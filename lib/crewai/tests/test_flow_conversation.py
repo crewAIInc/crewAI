@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
@@ -35,6 +35,7 @@ from crewai.flow.flow_context import (
     current_flow_id,
     current_flow_name,
 )
+from crewai.llms.base_llm import BaseLLM
 from crewai.flow.conversation import (
     append_message,
     get_conversation_messages,
@@ -183,14 +184,11 @@ class TestConversationalFlow:
         assert flow.state.messages[-1].content == "pong"
 
     def test_stream_turn_enables_streaming_on_conversation_llm(self) -> None:
-        class FakeLLM:
-            stream = False
+        class FakeLLM(BaseLLM):
+            stream_values: ClassVar[list[bool | None]] = []
 
-            def __init__(self) -> None:
-                self.stream_values: list[bool] = []
-
-            def call(self, *, messages: list[dict[str, Any]]) -> str:
-                self.stream_values.append(self.stream)
+            def call(self, messages: Any, *args: Any, **kwargs: Any) -> str:
+                self.stream_values.append(self._effective_stream())
                 for chunk in ("po", "ng"):
                     crewai_event_bus.emit(
                         flow,
@@ -202,7 +200,8 @@ class TestConversationalFlow:
                     )
                 return "pong"
 
-        llm = FakeLLM()
+        FakeLLM.stream_values = []
+        llm = FakeLLM(model="gpt-4o-mini", stream=False)
 
         @ConversationConfig(llm=llm)
         class StreamingChatFlow(ConversationalFlow):

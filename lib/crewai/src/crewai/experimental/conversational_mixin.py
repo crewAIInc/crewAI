@@ -1166,12 +1166,10 @@ class _ConversationalMixin:
             yield
             return
 
-        original_stream = llm.stream
-        try:
-            llm.stream = True
+        from crewai.llms.base_llm import call_stream_override
+
+        with call_stream_override(llm, True):
             yield
-        finally:
-            llm.stream = original_stream
 
     def finalize_session_traces(self) -> None:
         """Emit a final ``FlowFinishedEvent`` and finalize the trace batch.

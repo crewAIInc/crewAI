@@ -103,46 +103,6 @@ def _extract_tool_call_info(
     return StreamChunkType.TEXT, None
 
 
-def _extract_tool_call_chunk(data: dict[str, Any]) -> ToolCallChunk | None:
-    tool_call = data.get("tool_call")
-    if not isinstance(tool_call, dict):
-        return None
-    function = tool_call.get("function")
-    if not isinstance(function, dict):
-        function = {}
-    function_name = function.get("name")
-    return ToolCallChunk(
-        tool_id=tool_call.get("id"),
-        tool_name=sanitize_tool_name(str(function_name)) if function_name else None,
-        arguments=function.get("arguments") or "",
-        index=tool_call.get("index") or 0,
-    )
-
-
-def stream_frame_to_chunk(frame: StreamFrame) -> StreamChunk | None:
-    """Project an LLM stream frame into the legacy ``StreamChunk`` shape."""
-    if frame.channel != "llm" or frame.type not in {
-        "llm_stream_chunk",
-        "llm_thinking_chunk",
-    }:
-        return None
-
-    tool_call = _extract_tool_call_chunk(frame.data)
-    chunk_type = (
-        StreamChunkType.TOOL_CALL if tool_call is not None else StreamChunkType.TEXT
-    )
-    return StreamChunk(
-        content=str(frame.data.get("chunk") or ""),
-        chunk_type=chunk_type,
-        task_index=0,
-        task_name=str(frame.data.get("task_name") or ""),
-        task_id=str(frame.data.get("task_id") or ""),
-        agent_role=str(frame.data.get("agent_role") or ""),
-        agent_id=str(frame.data.get("agent_id") or ""),
-        tool_call=tool_call,
-    )
-
-
 def _create_stream_chunk(
     event: LLMStreamChunkEvent,
     current_task_info: TaskInfo,

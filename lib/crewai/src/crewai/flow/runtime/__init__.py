@@ -1860,21 +1860,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         output_holder.append(stream_session)
         return stream_session
 
-    def stream_frames(
-        self,
-        inputs: dict[str, Any] | None = None,
-        input_files: dict[str, FileInput] | None = None,
-        from_checkpoint: CheckpointConfig | None = None,
-        restore_from_state_id: str | None = None,
-    ) -> StreamSession[Any]:
-        """Alias for :meth:`stream_events`."""
-        return self.stream_events(
-            inputs=inputs,
-            input_files=input_files,
-            from_checkpoint=from_checkpoint,
-            restore_from_state_id=restore_from_state_id,
-        )
-
     def astream(
         self,
         inputs: dict[str, Any] | None = None,
