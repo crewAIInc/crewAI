@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Coroutine, Iterable, Mapping
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from opentelemetry import baggage
@@ -13,8 +12,8 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crews.crew_output import CrewOutput
 from crewai.llms.base_llm import BaseLLM
 from crewai.rag.embeddings.types import EmbedderConfig
-from crewai.skills.loader import activate_skill, discover_skills
-from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
+from crewai.skills.loader import load_skills
+from crewai.skills.models import Skill as SkillModel
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
 from crewai.utilities.file_store import store_files
 from crewai.utilities.streaming import (
@@ -60,23 +59,7 @@ def _resolve_crew_skills(crew: Crew) -> list[SkillModel] | None:
     if not isinstance(crew.skills, list) or not crew.skills:
         return None
 
-    resolved: list[SkillModel] = []
-    seen: set[str] = set()
-    for item in crew.skills:
-        if isinstance(item, Path):
-            for skill in discover_skills(item):
-                if skill.name not in seen:
-                    seen.add(skill.name)
-                    resolved.append(activate_skill(skill))
-        elif isinstance(item, SkillModel):
-            if item.name not in seen:
-                seen.add(item.name)
-                resolved.append(
-                    activate_skill(item)
-                    if item.disclosure_level < INSTRUCTIONS
-                    else item
-                )
-    return resolved
+    return load_skills(crew.skills) or None
 
 
 def setup_agents(
