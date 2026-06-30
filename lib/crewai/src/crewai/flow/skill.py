@@ -240,7 +240,7 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         hidden=True,
         examples=True,
         descriptions={
-            "input": "Input passed to the individual agent kickoff outside of a crew. Use a single string value, often a dynamic `${...}` expression. When an agent needs multiple fields, build one single-line CEL string with labels and separators, for example `${'Ticket ID: ' + state.ticket_id + '; Message: ' + state.message}`. In YAML, avoid `\\n` escapes inside `${...}` strings.",
+            "input": "Input passed to the individual agent kickoff outside of a crew. Use a single string value, often a dynamic `${...}` expression. When an agent needs multiple fields, build one single-line CEL string with labels and separators, using `text(root, 'path')` for values that may be missing or null, for example `${'Ticket ID: ' + text(state, 'ticket_id') + '; Message: ' + text(state, 'message')}`. In YAML, avoid `\\n` escapes inside `${...}` strings.",
         },
     ),
     ModelSpec("FlowConfigDefinition", "Config", "config"),

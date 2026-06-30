@@ -104,7 +104,8 @@ Dynamic value rules:
 
 - A string is dynamic only when the whole trimmed string is wrapped in `${...}`.
 - `Ticket: ${state.ticket}` stays literal. For computed strings, build the string inside the CEL expression.
-- When an agent needs multiple fields, build one single-line CEL string with labels and separators. Example: `input: "${'Ticket ID: ' + state.ticket_id + '; Message: ' + state.message}"`.
+- For prompt text, use CrewAI's CEL helper `text(root, "path", "default")` to safely read missing or null values as strings. The default argument is optional and defaults to `""`.
+- When an agent needs multiple fields, build one single-line CEL string with labels and separators. Example: `input: "${'Ticket ID: ' + text(state, 'ticket_id') + '; Message: ' + text(state, 'message')}"`.
 - In YAML, do not put `\n` escapes inside `${...}` strings. Prefer plain `${state.field}` values or the single-line labeled pattern above.
 - `${...}` keeps the value type. It does not always make text.
 - Crew action-level `inputs` are the actual Crew kickoff inputs. Use CEL-wrapped values there for runtime data from `state` or `outputs`.
