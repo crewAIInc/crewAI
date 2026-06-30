@@ -1,0 +1,528 @@
+---
+title: Microsoft SharePoint 통합
+description: "CrewAI를 위한 Microsoft SharePoint 통합으로 사이트, 목록 및 문서 관리."
+icon: "folder-tree"
+mode: "wide"
+---
+
+## 개요
+
+에이전트가 SharePoint 사이트, 목록 및 문서 라이브러리에 액세스하고 관리할 수 있도록 합니다. AI 기반 자동화로 사이트 정보를 검색하고, 목록 항목을 관리하고, 파일을 업로드 및 구성하며, SharePoint 워크플로를 간소화합니다.
+
+## 전제 조건
+
+Microsoft SharePoint 통합을 사용하기 전에 다음 사항을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
+- SharePoint 액세스 권한이 있는 Microsoft 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Microsoft 계정 연결
+
+## Microsoft SharePoint 통합 설정
+
+### 1. Microsoft 계정 연결
+
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동
+2. 인증 통합 섹션에서 **Microsoft SharePoint** 찾기
+3. **연결**을 클릭하고 OAuth 플로우 완료
+4. SharePoint 사이트 및 파일 액세스에 필요한 권한 부여
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token 복사
+
+### 2. 필요한 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## 사용 가능한 작업
+
+<AccordionGroup>
+  <Accordion title="microsoft_sharepoint/get_sites">
+    **설명:** 사용자가 액세스할 수 있는 모든 SharePoint 사이트를 가져옵니다.
+
+    **매개변수:**
+    - `search` (string, 선택사항): 사이트를 필터링하기 위한 검색 쿼리.
+    - `select` (string, 선택사항): 반환할 특정 속성 선택 (예: 'displayName,id,webUrl').
+    - `filter` (string, 선택사항): OData 구문을 사용하여 결과 필터링.
+    - `expand` (string, 선택사항): 관련 리소스를 인라인으로 확장.
+    - `top` (integer, 선택사항): 반환할 항목 수 (최소 1, 최대 999).
+    - `skip` (integer, 선택사항): 건너뛸 항목 수 (최소 0).
+    - `orderby` (string, 선택사항): 지정된 속성으로 결과 정렬 (예: 'displayName desc').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_site">
+    **설명:** 특정 SharePoint 사이트에 대한 정보를 가져옵니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): SharePoint 사이트의 ID.
+    - `select` (string, 선택사항): 반환할 특정 속성 선택 (예: 'displayName,id,webUrl,drives').
+    - `expand` (string, 선택사항): 관련 리소스를 인라인으로 확장 (예: 'drives,lists').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_drives">
+    **설명:** SharePoint 사이트의 모든 문서 라이브러리(드라이브)를 나열합니다. 파일 작업을 사용하기 전에 사용 가능한 라이브러리를 찾으려면 이 작업을 사용하세요.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `top` (integer, 선택사항): 페이지당 반환할 최대 드라이브 수 (1-999). 기본값: 100
+    - `skip_token` (string, 선택사항): 다음 결과 페이지를 가져오기 위한 이전 응답의 페이지네이션 토큰.
+    - `select` (string, 선택사항): 반환할 속성의 쉼표로 구분된 목록 (예: 'id,name,webUrl,driveType').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_site_lists">
+    **설명:** SharePoint 사이트의 모든 목록을 가져옵니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): SharePoint 사이트의 ID.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_list">
+    **설명:** 특정 목록에 대한 정보를 가져옵니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): SharePoint 사이트의 ID.
+    - `list_id` (string, 필수): 목록의 ID.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_list_items">
+    **설명:** SharePoint 목록에서 항목을 가져옵니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): SharePoint 사이트의 ID.
+    - `list_id` (string, 필수): 목록의 ID.
+    - `expand` (string, 선택사항): 관련 데이터 확장 (예: 'fields').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/create_list_item">
+    **설명:** SharePoint 목록에 새 항목을 만듭니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): SharePoint 사이트의 ID.
+    - `list_id` (string, 필수): 목록의 ID.
+    - `fields` (object, 필수): 새 항목의 필드 값.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/update_list_item">
+    **설명:** SharePoint 목록의 항목을 업데이트합니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): SharePoint 사이트의 ID.
+    - `list_id` (string, 필수): 목록의 ID.
+    - `item_id` (string, 필수): 업데이트할 항목의 ID.
+    - `fields` (object, 필수): 업데이트할 필드 값.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/delete_list_item">
+    **설명:** SharePoint 목록에서 항목을 삭제합니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): SharePoint 사이트의 ID.
+    - `list_id` (string, 필수): 목록의 ID.
+    - `item_id` (string, 필수): 삭제할 항목의 ID.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/upload_file_to_library">
+    **설명:** SharePoint 문서 라이브러리에 파일을 업로드합니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): SharePoint 사이트의 ID.
+    - `file_path` (string, 필수): 파일을 업로드할 경로 (예: 'folder/fileName.txt').
+    - `content` (string, 필수): 업로드할 파일의 내용.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/list_files">
+    **설명:** SharePoint 문서 라이브러리에서 파일과 폴더를 가져옵니다. 기본적으로 루트 폴더를 나열하지만 folder_id를 제공하여 하위 폴더로 이동할 수 있습니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `folder_id` (string, 선택사항): 내용을 나열할 폴더의 ID. 루트 폴더의 경우 'root'를 사용하거나 이전 list_files 호출에서 가져온 폴더 ID를 제공하세요. 기본값: 'root'
+    - `top` (integer, 선택사항): 페이지당 반환할 최대 항목 수 (1-1000). 기본값: 50
+    - `skip_token` (string, 선택사항): 다음 결과 페이지를 가져오기 위한 이전 응답의 페이지네이션 토큰.
+    - `orderby` (string, 선택사항): 결과 정렬 순서 (예: 'name asc', 'size desc', 'lastModifiedDateTime desc'). 기본값: 'name asc'
+    - `filter` (string, 선택사항): 결과를 좁히기 위한 OData 필터 (예: 'file ne null'은 파일만, 'folder ne null'은 폴더만).
+    - `select` (string, 선택사항): 반환할 필드의 쉼표로 구분된 목록 (예: 'id,name,size,folder,file,webUrl,lastModifiedDateTime').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/delete_file">
+    **설명:** SharePoint 문서 라이브러리에서 파일 또는 폴더를 삭제합니다. 폴더의 경우 모든 내용이 재귀적으로 삭제됩니다. 항목은 사이트 휴지통으로 이동됩니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): 삭제할 파일 또는 폴더의 고유 식별자. list_files에서 가져오세요.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/list_files_by_path">
+    **설명:** 경로로 SharePoint 문서 라이브러리 폴더의 파일과 폴더를 나열합니다. 깊은 탐색을 위해 여러 list_files 호출보다 더 효율적입니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `folder_path` (string, 필수): 앞뒤 슬래시 없이 폴더의 전체 경로 (예: 'Documents', 'Reports/2024/Q1').
+    - `top` (integer, 선택사항): 페이지당 반환할 최대 항목 수 (1-1000). 기본값: 50
+    - `skip_token` (string, 선택사항): 다음 결과 페이지를 가져오기 위한 이전 응답의 페이지네이션 토큰.
+    - `orderby` (string, 선택사항): 결과 정렬 순서 (예: 'name asc', 'size desc'). 기본값: 'name asc'
+    - `select` (string, 선택사항): 반환할 필드의 쉼표로 구분된 목록 (예: 'id,name,size,folder,file,webUrl,lastModifiedDateTime').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/download_file">
+    **설명:** SharePoint 문서 라이브러리에서 원시 파일 내용을 다운로드합니다. 일반 텍스트 파일(.txt, .csv, .json)에만 사용하세요. Excel 파일의 경우 Excel 전용 작업을 사용하세요. Word 파일의 경우 get_word_document_content를 사용하세요.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): 다운로드할 파일의 고유 식별자. list_files 또는 list_files_by_path에서 가져오세요.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_file_info">
+    **설명:** SharePoint 문서 라이브러리의 특정 파일 또는 폴더에 대한 자세한 메타데이터를 가져옵니다. 이름, 크기, 생성/수정 날짜 및 작성자 정보가 포함됩니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): 파일 또는 폴더의 고유 식별자. list_files 또는 list_files_by_path에서 가져오세요.
+    - `select` (string, 선택사항): 반환할 속성의 쉼표로 구분된 목록 (예: 'id,name,size,createdDateTime,lastModifiedDateTime,webUrl,createdBy,lastModifiedBy').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/create_folder">
+    **설명:** SharePoint 문서 라이브러리에 새 폴더를 만듭니다. 기본적으로 루트에 폴더를 만들며 하위 폴더를 만들려면 parent_id를 사용하세요.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `folder_name` (string, 필수): 새 폴더의 이름. 사용할 수 없는 문자: \ / : * ? " < > |
+    - `parent_id` (string, 선택사항): 상위 폴더의 ID. 문서 라이브러리 루트의 경우 'root'를 사용하거나 list_files에서 가져온 폴더 ID를 제공하세요. 기본값: 'root'
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/search_files">
+    **설명:** 키워드로 SharePoint 문서 라이브러리에서 파일과 폴더를 검색합니다. 파일 이름, 폴더 이름 및 Office 문서의 파일 내용을 검색합니다. 와일드카드나 특수 문자를 사용하지 마세요.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `query` (string, 필수): 검색 키워드 (예: 'report', 'budget 2024'). *.txt와 같은 와일드카드는 지원되지 않습니다.
+    - `top` (integer, 선택사항): 페이지당 반환할 최대 결과 수 (1-1000). 기본값: 50
+    - `skip_token` (string, 선택사항): 다음 결과 페이지를 가져오기 위한 이전 응답의 페이지네이션 토큰.
+    - `select` (string, 선택사항): 반환할 필드의 쉼표로 구분된 목록 (예: 'id,name,size,folder,file,webUrl,lastModifiedDateTime').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/copy_file">
+    **설명:** SharePoint 내에서 파일 또는 폴더를 새 위치로 복사합니다. 원본 항목은 변경되지 않습니다. 대용량 파일의 경우 복사 작업은 비동기적입니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): 복사할 파일 또는 폴더의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+    - `destination_folder_id` (string, 필수): 대상 폴더의 ID. 루트 폴더의 경우 'root'를 사용하거나 list_files에서 가져온 폴더 ID를 사용하세요.
+    - `new_name` (string, 선택사항): 복사본의 새 이름. 제공하지 않으면 원래 이름이 사용됩니다.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/move_file">
+    **설명:** SharePoint 내에서 파일 또는 폴더를 새 위치로 이동합니다. 항목은 원래 위치에서 제거됩니다. 폴더의 경우 모든 내용도 함께 이동됩니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): 이동할 파일 또는 폴더의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+    - `destination_folder_id` (string, 필수): 대상 폴더의 ID. 루트 폴더의 경우 'root'를 사용하거나 list_files에서 가져온 폴더 ID를 사용하세요.
+    - `new_name` (string, 선택사항): 이동된 항목의 새 이름. 제공하지 않으면 원래 이름이 유지됩니다.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_worksheets">
+    **설명:** SharePoint 문서 라이브러리에 저장된 Excel 통합 문서의 모든 워크시트(탭)를 나열합니다. 반환된 워크시트 이름을 다른 Excel 작업에 사용하세요.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): SharePoint에 있는 Excel 파일의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+    - `select` (string, 선택사항): 반환할 속성의 쉼표로 구분된 목록 (예: 'id,name,position,visibility').
+    - `filter` (string, 선택사항): OData 필터 표현식 (예: "visibility eq 'Visible'"로 숨겨진 시트 제외).
+    - `top` (integer, 선택사항): 반환할 최대 워크시트 수. 최소: 1, 최대: 999
+    - `orderby` (string, 선택사항): 정렬 순서 (예: 'position asc'로 탭 순서대로 반환).
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/create_excel_worksheet">
+    **설명:** SharePoint 문서 라이브러리에 저장된 Excel 통합 문서에 새 워크시트(탭)를 만듭니다. 새 시트는 탭 목록의 끝에 추가됩니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): SharePoint에 있는 Excel 파일의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+    - `name` (string, 필수): 새 워크시트의 이름. 최대 31자. 사용할 수 없는 문자: \ / * ? : [ ]. 통합 문서 내에서 고유해야 합니다.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_range_data">
+    **설명:** SharePoint에 저장된 Excel 워크시트의 특정 범위에서 셀 값을 가져옵니다. 크기를 모르는 상태에서 모든 데이터를 읽으려면 대신 get_excel_used_range를 사용하세요.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): SharePoint에 있는 Excel 파일의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+    - `worksheet_name` (string, 필수): 읽을 워크시트(탭)의 이름. get_excel_worksheets에서 가져오세요. 대소문자를 구분합니다.
+    - `range` (string, 필수): A1 표기법의 셀 범위 (예: 'A1:C10', 'A:C', '1:5', 'A1').
+    - `select` (string, 선택사항): 반환할 속성의 쉼표로 구분된 목록 (예: 'address,values,formulas,numberFormat,text').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/update_excel_range_data">
+    **설명:** SharePoint에 저장된 Excel 워크시트의 특정 범위에 값을 씁니다. 기존 셀 내용을 덮어씁니다. values 배열의 크기는 범위 크기와 정확히 일치해야 합니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): SharePoint에 있는 Excel 파일의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+    - `worksheet_name` (string, 필수): 업데이트할 워크시트(탭)의 이름. get_excel_worksheets에서 가져오세요. 대소문자를 구분합니다.
+    - `range` (string, 필수): 값을 쓸 A1 표기법의 셀 범위 (예: 'A1:C3'은 3x3 블록).
+    - `values` (array, 필수): 2D 값 배열 (셀을 포함하는 행). A1:B2의 예: [["Header1", "Header2"], ["Value1", "Value2"]]. 셀을 지우려면 null을 사용하세요.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_used_range_metadata">
+    **설명:** 실제 셀 값 없이 워크시트에서 사용된 범위의 메타데이터(주소 및 크기)만 반환합니다. 대용량 파일에서 데이터를 청크로 읽기 전에 스프레드시트 크기를 파악하는 데 이상적입니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): SharePoint에 있는 Excel 파일의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+    - `worksheet_name` (string, 필수): 읽을 워크시트(탭)의 이름. get_excel_worksheets에서 가져오세요. 대소문자를 구분합니다.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_used_range">
+    **설명:** SharePoint에 저장된 워크시트에서 데이터가 포함된 모든 셀을 가져옵니다. 2MB보다 큰 파일에는 사용하지 마세요. 대용량 파일의 경우 먼저 get_excel_used_range_metadata를 사용한 다음 get_excel_range_data로 작은 청크로 읽으세요.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): SharePoint에 있는 Excel 파일의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+    - `worksheet_name` (string, 필수): 읽을 워크시트(탭)의 이름. get_excel_worksheets에서 가져오세요. 대소문자를 구분합니다.
+    - `select` (string, 선택사항): 반환할 속성의 쉼표로 구분된 목록 (예: 'address,values,formulas,numberFormat,text,rowCount,columnCount').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_cell">
+    **설명:** SharePoint의 Excel 파일에서 행과 열 인덱스로 단일 셀의 값을 가져옵니다. 인덱스는 0 기반입니다 (행 0 = Excel 행 1, 열 0 = 열 A).
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): SharePoint에 있는 Excel 파일의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+    - `worksheet_name` (string, 필수): 워크시트(탭)의 이름. get_excel_worksheets에서 가져오세요. 대소문자를 구분합니다.
+    - `row` (integer, 필수): 0 기반 행 인덱스 (행 0 = Excel 행 1). 유효 범위: 0-1048575
+    - `column` (integer, 필수): 0 기반 열 인덱스 (열 0 = A, 열 1 = B). 유효 범위: 0-16383
+    - `select` (string, 선택사항): 반환할 속성의 쉼표로 구분된 목록 (예: 'address,values,formulas,numberFormat,text').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/add_excel_table">
+    **설명:** 셀 범위를 필터링, 정렬 및 구조화된 데이터 기능이 있는 서식이 지정된 Excel 테이블로 변환합니다. 테이블을 만들면 add_excel_table_row로 데이터를 추가할 수 있습니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): SharePoint에 있는 Excel 파일의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+    - `worksheet_name` (string, 필수): 데이터 범위가 포함된 워크시트의 이름. get_excel_worksheets에서 가져오세요.
+    - `range` (string, 필수): 헤더와 데이터를 포함하여 테이블로 변환할 셀 범위 (예: 'A1:D10'에서 A1:D1은 열 헤더).
+    - `has_headers` (boolean, 선택사항): 첫 번째 행에 열 헤더가 포함되어 있으면 true로 설정. 기본값: true
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_tables">
+    **설명:** SharePoint에 저장된 특정 Excel 워크시트의 모든 테이블을 나열합니다. id, name, showHeaders 및 showTotals를 포함한 테이블 속성을 반환합니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): SharePoint에 있는 Excel 파일의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+    - `worksheet_name` (string, 필수): 테이블을 가져올 워크시트의 이름. get_excel_worksheets에서 가져오세요.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/add_excel_table_row">
+    **설명:** SharePoint 파일의 Excel 테이블 끝에 새 행을 추가합니다. values 배열은 테이블의 열 수와 같은 수의 요소를 가져야 합니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): SharePoint에 있는 Excel 파일의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+    - `worksheet_name` (string, 필수): 테이블이 포함된 워크시트의 이름. get_excel_worksheets에서 가져오세요.
+    - `table_name` (string, 필수): 행을 추가할 테이블의 이름 (예: 'Table1'). get_excel_tables에서 가져오세요. 대소문자를 구분합니다.
+    - `values` (array, 필수): 새 행의 셀 값 배열로 테이블 순서대로 열당 하나씩 (예: ["John Doe", "john@example.com", 25]).
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_table_data">
+    **설명:** SharePoint 파일의 Excel 테이블에서 모든 행을 데이터 범위로 가져옵니다. 정확한 범위를 알 필요가 없으므로 구조화된 테이블 작업 시 get_excel_range_data보다 쉽습니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): SharePoint에 있는 Excel 파일의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+    - `worksheet_name` (string, 필수): 테이블이 포함된 워크시트의 이름. get_excel_worksheets에서 가져오세요.
+    - `table_name` (string, 필수): 데이터를 가져올 테이블의 이름 (예: 'Table1'). get_excel_tables에서 가져오세요. 대소문자를 구분합니다.
+    - `select` (string, 선택사항): 반환할 속성의 쉼표로 구분된 목록 (예: 'address,values,formulas,numberFormat,text').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/create_excel_chart">
+    **설명:** SharePoint에 저장된 Excel 워크시트에 데이터 범위에서 차트 시각화를 만듭니다. 차트는 워크시트에 포함됩니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): SharePoint에 있는 Excel 파일의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+    - `worksheet_name` (string, 필수): 차트를 만들 워크시트의 이름. get_excel_worksheets에서 가져오세요.
+    - `chart_type` (string, 필수): 차트 유형 (예: 'ColumnClustered', 'ColumnStacked', 'Line', 'LineMarkers', 'Pie', 'Bar', 'BarClustered', 'Area', 'Scatter', 'Doughnut').
+    - `source_data` (string, 필수): 헤더를 포함한 A1 표기법의 차트 데이터 범위 (예: 'A1:B10').
+    - `series_by` (string, 선택사항): 데이터 계열 구성 방법: 'Auto', 'Columns' 또는 'Rows'. 기본값: 'Auto'
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/list_excel_charts">
+    **설명:** SharePoint에 저장된 Excel 워크시트에 포함된 모든 차트를 나열합니다. id, name, chartType, height, width 및 position을 포함한 차트 속성을 반환합니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): SharePoint에 있는 Excel 파일의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+    - `worksheet_name` (string, 필수): 차트를 나열할 워크시트의 이름. get_excel_worksheets에서 가져오세요.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/delete_excel_worksheet">
+    **설명:** SharePoint에 저장된 Excel 통합 문서에서 워크시트(탭)와 모든 내용을 영구적으로 제거합니다. 실행 취소할 수 없습니다. 통합 문서에는 최소 하나의 워크시트가 있어야 합니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): SharePoint에 있는 Excel 파일의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+    - `worksheet_name` (string, 필수): 삭제할 워크시트의 이름. 대소문자를 구분합니다. 이 시트의 모든 데이터, 테이블 및 차트가 영구적으로 제거됩니다.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/delete_excel_table">
+    **설명:** SharePoint의 Excel 워크시트에서 테이블을 제거합니다. 테이블 구조(필터링, 서식, 테이블 기능)는 삭제되지만 기본 셀 데이터는 보존됩니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): SharePoint에 있는 Excel 파일의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+    - `worksheet_name` (string, 필수): 테이블이 포함된 워크시트의 이름. get_excel_worksheets에서 가져오세요.
+    - `table_name` (string, 필수): 삭제할 테이블의 이름 (예: 'Table1'). get_excel_tables에서 가져오세요. 테이블 삭제 후에도 셀의 데이터는 유지됩니다.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/list_excel_names">
+    **설명:** SharePoint에 저장된 Excel 통합 문서에 정의된 모든 명명된 범위를 가져옵니다. 명명된 범위는 셀 범위에 대한 사용자 정의 레이블입니다 (예: 'SalesData'는 A1:D100을 가리킴).
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): SharePoint에 있는 Excel 파일의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_word_document_content">
+    **설명:** SharePoint 문서 라이브러리에 저장된 Word 문서(.docx)에서 텍스트 내용을 다운로드하고 추출합니다. SharePoint에서 Word 문서를 읽는 권장 방법입니다.
+
+    **매개변수:**
+    - `site_id` (string, 필수): get_sites에서 가져온 전체 SharePoint 사이트 식별자.
+    - `drive_id` (string, 필수): 문서 라이브러리의 ID. 먼저 get_drives를 호출하여 유효한 드라이브 ID를 가져오세요.
+    - `item_id` (string, 필수): SharePoint에 있는 Word 문서(.docx)의 고유 식별자. list_files 또는 search_files에서 가져오세요.
+
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예제
+
+### 기본 Microsoft SharePoint 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+
+# Microsoft SharePoint 기능을 가진 에이전트 생성
+sharepoint_agent = Agent(
+    role="SharePoint 관리자",
+    goal="SharePoint 사이트, 목록 및 문서를 효율적으로 관리",
+    backstory="Microsoft SharePoint 관리 및 콘텐츠 관리 전문 AI 어시스턴트.",
+    apps=['microsoft_sharepoint']  # 모든 SharePoint 작업을 사용할 수 있습니다
+)
+
+# 모든 사이트 가져오기 작업
+get_sites_task = Task(
+    description="액세스할 수 있는 모든 SharePoint 사이트를 나열하세요.",
+    agent=sharepoint_agent,
+    expected_output="표시 이름과 URL이 포함된 SharePoint 사이트 목록."
+)
+
+# 작업 실행
+crew = Crew(
+    agents=[sharepoint_agent],
+    tasks=[get_sites_task]
+)
+
+crew.kickoff()
+```
+
+## 문제 해결
+
+### 일반적인 문제
+
+**인증 오류**
+
+- Microsoft 계정이 SharePoint 액세스에 필요한 권한을 가지고 있는지 확인하세요 (예: `Sites.Read.All`, `Sites.ReadWrite.All`).
+- OAuth 연결이 필요한 모든 범위를 포함하는지 확인하세요.
+
+**사이트/목록/항목 ID 문제**
+
+- 사이트, 목록, 항목 ID가 올바른지 다시 확인하세요.
+- 참조된 리소스가 존재하고 액세스할 수 있는지 확인하세요.
+
+### 도움 받기
+
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
+  Microsoft SharePoint 통합 설정 또는 문제 해결에 대한 지원이 필요하시면
+  지원팀에 문의하세요.
+</Card>

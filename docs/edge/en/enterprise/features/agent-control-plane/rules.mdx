@@ -1,0 +1,176 @@
+---
+title: "Set up the Rules"
+description: "Apply organization-wide policies across many automations from a single place."
+sidebarTitle: "Rules"
+icon: "shield-check"
+mode: "wide"
+---
+
+<Info>
+  **ACP (Beta) Docs Navigation**
+
+  - [Overview](/en/enterprise/features/agent-control-plane/overview)
+  - [Monitoring](/en/enterprise/features/agent-control-plane/monitoring)
+  - **Rules** *(you are here)*
+</Info>
+
+## Overview
+
+Rules let you apply policies — today **PII Redaction** and **Cost Limit** — across many automations at once, instead of configuring each deployment individually. Open the **Rules** tab in the [Agent Control Plane](/en/enterprise/features/agent-control-plane/overview) to manage them.
+
+<Frame>
+  ![Rules list](/images/enterprise/acp-rules-list.png)
+</Frame>
+
+Each rule card shows the name, description, the **scope** the rule applies to (selected tools and tags), and a count of **engaged automations** — deployments that currently match the scope. The toggle on the right enables or disables the rule without deleting it.
+
+## Requirements
+
+<Warning>
+  **Enterprise Plan or Ultra Plan** is required to create or edit **PII Redaction** rules. Lower-tier organizations can still open the Rules tab and view existing rules, but the PII editor renders read-only with an "Enterprise" lock pill and the alert *"PII Redaction rules require an Enterprise plan."* — contact your account owner or sales to upgrade. **Cost Limit** rules are **not** plan-gated and can be created on any plan where the Agent Control Plane is enabled.
+</Warning>
+
+- The **Agent Control Plane** feature must be enabled for your organization. See [Overview — Requirements](/en/enterprise/features/agent-control-plane/overview#requirements).
+- The `manage` [RBAC permission](/en/enterprise/features/rbac) on Agent Control Plane is required to create, edit, toggle, or delete rules. The `read` permission is enough to view them.
+- All rule changes are versioned for auditing.
+
+## Rule types
+
+Every rule is one of the types below. Open the tab for the policy you want to enforce.
+
+<Tabs>
+<Tab title="PII Redaction">
+Applies PII redaction to executions of every matching automation, using the same entity catalog and custom recognizers documented in [PII Redaction for Traces](/en/enterprise/features/pii-trace-redactions).
+
+<Warning>
+Creating or editing PII Redaction rules requires an **Enterprise** or **Ultra** plan. On lower tiers the PII editor renders read-only with an "Enterprise" lock pill.
+</Warning>
+
+**Configuration** — in the **PII Mask Type** table, check each entity type you want covered and choose how to handle it:
+
+- **Mask** — replaces the match with the entity label (e.g. `<CREDIT_CARD>`).
+- **Redact** — removes the matched text entirely.
+
+See [PII Redaction for Traces](/en/enterprise/features/pii-trace-redactions) for the full entity catalog and how to add organization-level custom recognizers.
+</Tab>
+
+<Tab title="Cost Limit">
+Emails the recipients you choose when a matching automation's LLM spend exceeds a budget threshold in the selected period. Available on **all plans** where the Agent Control Plane is enabled — it is not Enterprise-gated.
+
+<Warning>
+Cost Limit rules are **notify-only**. They never pause, throttle, or stop a run — they only send an email so a human can decide what to do. Adjust the budget or remove the rule if you no longer want the alert.
+</Warning>
+
+**Configuration**
+
+| Field | Description |
+|-------|-------------|
+| **Budget period** | The window spend is measured over: **Daily**, **Weekly**, or **Monthly** (default *Monthly*). Spend resets at the start of each calendar period. |
+| **Threshold (USD)** | The dollar amount that triggers an alert. Must be greater than `0`. The alert fires once the automation's spend for the current period exceeds this value. |
+| **Recipient emails** | Up to 50 email addresses. Type an address and press **Enter** or comma to add it as a chip; **Backspace** removes the last chip. These do not need to be CrewAI users. |
+| **Notify roles** | Optionally select organization [roles](/en/enterprise/features/rbac); the alert is sent to every member of the chosen roles. Roles with no members can't be selected. You must provide at least one recipient — an email or a role. |
+| **Re-alert frequency** | How often the alert can re-fire while an automation stays over budget: **Once per period**, **Every hour while over**, **Every 4h while over**, or **Daily while over**. Re-alerts are capped at 24 per period. |
+
+**How spend is measured and matched**
+
+- The threshold is evaluated **per automation**, not summed across the whole scope. Each engaged automation has its own running total for the period.
+- A rule can match many automations via its conditions (tools/tags), and a single automation can be covered by **multiple** Cost Limit rules at once. Each rule tracks its own budget and alert state independently — they don't merge.
+- A background check compares each engaged automation's period-to-date spend against the threshold and sends the email when it's exceeded. Because the check runs periodically, expect a short delay between crossing the threshold and the email arriving.
+
+**The alert email**
+
+When an automation goes over budget, recipients get an email summarizing the overage — the automation name, the **current spend**, the **budget threshold**, and how far over it is in both dollars and percent (e.g. `$0.38` current vs a `$0.10` budget = `+277%`). The email reiterates that the run was **not** paused.
+</Tab>
+</Tabs>
+
+More rule types will be added over time.
+
+## Creating a rule
+
+<Tabs>
+<Tab title="PII Redaction">
+<Frame>
+  <img src="/images/enterprise/acp-rules-edit-side-panel.png" alt="New Rule side panel configured for PII Redaction with the PII mask type table" width="450" />
+</Frame>
+</Tab>
+<Tab title="Cost Limit">
+<Frame>
+  <img src="/images/enterprise/acp-rules-edit-cost-limit.png" alt="New Rule side panel configured for Cost Limit with budget period, threshold, and recipient emails" width="450" />
+</Frame>
+</Tab>
+</Tabs>
+
+<Steps>
+  <Step title="Open the editor">
+    Click **+ Create new** at the top-right of the Rules tab, or **View Details** on an existing rule card.
+  </Step>
+
+  <Step title="Name and describe the rule">
+    Give the rule a clear name (e.g. *Mask PII (CC)* or *Monthly $100 budget*) and a description explaining when it applies. Both show up on the rule card and in the Engaged Automations modal.
+  </Step>
+
+  <Step title="Pick the type">
+    Choose **PII Redaction** or **Cost Limit**. The type determines which configuration section appears below the conditions. The type is fixed once the rule is created — to switch, create a new rule.
+  </Step>
+
+  <Step title="Set the conditions">
+    Conditions decide which automations the rule engages with. Both are optional and use **set-equality** semantics:
+
+    - **Tools** — only automations whose tool set **exactly matches** the selected tools will engage. Picks from Studio apps, MCPs, OSS tools, and Tool Repository registry tools.
+    - **Automations** — only automations whose tag set **exactly matches** the selected tags will engage.
+
+    Leaving a picker empty means "no filter on this dimension". Leaving both empty means the rule applies to **every** automation in the organization.
+  </Step>
+
+  <Step title="Configure the type-specific section">
+    The editor shows the configuration for the type you picked — the **PII Mask Type** table for PII Redaction, or the budget fields for Cost Limit. See [Rule types](#rule-types) for what each field does.
+  </Step>
+
+  <Step title="Save">
+    The rule applies to **future** executions of every engaged automation as soon as you save. No re-deploy is needed.
+  </Step>
+</Steps>
+
+## Engaged automations
+
+Click **Engaged N automations** on any rule card to see exactly which deployments the rule is currently matching, along with each one's last execution.
+
+<Frame>
+  ![Engaged automations modal](/images/enterprise/acp-rules-engaged-modal.png)
+</Frame>
+
+This is the fastest way to sanity-check a rule's scope before enabling it — for example, to confirm that a rule scoped to the `production` tag isn't accidentally matching a staging deployment.
+
+## Org-wide rules vs per-deployment settings
+
+Both PII Redaction and Cost Limit can be configured in two places: org-wide as a Rule on this page, or per-deployment under that deployment's **Settings**. When an enabled org-wide rule's scope matches a deployment, the rule takes precedence over the deployment-owned setting while it's attached.
+
+| Policy | Per-deployment setting | What an attached org-wide rule does |
+|--------|------------------------|-------------------------------------|
+| **PII Redaction** | **Settings → PII Protection** ([guide](/en/enterprise/features/pii-trace-redactions)) | The rule's entity configuration **overrides** the deployment's PII settings for that deployment's executions. |
+| **Cost Limit** | **Settings → Cost Alerts** | The deployment's manual cost alert is **paused** and the attached cost rule(s) fire instead. The per-deployment form stays editable as a fallback. |
+
+Disable or detach the rule (or change its scope so it no longer matches) and the deployment falls back to its own per-deployment settings.
+
+Prefer org-wide rules when you want to enforce a consistent policy across many deployments; reserve per-deployment configuration for one-off exceptions.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Agent Control Plane — Overview" icon="book-open" href="/en/enterprise/features/agent-control-plane/overview">
+    What ACP is, requirements, plan tiers, and RBAC.
+  </Card>
+  <Card title="Agent Control Plane — Monitoring" icon="gauge" href="/en/enterprise/features/agent-control-plane/monitoring">
+    Monitor automations and LLM consumption across your fleet.
+  </Card>
+  <Card title="PII Redaction for Traces" icon="lock" href="/en/enterprise/features/pii-trace-redactions">
+    Entity catalog, custom recognizers, and per-deployment configuration.
+  </Card>
+  <Card title="RBAC" icon="users" href="/en/enterprise/features/rbac">
+    Manage who can create or edit rules.
+  </Card>
+</CardGroup>
+
+<Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
+  Contact our support team for help designing rules for your organization.
+</Card>

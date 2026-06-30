@@ -323,7 +323,7 @@ class AnthropicCompletion(BaseLLM):
 
                 effective_response_model = response_model or self.response_format
 
-                if self.stream:
+                if self._effective_stream():
                     return self._handle_streaming_completion(
                         completion_params,
                         available_functions,
@@ -393,7 +393,7 @@ class AnthropicCompletion(BaseLLM):
 
                 effective_response_model = response_model or self.response_format
 
-                if self.stream:
+                if self._effective_stream():
                     return await self._ahandle_streaming_completion(
                         completion_params,
                         available_functions,
@@ -441,7 +441,7 @@ class AnthropicCompletion(BaseLLM):
             "model": self.model,
             "messages": messages,
             "max_tokens": self.max_tokens,
-            "stream": self.stream,
+            "stream": self._effective_stream(),
         }
 
         if system_message:

@@ -16,9 +16,9 @@ dependencies = [
     "pyjwt>=2.13.0,<3",
     "pydantic>=2.11.9,<2.13",
     "rich>=13.7.1",
-    "opentelemetry-api~=1.34.0",
-    "opentelemetry-sdk~=1.34.0",
-    "opentelemetry-exporter-otlp-proto-http~=1.34.0",
+    "opentelemetry-api~=1.42.0",
+    "opentelemetry-sdk~=1.42.0",
+    "opentelemetry-exporter-otlp-proto-http~=1.42.0",
     "tomli~=2.0.2",
 ]
 

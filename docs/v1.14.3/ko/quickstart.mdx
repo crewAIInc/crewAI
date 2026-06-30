@@ -1,0 +1,278 @@
+---
+title: 퀵스타트
+description: 몇 분 안에 첫 CrewAI Flow를 만듭니다 — 오케스트레이션, 상태, 그리고 실제 보고서를 만드는 에이전트 crew까지.
+icon: rocket
+mode: "wide"
+---
+
+### 영상: 코딩 에이전트 스킬을 활용한 CrewAI Agents & Flows 구축
+
+코딩 에이전트 스킬(Claude Code, Codex 등)을 설치하여 CrewAI로 코딩 에이전트를 빠르게 시작하세요.
+
+`npx skills add crewaiinc/skills` 명령어로 설치할 수 있습니다
+
+<iframe src="https://www.loom.com/embed/befb9f68b81f42ad8112bfdd95a780af" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style={{width: "100%", height: "400px"}}></iframe>
+
+이 가이드에서는 **Flow**를 만들어 연구 주제를 정하고, **에이전트 한 명으로 구성된 crew**(웹 검색을 쓰는 연구원)를 실행한 뒤, 디스크에 **Markdown 보고서**를 남깁니다. Flow는 프로덕션 앱을 구성하는 권장 방식으로, **상태**와 **실행 순서**를 담당하고 **에이전트**는 crew 단계 안에서 실제 작업을 수행합니다.
+
+CrewAI를 아직 설치하지 않았다면 먼저 [설치 가이드](/ko/installation)를 따르세요.
+
+## 사전 요건
+
+- Python 환경과 CrewAI CLI([설치](/ko/installation) 참고)
+- 올바른 API 키로 설정한 LLM — [LLM](/ko/concepts/llms#setting-up-your-llm) 참고
+- 이 튜토리얼의 웹 검색용 [Serper.dev](https://serper.dev/) API 키(`SERPER_API_KEY`)
+
+## 첫 번째 Flow 만들기
+
+<Steps>
+  <Step title="Flow 프로젝트 생성">
+  터미널에서 Flow 프로젝트를 생성합니다(폴더 이름은 밑줄 형식입니다. 예: `latest_ai_flow`).
+
+    <CodeGroup>
+      ```shell Terminal
+      crewai create flow latest-ai-flow
+      cd latest_ai_flow
+      ```
+    </CodeGroup>
+
+  이렇게 하면 `src/latest_ai_flow/` 아래에 Flow 앱이 만들어지고, 다음 단계에서 **단일 에이전트** 연구 crew로 바꿀 시작용 crew가 `crews/content_crew/`에 포함됩니다.
+  </Step>
+
+  <Step title="`agents.yaml`에 에이전트 하나 설정">
+  `src/latest_ai_flow/crews/content_crew/config/agents.yaml` 내용을 한 명의 연구원만 남기도록 바꿉니다. `{topic}` 같은 변수는 `crew.kickoff(inputs=...)`로 채워집니다.
+
+    ```yaml agents.yaml
+    # src/latest_ai_flow/crews/content_crew/config/agents.yaml
+    researcher:
+      role: >
+        {topic} 시니어 데이터 리서처
+      goal: >
+        {topic} 분야의 최신 동향을 파악한다
+      backstory: >
+        당신은 {topic}의 최신 흐름을 찾아내는 데 능숙한 연구원입니다.
+        가장 관련성 높은 정보를 찾아 명확하게 전달합니다.
+    ```
+
+  </Step>
+
+  <Step title="`tasks.yaml`에 작업 하나 설정">
+    ```yaml tasks.yaml
+    # src/latest_ai_flow/crews/content_crew/config/tasks.yaml
+    research_task:
+      description: >
+        {topic}에 대해 철저히 조사하세요. 웹 검색으로 최신이고 신뢰할 수 있는 정보를 찾으세요.
+        현재 연도는 2026년입니다.
+      expected_output: >
+        마크다운 보고서로, 주요 트렌드·주목할 도구나 기업·시사점 등으로 섹션을 나누세요.
+        분량은 약 800~1200단어. 문서 전체를 코드 펜스로 감싸지 마세요.
+      agent: researcher
+      output_file: output/report.md
+    ```
+
+  </Step>
+
+  <Step title="crew 클래스 연결 (`content_crew.py`)">
+  생성된 crew가 YAML을 읽고 연구원에게 `SerperDevTool`을 붙이도록 합니다.
+
+    ```python content_crew.py
+    # src/latest_ai_flow/crews/content_crew/content_crew.py
+    from typing import List
+
+    from crewai import Agent, Crew, Process, Task
+    from crewai.agents.agent_builder.base_agent import BaseAgent
+    from crewai.project import CrewBase, agent, crew, task
+    from crewai_tools import SerperDevTool
+
+
+    @CrewBase
+    class ResearchCrew:
+      """Flow 안에서 사용하는 단일 에이전트 연구 crew."""
+
+      agents: List[BaseAgent]
+      tasks: List[Task]
+
+      agents_config = "config/agents.yaml"
+      tasks_config = "config/tasks.yaml"
+
+      @agent
+      def researcher(self) -> Agent:
+        return Agent(
+          config=self.agents_config["researcher"],  # type: ignore[index]
+          verbose=True,
+          tools=[SerperDevTool()],
+        )
+
+      @task
+      def research_task(self) -> Task:
+        return Task(
+          config=self.tasks_config["research_task"],  # type: ignore[index]
+        )
+
+      @crew
+      def crew(self) -> Crew:
+        return Crew(
+          agents=self.agents,
+          tasks=self.tasks,
+          process=Process.sequential,
+          verbose=True,
+        )
+    ```
+
+  </Step>
+
+  <Step title="`main.py`에서 Flow 정의">
+  crew를 Flow에 연결합니다: `@start()` 단계에서 주제를 **상태**에 넣고, `@listen` 단계에서 crew를 실행합니다. 작업의 `output_file`은 그대로 `output/report.md`에 씁니다.
+
+    ```python main.py
+    # src/latest_ai_flow/main.py
+    from pydantic import BaseModel
+
+    from crewai.flow import Flow, listen, start
+
+    from latest_ai_flow.crews.content_crew.content_crew import ResearchCrew
+
+
+    class ResearchFlowState(BaseModel):
+      topic: str = ""
+      report: str = ""
+
+
+    class LatestAiFlow(Flow[ResearchFlowState]):
+      @start()
+      def prepare_topic(self, crewai_trigger_payload: dict | None = None):
+        if crewai_trigger_payload:
+          self.state.topic = crewai_trigger_payload.get("topic", "AI Agents")
+        else:
+          self.state.topic = "AI Agents"
+        print(f"주제: {self.state.topic}")
+
+      @listen(prepare_topic)
+      def run_research(self):
+        result = ResearchCrew().crew().kickoff(inputs={"topic": self.state.topic})
+        self.state.report = result.raw
+        print("연구 crew 실행 완료.")
+
+      @listen(run_research)
+      def summarize(self):
+        print("보고서 경로: output/report.md")
+
+
+    def kickoff():
+      LatestAiFlow().kickoff()
+
+
+    def plot():
+      LatestAiFlow().plot()
+
+
+    if __name__ == "__main__":
+      kickoff()
+    ```
+
+  <Tip>
+  패키지 이름이 `latest_ai_flow`가 아니면 `ResearchCrew` import 경로를 프로젝트 모듈 경로에 맞게 바꾸세요.
+  </Tip>
+  </Step>
+
+  <Step title="환경 변수">
+  프로젝트 루트의 `.env`에 다음을 설정합니다.
+
+    - `SERPER_API_KEY` — [Serper.dev](https://serper.dev/)에서 발급
+    - 모델 제공자 키 — [LLM 설정](/ko/concepts/llms#setting-up-your-llm) 참고
+  </Step>
+
+  <Step title="설치 및 실행">
+    <CodeGroup>
+      ```shell Terminal
+      crewai install
+      crewai run
+      ```
+    </CodeGroup>
+
+  `crewai run`은 프로젝트에 정의된 Flow 진입점을 실행합니다(crew와 동일한 명령이며, `pyproject.toml`의 프로젝트 유형은 `"flow"`입니다).
+  </Step>
+
+  <Step title="결과 확인">
+  Flow와 crew 로그가 출력되어야 합니다. 생성된 보고서는 **`output/report.md`**에서 확인하세요(발췌):
+
+  <CodeGroup>
+    ```markdown output/report.md
+    # 2026년 AI 에이전트: 동향과 전망
+
+    ## 요약
+    …
+
+    ## 주요 트렌드
+    - **도구 사용과 오케스트레이션** — …
+    - **엔터프라이즈 도입** — …
+
+    ## 시사점
+    …
+    ```
+  </CodeGroup>
+
+  실제 파일은 더 길고 실시간 검색 결과를 반영합니다.
+  </Step>
+</Steps>
+
+## 한 번에 이해하기
+
+1. **Flow** — `LatestAiFlow`는 `prepare_topic` → `run_research` → `summarize` 순으로 실행됩니다. 상태(`topic`, `report`)는 Flow에 있습니다.
+2. **Crew** — `ResearchCrew`는 에이전트 한 명·작업 하나로 실행됩니다. 연구원이 **Serper**로 웹을 검색하고 구조화된 보고서를 씁니다.
+3. **결과물** — 작업의 `output_file`이 `output/report.md`에 보고서를 씁니다.
+
+Flow 패턴(라우팅, 지속성, human-in-the-loop)을 더 보려면 [첫 Flow 만들기](/ko/guides/flows/first-flow)와 [Flows](/ko/concepts/flows)를 참고하세요. Flow 없이 crew만 쓰려면 [Crews](/ko/concepts/crews)를, 작업 없이 단일 `Agent`의 `kickoff()`만 쓰려면 [Agents](/ko/concepts/agents#direct-agent-interaction-with-kickoff)를 참고하세요.
+
+<Check>
+에이전트 crew와 저장된 보고서까지 이어진 Flow를 완성했습니다. 이제 단계·crew·도구를 더해 확장할 수 있습니다.
+</Check>
+
+### 이름 일치
+
+YAML 키(`researcher`, `research_task`)는 `@CrewBase` 클래스의 메서드 이름과 같아야 합니다. 전체 데코레이터 패턴은 [Crews](/ko/concepts/crews)를 참고하세요.
+
+## 배포
+
+로컬에서 정상 실행되고 프로젝트가 **GitHub** 저장소에 있으면 Flow를 **[CrewAI AMP](https://app.crewai.com)**에 올릴 수 있습니다. 프로젝트 루트에서:
+
+<CodeGroup>
+```bash 인증
+crewai login
+```
+
+```bash 배포 생성
+crewai deploy create
+```
+
+```bash 상태 및 로그
+crewai deploy status
+crewai deploy logs
+```
+
+```bash 코드 변경 후 반영
+crewai deploy push
+```
+
+```bash 배포 목록 또는 삭제
+crewai deploy list
+crewai deploy remove <deployment_id>
+```
+</CodeGroup>
+
+<Tip>
+  첫 배포는 보통 **약 1분** 정도 걸립니다. 전체 사전 요건과 웹 UI 절차는 [AMP에 배포](/ko/enterprise/guides/deploy-to-amp)를 참고하세요.
+</Tip>
+
+<CardGroup cols={2}>
+  <Card title="배포 가이드" icon="book" href="/ko/enterprise/guides/deploy-to-amp">
+    AMP 배포 단계별 안내(CLI 및 대시보드).
+  </Card>
+  <Card
+    title="커뮤니티"
+    icon="comments"
+    href="https://community.crewai.com"
+  >
+    아이디어를 나누고 프로젝트를 공유하며 다른 CrewAI 개발자와 소통하세요.
+  </Card>
+</CardGroup>

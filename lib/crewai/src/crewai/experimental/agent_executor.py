@@ -46,13 +46,15 @@ from crewai.events.types.observation_events import (
     GoalAchievedEarlyEvent,
     PlanRefinementEvent,
     PlanReplanTriggeredEvent,
+    PlanStepCompletedEvent,
+    PlanStepStartedEvent,
 )
 from crewai.events.types.tool_usage_events import (
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.flow.flow import Flow, StateProxy, listen, or_, router, start
+from crewai.flow.flow import Flow, listen, or_, router, start
 from crewai.flow.types import FlowMethodName
 from crewai.hooks.llm_hooks import (
     get_after_llm_call_hooks,
@@ -73,10 +75,12 @@ from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities.agent_utils import (
     _llm_stop_words_applied,
+    build_text_tool_calling_fallback_message,
     check_native_tool_support,
     enforce_rpm_limit,
     extract_tool_call_info,
     format_message_for_llm,
+    format_native_tool_output_for_agent,
     get_llm_response,
     handle_agent_action_core,
     handle_context_length,
@@ -86,6 +90,7 @@ from crewai.utilities.agent_utils import (
     has_reached_max_iterations,
     is_context_length_exceeded,
     is_inside_event_loop,
+    is_native_tool_calling_unsupported_error,
     is_tool_call_list,
     parse_tool_call_args,
     process_llm_response,
@@ -241,6 +246,23 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 self._tool_name_mapping,
             ) = setup_native_tools(self.original_tools)
 
+    def _downgrade_to_text_tool_calling(self) -> None:
+        """Switch a running execution from native tools to text tool calls."""
+        self.state.use_native_tools = False
+        self.state.pending_tool_calls.clear()
+        self._openai_tools = []
+        self._available_functions = {}
+        if self.tools:
+            self.state.messages.append(
+                format_message_for_llm(
+                    build_text_tool_calling_fallback_message(
+                        self.tools_description,
+                        self.tools_names,
+                    ),
+                    role="user",
+                )
+            )
+
     def _is_tool_call_list(self, response: list[Any]) -> bool:
         """Check if a response is a list of tool calls."""
         return is_tool_call_list(response)
@@ -253,11 +275,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             bool: True if stop words should be used.
         """
         return self.llm.supports_stop_words() if self.llm else False
-
-    @property
-    def state(self) -> AgentExecutorState:
-        """Get thread-safe state proxy."""
-        return StateProxy(self._state, self._state_lock)  # type: ignore[return-value]
 
     @property  # type: ignore[misc]
     def iterations(self) -> int:
@@ -348,6 +365,84 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             todos.append(todo)
 
         self.state.todos = TodoList(items=todos)
+
+    def _emit_plan_step_started(self, todo: TodoItem) -> None:
+        try:
+            crewai_event_bus.emit(
+                self.agent,
+                event=PlanStepStartedEvent(
+                    agent_role=self.agent.role,
+                    step_number=todo.step_number,
+                    step_description=todo.description,
+                    tool_to_use=todo.tool_to_use,
+                    from_task=self.task,
+                    from_agent=self.agent,
+                ),
+            )
+        except Exception:  # noqa: S110
+            pass
+
+    def _emit_plan_step_completed(
+        self,
+        todo: TodoItem,
+        *,
+        success: bool,
+        result: str | None = None,
+        error: str | None = None,
+    ) -> None:
+        try:
+            crewai_event_bus.emit(
+                self.agent,
+                event=PlanStepCompletedEvent(
+                    agent_role=self.agent.role,
+                    step_number=todo.step_number,
+                    step_description=todo.description,
+                    tool_to_use=todo.tool_to_use,
+                    success=success,
+                    result=result,
+                    error=error,
+                    from_task=self.task,
+                    from_agent=self.agent,
+                ),
+            )
+        except Exception:  # noqa: S110
+            pass
+
+    def _mark_todo_running(self, todo: TodoItem) -> None:
+        previous_status = todo.status
+        self.state.todos.mark_running(todo.step_number)
+        if previous_status != "running":
+            self._emit_plan_step_started(todo)
+
+    def _mark_todo_completed(
+        self,
+        step_number: int,
+        result: str | None = None,
+    ) -> None:
+        todo = self.state.todos.get_by_step_number(step_number)
+        previous_status = todo.status if todo else None
+        self.state.todos.mark_completed(step_number, result=result)
+        todo = self.state.todos.get_by_step_number(step_number)
+        if todo and previous_status != "completed":
+            self._emit_plan_step_completed(todo, success=True, result=result)
+
+    def _mark_todo_failed(
+        self,
+        step_number: int,
+        result: str | None = None,
+        error: str | None = None,
+    ) -> None:
+        todo = self.state.todos.get_by_step_number(step_number)
+        previous_status = todo.status if todo else None
+        self.state.todos.mark_failed(step_number, result=result)
+        todo = self.state.todos.get_by_step_number(step_number)
+        if todo and previous_status != "failed":
+            self._emit_plan_step_completed(
+                todo,
+                success=False,
+                result=result,
+                error=error,
+            )
 
     def _ensure_step_executor(self) -> Any:
         """Lazily create the StepExecutor (avoids circular imports)."""
@@ -597,8 +692,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             and not observation.step_completed_successfully
             and observation.needs_full_replan
         ):
-            self.state.todos.mark_failed(
-                current_todo.step_number, result=current_todo.result
+            self._mark_todo_failed(
+                current_todo.step_number,
+                result=current_todo.result,
+                error=observation.replan_reason,
             )
             if self.agent.verbose:
                 PRINTER.print(
@@ -614,8 +711,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             return "replan_now"
 
         if observation and not observation.step_completed_successfully:
-            self.state.todos.mark_failed(
-                current_todo.step_number, result=current_todo.result
+            self._mark_todo_failed(
+                current_todo.step_number,
+                result=current_todo.result,
             )
             if self.agent.verbose:
                 failed = len(self.state.todos.get_failed_todos())
@@ -629,9 +727,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 )
             return "continue_plan"
 
-        self.state.todos.mark_completed(
-            current_todo.step_number, result=current_todo.result
-        )
+        self._mark_todo_completed(current_todo.step_number, result=current_todo.result)
 
         if self.agent.verbose:
             completed = self.state.todos.completed_count
@@ -661,7 +757,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         # If observation is missing or step succeeded — continue
         if not observation or observation.step_completed_successfully:
-            self.state.todos.mark_completed(
+            self._mark_todo_completed(
                 current_todo.step_number, result=current_todo.result
             )
             if self.agent.verbose:
@@ -676,8 +772,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         # Step failed — only replan if observer explicitly requires it,
         # otherwise mark done and continue (same gate as low-effort).
         if observation.needs_full_replan:
-            self.state.todos.mark_failed(
-                current_todo.step_number, result=current_todo.result
+            self._mark_todo_failed(
+                current_todo.step_number,
+                result=current_todo.result,
+                error=observation.replan_reason,
             )
             if self.agent.verbose:
                 PRINTER.print(
@@ -694,9 +792,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         # Step failed but observer does not require a full replan — mark as
         # failed (not completed) so get_failed_todos() tracks it correctly.
-        self.state.todos.mark_failed(
-            current_todo.step_number, result=current_todo.result
-        )
+        self._mark_todo_failed(current_todo.step_number, result=current_todo.result)
         if self.agent.verbose:
             failed = len(self.state.todos.get_failed_todos())
             total = len(self.state.todos.items)
@@ -731,12 +827,12 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         observation = self.state.observations.get(current_todo.step_number)
         if not observation:
             # No observation available — default to continue
-            self.state.todos.mark_completed(current_todo.step_number)
+            self._mark_todo_completed(current_todo.step_number)
             return "continue_plan"
 
         # Goal already achieved — early termination
         if observation.goal_already_achieved:
-            self.state.todos.mark_completed(
+            self._mark_todo_completed(
                 current_todo.step_number, result=current_todo.result
             )
             if self.agent.verbose:
@@ -748,8 +844,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         # Full replan needed
         if observation.needs_full_replan:
-            self.state.todos.mark_failed(
-                current_todo.step_number, result=current_todo.result
+            self._mark_todo_failed(
+                current_todo.step_number,
+                result=current_todo.result,
+                error=observation.replan_reason,
             )
             if self.agent.verbose:
                 PRINTER.print(
@@ -761,9 +859,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         # Step failed — also trigger replan
         if not observation.step_completed_successfully:
-            self.state.todos.mark_failed(
-                current_todo.step_number, result=current_todo.result
-            )
+            self._mark_todo_failed(current_todo.step_number, result=current_todo.result)
             if self.agent.verbose:
                 PRINTER.print(
                     content="[Decide] Step failed — triggering replan",
@@ -773,7 +869,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             return "replan_now"
 
         if observation.remaining_plan_still_valid and observation.suggested_refinements:
-            self.state.todos.mark_completed(
+            self._mark_todo_completed(
                 current_todo.step_number, result=current_todo.result
             )
             if self.agent.verbose:
@@ -783,9 +879,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 )
             return "refine_and_continue"
 
-        self.state.todos.mark_completed(
-            current_todo.step_number, result=current_todo.result
-        )
+        self._mark_todo_completed(current_todo.step_number, result=current_todo.result)
         if self.agent.verbose:
             completed = self.state.todos.completed_count
             total = len(self.state.todos.items)
@@ -961,7 +1055,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             return "needs_replan"
 
         if len(ready) == 1:
-            self.state.todos.mark_running(ready[0].step_number)
+            self._mark_todo_running(ready[0])
             return "single_todo_ready"
 
         return "multiple_todos_ready"
@@ -1099,7 +1193,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         # Mark all ready todos as running
         for todo in ready:
-            self.state.todos.mark_running(todo.step_number)
+            self._mark_todo_running(todo)
 
         # Build context and executor for each todo, then run in parallel
         async def _run_step(todo: TodoItem) -> tuple[TodoItem, object]:
@@ -1127,7 +1221,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             if isinstance(item, BaseException):
                 error_msg = f"Error: {item!s}"
                 todo.result = error_msg
-                self.state.todos.mark_failed(todo.step_number, result=error_msg)
+                self._mark_todo_failed(
+                    todo.step_number,
+                    result=error_msg,
+                    error=error_msg,
+                )
                 if self.agent.verbose:
                     PRINTER.print(
                         content=f"Todo {todo.step_number} failed: {error_msg}",
@@ -1197,9 +1295,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             # Mark based on observation result
             if observation.step_completed_successfully:
-                self.state.todos.mark_completed(todo.step_number, result=todo.result)
+                self._mark_todo_completed(todo.step_number, result=todo.result)
             else:
-                self.state.todos.mark_failed(todo.step_number, result=todo.result)
+                self._mark_todo_failed(todo.step_number, result=todo.result)
 
             if self.agent.verbose:
                 PRINTER.print(
@@ -1349,7 +1447,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     def call_llm_native_tools(
         self,
     ) -> Literal[
-        "native_tool_calls", "native_finished", "context_error", "todo_satisfied"
+        "native_tool_calls",
+        "native_finished",
+        "context_error",
+        "todo_satisfied",
+        "continue_reasoning",
     ]:
         """Execute LLM call with native function calling.
 
@@ -1428,6 +1530,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             return self._route_finish_with_todos("native_finished")
 
         except Exception as e:
+            if is_native_tool_calling_unsupported_error(e):
+                self._downgrade_to_text_tool_calling()
+                return "continue_reasoning"
             if is_context_length_exceeded(e):
                 self._last_context_error = e
                 return "context_error"
@@ -1796,19 +1901,32 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         ):
             max_usage_reached = True
 
+        structured_tool: CrewStructuredTool | None = None
+        if original_tool is not None:
+            for structured in self.tools or []:
+                if getattr(structured, "_original_tool", None) is original_tool:
+                    structured_tool = structured
+                    break
+        if structured_tool is None:
+            for structured in self.tools or []:
+                if sanitize_tool_name(structured.name) == func_name:
+                    structured_tool = structured
+                    break
+
+        output_tool = original_tool or structured_tool
+
         # Check cache before executing
         from_cache = False
+        result = "Tool not found"
+        raw_tool_result: Any = result
         input_str = json.dumps(args_dict) if args_dict else ""
-        if self.tools_handler and self.tools_handler.cache:
+        if self.tools_handler and self.tools_handler.cache and output_tool is not None:
             cached_result = self.tools_handler.cache.read(
                 tool=func_name, input=input_str
             )
             if cached_result is not None:
-                result = (
-                    str(cached_result)
-                    if not isinstance(cached_result, str)
-                    else cached_result
-                )
+                raw_tool_result = cached_result
+                result = format_native_tool_output_for_agent(output_tool, cached_result)
                 from_cache = True
 
         # Emit tool usage started event
@@ -1826,18 +1944,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         error_event_emitted = False
 
         track_delegation_if_needed(func_name, args_dict, self.task)
-
-        structured_tool: CrewStructuredTool | None = None
-        if original_tool is not None:
-            for structured in self.tools or []:
-                if getattr(structured, "_original_tool", None) is original_tool:
-                    structured_tool = structured
-                    break
-        if structured_tool is None:
-            for structured in self.tools or []:
-                if sanitize_tool_name(structured.name) == func_name:
-                    structured_tool = structured
-                    break
 
         hook_blocked = False
         before_hook_context = ToolCallHookContext(
@@ -1864,12 +1970,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
-        elif not from_cache and not max_usage_reached:
-            result = "Tool not found"
+            raw_tool_result = result
+        elif not from_cache and not max_usage_reached and output_tool is not None:
             if func_name in self._available_functions:
                 try:
                     tool_func = self._available_functions[func_name]
                     raw_result = tool_func(**args_dict)
+                    raw_tool_result = raw_result
 
                     # Add to cache after successful execution (before string conversion)
                     if self.tools_handler and self.tools_handler.cache:
@@ -1883,14 +1990,12 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                                 tool=func_name, input=input_str, output=raw_result
                             )
 
-                    # Convert to string for message
-                    result = (
-                        str(raw_result)
-                        if not isinstance(raw_result, str)
-                        else raw_result
+                    result = format_native_tool_output_for_agent(
+                        output_tool, raw_result
                     )
                 except Exception as e:
                     result = f"Error executing tool: {e}"
+                    raw_tool_result = result
                     if self.task:
                         self.task.increment_tools_errors()
                     # Emit tool usage error event
@@ -1912,6 +2017,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
             else:
                 result = f"Tool '{func_name}' has reached its maximum usage limit and cannot be used anymore."
+            raw_tool_result = result
 
         # Execute after_tool_call hooks (even if blocked, to allow logging/monitoring)
         after_hook_context = ToolCallHookContext(
@@ -1922,6 +2028,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             task=self.task,
             crew=self.crew,
             tool_result=result,
+            raw_tool_result=raw_tool_result,
         )
         after_hooks = get_after_tool_call_hooks()
         try:
@@ -2085,7 +2192,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             step_number: The step number to mark.
             result: The result of the todo.
         """
-        self.state.todos.mark_completed(step_number, result=result)
+        self._mark_todo_completed(step_number, result=result)
 
         if self.agent.verbose:
             completed = self.state.todos.completed_count

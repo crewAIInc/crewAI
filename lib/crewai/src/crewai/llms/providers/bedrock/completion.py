@@ -428,7 +428,7 @@ class BedrockCompletion(BaseLLM):
                         self.additional_model_response_field_paths
                     )
 
-                if self.stream:
+                if self._effective_stream():
                     return self._handle_streaming_converse(
                         formatted_messages,
                         body,
@@ -556,7 +556,7 @@ class BedrockCompletion(BaseLLM):
                         self.additional_model_response_field_paths
                     )
 
-                if self.stream:
+                if self._effective_stream():
                     return await self._ahandle_streaming_converse(
                         formatted_messages,
                         body,

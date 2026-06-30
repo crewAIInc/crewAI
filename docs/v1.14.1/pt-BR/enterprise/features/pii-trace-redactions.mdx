@@ -1,0 +1,342 @@
+---
+title: Redação de PII para Traces
+description: "Redija automaticamente dados sensíveis de traces de execução de crews e flows"
+icon: "lock"
+mode: "wide"
+---
+
+## Visão Geral
+
+A Redação de PII é um recurso do CrewAI AMP que detecta e mascara automaticamente Informações de Identificação Pessoal (PII) nos traces de execução de crews e flows. Isso garante que dados sensíveis como números de cartão de crédito, CPF, endereços de e-mail e nomes não sejam expostos nos traces do CrewAI AMP. Você também pode criar reconhecedores personalizados para proteger dados específicos da sua organização.
+
+
+<Info>
+  A Redação de PII está disponível no plano Enterprise.
+  A implantação deve ser versão 1.8.0 ou superior.
+</Info>
+
+
+<Frame>
+  ![Visão Geral da Redação de PII](/images/enterprise/pii_mask_recognizer_trace_example.png)
+</Frame>
+
+
+## Por Que a Redação de PII é Importante
+
+Ao executar agentes de IA em produção, informações sensíveis frequentemente fluem através das suas crews:
+
+- Dados de clientes de integrações CRM
+- Informações financeiras de processadores de pagamento
+- Detalhes pessoais de envios de formulários
+- Dados internos de funcionários
+
+Sem a redação adequada, esses dados aparecem nos traces, tornando a conformidade com regulamentações como LGPD, HIPAA e PCI-DSS desafiadora. A Redação de PII resolve isso mascarando automaticamente dados sensíveis antes de serem armazenados nos traces.
+
+## Como Funciona
+
+1. **Detectar** - Escanear dados de eventos de trace para padrões de PII conhecidos
+2. **Classificar** - Identificar o tipo de dado sensível (cartão de crédito, CPF, e-mail, etc.)
+3. **Mascarar/Redigir** - Substituir os dados sensíveis por valores mascarados com base na sua configuração
+
+```
+Original: "Entre em contato com john.doe@company.com ou ligue para 555-123-4567"
+Redigido: "Entre em contato com <EMAIL_ADDRESS> ou ligue para <PHONE_NUMBER>"
+```
+
+## Habilitando a Redação de PII
+
+<Info>
+  Você deve estar no plano Enterprise e sua implantação deve ser versão 1.8.0 ou superior para usar este recurso.
+</Info>
+
+<Steps>
+  <Step title="Navegue até Configurações da Crew">
+    No painel do CrewAI AMP, selecione sua crew implantada e vá para uma de suas implantações/automações, depois navegue até **Settings** → **PII Protection**.
+  </Step>
+
+  <Step title="Habilitar Proteção PII">
+    Ative **PII Redaction for Traces**. Isso habilitará a varredura automática e redação de dados de trace.
+
+    <Info>
+      Você precisa habilitar manualmente a Redação de PII para cada implantação.
+    </Info>
+
+    <Frame>
+      ![Habilitar Redação de PII](/images/enterprise/pii_mask_recognizer_enable.png)
+    </Frame>
+  </Step>
+
+  <Step title="Configurar Tipos de Entidade">
+    Selecione quais tipos de PII detectar e redigir. Cada entidade pode ser habilitada ou desabilitada individualmente.
+
+    <Frame>
+      ![Configurar Entidades](/images/enterprise/pii_mask_recognizer_supported_entities.png)
+    </Frame>
+  </Step>
+
+  <Step title="Salvar">
+    Salve sua configuração. A redação de PII estará ativa em todas as execuções subsequentes da crew, sem necessidade de reimplantação.
+  </Step>
+</Steps>
+
+## Tipos de Entidade Suportados
+
+O CrewAI suporta os seguintes tipos de entidade PII, organizados por categoria.
+
+### Entidades Globais
+
+| Entidade | Descrição | Exemplo |
+|----------|-----------|---------|
+| `CREDIT_CARD` | Números de cartão de crédito/débito | "4111-1111-1111-1111" |
+| `CRYPTO` | Endereços de carteira de criptomoedas | "bc1qxy2kgd..." |
+| `DATE_TIME` | Datas e horários | "15 de janeiro de 2024" |
+| `EMAIL_ADDRESS` | Endereços de e-mail | "john@example.com" |
+| `IBAN_CODE` | Números de conta bancária internacional | "DE89 3704 0044 0532 0130 00" |
+| `IP_ADDRESS` | Endereços IPv4 e IPv6 | "192.168.1.1" |
+| `LOCATION` | Localizações geográficas | "São Paulo" |
+| `MEDICAL_LICENSE` | Números de licença médica | "CRM12345" |
+| `NRP` | Nacionalidades, grupos religiosos ou políticos | - |
+| `PERSON` | Nomes pessoais | "João Silva" |
+| `PHONE_NUMBER` | Números de telefone em vários formatos | "+55 (11) 98765-4321" |
+| `URL` | URLs da web | "https://example.com" |
+
+### Entidades Específicas dos EUA
+
+| Entidade | Descrição | Exemplo |
+|----------|-----------|---------|
+| `US_BANK_NUMBER` | Números de conta bancária dos EUA | "1234567890" |
+| `US_DRIVER_LICENSE` | Números de carteira de motorista dos EUA | "D1234567" |
+| `US_ITIN` | Número de Identificação de Contribuinte Individual | "900-70-0000" |
+| `US_PASSPORT` | Números de passaporte dos EUA | "123456789" |
+| `US_SSN` | Números de Seguro Social | "123-45-6789" |
+
+## Ações de Redação
+
+Para cada entidade habilitada, você pode configurar como os dados são redigidos:
+
+| Ação | Descrição | Exemplo de Saída |
+|------|-----------|------------------|
+| `mask` | Substituir pelo rótulo do tipo de entidade | `<CREDIT_CARD>` |
+| `redact` | Remover completamente o texto | *(vazio)* |
+
+## Reconhecedores Personalizados
+
+Além das entidades integradas, você pode criar **reconhecedores personalizados** para detectar padrões de PII específicos da sua organização.
+
+<Frame>
+  ![Reconhecedores Personalizados](/images/enterprise/pii_mask_recognizer.png)
+</Frame>
+
+### Tipos de Reconhecedores
+
+Você tem duas opções para reconhecedores personalizados:
+
+| Tipo | Melhor Para | Exemplo de Caso de Uso |
+|------|-------------|------------------------|
+| **Baseado em Padrão (Regex)** | Dados estruturados com formatos previsíveis | Valores de salário, IDs de funcionários, códigos de projeto |
+| **Lista de Negação** | Correspondências exatas de strings | Nomes de empresas, codinomes internos, termos específicos |
+
+### Criando um Reconhecedor Personalizado
+
+<Steps>
+  <Step title="Navegue até Reconhecedores Personalizados">
+    Vá para **Settings** da Organização → **Organization** → **Add Recognizer**.
+  </Step>
+
+  <Step title="Configure o Reconhecedor">
+    <Frame>
+      ![Configurar Reconhecedor](/images/enterprise/pii_mask_recognizer_create.png)
+    </Frame>
+
+    Configure os seguintes campos:
+    - **Name**: Um nome descritivo para o reconhecedor
+    - **Entity Type**: O rótulo da entidade que aparecerá na saída redigida (ex.: `EMPLOYEE_ID`, `SALARY`)
+    - **Type**: Escolha entre Padrão Regex ou Lista de Negação
+    - **Pattern/Values**: Padrão regex ou lista de strings para corresponder
+    - **Confidence Threshold**: Pontuação mínima (0.0-1.0) necessária para uma correspondência acionar a redação. Valores mais altos (ex.: 0.8) reduzem falsos positivos, mas podem perder algumas correspondências. Valores mais baixos (ex.: 0.5) capturam mais correspondências, mas podem redigir em excesso. O padrão é 0.8.
+    - **Context Words** (opcional): Palavras que aumentam a confiança de detecção quando encontradas próximas
+  </Step>
+
+  <Step title="Salvar">
+    Salve o reconhecedor. Ele estará disponível para habilitar em suas implantações.
+  </Step>
+</Steps>
+
+### Entendendo os Tipos de Entidade
+
+O **Entity Type** determina como o conteúdo correspondido aparece nos traces redigidos:
+
+```
+Entity Type: SALARY
+Pattern: salary:\s*\$\s*\d+
+Entrada: "Salário do funcionário: $50,000"
+Saída: "Salário do funcionário <SALARY>"
+```
+
+### Usando Palavras de Contexto
+
+Palavras de contexto melhoram a precisão aumentando a confiança quando termos específicos aparecem próximos ao padrão correspondido:
+
+```
+Context Words: "project", "code", "internal"
+Entity Type: PROJECT_CODE
+Pattern: PRJ-\d{4}
+```
+
+Quando "project" ou "code" aparece próximo a "PRJ-1234", o reconhecedor tem maior confiança de que é uma correspondência verdadeira, reduzindo falsos positivos.
+
+
+## Visualizando Traces Redigidos
+
+Uma vez que a redação de PII está habilitada, seus traces mostrarão valores redigidos no lugar de dados sensíveis:
+
+```
+Task Output: "Cliente <PERSON> fez o pedido #12345.
+E-mail de contato: <EMAIL_ADDRESS>, telefone: <PHONE_NUMBER>.
+Pagamento processado para cartão terminando em <CREDIT_CARD>."
+```
+
+Os valores redigidos são claramente marcados com colchetes angulares e o rótulo do tipo de entidade (ex.: `<EMAIL_ADDRESS>`), facilitando entender quais dados foram protegidos enquanto ainda permite depurar e monitorar o comportamento da crew.
+
+
+
+## Melhores Práticas
+
+### Considerações de Desempenho
+
+<Steps>
+  <Step title="Habilite Apenas Entidades Necessárias">
+    Cada entidade habilitada adiciona sobrecarga de processamento. Habilite apenas entidades relevantes para seus dados.
+  </Step>
+
+  <Step title="Use Padrões Específicos">
+    Para reconhecedores personalizados, use padrões específicos para reduzir falsos positivos e melhorar o desempenho. Padrões regex são melhores para identificar padrões específicos nos traces como salário, ID de funcionário, código de projeto, etc. Reconhecedores de lista de negação são melhores para identificar strings exatas nos traces como nomes de empresas, codinomes internos, etc.
+  </Step>
+
+  <Step title="Aproveite Palavras de Contexto">
+    Palavras de contexto melhoram a precisão acionando a detecção apenas quando o texto circundante corresponde.
+  </Step>
+</Steps>
+
+## Solução de Problemas
+
+<Accordion title="PII Não Está Sendo Redigido">
+  **Possíveis Causas:**
+  - Tipo de entidade não habilitado na configuração
+  - Padrão não corresponde ao formato dos dados
+  - Reconhecedor personalizado tem erros de sintaxe
+
+  **Soluções:**
+  - Verifique se a entidade está habilitada em Settings → Security
+  - Teste padrões regex com dados de amostra
+  - Verifique logs para erros de configuração
+</Accordion>
+
+<Accordion title="Muitos Dados Estão Sendo Redigidos">
+  **Possíveis Causas:**
+  - Tipos de entidade muito amplos habilitados (ex.: `DATE_TIME` captura datas em todos os lugares)
+  - Padrões de reconhecedor personalizado são muito gerais
+
+  **Soluções:**
+  - Desabilite entidades que causam falsos positivos
+  - Torne padrões personalizados mais específicos
+  - Adicione palavras de contexto para melhorar a precisão
+</Accordion>
+
+<Accordion title="Problemas de Desempenho">
+  **Possíveis Causas:**
+  - Muitas entidades habilitadas
+  - Entidades baseadas em NLP (`PERSON`, `LOCATION`, `NRP`) são computacionalmente caras pois usam modelos de machine learning
+
+  **Soluções:**
+  - Habilite apenas entidades que você realmente precisa
+  - Considere usar alternativas baseadas em padrão quando possível
+  - Monitore tempos de processamento de trace no painel
+</Accordion>
+
+---
+
+## Exemplo Prático: Correspondência de Padrão de Salário
+
+Este exemplo demonstra como criar um reconhecedor personalizado para detectar e mascarar informações de salário em seus traces.
+
+### Caso de Uso
+
+Sua crew processa dados de funcionários ou financeiros que incluem informações de salário em formatos como:
+- `salary: $50,000`
+- `salary: $125,000.00`
+- `salary:$1,500.50`
+
+Você deseja mascarar automaticamente esses valores para proteger dados sensíveis de remuneração.
+
+### Configuração
+
+<Frame>
+  ![Configuração do Reconhecedor de Salário](/images/enterprise/pii_mask_custom_recognizer_salary.png)
+</Frame>
+
+| Campo | Valor |
+|-------|-------|
+| **Name** | `SALARY` |
+| **Entity Type** | `SALARY` |
+| **Type** | Regex Pattern |
+| **Regex Pattern** | `salary:\s*\$\s*\d{1,3}(,\d{3})*(\.\d{2})?` |
+| **Action** | Mask |
+| **Confidence Threshold** | `0.8` |
+| **Context Words** | `salary, compensation, pay, wage, income` |
+
+### Análise do Padrão Regex
+
+| Componente do Padrão | Significado |
+|----------------------|-------------|
+| `salary:` | Corresponde ao texto literal "salary:" |
+| `\s*` | Corresponde a zero ou mais caracteres de espaço em branco |
+| `\$` | Corresponde ao sinal de dólar (escapado) |
+| `\s*` | Corresponde a zero ou mais caracteres de espaço em branco após $ |
+| `\d{1,3}` | Corresponde a 1-3 dígitos (ex.: "1", "50", "125") |
+| `(,\d{3})*` | Corresponde a milhares separados por vírgula (ex.: ",000", ",500,000") |
+| `(\.\d{2})?` | Opcionalmente corresponde a centavos (ex.: ".00", ".50") |
+
+### Resultados de Exemplo
+
+```
+Original: "Registro do funcionário mostra salary: $125,000.00 anualmente"
+Redigido: "Registro do funcionário mostra <SALARY> anualmente"
+
+Original: "Salário base salary:$50,000 com potencial de bônus"
+Redigido: "Salário base <SALARY> com potencial de bônus"
+```
+
+<Tip>
+  Adicionar palavras de contexto como "salary", "compensation", "pay", "wage" e "income" ajuda a aumentar a confiança de detecção quando esses termos aparecem próximos ao padrão correspondido, reduzindo falsos positivos.
+</Tip>
+
+### Habilite o Reconhecedor para Suas Implantações
+
+<Warning>
+  Criar um reconhecedor personalizado no nível da organização não o habilita automaticamente para suas implantações. Você deve habilitar manualmente cada reconhecedor para cada implantação onde deseja aplicá-lo.
+</Warning>
+
+Após criar seu reconhecedor personalizado, habilite-o para cada implantação:
+
+<Steps>
+  <Step title="Navegue até Sua Implantação">
+    Vá para sua implantação/automação e abra **Settings** → **PII Protection**.
+  </Step>
+
+  <Step title="Selecione Reconhecedores Personalizados">
+    Em **Mask Recognizers**, você verá os reconhecedores definidos pela sua organização. Marque a caixa ao lado dos reconhecedores que deseja habilitar.
+
+    <Frame>
+      ![Habilitar Reconhecedor Personalizado](/images/enterprise/pii_mask_recognizers_options.png)
+    </Frame>
+  </Step>
+
+  <Step title="Salvar Configuração">
+    Salve suas alterações. O reconhecedor estará ativo em todas as execuções subsequentes para esta implantação.
+  </Step>
+</Steps>
+
+<Info>
+  Repita este processo para cada implantação onde você precisa do reconhecedor personalizado. Isso oferece controle granular sobre quais reconhecedores estão ativos em diferentes ambientes (ex.: desenvolvimento vs. produção).
+</Info>

@@ -1,0 +1,551 @@
+---
+title: Google Docs Integration
+description: "Document creation and editing with Google Docs integration for CrewAI."
+icon: "file-lines"
+mode: "wide"
+---
+
+## Overview
+
+Enable your agents to create, edit, and manage Google Docs documents with text manipulation and formatting. Automate document creation, insert and replace text, manage content ranges, and streamline your document workflows with AI-powered automation.
+
+## Prerequisites
+
+Before using the Google Docs integration, ensure you have:
+
+- A [CrewAI AMP](https://app.crewai.com) account with an active subscription
+- A Google account with Google Docs access
+- Connected your Google account through the [Integrations page](https://app.crewai.com/crewai_plus/connectors)
+
+## Setting Up Google Docs Integration
+
+### 1. Connect Your Google Account
+
+1. Navigate to [CrewAI AMP Integrations](https://app.crewai.com/crewai_plus/connectors)
+2. Find **Google Docs** in the Authentication Integrations section
+3. Click **Connect** and complete the OAuth flow
+4. Grant the necessary permissions for document access
+5. Copy your Enterprise Token from [Integration Settings](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. Install Required Package
+
+```bash
+uv add crewai-tools
+```
+
+### 3. Environment Variable Setup
+
+<Note>
+  To use integrations with `Agent(apps=[])`, you must set the
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise
+  Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+Or add it to your `.env` file:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## Available Actions
+
+<AccordionGroup>
+  <Accordion title="google_docs/create_document">
+    **Description:** Create a new Google Document.
+
+    **Parameters:**
+    - `title` (string, optional): The title for the new document.
+
+  </Accordion>
+
+  <Accordion title="google_docs/get_document">
+    **Description:** Get the contents and metadata of a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The ID of the document to retrieve.
+    - `includeTabsContent` (boolean, optional): Whether to include tab content. Default is `false`.
+    - `suggestionsViewMode` (string, optional): The suggestions view mode to apply to the document. Enum: `DEFAULT_FOR_CURRENT_ACCESS`, `PREVIEW_SUGGESTIONS_ACCEPTED`, `PREVIEW_WITHOUT_SUGGESTIONS`. Default is `DEFAULT_FOR_CURRENT_ACCESS`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/batch_update">
+    **Description:** Apply one or more updates to a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The ID of the document to update.
+    - `requests` (array, required): A list of updates to apply to the document. Each item is an object representing a request.
+    - `writeControl` (object, optional): Provides control over how write requests are executed. Contains `requiredRevisionId` (string) and `targetRevisionId` (string).
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_text">
+    **Description:** Insert text into a Google Document at a specific location.
+
+    **Parameters:**
+    - `documentId` (string, required): The ID of the document to update.
+    - `text` (string, required): The text to insert.
+    - `index` (integer, optional): The zero-based index where to insert the text. Default is `1`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/replace_text">
+    **Description:** Replace all instances of text in a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The ID of the document to update.
+    - `containsText` (string, required): The text to find and replace.
+    - `replaceText` (string, required): The text to replace it with.
+    - `matchCase` (boolean, optional): Whether the search should respect case. Default is `false`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_content_range">
+    **Description:** Delete content from a specific range in a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The ID of the document to update.
+    - `startIndex` (integer, required): The start index of the range to delete.
+    - `endIndex` (integer, required): The end index of the range to delete.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_page_break">
+    **Description:** Insert a page break at a specific location in a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The ID of the document to update.
+    - `index` (integer, optional): The zero-based index where to insert the page break. Default is `1`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_named_range">
+    **Description:** Create a named range in a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The ID of the document to update.
+    - `name` (string, required): The name for the named range.
+    - `startIndex` (integer, required): The start index of the range.
+    - `endIndex` (integer, required): The end index of the range.
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_document_with_content">
+    **Description:** Create a new Google Document with content in one action.
+
+    **Parameters:**
+    - `title` (string, required): The title for the new document. Appears at the top of the document and in Google Drive.
+    - `content` (string, optional): The text content to insert into the document. Use `\n` for new paragraphs.
+
+  </Accordion>
+
+  <Accordion title="google_docs/append_text">
+    **Description:** Append text to the end of a Google Document. Automatically inserts at the document end without needing to specify an index.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID from create_document response or URL.
+    - `text` (string, required): Text to append at the end of the document. Use `\n` for new paragraphs.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_bold">
+    **Description:** Make text bold or remove bold formatting in a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `startIndex` (integer, required): Start position of text to format.
+    - `endIndex` (integer, required): End position of text to format (exclusive).
+    - `bold` (boolean, required): Set `true` to make bold, `false` to remove bold.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_italic">
+    **Description:** Make text italic or remove italic formatting in a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `startIndex` (integer, required): Start position of text to format.
+    - `endIndex` (integer, required): End position of text to format (exclusive).
+    - `italic` (boolean, required): Set `true` to make italic, `false` to remove italic.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_underline">
+    **Description:** Add or remove underline formatting from text in a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `startIndex` (integer, required): Start position of text to format.
+    - `endIndex` (integer, required): End position of text to format (exclusive).
+    - `underline` (boolean, required): Set `true` to underline, `false` to remove underline.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_strikethrough">
+    **Description:** Add or remove strikethrough formatting from text in a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `startIndex` (integer, required): Start position of text to format.
+    - `endIndex` (integer, required): End position of text to format (exclusive).
+    - `strikethrough` (boolean, required): Set `true` to add strikethrough, `false` to remove.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_font_size">
+    **Description:** Change the font size of text in a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `startIndex` (integer, required): Start position of text to format.
+    - `endIndex` (integer, required): End position of text to format (exclusive).
+    - `fontSize` (number, required): Font size in points. Common sizes: 10, 11, 12, 14, 16, 18, 24, 36.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_color">
+    **Description:** Change the color of text using RGB values (0-1 scale) in a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `startIndex` (integer, required): Start position of text to format.
+    - `endIndex` (integer, required): End position of text to format (exclusive).
+    - `red` (number, required): Red component (0-1). Example: `1` for full red.
+    - `green` (number, required): Green component (0-1). Example: `0.5` for half green.
+    - `blue` (number, required): Blue component (0-1). Example: `0` for no blue.
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_hyperlink">
+    **Description:** Turn existing text into a clickable hyperlink in a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `startIndex` (integer, required): Start position of text to make into a link.
+    - `endIndex` (integer, required): End position of text to make into a link (exclusive).
+    - `url` (string, required): The URL the link should point to. Example: `"https://example.com"`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/apply_heading_style">
+    **Description:** Apply a heading or paragraph style to a text range in a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `startIndex` (integer, required): Start position of paragraph(s) to style.
+    - `endIndex` (integer, required): End position of paragraph(s) to style.
+    - `style` (string, required): The style to apply. Enum: `NORMAL_TEXT`, `TITLE`, `SUBTITLE`, `HEADING_1`, `HEADING_2`, `HEADING_3`, `HEADING_4`, `HEADING_5`, `HEADING_6`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_paragraph_alignment">
+    **Description:** Set text alignment for paragraphs in a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `startIndex` (integer, required): Start position of paragraph(s) to align.
+    - `endIndex` (integer, required): End position of paragraph(s) to align.
+    - `alignment` (string, required): Text alignment. Enum: `START` (left), `CENTER`, `END` (right), `JUSTIFIED`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_line_spacing">
+    **Description:** Set line spacing for paragraphs in a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `startIndex` (integer, required): Start position of paragraph(s).
+    - `endIndex` (integer, required): End position of paragraph(s).
+    - `lineSpacing` (number, required): Line spacing as percentage. `100` = single, `115` = 1.15x, `150` = 1.5x, `200` = double.
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_paragraph_bullets">
+    **Description:** Convert paragraphs to a bulleted or numbered list in a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `startIndex` (integer, required): Start position of paragraphs to convert to list.
+    - `endIndex` (integer, required): End position of paragraphs to convert to list.
+    - `bulletPreset` (string, required): Bullet/numbering style. Enum: `BULLET_DISC_CIRCLE_SQUARE`, `BULLET_DIAMONDX_ARROW3D_SQUARE`, `BULLET_CHECKBOX`, `BULLET_ARROW_DIAMOND_DISC`, `BULLET_STAR_CIRCLE_SQUARE`, `NUMBERED_DECIMAL_ALPHA_ROMAN`, `NUMBERED_DECIMAL_ALPHA_ROMAN_PARENS`, `NUMBERED_DECIMAL_NESTED`, `NUMBERED_UPPERALPHA_ALPHA_ROMAN`, `NUMBERED_UPPERROMAN_UPPERALPHA_DECIMAL`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_paragraph_bullets">
+    **Description:** Remove bullets or numbering from paragraphs in a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `startIndex` (integer, required): Start position of list paragraphs.
+    - `endIndex` (integer, required): End position of list paragraphs.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_table_with_content">
+    **Description:** Insert a table with content into a Google Document in one action. Provide content as a 2D array.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `rows` (integer, required): Number of rows in the table.
+    - `columns` (integer, required): Number of columns in the table.
+    - `index` (integer, optional): Position to insert the table. If not provided, the table is inserted at the end of the document.
+    - `content` (array, required): Table content as a 2D array. Each inner array is a row. Example: `[["Year", "Revenue"], ["2023", "$43B"], ["2024", "$45B"]]`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_table_row">
+    **Description:** Insert a new row above or below a reference cell in an existing table.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `tableStartIndex` (integer, required): The start index of the table. Get from get_document.
+    - `rowIndex` (integer, required): Row index (0-based) of reference cell.
+    - `columnIndex` (integer, optional): Column index (0-based) of reference cell. Default is `0`.
+    - `insertBelow` (boolean, optional): If `true`, insert below the reference row. If `false`, insert above. Default is `true`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_table_column">
+    **Description:** Insert a new column left or right of a reference cell in an existing table.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `tableStartIndex` (integer, required): The start index of the table.
+    - `rowIndex` (integer, optional): Row index (0-based) of reference cell. Default is `0`.
+    - `columnIndex` (integer, required): Column index (0-based) of reference cell.
+    - `insertRight` (boolean, optional): If `true`, insert to the right. If `false`, insert to the left. Default is `true`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_table_row">
+    **Description:** Delete a row from an existing table in a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `tableStartIndex` (integer, required): The start index of the table.
+    - `rowIndex` (integer, required): Row index (0-based) to delete.
+    - `columnIndex` (integer, optional): Column index (0-based) of any cell in the row. Default is `0`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_table_column">
+    **Description:** Delete a column from an existing table in a Google Document.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `tableStartIndex` (integer, required): The start index of the table.
+    - `rowIndex` (integer, optional): Row index (0-based) of any cell in the column. Default is `0`.
+    - `columnIndex` (integer, required): Column index (0-based) to delete.
+
+  </Accordion>
+
+  <Accordion title="google_docs/merge_table_cells">
+    **Description:** Merge a range of table cells into a single cell. Content from all cells is preserved.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `tableStartIndex` (integer, required): The start index of the table.
+    - `rowIndex` (integer, required): Starting row index (0-based) for the merge.
+    - `columnIndex` (integer, required): Starting column index (0-based) for the merge.
+    - `rowSpan` (integer, required): Number of rows to merge.
+    - `columnSpan` (integer, required): Number of columns to merge.
+
+  </Accordion>
+
+  <Accordion title="google_docs/unmerge_table_cells">
+    **Description:** Unmerge previously merged table cells back into individual cells.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `tableStartIndex` (integer, required): The start index of the table.
+    - `rowIndex` (integer, required): Row index (0-based) of the merged cell.
+    - `columnIndex` (integer, required): Column index (0-based) of the merged cell.
+    - `rowSpan` (integer, required): Number of rows the merged cell spans.
+    - `columnSpan` (integer, required): Number of columns the merged cell spans.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_inline_image">
+    **Description:** Insert an image from a public URL into a Google Document. The image must be publicly accessible, under 50MB, and in PNG/JPEG/GIF format.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `uri` (string, required): Public URL of the image. Must be accessible without authentication.
+    - `index` (integer, optional): Position to insert the image. If not provided, the image is inserted at the end of the document. Default is `1`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_section_break">
+    **Description:** Insert a section break to create document sections with different formatting.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `index` (integer, required): Position to insert the section break.
+    - `sectionType` (string, required): The type of section break. Enum: `CONTINUOUS` (stays on same page), `NEXT_PAGE` (starts a new page).
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_header">
+    **Description:** Create a header for the document. Returns a headerId which can be used with insert_text to add header content.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `type` (string, optional): Header type. Enum: `DEFAULT`. Default is `DEFAULT`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_footer">
+    **Description:** Create a footer for the document. Returns a footerId which can be used with insert_text to add footer content.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `type` (string, optional): Footer type. Enum: `DEFAULT`. Default is `DEFAULT`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_header">
+    **Description:** Delete a header from the document. Use get_document to find the headerId.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `headerId` (string, required): The header ID to delete. Get from get_document response.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_footer">
+    **Description:** Delete a footer from the document. Use get_document to find the footerId.
+
+    **Parameters:**
+    - `documentId` (string, required): The document ID.
+    - `footerId` (string, required): The footer ID to delete. Get from get_document response.
+
+  </Accordion>
+</AccordionGroup>
+
+## Usage Examples
+
+### Basic Google Docs Agent Setup
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent with Google Docs capabilities
+docs_agent = Agent(
+    role="Document Creator",
+    goal="Create and manage Google Docs documents efficiently",
+    backstory="An AI assistant specialized in Google Docs document creation and editing.",
+    apps=['google_docs']  # All Google Docs actions will be available
+)
+
+# Task to create a new document
+create_doc_task = Task(
+    description="Create a new Google Document titled 'Project Status Report'",
+    agent=docs_agent,
+    expected_output="New Google Document 'Project Status Report' created successfully"
+)
+
+# Run the task
+crew = Crew(
+    agents=[docs_agent],
+    tasks=[create_doc_task]
+)
+
+crew.kickoff()
+```
+
+### Text Editing and Content Management
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent focused on text editing
+text_editor = Agent(
+    role="Document Editor",
+    goal="Edit and update content in Google Docs documents",
+    backstory="An AI assistant skilled in precise text editing and content management.",
+    apps=['google_docs/insert_text', 'google_docs/replace_text', 'google_docs/delete_content_range']
+)
+
+# Task to edit document content
+edit_content_task = Task(
+    description="In document 'your_document_id', insert the text 'Executive Summary: ' at the beginning, then replace all instances of 'TODO' with 'COMPLETED'.",
+    agent=text_editor,
+    expected_output="Document updated with new text inserted and TODO items replaced."
+)
+
+crew = Crew(
+    agents=[text_editor],
+    tasks=[edit_content_task]
+)
+
+crew.kickoff()
+```
+
+### Advanced Document Operations
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent for advanced document operations
+document_formatter = Agent(
+    role="Document Formatter",
+    goal="Apply advanced formatting and structure to Google Docs",
+    backstory="An AI assistant that handles complex document formatting and organization.",
+    apps=['google_docs/batch_update', 'google_docs/insert_page_break', 'google_docs/create_named_range']
+)
+
+# Task to format document
+format_doc_task = Task(
+    description="In document 'your_document_id', insert a page break at position 100, create a named range called 'Introduction' for characters 1-50, and apply batch formatting updates.",
+    agent=document_formatter,
+    expected_output="Document formatted with page break, named range, and styling applied."
+)
+
+crew = Crew(
+    agents=[document_formatter],
+    tasks=[format_doc_task]
+)
+
+crew.kickoff()
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Authentication Errors**
+
+- Ensure your Google account has the necessary permissions for Google Docs access.
+- Verify that the OAuth connection includes all required scopes (`https://www.googleapis.com/auth/documents`).
+
+**Document ID Issues**
+
+- Double-check document IDs for correctness.
+- Ensure the document exists and is accessible to your account.
+- Document IDs can be found in the Google Docs URL.
+
+**Text Insertion and Range Operations**
+
+- When using `insert_text` or `delete_content_range`, ensure index positions are valid.
+- Remember that Google Docs uses zero-based indexing.
+- The document must have content at the specified index positions.
+
+**Batch Update Request Formatting**
+
+- When using `batch_update`, ensure the `requests` array is correctly formatted according to the Google Docs API documentation.
+- Complex updates require specific JSON structures for each request type.
+
+**Replace Text Operations**
+
+- For `replace_text`, ensure the `containsText` parameter exactly matches the text you want to replace.
+- Use `matchCase` parameter to control case sensitivity.
+
+### Getting Help
+
+<Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
+  Contact our support team for assistance with Google Docs integration setup or
+  troubleshooting.
+</Card>

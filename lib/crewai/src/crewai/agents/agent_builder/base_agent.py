@@ -85,9 +85,28 @@ def _validate_llm_ref(value: Any) -> Any:
         import inspect
 
         llm_type = value.get("llm_type")
-        if not llm_type or llm_type not in _LLM_TYPE_REGISTRY:
+        if not llm_type:
+            model = (
+                value.get("model")
+                or value.get("model_name")
+                or value.get("deployment_name")
+            )
+            if not model:
+                raise ValueError(
+                    "LLM config objects must include 'model', 'model_name', "
+                    "or 'deployment_name', or a serialized 'llm_type'. "
+                    f"Got keys: {list(value)}"
+                )
+            from crewai.llm import LLM
+
+            llm_kwargs = {**value, "model": model}
+            llm_kwargs.pop("model_name", None)
+            llm_kwargs.pop("deployment_name", None)
+            return LLM(**llm_kwargs)
+
+        if llm_type not in _LLM_TYPE_REGISTRY:
             raise ValueError(
-                f"Unknown or missing llm_type: {llm_type!r}. "
+                f"Unknown llm_type: {llm_type!r}. "
                 f"Expected one of {list(_LLM_TYPE_REGISTRY)}"
             )
         dotted = _LLM_TYPE_REGISTRY[llm_type]
@@ -369,7 +388,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     )
     skills: list[Path | Skill | str] | None = Field(
         default=None,
-        description="Agent Skills. Accepts paths for discovery, pre-loaded Skill objects, or '@org/name' registry refs.",
+        description="Agent Skills. Accepts paths for discovery, inline SKILL.md strings, pre-loaded Skill objects, or '@org/name' registry refs.",
         min_length=1,
     )
     execution_context: ExecutionContext | None = Field(default=None)
@@ -474,20 +493,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     @classmethod
     def process_model_config(cls, values: Any) -> dict[str, Any]:
         return process_config(values, cls)
-
-    @field_validator("skills", mode="before")
-    @classmethod
-    def coerce_skill_strings(cls, skills: Any) -> Any:
-        """Coerce plain path strings to Path objects; keep @-prefixed refs as str."""
-        if not isinstance(skills, list):
-            return skills
-        result = []
-        for item in skills:
-            if isinstance(item, str) and not item.startswith("@"):
-                result.append(Path(item))
-            else:
-                result.append(item)
-        return result
 
     @field_validator("tools")
     @classmethod
@@ -618,7 +623,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         if self.memory is True:
             from crewai.memory.unified_memory import Memory
 
-            self.memory = Memory()
+            memory_kwargs: dict[str, Any] = {}
+            if self.llm is not None:
+                memory_kwargs["llm"] = self.llm
+            self.memory = Memory(**memory_kwargs)
         elif self.memory is False:
             self.memory = None
         return self

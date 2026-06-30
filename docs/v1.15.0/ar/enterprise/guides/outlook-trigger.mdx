@@ -1,0 +1,69 @@
+---
+title: "مشغل Outlook"
+description: "إطلاق الأتمتات من رسائل Outlook وتحديثات التقويم"
+icon: "microsoft"
+mode: "wide"
+---
+
+## نظرة عامة
+
+أتمت الاستجابات عندما يسلّم Outlook رسالة جديدة أو عند إزالة حدث من التقويم. تقوم الفرق عادة بتوجيه التصعيدات وإنشاء تذاكر أو تنبيه الحاضرين بالإلغاءات.
+
+<Tip>
+  اربط Outlook في **Tools & Integrations** وتأكد من تفعيل المشغل
+  لعملية النشر.
+</Tip>
+
+## تفعيل مشغل Outlook
+
+1. افتح عملية النشر في CrewAI AMP
+2. انتقل إلى علامة تبويب **Triggers**
+3. حدد موقع **Outlook** وبدّل مفتاح التبديل للتفعيل
+
+<Frame caption="اتصال مشغل Microsoft Outlook">
+  <img
+    src="/images/enterprise/outlook-trigger.png"
+    alt="تفعيل أو تعطيل المشغلات بالتبديل"
+  />
+</Frame>
+
+## مثال: تلخيص رسالة بريد إلكتروني جديدة
+
+```python
+from outlook_message_crew import OutlookMessageTrigger
+
+crew = OutlookMessageTrigger().crew()
+crew.kickoff({
+    "crewai_trigger_payload": outlook_payload,
+})
+```
+
+يستخرج الطاقم تفاصيل المرسل والموضوع ومعاينة النص والمرفقات قبل إنشاء استجابة منظمة.
+
+## الاختبار المحلي
+
+اختبر تكامل مشغل Outlook محلياً باستخدام CrewAI CLI:
+
+```bash
+# عرض جميع المشغلات المتاحة
+crewai triggers list
+
+# محاكاة مشغل Outlook بحمولة واقعية
+crewai triggers run microsoft_outlook/email_received
+```
+
+سينفذ أمر `crewai triggers run` طاقمك بحمولة Outlook كاملة، مما يتيح لك اختبار منطق التحليل قبل النشر.
+
+<Warning>
+  استخدم `crewai triggers run microsoft_outlook/email_received` (وليس `crewai run`)
+  لمحاكاة تنفيذ المشغل أثناء التطوير. بعد النشر، سيتلقى طاقمك
+  حمولة المشغل تلقائياً.
+</Warning>
+
+## استكشاف الأخطاء وإصلاحها
+
+- تحقق من أن موصل Outlook لا يزال مفوّضاً؛ يجب تجديد الاشتراك دورياً
+- اختبر محلياً بـ `crewai triggers run microsoft_outlook/email_received` لرؤية هيكل الحمولة بالضبط
+- إذا كانت المرفقات مفقودة، تأكد من أن اشتراك webhook يتضمن علامة `includeResourceData`
+- راجع سجلات التنفيذ عندما تفشل الأحداث في المطابقة — حمولات الإلغاء تفتقد قوائم الحاضرين حسب التصميم ويجب أن يأخذ الطاقم ذلك في الاعتبار
+- تذكر: استخدم `crewai triggers run` (وليس `crewai run`) لمحاكاة تنفيذ المشغل

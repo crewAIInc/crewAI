@@ -1,0 +1,132 @@
+---
+title: "Crew 훈련"
+description: "CrewAI AMP 플랫폼에서 직접 배포된 Crew를 훈련하여 시간이 지남에 따라 에이전트 성능을 개선하세요"
+icon: "dumbbell"
+mode: "wide"
+---
+
+훈련을 통해 CrewAI AMP의 **Training** 탭에서 직접 반복 훈련 세션을 실행하여 Crew 성능을 개선할 수 있습니다. 플랫폼은 **자동 훈련 모드**를 사용합니다 — 반복 프로세스를 자동으로 처리하며, 반복마다 대화형 피드백이 필요한 CLI 훈련과는 다릅니다.
+
+훈련이 완료되면 CrewAI는 에이전트 출력을 평가하고 각 에이전트에 대한 실행 가능한 제안으로 피드백을 통합합니다. 이러한 제안은 향후 Crew 실행에 적용되어 출력 품질을 개선합니다.
+
+<Tip>
+  CrewAI 훈련이 내부적으로 어떻게 작동하는지에 대한 자세한 내용은 [훈련 개념](/ko/concepts/training) 페이지를 참조하세요.
+</Tip>
+
+## 사전 요구 사항
+
+<CardGroup cols={2}>
+  <Card title="활성 배포" icon="rocket">
+    **Ready** 상태의 활성 배포(Crew 유형)가 있는 CrewAI AMP 계정이 필요합니다.
+  </Card>
+  <Card title="실행 권한" icon="key">
+    훈련하려는 배포에 대한 실행 권한이 계정에 있어야 합니다.
+  </Card>
+</CardGroup>
+
+## Crew 훈련 방법
+
+<Steps>
+  <Step title="Training 탭 열기">
+    **Deployments**로 이동하여 배포를 클릭한 다음 **Training** 탭을 선택합니다.
+  </Step>
+
+  <Step title="훈련 이름 입력">
+    **Training Name**을 입력합니다 — 이것은 훈련 결과를 저장하는 데 사용되는 `.pkl` 파일 이름이 됩니다. 예를 들어, "Expert Mode Training"은 `expert_mode_training.pkl`을 생성합니다.
+  </Step>
+
+  <Step title="Crew 입력값 작성">
+    Crew의 입력 필드를 입력합니다. 이는 일반 kickoff에 제공하는 것과 동일한 입력값입니다 — Crew 구성에 따라 동적으로 로드됩니다.
+  </Step>
+
+  <Step title="훈련 시작">
+    **Train Crew**를 클릭합니다. 프로세스가 실행되는 동안 버튼이 스피너와 함께 "Training..."으로 변경됩니다.
+
+    내부적으로:
+    - 배포에 대한 훈련 레코드가 생성됩니다
+    - 플랫폼이 배포의 자동 훈련 엔드포인트를 호출합니다
+    - Crew가 자동으로 반복을 실행합니다 — 수동 피드백이 필요하지 않습니다
+  </Step>
+
+  <Step title="진행 상황 모니터링">
+    **Current Training Status** 패널에 다음이 표시됩니다:
+    - **Status** — 훈련 실행의 현재 상태
+    - **Nº Iterations** — 구성된 훈련 반복 횟수
+    - **Filename** — 생성 중인 `.pkl` 파일
+    - **Started At** — 훈련 시작 시간
+    - **Training Inputs** — 제공한 입력값
+  </Step>
+</Steps>
+
+## 훈련 결과 이해
+
+훈련이 완료되면 다음 정보가 포함된 에이전트별 결과 카드가 표시됩니다:
+
+- **Agent Role** — Crew에서 에이전트의 이름/역할
+- **Final Quality** — 에이전트 출력 품질을 평가하는 0~10점 점수
+- **Final Summary** — 훈련 중 에이전트 성능 요약
+- **Suggestions** — 에이전트 동작 개선을 위한 실행 가능한 권장 사항
+
+### 제안 편집
+
+모든 에이전트의 제안을 개선할 수 있습니다:
+
+<Steps>
+  <Step title="Edit 클릭">
+    에이전트의 결과 카드에서 제안 옆에 있는 **Edit** 버튼을 클릭합니다.
+  </Step>
+
+  <Step title="제안 수정">
+    원하는 개선 사항을 더 잘 반영하도록 제안 텍스트를 업데이트합니다.
+  </Step>
+
+  <Step title="변경 사항 저장">
+    **Save**를 클릭합니다. 편집된 제안이 배포에 다시 동기화되고 이후 모든 실행에 사용됩니다.
+  </Step>
+</Steps>
+
+## 훈련 데이터 사용
+
+Crew에 훈련 결과를 적용하려면:
+
+1. 완료된 훈련 세션에서 **Training Filename**(`.pkl` 파일)을 확인합니다.
+2. 배포의 kickoff 또는 실행 구성에서 이 파일 이름을 지정합니다.
+3. Crew가 자동으로 훈련 파일을 로드하고 저장된 제안을 각 에이전트에 적용합니다.
+
+이는 에이전트가 이후 모든 실행에서 훈련 중에 생성된 피드백의 혜택을 받는다는 것을 의미합니다.
+
+## 이전 훈련
+
+Training 탭 하단에는 배포에 대한 **모든 과거 훈련 세션 기록**이 표시됩니다. 이전 훈련 실행을 검토하거나 결과를 비교하거나 사용할 다른 훈련 파일을 선택하는 데 사용합니다.
+
+## 오류 처리
+
+훈련 실행이 실패하면 상태 패널에 무엇이 잘못되었는지 설명하는 메시지와 함께 오류 상태가 표시됩니다.
+
+훈련 실패의 일반적인 원인:
+- **배포 런타임이 업데이트되지 않음** — 배포가 최신 버전을 실행하고 있는지 확인하세요
+- **Crew 실행 오류** — Crew의 작업 로직 또는 에이전트 구성 내 문제
+- **네트워크 문제** — 플랫폼과 배포 간의 연결 문제
+
+## 제한 사항
+
+<Info>
+  훈련 워크플로를 계획할 때 다음 제약 사항을 염두에 두세요:
+  - **배포당 한 번에 하나의 활성 훈련** — 다른 훈련을 시작하기 전에 현재 실행이 완료될 때까지 기다리세요
+  - **자동 훈련 모드만** — 플랫폼은 CLI처럼 반복당 대화형 피드백을 지원하지 않습니다
+  - **훈련 데이터는 배포별** — 훈련 결과는 특정 배포 인스턴스 및 버전에 연결됩니다
+</Info>
+
+## 관련 리소스
+
+<CardGroup cols={3}>
+  <Card title="훈련 개념" icon="book" href="/ko/concepts/training">
+    CrewAI 훈련이 내부적으로 어떻게 작동하는지 알아보세요.
+  </Card>
+  <Card title="Crew 시작" icon="play" href="/ko/enterprise/guides/kickoff-crew">
+    AMP 플랫폼에서 배포된 Crew를 실행하세요.
+  </Card>
+  <Card title="AMP에 배포" icon="cloud-arrow-up" href="/ko/enterprise/guides/deploy-to-amp">
+    Crew를 배포하고 훈련 준비를 완료하세요.
+  </Card>
+</CardGroup>
