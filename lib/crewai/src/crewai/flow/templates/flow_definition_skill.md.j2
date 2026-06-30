@@ -72,7 +72,9 @@ Pick the simplest action that does the job.
 
 If an agent is a router, make its goal say exactly what to return, for example:
 `Return exactly one bare value: approved, rejected, or needs_review. Do not include explanation.`
+{% if include_expression_action %}
 Prefer `call: expression` when routing can be computed without an agent.
+{% endif %}
 
 ## CEL And Dynamic Values
 

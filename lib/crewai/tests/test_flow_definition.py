@@ -1339,4 +1339,8 @@ def test_skill_with_skips_is_shorter():
     )
 
     assert "[Method](#method)" in trimmed
+    assert "call: expression" not in trimmed
+    assert "Prefer `call: expression`" not in trimmed
+    assert "call: script" not in trimmed
+    assert "call: tool" not in trimmed
     assert len(trimmed) < len(full)
