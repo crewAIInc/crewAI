@@ -26,6 +26,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.types.streaming import FlowStreamingOutput, StreamChunk
 from crewai_cli.command import AuthenticationRequiredError
 from crewai_cli import run_crew
 from crewai_cli.crew_run_tui import (
@@ -175,6 +176,29 @@ def test_conversation_turn_done_records_assistant_message() -> None:
     assert app._conversation_turn_in_progress is False
     assert app._status == "chatting"
     assert isinstance(app._crew_result, RawResult)
+
+
+def test_conversation_streaming_result_is_consumed_before_result_access() -> None:
+    streaming = FlowStreamingOutput()
+    result_accessed_before_completion = False
+
+    def chunks():
+        yield StreamChunk(content="hello ")
+        yield StreamChunk(content="world")
+        streaming._set_result("hello world")
+
+    streaming._sync_iterator = chunks()
+
+    try:
+        streaming.result
+    except RuntimeError:
+        result_accessed_before_completion = True
+
+    app = CrewRunApp(conversational=True)
+
+    assert result_accessed_before_completion is True
+    assert app._consume_conversation_streaming_result(streaming) == "hello world"
+    assert streaming.get_full_text() == "hello world"
 
 
 @pytest.mark.asyncio
