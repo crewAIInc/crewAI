@@ -1,13 +1,30 @@
 """Tests for the VoyageAI embedding function."""
 
+import sys
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 
 from crewai.rag.embeddings.providers.voyageai.embedding_callable import (
-    CONTEXTUALIZED_CHUNK_SIZE,
     VoyageAIEmbeddingFunction,
 )
+
+
+@contextmanager
+def mock_voyageai_client():
+    """Inject a fake ``voyageai`` module so tests run without the optional dependency.
+
+    ``VoyageAIEmbeddingFunction`` imports ``voyageai`` lazily, so patching
+    ``voyageai.Client`` directly fails when the package is not installed (e.g. in
+    CI). Registering a mock module in ``sys.modules`` makes the lazy import resolve
+    to the mock regardless of whether the real package is present.
+    """
+    mock_client = MagicMock()
+    mock_module = MagicMock()
+    mock_module.Client.return_value = mock_client
+    with patch.dict(sys.modules, {"voyageai": mock_module}):
+        yield mock_client
 
 
 class TestVoyageAIEmbeddingFunction:
@@ -15,9 +32,7 @@ class TestVoyageAIEmbeddingFunction:
 
     def test_standard_model_uses_embed(self):
         """Standard models should call the regular embed endpoint."""
-        with patch("voyageai.Client") as mock_client_class:
-            mock_client = MagicMock()
-            mock_client_class.return_value = mock_client
+        with mock_voyageai_client() as mock_client:
             mock_client.embed.return_value = MagicMock(embeddings=[[0.1, 0.2]])
 
             fn = VoyageAIEmbeddingFunction(api_key="voyage-key", model="voyage-2")
@@ -29,9 +44,7 @@ class TestVoyageAIEmbeddingFunction:
 
     def test_contextualized_model_uses_contextualized_embed(self):
         """voyage-context-4 should call the contextualized embeddings endpoint."""
-        with patch("voyageai.Client") as mock_client_class:
-            mock_client = MagicMock()
-            mock_client_class.return_value = mock_client
+        with mock_voyageai_client() as mock_client:
             mock_client.contextualized_embed.return_value = MagicMock(
                 results=[
                     MagicMock(embeddings=[[0.1, 0.2]]),
@@ -50,9 +63,7 @@ class TestVoyageAIEmbeddingFunction:
 
     def test_contextualized_call_wraps_inputs_as_list_of_lists(self):
         """Each input string is wrapped as its own single-chunk document (List[List[str]])."""
-        with patch("voyageai.Client") as mock_client_class:
-            mock_client = MagicMock()
-            mock_client_class.return_value = mock_client
+        with mock_voyageai_client() as mock_client:
             mock_client.contextualized_embed.return_value = MagicMock(
                 results=[MagicMock(embeddings=[[0.1, 0.2]])]
             )
@@ -71,9 +82,7 @@ class TestVoyageAIEmbeddingFunction:
 
     def test_contextualized_input_is_list_of_lists(self):
         """Input must be passed as List[List[str]], each inner list is one document with its chunks."""
-        with patch("voyageai.Client") as mock_client_class:
-            mock_client = MagicMock()
-            mock_client_class.return_value = mock_client
+        with mock_voyageai_client() as mock_client:
             mock_client.contextualized_embed.return_value = MagicMock(
                 results=[
                     MagicMock(embeddings=[[0.1, 0.2]]),
@@ -91,9 +100,7 @@ class TestVoyageAIEmbeddingFunction:
 
     def test_contextualized_string_input_normalized_with_wrapping(self):
         """A single string input is normalized and wrapped as a single-chunk document."""
-        with patch("voyageai.Client") as mock_client_class:
-            mock_client = MagicMock()
-            mock_client_class.return_value = mock_client
+        with mock_voyageai_client() as mock_client:
             mock_client.contextualized_embed.return_value = MagicMock(
                 results=[MagicMock(embeddings=[[0.1, 0.2]])]
             )
