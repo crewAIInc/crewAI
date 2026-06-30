@@ -195,11 +195,11 @@ Fields:
 - `schema` (optional): must be `crewai.flow/v1`; default `crewai.flow/v1`. Declarative Flow schema identifier and version. Include it explicitly in authored declarations.
 - `name` (required): string. Unique flow name used in logs, events, and traces.
 - `description` (optional): string | null; default `null`. Human-readable summary of the flow.
-- `state` (required): [State](#state). State contract for the initial state and updates during execution.
+- `state` (required): [State](#json-schema-state-statetypejson_schema). State contract for the initial state and updates during execution.
 - `config` (optional): [Config (`config`)](#config-config); default generated default. Serializable flow-level execution configuration.
 - `persist` (optional): [Persistence (`persist`)](#persistence-persist) | null; default `null`. Flow-level persistence configuration.
 - `conversational` (optional): object | null; default `null`. Top-level conversational flow configuration, only when the flow supports chat.
-- `methods` (required): map of string to [Method](#method). Mapping of method names to method definitions.
+- `methods` (required): map of string to [Method](#method-methods). Mapping of method names to method definitions.
 
 ### JSON Schema State (`state[type=json_schema]`)
 
@@ -220,7 +220,7 @@ Fields:
 - `listen` (optional): string | map of string to any | null; default `null`. Trigger condition that runs this method after upstream events. A string target can be a method name or a router-emitted event name, and both live in the same trigger namespace. Map conditions are for `and`/`or` trigger composition, for example `{"and": ["validated", "processed"]}`.
 - `router` (optional): boolean; default `false`. Whether the method output should be treated as the next event name. Router actions must return one event name string, with no surrounding explanation.
 - `emit` (optional): list[string] | null; default `null`. Declared router events this method may emit. Each emitted event name should be unique and should not collide with method names.
-- `human_feedback` (optional): [Human Feedback (`methods.<name>.human_feedback`)](#human-feedback-methods-name-human-feedback) | null; default `null`. Optional human feedback step applied after the method action.
+- `human_feedback` (optional): [Human Feedback (`methods.<name>.human_feedback`)](#human-feedback-methodshuman_feedback) | null; default `null`. Optional human feedback step applied after the method action.
 - `persist` (optional): [Persistence (`persist`)](#persistence-persist) | null; default `null`. Method-level persistence override.
 
 ### Action
@@ -228,12 +228,12 @@ Fields:
 Discriminated union by `call`.
 
 Allowed shapes:
-- [`call: script`](#script-action-methods-name-do-call-script)
-- [`call: tool`](#tool-action-methods-name-do-call-tool)
-- [`call: crew`](#crew-action-methods-name-do-call-crew)
-- [`call: agent`](#agent-action-methods-name-do-call-agent)
-- [`call: expression`](#expression-action-methods-name-do-call-expression)
-- [`call: each`](#each-action-methods-name-do-call-each)
+- [`call: script`](#script-action-methodsdocallscript)
+- [`call: tool`](#tool-action-methodsdocalltool)
+- [`call: crew`](#crew-action-methodsdocallcrew)
+- [`call: agent`](#agent-action-methodsdocallagent)
+- [`call: expression`](#expression-action-methodsdocallexpression)
+- [`call: each`](#each-action-methodsdocalleach)
 
 ### Script Action (`methods.<name>.do[call=script]`)
 
@@ -323,14 +323,14 @@ Shape:
 Fields:
 - `call` (required): must be `each`. Action discriminator. Use each to run a sequence of actions for every item in an input list.
 - `in` (required): string. CEL expression that must evaluate to the list to iterate.
-- `do` (required): list of [Each Step (`methods.<name>.do[call=each].do[]`)](#each-step-methods-name-do-call-each-do). Ordered steps to run for each item. Each step has a name, optional if expression, and atomic action.
+- `do` (required): list of [Each Step (`methods.<name>.do[call=each].do[]`)](#each-step-methodsdocalleachdo). Ordered steps to run for each item. Each step has a name, optional if expression, and atomic action.
 
 ### Each Step (`methods.<name>.do[call=each].do[]`)
 
 Fields:
 - `name` (required): string. Step name used to reference this step's output.
 - `if` (optional): string | null; default `null`. Optional CEL expression evaluated against state, outputs, and local context. When present, the step runs only if the expression evaluates to true.
-- `action` (required): [Tool Action (`methods.<name>.do[call=tool]`)](#tool-action-methods-name-do-call-tool) | [Crew Action (`methods.<name>.do[call=crew]`)](#crew-action-methods-name-do-call-crew) | [Agent Action (`methods.<name>.do[call=agent]`)](#agent-action-methods-name-do-call-agent) | [Expression Action (`methods.<name>.do[call=expression]`)](#expression-action-methods-name-do-call-expression) | [Script Action (`methods.<name>.do[call=script]`)](#script-action-methods-name-do-call-script). Atomic action to run for this step.
+- `action` (required): [Tool Action (`methods.<name>.do[call=tool]`)](#tool-action-methodsdocalltool) | [Crew Action (`methods.<name>.do[call=crew]`)](#crew-action-methodsdocallcrew) | [Agent Action (`methods.<name>.do[call=agent]`)](#agent-action-methodsdocallagent) | [Expression Action (`methods.<name>.do[call=expression]`)](#expression-action-methodsdocallexpression) | [Script Action (`methods.<name>.do[call=script]`)](#script-action-methodsdocallscript). Atomic action to run for this step.
 
 ### Config (`config`)
 

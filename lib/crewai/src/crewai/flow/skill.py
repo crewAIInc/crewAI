@@ -11,7 +11,6 @@ from jinja2 import Environment, FileSystemLoader
 import yaml
 
 from crewai.flow.flow_definition import FlowDefinition
-from crewai.utilities.string_utils import slugify
 
 
 SKIP_BY_MODEL: dict[str, str] = {
@@ -26,8 +25,8 @@ SKIP_BY_MODEL: dict[str, str] = {
 }
 
 FIELD_TYPE_OVERRIDES: dict[tuple[str, str], str] = {
-    ("FlowDefinition", "state"): "[State](#state)",
-    ("FlowDefinition", "methods"): "map of string to [Method](#method)",
+    ("FlowDefinition", "state"): "[State](#json-schema-state-statetypejson_schema)",
+    ("FlowDefinition", "methods"): "map of string to [Method](#method-methods)",
     ("FlowMethodDefinition", "do"): "[Action](#action)",
     ("FlowCrewActionDefinition", "with"): "inline crew definition",
 }
@@ -327,8 +326,10 @@ class FlowSkillReferenceExtractor:
 
         return {
             "label": spec.display_label,
-            "anchor": f"#{slugify(spec.display_label, separator='-')}",
-            "link": f"[{spec.display_label}](#{slugify(spec.display_label, separator='-')})",
+            "anchor": f"#{markdown_heading_anchor(spec.display_label)}",
+            "link": (
+                f"[{spec.display_label}](#{markdown_heading_anchor(spec.display_label)})"
+            ),
             "discriminator": extract_discriminator(model_schema),
             "fields": fields,
             "inline_models": self.inline_models_for(model_name),
@@ -442,7 +443,7 @@ class FlowSkillReferenceExtractor:
             return None
         if spec is None:
             return "object"
-        return f"[{spec.display_label}](#{slugify(spec.display_label, separator='-')})"
+        return f"[{spec.display_label}](#{markdown_heading_anchor(spec.display_label)})"
 
     def render_field_description(
         self,
@@ -492,6 +493,14 @@ def join_unique(values: Any) -> str | None:
         dict.fromkeys(value for value in values if value is not None)
     )
     return " | ".join(rendered_values) or None
+
+
+def markdown_heading_anchor(text: str) -> str:
+    heading = re.sub(r"<[^>]+>", "", text)
+    heading = re.sub(r"`([^`]*)`", r"\1", heading)
+    heading = heading.lower()
+    heading = re.sub(r"[^\w\s-]", "", heading)
+    return re.sub(r"\s+", "-", heading.strip())
 
 
 def format_inline_value(value: Any) -> str:

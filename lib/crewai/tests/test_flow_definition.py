@@ -1308,7 +1308,7 @@ def test_skill_documents_flow_wiring():
 
     assert isinstance(skill, str)
     assert "```yaml" in skill
-    assert "[Method](#method)" in skill
+    assert "[Method](#method-methods)" in skill
 
 
 def test_skill_can_render_json_examples():
@@ -1322,7 +1322,7 @@ def test_skill_can_render_json_examples():
 def test_skill_ignores_unknown_skips():
     skill = flow_definition.FlowDefinition.skill(skips=["unknown"])
 
-    assert "[Method](#method)" in skill
+    assert "[Method](#method-methods)" in skill
 
 
 def test_skill_with_skips_is_shorter():
@@ -1338,7 +1338,7 @@ def test_skill_with_skips_is_shorter():
         ]
     )
 
-    assert "[Method](#method)" in trimmed
+    assert "[Method](#method-methods)" in trimmed
     assert "call: expression" not in trimmed
     assert "Prefer `call: expression`" not in trimmed
     assert "call: script" not in trimmed
