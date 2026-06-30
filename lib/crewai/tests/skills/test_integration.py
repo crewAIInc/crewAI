@@ -6,7 +6,11 @@ import pytest
 
 from crewai import Agent, Crew, Task
 from crewai.crews.utils import _resolve_crew_skills
-from crewai.skills.loader import activate_skill, discover_skills, format_skill_context
+from crewai.skills.loader import (
+    activate_skill,
+    discover_skills,
+    format_skill_context,
+)
 from crewai.skills.models import INSTRUCTIONS, METADATA
 from crewai.utilities.prompts import Prompts
 
@@ -170,3 +174,35 @@ class TestSkillDiscoveryAndActivation:
         assert skills is not None
         assert [skill.name for skill in skills] == ["crew-inline-review"]
         assert [skill.instructions for skill in skills] == ["Apply this to every agent."]
+
+    def test_crew_activates_preloaded_metadata_skill(self, tmp_path: Path) -> None:
+        _create_skill_dir(
+            tmp_path,
+            "crew-preloaded",
+            body="Apply this crew-level guidance to every agent.",
+        )
+        metadata_skill = discover_skills(tmp_path)[0]
+        agent = Agent(
+            role="Reviewer",
+            goal="Review changes.",
+            backstory="An experienced reviewer.",
+        )
+        task = Task(
+            description="Review the diff.",
+            expected_output="Findings.",
+            agent=agent,
+        )
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            skills=[metadata_skill],
+        )
+
+        skills = _resolve_crew_skills(crew)
+
+        assert skills is not None
+        assert [skill.name for skill in skills] == ["crew-preloaded"]
+        assert [skill.disclosure_level for skill in skills] == [INSTRUCTIONS]
+        assert [skill.instructions for skill in skills] == [
+            "Apply this crew-level guidance to every agent."
+        ]

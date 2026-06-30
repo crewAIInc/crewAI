@@ -194,13 +194,20 @@ def load_skills(
     """Load skill inputs into de-duplicated Skill objects.
 
     Preserves first-seen order when multiple inputs resolve to the same skill
-    name.
+    name. Registry refs are scoped by org so different orgs can publish skills
+    that share a frontmatter name.
     """
     loaded: dict[str, Skill] = {}
     for skill_input in skills:
         for skill in load_skill(skill_input, source=source):
-            if skill.name not in loaded:
-                loaded[skill.name] = skill
+            dedup_key = skill.name
+            if isinstance(skill_input, str) and skill_input.startswith("@"):
+                from crewai.experimental.skills.registry import parse_registry_ref
+
+                org, _ = parse_registry_ref(skill_input)
+                dedup_key = f"{org}/{skill.name}"
+            if dedup_key not in loaded:
+                loaded[dedup_key] = skill
     return list(loaded.values())
 
 

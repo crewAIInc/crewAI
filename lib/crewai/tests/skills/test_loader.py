@@ -166,6 +166,45 @@ class TestLoadSkill:
 
         assert skills == [first]
 
+    def test_load_skills_keeps_registry_refs_from_different_orgs(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        first = Skill(
+            frontmatter=SkillFrontmatter(
+                name="shared-skill",
+                description="First registry skill",
+            ),
+            path=tmp_path / "first",
+            disclosure_level=INSTRUCTIONS,
+            instructions="First instructions.",
+        )
+        second = Skill(
+            frontmatter=SkillFrontmatter(
+                name="shared-skill",
+                description="Second registry skill",
+            ),
+            path=tmp_path / "second",
+            disclosure_level=INSTRUCTIONS,
+            instructions="Second instructions.",
+        )
+
+        def resolve_registry_ref(ref: str, source: object = None) -> Skill:
+            return {
+                "@first/shared-skill": first,
+                "@second/shared-skill": second,
+            }[ref]
+
+        monkeypatch.setattr(
+            "crewai.experimental.skills.registry.resolve_registry_ref",
+            resolve_registry_ref,
+        )
+
+        skills = load_skills(["@first/shared-skill", "@second/shared-skill"])
+
+        assert skills == [first, second]
+
 
 class TestLoadResources:
     """Tests for load_resources."""

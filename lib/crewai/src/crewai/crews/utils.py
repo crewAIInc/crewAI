@@ -12,8 +12,8 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crews.crew_output import CrewOutput
 from crewai.llms.base_llm import BaseLLM
 from crewai.rag.embeddings.types import EmbedderConfig
-from crewai.skills.loader import load_skills
-from crewai.skills.models import Skill as SkillModel
+from crewai.skills.loader import activate_skill, load_skills
+from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
 from crewai.utilities.file_store import store_files
 from crewai.utilities.streaming import (
@@ -59,7 +59,13 @@ def _resolve_crew_skills(crew: Crew) -> list[SkillModel] | None:
     if not isinstance(crew.skills, list) or not crew.skills:
         return None
 
-    return load_skills(crew.skills) or None
+    resolved = load_skills(crew.skills)
+    if not resolved:
+        return None
+    return [
+        activate_skill(skill) if skill.disclosure_level < INSTRUCTIONS else skill
+        for skill in resolved
+    ]
 
 
 def setup_agents(
