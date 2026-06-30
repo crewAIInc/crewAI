@@ -82,8 +82,9 @@ def test_flow_definition_json_schema_carries_reference_descriptions():
     assert "not sandboxed" in script_properties["code"]["description"]
 
     agent_properties = defs["FlowAgentActionDefinition"]["properties"]
-    assert "Inline Agent definition" in agent_properties["with"]["description"]
-    assert "run an inline Agent" in agent_properties["call"]["description"]
+    assert "Individual Agent definition" in agent_properties["with"]["description"]
+    assert "outside of a crew" in agent_properties["with"]["description"]
+    assert "individual inline Agent" in agent_properties["call"]["description"]
 
     state_schema = next(
         branch
@@ -154,7 +155,7 @@ def test_flow_definition_json_schema_carries_field_examples_only():
 
     script_properties = defs["FlowScriptActionDefinition"]["properties"]
     assert script_properties["call"]["examples"] == ["script"]
-    assert "input.strip()" in script_properties["code"]["examples"][0]
+    assert "state['topic'].strip()" in script_properties["code"]["examples"][0]
     assert script_properties["language"]["examples"] == ["python"]
 
     action_properties = defs["FlowCodeActionDefinition"]["properties"]
@@ -1300,3 +1301,46 @@ def test_flow_definition_allows_router_without_trigger(caplog):
     StandaloneRouterFlow.flow_definition()
 
     assert not caplog.records
+
+
+def test_skill_documents_flow_wiring():
+    skill = flow_definition.FlowDefinition.skill()
+
+    assert isinstance(skill, str)
+    assert "```yaml" in skill
+    assert "[Method](#method-methods)" in skill
+
+
+def test_skill_can_render_json_examples():
+    skill = flow_definition.FlowDefinition.skill(examples_format="json")
+
+    assert "```json" in skill
+    assert '"schema": "crewai.flow/v1"' in skill
+    assert "```yaml" not in skill
+
+
+def test_skill_ignores_unknown_skips():
+    skill = flow_definition.FlowDefinition.skill(skips=["unknown"])
+
+    assert "[Method](#method-methods)" in skill
+
+
+def test_skill_with_skips_is_shorter():
+    full = flow_definition.FlowDefinition.skill()
+    trimmed = flow_definition.FlowDefinition.skill(
+        skips=[
+            "each",
+            "hitl",
+            "persistence",
+            "expression_action",
+            "script_action",
+            "tool_action",
+        ]
+    )
+
+    assert "[Method](#method-methods)" in trimmed
+    assert "call: expression" not in trimmed
+    assert "Prefer `call: expression`" not in trimmed
+    assert "call: script" not in trimmed
+    assert "call: tool" not in trimmed
+    assert len(trimmed) < len(full)
