@@ -481,11 +481,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         return flow_definition
 
     @classmethod
-    def from_definition(cls, definition: FlowDefinition, **kwargs: Any) -> Flow[Any]:
-        """Build a runnable Flow directly from a definition; no subclass required."""
-        return cls.from_declaration(contents=definition, **kwargs)
-
-    @classmethod
     def from_declaration(
         cls,
         *,
@@ -604,7 +599,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             config: Checkpoint configuration with ``restore_from`` set to
                 the path of the checkpoint to load.
             definition: The FlowDefinition to restore a definition-built flow
-                (one created via ``Flow.from_definition``) from; its actions
+                (one created via ``Flow.from_declaration``) from; its actions
                 are re-resolved since checkpoints carry no callables.
                 Subclasses carry their own definition and don't need this.
 
@@ -629,7 +624,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 entity._restore_from_checkpoint()
                 return entity
             instance = (
-                cls.from_definition(definition) if definition is not None else cls()
+                cls.from_declaration(contents=definition)
+                if definition is not None
+                else cls()
             )
             instance.checkpoint_completed_methods = entity.checkpoint_completed_methods
             instance.checkpoint_method_outputs = entity.checkpoint_method_outputs
@@ -1178,7 +1175,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 registered factory when present, else the built-in SQLite
                 fallback).
             definition: The FlowDefinition to restore a definition-built flow
-                (one created via ``Flow.from_definition``) from. Subclasses
+                (one created via ``Flow.from_declaration``) from. Subclasses
                 carry their own definition and don't need this.
             **kwargs: Additional keyword arguments passed to the Flow constructor
 
@@ -1212,7 +1209,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         state_data, pending_context = loaded
 
         instance = (
-            cls.from_definition(definition, persistence=persistence, **kwargs)
+            cls.from_declaration(contents=definition, persistence=persistence, **kwargs)
             if definition is not None
             else cls(persistence=persistence, **kwargs)
         )

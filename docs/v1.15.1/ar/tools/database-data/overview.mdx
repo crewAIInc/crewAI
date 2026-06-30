@@ -1,0 +1,67 @@
+---
+title: "نظرة عامة"
+description: "الاتصال بقواعد البيانات ومخازن المتجهات ومستودعات البيانات للحصول على وصول شامل للبيانات"
+icon: "face-smile"
+mode: "wide"
+---
+
+تتيح هذه الأدوات لوكلائك التفاعل مع أنظمة قواعد بيانات متنوعة، من قواعد بيانات SQL التقليدية إلى مخازن المتجهات الحديثة ومستودعات البيانات.
+
+## **الأدوات المتاحة**
+
+<CardGroup cols={2}>
+  <Card title="أداة MySQL" icon="database" href="/ar/tools/database-data/mysqltool">
+    الاتصال بقواعد بيانات MySQL والاستعلام عنها بعمليات SQL.
+  </Card>
+
+  <Card title="بحث PostgreSQL" icon="elephant" href="/ar/tools/database-data/pgsearchtool">
+    البحث والاستعلام في قواعد بيانات PostgreSQL بكفاءة.
+  </Card>
+
+  <Card title="بحث Snowflake" icon="snowflake" href="/ar/tools/database-data/snowflakesearchtool">
+    الوصول إلى مستودع بيانات Snowflake للتحليلات وإعداد التقارير.
+  </Card>
+
+  <Card title="أداة NL2SQL" icon="language" href="/ar/tools/database-data/nl2sqltool">
+    تحويل استعلامات اللغة الطبيعية إلى عبارات SQL تلقائياً.
+  </Card>
+
+  <Card title="بحث متجهي Qdrant" icon="vector-square" href="/ar/tools/database-data/qdrantvectorsearchtool">
+    البحث في التضمينات المتجهية باستخدام قاعدة بيانات Qdrant المتجهية.
+  </Card>
+
+  <Card title="بحث متجهي Weaviate" icon="network-wired" href="/ar/tools/database-data/weaviatevectorsearchtool">
+    إجراء بحث دلالي باستخدام قاعدة بيانات Weaviate المتجهية.
+  </Card>
+
+  <Card title="بحث متجهي MongoDB" icon="leaf" href="/ar/tools/database-data/mongodbvectorsearchtool">
+    بحث التشابه المتجهي على MongoDB Atlas مع أدوات مساعدة للفهرسة.
+  </Card>
+
+  <Card title="بحث SingleStore" icon="database" href="/ar/tools/database-data/singlestoresearchtool">
+    استعلامات SELECT/SHOW آمنة على SingleStore مع تجميع الاتصالات والتحقق.
+  </Card>
+</CardGroup>
+
+## **حالات الاستخدام الشائعة**
+
+- **تحليل البيانات**: الاستعلام عن قواعد البيانات لذكاء الأعمال وإعداد التقارير
+- **البحث المتجهي**: العثور على محتوى مشابه باستخدام التضمينات الدلالية
+- **عمليات ETL**: استخراج البيانات وتحويلها وتحميلها بين الأنظمة
+- **التحليلات الفورية**: الوصول إلى البيانات الحية لاتخاذ القرارات
+
+```python
+from crewai_tools import MySQLTool, QdrantVectorSearchTool, NL2SQLTool
+
+# Create database tools
+mysql_db = MySQLTool()
+vector_search = QdrantVectorSearchTool()
+nl_to_sql = NL2SQLTool()
+
+# Add to your agent
+agent = Agent(
+    role="Data Analyst",
+    tools=[mysql_db, vector_search, nl_to_sql],
+    goal="Extract insights from various data sources"
+)
+```
