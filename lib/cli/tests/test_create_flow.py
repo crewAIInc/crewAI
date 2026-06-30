@@ -29,6 +29,12 @@ def test_create_flow_declarative_project_can_run(
     agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
     assert "CrewAI Flow declaration" in agents_md
     assert "schema: crewai.flow/v1" in agents_md
+    assert 'text(root, "path", "default")' in agents_md
+    assert "call: expression" in agents_md
+    assert "call: tool" not in agents_md
+    assert "call: script" not in agents_md
+    assert "call: each" not in agents_md
+    assert "human_feedback" not in agents_md
 
     monkeypatch.chdir(project_root)
     result = CliRunner().invoke(crewai, ["run"], env={"UV_RUN_RECURSION_DEPTH": "1"})

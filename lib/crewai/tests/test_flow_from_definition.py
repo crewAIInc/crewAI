@@ -848,6 +848,34 @@ methods:
     )
 
 
+def test_tool_action_renders_text_custom_expression_inputs():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: ToolFlow
+methods:
+  search:
+    do:
+      call: tool
+      ref: {__name__}:StaticSearchTool
+      with:
+        search_query: "${{'Ticket ID: ' + text(state, 'ticket.id') + '; Subject: ' + text(state, 'ticket.subject') + '; Priority: ' + text(state, 'priority', 'unknown') + '; Message: ' + text(state, 'messages.0.body')}}"
+        prefix: "${{text(state, 'ticket')}}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    assert (
+        flow.kickoff(
+            inputs={
+                "ticket": {"id": 123, "subject": None},
+                "messages": [{"body": "Initial report"}],
+            }
+        )
+        == '{"id": 123, "subject": null}:Ticket ID: 123; Subject: ; Priority: unknown; Message: Initial report'
+    )
+
+
 def test_agent_action_runs_inline_yaml_definition(monkeypatch: pytest.MonkeyPatch):
     from crewai import Agent
 
@@ -878,6 +906,41 @@ methods:
     assert flow.kickoff(inputs={"question": "What is CrewAI?"}) == {
         "agent": "Analyst",
         "input": "What is CrewAI?",
+    }
+
+
+def test_agent_action_renders_text_custom_expression_input(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from crewai import Agent
+
+    async def fake_kickoff_async(
+        self: Agent, messages: str, **_kwargs: Any
+    ) -> dict[str, Any]:
+        return {"agent": self.role, "input": messages}
+
+    monkeypatch.setattr(Agent, "kickoff_async", fake_kickoff_async)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: AgentFlow
+methods:
+  answer:
+    do:
+      call: agent
+      with:
+        role: Analyst
+        goal: Answer questions
+        backstory: Knows things.
+        input: "${'Ticket ID: ' + text(state, 'ticket.id') + '; Subject: ' + text(state, 'ticket.subject')}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    assert flow.kickoff(inputs={"ticket": {"id": 123, "subject": None}}) == {
+        "agent": "Analyst",
+        "input": "Ticket ID: 123; Subject: ",
     }
 
 
@@ -2148,6 +2211,37 @@ def test_explicit_cel_fields_accept_expression_markers():
     )
 
     assert Flow.from_declaration(contents=definition).kickoff(inputs={"score": 90}) == "qualified"
+
+
+def test_expression_action_runs_text_custom_expression():
+    definition = FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ExpressionFlow",
+            "methods": {
+                "summarize": {
+                    "start": True,
+                    "do": {
+                        "call": "expression",
+                        "expr": (
+                            "'Ticket ID: ' + text(state, 'ticket.id') + "
+                            "'; Tags: ' + text(state, 'tags')"
+                        ),
+                    },
+                }
+            },
+        }
+    )
+
+    assert (
+        Flow.from_declaration(contents=definition).kickoff(
+            inputs={
+                "ticket": {"id": 123},
+                "tags": ["urgent", "billing"],
+            }
+        )
+        == 'Ticket ID: 123; Tags: ["urgent", "billing"]'
+    )
 
 
 def test_expression_local_context_recurses_into_dataclass_values():
