@@ -74,6 +74,44 @@ class CrewAgentDefinition(BaseModel):
         description="Additional agent settings passed to the loader.",
         examples=[{"llm": "openai/gpt-4o-mini"}],
     )
+    tools: list[str | dict[str, Any]] | None = Field(
+        default=None,
+        description=(
+            "Tool refs or serialized tool definitions available to this agent. "
+            "String refs can use CrewAI tool names, `custom:<name>`, or fully "
+            "qualified `module:Class` references."
+        ),
+        examples=[["crewai_tools:SerperDevTool", "custom:file_read"]],
+    )
+    apps: list[str] | None = Field(
+        default=None,
+        description=(
+            "Platform apps available to this agent. Can contain app names such as "
+            "`gmail` or app/action refs such as `gmail/send_email`."
+        ),
+        examples=[["gmail", "slack/send_message"]],
+    )
+    mcps: list[str | dict[str, Any]] | None = Field(
+        default=None,
+        description=(
+            "MCP server refs or serialized MCP server configs available to this "
+            "agent. String refs can use HTTPS URLs, connected MCP integration "
+            "slugs, or refs with a `#tool_name` suffix for specific tools."
+        ),
+        examples=[
+            [
+                "https://api.weather.com/mcp#get_current_weather",
+                "snowflake",
+                "stripe#list_invoices",
+                {
+                    "url": "https://api.example.com/mcp",
+                    "headers": {"Authorization": "Bearer your_token"},
+                    "streamable": True,
+                    "cache_tools_list": True,
+                },
+            ]
+        ],
+    )
 
     @field_validator("settings", mode="before")
     @classmethod

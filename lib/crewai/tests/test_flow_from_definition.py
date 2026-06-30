@@ -1328,6 +1328,9 @@ def test_crew_action_json_schema_describes_inline_crew_definitions():
         "goal",
         "backstory",
         "settings",
+        "tools",
+        "apps",
+        "mcps",
     }
     assert set(schema_defs["CrewTaskDefinition"]["properties"]) >= {
         "description",
