@@ -118,6 +118,8 @@ def _create_python_flow(
 def _create_declarative_flow(
     name: str, class_name: str, folder_name: str, project_root: Path
 ) -> None:
+    from crewai.flow.flow_definition import FlowDefinition
+
     project_root.mkdir(parents=True)
     package_root = project_root / "src" / folder_name
     package_root.mkdir(parents=True)
@@ -127,9 +129,7 @@ def _create_declarative_flow(
     package_dir = Path(__file__).parent
     templates_dir = package_dir / "templates" / "declarative_flow"
 
-    agents_md_src = package_dir / "templates" / "AGENTS.md"
-    if agents_md_src.exists():
-        shutil.copy2(agents_md_src, project_root / "AGENTS.md")
+    (project_root / "AGENTS.md").write_text(FlowDefinition.skill(), encoding="utf-8")
 
     for src_file in templates_dir.rglob("*"):
         if not src_file.is_file():

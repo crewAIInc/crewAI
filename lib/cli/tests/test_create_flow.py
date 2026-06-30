@@ -8,6 +8,7 @@ import tomli
 
 from crewai_cli.cli import crewai
 from crewai_cli.create_flow import create_flow
+from crewai.flow.flow_definition import FlowDefinition
 
 
 def test_create_flow_declarative_project_can_run(
@@ -26,6 +27,10 @@ def test_create_flow_declarative_project_can_run(
     assert pyproject["project"]["requires-python"]
     assert pyproject["project"]["dependencies"]
     assert (project_root / pyproject["tool"]["crewai"]["definition"]).is_file()
+    assert (
+        (project_root / "AGENTS.md").read_text(encoding="utf-8")
+        == FlowDefinition.skill()
+    )
 
     monkeypatch.chdir(project_root)
     result = CliRunner().invoke(crewai, ["run"], env={"UV_RUN_RECURSION_DEPTH": "1"})
