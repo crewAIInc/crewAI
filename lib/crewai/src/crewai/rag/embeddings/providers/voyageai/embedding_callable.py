@@ -8,9 +8,6 @@ from typing_extensions import Unpack
 from crewai.rag.embeddings.providers.voyageai.types import VoyageAIProviderConfig
 
 
-CONTEXTUALIZED_CHUNK_SIZE = 32000
-
-
 class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
     """Embedding function for VoyageAI models."""
 
