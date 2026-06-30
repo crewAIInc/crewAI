@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import contextvars
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import logging
 import os
@@ -16,7 +16,7 @@ from crewai_core.lock_store import lock as store_lock
 import lancedb  # type: ignore[import-untyped]
 
 from crewai.memory.storage.backend import EmbeddingDimensionMismatchError
-from crewai.memory.types import MemoryRecord, ScopeInfo
+from crewai.memory.types import MemoryRecord, ScopeInfo, _utc_now
 
 
 _logger = logging.getLogger(__name__)
@@ -157,6 +157,7 @@ class LanceDBStorage:
 
         Caller must already hold ``store_lock(self._lock_name)``.
         """
+        now = _utc_now().isoformat()
         placeholder = [
             {
                 "id": "__schema_placeholder__",
@@ -165,8 +166,8 @@ class LanceDBStorage:
                 "categories_str": "[]",
                 "metadata_str": "{}",
                 "importance": 0.5,
-                "created_at": datetime.utcnow().isoformat(),
-                "last_accessed": datetime.utcnow().isoformat(),
+                "created_at": now,
+                "last_accessed": now,
                 "source": "",
                 "private": False,
                 "vector": [0.0] * vector_dim,
@@ -263,12 +264,18 @@ class LanceDBStorage:
 
     def _row_to_record(self, row: dict[str, Any]) -> MemoryRecord:
         def _parse_dt(val: Any) -> datetime:
+            """Parse a datetime value, normalizing to naive UTC."""
             if val is None:
-                return datetime.utcnow()
+                return _utc_now()
             if isinstance(val, datetime):
+                if val.tzinfo is not None:
+                    return val.astimezone(timezone.utc).replace(tzinfo=None)
                 return val
             s = str(val)
-            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+            dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+            if dt.tzinfo is not None:
+                return dt.astimezone(timezone.utc).replace(tzinfo=None)
+            return dt
 
         return MemoryRecord(
             id=str(row["id"]),
@@ -349,7 +356,7 @@ class LanceDBStorage:
         if not record_ids or self._table is None:
             return
         with store_lock(self._lock_name):
-            now = datetime.utcnow().isoformat()
+            now = _utc_now().isoformat()
             safe_ids = [str(rid).replace("'", "''") for rid in record_ids]
             ids_expr = ", ".join(f"'{rid}'" for rid in safe_ids)
             self._do_write(
