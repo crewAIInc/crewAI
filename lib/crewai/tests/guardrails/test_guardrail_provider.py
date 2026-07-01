@@ -489,6 +489,19 @@ class TestMalformedRequestSafety:
         assert decision.allow is False
         assert isinstance(decision, GuardrailDecision)
 
+    def test_allowed_agents_with_missing_agent_id_denied(self):
+        """When allowed_agents is configured, requests with agent_id=None must be denied."""
+        provider = CorrectoverGuardrailProvider(
+            allowed_agents={"agent-1", "agent-2"},
+            require_agent_identity=False,  # even without require_agent_identity
+        )
+        request = _make_request(agent_id=None)
+        decision = provider.evaluate(request)
+        assert decision.allow is False
+        assert "identity" in decision.reason.lower()
+        detail = decision.metadata["dimension_details"]["identity"]["detail"]
+        assert "required" in detail.lower()
+
     def test_action_id_generated_for_malformed_input(self):
         """action_id is still generated even with non-string tool_name."""
         provider = CorrectoverGuardrailProvider()

@@ -295,7 +295,14 @@ class CorrectoverGuardrailProvider:
             )
 
         if self.allowed_agents is not None:
-            if request.agent_id and request.agent_id not in self.allowed_agents:
+            # When allowed_agents is configured, agent_id is mandatory
+            if not request.agent_id:
+                return DimensionResult(
+                    "identity",
+                    False,
+                    "agent_id required when allowed_agents is configured",
+                )
+            if request.agent_id not in self.allowed_agents:
                 return DimensionResult(
                     "identity",
                     False,
