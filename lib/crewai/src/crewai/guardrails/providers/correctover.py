@@ -23,7 +23,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from .types import GuardrailDecision, GuardrailProvider, GuardrailRequest
+from .providers.types import GuardrailDecision, GuardrailProvider, GuardrailRequest
 
 # Canonical dimension order for Correctover 6-dim verification
 VERIFICATION_DIMENSIONS = (
@@ -119,18 +119,32 @@ class CorrectoverGuardrailProvider:
         Uses SHA-256 over a canonical representation of the request to ensure
         identical inputs always produce the same action_id, regardless of
         whether a timestamp was provided.
+
+        Handles malformed inputs defensively: non-string tool_name is repr'd,
+        non-Mapping tool_input falls back to repr().
         """
-        # Deterministic serialization of tool_input (sorted keys, compact)
-        tool_input_fingerprint = json.dumps(
-            request.tool_input,
-            sort_keys=True,
-            separators=(",", ":"),
-            default=repr,
+        # Robust tool_name: always a string for fingerprinting
+        tool_name_str = (
+            request.tool_name
+            if isinstance(request.tool_name, str)
+            else repr(request.tool_name)
         )
+
+        # Deterministic serialization of tool_input (sorted keys, compact)
+        if isinstance(request.tool_input, Mapping):
+            tool_input_fingerprint = json.dumps(
+                request.tool_input,
+                sort_keys=True,
+                separators=(",", ":"),
+                default=repr,
+            )
+        else:
+            tool_input_fingerprint = repr(request.tool_input)
+
         agent_part = request.agent_id or ""
         ts_part = request.timestamp if request.timestamp is not None else "no-timestamp"
         content = "|".join([
-            request.tool_name,
+            tool_name_str,
             tool_input_fingerprint,
             agent_part,
             str(ts_part),
@@ -143,12 +157,17 @@ class CorrectoverGuardrailProvider:
 
         Runs all 6 dimensions of Correctover verification and returns
         a GuardrailDecision. Any dimension failure results in deny.
+        Malformed requests (non-string tool_name, non-Mapping tool_input)
+        are kept on the deny path — they never escape evaluate().
         """
         self._request_count += 1
         dimensions: list[DimensionResult] = []
-        action_id = self._generate_action_id(request)
 
         try:
+            # Generate action_id inside try block so any serialization
+            # failure is caught by the fail_closed safety net below.
+            action_id = self._generate_action_id(request)
+
             # Dimension 1: Structure
             dims_structure = self._check_structure(request)
             dimensions.append(dims_structure)
@@ -174,12 +193,13 @@ class CorrectoverGuardrailProvider:
             dimensions.append(dims_cost)
 
         except Exception as e:
-            # Honor fail_closed flag: deny if True, allow if False
+            # Honor fail_closed flag: deny if True, allow if False.
+            # Malformed requests are caught here — they never escape evaluate().
             return GuardrailDecision(
                 allow=not self.fail_closed,
                 reason=f"Correctover provider error: {e}",
                 metadata={"error": str(e), "fail_closed": self.fail_closed},
-                action_id=action_id,
+                action_id=None,
             )
 
         # Aggregate: all dimensions must pass
@@ -236,6 +256,15 @@ class CorrectoverGuardrailProvider:
         """Check tool against allow/block lists."""
         tool = request.tool_name
 
+        # Guard against non-string tool_name that bypassed structure check.
+        # (In normal flow, structure check catches this first, but defense-in-depth
+        # ensures schema check never raises on set membership.)
+        if not isinstance(tool, str):
+            return DimensionResult(
+                "schema", False,
+                "tool_name is not a string: " + str(type(tool)),
+            )
+
         # Blocked tools take priority
         if tool in self.blocked_tools:
             return DimensionResult(
@@ -258,11 +287,17 @@ class CorrectoverGuardrailProvider:
             )
 
         if self.allowed_agents is not None:
+            # Guard against non-string agent_id
+            if request.agent_id is not None and not isinstance(request.agent_id, str):
+                return DimensionResult(
+                    "identity", False,
+                    "agent_id is not a string: " + str(type(request.agent_id)),
+                )
             if request.agent_id and request.agent_id not in self.allowed_agents:
                 return DimensionResult(
                     "identity",
                     False,
-                    "agent '" + request.agent_id + "' not in allowed list",
+                    "agent '" + str(request.agent_id) + "' not in allowed list",
                 )
 
         return DimensionResult("identity", True)

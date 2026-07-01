@@ -412,3 +412,118 @@ class TestConformanceVector:
         decision = provider.evaluate(request)
         assert isinstance(decision, GuardrailDecision)
         assert isinstance(decision.allow, bool)
+
+
+class TestMalformedRequestSafety:
+    """
+    Security: malformed requests must NEVER escape evaluate().
+    They stay on the deny path (fail_closed=True) or structured allow path
+    (fail_closed=False) — never raise unhandled exceptions.
+    """
+
+    def test_non_string_tool_name_denied(self):
+        """Non-string tool_name is denied, not crashed."""
+        provider = CorrectoverGuardrailProvider()
+        request = _make_request(tool_name=123)
+        decision = provider.evaluate(request)
+        assert decision.allow is False
+        assert "structure" in decision.reason.lower()
+
+    def test_non_string_tool_name_fail_closed_false(self):
+        """Non-string tool_name with fail_closed=False returns structured allow."""
+        provider = CorrectoverGuardrailProvider(fail_closed=False)
+        request = _make_request(tool_name=123)
+        decision = provider.evaluate(request)
+        # Structure check catches it → deny (even with fail_closed=False,
+        # because this is a dimension failure, not a provider error)
+        assert decision.allow is False
+        assert isinstance(decision, GuardrailDecision)
+
+    def test_non_mapping_tool_input_denied(self):
+        """Non-Mapping tool_input is denied via structure check."""
+        provider = CorrectoverGuardrailProvider()
+        request = _make_request(tool_input="not a dict")
+        decision = provider.evaluate(request)
+        assert decision.allow is False
+        assert "structure" in decision.reason.lower()
+
+    def test_none_tool_input_denied(self):
+        """None tool_input is denied via structure check."""
+        provider = CorrectoverGuardrailProvider()
+        request = _make_request(tool_input=None)
+        decision = provider.evaluate(request)
+        assert decision.allow is False
+        assert "structure" in decision.reason.lower()
+
+    def test_list_tool_input_denied(self):
+        """List tool_input is denied (not a Mapping)."""
+        provider = CorrectoverGuardrailProvider()
+        request = _make_request(tool_input=[1, 2, 3])
+        decision = provider.evaluate(request)
+        assert decision.allow is False
+        assert "structure" in decision.reason.lower()
+
+    def test_non_string_agent_id_denied(self):
+        """Non-string agent_id is denied via identity check."""
+        provider = CorrectoverGuardrailProvider(
+            require_agent_identity=True,
+        )
+        request = _make_request(agent_id=42)
+        decision = provider.evaluate(request)
+        # agent_id=42 is truthy but not a string → identity check catches it
+        assert decision.allow is False
+
+    def test_mixed_key_tool_input_denied(self):
+        """tool_input with mixed key types is denied (json.dumps sort_keys fails on int+str)."""
+        provider = CorrectoverGuardrailProvider()
+        # Note: GuardrailRequest accepts any Mapping, including dict with int keys
+        request = GuardrailRequest(
+            tool_name="test",
+            tool_input={1: "value", "key": "other"},
+        )
+        decision = provider.evaluate(request)
+        # json.dumps(sort_keys=True) raises TypeError on mixed int/str keys,
+        # caught by evaluate()'s fail_closed safety net → deny
+        assert decision.allow is False
+        assert isinstance(decision, GuardrailDecision)
+
+    def test_action_id_generated_for_malformed_input(self):
+        """action_id is still generated even with non-string tool_name."""
+        provider = CorrectoverGuardrailProvider()
+        request = _make_request(tool_name=123)
+        decision = provider.evaluate(request)
+        # action_id is generated because _generate_action_id handles non-str
+        assert decision.action_id is not None
+        assert isinstance(decision.action_id, str)
+        assert len(decision.action_id) == 16
+
+    def test_action_id_deterministic_for_malformed_input(self):
+        """action_id is deterministic even with malformed inputs."""
+        provider = CorrectoverGuardrailProvider()
+        request = _make_request(tool_name=456, timestamp=None)
+        d1 = provider.evaluate(request)
+        d2 = provider.evaluate(request)
+        assert d1.action_id == d2.action_id
+
+    def test_malformed_request_never_raises(self):
+        """No malformed input combination should raise an unhandled exception."""
+        provider = CorrectoverGuardrailProvider(
+            blocked_tools={"x"},
+            allowed_agents={"agent-1"},
+            require_agent_identity=True,
+        )
+        # Worst-case: everything is wrong
+        bad_inputs = [
+            {"tool_name": None, "tool_input": None},
+            {"tool_name": 123, "tool_input": 456},
+            {"tool_name": [1, 2], "tool_input": {"key": "val"}},
+            {"tool_name": "", "tool_input": None},
+            {"tool_name": 0, "tool_input": []},
+            {"tool_name": "x", "tool_input": {1: 2}},
+        ]
+        for bad in bad_inputs:
+            request = GuardrailRequest(**bad)
+            # This must NEVER raise
+            decision = provider.evaluate(request)
+            assert isinstance(decision, GuardrailDecision)
+            assert isinstance(decision.allow, bool)
