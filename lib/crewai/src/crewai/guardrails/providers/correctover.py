@@ -9,7 +9,7 @@ Maps CrewAI's pre-tool-call context into Correctover's 6-dimensional verificatio
 
 Usage:
     from crewai.guardrails.providers import CorrectoverGuardrailProvider
-    from crewai.hooks import enable_guardrail
+    from crewai.guardrails.enable import enable_guardrail
 
     provider = CorrectoverGuardrailProvider()
     enable_guardrail(provider)  # registers as global before-tool-call hook
@@ -18,6 +18,7 @@ Usage:
 from __future__ import annotations
 
 import hashlib
+import json
 import time
 from dataclasses import dataclass
 from typing import Any, Mapping
@@ -55,7 +56,8 @@ class VerificationReport:
 
     @property
     def failed_dimensions(self) -> list[str]:
-        return [d for d in self.dimensions if not d.passed]
+        """Return names of failed dimensions as a list of strings."""
+        return [d.name for d in self.dimensions if not d.passed]
 
 
 class CorrectoverGuardrailProvider:
@@ -112,13 +114,27 @@ class CorrectoverGuardrailProvider:
         self._request_count = 0
 
     def _generate_action_id(self, request: GuardrailRequest) -> str:
-        """Generate a deterministic action_id for audit traceability."""
-        content = (
-            f"{request.tool_name}|"
-            f"{hashlib.md5(str(request.tool_input).encode()).hexdigest()[:12]}|"
-            f"{request.agent_id or ''}|"
-            f"{request.timestamp or time.time()}"
+        """Generate a deterministic action_id for audit traceability.
+
+        Uses SHA-256 over a canonical representation of the request to ensure
+        identical inputs always produce the same action_id, regardless of
+        whether a timestamp was provided.
+        """
+        # Deterministic serialization of tool_input (sorted keys, compact)
+        tool_input_fingerprint = json.dumps(
+            request.tool_input,
+            sort_keys=True,
+            separators=(",", ":"),
+            default=repr,
         )
+        agent_part = request.agent_id or ""
+        ts_part = request.timestamp if request.timestamp is not None else "no-timestamp"
+        content = "|".join([
+            request.tool_name,
+            tool_input_fingerprint,
+            agent_part,
+            str(ts_part),
+        ])
         return hashlib.sha256(content.encode()).hexdigest()[:16]
 
     def evaluate(self, request: GuardrailRequest) -> GuardrailDecision:
@@ -171,7 +187,7 @@ class CorrectoverGuardrailProvider:
         if failed:
             return GuardrailDecision(
                 allow=False,
-                reason=f"Verification failed: {', '.join(d.name for d in failed)}",
+                reason="Verification failed: " + ", ".join(d.name for d in failed),
                 metadata={
                     "action_id": action_id,
                     "failed_dimensions": [d.name for d in failed],
@@ -202,7 +218,8 @@ class CorrectoverGuardrailProvider:
             )
         if not isinstance(request.tool_name, str):
             return DimensionResult(
-                "structure", False, f"tool_name is not a string: {type(request.tool_name)}"
+                "structure", False,
+                "tool_name is not a string: " + str(type(request.tool_name)),
             )
         if request.tool_input is None:
             return DimensionResult(
@@ -210,7 +227,8 @@ class CorrectoverGuardrailProvider:
             )
         if not isinstance(request.tool_input, Mapping):
             return DimensionResult(
-                "structure", False, f"tool_input is not a Mapping: {type(request.tool_input)}"
+                "structure", False,
+                "tool_input is not a Mapping: " + str(type(request.tool_input)),
             )
         return DimensionResult("structure", True)
 
@@ -221,13 +239,13 @@ class CorrectoverGuardrailProvider:
         # Blocked tools take priority
         if tool in self.blocked_tools:
             return DimensionResult(
-                "schema", False, f"tool '{tool}' is explicitly blocked"
+                "schema", False, "tool '" + tool + "' is explicitly blocked"
             )
 
         # If whitelist exists, tool must be in it
         if self.allowed_tools is not None and tool not in self.allowed_tools:
             return DimensionResult(
-                "schema", False, f"tool '{tool}' not in allowed list"
+                "schema", False, "tool '" + tool + "' not in allowed list"
             )
 
         return DimensionResult("schema", True)
@@ -244,7 +262,7 @@ class CorrectoverGuardrailProvider:
                 return DimensionResult(
                     "identity",
                     False,
-                    f"agent '{request.agent_id}' not in allowed list",
+                    "agent '" + request.agent_id + "' not in allowed list",
                 )
 
         return DimensionResult("identity", True)
@@ -261,7 +279,7 @@ class CorrectoverGuardrailProvider:
                 return DimensionResult(
                     "integrity",
                     False,
-                    f"tool_input key is not a string: {type(key)}",
+                    "tool_input key is not a string: " + str(type(key)),
                 )
 
         return DimensionResult("integrity", True)
@@ -271,14 +289,16 @@ class CorrectoverGuardrailProvider:
         if self.max_latency_ms is not None:
             if self.max_latency_ms <= 0:
                 return DimensionResult(
-                    "latency", False, f"max_latency_ms must be positive: {self.max_latency_ms}"
+                    "latency", False,
+                    "max_latency_ms must be positive: " + str(self.max_latency_ms),
                 )
             if request.timestamp is not None:
                 elapsed_ms = (time.time() - request.timestamp) * 1000
                 if elapsed_ms > self.max_latency_ms:
                     return DimensionResult(
                         "latency", False,
-                        f"request age {elapsed_ms:.1f}ms exceeds limit {self.max_latency_ms}ms"
+                        "request age %.1fms exceeds limit %.1fms"
+                        % (elapsed_ms, self.max_latency_ms),
                     )
         return DimensionResult("latency", True)
 
@@ -287,7 +307,8 @@ class CorrectoverGuardrailProvider:
         if self.max_cost_usd is not None:
             if self.max_cost_usd < 0:
                 return DimensionResult(
-                    "cost", False, f"max_cost_usd must be non-negative: {self.max_cost_usd}"
+                    "cost", False,
+                    "max_cost_usd must be non-negative: " + str(self.max_cost_usd),
                 )
         return DimensionResult("cost", True)
 

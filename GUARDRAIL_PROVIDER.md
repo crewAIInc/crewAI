@@ -12,7 +12,7 @@ objects with deny reasons, metadata, and fail-closed semantics.
 ## Quick Start
 
 ```python
-from crewai.hooks import enable_guardrail
+from crewai.guardrails.enable import enable_guardrail
 from crewai.guardrails.providers import CorrectoverGuardrailProvider
 
 provider = CorrectoverGuardrailProvider(
@@ -32,11 +32,18 @@ enable_guardrail(provider)
 | Schema | Tool passes allow/block list policy |
 | Identity | Agent identity matches policy |
 | Integrity | tool_input verified as immutable snapshot (no mutation since construction) |
-| Latency | Request within time bounds |
+| Latency | Request within time bounds (uses request.timestamp for actual measurement) |
 | Cost | Estimated cost within policy limits |
+
+## Design Principles
+
+- **fail-closed**: any dimension failure or provider error blocks execution
+- **deterministic**: same input → same decision (action_id uses SHA-256 over canonical request)
+- **traceable**: every decision includes action_id for audit linkage
+- **minimal latency**: 6-dim check at ~22μs P50
 
 ## Test Coverage
 
-31 tests, all passing.
+42 tests, all passing.
 
 Targets upstream patch kit: safal207/ibex-agent-verification#68

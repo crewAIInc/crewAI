@@ -13,7 +13,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from .types import GuardrailDecision, GuardrailProvider, GuardrailRequest
+from .providers.types import GuardrailDecision, GuardrailProvider, GuardrailRequest
 
 
 @dataclass
@@ -26,6 +26,7 @@ class ToolCallContext:
     agent_role: str | None = None
     task_description: str | None = None
     crew_id: str | None = None
+    timestamp: float | None = None
 
 
 # Global registry for standalone hooks
@@ -65,7 +66,11 @@ def enable_guardrail(
 
 
 def _build_request(context: ToolCallContext) -> GuardrailRequest:
-    """Build a GuardrailRequest from a tool-call context."""
+    """Build a GuardrailRequest from a tool-call context.
+
+    Preserves the context timestamp if provided, so latency checks measure
+    total request age (including queue time), not just adapter/provider time.
+    """
     return GuardrailRequest(
         tool_name=context.tool_name,
         tool_input=deepcopy(context.tool_input),
@@ -73,7 +78,7 @@ def _build_request(context: ToolCallContext) -> GuardrailRequest:
         agent_role=context.agent_role,
         task_description=context.task_description,
         crew_id=context.crew_id,
-        timestamp=time.time(),
+        timestamp=context.timestamp if context.timestamp is not None else time.time(),
     )
 
 

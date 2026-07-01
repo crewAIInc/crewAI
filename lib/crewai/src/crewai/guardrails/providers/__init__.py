@@ -1,7 +1,7 @@
 """Correctover Guardrail Provider for CrewAI."""
 
 from .types import GuardrailDecision, GuardrailProvider, GuardrailRequest
-from .provider import CorrectoverGuardrailProvider, DimensionResult, VerificationReport
+from .correctover import CorrectoverGuardrailProvider, DimensionResult, VerificationReport
 
 __all__ = [
     "CorrectoverGuardrailProvider",
