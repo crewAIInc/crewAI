@@ -29,9 +29,9 @@ enable_guardrail(provider)
 | Dimension | Checks |
 |-----------|--------|
 | Structure | tool_name and tool_input have valid types |
-| Schema | Tool passes allow/block lists |
+| Schema | Tool passes allow/block list policy |
 | Identity | Agent identity matches policy |
-| Integrity | tool_input is a frozen snapshot |
+| Integrity | tool_input verified as immutable snapshot (no mutation since construction) |
 | Latency | Request within time bounds |
 | Cost | Estimated cost within policy limits |
 
