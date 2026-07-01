@@ -62,7 +62,7 @@ class CorrectoverGuardrailProvider:
 
     Runs 6-dimensional deterministic verification on the tool-call request:
     - structure: tool_name and tool_input conform to expected schema
-    - schema: parameter types and required fields validate
+    - schema: tool passes allow/block list policy
     - identity: agent_id and agent_role match registered principals
     - integrity: tool_input has not been mutated since request construction
     - latency: request is within acceptable time bounds
@@ -145,11 +145,11 @@ class CorrectoverGuardrailProvider:
             dimensions.append(dims_cost)
 
         except Exception as e:
-            # Fail closed: any provider error blocks execution
+            # Honor fail_closed flag: deny if True, allow if False
             return GuardrailDecision(
-                allow=False,
+                allow=not self.fail_closed,
                 reason=f"Correctover provider error: {e}",
-                metadata={"error": str(e), "fail_closed": True},
+                metadata={"error": str(e), "fail_closed": self.fail_closed},
             )
 
         # Aggregate: all dimensions must pass
