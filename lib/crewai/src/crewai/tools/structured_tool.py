@@ -52,6 +52,11 @@ def _infer_result_schema_from_callable(
 
 
 def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
+    """Format the raw tool output into a string representation for the agent.
+
+    If result_schema is not set and the output is a dict or list, it will
+    automatically JSON-serialize the output to avoid single-quote invalid JSON issues.
+    """
     original_tool = getattr(tool, "_original_tool", None)
     if original_tool is not None:
         return cast(str, original_tool.format_output_for_agent(raw_result))
