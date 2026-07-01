@@ -6,12 +6,15 @@ from typing import Any, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from crewai.agent.planning_config import PlanningConfig
+
 
 __all__ = [
     "AgentDefinition",
     "CrewAgentDefinition",
     "CrewDefinition",
     "CrewTaskDefinition",
+    "LLMDefinition",
     "PythonReferenceDefinition",
 ]
 
@@ -36,6 +39,26 @@ class PythonReferenceDefinition(BaseModel):
                 "like 'module.attribute'"
             )
         return path
+
+
+class LLMDefinition(BaseModel):
+    """LLM configuration used by inline agent definitions."""
+
+    model_config = ConfigDict(extra="allow")
+
+    model: str = Field(
+        description="Model identifier used to instantiate the LLM.",
+        examples=["openai/gpt-4o-mini"],
+    )
+    max_tokens: int | None = Field(
+        default=None,
+        description=(
+            "Maximum number of tokens the LLM can generate. If null, CrewAI "
+            "does not set an explicit output token cap and the provider's "
+            "default applies."
+        ),
+        examples=[4096],
+    )
 
 
 class CrewAgentDefinition(BaseModel):
@@ -73,6 +96,42 @@ class CrewAgentDefinition(BaseModel):
         default_factory=dict,
         description="Additional agent settings passed to the loader.",
         examples=[{"llm": "openai/gpt-4o-mini"}],
+    )
+    llm: str | LLMDefinition | None = Field(
+        default=None,
+        description=(
+            "Language model that runs the agent. Use a string model name or an "
+            "object with model settings such as max_tokens."
+        ),
+        examples=[{"model": "openai/gpt-4o-mini", "max_tokens": 4096}],
+    )
+    planning_config: PlanningConfig | None = Field(
+        default=None,
+        description="Configuration for agent planning before task execution.",
+        examples=[{"max_attempts": 3}],
+    )
+    allow_delegation: bool | None = Field(
+        default=None,
+        description="Enable agent to delegate and ask questions among each other.",
+        examples=[False],
+    )
+    max_iter: int | None = Field(
+        default=None,
+        description="Maximum iterations for an agent to execute a task",
+        examples=[25],
+    )
+    max_rpm: int | None = Field(
+        default=None,
+        description=(
+            "Maximum number of requests per minute for the agent execution to be "
+            "respected."
+        ),
+        examples=[10],
+    )
+    max_execution_time: int | None = Field(
+        default=None,
+        description="Maximum execution time in seconds for an agent to execute a task",
+        examples=[300],
     )
     tools: list[str | dict[str, Any]] | None = Field(
         default=None,
