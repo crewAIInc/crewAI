@@ -22,6 +22,7 @@ class ToolCallContext:
 
     tool_name: str
     tool_input: dict[str, Any]
+    tool_alias: str | None = None
     agent_id: str | None = None
     agent_role: str | None = None
     task_description: str | None = None
@@ -68,12 +69,18 @@ def enable_guardrail(
 def _build_request(context: ToolCallContext) -> GuardrailRequest:
     """Build a GuardrailRequest from a tool-call context.
 
+    Mirrors the upstream _build_request in crewai.hooks.guardrails:
+    - tool_name: human-readable name (or alias as fallback)
+    - tool_alias: internal identifier (from context.tool_alias)
+    - tool_input: deep-copied snapshot (detached from mutable CrewAI args)
+
     Preserves the context timestamp if provided, so latency checks measure
     total request age (including queue time), not just adapter/provider time.
     """
     return GuardrailRequest(
         tool_name=context.tool_name,
         tool_input=deepcopy(context.tool_input),
+        tool_alias=context.tool_alias,
         agent_id=context.agent_id,
         agent_role=context.agent_role,
         task_description=context.task_description,
