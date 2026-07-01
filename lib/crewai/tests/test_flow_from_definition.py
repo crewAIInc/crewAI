@@ -11,6 +11,8 @@ from unittest.mock import patch
 import pytest
 from pydantic import BaseModel, ValidationError
 
+from crewai import Agent
+from crewai.agent.planning_config import PlanningConfig
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
@@ -27,9 +29,60 @@ from crewai.flow.flow_definition import FlowConfigDefinition, FlowDefinition
 from crewai.flow.persistence import persist
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.runtime._actions import FlowScriptExecutionDisabledError
+from crewai.project.crew_definition import AgentDefinition
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.tools import BaseTool
 from crewai.types.streaming import StreamSession
+
+
+AGENT_RUNTIME_CONTROL_FIELDS = (
+    "planning_config",
+    "allow_delegation",
+    "max_iter",
+    "max_rpm",
+    "max_execution_time",
+)
+
+
+def assert_agent_runtime_field_schema(properties: dict[str, Any]) -> None:
+    for field_name in AGENT_RUNTIME_CONTROL_FIELDS:
+        assert "default" in properties[field_name]
+        assert properties[field_name]["default"] is None
+        assert properties[field_name]["description"]
+
+
+def assert_planning_config_schema(schema_defs: dict[str, Any]) -> None:
+    properties = schema_defs["PlanningConfig"]["properties"]
+    max_attempts = properties["max_attempts"]
+    planning_config_field = PlanningConfig.model_fields["max_attempts"]
+
+    assert max_attempts["default"] == planning_config_field.default
+    assert max_attempts["description"] == planning_config_field.description
+
+
+def assert_llm_definition_schema(schema_defs: dict[str, Any]) -> None:
+    properties = schema_defs["LLMDefinition"]["properties"]
+
+    assert set(properties) >= {
+        "model",
+        "max_tokens",
+    }
+    assert properties["model"]["type"] == "string"
+    assert properties["max_tokens"]["default"] is None
+
+
+def test_inline_agent_definition_omits_unspecified_runtime_controls():
+    definition = AgentDefinition(
+        role="Analyst",
+        goal="Answer questions",
+        backstory="Knows things.",
+        input="${state.question}",
+    )
+
+    dumped = definition.model_dump(mode="python", exclude_none=True)
+
+    for field_name in AGENT_RUNTIME_CONTROL_FIELDS:
+        assert field_name not in dumped
 
 
 class StaticSearchTool(BaseTool):
@@ -996,6 +1049,10 @@ def test_agent_action_round_trips_with_inline_definition():
                             "role": "Analyst",
                             "goal": "Answer questions",
                             "backstory": "Knows things.",
+                            "llm": {
+                                "model": "openai/gpt-4o-mini",
+                                "max_tokens": 4096,
+                            },
                             "settings": {"verbose": True},
                             "input": "${state.question}",
                         },
@@ -1010,20 +1067,28 @@ def test_agent_action_round_trips_with_inline_definition():
     assert action.call == "agent"
     assert action.with_.role == "Analyst"
     assert action.with_.input == "${state.question}"
+    assert action.with_.llm is not None
+    assert action.with_.llm.max_tokens == 4096
     assert action.with_.settings == {"verbose": True}
 
 
 def test_agent_action_json_schema_describes_inline_agent_definitions():
     schema_defs = FlowDefinition.model_json_schema(by_alias=True)["$defs"]
+    properties = schema_defs["AgentDefinition"]["properties"]
 
-    assert set(schema_defs["AgentDefinition"]["properties"]) >= {
+    assert set(properties) >= {
         "role",
         "goal",
         "backstory",
         "settings",
+        "llm",
         "input",
         "response_format",
+        *AGENT_RUNTIME_CONTROL_FIELDS,
     }
+    assert_agent_runtime_field_schema(properties)
+    assert_planning_config_schema(schema_defs)
+    assert_llm_definition_schema(schema_defs)
 
 
 def test_agent_action_rejects_non_string_input_in_definition():
@@ -1379,6 +1444,7 @@ def test_crew_action_normalizes_named_agent_list_definition():
 def test_crew_action_json_schema_describes_inline_crew_definitions():
     schema_defs = FlowDefinition.model_json_schema(by_alias=True)["$defs"]
     agents_schema = schema_defs["CrewDefinition"]["properties"]["agents"]
+    agent_properties = schema_defs["CrewAgentDefinition"]["properties"]
 
     assert set(schema_defs["CrewDefinition"]["properties"]) >= {
         "agents",
@@ -1386,15 +1452,20 @@ def test_crew_action_json_schema_describes_inline_crew_definitions():
         "inputs",
     }
     assert {option["type"] for option in agents_schema["anyOf"]} == {"array", "object"}
-    assert set(schema_defs["CrewAgentDefinition"]["properties"]) >= {
+    assert set(agent_properties) >= {
         "role",
         "goal",
         "backstory",
         "settings",
+        "llm",
         "tools",
         "apps",
         "mcps",
+        *AGENT_RUNTIME_CONTROL_FIELDS,
     }
+    assert_agent_runtime_field_schema(agent_properties)
+    assert_planning_config_schema(schema_defs)
+    assert_llm_definition_schema(schema_defs)
     assert set(schema_defs["CrewTaskDefinition"]["properties"]) >= {
         "description",
         "expected_output",
