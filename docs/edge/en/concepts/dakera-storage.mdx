@@ -51,7 +51,7 @@ from crewai import Crew, Agent, Task, Process
 from crewai_dakera import DakeraStorage
 
 storage = DakeraStorage(
-    base_url="http://localhost:3000",
+    base_url="http://localhost:3300",
     api_key="your_key",
 )
 
@@ -76,7 +76,7 @@ from crewai_dakera import DakeraStorage
 
 memory = Memory(
     storage=DakeraStorage(
-        base_url="http://localhost:3000",
+        base_url="http://localhost:3300",
         api_key="your_key",
     )
 )
@@ -96,7 +96,7 @@ from crewai import Agent, Memory
 from crewai_dakera import DakeraStorage
 
 storage = DakeraStorage(
-    base_url="http://localhost:3000",
+    base_url="http://localhost:3300",
     api_key="your_key",
 )
 
@@ -124,7 +124,7 @@ Dakera applies an exponential decay to memory importance over time. Memories acc
 
 ```python
 storage = DakeraStorage(
-    base_url="http://localhost:3000",
+    base_url="http://localhost:3300",
     api_key="your_key",
     # Optional: tune decay parameters
     half_life_days=14,      # Importance halves every 14 days without access
@@ -167,7 +167,7 @@ crew_run_2.kickoff()
 
 ```python
 DakeraStorage(
-    base_url="http://localhost:3000",  # Dakera server URL (required)
+    base_url="http://localhost:3300",  # Dakera server URL (required)
     api_key="your_key",               # API key (required)
     namespace="crewai",               # Isolate memories by crew/project (optional)
     half_life_days=30,                # Decay half-life in days (default: 30)
@@ -181,7 +181,7 @@ DakeraStorage(
 Set credentials via environment variables to avoid hardcoding:
 
 ```bash
-export DAKERA_BASE_URL=http://localhost:3000
+export DAKERA_BASE_URL=http://localhost:3300
 export DAKERA_API_KEY=your_key
 ```
 
@@ -201,19 +201,19 @@ Because Dakera is a REST server, you can inspect, inject, or delete memories fro
 
 ```bash
 # Store a memory manually
-curl -X POST http://localhost:3000/v1/memories \
+curl -X POST http://localhost:3300/v1/memories \
   -H "Authorization: Bearer your_key" \
   -H "Content-Type: application/json" \
   -d '{"content": "The project deadline is 2026-09-01.", "namespace": "crewai"}'
 
 # Search memories
-curl -X POST http://localhost:3000/v1/memories/search \
+curl -X POST http://localhost:3300/v1/memories/search \
   -H "Authorization: Bearer your_key" \
   -H "Content-Type: application/json" \
   -d '{"query": "project deadline", "namespace": "crewai", "limit": 5}'
 
 # Delete memories by filter
-curl -X DELETE http://localhost:3000/v1/memories \
+curl -X DELETE http://localhost:3300/v1/memories \
   -H "Authorization: Bearer your_key" \
   -H "Content-Type: application/json" \
   -d '{"namespace": "crewai", "older_than_days": 90}'
@@ -228,7 +228,7 @@ services:
   dakera:
     image: ghcr.io/dakera-ai/dakera:latest
     ports:
-      - "3000:3000"
+      - "3300:3300"
     environment:
       DAKERA_API_KEY: ${DAKERA_API_KEY}
     volumes:
@@ -242,7 +242,7 @@ volumes:
 ## Troubleshooting
 
 **Connection refused?**
-- Confirm the Dakera server is running: `curl http://localhost:3000/health`
+- Confirm the Dakera server is running: `curl http://localhost:3300/health`
 - Check the `base_url` matches the server address
 
 **Authentication errors?**
