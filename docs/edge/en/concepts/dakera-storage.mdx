@@ -28,10 +28,10 @@ pip install crewai-dakera
 ```bash
 docker run -d \
   --name dakera \
-  -p 3000:3000 \
+  -p 3300:3300 \
   -e DAKERA_API_KEY=your_key \
   -v dakera_data:/data \
-  dakera/dakera:latest
+  ghcr.io/dakera-ai/dakera:latest
 ```
 
 The server exposes three core endpoints:
@@ -148,7 +148,7 @@ crew_run_1 = Crew(
     agents=[researcher],
     tasks=[discovery_task],
     memory=True,
-    storage=DakeraStorage(base_url="http://dakera:3000", api_key="key"),
+    storage=DakeraStorage(base_url="http://dakera:3300", api_key="key"),
 )
 crew_run_1.kickoff()
 
@@ -157,7 +157,7 @@ crew_run_2 = Crew(
     agents=[researcher],
     tasks=[followup_task],
     memory=True,
-    storage=DakeraStorage(base_url="http://dakera:3000", api_key="key"),
+    storage=DakeraStorage(base_url="http://dakera:3300", api_key="key"),
 )
 crew_run_2.kickoff()
 # Agent automatically recalls relevant context from Run 1
@@ -226,7 +226,7 @@ For production, use Docker Compose with a named volume:
 ```yaml
 services:
   dakera:
-    image: dakera/dakera:latest
+    image: ghcr.io/dakera-ai/dakera:latest
     ports:
       - "3000:3000"
     environment:
