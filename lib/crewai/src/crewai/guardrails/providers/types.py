@@ -7,6 +7,13 @@ import directly from crewai.hooks.guardrails.
 
 Until then, this module provides a standalone, drop-in implementation
 that is structurally compatible with the upstream contract.
+
+Extensions beyond upstream (backward-compatible optional fields):
+- GuardrailRequest.timestamp: enables latency measurement across queue time
+- GuardrailDecision.action_id: enables audit traceability linking
+
+Missing from upstream (to be added):
+- GuardrailRequest.tool_alias: internal tool identifier vs human-readable name
 """
 
 from __future__ import annotations
@@ -21,6 +28,7 @@ class GuardrailRequest:
 
     tool_name: str
     tool_input: Mapping[str, Any]
+    tool_alias: str | None = None
     agent_id: str | None = None
     agent_role: str | None = None
     task_description: str | None = None

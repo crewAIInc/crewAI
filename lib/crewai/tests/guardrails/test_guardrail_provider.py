@@ -362,6 +362,7 @@ class TestConformanceVector:
         """GuardrailRequest has all fields from the upstream contract."""
         ts = time.time()
         request = _make_request(
+            tool_alias="SearchWeb",
             agent_id="agent-1",
             agent_role="researcher",
             task_description="search for info",
@@ -369,12 +370,18 @@ class TestConformanceVector:
             timestamp=ts,
         )
         assert request.tool_name == "search"
+        assert request.tool_alias == "SearchWeb"
         assert request.tool_input == {"query": "test"}
         assert request.agent_id == "agent-1"
         assert request.agent_role == "researcher"
         assert request.task_description == "search for info"
         assert request.crew_id == "crew-1"
         assert request.timestamp == ts
+
+    def test_tool_alias_defaults_to_none(self):
+        """tool_alias is optional (upstream has it as required str, we make it optional for compat)."""
+        request = _make_request()
+        assert request.tool_alias is None
 
     def test_decision_fields_match_upstream(self):
         """GuardrailDecision has all fields from the upstream contract including action_id."""
