@@ -98,6 +98,42 @@ class TestVoyageAIEmbeddingFunction:
             _, kwargs = mock_client.contextualized_embed.call_args
             assert kwargs["inputs"] == [["aa"], ["bb"]]
 
+    def test_contextualized_defaults_input_type_to_document(self):
+        """Without a configured input_type, contextualized calls default to 'document'."""
+        with patch("voyageai.Client") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client_class.return_value = mock_client
+            mock_client.contextualized_embed.return_value = MagicMock(
+                results=[MagicMock(embeddings=[[0.1, 0.2]])]
+            )
+
+            fn = VoyageAIEmbeddingFunction(
+                api_key="voyage-key", model="voyage-context-4"
+            )
+            fn(["aa"])
+
+            _, kwargs = mock_client.contextualized_embed.call_args
+            assert kwargs["input_type"] == "document"
+
+    def test_contextualized_model_forwards_input_type(self):
+        """A configured input_type is forwarded to the contextualized call."""
+        with patch("voyageai.Client") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client_class.return_value = mock_client
+            mock_client.contextualized_embed.return_value = MagicMock(
+                results=[MagicMock(embeddings=[[0.1, 0.2]])]
+            )
+
+            fn = VoyageAIEmbeddingFunction(
+                api_key="voyage-key",
+                model="voyage-context-4",
+                input_type="query",
+            )
+            fn(["aa"])
+
+            _, kwargs = mock_client.contextualized_embed.call_args
+            assert kwargs["input_type"] == "query"
+
     def test_contextualized_string_input_normalized_with_wrapping(self):
         """A single string input is normalized and wrapped as a single-chunk document."""
         with mock_voyageai_client() as mock_client:

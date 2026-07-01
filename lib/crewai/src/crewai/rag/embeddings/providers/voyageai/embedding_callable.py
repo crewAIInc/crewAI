@@ -57,7 +57,7 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
             ctx_result = self._client.contextualized_embed(
                 inputs=inputs,
                 model=model,
-                input_type="document",
+                input_type=self._config.get("input_type", "document"),
                 output_dtype=self._config.get("output_dtype"),
                 output_dimension=self._config.get("output_dimension"),
             )
