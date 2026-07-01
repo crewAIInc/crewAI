@@ -773,6 +773,15 @@ class FlowDefinition(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def _validate_trigger_namespace(self) -> FlowDefinition:
+        for method_name, method in self.methods.items():
+            if _condition_references(method.listen, method_name):
+                raise ValueError(
+                    f"methods.{method_name}.listen must not reference itself"
+                )
+        return self
+
+    @model_validator(mode="after")
     def _validate_cel_expressions(self) -> FlowDefinition:
         for method_name, method in self.methods.items():
             _validate_action_cel(
@@ -867,6 +876,18 @@ def _validate_step_list(steps: list[FlowEachStepDefinition], *, field: str) -> N
         if name in seen:
             raise ValueError(f"{field} step names must be unique: {name!r}")
         seen.add(name)
+
+
+def _condition_references(condition: FlowDefinitionCondition | None, name: str) -> bool:
+    if condition is None:
+        return False
+    if isinstance(condition, str):
+        return condition == name
+    return any(
+        _condition_references(child, name)
+        for key in ("and", "or")
+        for child in condition.get(key, [])
+    )
 
 
 def _validate_action_cel(

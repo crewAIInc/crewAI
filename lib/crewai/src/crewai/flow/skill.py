@@ -162,7 +162,7 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         descriptions={
             "do": "Single action object executed when this method runs.",
             "start": "Marks a start method. Use `true` for the normal entrypoint. String or map conditions are advanced trigger conditions; use them only when the user asks for event/condition-based starts.",
-            "listen": 'Trigger condition that runs this method after upstream events. A string target can be a method name or a router-emitted event name, and both live in the same trigger namespace. Map conditions are for `and`/`or` trigger composition, for example `{"and": ["validated", "processed"]}`.',
+            "listen": 'Trigger condition that runs this method after upstream events. A string target can be a method name or a router-emitted event name, and both live in the same trigger namespace. Methods must not listen to their own method name. Map conditions are for `and`/`or` trigger composition, for example `{"and": ["validated", "processed"]}`.',
             "router": "Whether the method output should be treated as the next event name. Router actions must return one event name string, with no surrounding explanation.",
             "emit": "Declared router events this method may emit. Each emitted event name should be unique and should not collide with method names.",
         },

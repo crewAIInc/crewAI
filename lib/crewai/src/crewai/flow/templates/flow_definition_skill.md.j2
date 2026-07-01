@@ -60,6 +60,7 @@ Pick the simplest action that does the job.
 - `state` is the initial shared data shape. Action results do not automatically merge into `state`.
 - Read method results with `outputs.method_name` after that method can run.
 - `listen` targets a method name or a router-emitted event name.
+- Methods must not listen to their own method name.
 - Method names and emitted event names share one namespace. Avoid reusing the same string for both unless the user explicitly wants that.
 - Use `router: true` plus `emit` when one method chooses between named branches.
 - A router action must return exactly one emitted event string. It must not return JSON, a list, or an explanation.
@@ -127,6 +128,7 @@ Dynamic value rules:
 - Do not put more than one action under a method's `do`.
 - Do not make `do` a list.
 - Do not reference `outputs.some_method` before `some_method` can run.
+- Do not set a method's `listen` to its own method name.
 - Do not use the same string for an emitted event and a method name unless the user asks for it.
 - Do not use `emit` without `router: true`{% if include_hitl %} or `human_feedback.emit`{% endif %}.
 - Do not rely on crew action-level `inputs` alone to ground agent behavior. Inputs that do not match placeholders are effectively unused by the prompt.
@@ -195,6 +197,7 @@ Allowed shapes:
 
 - A method has exactly one `do` action object with one `call` discriminator.
 - `listen` targets method names and router-emitted event names in one shared namespace.
+- Methods cannot listen to their own method name.
 - A router method result must match one declared `emit` value.
 - Crew action-level `inputs` are the Crew kickoff inputs; use CEL-wrapped strings there for runtime values.
 - Crew agent/task interpolation uses `{name}` placeholders from evaluated crew inputs.
