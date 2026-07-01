@@ -57,7 +57,7 @@ methods:
         role: Follow-up router
         goal: 'Return exactly one bare value: followup or done. Do not include explanation.'
         backstory: Skilled at routing reviewed research briefs.
-        input: "${outputs.research_brief.raw}"
+        input: "${'Reviewed research: ' + text(outputs, 'research_brief.raw')}"
   write_followup:
     listen: followup
     do:

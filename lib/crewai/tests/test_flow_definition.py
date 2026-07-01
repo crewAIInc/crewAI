@@ -1333,6 +1333,7 @@ def test_skill_documents_flow_wiring():
     assert isinstance(skill, str)
     assert "```yaml" in skill
     assert "[Method](#method-methods)" in skill
+    assert "input: \"${'Reviewed research: ' + text(outputs, 'research_brief.raw')}\"" in skill
     assert 'text(root, "path", "default")' in skill
 
 
