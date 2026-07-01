@@ -136,7 +136,9 @@ class TestVoyageAIEmbeddingFunction:
 
     def test_contextualized_string_input_normalized_with_wrapping(self):
         """A single string input is normalized and wrapped as a single-chunk document."""
-        with mock_voyageai_client() as mock_client:
+        with patch("voyageai.Client") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client_class.return_value = mock_client
             mock_client.contextualized_embed.return_value = MagicMock(
                 results=[MagicMock(embeddings=[[0.1, 0.2]])]
             )
