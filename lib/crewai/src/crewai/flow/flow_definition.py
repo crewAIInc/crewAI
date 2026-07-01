@@ -472,8 +472,8 @@ class FlowAgentActionDefinition(BaseModel):
 
     call: Literal["agent"] = Field(
         description=(
-            "Action discriminator. Use agent to run an individual inline Agent "
-            "definition outside of a crew."
+            "Action discriminator. Use agent to run an individual inline or "
+            "repository-backed Agent definition outside of a crew."
         ),
         examples=["agent"],
     )
@@ -481,7 +481,8 @@ class FlowAgentActionDefinition(BaseModel):
         alias="with",
         description=(
             "Individual Agent definition to load and execute outside of a crew "
-            "for this action."
+            "for this action. Set from_repository to load agent configuration "
+            "from the agent repository."
         ),
         examples=[
             {

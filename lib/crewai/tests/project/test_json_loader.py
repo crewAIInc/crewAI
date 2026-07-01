@@ -355,6 +355,18 @@ class TestLoadAgent:
         with pytest.raises(Exception):
             load_agent(agent_file)
 
+    def test_load_agent_rejects_null_required_fields(self, tmp_path: Path):
+        agent_def = {
+            "role": None,
+            "goal": "Find information",
+            "backstory": "Expert researcher.",
+        }
+        agent_file = tmp_path / "agent.json"
+        agent_file.write_text(json.dumps(agent_def))
+
+        with pytest.raises(JSONProjectValidationError, match="missing required field 'role'"):
+            load_agent(agent_file)
+
     def test_load_agent_file_not_found(self):
         with pytest.raises(FileNotFoundError):
             load_agent(Path("/nonexistent/agent.json"))

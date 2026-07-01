@@ -88,7 +88,7 @@ def test_flow_definition_json_schema_carries_reference_descriptions():
     agent_properties = defs["FlowAgentActionDefinition"]["properties"]
     assert "Individual Agent definition" in agent_properties["with"]["description"]
     assert "outside of a crew" in agent_properties["with"]["description"]
-    assert "individual inline Agent" in agent_properties["call"]["description"]
+    assert "repository-backed Agent" in agent_properties["call"]["description"]
 
     expression_rule = FLOW_TEMPLATE_EXPRESSION_RULES[0]
     code_properties = defs["FlowCodeActionDefinition"]["properties"]

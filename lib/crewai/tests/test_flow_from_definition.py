@@ -1163,6 +1163,55 @@ methods:
     }
 
 
+def test_agent_action_runs_repository_yaml_definition(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import crewai.agent.core as agent_core
+    from crewai import Agent
+
+    def fake_load_agent_from_repository(from_repository: str) -> dict[str, Any]:
+        assert from_repository == "support_specialist"
+        return {
+            "role": "Repository specialist",
+            "goal": "Answer support questions",
+            "backstory": "Loaded from the agent repository.",
+            "max_iter": 3,
+        }
+
+    async def fake_kickoff_async(
+        self: Agent, messages: str, **_kwargs: Any
+    ) -> dict[str, Any]:
+        return {"agent": self.role, "input": messages, "max_iter": self.max_iter}
+
+    monkeypatch.setattr(
+        agent_core,
+        "load_agent_from_repository",
+        fake_load_agent_from_repository,
+    )
+    monkeypatch.setattr(Agent, "kickoff_async", fake_kickoff_async)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: AgentFlow
+methods:
+  answer:
+    do:
+      call: agent
+      with:
+        from_repository: support_specialist
+        input: "${state.question}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    assert flow.kickoff(inputs={"question": "What is CrewAI?"}) == {
+        "agent": "Repository specialist",
+        "input": "What is CrewAI?",
+        "max_iter": 3,
+    }
+
+
 def test_agent_action_renders_text_custom_expression_input(
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -1281,6 +1330,7 @@ def test_agent_action_json_schema_describes_inline_agent_definitions():
         "role",
         "goal",
         "backstory",
+        "from_repository",
         "settings",
         "llm",
         "input",
@@ -1434,6 +1484,73 @@ methods:
     ) == {
         "topic": "News about AI",
         "sources": ["crewai.com", "archive-AI"],
+    }
+
+
+def test_crew_action_runs_repository_agent_yaml_definition(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import crewai.agent.core as agent_core
+    from crewai import Crew
+
+    def fake_load_agent_from_repository(from_repository: str) -> dict[str, Any]:
+        assert from_repository == "researcher"
+        return {
+            "role": "Repository researcher",
+            "goal": "Research {topic}",
+            "backstory": "Loaded from the agent repository.",
+            "max_iter": 5,
+        }
+
+    async def fake_kickoff_async(
+        self: Crew, inputs: dict[str, Any] | None = None, **_kwargs: Any
+    ) -> dict[str, Any]:
+        return {
+            "crew": self.name,
+            "agents": [
+                {"role": agent.role, "max_iter": agent.max_iter}
+                for agent in self.agents
+            ],
+            "tasks": [task.description for task in self.tasks],
+            "inputs": inputs,
+        }
+
+    monkeypatch.setattr(
+        agent_core,
+        "load_agent_from_repository",
+        fake_load_agent_from_repository,
+    )
+    monkeypatch.setattr(Crew, "kickoff_async", fake_kickoff_async)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: CrewFlow
+methods:
+  research:
+    do:
+      call: crew
+      with:
+        name: inline_research
+        agents:
+          researcher:
+            from_repository: researcher
+        tasks:
+          - name: research_task
+            description: Research {topic}
+            expected_output: Findings about {topic}
+            agent: researcher
+      inputs:
+        topic: "${state.topic}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    assert flow.kickoff(inputs={"topic": "AI"}) == {
+        "crew": "inline_research",
+        "agents": [{"role": "Repository researcher", "max_iter": 5}],
+        "tasks": ["Research {topic}"],
+        "inputs": {"topic": "AI"},
     }
 
 
@@ -1709,6 +1826,7 @@ def test_crew_action_json_schema_describes_inline_crew_definitions():
         "role",
         "goal",
         "backstory",
+        "from_repository",
         "settings",
         "llm",
         "tools",

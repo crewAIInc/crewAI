@@ -258,9 +258,10 @@ Fields:
 #### Crew Agent Definition (`methods.<name>.do[call=crew].with.agents.<name>`)
 
 Fields:
-- `role` (required): string. Crew agent role. Crew inputs are interpolated with `{name}` placeholders such as `{topic}`; this is not CEL. Example: `Research analyst`
-- `goal` (required): string. Crew agent goal. Crew inputs are interpolated with `{name}` placeholders such as `{topic}`; this is not CEL. Example: `Research {topic}`
-- `backstory` (required): string. Crew agent backstory. Crew inputs are interpolated with `{name}` placeholders such as `{topic}`; this is not CEL. Example: `Expert at concise technical research.`
+- `role` (optional): string | null; default `null`. Crew agent role. Crew inputs are interpolated with `{name}` placeholders such as `{topic}`; this is not CEL. Example: `Research analyst`
+- `goal` (optional): string | null; default `null`. Crew agent goal. Crew inputs are interpolated with `{name}` placeholders such as `{topic}`; this is not CEL. Example: `Research {topic}`
+- `backstory` (optional): string | null; default `null`. Crew agent backstory. Crew inputs are interpolated with `{name}` placeholders such as `{topic}`; this is not CEL. Example: `Expert at concise technical research.`
+- `from_repository` (optional): string | null; default `null`. Agent repository name to load. Repository values supply missing agent configuration; explicitly provided local fields override the repository values. Example: `researcher`
 - `settings` (optional): map of string to any. Additional agent settings passed to the loader. Example: `{"llm": "openai/gpt-4o-mini"}`
 - `llm` (optional): string or inline LLM config; default `null`. Language model that runs this crew agent. Use an object when setting LLM options such as `max_tokens`. Example: `{"max_tokens": 4096, "model": "openai/gpt-4o-mini"}`
 - `planning_config` (optional): object | null; default `null`. Agent planning configuration. Set `max_attempts` to limit planning refinement attempts before task execution. Example: `{"max_attempts": 3}`
@@ -292,15 +293,16 @@ Shape:
 - `call: agent`
 
 Fields:
-- `call` (required): must be `agent`. Action discriminator. Use agent to run an individual inline Agent definition outside of a crew. Example: `agent`
+- `call` (required): must be `agent`. Action discriminator. Use agent to run an individual inline or repository-backed Agent definition outside of a crew. Example: `agent`
 - `with` (required): any. Individual Agent definition to load and execute outside of a crew for this action. Put the agent input in `with.input`; agent actions do not support action-level `inputs`. Example: `{"backstory": "Precise and concise.", "goal": "Answer user questions", "input": "${state.question}", "role": "Analyst", "settings": {"llm": "openai/gpt-4o-mini"}}`
 
 #### Agent Definition (`methods.<name>.do[call=agent].with`)
 
 Fields:
-- `role` (required): string. Individual agent role used by a Flow agent action outside of a crew. Example: `Support specialist`
-- `goal` (required): string. Individual agent goal for the Flow agent action outside of a crew. Example: `Draft a concise customer reply`
-- `backstory` (required): string. Individual agent backstory used to shape behavior outside of a crew. Example: `Expert at resolving SaaS support questions.`
+- `role` (optional): string | null; default `null`. Individual agent role used by a Flow agent action outside of a crew. Example: `Support specialist`
+- `goal` (optional): string | null; default `null`. Individual agent goal for the Flow agent action outside of a crew. Example: `Draft a concise customer reply`
+- `backstory` (optional): string | null; default `null`. Individual agent backstory used to shape behavior outside of a crew. Example: `Expert at resolving SaaS support questions.`
+- `from_repository` (optional): string | null; default `null`. Agent repository name to load. Repository values supply missing agent configuration; explicitly provided local fields override the repository values. Example: `support_specialist`
 - `settings` (optional): map of string to any. Additional agent settings passed to the loader. Example: `{"llm": "openai/gpt-4o-mini"}`
 - `llm` (optional): string or inline LLM config; default `null`. Language model that runs this agent. Use an object when setting LLM options such as `max_tokens`. Example: `{"max_tokens": 4096, "model": "openai/gpt-4o-mini"}`
 - `planning_config` (optional): object | null; default `null`. Agent planning configuration. Set `max_attempts` to limit planning refinement attempts before task execution. Example: `{"max_attempts": 3}`
