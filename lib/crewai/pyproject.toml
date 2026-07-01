@@ -92,6 +92,7 @@ litellm = [
 ]
 bedrock = [
     "boto3~=1.42.90",
+    "aiobotocore~=3.5.0",
 ]
 google-genai = [
     "google-genai~=1.65.0",
