@@ -20,12 +20,12 @@ class GuardrailRequest:
     """Provider-agnostic context for one pre-tool-call authorization decision."""
 
     tool_name: str
-    tool_alias: str
     tool_input: Mapping[str, Any]
     agent_id: str | None = None
     agent_role: str | None = None
     task_description: str | None = None
     crew_id: str | None = None
+    timestamp: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,6 +35,7 @@ class GuardrailDecision:
     allow: bool
     reason: str | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
+    action_id: str | None = None
 
 
 @runtime_checkable

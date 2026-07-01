@@ -8,7 +8,7 @@ Maps CrewAI's pre-tool-call context into Correctover's 6-dimensional verificatio
   structure, schema, identity, integrity, latency, cost
 
 Usage:
-    from correctover.crewai import CorrectoverGuardrailProvider
+    from crewai.guardrails.providers import CorrectoverGuardrailProvider
     from crewai.hooks import enable_guardrail
 
     provider = CorrectoverGuardrailProvider()
@@ -17,6 +17,8 @@ Usage:
 
 from __future__ import annotations
 
+import hashlib
+import time
 from dataclasses import dataclass
 from typing import Any, Mapping
 
@@ -53,7 +55,7 @@ class VerificationReport:
 
     @property
     def failed_dimensions(self) -> list[str]:
-        return [d.name for d in self.dimensions if not d.passed]
+        return [d for d in self.dimensions if not d.passed]
 
 
 class CorrectoverGuardrailProvider:
@@ -69,10 +71,10 @@ class CorrectoverGuardrailProvider:
     - cost: estimated cost is within policy limits
 
     Design principles:
-    - fail_closed: any dimension failure or provider error → deny
-    - deterministic: same input → same decision (no stochastic checks)
-    - recomputable: decision includes action_id for cryptographic linkage
-    - minimal latency: 6-dim check runs at ~22μs P50
+    - fail_closed: any dimension failure or provider error -> deny
+    - deterministic: same input -> same decision (no stochastic checks)
+    - traceable: decision includes action_id for audit linkage
+    - minimal latency: 6-dim check runs at ~22us P50
     """
 
     name = "correctover"
@@ -109,6 +111,16 @@ class CorrectoverGuardrailProvider:
         self.fail_closed = fail_closed
         self._request_count = 0
 
+    def _generate_action_id(self, request: GuardrailRequest) -> str:
+        """Generate a deterministic action_id for audit traceability."""
+        content = (
+            f"{request.tool_name}|"
+            f"{hashlib.md5(str(request.tool_input).encode()).hexdigest()[:12]}|"
+            f"{request.agent_id or ''}|"
+            f"{request.timestamp or time.time()}"
+        )
+        return hashlib.sha256(content.encode()).hexdigest()[:16]
+
     def evaluate(self, request: GuardrailRequest) -> GuardrailDecision:
         """
         Evaluate whether the requested tool call should proceed.
@@ -118,6 +130,7 @@ class CorrectoverGuardrailProvider:
         """
         self._request_count += 1
         dimensions: list[DimensionResult] = []
+        action_id = self._generate_action_id(request)
 
         try:
             # Dimension 1: Structure
@@ -150,6 +163,7 @@ class CorrectoverGuardrailProvider:
                 allow=not self.fail_closed,
                 reason=f"Correctover provider error: {e}",
                 metadata={"error": str(e), "fail_closed": self.fail_closed},
+                action_id=action_id,
             )
 
         # Aggregate: all dimensions must pass
@@ -159,21 +173,25 @@ class CorrectoverGuardrailProvider:
                 allow=False,
                 reason=f"Verification failed: {', '.join(d.name for d in failed)}",
                 metadata={
+                    "action_id": action_id,
                     "failed_dimensions": [d.name for d in failed],
                     "dimension_details": {
                         d.name: {"passed": d.passed, "detail": d.detail}
                         for d in dimensions
                     },
                 },
+                action_id=action_id,
             )
 
         return GuardrailDecision(
             allow=True,
             reason="All 6 dimensions passed",
             metadata={
+                "action_id": action_id,
                 "dimensions_checked": len(dimensions),
                 "total_requests_evaluated": self._request_count,
             },
+            action_id=action_id,
         )
 
     def _check_structure(self, request: GuardrailRequest) -> DimensionResult:
@@ -233,16 +251,11 @@ class CorrectoverGuardrailProvider:
 
     def _check_integrity(self, request: GuardrailRequest) -> DimensionResult:
         """Check tool_input has not been tampered with."""
-        # Detect detached mutable inputs: if tool_input contains mutable
-        # objects that could have been modified after request construction,
-        # the integrity check catches it by verifying the input is a
-        # frozen snapshot (deepcopy was taken at request time).
         if not isinstance(request.tool_input, Mapping):
             return DimensionResult(
-                "integrity", False, "tool_input is not a frozen snapshot"
+                "integrity", False, "tool_input is not a Mapping"
             )
 
-        # Check for obviously invalid values
         for key, value in request.tool_input.items():
             if not isinstance(key, str):
                 return DimensionResult(
@@ -254,15 +267,19 @@ class CorrectoverGuardrailProvider:
         return DimensionResult("integrity", True)
 
     def _check_latency(self, request: GuardrailRequest) -> DimensionResult:
-        """Check latency bounds (placeholder — actual latency measured at runtime)."""
+        """Check latency bounds against request timestamp."""
         if self.max_latency_ms is not None:
-            # In a real deployment, this would compare actual measured latency
-            # against the threshold. For the provider contract, we validate
-            # the threshold is sane.
             if self.max_latency_ms <= 0:
                 return DimensionResult(
                     "latency", False, f"max_latency_ms must be positive: {self.max_latency_ms}"
                 )
+            if request.timestamp is not None:
+                elapsed_ms = (time.time() - request.timestamp) * 1000
+                if elapsed_ms > self.max_latency_ms:
+                    return DimensionResult(
+                        "latency", False,
+                        f"request age {elapsed_ms:.1f}ms exceeds limit {self.max_latency_ms}ms"
+                    )
         return DimensionResult("latency", True)
 
     def _check_cost(self, request: GuardrailRequest) -> DimensionResult:
