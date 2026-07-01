@@ -625,7 +625,7 @@ def test_flow_definition_from_declaration_accepts_json_and_yaml_strings():
             return "left"
 
         @listen("left")
-        def left(self):
+        def handle_left(self):
             return "left"
 
     expected = RoundTripFlow.flow_definition()
@@ -650,11 +650,11 @@ def test_flow_definition_from_declaration_accepts_json_and_yaml_strings():
                 "ref": "test_flow_definition:RoundTripFlow.decide"
               }
             },
-            "left": {
+            "handle_left": {
               "listen": "left",
               "do": {
                 "call": "code",
-                "ref": "test_flow_definition:RoundTripFlow.left"
+                "ref": "test_flow_definition:RoundTripFlow.handle_left"
               }
             }
           }
@@ -675,11 +675,11 @@ def test_flow_definition_from_declaration_accepts_json_and_yaml_strings():
             do:
               call: code
               ref: test_flow_definition:RoundTripFlow.decide
-          left:
+          handle_left:
             listen: left
             do:
               call: code
-              ref: test_flow_definition:RoundTripFlow.left
+              ref: test_flow_definition:RoundTripFlow.handle_left
         """,
     ]
 
@@ -946,11 +946,11 @@ def test_flow_definition_infers_literal_router_emit():
             return "left"
 
         @listen("left")
-        def left(self):
+        def handle_left(self):
             return "left"
 
         @listen("right")
-        def right(self):
+        def handle_right(self):
             return "right"
 
     definition = LiteralRouterFlow.flow_definition()
@@ -973,11 +973,11 @@ def test_flow_definition_infers_enum_router_emit():
             return Decision.APPROVE
 
         @listen("approve")
-        def approve(self):
+        def handle_approve(self):
             return "approve"
 
         @listen("reject")
-        def reject(self):
+        def handle_reject(self):
             return "reject"
 
     definition = EnumRouterFlow.flow_definition()
@@ -996,11 +996,11 @@ def test_flow_definition_infers_literal_union_router_emit():
             return "left"
 
         @listen("left")
-        def left(self):
+        def handle_left(self):
             return "left"
 
         @listen("right")
-        def right(self):
+        def handle_right(self):
             return "right"
 
     definition = LiteralUnionRouterFlow.flow_definition()
@@ -1054,7 +1054,7 @@ def test_flow_definition_does_not_infer_unannotated_router_body_emit():
             return "left"
 
         @listen("left")
-        def left(self):
+        def handle_left(self):
             return "left"
 
     definition = UnannotatedRouterFlow.flow_definition()
@@ -1073,11 +1073,11 @@ def test_flow_definition_accepts_explicit_router_events():
             return self.state["dynamic_event"]
 
         @listen("left")
-        def left(self):
+        def handle_left(self):
             return "left"
 
         @listen("right")
-        def right(self):
+        def handle_right(self):
             return "right"
 
     definition = ExplicitRouterFlow.flow_definition()
@@ -1149,7 +1149,7 @@ def test_router_human_feedback_preserves_existing_router_metadata():
             return "approved"
 
         @listen("approved")
-        def approved(self):
+        def handle_approved(self):
             return "approved"
 
     definition = RouterHumanFeedbackFlow.flow_definition()
@@ -1212,6 +1212,30 @@ def test_static_string_listener_is_allowed_by_contract():
         }
     )
     assert definition.methods["handle"].listen == "begni"
+
+
+@pytest.mark.parametrize("listen", ["publish", {"or": ["publish", "revise"]}])
+@pytest.mark.parametrize("router_enabled", [False, True])
+def test_flow_definition_rejects_method_self_listen(listen, router_enabled):
+    with pytest.raises(ValueError, match="methods.publish.listen"):
+        flow_definition.FlowDefinition.from_declaration(contents=
+            {
+                "schema": "crewai.flow/v1",
+                "name": "SelfListenFlow",
+                "methods": {
+                    "begin": {
+                        "do": {"ref": "loaded_flows:SelfListenFlow.begin"},
+                        "start": True,
+                    },
+                    "publish": {
+                        "do": {"ref": "loaded_flows:SelfListenFlow.publish"},
+                        "listen": listen,
+                        "router": router_enabled,
+                        "emit": ["done"] if router_enabled else None,
+                    },
+                },
+            }
+        )
 
 
 def test_start_false_not_classified_as_start_method():
