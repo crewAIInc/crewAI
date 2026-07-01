@@ -10,13 +10,15 @@ from __future__ import annotations
 import time
 import pytest
 
-from correctover_guardrail import (
+from crewai.guardrails.providers import (
     CorrectoverGuardrailProvider,
     GuardrailDecision,
     GuardrailProvider,
     GuardrailRequest,
+    DimensionResult,
+    VerificationReport,
 )
-from correctover_guardrail.enable import ToolCallContext, enable_guardrail
+from crewai.guardrails.enable import ToolCallContext, enable_guardrail
 
 
 def _make_request(**kwargs) -> GuardrailRequest:
@@ -98,6 +100,14 @@ class TestAllowDecisions:
         d2 = provider.evaluate(request)
         assert d1.action_id == d2.action_id
 
+    def test_action_id_deterministic_without_timestamp(self):
+        """action_id is deterministic even when timestamp is None."""
+        provider = CorrectoverGuardrailProvider()
+        request = _make_request(timestamp=None)
+        d1 = provider.evaluate(request)
+        d2 = provider.evaluate(request)
+        assert d1.action_id == d2.action_id
+
 
 class TestDenyDecisions:
     """Verify correct deny decisions."""
@@ -138,12 +148,12 @@ class TestDenyDecisions:
         decision = provider.evaluate(request)
         assert decision.allow is False
 
-    def test_none_tool_input_denied(self):
+    def test_empty_tool_input_allowed(self):
+        """Empty tool_input is structurally valid (not the same as None)."""
         provider = CorrectoverGuardrailProvider()
-        # tool_input cannot be None in frozen dataclass, but empty is fine
         request = _make_request(tool_input={})
         decision = provider.evaluate(request)
-        assert decision.allow is True  # empty input is valid
+        assert decision.allow is True
 
 
 class TestFailClosed:
@@ -155,8 +165,6 @@ class TestFailClosed:
 
     def test_fail_closed_false_on_error(self):
         """With fail_closed=False, provider errors should allow execution."""
-        # Use a negative max_latency_ms to force an exception path? No, that's validated.
-        # Instead, test via the hook interface below.
         provider = CorrectoverGuardrailProvider(fail_closed=False)
         assert provider.fail_closed is False
 
@@ -178,9 +186,8 @@ class TestTimestampField:
 
     def test_latency_check_uses_timestamp(self):
         """Verify latency check uses request timestamp for actual measurement."""
-        provider = CorrectoverGuardrailProvider(max_latency_ms=0.001)  # 1 microsecond, very tight
-        # Use a timestamp in the past to ensure elapsed time exceeds threshold
-        request = _make_request(timestamp=time.time() - 1.0)  # 1 second ago
+        provider = CorrectoverGuardrailProvider(max_latency_ms=0.001)
+        request = _make_request(timestamp=time.time() - 1.0)
         decision = provider.evaluate(request)
         assert decision.allow is False
         assert "latency" in decision.reason.lower()
@@ -272,6 +279,23 @@ class TestEnableGuardrail:
         result = hook(context)
         assert result is None
 
+    def test_context_timestamp_preserved(self):
+        """Context timestamp is preserved in the request for latency checks."""
+        provider = CorrectoverGuardrailProvider(max_latency_ms=100)
+        hook = enable_guardrail(provider)
+        # Use a very old timestamp to trigger latency failure
+        context = _make_context(timestamp=time.time() - 10.0)
+        result = hook(context)
+        assert result is False
+
+    def test_context_no_timestamp_uses_current_time(self):
+        """When context has no timestamp, current time is used."""
+        provider = CorrectoverGuardrailProvider()
+        hook = enable_guardrail(provider)
+        context = _make_context()
+        result = hook(context)
+        assert result is None
+
 
 class TestRequestStats:
     """Verify provider statistics."""
@@ -299,6 +323,33 @@ class TestRequestStats:
         config = stats["configuration"]
         assert config["blocked_tools"] == ["x"]
         assert config["max_cost_usd"] == 5.0
+
+
+class TestVerificationReport:
+    """Verify VerificationReport.failed_dimensions returns strings."""
+
+    def test_failed_dimensions_returns_strings(self):
+        report = VerificationReport(
+            dimensions=[
+                DimensionResult("structure", True),
+                DimensionResult("schema", False, "blocked"),
+                DimensionResult("cost", False, "exceeded"),
+            ],
+            allow=False,
+        )
+        failed = report.failed_dimensions
+        assert all(isinstance(d, str) for d in failed)
+        assert failed == ["schema", "cost"]
+
+    def test_failed_dimensions_empty_when_all_pass(self):
+        report = VerificationReport(
+            dimensions=[
+                DimensionResult("structure", True),
+                DimensionResult("schema", True),
+            ],
+            allow=True,
+        )
+        assert report.failed_dimensions == []
 
 
 class TestConformanceVector:
