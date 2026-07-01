@@ -11,7 +11,6 @@ from unittest.mock import patch
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from crewai import Agent
 from crewai.agent.planning_config import PlanningConfig
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.flow_events import (
