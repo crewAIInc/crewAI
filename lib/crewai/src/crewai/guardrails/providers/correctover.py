@@ -141,7 +141,8 @@ class CorrectoverGuardrailProvider:
         else:
             tool_input_fingerprint = repr(request.tool_input)
 
-        agent_part = request.agent_id or ""
+        # Robust agent_id: always a string (non-string types get str()'d)
+        agent_part = str(request.agent_id) if request.agent_id is not None else ""
         ts_part = request.timestamp if request.timestamp is not None else "no-timestamp"
         content = "|".join([
             tool_name_str,
@@ -286,18 +287,19 @@ class CorrectoverGuardrailProvider:
                 "identity", False, "agent_id required but not provided"
             )
 
+        # Guard against non-string agent_id (defensive, regardless of allowed_agents)
+        if request.agent_id is not None and not isinstance(request.agent_id, str):
+            return DimensionResult(
+                "identity", False,
+                "agent_id is not a string: " + str(type(request.agent_id)),
+            )
+
         if self.allowed_agents is not None:
-            # Guard against non-string agent_id
-            if request.agent_id is not None and not isinstance(request.agent_id, str):
-                return DimensionResult(
-                    "identity", False,
-                    "agent_id is not a string: " + str(type(request.agent_id)),
-                )
             if request.agent_id and request.agent_id not in self.allowed_agents:
                 return DimensionResult(
                     "identity",
                     False,
-                    "agent '" + str(request.agent_id) + "' not in allowed list",
+                    "agent '" + request.agent_id + "' not in allowed list",
                 )
 
         return DimensionResult("identity", True)

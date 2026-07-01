@@ -464,14 +464,16 @@ class TestMalformedRequestSafety:
         assert "structure" in decision.reason.lower()
 
     def test_non_string_agent_id_denied(self):
-        """Non-string agent_id is denied via identity check."""
+        """Non-string agent_id is denied via identity check (type guard at top level)."""
         provider = CorrectoverGuardrailProvider(
             require_agent_identity=True,
         )
         request = _make_request(agent_id=42)
         decision = provider.evaluate(request)
         # agent_id=42 is truthy but not a string → identity check catches it
+        # regardless of whether allowed_agents is set
         assert decision.allow is False
+        assert "identity" in decision.reason.lower()
 
     def test_mixed_key_tool_input_denied(self):
         """tool_input with mixed key types is denied (json.dumps sort_keys fails on int+str)."""
