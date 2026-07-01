@@ -200,8 +200,9 @@ class Agent(BaseAgent):
     _mcp_resolver: MCPToolResolver | None = PrivateAttr(default=None)
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     max_execution_time: int | None = Field(
-        default=None,
-        description="Maximum execution time for an agent to execute a task",
+      default=None,
+      gt=0,
+      description="Maximum execution time for an agent to execute a task",
     )
     step_callback: SerializableCallable | None = Field(
         default=None,
@@ -244,8 +245,9 @@ class Agent(BaseAgent):
         description="Keep messages under the context window size by summarizing content.",
     )
     max_retry_limit: int = Field(
-        default=2,
-        description="Maximum number of retries for an agent to execute a task when an error occurs.",
+      default=2,
+      ge=0,
+      description="Maximum number of retries for an agent to execute a task when an error occurs.",
     )
     multimodal: bool = Field(
         default=False,
@@ -315,7 +317,9 @@ class Agent(BaseAgent):
         description="Function or string description of a guardrail to validate agent output",
     )
     guardrail_max_retries: int = Field(
-        default=3, description="Maximum number of retries when guardrail fails"
+      default=3,
+      ge=0,
+      description="Maximum number of retries when guardrail fails",
     )
     a2a: (
         list[A2AConfig | A2AServerConfig | A2AClientConfig]
