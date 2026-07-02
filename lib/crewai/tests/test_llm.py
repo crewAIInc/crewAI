@@ -806,6 +806,31 @@ def test_ollama_does_not_modify_when_last_is_user(ollama_llm):
     assert formatted == original_messages
 
 
+def test_format_messages_strips_cache_breakpoint_for_non_anthropic():
+    """cache_breakpoint keys must be removed for non-Anthropic providers."""
+    from crewai.llms.cache import CACHE_BREAKPOINT_KEY
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+    # Simulate a message that carries the cache breakpoint marker
+    messages = [
+        {"role": "user", "content": "Hello", CACHE_BREAKPOINT_KEY: True},
+    ]
+    formatted = llm._format_messages_for_provider(messages)
+    assert all(CACHE_BREAKPOINT_KEY not in msg for msg in formatted)
+
+
+def test_format_messages_preserves_cache_breakpoint_for_anthropic():
+    """cache_breakpoint keys must be preserved for Anthropic providers."""
+    from crewai.llms.cache import CACHE_BREAKPOINT_KEY
+
+    llm = LLM(model="claude-3-5-sonnet-20241022", is_litellm=True)
+    messages = [
+        {"role": "user", "content": "Hello", CACHE_BREAKPOINT_KEY: True},
+    ]
+    formatted = llm._format_messages_for_provider(messages)
+    assert any(CACHE_BREAKPOINT_KEY in msg for msg in formatted)
+
+
 def test_native_provider_raises_error_when_supported_but_fails():
     """Test that when a native provider is in SUPPORTED_NATIVE_PROVIDERS but fails to instantiate, we raise the error."""
     with patch("crewai.llm.SUPPORTED_NATIVE_PROVIDERS", ["openai"]):
@@ -853,6 +878,12 @@ def test_prefixed_models_with_valid_constants_use_native_sdk():
         assert llm3.is_litellm is False
         assert llm3.provider == "gemini"
 
+    # Test groq/ prefix with Groq model in constants → Native SDK
+    with patch.dict(os.environ, {"GROQ_API_KEY": "test-key"}):
+        llm4 = LLM(model="groq/llama-3.1-70b-versatile", is_litellm=False)
+        assert llm4.is_litellm is False
+        assert llm4.provider == "groq"
+
 
 def test_prefixed_models_with_invalid_constants_use_litellm():
     """Test that models with native provider prefixes use LiteLLM when model is NOT in constants and does NOT match patterns."""
@@ -889,10 +920,10 @@ def test_prefixed_models_with_valid_patterns_use_native_sdk():
 
 def test_prefixed_models_with_non_native_providers_use_litellm():
     """Test that models with non-native provider prefixes always use LiteLLM."""
-    # Test groq/ prefix (not a native provider) → LiteLLM
-    llm = LLM(model="groq/llama-3.3-70b", is_litellm=False)
+    # Test replicate/ prefix (not a native provider) → LiteLLM
+    llm = LLM(model="replicate/llama-3-70b", is_litellm=False)
     assert llm.is_litellm is True
-    assert llm.model == "groq/llama-3.3-70b"
+    assert llm.model == "replicate/llama-3-70b"
 
     # Test together/ prefix (not a native provider) → LiteLLM
     llm2 = LLM(model="together/qwen-2.5-72b", is_litellm=False)
