@@ -89,7 +89,8 @@ def reset_memories_command(
         flows = get_flows()
 
         if not crews and not flows:
-            raise ValueError("No crew or flow found.")
+            click.echo("No crew or flow found.")
+            return
 
         for crew in crews:
             if all:
