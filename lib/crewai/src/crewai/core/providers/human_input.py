@@ -179,7 +179,8 @@ class SyncHumanInputProvider(HumanInputProvider):
         Returns:
             The final answer after feedback processing.
         """
-        feedback = self._prompt_input(context.crew)
+        output_str = self._get_output_string(formatted_answer)
+        feedback = self._prompt_input(context.crew, output_str)
 
         if context._is_training_mode():
             return self._handle_training_feedback(formatted_answer, feedback, context)
@@ -200,7 +201,8 @@ class SyncHumanInputProvider(HumanInputProvider):
         Returns:
             The final answer after feedback processing.
         """
-        feedback = await self._prompt_input_async(context.crew)
+        output_str = self._get_output_string(formatted_answer)
+        feedback = await self._prompt_input_async(context.crew, output_str)
 
         if context._is_training_mode():
             return await self._handle_training_feedback_async(
@@ -259,7 +261,9 @@ class SyncHumanInputProvider(HumanInputProvider):
             else:
                 context.messages.append(context._format_feedback_message(feedback))
                 answer = context._invoke_loop()
-                feedback = self._prompt_input(context.crew)
+                feedback = self._prompt_input(
+                    context.crew, self._get_output_string(answer)
+                )
 
         return answer
 
@@ -311,16 +315,19 @@ class SyncHumanInputProvider(HumanInputProvider):
             else:
                 context.messages.append(context._format_feedback_message(feedback))
                 answer = await context._ainvoke_loop()
-                feedback = await self._prompt_input_async(context.crew)
+                feedback = await self._prompt_input_async(
+                    context.crew, self._get_output_string(answer)
+                )
 
         return answer
 
     @staticmethod
-    def _prompt_input(crew: Crew | None) -> str:
+    def _prompt_input(crew: Crew | None, agent_output: str | None = None) -> str:
         """Show rich panel and prompt for input.
 
         Args:
             crew: The crew instance for context.
+            agent_output: The agent's final output to display for review.
 
         Returns:
             User input string from terminal.
@@ -334,6 +341,17 @@ class SyncHumanInputProvider(HumanInputProvider):
         formatter.pause_live_updates()
 
         try:
+            if agent_output is not None:
+                result_content = Text()
+                result_content.append(agent_output, style="bright_green")
+                result_panel = Panel(
+                    result_content,
+                    title="Agent Final Answer",
+                    border_style="green",
+                    padding=(1, 2),
+                )
+                formatter.console.print(result_panel)
+
             if crew and getattr(crew, "_train", False):
                 prompt_text = (
                     "TRAINING MODE: Provide feedback to improve the agent's performance.\n\n"
@@ -369,11 +387,14 @@ class SyncHumanInputProvider(HumanInputProvider):
             formatter.resume_live_updates()
 
     @staticmethod
-    async def _prompt_input_async(crew: Crew | None) -> str:
+    async def _prompt_input_async(
+        crew: Crew | None, agent_output: str | None = None
+    ) -> str:
         """Show rich panel and prompt for input without blocking the event loop.
 
         Args:
             crew: The crew instance for context.
+            agent_output: The agent's final output to display for review.
 
         Returns:
             User input string from terminal.
@@ -387,6 +408,17 @@ class SyncHumanInputProvider(HumanInputProvider):
         formatter.pause_live_updates()
 
         try:
+            if agent_output is not None:
+                result_content = Text()
+                result_content.append(agent_output, style="bright_green")
+                result_panel = Panel(
+                    result_content,
+                    title="Agent Final Answer",
+                    border_style="green",
+                    padding=(1, 2),
+                )
+                formatter.console.print(result_panel)
+
             if crew and getattr(crew, "_train", False):
                 prompt_text = (
                     "TRAINING MODE: Provide feedback to improve the agent's performance.\n\n"
