@@ -178,6 +178,62 @@ def safety_check(context: ToolCallHookContext) -> bool | None:
     return None
 ```
 
+#### Agent Threat Rules pre-tool scanner
+
+[Agent Threat Rules](https://github.com/Agent-Threat-Rule/agent-threat-rules) (ATR) is a catalog-driven rule set for known AI agent threats such as prompt injection, tool poisoning, context exfiltration, and privilege escalation. A recommended CrewAI integration path is a `@before_tool_call` hook: at this point the agent has already selected a concrete tool and concrete arguments, but the tool has not executed yet.
+
+This keeps ATR outside CrewAI's core dependency tree while giving scanners the full pre-tool context they need:
+
+- `context.tool_name` identifies the intended action
+- `context.tool_input` contains the concrete arguments to scan
+- `context.agent`, `context.task`, and `context.crew` provide execution context and access to each object's `security_config`
+- The hook can return `False` to block execution before a risky tool call runs
+
+```python
+from crewai.hooks import ToolCallHookContext, before_tool_call
+
+
+def scan_with_agent_threat_rules(payload: dict) -> list[str]:
+    """Call your ATR adapter and return matched rule IDs."""
+    # Example adapter boundary. Load ATR/pyatr in your app or optional integration
+    # package, then pass tool intent plus security metadata to the scanner.
+    return []
+
+
+@before_tool_call
+def scan_tool_intent_with_atr(context: ToolCallHookContext) -> bool | None:
+    payload = {
+        "tool_name": context.tool_name,
+        "tool_input": context.tool_input,
+        "agent_role": context.agent.role if context.agent else None,
+        "agent_fingerprint": (
+            context.agent.security_config.fingerprint.uuid_str
+            if context.agent and context.agent.security_config
+            else None
+        ),
+        "task_description": context.task.description if context.task else None,
+        "task_fingerprint": (
+            context.task.security_config.fingerprint.uuid_str
+            if context.task and context.task.security_config
+            else None
+        ),
+        "crew_fingerprint": (
+            context.crew.security_config.fingerprint.uuid_str
+            if context.crew and context.crew.security_config
+            else None
+        ),
+    }
+
+    matched_rule_ids = scan_with_agent_threat_rules(payload)
+    if matched_rule_ids:
+        print(f"Blocked by Agent Threat Rules: {matched_rule_ids}")
+        return False
+
+    return None
+```
+
+For credential brokering or secret access checks, attach the credential metadata your application is about to use to the same payload before scanning. That lets ATR-style catalog checks inspect both the action intent and the sensitive context in scope without requiring CrewAI to vendor the ATR rule corpus.
+
 ### 2. Human Approval Gate
 
 ```python
