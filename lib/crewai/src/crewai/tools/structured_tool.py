@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 import inspect
 import json
 import textwrap
@@ -58,6 +58,14 @@ def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
 
     result_schema = getattr(tool, "result_schema", None)
     if not (isinstance(result_schema, type) and issubclass(result_schema, BaseModel)):
+        if isinstance(raw_result, Mapping) or (
+            isinstance(raw_result, Sequence)
+            and not isinstance(raw_result, str | bytes | bytearray)
+        ):
+            try:
+                return json.dumps(raw_result)
+            except (TypeError, ValueError):
+                pass
         return str(raw_result)
 
     try:

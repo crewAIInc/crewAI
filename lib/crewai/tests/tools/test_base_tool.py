@@ -460,12 +460,22 @@ class TestToolOutputSchema:
             expected_agent_payload
         )
 
-    def test_base_tool_does_not_infer_non_pydantic_return_annotation(self) -> None:
+    def test_base_tool_serializes_non_pydantic_mapping_output_as_json(self) -> None:
         t = DictAnnotatedSearchTool()
 
         raw_result = t.run(query="crew")
 
         assert raw_result == {"query": "crew", "score": 0.5}
+        assert json.loads(t.format_output_for_agent(raw_result)) == {
+            "query": "crew",
+            "score": 0.5,
+        }
+
+    def test_base_tool_falls_back_for_unserializable_mapping_output(self) -> None:
+        t = DictAnnotatedSearchTool()
+        raw_result: dict[str, object] = {}
+        raw_result["self"] = raw_result
+
         assert t.format_output_for_agent(raw_result) == str(raw_result)
 
     @pytest.mark.parametrize(
@@ -506,7 +516,7 @@ class TestToolOutputSchema:
             expected_agent_payload
         )
 
-    def test_decorator_tool_does_not_infer_non_pydantic_return_annotation(
+    def test_decorator_tool_serializes_non_pydantic_mapping_output_as_json(
         self,
     ) -> None:
         @tool("search")
@@ -517,6 +527,22 @@ class TestToolOutputSchema:
         raw_result = search.run(query="crew")
 
         assert raw_result == {"query": "crew", "score": 0.5}
+        assert json.loads(search.format_output_for_agent(raw_result)) == {
+            "query": "crew",
+            "score": 0.5,
+        }
+
+    def test_decorator_tool_falls_back_for_unserializable_mapping_output(
+        self,
+    ) -> None:
+        @tool("search")
+        def search(query: str) -> dict[str, object]:
+            """Search for a query."""
+            return {"query": query, "score": 0.5}
+
+        raw_result: dict[str, object] = {}
+        raw_result["self"] = raw_result
+
         assert search.format_output_for_agent(raw_result) == str(raw_result)
 
     def test_explicit_result_schema_wins_over_return_annotation(self) -> None:
