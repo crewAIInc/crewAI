@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 from crewai.agents.tools_handler import ToolsHandler as _ToolsHandler
 from crewai.agents.step_executor import StepExecutor
+from crewai.core.providers.human_input import SyncHumanInputProvider
 
 
 def _build_executor(**kwargs: Any) -> AgentExecutor:
@@ -222,6 +223,36 @@ class TestAgentExecutor:
         assert executor.crew == mock_dependencies["crew"]
         assert executor.max_iter == 10
         assert executor.use_stop_words is True
+
+    def test_ask_for_human_input_delegates_to_state(self, mock_dependencies):
+        """Test ExecutorContext human input flag compatibility."""
+        executor = _build_executor(**mock_dependencies)
+
+        assert executor.ask_for_human_input is False
+
+        executor.state.ask_for_human_input = True
+        assert executor.ask_for_human_input is True
+
+        executor.ask_for_human_input = False
+        assert executor.state.ask_for_human_input is False
+
+    def test_human_input_provider_can_clear_executor_state_flag(
+        self, mock_dependencies
+    ):
+        """Test sync human feedback can read and clear the executor flag."""
+        executor = _build_executor(**mock_dependencies)
+        executor.state.ask_for_human_input = True
+        formatted_answer = AgentFinish(
+            thought="final thoughts", output="Final answer", text="complete"
+        )
+
+        with patch.object(SyncHumanInputProvider, "_prompt_input", return_value=""):
+            result = SyncHumanInputProvider().handle_feedback(
+                formatted_answer, executor
+            )
+
+        assert result is formatted_answer
+        assert executor.state.ask_for_human_input is False
 
     def test_initialize_reasoning(self, mock_dependencies):
         """Test flow entry point."""
