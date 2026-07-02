@@ -5,13 +5,13 @@ from __future__ import annotations
 from unittest.mock import Mock
 
 from crewai.hooks import (
-    PolicyDecision,
-    PolicyRequest,
+    GuardrailDecision,
+    GuardrailRequest,
     after_llm_call,
     after_tool_call,
     before_llm_call,
     before_tool_call,
-    enable_policy_provider,
+    enable_guardrail,
     get_after_llm_call_hooks,
     get_after_tool_call_hooks,
     get_before_llm_call_hooks,
@@ -187,7 +187,6 @@ class TestToolHookDecorators:
         """Tool filter should auto-sanitize names so users can pass BaseTool.name directly."""
         execution_log = []
 
-        # User passes the human-readable tool name (e.g. BaseTool.name)
         @before_tool_call(tools=["Delete File", "Execute Code"])
         def filtered_hook(context):
             execution_log.append(context.tool_name)
@@ -197,7 +196,6 @@ class TestToolHookDecorators:
         assert len(hooks) == 1
 
         mock_tool = Mock()
-        # Context uses the sanitized name (as set by the executor)
         context = ToolCallHookContext(
             tool_name="delete_file",
             tool_input={},
@@ -206,7 +204,6 @@ class TestToolHookDecorators:
         hooks[0](context)
         assert execution_log == ["delete_file"]
 
-        # Non-matching tool still filtered out
         context2 = ToolCallHookContext(
             tool_name="read_file",
             tool_input={},
@@ -280,7 +277,7 @@ class TestToolHookDecorators:
         )
         result2 = hooks[0](context2)
 
-        assert result2 is None  # Hook didn't run, returns None
+        assert result2 is None
 
 
 class TestDecoratorAttributes:
@@ -353,28 +350,28 @@ class TestMultipleDecorators:
         assert len(hooks) == 2
 
 
-class RecordingPolicyProvider:
+class RecordingGuardrailProvider:
     """Small provider fixture that records the latest detached request."""
-
-    name = "recording"
 
     def __init__(
         self,
-        decision: PolicyDecision | None = None,
+        decision: GuardrailDecision | None = None,
         error: Exception | None = None,
     ) -> None:
-        self.decision = decision if decision is not None else PolicyDecision(allow=True)
+        self.decision = (
+            decision if decision is not None else GuardrailDecision(allow=True)
+        )
         self.error = error
-        self.request: PolicyRequest | None = None
+        self.request: GuardrailRequest | None = None
 
-    def evaluate(self, request: PolicyRequest) -> PolicyDecision:
+    def evaluate(self, request: GuardrailRequest) -> GuardrailDecision:
         self.request = request
         if self.error is not None:
             raise self.error
         return self.decision
 
 
-class TestPolicyProviderAdapter:
+class TestGuardrailProviderAdapter:
     """Test the provider adapter built on the existing before-tool hook registry."""
 
     @staticmethod
@@ -384,22 +381,16 @@ class TestPolicyProviderAdapter:
         agent = Mock()
         agent.id = "agent-123"
         agent.role = "Support Agent"
-        task = Mock()
-        task.description = "Reply to the customer"
-        crew = Mock()
-        crew.id = "crew-456"
         return ToolCallHookContext(
             tool_name="send_email",
             tool_input={"recipient": "qa@example.com", "body": "Hello"},
             tool=tool,
             agent=agent,
-            task=task,
-            crew=crew,
         )
 
     def test_registers_provider_and_allows(self):
-        provider = RecordingPolicyProvider()
-        hook = enable_policy_provider(provider)
+        provider = RecordingGuardrailProvider()
+        hook = enable_guardrail(provider)
 
         assert get_before_tool_call_hooks() == [hook]
         assert hook(self.context()) is None
@@ -408,38 +399,33 @@ class TestPolicyProviderAdapter:
         assert provider.request.tool_alias == "send_email"
         assert provider.request.agent_id == "agent-123"
         assert provider.request.agent_role == "Support Agent"
-        assert provider.request.task_description == "Reply to the customer"
-        assert provider.request.crew_id == "crew-456"
 
     def test_deny_maps_to_false(self):
-        provider = RecordingPolicyProvider(
-            PolicyDecision(allow=False, reason="policy")
+        provider = RecordingGuardrailProvider(
+            GuardrailDecision(allow=False, reason="policy")
         )
 
-        assert enable_policy_provider(provider)(self.context()) is False
+        assert enable_guardrail(provider)(self.context()) is False
 
     def test_provider_receives_detached_tool_input(self):
         context = self.context()
-        provider = RecordingPolicyProvider()
+        provider = RecordingGuardrailProvider()
 
-        assert enable_policy_provider(provider)(context) is None
+        assert enable_guardrail(provider)(context) is None
         assert provider.request is not None
         provider.request.tool_input["recipient"] = "other@example.com"
 
         assert context.tool_input["recipient"] == "qa@example.com"
 
     def test_provider_failure_is_fail_closed_by_default(self):
-        provider = RecordingPolicyProvider(error=RuntimeError("unavailable"))
+        provider = RecordingGuardrailProvider(error=RuntimeError("unavailable"))
 
-        assert enable_policy_provider(provider)(self.context()) is False
+        assert enable_guardrail(provider)(self.context()) is False
 
     def test_provider_failure_can_fail_open(self):
-        provider = RecordingPolicyProvider(error=RuntimeError("unavailable"))
+        provider = RecordingGuardrailProvider(error=RuntimeError("unavailable"))
 
-        assert (
-            enable_policy_provider(provider, fail_closed=False)(self.context())
-            is None
-        )
+        assert enable_guardrail(provider, fail_closed=False)(self.context()) is None
 
     @pytest.mark.parametrize("fail_closed, expected", [(True, False), (False, None)])
     def test_invalid_provider_result_follows_failure_policy(
@@ -447,17 +433,14 @@ class TestPolicyProviderAdapter:
         fail_closed: bool,
         expected: bool | None,
     ):
-        provider = RecordingPolicyProvider()
+        provider = RecordingGuardrailProvider()
         provider.decision = object()  # type: ignore[assignment]
 
-        assert (
-            enable_policy_provider(provider, fail_closed=fail_closed)(self.context())
-            is expected
-        )
+        assert enable_guardrail(provider, fail_closed=fail_closed)(self.context()) is expected
 
     def test_non_boolean_allow_is_rejected(self):
-        decision = PolicyDecision(allow=True)
+        decision = GuardrailDecision(allow=True)
         object.__setattr__(decision, "allow", 1)
-        provider = RecordingPolicyProvider(decision)
+        provider = RecordingGuardrailProvider(decision)
 
-        assert enable_policy_provider(provider)(self.context()) is False
+        assert enable_guardrail(provider)(self.context()) is False
