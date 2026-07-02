@@ -1034,6 +1034,19 @@ class BedrockCompletion(BaseLLM):
                         logging.debug("Content block stopped in stream")
                         if current_tool_use:
                             function_name = current_tool_use["name"]
+                            # Streamed tool input arrives as JSON string deltas in
+                            # accumulated_tool_input; fold it back into the tool-use
+                            # block so function_args (and the message history below)
+                            # carry the real arguments instead of an empty input.
+                            try:
+                                parsed_input = json.loads(accumulated_tool_input)
+                                current_tool_use["input"] = (
+                                    parsed_input
+                                    if isinstance(parsed_input, dict)
+                                    else {}
+                                )
+                            except (json.JSONDecodeError, ValueError, TypeError):
+                                current_tool_use["input"] = {}
                             function_args = cast(
                                 dict[str, Any], current_tool_use.get("input", {})
                             )
@@ -1632,6 +1645,19 @@ class BedrockCompletion(BaseLLM):
                         logging.debug("Content block stopped in stream")
                         if current_tool_use:
                             function_name = current_tool_use["name"]
+                            # Streamed tool input arrives as JSON string deltas in
+                            # accumulated_tool_input; fold it back into the tool-use
+                            # block so function_args (and the message history below)
+                            # carry the real arguments instead of an empty input.
+                            try:
+                                parsed_input = json.loads(accumulated_tool_input)
+                                current_tool_use["input"] = (
+                                    parsed_input
+                                    if isinstance(parsed_input, dict)
+                                    else {}
+                                )
+                            except (json.JSONDecodeError, ValueError, TypeError):
+                                current_tool_use["input"] = {}
                             function_args = cast(
                                 dict[str, Any], current_tool_use.get("input", {})
                             )
