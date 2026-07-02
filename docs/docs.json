@@ -306,6 +306,7 @@
                         "pages": [
                           "edge/en/tools/integration/overview",
                           "edge/en/tools/integration/bedrockinvokeagenttool",
+                          "edge/en/tools/integration/bolyracrewai",
                           "edge/en/tools/integration/crewaiautomationtool",
                           "edge/en/tools/integration/mergeagenthandlertool"
                         ]
