@@ -1,5 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
+import asyncio
 from io import StringIO
 import json
 import threading
@@ -1286,6 +1287,89 @@ async def test_mixed_sync_async_task_outputs_not_dropped_native_async(
         result = await crew.akickoff()
 
     assert [o.raw for o in result.tasks_output] == ["s1", "a1", "s2"]
+
+
+def test_async_task_failure_cancels_pending_futures(researcher, writer):
+    """A failed async task should stop the batch and cancel pending futures."""
+    failing_future: Future[TaskOutput] = Future()
+    failing_future.set_exception(RuntimeError("LLM call failed"))
+    pending_future: Future[TaskOutput] = Future()
+
+    async1 = Task(
+        description="async1",
+        expected_output="x",
+        agent=researcher,
+        async_execution=True,
+    )
+    async2 = Task(
+        description="async2",
+        expected_output="x",
+        agent=researcher,
+        async_execution=True,
+    )
+    sync1 = Task(description="sync1", expected_output="x", agent=writer)
+
+    crew = Crew(agents=[researcher, writer], tasks=[async1, async2, sync1])
+
+    with (
+        patch.object(
+            Task, "execute_async", side_effect=[failing_future, pending_future]
+        ),
+        patch.object(Task, "execute_sync") as mock_execute_sync,
+        pytest.raises(RuntimeError, match="LLM call failed"),
+    ):
+        crew.kickoff()
+
+    assert pending_future.cancelled()
+    mock_execute_sync.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_async_task_failure_cancels_pending_native_tasks(researcher, writer):
+    """A failed native async task should cancel later pending async tasks."""
+    async1 = Task(
+        description="async1",
+        expected_output="x",
+        agent=researcher,
+        async_execution=True,
+    )
+    async2 = Task(
+        description="async2",
+        expected_output="x",
+        agent=researcher,
+        async_execution=True,
+    )
+    sync1 = Task(description="sync1", expected_output="x", agent=writer)
+
+    crew = Crew(agents=[researcher, writer], tasks=[async1, async2, sync1])
+
+    call_count = 0
+    second_started = asyncio.Event()
+    second_cancelled = asyncio.Event()
+    never_finish = asyncio.Event()
+
+    async def fake_aexecute_sync(*_args: Any, **_kwargs: Any) -> TaskOutput:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            await second_started.wait()
+            raise RuntimeError("LLM call failed")
+        if call_count == 2:
+            second_started.set()
+            try:
+                await never_finish.wait()
+            except asyncio.CancelledError:
+                second_cancelled.set()
+                raise
+        pytest.fail("Sync task should not run after async failure")
+
+    with (
+        patch.object(Task, "aexecute_sync", side_effect=fake_aexecute_sync),
+        pytest.raises(RuntimeError, match="LLM call failed"),
+    ):
+        await crew.akickoff()
+
+    assert second_cancelled.is_set()
 
 
 def test_pending_async_outputs_preserved_through_conditional_task(researcher, writer):
