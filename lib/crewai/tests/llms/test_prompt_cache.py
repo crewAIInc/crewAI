@@ -6,6 +6,7 @@ from crewai.llms.cache import (
     CACHE_BREAKPOINT_KEY,
     mark_cache_breakpoint,
     strip_cache_breakpoint,
+    supports_cache_breakpoint,
 )
 from crewai.llms.providers.anthropic.completion import AnthropicCompletion
 from crewai.llms.providers.openai.completion import OpenAICompletion
@@ -189,3 +190,26 @@ class TestNonAnthropicStripsMarker:
         formatted = llm._format_messages(messages)
         for m in formatted:
             assert CACHE_BREAKPOINT_KEY not in m
+
+
+class TestSupportsCacheBreakpoint:
+    def test_anthropic_model_string_supports_cache(self) -> None:
+        assert supports_cache_breakpoint("claude-sonnet-4-5") is True
+        assert supports_cache_breakpoint("anthropic/claude-3-opus") is True
+        assert supports_cache_breakpoint("claude/claude-3-sonnet") is True
+
+    def test_non_anthropic_model_string_rejects_cache(self) -> None:
+        assert supports_cache_breakpoint("gpt-4o-mini") is False
+        assert supports_cache_breakpoint("groq/llama-3.1-70b") is False
+        assert supports_cache_breakpoint("gemini-2.0-flash") is False
+
+    def test_anthropic_llm_instance_supports_cache(self) -> None:
+        llm = AnthropicCompletion(model="claude-sonnet-4-5")
+        assert supports_cache_breakpoint(llm) is True
+
+    def test_openai_llm_instance_rejects_cache(self) -> None:
+        llm = OpenAICompletion(model="gpt-4o-mini")
+        assert supports_cache_breakpoint(llm) is False
+
+    def test_none_rejects_cache(self) -> None:
+        assert supports_cache_breakpoint(None) is False
