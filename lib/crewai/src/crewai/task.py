@@ -111,6 +111,41 @@ def _deserialize_model_class(v: Any) -> type[BaseModel] | None:
     return None
 
 
+def _validate_output_file_path(
+    value: str | None,
+    *,
+    allow_templates: bool = True,
+    preserve_absolute: bool = False,
+) -> str | None:
+    """Validate an output file path before it is written."""
+    if value is None:
+        return None
+
+    if ".." in value:
+        raise ValueError("Path traversal attempts are not allowed in output_file paths")
+
+    if value.startswith(("~", "$")):
+        raise ValueError(
+            "Shell expansion characters are not allowed in output_file paths"
+        )
+
+    if any(char in value for char in ["|", ">", "<", "&", ";"]):
+        raise ValueError(
+            "Shell special characters are not allowed in output_file paths"
+        )
+
+    if allow_templates and ("{" in value or "}" in value):
+        template_vars = [part.split("}")[0] for part in value.split("{")[1:]]
+        for var in template_vars:
+            if not var.isidentifier():
+                raise ValueError(f"Invalid template variable name: {var}")
+        return value
+
+    if value.startswith("/") and not preserve_absolute:
+        return value.lstrip("/")
+    return value
+
+
 class Task(BaseModel):
     """Class that represents a task to be executed.
 
@@ -501,34 +536,7 @@ class Task(BaseModel):
             ValueError: If the path contains invalid characters, path traversal attempts,
                       or other security concerns.
         """
-        if value is None:
-            return None
-
-        if ".." in value:
-            raise ValueError(
-                "Path traversal attempts are not allowed in output_file paths"
-            )
-
-        if value.startswith(("~", "$")):
-            raise ValueError(
-                "Shell expansion characters are not allowed in output_file paths"
-            )
-
-        if any(char in value for char in ["|", ">", "<", "&", ";"]):
-            raise ValueError(
-                "Shell special characters are not allowed in output_file paths"
-            )
-
-        if "{" in value or "}" in value:
-            template_vars = [part.split("}")[0] for part in value.split("{")[1:]]
-            for var in template_vars:
-                if not var.isidentifier():
-                    raise ValueError(f"Invalid template variable name: {var}")
-            return value
-
-        if value.startswith("/"):
-            return value[1:]
-        return value
+        return _validate_output_file_path(value)
 
     @model_validator(mode="after")
     def set_attributes_based_on_config(self) -> Task:
@@ -1027,8 +1035,15 @@ Follow these guidelines:
 
         if self.output_file is not None:
             try:
-                self.output_file = interpolate_only(
+                interpolated_output_file = interpolate_only(
                     input_string=self._original_output_file, inputs=inputs
+                )
+                self.output_file = _validate_output_file_path(
+                    interpolated_output_file,
+                    allow_templates=False,
+                    preserve_absolute=Path(
+                        str(self._original_output_file)
+                    ).is_absolute(),
                 )
             except (KeyError, ValueError) as e:
                 raise ValueError(f"Error interpolating output_file path: {e!s}") from e
