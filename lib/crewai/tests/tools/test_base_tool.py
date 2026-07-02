@@ -466,7 +466,7 @@ class TestToolOutputSchema:
         raw_result = t.run(query="crew")
 
         assert raw_result == {"query": "crew", "score": 0.5}
-        assert t.format_output_for_agent(raw_result) == str(raw_result)
+        assert t.format_output_for_agent(raw_result) == json.dumps(raw_result)
 
     @pytest.mark.parametrize(
         ("make_tool", "expected_raw", "expected_agent_payload"),
@@ -517,7 +517,7 @@ class TestToolOutputSchema:
         raw_result = search.run(query="crew")
 
         assert raw_result == {"query": "crew", "score": 0.5}
-        assert search.format_output_for_agent(raw_result) == str(raw_result)
+        assert search.format_output_for_agent(raw_result) == json.dumps(raw_result)
 
     def test_explicit_result_schema_wins_over_return_annotation(self) -> None:
         class AlternateOutput(BaseModel):
@@ -550,7 +550,7 @@ class TestToolOutputSchema:
             agent_text = search.format_output_for_agent(raw_result)
 
         assert raw_result == {"query": "crew", "score": "not-a-float"}
-        assert agent_text == str(raw_result)
+        assert agent_text == json.dumps(raw_result)
 
     def test_unserializable_typed_output_warns_and_uses_string_agent_text(
         self,
