@@ -39,11 +39,11 @@ logger = logging.getLogger(__name__)
 
 
 class FileProcessor:
-    """Processes files according to provider constraints and per-file mode mode.
+    """Processes files according to provider constraints and per-file mode.
 
     Validates files against provider-specific limits and optionally transforms
     them (resize, compress, chunk) to meet those limits. Each file specifies
-    its own mode mode via `file.mode`.
+    its own mode via `file.mode`.
 
     Attributes:
         constraints: Provider constraints for validation.
@@ -90,13 +90,13 @@ class FileProcessor:
 
     @staticmethod
     def _get_mode(file: FileInput) -> FileHandling:
-        """Get the mode mode for a file.
+        """Get the mode for a file.
 
         Args:
             file: The file to get mode for.
 
         Returns:
-            The file's mode mode, defaulting to AUTO.
+            The file's mode, defaulting to AUTO.
         """
         mode = getattr(file, "mode", None)
         if mode is None:
@@ -108,7 +108,7 @@ class FileProcessor:
         return FileHandling.AUTO
 
     def process(self, file: FileInput) -> FileInput | Sequence[FileInput]:
-        """Process a single file according to constraints and its mode mode.
+        """Process a single file according to constraints and its mode.
 
         Args:
             file: The file to process.
