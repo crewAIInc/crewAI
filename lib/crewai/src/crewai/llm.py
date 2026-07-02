@@ -52,6 +52,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 from crewai.utilities.logger_utils import suppress_warnings
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
+from crewai.utilities.tool_errors import format_tool_error
 
 
 try:
@@ -342,6 +343,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "cerebras",
     "dashscope",
     "snowflake",
+    "groq",
 ]
 
 
@@ -431,6 +433,7 @@ class LLM(BaseLLM):
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
                 "snowflake": "snowflake",
+                "groq": "groq",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -553,6 +556,12 @@ class LLM(BaseLLM):
         if provider == "snowflake":
             return True
 
+        if provider == "groq":
+            return any(
+                model_lower.startswith(prefix)
+                for prefix in ["llama", "gemma", "mixtral", "whisper", "deepseek"]
+            )
+
         return False
 
     @classmethod
@@ -664,6 +673,7 @@ class LLM(BaseLLM):
             "hosted_vllm",
             "cerebras",
             "dashscope",
+            "groq",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (
@@ -1755,11 +1765,12 @@ class LLM(BaseLLM):
                 return result
             except Exception as e:
                 fn = available_functions.get(function_name, lambda: None)
+                structured_error = format_tool_error(e)
                 logging.error(f"Error executing function '{function_name}': {e}")
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(
-                        error=f"Tool execution error: {e!s}",
+                        error=structured_error,
                         from_task=from_task,
                         from_agent=from_agent,
                         call_id=get_current_call_id(),
@@ -1770,7 +1781,7 @@ class LLM(BaseLLM):
                     event=ToolUsageErrorEvent(
                         tool_name=function_name,
                         tool_args=function_args,
-                        error=f"Tool execution error: {e!s}",
+                        error=structured_error,
                         from_task=from_task,
                         from_agent=from_agent,
                     ),
@@ -2285,6 +2296,17 @@ class LLM(BaseLLM):
                 raise TypeError(
                     "Invalid message format. Each message must be a dict with 'role' and 'content' keys"
                 )
+
+        # Strip cache_breakpoint from messages for non-Anthropic providers.
+        # This key is only meaningful for Anthropic's prompt caching API;
+        # other providers (Groq, OpenAI-compatible) reject unknown fields.
+        if not self.is_anthropic:
+            from crewai.llms.cache import CACHE_BREAKPOINT_KEY
+
+            messages = [
+                {k: v for k, v in msg.items() if k != CACHE_BREAKPOINT_KEY}
+                for msg in messages
+            ]  # type: ignore[assignment]
 
         if "o1" in self.model.lower():
             formatted_messages = []
