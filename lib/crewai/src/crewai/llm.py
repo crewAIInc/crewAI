@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 import json
 import logging
@@ -94,7 +95,10 @@ if TYPE_CHECKING:
         ModelResponseStream,
         StreamingChoices as LiteLLMStreamingChoices,
     )
-    from litellm.utils import supports_response_schema
+    from litellm.utils import (
+        supports_reasoning as supports_reasoning_fn,
+        supports_response_schema,
+    )
 else:
     litellm = None
     Choices = None
@@ -108,6 +112,7 @@ else:
     Function = None
     ModelResponse = None
     supports_response_schema = None
+    supports_reasoning_fn = None
 
 
 def _ensure_litellm() -> bool:
@@ -116,7 +121,7 @@ def _ensure_litellm() -> bool:
     global litellm, Choices, LiteLLMDelta, Message, ModelResponseBase
     global ModelResponseStream, LiteLLMStreamingChoices, get_supported_openai_params
     global ChatCompletionDeltaToolCall, Function
-    global ModelResponse, supports_response_schema
+    global ModelResponse, supports_response_schema, supports_reasoning_fn
 
     if _litellm_loaded:
         return LITELLM_AVAILABLE
@@ -138,7 +143,10 @@ def _ensure_litellm() -> bool:
             ModelResponseStream as _ModelResponseStream,
             StreamingChoices as _LiteLLMStreamingChoices,
         )
-        from litellm.utils import supports_response_schema as _supports_response_schema
+        from litellm.utils import (
+            supports_reasoning as _supports_reasoning,
+            supports_response_schema as _supports_response_schema,
+        )
 
         litellm = _litellm
         Choices = _Choices  # type: ignore[misc]
@@ -152,6 +160,7 @@ def _ensure_litellm() -> bool:
         Function = _Function  # type: ignore[misc]
         ModelResponse = _ModelResponse  # type: ignore[misc]
         supports_response_schema = _supports_response_schema
+        supports_reasoning_fn = _supports_reasoning
 
         _litellm.suppress_debug_info = True
         LITELLM_AVAILABLE = True
@@ -343,6 +352,48 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "dashscope",
     "snowflake",
 ]
+
+
+@dataclass
+class ProviderCapabilities:
+    """Describes which features a provider supports.
+
+    This aggregates the scattered capability checks (supports_response_schema,
+    supports_function_calling, supports_stop_words, etc.) into a single
+    structured object. The LLM class can populate this via litellm introspection
+    or provider-specific knowledge.
+
+    Attributes:
+        supports_response_format: Whether structured output (json_object / json_schema) works.
+        supports_tool_calling: Whether function/tool calling works.
+        supports_reasoning: Whether reasoning_effort / thinking tokens are forwarded.
+        supports_streaming: Whether streaming responses work.
+        supports_image_input: Whether the provider accepts image content blocks.
+        supports_stop_words: Whether the ``stop`` parameter is honored.
+    """
+
+    supports_response_format: bool = True
+    supports_tool_calling: bool = True
+    supports_reasoning: bool = False
+    supports_streaming: bool = True
+    supports_image_input: bool = False
+    supports_stop_words: bool = True
+
+
+# Providers known to NOT support response_format. This is the fallback when
+# litellm's supports_response_schema() cannot be used (e.g. litellm unavailable).
+# Extended via community contributions as new providers are discovered.
+_PROVIDERS_WITHOUT_RESPONSE_FORMAT: Final[frozenset[str]] = frozenset(
+    {"deepseek", "ollama", "ollama_chat", "hosted_vllm"}
+)
+
+# Providers known to NOT support tool calling.
+_PROVIDERS_WITHOUT_TOOL_CALLING: Final[frozenset[str]] = frozenset()
+
+# Providers known to support reasoning/thinking tokens.
+_PROVIDERS_WITH_REASONING: Final[frozenset[str]] = frozenset(
+    {"openai", "azure", "azure_openai", "anthropic", "claude", "bedrock", "aws", "cerebras"}
+)
 
 
 class Delta(TypedDict):
@@ -2344,19 +2395,27 @@ class LLM(BaseLLM):
         Note: This validation only applies to the litellm fallback path.
         Native providers have their own validation.
         """
-        if not _ensure_litellm() or supports_response_schema is None:
+        if not _ensure_litellm():
             # When litellm is not available, skip validation
             # (this path should only be reached for litellm fallback models)
             return
 
         provider = self._get_custom_llm_provider()
-        if self.response_format is not None and not supports_response_schema(
-            model=self.model,
-            custom_llm_provider=provider,
-        ):
+        # get_capabilities() carries its own static-allowlist fallback for the
+        # case where litellm introspection (e.g. supports_response_schema) is
+        # unavailable, so we let it run rather than bailing early here.
+        caps = self.get_capabilities()
+        if self.response_format is not None and not caps.supports_response_format:
             raise ValueError(
-                f"The model {self.model} does not support response_format for provider '{provider}'. "
-                "Please remove response_format or use a supported model."
+                f"The provider '{provider or self.provider}' does not support "
+                "response_format. Remove response_format, use result_as_string=True, "
+                "or switch to a provider that supports structured output."
+            )
+        if self.reasoning_effort is not None and not caps.supports_reasoning:
+            raise ValueError(
+                f"The provider '{provider or self.provider}' does not support "
+                "reasoning_effort. Remove reasoning_effort or switch to a provider "
+                "that supports thinking/reasoning tokens."
             )
 
     def supports_function_calling(self) -> bool:
@@ -2399,6 +2458,70 @@ class LLM(BaseLLM):
         except Exception as e:
             logging.error(f"Failed to get supported params: {e!s}")
             return True  # Default to True
+
+    def get_capabilities(self) -> ProviderCapabilities:
+        """Return the structured capabilities for this provider/model.
+
+        Aggregates individual capability checks into a single
+        :class:`ProviderCapabilities` object. Uses litellm introspection
+        when litellm is available, falling back to the static provider
+        allowlists defined in this module.
+
+        Returns:
+            A fully populated ProviderCapabilities instance.
+        """
+        provider = self._get_custom_llm_provider() or self.provider or "openai"
+
+        # --- response_format ---
+        supports_response_format = True
+        if _ensure_litellm() and supports_response_schema is not None:
+            try:
+                supports_response_format = supports_response_schema(
+                    model=self.model, custom_llm_provider=provider
+                )
+            except Exception:
+                supports_response_format = (
+                    provider not in _PROVIDERS_WITHOUT_RESPONSE_FORMAT
+                )
+        else:
+            supports_response_format = (
+                provider not in _PROVIDERS_WITHOUT_RESPONSE_FORMAT
+            )
+
+        # --- tool calling ---
+        supports_tool_calling = self.supports_function_calling()
+        if not supports_tool_calling and provider not in _PROVIDERS_WITHOUT_TOOL_CALLING:
+            # supports_function_calling may return False for unknown providers;
+            # fall back to the allowlist
+            supports_tool_calling = True
+
+        # --- reasoning ---
+        supports_reasoning = provider in _PROVIDERS_WITH_REASONING
+        if _ensure_litellm() and supports_reasoning_fn is not None:
+            try:
+                supports_reasoning = supports_reasoning_fn(
+                    model=self.model, custom_llm_provider=provider
+                )
+            except Exception:
+                supports_reasoning = provider in _PROVIDERS_WITH_REASONING
+
+        # --- streaming ---
+        supports_streaming = True  # virtually all modern providers support streaming
+
+        # --- image input ---
+        supports_image_input = self.supports_multimodal()
+
+        # --- stop words ---
+        supports_stop_words = self.supports_stop_words()
+
+        return ProviderCapabilities(
+            supports_response_format=supports_response_format,
+            supports_tool_calling=supports_tool_calling,
+            supports_reasoning=supports_reasoning,
+            supports_streaming=supports_streaming,
+            supports_image_input=supports_image_input,
+            supports_stop_words=supports_stop_words,
+        )
 
     def get_context_window_size(self) -> int:
         """
