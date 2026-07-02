@@ -112,6 +112,16 @@ class TestValidateDirectoryPath:
         with pytest.raises(ValueError, match="not a directory"):
             validate_directory_path("file.txt", str(tmp_path))
 
+    def test_rejects_file_as_directory_without_leaking_base_path(self, tmp_path):
+        (tmp_path / "file.txt").touch()
+
+        with pytest.raises(ValueError) as exc_info:
+            validate_directory_path("file.txt", str(tmp_path))
+
+        message = str(exc_info.value)
+        assert "file.txt" in message
+        assert str(tmp_path) not in message
+
     def test_rejects_traversal(self, tmp_path):
         with pytest.raises(ValueError, match="outside the allowed directory"):
             validate_directory_path("../../", str(tmp_path))

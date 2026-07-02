@@ -117,7 +117,9 @@ def validate_directory_path(path: str, base_dir: str | None = None) -> str:
     """
     validated = validate_file_path(path, base_dir)
     if not os.path.isdir(validated):
-        raise ValueError(f"Path '{validated}' is not a directory.")
+        raise ValueError(
+            f"Path '{format_path_for_display(validated, base_dir)}' is not a directory."
+        )
     return validated
 
 
