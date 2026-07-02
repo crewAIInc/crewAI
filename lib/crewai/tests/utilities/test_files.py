@@ -375,6 +375,21 @@ class TestNormalizeInputFiles:
         result = normalize_input_files([])
         assert result == {}
 
+    def test_normalize_base_file_keeps_full_filename(self) -> None:
+        """BaseFile inputs keep the full filename (with extension), like file sources do.
+
+        Files sharing a base name but different extensions must not collide into a
+        single entry, which would silently drop one of them.
+        """
+        json_file = TextFile(source=FileBytes(data=b"json", filename="data.json"))
+        text_file = TextFile(source=FileBytes(data=b"text", filename="data.txt"))
+
+        result = normalize_input_files([json_file, text_file])
+
+        assert "data.json" in result
+        assert "data.txt" in result
+        assert len(result) == 2
+
 
 class TestGenericFile:
     """Tests for the generic File class with auto-detection."""
