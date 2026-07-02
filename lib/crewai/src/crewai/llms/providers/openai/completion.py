@@ -247,7 +247,10 @@ class OpenAICompletion(BaseLLM):
             return data
         if not data.get("provider"):
             data["provider"] = "openai"
-        data["api_key"] = data.get("api_key") or os.getenv("OPENAI_API_KEY")
+        api_key = data.get("api_key") or os.getenv("OPENAI_API_KEY")
+        if isinstance(api_key, str):
+            api_key = api_key.strip()
+        data["api_key"] = api_key
         if "api_base" not in data:
             data["api_base"] = None
         model = data.get("model", "gpt-4o")
@@ -364,6 +367,8 @@ class OpenAICompletion(BaseLLM):
             self.api_key = os.getenv("OPENAI_API_KEY")
             if self.api_key is None:
                 raise ValueError("OPENAI_API_KEY is required")
+        if isinstance(self.api_key, str):
+            self.api_key = self.api_key.strip()
 
         base_params = {
             "api_key": self.api_key,
