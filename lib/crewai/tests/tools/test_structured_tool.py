@@ -173,7 +173,7 @@ def test_from_function_does_not_infer_non_pydantic_result_schema():
     raw_result = tool.invoke({"value": "crew"})
 
     assert raw_result == {"value": "crew", "count": 1}
-    assert tool.format_output_for_agent(raw_result) == str(raw_result)
+    assert tool.format_output_for_agent(raw_result) == json.dumps(raw_result, ensure_ascii=False)
 
 
 def test_invalid_typed_output_warns_and_uses_string_agent_text():
@@ -189,15 +189,15 @@ def test_invalid_typed_output_warns_and_uses_string_agent_text():
     raw_result = tool.invoke({"value": "crew"})
 
     with pytest.warns(
-        RuntimeWarning, match="Failed to validate or serialize"
+        RuntimeWarning, match="Failed to validate output"
     ) as warnings:
         agent_text = tool.format_output_for_agent(raw_result)
 
     assert raw_result == {"value": "crew", "count": "wrong"}
-    assert agent_text == str(raw_result)
+    assert agent_text == json.dumps(raw_result, ensure_ascii=False)
     warning_message = str(warnings[0].message)
-    assert "ValidationError" in warning_message
-    assert "wrong" not in warning_message
+    assert "validation error" in warning_message.lower()
+    assert "wrong" in warning_message
 
 
 def test_validate_function_signature(basic_function, schema_class):
@@ -519,3 +519,31 @@ def test_structured_tool_invoke_exception_handling():
         tool.invoke({"should_fail": True})
 
     assert call_count == 1
+
+
+def test_format_output_for_agent_with_dict_and_list():
+    """Test that format_output_for_agent automatically serializes dict and list outputs to JSON."""
+    def dict_tool() -> dict:
+        return {"nested": {"key": "value"}}
+
+    tool = CrewStructuredTool.from_function(
+        func=dict_tool,
+        name="dict_tool",
+        description="A tool returning a dict",
+    )
+    
+    result = tool.format_output_for_agent({"nested": {"key": "value"}})
+    assert json.loads(result) == {"nested": {"key": "value"}}
+
+    def list_tool() -> list:
+        return [{"nested": {"key": "value"}}]
+
+    tool_list = CrewStructuredTool.from_function(
+        func=list_tool,
+        name="list_tool",
+        description="A tool returning a list",
+    )
+
+    result_list = tool_list.format_output_for_agent([{"nested": {"key": "value"}}])
+    assert json.loads(result_list) == [{"nested": {"key": "value"}}]
+
