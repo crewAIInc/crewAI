@@ -17,12 +17,23 @@ def temp_env():
     test_file = "test.txt"
     test_content = "Hello, World!"
 
+    # FileWriterTool confines writes to an allow-listed root (cwd plus
+    # CREWAI_TOOLS_ALLOWED_DIRS). Explicitly permit this temp dir — this is the
+    # supported way for a developer to widen the write scope to an external
+    # directory, and lets the happy-path tests below write into it.
+    prev_allowed = os.environ.get("CREWAI_TOOLS_ALLOWED_DIRS")
+    os.environ["CREWAI_TOOLS_ALLOWED_DIRS"] = temp_dir
+
     yield {
         "temp_dir": temp_dir,
         "test_file": test_file,
         "test_content": test_content,
     }
 
+    if prev_allowed is None:
+        os.environ.pop("CREWAI_TOOLS_ALLOWED_DIRS", None)
+    else:
+        os.environ["CREWAI_TOOLS_ALLOWED_DIRS"] = prev_allowed
     shutil.rmtree(temp_dir, ignore_errors=True)
 
 
@@ -189,6 +200,27 @@ def test_blocks_symlink_escape(tool, temp_env):
         result = tool._run(
             filename="escape/target.txt",
             directory=temp_env["temp_dir"],
+            content="should not be written",
+            overwrite=True,
+        )
+        assert "Error" in result
+        assert not os.path.exists(outside_file)
+    finally:
+        shutil.rmtree(outside_dir, ignore_errors=True)
+
+
+
+def test_blocks_unbounded_directory_arg(tool, temp_env):
+    # The core fix: the `directory` argument is itself untrusted (LLM-chosen).
+    # A directory outside the allow-list must be rejected even when filename
+    # is benign — previously this let an agent write anywhere on disk
+    # (e.g. ~/.ssh/authorized_keys).
+    outside_dir = tempfile.mkdtemp()  # NOT added to CREWAI_TOOLS_ALLOWED_DIRS
+    outside_file = os.path.join(outside_dir, "test.txt")
+    try:
+        result = tool._run(
+            filename="test.txt",
+            directory=outside_dir,
             content="should not be written",
             overwrite=True,
         )
