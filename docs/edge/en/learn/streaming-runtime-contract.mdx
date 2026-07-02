@@ -145,6 +145,33 @@ result = stream.result
 
 `llm.stream_events(...)` temporarily enables streaming for the wrapped call and restores the LLM's previous `stream` setting afterward. Provider integrations continue to emit the underlying LLM stream events; this helper provides a common iterator API over those events for every LLM provider.
 
+### Tool Call Argument Deltas
+
+Native tool-call streaming uses `llm_stream_chunk` frames on the `llm` channel. This represents the model constructing a tool call. It is separate from the `tools` channel, which represents CrewAI executing that tool.
+
+For a streamed tool call, the frame payload includes:
+
+```python
+frame.type == "llm_stream_chunk"
+frame.channel == "llm"
+frame.event["call_type"] == "tool_call"
+frame.event["chunk"]      # latest argument delta from the provider
+frame.event["tool_call"]  # accumulated tool-call state
+```
+
+The `tool_call` payload follows the OpenAI-style function call shape:
+
+```python
+tool_call = frame.event["tool_call"]
+tool_call["id"]
+tool_call["index"]
+tool_call["type"]  # "function"
+tool_call["function"]["name"]
+tool_call["function"]["arguments"]  # accumulated JSON argument string
+```
+
+Providers differ in granularity. OpenAI and Anthropic may stream arguments as small JSON fragments, while some providers emit the complete argument object in one chunk. Consumers should treat `frame.event["chunk"]` as the latest delta and `tool_call["function"]["arguments"]` as the current accumulated state.
+
 ## Conversational Turns
 
 Conversational Flows can stream one user turn with `stream_turn()`:

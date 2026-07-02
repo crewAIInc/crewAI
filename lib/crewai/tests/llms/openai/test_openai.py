@@ -7,6 +7,7 @@ import openai
 import pytest
 
 from crewai.llm import LLM
+from crewai.events.types.llm_events import LLMCallType, LLMStreamChunkEvent
 from crewai.llms.providers.openai.completion import OpenAICompletion, ResponsesAPIResult
 from crewai.crew import Crew
 from crewai.agent import Agent
@@ -1885,6 +1886,195 @@ def test_openai_responses_api_no_detail_fields_omitted():
     assert usage["completion_tokens"] == 30
     assert "cached_prompt_tokens" not in usage
     assert "reasoning_tokens" not in usage
+
+
+def test_openai_responses_streaming_emits_tool_call_argument_deltas():
+    llm = OpenAICompletion(model="gpt-4o", api="responses", stream=True)
+    stream_events = [
+        types.SimpleNamespace(
+            type="response.created",
+            response=types.SimpleNamespace(id="resp_123"),
+        ),
+        types.SimpleNamespace(
+            type="response.output_item.added",
+            output_index=0,
+            item=types.SimpleNamespace(
+                type="function_call",
+                id="fc_123",
+                call_id="call_123",
+                name="get_weather",
+                arguments="",
+            ),
+        ),
+        types.SimpleNamespace(
+            type="response.function_call_arguments.delta",
+            item_id="fc_123",
+            output_index=0,
+            delta='{"city"',
+        ),
+        types.SimpleNamespace(
+            type="response.function_call_arguments.delta",
+            item_id="fc_123",
+            output_index=0,
+            delta=': "Paris"}',
+        ),
+        types.SimpleNamespace(
+            type="response.function_call_arguments.done",
+            item_id="fc_123",
+            output_index=0,
+            name="get_weather",
+            arguments='{"city": "Paris"}',
+        ),
+        types.SimpleNamespace(
+            type="response.output_item.done",
+            output_index=0,
+            item=types.SimpleNamespace(
+                type="function_call",
+                id="fc_123",
+                call_id="call_123",
+                name="get_weather",
+                arguments='{"city": "Paris"}',
+            ),
+        ),
+        types.SimpleNamespace(
+            type="response.completed",
+            response=types.SimpleNamespace(
+                id="resp_123",
+                status="completed",
+                usage=None,
+            ),
+        ),
+    ]
+    fake_client = types.SimpleNamespace(
+        responses=types.SimpleNamespace(create=lambda **_: iter(stream_events))
+    )
+
+    with patch.object(llm, "_get_sync_client", return_value=fake_client):
+        with patch("crewai.events.event_bus.CrewAIEventsBus.emit") as mock_emit:
+            llm._handle_streaming_responses({"input": []})
+
+    tool_call_events = [
+        call.kwargs["event"]
+        for call in mock_emit.call_args_list
+        if isinstance(call.kwargs.get("event"), LLMStreamChunkEvent)
+        and call.kwargs["event"].call_type == LLMCallType.TOOL_CALL
+    ]
+
+    assert [event.chunk for event in tool_call_events] == [
+        "",
+        '{"city"',
+        ': "Paris"}',
+    ]
+    assert [
+        event.tool_call.function.arguments for event in tool_call_events
+    ] == ["", '{"city"', '{"city": "Paris"}']
+    assert all(event.tool_call.id == "call_123" for event in tool_call_events)
+    assert all(
+        event.tool_call.function.name == "get_weather" for event in tool_call_events
+    )
+
+
+@pytest.mark.asyncio
+async def test_openai_responses_async_streaming_emits_tool_call_argument_deltas():
+    llm = OpenAICompletion(model="gpt-4o", api="responses", stream=True)
+    stream_events = [
+        types.SimpleNamespace(
+            type="response.created",
+            response=types.SimpleNamespace(id="resp_123"),
+        ),
+        types.SimpleNamespace(
+            type="response.output_item.added",
+            output_index=0,
+            item=types.SimpleNamespace(
+                type="function_call",
+                id="fc_123",
+                call_id="call_123",
+                name="get_weather",
+                arguments="",
+            ),
+        ),
+        types.SimpleNamespace(
+            type="response.function_call_arguments.delta",
+            item_id="fc_123",
+            output_index=0,
+            delta='{"city"',
+        ),
+        types.SimpleNamespace(
+            type="response.function_call_arguments.delta",
+            item_id="fc_123",
+            output_index=0,
+            delta=': "Paris"}',
+        ),
+        types.SimpleNamespace(
+            type="response.function_call_arguments.done",
+            item_id="fc_123",
+            output_index=0,
+            name="get_weather",
+            arguments='{"city": "Paris"}',
+        ),
+        types.SimpleNamespace(
+            type="response.output_item.done",
+            output_index=0,
+            item=types.SimpleNamespace(
+                type="function_call",
+                id="fc_123",
+                call_id="call_123",
+                name="get_weather",
+                arguments='{"city": "Paris"}',
+            ),
+        ),
+        types.SimpleNamespace(
+            type="response.completed",
+            response=types.SimpleNamespace(
+                id="resp_123",
+                status="completed",
+                usage=None,
+            ),
+        ),
+    ]
+
+    class MockAsyncStream:
+        def __init__(self, events: list[Any]) -> None:
+            self._events = events
+            self._index = 0
+
+        def __aiter__(self) -> "MockAsyncStream":
+            return self
+
+        async def __anext__(self) -> Any:
+            if self._index >= len(self._events):
+                raise StopAsyncIteration
+            event = self._events[self._index]
+            self._index += 1
+            return event
+
+    fake_client = types.SimpleNamespace(
+        responses=types.SimpleNamespace(create=lambda **_: MockAsyncStream(stream_events))
+    )
+
+    with patch.object(llm, "_get_async_client", return_value=fake_client):
+        with patch("crewai.events.event_bus.CrewAIEventsBus.emit") as mock_emit:
+            await llm._ahandle_streaming_responses({"input": []})
+
+    tool_call_events = [
+        call.kwargs["event"]
+        for call in mock_emit.call_args_list
+        if isinstance(call.kwargs.get("event"), LLMStreamChunkEvent)
+        and call.kwargs["event"].call_type == LLMCallType.TOOL_CALL
+    ]
+
+    assert [event.chunk for event in tool_call_events] == [
+        "",
+        '{"city"',
+        ': "Paris"}',
+    ]
+    assert [
+        event.tool_call.function.arguments for event in tool_call_events
+    ] == ["", '{"city"', '{"city": "Paris"}']
+    assert all(event.tool_call.id == "call_123" for event in tool_call_events)
+    assert all(
+        event.tool_call.function.name == "get_weather" for event in tool_call_events
+    )
 
 
 @pytest.mark.asyncio

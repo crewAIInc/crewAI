@@ -61,6 +61,35 @@ Frames are grouped into high-level channels:
 
 The stream itself remains one ordered timeline. Channel projections let consumers focus on only part of that timeline.
 
+### Tool Call Streaming
+
+Tool calls appear in two places because there are two distinct phases:
+
+| Phase | Channel | Event type | Meaning |
+|-------|---------|------------|---------|
+| Tool-call construction | `llm` | `llm_stream_chunk` | The model is streaming the tool name or arguments it intends to call |
+| Tool execution | `tools` | `tool_usage_started`, `tool_usage_finished`, `tool_usage_error` | CrewAI is executing the tool and reporting the result |
+
+For streamed tool-call arguments, the latest provider delta is available as `frame.data["chunk"]`. The accumulated argument string is available at `frame.data["tool_call"]["function"]["arguments"]`.
+
+```python
+with llm.stream_events("Check the weather in Paris.", tools=[weather_tool]) as stream:
+    for frame in stream.llm:
+        if frame.type != "llm_stream_chunk":
+            continue
+
+        tool_call = frame.data.get("tool_call")
+        if tool_call:
+            function = tool_call["function"]
+            print("Tool:", function["name"])
+            print("Latest argument delta:", frame.data["chunk"])
+            print("Arguments so far:", function["arguments"])
+        elif frame.content:
+            print(frame.content, end="", flush=True)
+```
+
+Use the `tools` channel when you want to display that a tool actually started, completed, or failed. Use the `llm` channel when you want to observe the model constructing the tool call before execution.
+
 ```mermaid
 flowchart LR
     A["flow<br/>flow_started"] --> B["llm<br/>llm_call_started"]

@@ -685,6 +685,40 @@ class BaseLLM(BaseModel, ABC):
             ),
         )
 
+    def _emit_tool_call_stream_chunk_event(
+        self,
+        *,
+        chunk: str,
+        tool_call_id: str | None,
+        tool_name: str | None,
+        arguments: str,
+        index: int,
+        from_task: Task | None = None,
+        from_agent: BaseAgent | None = None,
+        response_id: str | None = None,
+    ) -> None:
+        """Emit a normalized streamed tool-call chunk.
+
+        ``chunk`` is the latest provider delta while ``arguments`` is the
+        accumulated argument string for consumers that want current state.
+        """
+        self._emit_stream_chunk_event(
+            chunk=chunk,
+            from_task=from_task,
+            from_agent=from_agent,
+            tool_call={
+                "id": tool_call_id,
+                "function": {
+                    "name": tool_name or "",
+                    "arguments": arguments,
+                },
+                "type": "function",
+                "index": index,
+            },
+            call_type=LLMCallType.TOOL_CALL,
+            response_id=response_id,
+        )
+
     def _emit_thinking_chunk_event(
         self,
         chunk: str,
