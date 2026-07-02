@@ -113,7 +113,11 @@ def _find_checkpoint(source: Any) -> CheckpointConfig | None:
 def _do_checkpoint(
     state: RuntimeState, cfg: CheckpointConfig, event: BaseEvent | None = None
 ) -> None:
-    """Write a checkpoint and prune old ones if configured."""
+    """Write a checkpoint and prune old ones if configured.
+
+    The state's lineage lock is held for the entire read-write-update cycle
+    so concurrent callers see consistent ``_parent_id`` values.
+    """
     provider_name: str = type(cfg.provider).__name__
     trigger: str | None = event.type if event is not None else None
     context: dict[str, Any] = {
@@ -123,36 +127,37 @@ def _do_checkpoint(
         "agent_role": event.agent_role if event is not None else None,
     }
 
-    parent_id_snapshot: str | None = state._parent_id
-    branch_snapshot: str = state._branch
-
-    crewai_event_bus.emit(
-        cfg,
-        CheckpointStartedEvent(
-            location=cfg.location,
-            provider=provider_name,
-            trigger=trigger,
-            branch=branch_snapshot,
-            parent_id=parent_id_snapshot,
-            **context,
-        ),
-    )
-
     start: float = time.perf_counter()
     try:
-        _prepare_entities(state.root)
-        payload = state.model_dump(mode="json")
-        if event is not None:
-            payload["trigger"] = event.type
-        data = json.dumps(payload)
-        location = cfg.provider.checkpoint(
-            data,
-            cfg.location,
-            parent_id=parent_id_snapshot,
-            branch=branch_snapshot,
-        )
-        state._chain_lineage(cfg.provider, location)
-        checkpoint_id: str = cfg.provider.extract_id(location)
+        with state._lineage_lock:
+            parent_id_snapshot: str | None = state._parent_id
+            branch_snapshot: str = state._branch
+
+            crewai_event_bus.emit(
+                cfg,
+                CheckpointStartedEvent(
+                    location=cfg.location,
+                    provider=provider_name,
+                    trigger=trigger,
+                    branch=branch_snapshot,
+                    parent_id=parent_id_snapshot,
+                    **context,
+                ),
+            )
+
+            _prepare_entities(state.root)
+            payload = state.model_dump(mode="json")
+            if event is not None:
+                payload["trigger"] = event.type
+            data = json.dumps(payload)
+            location = cfg.provider.checkpoint(
+                data,
+                cfg.location,
+                parent_id=parent_id_snapshot,
+                branch=branch_snapshot,
+            )
+            state._chain_lineage(cfg.provider, location)
+            checkpoint_id: str = cfg.provider.extract_id(location)
     except Exception as exc:
         crewai_event_bus.emit(
             cfg,
