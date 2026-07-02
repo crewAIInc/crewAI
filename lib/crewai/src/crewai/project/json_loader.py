@@ -978,9 +978,10 @@ def _agent_kwargs_from_definition(
         extra_allowed,
         skip_unknown=skip_unknown,
     )
-    for required in ("role", "goal", "backstory"):
-        if required not in defn:
-            errors.append(f"{path}: missing required field '{required}'")
+    if not defn.get("from_repository"):
+        for required in ("role", "goal", "backstory"):
+            if required not in defn:
+                errors.append(f"{path}: missing required field '{required}'")
 
     settings = defn.get("settings", {})
     if settings is None:
