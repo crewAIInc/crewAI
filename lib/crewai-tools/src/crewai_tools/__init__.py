@@ -303,6 +303,7 @@ __all__ = [
     "ScrapegraphScrapeTool",
     "ScrapegraphScrapeToolSchema",
     "ScrapflyScrapeWebsiteTool",
+    "SearchApiSearchTool",
     "SeleniumScrapingTool",
     "SerpApiGoogleSearchTool",
     "SerpApiGoogleShoppingTool",

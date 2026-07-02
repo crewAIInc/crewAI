@@ -5,7 +5,7 @@ import os
 from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 import requests
 
 
@@ -70,14 +70,19 @@ class SearchApiSearchTool(BaseTool):
 
     _api_key: str | None = PrivateAttr(default=None)
 
+    @field_validator("engine")
+    @classmethod
+    def validate_engine(cls, v: str) -> str:
+        """Validate the engine is supported."""
+        if v not in SUPPORTED_ENGINES:
+            raise ValueError(
+                f"Invalid engine: {v}. Must be one of: {', '.join(SUPPORTED_ENGINES)}"
+            )
+        return v
+
     def __init__(self, **kwargs: Any) -> None:
         """Initialize the SearchApi tool and validate configuration."""
         super().__init__(**kwargs)
-        if self.engine not in SUPPORTED_ENGINES:
-            raise ValueError(
-                f"Invalid engine: {self.engine}. "
-                f"Must be one of: {', '.join(SUPPORTED_ENGINES)}"
-            )
         api_key = os.getenv("SEARCHAPI_API_KEY")
         if not api_key:
             raise ValueError(

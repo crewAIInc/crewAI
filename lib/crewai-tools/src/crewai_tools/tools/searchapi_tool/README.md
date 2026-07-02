@@ -11,6 +11,7 @@ pip install 'crewai[tools]'
 ```
 
 ## Supported Engines
+
 | Engine | Description |
 |--------|-------------|
 | `google` | Google web search (default) |
@@ -67,6 +68,7 @@ result = tool.run(search_query="coffee shops", location="San Francisco")
 ```
 
 ## Configuration
+
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `engine` | `str` | `"google"` | Search engine to use |
@@ -75,6 +77,7 @@ result = tool.run(search_query="coffee shops", location="San Francisco")
 | `language` | `str \| None` | `None` | Language code (e.g., `"en"`, `"es"`) |
 
 ## Runtime Parameters
+
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `search_query` | `str` | Yes | The search query to execute |
