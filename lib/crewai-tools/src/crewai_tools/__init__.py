@@ -160,6 +160,7 @@ from crewai_tools.tools.scrapfly_scrape_website_tool.scrapfly_scrape_website_too
 from crewai_tools.tools.selenium_scraping_tool.selenium_scraping_tool import (
     SeleniumScrapingTool,
 )
+from crewai_tools.tools.signatrust_tool.signatrust_tool import SignatrustTool
 from crewai_tools.tools.serpapi_tool.serpapi_google_search_tool import (
     SerpApiGoogleSearchTool,
 )
@@ -301,6 +302,7 @@ __all__ = [
     "ScrapegraphScrapeToolSchema",
     "ScrapflyScrapeWebsiteTool",
     "SeleniumScrapingTool",
+    "SignatrustTool",
     "SerpApiGoogleSearchTool",
     "SerpApiGoogleShoppingTool",
     "SerperDevTool",
