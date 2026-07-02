@@ -4,7 +4,7 @@ import logging
 from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol
 
 from crewai_core.printer import PRINTER
 
@@ -326,7 +326,7 @@ def clear_all_tool_call_hooks() -> tuple[int, int]:
 
 
 @dataclass(frozen=True, slots=True)
-class PolicyRequest:
+class GuardrailRequest:
     """Detached context for one provider decision before a tool call."""
 
     tool_name: str
@@ -334,12 +334,10 @@ class PolicyRequest:
     tool_input: Mapping[str, Any]
     agent_id: str | None = None
     agent_role: str | None = None
-    task_description: str | None = None
-    crew_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
-class PolicyDecision:
+class GuardrailDecision:
     """Provider verdict for one proposed tool call."""
 
     allow: bool
@@ -347,19 +345,16 @@ class PolicyDecision:
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
 
-@runtime_checkable
-class PolicyProvider(Protocol):
-    """Contract for pluggable pre-tool-call policy providers."""
+class GuardrailProvider(Protocol):
+    """Contract for pluggable pre-tool-call guardrail providers."""
 
-    name: str
-
-    def evaluate(self, request: PolicyRequest) -> PolicyDecision:
+    def evaluate(self, request: GuardrailRequest) -> GuardrailDecision:
         """Evaluate whether the requested tool call may proceed."""
         ...
 
 
-def enable_policy_provider(
-    provider: PolicyProvider,
+def enable_guardrail(
+    provider: GuardrailProvider,
     *,
     fail_closed: bool = True,
 ) -> BeforeToolCallHookType:
@@ -372,14 +367,16 @@ def enable_policy_provider(
 
     def _hook(context: ToolCallHookContext) -> bool | None:
         try:
-            request = _build_policy_request(context)
+            request = _build_guardrail_request(context)
             decision = provider.evaluate(request)
-            if not isinstance(decision, PolicyDecision):
-                raise TypeError("PolicyProvider.evaluate() must return PolicyDecision")
+            if not isinstance(decision, GuardrailDecision):
+                raise TypeError(
+                    "GuardrailProvider.evaluate() must return GuardrailDecision"
+                )
             if not isinstance(decision.allow, bool):
-                raise TypeError("PolicyDecision.allow must be a bool")
+                raise TypeError("GuardrailDecision.allow must be a bool")
         except Exception:
-            logger.exception("PolicyProvider evaluation failed")
+            logger.exception("GuardrailProvider evaluation failed")
             return False if fail_closed else None
 
         return None if decision.allow else False
@@ -388,18 +385,16 @@ def enable_policy_provider(
     return _hook
 
 
-def _build_policy_request(context: ToolCallHookContext) -> PolicyRequest:
+def _build_guardrail_request(context: ToolCallHookContext) -> GuardrailRequest:
     """Snapshot the mutable tool-call context before provider evaluation."""
 
     original_tool_name = _optional_text(getattr(context, "tool", None), "name")
-    return PolicyRequest(
+    return GuardrailRequest(
         tool_name=original_tool_name or context.tool_name,
         tool_alias=context.tool_name,
         tool_input=deepcopy(context.tool_input),
         agent_id=_optional_identifier(context.agent, "id"),
         agent_role=_optional_text(context.agent, "role"),
-        task_description=_optional_text(context.task, "description"),
-        crew_id=_optional_identifier(context.crew, "id"),
     )
 
 
