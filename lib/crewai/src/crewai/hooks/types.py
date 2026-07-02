@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Generic, Protocol, TypeVar, runtime_checkable
 
+from crewai.hooks.tool_call_decision import ToolCallDecision
+
 
 if TYPE_CHECKING:
     from crewai.hooks.llm_hooks import LLMCallHookContext
@@ -22,7 +24,8 @@ class Hook(Protocol, Generic[ContextT, ReturnT]):
 
     Type Parameters:
         ContextT: The context type (LLMCallHookContext or ToolCallHookContext)
-        ReturnT: The return type (None, str | None, or bool | None)
+        ReturnT: The return type (None, str | None, bool | None, or
+            bool | ToolCallDecision | None)
 
     Example:
         >>> # Before LLM call hook: receives LLMCallHookContext, returns None
@@ -39,7 +42,8 @@ class Hook(Protocol, Generic[ContextT, ReturnT]):
             context: Context object with relevant execution state
 
         Returns:
-            Hook-specific return value (None, str | None, or bool | None)
+            Hook-specific return value (None, str | None, bool | None, or
+            bool | ToolCallDecision | None)
         """
         ...
 
@@ -84,14 +88,16 @@ class AfterLLMCallHook(Hook["LLMCallHookContext", str | None], Protocol):
         ...
 
 
-class BeforeToolCallHook(Hook["ToolCallHookContext", bool | None], Protocol):
+class BeforeToolCallHook(
+    Hook["ToolCallHookContext", bool | ToolCallDecision | None], Protocol
+):
     """Protocol for before_tool_call hooks.
 
     These hooks are called before a tool is executed and can modify the tool
     input or block the execution entirely.
     """
 
-    def __call__(self, context: ToolCallHookContext) -> bool | None:
+    def __call__(self, context: ToolCallHookContext) -> bool | ToolCallDecision | None:
         """Execute the before tool call hook.
 
         Args:
@@ -99,7 +105,8 @@ class BeforeToolCallHook(Hook["ToolCallHookContext", bool | None], Protocol):
                 Tool input can be modified in-place.
 
         Returns:
-            False to block tool execution, True or None to allow execution
+            False to block tool execution, ToolCallDecision for tri-state
+            release-control, True or None to allow execution
         """
         ...
 
@@ -123,15 +130,19 @@ class AfterToolCallHook(Hook["ToolCallHookContext", str | None], Protocol):
         ...
 
 
-# - All before hooks: bool | None (False = block execution, True/None = allow)
+# - All before hooks: bool | ToolCallDecision | None
+#   (False = block execution, ToolCallDecision = release-control decision,
+#   True/None = allow)
 # - All after hooks: str | None (str = modified result, None = keep original)
 BeforeLLMCallHookType = Hook["LLMCallHookContext", bool | None]
 AfterLLMCallHookType = Hook["LLMCallHookContext", str | None]
-BeforeToolCallHookType = Hook["ToolCallHookContext", bool | None]
+BeforeToolCallHookType = Hook["ToolCallHookContext", bool | ToolCallDecision | None]
 AfterToolCallHookType = Hook["ToolCallHookContext", str | None]
 
 # Alternative Callable-based type aliases for compatibility
 BeforeLLMCallHookCallable = Callable[["LLMCallHookContext"], bool | None]
 AfterLLMCallHookCallable = Callable[["LLMCallHookContext"], str | None]
-BeforeToolCallHookCallable = Callable[["ToolCallHookContext"], bool | None]
+BeforeToolCallHookCallable = Callable[
+    ["ToolCallHookContext"], bool | ToolCallDecision | None
+]
 AfterToolCallHookCallable = Callable[["ToolCallHookContext"], str | None]
