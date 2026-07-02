@@ -2391,3 +2391,55 @@ class TestVisionImageFormatContract:
         assert hasattr(AnthropicCompletion, "_convert_image_blocks"), (
             "Anthropic provider must have _convert_image_blocks for auto-conversion"
         )
+
+
+class TestAgentExecutorHumanInputProtocolContract:
+    """AgentExecutor must implement full ExecutorContext and AsyncExecutorContext protocol for human_input=True."""
+
+    def test_agent_executor_implements_human_input_protocol(self):
+        from crewai.experimental.agent_executor import AgentExecutor
+
+        assert hasattr(AgentExecutor, "_format_feedback_message")
+        assert hasattr(AgentExecutor, "_invoke_loop")
+        assert hasattr(AgentExecutor, "_ainvoke_loop")
+        assert hasattr(AgentExecutor, "_is_training_mode")
+
+    def test_agent_executor_format_feedback_message(self, mock_dependencies):
+        executor = _build_executor(**mock_dependencies)
+        msg = executor._format_feedback_message("Please fix the summary")
+        assert msg["role"] == "user"
+        assert "Please fix the summary" in msg["content"]
+
+    def test_agent_executor_invoke_loop_resets_iterations(self, mock_dependencies):
+        executor = _build_executor(**mock_dependencies)
+        executor.state.iterations = 10
+        iterations_at_kickoff = None
+
+        def mock_kickoff_impl():
+            nonlocal iterations_at_kickoff
+            iterations_at_kickoff = executor.state.iterations
+            executor.state.current_answer = AgentFinish(thought="done", output="ok", text="ok")
+
+        with patch.object(executor, "kickoff", side_effect=mock_kickoff_impl):
+            res = executor._invoke_loop()
+            assert iterations_at_kickoff == 0
+            assert res.output == "ok"
+
+    @pytest.mark.asyncio
+    async def test_agent_executor_ainvoke_loop_resets_iterations(self, mock_dependencies):
+        executor = _build_executor(**mock_dependencies)
+        executor.state.iterations = 10
+        iterations_at_kickoff = None
+
+        async def mock_kickoff_async_impl():
+            nonlocal iterations_at_kickoff
+            iterations_at_kickoff = executor.state.iterations
+            executor.state.current_answer = AgentFinish(thought="done", output="ok_async", text="ok_async")
+
+        with patch.object(executor, "kickoff_async", side_effect=mock_kickoff_async_impl):
+            res = await executor._ainvoke_loop()
+            assert iterations_at_kickoff == 0
+            assert res.output == "ok_async"
+
+
+
