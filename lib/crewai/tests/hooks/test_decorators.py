@@ -187,6 +187,7 @@ class TestToolHookDecorators:
         """Tool filter should auto-sanitize names so users can pass BaseTool.name directly."""
         execution_log = []
 
+        # User passes the human-readable tool name (e.g. BaseTool.name)
         @before_tool_call(tools=["Delete File", "Execute Code"])
         def filtered_hook(context):
             execution_log.append(context.tool_name)
@@ -196,6 +197,7 @@ class TestToolHookDecorators:
         assert len(hooks) == 1
 
         mock_tool = Mock()
+        # Context uses the sanitized name (as set by the executor)
         context = ToolCallHookContext(
             tool_name="delete_file",
             tool_input={},
@@ -204,6 +206,7 @@ class TestToolHookDecorators:
         hooks[0](context)
         assert execution_log == ["delete_file"]
 
+        # Non-matching tool still filtered out
         context2 = ToolCallHookContext(
             tool_name="read_file",
             tool_input={},
@@ -277,7 +280,7 @@ class TestToolHookDecorators:
         )
         result2 = hooks[0](context2)
 
-        assert result2 is None
+        assert result2 is None  # Hook didn't run, returns None
 
 
 class TestDecoratorAttributes:
@@ -383,7 +386,11 @@ class TestGuardrailProviderAdapter:
         agent.role = "Support Agent"
         return ToolCallHookContext(
             tool_name="send_email",
-            tool_input={"recipient": "qa@example.com", "body": "Hello"},
+            tool_input={
+                "recipient": "qa@example.com",
+                "body": "Hello",
+                "headers": {"x-trace": "original"},
+            },
             tool=tool,
             agent=agent,
         )
@@ -407,15 +414,17 @@ class TestGuardrailProviderAdapter:
 
         assert enable_guardrail(provider)(self.context()) is False
 
-    def test_provider_receives_detached_tool_input(self):
+    def test_provider_receives_deeply_detached_tool_input(self):
         context = self.context()
         provider = RecordingGuardrailProvider()
 
         assert enable_guardrail(provider)(context) is None
         assert provider.request is not None
         provider.request.tool_input["recipient"] = "other@example.com"
+        provider.request.tool_input["headers"]["x-trace"] = "changed"
 
         assert context.tool_input["recipient"] == "qa@example.com"
+        assert context.tool_input["headers"]["x-trace"] == "original"
 
     def test_provider_failure_is_fail_closed_by_default(self):
         provider = RecordingGuardrailProvider(error=RuntimeError("unavailable"))
