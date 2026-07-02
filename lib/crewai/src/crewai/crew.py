@@ -1260,6 +1260,9 @@ class Crew(FlowTrackable, BaseModel):
             )
             raise
         finally:
+            # Ensure all background memory saves complete before returning
+            if self._memory is not None and hasattr(self._memory, "drain_writes"):
+                self._memory.drain_writes()
             clear_files(self.id)
             detach(token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
