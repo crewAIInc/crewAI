@@ -409,7 +409,7 @@ class AgentReasoning:
             return (
                 response_str,
                 [],
-                "READY: I am ready to execute the task." in response_str,
+                AgentReasoning._check_ready(response_str),
             )
 
         except Exception as e:
@@ -433,7 +433,7 @@ class AgentReasoning:
                 return (
                     fallback_str,
                     [],
-                    "READY: I am ready to execute the task." in fallback_str,
+                    AgentReasoning._check_ready(fallback_str),
                 )
             except Exception as inner_e:
                 self.logger.error(f"Error during fallback text parsing: {inner_e!s}")
@@ -580,6 +580,29 @@ class AgentReasoning:
             )
 
     @staticmethod
+    def _check_ready(response: str) -> bool:
+        """Return True when the response signals readiness.
+
+        Accepts the full-sentence form used by the initial-plan prompt
+        ('READY: I am ready to execute the task.') and the short 'READY' /
+        'NOT READY' form used by the refine-plan and planning prompts.
+
+        Only the last meaningful line is inspected for the short form, so a plan
+        body that merely mentions the word "ready" is not misread as readiness,
+        and 'NOT READY' is never matched. Surrounding markdown emphasis and
+        punctuation (e.g. ``**READY**``, ``## READY``, ``READY.``) are stripped,
+        and pure-separator lines (e.g. ``---``) are skipped.
+        """
+        if "READY: I am ready to execute the task." in response:
+            return True
+        for line in reversed(response.splitlines()):
+            conclusion = line.strip().strip("*`#_-.!:> ").upper()
+            if not conclusion:
+                continue
+            return conclusion == "READY"
+        return False
+
+    @staticmethod
     def _parse_planning_response(response: str) -> tuple[str, bool]:
         """Parses the planning response to extract the plan and readiness.
 
@@ -593,7 +616,7 @@ class AgentReasoning:
             return "No plan was generated.", False
 
         plan = response
-        ready = "READY: I am ready to execute the task." in response
+        ready = AgentReasoning._check_ready(response)
 
         return plan, ready
 
