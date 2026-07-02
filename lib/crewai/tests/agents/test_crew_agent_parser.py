@@ -196,6 +196,18 @@ def test_clean_action_with_empty_string():
     assert cleaned_action == ""
 
 
+def test_parse_strips_action_markdown_without_touching_input_asterisks():
+    text = (
+        "Thought: Let's ask a formatted tool\n"
+        "Action: ** search **\n"
+        "Action Input: explain why 2 ** 3 equals 8"
+    )
+    result = parser.parse(text)
+    assert isinstance(result, AgentAction)
+    assert result.tool == "search"
+    assert result.tool_input == "explain why 2 ** 3 equals 8"
+
+
 def test_valid_final_answer_parsing():
     text = (
         "Thought: I found the information\nFinal Answer: The temperature is 100 degrees"
@@ -357,6 +369,3 @@ def test_integration_valid_and_invalid():
     assert isinstance(results[1], AgentFinish)
     assert isinstance(results[2], OutputParserException)
     assert isinstance(results[3], OutputParserException)
-
-
-# TODO: ADD TEST TO MAKE SURE ** REMOVAL DOESN'T MESS UP ANYTHING
