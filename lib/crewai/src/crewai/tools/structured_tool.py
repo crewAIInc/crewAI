@@ -323,7 +323,7 @@ class CrewStructuredTool(BaseModel):
                 return await self.func(**parsed_args, **kwargs)
             import asyncio
 
-            return await asyncio.get_event_loop().run_in_executor(
+            return await asyncio.get_running_loop().run_in_executor(
                 None, lambda: self.func(**parsed_args, **kwargs)
             )
         except Exception:
