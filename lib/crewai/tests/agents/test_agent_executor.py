@@ -958,6 +958,119 @@ class TestFlowInvoke:
         mock_kickoff.assert_called_once()
         mock_save_to_memory.assert_called_once()
 
+    def test_invoke_loop_clears_transient_state_between_sequential_runs(
+        self, mock_dependencies
+    ):
+        """Feedback reruns must not inherit pipeline state from prior runs."""
+        executor = _build_executor(**mock_dependencies)
+        start_states = []
+        outputs = ["First result", "Second result"]
+
+        def mock_kickoff_side_effect():
+            start_states.append(
+                (
+                    executor.state.iterations,
+                    executor.state.current_answer,
+                    executor.state.use_native_tools,
+                    list(executor.state.pending_tool_calls),
+                )
+            )
+            executor.state.iterations = 3
+            executor.state.use_native_tools = True
+            executor.state.pending_tool_calls.append("tool_call")
+            executor.state.current_answer = AgentFinish(
+                thought="final thinking",
+                output=outputs.pop(0),
+                text="complete",
+            )
+
+        executor.state.iterations = 9
+        executor.state.current_answer = AgentAction(
+            thought="stale", tool="search", tool_input="query", text="action"
+        )
+        executor.state.use_native_tools = True
+        executor.state.pending_tool_calls.append("stale_tool_call")
+
+        with patch.object(
+            AgentExecutor, "kickoff", side_effect=mock_kickoff_side_effect
+        ):
+            first_result = executor._invoke_loop()
+
+            assert first_result.output == "First result"
+            assert executor.state.iterations == 0
+            assert executor.state.current_answer is None
+            assert executor.state.use_native_tools is False
+            assert executor.state.pending_tool_calls == []
+
+            second_result = executor._invoke_loop()
+
+        assert second_result.output == "Second result"
+        assert start_states == [
+            (0, None, False, []),
+            (0, None, False, []),
+        ]
+        assert executor.state.iterations == 0
+        assert executor.state.current_answer is None
+        assert executor.state.use_native_tools is False
+        assert executor.state.pending_tool_calls == []
+
+    @pytest.mark.asyncio
+    async def test_ainvoke_loop_clears_transient_state_between_sequential_runs(
+        self, mock_dependencies
+    ):
+        """Async feedback reruns must not inherit pipeline state from prior runs."""
+        executor = _build_executor(**mock_dependencies)
+        start_states = []
+        outputs = ["First result", "Second result"]
+
+        async def mock_kickoff_side_effect():
+            start_states.append(
+                (
+                    executor.state.iterations,
+                    executor.state.current_answer,
+                    executor.state.use_native_tools,
+                    list(executor.state.pending_tool_calls),
+                )
+            )
+            executor.state.iterations = 3
+            executor.state.use_native_tools = True
+            executor.state.pending_tool_calls.append("tool_call")
+            executor.state.current_answer = AgentFinish(
+                thought="final thinking",
+                output=outputs.pop(0),
+                text="complete",
+            )
+
+        executor.state.iterations = 9
+        executor.state.current_answer = AgentAction(
+            thought="stale", tool="search", tool_input="query", text="action"
+        )
+        executor.state.use_native_tools = True
+        executor.state.pending_tool_calls.append("stale_tool_call")
+
+        with patch.object(
+            AgentExecutor, "kickoff_async", side_effect=mock_kickoff_side_effect
+        ):
+            first_result = await executor._ainvoke_loop()
+
+            assert first_result.output == "First result"
+            assert executor.state.iterations == 0
+            assert executor.state.current_answer is None
+            assert executor.state.use_native_tools is False
+            assert executor.state.pending_tool_calls == []
+
+            second_result = await executor._ainvoke_loop()
+
+        assert second_result.output == "Second result"
+        assert start_states == [
+            (0, None, False, []),
+            (0, None, False, []),
+        ]
+        assert executor.state.iterations == 0
+        assert executor.state.current_answer is None
+        assert executor.state.use_native_tools is False
+        assert executor.state.pending_tool_calls == []
+
     @patch.object(AgentExecutor, "kickoff")
     def test_invoke_failure_no_agent_finish(self, mock_kickoff, mock_dependencies):
         """Test invoke fails without AgentFinish."""
@@ -2391,3 +2504,69 @@ class TestVisionImageFormatContract:
         assert hasattr(AnthropicCompletion, "_convert_image_blocks"), (
             "Anthropic provider must have _convert_image_blocks for auto-conversion"
         )
+
+
+# Human Input Protocol Compliance
+
+
+class TestAgentExecutorHumanInputProtocol:
+    """Verify AgentExecutor implements the ExecutorContext protocol methods
+    required for human_input=True to work.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/6347
+    """
+
+    def test_has_invoke_loop(self):
+        """AgentExecutor must have _invoke_loop for sync human feedback."""
+        assert hasattr(AgentExecutor, "_invoke_loop"), (
+            "AgentExecutor missing _invoke_loop — human_input=True will crash"
+        )
+        assert callable(getattr(AgentExecutor, "_invoke_loop", None))
+
+    def test_has_ainvoke_loop(self):
+        """AgentExecutor must have _ainvoke_loop for async human feedback."""
+        assert hasattr(AgentExecutor, "_ainvoke_loop"), (
+            "AgentExecutor missing _ainvoke_loop — async human_input=True will crash"
+        )
+        assert callable(getattr(AgentExecutor, "_ainvoke_loop", None))
+
+    def test_has_format_feedback_message(self):
+        """AgentExecutor must have _format_feedback_message for formatting feedback."""
+        assert hasattr(AgentExecutor, "_format_feedback_message"), (
+            "AgentExecutor missing _format_feedback_message — human_input=True will crash"
+        )
+        assert callable(getattr(AgentExecutor, "_format_feedback_message", None))
+
+    def test_format_feedback_message_returns_dict(self):
+        """_format_feedback_message should return a dict with role and content."""
+        executor = _build_executor()
+        result = executor._format_feedback_message("test feedback")
+        assert isinstance(result, dict), "Feedback message should be a dict"
+        assert "role" in result, "Feedback message must have 'role' key"
+        assert "content" in result, "Feedback message must have 'content' key"
+        assert "test feedback" in result["content"], (
+            "Feedback message content should include the feedback text"
+        )
+
+    def test_protocol_methods_match_executor_context(self):
+        """All methods from ExecutorContext protocol must exist on AgentExecutor."""
+        from crewai.core.providers.human_input import ExecutorContext
+
+        # Get all method names from the protocol
+        protocol_methods = [
+            name for name in dir(ExecutorContext)
+            if not name.startswith("_") or name in (
+                "_invoke_loop",
+                "_ainvoke_loop",
+                "_format_feedback_message",
+                "_is_training_mode",
+                "_handle_crew_training_output",
+            )
+        ]
+
+        for method_name in protocol_methods:
+            if method_name.startswith("__"):
+                continue
+            assert hasattr(AgentExecutor, method_name), (
+                f"AgentExecutor missing protocol method: {method_name}"
+            )
