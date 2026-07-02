@@ -16,7 +16,7 @@ mode: "wide"
 
 ## Overview
 
-Rules let you apply policies — today: **PII Redaction** — across many automations at once, instead of configuring each deployment individually. Open the **Rules** tab in the [Agent Control Plane](/en/enterprise/features/agent-control-plane/overview) to manage them.
+Rules let you apply policies — today **PII Redaction** and **Cost Limit** — across many automations at once, instead of configuring each deployment individually. Open the **Rules** tab in the [Agent Control Plane](/en/enterprise/features/agent-control-plane/overview) to manage them.
 
 <Frame>
   ![Rules list](/images/enterprise/acp-rules-list.png)
@@ -27,26 +27,78 @@ Each rule card shows the name, description, the **scope** the rule applies to (s
 ## Requirements
 
 <Warning>
-  **Enterprise Plan or Ultra Plan** is required to create or edit PII Redaction rules. Lower-tier organizations can still open the Rules tab and view existing rules, but the editor renders read-only with an "Enterprise" lock pill and the alert *"PII Redaction rules require an Enterprise plan."* — contact your account owner or sales to upgrade.
+  **Enterprise Plan or Ultra Plan** is required to create or edit **PII Redaction** rules. Lower-tier organizations can still open the Rules tab and view existing rules, but the PII editor renders read-only with an "Enterprise" lock pill and the alert *"PII Redaction rules require an Enterprise plan."* — contact your account owner or sales to upgrade. **Cost Limit** rules are **not** plan-gated and can be created on any plan where the Agent Control Plane is enabled.
 </Warning>
 
 - The **Agent Control Plane** feature must be enabled for your organization. See [Overview — Requirements](/en/enterprise/features/agent-control-plane/overview#requirements).
 - The `manage` [RBAC permission](/en/enterprise/features/rbac) on Agent Control Plane is required to create, edit, toggle, or delete rules. The `read` permission is enough to view them.
 - All rule changes are versioned for auditing.
 
-## Available rule types
+## Rule types
 
-| Type | What it does |
-|------|---------------|
-| **PII Redaction** | Applies PII redaction to executions of every matching automation, using the same entity catalog and custom recognizers documented in [PII Redaction for Traces](/en/enterprise/features/pii-trace-redactions). |
+Every rule is one of the types below. Open the tab for the policy you want to enforce.
+
+<Tabs>
+<Tab title="PII Redaction">
+Applies PII redaction to executions of every matching automation, using the same entity catalog and custom recognizers documented in [PII Redaction for Traces](/en/enterprise/features/pii-trace-redactions).
+
+<Warning>
+Creating or editing PII Redaction rules requires an **Enterprise** or **Ultra** plan. On lower tiers the PII editor renders read-only with an "Enterprise" lock pill.
+</Warning>
+
+**Configuration** — in the **PII Mask Type** table, check each entity type you want covered and choose how to handle it:
+
+- **Mask** — replaces the match with the entity label (e.g. `<CREDIT_CARD>`).
+- **Redact** — removes the matched text entirely.
+
+See [PII Redaction for Traces](/en/enterprise/features/pii-trace-redactions) for the full entity catalog and how to add organization-level custom recognizers.
+</Tab>
+
+<Tab title="Cost Limit">
+Emails the recipients you choose when a matching automation's LLM spend exceeds a budget threshold in the selected period. Available on **all plans** where the Agent Control Plane is enabled — it is not Enterprise-gated.
+
+<Warning>
+Cost Limit rules are **notify-only**. They never pause, throttle, or stop a run — they only send an email so a human can decide what to do. Adjust the budget or remove the rule if you no longer want the alert.
+</Warning>
+
+**Configuration**
+
+| Field | Description |
+|-------|-------------|
+| **Budget period** | The window spend is measured over: **Daily**, **Weekly**, or **Monthly** (default *Monthly*). Spend resets at the start of each calendar period. |
+| **Threshold (USD)** | The dollar amount that triggers an alert. Must be greater than `0`. The alert fires once the automation's spend for the current period exceeds this value. |
+| **Recipient emails** | Up to 50 email addresses. Type an address and press **Enter** or comma to add it as a chip; **Backspace** removes the last chip. These do not need to be CrewAI users. |
+| **Notify roles** | Optionally select organization [roles](/en/enterprise/features/rbac); the alert is sent to every member of the chosen roles. Roles with no members can't be selected. You must provide at least one recipient — an email or a role. |
+| **Re-alert frequency** | How often the alert can re-fire while an automation stays over budget: **Once per period**, **Every hour while over**, **Every 4h while over**, or **Daily while over**. Re-alerts are capped at 24 per period. |
+
+**How spend is measured and matched**
+
+- The threshold is evaluated **per automation**, not summed across the whole scope. Each engaged automation has its own running total for the period.
+- A rule can match many automations via its conditions (tools/tags), and a single automation can be covered by **multiple** Cost Limit rules at once. Each rule tracks its own budget and alert state independently — they don't merge.
+- A background check compares each engaged automation's period-to-date spend against the threshold and sends the email when it's exceeded. Because the check runs periodically, expect a short delay between crossing the threshold and the email arriving.
+
+**The alert email**
+
+When an automation goes over budget, recipients get an email summarizing the overage — the automation name, the **current spend**, the **budget threshold**, and how far over it is in both dollars and percent (e.g. `$0.38` current vs a `$0.10` budget = `+277%`). The email reiterates that the run was **not** paused.
+</Tab>
+</Tabs>
 
 More rule types will be added over time.
 
 ## Creating a rule
 
+<Tabs>
+<Tab title="PII Redaction">
 <Frame>
-  <img src="/images/enterprise/acp-rules-edit-side-panel.png" alt="Rule edit side panel with conditions and PII mask type" width="450" />
+  <img src="/images/enterprise/acp-rules-edit-side-panel.png" alt="New Rule side panel configured for PII Redaction with the PII mask type table" width="450" />
 </Frame>
+</Tab>
+<Tab title="Cost Limit">
+<Frame>
+  <img src="/images/enterprise/acp-rules-edit-cost-limit.png" alt="New Rule side panel configured for Cost Limit with budget period, threshold, and recipient emails" width="450" />
+</Frame>
+</Tab>
+</Tabs>
 
 <Steps>
   <Step title="Open the editor">
@@ -54,11 +106,11 @@ More rule types will be added over time.
   </Step>
 
   <Step title="Name and describe the rule">
-    Give the rule a clear name (e.g. *Mask PII (CC)*) and a description explaining when it applies. Both show up on the rule card and in the Engaged Automations modal.
+    Give the rule a clear name (e.g. *Mask PII (CC)* or *Monthly $100 budget*) and a description explaining when it applies. Both show up on the rule card and in the Engaged Automations modal.
   </Step>
 
   <Step title="Pick the type">
-    Today only **PII Redaction** is available.
+    Choose **PII Redaction** or **Cost Limit**. The type determines which configuration section appears below the conditions. The type is fixed once the rule is created — to switch, create a new rule.
   </Step>
 
   <Step title="Set the conditions">
@@ -70,8 +122,8 @@ More rule types will be added over time.
     Leaving a picker empty means "no filter on this dimension". Leaving both empty means the rule applies to **every** automation in the organization.
   </Step>
 
-  <Step title="Configure the PII Mask Type table">
-    Check each entity type you want covered and choose **Mask** (replaces with the entity label, e.g. `<CREDIT_CARD>`) or **Redact** (removes the matched text entirely). See [PII Redaction for Traces](/en/enterprise/features/pii-trace-redactions) for the full entity catalog and how to add organization-level custom recognizers.
+  <Step title="Configure the type-specific section">
+    The editor shows the configuration for the type you picked — the **PII Mask Type** table for PII Redaction, or the budget fields for Cost Limit. See [Rule types](#rule-types) for what each field does.
   </Step>
 
   <Step title="Save">
@@ -91,12 +143,14 @@ This is the fastest way to sanity-check a rule's scope before enabling it — fo
 
 ## Org-wide rules vs per-deployment settings
 
-PII Redaction can be configured in two places:
+Both PII Redaction and Cost Limit can be configured in two places: org-wide as a Rule on this page, or per-deployment under that deployment's **Settings**. When an enabled org-wide rule's scope matches a deployment, the rule takes precedence over the deployment-owned setting while it's attached.
 
-- **Per-deployment** — under **Settings → PII Protection** on each individual deployment ([guide](/en/enterprise/features/pii-trace-redactions))
-- **Org-wide** — as a Rule on this page
+| Policy | Per-deployment setting | What an attached org-wide rule does |
+|--------|------------------------|-------------------------------------|
+| **PII Redaction** | **Settings → PII Protection** ([guide](/en/enterprise/features/pii-trace-redactions)) | The rule's entity configuration **overrides** the deployment's PII settings for that deployment's executions. |
+| **Cost Limit** | **Settings → Cost Alerts** | The deployment's manual cost alert is **paused** and the attached cost rule(s) fire instead. The per-deployment form stays editable as a fallback. |
 
-When an enabled org-wide rule's scope matches a deployment, the rule's entity configuration **overrides** the deployment-owned PII settings for that deployment's executions — the rule becomes the single source of truth while it's attached. Disable or detach the rule (or change its scope so it no longer matches) and the deployment falls back to its own PII Protection settings.
+Disable or detach the rule (or change its scope so it no longer matches) and the deployment falls back to its own per-deployment settings.
 
 Prefer org-wide rules when you want to enforce a consistent policy across many deployments; reserve per-deployment configuration for one-off exceptions.
 

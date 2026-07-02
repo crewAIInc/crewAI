@@ -6,12 +6,15 @@ from typing import Any, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from crewai.agent.planning_config import PlanningConfig
+
 
 __all__ = [
     "AgentDefinition",
     "CrewAgentDefinition",
     "CrewDefinition",
     "CrewTaskDefinition",
+    "LLMDefinition",
     "PythonReferenceDefinition",
 ]
 
@@ -19,7 +22,10 @@ __all__ = [
 class PythonReferenceDefinition(BaseModel):
     """Dotted Python reference used by crew definitions."""
 
-    python: str
+    python: str = Field(
+        description="Dotted Python import path to load.",
+        examples=["my_project.schemas.SupportReply"],
+    )
 
     @field_validator("python")
     @classmethod
@@ -35,16 +41,136 @@ class PythonReferenceDefinition(BaseModel):
         return path
 
 
+class LLMDefinition(BaseModel):
+    """LLM configuration used by inline agent definitions."""
+
+    model_config = ConfigDict(extra="allow")
+
+    model: str = Field(
+        description="Model identifier used to instantiate the LLM.",
+        examples=["openai/gpt-4o-mini"],
+    )
+    max_tokens: int | None = Field(
+        default=None,
+        description=(
+            "Maximum number of tokens the LLM can generate. If null, CrewAI "
+            "does not set an explicit output token cap and the provider's "
+            "default applies."
+        ),
+        examples=[4096],
+    )
+
+
 class CrewAgentDefinition(BaseModel):
     """Inline agent definition used by a crew definition."""
 
     model_config = ConfigDict(extra="allow")
 
-    role: str
-    goal: str
-    backstory: str
-    type: str | PythonReferenceDefinition | None = None
-    settings: dict[str, Any] = Field(default_factory=dict)
+    role: str = Field(
+        description=(
+            "Crew agent role. Crew inputs are interpolated with `{name}` "
+            "placeholders such as `{topic}`; this is not CEL."
+        ),
+        examples=["Research analyst"],
+    )
+    goal: str = Field(
+        description=(
+            "Crew agent goal. Crew inputs are interpolated with `{name}` "
+            "placeholders such as `{topic}`; this is not CEL."
+        ),
+        examples=["Research {topic}"],
+    )
+    backstory: str = Field(
+        description=(
+            "Crew agent backstory. Crew inputs are interpolated with `{name}` "
+            "placeholders such as `{topic}`; this is not CEL."
+        ),
+        examples=["Expert at concise technical research."],
+    )
+    type: str | PythonReferenceDefinition | None = Field(
+        default=None,
+        description="Optional built-in type or Python reference used to load the agent.",
+        examples=["agent", {"python": "my_project.agents.ResearchAgent"}],
+    )
+    settings: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional agent settings passed to the loader.",
+        examples=[{"llm": "openai/gpt-4o-mini"}],
+    )
+    llm: str | LLMDefinition | None = Field(
+        default=None,
+        description=(
+            "Language model that runs the agent. Use a string model name or an "
+            "object with model settings such as max_tokens."
+        ),
+        examples=[{"model": "openai/gpt-4o-mini", "max_tokens": 4096}],
+    )
+    planning_config: PlanningConfig | None = Field(
+        default=None,
+        description="Configuration for agent planning before task execution.",
+        examples=[{"max_attempts": 3}],
+    )
+    allow_delegation: bool | None = Field(
+        default=None,
+        description="Enable agent to delegate and ask questions among each other.",
+        examples=[False],
+    )
+    max_iter: int | None = Field(
+        default=None,
+        description="Maximum iterations for an agent to execute a task",
+        examples=[25],
+    )
+    max_rpm: int | None = Field(
+        default=None,
+        description=(
+            "Maximum number of requests per minute for the agent execution to be "
+            "respected."
+        ),
+        examples=[10],
+    )
+    max_execution_time: int | None = Field(
+        default=None,
+        description="Maximum execution time in seconds for an agent to execute a task",
+        examples=[300],
+    )
+    tools: list[str | dict[str, Any]] | None = Field(
+        default=None,
+        description=(
+            "Tool refs or serialized tool definitions available to this agent. "
+            "String refs can use CrewAI tool names, `custom:<name>`, or fully "
+            "qualified `module:Class` references."
+        ),
+        examples=[["crewai_tools:SerperDevTool", "custom:file_read"]],
+    )
+    apps: list[str] | None = Field(
+        default=None,
+        description=(
+            "Platform apps available to this agent. Can contain app names such as "
+            "`gmail` or app/action refs such as `gmail/send_email`."
+        ),
+        examples=[["gmail", "slack/send_message"]],
+    )
+    mcps: list[str | dict[str, Any]] | None = Field(
+        default=None,
+        description=(
+            "MCP server refs or serialized MCP server configs available to this "
+            "agent. String refs can use HTTPS URLs, connected MCP integration "
+            "slugs, or refs with a `#tool_name` suffix for specific tools."
+        ),
+        examples=[
+            [
+                "https://api.weather.com/mcp#get_current_weather",
+                "snowflake",
+                "stripe#list_invoices",
+                {
+                    "url": "https://api.example.com/mcp",
+                    "headers": {"Authorization": "Bearer your_token"},
+                    "streamable": True,
+                    "cache_tools_list": True,
+                },
+            ]
+        ],
+    )
 
     @field_validator("settings", mode="before")
     @classmethod
@@ -55,10 +181,41 @@ class CrewAgentDefinition(BaseModel):
 
 
 class AgentDefinition(CrewAgentDefinition):
-    """Inline agent definition used by a Flow agent action."""
+    """Inline individual agent definition used outside of a crew."""
 
-    input: str
-    response_format: PythonReferenceDefinition | None = None
+    role: str = Field(
+        description="Individual agent role used by a Flow agent action outside of a crew.",
+        examples=["Support specialist"],
+    )
+    goal: str = Field(
+        description="Individual agent goal for the Flow agent action outside of a crew.",
+        examples=["Draft a concise customer reply"],
+    )
+    backstory: str = Field(
+        description=(
+            "Individual agent backstory used to shape behavior outside of a crew."
+        ),
+        examples=["Expert at resolving SaaS support questions."],
+    )
+    type: str | PythonReferenceDefinition | None = Field(
+        default=None,
+        description="Optional built-in type or Python reference used to load the agent.",
+        examples=["agent", {"python": "my_project.agents.SupportAgent"}],
+    )
+    settings: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional agent settings passed to the loader.",
+        examples=[{"llm": "openai/gpt-4o-mini"}],
+    )
+    input: str = Field(
+        description="Input passed to the individual agent kickoff outside of a crew.",
+        examples=["${state.ticket.body}"],
+    )
+    response_format: PythonReferenceDefinition | None = Field(
+        default=None,
+        description="Optional Python reference to a Pydantic response format.",
+        examples=[{"python": "my_project.schemas.SupportReply"}],
+    )
 
     @field_validator("input", mode="before")
     @classmethod
@@ -73,12 +230,40 @@ class CrewTaskDefinition(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    description: str
-    expected_output: str
-    name: str | None = None
-    agent: str | None = None
-    context: list[str] | None = None
-    type: str | PythonReferenceDefinition | None = None
+    description: str = Field(
+        description=(
+            "Task instructions. Crew inputs are interpolated with `{name}` "
+            "placeholders such as `{topic}`; this is not CEL."
+        ),
+        examples=["Research {topic}."],
+    )
+    expected_output: str = Field(
+        description=(
+            "Expected task output. Crew inputs are interpolated with `{name}` "
+            "placeholders such as `{topic}`; this is not CEL."
+        ),
+        examples=["Key findings about {topic}."],
+    )
+    name: str | None = Field(
+        default=None,
+        description="Optional task name used by context references.",
+        examples=["research_task"],
+    )
+    agent: str | None = Field(
+        default=None,
+        description="Name of the crew agent assigned to this task.",
+        examples=["researcher"],
+    )
+    context: list[str] | None = Field(
+        default=None,
+        description="Names of previous tasks whose outputs should be used as context.",
+        examples=[["research_task"]],
+    )
+    type: str | PythonReferenceDefinition | None = Field(
+        default=None,
+        description="Optional built-in type or Python reference used to load the task.",
+        examples=["task", {"python": "my_project.tasks.ResearchTask"}],
+    )
 
 
 _CrewAgentsInput: TypeAlias = dict[str, CrewAgentDefinition] | list[dict[str, Any]]
@@ -89,10 +274,44 @@ class CrewDefinition(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    agents: dict[str, CrewAgentDefinition]
-    tasks: list[CrewTaskDefinition]
-    inputs: dict[str, Any] = Field(default_factory=dict)
-    manager_agent: str | PythonReferenceDefinition | None = None
+    agents: dict[str, CrewAgentDefinition] = Field(
+        description="Inline crew agents keyed by agent name.",
+        examples=[
+            {
+                "researcher": {
+                    "role": "Research analyst",
+                    "goal": "Research {topic}",
+                    "backstory": "Expert at concise technical research.",
+                }
+            }
+        ],
+    )
+    tasks: list[CrewTaskDefinition] = Field(
+        description="Ordered crew tasks.",
+        examples=[
+            [
+                {
+                    "name": "research_task",
+                    "description": "Research {topic}.",
+                    "expected_output": "Key findings about {topic}.",
+                    "agent": "researcher",
+                }
+            ]
+        ],
+    )
+    inputs: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Default crew inputs. Values are available to crew agent and task "
+            "interpolation as `{name}` placeholders, for example `{topic}`."
+        ),
+        examples=[{"topic": "AI agents"}],
+    )
+    manager_agent: str | PythonReferenceDefinition | None = Field(
+        default=None,
+        description="Optional manager agent name or Python reference.",
+        examples=["manager", {"python": "my_project.agents.ManagerAgent"}],
+    )
 
     @field_validator("inputs", mode="before")
     @classmethod

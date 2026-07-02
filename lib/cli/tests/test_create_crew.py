@@ -11,7 +11,10 @@ from packaging.requirements import Requirement
 from packaging.version import Version
 import crewai_cli.create_json_crew as json_crew
 import crewai_cli.tui_picker as tui_picker
+from crewai_cli.cli import crewai
 from crewai_cli.create_crew import create_crew, create_folder_structure
+from crewai_cli.utils import render_template
+from crewai_cli.version import get_crewai_tools_dependency
 
 
 @pytest.fixture
@@ -107,6 +110,7 @@ def test_create_crew_with_trailing_slash_creates_valid_project(
             "crewai_cli.create_crew.create_folder_structure"
         ) as mock_create_folder:
             mock_folder_path = Path(work_dir) / "test_project"
+            mock_folder_path.mkdir()
             mock_create_folder.return_value = (
                 mock_folder_path,
                 "test_project",
@@ -141,6 +145,7 @@ def test_create_crew_with_multiple_trailing_slashes(
             "crewai_cli.create_crew.create_folder_structure"
         ) as mock_create_folder:
             mock_folder_path = Path(work_dir) / "test_project"
+            mock_folder_path.mkdir()
             mock_create_folder.return_value = (
                 mock_folder_path,
                 "test_project",
@@ -165,6 +170,7 @@ def test_create_crew_normal_name_still_works(
             "crewai_cli.create_crew.create_folder_structure"
         ) as mock_create_folder:
             mock_folder_path = Path(work_dir) / "normal_project"
+            mock_folder_path.mkdir()
             mock_create_folder.return_value = (
                 mock_folder_path,
                 "normal_project",
@@ -174,6 +180,26 @@ def test_create_crew_normal_name_still_works(
             create_crew("normal-project", skip_provider=True)
 
             mock_create_folder.assert_called_once_with("normal-project", None)
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git is not installed")
+@pytest.mark.parametrize(
+    ("args", "project_root"),
+    [
+        (["create", "crew", "Git Crew"], "git_crew"),
+        (["create", "flow", "Git Flow"], "git_flow"),
+    ],
+)
+def test_create_initializes_git_repo_when_git_is_available(
+    args, project_root, tmp_path, monkeypatch, runner
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_DMN", "True")
+
+    result = runner.invoke(crewai, args)
+
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / project_root / ".git").is_dir()
 
 
 def test_create_folder_structure_handles_spaces_and_dashes_with_slash():
@@ -735,12 +761,16 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
 
     pyproject = tomli.loads((tmp_path / "json_crew" / "pyproject.toml").read_text())
     dependency = pyproject["project"]["dependencies"][0]
-    assert dependency == "crewai[tools]>=1.15.0,<2.0.0"
+    assert dependency == get_crewai_tools_dependency()
     assert Version("1.15.0") in Requirement(dependency).specifier
     assert Version("2.0.0") not in Requirement(dependency).specifier
     assert pyproject["tool"]["hatch"]["build"]["targets"]["wheel"][
         "only-include"
     ] == ["agents", "crew.jsonc", "tools", "knowledge", "skills"]
+    assert pyproject["tool"]["crewai"] == {
+        "type": "crew",
+        "definition": "crew.jsonc",
+    }
 
     crew_template = (tmp_path / "json_crew" / "crew.jsonc").read_text()
     assert (
@@ -810,6 +840,37 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
         agent_template
     )
     assert '"knowledge_sources": []' in agent_template
+
+
+def test_json_crew_uses_template_files():
+    template_names = {
+        "pyproject.toml",
+        "README.md",
+        ".gitignore",
+        "agent.jsonc",
+        "agent_settings.jsonc",
+        "task.jsonc",
+        "crew.jsonc",
+        "knowledge/user_preference.txt",
+    }
+
+    for template_name in template_names:
+        assert (json_crew._TEMPLATES_DIR / template_name).is_file()
+
+
+def test_render_template_does_not_replace_tokens_inside_replacement_values(tmp_path):
+    template = tmp_path / "template.txt"
+    template.write_text("{{first}} {{second}}", encoding="utf-8")
+
+    rendered = render_template(
+        template,
+        {
+            "first": "{{second}}",
+            "second": "done",
+        },
+    )
+
+    assert rendered == "{{second}} done"
 
 
 def test_json_provider_default_model_helper():
