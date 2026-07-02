@@ -29,7 +29,10 @@ from crewai.flow.conversational_definition import (
     FlowConversationalDefinition,
     FlowConversationalRouterDefinition,
 )
-from crewai.flow.expressions import ExpressionData
+from crewai.flow.expressions import (
+    ExpressionData,
+    flow_template_expression_description,
+)
 from crewai.project.crew_definition import AgentDefinition, CrewDefinition
 
 
@@ -362,12 +365,10 @@ class FlowCodeActionDefinition(BaseModel):
     with_: dict[str, ExpressionData] | None = Field(
         default=None,
         alias="with",
-        description=(
-            "Keyword arguments passed to the callable. String values are evaluated "
-            "as CEL only when the trimmed value starts with ${ and ends with }; "
-            "all other values are literal."
+        description=flow_template_expression_description(
+            "Keyword arguments passed to the callable."
         ),
-        examples=[{"topic": "${state.topic}"}],
+        examples=[{"topic": "${state.topic}", "query": "News about ${state.topic}"}],
     )
 
 
@@ -390,11 +391,7 @@ class FlowToolActionDefinition(BaseModel):
     with_: dict[str, ExpressionData] | None = Field(
         default=None,
         alias="with",
-        description=(
-            "Tool input arguments. String values are evaluated as CEL only when "
-            "the trimmed value starts with ${ and ends with }; all other values "
-            "are literal."
-        ),
+        description=flow_template_expression_description("Tool input arguments."),
         examples=[{"query": "${outputs.normalize_topic}", "limit": 5}],
     )
 
@@ -446,11 +443,12 @@ class FlowCrewActionDefinition(BaseModel):
     )
     inputs: dict[str, ExpressionData] | None = Field(
         default=None,
-        description=(
-            "Input overrides passed to the Crew. String values are evaluated as CEL "
-            "only when the trimmed value starts with ${ and ends with }; all other "
-            "values are literal. The resulting values are available to crew agent "
-            "and task interpolation as `{name}` placeholders."
+        description=flow_template_expression_description(
+            "Input overrides passed to the Crew."
+        )
+        + (
+            " The resulting values are available to crew agent and task "
+            "interpolation as `{name}` placeholders."
         ),
         examples=[{"topic": "${state.topic}"}],
     )
