@@ -100,6 +100,11 @@ class TypedInputsTool(BaseTool):
         return f"{count}:{','.join(include_domains)}"
 
 
+class TemplateInputFlow(Flow):
+    def capture_inputs(self, prompt: str, domains: list[str]) -> dict[str, Any]:
+        return {"prompt": prompt, "domains": domains}
+
+
 class AsyncResultTool(BaseTool):
     name: str = "AsyncResultTool"
     description: str = "Returns an async result from its sync entrypoint."
@@ -733,7 +738,7 @@ methods:
     assert flow.kickoff(inputs={"topic": "ai"}) == "found:ai agents"
 
 
-def test_tool_action_treats_embedded_cel_marker_as_literal():
+def test_tool_action_interpolates_cel_string_literals():
     definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
@@ -754,10 +759,10 @@ def test_tool_action_treats_embedded_cel_marker_as_literal():
         }
     )
 
-    assert Flow.from_declaration(contents=definition).kickoff() == "p}x:wrapped ${'a}b'} value"
+    assert Flow.from_declaration(contents=definition).kickoff() == "p}x:wrapped a}b value"
 
 
-def test_tool_action_treats_marker_with_trailing_text_as_literal():
+def test_tool_action_interpolates_expression_with_surrounding_text():
     definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
@@ -778,11 +783,177 @@ def test_tool_action_treats_marker_with_trailing_text_as_literal():
         }
     )
 
-    assert Flow.from_declaration(contents=definition).kickoff() == "p:${state.topic} extra"
+    flow = Flow.from_declaration(contents=definition)
+
+    assert flow.kickoff(inputs={"topic": "ai"}) == "p:ai extra"
 
 
-def test_tool_action_rejects_adjacent_markers_as_invalid_cel():
-    with pytest.raises(ValidationError, match="invalid CEL expression"):
+def test_tool_action_interpolates_adjacent_expressions():
+    definition = FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}:StaticSearchTool",
+                        "with": {
+                            "search_query": "${'a'}${'b'}",
+                            "prefix": "p",
+                        },
+                    },
+                },
+            },
+        }
+    )
+
+    assert Flow.from_declaration(contents=definition).kickoff() == "p:ab"
+
+
+def test_tool_action_interpolates_multiple_expressions_with_literals():
+    definition = FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}:StaticSearchTool",
+                        "with": {
+                            "search_query": "here's ${state.a} and another ${state.b}!",
+                            "prefix": "p",
+                        },
+                    },
+                },
+            },
+        }
+    )
+
+    flow = Flow.from_declaration(contents=definition)
+
+    assert flow.kickoff(inputs={"a": "one", "b": "two"}) == "p:here's one and another two!"
+
+
+def test_tool_action_interpolates_non_string_values_as_json():
+    definition = FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}:StaticSearchTool",
+                        "with": {
+                            "search_query": "n=${state.n}; ok=${state.ok}; d=${state.d}",
+                            "prefix": "p",
+                        },
+                    },
+                },
+            },
+        }
+    )
+
+    flow = Flow.from_declaration(contents=definition)
+
+    assert (
+        flow.kickoff(inputs={"n": 3, "ok": True, "d": {"a": 1}})
+        == 'p:n=3; ok=true; d={"a": 1}'
+    )
+
+
+def test_tool_action_interpolates_null_as_empty_string():
+    definition = FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}:StaticSearchTool",
+                        "with": {
+                            "search_query": "note:${state.note};",
+                            "prefix": "p",
+                        },
+                    },
+                },
+            },
+        }
+    )
+
+    flow = Flow.from_declaration(contents=definition)
+
+    assert flow.kickoff(inputs={"note": None}) == "p:note:;"
+
+
+def test_tool_action_interpolates_object_literal_fields():
+    definition = FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}:StaticSearchTool",
+                        "with": {
+                            "search_query": "result: ${ {'k': 'v'}.k } end",
+                            "prefix": "p",
+                        },
+                    },
+                },
+            },
+        }
+    )
+
+    assert Flow.from_declaration(contents=definition).kickoff() == "p:result: v end"
+
+
+def test_tool_action_keeps_plain_dollar_signs_literal():
+    definition = FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}:StaticSearchTool",
+                        "with": {
+                            "search_query": "$5 or $more, escaped ${'${'}x",
+                            "prefix": "p",
+                        },
+                    },
+                },
+            },
+        }
+    )
+
+    assert Flow.from_declaration(contents=definition).kickoff() == "p:$5 or $more, escaped ${x"
+
+
+@pytest.mark.parametrize(
+    ("search_query", "error"),
+    [
+        ("cost ${state.a", "unterminated"),
+        ("x ${} y", "empty CEL expression"),
+        ("a ${foo.bar} b", "unknown CEL root"),
+    ],
+)
+def test_tool_action_rejects_invalid_interpolated_inputs(
+    search_query: str,
+    error: str,
+):
+    with pytest.raises(ValidationError, match=error):
         FlowDefinition.from_declaration(contents=
             {
                 "schema": "crewai.flow/v1",
@@ -794,7 +965,7 @@ def test_tool_action_rejects_adjacent_markers_as_invalid_cel():
                             "call": "tool",
                             "ref": f"{__name__}:StaticSearchTool",
                             "with": {
-                                "search_query": "${'a'}${'b'}",
+                                "search_query": search_query,
                                 "prefix": "p",
                             },
                         },
@@ -804,7 +975,7 @@ def test_tool_action_rejects_adjacent_markers_as_invalid_cel():
         )
 
 
-def test_tool_action_accepts_braces_in_full_cel_marker():
+def test_tool_action_preserves_type_for_object_literal_expression():
     definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
@@ -900,6 +1071,37 @@ methods:
     )
 
 
+def test_tool_action_interpolates_values_inside_list_inputs():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: ToolFlow
+methods:
+  typed:
+    do:
+      call: tool
+      ref: {__name__}:TypedInputsTool
+      with:
+        count: "${{state.limit}}"
+        include_domains:
+          - "${{state.primary_domain}}"
+          - "docs.${{state.domain_suffix}}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    assert (
+        flow.kickoff(
+            inputs={
+                "limit": 2,
+                "primary_domain": "crewai.com",
+                "domain_suffix": "example.com",
+            }
+        )
+        == "2:crewai.com,docs.example.com"
+    )
+
+
 def test_tool_action_renders_text_custom_expression_inputs():
     yaml_str = f"""
 schema: crewai.flow/v1
@@ -984,7 +1186,7 @@ methods:
         role: Analyst
         goal: Answer questions
         backstory: Knows things.
-        input: "${'Ticket ID: ' + text(state, 'ticket.id') + '; Subject: ' + text(state, 'ticket.subject')}"
+        input: "Ticket ID: ${text(state, 'ticket.id')}; Subject: ${text(state, 'ticket.subject')}"
     start: true
 """
 
@@ -1180,6 +1382,58 @@ methods:
         "agents": ["Researcher"],
         "tasks": ["Research {topic}"],
         "inputs": {"topic": "AI"},
+    }
+
+
+def test_crew_action_interpolates_runtime_strings_and_lists(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from crewai import Crew
+
+    async def fake_kickoff_async(
+        self: Crew, inputs: dict[str, Any] | None = None, **_kwargs: Any
+    ) -> dict[str, Any] | None:
+        return inputs
+
+    monkeypatch.setattr(Crew, "kickoff_async", fake_kickoff_async)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: CrewFlow
+methods:
+  research:
+    do:
+      call: crew
+      with:
+        name: inline_research
+        agents:
+          researcher:
+            role: Researcher
+            goal: Research {topic}
+            backstory: Knows things.
+        tasks:
+          - name: research_task
+            description: Research {topic} using {sources}
+            expected_output: Findings about {topic}
+            agent: researcher
+      inputs:
+        topic: "News about ${state.topic}"
+        sources:
+          - "${state.primary_source}"
+          - "archive-${state.topic}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    assert flow.kickoff(
+        inputs={
+            "topic": "AI",
+            "primary_source": "crewai.com",
+        }
+    ) == {
+        "topic": "News about AI",
+        "sources": ["crewai.com", "archive-AI"],
     }
 
 
@@ -1598,6 +1852,37 @@ methods:
     assert flow.kickoff(inputs={"name": "hello"}) == "hello!"
 
 
+def test_code_action_interpolates_strings_and_lists():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: CodeTemplateFlow
+methods:
+  capture:
+    do:
+      call: code
+      ref: {__name__}:TemplateInputFlow.capture_inputs
+      with:
+        prompt: "Ticket ${{state.ticket.id}}: ${{state.ticket.subject}}"
+        domains:
+          - "${{state.primary_domain}}"
+          - "docs.${{state.domain_suffix}}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    assert flow.kickoff(
+        inputs={
+            "ticket": {"id": 123, "subject": "Login issue"},
+            "primary_domain": "crewai.com",
+            "domain_suffix": "example.com",
+        }
+    ) == {
+        "prompt": "Ticket 123: Login issue",
+        "domains": ["crewai.com", "docs.example.com"],
+    }
+
+
 def test_code_action_supports_callable_instance_refs():
     yaml_str = f"""
 schema: crewai.flow/v1
@@ -1641,6 +1926,42 @@ methods:
     assert flow.kickoff(inputs={"rows": ["a", "b"]}) == [
         "normalized:a",
         "normalized:b",
+    ]
+
+
+def test_each_action_interpolates_item_values_in_step_inputs():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: EachFlow
+methods:
+  process_rows:
+    do:
+      call: each
+      in: state.rows
+      do:
+        - name: normalize
+          action:
+            call: code
+            ref: {__name__}:EachActionFlow.normalize_row
+            with:
+              row: "Row ${{item.id}}: ${{item.value}}"
+              prefix: "${{state.prefix}}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    assert flow.kickoff(
+        inputs={
+            "prefix": "normalized",
+            "rows": [
+                {"id": 1, "value": "alpha"},
+                {"id": 2, "value": "beta"},
+            ],
+        }
+    ) == [
+        "normalized:Row 1: alpha",
+        "normalized:Row 2: beta",
     ]
 
 
