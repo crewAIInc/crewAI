@@ -15651,6 +15651,12 @@
             "title": "Database URI",
             "type": "string"
           },
+          "require_approval": {
+            "default": false,
+            "description": "When True, every query is shown to a human for approval before execution. The approval_handler callable is invoked with the SQL string and must return True to proceed. Defaults to an interactive terminal prompt.",
+            "title": "Require Approval",
+            "type": "boolean"
+          },
           "tables": {
             "items": {
               "additionalProperties": true,
