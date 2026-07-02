@@ -3,7 +3,7 @@
 ## Description
 This tool is specifically crafted for conducting semantic searches within docs within a Weaviate vector database. Use this tool to find semantically similar docs to a given query.
 
-Weaviate is a vector database that is used to store and query vector embeddings. You can follow their docs here: https://weaviate.io/developers/wcs/connect
+Weaviate is a vector database that is used to store and query vector embeddings. You can follow their docs here: https://weaviate.io/developers/wcs
 
 ## Installation
 Install the crewai_tools package by executing the following command in your terminal:
@@ -60,7 +60,7 @@ Preloading the Weaviate database with documents:
 ```python
 from crewai_tools import WeaviateVectorSearchTool
 
-# Use before hooks to generate the documents and add them to the Weaviate database. Follow the weaviate docs: https://weaviate.io/developers/wcs/connect
+# Use before hooks to generate the documents and add them to the Weaviate database. Follow the weaviate docs: https://weaviate.io/developers/wcs
 test_docs = client.collections.get("example_collections")
 
 
