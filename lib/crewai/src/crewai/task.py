@@ -484,6 +484,34 @@ class Task(BaseModel):
                 result[key] = value
         return result
 
+    @staticmethod
+    def _reject_unsafe_output_chars(value: str) -> None:
+        """Reject path-traversal and shell metacharacters in an output_file value."""
+        if ".." in value:
+            raise ValueError(
+                "Path traversal attempts are not allowed in output_file paths"
+            )
+        if value.startswith(("~", "$")):
+            raise ValueError(
+                "Shell expansion characters are not allowed in output_file paths"
+            )
+        if any(char in value for char in ["|", ">", "<", "&", ";"]):
+            raise ValueError(
+                "Shell special characters are not allowed in output_file paths"
+            )
+
+    @staticmethod
+    def _normalize_output_path(value: str) -> str:
+        """Apply the output_file path policy to a concrete (already-interpolated) path.
+
+        Mirrors the constraints enforced on a literal output_file: reject traversal
+        and shell metacharacters, and treat a leading slash as a relative path.
+        """
+        Task._reject_unsafe_output_chars(value)
+        if value.startswith("/"):
+            return value[1:]
+        return value
+
     @field_validator("output_file")
     @classmethod
     def output_file_validation(cls, value: str | None) -> str | None:
@@ -504,20 +532,7 @@ class Task(BaseModel):
         if value is None:
             return None
 
-        if ".." in value:
-            raise ValueError(
-                "Path traversal attempts are not allowed in output_file paths"
-            )
-
-        if value.startswith(("~", "$")):
-            raise ValueError(
-                "Shell expansion characters are not allowed in output_file paths"
-            )
-
-        if any(char in value for char in ["|", ">", "<", "&", ";"]):
-            raise ValueError(
-                "Shell special characters are not allowed in output_file paths"
-            )
+        cls._reject_unsafe_output_chars(value)
 
         if "{" in value or "}" in value:
             template_vars = [part.split("}")[0] for part in value.split("{")[1:]]
@@ -1027,11 +1042,12 @@ Follow these guidelines:
 
         if self.output_file is not None:
             try:
-                self.output_file = interpolate_only(
+                interpolated_output_file = interpolate_only(
                     input_string=self._original_output_file, inputs=inputs
                 )
             except (KeyError, ValueError) as e:
                 raise ValueError(f"Error interpolating output_file path: {e!s}") from e
+            self.output_file = self._normalize_output_path(interpolated_output_file)
 
         if inputs.get("crew_chat_messages"):
             conversation_instruction = I18N_DEFAULT.slice(
