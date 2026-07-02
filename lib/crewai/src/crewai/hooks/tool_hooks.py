@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import logging
+from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import dataclass, field
-import logging
-from typing import TYPE_CHECKING, Any, Mapping, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from crewai_core.printer import PRINTER
 
@@ -375,7 +376,7 @@ def enable_policy_provider(
             decision = provider.evaluate(request)
             if not isinstance(decision, PolicyDecision):
                 raise TypeError("PolicyProvider.evaluate() must return PolicyDecision")
-            if type(decision.allow) is not bool:
+            if not isinstance(decision.allow, bool):
                 raise TypeError("PolicyDecision.allow must be a bool")
         except Exception:
             logger.exception("PolicyProvider evaluation failed")
