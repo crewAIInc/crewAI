@@ -24,6 +24,7 @@ from typing import (
     Annotated,
     Any,
     ClassVar,
+    Final,
     Generic,
     Literal,
     ParamSpec,
@@ -159,6 +160,13 @@ ExecutionContext = Any  # type: ignore[assignment,misc]
 
 
 logger = logging.getLogger(__name__)
+
+
+# Upper bound on router hops within a single _route() invocation. Guards
+# against circular @router definitions that would otherwise spin the event
+# loop indefinitely. No legitimate flow exceeds this; if hit, surface a
+# RuntimeError so the cycle is diagnosable instead of silently hanging.
+MAX_ROUTER_HOPS: Final[int] = 100
 
 
 def _condition_branches(
@@ -2725,8 +2733,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         current_trigger = trigger_method
         current_result = result  # Track the result to pass to each router
         current_triggering_event_id = triggering_event_id
+        hop_count = 0
 
         while True:
+            hop_count += 1
+            if hop_count > MAX_ROUTER_HOPS:
+                raise RuntimeError(
+                    f"Flow router cycle detected: exceeded {MAX_ROUTER_HOPS} "
+                    "router hops. Check for circular @router definitions."
+                )
             routers_triggered = self._find_triggered_methods(
                 current_trigger, router_only=True
             )
