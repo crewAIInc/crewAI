@@ -121,6 +121,29 @@ CrewAI supports a multitude of LLM providers, each offering unique features, aut
 In this section, you'll find detailed examples that help you select, configure, and optimize the LLM that best fits your project's needs.
 
 <AccordionGroup>
+  <Accordion title="TrustedRouter">
+    TrustedRouter is an OpenAI-compatible router for privacy-sensitive agent work. It uses [open-source, verifiable attested routing](https://trustedrouter.com/trust) and does not log prompts or outputs by default.
+
+    ```toml Code
+    TRUSTEDROUTER_API_KEY=tr_...
+    ```
+
+    **Basic Usage:**
+    ```python Code
+    import os
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/trustedrouter/zdr",
+        api_key=os.environ["TRUSTEDROUTER_API_KEY"],
+        base_url="https://api.trustedrouter.com/v1",
+        temperature=0.2,
+    )
+    ```
+
+    Use this configuration when you want CrewAI to keep the familiar OpenAI-compatible request shape while routing through TrustedRouter's attested gateway.
+  </Accordion>
+
   <Accordion title="OpenAI">
     CrewAI provides native integration with OpenAI through the OpenAI Python SDK.
 
