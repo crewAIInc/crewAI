@@ -2048,8 +2048,11 @@ async def test_openai_responses_async_streaming_emits_tool_call_argument_deltas(
             self._index += 1
             return event
 
+    async def mock_create(**_: Any) -> MockAsyncStream:
+        return MockAsyncStream(stream_events)
+
     fake_client = types.SimpleNamespace(
-        responses=types.SimpleNamespace(create=lambda **_: MockAsyncStream(stream_events))
+        responses=types.SimpleNamespace(create=mock_create)
     )
 
     with patch.object(llm, "_get_async_client", return_value=fake_client):
