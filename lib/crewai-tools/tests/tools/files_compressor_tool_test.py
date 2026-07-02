@@ -1,6 +1,13 @@
+import os
+import shutil
+import tarfile
+import tempfile
+import zipfile
 from unittest.mock import patch
 
-from crewai_tools.tools.files_compressor_tool import FileCompressorTool
+from crewai_tools.tools.files_compressor_tool.files_compressor_tool import (
+    FileCompressorTool,
+)
 import pytest
 
 
@@ -129,3 +136,105 @@ def test_prepare_output_makes_dir(mock_exists, mock_makedirs):
     result = tool._prepare_output("some/missing/path/file.zip", overwrite=True)
     assert result is True
     mock_makedirs.assert_called_once()
+
+
+# --- Security: symlink content must not leak out of the allow-list ---
+
+
+@pytest.fixture
+def symlink_env():
+    """A working dir (the allowed root, via cwd) containing a normal file and a
+    symlink pointing at a file OUTSIDE that root.
+
+    The working directory is the allowed root for path validation, so we chdir
+    into ``work_dir`` rather than relying on CREWAI_TOOLS_ALLOWED_DIRS. This
+    keeps the test independent of the configurable-allow-list feature and
+    exercises the default cwd confinement.
+    """
+    work_dir = os.path.realpath(tempfile.mkdtemp())
+    outside_dir = os.path.realpath(tempfile.mkdtemp())  # outside the allowed root
+    outside_file = os.path.join(outside_dir, "outside.txt")
+    with open(outside_file, "w") as f:
+        f.write("OUTSIDE_FILE_MARKER")
+
+    src = os.path.join(work_dir, "src")
+    os.makedirs(src)
+    with open(os.path.join(src, "normal.txt"), "w") as f:
+        f.write("safe content")
+    os.symlink(outside_file, os.path.join(src, "leak.txt"))
+
+    prev_cwd = os.getcwd()
+    os.chdir(work_dir)
+    yield {
+        "work_dir": work_dir,
+        "src": src,
+        "outside_dir": outside_dir,
+        "outside_file": outside_file,
+    }
+    os.chdir(prev_cwd)
+    shutil.rmtree(work_dir, ignore_errors=True)
+    shutil.rmtree(outside_dir, ignore_errors=True)
+
+
+def test_zip_excludes_symlink_to_outside_file(tool, symlink_env):
+    out = os.path.join(symlink_env["work_dir"], "archive.zip")
+    result = tool._run(
+        input_path=symlink_env["src"], output_path=out, format="zip", overwrite=True
+    )
+    assert "Successfully compressed" in result
+    assert "skipped for safety" in result
+
+    with zipfile.ZipFile(out) as zf:
+        names = zf.namelist()
+        assert "normal.txt" in names
+        assert "leak.txt" not in names
+        blob = b"".join(zf.read(n) for n in names)
+    assert b"OUTSIDE_FILE_MARKER" not in blob
+
+
+def test_tar_excludes_symlink_to_outside_file(tool, symlink_env):
+    out = os.path.join(symlink_env["work_dir"], "archive.tar.gz")
+    result = tool._run(
+        input_path=symlink_env["src"],
+        output_path=out,
+        format="tar.gz",
+        overwrite=True,
+    )
+    assert "Successfully compressed" in result
+    assert "skipped for safety" in result
+
+    with tarfile.open(out) as tf:
+        members = tf.getnames()
+        assert any(m.endswith("normal.txt") for m in members)
+        assert not any(m.endswith("leak.txt") for m in members)
+        assert all(not (tf.getmember(m).issym() or tf.getmember(m).islnk()) for m in members)
+
+
+def test_compress_zip_validates_output_path_at_sink(symlink_env):
+    # Calling the compressor directly (bypassing _run) must still refuse to
+    # write outside the allow-list.
+    outside = os.path.join(symlink_env["outside_dir"], "evil.zip")
+    with pytest.raises(ValueError, match="outside the allowed director"):
+        FileCompressorTool._compress_zip(symlink_env["src"], outside)
+    assert not os.path.exists(outside)
+
+
+def test_compress_tar_validates_output_path_at_sink(symlink_env):
+    outside = os.path.join(symlink_env["outside_dir"], "evil.tar.gz")
+    with pytest.raises(ValueError, match="outside the allowed director"):
+        FileCompressorTool._compress_tar(symlink_env["src"], outside, "tar.gz")
+    assert not os.path.exists(outside)
+
+
+def test_compress_zip_validates_input_path_at_sink(symlink_env):
+    out = os.path.join(symlink_env["work_dir"], "archive.zip")
+    with pytest.raises(ValueError, match="outside the allowed director"):
+        FileCompressorTool._compress_zip(symlink_env["outside_file"], out)
+    assert not os.path.exists(out)
+
+
+def test_compress_tar_validates_input_path_at_sink(symlink_env):
+    out = os.path.join(symlink_env["work_dir"], "archive.tar.gz")
+    with pytest.raises(ValueError, match="outside the allowed director"):
+        FileCompressorTool._compress_tar(symlink_env["outside_file"], out, "tar.gz")
+    assert not os.path.exists(out)
