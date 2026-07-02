@@ -2280,11 +2280,26 @@ class LLM(BaseLLM):
         if messages is None:
             raise TypeError("Messages cannot be None")
 
+        from crewai.llms.cache import CACHE_BREAKPOINT_KEY
+        from crewai.utilities.types import LLMMessage as _LLMMessage
+
+        # Strip the provider-agnostic cache-breakpoint marker. Only the native
+        # Anthropic adapter consumes it; on the litellm path every provider
+        # (Groq, OpenAI-compatible, etc.) receives the raw message dict and
+        # rejects the unknown ``cache_breakpoint`` key, so it must never reach
+        # the wire. Copy rather than mutate, since the executor reuses this
+        # message buffer across iterations of the tool-use loop.
+        cleaned: list[LLMMessage] = []
         for msg in messages:
             if not isinstance(msg, dict) or "role" not in msg or "content" not in msg:
                 raise TypeError(
                     "Invalid message format. Each message must be a dict with 'role' and 'content' keys"
                 )
+            copy: dict[str, Any] = {
+                k: v for k, v in msg.items() if k != CACHE_BREAKPOINT_KEY
+            }
+            cleaned.append(cast(_LLMMessage, copy))
+        messages = cleaned
 
         if "o1" in self.model.lower():
             formatted_messages = []
