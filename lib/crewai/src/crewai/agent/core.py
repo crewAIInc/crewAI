@@ -566,11 +566,32 @@ class Agent(BaseAgent):
             )
             if unified_memory is not None:
                 query = task.description
-                matches = unified_memory.recall(query, limit=5)
-                if matches:
-                    memory = "Relevant memories:\n" + "\n".join(
-                        m.format() for m in matches
+                matches = unified_memory.recall(query, limit=10)
+
+                # Separate factual memories from behavioral insights
+                factual = [
+                    m for m in matches
+                    if m.record.metadata.get("type") != "action_insight"
+                ]
+                behavioral = [
+                    m for m in matches
+                    if m.record.metadata.get("type") == "action_insight"
+                ]
+
+                parts: list[str] = []
+                if factual:
+                    parts.append(
+                        "Relevant memories:\n"
+                        + "\n".join(m.format() for m in factual)
                     )
+                if behavioral:
+                    parts.append(
+                        I18N_DEFAULT.slice("behavioral_memory").format(
+                            behavioral_memory="\n".join(m.format() for m in behavioral)
+                        )
+                    )
+                if parts:
+                    memory = "\n".join(parts)
             if memory.strip() != "":
                 task_prompt += I18N_DEFAULT.slice("memory").format(memory=memory)
 
@@ -1478,12 +1499,31 @@ class Agent(BaseAgent):
                     ),
                 )
                 start_time = time.time()
-                matches = agent_memory.recall(formatted_messages, limit=20)
-                memory_block = ""
-                if matches:
-                    memory_block = "Relevant memories:\n" + "\n".join(
-                        m.format() for m in matches
+                matches = agent_memory.recall(formatted_messages, limit=30)
+
+                # Separate factual memories from behavioral insights
+                factual = [
+                    m for m in matches
+                    if m.record.metadata.get("type") != "action_insight"
+                ]
+                behavioral = [
+                    m for m in matches
+                    if m.record.metadata.get("type") == "action_insight"
+                ]
+
+                parts: list[str] = []
+                if factual:
+                    parts.append(
+                        "Relevant memories:\n"
+                        + "\n".join(m.format() for m in factual)
                     )
+                if behavioral:
+                    parts.append(
+                        I18N_DEFAULT.slice("behavioral_memory").format(
+                            behavioral_memory="\n".join(m.format() for m in behavioral)
+                        )
+                    )
+                memory_block = "\n".join(parts)
                 if memory_block:
                     formatted_messages += "\n\n" + I18N_DEFAULT.slice("memory").format(
                         memory=memory_block

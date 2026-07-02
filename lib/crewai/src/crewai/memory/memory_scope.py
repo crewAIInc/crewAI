@@ -171,6 +171,33 @@ class MemoryScope(BaseModel):
         """Extract discrete memories from content; delegates to underlying Memory."""
         return self._require_memory().extract_memories(content)
 
+    def extract_action_insights(self, content: str) -> list[Any]:
+        """Extract behavioral insights; delegates to underlying Memory."""
+        return self._require_memory().extract_action_insights(content)
+
+    def _save_action_insight(
+        self,
+        content: str,
+        insight_type: str,
+        domain: str,
+        rationale: str,
+        context_signals: list[str],
+        scope: str = "/behavioral",
+        agent_role: str | None = None,
+        root_scope: str | None = None,
+    ) -> Any:
+        """Save or aggregate a behavioral insight; delegates to underlying Memory."""
+        return self._require_memory()._save_action_insight(
+            content=content,
+            insight_type=insight_type,
+            domain=domain,
+            rationale=rationale,
+            context_signals=context_signals,
+            scope=scope,
+            agent_role=agent_role,
+            root_scope=root_scope,
+        )
+
     def forget(
         self,
         scope: str | None = None,
@@ -326,6 +353,33 @@ class MemorySlice(BaseModel):
     def extract_memories(self, content: str) -> list[str]:
         """Extract discrete memories from content; delegates to underlying Memory."""
         return self._require_memory().extract_memories(content)
+
+    def extract_action_insights(self, content: str) -> list[Any]:
+        """Extract behavioral insights; delegates to underlying Memory."""
+        return self._require_memory().extract_action_insights(content)
+
+    def _save_action_insight(
+        self,
+        content: str,
+        insight_type: str,
+        domain: str,
+        rationale: str,
+        context_signals: list[str],
+        scope: str = "/behavioral",
+        agent_role: str | None = None,
+        root_scope: str | None = None,
+    ) -> Any:
+        """Save or aggregate a behavioral insight; delegates to underlying Memory."""
+        return self._require_memory()._save_action_insight(
+            content=content,
+            insight_type=insight_type,
+            domain=domain,
+            rationale=rationale,
+            context_signals=context_signals,
+            scope=scope,
+            agent_role=agent_role,
+            root_scope=root_scope,
+        )
 
     def list_scopes(self, path: str = "/") -> list[str]:
         """List scopes across all slice roots."""

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -378,3 +378,57 @@ def compute_composite_score(
         reasons.append("importance")
 
     return composite, reasons
+
+
+def compute_behavioral_adjustment(
+    metadata: dict[str, Any],
+    config: MemoryConfig,
+) -> tuple[float, list[str]]:
+    """Return a multiplier [0, 1] and reasons adjusting behavioral insight scores.
+
+    Factors in observation count (confidence), staleness (recency from last
+    observation rather than creation), and contradiction penalties.
+
+    Args:
+        metadata: The record's metadata dict (must contain observation_count,
+            last_observed_at, and optionally contradicts).
+        config: MemoryConfig providing recency_half_life_days.
+
+    Returns:
+        Tuple of (multiplier, reasons). multiplier is applied to the base
+        composite score; reasons describe what adjustments were made.
+    """
+    reasons: list[str] = []
+    multiplier = 1.0
+
+    # 1. Confidence from observation count
+    count = metadata.get("observation_count", 1)
+    confidence = min(1.0, count / 10.0)
+    if confidence < 0.8:
+        reasons.append(f"low_confidence({count}obs)")
+        multiplier *= confidence
+
+    # 2. Staleness: decay from last_observed_at rather than created_at
+    last_seen = metadata.get("last_observed_at")
+    if last_seen:
+        try:
+            last = datetime.fromisoformat(last_seen)
+            # Normalize timezone-aware to naive UTC so subtraction with utcnow() works
+            if last.tzinfo is not None:
+                last = last.astimezone(timezone.utc).replace(tzinfo=None)
+            days_since = max((datetime.utcnow() - last).total_seconds() / 86400.0, 0.0)
+            behavioral_hl = config.recency_half_life_days * 2  # default 60d
+            staleness = 0.5 ** (days_since / behavioral_hl)
+            if staleness < 0.5:
+                reasons.append("stale")
+            multiplier *= max(0.1, staleness)
+        except (ValueError, TypeError):
+            pass  # ignore malformed date
+
+    # 3. Contradiction penalty
+    contradicts = metadata.get("contradicts", [])
+    if contradicts:
+        multiplier *= 0.5
+        reasons.append("contradicted")
+
+    return multiplier, reasons

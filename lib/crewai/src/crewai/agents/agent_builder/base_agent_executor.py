@@ -46,6 +46,7 @@ class BaseAgentExecutor(BaseModel):
                 f"Expected result: {self.task.expected_output}\n"
                 f"Result: {output.text}"
             )
+            # --- Factual memory extraction ---
             extracted = memory.extract_memories(raw)
             if extracted:
                 base_root = getattr(memory, "root_scope", None)
@@ -61,5 +62,26 @@ class BaseAgentExecutor(BaseModel):
                     )
                 else:
                     memory.remember_many(extracted, agent_role=self.agent.role)
+
+            # --- Behavioral action insight extraction + save (with aggregation) ---
+            insights = memory.extract_action_insights(raw)
+            if insights:
+                base_root = getattr(memory, "root_scope", None)
+                for insight in insights:
+                    memory._save_action_insight(
+                        content=insight.content,
+                        insight_type=insight.type,
+                        domain=insight.domain,
+                        rationale=insight.rationale,
+                        context_signals=insight.context_signals,
+                        scope="/behavioral",
+                        agent_role=self.agent.role,
+                        root_scope=(
+                            f"{base_root.rstrip('/')}/agent/"
+                            f"{sanitize_scope_name(self.agent.role or 'unknown')}"
+                            if isinstance(base_root, str) and base_root
+                            else None
+                        ),
+                    )
         except Exception as e:
             self.agent._logger.log("error", f"Failed to save to memory: {e}")
