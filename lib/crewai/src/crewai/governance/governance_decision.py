@@ -51,10 +51,12 @@ class GovernanceDecision(TypedDict, total=False):
 
     intent_ref: str
     """Stable semantic identity of the authorized intent.
-    SHA-256(JCS({agent_id, tool, normalized_scope, intent_digest, idempotency_key})).
-    No timestamp — retries of the same authorized intent produce the same hash.
+    SHA-256(JCS({agent_id, tool, normalized_scope, intent_digest})).
+    No timestamp, no idempotency_key — retries of the same authorized intent
+    produce the same hash regardless of attempt count.
     This is the normative cross-runtime join key between GovernanceDecision
-    and GovernanceOutcome. Idempotency checks bind to intent_ref equality."""
+    and GovernanceOutcome. Duplicate enforcement keys on the PAIR
+    (intent_ref, idempotency_key) — not on intent_ref alone."""
 
     receipt_ref: str
     """Per-record unique identity for audit enumeration.
@@ -117,8 +119,13 @@ class GovernanceDecision(TypedDict, total=False):
     A verifier uses this to know how to recompute the digest."""
 
     idempotency_key: str
-    """Unique key for this specific action attempt. A second execution with the
-    same decision_id + idempotency_key is denied (IDEMPOTENCY_VIOLATION)."""
+    """Key stable across retries of one side effect — NOT a key unique to each
+    attempt. A second execution with the same (intent_ref, idempotency_key)
+    pair is denied (IDEMPOTENCY_VIOLATION), regardless of decision_id.
+
+    Duplicate enforcement keys on (intent_ref, idempotency_key). The
+    idempotency_key is NOT an input to intent_ref computation — changing
+    the key produces a genuinely new invocation of the same semantic intent."""
 
     # --- Policy evaluation ---
 
