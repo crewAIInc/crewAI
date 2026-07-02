@@ -7,27 +7,77 @@ with W3C did:key identity and portable signed reputation credentials.
 
 These tools let a CrewAI agent answer "can I trust this counterparty?" before
 handing work — or payment — to an agent it doesn't already know. Reads use the
-free/hosted public API; no API key is required for the tools below.
+free/hosted public API; no API key is required for the tools below. Set the
+``AGENT_GUILD_BASE_URL`` environment variable to point at a self-hosted or
+staging instance instead of the hosted default.
 """
 
 import json
+import os
+import urllib.error
 import urllib.parse
 import urllib.request
-from typing import List, Type
+from typing import List, Optional, Type
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
-AGENT_GUILD_BASE_URL = "https://agent-guild-5d5r.onrender.com"
+DEFAULT_AGENT_GUILD_BASE_URL = "https://agent-guild-5d5r.onrender.com"
 _UA = "crewai-tools-agentguild/1.0"
 _TIMEOUT = 30
 
+_ENV_VARS: List[EnvVar] = [
+    EnvVar(
+        name="AGENT_GUILD_BASE_URL",
+        description="Optional override for the Agent Guild API base URL "
+                    "(defaults to the hosted instance)",
+        required=False,
+    ),
+]
 
-def _get(path: str) -> str:
+
+def _base_url() -> str:
+    return os.environ.get(
+        "AGENT_GUILD_BASE_URL", DEFAULT_AGENT_GUILD_BASE_URL).rstrip("/")
+
+
+def _request(path: str, data: Optional[bytes] = None) -> str:
+    """Call the Agent Guild API and return the response body as a string.
+
+    Never raises, so a failed lookup can't crash a crew:
+    - HTTP error responses return the API's own (JSON) error body, which
+      carries a more actionable message than the bare status line;
+    - transport failures (DNS, timeout, cold start of the hosted instance)
+      return a structured JSON error string that names the endpoint and
+      distinguishes "service unreachable" from an in-band API error.
+    """
+    base_url = _base_url()
+    headers = {"User-Agent": _UA}
+    if data is not None:
+        headers["content-type"] = "application/json"
     req = urllib.request.Request(
-        AGENT_GUILD_BASE_URL + path, headers={"User-Agent": _UA})
-    with urllib.request.urlopen(req, timeout=_TIMEOUT) as r:
-        return r.read().decode("utf-8")
+        base_url + path, data=data, headers=headers,
+        method="POST" if data is not None else "GET")
+    try:
+        with urllib.request.urlopen(req, timeout=_TIMEOUT) as r:
+            return r.read().decode("utf-8")
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        if body:
+            return body
+        return json.dumps({
+            "error": "agent_guild_http_error",
+            "status": e.code,
+            "detail": str(e),
+        })
+    except Exception as e:  # noqa: BLE001
+        return json.dumps({
+            "error": "agent_guild_unreachable",
+            "detail": str(e),
+            "endpoint": base_url,
+            "hint": "The hosted instance may be cold-starting; retry once, "
+                    "or set AGENT_GUILD_BASE_URL to a self-hosted instance.",
+        })
 
 
 class AgentGuildCheckInput(BaseModel):
@@ -48,13 +98,10 @@ class AgentGuildCheckTool(BaseTool):
         "capabilities instead.")
     args_schema: Type[BaseModel] = AgentGuildCheckInput
     package_dependencies: List[str] = []
-    env_vars: List[EnvVar] = []
+    env_vars: List[EnvVar] = Field(default_factory=lambda: list(_ENV_VARS))
 
     def _run(self, capability: str) -> str:
-        try:
-            return _get("/check?capability=" + urllib.parse.quote(capability))
-        except Exception as e:  # noqa: BLE001
-            return json.dumps({"error": f"Agent Guild request failed: {e}"})
+        return _request("/check?capability=" + urllib.parse.quote(capability))
 
 
 class AgentGuildRiskScoreInput(BaseModel):
@@ -69,13 +116,10 @@ class AgentGuildRiskScoreTool(BaseTool):
         "agent id, including its trust score and collusion suspicion.")
     args_schema: Type[BaseModel] = AgentGuildRiskScoreInput
     package_dependencies: List[str] = []
-    env_vars: List[EnvVar] = []
+    env_vars: List[EnvVar] = Field(default_factory=lambda: list(_ENV_VARS))
 
     def _run(self, agent_id: str) -> str:
-        try:
-            return _get(f"/agents/{urllib.parse.quote(agent_id)}/risk-score")
-        except Exception as e:  # noqa: BLE001
-            return json.dumps({"error": f"Agent Guild request failed: {e}"})
+        return _request(f"/agents/{urllib.parse.quote(agent_id)}/risk-score")
 
 
 class AgentGuildVerifyPassportInput(BaseModel):
@@ -94,16 +138,8 @@ class AgentGuildVerifyPassportTool(BaseTool):
         "forged credential can't mislead.")
     args_schema: Type[BaseModel] = AgentGuildVerifyPassportInput
     package_dependencies: List[str] = []
-    env_vars: List[EnvVar] = []
+    env_vars: List[EnvVar] = Field(default_factory=lambda: list(_ENV_VARS))
 
     def _run(self, credential_json: str) -> str:
-        try:
-            body = credential_json.encode("utf-8")
-            req = urllib.request.Request(
-                AGENT_GUILD_BASE_URL + "/credentials/verify", data=body,
-                headers={"content-type": "application/json", "User-Agent": _UA},
-                method="POST")
-            with urllib.request.urlopen(req, timeout=_TIMEOUT) as r:
-                return r.read().decode("utf-8")
-        except Exception as e:  # noqa: BLE001
-            return json.dumps({"error": f"Agent Guild request failed: {e}"})
+        return _request(
+            "/credentials/verify", data=credential_json.encode("utf-8"))
