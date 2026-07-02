@@ -931,6 +931,48 @@ def test_interpolate_inputs(tmp_path):
     assert task.output_file == str(tmp_path / "ML" / "output_2025.txt")
 
 
+@pytest.mark.parametrize(
+    ("template", "malicious_inputs", "expected_error"),
+    [
+        ("reports/{name}.md", {"name": "../../../../tmp/pwn"}, "path traversal"),
+        ("{p}", {"p": "/tmp/abs_pwn"}, "absolute paths"),
+        ("{p}", {"p": "~/.bashrc"}, "shell expansion"),
+        ("{p}", {"p": "x;rm -rf /"}, "shell special characters"),
+        ("{p}", {"p": r"C:\Windows\evil"}, "absolute paths"),
+    ],
+)
+def test_interpolate_output_file_rejects_unsafe_inputs(
+    template, malicious_inputs, expected_error
+):
+    """Untrusted inputs must not escape the output_file path via interpolation."""
+    task = Task(
+        description="do {p} {name}".replace("{p}", "x").replace("{name}", "x"),
+        expected_output="e",
+        output_file=template,
+    )
+    with pytest.raises(ValueError, match=expected_error):
+        task.interpolate_inputs_and_add_conversation_history(inputs=malicious_inputs)
+
+
+def test_interpolate_output_file_allows_safe_inputs(tmp_path):
+    """Safe input values and developer-chosen absolute base paths still work."""
+    task = Task(
+        description="d",
+        expected_output="e",
+        output_file="reports/{name}.md",
+    )
+    task.interpolate_inputs_and_add_conversation_history(inputs={"name": "q3_summary"})
+    assert task.output_file == "reports/q3_summary.md"
+
+    abs_task = Task(
+        description="d",
+        expected_output="e",
+        output_file=str(tmp_path / "{topic}" / "out.md"),
+    )
+    abs_task.interpolate_inputs_and_add_conversation_history(inputs={"topic": "sales"})
+    assert abs_task.output_file == str(tmp_path / "sales" / "out.md")
+
+
 def test_interpolate_only():
     """Test the interpolate_only method for various scenarios including JSON structure preservation."""
 
