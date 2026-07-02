@@ -19,14 +19,14 @@ from crewai.hooks.llm_hooks import (
     unregister_before_llm_call_hook,
 )
 from crewai.hooks.tool_hooks import (
-    PolicyDecision,
-    PolicyProvider,
-    PolicyRequest,
+    GuardrailDecision,
+    GuardrailProvider,
+    GuardrailRequest,
     ToolCallHookContext,
     clear_after_tool_call_hooks,
     clear_all_tool_call_hooks,
     clear_before_tool_call_hooks,
-    enable_policy_provider,
+    enable_guardrail,
     get_after_tool_call_hooks,
     get_before_tool_call_hooks,
     register_after_tool_call_hook,
@@ -78,10 +78,10 @@ def clear_all_global_hooks() -> dict[str, tuple[int, int]]:
 
 
 __all__ = [
+    "GuardrailDecision",
+    "GuardrailProvider",
+    "GuardrailRequest",
     "LLMCallHookContext",
-    "PolicyDecision",
-    "PolicyProvider",
-    "PolicyRequest",
     "ToolCallHookContext",
     "after_llm_call",
     "after_tool_call",
@@ -94,7 +94,7 @@ __all__ = [
     "clear_all_tool_call_hooks",
     "clear_before_llm_call_hooks",
     "clear_before_tool_call_hooks",
-    "enable_policy_provider",
+    "enable_guardrail",
     "get_after_llm_call_hooks",
     "get_after_tool_call_hooks",
     "get_before_llm_call_hooks",
