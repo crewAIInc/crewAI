@@ -887,6 +887,17 @@ def test_prefixed_models_with_valid_patterns_use_native_sdk():
         assert llm2.model == "claude-future-5"
 
 
+def test_anthropic_double_dash_prefix_uses_native_sdk():
+    """Test that models with anthropic-- prefix (e.g. self-hosted) route to native Anthropic SDK."""
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        llm = LLM(
+            model="anthropic/anthropic--claude-3-5-sonnet", is_litellm=False
+        )
+        assert llm.is_litellm is False
+        assert llm.provider == "anthropic"
+        assert llm.model == "anthropic--claude-3-5-sonnet"
+
+
 def test_prefixed_models_with_non_native_providers_use_litellm():
     """Test that models with non-native provider prefixes always use LiteLLM."""
     # Test groq/ prefix (not a native provider) → LiteLLM
@@ -950,6 +961,19 @@ def test_validate_model_in_constants():
     assert (
         LLM._validate_model_in_constants("claude-3-5-sonnet-latest", "claude") is True
     )
+    # Models with non-standard anthropic-- prefix (e.g. self-hosted deployments)
+    assert (
+        LLM._validate_model_in_constants(
+            "anthropic--claude-3-5-sonnet", "anthropic"
+        )
+        is True
+    )
+    assert (
+        LLM._validate_model_in_constants(
+            "anthropic--claude-opus-4-0", "claude"
+        )
+        is True
+    )
     assert LLM._validate_model_in_constants("unknown-model", "claude") is False
 
     # Gemini models
@@ -972,6 +996,16 @@ def test_validate_model_in_constants():
     assert (
         LLM._validate_model_in_constants("anthropic.claude-future-v1:0", "bedrock")
         is True
+    )
+
+
+def test_infer_provider_from_model_anthropic_prefixes():
+    """Test that _infer_provider_from_model recognizes non-standard anthropic prefixes."""
+    # Standard prefixes already in constants
+    assert LLM._infer_provider_from_model("claude-opus-4-0") == "anthropic"
+    # Non-standard prefix not in constants — should still infer anthropic
+    assert (
+        LLM._infer_provider_from_model("anthropic--claude-3-5-sonnet") == "anthropic"
     )
 
 @pytest.mark.vcr(record_mode="once",decode_compressed_response=True)
