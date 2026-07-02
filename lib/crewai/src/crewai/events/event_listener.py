@@ -64,6 +64,7 @@ from crewai.events.types.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
     LLMCallStartedEvent,
+    LLMCallType,
     LLMStreamChunkEvent,
 )
 from crewai.events.types.llm_guardrail_events import (
@@ -455,6 +456,13 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(LLMStreamChunkEvent)
         def on_llm_stream_chunk(_: Any, event: LLMStreamChunkEvent) -> None:
+            if event.call_type == LLMCallType.TOOL_CALL:
+                self.formatter.handle_llm_stream_chunk(
+                    event.tool_call.function.arguments if event.tool_call else "",
+                    event.call_type,
+                )
+                return
+
             self.text_stream.write(event.chunk)
             self.text_stream.seek(self.next_chunk)
             self.text_stream.read()

@@ -240,14 +240,17 @@ for chunk in streaming:
 
 ### TOOL_CALL Chunks
 
-Information about tool calls being made:
+Information about tool calls being made. Depending on the provider, CrewAI may receive tool-call arguments incrementally. In that case, each `TOOL_CALL` chunk contains the latest streamed content in `chunk.content`, while `chunk.tool_call.arguments` contains the accumulated argument string so far.
 
 ```python Code
 for chunk in streaming:
     if chunk.chunk_type == StreamChunkType.TOOL_CALL:
         print(f"\nCalling tool: {chunk.tool_call.tool_name}")
-        print(f"Arguments: {chunk.tool_call.arguments}")
+        print(f"Latest argument delta: {chunk.content}")
+        print(f"Arguments so far: {chunk.tool_call.arguments}")
 ```
+
+Actual tool execution is reported separately through tool usage events in the runtime event stream and through CrewAI's verbose console output. `TOOL_CALL` chunks represent the model constructing the tool request before or during execution.
 
 ## Practical Example: Building a UI with Streaming
 
