@@ -23399,6 +23399,103 @@
       }
     },
     {
+      "description": "Fetch any URL and return clean, agent-ready Markdown via Skim (skim402.com). Strips nav, ads, and boilerplate; preserves the article body plus structured metadata (title, byline, published date, language, excerpt). Pays $0.002 per call in USDC on Base over the x402 protocol \u2014 no API keys, no signup. Use this whenever you need to read web content: articles, docs, blog posts, GitHub READMEs, research papers, and similar pages.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Hex private key for the Base wallet that pays for Skim reads over x402. Needed unless private_key is passed to the constructor. The key never leaves your machine.",
+          "name": "SKIM_WALLET_PRIVATE_KEY",
+          "required": false
+        }
+      ],
+      "humanized_name": "Skim web reader",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Read any URL as clean Markdown via Skim, paying per call over x402.\n\nThe tool lazily builds a payment-aware HTTP session the first time it runs,\nusing your Base wallet's private key to sign USDC authorizations on demand.\n\nArgs:\n    private_key (str): Optional. Hex private key (with or without ``0x``) for\n        the Base wallet that pays for reads. Falls back to the\n        ``SKIM_WALLET_PRIVATE_KEY`` environment variable. Use a dedicated\n        wallet, never your personal one.\n    base_url (str): Optional. Skim API base URL. Defaults to\n        ``https://skim402.com``.\n    max_price_usd (float): Optional. Hard per-call price cap in USD. The\n        wallet refuses to sign for anything above this. Defaults to ``0.01``\n        (Skim is ``$0.002``).\n    include_metadata (bool): Optional. When ``True`` (default), prepend a YAML\n        frontmatter block of the page metadata to the returned Markdown.\n    timeout (float): Optional. Per-request timeout in seconds. Defaults to\n        ``60``.\n\nExample:\n    from crewai_tools import SkimReaderTool\n\n    tool = SkimReaderTool()  # reads SKIM_WALLET_PRIVATE_KEY from the env\n    tool.run(url=\"https://en.wikipedia.org/wiki/HTTP_402\")",
+        "properties": {
+          "base_url": {
+            "default": "https://skim402.com",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "include_metadata": {
+            "default": true,
+            "title": "Include Metadata",
+            "type": "boolean"
+          },
+          "max_price_usd": {
+            "default": 0.01,
+            "title": "Max Price Usd",
+            "type": "number"
+          },
+          "timeout": {
+            "default": 60.0,
+            "title": "Timeout",
+            "type": "number"
+          }
+        },
+        "required": [],
+        "title": "SkimReaderTool",
+        "type": "object"
+      },
+      "name": "SkimReaderTool",
+      "package_dependencies": [
+        "x402[evm]",
+        "eth-account",
+        "requests"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "url": {
+            "description": "The fully-qualified URL to fetch and clean (https://...).",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "SkimReaderToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "Execute SQL queries or semantic search on Snowflake data warehouse. Supports both raw SQL and natural language queries.",
       "env_vars": [],
       "humanized_name": "Snowflake Database Search",
