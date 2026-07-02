@@ -23,6 +23,7 @@ from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
+    LLMCallStartedEvent,
     LLMCallType,
     LLMStreamChunkEvent,
 )
@@ -31,7 +32,6 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.base_llm import (
     BaseLLM,
     JsonResponseFormat,
@@ -509,7 +509,8 @@ class LLM(BaseLLM):
 
         if provider == "anthropic" or provider == "claude":
             return any(
-                model_lower.startswith(prefix) for prefix in ["claude-", "anthropic."]
+                model_lower.startswith(prefix)
+                for prefix in ["claude-", "claude/", "anthropic/", "anthropic."]
             )
 
         if provider == "gemini" or provider == "google":
@@ -703,7 +704,7 @@ class LLM(BaseLLM):
             bool: True if the model is from Anthropic, False otherwise.
         """
         anthropic_prefixes = ("anthropic/", "claude-", "claude/")
-        return any(prefix in model.lower() for prefix in anthropic_prefixes)
+        return any(model.lower().startswith(prefix) for prefix in anthropic_prefixes)
 
     def _prepare_completion_params(
         self,
@@ -786,11 +787,6 @@ class LLM(BaseLLM):
         last_chunk = None
         chunk_count = 0
         usage_info = None
-        # Tracked across the loop: LiteLLM with include_usage emits a final
-        # usage-only chunk with empty choices, so the post-loop last_chunk has
-        # no finish_reason. Capture both incrementally instead.
-        stream_finish_reason: str | None = None
-        stream_response_id: str | None = None
 
         accumulated_tool_args: defaultdict[int, AccumulatedToolArgs] = defaultdict(
             AccumulatedToolArgs
@@ -809,16 +805,6 @@ class LLM(BaseLLM):
 
                 if isinstance(chunk, ModelResponseBase):
                     response_id = chunk.id
-                elif isinstance(chunk, dict):
-                    response_id = chunk.get("id")
-
-                chunk_finish, chunk_id = self._extract_finish_reason_and_response_id(
-                    chunk
-                )
-                if chunk_finish:
-                    stream_finish_reason = chunk_finish
-                if chunk_id and not stream_response_id:
-                    stream_response_id = chunk_id
 
                 try:
                     choices = None
@@ -991,11 +977,6 @@ class LLM(BaseLLM):
                 if tool_calls_list:
                     return tool_calls_list
 
-            finish_reason, response_id_last = (
-                stream_finish_reason,
-                stream_response_id,
-            )
-
             if not tool_calls or not available_functions:
                 if response_model and self.is_litellm:
                     instructor_instance = InternalInstructor(
@@ -1013,8 +994,6 @@ class LLM(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage_dict,
-                        finish_reason=finish_reason,
-                        response_id=response_id_last,
                     )
                     return structured_response
 
@@ -1026,8 +1005,6 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=usage_dict,
-                    finish_reason=finish_reason,
-                    response_id=response_id_last,
                 )
                 return full_response
 
@@ -1043,8 +1020,6 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=usage_dict,
-                finish_reason=finish_reason,
-                response_id=response_id_last,
             )
             return full_response
 
@@ -1058,10 +1033,6 @@ class LLM(BaseLLM):
             logging.error(f"Error in streaming response: {e!s}")
             if full_response.strip():
                 logging.warning(f"Returning partial response despite error: {e!s}")
-                finish_reason, response_id_last = (
-                    stream_finish_reason,
-                    stream_response_id,
-                )
                 self._handle_emit_call_events(
                     response=full_response,
                     call_type=LLMCallType.LLM_CALL,
@@ -1069,8 +1040,6 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=self._usage_to_dict(usage_info),
-                    finish_reason=finish_reason,
-                    response_id=response_id_last,
                 )
                 return full_response
 
@@ -1255,10 +1224,6 @@ class LLM(BaseLLM):
             else None
         )
 
-        finish_reason, response_id = self._extract_finish_reason_and_response_id(
-            response
-        )
-
         if response_model is not None:
             # When using instructor/response_model, litellm returns a Pydantic model instance
             if isinstance(response, BaseModel):
@@ -1270,8 +1235,6 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=response_usage,
-                    finish_reason=finish_reason,
-                    response_id=response_id,
                 )
                 return structured_response
 
@@ -1308,8 +1271,6 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=response_usage,
-                finish_reason=finish_reason,
-                response_id=response_id,
             )
             return text_response
 
@@ -1327,8 +1288,6 @@ class LLM(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=response_usage,
-            finish_reason=finish_reason,
-            response_id=response_id,
         )
         return text_response
 
@@ -1406,10 +1365,6 @@ class LLM(BaseLLM):
             else None
         )
 
-        finish_reason, response_id = self._extract_finish_reason_and_response_id(
-            response
-        )
-
         if response_model is not None:
             if isinstance(response, BaseModel):
                 structured_response = response.model_dump_json()
@@ -1420,8 +1375,6 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=response_usage,
-                    finish_reason=finish_reason,
-                    response_id=response_id,
                 )
                 return structured_response
 
@@ -1460,8 +1413,6 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=response_usage,
-                finish_reason=finish_reason,
-                response_id=response_id,
             )
             return text_response
 
@@ -1479,8 +1430,6 @@ class LLM(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=response_usage,
-            finish_reason=finish_reason,
-            response_id=response_id,
         )
         return text_response
 
@@ -1518,29 +1467,12 @@ class LLM(BaseLLM):
         params["stream"] = True
         params["stream_options"] = {"include_usage": True}
         response_id = None
-        # See sync sibling: incrementally track finish_reason/response_id so the
-        # usage-only final chunk doesn't wipe them.
-        stream_finish_reason: str | None = None
-        stream_response_id: str | None = None
 
         try:
             async for chunk in await litellm.acompletion(**params):
                 chunk_count += 1
                 chunk_content = None
-                if isinstance(chunk, ModelResponseBase):
-                    response_id = chunk.id
-                elif isinstance(chunk, dict):
-                    response_id = chunk.get("id")
-                else:
-                    response_id = None
-
-                chunk_finish, chunk_id = self._extract_finish_reason_and_response_id(
-                    chunk
-                )
-                if chunk_finish:
-                    stream_finish_reason = chunk_finish
-                if chunk_id and not stream_response_id:
-                    stream_response_id = chunk_id
+                response_id = chunk.id if isinstance(chunk, ModelResponseBase) else None
 
                 try:
                     choices = None
@@ -1648,10 +1580,6 @@ class LLM(BaseLLM):
                         return tool_calls_list
 
             usage_dict = self._usage_to_dict(usage_info)
-            finish_reason, response_id_last = (
-                stream_finish_reason,
-                stream_response_id,
-            )
             self._handle_emit_call_events(
                 response=full_response,
                 call_type=LLMCallType.LLM_CALL,
@@ -1659,8 +1587,6 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 messages=params.get("messages"),
                 usage=usage_dict,
-                finish_reason=finish_reason,
-                response_id=response_id_last,
             )
             return full_response
 
@@ -1674,10 +1600,6 @@ class LLM(BaseLLM):
             if chunk_count == 0:
                 raise
             if full_response:
-                finish_reason, response_id_last = (
-                    stream_finish_reason,
-                    stream_response_id,
-                )
                 self._handle_emit_call_events(
                     response=full_response,
                     call_type=LLMCallType.LLM_CALL,
@@ -1685,8 +1607,6 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params.get("messages"),
                     usage=self._usage_to_dict(usage_info),
-                    finish_reason=finish_reason,
-                    response_id=response_id_last,
                 )
                 return full_response
             raise
@@ -1813,14 +1733,19 @@ class LLM(BaseLLM):
             ValueError: If response format is not supported
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
-        with llm_call_context():
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
+        with llm_call_context() as call_id:
+            crewai_event_bus.emit(
+                self,
+                event=LLMCallStartedEvent(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    model=self.model,
+                    call_id=call_id,
+                ),
             )
 
             self._validate_call_params()
@@ -1952,14 +1877,19 @@ class LLM(BaseLLM):
             ValueError: If response format is not supported
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
-        with llm_call_context():
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
+        with llm_call_context() as call_id:
+            crewai_event_bus.emit(
+                self,
+                event=LLMCallStartedEvent(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    model=self.model,
+                    call_id=call_id,
+                ),
             )
 
             self._validate_call_params()
@@ -2115,8 +2045,6 @@ class LLM(BaseLLM):
         from_agent: BaseAgent | None = None,
         messages: str | list[LLMMessage] | None = None,
         usage: dict[str, Any] | None = None,
-        finish_reason: str | None = None,
-        response_id: str | None = None,
     ) -> None:
         """Handle the events for the LLM call.
 
@@ -2127,10 +2055,6 @@ class LLM(BaseLLM):
             from_agent: Optional agent object
             messages: Optional messages object
             usage: Optional token usage data
-            finish_reason: Raw provider finish reason (e.g. "stop", "length",
-                "tool_calls"). Optional; downstream telemetry coerces to the
-                OTel GenAI enum.
-            response_id: Raw provider response identifier. Optional.
         """
         crewai_event_bus.emit(
             self,
@@ -2143,23 +2067,8 @@ class LLM(BaseLLM):
                 model=self.model,
                 call_id=get_current_call_id(),
                 usage=usage,
-                finish_reason=finish_reason,
-                response_id=response_id,
             ),
         )
-
-    def _effective_max_tokens(self) -> int | float | None:
-        """LiteLLM sends ``max_tokens or max_completion_tokens`` as the cap."""
-        return self.max_tokens or self.max_completion_tokens
-
-    @staticmethod
-    def _extract_finish_reason_and_response_id(
-        response_or_chunk: Any,
-    ) -> tuple[str | None, str | None]:
-        """LiteLLM responses/chunks share the choices-shape with OpenAI/Azure;
-        delegate to the shared extractor.
-        """
-        return extract_choices_finish_reason_and_id(response_or_chunk)
 
     def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
         """Process files attached to messages and format for provider.
