@@ -660,7 +660,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
             and "input" in first_item
         ):
             return True
-        if hasattr(first_item, "function_call") and first_item.function_call:
+        if isinstance(first_item, dict) and "toolUse" in first_item:
+            return True
+        if hasattr(first_item, "function_call") and first_item.function_call: 
             return True
         return False
 
@@ -827,6 +829,12 @@ class CrewAgentExecutor(BaseAgentExecutor):
             func_name = sanitize_tool_name(tool_call.name)
             return call_id, func_name, tool_call.input
         if isinstance(tool_call, dict):
+            if "toolUse" in tool_call:
+                tool_call = tool_call["toolUse"]
+
+            if not isinstance(tool_call, dict):
+                return None
+
             call_id = (
                 tool_call.get("id")
                 or tool_call.get("toolUseId")
