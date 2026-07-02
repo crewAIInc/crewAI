@@ -759,6 +759,34 @@ class Task(BaseModel):
             clear_task_files(self.id)
             reset_current_task_id(task_id_token)
 
+    @staticmethod
+    def _run_coroutine_sync(coro) -> None:
+        """Run a coroutine from synchronous code, handling the case where an
+        event loop is already running (e.g. Jupyter, kickoff_async)."""
+        import threading
+
+        try:
+            asyncio.get_running_loop()
+            # Loop already running — execute in a separate thread to avoid
+            # "cannot be called from a running event loop" errors
+            result_holder = []
+            exception_holder = []
+
+            def _run():
+                try:
+                    result_holder.append(asyncio.run(coro))
+                except Exception as e:
+                    exception_holder.append(e)
+
+            thread = threading.Thread(target=_run)
+            thread.start()
+            thread.join()
+            if exception_holder:
+                raise exception_holder[0]
+        except RuntimeError:
+            # No running loop — safe to use asyncio.run directly
+            asyncio.run(coro)
+
     def _execute_core(
         self,
         agent: BaseAgent | None,
@@ -849,7 +877,7 @@ class Task(BaseModel):
             if self.callback:
                 cb_result = self.callback(self.output)
                 if inspect.iscoroutine(cb_result):
-                    asyncio.run(cb_result)
+                    self._run_coroutine_sync(cb_result)
 
             crew = self.agent.crew  # type: ignore[union-attr]
             if (
@@ -860,7 +888,7 @@ class Task(BaseModel):
             ):
                 cb_result = crew.task_callback(self.output)
                 if inspect.iscoroutine(cb_result):
-                    asyncio.run(cb_result)
+                    self._run_coroutine_sync(cb_result)
 
             if self.output_file:
                 content = (
