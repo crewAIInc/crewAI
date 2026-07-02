@@ -52,6 +52,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 from crewai.utilities.logger_utils import suppress_warnings
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
+from crewai.utilities.tool_errors import format_tool_error
 
 
 try:
@@ -1755,11 +1756,12 @@ class LLM(BaseLLM):
                 return result
             except Exception as e:
                 fn = available_functions.get(function_name, lambda: None)
+                structured_error = format_tool_error(e)
                 logging.error(f"Error executing function '{function_name}': {e}")
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(
-                        error=f"Tool execution error: {e!s}",
+                        error=structured_error,
                         from_task=from_task,
                         from_agent=from_agent,
                         call_id=get_current_call_id(),
@@ -1770,7 +1772,7 @@ class LLM(BaseLLM):
                     event=ToolUsageErrorEvent(
                         tool_name=function_name,
                         tool_args=function_args,
-                        error=f"Tool execution error: {e!s}",
+                        error=structured_error,
                         from_task=from_task,
                         from_agent=from_agent,
                     ),
