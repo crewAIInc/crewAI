@@ -7,8 +7,8 @@ runtime/evaluator must preserve when binding an authorization record to an
 executable candidate.
 
 Invariant:
-    authorization binds exact action + exact target state + exact continuation
-    + non-duplicate outcome
+  authorization binds exact action + exact target state + exact continuation
+  + non-duplicate outcome
 """
 
 from __future__ import annotations
@@ -25,7 +25,12 @@ def evaluate_contract_binding(
     candidate: dict[str, Any],
     existing_outcomes: list[GovernanceOutcome] | None = None,
 ) -> tuple[BindingVerdict, str]:
-    """Small test oracle for the fail-closed GovernanceDecision contract."""
+    """Small test oracle for the fail-closed GovernanceDecision contract.
+
+    Duplicate enforcement keys on (intent_ref, idempotency_key) only.
+    decision_id is NOT part of the duplicate predicate — a fresh decision_id
+    with the same semantic side effect must still be denied.
+    """
     existing_outcomes = existing_outcomes or []
 
     if decision.get("decision") != "allow":
@@ -45,15 +50,15 @@ def evaluate_contract_binding(
     if decision.get("target_state_digest") != candidate.get("target_state_digest"):
         return "revalidate", "target_state_drift"
 
+    # Duplicate enforcement: (intent_ref, idempotency_key) only.
+    # decision_id is irrelevant — a fresh record for the same side effect is denied.
     for outcome in existing_outcomes:
-        same_decision = outcome.get("decision_id") == decision.get("decision_id")
         same_intent = outcome.get("intent_ref") == decision.get("intent_ref")
         same_idempotency = (
-            outcome.get("extensions", {}).get("idempotency_key")
-            == decision.get("idempotency_key")
+            outcome.get("idempotency_key") == decision.get("idempotency_key")
         )
         terminal = outcome.get("outcome") in {"executed", "blocked", "error", "timeout"}
-        if terminal and same_decision and same_intent and same_idempotency:
+        if terminal and same_intent and same_idempotency:
             return "deny", "duplicate_outcome"
 
     return "allow", "contract_binding_ok"
@@ -136,20 +141,18 @@ def test_continuation_mismatch_denies() -> None:
 
 
 def test_duplicate_outcome_idempotency_collision_denies() -> None:
-    """A terminal outcome for the same idempotency key blocks re-execution."""
+    """A terminal outcome for the same (intent_ref, idempotency_key) blocks re-execution."""
     decision = base_allow_decision()
     candidate = matching_candidate()
     existing_outcome: GovernanceOutcome = {
         "decision_id": "d-fail-closed-001",
         "intent_ref": "sha256:intent-ref-approved",
         "receipt_ref": "sha256:outcome-receipt-001",
+        "idempotency_key": "idem:send-summary:user@example.com:001",
         "outcome": "executed",
         "tool_output_hash": "sha256:tool-output-001",
         "completed_at": "2026-06-25T14:00:02Z",
         "seq": 0,
-        "extensions": {
-            "idempotency_key": "idem:send-summary:user@example.com:001",
-        },
     }
 
     verdict, reason = evaluate_contract_binding(
@@ -160,3 +163,73 @@ def test_duplicate_outcome_idempotency_collision_denies() -> None:
 
     assert verdict == "deny"
     assert reason == "duplicate_outcome"
+
+
+def test_duplicate_different_decision_id_denies() -> None:
+    """Fresh decision_id with same (intent_ref, idempotency_key) is denied.
+
+    This is the critical test: duplicate-side-effect prevention must NOT
+    depend on runtime-local record identity (decision_id). A terminal outcome
+    for (intent_ref, idempotency_key) blocks any subsequent execution
+    regardless of decision_id.
+    """
+    decision = base_allow_decision()
+    decision["decision_id"] = "d-replay-fresh-id"  # DIFFERENT decision_id
+    candidate = matching_candidate()
+
+    # Existing terminal outcome from the ORIGINAL decision_id
+    existing_outcome: GovernanceOutcome = {
+        "decision_id": "d-fail-closed-001",  # original decision_id
+        "intent_ref": "sha256:intent-ref-approved",
+        "receipt_ref": "sha256:outcome-receipt-001",
+        "idempotency_key": "idem:send-summary:user@example.com:001",
+        "outcome": "executed",
+        "tool_output_hash": "sha256:tool-output-001",
+        "completed_at": "2026-06-25T14:00:02Z",
+        "seq": 0,
+    }
+
+    # The oracle must deny: same (intent_ref, idempotency_key) pair has
+    # a terminal outcome, even though decision_id differs.
+    verdict, reason = evaluate_contract_binding(
+        decision,
+        candidate,
+        existing_outcomes=[existing_outcome],
+    )
+
+    assert verdict == "deny"
+    assert reason == "duplicate_outcome"
+
+
+def test_different_idempotency_key_same_intent_is_allowed() -> None:
+    """Same intent_ref but different idempotency_key = genuinely new action.
+
+    Model A (pair model): intent_ref excludes idempotency_key.
+    A different key represents a new invocation of the same semantic intent.
+    """
+    decision = base_allow_decision()
+    decision["idempotency_key"] = "idem:send-summary:user@example.com:002"  # NEW key
+    candidate = matching_candidate()
+    candidate["idempotency_key"] = "idem:send-summary:user@example.com:002"
+
+    # Existing outcome is for a DIFFERENT idempotency_key
+    existing_outcome: GovernanceOutcome = {
+        "decision_id": "d-fail-closed-001",
+        "intent_ref": "sha256:intent-ref-approved",
+        "receipt_ref": "sha256:outcome-receipt-001",
+        "idempotency_key": "idem:send-summary:user@example.com:001",  # old key
+        "outcome": "executed",
+        "tool_output_hash": "sha256:tool-output-001",
+        "completed_at": "2026-06-25T14:00:02Z",
+        "seq": 0,
+    }
+
+    # Should ALLOW: different idempotency_key means genuinely new action
+    verdict, reason = evaluate_contract_binding(
+        decision,
+        candidate,
+        existing_outcomes=[existing_outcome],
+    )
+
+    assert verdict == "allow"
+    assert reason == "contract_binding_ok"
