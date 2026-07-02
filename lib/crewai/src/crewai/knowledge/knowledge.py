@@ -133,11 +133,22 @@ class Knowledge(BaseModel):
         self.sources = sources
 
     def query(
-        self, query: list[str], results_limit: int = 5, score_threshold: float = 0.6
+        self,
+        query: list[str],
+        results_limit: int = 5,
+        score_threshold: float = 0.6,
+        metadata_filter: dict[str, Any] | None = None,
     ) -> list[SearchResult]:
-        """
-        Query across all knowledge sources to find the most relevant information.
+        """Query across all knowledge sources to find the most relevant information.
+
         Returns the top_k most relevant chunks.
+
+        Args:
+            query: List of query strings.
+            results_limit: Maximum number of results to return.
+            score_threshold: Minimum similarity score for results.
+            metadata_filter: Optional metadata filter forwarded to the
+                underlying storage.
 
         Raises:
             ValueError: If storage is not initialized.
@@ -148,6 +159,7 @@ class Knowledge(BaseModel):
         return self.storage.search(
             query,
             limit=results_limit,
+            metadata_filter=metadata_filter,
             score_threshold=score_threshold,
         )
 
@@ -165,7 +177,11 @@ class Knowledge(BaseModel):
         self.storage.reset()
 
     async def aquery(
-        self, query: list[str], results_limit: int = 5, score_threshold: float = 0.6
+        self,
+        query: list[str],
+        results_limit: int = 5,
+        score_threshold: float = 0.6,
+        metadata_filter: dict[str, Any] | None = None,
     ) -> list[SearchResult]:
         """Query across all knowledge sources asynchronously.
 
@@ -173,6 +189,8 @@ class Knowledge(BaseModel):
             query: List of query strings.
             results_limit: Maximum number of results to return.
             score_threshold: Minimum similarity score for results.
+            metadata_filter: Optional metadata filter forwarded to the
+                underlying storage.
 
         Returns:
             The top results matching the query.
@@ -186,6 +204,7 @@ class Knowledge(BaseModel):
         return await self.storage.asearch(
             query,
             limit=results_limit,
+            metadata_filter=metadata_filter,
             score_threshold=score_threshold,
         )
 

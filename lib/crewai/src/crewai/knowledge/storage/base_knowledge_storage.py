@@ -35,12 +35,34 @@ class BaseKnowledgeStorage(BaseModel, ABC):
         """Search for documents in the knowledge base asynchronously."""
 
     @abstractmethod
-    def save(self, documents: list[str]) -> None:
-        """Save documents to the knowledge base."""
+    def save(
+        self,
+        documents: list[str],
+        metadata: dict[str, Any] | list[dict[str, Any]] | None = None,
+    ) -> None:
+        """Save documents to the knowledge base.
+
+        Args:
+            documents: List of document strings to save.
+            metadata: Optional metadata to attach to each stored document.
+                A single dict is applied to every document; a list of dicts
+                must match the number of documents.
+        """
 
     @abstractmethod
-    async def asave(self, documents: list[str]) -> None:
-        """Save documents to the knowledge base asynchronously."""
+    async def asave(
+        self,
+        documents: list[str],
+        metadata: dict[str, Any] | list[dict[str, Any]] | None = None,
+    ) -> None:
+        """Save documents to the knowledge base asynchronously.
+
+        Args:
+            documents: List of document strings to save.
+            metadata: Optional metadata to attach to each stored document.
+                A single dict is applied to every document; a list of dicts
+                must match the number of documents.
+        """
 
     @abstractmethod
     def reset(self) -> None:

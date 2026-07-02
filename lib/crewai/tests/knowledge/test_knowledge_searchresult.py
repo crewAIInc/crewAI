@@ -39,7 +39,7 @@ def test_knowledge_query_returns_searchresult() -> None:
         )
 
         mock_storage.search.assert_called_once_with(
-            ["AI technology"], limit=5, score_threshold=0.3
+            ["AI technology"], limit=5, metadata_filter=None, score_threshold=0.3
         )
 
         assert isinstance(results, list)

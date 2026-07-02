@@ -1942,22 +1942,52 @@ class Crew(FlowTrackable, BaseModel):
         return self._execute_tasks(self.tasks, start_index, True)
 
     def query_knowledge(
-        self, query: list[str], results_limit: int = 3, score_threshold: float = 0.35
+        self,
+        query: list[str],
+        results_limit: int = 3,
+        score_threshold: float = 0.35,
+        metadata_filter: dict[str, Any] | None = None,
     ) -> list[SearchResult] | None:
-        """Query the crew's knowledge base for relevant information."""
+        """Query the crew's knowledge base for relevant information.
+
+        Args:
+            query: List of query strings.
+            results_limit: Maximum number of results to return.
+            score_threshold: Minimum similarity score for results.
+            metadata_filter: Optional metadata filter forwarded to the
+                underlying knowledge storage.
+        """
         if self.knowledge:
             return self.knowledge.query(
-                query, results_limit=results_limit, score_threshold=score_threshold
+                query,
+                results_limit=results_limit,
+                score_threshold=score_threshold,
+                metadata_filter=metadata_filter,
             )
         return None
 
     async def aquery_knowledge(
-        self, query: list[str], results_limit: int = 3, score_threshold: float = 0.35
+        self,
+        query: list[str],
+        results_limit: int = 3,
+        score_threshold: float = 0.35,
+        metadata_filter: dict[str, Any] | None = None,
     ) -> list[SearchResult] | None:
-        """Query the crew's knowledge base for relevant information asynchronously."""
+        """Query the crew's knowledge base for relevant information asynchronously.
+
+        Args:
+            query: List of query strings.
+            results_limit: Maximum number of results to return.
+            score_threshold: Minimum similarity score for results.
+            metadata_filter: Optional metadata filter forwarded to the
+                underlying knowledge storage.
+        """
         if self.knowledge:
             return await self.knowledge.aquery(
-                query, results_limit=results_limit, score_threshold=score_threshold
+                query,
+                results_limit=results_limit,
+                score_threshold=score_threshold,
+                metadata_filter=metadata_filter,
             )
         return None
 
