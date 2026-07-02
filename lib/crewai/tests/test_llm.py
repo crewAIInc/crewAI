@@ -1177,3 +1177,27 @@ async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0].function.name == "search"
+
+
+class TestModelPrefixFiltering:
+    """Test that model prefix filtering supports custom deployments."""
+
+    def test_anthropic_custom_prefix(self):
+        """Models with 'anthropic--claude' prefix should be recognized."""
+        from crewai.llm import LLM
+        assert LLM._matches_provider_pattern("anthropic--claude-3-sonnet", "anthropic")
+
+    def test_anthropic_standard_prefix(self):
+        """Standard claude- prefix should still work."""
+        from crewai.llm import LLM
+        assert LLM._matches_provider_pattern("claude-3-sonnet", "anthropic")
+
+    def test_anthropic_dot_prefix(self):
+        """Standard anthropic. prefix should still work."""
+        from crewai.llm import LLM
+        assert LLM._matches_provider_pattern("anthropic.claude-3-sonnet", "anthropic")
+
+    def test_infer_anthropic_from_custom_name(self):
+        """Should infer anthropic provider from custom model names."""
+        from crewai.llm import LLM
+        assert LLM._infer_provider_from_model("anthropic--claude-3-sonnet") == "anthropic"
