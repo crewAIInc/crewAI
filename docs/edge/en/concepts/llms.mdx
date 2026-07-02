@@ -1267,6 +1267,32 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```
   </Accordion>
 
+  <Accordion title="Requesty">
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    REQUESTY_API_KEY=***
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    llm = LLM(
+        model="requesty/openai/gpt-4o-mini",
+        base_url="https://router.requesty.ai/v1",
+        api_key=REQUESTY_API_KEY
+    )
+    ```
+
+    <Info>
+      Requesty is an OpenAI-compatible gateway that uses `provider/model` naming.
+      Browse available models at [app.requesty.ai/router/list](https://app.requesty.ai/router/list).
+      Examples:
+      - requesty/openai/gpt-4o-mini
+      - requesty/anthropic/claude-sonnet-4-5
+
+      See [requesty.ai](https://requesty.ai) and [docs.requesty.ai](https://docs.requesty.ai) for more details.
+    </Info>
+  </Accordion>
+
   <Accordion title="Nebius AI Studio">
     Set the following environment variables in your `.env` file:
     ```toml Code
