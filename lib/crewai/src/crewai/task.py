@@ -645,11 +645,11 @@ class Task(BaseModel):
         self._store_input_files()
         try:
             agent = agent or self.agent
-            self.agent = agent
             if not agent:
                 raise Exception(
                     f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
                 )
+            self.agent = agent
 
             self.prompt_context = context
             tools = tools or self.tools or []
@@ -740,7 +740,7 @@ class Task(BaseModel):
             if self.output_file:
                 content = (
                     json_output
-                    if json_output
+                    if json_output is not None
                     else (
                         pydantic_output.model_dump_json() if pydantic_output else result
                     )
@@ -770,11 +770,11 @@ class Task(BaseModel):
         self._store_input_files()
         try:
             agent = agent or self.agent
-            self.agent = agent
             if not agent:
                 raise Exception(
                     f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
                 )
+            self.agent = agent
 
             self.prompt_context = context
             tools = tools or self.tools or []
@@ -865,7 +865,7 @@ class Task(BaseModel):
             if self.output_file:
                 content = (
                     json_output
-                    if json_output
+                    if json_output is not None
                     else (
                         pydantic_output.model_dump_json() if pydantic_output else result
                     )
