@@ -51,6 +51,10 @@ if TYPE_CHECKING:
     from crewai.rag.embeddings.providers.aws.types import BedrockProviderSpec
     from crewai.rag.embeddings.providers.cohere.types import CohereProviderSpec
     from crewai.rag.embeddings.providers.custom.types import CustomProviderSpec
+    from crewai.rag.embeddings.providers.fastembed.embedding_callable import (
+        FastEmbedEmbeddingFunction,
+    )
+    from crewai.rag.embeddings.providers.fastembed.types import FastEmbedProviderSpec
     from crewai.rag.embeddings.providers.google.genai_vertex_embedding import (
         GoogleGenAIVertexEmbeddingFunction,
     )
@@ -92,6 +96,7 @@ PROVIDER_PATHS = {
     "amazon-bedrock": "crewai.rag.embeddings.providers.aws.bedrock.BedrockProvider",
     "cohere": "crewai.rag.embeddings.providers.cohere.cohere_provider.CohereProvider",
     "custom": "crewai.rag.embeddings.providers.custom.custom_provider.CustomProvider",
+    "fastembed": "crewai.rag.embeddings.providers.fastembed.fastembed_provider.FastEmbedProvider",
     "google-generativeai": "crewai.rag.embeddings.providers.google.generative_ai.GenerativeAiProvider",
     "google": "crewai.rag.embeddings.providers.google.generative_ai.GenerativeAiProvider",
     "google-vertex": "crewai.rag.embeddings.providers.google.vertex.VertexAIProvider",
@@ -140,6 +145,12 @@ def build_embedder_from_dict(spec: CohereProviderSpec) -> CohereEmbeddingFunctio
 
 @overload
 def build_embedder_from_dict(spec: CustomProviderSpec) -> EmbeddingFunction[Any]: ...
+
+
+@overload
+def build_embedder_from_dict(
+    spec: FastEmbedProviderSpec,
+) -> FastEmbedEmbeddingFunction: ...
 
 
 @overload
@@ -281,6 +292,10 @@ def build_embedder(spec: CohereProviderSpec) -> CohereEmbeddingFunction: ...
 
 @overload
 def build_embedder(spec: CustomProviderSpec) -> EmbeddingFunction[Any]: ...
+
+
+@overload
+def build_embedder(spec: FastEmbedProviderSpec) -> FastEmbedEmbeddingFunction: ...
 
 
 @overload

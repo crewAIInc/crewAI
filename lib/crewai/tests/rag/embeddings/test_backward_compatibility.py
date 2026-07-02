@@ -9,6 +9,7 @@ from crewai.rag.embeddings.providers.microsoft.azure import AzureProvider
 from crewai.rag.embeddings.providers.jina.jina_provider import JinaProvider
 from crewai.rag.embeddings.providers.ollama.ollama_provider import OllamaProvider
 from crewai.rag.embeddings.providers.aws.bedrock import BedrockProvider
+from crewai.rag.embeddings.providers.fastembed.fastembed_provider import FastEmbedProvider
 from crewai.rag.embeddings.providers.text2vec.text2vec_provider import Text2VecProvider
 from crewai.rag.embeddings.providers.sentence_transformer.sentence_transformer_provider import (
     SentenceTransformerProvider,
@@ -124,6 +125,13 @@ class TestModelKeyBackwardCompatibility:
             model="shibing624/text2vec-base-multilingual",
         )
         assert provider.model_name == "shibing624/text2vec-base-multilingual"
+
+    def test_fastembed_provider_accepts_model_key(self):
+        """Test FastEmbed provider accepts 'model' as alias for 'model_name'."""
+        provider = FastEmbedProvider(
+            model="sentence-transformers/all-MiniLM-L6-v2",
+        )
+        assert provider.model_name == "sentence-transformers/all-MiniLM-L6-v2"
 
     def test_sentence_transformer_provider_accepts_model_key(self):
         """Test SentenceTransformer provider accepts 'model' as alias."""

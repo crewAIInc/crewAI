@@ -155,6 +155,35 @@ class TestEmbeddingFactory:
         )
 
     @patch("crewai.rag.embeddings.factory.import_and_validate_definition")
+    def test_build_embedder_fastembed(self, mock_import):
+        """Test building FastEmbed embedder."""
+        mock_provider_class = MagicMock()
+        mock_provider_instance = MagicMock()
+        mock_embedding_function = MagicMock()
+
+        mock_import.return_value = mock_provider_class
+        mock_provider_class.return_value = mock_provider_instance
+        mock_provider_instance.embedding_callable.return_value = mock_embedding_function
+
+        config = {
+            "provider": "fastembed",
+            "config": {
+                "model": "sentence-transformers/all-MiniLM-L6-v2",
+                "cache_dir": ".fastembed_cache",
+            },
+        }
+
+        build_embedder(config)
+
+        mock_import.assert_called_once_with(
+            "crewai.rag.embeddings.providers.fastembed.fastembed_provider.FastEmbedProvider"
+        )
+
+        call_kwargs = mock_provider_class.call_args.kwargs
+        assert call_kwargs["model"] == "sentence-transformers/all-MiniLM-L6-v2"
+        assert call_kwargs["cache_dir"] == ".fastembed_cache"
+
+    @patch("crewai.rag.embeddings.factory.import_and_validate_definition")
     def test_build_embedder_voyageai(self, mock_import):
         """Test building VoyageAI embedder."""
         mock_provider_class = MagicMock()
