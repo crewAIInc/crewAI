@@ -1297,6 +1297,32 @@ class Agent(BaseAgent):
         """
         return self._last_messages
 
+    def get_effective_system_prompt(self) -> str:
+        """Return the rendered system prompt as it would be sent to the LLM.
+
+        Combines role, goal, and backstory per the active template. This is the
+        canonical read path for optimizer instrumentation and prompt inspection.
+
+        The following fields are stable public API — safe to read and write after
+        construction, and reflected immediately in the next call to this method:
+        ``role``, ``goal``, ``backstory``, ``system_template``, ``prompt_template``.
+
+        Returns:
+            The fully rendered system prompt string. Never empty.
+        """
+        result = Prompts(
+            agent=self,
+            has_tools=False,
+            use_native_tool_calling=False,
+            use_system_prompt=self.use_system_prompt,
+            system_template=self.system_template,
+            prompt_template=self.prompt_template,
+            response_template=self.response_template,
+        ).task_execution()
+        if isinstance(result, SystemPromptResult):
+            return result.system
+        return result.prompt
+
     def _get_knowledge_search_query(self, task_prompt: str, task: Task) -> str | None:
         """Generate a search query for the knowledge base based on the task description."""
         crewai_event_bus.emit(
