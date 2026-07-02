@@ -2800,8 +2800,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     )
 
                 if self.state.ask_for_human_input:
-                    formatted_answer = self._handle_human_feedback(formatted_answer)
+                            self._force_display_final_answer(formatted_answer)
+                            formatted_answer = self._handle_human_feedback(formatted_answer)
 
+                            formatted_answer = self._handle_human_feedback(formatted_answer)
             self._save_to_memory(formatted_answer)
 
             return {"output": formatted_answer.output}
@@ -2906,10 +2908,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     )
 
                 if self.state.ask_for_human_input:
-                    formatted_answer = await self._ahandle_human_feedback(
-                        formatted_answer
-                    )
-
+                                self._force_display_final_answer(formatted_answer)
+                                formatted_answer = await self._ahandle_human_feedback(
+                                    formatted_answer
+                                )
             self._save_to_memory(formatted_answer)
 
             return {"output": formatted_answer.output}
@@ -2928,7 +2930,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             raise
         finally:
             self._is_executing = False
-
+    def _force_display_final_answer(self, formatted_answer: Any) -> None:
+            """Forces display of the agent's final answer before human feedback loop."""
+            if formatted_answer and hasattr(formatted_answer, "output"):
+                try:
+                    self._console.print(f"[bold purple]Final Answer:[/bold purple] {formatted_answer.output}")
+                except Exception:
+                    print(f"\nFinal Answer: {formatted_answer.output}\n")
     async def ainvoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """Async version of invoke. Alias for invoke_async."""
         return await self.invoke_async(inputs)
