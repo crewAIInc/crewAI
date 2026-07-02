@@ -6,6 +6,9 @@ from unittest import mock
 from unittest.mock import MagicMock, patch
 import warnings
 
+import pytest
+from pydantic import BaseModel
+
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
 from crewai.constants import DEFAULT_LLM_MODEL
 from crewai.events.event_bus import crewai_event_bus
@@ -20,7 +23,6 @@ from crewai.process import Process
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities.errors import AgentRepositoryError
-import pytest
 
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
@@ -843,6 +845,49 @@ def test_using_system_prompt():
     agent.create_agent_executor()
     assert agent.agent_executor.prompt.get("user")
     assert agent.agent_executor.prompt.get("system")
+
+
+def test_output_models_do_not_become_executor_response_model():
+    """output_pydantic/json should be post-processed after the tool loop."""
+
+    class ScoreOutput(BaseModel):
+        score: int
+
+    class NativeOutput(BaseModel):
+        answer: str
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+    )
+
+    pydantic_task = Task(
+        description="Return a score",
+        expected_output="A score",
+        output_pydantic=ScoreOutput,
+        agent=agent,
+    )
+    agent.create_agent_executor(task=pydantic_task)
+    assert agent.agent_executor.response_model is None
+
+    native_task = Task(
+        description="Return a native structured answer",
+        expected_output="A structured answer",
+        response_model=NativeOutput,
+        agent=agent,
+    )
+    agent.create_agent_executor(task=native_task)
+    assert agent.agent_executor.response_model is NativeOutput
+
+    json_task = Task(
+        description="Return JSON",
+        expected_output="A JSON score",
+        output_json=ScoreOutput,
+        agent=agent,
+    )
+    agent.create_agent_executor(task=json_task)
+    assert agent.agent_executor.response_model is None
 
 
 def test_system_and_prompt_template():
