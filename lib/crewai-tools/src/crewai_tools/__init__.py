@@ -208,6 +208,9 @@ from crewai_tools.tools.txt_search_tool.txt_search_tool import TXTSearchTool
 from crewai_tools.tools.vision_tool.vision_tool import VisionTool
 from crewai_tools.tools.weaviate_tool.vector_search import WeaviateVectorSearchTool
 from crewai_tools.tools.website_search.website_search_tool import WebsiteSearchTool
+from crewai_tools.tools.wikipedia_search_tool.wikipedia_search_tool import (
+    WikipediaSearchTool,
+)
 from crewai_tools.tools.xml_search_tool.xml_search_tool import XMLSearchTool
 from crewai_tools.tools.youtube_channel_search_tool.youtube_channel_search_tool import (
     YoutubeChannelSearchTool,
@@ -323,6 +326,7 @@ __all__ = [
     "VisionTool",
     "WeaviateVectorSearchTool",
     "WebsiteSearchTool",
+    "WikipediaSearchTool",
     "XMLSearchTool",
     "YoutubeChannelSearchTool",
     "YoutubeVideoSearchTool",
