@@ -9,6 +9,7 @@ from datetime import datetime
 import inspect
 import json
 import threading
+import traceback
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 from uuid import uuid4
 
@@ -1606,13 +1607,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             )
         except Exception as e:
             if self.agent and self.agent.verbose:
-                PRINTER.print(content=f"Error in tool execution: {e}", color="red")
+                PRINTER.print(content=f"Error in tool execution: {e}\n{traceback.format_exc(limit=5)}", color="red")
             if self.task:
                 self.task.increment_tools_errors()
 
-            error_observation = f"\nObservation: Error executing tool: {e}"
+            error_observation = f"\nObservation: Error executing tool: {e}\nTraceback:\n{traceback.format_exc(limit=5)}"
             action.text += error_observation
-            action.result = str(e)
+            action.result = str(e) + f"\nTraceback:\n{traceback.format_exc(limit=5)}"
             self._append_message_to_state(action.text)
 
             reasoning_prompt = I18N_DEFAULT.slice("post_tool_reasoning")
@@ -1731,7 +1732,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                         ordered_results[idx] = {
                             "call_id": call_id,
                             "func_name": func_name,
-                            "result": f"Error executing tool: {e}",
+                            "result": f"Error executing tool: {e}\nTraceback:\n{traceback.format_exc(limit=5)}",
                             "from_cache": False,
                             "original_tool": None,
                         }
@@ -1994,7 +1995,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                         output_tool, raw_result
                     )
                 except Exception as e:
-                    result = f"Error executing tool: {e}"
+                    result = f"Error executing tool: {e}\nTraceback:\n{traceback.format_exc(limit=5)}"
                     raw_tool_result = result
                     if self.task:
                         self.task.increment_tools_errors()
