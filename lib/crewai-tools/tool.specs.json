@@ -20305,6 +20305,128 @@
       }
     },
     {
+      "description": "A tool that searches the internet using SearchApi. Supports multiple engines: google, google_news, google_shopping, google_jobs, youtube, bing, and baidu.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SearchApi (https://www.searchapi.io)",
+          "name": "SEARCHAPI_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SearchApi Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "engine": {
+            "default": "google",
+            "title": "Engine",
+            "type": "string"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Language"
+          }
+        },
+        "required": [],
+        "title": "SearchApiSearchTool",
+        "type": "object"
+      },
+      "name": "SearchApiSearchTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for SearchApi search tool.",
+        "properties": {
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Location to perform the search from (e.g., 'New York').",
+            "title": "Location"
+          },
+          "search_query": {
+            "description": "Mandatory search query to perform the search.",
+            "title": "Search Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "search_query"
+        ],
+        "title": "SearchApiSearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool to perform to perform a Google search with a search_query.",
       "env_vars": [
         {
