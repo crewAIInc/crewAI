@@ -1570,8 +1570,10 @@ class OpenAICompletion(BaseLLM):
             params["reasoning_effort"] = self.reasoning_effort
 
         if self.response_format is not None:
-            if isinstance(self.response_format, type) and issubclass(
-                self.response_format, BaseModel
+            if (
+                isinstance(self.response_format, type)
+                and issubclass(self.response_format, BaseModel)
+                and self.supports_native_structured_output()
             ):
                 params["response_format"] = generate_model_description(
                     self.response_format
@@ -1636,7 +1638,7 @@ class OpenAICompletion(BaseLLM):
     ) -> str | Any:
         """Handle non-streaming chat completion."""
         try:
-            if response_model:
+            if response_model and self.supports_native_structured_output():
                 parse_params = {
                     k: v for k, v in params.items() if k != "response_format"
                 }
@@ -1722,10 +1724,14 @@ class OpenAICompletion(BaseLLM):
 
             content = message.content or ""
 
-            if self.response_format and isinstance(self.response_format, type):
+            # When native structured output was skipped (e.g. a provider that
+            # rejects json_schema), validate the plain completion against the
+            # requested model client-side so a parsed object is still returned.
+            structured_format = response_model or self.response_format
+            if structured_format is not None and isinstance(structured_format, type):
                 try:
                     structured_result = self._validate_structured_output(
-                        content, self.response_format
+                        content, structured_format
                     )
                     self._emit_call_completed_event(
                         response=structured_result,
@@ -1799,7 +1805,8 @@ class OpenAICompletion(BaseLLM):
         from_agent: Any | None = None,
         finish_reason: str | None = None,
         response_id: str | None = None,
-    ) -> str | list[dict[str, Any]]:
+        response_model: type[BaseModel] | None = None,
+    ) -> str | list[dict[str, Any]] | BaseModel:
         """Finalize a streaming response with usage tracking, tool call handling, and events.
 
         Args:
@@ -1813,6 +1820,10 @@ class OpenAICompletion(BaseLLM):
             finish_reason: Raw provider finish reason (e.g. "stop", "length",
                 "tool_calls") extracted from the last streaming chunk.
             response_id: Raw provider response id from any chunk.
+            response_model: When set and the stream produced text (no tool
+                calls), validate the accumulated response against this model
+                and return the parsed object. Used by the fallback path for
+                providers that don't support native json_schema streaming.
 
         Returns:
             Tool calls list when tools were invoked without available_functions,
@@ -1880,6 +1891,35 @@ class OpenAICompletion(BaseLLM):
 
         full_response = self._apply_stop_words(full_response)
 
+        # Fallback structured-output validation: when native json_schema
+        # streaming was skipped (e.g. DeepSeek), parse the accumulated text
+        # into the requested model so the call still returns a parsed object,
+        # matching the async streaming path and the non-streaming fallback.
+        # Honor both a per-call response_model and a configured response_format.
+        structured_format = response_model or self.response_format
+        if (
+            structured_format is not None
+            and isinstance(structured_format, type)
+            and full_response
+        ):
+            try:
+                structured_result = self._validate_structured_output(
+                    full_response, structured_format
+                )
+                self._emit_call_completed_event(
+                    response=structured_result,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                    usage=usage_data,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
+                )
+                return structured_result
+            except ValueError as e:
+                logging.warning(f"Structured output validation failed: {e}")
+
         self._emit_call_completed_event(
             response=full_response,
             call_type=LLMCallType.LLM_CALL,
@@ -1905,7 +1945,7 @@ class OpenAICompletion(BaseLLM):
         full_response = ""
         tool_calls: dict[int, dict[str, Any]] = {}
 
-        if response_model:
+        if response_model and self.supports_native_structured_output():
             parse_params = {
                 k: v
                 for k, v in params.items()
@@ -2040,6 +2080,7 @@ class OpenAICompletion(BaseLLM):
             from_agent=from_agent,
             finish_reason=stream_finish_reason,
             response_id=stream_response_id,
+            response_model=response_model,
         )
         if isinstance(result, str):
             return self._invoke_after_llm_call_hooks(
@@ -2057,7 +2098,7 @@ class OpenAICompletion(BaseLLM):
     ) -> str | Any:
         """Handle non-streaming async chat completion."""
         try:
-            if response_model:
+            if response_model and self.supports_native_structured_output():
                 parse_params = {
                     k: v for k, v in params.items() if k != "response_format"
                 }
@@ -2149,10 +2190,14 @@ class OpenAICompletion(BaseLLM):
 
             content = message.content or ""
 
-            if self.response_format and isinstance(self.response_format, type):
+            # When native structured output was skipped (e.g. a provider that
+            # rejects json_schema), validate the plain completion against the
+            # requested model client-side so a parsed object is still returned.
+            structured_format = response_model or self.response_format
+            if structured_format is not None and isinstance(structured_format, type):
                 try:
                     structured_result = self._validate_structured_output(
-                        content, self.response_format
+                        content, structured_format
                     )
                     self._emit_call_completed_event(
                         response=structured_result,
@@ -2380,6 +2425,20 @@ class OpenAICompletion(BaseLLM):
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
         return not self.is_o1_model
+
+    def supports_native_structured_output(self) -> bool:
+        """Whether the endpoint accepts OpenAI's json_schema structured outputs.
+
+        OpenAI's ``beta.chat.completions.parse`` / ``.stream`` and a Pydantic
+        ``response_format`` send a ``response_format`` of type ``json_schema``.
+        Some OpenAI-compatible endpoints reject it (e.g. DeepSeek: "This
+        response_format type is unavailable now"). Subclasses override this to
+        fall back to a plain completion plus client-side validation.
+
+        Returns:
+            ``True`` for OpenAI; subclasses may return ``False``.
+        """
+        return True
 
     def supports_stop_words(self) -> bool:
         """Check if the model supports stop words."""
