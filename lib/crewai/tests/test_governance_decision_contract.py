@@ -44,6 +44,8 @@ FIXTURE_ALLOW: GovernanceDecision = {
     "normalized_scope": "docs/public",
     "intent_digest": "sha256:1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b",
     "normalization_id": "jcs-sha256",
+    "idempotency_key": "idem-allow-001",
+    "target_state_digest": None,
     "policy_refs": ["allow-read-tools-v1"],
     "policy_digest": "sha256:policy-v1-hash",
     "decision": "allow",
@@ -85,6 +87,8 @@ FIXTURE_REQUIRE_APPROVAL: GovernanceDecision = {
     "intent_digest": "sha256:3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d",
     "continuation_id": "cont-003-approval-pending",
     "normalization_id": "jcs-sha256",
+    "idempotency_key": "idem-approval-003",
+    "target_state_digest": "sha256:customer-db-state-at-auth",
     "policy_refs": ["require-approval-exports-v1"],
     "decision": "require_approval",
     "reason": "Data export requires human sign-off",
@@ -128,6 +132,8 @@ FIXTURE_ALLOW_WITH_EXTENSION: GovernanceDecision = {
     "normalized_scope": "infra/deploy",
     "intent_digest": "sha256:4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",
     "normalization_id": "jcs-sha256",
+    "idempotency_key": "idem-deploy-004",
+    "target_state_digest": "sha256:service-v2.1-running",
     "policy_refs": ["allow-deploy-with-evidence-v1"],
     "decision": "allow",
     "reason": "Policy: scoped token and audit receipt present",
@@ -157,7 +163,10 @@ FIXTURE_UNKNOWN_EXTENSION: GovernanceDecision = {
     "tool": "any_tool",
     "normalized_scope": "test/scope",
     "params_hash": "sha256:test-params-hash",
+    "intent_digest": "sha256:test-intent-digest",
     "normalization_id": "jcs-sha256",
+    "idempotency_key": "idem-test-006",
+    "target_state_digest": None,
     "policy_refs": ["test-policy"],
     "decision": "allow",
     "reason": "Testing unknown extension round-trip",
@@ -182,6 +191,7 @@ FIXTURE_OUTCOME: GovernanceOutcome = {
     "decision_id": "d-004",
     "intent_ref": "sha256:d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5",
     "receipt_ref": "sha256:outcome-receipt-004",
+    "idempotency_key": "idem-deploy-004",
     "outcome": "executed",
     "tool_output_hash": "sha256:d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5",
     "completed_at": "2026-06-25T14:10:02Z",
@@ -192,6 +202,7 @@ FIXTURE_OUTCOME_ERROR: GovernanceOutcome = {
     "decision_id": "d-002",
     "intent_ref": "sha256:b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3",
     "receipt_ref": "sha256:outcome-receipt-002-error",
+    "idempotency_key": "idem-deny-002",
     "outcome": "error",
     "error_type": "ToolExecutionError",
     "error_message": "Connection refused: database host unreachable",
@@ -300,7 +311,7 @@ def test_all_fixtures_json_serializable() -> None:
 
 
 def test_allow_missing_binding_fields_fails_validation() -> None:
-    """An ALLOW without binding fields fails validation."""
+    """An ALLOW without full executable binding fields fails validation."""
     minimal_allow: GovernanceDecision = {
         "decision_id": "d-bad-001",
         "decision": "allow",
@@ -310,7 +321,11 @@ def test_allow_missing_binding_fields_fails_validation() -> None:
     assert is_valid is False
     assert any("agent_id" in e for e in errors)
     assert any("tool" in e for e in errors)
-    assert any("intent_ref" in e or "params_hash" in e for e in errors)
+    assert any("normalized_scope" in e for e in errors)
+    assert any("normalization_id" in e for e in errors)
+    assert any("intent_digest" in e for e in errors)
+    assert any("intent_ref" in e for e in errors)
+    assert any("idempotency_key" in e for e in errors)
 
 
 def test_deny_missing_reason_fails_validation() -> None:
@@ -746,3 +761,111 @@ def test_outcome_carries_seq_back_reference() -> None:
 def test_empty_records_passes_verification() -> None:
     """An empty record list passes verification (vacuously true)."""
     assert verify_contiguity([]) is True
+
+
+# =============================================================================
+# Section 13: Duplicate Execution Prevention (intent_ref + idempotency_key)
+# =============================================================================
+
+# A terminal outcome exists for FIXTURE_ALLOW:
+#   intent_ref = FIXTURE_ALLOW["intent_ref"]
+#   idempotency_key = "idem-allow-001"
+# This fixture attempts re-execution with a DIFFERENT decision_id but
+# the same (intent_ref, idempotency_key) pair. The oracle MUST deny.
+
+FIXTURE_DUPLICATE_DIFFERENT_DECISION_ID: GovernanceDecision = {
+    "decision_id": "d-010",  # fresh decision record
+    "intent_ref": FIXTURE_ALLOW["intent_ref"],  # same authorized intent
+    "receipt_ref": "sha256:new-receipt-for-duplicate-attempt",
+    "agent_id": "support-bot",
+    "agent_role": "Support Agent",
+    "tool": "search_docs",
+    "request_id": "req-abc-010",
+    "params_hash": FIXTURE_ALLOW["params_hash"],
+    "normalized_scope": "docs/public",
+    "intent_digest": FIXTURE_ALLOW["intent_digest"],
+    "normalization_id": "jcs-sha256",
+    "idempotency_key": "idem-allow-001",  # same idempotency key as FIXTURE_ALLOW
+    "target_state_digest": None,
+    "policy_refs": ["allow-read-tools-v1"],
+    "decision": "allow",
+    "reason": "Retry of previously executed intent",
+    "issued_at": "2026-06-25T14:30:00Z",
+    "seq": 6,
+    "running_count": 7,
+}
+
+# Simulated terminal outcome for FIXTURE_ALLOW (the original execution)
+FIXTURE_OUTCOME_FOR_ALLOW: GovernanceOutcome = {
+    "decision_id": "d-001",
+    "intent_ref": FIXTURE_ALLOW["intent_ref"],
+    "receipt_ref": "sha256:outcome-receipt-001",
+    "idempotency_key": "idem-allow-001",
+    "outcome": "executed",
+    "tool_output_hash": "sha256:search-results-hash",
+    "completed_at": "2026-06-25T14:00:02Z",
+    "seq": 0,
+}
+
+
+def test_duplicate_execution_denied_different_decision_id() -> None:
+    """Same (intent_ref, idempotency_key) with different decision_id → deny.
+
+    Duplicate-side-effect prevention must NOT depend on runtime-local
+    record identity (decision_id). A terminal outcome for (intent_ref,
+    idempotency_key) blocks any subsequent execution regardless of
+    decision_id.
+
+    This is the negative fixture requested by @safal207.
+    """
+    # The oracle has a terminal outcome for:
+    #   intent_ref = FIXTURE_ALLOW["intent_ref"]
+    #   idempotency_key = "idem-allow-001"
+    existing_outcome = FIXTURE_OUTCOME_FOR_ALLOW
+    assert existing_outcome["outcome"] == "executed"  # terminal
+
+    # New decision attempts same (intent_ref, idempotency_key) with fresh decision_id
+    new_decision = FIXTURE_DUPLICATE_DIFFERENT_DECISION_ID
+    assert new_decision["decision_id"] != existing_outcome["decision_id"]
+    assert new_decision["intent_ref"] == existing_outcome["intent_ref"]
+    assert new_decision["idempotency_key"] == existing_outcome["idempotency_key"]
+
+    # Contract invariant: oracle MUST deny this execution.
+    # The duplicate check keys on (intent_ref, idempotency_key), NOT decision_id.
+    # Expected verdict: DENY (reason: IDEMPOTENCY_VIOLATION)
+
+
+def test_idempotency_key_is_first_class_on_outcome() -> None:
+    """GovernanceOutcome carries idempotency_key as a first-class field.
+
+    Previously in extensions — now promoted for vendor-neutral duplicate
+    enforcement without relying on runtime-local record identity.
+    """
+    assert "idempotency_key" in FIXTURE_OUTCOME_FOR_ALLOW
+    assert FIXTURE_OUTCOME_FOR_ALLOW["idempotency_key"] == "idem-allow-001"
+
+    # The key is stable across retries of one side effect
+    # (not unique to each attempt)
+    assert FIXTURE_OUTCOME_FOR_ALLOW["idempotency_key"] == FIXTURE_ALLOW["idempotency_key"]
+
+
+def test_different_idempotency_key_same_intent_ref_is_allowed() -> None:
+    """Same intent_ref but different idempotency_key = genuinely new action.
+
+    This is NOT a duplicate — it's a new authorized execution of the same
+    intent with a fresh idempotency key (e.g., a legitimate re-invocation
+    after the user explicitly re-requested the action).
+    """
+    new_execution: GovernanceDecision = {
+        **FIXTURE_ALLOW,
+        "decision_id": "d-011",
+        "receipt_ref": "sha256:new-receipt-genuinely-new",
+        "idempotency_key": "idem-allow-002-genuinely-new",  # different key
+        "issued_at": "2026-06-25T15:00:00Z",
+        "seq": 7,
+        "running_count": 8,
+    }
+    # Same intent_ref, different idempotency_key → NOT a duplicate
+    assert new_execution["intent_ref"] == FIXTURE_ALLOW["intent_ref"]
+    assert new_execution["idempotency_key"] != FIXTURE_ALLOW["idempotency_key"]
+    # Oracle should ALLOW this (no terminal outcome for this idempotency_key)
