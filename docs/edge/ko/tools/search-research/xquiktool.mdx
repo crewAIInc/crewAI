@@ -1,0 +1,96 @@
+---
+title: Xquik 도구
+description: Xquik REST API로 공개 X/Twitter 데이터를 검색하고 확인합니다.
+icon: magnifying-glass-chart
+mode: "wide"
+---
+
+# Xquik 도구
+
+## 설명
+
+Xquik 도구를 사용하면 CrewAI 에이전트가 Xquik REST API를 통해 공개 X/Twitter 데이터를 검색하고 확인할 수 있습니다. 소셜 리서치, 시장 모니터링, 출처 탐색, 트렌드 분석, 계정 수준 컨텍스트 수집에 유용합니다.
+
+## 설치
+
+CrewAI 도구를 설치합니다:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+Xquik API 키를 설정합니다:
+
+```shell
+export XQUIK_API_KEY="your-api-key"
+```
+
+## 사용 가능한 도구
+
+- `XquikSearchTweetsTool`: `from:`, `has:media`, `lang:`, `since:`, `min_faves:` 같은 X 검색 연산자로 공개 게시물을 검색합니다.
+- `XquikGetTweetTool`: tweet ID로 게시물 1개를 조회합니다.
+- `XquikGetUserTool`: 사용자 이름 또는 사용자 ID로 프로필 1개를 조회합니다.
+- `XquikGetUserTweetsTool`: 한 사용자의 최근 게시물을 커서 페이지네이션으로 나열합니다.
+- `XquikGetTrendsTool`: 지역 WOEID로 트렌딩 토픽을 가져옵니다.
+
+## 예시
+
+```python Code
+from crewai_tools import XquikSearchTweetsTool
+
+tool = XquikSearchTweetsTool()
+
+results = tool.run(
+    search_query="from:crewai AI agents",
+    limit=10,
+    query_type="Latest",
+)
+```
+
+## 에이전트와 함께 사용하는 예시
+
+```python Code
+from crewai import Agent
+from crewai_tools import XquikGetTrendsTool, XquikSearchTweetsTool
+
+x_search = XquikSearchTweetsTool()
+x_trends = XquikGetTrendsTool()
+
+researcher = Agent(
+    role="Social Research Analyst",
+    goal="Find timely public X/Twitter signals for a research brief.",
+    backstory="You use public social data to identify relevant posts and trends.",
+    tools=[x_search, x_trends],
+)
+```
+
+## 매개변수
+
+### `XquikSearchTweetsTool`
+
+- `search_query`: 필수. X 검색 쿼리입니다.
+- `limit`: 선택 사항. 반환할 최대 tweet 수이며 1에서 200까지입니다. 기본값은 `20`입니다.
+- `query_type`: 선택 사항. `Latest` 또는 `Top`입니다. 기본값은 `Latest`입니다.
+- `cursor`: 선택 사항. 이전 응답의 페이지네이션 커서입니다.
+- `since_time`: 선택 사항. 하한 시간으로 사용할 ISO 8601 timestamp입니다.
+- `until_time`: 선택 사항. 상한 시간으로 사용할 ISO 8601 timestamp입니다.
+
+### `XquikGetTweetTool`
+
+- `tweet_id`: 필수. 조회할 tweet ID입니다.
+
+### `XquikGetUserTool`
+
+- `user`: 필수. X 사용자 이름, `@username` 또는 사용자 ID입니다.
+
+### `XquikGetUserTweetsTool`
+
+- `user`: 필수. X 사용자 이름, `@username` 또는 사용자 ID입니다.
+- `cursor`: 선택 사항. 이전 응답의 페이지네이션 커서입니다.
+- `include_replies`: 선택 사항. 답글 tweet을 포함합니다. 기본값은 `False`입니다.
+- `include_parent_tweet`: 선택 사항. 사용 가능한 경우 답글의 상위 tweet을 포함합니다. 기본값은 `False`입니다.
+
+### `XquikGetTrendsTool`
+
+- `woeid`: 선택 사항. 지역 WOEID입니다. 전 세계는 `1`, 미국은 `23424977`, 영국은 `23424975`, 터키는 `23424969`를 사용합니다.
+- `count`: 선택 사항. 반환할 트렌드 수이며 1에서 50까지입니다. 기본값은 `30`입니다.

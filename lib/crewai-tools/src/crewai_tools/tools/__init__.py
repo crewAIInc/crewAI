@@ -196,6 +196,13 @@ from crewai_tools.tools.vision_tool.vision_tool import VisionTool
 from crewai_tools.tools.weaviate_tool.vector_search import WeaviateVectorSearchTool
 from crewai_tools.tools.website_search.website_search_tool import WebsiteSearchTool
 from crewai_tools.tools.xml_search_tool.xml_search_tool import XMLSearchTool
+from crewai_tools.tools.xquik_tool import (
+    XquikGetTrendsTool,
+    XquikGetTweetTool,
+    XquikGetUserTool,
+    XquikGetUserTweetsTool,
+    XquikSearchTweetsTool,
+)
 from crewai_tools.tools.youtube_channel_search_tool.youtube_channel_search_tool import (
     YoutubeChannelSearchTool,
 )
@@ -307,6 +314,11 @@ __all__ = [
     "WeaviateVectorSearchTool",
     "WebsiteSearchTool",
     "XMLSearchTool",
+    "XquikGetTrendsTool",
+    "XquikGetTweetTool",
+    "XquikGetUserTool",
+    "XquikGetUserTweetsTool",
+    "XquikSearchTweetsTool",
     "YoutubeChannelSearchTool",
     "YoutubeVideoSearchTool",
     "ZapierActionTools",
