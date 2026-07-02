@@ -5,10 +5,13 @@ from __future__ import annotations
 from unittest.mock import Mock
 
 from crewai.hooks import (
+    PolicyDecision,
+    PolicyRequest,
     after_llm_call,
     after_tool_call,
     before_llm_call,
     before_tool_call,
+    enable_policy_provider,
     get_after_llm_call_hooks,
     get_after_tool_call_hooks,
     get_before_llm_call_hooks,
@@ -348,3 +351,113 @@ class TestMultipleDecorators:
         hooks = get_before_tool_call_hooks()
 
         assert len(hooks) == 2
+
+
+class RecordingPolicyProvider:
+    """Small provider fixture that records the latest detached request."""
+
+    name = "recording"
+
+    def __init__(
+        self,
+        decision: PolicyDecision | None = None,
+        error: Exception | None = None,
+    ) -> None:
+        self.decision = decision if decision is not None else PolicyDecision(allow=True)
+        self.error = error
+        self.request: PolicyRequest | None = None
+
+    def evaluate(self, request: PolicyRequest) -> PolicyDecision:
+        self.request = request
+        if self.error is not None:
+            raise self.error
+        return self.decision
+
+
+class TestPolicyProviderAdapter:
+    """Test the provider adapter built on the existing before-tool hook registry."""
+
+    @staticmethod
+    def context() -> ToolCallHookContext:
+        tool = Mock()
+        tool.name = "Send Email"
+        agent = Mock()
+        agent.id = "agent-123"
+        agent.role = "Support Agent"
+        task = Mock()
+        task.description = "Reply to the customer"
+        crew = Mock()
+        crew.id = "crew-456"
+        return ToolCallHookContext(
+            tool_name="send_email",
+            tool_input={"recipient": "qa@example.com", "body": "Hello"},
+            tool=tool,
+            agent=agent,
+            task=task,
+            crew=crew,
+        )
+
+    def test_registers_provider_and_allows(self):
+        provider = RecordingPolicyProvider()
+        hook = enable_policy_provider(provider)
+
+        assert get_before_tool_call_hooks() == [hook]
+        assert hook(self.context()) is None
+        assert provider.request is not None
+        assert provider.request.tool_name == "Send Email"
+        assert provider.request.tool_alias == "send_email"
+        assert provider.request.agent_id == "agent-123"
+        assert provider.request.agent_role == "Support Agent"
+        assert provider.request.task_description == "Reply to the customer"
+        assert provider.request.crew_id == "crew-456"
+
+    def test_deny_maps_to_false(self):
+        provider = RecordingPolicyProvider(
+            PolicyDecision(allow=False, reason="policy")
+        )
+
+        assert enable_policy_provider(provider)(self.context()) is False
+
+    def test_provider_receives_detached_tool_input(self):
+        context = self.context()
+        provider = RecordingPolicyProvider()
+
+        assert enable_policy_provider(provider)(context) is None
+        assert provider.request is not None
+        provider.request.tool_input["recipient"] = "other@example.com"
+
+        assert context.tool_input["recipient"] == "qa@example.com"
+
+    def test_provider_failure_is_fail_closed_by_default(self):
+        provider = RecordingPolicyProvider(error=RuntimeError("unavailable"))
+
+        assert enable_policy_provider(provider)(self.context()) is False
+
+    def test_provider_failure_can_fail_open(self):
+        provider = RecordingPolicyProvider(error=RuntimeError("unavailable"))
+
+        assert (
+            enable_policy_provider(provider, fail_closed=False)(self.context())
+            is None
+        )
+
+    @pytest.mark.parametrize("fail_closed, expected", [(True, False), (False, None)])
+    def test_invalid_provider_result_follows_failure_policy(
+        self,
+        fail_closed: bool,
+        expected: bool | None,
+    ):
+        provider = RecordingPolicyProvider()
+        provider.decision = object()  # type: ignore[assignment]
+
+        assert (
+            enable_policy_provider(provider, fail_closed=fail_closed)(self.context())
+            is expected
+        )
+
+    def test_non_boolean_allow_is_rejected(self):
+        decision = PolicyDecision(allow=True)
+        object.__setattr__(decision, "allow", 1)
+        provider = RecordingPolicyProvider(decision)
+
+        assert enable_policy_provider(provider)(self.context()) is False
