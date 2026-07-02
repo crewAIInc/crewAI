@@ -46,6 +46,7 @@ class TavilySearchTool(BaseTool):
         include_images: Whether to include images in the search results.
         timeout: The timeout for the search request in seconds.
         max_content_length_per_result: Maximum length for the 'content' of each search result.
+        exact_match: Only return results containing the exact phrase(s) in quotes in your query.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -100,6 +101,10 @@ class TavilySearchTool(BaseTool):
     max_content_length_per_result: int = Field(
         default=1000,
         description="Maximum length for the 'content' of each search result to avoid context window issues.",
+    )
+    exact_match: bool | None = Field(
+        default=None,
+        description="Only return results containing the exact phrase(s) in quotes in your query.",
     )
     package_dependencies: list[str] = Field(default_factory=lambda: ["tavily-python"])
     env_vars: list[EnvVar] = Field(
@@ -167,20 +172,24 @@ class TavilySearchTool(BaseTool):
                 "Tavily client is not initialized. Ensure 'tavily-python' is installed and API key is set."
             )
 
-        raw_results = self.client.search(
-            query=query,
-            search_depth=self.search_depth,
-            topic=self.topic,
-            time_range=self.time_range,
-            days=self.days,
-            max_results=self.max_results,
-            include_domains=self.include_domains,
-            exclude_domains=self.exclude_domains,
-            include_answer=self.include_answer,
-            include_raw_content=self.include_raw_content,
-            include_images=self.include_images,
-            timeout=self.timeout,
-        )
+        search_kwargs: dict[str, Any] = {
+            "query": query,
+            "search_depth": self.search_depth,
+            "topic": self.topic,
+            "time_range": self.time_range,
+            "days": self.days,
+            "max_results": self.max_results,
+            "include_domains": self.include_domains,
+            "exclude_domains": self.exclude_domains,
+            "include_answer": self.include_answer,
+            "include_raw_content": self.include_raw_content,
+            "include_images": self.include_images,
+            "timeout": self.timeout,
+        }
+        if self.exact_match is not None:
+            search_kwargs["exact_match"] = self.exact_match
+
+        raw_results = self.client.search(**search_kwargs)
 
         if (
             isinstance(raw_results, dict)
@@ -219,20 +228,24 @@ class TavilySearchTool(BaseTool):
                 "Tavily async client is not initialized. Ensure 'tavily-python' is installed and API key is set."
             )
 
-        raw_results = await self.async_client.search(
-            query=query,
-            search_depth=self.search_depth,
-            topic=self.topic,
-            time_range=self.time_range,
-            days=self.days,
-            max_results=self.max_results,
-            include_domains=self.include_domains,
-            exclude_domains=self.exclude_domains,
-            include_answer=self.include_answer,
-            include_raw_content=self.include_raw_content,
-            include_images=self.include_images,
-            timeout=self.timeout,
-        )
+        search_kwargs: dict[str, Any] = {
+            "query": query,
+            "search_depth": self.search_depth,
+            "topic": self.topic,
+            "time_range": self.time_range,
+            "days": self.days,
+            "max_results": self.max_results,
+            "include_domains": self.include_domains,
+            "exclude_domains": self.exclude_domains,
+            "include_answer": self.include_answer,
+            "include_raw_content": self.include_raw_content,
+            "include_images": self.include_images,
+            "timeout": self.timeout,
+        }
+        if self.exact_match is not None:
+            search_kwargs["exact_match"] = self.exact_match
+
+        raw_results = await self.async_client.search(**search_kwargs)
 
         if (
             isinstance(raw_results, dict)
