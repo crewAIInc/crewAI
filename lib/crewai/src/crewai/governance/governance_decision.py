@@ -232,6 +232,17 @@ class GovernanceOutcome(TypedDict, total=False):
     receipt_ref: str
     """Unique per-record identity for this outcome (includes timestamp)."""
 
+    idempotency_key: str
+    """Stable key identifying this specific side effect across retries.
+    A key stable across retries of one side effect — NOT a key unique to
+    each attempt. Duplicate detection keys on (intent_ref, idempotency_key):
+    a terminal outcome for this pair blocks any subsequent execution
+    regardless of decision_id.
+
+    Promoted to first-class field (previously in extensions) to enable
+    vendor-neutral duplicate enforcement without relying on runtime-local
+    record identity."""
+
     outcome: Literal["executed", "blocked", "error", "timeout"]
     """What actually happened after the governance decision."""
 
@@ -309,7 +320,12 @@ def validate_governance_decision(d: GovernanceDecision) -> tuple[bool, list[str]
 
     The TypedDict is total=False (wire format flexibility), but this validator
     enforces route-specific minimums so that executable decisions carry the
-    binding fields needed for safe verification.
+    full recomputation boundary needed for safe verification.
+
+    This is a normative authorization validator — not just shape validation.
+    An executable decision (allow / require_approval) MUST carry the complete
+    binding fields that a future executor needs to recompute and verify the
+    authorized intent before performing the side effect.
 
     Returns:
         (is_valid, list_of_errors)
@@ -325,22 +341,51 @@ def validate_governance_decision(d: GovernanceDecision) -> tuple[bool, list[str]
     if not d.get("decision_id"):
         errors.append(f"'{decision}' requires 'decision_id'")
 
-    if decision in ("allow", "require_approval"):
-        # Executable decisions need binding fields
-        required = ["agent_id", "tool", "issued_at"]
+    if decision == "allow":
+        # Full executable binding: all fields needed to reconstruct the
+        # authorized intent boundary at execution time.
+        required = [
+            "agent_id", "tool", "normalized_scope", "normalization_id",
+            "intent_digest", "intent_ref", "idempotency_key",
+            "issued_at",
+        ]
         for field in required:
             if not d.get(field):
-                errors.append(f"'{decision}' requires '{field}'")
+                errors.append(f"'allow' requires '{field}'")
 
-        # Need at least one of intent_ref or params_hash for binding
-        if not d.get("intent_ref") and not d.get("params_hash"):
+        # policy_refs must have at least one entry
+        if not d.get("policy_refs"):
+            errors.append("'allow' requires at least one entry in 'policy_refs'")
+
+        # target_state_digest key must be present (value may be None)
+        if "target_state_digest" not in d:
             errors.append(
-                f"'{decision}' requires 'intent_ref' or 'params_hash' for intent binding"
+                "'allow' requires 'target_state_digest' key (value may be None)"
             )
 
-        # Need at least one policy reference
+    elif decision == "require_approval":
+        # Same binding as allow + resume fields for safe continuation
+        required = [
+            "agent_id", "tool", "normalized_scope", "normalization_id",
+            "intent_digest", "intent_ref", "idempotency_key",
+            "issued_at",
+            "continuation_id", "expires_at",
+        ]
+        for field in required:
+            if not d.get(field):
+                errors.append(f"'require_approval' requires '{field}'")
+
+        # policy_refs must have at least one entry
         if not d.get("policy_refs"):
-            errors.append(f"'{decision}' requires at least one entry in 'policy_refs'")
+            errors.append(
+                "'require_approval' requires at least one entry in 'policy_refs'"
+            )
+
+        # target_state_digest key must be present (value may be None)
+        if "target_state_digest" not in d:
+            errors.append(
+                "'require_approval' requires 'target_state_digest' key (value may be None)"
+            )
 
     elif decision == "deny":
         if not d.get("tool"):
