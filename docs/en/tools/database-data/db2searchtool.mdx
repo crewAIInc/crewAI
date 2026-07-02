@@ -1,0 +1,279 @@
+---
+title: 'Db2 Vector Search Tool'
+description: 'Semantic search capabilities for CrewAI agents using Db2 vector database'
+icon: database
+mode: "wide"
+---
+
+## Overview
+
+The Db2 Vector Search Tool enables semantic search capabilities in your CrewAI agents by leveraging Db2 native vector search functionality. This tool allows agents to retrieve semantically relevant documents stored in Db2 tables.
+
+It supports configurable embeddings, metadata filtering, and configurable retrieval behavior.
+
+## Installation
+
+Install the required package:
+
+```bash
+uv add ibm_db
+```
+
+## Basic Usage
+
+Here's a minimal example of how to use the tool:
+
+```python
+from crewai import Agent
+from crewai_tools import DB2VectorSearchTool, DB2Config
+
+# Initialize the tool with DB2Config
+db2_tool = DB2VectorSearchTool(
+    db2_config=DB2Config(
+        database="your_database",
+        hostname="localhost",
+        port=50000,
+        username="your_username",
+        password="your_password",
+        table_name="documents",
+        vector_column="embedding"
+    )
+)
+
+# Create an agent that uses the tool
+agent = Agent(
+    role="Research Assistant",
+    goal="Find relevant information in documents",
+    tools=[db2_tool]
+)
+
+# The tool will automatically use OpenAI embeddings
+# and return the 3 most relevant results ordered by distance
+```
+
+## Semantic Search Workflow Example
+
+Here's a complete example showing how to:
+1. Configure the Db2 vector search tool
+2. Create CrewAI agents that use the tool
+3. Run a semantic search workflow over existing vectors stored in Db2
+
+```python
+import os
+from dotenv import load_dotenv
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import DB2VectorSearchTool, DB2Config
+
+# Load environment variables
+load_dotenv()
+
+# Initialize Db2 search tool
+db2_tool = DB2VectorSearchTool(
+    db2_config=DB2Config(
+        database=os.getenv("DB2_DATABASE", "MYDB"),
+        hostname=os.getenv("DB2_HOSTNAME", "localhost"),
+        port=50000,
+        username=os.getenv("DB2_USERNAME"),
+        password=os.getenv("DB2_PASSWORD"),
+        table_name="documents",
+        vector_column="embedding",
+        return_columns=["content", "category"],
+        limit=3,
+        distance_metric="COSINE",
+        max_distance=0.35
+    )
+)
+
+# Create CrewAI agents
+search_agent = Agent(
+    role="Senior Semantic Search Agent",
+    goal="Find and analyze documents based on semantic search",
+    backstory="""You are an expert research assistant who can find relevant
+    information using semantic search in a Db2 database.""",
+    tools=[db2_tool],
+    verbose=True
+)
+
+answer_agent = Agent(
+    role="Senior Answer Assistant",
+    goal="Generate answers to questions based on the context provided",
+    backstory="""You are an expert answer assistant who can generate
+    answers to questions based on the context provided.""",
+    tools=[db2_tool],
+    verbose=True
+)
+
+# Define tasks
+search_task = Task(
+    description="""Search for relevant documents about the {query}.
+    Your final answer should include:
+    - The relevant information found
+    - The vector distances of the results
+    - The returned document fields""",
+    agent=search_agent
+)
+
+answer_task = Task(
+    description="""Given the retrieved context from Db2,
+    generate a final answer based on the context.""",
+    agent=answer_agent
+)
+
+# Run CrewAI workflow
+crew = Crew(
+    agents=[search_agent, answer_agent],
+    tasks=[search_task, answer_task],
+    process=Process.sequential,
+    verbose=True
+)
+
+result = crew.kickoff(
+    inputs={"query": "What is the role of X in the document?"}
+)
+print(result)
+```
+
+## Tool Parameters
+
+### Required Parameters
+- `db2_config` (DB2Config): Configuration object containing all Db2 connection and search settings
+
+### DB2Config Parameters
+- `database` (str): Name of the Db2 database
+- `hostname` (str): Hostname of the Db2 server (default: `"localhost"`)
+- `port` (int): Port of the Db2 server (default: `50000`)
+- `protocol` (str): Connection protocol (default: `"TCPIP"`)
+- `username` (str, optional): Username for Db2 authentication
+- `password` (str, optional): Password for Db2 authentication
+- `table_name` (str): Name of the Db2 table to search (default: `"documents"`)
+- `vector_column` (str): Name of the vector column (default: `"embedding"`)
+- `embedding_model` (str): OpenAI embedding model used when default embeddings are enabled (default: `"text-embedding-3-large"`)
+- `return_columns` (list[str]): Columns to return in search results (default: `["content"]`)
+- `limit` (int): Maximum number of results to return, between 1 and 100 (default: `3`)
+- `distance_metric` (str): Distance metric used for vector search (default: `"COSINE"`)
+- `max_distance` (float, optional): Maximum allowed distance for returned results
+
+### Optional Tool Parameters
+- `custom_embedding_fn` (Callable[[str], list[float]]): Custom function for text vectorization
+
+## Supported Distance Metrics
+
+The tool supports the following Db2 vector distance metrics:
+- `COSINE`
+- `EUCLIDEAN`
+- `DOT_PRODUCT`
+- `L2_DISTANCE`
+
+## Advanced Filtering
+
+The DB2VectorSearchTool supports filtering capabilities to refine your search results.
+
+### Dynamic Filtering
+Use `filter_by` and `filter_value` parameters in your search to filter results on-the-fly:
+
+```python
+result = db2_tool.run(
+    query="machine learning",
+    filter_by="category",
+    filter_value="research"
+)
+```
+
+This applies an equality filter during vector search, such as filtering rows where `category == "research"`.
+
+## Search Parameters
+
+The tool accepts these parameters in its schema:
+- `query` (str): The search query to find similar documents
+- `filter_by` (str, optional): Metadata column to filter on
+- `filter_value` (Any, optional): Value to filter by
+
+## Return Format
+
+The tool returns results in JSON format:
+
+```json
+[
+  {
+    "distance": 0.1401,
+    "data": {
+      "content": "Document content",
+      "category": "research"
+    }
+  }
+]
+```
+
+## Default Embedding
+
+By default, the tool uses OpenAI's `text-embedding-3-large` model for vectorization. If you use this default embedding path, install the OpenAI package:
+
+```bash
+uv add openai
+```
+
+This also requires:
+- OpenAI API key set in environment: `OPENAI_API_KEY`
+
+## Custom Embeddings
+
+Instead of using the default embedding model, you might want to use your own embedding function in cases where you:
+
+1. Want to use a different embedding model
+2. Need to match the vector dimension expected by your Db2 table
+3. Want to reduce costs by using open-source embedding models
+4. Want to use domain-specific embeddings
+
+Here's an example using Sentence Transformers:
+
+```python
+from sentence_transformers import SentenceTransformer
+from crewai_tools import DB2VectorSearchTool, DB2Config
+
+model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+
+def custom_embeddings(text: str) -> list[float]:
+    return model.encode(text).tolist()
+
+tool = DB2VectorSearchTool(
+    db2_config=DB2Config(
+        database="your_database",
+        hostname="localhost",
+        username="your_username",
+        password="your_password",
+        table_name="documents",
+        vector_column="embedding"
+    ),
+    custom_embedding_fn=custom_embeddings
+)
+```
+
+## Security Features
+
+The tool includes built-in protections for secure query execution:
+- Validation of table and column identifiers
+- Parameterized SQL queries for values
+- distance metric validation
+- Validated identifier handling
+
+## Error Handling
+
+The tool includes validation for:
+- Db2 connection handling
+- distance metric configuration
+- identifier safety
+- environment variable availability for default embeddings
+- serialization of Db2-specific data types such as `Decimal`, date and datetime values, and `bytes`
+
+## Environment Variables
+
+Supported environment variables:
+
+```bash
+export DB2_DATABASE="your_database"
+export DB2_HOSTNAME="your_hostname"
+export DB2_USERNAME="your_username"
+export DB2_PASSWORD="your_password"
+export OPENAI_API_KEY="your_openai_key"
+
+## Happy CrewAi Development!
