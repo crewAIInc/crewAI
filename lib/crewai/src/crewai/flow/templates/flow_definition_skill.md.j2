@@ -31,6 +31,8 @@ Do not include explanatory prose unless the user asks for it.
 6. Pass data with `${...}` mappings from `state` and completed `outputs`.
 7. Before final output, check every `listen`, `emit`, and `outputs.some_method` reference.
 
+Set optional fields only when you are confident they are needed. Otherwise, trust CrewAI defaults and omit them.
+
 Method names must match `^[A-Za-z_][A-Za-z0-9_]*$`.
 
 ## Choose One Action Per Method

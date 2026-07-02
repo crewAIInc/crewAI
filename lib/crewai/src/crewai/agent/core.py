@@ -201,7 +201,7 @@ class Agent(BaseAgent):
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     max_execution_time: int | None = Field(
         default=None,
-        description="Maximum execution time for an agent to execute a task",
+        description="Maximum execution time in seconds for an agent to execute a task",
     )
     step_callback: SerializableCallable | None = Field(
         default=None,

@@ -1335,6 +1335,17 @@ def test_skill_documents_flow_wiring():
     assert "[Method](#method-methods)" in skill
     assert "input: \"${'Reviewed research: ' + text(outputs, 'research_brief.raw')}\"" in skill
     assert 'text(root, "path", "default")' in skill
+    assert "trust CrewAI defaults and omit them" in skill
+    assert "#### LLM Definition" in skill
+    assert "`max_tokens` (optional): integer | null; default `null`" in skill
+    assert "CrewAI does not set an explicit output token cap" in skill
+    assert "`planning_config` (optional): object | null; default `null`" in skill
+    assert "Set `max_attempts` to limit planning refinement attempts" in skill
+    assert "`allow_delegation` (optional): boolean | null; default `null`" in skill
+    assert "`max_iter` (optional): integer | null; default `null`" in skill
+    assert "`max_rpm` (optional): integer | null; default `null`" in skill
+    assert "`max_execution_time` (optional): integer | null; default `null`" in skill
+    assert "Maximum execution time in seconds for an agent" in skill
 
 
 def test_skill_can_render_json_examples():
