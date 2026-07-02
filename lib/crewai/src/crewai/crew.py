@@ -1019,6 +1019,7 @@ class Crew(FlowTrackable, BaseModel):
         runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
             inputs = prepare_kickoff(self, inputs, input_files)
+            self._log_crew_start()
 
             if self.process == Process.sequential:
                 result = self._run_sequential_process()
@@ -1036,6 +1037,7 @@ class Crew(FlowTrackable, BaseModel):
 
             self.usage_metrics = self.calculate_usage_metrics()
 
+            self._log_crew_finish()
             return result
         except Exception as e:
             crewai_event_bus.emit(
@@ -1533,15 +1535,24 @@ class Crew(FlowTrackable, BaseModel):
             start_index = custom_start
 
         task_outputs: list[TaskOutput] = []
-        futures: list[tuple[Task, Future[TaskOutput], int]] = []
+        futures: list[tuple[Task, Future[TaskOutput], int, str, str | None]] = []
         last_sync_output: TaskOutput | None = None
+        previous_agent_role: str | None = None
 
         for task_index, task in enumerate(tasks):
             exec_data, task_outputs, last_sync_output = prepare_task_execution(
                 self, task, task_index, start_index, task_outputs, last_sync_output
             )
             if exec_data.should_skip:
+                if exec_data.agent is None:
+                    skipped_agent = self._get_agent_to_use(task)
+                    if skipped_agent is not None:
+                        previous_agent_role = skipped_agent.role
                 continue
+
+            agent_role = exec_data.agent.role if exec_data.agent else "None"
+            if previous_agent_role and previous_agent_role != agent_role:
+                self._log_context_received(agent_role, previous_agent_role)
 
             if isinstance(task, ConditionalTask):
                 skipped_task_output = self._handle_conditional_task(
@@ -1550,6 +1561,8 @@ class Crew(FlowTrackable, BaseModel):
                 if skipped_task_output:
                     task_outputs.append(skipped_task_output)
                     continue
+
+            next_agent_role = self._get_next_agent_role(tasks, task_index)
 
             if task.async_execution:
                 context = self._get_context(
@@ -1560,7 +1573,7 @@ class Crew(FlowTrackable, BaseModel):
                     context=context,
                     tools=exec_data.tools,
                 )
-                futures.append((task, future, task_index))
+                futures.append((task, future, task_index, agent_role, next_agent_role))
             else:
                 if futures:
                     task_outputs.extend(
@@ -1577,6 +1590,9 @@ class Crew(FlowTrackable, BaseModel):
                 task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
                 self._store_execution_log(task, task_output, task_index, was_replayed)
+                self._log_task_completion(agent_role, task, next_agent_role)
+
+            previous_agent_role = agent_role
 
         if futures:
             task_outputs.extend(self._process_async_tasks(futures, was_replayed))
@@ -1587,7 +1603,7 @@ class Crew(FlowTrackable, BaseModel):
         self,
         task: ConditionalTask,
         task_outputs: list[TaskOutput],
-        futures: list[tuple[Task, Future[TaskOutput], int]],
+        futures: list[tuple[Task, Future[TaskOutput], int, str, str | None]],
         task_index: int,
         was_replayed: bool,
     ) -> TaskOutput | None:
@@ -1798,7 +1814,29 @@ class Crew(FlowTrackable, BaseModel):
 
         return tools or []
 
+    def _log_crew_start(self) -> None:
+        crew_name = self.name or "crew"
+        self._logger.log(
+            "info",
+            f"[{crew_name}] Starting crew execution",
+            color="bold_purple",
+        )
+
+    def _log_crew_finish(self) -> None:
+        crew_name = self.name or "crew"
+        self._logger.log(
+            "info",
+            f"[{crew_name}] Crew execution completed",
+            color="bold_purple",
+        )
+
     def _log_task_start(self, task: Task, role: str = "None") -> None:
+        task_name = task.name or task.description
+        self._logger.log(
+            "info",
+            f"[Agent: {role}] Starting task: {task_name}",
+            color="bold_blue",
+        )
         if self.output_log_file:
             self._file_handler.log(
                 task_name=task.name,  # type: ignore[arg-type]
@@ -1806,6 +1844,37 @@ class Crew(FlowTrackable, BaseModel):
                 agent=role,
                 status="started",
             )
+
+    def _log_task_completion(
+        self, role: str, task: Task, next_agent_role: str | None = None
+    ) -> None:
+        task_name = task.name or task.description
+        if next_agent_role and next_agent_role != role:
+            self._logger.log(
+                "info",
+                f"[Agent: {role}] Task complete: {task_name}, passing to: {next_agent_role}",
+                color="bold_blue",
+            )
+        else:
+            self._logger.log(
+                "info",
+                f"[Agent: {role}] Task complete: {task_name}",
+                color="bold_blue",
+            )
+
+    def _log_context_received(self, role: str, from_role: str) -> None:
+        self._logger.log(
+            "info",
+            f"[Agent: {role}] Received context from {from_role}",
+            color="bold_blue",
+        )
+
+    def _get_next_agent_role(self, tasks: list[Task], current_index: int) -> str | None:
+        for i in range(current_index + 1, len(tasks)):
+            next_agent = self._get_agent_to_use(tasks[i])
+            if next_agent is not None:
+                return next_agent.role
+        return None
 
     def _update_manager_tools(
         self, task: Task, tools: list[BaseTool]
@@ -1877,17 +1946,18 @@ class Crew(FlowTrackable, BaseModel):
 
     def _process_async_tasks(
         self,
-        futures: list[tuple[Task, Future[TaskOutput], int]],
+        futures: list[tuple[Task, Future[TaskOutput], int, str, str | None]],
         was_replayed: bool = False,
     ) -> list[TaskOutput]:
         task_outputs: list[TaskOutput] = []
-        for future_task, future, task_index in futures:
+        for future_task, future, task_index, agent_role, next_agent_role in futures:
             task_output = future.result()
             task_outputs.append(task_output)
             self._process_task_result(future_task, task_output)
             self._store_execution_log(
                 future_task, task_output, task_index, was_replayed
             )
+            self._log_task_completion(agent_role, future_task, next_agent_role)
         return task_outputs
 
     @staticmethod

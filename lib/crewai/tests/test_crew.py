@@ -4900,3 +4900,245 @@ def test_memory_remember_receives_task_content():
     assert "Researcher" in raw
     assert "Expected result:" in raw
     assert "Result:" in raw
+
+
+def test_verbose_crew_start_and_finish_logs(researcher, capsys):
+    """Test that crew start/finish logs are emitted when verbose=True."""
+    tasks = [
+        Task(
+            description="Research AI advancements.",
+            expected_output="A full report on AI advancements.",
+            agent=researcher,
+        ),
+    ]
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=tasks,
+        process=Process.sequential,
+        verbose=True,
+    )
+
+    mock_task_output = TaskOutput(
+        description="Research AI advancements.",
+        raw="AI advancements report",
+        agent="Researcher",
+    )
+    with patch.object(Task, "execute_sync", return_value=mock_task_output):
+        crew.kickoff()
+    captured = capsys.readouterr()
+    # Strip ANSI escape codes for assertion
+    clean_out = re.sub(r"\x1b\[[0-9;]*m", "", captured.out)
+    assert "[crew] Starting crew execution" in clean_out
+    assert "[crew] Crew execution completed" in clean_out
+
+
+def test_verbose_crew_start_and_finish_not_logged_when_not_verbose(researcher, capsys):
+    """Test that crew start/finish logs are NOT emitted when verbose=False."""
+    tasks = [
+        Task(
+            description="Research AI advancements.",
+            expected_output="A full report on AI advancements.",
+            agent=researcher,
+        ),
+    ]
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=tasks,
+        process=Process.sequential,
+        verbose=False,
+    )
+
+    mock_task_output = TaskOutput(
+        description="Research AI advancements.",
+        raw="AI advancements report",
+        agent="Researcher",
+    )
+    with patch.object(Task, "execute_sync", return_value=mock_task_output):
+        crew.kickoff()
+    captured = capsys.readouterr()
+    clean_out = re.sub(r"\x1b\[[0-9;]*m", "", captured.out)
+    assert "Starting crew execution" not in clean_out
+    assert "Crew execution completed" not in clean_out
+
+
+def test_verbose_task_start_and_completion_logs(researcher, writer, capsys):
+    """Test that per-task start/complete logs are emitted when verbose=True."""
+    tasks = [
+        Task(
+            description="Research AI advancements.",
+            expected_output="A full report on AI advancements.",
+            agent=researcher,
+        ),
+        Task(
+            description="Write about AI in healthcare.",
+            expected_output="A 4 paragraph article about AI.",
+            agent=writer,
+        ),
+    ]
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=tasks,
+        process=Process.sequential,
+        verbose=True,
+    )
+
+    mock_task_output1 = TaskOutput(
+        description="Research AI advancements.",
+        raw="AI advancements report",
+        agent="Researcher",
+    )
+    mock_task_output2 = TaskOutput(
+        description="Write about AI in healthcare.",
+        raw="Article about AI in healthcare",
+        agent="Senior Writer",
+    )
+    with patch.object(
+        Task, "execute_sync", side_effect=[mock_task_output1, mock_task_output2]
+    ):
+        crew.kickoff()
+    captured = capsys.readouterr()
+    clean_out = re.sub(r"\x1b\[[0-9;]*m", "", captured.out)
+    assert "[Agent: Researcher] Starting task:" in clean_out
+    assert "[Agent: Senior Writer] Starting task:" in clean_out
+    assert "[Agent: Researcher] Task complete:" in clean_out
+    assert "[Agent: Senior Writer] Task complete:" in clean_out
+
+
+def test_verbose_handoff_logs_between_agents(researcher, writer, capsys):
+    """Test that handoff logs appear when tasks pass between different agents."""
+    tasks = [
+        Task(
+            description="Research AI advancements.",
+            expected_output="A full report on AI advancements.",
+            agent=researcher,
+        ),
+        Task(
+            description="Write about AI in healthcare.",
+            expected_output="A 4 paragraph article about AI.",
+            agent=writer,
+        ),
+    ]
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=tasks,
+        process=Process.sequential,
+        verbose=True,
+    )
+
+    mock_task_output1 = TaskOutput(
+        description="Research AI advancements.",
+        raw="AI advancements report",
+        agent="Researcher",
+    )
+    mock_task_output2 = TaskOutput(
+        description="Write about AI in healthcare.",
+        raw="Article about AI in healthcare",
+        agent="Senior Writer",
+    )
+    with patch.object(
+        Task, "execute_sync", side_effect=[mock_task_output1, mock_task_output2]
+    ):
+        crew.kickoff()
+    captured = capsys.readouterr()
+    clean_out = re.sub(r"\x1b\[[0-9;]*m", "", captured.out)
+    assert "passing to: Senior Writer" in clean_out
+    assert "[Agent: Senior Writer] Received context from Researcher" in clean_out
+
+
+def test_verbose_no_handoff_when_same_agent(researcher, capsys):
+    """Test that no handoff log is emitted when the same agent runs consecutive tasks."""
+    tasks = [
+        Task(
+            description="Research AI advancements.",
+            expected_output="A full report on AI advancements.",
+            agent=researcher,
+        ),
+        Task(
+            description="Research more about AI.",
+            expected_output="Extended AI report.",
+            agent=researcher,
+        ),
+    ]
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=tasks,
+        process=Process.sequential,
+        verbose=True,
+    )
+
+    mock_task_output1 = TaskOutput(
+        description="Research AI advancements.",
+        raw="AI advancements report",
+        agent="Researcher",
+    )
+    mock_task_output2 = TaskOutput(
+        description="Research more about AI.",
+        raw="Extended AI report",
+        agent="Researcher",
+    )
+    with patch.object(
+        Task, "execute_sync", side_effect=[mock_task_output1, mock_task_output2]
+    ):
+        crew.kickoff()
+    captured = capsys.readouterr()
+    clean_out = re.sub(r"\x1b\[[0-9;]*m", "", captured.out)
+    assert "Received context from" not in clean_out
+    assert "passing to:" not in clean_out
+
+
+def test_verbose_crew_name_in_logs(researcher, capsys):
+    """Test that the crew name appears in start/finish logs when set."""
+    crew = Crew(
+        name="TestCrew",
+        agents=[researcher],
+        tasks=[
+            Task(
+                description="Research AI advancements.",
+                expected_output="A full report on AI advancements.",
+                agent=researcher,
+            ),
+        ],
+        process=Process.sequential,
+        verbose=True,
+    )
+
+    crew._log_crew_start()
+    crew._log_crew_finish()
+    captured = capsys.readouterr()
+    clean_out = re.sub(r"\x1b\[[0-9;]*m", "", captured.out)
+    assert "[TestCrew] Starting crew execution" in clean_out
+    assert "[TestCrew] Crew execution completed" in clean_out
+
+
+def test_verbose_task_name_in_logs(researcher, writer, capsys):
+    """Test that the task name is used in logs when available, falling back to description."""
+    named_task = Task(
+        name="research_task",
+        description="Research AI advancements.",
+        expected_output="A full report on AI advancements.",
+        agent=researcher,
+    )
+    unnamed_task = Task(
+        description="Write about AI.",
+        expected_output="A short article.",
+        agent=writer,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[named_task, unnamed_task],
+        process=Process.sequential,
+        verbose=True,
+    )
+
+    crew._log_task_start(named_task, "Researcher")
+    crew._log_task_start(unnamed_task, "Senior Writer")
+    captured = capsys.readouterr()
+    clean_out = re.sub(r"\x1b\[[0-9;]*m", "", captured.out)
+    assert "[Agent: Researcher] Starting task: research_task" in clean_out
+    assert "[Agent: Senior Writer] Starting task: Write about AI." in clean_out
