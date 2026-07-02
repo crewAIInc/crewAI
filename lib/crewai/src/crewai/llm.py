@@ -509,7 +509,8 @@ class LLM(BaseLLM):
 
         if provider == "anthropic" or provider == "claude":
             return any(
-                model_lower.startswith(prefix) for prefix in ["claude-", "anthropic."]
+                model_lower.startswith(prefix)
+                for prefix in ["claude-", "anthropic.", "anthropic--"]
             )
 
         if provider == "gemini" or provider == "google":
@@ -618,6 +619,17 @@ class LLM(BaseLLM):
 
         if model in AZURE_MODELS:
             return "azure"
+
+        # Fallback: infer provider from known name prefixes embedded in the model
+        # string.  Self-hosted or proxy deployments often encode the provider in
+        # the model name itself (e.g. "anthropic--claude-3.5-sonnet").
+        model_lower = model.lower()
+        if model_lower.startswith(("anthropic", "claude")):
+            return "anthropic"
+        if model_lower.startswith(("gemini", "gemma")):
+            return "gemini"
+        if model_lower.startswith(("gpt-", "o1", "o3", "o4")):
+            return "openai"
 
         return "openai"
 
