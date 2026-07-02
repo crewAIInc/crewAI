@@ -758,6 +758,15 @@ class ToolUsage:
 
     def _select_tool(self, tool_name: str) -> Any:
         sanitized_input = sanitize_tool_name(tool_name)
+        # Fast path: an exact (sanitized) name match is the overwhelmingly
+        # common case — the LLM emitted a valid tool name — so resolve it in a
+        # single O(n) scan and skip the O(n log n) fuzzy SequenceMatcher sort
+        # below. An exact match has ratio 1.0, so it would always win that sort
+        # anyway; scanning self.tools in order preserves the same tie-break.
+        for tool in self.tools:
+            if sanitize_tool_name(tool.name) == sanitized_input:
+                return tool
+        # Fuzzy fallback: tolerate minor typos / near-misses in the tool name.
         order_tools = sorted(
             self.tools,
             key=lambda tool: SequenceMatcher(
