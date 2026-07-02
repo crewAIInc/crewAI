@@ -508,9 +508,11 @@ class LLM(BaseLLM):
             )
 
         if provider == "anthropic" or provider == "claude":
-            return any(
-                model_lower.startswith(prefix) for prefix in ["claude-", "anthropic."]
-            )
+            # Match Anthropic models regardless of custom deployment naming
+            # (e.g. "anthropic--claude-...", "anthropic.claude-...") rather than
+            # only the canonical "claude-" / "anthropic." prefixes (#5893).
+            # "anthropomorphic" does not start with "anthropic", so it is safe.
+            return "claude" in model_lower or model_lower.startswith("anthropic")
 
         if provider == "gemini" or provider == "google":
             return any(
@@ -619,6 +621,15 @@ class LLM(BaseLLM):
         if model in AZURE_MODELS:
             return "azure"
 
+        # Before defaulting to OpenAI, fall back to provider naming patterns so
+        # unprefixed but recognizable model ids (e.g. "anthropic--claude-...")
+        # are not silently misrouted to OpenAI (#5893). Only families with
+        # specific prefix rules are consulted; broad patterns (e.g. bedrock's
+        # bare "." match) are intentionally excluded to avoid false positives.
+        for candidate in ("anthropic", "gemini"):
+            if cls._matches_provider_pattern(model, candidate):
+                return candidate
+
         return "openai"
 
     @classmethod
@@ -692,9 +703,13 @@ class LLM(BaseLLM):
             self.set_env_callbacks()
         return self
 
-    @staticmethod
-    def _is_anthropic_model(model: str) -> bool:
+    @classmethod
+    def _is_anthropic_model(cls, model: str) -> bool:
         """Determine if the model is from Anthropic provider.
+
+        Delegates to the same pattern matcher used for native-provider
+        routing so detection stays consistent across both, including custom
+        deployment naming such as ``anthropic--claude-...`` (#5893).
 
         Args:
             model: The model identifier string.
@@ -702,8 +717,7 @@ class LLM(BaseLLM):
         Returns:
             bool: True if the model is from Anthropic, False otherwise.
         """
-        anthropic_prefixes = ("anthropic/", "claude-", "claude/")
-        return any(prefix in model.lower() for prefix in anthropic_prefixes)
+        return cls._matches_provider_pattern(model, "anthropic")
 
     def _prepare_completion_params(
         self,
