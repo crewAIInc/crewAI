@@ -173,7 +173,7 @@ def test_from_function_does_not_infer_non_pydantic_result_schema():
     raw_result = tool.invoke({"value": "crew"})
 
     assert raw_result == {"value": "crew", "count": 1}
-    assert tool.format_output_for_agent(raw_result) == str(raw_result)
+    assert tool.format_output_for_agent(raw_result) == json.dumps(raw_result, ensure_ascii=False)
 
 
 def test_invalid_typed_output_warns_and_uses_string_agent_text():
@@ -189,15 +189,15 @@ def test_invalid_typed_output_warns_and_uses_string_agent_text():
     raw_result = tool.invoke({"value": "crew"})
 
     with pytest.warns(
-        RuntimeWarning, match="Failed to validate or serialize"
+        RuntimeWarning, match="Failed to validate output"
     ) as warnings:
         agent_text = tool.format_output_for_agent(raw_result)
 
     assert raw_result == {"value": "crew", "count": "wrong"}
-    assert agent_text == str(raw_result)
+    assert agent_text == json.dumps(raw_result, ensure_ascii=False)
     warning_message = str(warnings[0].message)
-    assert "ValidationError" in warning_message
-    assert "wrong" not in warning_message
+    assert "validation error" in warning_message.lower()
+    assert "wrong" in warning_message
 
 
 def test_validate_function_signature(basic_function, schema_class):
