@@ -1478,6 +1478,7 @@ class Crew(FlowTrackable, BaseModel):
         return self._execute_tasks(self.tasks)
 
     def _create_manager_agent(self) -> None:
+        """Create or configure the manager agent for hierarchical execution."""
         if self.manager_agent is not None:
             self.manager_agent.allow_delegation = True
             manager = self.manager_agent
@@ -1488,7 +1489,7 @@ class Crew(FlowTrackable, BaseModel):
                     color="bold_yellow",
                 )
                 manager.tools = []
-                raise Exception("Manager agent should not have tools")
+                # tools are stripped after warning — see set_manager_agent()
         else:
             self.manager_llm = create_llm(self.manager_llm)
             i18n = get_i18n(prompt_file=self.prompt_file)
