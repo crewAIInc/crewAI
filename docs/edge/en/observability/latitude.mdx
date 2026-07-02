@@ -1,0 +1,150 @@
+---
+title: Latitude Integration
+description: Learn how to integrate Latitude with CrewAI using OpenTelemetry via OpenInference
+icon: compass
+mode: "wide"
+---
+
+# Integrate Latitude with CrewAI
+
+This guide demonstrates how to integrate **Latitude** with **CrewAI** using OpenTelemetry via the [OpenInference](https://github.com/Arize-ai/openinference) SDK. By the end of this guide, you will be able to trace your CrewAI agents and inspect, search, and evaluate every run in Latitude.
+
+> **What is Latitude?** [Latitude](https://latitude.so) is an open-source (MIT-licensed) platform for improving production AI agents. It provides observability, search, and evaluation, helping teams capture real agent traffic, surface important behaviors across that traffic, and turn repeated failures into trackable issues. Latitude's ingestion endpoint speaks standard OpenTelemetry (OTLP over HTTP), so CrewAI traces flow in without a vendor-specific library.
+
+## Get Started
+
+We'll walk through a simple example of using CrewAI and integrating it with Latitude via OpenTelemetry using OpenInference.
+
+### Step 1: Install Dependencies
+
+```bash
+pip install openinference-instrumentation-crewai crewai crewai-tools opentelemetry-sdk opentelemetry-exporter-otlp
+```
+
+### Step 2: Set Up Environment Variables
+
+Set your Latitude API key and project slug, and point the OpenTelemetry exporter at Latitude's ingestion endpoint. Generate an API key from your project settings after signing up for [Latitude](https://app.latitude.so) (or self-hosting); your project slug is visible in the project settings or URL.
+
+```python
+import os
+
+# Your Latitude credentials
+os.environ["LATITUDE_API_KEY"] = "your-api-key"
+os.environ["LATITUDE_PROJECT"] = "your-project-slug"
+
+# Your OpenAI key (or whichever model provider your crew uses)
+os.environ["OPENAI_API_KEY"] = "sk-proj-..."
+
+# Your Serper key, used by SerperDevTool in the example below
+os.environ["SERPER_API_KEY"] = "your-serper-api-key"
+```
+
+### Step 3: Initialize OpenTelemetry with Latitude
+
+Register a tracer provider with an OTLP HTTP exporter pointed at Latitude's endpoint, then initialize the OpenInference CrewAI instrumentor. Latitude's endpoint speaks standard OTLP over HTTP and requires an `Authorization` bearer header plus the `X-Latitude-Project` header.
+
+```python
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from openinference.instrumentation.crewai import CrewAIInstrumentor
+
+# Latitude's ingestion endpoint and required headers
+exporter = OTLPSpanExporter(
+    endpoint="https://ingest.latitude.so/v1/traces",
+    headers={
+        "Authorization": f"Bearer {os.environ['LATITUDE_API_KEY']}",
+        "X-Latitude-Project": os.environ["LATITUDE_PROJECT"],
+    },
+)
+
+tracer_provider = TracerProvider()
+tracer_provider.add_span_processor(BatchSpanProcessor(exporter))
+trace.set_tracer_provider(tracer_provider)
+
+# Start instrumenting CrewAI
+CrewAIInstrumentor().instrument(skip_dep_check=True, tracer_provider=tracer_provider)
+```
+
+<Tip>
+You can also configure the exporter through standard OpenTelemetry environment variables instead of passing arguments in code:
+
+```bash
+export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="https://ingest.latitude.so/v1/traces"
+export OTEL_EXPORTER_OTLP_TRACES_HEADERS="Authorization=Bearer YOUR_API_KEY,X-Latitude-Project=YOUR_PROJECT_SLUG"
+```
+</Tip>
+
+### Step 4: Create a CrewAI Application
+
+We'll create a CrewAI application where two agents collaborate to research and write a blog post about AI advancements.
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai_tools import SerperDevTool
+
+search_tool = SerperDevTool()
+
+# Define your agents with roles and goals
+researcher = Agent(
+    role="Senior Research Analyst",
+    goal="Uncover cutting-edge developments in AI and data science",
+    backstory="""You work at a leading tech think tank.
+    Your expertise lies in identifying emerging trends.
+    You have a knack for dissecting complex data and presenting actionable insights.""",
+    verbose=True,
+    allow_delegation=False,
+    tools=[search_tool],
+)
+writer = Agent(
+    role="Tech Content Strategist",
+    goal="Craft compelling content on tech advancements",
+    backstory="""You are a renowned Content Strategist, known for your insightful and engaging articles.
+    You transform complex concepts into compelling narratives.""",
+    verbose=True,
+    allow_delegation=True,
+)
+
+# Create tasks for your agents
+task1 = Task(
+    description="""Conduct a comprehensive analysis of recent advancements in AI.
+    Identify key trends, breakthrough technologies, and potential industry impacts.""",
+    expected_output="Full analysis report in bullet points",
+    agent=researcher,
+)
+
+task2 = Task(
+    description="""Using the insights provided, develop an engaging blog
+    post that highlights the most significant AI advancements.
+    Your post should be informative yet accessible, catering to a tech-savvy audience.""",
+    expected_output="Full blog post of at least 4 paragraphs",
+    agent=writer,
+)
+
+# Instantiate your crew with a sequential process
+crew = Crew(
+    agents=[researcher, writer], tasks=[task1, task2], verbose=1, process=Process.sequential
+)
+
+# Get your crew to work!
+result = crew.kickoff()
+
+print("######################")
+print(result)
+```
+
+### Step 5: View Traces in Latitude
+
+After running the crew, open your **project** in the [Latitude dashboard](https://app.latitude.so) to view the generated traces. You'll see a trace for the crew run with child spans for each agent, task, tool call, and LLM call, including model, token usage, latency, and full inputs/outputs, which help you debug and optimize your CrewAI agents.
+
+<Tip>
+OTLP exporters batch spans in the background. For short-lived scripts, call `tracer_provider.shutdown()` before the process exits to flush any pending spans.
+</Tip>
+
+### References
+
+- [Latitude Documentation](https://docs.latitude.so) - Overview of the Latitude platform.
+- [Latitude OpenTelemetry Exporter](https://docs.latitude.so/telemetry/otel-exporter) - Endpoint, headers, and span attributes.
+- [CrewAI Documentation](https://docs.crewai.com/) - Overview of the CrewAI framework.
+- [OpenInference GitHub](https://github.com/Arize-ai/openinference) - Source code for the OpenInference SDK.
