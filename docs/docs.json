@@ -329,6 +329,7 @@
                       "edge/en/observability/tracing",
                       "edge/en/observability/overview",
                       "edge/en/observability/arize-phoenix",
+                      "edge/en/observability/asqav",
                       "edge/en/observability/braintrust",
                       "edge/en/observability/datadog",
                       "edge/en/observability/galileo",
