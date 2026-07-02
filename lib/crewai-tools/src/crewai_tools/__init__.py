@@ -101,6 +101,11 @@ from crewai_tools.tools.hyperbrowser_load_tool.hyperbrowser_load_tool import (
 from crewai_tools.tools.invoke_crewai_automation_tool.invoke_crewai_automation_tool import (
     InvokeCrewAIAutomationTool,
 )
+from crewai_tools.tools.iflow_search_tool import (
+    IFlowImageSearchTool,
+    IFlowWebFetchTool,
+    IFlowWebSearchTool,
+)
 from crewai_tools.tools.jina_scrape_website_tool.jina_scrape_website_tool import (
     JinaScrapeWebsiteTool,
 )
@@ -268,6 +273,9 @@ __all__ = [
     "GenerateCrewaiAutomationTool",
     "GithubSearchTool",
     "HyperbrowserLoadTool",
+    "IFlowImageSearchTool",
+    "IFlowWebFetchTool",
+    "IFlowWebSearchTool",
     "InvokeCrewAIAutomationTool",
     "JSONSearchTool",
     "JinaScrapeWebsiteTool",
