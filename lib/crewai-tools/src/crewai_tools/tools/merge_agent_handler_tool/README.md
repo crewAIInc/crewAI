@@ -227,5 +227,4 @@ All tool executions are:
 
 For questions or issues:
 - 📚 [Documentation](https://docs.ah.merge.dev)
-- 💬 [Discord Community](https://merge.dev/discord)
 - 📧 [Support Email](mailto:support@merge.dev)
