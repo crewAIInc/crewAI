@@ -73,7 +73,7 @@ To use a different LLM with your CrewAI agents, you have several options:
                 role='Anthropic Expert',
                 goal='Analyze data using Claude',
                 backstory="An AI assistant leveraging Anthropic's language model.",
-                llm='claude-2'
+                llm='claude-3-5-haiku-20241022'
             )
             ```
         </CodeGroup>
@@ -108,7 +108,7 @@ When configuring an LLM for your agent, you have access to a wide range of param
 
 | Parameter | Type | Description |
 |:----------|:-----:|:-------------|
-| **model** | `str` | The name of the model to use (e.g., "gpt-4", "claude-2") |
+| **model** | `str` | The name of the model to use (e.g., "gpt-4o-mini", "claude-3-5-haiku-20241022") |
 | **temperature** | `float` | Controls randomness in output (0.0 to 1.0) |
 | **max_tokens** | `int` | Maximum number of tokens to generate |
 | **top_p** | `float` | Controls diversity of output (0.0 to 1.0) |
