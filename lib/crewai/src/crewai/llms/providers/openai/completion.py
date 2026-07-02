@@ -723,16 +723,19 @@ class OpenAICompletion(BaseLLM):
         if response_model or self.response_format:
             format_model = response_model or self.response_format
             if isinstance(format_model, type) and issubclass(format_model, BaseModel):
-                schema_output = generate_model_description(format_model)
-                json_schema = schema_output.get("json_schema", {})
-                params["text"] = {
-                    "format": {
-                        "type": "json_schema",
-                        "name": json_schema.get("name", format_model.__name__),
-                        "strict": json_schema.get("strict", True),
-                        "schema": json_schema.get("schema", {}),
+                if self._supports_structured_output():
+                    schema_output = generate_model_description(format_model)
+                    json_schema = schema_output.get("json_schema", {})
+                    params["text"] = {
+                        "format": {
+                            "type": "json_schema",
+                            "name": json_schema.get("name", format_model.__name__),
+                            "strict": json_schema.get("strict", True),
+                            "schema": json_schema.get("schema", {}),
+                        }
                     }
-                }
+                else:
+                    params["text"] = {"format": {"type": "json_object"}}
             elif isinstance(format_model, dict):
                 params["text"] = {"format": format_model}
 
@@ -1573,9 +1576,12 @@ class OpenAICompletion(BaseLLM):
             if isinstance(self.response_format, type) and issubclass(
                 self.response_format, BaseModel
             ):
-                params["response_format"] = generate_model_description(
-                    self.response_format
-                )
+                if self._supports_structured_output():
+                    params["response_format"] = generate_model_description(
+                        self.response_format
+                    )
+                else:
+                    params["response_format"] = {"type": "json_object"}
             elif isinstance(self.response_format, dict):
                 params["response_format"] = self.response_format
 
@@ -2376,6 +2382,20 @@ class OpenAICompletion(BaseLLM):
             finish_reason=stream_finish_reason,
             response_id=stream_response_id,
         )
+
+    def _supports_structured_output(self) -> bool:
+        """Whether the model supports json_schema response_format type."""
+        model_lower = self.model.lower() if self.model else ""
+
+        unsupported_prefixes = ("o1-preview", "o1-mini", "gpt-4-base", "gpt-3.5", "gpt-35")
+        if model_lower.startswith(unsupported_prefixes):
+            return False
+
+        supported_prefixes = ("gpt-4o", "gpt-4-turbo", "gpt-4.1", "gpt-5", "o1", "o3", "o4")
+        if model_lower.startswith(supported_prefixes):
+            return True
+
+        return True
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
