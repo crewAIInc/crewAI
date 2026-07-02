@@ -6,6 +6,7 @@ for agent use, and format skill context for prompt injection.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -18,12 +19,13 @@ from crewai.events.types.skill_events import (
     SkillLoadFailedEvent,
     SkillLoadedEvent,
 )
-from crewai.skills.models import INSTRUCTIONS, RESOURCES, Skill
+from crewai.skills.models import INSTRUCTIONS, RESOURCES, Skill, SkillFrontmatter
 from crewai.skills.parser import (
     SKILL_FILENAME,
     load_skill_instructions,
     load_skill_metadata,
     load_skill_resources,
+    parse_frontmatter,
 )
 
 
@@ -141,6 +143,72 @@ def activate_skill(
         )
 
     return activated
+
+
+def load_skill(
+    skill: Path | Skill | str,
+    source: BaseAgent | None = None,
+) -> list[Skill]:
+    """Load one skill input into Skill objects.
+
+    Accepts a pre-loaded Skill object, skill search path, inline SKILL.md
+    string, or '@org/name' registry reference. Path inputs can expand to many
+    skills. Path and inline inputs are activated immediately; pre-loaded Skill
+    objects keep their disclosure level.
+    """
+    if isinstance(skill, Skill):
+        return [skill]
+    if isinstance(skill, Path):
+        return [
+            activate_skill(s, source=source)
+            for s in discover_skills(skill, source=source)
+        ]
+    if isinstance(skill, str) and skill.startswith("@"):
+        from crewai.experimental.skills.registry import resolve_registry_ref
+
+        return [resolve_registry_ref(skill, source=source)]
+    if isinstance(skill, str) and skill.lstrip().startswith("---\n"):
+        frontmatter_dict, body = parse_frontmatter(skill.strip())
+        return [
+            Skill(
+                frontmatter=SkillFrontmatter(**frontmatter_dict),
+                instructions=body,
+                path=Path("."),
+                disclosure_level=INSTRUCTIONS,
+            )
+        ]
+    if isinstance(skill, str):
+        return [
+            activate_skill(s, source=source)
+            for s in discover_skills(Path(skill), source=source)
+        ]
+
+    msg = f"Unsupported skill input: {skill!r}"
+    raise TypeError(msg)
+
+
+def load_skills(
+    skills: Iterable[Path | Skill | str],
+    source: BaseAgent | None = None,
+) -> list[Skill]:
+    """Load skill inputs into de-duplicated Skill objects.
+
+    Preserves first-seen order when multiple inputs resolve to the same skill
+    name. Registry refs are scoped by org so different orgs can publish skills
+    that share a frontmatter name.
+    """
+    loaded: dict[str, Skill] = {}
+    for skill_input in skills:
+        for skill in load_skill(skill_input, source=source):
+            dedup_key = skill.name
+            if isinstance(skill_input, str) and skill_input.startswith("@"):
+                from crewai.experimental.skills.registry import parse_registry_ref
+
+                org, _ = parse_registry_ref(skill_input)
+                dedup_key = f"{org}/{skill.name}"
+            if dedup_key not in loaded:
+                loaded[dedup_key] = skill
+    return list(loaded.values())
 
 
 def load_resources(skill: Skill) -> Skill:

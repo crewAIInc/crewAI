@@ -10,6 +10,9 @@ from crewai.utilities.serialization import to_serializable
 
 
 if TYPE_CHECKING:
+    from celpy.celtypes import StringType
+    from celpy.evaluation import CELFunction
+
     from crewai.flow.runtime import Flow
 else:
     from typing_extensions import TypeAliasType
@@ -18,6 +21,37 @@ else:
 _CEL_MACROS_WITH_LOCAL_BINDINGS = frozenset(
     {"all", "exists", "exists_one", "filter", "map"}
 )
+
+
+def _handle_text_custom_expression(
+    root: Any, path: Any, default: Any = ""
+) -> StringType:
+    from celpy.adapter import CELJSONEncoder
+    from celpy.celtypes import StringType
+
+    fallback = StringType("" if default is None else str(default))
+    current = root
+    for part in str(path).split("."):
+        if current is None:
+            return fallback
+        try:
+            if isinstance(current, list):
+                current = current[int(part)]
+            else:
+                current = current[StringType(part)]
+        except (KeyError, IndexError, TypeError, ValueError):
+            return fallback
+
+    if current is None:
+        return fallback
+    if isinstance(current, str):
+        return StringType(current)
+    return StringType(json.dumps(current, cls=CELJSONEncoder, ensure_ascii=False))
+
+
+_EXPRESSION_FUNCTIONS: dict[str, CELFunction] = {
+    "text": _handle_text_custom_expression,
+}
 if TYPE_CHECKING:
     ExpressionData: TypeAlias = (
         str
@@ -219,7 +253,8 @@ class Expression:
 
             environment = Environment()
             program = environment.program(
-                Expression._compile_cel(expression, environment=environment)
+                Expression._compile_cel(expression, environment=environment),
+                functions=_EXPRESSION_FUNCTIONS,
             )
             result = program.evaluate(cast(Context, json_to_cel(context)))
             return json.loads(json.dumps(result, cls=CELJSONEncoder))

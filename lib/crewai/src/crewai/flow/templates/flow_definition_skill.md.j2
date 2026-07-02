@@ -1,0 +1,209 @@
+---
+name: flow-definition
+description: Create or edit CrewAI Flow declarations. Use when the user needs a YAML or JSON flow with methods, state, agents, crews, tools, outputs, or conditional branches.
+---
+
+# Flow Definition
+
+You are writing a CrewAI Flow declaration for the user.
+Use these instructions when the user asks you to create or edit a Flow.
+Return one valid `crewai.flow/v1` YAML or JSON document.
+
+Treat this document as instructions for you, not as text to show the user.
+Follow the examples for shape and formatting, then use the API reference to check exact fields.
+
+## Output Format
+
+Return one valid `crewai.flow/v1` Flow declaration.
+Do not include explanatory prose unless the user asks for it.
+
+## Build It In This Order
+
+1. Define `state` first. Use `type: json_schema` and put the JSON Schema inline.
+2. Put required input fields in `state.json_schema.required`. Do not rely on `state.default` to make fields required.
+{% if include_non_linear_flows %}
+3. Add at least one method with `start: true`.
+{% else %}
+3. Add exactly one method with `start: true`.
+{% endif %}
+4. Add later methods with `listen`.
+5. Give each method exactly one `do` action object. Never make `do` a list.
+6. Pass data with `${...}` mappings from `state` and completed `outputs`.
+7. Before final output, check every `listen`, `emit`, and `outputs.some_method` reference.
+
+Set optional fields only when you are confident they are needed. Otherwise, trust CrewAI defaults and omit them.
+
+Method names must match `^[A-Za-z_][A-Za-z0-9_]*$`.
+
+## Choose One Action Per Method
+
+Pick the simplest action that does the job.
+
+{% if include_expression_action %}
+- Use `call: expression` for simple reads, filters, computed values, and deterministic routing.
+{% endif %}
+{% if include_tool_action %}
+- Use `call: tool` for packaged deterministic work: API calls, searches, lookups, scoring, file work, or custom CrewAI tools.
+{% endif %}
+- Use `call: agent` for one AI worker that classifies, decides, summarizes, writes, or drafts. Put `role`, `goal`, `backstory`, and `input` under `with`. Do not add an action-level `inputs` map to an agent.
+- Use `call: crew` for coordinated AI work with multiple agents or tasks. Define the crew under `with`. Pass runtime values with the action-level `inputs` map.
+{% if include_each_action %}
+- Use `call: each` when the same ordered mini-pipeline must run once per item. Give every step a `name`.
+{% endif %}
+{% if include_hitl %}
+- Use `human_feedback` when a method needs a human checkpoint.
+{% endif %}
+{% if include_script_action %}
+- Use `call: script` only for trusted inline Python. Scripts are not sandboxed.
+{% endif %}
+
+## Wire Methods Explicitly
+
+- `state` is the initial shared data shape. Action results do not automatically merge into `state`.
+- Read method results with `outputs.method_name` after that method can run.
+- `listen` targets a method name or a router-emitted event name.
+- Methods must not listen to their own method name.
+- Method names and emitted event names share one namespace. Avoid reusing the same string for both unless the user explicitly wants that.
+- Use `router: true` plus `emit` when one method chooses between named branches.
+- A router action must return exactly one emitted event string. It must not return JSON, a list, or an explanation.
+{% if include_non_linear_flows %}
+- Conditional `listen` values use `and` / `or`, for example `listen: {and: [validated, enriched]}`. They are not CEL.
+- Use `start: true` for normal entrypoints. Use conditional `start` only for advanced event-driven starts.
+{% else %}
+- Use `start: true` for the single entrypoint.
+{% endif %}
+
+If an agent is a router, make its goal say exactly what to return, for example:
+`Return exactly one bare value: approved, rejected, or needs_review. Do not include explanation.`
+{% if include_expression_action %}
+Prefer `call: expression` when routing can be computed without an agent.
+{% endif %}
+
+## CEL And Dynamic Values
+
+CEL is the expression language for reading Flow data and making small decisions.
+Use {% if include_tool_action %}tools, {% endif %}agents and crews{% if include_script_action %}, or trusted scripts{% endif %} for larger work or side effects.
+
+Use these expression forms correctly:
+
+{% if include_expression_action or include_each_action %}
+- Raw CEL: use in {% if include_expression_action and include_each_action %}`expr`, `in`, and `if`{% elif include_expression_action %}`expr`{% else %}`in` and `if`{% endif %}. Do not wrap raw CEL in `${...}`.
+{% endif %}
+- Action mappings: wrap the whole string in `${...}`.
+- Crew text: use `{name}` placeholders from crew inputs. Example: `Research {topic}`.
+- Crew inputs become prompt text only when agent or task text references matching `{name}` placeholders.
+- Passing an input that is not referenced by any `{name}` placeholder does not ground the crew. If the crew needs a field, put that placeholder in an agent `goal`, task `description`, or task `expected_output`.
+
+Available CEL variables:
+
+- `state`: initial input data, for example `state.ticket.subject`.
+- `outputs`: completed method outputs, for example `outputs.classify_ticket`.
+{% if include_each_action %}
+- `item`: the current item inside `each`, for example `item.company_domain`.
+- `outputs`: inside `each`, prior step outputs for the current item, for example `outputs.enrich`.
+{% endif %}
+
+Dynamic value rules:
+
+- A string is dynamic only when the whole trimmed string is wrapped in `${...}`.
+- `Ticket: ${state.ticket}` stays literal. For computed strings, build the string inside the CEL expression.
+- For prompt text, use CrewAI's CEL helper `text(root, "path", "default")` to safely read missing or null values as strings. The default argument is optional and defaults to `""`.
+- When an agent needs multiple fields, build one single-line CEL string with labels and separators. Example: `input: "${'Ticket ID: ' + text(state, 'ticket_id') + '; Message: ' + text(state, 'message')}"`.
+- In YAML, do not put `\n` escapes inside `${...}` strings. Prefer plain `${state.field}` values or the single-line labeled pattern above.
+- `${...}` keeps the value type. It does not always make text.
+- Crew action-level `inputs` are the actual Crew kickoff inputs. Use CEL-wrapped values there for runtime data from `state` or `outputs`.
+- Crew action-level `inputs` alone are not grounding. Include placeholders for the facts the model must use.
+- Crew outputs are objects. Use `${outputs.research_brief.raw}` for text.
+- For structured crew output, use fields like `${outputs.research_brief.json_dict.field}` or `${outputs.research_brief.pydantic.field}`.
+- Do not pass a whole crew output to an agent input, like `${outputs.research_brief}`.
+- Agent outputs may also be objects. Use fields like `${outputs.classify_ticket.raw}` or `${outputs.classify_ticket.pydantic.category}`.
+- Use `with.inputs` only for static Crew input defaults.
+- Agent action `with.input` is the agent's single input value.
+{% if include_script_action %}
+- Trusted `script` actions can mutate state explicitly. Use them only when the user asks for that behavior.
+{% endif %}
+
+## Do Not
+
+- Do not invent top-level keys outside the Flow declaration shape.
+- Do not use fields outside the declaration schema{% if include_tool_action %} or tool refs shown here{% endif %}.
+- Do not put more than one action under a method's `do`.
+- Do not make `do` a list.
+- Do not reference `outputs.some_method` before `some_method` can run.
+- Do not set a method's `listen` to its own method name.
+- Do not use the same string for an emitted event and a method name unless the user asks for it.
+- Do not use `emit` without `router: true`{% if include_hitl %} or `human_feedback.emit`{% endif %}.
+- Do not rely on crew action-level `inputs` alone to ground agent behavior. Inputs that do not match placeholders are effectively unused by the prompt.
+- Do not ask agents to infer missing facts when accuracy matters. Tell them to mark missing dates, amounts, offers, logs, or constraints as unknown.
+- Do not set `config.stream: true` unless the caller is expected to consume a streaming result. For normal generated flows and CLI smoke tests, omit it.
+{% if include_conversational %}
+- Do not put conversational settings under `state`, `config`, or a method. Use top-level `conversational` only when the user asks for a chat or conversation flow.
+{% endif %}
+{% if include_each_action %}
+- Do not use `each` without at least one named step.
+{% endif %}
+{% if include_script_action %}
+- Do not use `script` for untrusted input or user-authored code.
+{% endif %}
+
+## Examples
+
+### Crew review with routed follow-up
+
+```{{ example_language }}
+{{ example }}
+```
+
+## API Reference
+
+Use this appendix to check exact field names, required fields, linked object types, and allowed action/state shapes. Linked type names point to another section in this reference.
+{% macro render_model(model) -%}
+{% if model.discriminator %}
+
+Shape:
+- `{{ model.discriminator.name }}: {{ model.discriminator.value }}`
+{% endif %}
+
+Fields:
+{% for field in model.fields %}
+- `{{ field.name }}` ({% if field.required %}required{% else %}optional{% endif %}): {{ field.type }}{% if field.default %}; default {{ field.default }}{% endif %}{% if field.description %}. {{ field.description }}{% endif %}{% if field.examples %}{% if not field.description %}.{% endif %} Example{% if field.examples|length > 1 %}s{% endif %}: {{ field.examples | join(", ") }}{% endif +%}
+{% endfor %}
+{% for inline_model in model.inline_models %}
+
+#### {{ inline_model.label }}
+{{ render_model(inline_model) }}
+{% endfor %}
+{%- endmacro %}
+{% for section in sections %}
+
+### {{ section.label }}
+{% if section.kind == "union" %}
+
+Discriminated union by `{% if section.label == "State" %}type{% else %}call{% endif %}`.
+
+Allowed shapes:
+{% for model in section.models %}
+- [`{{ model.discriminator.name }}: {{ model.discriminator.value }}`]({{ model.anchor }})
+{% endfor %}
+{% for model in section.models %}
+
+### {{ model.label }}
+{{ render_model(model) }}
+{% endfor %}
+{% else %}
+{{ render_model(section.models[0]) }}
+{% endif %}
+
+{% endfor %}
+### Cross-Field Rules
+
+- A method has exactly one `do` action object with one `call` discriminator.
+- `listen` targets method names and router-emitted event names in one shared namespace.
+- Methods cannot listen to their own method name.
+- A router method result must match one declared `emit` value.
+- Crew action-level `inputs` are the Crew kickoff inputs; use CEL-wrapped strings there for runtime values.
+- Crew agent/task interpolation uses `{name}` placeholders from evaluated crew inputs.
+- Agent `with.input` must be text. Use `${outputs.method_name.raw}` or a text field like `${outputs.method_name.json_dict.summary}`.
+{% if include_each_action %}
+- `each.do` must contain at least one named step.
+{% endif %}
