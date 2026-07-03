@@ -10,6 +10,11 @@ from typing import Any, Literal
 from jinja2 import Environment, FileSystemLoader
 import yaml
 
+from crewai.flow.expressions import (
+    FLOW_TEMPLATE_EXPRESSION_CONTRACT,
+    FLOW_TEMPLATE_EXPRESSION_EXAMPLES,
+    FLOW_TEMPLATE_EXPRESSION_RULES,
+)
 from crewai.flow.flow_definition import FlowDefinition
 
 
@@ -73,6 +78,10 @@ def template_context(
         "include_expression_action": "expression_action" not in skips,
         "include_script_action": "script_action" not in skips,
         "include_tool_action": "tool_action" not in skips,
+        "expression_contract_examples": FLOW_TEMPLATE_EXPRESSION_EXAMPLES[
+            examples_format
+        ],
+        "expression_contract_rules": FLOW_TEMPLATE_EXPRESSION_RULES,
         "sections": FlowSkillReferenceExtractor(skips=skips).extract(),
     }
 
@@ -185,7 +194,7 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         examples=True,
         descriptions={
             "call": "Action discriminator. Use crew to run an inline Crew definition.",
-            "inputs": "Actual kickoff inputs passed to the Crew. Use CEL-wrapped values here, for example `${state.topic}` or `${outputs.research_brief}`. The evaluated values are available to crew agent and task interpolation as `{name}` placeholders; reference each input the crew needs in agent or task text.",
+            "inputs": f"Actual kickoff inputs passed to the Crew. {FLOW_TEMPLATE_EXPRESSION_CONTRACT} The evaluated values are available to crew agent and task interpolation as `{{name}}` placeholders; reference each input the crew needs in agent or task text.",
         },
     ),
     ModelSpec(
@@ -253,7 +262,7 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         hidden=True,
         examples=True,
         descriptions={
-            "input": "Input passed to the individual agent kickoff outside of a crew. Use a single string value, often a dynamic `${...}` expression. When an agent needs multiple fields, build one single-line CEL string with labels and separators, using `text(root, 'path')` for values that may be missing or null, for example `${'Ticket ID: ' + text(state, 'ticket_id') + '; Message: ' + text(state, 'message')}`. In YAML, avoid `\\n` escapes inside `${...}` strings.",
+            "input": f"Input passed to the individual agent kickoff outside of a crew. Use one string. {FLOW_TEMPLATE_EXPRESSION_CONTRACT} When an agent needs multiple fields, write one string with labels and separators, for example `Ticket ID: ${{state.ticket_id}}; Message: ${{state.message}}`.",
             "llm": "Language model that runs this agent. Use an object when setting LLM options such as `max_tokens`.",
             "planning_config": "Agent planning configuration. Set `max_attempts` to limit planning refinement attempts before task execution.",
         },
