@@ -10,6 +10,7 @@ import pytest
 from crewai import Agent, Crew, Task
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import LLMStreamChunkEvent, ToolCall, FunctionCall
+from crewai.events.types.tool_usage_events import ToolUsageStartedEvent
 from crewai.flow.flow import Flow, start
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.types.streaming import (
@@ -1011,3 +1012,155 @@ class TestConcurrentStreamIsolation:
 
         _unregister_handler(state_a.handler)
         _unregister_handler(state_b.handler)
+
+
+# ---------------------------------------------------------------------------
+# Frame-streaming (stream_frames) tests
+# ---------------------------------------------------------------------------
+
+
+class TestCrewFrameStreaming:
+    """Tests for Crew-level frame streaming (stream_frames=True)."""
+
+    @staticmethod
+    def _fake_kickoff_returning(
+        output: Any,
+        events: list | None = None,
+    ) -> Any:
+        """Factory: returns a fake ``kickoff(self, ...)`` that emits *events*
+        on the crew bus and returns *output*."""
+
+        def fake_kickoff(
+            _self: Crew,
+            inputs: dict[str, Any] | None = None,
+            input_files: dict[str, Any] | None = None,
+            from_checkpoint: CheckpointConfig | None = None,
+        ) -> Any:
+            if events:
+                for event in events:
+                    crewai_event_bus.emit(_self, event)
+            return output
+
+        return fake_kickoff
+
+    def test_frame_stream_yields_mixed_events(
+        self, researcher: Agent, simple_task: Task
+    ) -> None:
+        """When stream_frames=True, the StreamSession includes non-LLM events."""
+        from crewai.crews.crew_output import CrewOutput
+
+        crew = Crew(
+            agents=[researcher],
+            tasks=[simple_task],
+            verbose=False,
+            stream=True,
+            stream_frames=True,
+        )
+        fake_output = MagicMock(spec=CrewOutput)
+        fake_output.raw = "mock output"
+
+        fake_kickoff = self._fake_kickoff_returning(
+            fake_output,
+            events=[
+                LLMStreamChunkEvent(
+                    type="llm_stream_chunk", chunk="token", call_id="c-1"
+                ),
+                ToolUsageStartedEvent(
+                    type="tool_usage_started",
+                    tool_name="search",
+                    tool_args={"q": "test"},
+                ),
+            ],
+        )
+
+        with patch.object(Crew, "kickoff", fake_kickoff):
+            session = crew._kickoff_frame_stream(None, None)
+            frames = list(session)
+
+        assert len(frames) >= 2, f"expected >=2 frames, got {len(frames)}"
+
+        channels = {f.channel for f in frames}
+        assert "llm" in channels, "LLM chunks should produce 'llm' channel frames"
+        assert (
+            "tools" in channels
+        ), "tool events should produce 'tools' channel frames — "
+        "this proves the frame path includes non-LLM events that the chunk "
+        "path drops"
+
+        assert session.result is fake_output
+
+    def test_frame_stream_result_accessible_after_exhaustion(
+        self, researcher: Agent, simple_task: Task
+    ) -> None:
+        """StreamSession.result returns the CrewOutput after all frames are consumed."""
+        from crewai.crews.crew_output import CrewOutput
+
+        crew = Crew(
+            agents=[researcher],
+            tasks=[simple_task],
+            verbose=False,
+            stream=True,
+            stream_frames=True,
+        )
+        fake_output = MagicMock(spec=CrewOutput)
+
+        with patch.object(Crew, "kickoff", self._fake_kickoff_returning(fake_output)):
+            session = crew._kickoff_frame_stream(None, None)
+            list(session)
+            assert session.result is fake_output
+            assert session.is_completed
+
+    def test_stream_frames_false_default_unchanged(
+        self, researcher: Agent, simple_task: Task
+    ) -> None:
+        """stream_frames=False (default) — the Crew field is False out of the box."""
+        crew = Crew(
+            agents=[researcher],
+            tasks=[simple_task],
+            verbose=False,
+            stream=True,
+        )
+        assert not crew.stream_frames
+        # The chunk path is still available (verified via existing tests).
+
+    @pytest.mark.asyncio
+    async def test_async_frame_stream_yields_tool_events(
+        self, researcher: Agent, simple_task: Task
+    ) -> None:
+        """Async frame streaming via _akickoff_frame_stream yields tool frames."""
+        from crewai.crews.crew_output import CrewOutput
+
+        crew = Crew(
+            agents=[researcher],
+            tasks=[simple_task],
+            verbose=False,
+            stream=True,
+            stream_frames=True,
+        )
+        fake_output = MagicMock(spec=CrewOutput)
+        fake_output.raw = "mock async"
+
+        fake_kickoff = self._fake_kickoff_returning(
+            fake_output,
+            events=[
+                LLMStreamChunkEvent(
+                    type="llm_stream_chunk",
+                    chunk="async-token",
+                    call_id="c-async",
+                ),
+                ToolUsageStartedEvent(
+                    type="tool_usage_started",
+                    tool_name="fetch",
+                    tool_args={"url": "/api"},
+                ),
+            ],
+        )
+
+        with patch.object(Crew, "kickoff", fake_kickoff):
+            session = await crew._akickoff_frame_stream(None, None)
+            frames = [f async for f in session]
+
+        assert len(frames) >= 2
+        channels = {f.channel for f in frames}
+        assert "tools" in channels
+        assert session.result is fake_output
