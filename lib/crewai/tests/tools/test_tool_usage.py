@@ -25,7 +25,7 @@ from crewai.hooks.tool_hooks import (
 )
 from crewai.tools import BaseTool
 from crewai.tools.tool_calling import ToolCalling
-from crewai.tools.tool_usage import ToolUsage
+from crewai.tools.tool_usage import ToolUsage, ToolUsageError
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from pydantic import BaseModel, Field
 import pytest
@@ -687,6 +687,69 @@ def test_tool_validate_input_error_event():
         assert event.agent_role == "test_role"
         assert event.tool_name == "test_tool"
         assert "must be a valid dictionary" in event.error
+
+
+def _build_tool_usage_for_original_calling() -> ToolUsage:
+    """Build a minimal ToolUsage instance for exercising _original_tool_calling."""
+    mock_agent = MagicMock()
+    mock_agent.key = "test_key"
+    mock_agent.role = "test_role"
+    mock_agent.verbose = False
+
+    class TestTool(BaseTool):
+        name: str = "Test Tool"
+        description: str = "A test tool"
+
+        def _run(self, input: dict) -> str:
+            return "test result"
+
+    return ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[TestTool()],
+        task=MagicMock(),
+        function_calling_llm=None,
+        agent=mock_agent,
+        action=MagicMock(tool="test_tool", tool_input='{"key": "value"}'),
+    )
+
+
+def test_original_tool_calling_valid_dict_returns_tool_calling():
+    """A valid dict from _validate_tool_input yields a ToolCalling result."""
+    tool_usage = _build_tool_usage_for_original_calling()
+
+    result = tool_usage._original_tool_calling("tool_string", raise_error=False)
+
+    assert isinstance(result, ToolCalling)
+    assert result.tool_name == "test_tool"
+    assert result.arguments == {"key": "value"}
+
+
+def test_original_tool_calling_non_dict_raises_tool_usage_error():
+    """Non-dict validation result with raise_error=True raises ToolUsageError.
+
+    Regression test: previously this path used a bare ``raise`` outside any
+    ``except`` block, producing ``RuntimeError: No active exception to re-raise``
+    instead of a meaningful error.
+    """
+    tool_usage = _build_tool_usage_for_original_calling()
+
+    with patch.object(
+        ToolUsage, "_validate_tool_input", return_value=["not", "a", "dict"]
+    ):
+        with pytest.raises(ToolUsageError):
+            tool_usage._original_tool_calling("tool_string", raise_error=True)
+
+
+def test_original_tool_calling_non_dict_returns_error_when_not_raising():
+    """Non-dict validation result with raise_error=False returns a ToolUsageError."""
+    tool_usage = _build_tool_usage_for_original_calling()
+
+    with patch.object(
+        ToolUsage, "_validate_tool_input", return_value=["not", "a", "dict"]
+    ):
+        result = tool_usage._original_tool_calling("tool_string", raise_error=False)
+
+    assert isinstance(result, ToolUsageError)
 
 
 def test_tool_usage_finished_event_with_result():
