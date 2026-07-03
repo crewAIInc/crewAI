@@ -3956,6 +3956,110 @@
       }
     },
     {
+      "description": "Verify when a photo was taken and its provenance. Checks EXIF and XMP metadata, validates C2PA Content Credentials against the official trust lists, and runs pixel forensics, returning one verdict (provenance_confirmed, consistent, inconclusive, metadata_anomaly, or manipulation_indicated) with a 0 to 100 confidence, plus the extracted capture time, capture device, and capture location. It does not detect deepfakes or AI generation; verdicts are investigative triage to support human review, not proof. Accepts a local image file path or a direct image URL.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Optional ChronoVerify API key (cv_live_...). Without it, requests use the free keyless path, which is rate limited per IP. A free key is available at https://chronoverify.com/v1/keys/free.",
+          "name": "CHRONOVERIFY_API_KEY",
+          "required": false
+        }
+      ],
+      "humanized_name": "ChronoVerify Image Verification",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Verify a photo's capture time and provenance with the ChronoVerify API.\n\nSends the image to the ChronoVerify verification endpoint, which checks\nEXIF and XMP metadata, validates C2PA Content Credentials against the\nofficial trust lists, and runs classical pixel forensics. The response is\na typed verdict with a 0 to 100 confidence plus the extracted capture\ntime, capture device, capture location, C2PA details, and file hashes.\n\nChronoVerify is not a deepfake or AI-generation detector. Verdicts are\ninvestigative triage to support human review, not proof.\n\nAn API key is optional. Without one, requests use the free keyless path,\nwhich is rate limited per IP. Set ``CHRONOVERIFY_API_KEY`` to meter\nrequests against a key instead.",
+        "properties": {
+          "api_base_url": {
+            "default": "https://chronoverify.com",
+            "description": "Base URL of the ChronoVerify API.",
+            "title": "Api Base Url",
+            "type": "string"
+          },
+          "request_timeout": {
+            "default": 120,
+            "description": "Timeout in seconds for the verification request.",
+            "title": "Request Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "ChronoVerifyImageVerificationTool",
+        "type": "object"
+      },
+      "name": "ChronoVerifyImageVerificationTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for ChronoVerifyImageVerificationTool.",
+        "properties": {
+          "image_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Local filesystem path of the image file to verify. Provide exactly one of image_path or image_url.",
+            "title": "Image Path"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Direct URL of the image to verify. Must be a direct link to the image bytes; redirects and hosts that block automated fetches fail, so prefer image_path when the file is available locally.",
+            "title": "Image Url"
+          }
+        },
+        "title": "ChronoVerifyImageVerificationToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to semantic search a query from a Code Docs content.",
       "env_vars": [],
       "humanized_name": "Search a Code Docs content",
