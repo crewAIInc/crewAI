@@ -849,9 +849,12 @@ class ToolUsage:
             return ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
 
         if not isinstance(arguments, dict):
+            tool_arguments_error = ToolUsageError(
+                f"{I18N_DEFAULT.errors('tool_arguments_error')}"
+            )
             if raise_error:
-                raise
-            return ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
+                raise tool_arguments_error
+            return tool_arguments_error
 
         return ToolCalling(
             tool_name=sanitize_tool_name(tool.name),
