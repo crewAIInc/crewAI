@@ -8,6 +8,7 @@ import contextvars
 from datetime import datetime
 import inspect
 import json
+import re
 import threading
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 from uuid import uuid4
@@ -3149,6 +3150,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     def _format_prompt(prompt: str, inputs: dict[str, str]) -> str:
         """Format prompt template with input values.
 
+        Substitutes every placeholder in a single pass so a substituted value
+        that itself contains a placeholder token (e.g. task input mentioning
+        the literal ``{tools}``) is not clobbered by a later replacement.
+
         Args:
             prompt: Template string.
             inputs: Values to substitute.
@@ -3156,9 +3161,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         Returns:
             Formatted prompt.
         """
-        prompt = prompt.replace("{input}", inputs["input"])
-        prompt = prompt.replace("{tool_names}", inputs["tool_names"])
-        return prompt.replace("{tools}", inputs["tools"])
+        return re.sub(
+            r"\{(input|tool_names|tools)\}",
+            lambda match: inputs[match.group(1)],
+            prompt,
+        )
 
     def _handle_human_feedback(self, formatted_answer: AgentFinish) -> AgentFinish:
         """Process human feedback and refine answer.

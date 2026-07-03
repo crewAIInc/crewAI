@@ -475,6 +475,29 @@ class TestAgentExecutor:
         assert "tool1, tool2" in result
         assert "desc" in result
 
+    def test_format_prompt_preserves_placeholder_tokens_in_values(
+        self, mock_dependencies
+    ):
+        """A value containing a placeholder token must not be re-substituted.
+
+        Regression: sequential ``str.replace`` substituted ``{input}`` first, so
+        task input that legitimately mentioned ``{tools}`` or ``{tool_names}``
+        had those tokens clobbered by the later replacements.
+        """
+        executor = _build_executor(**mock_dependencies)
+        inputs = {
+            "input": "explain the {tools} and {tool_names} placeholders",
+            "tool_names": "search",
+            "tools": "search: web search",
+        }
+
+        result = executor._format_prompt("Task: {input}\nTools: {tools}", inputs)
+
+        assert result == (
+            "Task: explain the {tools} and {tool_names} placeholders\n"
+            "Tools: search: web search"
+        )
+
     def test_is_training_mode_false(self, mock_dependencies):
         """Test training mode detection when not in training."""
         executor = _build_executor(**mock_dependencies)
