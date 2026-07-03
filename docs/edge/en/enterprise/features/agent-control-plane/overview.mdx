@@ -20,7 +20,7 @@ The **Agent Control Plane** (ACP) is the operations hub for everything you have 
 - Monitor the **health** of every live automation (crew or flow), with `Critical` / `Warning` / `Healthy` breakdowns and execution counts.
 - Track **LLM consumption** — tokens and cost — per automation, per provider, and per model, with a delta vs the previous period.
 - Drill into any single automation or model provider for time-series charts and per-provider breakdowns.
-- Apply organization-wide **Rules** (today: PII Redaction) across many automations at once instead of editing each deployment individually.
+- Apply organization-wide **Rules** (today: PII Redaction and Cost Limit) across many automations at once instead of editing each deployment individually.
 
 <Frame>
   ![Agent Control Plane overview](/images/enterprise/acp-overview-automations-sankey.png)
@@ -33,7 +33,7 @@ The **Agent Control Plane** (ACP) is the operations hub for everything you have 
 The two tabs answer two different questions:
 
 - **Automations** — *"How is my fleet behaving right now, and what is it costing me?"* See [Monitoring](/en/enterprise/features/agent-control-plane/monitoring).
-- **Rules** — *"How do I enforce a policy (e.g. PII redaction) across many deployments without re-deploying each one?"* See [Rules](/en/enterprise/features/agent-control-plane/rules).
+- **Rules** — *"How do I enforce a policy (e.g. PII redaction or a spend budget) across many deployments without re-deploying each one?"* See [Rules](/en/enterprise/features/agent-control-plane/rules).
 
 ## Requirements
 
@@ -42,7 +42,7 @@ The two tabs answer two different questions:
 </Warning>
 
 <Warning>
-  **Enterprise Plan or Ultra Plan** is required to create or edit [Rules](/en/enterprise/features/agent-control-plane/rules). Lower-tier organizations can open the Rules tab and view existing rules, but the editor renders read-only with an "Enterprise" lock pill and the alert *"PII Redaction rules require an Enterprise plan."* Monitoring (the Automations tab) is available on all plans where the feature is enabled.
+  **Enterprise Plan or Ultra Plan** is required to create or edit **PII Redaction** [Rules](/en/enterprise/features/agent-control-plane/rules). Lower-tier organizations can open the Rules tab and view existing rules, but the PII editor renders read-only with an "Enterprise" lock pill and the alert *"PII Redaction rules require an Enterprise plan."* **Cost Limit** rules and Monitoring (the Automations tab) are available on all plans where the feature is enabled.
 </Warning>
 
 - The **Agent Control Plane** feature must be enabled for your organization. If you don't see it in the sidebar, ask your account owner to request enablement.
@@ -56,7 +56,7 @@ The two tabs answer two different questions:
     Watch fleet health and LLM spend with metric cards, an interactive sankey, per-automation tables, and drill-down side panels for any automation or provider.
   </Card>
   <Card title="Rules" icon="shield-check" href="/en/enterprise/features/agent-control-plane/rules">
-    Apply organization-wide PII Redaction policies scoped by tools and tags. Changes take effect on the next execution — no re-deploy required.
+    Apply organization-wide PII Redaction and Cost Limit policies scoped by tools and tags. Changes take effect on the next execution — no re-deploy required.
   </Card>
 </CardGroup>
 
