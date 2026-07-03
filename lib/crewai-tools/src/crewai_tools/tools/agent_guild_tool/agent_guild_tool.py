@@ -101,7 +101,7 @@ class AgentGuildCheckTool(BaseTool):
     env_vars: List[EnvVar] = Field(default_factory=lambda: list(_ENV_VARS))
 
     def _run(self, capability: str) -> str:
-        return _request("/check?capability=" + urllib.parse.quote(capability))
+        return _request("/check?capability=" + urllib.parse.quote(capability, safe=""))
 
 
 class AgentGuildRiskScoreInput(BaseModel):
@@ -119,7 +119,8 @@ class AgentGuildRiskScoreTool(BaseTool):
     env_vars: List[EnvVar] = Field(default_factory=lambda: list(_ENV_VARS))
 
     def _run(self, agent_id: str) -> str:
-        return _request(f"/agents/{urllib.parse.quote(agent_id)}/risk-score")
+        quoted_id = urllib.parse.quote(agent_id, safe="")
+        return _request(f"/agents/{quoted_id}/risk-score")
 
 
 class AgentGuildVerifyPassportInput(BaseModel):
