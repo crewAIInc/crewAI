@@ -1,7 +1,7 @@
 from typing import Any
 from xml.etree.ElementTree import ParseError
 
-from defusedxml.ElementTree import fromstring, parse
+from defusedxml.ElementTree import fromstring
 from defusedxml.common import DefusedXmlException
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
@@ -42,10 +42,7 @@ class XMLLoader(BaseLoader):
 
     def _parse_xml(self, content: str, source_ref: str) -> LoaderResult:
         try:
-            if content.strip().startswith("<"):
-                root = fromstring(content)
-            else:
-                root = parse(source_ref).getroot()
+            root = fromstring(content)
 
             text_parts = []
             for text_content in root.itertext():

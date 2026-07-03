@@ -16,11 +16,12 @@ class TestXMLLoaderSecurity:
     """
 
     def test_rejects_external_entity_expansion(self):
-        """A document referencing an external entity must not resolve it.
+        """A document referencing an external entity must be refused.
 
-        The stdlib xml.etree parser would resolve `SYSTEM` entities (leaking
-        file contents). defusedxml refuses; XMLLoader captures that and
-        surfaces `security_error` in metadata.
+        defusedxml refuses to process any declared entity by default,
+        including this external `SYSTEM` reference. XMLLoader captures
+        that refusal and surfaces `security_error` in metadata instead
+        of letting the exception escape into `RAG.add()`.
         """
         malicious = (
             '<?xml version="1.0"?>'
@@ -80,6 +81,25 @@ class TestXMLLoaderSecurity:
         result = loader.load(SourceContent(broken))
 
         assert "parse_error" in result.metadata
+        assert "security_error" not in result.metadata
+
+    @patch("crewai_tools.rag.loaders.xml_loader.load_from_url")
+    def test_url_payload_with_bom_is_parsed_not_treated_as_path(self, mock_load):
+        """Content with a BOM or leading whitespace must still be parsed
+        as XML, not routed to a filesystem `parse(source_ref)` call that
+        would raise `FileNotFoundError` on a URL source_ref.
+        """
+        payload = (
+            "\ufeff<?xml version=\"1.0\"?><root><item>bom-safe</item></root>"
+        )
+        mock_load.return_value = payload
+
+        loader = XMLLoader()
+        result = loader.load(SourceContent("https://example.com/feed.xml"))
+
+        assert "bom-safe" in result.content
+        assert result.metadata["root_tag"] == "root"
+        assert "parse_error" not in result.metadata
         assert "security_error" not in result.metadata
 
     @patch("crewai_tools.rag.loaders.xml_loader.load_from_url")
