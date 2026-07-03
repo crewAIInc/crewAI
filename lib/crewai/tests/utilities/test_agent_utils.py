@@ -1319,6 +1319,26 @@ class TestProcessLlmResponse:
 
         assert isinstance(result, AgentFinish)
 
+    def test_observation_substring_in_action_input_preserved(self) -> None:
+        """An 'Observation:' inside the Action Input payload is not a truncation point.
+
+        The fabricated Observation is emitted on its own line, so anchoring the
+        truncation on the "\nObservation:" stop sequence leaves a payload that
+        merely mentions the word intact.
+        """
+        text = (
+            "Thought: I need to look this term up.\n"
+            'Action: web_search\n'
+            'Action Input: {"search_query": "what does Observation: mean in ReAct"}\n'
+            "Observation: It is the tool result step.\n"
+            "Final Answer: Observation is the tool result step in ReAct."
+        )
+        result = process_llm_response(text, use_stop_words=False)
+
+        assert isinstance(result, AgentAction)
+        assert result.tool == "web_search"
+        assert "what does Observation: mean in ReAct" in result.tool_input
+
     def test_action_without_observation_unchanged(self) -> None:
         """An Action followed directly by a Final Answer keeps current behavior."""
         text = (

@@ -580,11 +580,13 @@ def process_llm_response(
         action_match = ACTION_INPUT_REGEX.search(answer)
         final_answer_idx = answer.find(FINAL_ANSWER_ACTION)
         if action_match and action_match.start() < final_answer_idx:
-            # Without a "\nObservation:" stop sequence the model generates past
+            # Without the "\nObservation:" stop sequence the model generates past
             # the real tool call, fabricating an Observation and Final Answer.
             # Discard the fabricated continuation so the actual Action executes.
+            # Anchor on the newline (the real stop sequence) so an "Observation:"
+            # substring inside the Action Input payload isn't mistaken for it.
             observation_idx = answer.find(
-                "Observation:", action_match.start(), final_answer_idx
+                "\nObservation:", action_match.start(), final_answer_idx
             )
             if observation_idx != -1:
                 answer = answer[:observation_idx].strip()
