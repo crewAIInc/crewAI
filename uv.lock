@@ -13,7 +13,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-06-20T16:46:21.117658Z"
+exclude-newer = "2026-06-28T20:06:34.114646Z"
 exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
@@ -1371,6 +1371,7 @@ azure-ai-inference = [
     { name = "azure-identity" },
 ]
 bedrock = [
+    { name = "aiobotocore" },
     { name = "boto3" },
 ]
 docling = [
@@ -1418,6 +1419,7 @@ watson = [
 requires-dist = [
     { name = "a2a-sdk", marker = "extra == 'a2a'", specifier = "~=0.3.10" },
     { name = "aiobotocore", marker = "extra == 'aws'", specifier = "~=3.5.0" },
+    { name = "aiobotocore", marker = "extra == 'bedrock'", specifier = "~=3.5.0" },
     { name = "aiocache", extras = ["memcached", "redis"], marker = "extra == 'a2a'", specifier = "~=0.12.3" },
     { name = "aiofiles", specifier = "~=24.1.0" },
     { name = "aiosqlite", specifier = "~=0.21.0" },
