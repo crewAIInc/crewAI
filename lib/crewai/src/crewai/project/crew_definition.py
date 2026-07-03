@@ -66,21 +66,24 @@ class CrewAgentDefinition(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    role: str = Field(
+    role: str | None = Field(
+        default=None,
         description=(
             "Crew agent role. Crew inputs are interpolated with `{name}` "
             "placeholders such as `{topic}`; this is not CEL."
         ),
         examples=["Research analyst"],
     )
-    goal: str = Field(
+    goal: str | None = Field(
+        default=None,
         description=(
             "Crew agent goal. Crew inputs are interpolated with `{name}` "
             "placeholders such as `{topic}`; this is not CEL."
         ),
         examples=["Research {topic}"],
     )
-    backstory: str = Field(
+    backstory: str | None = Field(
+        default=None,
         description=(
             "Crew agent backstory. Crew inputs are interpolated with `{name}` "
             "placeholders such as `{topic}`; this is not CEL."
@@ -91,6 +94,15 @@ class CrewAgentDefinition(BaseModel):
         default=None,
         description="Optional built-in type or Python reference used to load the agent.",
         examples=["agent", {"python": "my_project.agents.ResearchAgent"}],
+    )
+    from_repository: str | None = Field(
+        default=None,
+        description=(
+            "Agent repository name to load. Repository values supply missing "
+            "agent configuration; explicitly provided local fields override the "
+            "repository values."
+        ),
+        examples=["researcher"],
     )
     settings: dict[str, Any] = Field(
         default_factory=dict,
@@ -183,15 +195,18 @@ class CrewAgentDefinition(BaseModel):
 class AgentDefinition(CrewAgentDefinition):
     """Inline individual agent definition used outside of a crew."""
 
-    role: str = Field(
+    role: str | None = Field(
+        default=None,
         description="Individual agent role used by a Flow agent action outside of a crew.",
         examples=["Support specialist"],
     )
-    goal: str = Field(
+    goal: str | None = Field(
+        default=None,
         description="Individual agent goal for the Flow agent action outside of a crew.",
         examples=["Draft a concise customer reply"],
     )
-    backstory: str = Field(
+    backstory: str | None = Field(
+        default=None,
         description=(
             "Individual agent backstory used to shape behavior outside of a crew."
         ),

@@ -89,7 +89,20 @@ Use these expression forms correctly:
 {% if include_expression_action or include_each_action %}
 - Raw CEL: use in {% if include_expression_action and include_each_action %}`expr`, `in`, and `if`{% elif include_expression_action %}`expr`{% else %}`in` and `if`{% endif %}. Do not wrap raw CEL in `${...}`.
 {% endif %}
-- Action mappings: wrap the whole string in `${...}`.
+{% for rule in expression_contract_rules %}
+- {{ rule }}
+{% endfor %}
+
+Expression examples:
+{% for example in expression_contract_examples %}
+
+{{ example.title }}:
+
+```{{ example_language }}
+{{ example.code }}
+```
+{% endfor %}
+
 - Crew text: use `{name}` placeholders from crew inputs. Example: `Research {topic}`.
 - Crew inputs become prompt text only when agent or task text references matching `{name}` placeholders.
 - Passing an input that is not referenced by any `{name}` placeholder does not ground the crew. If the crew needs a field, put that placeholder in an agent `goal`, task `description`, or task `expected_output`.
@@ -105,13 +118,8 @@ Available CEL variables:
 
 Dynamic value rules:
 
-- A string is dynamic only when the whole trimmed string is wrapped in `${...}`.
-- `Ticket: ${state.ticket}` stays literal. For computed strings, build the string inside the CEL expression.
-- For prompt text, use CrewAI's CEL helper `text(root, "path", "default")` to safely read missing or null values as strings. The default argument is optional and defaults to `""`.
-- When an agent needs multiple fields, build one single-line CEL string with labels and separators. Example: `input: "${'Ticket ID: ' + text(state, 'ticket_id') + '; Message: ' + text(state, 'message')}"`.
-- In YAML, do not put `\n` escapes inside `${...}` strings. Prefer plain `${state.field}` values or the single-line labeled pattern above.
-- `${...}` keeps the value type. It does not always make text.
-- Crew action-level `inputs` are the actual Crew kickoff inputs. Use CEL-wrapped values there for runtime data from `state` or `outputs`.
+- When an agent needs multiple fields, write one text value with labels and separators. Example value: `Ticket ID: ${state.ticket_id}; Message: ${state.message}`.
+- Crew action-level `inputs` are the actual Crew kickoff inputs. Use `${...}` values there for runtime data from `state` or `outputs`.
 - Crew action-level `inputs` alone are not grounding. Include placeholders for the facts the model must use.
 - Crew outputs are objects. Use `${outputs.research_brief.raw}` for text.
 - For structured crew output, use fields like `${outputs.research_brief.json_dict.field}` or `${outputs.research_brief.pydantic.field}`.
