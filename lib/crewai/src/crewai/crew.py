@@ -117,7 +117,11 @@ from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.agent_tools.read_file_tool import ReadFileTool
 from crewai.tools.base_tool import BaseTool
 from crewai.types.callback import SerializableCallable
-from crewai.types.streaming import CrewStreamingOutput
+from crewai.types.streaming import (
+    AsyncStreamSession,
+    CrewStreamingOutput,
+    StreamSession,
+)
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
 from crewai.utilities.crew.models import CrewContext
@@ -137,7 +141,10 @@ from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.streaming import (
     create_async_chunk_generator,
+    create_async_frame_generator,
     create_chunk_generator,
+    create_frame_generator,
+    create_frame_streaming_state,
     register_cleanup,
     signal_end,
     signal_error,
@@ -292,6 +299,16 @@ class Crew(FlowTrackable, BaseModel):
     stream: bool = Field(
         default=False,
         description="Whether to stream output from the crew execution.",
+    )
+    stream_frames: bool = Field(
+        default=False,
+        description=(
+            "When True (requires stream=True), kickoff yields StreamFrame "
+            "events covering the full execution (LLM tokens, tool calls, "
+            "agent/task lifecycle) instead of StreamChunk token chunks. "
+            "Returns a StreamSession / AsyncStreamSession whose .subscribe() "
+            "allows filtering by channel (llm, tools, messages, flow, lifecycle)."
+        ),
     )
     max_rpm: int | None = Field(
         default=None,
@@ -968,7 +985,7 @@ class Crew(FlowTrackable, BaseModel):
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
-    ) -> CrewOutput | CrewStreamingOutput:
+    ) -> CrewOutput | CrewStreamingOutput | StreamSession[CrewOutput]:
         """Execute the crew's workflow.
 
         Args:
@@ -987,6 +1004,8 @@ class Crew(FlowTrackable, BaseModel):
         get_env_context()
         if self.stream:
             enable_agent_streaming(self.agents)
+            if self.stream_frames:
+                return self._kickoff_frame_stream(inputs, input_files)
             ctx = StreamingContext()
 
             def run_crew() -> None:
@@ -1098,7 +1117,7 @@ class Crew(FlowTrackable, BaseModel):
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
-    ) -> CrewOutput | CrewStreamingOutput:
+    ) -> CrewOutput | CrewStreamingOutput | AsyncStreamSession[CrewOutput]:
         """Asynchronous kickoff method to start the crew execution.
 
         Args:
@@ -1121,6 +1140,8 @@ class Crew(FlowTrackable, BaseModel):
 
         if self.stream:
             enable_agent_streaming(self.agents)
+            if self.stream_frames:
+                return await self._akickoff_frame_stream(inputs, input_files)
             ctx = StreamingContext(use_async=True)
 
             async def run_crew() -> None:
@@ -1146,6 +1167,83 @@ class Crew(FlowTrackable, BaseModel):
             return streaming_output
 
         return await asyncio.to_thread(self.kickoff, inputs, input_files)
+
+    def _kickoff_frame_stream(
+        self,
+        inputs: dict[str, Any] | None,
+        input_files: dict[str, FileInput] | None,
+    ) -> StreamSession[CrewOutput]:
+        """Run kickoff and stream full execution frames.
+
+        Yields ``StreamFrame`` events for the entire crew run (LLM tokens,
+        tool calls, agent/task lifecycle) via the existing frame streaming
+        pipeline, instead of the default ``StreamChunk`` token-only stream.
+        Consumers iterate the returned ``StreamSession`` (or filter with
+        ``.subscribe(channels=...)``) and access the final ``CrewOutput`` via
+        ``.result`` after exhaustion. Requires ``stream=True``; ``stream_frames``
+        selects this path over chunk streaming.
+
+        Args:
+            inputs: Optional input dictionary for task interpolation.
+            input_files: Optional dict of named file inputs for the crew.
+
+        Returns:
+            A ``StreamSession`` yielding ``StreamFrame`` events.
+        """
+        result_holder: list[CrewOutput] = []
+        state = create_frame_streaming_state(result_holder, use_async=False)
+        output_holder: list[StreamSession[Any]] = []
+
+        def run_crew() -> CrewOutput | None:
+            self.stream = False
+            try:
+                crew_result = self.kickoff(inputs=inputs, input_files=input_files)
+                return crew_result if isinstance(crew_result, CrewOutput) else None
+            finally:
+                self.stream = True
+
+        stream_session: StreamSession[CrewOutput] = StreamSession(
+            sync_iterator=create_frame_generator(state, run_crew, output_holder)
+        )
+        output_holder.append(stream_session)
+        return stream_session
+
+    async def _akickoff_frame_stream(
+        self,
+        inputs: dict[str, Any] | None,
+        input_files: dict[str, FileInput] | None,
+    ) -> AsyncStreamSession[CrewOutput]:
+        """Run kickoff asynchronously and stream full execution frames.
+
+        Async counterpart of ``_kickoff_frame_stream``. Yields ``StreamFrame``
+        events via the existing async frame streaming pipeline, instead of the
+        default ``StreamChunk`` token-only stream. Requires ``stream=True``;
+        ``stream_frames`` selects this path over chunk streaming.
+
+        Args:
+            inputs: Optional input dictionary for task interpolation.
+            input_files: Optional dict of named file inputs for the crew.
+
+        Returns:
+            An ``AsyncStreamSession`` yielding ``StreamFrame`` events.
+        """
+        result_holder: list[CrewOutput] = []
+        state = create_frame_streaming_state(result_holder, use_async=True)
+        output_holder: list[AsyncStreamSession[Any]] = []
+
+        async def run_crew() -> CrewOutput | None:
+            self.stream = False
+            try:
+                result = await asyncio.to_thread(self.kickoff, inputs, input_files)
+                return result if isinstance(result, CrewOutput) else None
+            finally:
+                self.stream = True
+
+        stream_session: AsyncStreamSession[CrewOutput] = AsyncStreamSession(
+            async_iterator=create_async_frame_generator(state, run_crew, output_holder)
+        )
+        output_holder.append(stream_session)
+        return stream_session
 
     async def kickoff_for_each_async(
         self,
