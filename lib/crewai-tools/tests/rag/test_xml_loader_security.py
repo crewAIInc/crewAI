@@ -2,9 +2,6 @@
 
 from unittest.mock import patch
 
-import pytest
-from defusedxml.common import EntitiesForbidden
-
 from crewai_tools.rag.loaders.xml_loader import XMLLoader
 from crewai_tools.rag.source_content import SourceContent
 
@@ -12,14 +9,18 @@ from crewai_tools.rag.source_content import SourceContent
 class TestXMLLoaderSecurity:
     """Ensure XMLLoader rejects XML documents that would trigger XXE or entity
     expansion attacks when parsed with the standard library.
+
+    The loader keeps its "return a LoaderResult with an error in metadata"
+    contract for malformed input, so malicious documents are contained at the
+    loader boundary rather than aborting the caller (e.g. RAG.add).
     """
 
     def test_rejects_external_entity_expansion(self):
         """A document referencing an external entity must not resolve it.
 
-        Using stdlib xml.etree, the entity would either be resolved (leaking
-        file contents) or silently dropped depending on the parser. defusedxml
-        raises instead, which is the desired behavior.
+        The stdlib xml.etree parser would resolve `SYSTEM` entities (leaking
+        file contents). defusedxml refuses; XMLLoader captures that and
+        surfaces `security_error` in metadata.
         """
         malicious = (
             '<?xml version="1.0"?>'
@@ -30,10 +31,12 @@ class TestXMLLoaderSecurity:
         )
 
         loader = XMLLoader()
-        source = SourceContent(malicious)
+        result = loader.load(SourceContent(malicious))
 
-        with pytest.raises(EntitiesForbidden):
-            loader.load(source)
+        assert result.content == ""
+        assert "security_error" in result.metadata
+        assert result.metadata["format"] == "xml"
+        assert "root_tag" not in result.metadata
 
     def test_rejects_billion_laughs(self):
         """Nested entity expansion (billion laughs) must be refused."""
@@ -48,10 +51,11 @@ class TestXMLLoaderSecurity:
         )
 
         loader = XMLLoader()
-        source = SourceContent(malicious)
+        result = loader.load(SourceContent(malicious))
 
-        with pytest.raises(EntitiesForbidden):
-            loader.load(source)
+        assert result.content == ""
+        assert "security_error" in result.metadata
+        assert result.metadata["format"] == "xml"
 
     def test_parses_safe_xml(self):
         """A benign XML document without a DOCTYPE must still parse."""
@@ -64,6 +68,19 @@ class TestXMLLoaderSecurity:
         assert "world" in result.content
         assert result.metadata["format"] == "xml"
         assert result.metadata["root_tag"] == "root"
+        assert "security_error" not in result.metadata
+
+    def test_malformed_xml_still_returns_parse_error(self):
+        """Non-security parse failures still land in `parse_error`, not
+        `security_error`, so existing consumers keep working.
+        """
+        broken = "<root><unclosed>"
+
+        loader = XMLLoader()
+        result = loader.load(SourceContent(broken))
+
+        assert "parse_error" in result.metadata
+        assert "security_error" not in result.metadata
 
     @patch("crewai_tools.rag.loaders.xml_loader.load_from_url")
     def test_rejects_xxe_from_url_source(self, mock_load):
@@ -77,7 +94,7 @@ class TestXMLLoaderSecurity:
         )
 
         loader = XMLLoader()
-        source = SourceContent("https://example.com/feed.xml")
+        result = loader.load(SourceContent("https://example.com/feed.xml"))
 
-        with pytest.raises(EntitiesForbidden):
-            loader.load(source)
+        assert result.content == ""
+        assert "security_error" in result.metadata
