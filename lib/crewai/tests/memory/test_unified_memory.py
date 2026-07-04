@@ -179,6 +179,32 @@ def test_lancedb_list_scopes_get_scope_info(lancedb_path: Path) -> None:
     assert info.path == "/"
 
 
+def test_lancedb_scope_prefix_respects_path_boundary(lancedb_path: Path) -> None:
+    """Scope operations must not leak into lexicographic sibling scopes.
+
+    ``/team`` owns itself and descendants under ``/team/`` but is a distinct
+    scope from the sibling ``/team-b`` (which merely shares a string prefix).
+    """
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(lancedb_path), vector_dim=4)
+    storage.save([
+        MemoryRecord(content="team", scope="/team", embedding=[0.1] * 4),
+        MemoryRecord(content="team-b", scope="/team-b", embedding=[0.2] * 4),
+        MemoryRecord(content="child", scope="/team/x", embedding=[0.3] * 4),
+    ])
+
+    # count/get_scope_info must include the scope + its descendants only.
+    assert storage.count("/team") == 2  # /team and /team/x, NOT /team-b
+    assert storage.count("/team-b") == 1
+
+    # reset must delete only the /team subtree, leaving the sibling intact.
+    storage.reset("/team")
+    assert storage.count("/team-b") == 1
+    surviving = {r.scope for r in storage.list_records(limit=100)}
+    assert surviving == {"/team-b"}
+
+
 
 
 @pytest.fixture
