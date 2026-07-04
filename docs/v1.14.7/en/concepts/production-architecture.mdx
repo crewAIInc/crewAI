@@ -121,33 +121,6 @@ def log_request(context):
     print(f"Agent {context.agent.role} is calling the LLM...")
 ```
 
-## Governance and Auditability Patterns
-
-For multi-agent workflows in production, treat governance and auditability as first-class architecture concerns.
-
-### 1. Explicit handoff boundaries
-
-When one agent or crew hands work to another, log the handoff intent and expected output schema. This reduces ambiguity and makes post-incident analysis easier.
-
-### 2. Traceable tool execution
-
-Prefer tools and tasks that can emit structured traces (inputs, outputs, timestamps, and result status). Pair this with [CrewAI Tracing](/en/observability/tracing) so operators can reconstruct execution paths quickly.
-
-### 3. Safe defaults for production runs
-
-- Use guardrails on critical tasks.
-- Prefer structured outputs across boundaries.
-- Keep retry behavior explicit and bounded.
-- Route sensitive or high-impact actions through a human approval step.
-
-### 4. Anti-patterns to avoid
-
-- Hidden side effects in tasks that are not visible in traces.
-- Cross-agent state mutation without clear ownership.
-- Overloading one crew with unrelated responsibilities.
-
-These patterns help teams scale CrewAI workflows while preserving reliability, reviewability, and operational trust.
-
 ## Deployment Patterns
 
 When deploying your Flow, consider the following:
