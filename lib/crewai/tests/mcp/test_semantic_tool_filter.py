@@ -91,6 +91,38 @@ class TestSemanticToolFilter:
         )
         assert flt(ctx, {"name": "web_search", "description": "search the web"}) is True
 
+    def test_fail_open_when_embedder_returns_empty_vector(self) -> None:
+        """An embedder returning an empty vector fails open (tool included)."""
+
+        class EmptyEmbedder:
+            def __call__(self, input: list[str]) -> list[list[float]]:
+                return [[] for _ in input]
+
+        flt = SemanticToolFilter(embedder=EmptyEmbedder(), threshold=0.3)
+        ctx = ToolFilterContext(
+            agent=_agent(role="Researcher", goal="search the web"),
+            server_name="srv",
+            run_context=None,
+        )
+        assert flt(ctx, {"name": "web_search", "description": "search the web"}) is True
+
+    def test_fail_open_when_embeddings_differ_in_length(self) -> None:
+        """Mismatched embedding lengths fail open (strict zip raises, caught)."""
+
+        class MismatchedEmbedder:
+            def __call__(self, input: list[str]) -> list[list[float]]:
+                # Query (agent profile) contains "Researcher"; tool text does not.
+                # Yield different lengths so the strict zip raises.
+                return [[1.0, 0.0, 0.0] if "Researcher" in t else [1.0, 0.0] for t in input]
+
+        flt = SemanticToolFilter(embedder=MismatchedEmbedder(), threshold=0.3)
+        ctx = ToolFilterContext(
+            agent=_agent(role="Researcher", goal="search the web"),
+            server_name="srv",
+            run_context=None,
+        )
+        assert flt(ctx, {"name": "web_search", "description": "search the web"}) is True
+
     def test_run_context_query_takes_precedence(self) -> None:
         """An explicit run_context query overrides the agent profile."""
         embedder = BagOfWordsEmbedder()

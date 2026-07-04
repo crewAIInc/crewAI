@@ -179,7 +179,7 @@ def _cosine_similarity(a: list[float], b: list[float]) -> float:
     """
     if not a or not b:
         return 0.0
-    dot = sum(x * y for x, y in zip(a, b, strict=False))
+    dot = sum(x * y for x, y in zip(a, b, strict=True))
     na = math.sqrt(sum(x * x for x in a))
     nb = math.sqrt(sum(y * y for y in b))
     if na == 0.0 or nb == 0.0:
@@ -261,10 +261,15 @@ class SemanticToolFilter:
         try:
             query_vec = self._embed(query)
             tool_vec = self._embed(tool_text)
+            if not query_vec or not tool_vec:
+                # Empty embedding (e.g. embedder returned nothing useful)
+                # is treated as a failure and fails open.
+                return True
+            similarity = _cosine_similarity(query_vec, tool_vec)
         except Exception:
             return True
 
-        return _cosine_similarity(query_vec, tool_vec) >= self.threshold
+        return similarity >= self.threshold
 
     def _query_text(self, context: ToolFilterContext) -> str | None:
         """Derive the query string from run_context or the agent profile."""
