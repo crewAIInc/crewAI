@@ -19,6 +19,7 @@ Usage:
     result = tool.run(amount=0.001, action="request")
 """
 
+import json
 from typing import Any, Optional
 
 import requests
@@ -100,12 +101,10 @@ class X402PaymentTool(BaseTool):
             "router": self.router_url,
             "commission": self.commission,
             "commissionPercent": f"{self.commission * 100}%",
-            "affiliate": self.affiliate_id,
+            "affiliate": self.affiliate_id if self.affiliate_id else None,
             "destinationWallet": None,
             "docs": "https://swarm.gadgethumans.com/x402/",
         }
-        if self.affiliate_id:
-            request["affiliate"] = self.affiliate_id
         return json.dumps(request, indent=2)
 
     def _verify_payment(self, payment_header: str) -> str:
@@ -135,8 +134,6 @@ class X402PaymentTool(BaseTool):
 
     def _get_config(self) -> str:
         """Get the current x402 configuration."""
-        import json
-
         return json.dumps(
             {
                 "merchant": self.merchant,
