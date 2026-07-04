@@ -1081,11 +1081,11 @@ class TestCrewFrameStreaming:
 
         channels = {f.channel for f in frames}
         assert "llm" in channels, "LLM chunks should produce 'llm' channel frames"
-        assert (
-            "tools" in channels
-        ), "tool events should produce 'tools' channel frames — "
-        "this proves the frame path includes non-LLM events that the chunk "
-        "path drops"
+        assert "tools" in channels, (
+            "tool events should produce 'tools' channel frames — "
+            "this proves the frame path includes non-LLM events that the chunk "
+            "path drops"
+        )
 
         assert session.result is fake_output
 
@@ -1109,6 +1109,19 @@ class TestCrewFrameStreaming:
             list(session)
             assert session.result is fake_output
             assert session.is_completed
+
+    def test_stream_frames_implies_stream(
+        self, researcher: Agent, simple_task: Task
+    ) -> None:
+        """stream_frames=True auto-enables stream=True (no silent ignore)."""
+        crew = Crew(
+            agents=[researcher],
+            tasks=[simple_task],
+            verbose=False,
+            stream_frames=True,
+        )
+        assert crew.stream is True
+        assert crew.stream_frames is True
 
     def test_stream_frames_false_default_unchanged(
         self, researcher: Agent, simple_task: Task

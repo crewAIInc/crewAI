@@ -303,11 +303,12 @@ class Crew(FlowTrackable, BaseModel):
     stream_frames: bool = Field(
         default=False,
         description=(
-            "When True (requires stream=True), kickoff yields StreamFrame "
-            "events covering the full execution (LLM tokens, tool calls, "
-            "agent/task lifecycle) instead of StreamChunk token chunks. "
-            "Returns a StreamSession / AsyncStreamSession whose .subscribe() "
-            "allows filtering by channel (llm, tools, messages, flow, lifecycle)."
+            "When True, kickoff yields StreamFrame events covering the full "
+            "execution (LLM tokens, tool calls, agent/task lifecycle) instead "
+            "of StreamChunk token chunks. Implies stream=True (streaming is "
+            "auto-enabled if not set). Returns a StreamSession / "
+            "AsyncStreamSession whose .subscribe() allows filtering by channel "
+            "(llm, tools, messages, flow, lifecycle)."
         ),
     )
     max_rpm: int | None = Field(
@@ -707,6 +708,18 @@ class Crew(FlowTrackable, BaseModel):
                 self._logger.log(
                     "warning", f"Failed to init knowledge: {e}", color="yellow"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def enforce_stream_frames_contract(self) -> Self:
+        """Ensure ``stream_frames`` implies ``stream``.
+
+        ``stream_frames`` only takes effect when ``stream`` is True. Rather
+        than silently ignoring ``stream_frames=True`` with ``stream=False``,
+        enable streaming so the frame output is produced as documented.
+        """
+        if self.stream_frames and not self.stream:
+            self.stream = True
         return self
 
     @model_validator(mode="after")
