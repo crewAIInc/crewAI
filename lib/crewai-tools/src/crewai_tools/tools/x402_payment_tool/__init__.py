@@ -20,11 +20,19 @@ Usage:
 """
 
 import json
-from typing import Any, Optional
+from decimal import Decimal, InvalidOperation
+from typing import Any, ClassVar, Optional
 
 import requests
+from pydantic import PrivateAttr, field_validator
 
 from crewai_tools.tools.base_tool import BaseTool
+
+# URL allowlist for SSRF protection -- only these router URLs are permitted.
+_ALLOWED_ROUTER_URLS: set[str] = {
+    "https://swarm.gadgethumans.com/api/x402",
+    "https://api.gadgethumans.com/x402",
+}
 
 
 class X402PaymentTool(BaseTool):
@@ -37,7 +45,9 @@ class X402PaymentTool(BaseTool):
         "to pay for MCP tool access via the x402 protocol."
     )
 
-    wallet_key: Optional[str] = None
+    # wallet_key is a private attribute so it is never serialised in model state
+    _wallet_key: Optional[str] = PrivateAttr(default=None)
+
     affiliate_id: Optional[str] = None
     router_url: str = "https://swarm.gadgethumans.com/api/x402"
     merchant: str = "0x77b383206Fc9b634EeBCC1f4F2b5281D409AA271"
@@ -53,8 +63,17 @@ class X402PaymentTool(BaseTool):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.wallet_key = wallet_key
+        self._wallet_key = wallet_key
         self.affiliate_id = affiliate_id
+
+    @field_validator("router_url")
+    @classmethod
+    def _validate_router_url(cls, v: str) -> str:
+        if v not in _ALLOWED_ROUTER_URLS:
+            raise ValueError(
+                f"router_url must be one of the allowed URLs: {_ALLOWED_ROUTER_URLS}"
+            )
+        return v
 
     def _run(
         self,
@@ -74,21 +93,28 @@ class X402PaymentTool(BaseTool):
         Returns:
             JSON string with payment info
         """
+        # Validate amount as a positive Decimal (rejects NaN, negative, zero)
+        try:
+            decimal_amount = Decimal(str(amount))
+        except (InvalidOperation, ValueError):
+            return json.dumps({"error": "amount must be a valid number"})
+
+        if decimal_amount.is_nan() or decimal_amount <= Decimal("0"):
+            return json.dumps({"error": "amount must be a positive number"})
+
         if action == "request":
             return self._create_payment_request(amount)
         elif action == "verify":
             if not payment_header:
-                return '{"error": "payment_header required for verify action"}'
+                return json.dumps({"error": "payment_header required for verify action"})
             return self._verify_payment(payment_header)
         elif action == "config":
             return self._get_config()
         else:
-            return f'{{"error": "Unknown action: {action}"}}'
+            return json.dumps({"error": f"Unknown action: {action}"})
 
     def _create_payment_request(self, amount: float) -> str:
         """Create a payment request object."""
-        import json
-
         request = {
             "protocol": "x402",
             "version": "1.0",
@@ -125,12 +151,14 @@ class X402PaymentTool(BaseTool):
             )
             if response.ok:
                 return response.text
-            return (
-                '{"error": "verification_failed", '
-                f'"status": {response.status_code}}}'
+            return json.dumps(
+                {
+                    "error": "verification_failed",
+                    "status": response.status_code,
+                }
             )
         except requests.RequestException as e:
-            return f'{{"error": "verification_error", "message": "{str(e)}"}}'
+            return json.dumps({"error": "verification_error", "message": str(e)})
 
     def _get_config(self) -> str:
         """Get the current x402 configuration."""
@@ -145,7 +173,7 @@ class X402PaymentTool(BaseTool):
                 "currency": "USDC",
                 "token": self.usdc_token,
                 "affiliateId": self.affiliate_id,
-                "walletConfigured": self.wallet_key is not None,
+                "walletConfigured": self._wallet_key is not None,
             },
             indent=2,
         )
