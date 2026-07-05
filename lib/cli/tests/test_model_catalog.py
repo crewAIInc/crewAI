@@ -188,6 +188,19 @@ def test_vendor_gemini_paginates(monkeypatch):
     assert ids == ["gemini-2.5-pro", "gemini-3.5-flash"]
 
 
+def test_vendor_gemini_first_page_error_uses_fallback(monkeypatch):
+    # A total (first-page) Gemini failure with a key set must fall back to the
+    # curated list, not be mistaken for a successful empty result.
+    monkeypatch.setenv("GEMINI_API_KEY", "key")
+
+    def boom(*a, **k):
+        raise RuntimeError("gemini down")
+
+    monkeypatch.setattr(mc, "_http_get_json", boom)
+    models = mc.get_provider_models("gemini", [("gemini-x", "Gemini X")])
+    assert models == [("gemini-x", "Gemini X")]
+
+
 def test_vendor_gemini_keeps_partial_on_later_page_error(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "key")
 

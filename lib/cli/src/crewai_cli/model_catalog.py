@@ -243,9 +243,13 @@ def _fetch_gemini(api_key: str | None) -> list[dict[str, Any]]:
                 params=params,
             )
         except Exception:
-            # A later-page failure keeps the models already gathered rather than
-            # discarding them; a first-page failure just yields an empty list.
-            break
+            # Later-page failure: keep the models already gathered. First-page
+            # failure (nothing gathered yet) is a real outage — re-raise so the
+            # caller falls back to the curated list rather than mistaking it for
+            # a successful empty result.
+            if entries:
+                break
+            raise
         for item in data.get("models", []):
             methods = item.get("supportedGenerationMethods") or []
             if "generateContent" not in methods:
