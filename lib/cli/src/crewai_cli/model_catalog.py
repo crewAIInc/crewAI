@@ -131,12 +131,20 @@ def get_provider_models(
 
     label_map = {model_id: label for model_id, label in fallback}
 
-    entries = _from_vendor(provider_key)
-    # The LiteLLM feed lags real releases, so only reach for it when we have no
-    # curated fallback for this provider — never let it override the fallback.
-    if not entries and not fallback:
-        entries = _from_litellm(provider_key)
+    # A non-None vendor result is authoritative — even when empty (e.g. a
+    # reachable Ollama with no models installed): show that rather than
+    # hardcoded suggestions the crew can't actually run. The picker handles an
+    # empty list by prompting for manual entry.
+    vendor = _from_vendor(provider_key)
+    if vendor is not None:
+        result = _finalize(vendor, label_map)
+        if result:
+            _write_catalog_cache(provider_key, result, source="dynamic")
+        return result
 
+    # Vendor tier unavailable. The LiteLLM feed lags real releases, so only
+    # reach for it when we have no curated fallback — never override the fallback.
+    entries = _from_litellm(provider_key) if not fallback else None
     result = _finalize(entries, label_map) if entries else []
     if result:
         _write_catalog_cache(provider_key, result, source="dynamic")
@@ -153,7 +161,13 @@ def get_provider_models(
 
 
 def _from_vendor(provider_key: str) -> list[dict[str, Any]] | None:
-    """Fetch models straight from the vendor, or ``None`` if unavailable."""
+    """Fetch models from the vendor.
+
+    Returns the model list on a successful fetch — **including an empty list**,
+    which is meaningful (e.g. a reachable Ollama server with nothing installed).
+    Returns ``None`` only when the vendor tier is unavailable: no fetcher, no
+    API key, or the request failed.
+    """
     fetcher = _VENDOR_FETCHERS.get(provider_key)
     if fetcher is None:
         return None
@@ -165,11 +179,10 @@ def _from_vendor(provider_key: str) -> list[dict[str, Any]] | None:
         return None
 
     try:
-        entries = fetcher(api_key)
+        return fetcher(api_key)
     except Exception:
         # Network error, auth failure, unexpected payload — degrade quietly.
         return None
-    return entries or None
 
 
 def _fetch_openai(api_key: str | None) -> list[dict[str, Any]]:
@@ -252,12 +265,22 @@ def _fetch_gemini(api_key: str | None) -> list[dict[str, Any]]:
 
 
 def _ollama_base() -> str:
-    """Resolve the Ollama server base URL from the environment."""
-    return (
+    """Resolve the Ollama server base URL from the environment.
+
+    Checks ``OLLAMA_API_BASE`` / ``API_BASE`` (what LiteLLM and the generated
+    crew use) first, then ``OLLAMA_HOST`` (the Ollama runtime convention), so a
+    user who only set ``OLLAMA_HOST`` sees models from the right server.
+    """
+    base = (
         os.environ.get("OLLAMA_API_BASE")
         or os.environ.get("API_BASE")
+        or os.environ.get("OLLAMA_HOST")
         or "http://localhost:11434"
-    ).rstrip("/")
+    ).strip()
+    # OLLAMA_HOST is often scheme-less (e.g. "127.0.0.1:11434").
+    if "://" not in base:
+        base = f"http://{base}"
+    return base.rstrip("/")
 
 
 def _fetch_ollama(_api_key: str | None) -> list[dict[str, Any]]:

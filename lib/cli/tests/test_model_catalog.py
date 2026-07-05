@@ -16,6 +16,7 @@ _ALL_KEY_ENVS = [
     "CEREBRAS_API_KEY",
     "OLLAMA_API_BASE",
     "API_BASE",
+    "OLLAMA_HOST",
 ]
 
 FALLBACK_ANTHROPIC = [
@@ -209,6 +210,29 @@ def test_vendor_gemini_keeps_partial_on_later_page_error(monkeypatch):
     # Page-1 models are kept; the later-page error doesn't force the fallback.
     models = mc.get_provider_models("gemini", [("fallback-x", "Fallback X")])
     assert [m for m, _ in models] == ["gemini-3.5-flash"]
+
+
+def test_ollama_empty_response_not_filled_with_fallback(monkeypatch):
+    # A reachable Ollama with nothing installed -> empty (manual entry), not the
+    # curated suggestions the crew can't actually run.
+    monkeypatch.setattr(mc, "_http_get_json", lambda *a, **k: {"models": []})
+    assert mc.get_provider_models("ollama", [("llama3.3", "Llama 3.3")]) == []
+
+
+def test_ollama_unreachable_uses_fallback(monkeypatch):
+    # Server down (fetch raises) is different from empty -> fall back to suggestions.
+    def boom(*a, **k):
+        raise RuntimeError("connection refused")
+
+    monkeypatch.setattr(mc, "_http_get_json", boom)
+    models = mc.get_provider_models("ollama", [("llama3.3", "Llama 3.3")])
+    assert models == [("llama3.3", "Llama 3.3")]
+
+
+def test_ollama_base_honors_ollama_host(monkeypatch):
+    # OLLAMA_HOST (scheme-less runtime convention) is resolved with a scheme.
+    monkeypatch.setenv("OLLAMA_HOST", "10.0.0.5:11434")
+    assert mc._ollama_base() == "http://10.0.0.5:11434"
 
 
 def test_curated_label_overrides_raw_vendor_label(monkeypatch):
