@@ -23,6 +23,7 @@ use a short timeout and successful results are cached.
 from __future__ import annotations
 
 from collections.abc import Callable
+import contextlib
 import json
 import os
 from pathlib import Path
@@ -46,6 +47,11 @@ _TIMEOUT = 6.0
 
 #: How long a resolved (dynamic) catalog stays fresh before we refetch.
 _CATALOG_TTL = 6 * 3600
+
+#: How long a fallback result is cached after a failed/empty fetch. Short, so a
+#: newly-added API key takes effect soon, but long enough to spare the picker a
+#: repeated timeout-prone network attempt on every call within one session.
+_NEGATIVE_TTL = 300
 
 #: How long the shared LiteLLM feed cache stays fresh.
 _LITELLM_TTL = 24 * 3600
@@ -130,15 +136,17 @@ def get_provider_models(
     # curated fallback for this provider — never let it override the fallback.
     if not entries and not fallback:
         entries = _from_litellm(provider_key)
-    if not entries:
-        return fallback
 
-    result = _finalize(entries, label_map)
-    if not result:
-        return fallback
+    result = _finalize(entries, label_map) if entries else []
+    if result:
+        _write_catalog_cache(provider_key, result, source="dynamic")
+        return result
 
-    _write_catalog_cache(provider_key, result)
-    return result
+    # Nothing fresher than the curated list. Cache it briefly (negative cache)
+    # so a failed vendor/LiteLLM fetch isn't retried on every subsequent call.
+    if fallback:
+        _write_catalog_cache(provider_key, fallback, source="fallback")
+    return fallback
 
 
 # ── Tier 1: vendor APIs ──────────────────────────────────────────
@@ -230,14 +238,18 @@ def _fetch_gemini(api_key: str | None) -> list[dict[str, Any]]:
     return entries
 
 
-def _fetch_ollama(_api_key: str | None) -> list[dict[str, Any]]:
-    """List models installed on the local Ollama server (no API key)."""
-    base = (
+def _ollama_base() -> str:
+    """Resolve the Ollama server base URL from the environment."""
+    return (
         os.environ.get("OLLAMA_API_BASE")
         or os.environ.get("API_BASE")
         or "http://localhost:11434"
     ).rstrip("/")
-    data = _http_get_json(f"{base}/api/tags")
+
+
+def _fetch_ollama(_api_key: str | None) -> list[dict[str, Any]]:
+    """List models installed on the local Ollama server (no API key)."""
+    data = _http_get_json(f"{_ollama_base()}/api/tags")
     entries: list[dict[str, Any]] = []
     for item in data.get("models", []):
         model_id = item.get("model") or item.get("name")
@@ -305,11 +317,11 @@ def _load_litellm_data() -> dict[str, Any] | None:
         # Fall back to a stale cache if we have one, else give up on this tier.
         return _read_json(cache_file)
 
-    try:
+    # Best-effort cache write; a failure (e.g. read-only home) is non-fatal
+    # since we already hold the freshly-fetched data.
+    with contextlib.suppress(OSError):
         cache_file.parent.mkdir(parents=True, exist_ok=True)
         cache_file.write_text(json.dumps(data), encoding="utf-8")
-    except OSError:
-        pass
     return data
 
 
@@ -476,15 +488,29 @@ def _litellm_cache_file() -> Path:
     return _cache_dir() / "provider_cache.json"
 
 
+def _cache_key(provider_key: str) -> str:
+    """Cache key for a provider.
+
+    Ollama lists models from a base URL that can change between runs, so its
+    key includes that base — otherwise a changed host would serve the previous
+    host's models until the entry expired.
+    """
+    if provider_key == "ollama":
+        return f"ollama@{_ollama_base()}"
+    return provider_key
+
+
 def _read_catalog_cache(provider_key: str) -> list[tuple[str, str]] | None:
     """Return a fresh cached catalog for ``provider_key``, or ``None``."""
     payload = _read_json(_catalog_cache_file())
-    if not payload:
+    if not isinstance(payload, dict):
         return None
-    entry = payload.get(provider_key)
+    entry = payload.get(_cache_key(provider_key))
     if not isinstance(entry, dict):
         return None
-    if (time.time() - _as_float(entry.get("ts"))) >= _CATALOG_TTL:
+    # Fallback (negative) entries expire fast; dynamic ones live the full TTL.
+    ttl = _NEGATIVE_TTL if entry.get("source") == "fallback" else _CATALOG_TTL
+    if (time.time() - _as_float(entry.get("ts"))) >= ttl:
         return None
     models = entry.get("models")
     if not isinstance(models, list) or not models:
@@ -495,15 +521,19 @@ def _read_catalog_cache(provider_key: str) -> list[tuple[str, str]] | None:
         return None
 
 
-def _write_catalog_cache(provider_key: str, models: list[tuple[str, str]]) -> None:
+def _write_catalog_cache(
+    provider_key: str, models: list[tuple[str, str]], *, source: str
+) -> None:
     cache_file = _catalog_cache_file()
-    payload = _read_json(cache_file) or {}
-    payload[provider_key] = {
+    payload = _read_json(cache_file)
+    if not isinstance(payload, dict):
+        payload = {}
+    payload[_cache_key(provider_key)] = {
         "ts": time.time(),
+        "source": source,
         "models": [[model_id, label] for model_id, label in models],
     }
-    try:
+    # Best-effort cache write; a failure (e.g. read-only home) is non-fatal.
+    with contextlib.suppress(OSError):
         cache_file.parent.mkdir(parents=True, exist_ok=True)
         cache_file.write_text(json.dumps(payload), encoding="utf-8")
-    except OSError:
-        pass

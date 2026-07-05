@@ -258,3 +258,47 @@ def test_litellm_fills_uncurated_bedrock(monkeypatch):
 
     models = mc.get_provider_models("bedrock", [])
     assert models == [("anthropic.claude-v2", "Anthropic.claude v2")]
+
+
+def test_failed_fetch_is_negatively_cached(monkeypatch):
+    # A failed vendor fetch must not be retried on every call — the fallback is
+    # cached briefly so the picker doesn't re-hit the timeout-prone endpoint.
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    calls = {"n": 0}
+
+    def boom(*a, **k):
+        calls["n"] += 1
+        raise RuntimeError("down")
+
+    monkeypatch.setattr(mc, "_http_get_json", boom)
+    first = mc.get_provider_models("anthropic", FALLBACK_ANTHROPIC)
+    second = mc.get_provider_models("anthropic", FALLBACK_ANTHROPIC)
+
+    assert first == second == FALLBACK_ANTHROPIC
+    assert calls["n"] == 1  # second call served from the negative cache
+
+
+def test_bad_cache_json_does_not_crash(monkeypatch):
+    # A corrupt cache whose root is not a mapping must not raise (get_provider_models
+    # is documented to never raise).
+    mc._catalog_cache_file().write_text("[1, 2, 3]", encoding="utf-8")
+
+    models = mc.get_provider_models("anthropic", FALLBACK_ANTHROPIC)
+    assert models == FALLBACK_ANTHROPIC
+
+
+def test_ollama_cache_keyed_by_base(monkeypatch):
+    # Changing OLLAMA_API_BASE must not serve the previous host's cached models.
+    monkeypatch.setenv("OLLAMA_API_BASE", "http://host-a:11434")
+    monkeypatch.setattr(
+        mc, "_http_get_json", lambda *a, **k: {"models": [{"model": "llama-a"}]}
+    )
+    first = mc.get_provider_models("ollama", [])
+    assert [m for m, _ in first] == ["llama-a"]
+
+    monkeypatch.setenv("OLLAMA_API_BASE", "http://host-b:11434")
+    monkeypatch.setattr(
+        mc, "_http_get_json", lambda *a, **k: {"models": [{"model": "llama-b"}]}
+    )
+    second = mc.get_provider_models("ollama", [])
+    assert [m for m, _ in second] == ["llama-b"]  # not the host-a cache
