@@ -224,10 +224,15 @@ def _fetch_gemini(api_key: str | None) -> list[dict[str, Any]]:
     # models.list is paginated and not guaranteed newest-first, so walk pages
     # (bounded) to see the full set — _finalize does the sort + truncation.
     for _ in range(10):
-        data = _http_get_json(
-            "https://generativelanguage.googleapis.com/v1beta/models",
-            params=params,
-        )
+        try:
+            data = _http_get_json(
+                "https://generativelanguage.googleapis.com/v1beta/models",
+                params=params,
+            )
+        except Exception:
+            # A later-page failure keeps the models already gathered rather than
+            # discarding them; a first-page failure just yields an empty list.
+            break
         for item in data.get("models", []):
             methods = item.get("supportedGenerationMethods") or []
             if "generateContent" not in methods:

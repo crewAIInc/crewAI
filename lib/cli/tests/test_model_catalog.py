@@ -187,6 +187,30 @@ def test_vendor_gemini_paginates(monkeypatch):
     assert ids == ["gemini-2.5-pro", "gemini-3.5-flash"]
 
 
+def test_vendor_gemini_keeps_partial_on_later_page_error(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "key")
+
+    def fetch(url, headers=None, params=None):
+        if (params or {}).get("pageToken"):
+            raise RuntimeError("page 2 down")
+        return {
+            "models": [
+                {
+                    "name": "models/gemini-3.5-flash",
+                    "displayName": "Gemini 3.5 Flash",
+                    "supportedGenerationMethods": ["generateContent"],
+                }
+            ],
+            "nextPageToken": "p2",
+        }
+
+    monkeypatch.setattr(mc, "_http_get_json", fetch)
+
+    # Page-1 models are kept; the later-page error doesn't force the fallback.
+    models = mc.get_provider_models("gemini", [("fallback-x", "Fallback X")])
+    assert [m for m, _ in models] == ["gemini-3.5-flash"]
+
+
 def test_curated_label_overrides_raw_vendor_label(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     payload = {"data": [{"id": "gpt-5.5", "created": 1}]}
