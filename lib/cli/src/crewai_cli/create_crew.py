@@ -6,12 +6,18 @@ import click
 import tomli
 
 from crewai_cli.constants import ENV_VARS, MODELS
+from crewai_cli.git import initialize_if_git_available
 from crewai_cli.provider import (
     get_provider_data,
     select_model,
     select_provider,
 )
-from crewai_cli.utils import copy_template, load_env_vars, write_env_file
+from crewai_cli.utils import (
+    copy_template,
+    is_dmn_mode_enabled,
+    load_env_vars,
+    write_env_file,
+)
 
 
 def get_reserved_script_names() -> set[str]:
@@ -50,7 +56,6 @@ def create_folder_structure(
     folder_name = name.replace(" ", "_").replace("-", "_").lower()
     folder_name = re.sub(r"[^a-zA-Z0-9_]", "", folder_name)
 
-    # Check if the name starts with invalid characters or is primarily invalid
     if re.match(r"^[^a-zA-Z0-9_-]+", name):
         raise ValueError(
             f"Project name '{name}' contains no valid characters for a Python module name"
@@ -98,7 +103,6 @@ def create_folder_structure(
             f"Project name '{name}' would generate class name '{class_name}' which cannot start with a digit"
         )
 
-    # Check if the original name (before title casing) is a keyword
     original_name_clean = re.sub(
         r"[^a-zA-Z0-9_]", "", name.replace("_", "").replace("-", "").lower()
     )
@@ -122,13 +126,15 @@ def create_folder_structure(
         folder_path = Path(folder_name)
 
     if folder_path.exists():
+        if is_dmn_mode_enabled():
+            raise click.ClickException(f"Folder {folder_name} already exists.")
         if not click.confirm(
             f"Folder {folder_name} already exists. Do you want to override it?"
         ):
             click.secho("Operation cancelled.", fg="yellow")
             sys.exit(0)
         click.secho(f"Overriding folder {folder_name}...", fg="green", bold=True)
-        shutil.rmtree(folder_path)  # Delete the existing folder and its contents
+        shutil.rmtree(folder_path)
 
     click.secho(
         f"Creating {'crew' if parent_folder else 'folder'} {folder_name}...",
@@ -144,7 +150,6 @@ def create_folder_structure(
         (folder_path / "src" / folder_name / "tools").mkdir(parents=True)
         (folder_path / "src" / folder_name / "config").mkdir(parents=True)
 
-        # Copy AGENTS.md to project root (top-level projects only)
         package_dir = Path(__file__).parent
         agents_md_src = package_dir / "templates" / "AGENTS.md"
         if agents_md_src.exists():
@@ -204,6 +209,8 @@ def create_crew(
 ) -> None:
     folder_path, folder_name, class_name = create_folder_structure(name, parent_folder)
     env_vars = load_env_vars(folder_path)
+    if is_dmn_mode_enabled():
+        skip_provider = True
     if not skip_provider:
         if not provider:
             provider_models = get_provider_data()
@@ -232,25 +239,22 @@ def create_crew(
 
         while True:
             selected_provider = select_provider(provider_models)
-            if selected_provider is None:  # User typed 'q'
+            if selected_provider is None:
                 click.secho("Exiting...", fg="yellow")
                 sys.exit(0)
-            if selected_provider and isinstance(
-                selected_provider, str
-            ):  # Valid selection
+            if selected_provider and isinstance(selected_provider, str):
                 break
             click.secho(
                 "No provider selected. Please try again or press 'q' to exit.", fg="red"
             )
 
-        # Check if the selected provider has predefined models
         if MODELS.get(selected_provider):
             while True:
                 selected_model = select_model(selected_provider, provider_models)
-                if selected_model is None:  # User typed 'q'
+                if selected_model is None:
                     click.secho("Exiting...", fg="yellow")
                     sys.exit(0)
-                if selected_model:  # Valid selection
+                if selected_model:
                     break
                 click.secho(
                     "No model selected. Please try again or press 'q' to exit.",
@@ -258,17 +262,14 @@ def create_crew(
                 )
             env_vars["MODEL"] = selected_model
 
-        # Check if the selected provider requires API keys
         if selected_provider in ENV_VARS:
             provider_env_vars = ENV_VARS[selected_provider]
             for details in provider_env_vars:
                 if details.get("default", False):
-                    # Automatically add default key-value pairs
                     for key, value in details.items():
                         if key not in ["prompt", "key_name", "default"]:
                             env_vars[key] = value
                 elif "key_name" in details:
-                    # Prompt for non-default key-value pairs
                     prompt = details["prompt"]
                     key_name = details["key_name"]
                     api_key_value = click.prompt(prompt, default="", show_default=False)
@@ -317,5 +318,8 @@ def create_crew(
             src_file = templates_dir / file_name
             dst_file = src_folder / file_name
             copy_template(src_file, dst_file, name, class_name, folder_name)
+
+    if not parent_folder:
+        initialize_if_git_available(folder_path)
 
     click.secho(f"Crew {name} created successfully!", fg="green", bold=True)

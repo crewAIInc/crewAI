@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import threading
 from unittest.mock import MagicMock
 
 import pytest
@@ -18,7 +19,39 @@ from crewai.memory.types import (
 )
 
 
-# --- Types ---
+def test_memory_analysis_llm_is_isolated_from_streaming_agent_llm(
+    tmp_path: Path,
+) -> None:
+    """Memory analysis should not share a mutable streaming LLM with the agent UI."""
+    from crewai.llms.base_llm import BaseLLM
+    from crewai.memory.unified_memory import Memory
+    from crewai.utilities.types import LLMMessage
+
+    class FakeStreamingLLM(BaseLLM):
+        def call(
+            self,
+            messages: str | list[LLMMessage],
+            tools: list[dict] | None = None,
+            callbacks: list | None = None,
+            available_functions: dict | None = None,
+            from_task: object | None = None,
+            from_agent: object | None = None,
+            response_model: type | None = None,
+        ) -> str:
+            return ""
+
+    agent_llm = FakeStreamingLLM(model="fake-model", stream=True)
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        llm=agent_llm,
+        embedder=lambda texts: [[0.1] for _ in texts],
+    )
+
+    assert mem._llm is not agent_llm
+    assert mem._llm.stream is False
+
+    agent_llm.stream = True
+    assert mem._llm.stream is False
 
 
 def test_memory_record_defaults() -> None:
@@ -44,7 +77,6 @@ def test_memory_record_embedding_excluded_from_serialization() -> None:
     """Embedding vectors should not appear in serialized output to save tokens."""
     r = MemoryRecord(content="hello", embedding=[0.1, 0.2, 0.3])
 
-    # Direct access still works
     assert r.embedding == [0.1, 0.2, 0.3]
 
     # model_dump excludes embedding by default
@@ -59,7 +91,6 @@ def test_memory_record_embedding_excluded_from_serialization() -> None:
     # repr excludes embedding
     assert "embedding=" not in repr(r)
 
-    # Direct attribute access still works for storage layer
     assert r.embedding is not None
     assert len(r.embedding) == 3
 
@@ -90,7 +121,6 @@ def test_memory_config() -> None:
     assert c.importance_weight == 0.2
 
 
-# --- LanceDB storage ---
 
 
 @pytest.fixture
@@ -173,9 +203,6 @@ def test_lancedb_row_to_record_normalizes_legacy_naive_datetimes(
     assert record.last_accessed.tzinfo is timezone.utc
 
 
-# --- Memory class (with mock embedder, no LLM for explicit remember) ---
-
-
 @pytest.fixture
 def mock_embedder() -> MagicMock:
     """Embedder mock that returns one embedding per input text (batch-aware)."""
@@ -249,7 +276,6 @@ def test_memory_list_scopes_info_tree(tmp_path: Path, mock_embedder: MagicMock) 
     assert "/" in tree or "0 records" in tree or "1 records" in tree
 
 
-# --- MemoryScope ---
 
 
 def test_memory_scope_remember_recall(tmp_path: Path, mock_embedder: MagicMock) -> None:
@@ -263,7 +289,6 @@ def test_memory_scope_remember_recall(tmp_path: Path, mock_embedder: MagicMock) 
     assert len(results) >= 1
 
 
-# --- MemorySlice recall (read-only) ---
 
 
 def test_memory_slice_recall(tmp_path: Path, mock_embedder: MagicMock) -> None:
@@ -288,7 +313,6 @@ def test_memory_slice_remember_is_noop_when_read_only(tmp_path: Path, mock_embed
     assert mem.list_records() == []
 
 
-# --- Flow memory ---
 
 
 def test_flow_has_default_memory() -> None:
@@ -335,7 +359,6 @@ def test_flow_recall_remember_with_memory(tmp_path: Path, mock_embedder: MagicMo
     assert len(results) >= 1
 
 
-# --- extract_memories ---
 
 
 def test_memory_extract_memories_returns_list_from_llm(tmp_path: Path) -> None:
@@ -482,7 +505,6 @@ def test_flow_extract_memories_delegates_when_memory_present() -> None:
     assert result == ["Flow fact 1.", "Flow fact 2."]
 
 
-# --- Composite scoring ---
 
 
 def test_composite_score_brand_new_memory() -> None:
@@ -492,7 +514,7 @@ def test_composite_score_brand_new_memory() -> None:
         content="test",
         scope="/",
         importance=0.7,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
     score, reasons = compute_composite_score(record, 0.8, config)
     assert 0.82 <= score <= 0.86
@@ -519,7 +541,7 @@ def test_composite_score_accepts_legacy_naive_created_at() -> None:
 def test_composite_score_old_memory_decayed() -> None:
     """Memory 60 days old (2 half-lives) has decay = 0.25; composite ~ 0.575."""
     config = MemoryConfig(recency_half_life_days=30)
-    old_date = datetime.utcnow() - timedelta(days=60)
+    old_date = datetime.now(timezone.utc) - timedelta(days=60)
     record = MemoryRecord(
         content="old",
         scope="/",
@@ -538,14 +560,13 @@ def test_composite_score_reranks_results(
     """Same semantic score: high-importance recent memory ranks first."""
     from crewai.memory.unified_memory import Memory
 
-    # Use same dim as default LanceDB (1536) so storage does not overwrite embedding
-    emb = [0.1] * 1536
+    # Use same dim as default LanceDB (3072) so storage does not overwrite embedding
+    emb = [0.1] * 3072
     mem = Memory(
         storage=str(tmp_path / "rerank_db"),
         llm=MagicMock(),
         embedder=MagicMock(return_value=[emb]),
     )
-    # Save both records directly to storage (bypass encoding flow)
     # to test composite scoring in isolation without consolidation merging them.
     record_high = MemoryRecord(
         content="Important decision",
@@ -555,7 +576,7 @@ def test_composite_score_reranks_results(
         embedding=emb,
     )
     mem._storage.save([record_high])
-    old = datetime.utcnow() - timedelta(days=90)
+    old = datetime.now(timezone.utc) - timedelta(days=90)
     record_low = MemoryRecord(
         content="Old trivial note",
         scope="/",
@@ -577,7 +598,7 @@ def test_composite_score_match_reasons_populated() -> None:
     fresh_high = MemoryRecord(
         content="x",
         importance=0.9,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
     score1, reasons1 = compute_composite_score(fresh_high, 0.5, config)
     assert "semantic" in reasons1
@@ -587,7 +608,7 @@ def test_composite_score_match_reasons_populated() -> None:
     old_low = MemoryRecord(
         content="y",
         importance=0.1,
-        created_at=datetime.utcnow() - timedelta(days=60),
+        created_at=datetime.now(timezone.utc) - timedelta(days=60),
     )
     score2, reasons2 = compute_composite_score(old_low, 0.5, config)
     assert "semantic" in reasons2
@@ -605,7 +626,7 @@ def test_composite_score_custom_config() -> None:
     record = MemoryRecord(
         content="any",
         importance=0.9,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
     score, reasons = compute_composite_score(record, 0.73, config)
     assert score == pytest.approx(0.73, rel=1e-5)
@@ -688,7 +709,6 @@ def test_remember_survives_llm_failure(
     assert mem._storage.count() == 1
 
 
-# --- Agent.kickoff() memory integration ---
 
 
 def test_agent_kickoff_memory_recall_and_save(tmp_path: Path, mock_embedder: MagicMock) -> None:
@@ -700,7 +720,6 @@ def test_agent_kickoff_memory_recall_and_save(tmp_path: Path, mock_embedder: Mag
     from crewai.memory.unified_memory import Memory
     from crewai.types.usage_metrics import UsageMetrics
 
-    # Create a real memory with mock embedder
     mem = Memory(
         storage=str(tmp_path / "agent_kickoff_db"),
         llm=MagicMock(),
@@ -710,7 +729,6 @@ def test_agent_kickoff_memory_recall_and_save(tmp_path: Path, mock_embedder: Mag
     # Pre-populate a memory record
     mem.remember("The team uses PostgreSQL.", scope="/", categories=["database"], importance=0.8)
 
-    # Create mock LLM for the agent
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Final Answer: PostgreSQL is the database."
     mock_llm.stop = []
@@ -739,10 +757,8 @@ def test_agent_kickoff_memory_recall_and_save(tmp_path: Path, mock_embedder: Mag
     assert result is not None
     assert result.raw is not None
 
-    # Verify recall was called (passive memory injection)
     recall_mock.assert_called_once()
 
-    # Verify extract_memories and remember_many were called (passive batch save)
     extract_mock.assert_called_once()
     raw_content = extract_mock.call_args.args[0]
     assert "Input:" in raw_content
@@ -755,7 +771,6 @@ def test_agent_kickoff_memory_recall_and_save(tmp_path: Path, mock_embedder: Mag
     assert "PostgreSQL is used." in saved_contents
 
 
-# --- Batch EncodingFlow tests ---
 
 
 def test_batch_embed_single_call(tmp_path: Path) -> None:
@@ -775,8 +790,7 @@ def test_batch_embed_single_call(tmp_path: Path) -> None:
         categories=["test"],
         importance=0.5,
     )
-    mem.drain_writes()  # wait for background save
-    # The embedder should have been called exactly once with all 3 texts
+    mem.drain_writes()
     embedder.assert_called_once()
     texts_arg = embedder.call_args.args[0]
     assert len(texts_arg) == 3
@@ -788,7 +802,6 @@ def test_intra_batch_dedup_drops_near_identical(tmp_path: Path) -> None:
     from crewai.memory.unified_memory import Memory
 
     embedder = MagicMock()
-    # All identical embeddings -> cosine similarity = 1.0
     embedder.side_effect = lambda texts: [[0.5] * 1536 for _ in texts]
 
     llm = MagicMock()
@@ -805,7 +818,7 @@ def test_intra_batch_dedup_drops_near_identical(tmp_path: Path) -> None:
         categories=["reliability"],
         importance=0.7,
     )
-    mem.drain_writes()  # wait for background save
+    mem.drain_writes()
     assert mem._storage.count() == 1
 
 
@@ -814,14 +827,12 @@ def test_intra_batch_dedup_keeps_merely_similar(tmp_path: Path) -> None:
     from crewai.memory.unified_memory import Memory
     import math
 
-    # Return different embeddings for different texts
     call_count = 0
 
     def varying_embedder(texts: list[str]) -> list[list[float]]:
         nonlocal call_count
         result = []
         for i, _ in enumerate(texts):
-            # Create orthogonal-ish embeddings so similarity is low
             emb = [0.0] * 1536
             idx = (call_count + i) % 1536
             emb[idx] = 1.0
@@ -840,7 +851,7 @@ def test_intra_batch_dedup_keeps_merely_similar(tmp_path: Path) -> None:
         categories=["tech"],
         importance=0.6,
     )
-    mem.drain_writes()  # wait for background save
+    mem.drain_writes()
     assert mem._storage.count() == 2
 
 
@@ -858,8 +869,6 @@ def test_batch_consolidation_deduplicates_against_storage(
     llm = MagicMock()
     llm.supports_function_calling.return_value = True
     # After intra-batch dedup (identical embeddings), only 1 item survives.
-    # That item hits parallel_analyze which calls analyze_for_consolidation.
-    # The single-item call returns a ConsolidationPlan directly.
     llm.call.return_value = ConsolidationPlan(
         actions=[], insert_new=False, insert_reason="duplicate"
     )
@@ -881,9 +890,8 @@ def test_batch_consolidation_deduplicates_against_storage(
         categories=["review"],
         importance=0.7,
     )
-    mem.drain_writes()  # wait for background save
+    mem.drain_writes()
     # Intra-batch dedup fires: same embedding = 1.0 >= 0.98, so item 1 is dropped.
-    # The remaining item finds the pre-existing record (similarity 1.0 >= 0.85).
     # LLM says don't insert -> no new records. Total stays at 1.
     assert mem._storage.count() == 1
 
@@ -918,8 +926,7 @@ def test_parallel_find_similar_runs_all_searches(tmp_path: Path) -> None:
             categories=["test"],
             importance=0.5,
         )
-        mem.drain_writes()  # wait for background save
-        # All 3 items should trigger a storage search
+        mem.drain_writes()
         assert search_mock.call_count == 3
 
 
@@ -966,7 +973,6 @@ def test_parallel_analyze_runs_concurrent_calls(tmp_path: Path) -> None:
     embedder = MagicMock(side_effect=distinct_embedder)
     llm = MagicMock()
     llm.supports_function_calling.return_value = True
-    # Return a valid MemoryAnalysis for field resolution calls
     llm.call.return_value = MemoryAnalysis(
         suggested_scope="/inferred",
         categories=["auto"],
@@ -978,13 +984,11 @@ def test_parallel_analyze_runs_concurrent_calls(tmp_path: Path) -> None:
 
     # No scope/categories/importance -> all 3 need field resolution (Group C)
     mem.remember_many(["Fact A.", "Fact B.", "Fact C."])
-    mem.drain_writes()  # wait for background save
-    # Each item triggers one analyze_for_save call -> 3 parallel LLM calls
+    mem.drain_writes()
     assert llm.call.call_count == 3
     assert mem._storage.count() == 3
 
 
-# --- Non-blocking save tests ---
 
 
 def test_remember_many_returns_immediately(tmp_path: Path) -> None:
@@ -1014,11 +1018,58 @@ def test_remember_many_returns_immediately(tmp_path: Path) -> None:
         categories=["test"],
         importance=0.5,
     )
-    # Returns immediately with empty list (save is in background)
     assert result == []
     # After draining, records should exist
     mem.drain_writes()
     assert mem._storage.count() == 2
+
+
+def test_reset_all_blocks_new_save_submission_until_reset_completes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A save cannot be submitted between draining writes and resetting storage."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        llm=MagicMock(),
+        embedder=lambda texts: [[0.1] * 4 for _ in texts],
+    )
+    reset_started = threading.Event()
+    release_reset = threading.Event()
+    submission_returned = threading.Event()
+    order: list[str] = []
+    original_reset = mem._storage.reset
+
+    def blocking_reset(scope_prefix: str | None = None) -> None:
+        order.append("reset-start")
+        reset_started.set()
+        assert release_reset.wait(timeout=2)
+        original_reset(scope_prefix=scope_prefix)
+        order.append("reset-end")
+
+    def submit_save() -> None:
+        mem._submit_save(lambda: order.append("save"))
+        order.append("submit-returned")
+        submission_returned.set()
+
+    monkeypatch.setattr(mem._storage, "reset", blocking_reset)
+
+    reset_thread = threading.Thread(target=mem.reset_all)
+    reset_thread.start()
+    assert reset_started.wait(timeout=2)
+
+    submit_thread = threading.Thread(target=submit_save)
+    submit_thread.start()
+    assert not submission_returned.wait(timeout=0.1)
+
+    release_reset.set()
+    reset_thread.join(timeout=2)
+    submit_thread.join(timeout=2)
+
+    assert not reset_thread.is_alive()
+    assert not submit_thread.is_alive()
+    assert order.index("reset-end") < order.index("submit-returned")
 
 
 def test_recall_drains_pending_writes(tmp_path: Path, mock_embedder: MagicMock) -> None:
@@ -1040,6 +1091,42 @@ def test_recall_drains_pending_writes(tmp_path: Path, mock_embedder: MagicMock) 
     matches = mem.recall("Python", scope="/test", limit=5, depth="shallow")
     assert len(matches) >= 1
     assert "Python" in matches[0].record.content
+
+
+def test_drain_writes_reports_background_save_failure_without_raising(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """Background memory failures should be reported without failing cleanup."""
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.memory_events import MemorySaveFailedEvent
+    from crewai.memory.unified_memory import Memory
+
+    failure_seen = threading.Event()
+    failures: list[MemorySaveFailedEvent] = []
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        llm=MagicMock(),
+        embedder=mock_embedder,
+    )
+
+    def fail_save() -> None:
+        raise ValueError("invalid model ID")
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(MemorySaveFailedEvent)
+        def on_memory_save_failed(_source, event):
+            failures.append(event)
+            failure_seen.set()
+
+        mem._submit_save(fail_save)
+        mem.drain_writes()
+
+        assert failure_seen.wait(timeout=2)
+
+    assert failures
+    assert failures[0].value == "background save"
+    assert failures[0].error == "invalid model ID"
 
 
 def test_close_drains_and_shuts_down(tmp_path: Path, mock_embedder: MagicMock) -> None:

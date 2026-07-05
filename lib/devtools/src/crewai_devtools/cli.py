@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -21,6 +22,11 @@ from rich.prompt import Confirm
 import tomlkit
 
 from crewai_devtools.docs_check import docs_check
+from crewai_devtools.docs_versioning import (
+    InvalidVersionError,
+    MissingEdgeSourcesError,
+    freeze as freeze_docs,
+)
 from crewai_devtools.prompts import RELEASE_NOTES_PROMPT, TRANSLATE_RELEASE_NOTES_PROMPT
 
 
@@ -355,8 +361,19 @@ def update_pyproject_dependencies(
 
     workspace_packages = _DEFAULT_WORKSPACE_PACKAGES + (extra_packages or [])
 
+    current_extra: str | None = None
+    extra_header = re.compile(r"^\s*([A-Za-z0-9_-]+)\s*=\s*\[")
+
     for i, line in enumerate(lines):
+        match = extra_header.match(line)
+        if match:
+            current_extra = match.group(1)
+        elif line.strip().startswith("]"):
+            current_extra = None
+
         for pkg in workspace_packages:
+            if pkg == "crewai-files" and current_extra == "file-processing":
+                continue
             if f"{pkg}==" in line:
                 stripped = line.lstrip()
                 indent = line[: len(line) - len(stripped)]
@@ -378,56 +395,39 @@ def update_pyproject_dependencies(
 
 
 def add_docs_version(docs_json_path: Path, version: str) -> bool:
-    """Add a new version to the Mintlify docs.json versioning config.
+    """Freeze Edge into a new snapshot and register the version in docs.json.
 
-    Copies the current default version's tabs into a new version entry,
-    sets the new version as default, and marks the previous default as
-    non-default. Operates on all languages.
+    Thin compatibility wrapper around :func:`crewai_devtools.docs_versioning.freeze`.
+    Materialises ``docs/v<version>/`` from ``docs/edge/`` (copies files, rewrites
+    ``openapi:`` refs inside the snapshot), inserts a new ``vX.Y.Z`` entry into
+    every language's ``versions[]`` block just after Edge, marks it
+    default + ``Latest`` (demoting the prior default), and updates the wildcard
+    ``/<lang>/:slug*`` redirects to point at the new version.
+
+    Skipped (returns False) for pre-release versions like ``1.10.1b1`` since
+    those don't get their own snapshot — pre-release docs stay on Edge.
 
     Args:
         docs_json_path: Path to docs/docs.json.
-        version: Version string (e.g., "1.10.1b1").
+        version: Version string (e.g., ``"1.10.1"``). Pre-releases are skipped.
 
     Returns:
-        True if docs.json was updated, False otherwise.
+        True if docs.json was updated, False otherwise (missing file, missing
+        Edge sources, pre-release, or snapshot already up to date).
     """
-    import json
-
     if not docs_json_path.exists():
         return False
-
-    data = json.loads(docs_json_path.read_text())
-    version_label = f"v{version}"
-    updated = False
-
-    for lang in data.get("navigation", {}).get("languages", []):
-        versions = lang.get("versions", [])
-        if not versions:
-            continue
-
-        if any(v.get("version") == version_label for v in versions):
-            continue
-
-        default_version = next(
-            (v for v in versions if v.get("default")),
-            versions[0],
-        )
-
-        new_version = {
-            "version": version_label,
-            "default": True,
-            "tabs": default_version.get("tabs", []),
-        }
-
-        default_version.pop("default", None)
-        versions.insert(0, new_version)
-        updated = True
-
-    if not updated:
+    if _is_prerelease(version):
         return False
 
-    docs_json_path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
-    return True
+    docs_root = docs_json_path.parent
+    try:
+        result = freeze_docs(version, docs_root)
+    except (InvalidVersionError, MissingEdgeSourcesError) as e:
+        console.print(f"[yellow]Warning:[/yellow] {e}")
+        return False
+
+    return result.docsjson_entries_inserted > 0 or result.redirects_upserted > 0
 
 
 ChangelogLang = Literal["en", "pt-BR", "ko", "ar"]
@@ -732,18 +732,23 @@ def _is_prerelease(version: str) -> bool:
     return any(indicator in v for indicator in _PRERELEASE_INDICATORS)
 
 
-def get_commits_from_last_tag(tag_name: str, version: str) -> tuple[str, str]:
+def get_commits_from_last_tag(
+    tag_name: str, version: str, cwd: Path | None = None
+) -> tuple[str, str]:
     """Get commits from the last tag, excluding current version.
 
     Args:
         tag_name: Current tag name (e.g., "v1.0.0").
         version: Current version (e.g., "1.0.0").
+        cwd: Directory to run git commands in (defaults to current).
 
     Returns:
         Tuple of (commit_range, commits) where commits is newline-separated.
     """
     try:
-        all_tags = run_command(["git", "tag", "--sort=-version:refname"]).split("\n")
+        all_tags = run_command(
+            ["git", "tag", "--sort=-version:refname"], cwd=cwd
+        ).split("\n")
         prev_tags = [t for t in all_tags if t and t != tag_name and t != f"v{version}"]
 
         if not _is_prerelease(version):
@@ -752,22 +757,30 @@ def get_commits_from_last_tag(tag_name: str, version: str) -> tuple[str, str]:
         if prev_tags:
             last_tag = prev_tags[0]
             commit_range = f"{last_tag}..HEAD"
-            commits = run_command(["git", "log", commit_range, "--pretty=format:%s"])
+            commits = run_command(
+                ["git", "log", commit_range, "--pretty=format:%s"], cwd=cwd
+            )
         else:
             commit_range = "HEAD"
-            commits = run_command(["git", "log", "--pretty=format:%s"])
+            commits = run_command(["git", "log", "--pretty=format:%s"], cwd=cwd)
     except subprocess.CalledProcessError:
         commit_range = "HEAD"
-        commits = run_command(["git", "log", "--pretty=format:%s"])
+        commits = run_command(["git", "log", "--pretty=format:%s"], cwd=cwd)
 
     return commit_range, commits
 
 
-def get_github_contributors(commit_range: str) -> list[str]:
+def get_github_contributors(
+    commit_range: str,
+    repo: str = "crewAIInc/crewAI",
+    cwd: Path | None = None,
+) -> list[str]:
     """Get GitHub usernames from commit range using GitHub API.
 
     Args:
         commit_range: Git commit range (e.g., "abc123..HEAD").
+        repo: GitHub repo in ``owner/name`` form to resolve commits against.
+        cwd: Directory to run git commands in (defaults to current).
 
     Returns:
         List of GitHub usernames sorted alphabetically.
@@ -779,10 +792,10 @@ def get_github_contributors(commit_range: str) -> list[str]:
             gh_token = None
 
         g = Github(login_or_token=gh_token) if gh_token else Github()
-        github_repo = g.get_repo("crewAIInc/crewAI")
+        github_repo = g.get_repo(repo)
 
         commit_shas = run_command(
-            ["git", "log", commit_range, "--pretty=format:%H"]
+            ["git", "log", commit_range, "--pretty=format:%H"], cwd=cwd
         ).split("\n")
 
         contributors = set()
@@ -893,7 +906,7 @@ def _update_all_versions(
             "[yellow]Warning:[/yellow] No __version__ attributes found to update"
         )
 
-    templates_dir = lib_dir / "crewai" / "src" / "crewai" / "cli" / "templates"
+    templates_dir = lib_dir / "cli" / "src" / "crewai_cli" / "templates"
     if templates_dir.exists():
         if dry_run:
             for tpl in templates_dir.rglob("pyproject.toml"):
@@ -922,8 +935,25 @@ def _generate_release_notes(
     version: str,
     tag_name: str,
     no_edit: bool,
+    cwd: Path | None = None,
+    gh_repo: str = "crewAIInc/crewAI",
+    openai_client: OpenAI | None = None,
+    bump_already_done: bool = True,
 ) -> tuple[str, OpenAI, bool]:
     """Generate, display, and optionally edit release notes.
+
+    Args:
+        version: Version being released.
+        tag_name: Tag name for the release.
+        no_edit: Skip the interactive edit prompt.
+        cwd: Directory to run git commands in (defaults to current).
+        gh_repo: GitHub repo (``owner/name``) for resolving contributors.
+        openai_client: Reuse an existing OpenAI client if provided.
+        bump_already_done: True when the ``feat: bump versions to <version>``
+            commit for the current release is already in history (the real
+            release path). False in previews where no bump exists yet — the
+            most recent bump commit is the *previous* version and must be
+            used as the range start.
 
     Returns:
         Tuple of (release_notes, openai_client, is_prerelease).
@@ -939,7 +969,8 @@ def _generate_release_notes(
                     "log",
                     "--grep=^feat: bump versions to",
                     "--format=%H %s",
-                ]
+                ],
+                cwd=cwd,
             )
             bump_entries = [
                 line for line in prev_bump_output.strip().split("\n") if line.strip()
@@ -947,7 +978,8 @@ def _generate_release_notes(
 
             is_stable = not _is_prerelease(version)
             prev_commit = None
-            for entry in bump_entries[1:]:
+            scan_entries = bump_entries[1:] if bump_already_done else bump_entries
+            for entry in scan_entries:
                 bump_ver = entry.split("feat: bump versions to", 1)[-1].strip()
                 if is_stable and _is_prerelease(bump_ver):
                     continue
@@ -957,7 +989,7 @@ def _generate_release_notes(
             if prev_commit:
                 commit_range = f"{prev_commit}..HEAD"
                 commits = run_command(
-                    ["git", "log", commit_range, "--pretty=format:%s"]
+                    ["git", "log", commit_range, "--pretty=format:%s"], cwd=cwd
                 )
 
                 commit_lines = [
@@ -967,14 +999,21 @@ def _generate_release_notes(
                 ]
                 commits = "\n".join(commit_lines)
             else:
-                commit_range, commits = get_commits_from_last_tag(tag_name, version)
+                commit_range, commits = get_commits_from_last_tag(
+                    tag_name, version, cwd=cwd
+                )
 
         except subprocess.CalledProcessError:
-            commit_range, commits = get_commits_from_last_tag(tag_name, version)
+            commit_range, commits = get_commits_from_last_tag(
+                tag_name, version, cwd=cwd
+            )
 
-        github_contributors = get_github_contributors(commit_range)
+        github_contributors = get_github_contributors(
+            commit_range, repo=gh_repo, cwd=cwd
+        )
 
-        openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        if openai_client is None:
+            openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
         if commits.strip():
             contributors_section = ""
@@ -1053,97 +1092,127 @@ def _update_docs_and_create_pr(
     is_prerelease: bool,
     dry_run: bool,
 ) -> str | None:
-    """Update changelogs and docs version switcher, create PR if needed.
+    """Update Edge changelogs, freeze a snapshot, and open the docs PR.
+
+    For a stable release this freezes ``docs/edge/`` into ``docs/v<version>/``
+    (after the Edge changelogs have been updated so the snapshot contains the
+    new entry), updates ``docs/docs.json`` to register the new version and
+    canonical-URL redirects, and opens a ``[docs-freeze]`` PR. The
+    ``docs-snapshots`` CI guard recognises that title prefix and allows the
+    snapshot directory to land.
+
+    For a pre-release, only the Edge changelogs are touched (pre-releases don't
+    get a frozen snapshot — they ride Edge), and the PR title omits the
+    ``[docs-freeze]`` prefix.
 
     Returns:
         The docs branch name if a PR was created, None otherwise.
     """
     docs_json_path = cwd / "docs" / "docs.json"
+    edge_root = cwd / "docs" / "edge"
+    snapshot_path = cwd / "docs" / f"v{version}"
     changelog_langs: list[ChangelogLang] = ["en", "pt-BR", "ko", "ar"]
 
-    if not dry_run:
-        docs_files_staged: list[str] = []
-
+    if dry_run:
         for lang in changelog_langs:
-            cl_path = cwd / "docs" / lang / "changelog.mdx"
-            if lang == "en":
-                notes_for_lang = release_notes
-            else:
-                console.print(f"[dim]Translating release notes to {lang}...[/dim]")
-                notes_for_lang = translate_release_notes(
-                    release_notes, lang, openai_client
-                )
-            if update_changelog(cl_path, version, notes_for_lang, lang=lang):
-                console.print(f"[green]✓[/green] Updated {cl_path.relative_to(cwd)}")
-                docs_files_staged.append(str(cl_path))
-            else:
-                console.print(
-                    f"[yellow]Warning:[/yellow] Changelog not found at {cl_path.relative_to(cwd)}"
-                )
-
+            cl_path = edge_root / lang / "changelog.mdx"
+            translated = " (translated)" if lang != "en" else ""
+            console.print(
+                f"[dim][DRY RUN][/dim] Would update "
+                f"{cl_path.relative_to(cwd)}{translated}"
+            )
         if not is_prerelease:
-            if add_docs_version(docs_json_path, version):
-                console.print(
-                    f"[green]✓[/green] Added v{version} to docs version switcher"
-                )
-                docs_files_staged.append(str(docs_json_path))
-            else:
-                console.print(
-                    f"[yellow]Warning:[/yellow] docs.json not found at {docs_json_path.relative_to(cwd)}"
-                )
-
-        if docs_files_staged:
-            docs_branch = f"docs/changelog-v{version}"
-            create_or_reset_branch(docs_branch)
-            for f in docs_files_staged:
-                run_command(["git", "add", f])
-            run_command(
-                [
-                    "git",
-                    "commit",
-                    "-m",
-                    f"docs: update changelog and version for v{version}",
-                ]
+            console.print(
+                f"[dim][DRY RUN][/dim] Would freeze docs/edge -> "
+                f"{snapshot_path.relative_to(cwd)} and update docs.json + redirects"
             )
-            console.print("[green]✓[/green] Committed docs updates")
-
-            run_command(["git", "push", "-u", "origin", docs_branch])
-            console.print(f"[green]✓[/green] Pushed branch {docs_branch}")
-
-            pr_url = run_command(
-                [
-                    "gh",
-                    "pr",
-                    "create",
-                    "--base",
-                    "main",
-                    "--title",
-                    f"docs: update changelog and version for v{version}",
-                    "--body",
-                    "",
-                ]
+        else:
+            console.print(
+                "[dim][DRY RUN][/dim] Skipping snapshot freeze (pre-release stays on Edge)"
             )
-            console.print("[green]✓[/green] Created docs PR")
-            console.print(f"[cyan]PR URL:[/cyan] {pr_url}")
-            return docs_branch
-
+        prefix = "" if is_prerelease else "[docs-freeze] "
+        console.print(
+            f"[dim][DRY RUN][/dim] Would create branch docs/freeze-v{version}, "
+            f"open PR titled '{prefix}docs: snapshot and changelog for v{version}', "
+            "and wait for merge"
+        )
         return None
+
+    docs_paths_staged: list[str] = []
+
+    # Step 1: update Edge changelogs first so the snapshot we freeze afterwards
+    # contains the new release's entry.
     for lang in changelog_langs:
-        cl_path = cwd / "docs" / lang / "changelog.mdx"
-        translated = " (translated)" if lang != "en" else ""
-        console.print(
-            f"[dim][DRY RUN][/dim] Would update {cl_path.relative_to(cwd)}{translated}"
-        )
+        cl_path = edge_root / lang / "changelog.mdx"
+        if lang == "en":
+            notes_for_lang = release_notes
+        else:
+            console.print(f"[dim]Translating release notes to {lang}...[/dim]")
+            notes_for_lang = translate_release_notes(release_notes, lang, openai_client)
+        if update_changelog(cl_path, version, notes_for_lang, lang=lang):
+            console.print(f"[green]✓[/green] Updated {cl_path.relative_to(cwd)}")
+            docs_paths_staged.append(str(cl_path))
+        else:
+            console.print(
+                f"[yellow]Warning:[/yellow] Changelog not found at "
+                f"{cl_path.relative_to(cwd)}"
+            )
+
+    # Step 2: stable releases get a frozen snapshot + docs.json updates;
+    # pre-releases ride Edge so we only need the changelog edits.
+    is_freeze = False
     if not is_prerelease:
-        console.print(
-            f"[dim][DRY RUN][/dim] Would add v{version} to docs version switcher"
-        )
-    else:
-        console.print("[dim][DRY RUN][/dim] Skipping docs version (pre-release)")
-    console.print(
-        f"[dim][DRY RUN][/dim] Would create branch docs/changelog-v{version}, PR, and wait for merge"
+        if add_docs_version(docs_json_path, version):
+            console.print(
+                f"[green]✓[/green] Froze docs/edge -> "
+                f"{snapshot_path.relative_to(cwd)} and updated docs.json + redirects"
+            )
+            docs_paths_staged.append(str(docs_json_path))
+            docs_paths_staged.append(str(snapshot_path))
+            is_freeze = True
+        else:
+            console.print(
+                f"[yellow]Warning:[/yellow] docs freeze did not modify "
+                f"{docs_json_path.relative_to(cwd)} "
+                "(missing file, missing Edge sources, or snapshot already current)"
+            )
+
+    if not docs_paths_staged:
+        return None
+
+    docs_branch = f"docs/freeze-v{version}"
+    create_or_reset_branch(docs_branch)
+    for path in docs_paths_staged:
+        run_command(["git", "add", path])
+
+    # The [docs-freeze] title prefix is what the docs-snapshots CI guard reads
+    # to allow writes under docs/v*/ and image deletions. Omit it for
+    # pre-releases since they don't touch frozen snapshots.
+    title_prefix = "[docs-freeze] " if is_freeze else ""
+    pr_title = f"{title_prefix}docs: snapshot and changelog for v{version}"
+
+    run_command(["git", "commit", "-m", pr_title])
+    console.print("[green]✓[/green] Committed docs updates")
+
+    run_command(["git", "push", "-u", "origin", docs_branch])
+    console.print(f"[green]✓[/green] Pushed branch {docs_branch}")
+
+    pr_url = run_command(
+        [
+            "gh",
+            "pr",
+            "create",
+            "--base",
+            "main",
+            "--title",
+            pr_title,
+            "--body",
+            "",
+        ]
     )
-    return None
+    console.print("[green]✓[/green] Created docs PR")
+    console.print(f"[cyan]PR URL:[/cyan] {pr_url}")
+    return docs_branch
 
 
 def _create_tag_and_release(
@@ -1532,7 +1601,13 @@ def _wait_for_pr_merged(branch: str, cwd: Path) -> None:
         time.sleep(_PR_MERGE_POLL_INTERVAL)
 
 
-def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> None:
+def _release_enterprise(
+    version: str,
+    is_prerelease: bool,
+    dry_run: bool,
+    no_edit: bool = False,
+    openai_client: OpenAI | None = None,
+) -> None:
     """Clone the enterprise repo, bump versions, and create a release PR.
 
     Expects ENTERPRISE_REPO, ENTERPRISE_VERSION_DIRS, and
@@ -1542,6 +1617,8 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
         version: New version string.
         is_prerelease: Whether this is a pre-release version.
         dry_run: Show what would be done without making changes.
+        no_edit: Skip the interactive release-notes edit prompt.
+        openai_client: Reuse OpenAI client from earlier phases if available.
     """
     if (
         not _ENTERPRISE_REPO
@@ -1559,7 +1636,6 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
     )
 
     if dry_run:
-        console.print(f"[dim][DRY RUN][/dim] Would clone {enterprise_repo}")
         for d in _ENTERPRISE_VERSION_DIRS:
             console.print(f"[dim][DRY RUN][/dim] Would update versions in {d}")
         console.print(
@@ -1570,6 +1646,26 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
             "[dim][DRY RUN][/dim] Would create bump PR, wait for merge, "
             "then tag and release"
         )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_dir = Path(tmp) / enterprise_repo.split("/")[-1]
+            console.print(f"\nCloning {enterprise_repo} (read-only preview)...")
+            run_command(["gh", "repo", "clone", enterprise_repo, str(repo_dir)])
+            console.print(f"[green]✓[/green] Cloned {enterprise_repo}")
+
+            _generate_release_notes(
+                version,
+                version,
+                no_edit,
+                cwd=repo_dir,
+                gh_repo=enterprise_repo,
+                openai_client=openai_client,
+                bump_already_done=False,
+            )
+            console.print(
+                "[dim][DRY RUN][/dim] Would tag and create GitHub release "
+                "with the notes above"
+            )
         return
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -1682,8 +1778,18 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
         run_command(["git", "pull"], cwd=repo_dir)
 
         tag_name = version
+
+        release_notes, _, _ = _generate_release_notes(
+            version,
+            tag_name,
+            no_edit,
+            cwd=repo_dir,
+            gh_repo=enterprise_repo,
+            openai_client=openai_client,
+        )
+
         run_command(
-            ["git", "tag", "-a", tag_name, "-m", f"Release {version}"],
+            ["git", "tag", "-a", tag_name, "-m", release_notes],
             cwd=repo_dir,
         )
         run_command(["git", "push", "origin", tag_name], cwd=repo_dir)
@@ -1699,7 +1805,7 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
             "--title",
             tag_name,
             "--notes",
-            f"Release {version}",
+            release_notes,
         ]
         if is_prerelease:
             gh_cmd.append("--prerelease")
@@ -1998,7 +2104,7 @@ def tag(dry_run: bool, no_edit: bool) -> None:
             console.print("[green]✓[/green] main branch up to date")
 
         release_notes, openai_client, is_prerelease = _generate_release_notes(
-            version, tag_name, no_edit
+            version, tag_name, no_edit, bump_already_done=True
         )
 
         docs_branch = _update_docs_and_create_pr(
@@ -2109,7 +2215,7 @@ def release(
 
     if skip_to_enterprise:
         try:
-            _release_enterprise(version, is_prerelease, dry_run)
+            _release_enterprise(version, is_prerelease, dry_run, no_edit=no_edit)
         except BaseException as e:
             _print_release_error(e)
             _resume_hint(
@@ -2205,7 +2311,7 @@ def release(
             console.print("[green]✓[/green] main branch up to date")
 
         release_notes, openai_client, is_prerelease = _generate_release_notes(
-            version, tag_name, no_edit
+            version, tag_name, no_edit, bump_already_done=not dry_run
         )
 
         docs_branch = _update_docs_and_create_pr(
@@ -2259,7 +2365,13 @@ def release(
 
     if not skip_enterprise:
         try:
-            _release_enterprise(version, is_prerelease, dry_run)
+            _release_enterprise(
+                version,
+                is_prerelease,
+                dry_run,
+                no_edit=no_edit,
+                openai_client=openai_client,
+            )
         except BaseException as e:
             _print_release_error(e)
             _resume_hint(

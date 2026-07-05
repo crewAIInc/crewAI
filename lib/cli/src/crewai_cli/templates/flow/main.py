@@ -68,7 +68,6 @@ def run_with_trigger():
     import json
     import sys
 
-    # Get trigger payload from command line argument
     if len(sys.argv) < 2:
         raise Exception("No trigger payload provided. Please provide JSON payload as argument.")
 
@@ -77,8 +76,6 @@ def run_with_trigger():
     except json.JSONDecodeError:
         raise Exception("Invalid JSON payload provided as argument")
 
-    # Create flow and kickoff with trigger payload
-    # The @start() methods will automatically receive crewai_trigger_payload parameter
     content_flow = ContentFlow()
 
     try:

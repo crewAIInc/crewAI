@@ -61,6 +61,11 @@ if TYPE_CHECKING:
         CrewTrainStartedEvent,
     )
     from crewai.events.types.flow_events import (
+        ConversationMessageAddedEvent,
+        ConversationRouteSelectedEvent,
+        ConversationTurnCompletedEvent,
+        ConversationTurnFailedEvent,
+        ConversationTurnStartedEvent,
         FlowCreatedEvent,
         FlowEvent,
         FlowFinishedEvent,
@@ -114,6 +119,11 @@ if TYPE_CHECKING:
         MemorySaveFailedEvent,
         MemorySaveStartedEvent,
     )
+    from crewai.events.types.observation_events import (
+        PlanStepCompletedEvent,
+        PlanStepEvent,
+        PlanStepStartedEvent,
+    )
     from crewai.events.types.reasoning_events import (
         AgentReasoningCompletedEvent,
         AgentReasoningFailedEvent,
@@ -144,9 +154,7 @@ if TYPE_CHECKING:
         ToolValidateInputErrorEvent,
     )
 
-# Map every event class name → its module path for lazy loading
 _LAZY_EVENT_MAPPING: dict[str, str] = {
-    # agent_events
     "AgentEvaluationCompletedEvent": "crewai.events.types.agent_events",
     "AgentEvaluationFailedEvent": "crewai.events.types.agent_events",
     "AgentEvaluationStartedEvent": "crewai.events.types.agent_events",
@@ -156,7 +164,6 @@ _LAZY_EVENT_MAPPING: dict[str, str] = {
     "LiteAgentExecutionCompletedEvent": "crewai.events.types.agent_events",
     "LiteAgentExecutionErrorEvent": "crewai.events.types.agent_events",
     "LiteAgentExecutionStartedEvent": "crewai.events.types.agent_events",
-    # checkpoint_events
     "CheckpointBaseEvent": "crewai.events.types.checkpoint_events",
     "CheckpointCompletedEvent": "crewai.events.types.checkpoint_events",
     "CheckpointFailedEvent": "crewai.events.types.checkpoint_events",
@@ -169,7 +176,6 @@ _LAZY_EVENT_MAPPING: dict[str, str] = {
     "CheckpointRestoreFailedEvent": "crewai.events.types.checkpoint_events",
     "CheckpointRestoreStartedEvent": "crewai.events.types.checkpoint_events",
     "CheckpointStartedEvent": "crewai.events.types.checkpoint_events",
-    # crew_events
     "CrewKickoffCompletedEvent": "crewai.events.types.crew_events",
     "CrewKickoffFailedEvent": "crewai.events.types.crew_events",
     "CrewKickoffStartedEvent": "crewai.events.types.crew_events",
@@ -180,7 +186,11 @@ _LAZY_EVENT_MAPPING: dict[str, str] = {
     "CrewTrainCompletedEvent": "crewai.events.types.crew_events",
     "CrewTrainFailedEvent": "crewai.events.types.crew_events",
     "CrewTrainStartedEvent": "crewai.events.types.crew_events",
-    # flow_events
+    "ConversationMessageAddedEvent": "crewai.events.types.flow_events",
+    "ConversationRouteSelectedEvent": "crewai.events.types.flow_events",
+    "ConversationTurnCompletedEvent": "crewai.events.types.flow_events",
+    "ConversationTurnFailedEvent": "crewai.events.types.flow_events",
+    "ConversationTurnStartedEvent": "crewai.events.types.flow_events",
     "FlowCreatedEvent": "crewai.events.types.flow_events",
     "FlowEvent": "crewai.events.types.flow_events",
     "FlowFinishedEvent": "crewai.events.types.flow_events",
@@ -191,25 +201,20 @@ _LAZY_EVENT_MAPPING: dict[str, str] = {
     "MethodExecutionFailedEvent": "crewai.events.types.flow_events",
     "MethodExecutionFinishedEvent": "crewai.events.types.flow_events",
     "MethodExecutionStartedEvent": "crewai.events.types.flow_events",
-    # knowledge_events
     "KnowledgeQueryCompletedEvent": "crewai.events.types.knowledge_events",
     "KnowledgeQueryFailedEvent": "crewai.events.types.knowledge_events",
     "KnowledgeQueryStartedEvent": "crewai.events.types.knowledge_events",
     "KnowledgeRetrievalCompletedEvent": "crewai.events.types.knowledge_events",
     "KnowledgeRetrievalStartedEvent": "crewai.events.types.knowledge_events",
     "KnowledgeSearchQueryFailedEvent": "crewai.events.types.knowledge_events",
-    # llm_events
     "LLMCallCompletedEvent": "crewai.events.types.llm_events",
     "LLMCallFailedEvent": "crewai.events.types.llm_events",
     "LLMCallStartedEvent": "crewai.events.types.llm_events",
     "LLMStreamChunkEvent": "crewai.events.types.llm_events",
-    # llm_guardrail_events
     "LLMGuardrailCompletedEvent": "crewai.events.types.llm_guardrail_events",
     "LLMGuardrailStartedEvent": "crewai.events.types.llm_guardrail_events",
-    # logging_events
     "AgentLogsExecutionEvent": "crewai.events.types.logging_events",
     "AgentLogsStartedEvent": "crewai.events.types.logging_events",
-    # mcp_events
     "MCPConfigFetchFailedEvent": "crewai.events.types.mcp_events",
     "MCPConnectionCompletedEvent": "crewai.events.types.mcp_events",
     "MCPConnectionFailedEvent": "crewai.events.types.mcp_events",
@@ -217,7 +222,6 @@ _LAZY_EVENT_MAPPING: dict[str, str] = {
     "MCPToolExecutionCompletedEvent": "crewai.events.types.mcp_events",
     "MCPToolExecutionFailedEvent": "crewai.events.types.mcp_events",
     "MCPToolExecutionStartedEvent": "crewai.events.types.mcp_events",
-    # memory_events
     "MemoryQueryCompletedEvent": "crewai.events.types.memory_events",
     "MemoryQueryFailedEvent": "crewai.events.types.memory_events",
     "MemoryQueryStartedEvent": "crewai.events.types.memory_events",
@@ -227,24 +231,23 @@ _LAZY_EVENT_MAPPING: dict[str, str] = {
     "MemorySaveCompletedEvent": "crewai.events.types.memory_events",
     "MemorySaveFailedEvent": "crewai.events.types.memory_events",
     "MemorySaveStartedEvent": "crewai.events.types.memory_events",
-    # reasoning_events
+    "PlanStepCompletedEvent": "crewai.events.types.observation_events",
+    "PlanStepEvent": "crewai.events.types.observation_events",
+    "PlanStepStartedEvent": "crewai.events.types.observation_events",
     "AgentReasoningCompletedEvent": "crewai.events.types.reasoning_events",
     "AgentReasoningFailedEvent": "crewai.events.types.reasoning_events",
     "AgentReasoningStartedEvent": "crewai.events.types.reasoning_events",
     "ReasoningEvent": "crewai.events.types.reasoning_events",
-    # skill_events
     "SkillActivatedEvent": "crewai.events.types.skill_events",
     "SkillDiscoveryCompletedEvent": "crewai.events.types.skill_events",
     "SkillDiscoveryStartedEvent": "crewai.events.types.skill_events",
     "SkillEvent": "crewai.events.types.skill_events",
     "SkillLoadFailedEvent": "crewai.events.types.skill_events",
     "SkillLoadedEvent": "crewai.events.types.skill_events",
-    # task_events
     "TaskCompletedEvent": "crewai.events.types.task_events",
     "TaskEvaluationEvent": "crewai.events.types.task_events",
     "TaskFailedEvent": "crewai.events.types.task_events",
     "TaskStartedEvent": "crewai.events.types.task_events",
-    # tool_usage_events
     "ToolExecutionErrorEvent": "crewai.events.types.tool_usage_events",
     "ToolSelectionErrorEvent": "crewai.events.types.tool_usage_events",
     "ToolUsageErrorEvent": "crewai.events.types.tool_usage_events",
@@ -306,6 +309,11 @@ __all__ = [
     "CheckpointRestoreStartedEvent",
     "CheckpointStartedEvent",
     "CircularDependencyError",
+    "ConversationMessageAddedEvent",
+    "ConversationRouteSelectedEvent",
+    "ConversationTurnCompletedEvent",
+    "ConversationTurnFailedEvent",
+    "ConversationTurnStartedEvent",
     "CrewKickoffCompletedEvent",
     "CrewKickoffFailedEvent",
     "CrewKickoffStartedEvent",
@@ -358,6 +366,9 @@ __all__ = [
     "MethodExecutionFailedEvent",
     "MethodExecutionFinishedEvent",
     "MethodExecutionStartedEvent",
+    "PlanStepCompletedEvent",
+    "PlanStepEvent",
+    "PlanStepStartedEvent",
     "ReasoningEvent",
     "SkillActivatedEvent",
     "SkillDiscoveryCompletedEvent",

@@ -11,12 +11,13 @@ logger = logging.getLogger(__name__)
 
 
 def create_llm(
-    llm_value: str | LLM | Any | None = None,
+    llm_value: str | dict[str, Any] | LLM | Any | None = None,
 ) -> LLM | BaseLLM | None:
     """Creates or returns an LLM instance based on the given llm_value.
 
     Args:
-        llm_value: LLM instance, model name string, None, or an object with LLM attributes.
+        llm_value: LLM instance, model name string, config dict, None, or an
+            object with LLM attributes.
 
     Returns:
         A BaseLLM instance if successful, or None if something fails.
@@ -30,6 +31,26 @@ def create_llm(
             return LLM(model=llm_value)
         except Exception as e:
             logger.error(f"Error instantiating LLM from string: {e}")
+            raise e
+
+    if isinstance(llm_value, dict):
+        try:
+            model = (
+                llm_value.get("model")
+                or llm_value.get("model_name")
+                or llm_value.get("deployment_name")
+            )
+            if not model:
+                raise ValueError(
+                    "LLM config dictionaries must include 'model', "
+                    "'model_name', or 'deployment_name'"
+                )
+            llm_params = {**llm_value, "model": model}
+            llm_params.pop("model_name", None)
+            llm_params.pop("deployment_name", None)
+            return LLM(**llm_params)
+        except Exception as e:
+            logger.error(f"Error instantiating LLM from dict: {e}")
             raise e
 
     if llm_value is None:
@@ -113,13 +134,11 @@ def _llm_via_environment_or_fallback() -> LLM | None:
 
     api_base = os.environ.get("API_BASE") or os.environ.get("AZURE_API_BASE")
 
-    # Synchronize base_url and api_base if one is populated and the other is not
     if base_url and not api_base:
         api_base = base_url
     elif api_base and not base_url:
         base_url = api_base
 
-    # Initialize llm_params dictionary
     llm_params: dict[str, Any] = {
         "model": model,
         "temperature": temperature,
@@ -158,7 +177,6 @@ def _llm_via_environment_or_fallback() -> LLM | None:
                 if key_name and key_name not in unaccepted_attributes:
                     env_value = os.environ.get(key_name)
                     if env_value:
-                        # Map environment variable names to recognized parameters
                         param_key = _normalize_key_name(key_name.lower())
                         llm_params[param_key] = env_value
                 elif isinstance(env_var, dict):

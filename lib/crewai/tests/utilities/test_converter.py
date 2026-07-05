@@ -1,4 +1,3 @@
-# Tests for enums
 from enum import Enum
 import json
 import os
@@ -55,7 +54,6 @@ class CustomConverter(Converter):
     pass
 
 
-# Fixtures
 @pytest.fixture
 def mock_agent() -> Mock:
     agent = Mock()
@@ -64,7 +62,6 @@ def mock_agent() -> Mock:
     return agent
 
 
-# Tests for convert_to_model
 def test_convert_to_model_with_valid_json() -> None:
     result = '{"name": "John", "age": 30}'
     output = convert_to_model(result, SimpleModel, None, None)
@@ -169,7 +166,6 @@ def test_convert_to_model_with_multiple_special_characters() -> None:
     )
 
 
-# Tests for validate_model
 def test_validate_model_pydantic_output() -> None:
     result = '{"name": "Alice", "age": 25}'
     output = validate_model(result, SimpleModel, False)
@@ -185,7 +181,6 @@ def test_validate_model_json_output() -> None:
     assert output == {"name": "Bob", "age": 40}
 
 
-# Tests for handle_partial_json
 def test_handle_partial_json_with_valid_partial() -> None:
     result = 'Some text {"name": "Charlie", "age": 35} more text'
     output = handle_partial_json(result, SimpleModel, False, None)
@@ -230,7 +225,6 @@ def test_handle_partial_json_falls_through_for_non_json_curly_blocks(
         mock_convert.assert_called_once()
 
 
-# Tests for convert_with_instructions
 @patch("crewai.utilities.converter.create_converter")
 @patch("crewai.utilities.converter.get_conversion_instructions")
 def test_convert_with_instructions_success(
@@ -266,13 +260,11 @@ def test_convert_with_instructions_failure(
         mock_printer.print.assert_called_once()
 
 
-# Tests for get_conversion_instructions
 def test_get_conversion_instructions_gpt() -> None:
     llm = LLM(model="gpt-4o-mini")
     with patch.object(LLM, "supports_function_calling") as supports_function_calling:
         supports_function_calling.return_value = True
         instructions = get_conversion_instructions(SimpleModel, llm)
-        # Now using OpenAPI schema format for all models
         assert "Format your final answer according to the following OpenAPI schema:" in instructions
         assert '"type": "json_schema"' in instructions
         assert '"name": "SimpleModel"' in instructions
@@ -283,14 +275,12 @@ def test_get_conversion_instructions_non_gpt() -> None:
     llm = LLM(model="ollama/llama3.1", base_url="http://localhost:11434")
     with patch.object(LLM, "supports_function_calling", return_value=False):
         instructions = get_conversion_instructions(SimpleModel, llm)
-        # Now using OpenAPI schema format for all models
         assert "Format your final answer according to the following OpenAPI schema:" in instructions
         assert '"type": "json_schema"' in instructions
         assert '"name": "SimpleModel"' in instructions
         assert "Do not include the OpenAPI schema in the final output" in instructions
 
 
-# Tests for is_gpt
 def test_supports_function_calling_true() -> None:
     llm = LLM(model="gpt-4o")
     assert llm.supports_function_calling() is True
@@ -410,10 +400,8 @@ def test_convert_with_instructions() -> None:
         instructions=instructions,
     )
 
-    # Act
     output = converter.to_pydantic()
 
-    # Assert
     assert isinstance(output, SimpleModel)
     assert output.name == "Alice"
     assert output.age == 30
@@ -479,7 +467,6 @@ def test_converter_with_nested_model() -> None:
     assert output.address.zip_code == "12345"
 
 
-# Tests for error handling
 def test_converter_error_handling() -> None:
     llm = Mock(spec=LLM)
     llm.supports_function_calling.return_value = False
@@ -500,7 +487,6 @@ def test_converter_error_handling() -> None:
     assert "Failed to convert text into a Pydantic model" in str(exc_info.value)
 
 
-# Tests for retry logic
 def test_converter_retry_logic() -> None:
     llm = Mock(spec=LLM)
     llm.supports_function_calling.return_value = False
@@ -528,7 +514,6 @@ def test_converter_retry_logic() -> None:
     assert llm.call.call_count == 3
 
 
-# Tests for optional fields
 def test_converter_with_optional_fields() -> None:
     class OptionalModel(BaseModel):
         name: str
@@ -555,7 +540,6 @@ def test_converter_with_optional_fields() -> None:
     assert output.age is None
 
 
-# Tests for list fields
 def test_converter_with_list_field() -> None:
     class ListModel(BaseModel):
         items: list[int]
@@ -609,7 +593,6 @@ def test_converter_with_enum() -> None:
     assert output.color == Color.RED
 
 
-# Tests for ambiguous input
 def test_converter_with_ambiguous_input() -> None:
     llm = Mock(spec=LLM)
     llm.supports_function_calling.return_value = False
@@ -630,11 +613,9 @@ def test_converter_with_ambiguous_input() -> None:
     assert "failed to convert text into a pydantic model" in str(exc_info.value).lower()
 
 
-# Tests for function calling support
 def test_converter_with_function_calling() -> None:
     llm = Mock(spec=LLM)
     llm.supports_function_calling.return_value = True
-    # Mock the llm.call to return a valid JSON string
     llm.call.return_value = '{"name": "Eve", "age": 35}'
 
     converter = Converter(
@@ -650,7 +631,6 @@ def test_converter_with_function_calling() -> None:
     assert output.name == "Eve"
     assert output.age == 35
 
-    # Verify llm.call was called with correct parameters
     llm.call.assert_called_once()
     call_args = llm.call.call_args
     assert call_args[1]["response_model"] == SimpleModel
@@ -677,11 +657,9 @@ def test_internal_instructor_with_openai_provider() -> None:
     mock_llm.model = "gpt-4o"
     mock_llm.provider = "openai"
 
-    # Mock instructor client
     mock_client = Mock()
     mock_client.chat.completions.create.return_value = SimpleModel(name="Test", age=25)
 
-    # Patch the instructor import at the method level
     with patch.object(InternalInstructor, '_create_instructor_client') as mock_create_client:
         mock_create_client.return_value = mock_client
 
@@ -696,7 +674,6 @@ def test_internal_instructor_with_openai_provider() -> None:
         assert isinstance(result, SimpleModel)
         assert result.name == "Test"
         assert result.age == 25
-        # Verify the method was called with the correct LLM
         mock_create_client.assert_called_once()
 
 
@@ -710,11 +687,9 @@ def test_internal_instructor_with_anthropic_provider() -> None:
     mock_llm.model = "claude-3-5-sonnet-20241022"
     mock_llm.provider = "anthropic"
 
-    # Mock instructor client
     mock_client = Mock()
     mock_client.chat.completions.create.return_value = SimpleModel(name="Bob", age=25)
 
-    # Patch the instructor import at the method level
     with patch.object(InternalInstructor, '_create_instructor_client') as mock_create_client:
         mock_create_client.return_value = mock_client
 
@@ -729,7 +704,6 @@ def test_internal_instructor_with_anthropic_provider() -> None:
         assert isinstance(result, SimpleModel)
         assert result.name == "Bob"
         assert result.age == 25
-        # Verify the method was called with the correct LLM
         mock_create_client.assert_called_once()
 
 
@@ -809,7 +783,6 @@ def test_factory_pattern_registry_extensibility() -> None:
         assert result_bedrock.name == "Charlie"
         assert result_bedrock.age == 35
 
-    # Test with Google provider
     mock_llm_google = Mock()
     mock_llm_google.is_litellm = False
     mock_llm_google.model = "gemini-1.5-flash"
@@ -833,7 +806,6 @@ def test_factory_pattern_registry_extensibility() -> None:
         assert result_google.name == "Diana"
         assert result_google.age == 28
 
-    # Test with Azure provider
     mock_llm_azure = Mock()
     mock_llm_azure.is_litellm = False
     mock_llm_azure.model = "gpt-4o"
@@ -868,11 +840,9 @@ def test_internal_instructor_with_bedrock_provider() -> None:
     mock_llm.model = "claude-3-5-sonnet-20241022"
     mock_llm.provider = "bedrock"
 
-    # Mock instructor client
     mock_client = Mock()
     mock_client.chat.completions.create.return_value = SimpleModel(name="Charlie", age=35)
 
-    # Patch the instructor import at the method level
     with patch.object(InternalInstructor, '_create_instructor_client') as mock_create_client:
         mock_create_client.return_value = mock_client
 
@@ -887,7 +857,6 @@ def test_internal_instructor_with_bedrock_provider() -> None:
         assert isinstance(result, SimpleModel)
         assert result.name == "Charlie"
         assert result.age == 35
-        # Verify the method was called with the correct LLM
         mock_create_client.assert_called_once()
 
 
@@ -901,11 +870,9 @@ def test_internal_instructor_with_gemini_provider() -> None:
     mock_llm.model = "gemini-1.5-flash"
     mock_llm.provider = "google"
 
-    # Mock instructor client
     mock_client = Mock()
     mock_client.chat.completions.create.return_value = SimpleModel(name="Diana", age=28)
 
-    # Patch the instructor import at the method level
     with patch.object(InternalInstructor, '_create_instructor_client') as mock_create_client:
         mock_create_client.return_value = mock_client
 
@@ -920,7 +887,6 @@ def test_internal_instructor_with_gemini_provider() -> None:
         assert isinstance(result, SimpleModel)
         assert result.name == "Diana"
         assert result.age == 28
-        # Verify the method was called with the correct LLM
         mock_create_client.assert_called_once()
 
 
@@ -928,17 +894,14 @@ def test_internal_instructor_with_azure_provider() -> None:
     """Test InternalInstructor with Azure OpenAI provider using registry pattern."""
     from crewai.utilities.internal_instructor import InternalInstructor
 
-    # Mock LLM with Azure provider
     mock_llm = Mock()
     mock_llm.is_litellm = False
     mock_llm.model = "gpt-4o"
     mock_llm.provider = "azure"
 
-    # Mock instructor client
     mock_client = Mock()
     mock_client.chat.completions.create.return_value = SimpleModel(name="Eve", age=32)
 
-    # Patch the instructor import at the method level
     with patch.object(InternalInstructor, '_create_instructor_client') as mock_create_client:
         mock_create_client.return_value = mock_client
 
@@ -953,7 +916,6 @@ def test_internal_instructor_with_azure_provider() -> None:
         assert isinstance(result, SimpleModel)
         assert result.name == "Eve"
         assert result.age == 32
-        # Verify the method was called with the correct LLM
         mock_create_client.assert_called_once()
 
 
@@ -961,17 +923,14 @@ def test_internal_instructor_unsupported_provider() -> None:
     """Test InternalInstructor with unsupported provider raises appropriate error."""
     from crewai.utilities.internal_instructor import InternalInstructor
 
-    # Mock LLM with unsupported provider
     mock_llm = Mock()
     mock_llm.is_litellm = False
     mock_llm.model = "unsupported-model"
     mock_llm.provider = "unsupported"
 
-    # Mock the _create_instructor_client method to raise an error for unsupported providers
     with patch.object(InternalInstructor, '_create_instructor_client') as mock_create_client:
         mock_create_client.side_effect = Exception("Unsupported provider: unsupported")
 
-        # This should raise an error when trying to create the instructor client
         with pytest.raises(Exception) as exc_info:
             instructor = InternalInstructor(
                 content="Test content",
@@ -980,7 +939,6 @@ def test_internal_instructor_unsupported_provider() -> None:
             )
             instructor.to_pydantic()
 
-        # Verify it's the expected error
         assert "Unsupported provider" in str(exc_info.value)
 
 
@@ -988,7 +946,6 @@ def test_internal_instructor_real_unsupported_provider() -> None:
     """Test InternalInstructor with real unsupported provider using actual instructor library."""
     from crewai.utilities.internal_instructor import InternalInstructor
 
-    # Mock LLM with unsupported provider that would actually fail with instructor
     mock_llm = Mock()
     mock_llm.is_litellm = False
     mock_llm.model = "unsupported-model"
@@ -996,7 +953,6 @@ def test_internal_instructor_real_unsupported_provider() -> None:
     mock_llm.base_url = None
     mock_llm.api_key = None
 
-    # This should raise a ConfigurationError from the real instructor library
     with pytest.raises(Exception) as exc_info:
         instructor = InternalInstructor(
             content="Test content",
@@ -1005,7 +961,6 @@ def test_internal_instructor_real_unsupported_provider() -> None:
         )
         instructor.to_pydantic()
 
-    # Verify it's a configuration error about unsupported provider
     assert "Unsupported provider" in str(exc_info.value) or "unsupported" in str(exc_info.value).lower()
 
 

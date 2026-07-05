@@ -30,7 +30,7 @@ from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
     SpanExportResult,
 )
-from opentelemetry.trace import Span
+from opentelemetry.trace import ProxyTracerProvider, Span
 from typing_extensions import Self
 
 from crewai.events.event_bus import crewai_event_bus
@@ -141,7 +141,7 @@ class Telemetry:
                 e,
                 (SystemExit, KeyboardInterrupt, GeneratorExit, asyncio.CancelledError),
             ):
-                raise  # Re-raise the exception to not interfere with system signals
+                raise
             self.ready = False
 
     @classmethod
@@ -162,6 +162,10 @@ class Telemetry:
         if self.ready and not self.trace_set:
             try:
                 with suppress_warnings():
+                    existing_provider = trace.get_tracer_provider()
+                    if not isinstance(existing_provider, ProxyTracerProvider):
+                        self.trace_set = True
+                        return
                     trace.set_tracer_provider(self.provider)
                     self.trace_set = True
             except Exception as e:
@@ -285,14 +289,12 @@ class Telemetry:
             self._add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
             self._add_attribute(span, "crew_number_of_agents", len(crew.agents))
 
-            # Add additional fingerprint metadata if available
             if hasattr(crew, "fingerprint") and crew.fingerprint:
                 self._add_attribute(
                     span,
                     "crew_fingerprint_created_at",
                     crew.fingerprint.created_at.isoformat(),
                 )
-                # Add fingerprint metadata if it exists
                 if hasattr(crew.fingerprint, "metadata") and crew.fingerprint.metadata:
                     self._add_attribute(
                         span,
@@ -337,7 +339,6 @@ class Telemetry:
                                     sanitize_tool_name(tool.name)
                                     for tool in agent.tools or []
                                 ],
-                                # Add agent fingerprint data if sharing crew details
                                 "fingerprint": (
                                     getattr(
                                         getattr(agent, "fingerprint", None),
@@ -387,7 +388,6 @@ class Telemetry:
                                     sanitize_tool_name(tool.name)
                                     for tool in task.tools or []
                                 ],
-                                # Add task fingerprint data if sharing crew details
                                 "fingerprint": (
                                     task.fingerprint.uuid_str
                                     if hasattr(task, "fingerprint") and task.fingerprint
@@ -502,7 +502,6 @@ class Telemetry:
                     "task_fingerprint_created_at",
                     task.fingerprint.created_at.isoformat(),
                 )
-                # Add fingerprint metadata if it exists
                 if hasattr(task.fingerprint, "metadata") and task.fingerprint.metadata:
                     self._add_attribute(
                         created_span,
@@ -510,7 +509,6 @@ class Telemetry:
                         json.dumps(task.fingerprint.metadata),
                     )
 
-            # Add agent fingerprint if task has an assigned agent
             if hasattr(task, "agent") and task.agent:
                 add_agent_fingerprint_to_span(
                     created_span, task.agent, self._add_attribute
@@ -533,7 +531,6 @@ class Telemetry:
             if hasattr(task, "fingerprint") and task.fingerprint:
                 self._add_attribute(span, "task_fingerprint", task.fingerprint.uuid_str)
 
-            # Add agent fingerprint if task has an assigned agent
             if hasattr(task, "agent") and task.agent:
                 add_agent_fingerprint_to_span(span, task.agent, self._add_attribute)
 
@@ -560,7 +557,6 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            # Ensure fingerprint data is present on completion span
             if hasattr(task, "fingerprint") and task.fingerprint:
                 self._add_attribute(span, "task_fingerprint", task.fingerprint.uuid_str)
 
@@ -625,7 +621,6 @@ class Telemetry:
             if llm:
                 self._add_attribute(span, "llm", llm.model)
 
-            # Add agent fingerprint data if available
             add_agent_fingerprint_to_span(span, agent, self._add_attribute)
             close_span(span)
 
@@ -656,7 +651,6 @@ class Telemetry:
             if tool_name:
                 self._add_attribute(span, "tool_name", tool_name)
 
-            # Add agent fingerprint data if available
             add_agent_fingerprint_to_span(span, agent, self._add_attribute)
             close_span(span)
 
@@ -937,7 +931,7 @@ class Telemetry:
             value: The attribute value.
         """
 
-        if span is None:
+        if span is None or value is None:
             return
 
         def _operation() -> None:
@@ -988,6 +982,11 @@ class Telemetry:
         def _operation() -> None:
             tracer = trace.get_tracer("crewai.telemetry")
             span = tracer.start_span("Flow Execution")
+            self._add_attribute(
+                span,
+                "crewai_version",
+                version("crewai"),
+            )
             self._add_attribute(span, "flow_name", flow_name)
             self._add_attribute(span, "node_names", json.dumps(node_names))
             close_span(span)

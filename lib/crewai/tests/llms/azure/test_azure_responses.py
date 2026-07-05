@@ -10,9 +10,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -51,9 +48,7 @@ def mock_openai_completion():
         yield mock_cls, instance
 
 
-# ---------------------------------------------------------------------------
 # Helper to build AzureCompletion with api="responses" while mocking imports
-# ---------------------------------------------------------------------------
 
 
 def _create_azure_responses(**overrides):
@@ -74,9 +69,7 @@ def _create_azure_responses(**overrides):
     return AzureCompletion(**defaults)
 
 
-# ---------------------------------------------------------------------------
 # Initialization tests
-# ---------------------------------------------------------------------------
 
 
 class TestAzureResponsesInit:
@@ -203,9 +196,7 @@ class TestAzureResponsesInit:
         assert "max_completion_tokens" not in call_kwargs
 
 
-# ---------------------------------------------------------------------------
 # Call delegation tests (VCR cassette-based)
-# ---------------------------------------------------------------------------
 
 
 class TestAzureResponsesCall:
@@ -247,9 +238,7 @@ class TestAzureResponsesCall:
         assert len(result) > 0
 
 
-# ---------------------------------------------------------------------------
 # Delegated property & method tests
-# ---------------------------------------------------------------------------
 
 
 class TestAzureResponsesProperties:
@@ -296,12 +285,10 @@ class TestAzureResponsesProperties:
             api_key="key",
             endpoint="https://res.openai.azure.com",
         )
-        comp.reset_chain()  # should not raise
+        comp.reset_chain()
 
 
-# ---------------------------------------------------------------------------
 # Feature-support method tests
-# ---------------------------------------------------------------------------
 
 
 class TestAzureResponsesFeatures:
@@ -364,9 +351,7 @@ class TestAzureResponsesFeatures:
         assert "api" not in config
 
 
-# ---------------------------------------------------------------------------
 # LLM factory integration test
-# ---------------------------------------------------------------------------
 
 
 class TestAzureResponsesViaLLMFactory:

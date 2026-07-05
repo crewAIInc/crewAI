@@ -309,18 +309,18 @@ def render_interactive(
                 </div>
             """)
 
-        if metadata.get("router_paths"):
-            paths = metadata["router_paths"]
-            paths_items = "".join(
+        if metadata.get("router_events"):
+            router_events = metadata["router_events"]
+            event_items = "".join(
                 [
                     f'<li style="margin: 3px 0;"><code style="background: rgba(255,90,80,0.08); padding: 2px 6px; border-radius: 3px; font-size: 10px; color: {CREWAI_ORANGE}; border: 1px solid rgba(255,90,80,0.2); font-weight: 600;">{p}</code></li>'
-                    for p in paths
+                    for p in router_events
                 ]
             )
             title_parts.append(f"""
                 <div>
-                    <div style="font-size: 10px; text-transform: uppercase; color: {GRAY}; letter-spacing: 0.5px; margin-bottom: 4px; font-weight: 600;">Router Paths</div>
-                    <ul style="list-style: none; padding: 0; margin: 0;">{paths_items}</ul>
+                    <div style="font-size: 10px; text-transform: uppercase; color: {GRAY}; letter-spacing: 0.5px; margin-bottom: 4px; font-weight: 600;">Router Events</div>
+                    <ul style="list-style: none; padding: 0; margin: 0;">{event_items}</ul>
                 </div>
             """)
 
@@ -364,11 +364,11 @@ def render_interactive(
         edge_color: str = GRAY
         edge_dashes: bool | list[int] = False
 
-        if edge["is_router_path"]:
+        if edge["is_router_event"]:
             edge_color = CREWAI_ORANGE
             edge_dashes = [15, 10]
-            if "router_path_label" in edge:
-                edge_label = edge["router_path_label"]
+            if "router_event" in edge:
+                edge_label = edge["router_event"] or ""
         elif edge["condition_type"] == "AND":
             edge_label = "AND"
             edge_color = CREWAI_ORANGE

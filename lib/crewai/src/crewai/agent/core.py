@@ -28,6 +28,7 @@ from pydantic import (
     ConfigDict,
     Field,
     PrivateAttr,
+    ValidationError,
     model_validator,
 )
 from pydantic.functional_serializers import PlainSerializer
@@ -72,7 +73,6 @@ from crewai.events.types.memory_events import (
     MemoryRetrievalFailedEvent,
     MemoryRetrievalStartedEvent,
 )
-from crewai.events.types.skill_events import SkillActivatedEvent
 from crewai.experimental.agent_executor import AgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -81,8 +81,8 @@ from crewai.llms.base_llm import BaseLLM
 from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
-from crewai.skills.loader import activate_skill, discover_skills
-from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
+from crewai.skills.loader import load_skills
+from crewai.skills.models import Skill as SkillModel
 from crewai.state.checkpoint_config import CheckpointConfig, apply_checkpoint
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.types.callback import SerializableCallable
@@ -201,7 +201,7 @@ class Agent(BaseAgent):
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     max_execution_time: int | None = Field(
         default=None,
-        description="Maximum execution time for an agent to execute a task",
+        description="Maximum execution time in seconds for an agent to execute a task",
     )
     step_callback: SerializableCallable | None = Field(
         default=None,
@@ -220,7 +220,11 @@ class Agent(BaseAgent):
         str | BaseLLM | None,
         BeforeValidator(_validate_llm_ref),
         PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
-    ] = Field(description="Language model that will run the agent.", default=None)
+    ] = Field(
+        description="Language model that will run the agent.",
+        default=None,
+        deprecated="function_calling_llm is deprecated and will be removed in a future release.",
+    )
     system_template: str | None = Field(
         default=None, description="System format for the agent."
     )
@@ -375,8 +379,17 @@ class Agent(BaseAgent):
                 DeprecationWarning,
                 stacklevel=2,
             )
+            kwargs: dict[str, int] = {}
+            if self.max_reasoning_attempts is not None:
+                kwargs["max_attempts"] = self.max_reasoning_attempts
+            self.planning_config = PlanningConfig(**kwargs)
+
+        if self.planning and self.planning_config is None:
+            # Bare planning=True should be bounded and avoid per-step
+            # PlannerObserver LLM calls unless explicitly configured.
             self.planning_config = PlanningConfig(
-                max_attempts=self.max_reasoning_attempts,
+                reasoning_effort="low",
+                max_attempts=1,
             )
 
         return self
@@ -415,13 +428,12 @@ class Agent(BaseAgent):
         self,
         resolved_crew_skills: list[SkillModel] | None = None,
     ) -> None:
-        """Resolve skill paths while preserving explicit disclosure levels.
+        """Load configured skills while preserving explicit disclosure levels.
 
-        Path entries trigger discovery and activation because directory-based
-        skills opt into eager loading. Pre-loaded Skill objects keep their
-        current disclosure level so callers can attach METADATA-only skills and
-        progressively activate them later. Crew-level skills are merged in with
-        event emission so observability is consistent regardless of origin.
+        Path strings, Path objects, inline SKILL.md strings, and registry refs
+        are loaded through the shared skill loader. Pre-loaded Skill objects
+        keep their current disclosure level so callers can attach METADATA-only
+        skills and progressively activate them later.
 
         Args:
             resolved_crew_skills: Pre-resolved crew skills. When provided,
@@ -430,7 +442,7 @@ class Agent(BaseAgent):
         from crewai.crew import Crew
 
         if resolved_crew_skills is None:
-            crew_skills: list[Path | SkillModel] | None = (
+            crew_skills = (
                 self.crew.skills
                 if isinstance(self.crew, Crew) and isinstance(self.crew.skills, list)
                 else None
@@ -441,44 +453,14 @@ class Agent(BaseAgent):
         if not self.skills and not crew_skills:
             return
 
-        needs_work = self.skills and any(
-            isinstance(s, Path)
-            or (isinstance(s, SkillModel) and s.disclosure_level < INSTRUCTIONS)
-            for s in self.skills
-        )
-        if not needs_work and not crew_skills:
-            return
-
-        seen: set[str] = set()
-        resolved: list[Path | SkillModel] = []
-        items: list[Path | SkillModel] = list(self.skills) if self.skills else []
-
+        items = list(self.skills) if self.skills else []
         if crew_skills:
             items.extend(crew_skills)
 
-        for item in items:
-            if isinstance(item, Path):
-                discovered = discover_skills(item, source=self)
-                for skill in discovered:
-                    if skill.name not in seen:
-                        seen.add(skill.name)
-                        resolved.append(activate_skill(skill, source=self))
-            elif isinstance(item, SkillModel):
-                if item.name not in seen:
-                    seen.add(item.name)
-                    if item.disclosure_level >= INSTRUCTIONS:
-                        crewai_event_bus.emit(
-                            self,
-                            event=SkillActivatedEvent(
-                                from_agent=self,
-                                skill_name=item.name,
-                                skill_path=item.path,
-                                disclosure_level=item.disclosure_level,
-                            ),
-                        )
-                    resolved.append(item)
-
-        self.skills = resolved if resolved else None
+        self.skills = cast(
+            list[Path | SkillModel | str] | None,
+            load_skills(items, source=self) or None,
+        )
 
     def _is_any_available_memory(self) -> bool:
         """Check if unified memory is available (agent or crew)."""
@@ -729,6 +711,31 @@ class Agent(BaseAgent):
         """
         self._check_execution_error(e, task)
         return await self.aexecute_task(task, context, tools)
+
+    def message(self, content: str, **kwargs: Any) -> str:
+        """Send a single message and get a response.
+
+        Creates a temporary Task + Crew, executes, and returns the raw output.
+        """
+        from crewai.crew import Crew
+        from crewai.task import Task
+        from crewai.types.streaming import CrewStreamingOutput
+
+        task = Task(
+            description=content,
+            expected_output="Respond to the user's message appropriately.",
+            agent=self,
+        )
+        crew = Crew(
+            agents=[self],
+            tasks=[task],
+            verbose=self.verbose,
+            memory=self.memory or False,
+        )
+        result = crew.kickoff()
+        if isinstance(result, CrewStreamingOutput):
+            return result.result.raw
+        return result.raw
 
     def execute_task(
         self,
@@ -1091,9 +1098,14 @@ class Agent(BaseAgent):
         """
         if self.agent_executor is None:
             raise RuntimeError("Agent executor is not initialized.")
+        if not isinstance(self.llm, BaseLLM):
+            raise RuntimeError(
+                "LLM must be resolved before updating agent executor parameters."
+            )
 
         if task is not None:
             self.agent_executor.task = task
+        self.agent_executor.llm = self.llm
         self.agent_executor.tools = tools
         self.agent_executor.original_tools = raw_tools
         self.agent_executor.prompt = prompt
@@ -1186,9 +1198,17 @@ class Agent(BaseAgent):
 
     def _use_trained_data(self, task_prompt: str) -> str:
         """Use trained data for the agent task prompt to improve output."""
-        trained_file = os.getenv(
-            CREWAI_TRAINED_AGENTS_FILE_ENV, TRAINED_AGENTS_DATA_FILE
+        crew_trained_agents_file = (
+            getattr(self.crew, "trained_agents_file", None)
+            if self.crew and not isinstance(self.crew, str)
+            else None
         )
+        trained_file = (
+            os.fspath(crew_trained_agents_file)
+            if crew_trained_agents_file
+            else os.getenv(CREWAI_TRAINED_AGENTS_FILE_ENV, TRAINED_AGENTS_DATA_FILE)
+        )
+
         if data := CrewTrainingHandler(trained_file).load():
             if trained_data_output := data.get(self.role):
                 task_prompt += (
@@ -1393,6 +1413,11 @@ class Agent(BaseAgent):
 
         if _is_resuming_agent_executor(self.agent_executor):
             executor = self.agent_executor
+            if not isinstance(self.llm, BaseLLM):
+                raise RuntimeError(
+                    "LLM must be resolved before resuming agent executor."
+                )
+            executor.llm = self.llm
             executor.tools = parsed_tools
             executor.tools_names = get_tool_names(parsed_tools)
             executor.tools_description = render_text_description_and_args(parsed_tools)
@@ -1673,24 +1698,32 @@ class Agent(BaseAgent):
         elif response_format:
             raw_output = str(output) if not isinstance(output, str) else output
             try:
-                model_schema = generate_model_description(response_format)
-                schema = json.dumps(model_schema, indent=2)
-                instructions = I18N_DEFAULT.slice("formatted_task_instructions").format(
-                    output_format=schema
-                )
+                formatted_result = response_format.model_validate_json(raw_output)
+            except ValidationError:
+                # Direct JSON validation failed; fall back to converter-based parsing below.
+                formatted_result = None
 
-                converter = Converter(
-                    llm=cast(BaseLLM, self.llm),
-                    text=raw_output,
-                    model=response_format,
-                    instructions=instructions,
-                )
+            if formatted_result is None:
+                try:
+                    model_schema = generate_model_description(response_format)
+                    schema = json.dumps(model_schema, indent=2)
+                    instructions = I18N_DEFAULT.slice(
+                        "formatted_task_instructions"
+                    ).format(output_format=schema)
 
-                conversion_result = converter.to_pydantic()
-                if isinstance(conversion_result, BaseModel):
-                    formatted_result = conversion_result
-            except ConverterError:
-                pass
+                    converter = Converter(
+                        llm=cast(BaseLLM, self.llm),
+                        text=raw_output,
+                        model=response_format,
+                        instructions=instructions,
+                    )
+
+                    conversion_result = converter.to_pydantic()
+                    if isinstance(conversion_result, BaseModel):
+                        formatted_result = conversion_result
+                except ConverterError:
+                    # Conversion failure is non-fatal; raw output is preserved below.
+                    pass
         else:
             raw_output = str(output) if not isinstance(output, str) else output
 

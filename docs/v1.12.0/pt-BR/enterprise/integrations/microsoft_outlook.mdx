@@ -1,0 +1,255 @@
+---
+title: Integração Microsoft Outlook
+description: "Gerenciamento de email, calendário e contatos com integração Microsoft Outlook para CrewAI."
+icon: "envelope"
+mode: "wide"
+---
+
+## Visão Geral
+
+Permita que seus agentes acessem e gerenciem emails, eventos de calendário e contatos do Outlook. Envie emails, recupere mensagens, gerencie eventos de calendário e organize contatos com automação alimentada por IA.
+
+## Pré-requisitos
+
+Antes de usar a integração Microsoft Outlook, certifique-se de ter:
+
+- Uma conta [CrewAI AMP](https://app.crewai.com) com assinatura ativa
+- Uma conta Microsoft com acesso ao Outlook
+- Conectado sua conta Microsoft através da [página de Integrações](https://app.crewai.com/crewai_plus/connectors)
+
+## Configurando a Integração Microsoft Outlook
+
+### 1. Conecte sua Conta Microsoft
+
+1. Navegue para [Integrações CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
+2. Encontre **Microsoft Outlook** na seção de Integrações de Autenticação
+3. Clique em **Conectar** e complete o fluxo OAuth
+4. Conceda as permissões necessárias para acesso a email, calendário e contatos
+5. Copie seu Token Enterprise das [Configurações de Integração](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. Instale o Pacote Necessário
+
+```bash
+uv add crewai-tools
+```
+
+### 3. Configuração de variável de ambiente
+
+<Note>
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="seu_enterprise_token"
+```
+
+Ou adicione ao seu arquivo `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
+```
+
+## Ações Disponíveis
+
+<AccordionGroup>
+  <Accordion title="microsoft_outlook/get_messages">
+    **Descrição:** Obter mensagens de email da caixa de correio do usuário.
+
+    **Parâmetros:**
+    - `top` (integer, opcional): Número de mensagens a recuperar (máx 1000). Padrão: 10.
+    - `filter` (string, opcional): Expressão de filtro OData (ex: "isRead eq false").
+    - `search` (string, opcional): String de consulta de pesquisa.
+    - `orderby` (string, opcional): Ordenar por campo (ex: "receivedDateTime desc"). Padrão: "receivedDateTime desc".
+    - `select` (string, opcional): Selecionar propriedades específicas para retornar.
+    - `expand` (string, opcional): Expandir recursos relacionados inline.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/send_email">
+    **Descrição:** Enviar uma mensagem de email.
+
+    **Parâmetros:**
+    - `to_recipients` (array, obrigatório): Array de endereços de email dos destinatários.
+    - `cc_recipients` (array, opcional): Array de endereços de email dos destinatários em cópia.
+    - `bcc_recipients` (array, opcional): Array de endereços de email dos destinatários em cópia oculta.
+    - `subject` (string, obrigatório): Assunto do email.
+    - `body` (string, obrigatório): Conteúdo do corpo do email.
+    - `body_type` (string, opcional): Tipo de conteúdo do corpo. Opções: Text, HTML. Padrão: HTML.
+    - `importance` (string, opcional): Nível de importância da mensagem. Opções: low, normal, high. Padrão: normal.
+    - `reply_to` (array, opcional): Array de endereços de email para resposta.
+    - `save_to_sent_items` (boolean, opcional): Se deve salvar a mensagem na pasta Itens Enviados. Padrão: true.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/get_calendar_events">
+    **Descrição:** Obter eventos de calendário do calendário do usuário.
+
+    **Parâmetros:**
+    - `top` (integer, opcional): Número de eventos a recuperar (máx 1000). Padrão: 10.
+    - `skip` (integer, opcional): Número de eventos a pular. Padrão: 0.
+    - `filter` (string, opcional): Expressão de filtro OData (ex: "start/dateTime ge '2024-01-01T00:00:00Z'").
+    - `orderby` (string, opcional): Ordenar por campo (ex: "start/dateTime asc"). Padrão: "start/dateTime asc".
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/create_calendar_event">
+    **Descrição:** Criar um novo evento de calendário.
+
+    **Parâmetros:**
+    - `subject` (string, obrigatório): Assunto/título do evento.
+    - `body` (string, opcional): Corpo/descrição do evento.
+    - `start_datetime` (string, obrigatório): Data e hora de início no formato ISO 8601 (ex: '2024-01-20T10:00:00').
+    - `end_datetime` (string, obrigatório): Data e hora de término no formato ISO 8601.
+    - `timezone` (string, opcional): Fuso horário (ex: 'Pacific Standard Time'). Padrão: UTC.
+    - `location` (string, opcional): Local do evento.
+    - `attendees` (array, opcional): Array de endereços de email dos participantes.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/get_contacts">
+    **Descrição:** Obter contatos do catálogo de endereços do usuário.
+
+    **Parâmetros:**
+    - `top` (integer, opcional): Número de contatos a recuperar (máx 1000). Padrão: 10.
+    - `skip` (integer, opcional): Número de contatos a pular. Padrão: 0.
+    - `filter` (string, opcional): Expressão de filtro OData.
+    - `orderby` (string, opcional): Ordenar por campo (ex: "displayName asc"). Padrão: "displayName asc".
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/create_contact">
+    **Descrição:** Criar um novo contato no catálogo de endereços do usuário.
+
+    **Parâmetros:**
+    - `displayName` (string, obrigatório): Nome de exibição do contato.
+    - `givenName` (string, opcional): Primeiro nome do contato.
+    - `surname` (string, opcional): Sobrenome do contato.
+    - `emailAddresses` (array, opcional): Array de endereços de email. Cada item é um objeto com `address` (string) e `name` (string).
+    - `businessPhones` (array, opcional): Array de números de telefone comerciais.
+    - `homePhones` (array, opcional): Array de números de telefone residenciais.
+    - `jobTitle` (string, opcional): Cargo do contato.
+    - `companyName` (string, opcional): Nome da empresa do contato.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/get_message">
+    **Descrição:** Obter uma mensagem de email específica por ID.
+
+    **Parâmetros:**
+    - `message_id` (string, obrigatório): O identificador único da mensagem. Obter pela ação get_messages.
+    - `select` (string, opcional): Lista separada por vírgulas de propriedades a retornar. Exemplo: "id,subject,body,from,receivedDateTime". Padrão: "id,subject,body,from,toRecipients,receivedDateTime".
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/reply_to_email">
+    **Descrição:** Responder a uma mensagem de email.
+
+    **Parâmetros:**
+    - `message_id` (string, obrigatório): O identificador único da mensagem a responder. Obter pela ação get_messages.
+    - `comment` (string, obrigatório): O conteúdo da mensagem de resposta. Pode ser texto simples ou HTML. A mensagem original será citada abaixo deste conteúdo.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/forward_email">
+    **Descrição:** Encaminhar uma mensagem de email.
+
+    **Parâmetros:**
+    - `message_id` (string, obrigatório): O identificador único da mensagem a encaminhar. Obter pela ação get_messages.
+    - `to_recipients` (array, obrigatório): Array de endereços de email dos destinatários. Exemplo: ["john@example.com", "jane@example.com"].
+    - `comment` (string, opcional): Mensagem opcional a incluir acima do conteúdo encaminhado. Pode ser texto simples ou HTML.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/mark_message_read">
+    **Descrição:** Marcar uma mensagem como lida ou não lida.
+
+    **Parâmetros:**
+    - `message_id` (string, obrigatório): O identificador único da mensagem. Obter pela ação get_messages.
+    - `is_read` (boolean, obrigatório): Definir como true para marcar como lida, false para marcar como não lida.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/delete_message">
+    **Descrição:** Excluir uma mensagem de email.
+
+    **Parâmetros:**
+    - `message_id` (string, obrigatório): O identificador único da mensagem a excluir. Obter pela ação get_messages.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/update_event">
+    **Descrição:** Atualizar um evento de calendário existente.
+
+    **Parâmetros:**
+    - `event_id` (string, obrigatório): O identificador único do evento. Obter pela ação get_calendar_events.
+    - `subject` (string, opcional): Novo assunto/título do evento.
+    - `start_time` (string, opcional): Nova hora de início no formato ISO 8601 (ex: "2024-01-20T10:00:00"). OBRIGATÓRIO: Também deve fornecer start_timezone ao usar este campo.
+    - `start_timezone` (string, opcional): Fuso horário da hora de início. OBRIGATÓRIO ao atualizar start_time. Exemplos: "Pacific Standard Time", "Eastern Standard Time", "UTC".
+    - `end_time` (string, opcional): Nova hora de término no formato ISO 8601. OBRIGATÓRIO: Também deve fornecer end_timezone ao usar este campo.
+    - `end_timezone` (string, opcional): Fuso horário da hora de término. OBRIGATÓRIO ao atualizar end_time. Exemplos: "Pacific Standard Time", "Eastern Standard Time", "UTC".
+    - `location` (string, opcional): Novo local do evento.
+    - `body` (string, opcional): Novo corpo/descrição do evento. Suporta formatação HTML.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/delete_event">
+    **Descrição:** Excluir um evento de calendário.
+
+    **Parâmetros:**
+    - `event_id` (string, obrigatório): O identificador único do evento a excluir. Obter pela ação get_calendar_events.
+
+  </Accordion>
+</AccordionGroup>
+
+## Exemplos de Uso
+
+### Configuração Básica do Agente Microsoft Outlook
+
+```python
+from crewai import Agent, Task, Crew
+
+# Crie um agente com capacidades do Microsoft Outlook
+outlook_agent = Agent(
+    role="Assistente de Email",
+    goal="Gerenciar emails, eventos de calendário e contatos de forma eficiente",
+    backstory="Um assistente IA especializado em operações do Microsoft Outlook e gerenciamento de comunicação.",
+    apps=['microsoft_outlook']  # Todas as ações do Outlook estarão disponíveis
+)
+
+# Tarefa para enviar um email
+send_email_task = Task(
+    description="Enviar um email para 'colega@exemplo.com' com assunto 'Atualização do Projeto' e corpo 'Olá, aqui está a última atualização do projeto. Atenciosamente.'",
+    agent=outlook_agent,
+    expected_output="Email enviado com sucesso para colega@exemplo.com"
+)
+
+# Execute a tarefa
+crew = Crew(
+    agents=[outlook_agent],
+    tasks=[send_email_task]
+)
+
+crew.kickoff()
+```
+
+## Solução de Problemas
+
+### Problemas Comuns
+
+**Erros de Autenticação**
+
+- Certifique-se de que sua conta Microsoft tenha as permissões necessárias para acesso a email, calendário e contatos.
+- Escopos necessários incluem: `Mail.Read`, `Mail.Send`, `Calendars.Read`, `Calendars.ReadWrite`, `Contacts.Read`, `Contacts.ReadWrite`.
+
+**Problemas de Envio de Email**
+
+- Certifique-se de que `to_recipients`, `subject` e `body` sejam fornecidos para `send_email`.
+- Verifique se os endereços de email estão formatados corretamente.
+
+### Obtendo Ajuda
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para assistência com configuração
+  ou solução de problemas da integração Microsoft Outlook.
+</Card>

@@ -60,7 +60,10 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
     _openai_agent: OpenAIAgentProtocol = PrivateAttr()
     _logger: Logger = PrivateAttr(default_factory=Logger)
     _active_thread: str | None = PrivateAttr(default=None)
-    function_calling_llm: Any = Field(default=None)
+    function_calling_llm: Any = Field(
+        default=None,
+        deprecated="function_calling_llm is deprecated and will be removed in a future release.",
+    )
     step_callback: Any = Field(default=None)
     _tool_adapter: OpenAIAgentToolAdapter = PrivateAttr()
     _converter_adapter: OpenAIConverterAdapter = PrivateAttr()
@@ -78,7 +81,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         Raises:
             ImportError: If OpenAI agent dependencies are not installed.
         """
-        self.llm = kwargs.pop("model", "gpt-4o-mini")
+        self.llm = kwargs.pop("model", "gpt-5.4-mini")
         super().__init__(**kwargs)
         self._tool_adapter = OpenAIAgentToolAdapter(tools=kwargs.get("tools"))
         self._converter_adapter = OpenAIConverterAdapter(agent_adapter=self)

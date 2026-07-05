@@ -33,10 +33,6 @@ from crewai.memory.utils import join_scope_paths
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# State models
-# ---------------------------------------------------------------------------
-
 
 class ItemState(BaseModel):
     """Per-item tracking within a batch."""
@@ -51,18 +47,14 @@ class ItemState(BaseModel):
     private: bool = False
     # Structural root scope prefix for hierarchical scoping
     root_scope: str | None = None
-    # Resolved values
     resolved_scope: str = "/"
     resolved_categories: list[str] = Field(default_factory=list)
     resolved_metadata: dict[str, Any] = Field(default_factory=dict)
     resolved_importance: float = 0.5
     resolved_source: str | None = None
     resolved_private: bool = False
-    # Embedding
     embedding: list[float] = Field(default_factory=list)
-    # Intra-batch dedup
     dropped: bool = False
-    # Consolidation
     similar_records: list[MemoryRecord] = Field(default_factory=list)
     top_similarity: float = 0.0
     plan: ConsolidationPlan | None = None
@@ -74,16 +66,10 @@ class EncodingState(BaseModel):
 
     id: str = Field(default_factory=lambda: str(uuid4()))
     items: list[ItemState] = Field(default_factory=list)
-    # Aggregate stats
     records_inserted: int = 0
     records_updated: int = 0
     records_deleted: int = 0
     items_dropped_dedup: int = 0
-
-
-# ---------------------------------------------------------------------------
-# Flow
-# ---------------------------------------------------------------------------
 
 
 class EncodingFlow(Flow[EncodingState]):
@@ -121,10 +107,6 @@ class EncodingFlow(Flow[EncodingState]):
         self._embedder = embedder
         self._config = config or MemoryConfig()
 
-    # ------------------------------------------------------------------
-    # Step 1: Batch embed (ONE embedder call)
-    # ------------------------------------------------------------------
-
     @start()
     def batch_embed(self) -> None:
         """Embed all items in a single embedder call."""
@@ -133,10 +115,6 @@ class EncodingFlow(Flow[EncodingState]):
         embeddings = embed_texts(self._embedder, texts)
         for item, emb in zip(items, embeddings, strict=False):
             item.embedding = emb
-
-    # ------------------------------------------------------------------
-    # Step 2: Intra-batch dedup (cosine similarity matrix)
-    # ------------------------------------------------------------------
 
     @listen(batch_embed)
     def intra_batch_dedup(self) -> None:
@@ -170,10 +148,6 @@ class EncodingFlow(Flow[EncodingState]):
         if norm_a == 0.0 or norm_b == 0.0:
             return 0.0
         return dot / (norm_a * norm_b)
-
-    # ------------------------------------------------------------------
-    # Step 3: Parallel find similar (concurrent storage searches)
-    # ------------------------------------------------------------------
 
     @listen(intra_batch_dedup)
     def parallel_find_similar(self) -> None:
@@ -244,10 +218,6 @@ class EncodingFlow(Flow[EncodingState]):
                     item.similar_records = [r for r, _ in raw]
                     item.top_similarity = float(raw[0][1]) if raw else 0.0
 
-    # ------------------------------------------------------------------
-    # Step 4: Parallel analyze (N concurrent LLM calls)
-    # ------------------------------------------------------------------
-
     @listen(parallel_find_similar)
     def parallel_analyze(self) -> None:
         """Field resolution + consolidation via parallel individual LLM calls.
@@ -273,7 +243,6 @@ class EncodingFlow(Flow[EncodingState]):
         existing_categories: list[str] = []
         if any_needs_fields:
             # Constrain scope/category suggestions to root_scope boundary
-            # Check if any active item has root_scope
             active_root = next(
                 (it.root_scope for it in items if not it.dropped and it.root_scope),
                 None,
@@ -284,7 +253,6 @@ class EncodingFlow(Flow[EncodingState]):
                 self._storage.list_categories(scope_prefix=active_root).keys()
             )
 
-        # Classify items and submit LLM calls
         save_futures: dict[int, Future[MemoryAnalysis]] = {}
         consol_futures: dict[int, Future[ConsolidationPlan]] = {}
 
@@ -302,11 +270,9 @@ class EncodingFlow(Flow[EncodingState]):
                 has_similar = item.top_similarity >= threshold
 
                 if fields_provided and not has_similar:
-                    # Group A: fast path
                     self._apply_defaults(item)
                     item.plan = ConsolidationPlan(actions=[], insert_new=True)
                 elif fields_provided and has_similar:
-                    # Group B: consolidation only
                     self._apply_defaults(item)
                     consol_futures[i] = pool.submit(
                         contextvars.copy_context().run,
@@ -316,7 +282,6 @@ class EncodingFlow(Flow[EncodingState]):
                         self._llm,
                     )
                 elif not fields_provided and not has_similar:
-                    # Group C: field resolution only
                     save_futures[i] = pool.submit(
                         contextvars.copy_context().run,
                         analyze_for_save,
@@ -326,7 +291,6 @@ class EncodingFlow(Flow[EncodingState]):
                         self._llm,
                     )
                 else:
-                    # Group D: both in parallel
                     save_futures[i] = pool.submit(
                         contextvars.copy_context().run,
                         analyze_for_save,
@@ -343,13 +307,10 @@ class EncodingFlow(Flow[EncodingState]):
                         self._llm,
                     )
 
-            # Collect field-resolution results
             for i, future in save_futures.items():
                 analysis = future.result()
                 item = items[i]
-                # Determine inner scope from explicit scope or LLM-inferred
                 inner_scope = item.scope or analysis.suggested_scope or "/"
-                # Join root_scope with inner scope if root_scope is set
                 if item.root_scope:
                     item.resolved_scope = join_scope_paths(item.root_scope, inner_scope)
                 else:
@@ -378,7 +339,6 @@ class EncodingFlow(Flow[EncodingState]):
                 if i not in consol_futures:
                     item.plan = ConsolidationPlan(actions=[], insert_new=True)
 
-            # Collect consolidation results
             for i, consol_future in consol_futures.items():
                 items[i].plan = consol_future.result()
         finally:
@@ -391,7 +351,6 @@ class EncodingFlow(Flow[EncodingState]):
         final resolved_scope.
         """
         inner_scope = item.scope or "/"
-        # Join root_scope with inner scope if root_scope is set
         if item.root_scope:
             item.resolved_scope = join_scope_paths(item.root_scope, inner_scope)
         else:
@@ -407,10 +366,6 @@ class EncodingFlow(Flow[EncodingState]):
         item.resolved_source = item.source
         item.resolved_private = item.private
 
-    # ------------------------------------------------------------------
-    # Step 5: Execute plans (batch re-embed + bulk insert)
-    # ------------------------------------------------------------------
-
     @listen(parallel_analyze)
     def execute_plans(self) -> None:
         """Apply all consolidation plans with batch re-embedding and bulk insert.
@@ -423,7 +378,6 @@ class EncodingFlow(Flow[EncodingState]):
         items = list(self.state.items)
         now = datetime.now(timezone.utc)
 
-        # --- Deduplicate actions across all items ---
         # Multiple items may reference the same existing record (because their
         # similar_records overlap). Collect one action per record_id, first wins.
         # Also build a map from record_id to the original MemoryRecord for updates.
@@ -455,7 +409,6 @@ class EncodingFlow(Flow[EncodingState]):
                 ):
                     dedup_updates[rid] = (i, action.new_content)
 
-        # --- Batch re-embed all update contents in ONE call ---
         update_list = list(
             dedup_updates.items()
         )  # [(record_id, (item_idx, new_content)), ...]
@@ -468,7 +421,6 @@ class EncodingFlow(Flow[EncodingState]):
         for (rid, _), emb in zip(update_list, update_embeddings, strict=False):
             update_emb_map[rid] = emb
 
-        # --- Apply all storage mutations under one lock ---
         # Hold the write lock for the entire delete + update + insert sequence
         # so no other pipeline can interleave and cause version conflicts.
         # The lock is reentrant (RLock), so the individual storage methods

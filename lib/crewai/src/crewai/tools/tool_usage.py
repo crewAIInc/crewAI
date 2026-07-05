@@ -62,6 +62,9 @@ OPENAI_BIGGER_MODELS: list[
 ]
 
 
+_RAW_RESULT_UNSET = object()
+
+
 class ToolUsageError(Exception):
     """Exception raised for errors in the tool usage."""
 
@@ -106,8 +109,8 @@ class ToolUsage:
         self.action = action
         self.function_calling_llm = function_calling_llm
         self.fingerprint_context = fingerprint_context or {}
+        self.last_raw_result: Any = _RAW_RESULT_UNSET
 
-        # Set the maximum parsing attempts for bigger models
         if (
             self.function_calling_llm
             and self.function_calling_llm.model in OPENAI_BIGGER_MODELS
@@ -120,6 +123,11 @@ class ToolUsage:
     ) -> ToolCalling | InstructorToolCalling | ToolUsageError:
         """Parse the tool string and return the tool calling."""
         return self._tool_calling(tool_string)
+
+    def get_last_raw_result(self, fallback: Any) -> Any:
+        if self.last_raw_result is _RAW_RESULT_UNSET:
+            return fallback
+        return self.last_raw_result
 
     def use(
         self, calling: ToolCalling | InstructorToolCalling, tool_string: str
@@ -232,6 +240,7 @@ class ToolUsage:
                 result = I18N_DEFAULT.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
                 )
+                self.last_raw_result = result
                 self._telemetry.tool_repeated_usage(
                     llm=self.function_calling_llm,
                     tool_name=sanitize_tool_name(tool.name),
@@ -299,9 +308,9 @@ class ToolUsage:
             )
             if usage_limit_error:
                 result = usage_limit_error
+                self.last_raw_result = result
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
                 result = self._format_result(result=result)
-                # Don't return early - fall through to finally block
             elif result is None:
                 try:
                     if sanitize_tool_name(calling.tool_name) in [
@@ -361,7 +370,10 @@ class ToolUsage:
                         tool_name=sanitize_tool_name(tool.name),
                         attempts=self._run_attempts,
                     )
-                    result = self._format_result(result=result)
+                    self.last_raw_result = result
+                    result = self._format_result(
+                        result=tool.format_output_for_agent(result)
+                    )
                     data = {
                         "result": result,
                         "tool_name": sanitize_tool_name(tool.name),
@@ -381,7 +393,6 @@ class ToolUsage:
                     if available_tool and hasattr(
                         available_tool, "_increment_usage_count"
                     ):
-                        # Use _increment_usage_count to sync count to original tool
                         available_tool._increment_usage_count()
                         if (
                             hasattr(available_tool, "max_usage_count")
@@ -424,6 +435,7 @@ class ToolUsage:
                         result = ToolUsageError(
                             f"\n{error_message}.\nMoving on then. {I18N_DEFAULT.slice('format').format(tool_names=self.tools_names)}"
                         ).message
+                        self.last_raw_result = result
                         if self.task:
                             self.task.increment_tools_errors()
                         if self.agent and self.agent.verbose:
@@ -433,7 +445,10 @@ class ToolUsage:
                             self.task.increment_tools_errors()
                         should_retry = True
             else:
-                result = self._format_result(result=result)
+                self.last_raw_result = result
+                result = self._format_result(
+                    result=tool.format_output_for_agent(result)
+                )
 
         finally:
             if started_event_emitted and not error_event_emitted:
@@ -463,6 +478,7 @@ class ToolUsage:
                 result = I18N_DEFAULT.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
                 )
+                self.last_raw_result = result
                 self._telemetry.tool_repeated_usage(
                     llm=self.function_calling_llm,
                     tool_name=sanitize_tool_name(tool.name),
@@ -532,9 +548,9 @@ class ToolUsage:
             )
             if usage_limit_error:
                 result = usage_limit_error
+                self.last_raw_result = result
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
                 result = self._format_result(result=result)
-                # Don't return early - fall through to finally block
             elif result is None:
                 try:
                     if sanitize_tool_name(calling.tool_name) in [
@@ -594,7 +610,10 @@ class ToolUsage:
                         tool_name=sanitize_tool_name(tool.name),
                         attempts=self._run_attempts,
                     )
-                    result = self._format_result(result=result)
+                    self.last_raw_result = result
+                    result = self._format_result(
+                        result=tool.format_output_for_agent(result)
+                    )
                     data = {
                         "result": result,
                         "tool_name": sanitize_tool_name(tool.name),
@@ -614,7 +633,6 @@ class ToolUsage:
                     if available_tool and hasattr(
                         available_tool, "_increment_usage_count"
                     ):
-                        # Use _increment_usage_count to sync count to original tool
                         available_tool._increment_usage_count()
                         if (
                             hasattr(available_tool, "max_usage_count")
@@ -657,6 +675,7 @@ class ToolUsage:
                         result = ToolUsageError(
                             f"\n{error_message}.\nMoving on then. {I18N_DEFAULT.slice('format').format(tool_names=self.tools_names)}"
                         ).message
+                        self.last_raw_result = result
                         if self.task:
                             self.task.increment_tools_errors()
                         if self.agent and self.agent.verbose:
@@ -666,7 +685,10 @@ class ToolUsage:
                             self.task.increment_tools_errors()
                         should_retry = True
             else:
-                result = self._format_result(result=result)
+                self.last_raw_result = result
+                result = self._format_result(
+                    result=tool.format_output_for_agent(result)
+                )
 
         finally:
             if started_event_emitted and not error_event_emitted:
@@ -868,32 +890,27 @@ class ToolUsage:
                 "Tool input must be a valid dictionary in JSON or Python literal format"
             )
 
-        # Attempt 1: Parse as JSON
         try:
             arguments = json.loads(tool_input)
             if isinstance(arguments, dict):
                 return arguments
         except (JSONDecodeError, TypeError):
-            pass  # Continue to the next parsing attempt
+            pass
 
-        # Attempt 2: Parse as Python literal
         try:
             arguments = ast.literal_eval(tool_input)
             if isinstance(arguments, dict):
                 return arguments
         except (ValueError, SyntaxError):
             repaired_input = repair_json(tool_input)
-            # Continue to the next parsing attempt
 
-        # Attempt 3: Parse as JSON5
         try:
             arguments = json5.loads(tool_input)
             if isinstance(arguments, dict):
                 return arguments
         except (JSONDecodeError, ValueError, TypeError):
-            pass  # Continue to the next parsing attempt
+            pass
 
-        # Attempt 4: Repair JSON
         try:
             repaired_input = str(repair_json(tool_input, skip_json_loads=True))
             if self.agent and self.agent.verbose:
@@ -910,7 +927,6 @@ class ToolUsage:
             "Tool input must be a valid dictionary in JSON or Python literal format"
         )
         self._emit_validate_input_error(error_message)
-        # If all parsing attempts fail, raise an error
         raise Exception(error_message)
 
     def _emit_validate_input_error(self, final_error: str) -> None:
@@ -923,7 +939,6 @@ class ToolUsage:
             "agent": self.agent,  # Adding agent for fingerprint extraction
         }
 
-        # Include fingerprint context if available
         if self.fingerprint_context:
             tool_selection_data.update(self.fingerprint_context)
 
@@ -1000,7 +1015,6 @@ class ToolUsage:
             ),
         }
 
-        # Include fingerprint context if available
         if self.fingerprint_context:
             event_data.update(self.fingerprint_context)
 
@@ -1017,7 +1031,6 @@ class ToolUsage:
         """
         security_context: dict[str, Any] = {}
 
-        # Add agent fingerprint if available
         if self.agent and hasattr(self.agent, "security_config"):
             security_config = getattr(self.agent, "security_config", None)
             if security_config and hasattr(security_config, "fingerprint"):
@@ -1028,7 +1041,6 @@ class ToolUsage:
                 except AttributeError:
                     pass
 
-        # Add task fingerprint if available
         if self.task and hasattr(self.task, "security_config"):
             security_config = getattr(self.task, "security_config", None)
             if security_config and hasattr(security_config, "fingerprint"):

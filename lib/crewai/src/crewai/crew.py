@@ -93,11 +93,11 @@ from crewai.events.types.crew_events import (
     CrewTrainStartedEvent,
 )
 from crewai.flow.flow_trackable import FlowTrackable
-from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.knowledge import Knowledge, _resolve_knowledge_sources
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
-from crewai.memory.memory_scope import MemoryScope, MemorySlice
+from crewai.memory.memory_scope import MemoryScope, MemorySlice, _ensure_memory_kind
 from crewai.memory.unified_memory import Memory
 from crewai.process import Process
 from crewai.rag.embeddings.types import EmbedderConfig
@@ -179,6 +179,7 @@ class Crew(FlowTrackable, BaseModel):
         max_rpm: Maximum number of requests per minute for the crew execution to
             be respected.
         prompt_file: Path to the prompt json file to be used for the crew.
+        trained_agents_file: Path to trained agent suggestions loaded during inference.
         id: A unique identifier for the crew instance.
         task_callback: Callback to be executed after each task for every agents
             execution.
@@ -223,7 +224,14 @@ class Crew(FlowTrackable, BaseModel):
     ] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: bool = Field(default=False)
-    memory: bool | Memory | MemoryScope | MemorySlice | None = Field(
+    memory: Annotated[
+        bool
+        | Annotated[
+            Memory | MemoryScope | MemorySlice, Field(discriminator="memory_kind")
+        ]
+        | None,
+        BeforeValidator(_ensure_memory_kind),
+    ] = Field(
         default=False,
         description=(
             "Enable crew memory. Pass True for default Memory(), "
@@ -251,7 +259,11 @@ class Crew(FlowTrackable, BaseModel):
         str | LLM | None,
         BeforeValidator(_validate_llm_ref),
         PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
-    ] = Field(description="Language model that will run the agent.", default=None)
+    ] = Field(
+        description="Language model that will run the agent.",
+        default=None,
+        deprecated="function_calling_llm is deprecated and will be removed in a future release.",
+    )
     config: Json[dict[str, Any]] | dict[str, Any] | None = Field(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     share_crew: bool | None = Field(default=False)
@@ -292,6 +304,13 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Path to the prompt json file to be used for the crew.",
     )
+    trained_agents_file: str | Path | None = Field(
+        default=None,
+        description=(
+            "Path to a trained-agents pickle produced by train(). "
+            "When set, agents load suggestions from this file during inference."
+        ),
+    )
     output_log_file: bool | str | None = Field(
         default=None,
         description="Path to the log file to be saved",
@@ -318,7 +337,10 @@ class Crew(FlowTrackable, BaseModel):
         default_factory=list,
         description="list of execution logs for tasks",
     )
-    knowledge_sources: list[BaseKnowledgeSource] | None = Field(
+    knowledge_sources: Annotated[
+        list[BaseKnowledgeSource] | None,
+        BeforeValidator(_resolve_knowledge_sources),
+    ] = Field(
         default=None,
         description=(
             "Knowledge sources for the crew. Add knowledge sources to the "
@@ -337,9 +359,9 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Knowledge for the crew.",
     )
-    skills: list[Path | Skill] | None = Field(
+    skills: list[Path | Skill | str] | None = Field(
         default=None,
-        description="Skill search paths or pre-loaded Skill objects applied to all agents in the crew.",
+        description="Skill search paths, inline SKILL.md strings, pre-loaded Skill objects, or '@org/name' registry refs applied to all agents in the crew.",
     )
 
     security_config: SecurityConfig = Field(
@@ -367,6 +389,15 @@ class Crew(FlowTrackable, BaseModel):
     checkpoint_inputs: dict[str, Any] | None = Field(default=None)
     checkpoint_train: bool | None = Field(default=None)
     checkpoint_kickoff_event_id: str | None = Field(default=None)
+
+    @field_validator(
+        "before_kickoff_callbacks", "after_kickoff_callbacks", mode="before"
+    )
+    @classmethod
+    def _drop_unresolvable_callbacks(cls, value: Any) -> Any:
+        if isinstance(value, list):
+            return [v for v in value if v is not None]
+        return value
 
     @classmethod
     def from_checkpoint(cls, config: CheckpointConfig) -> Crew:
@@ -429,16 +460,20 @@ class Crew(FlowTrackable, BaseModel):
                 if node.event.type == "task_started" and node.event.task_id:
                     started_task_ids.add(node.event.task_id)
 
+        is_hierarchical = self.process == Process.hierarchical
         resuming_task_agent_roles: set[str] = set()
         for task in self.tasks:
-            if (
-                task.output is None
-                and task.agent is not None
-                and str(task.id) in started_task_ids
-            ):
-                resuming_task_agent_roles.add(task.agent.role)
+            if task.output is not None or str(task.id) not in started_task_ids:
+                continue
+            executing_agent = self.manager_agent if is_hierarchical else task.agent
+            if executing_agent is not None:
+                resuming_task_agent_roles.add(executing_agent.role)
 
-        for agent in self.agents:
+        candidate_agents: list[BaseAgent] = list(self.agents)
+        if self.manager_agent is not None:
+            candidate_agents.append(self.manager_agent)
+
+        for agent in candidate_agents:
             agent.crew = self
             executor = agent.agent_executor
             if (
@@ -453,7 +488,7 @@ class Crew(FlowTrackable, BaseModel):
                 agent.agent_executor = None
         for task in self.tasks:
             if task.agent is not None:
-                for agent in self.agents:
+                for agent in candidate_agents:
                     if agent.role == task.agent.role:
                         task.agent = agent
                         if agent.agent_executor is not None and task.output is None:
@@ -473,7 +508,41 @@ class Crew(FlowTrackable, BaseModel):
         if self.checkpoint_train is not None:
             self._train = self.checkpoint_train
 
+        self._rebind_memory_views()
         self._restore_event_scope()
+
+    def _rebind_memory_views(self) -> None:
+        """Reattach a live ``Memory`` to restored ``MemoryScope``/``MemorySlice`` views.
+
+        Checkpoint JSON omits the live ``Memory`` dependency on scope/slice
+        views, so after restore they raise ``RuntimeError`` on first use.
+        Prefer the crew's restored ``Memory`` (from ``create_crew_memory``
+        or a ``Crew.memory=Memory(...)`` instance) so all views share one
+        backing store; fall back to a fresh ``Memory()`` only if nothing is
+        available.
+        """
+        from crewai.memory.memory_scope import MemoryScope, MemorySlice
+        from crewai.memory.unified_memory import Memory
+
+        backing: Memory | None = None
+        if isinstance(self._memory, Memory):
+            backing = self._memory
+        elif isinstance(self.memory, Memory):
+            backing = self.memory
+
+        def _ensure(view: Any) -> None:
+            nonlocal backing
+            if not isinstance(view, MemoryScope | MemorySlice):
+                return
+            if view._memory is not None:
+                return
+            if backing is None:
+                backing = Memory()
+            view.bind(backing)
+
+        _ensure(self.memory)
+        for agent in self.agents:
+            _ensure(agent.memory)
 
     def _restore_event_scope(self) -> None:
         """Rebuild the event scope stack from the checkpoint's event record."""
@@ -488,28 +557,11 @@ class Crew(FlowTrackable, BaseModel):
         if state is None:
             return
 
-        # Restore crew scope and the in-progress task scope. Inner scopes
-        # (agent, llm, tool) are re-created by the executor on resume.
         stack: list[tuple[str, str]] = []
         if self._kickoff_event_id:
             stack.append((self._kickoff_event_id, "crew_kickoff_started"))
-
-        # Find the task_started event for the in-progress task (skipped on resume)
-        for task in self.tasks:
-            if task.output is None:
-                task_id_str = str(task.id)
-                for node in state.event_record.nodes.values():
-                    if (
-                        node.event.type == "task_started"
-                        and node.event.task_id == task_id_str
-                    ):
-                        stack.append((node.event.event_id, "task_started"))
-                        break
-                break
-
         restore_event_scope(tuple(stack))
 
-        # Restore last_event_id and emission counter from the record
         last_event_id: str | None = None
         max_seq = 0
         for node in state.event_record.nodes.values():
@@ -554,7 +606,6 @@ class Crew(FlowTrackable, BaseModel):
             self._cache_handler = CacheHandler()
         event_listener = EventListener()
 
-        # Determine and set tracing state once for this execution
         tracing_enabled = should_enable_tracing(override=self.tracing)
         set_tracing_enabled(tracing_enabled)
 
@@ -582,7 +633,6 @@ class Crew(FlowTrackable, BaseModel):
         """
         from crewai.memory.utils import sanitize_scope_name
 
-        # Compute sanitized crew name for root_scope
         crew_name = sanitize_scope_name(self.name or "crew")
         crew_root_scope = f"/crew/{crew_name}"
 
@@ -594,7 +644,14 @@ class Crew(FlowTrackable, BaseModel):
                 from crewai.rag.embeddings.factory import build_embedder
 
                 embedder = build_embedder(cast(dict[str, Any], self.embedder))
-            self._memory = Memory(embedder=embedder, root_scope=crew_root_scope)
+            memory_kwargs: dict[str, Any] = {
+                "embedder": embedder,
+                "root_scope": crew_root_scope,
+            }
+            memory_llm = self._memory_llm()
+            if memory_llm is not None:
+                memory_kwargs["llm"] = memory_llm
+            self._memory = Memory(**memory_kwargs)
         elif self.memory:
             # User passed a Memory / MemoryScope / MemorySlice instance
             # Respect user's configuration — don't auto-set root_scope
@@ -603,6 +660,16 @@ class Crew(FlowTrackable, BaseModel):
             self._memory = None
 
         return self
+
+    def _memory_llm(self) -> str | BaseLLM | None:
+        """Return the LLM auto-created memory should use for analysis."""
+        if self.chat_llm is not None:
+            return self.chat_llm
+        for agent in self.agents:
+            agent_llm: str | BaseLLM | None = getattr(agent, "llm", None)
+            if agent_llm is not None:
+                return agent_llm
+        return None
 
     @model_validator(mode="after")
     def create_crew_knowledge(self) -> Crew:
@@ -688,7 +755,6 @@ class Crew(FlowTrackable, BaseModel):
         """Validates that the crew ends with at most one asynchronous task."""
         final_async_task_count = 0
 
-        # Traverse tasks backward
         for task in reversed(self.tasks):
             if task.async_execution:
                 final_async_task_count += 1
@@ -778,7 +844,7 @@ class Crew(FlowTrackable, BaseModel):
             if isinstance(task.context, list):
                 for context_task in task.context:
                     if id(context_task) not in task_indices:
-                        continue  # Skip context tasks not in the main tasks list
+                        continue
                     if task_indices[id(context_task)] > task_indices[id(task)]:
                         raise ValueError(
                             f"Task '{task.description}' has a context dependency "
@@ -950,6 +1016,7 @@ class Crew(FlowTrackable, BaseModel):
         )
         token = attach(baggage_ctx)
 
+        runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
             inputs = prepare_kickoff(self, inputs, input_files)
 
@@ -981,11 +1048,11 @@ class Crew(FlowTrackable, BaseModel):
             )
             raise
         finally:
-            # Ensure all background memory saves complete before returning
             if self._memory is not None and hasattr(self._memory, "drain_writes"):
                 self._memory.drain_writes()
             clear_files(self.id)
             detach(token)
+            crewai_event_bus._exit_runtime_scope(runtime_scope)
 
     def _post_kickoff(self, result: CrewOutput) -> CrewOutput:
         return result
@@ -1161,6 +1228,7 @@ class Crew(FlowTrackable, BaseModel):
         )
         token = attach(baggage_ctx)
 
+        runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
             inputs = prepare_kickoff(self, inputs, input_files)
 
@@ -1194,6 +1262,7 @@ class Crew(FlowTrackable, BaseModel):
         finally:
             clear_files(self.id)
             detach(token)
+            crewai_event_bus._exit_runtime_scope(runtime_scope)
 
     async def akickoff_for_each(
         self,
@@ -1533,7 +1602,6 @@ class Crew(FlowTrackable, BaseModel):
     def _prepare_tools(
         self, agent: BaseAgent, task: Task, tools: list[BaseTool]
     ) -> list[BaseTool]:
-        # Add delegation tools if agent allows delegation
         if hasattr(agent, "allow_delegation") and getattr(
             agent, "allow_delegation", False
         ):
@@ -1548,7 +1616,6 @@ class Crew(FlowTrackable, BaseModel):
             elif agent:
                 tools = self._add_delegation_tools(task, tools)
 
-        # Add code execution tools if agent allows code execution
         if hasattr(agent, "allow_code_execution") and getattr(
             agent, "allow_code_execution", False
         ):
@@ -1568,7 +1635,6 @@ class Crew(FlowTrackable, BaseModel):
         if agent and (hasattr(agent, "mcps") and getattr(agent, "mcps", None)):
             tools = self._add_mcp_tools(task, tools)
 
-        # Add memory tools if memory is available (agent or crew level)
         resolved_memory = getattr(agent, "memory", None) or self._memory
         if resolved_memory is not None:
             tools = self._add_memory_tools(tools, resolved_memory)
@@ -1592,7 +1658,6 @@ class Crew(FlowTrackable, BaseModel):
             def is_auto_injected(content_type: str) -> bool:
                 return any(content_type.startswith(t) for t in supported_types)
 
-            # Only add read_file tool if there are files that need it
             files_needing_tool = {
                 name: f
                 for name, f in files.items()
@@ -1617,17 +1682,14 @@ class Crew(FlowTrackable, BaseModel):
         if not new_tools:
             return existing_tools
 
-        # Create mapping of tool names to new tools
         new_tool_map = {sanitize_tool_name(tool.name): tool for tool in new_tools}
 
-        # Remove any existing tools that will be replaced
         tools = [
             tool
             for tool in existing_tools
             if sanitize_tool_name(tool.name) not in new_tool_map
         ]
 
-        # Add all new tools
         tools.extend(new_tools)
 
         return tools
@@ -1640,7 +1702,6 @@ class Crew(FlowTrackable, BaseModel):
     ) -> list[BaseTool]:
         if hasattr(task_agent, "get_delegation_tools"):
             delegation_tools = task_agent.get_delegation_tools(agents)
-            # Cast delegation_tools to the expected type for _merge_tools
             return self._merge_tools(tools, delegation_tools)
         return tools
 
@@ -1680,7 +1741,6 @@ class Crew(FlowTrackable, BaseModel):
     ) -> list[BaseTool]:
         if hasattr(agent, "get_code_execution_tools"):
             code_tools = agent.get_code_execution_tools()
-            # Cast code_tools to the expected type for _merge_tools
             return self._merge_tools(tools, cast(list[BaseTool], code_tools))
         return tools
 
@@ -1785,7 +1845,6 @@ class Crew(FlowTrackable, BaseModel):
         if not task_outputs:
             raise ValueError("No task outputs available to create crew output.")
 
-        # Filter out empty outputs and get the last valid one as the main output
         valid_outputs = [t for t in task_outputs if t.raw]
         if not valid_outputs:
             raise ValueError("No valid task outputs available to create crew output.")
@@ -1913,13 +1972,11 @@ class Crew(FlowTrackable, BaseModel):
         placeholder_pattern = re.compile(r"\{(.+?)}")
         required_inputs: set[str] = set()
 
-        # Scan tasks for inputs
         for task in self.tasks:
             # description and expected_output might contain e.g. {topic}, {user_name}
             text = f"{task.description or ''} {task.expected_output or ''}"
             required_inputs.update(placeholder_pattern.findall(text))
 
-        # Scan agents for inputs
         for agent in self.agents:
             # role, goal, backstory might have placeholders like {role_detail}, etc.
             text = f"{agent.role or ''} {agent.goal or ''} {agent.backstory or ''}"
@@ -2024,7 +2081,6 @@ class Crew(FlowTrackable, BaseModel):
 
                 total_usage_metrics.add_usage_metrics(llm_usage)
             else:
-                # fallback litellm
                 if hasattr(agent, "_token_process"):
                     token_sum = agent._token_process.get_summary()
                     total_usage_metrics.add_usage_metrics(token_sum)
@@ -2052,7 +2108,6 @@ class Crew(FlowTrackable, BaseModel):
         Uses concurrent.futures for concurrent execution.
         """
         try:
-            # Create LLM instance and ensure it's of type LLM for CrewEvaluator
             llm_instance = create_llm(eval_llm)
             if not llm_instance:
                 raise ValueError("Failed to create LLM instance.")
@@ -2206,18 +2261,18 @@ class Crew(FlowTrackable, BaseModel):
         """
 
         def default_reset(memory: Any) -> Any:
+            if isinstance(memory, Memory):
+                return memory.reset_all()
             return memory.reset()
 
         def knowledge_reset(memory: Any) -> Any:
             return self.reset_knowledge(memory)
 
-        # Get knowledge for agents
         agent_knowledges = [
             getattr(agent, "knowledge", None)
             for agent in self.agents
             if getattr(agent, "knowledge", None) is not None
         ]
-        # Get knowledge for crew and agents
         crew_knowledge = getattr(self, "knowledge", None)
         crew_and_agent_knowledges = (
             [crew_knowledge] if crew_knowledge is not None else []

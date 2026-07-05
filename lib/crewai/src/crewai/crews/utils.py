@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Coroutine, Iterable, Mapping
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from opentelemetry import baggage
@@ -13,7 +12,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crews.crew_output import CrewOutput
 from crewai.llms.base_llm import BaseLLM
 from crewai.rag.embeddings.types import EmbedderConfig
-from crewai.skills.loader import activate_skill, discover_skills
+from crewai.skills.loader import activate_skill, load_skills
 from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
 from crewai.utilities.file_store import store_files
@@ -60,23 +59,13 @@ def _resolve_crew_skills(crew: Crew) -> list[SkillModel] | None:
     if not isinstance(crew.skills, list) or not crew.skills:
         return None
 
-    resolved: list[SkillModel] = []
-    seen: set[str] = set()
-    for item in crew.skills:
-        if isinstance(item, Path):
-            for skill in discover_skills(item):
-                if skill.name not in seen:
-                    seen.add(skill.name)
-                    resolved.append(activate_skill(skill))
-        elif isinstance(item, SkillModel):
-            if item.name not in seen:
-                seen.add(item.name)
-                resolved.append(
-                    activate_skill(item)
-                    if item.disclosure_level < INSTRUCTIONS
-                    else item
-                )
-    return resolved
+    resolved = load_skills(crew.skills)
+    if not resolved:
+        return None
+    return [
+        activate_skill(skill) if skill.disclosure_level < INSTRUCTIONS else skill
+        for skill in resolved
+    ]
 
 
 def setup_agents(
@@ -157,7 +146,6 @@ def prepare_task_execution(
     Raises:
         ValueError: If no agent is available for the task.
     """
-    # Handle replay skip
     if start_index is not None and task_index < start_index:
         if task.output:
             task_outputs.append(task.output)
@@ -290,7 +278,6 @@ def prepare_kickoff(
         reset_emission_counter()
         reset_last_event_id()
 
-    # Normalize inputs to dict[str, Any] for internal processing
     normalized: dict[str, Any] | None = None
     if inputs is not None:
         if not isinstance(inputs, Mapping):
@@ -331,15 +318,12 @@ def prepare_kickoff(
     crew._task_output_handler.reset()
     crew._logging_color = "bold_purple"
 
-    # Check for flow input files in baggage context (inherited from parent Flow)
     _flow_files = baggage.get_baggage("flow_input_files")
     flow_files: dict[str, Any] = _flow_files if isinstance(_flow_files, dict) else {}
 
     if normalized is not None:
-        # Extract file objects unpacked directly into inputs
         unpacked_files = _extract_files_from_inputs(normalized)
 
-        # Merge files: flow_files < input_files < unpacked_files (later takes precedence)
         all_files = {**flow_files, **(input_files or {}), **unpacked_files}
         if all_files:
             store_files(crew.id, all_files)
@@ -347,7 +331,6 @@ def prepare_kickoff(
         crew._inputs = normalized
         crew._interpolate_inputs(normalized)
     else:
-        # No inputs dict provided
         all_files = {**flow_files, **(input_files or {})}
         if all_files:
             store_files(crew.id, all_files)

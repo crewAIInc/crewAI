@@ -1,11 +1,15 @@
 """Memory reset utilities for CrewAI crews and flows."""
 
+from pathlib import Path
 import subprocess
 from typing import Any
 
 import click
+from crewai_core.project import configured_project_definition, read_toml
 
 from crewai.flow import Flow
+from crewai.memory.unified_memory import Memory
+from crewai.project.crew_loader import load_crew
 from crewai.utilities.project_utils import get_crews, get_flows
 
 
@@ -23,12 +27,37 @@ def _reset_flow_memory(flow: Flow[Any]) -> None:
     if mem is None:
         return
     try:
-        if hasattr(mem, "reset"):
+        if isinstance(mem, Memory):
+            mem.reset_all()
+        elif hasattr(mem, "reset"):
             mem.reset()
-        elif hasattr(mem, "_memory") and hasattr(mem._memory, "reset"):
+        elif hasattr(mem, "_memory") and mem._memory is not None:
             mem._memory.reset()
-    except (FileNotFoundError, OSError):
+    except FileNotFoundError:
+        # Storage directory was never created — nothing to reset.
         pass
+    except OSError as exc:
+        click.echo(f"Memory reset skipped: storage I/O error ({exc}).", err=True)
+    except RuntimeError as exc:
+        # Restored MemoryScope/MemorySlice without a rebound Memory.
+        click.echo(f"Memory reset skipped: {exc}", err=True)
+
+
+def _configured_json_crew_path() -> Path | None:
+    if not Path("pyproject.toml").is_file():
+        return None
+    pyproject_data = read_toml()
+    return configured_project_definition("crew", pyproject_data=pyproject_data)
+
+
+def _get_json_crew() -> Any | None:
+    """Load a JSON-first crew from the current project, if present."""
+    crew_path = _configured_json_crew_path()
+    if crew_path is None:
+        return None
+
+    crew, _ = load_crew(crew_path)
+    return crew
 
 
 def reset_memories_command(
@@ -55,6 +84,8 @@ def reset_memories_command(
             return
 
         crews = get_crews()
+        if json_crew := _get_json_crew():
+            crews.append(json_crew)
         flows = get_flows()
 
         if not crews and not flows:
@@ -106,3 +137,4 @@ def reset_memories_command(
 
     except Exception as e:
         click.echo(f"An unexpected error occurred: {e}", err=True)
+        raise SystemExit(1) from e

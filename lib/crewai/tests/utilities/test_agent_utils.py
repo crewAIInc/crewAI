@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import Any, Literal, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import BaseModel, Field
 
+from crewai.hooks.tool_hooks import (
+    ToolCallHookContext,
+    clear_after_tool_call_hooks,
+    clear_before_tool_call_hooks,
+    register_after_tool_call_hook,
+)
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.agent_utils import (
     _asummarize_chunks,
@@ -102,11 +109,9 @@ class TestConvertToolsToOpenaiSchema:
         assert len(schemas) == 2
         assert len(functions) == 2
 
-        # Check calculator
         calc_schema = next(s for s in schemas if s["function"]["name"] == "calculator")
         assert calc_schema["function"]["description"] == "Perform mathematical calculations"
 
-        # Check search
         search_schema = next(s for s in schemas if s["function"]["name"] == "web_search")
         assert search_schema["function"]["description"] == "Search the web for information"
         assert "query" in search_schema["function"]["parameters"]["properties"]
@@ -145,13 +150,11 @@ class TestConvertToolsToOpenaiSchema:
         schema = schemas[0]
         params = schema["function"]["parameters"]
 
-        # Should have required array
         assert "required" in params
         assert "query" in params["required"]
 
     def test_tool_without_args_schema(self) -> None:
         """Test converting a tool that doesn't have an args_schema."""
-        # Create a minimal tool without args_schema
         class MinimalTool(BaseTool):
             name: str = "minimal"
             description: str = "A minimal tool"
@@ -451,7 +454,6 @@ class TestSummarizeMessages:
 
         )
 
-        # Check what was passed to llm.call
         call_args = mock_llm.call.call_args[0][0]
         user_msg_content = call_args[1]["content"]
         assert "[USER]:" in user_msg_content
@@ -501,7 +503,6 @@ class TestSummarizeMessages:
 
         )
 
-        # Verify the conversation text sent to LLM contains tool labels
         call_args = mock_llm.call.call_args[0][0]
         user_msg_content = call_args[1]["content"]
         assert "[TOOL_RESULT (web_search)]:" in user_msg_content
@@ -631,9 +632,9 @@ class TestSplitMessagesIntoChunks:
 
     def test_splits_at_message_boundaries(self) -> None:
         messages: list[dict[str, Any]] = [
-            {"role": "user", "content": "A" * 100},  # ~25 tokens
-            {"role": "assistant", "content": "B" * 100},  # ~25 tokens
-            {"role": "user", "content": "C" * 100},  # ~25 tokens
+            {"role": "user", "content": "A" * 100},
+            {"role": "assistant", "content": "B" * 100},
+            {"role": "user", "content": "C" * 100},
         ]
         # max_tokens=30 should cause splits
         chunks = _split_messages_into_chunks(messages, max_tokens=30)
@@ -646,7 +647,6 @@ class TestSplitMessagesIntoChunks:
         ]
         chunks = _split_messages_into_chunks(messages, max_tokens=1000)
         assert len(chunks) == 1
-        # The system message should not be in any chunk
         for chunk in chunks:
             for msg in chunk:
                 assert msg.get("role") != "system"
@@ -712,7 +712,7 @@ class TestParallelSummarization:
         messages = self._make_messages_for_n_chunks(3)
 
         mock_llm = MagicMock()
-        mock_llm.get_context_window_size.return_value = 100  # force multiple chunks
+        mock_llm.get_context_window_size.return_value = 100
         mock_llm.acall = AsyncMock(
             side_effect=[
                 "<summary>Summary chunk 1</summary>",
@@ -769,7 +769,7 @@ class TestParallelSummarization:
                 await asyncio.sleep(0.05)
                 return "<summary>Summary-A</summary>"
             elif "msg-1" in user_content:
-                return "<summary>Summary-B</summary>"  # fastest
+                return "<summary>Summary-B</summary>"
             else:
                 await asyncio.sleep(0.02)
                 return "<summary>Summary-C</summary>"
@@ -783,7 +783,6 @@ class TestParallelSummarization:
 
         )
 
-        # The final summary message should have A, B, C in order
         summary_content = messages[-1]["content"]
         pos_a = summary_content.index("Summary-A")
         pos_b = summary_content.index("Summary-B")
@@ -839,7 +838,6 @@ class TestParallelSummarization:
         )
 
         assert mock_llm.acall.await_count == 2
-        # Verify the merged summary made it into messages
         assert "Flow summary 1" in messages[-1]["content"]
         assert "Flow summary 2" in messages[-1]["content"]
 
@@ -940,7 +938,6 @@ class TestParallelSummarizationVCR:
 
         # Patch get_context_window_size to return 200 — forces multiple chunks
         with patch.object(type(llm), "get_context_window_size", return_value=200):
-            # Verify we actually get multiple chunks with this window size
             non_system = [m for m in messages if m.get("role") != "system"]
             chunks = _split_messages_into_chunks(non_system, max_tokens=200)
             assert len(chunks) > 1, f"Expected multiple chunks, got {len(chunks)}"
@@ -1039,6 +1036,142 @@ class TestParseToolCallArgs:
 
 class TestExecuteSingleNativeToolCall:
     """Tests for execute_single_native_tool_call."""
+
+    def test_typed_tool_output_is_json_agent_text(self) -> None:
+        clear_before_tool_call_hooks()
+        clear_after_tool_call_hooks()
+
+        class SearchOutput(BaseModel):
+            query: str
+            score: float
+
+        class TypedSearchTool(BaseTool):
+            name: str = "typed_search"
+            description: str = "Search for a query"
+            result_schema: type[BaseModel] = SearchOutput
+
+            def _run(self, query: str) -> SearchOutput:
+                return SearchOutput(query=query, score=0.9)
+
+        tool = TypedSearchTool()
+        tool_call = MagicMock()
+        tool_call.id = "call_1"
+        tool_call.function.name = "typed_search"
+        tool_call.function.arguments = '{"query": "crew"}'
+
+        result = execute_single_native_tool_call(
+            tool_call,
+            available_functions={"typed_search": tool._run},
+            original_tools=[tool],
+            structured_tools=[tool.to_structured_tool()],
+            tools_handler=None,
+            agent=None,
+            task=None,
+            crew=None,
+            event_source=MagicMock(),
+            printer=None,
+            verbose=False,
+        )
+
+        assert json.loads(result.result) == {"query": "crew", "score": 0.9}
+        assert json.loads(result.tool_message["content"]) == {
+            "query": "crew",
+            "score": 0.9,
+        }
+
+    def test_custom_agent_output_formatter_is_used_from_structured_tool(
+        self,
+    ) -> None:
+        clear_before_tool_call_hooks()
+        clear_after_tool_call_hooks()
+
+        class SearchOutput(BaseModel):
+            query: str
+            score: float
+
+        class MarkdownSearchTool(BaseTool):
+            name: str = "markdown_search"
+            description: str = "Search for a query"
+            result_schema: type[BaseModel] = SearchOutput
+
+            def _run(self, query: str) -> SearchOutput:
+                return SearchOutput(query=query, score=0.9)
+
+            def format_output_for_agent(self, raw_result: Any) -> str:
+                result = self.result_schema.model_validate(raw_result)
+                return f"### {result.query}\n\nScore: **{result.score}**"
+
+        tool = MarkdownSearchTool()
+        tool_call = MagicMock()
+        tool_call.id = "call_1"
+        tool_call.function.name = "markdown_search"
+        tool_call.function.arguments = '{"query": "crew"}'
+
+        result = execute_single_native_tool_call(
+            tool_call,
+            available_functions={"markdown_search": tool._run},
+            original_tools=[],
+            structured_tools=[tool.to_structured_tool()],
+            tools_handler=None,
+            agent=None,
+            task=None,
+            crew=None,
+            event_source=MagicMock(),
+            printer=None,
+            verbose=False,
+        )
+
+        assert result.result == "### crew\n\nScore: **0.9**"
+        assert result.tool_message["content"] == "### crew\n\nScore: **0.9**"
+
+    def test_after_hook_includes_raw_tool_result_for_typed_output(self) -> None:
+        clear_after_tool_call_hooks()
+
+        class SearchOutput(BaseModel):
+            query: str
+            score: float
+
+        class TypedSearchTool(BaseTool):
+            name: str = "typed_search"
+            description: str = "Search for a query"
+            result_schema: type[BaseModel] = SearchOutput
+
+            def _run(self, query: str) -> SearchOutput:
+                return SearchOutput(query=query, score=0.9)
+
+        seen_results: list[tuple[str | None, object]] = []
+
+        def after_hook(context: ToolCallHookContext) -> None:
+            seen_results.append((context.tool_result, context.raw_tool_result))
+
+        tool = TypedSearchTool()
+        tool_call = MagicMock()
+        tool_call.id = "call_1"
+        tool_call.function.name = "typed_search"
+        tool_call.function.arguments = '{"query": "crew"}'
+
+        register_after_tool_call_hook(after_hook)
+        try:
+            result = execute_single_native_tool_call(
+                tool_call,
+                available_functions={"typed_search": tool._run},
+                original_tools=[tool],
+                structured_tools=[tool.to_structured_tool()],
+                tools_handler=None,
+                agent=None,
+                task=None,
+                crew=None,
+                event_source=MagicMock(),
+                printer=None,
+                verbose=False,
+            )
+        finally:
+            clear_after_tool_call_hooks()
+
+        assert json.loads(result.result) == {"query": "crew", "score": 0.9}
+        assert seen_results == [
+            ('{"query":"crew","score":0.9}', SearchOutput(query="crew", score=0.9))
+        ]
 
     def test_result_as_answer_false_on_tool_error(self) -> None:
         """When a tool with result_as_answer=True raises, result_as_answer must be False.
