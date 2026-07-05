@@ -152,6 +152,40 @@ def test_vendor_gemini_requires_generate_content(monkeypatch):
     assert ids == ["gemini-2.5-pro", "gemini-1.5-pro"]
 
 
+def test_vendor_gemini_paginates(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "key")
+    pages = {
+        None: {
+            "models": [
+                {
+                    "name": "models/gemini-3.5-flash",
+                    "displayName": "Gemini 3.5 Flash",
+                    "supportedGenerationMethods": ["generateContent"],
+                }
+            ],
+            "nextPageToken": "p2",
+        },
+        "p2": {
+            "models": [
+                {
+                    "name": "models/gemini-2.5-pro",
+                    "displayName": "Gemini 2.5 Pro",
+                    "supportedGenerationMethods": ["generateContent"],
+                }
+            ]
+        },
+    }
+
+    def fetch(url, headers=None, params=None):
+        return pages[(params or {}).get("pageToken")]
+
+    monkeypatch.setattr(mc, "_http_get_json", fetch)
+
+    ids = sorted(m for m, _ in mc.get_provider_models("gemini", []))
+    # Both pages contributed (newest-first ranking is _finalize's job).
+    assert ids == ["gemini-2.5-pro", "gemini-3.5-flash"]
+
+
 def test_curated_label_overrides_raw_vendor_label(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     payload = {"data": [{"id": "gpt-5.5", "created": 1}]}
@@ -190,6 +224,18 @@ def test_litellm_tier_for_uncurated_provider(monkeypatch):
 
     # Only anthropic chat models, embedding + other providers excluded.
     assert ids == ["claude-opus-4-6", "claude-sonnet-4-5"]
+
+
+def test_null_litellm_provider_does_not_crash(monkeypatch):
+    # A present-but-null litellm_provider must be skipped, not raise.
+    litellm_data = {
+        "weird-model": {"litellm_provider": None, "mode": "chat"},
+        "anthropic.claude-v2": {"litellm_provider": "bedrock", "mode": "chat"},
+    }
+    mc._litellm_cache_file().write_text(json.dumps(litellm_data), encoding="utf-8")
+
+    models = mc.get_provider_models("bedrock", [])
+    assert [m for m, _ in models] == ["anthropic.claude-v2"]
 
 
 def test_litellm_strips_provider_prefix(monkeypatch):

@@ -219,22 +219,30 @@ def _fetch_anthropic(api_key: str | None) -> list[dict[str, Any]]:
 
 
 def _fetch_gemini(api_key: str | None) -> list[dict[str, Any]]:
-    data = _http_get_json(
-        "https://generativelanguage.googleapis.com/v1beta/models",
-        params={"key": api_key or "", "pageSize": 200},
-    )
     entries: list[dict[str, Any]] = []
-    for item in data.get("models", []):
-        methods = item.get("supportedGenerationMethods") or []
-        if "generateContent" not in methods:
-            continue
-        name = (item.get("name") or "").removeprefix("models/")
-        if not name or not _is_chat_model(name) or "aqa" in name:
-            continue
-        label = item.get("displayName") or _humanize(name)
-        # Gemini has no timestamp; rank by the version embedded in name/version.
-        version_hint = f"{name} {item.get('version') or ''}"
-        entries.append(_entry(name, label, version_hint=version_hint))
+    params: dict[str, Any] = {"key": api_key or "", "pageSize": 200}
+    # models.list is paginated and not guaranteed newest-first, so walk pages
+    # (bounded) to see the full set — _finalize does the sort + truncation.
+    for _ in range(10):
+        data = _http_get_json(
+            "https://generativelanguage.googleapis.com/v1beta/models",
+            params=params,
+        )
+        for item in data.get("models", []):
+            methods = item.get("supportedGenerationMethods") or []
+            if "generateContent" not in methods:
+                continue
+            name = (item.get("name") or "").removeprefix("models/")
+            if not name or not _is_chat_model(name) or "aqa" in name:
+                continue
+            label = item.get("displayName") or _humanize(name)
+            # Gemini has no timestamp; rank by the version in name/version.
+            version_hint = f"{name} {item.get('version') or ''}"
+            entries.append(_entry(name, label, version_hint=version_hint))
+        token = data.get("nextPageToken")
+        if not token:
+            break
+        params = {"key": api_key or "", "pageSize": 200, "pageToken": token}
     return entries
 
 
@@ -284,7 +292,9 @@ def _from_litellm(provider_key: str) -> list[dict[str, Any]] | None:
     for model_name, props in data.items():
         if not isinstance(props, dict):
             continue
-        if props.get("litellm_provider", "").strip().lower() != provider_key:
+        # `litellm_provider` can be present-but-null in the feed; coerce before
+        # string ops so a null value is skipped rather than raising.
+        if (props.get("litellm_provider") or "").strip().lower() != provider_key:
             continue
         if props.get("mode") != "chat":
             continue
