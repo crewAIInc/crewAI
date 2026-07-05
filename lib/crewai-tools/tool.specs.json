@@ -199,6 +199,436 @@
       }
     },
     {
+      "description": "Execute a shell command inside a BoxLite micro-VM and return the exit code, stdout, and stderr. Use this to run builds, package installs, git operations, or any one-off shell command.",
+      "env_vars": [],
+      "humanized_name": "BoxLite Sandbox Exec",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Run a shell command inside a BoxLite micro-VM.",
+        "properties": {
+          "cpus": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "vCPUs for the box. Defaults to the BoxLite runtime default.",
+            "title": "Cpus"
+          },
+          "image": {
+            "default": "python:slim",
+            "description": "OCI image the micro-VM boots from. Any Docker/OCI reference works (e.g. 'python:slim', 'ubuntu:24.04').",
+            "title": "Image",
+            "type": "string"
+          },
+          "memory_mib": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Memory in MiB for the box. Defaults to the BoxLite runtime default.",
+            "title": "Memory Mib"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one box across all calls to this tool instance and remove it at process exit. Default False creates and removes a fresh box per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "title": "BoxLiteExecTool",
+        "type": "object"
+      },
+      "name": "BoxLiteExecTool",
+      "package_dependencies": [
+        "boxlite[sync]"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "command": {
+            "description": "Shell command to execute in the box.",
+            "title": "Command",
+            "type": "string"
+          },
+          "cwd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Working directory to run the command in. Defaults to the box's configured workdir.",
+            "title": "Cwd"
+          },
+          "envs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional environment variables to set for this command.",
+            "title": "Envs"
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum seconds to wait for the command to finish.",
+            "title": "Timeout"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "title": "BoxLiteExecToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Perform filesystem operations inside a BoxLite micro-VM: read a file, write content to a path, append content to an existing file, list a directory, delete a path, make a directory, fetch file metadata, or check whether a path exists. For files larger than a few KB, create the file with action='write' and empty content, then send the body via multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
+      "env_vars": [],
+      "humanized_name": "BoxLite Sandbox Files",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Read, write, and manage files inside a BoxLite micro-VM.\n\nBoxLite exposes command execution rather than a files API, so these\noperations run over the box's shell, with content transferred as base64 so\nbinary data and arbitrary text survive intact. Most useful with\n``persistent=True``; with the default ephemeral mode the box \u2014 and its\nfiles \u2014 disappear when the call finishes.",
+        "properties": {
+          "cpus": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "vCPUs for the box. Defaults to the BoxLite runtime default.",
+            "title": "Cpus"
+          },
+          "image": {
+            "default": "python:slim",
+            "description": "OCI image the micro-VM boots from. Any Docker/OCI reference works (e.g. 'python:slim', 'ubuntu:24.04').",
+            "title": "Image",
+            "type": "string"
+          },
+          "memory_mib": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Memory in MiB for the box. Defaults to the BoxLite runtime default.",
+            "title": "Memory Mib"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one box across all calls to this tool instance and remove it at process exit. Default False creates and removes a fresh box per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "title": "BoxLiteFileTool",
+        "type": "object"
+      },
+      "name": "BoxLiteFileTool",
+      "package_dependencies": [
+        "boxlite[sync]"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "action": {
+            "description": "The filesystem action to perform: 'read' (returns file contents), 'write' (create or replace a file with content), 'append' (append content to an existing file \u2014 use this for writing large files in chunks to avoid hitting tool-call size limits), 'list' (lists a directory), 'delete' (removes a file/dir), 'mkdir' (creates a directory), 'info' (returns file metadata), 'exists' (returns a boolean for whether the path exists).",
+            "enum": [
+              "read",
+              "write",
+              "append",
+              "list",
+              "delete",
+              "mkdir",
+              "info",
+              "exists"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "binary": {
+            "default": false,
+            "description": "For 'write'/'append': treat content as base64 and write the decoded raw bytes. For 'read': return contents as base64 instead of decoded utf-8.",
+            "title": "Binary",
+            "type": "boolean"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Content to write or append. If omitted for 'write', an empty file is created. For files larger than a few KB, prefer one 'write' with empty content followed by multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
+            "title": "Content"
+          },
+          "depth": {
+            "default": 1,
+            "description": "For action='list': how many levels deep to recurse (default 1).",
+            "title": "Depth",
+            "type": "integer"
+          },
+          "path": {
+            "description": "Absolute path inside the box.",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "path"
+        ],
+        "title": "BoxLiteFileToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Execute a block of Python code inside a BoxLite micro-VM and return captured stdout, stderr, and the process exit code. Use this for data processing, quick scripts, or analysis that should run in an isolated environment. The box image must provide python3 (the default 'python:slim' does).",
+      "env_vars": [],
+      "humanized_name": "BoxLite Sandbox Python",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Run Python code inside a BoxLite micro-VM.\n\nExecutes the code with the box image's ``python3`` and returns captured\nstdout, stderr, and the process exit code. Pair with ``persistent=True``\n(and a Python image) to let imports and installed packages carry across\ncalls. Unlike the E2B code interpreter there is no Jupyter kernel, so rich\nresults (charts, dataframes) are not returned \u2014 only text streams.",
+        "properties": {
+          "cpus": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "vCPUs for the box. Defaults to the BoxLite runtime default.",
+            "title": "Cpus"
+          },
+          "image": {
+            "default": "python:slim",
+            "description": "OCI image the micro-VM boots from. Any Docker/OCI reference works (e.g. 'python:slim', 'ubuntu:24.04').",
+            "title": "Image",
+            "type": "string"
+          },
+          "memory_mib": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Memory in MiB for the box. Defaults to the BoxLite runtime default.",
+            "title": "Memory Mib"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one box across all calls to this tool instance and remove it at process exit. Default False creates and removes a fresh box per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "title": "BoxLitePythonTool",
+        "type": "object"
+      },
+      "name": "BoxLitePythonTool",
+      "package_dependencies": [
+        "boxlite[sync]"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "code": {
+            "description": "Python source to execute inside the box.",
+            "title": "Code",
+            "type": "string"
+          },
+          "envs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional environment variables for the run.",
+            "title": "Envs"
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum seconds to wait for the code to finish.",
+            "title": "Timeout"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "BoxLitePythonToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that performs image searches using the Brave Search API. Results are returned as structured JSON data.",
       "env_vars": [
         {
