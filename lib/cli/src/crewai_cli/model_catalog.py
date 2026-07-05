@@ -93,7 +93,6 @@ _NON_CHAT_MARKERS = (
     "image",
     "moderation",
     "similarity",
-    "search",
     "-edit",
     "davinci-002",
     "babbage-002",

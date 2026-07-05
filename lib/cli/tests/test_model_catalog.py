@@ -68,6 +68,15 @@ def test_is_chat_model_rejects_non_chat():
     assert not mc._is_chat_model("dall-e-3")
 
 
+def test_search_substring_not_treated_as_non_chat():
+    # 'search' must not drop legitimate completion models: a token like
+    # *-search-preview, or 'research' (which contains 'search' as a substring).
+    assert mc._is_chat_model("gpt-4o-search-preview")
+    assert mc._is_chat_model("o3-deep-research")
+    # genuine non-chat markers still filter
+    assert not mc._is_chat_model("text-embedding-3-large")
+
+
 def test_humanize():
     assert mc._humanize("gpt-4.1-mini") == "GPT 4.1 Mini"
     assert mc._humanize("anthropic/claude-opus-4-6") == "Claude Opus 4 6"
