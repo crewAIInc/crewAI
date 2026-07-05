@@ -15,7 +15,7 @@ from typing import Any
 from crewai_core.lock_store import lock as store_lock
 import lancedb  # type: ignore[import-untyped]
 
-from crewai.memory.types import MemoryRecord, ScopeInfo
+from crewai.memory.types import MemoryRecord, ScopeInfo, ensure_utc_aware
 
 
 _logger = logging.getLogger(__name__)
@@ -269,9 +269,9 @@ class LanceDBStorage:
             if val is None:
                 return datetime.now(timezone.utc)
             if isinstance(val, datetime):
-                return val
+                return ensure_utc_aware(val)
             s = str(val)
-            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+            return ensure_utc_aware(datetime.fromisoformat(s.replace("Z", "+00:00")))
 
         return MemoryRecord(
             id=str(row["id"]),

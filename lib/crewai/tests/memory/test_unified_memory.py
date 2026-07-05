@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -147,6 +147,30 @@ def test_lancedb_list_scopes_get_scope_info(lancedb_path: Path) -> None:
     info = storage.get_scope_info("/")
     assert info.record_count >= 1
     assert info.path == "/"
+
+
+def test_lancedb_row_to_record_normalizes_legacy_naive_datetimes(
+    lancedb_path: Path,
+) -> None:
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(lancedb_path), vector_dim=4)
+    record = storage._row_to_record(
+        {
+            "id": "legacy",
+            "content": "legacy content",
+            "scope": "/",
+            "categories_str": "[]",
+            "metadata_str": "{}",
+            "importance": 0.5,
+            "created_at": "2026-01-01T12:00:00",
+            "last_accessed": datetime(2026, 1, 1, 12, 5, 0),
+            "vector": [0.0] * 4,
+        }
+    )
+
+    assert record.created_at.tzinfo is timezone.utc
+    assert record.last_accessed.tzinfo is timezone.utc
 
 
 # --- Memory class (with mock embedder, no LLM for explicit remember) ---
@@ -475,6 +499,21 @@ def test_composite_score_brand_new_memory() -> None:
     assert "semantic" in reasons
     assert "recency" in reasons
     assert "importance" in reasons
+
+
+def test_composite_score_accepts_legacy_naive_created_at() -> None:
+    config = MemoryConfig()
+    record = MemoryRecord(
+        content="legacy",
+        scope="/",
+        importance=0.7,
+        created_at=datetime(2026, 1, 1, 12, 0, 0),
+    )
+
+    score, reasons = compute_composite_score(record, 0.8, config)
+
+    assert score > 0
+    assert "semantic" in reasons
 
 
 def test_composite_score_old_memory_decayed() -> None:
