@@ -56,16 +56,26 @@ _NEGATIVE_TTL = 300
 #: How long the shared LiteLLM feed cache stays fresh.
 _LITELLM_TTL = 24 * 3600
 
-#: Env var holding each provider's API key. Providers absent here (or with a
-#: ``None`` value, e.g. local Ollama) skip the vendor-API tier.
-_PROVIDER_KEY_ENV: dict[str, str | None] = {
-    "openai": "OPENAI_API_KEY",
-    "anthropic": "ANTHROPIC_API_KEY",
-    "gemini": "GEMINI_API_KEY",
-    "groq": "GROQ_API_KEY",
-    "cerebras": "CEREBRAS_API_KEY",
-    "ollama": None,
+#: Env vars that may hold each provider's API key, in priority order. A
+#: provider with an empty tuple (e.g. local Ollama) needs no key. Gemini accepts
+#: either name, matching crewai's own Gemini provider.
+_PROVIDER_KEY_ENV: dict[str, tuple[str, ...]] = {
+    "openai": ("OPENAI_API_KEY",),
+    "anthropic": ("ANTHROPIC_API_KEY",),
+    "gemini": ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
+    "groq": ("GROQ_API_KEY",),
+    "cerebras": ("CEREBRAS_API_KEY",),
+    "ollama": (),
 }
+
+
+def _provider_api_key(provider_key: str) -> str | None:
+    """First non-empty API key found among the provider's env vars."""
+    for env in _PROVIDER_KEY_ENV.get(provider_key, ()):
+        value = os.environ.get(env)
+        if value:
+            return value
+    return None
 
 # Substrings that mark a model id as *not* a chat/completion model. Used to
 # filter noisy OpenAI-compatible ``/models`` listings.
@@ -152,7 +162,9 @@ def get_provider_models(
 
     # Nothing fresher than the curated list. Cache it briefly (negative cache)
     # so a failed vendor/LiteLLM fetch isn't retried on every subsequent call.
-    if fallback:
+    # Skip Ollama: it's a local, fast-failing server, so re-probing is cheap and
+    # avoids serving suggestions after the server comes up within the TTL.
+    if fallback and provider_key != "ollama":
         _write_catalog_cache(provider_key, fallback, source="fallback")
     return fallback
 
@@ -172,9 +184,8 @@ def _from_vendor(provider_key: str) -> list[dict[str, Any]] | None:
     if fetcher is None:
         return None
 
-    key_env = _PROVIDER_KEY_ENV.get(provider_key)
-    api_key = os.environ.get(key_env) if key_env else None
-    if key_env and not api_key:
+    api_key = _provider_api_key(provider_key)
+    if _PROVIDER_KEY_ENV.get(provider_key) and not api_key:
         # Provider needs a key and none is set — skip to the next tier.
         return None
 
@@ -567,8 +578,7 @@ def _cache_key(provider_key: str) -> str:
     """
     if provider_key == "ollama":
         return f"ollama@{_ollama_base()}"
-    key_env = _PROVIDER_KEY_ENV.get(provider_key)
-    suffix = "key" if key_env and os.environ.get(key_env) else "nokey"
+    suffix = "key" if _provider_api_key(provider_key) else "nokey"
     return f"{provider_key}#{suffix}"
 
 

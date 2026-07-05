@@ -12,6 +12,7 @@ _ALL_KEY_ENVS = [
     "OPENAI_API_KEY",
     "ANTHROPIC_API_KEY",
     "GEMINI_API_KEY",
+    "GOOGLE_API_KEY",
     "GROQ_API_KEY",
     "CEREBRAS_API_KEY",
     "OLLAMA_API_BASE",
@@ -246,6 +247,44 @@ def test_ollama_base_honors_ollama_host(monkeypatch):
     # OLLAMA_HOST (scheme-less runtime convention) is resolved with a scheme.
     monkeypatch.setenv("OLLAMA_HOST", "10.0.0.5:11434")
     assert mc._ollama_base() == "http://10.0.0.5:11434"
+
+
+def test_ollama_recovery_not_blocked_by_negative_cache(monkeypatch):
+    # Ollama down -> fallback, but not negatively cached; once the server is up
+    # the next call fetches live models rather than serving suggestions.
+    calls = {"n": 0}
+
+    def flaky(*a, **k):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RuntimeError("connection refused")
+        return {"models": [{"model": "llama-installed"}]}
+
+    monkeypatch.setattr(mc, "_http_get_json", flaky)
+    first = mc.get_provider_models("ollama", [("llama3.3", "Llama 3.3")])
+    assert first == [("llama3.3", "Llama 3.3")]  # down -> fallback (not cached)
+    second = mc.get_provider_models("ollama", [("llama3.3", "Llama 3.3")])
+    assert [m for m, _ in second] == ["llama-installed"]  # recovered live
+
+
+def test_gemini_honors_google_api_key(monkeypatch):
+    # GOOGLE_API_KEY (equivalent to GEMINI_API_KEY in crewai) enables the live tier.
+    monkeypatch.setenv("GOOGLE_API_KEY", "key")
+    monkeypatch.setattr(
+        mc,
+        "_http_get_json",
+        lambda *a, **k: {
+            "models": [
+                {
+                    "name": "models/gemini-3.5-flash",
+                    "displayName": "Gemini 3.5 Flash",
+                    "supportedGenerationMethods": ["generateContent"],
+                }
+            ]
+        },
+    )
+    models = mc.get_provider_models("gemini", [("gemini-x", "Gemini X")])
+    assert [m for m, _ in models] == ["gemini-3.5-flash"]  # live, not fallback
 
 
 def test_curated_label_overrides_raw_vendor_label(monkeypatch):
