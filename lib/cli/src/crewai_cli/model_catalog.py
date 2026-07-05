@@ -345,7 +345,9 @@ def _fetch_litellm_data() -> dict[str, Any] | None:
     )
     if fresh:
         data = _read_json(cache_file)
-        if data:
+        # A corrupt/non-mapping fresh cache must not block a recoverable
+        # download — only short-circuit on a usable mapping.
+        if isinstance(data, dict) and data:
             return data
 
     try:

@@ -333,10 +333,19 @@ def test_added_key_bypasses_negative_cache(monkeypatch):
     assert [m for m, _ in second] == ["gpt-5.5"]  # live fetch, not cached fallback
 
 
-def test_bad_litellm_cache_does_not_crash(monkeypatch):
-    # A LiteLLM cache whose root is not a mapping must not crash the picker.
+def test_invalid_litellm_cache_falls_through_to_download(monkeypatch):
+    # A corrupt-but-fresh cache must neither crash the picker nor block a
+    # recoverable download — it falls through and refetches.
     mc._litellm_cache_file().write_text("[1, 2, 3]", encoding="utf-8")
-    assert mc.get_provider_models("bedrock", []) == []
+    monkeypatch.setattr(
+        mc,
+        "_http_get_json",
+        lambda *a, **k: {
+            "anthropic.claude-v2": {"litellm_provider": "bedrock", "mode": "chat"}
+        },
+    )
+    models = mc.get_provider_models("bedrock", [])
+    assert [m for m, _ in models] == ["anthropic.claude-v2"]  # recovered via download
 
 
 def test_litellm_fetch_attempted_once_per_process(monkeypatch):
