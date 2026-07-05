@@ -77,6 +77,7 @@ def _provider_api_key(provider_key: str) -> str | None:
             return value
     return None
 
+
 # Substrings that mark a model id as *not* a chat/completion model. Used to
 # filter noisy OpenAI-compatible ``/models`` listings.
 _NON_CHAT_MARKERS = (
