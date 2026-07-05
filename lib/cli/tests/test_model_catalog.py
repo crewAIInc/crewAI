@@ -28,6 +28,7 @@ FALLBACK_ANTHROPIC = [
 def isolated_env(monkeypatch, tmp_path):
     """Point the cache at a temp dir and clear provider keys for every test."""
     monkeypatch.setattr(mc, "_cache_dir", lambda: tmp_path)
+    mc._reset_litellm_memo()  # clear the process-level LiteLLM memo per test
     for key in _ALL_KEY_ENVS:
         monkeypatch.delenv(key, raising=False)
 
@@ -292,6 +293,41 @@ def test_curated_fallback_preferred_over_litellm(monkeypatch):
 
     models = mc.get_provider_models("anthropic", FALLBACK_ANTHROPIC)
     assert models == FALLBACK_ANTHROPIC
+
+
+def test_added_key_bypasses_negative_cache(monkeypatch):
+    # A no-key call negatively-caches the fallback; adding a key afterwards must
+    # fetch live models rather than serve the cached fallback (distinct cache key).
+    first = mc.get_provider_models("openai", [("gpt-x", "GPT X")])
+    assert first == [("gpt-x", "GPT X")]  # no key -> fallback
+
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setattr(
+        mc, "_http_get_json", lambda *a, **k: {"data": [{"id": "gpt-5.5", "created": 1}]}
+    )
+    second = mc.get_provider_models("openai", [("gpt-x", "GPT X")])
+    assert [m for m, _ in second] == ["gpt-5.5"]  # live fetch, not cached fallback
+
+
+def test_bad_litellm_cache_does_not_crash(monkeypatch):
+    # A LiteLLM cache whose root is not a mapping must not crash the picker.
+    mc._litellm_cache_file().write_text("[1, 2, 3]", encoding="utf-8")
+    assert mc.get_provider_models("bedrock", []) == []
+
+
+def test_litellm_fetch_attempted_once_per_process(monkeypatch):
+    # With no cache and a failing download, the feed is fetched at most once per
+    # process — repeated lookups (across providers) must not re-hit the network.
+    calls = {"n": 0}
+
+    def boom(*a, **k):
+        calls["n"] += 1
+        raise RuntimeError("offline")
+
+    monkeypatch.setattr(mc, "_http_get_json", boom)
+    mc.get_provider_models("bedrock", [])
+    mc.get_provider_models("azure", [])
+    assert calls["n"] == 1  # memoized after the first failed attempt
 
 
 def test_litellm_fills_uncurated_bedrock(monkeypatch):

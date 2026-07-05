@@ -281,11 +281,24 @@ _VENDOR_FETCHERS: dict[str, Callable[[str | None], list[dict[str, Any]]]] = {
 
 # ── Tier 2: LiteLLM feed ─────────────────────────────────────────
 
+# Process-level memo so a single CLI run attempts the LiteLLM download at most
+# once — repeated picker calls otherwise each incur a multi-second timeout when
+# the feed is stale/unreachable. Reset via _reset_litellm_memo() in tests.
+_UNSET: Any = object()
+_litellm_memo: Any = _UNSET
+
+
+def _reset_litellm_memo() -> None:
+    """Clear the process-level LiteLLM memo (test hook)."""
+    global _litellm_memo
+    _litellm_memo = _UNSET
+
 
 def _from_litellm(provider_key: str) -> list[dict[str, Any]] | None:
     """Build chat-model entries for ``provider_key`` from the LiteLLM feed."""
     data = _load_litellm_data()
-    if not data:
+    # A corrupt feed (non-mapping JSON root) must not crash the picker.
+    if not isinstance(data, dict):
         return None
 
     entries: list[dict[str, Any]] = []
@@ -310,7 +323,16 @@ def _from_litellm(provider_key: str) -> list[dict[str, Any]] | None:
 
 
 def _load_litellm_data() -> dict[str, Any] | None:
-    """Return the cached LiteLLM feed, fetching it once if the cache is cold."""
+    """Return the LiteLLM feed, memoized once per process (see _litellm_memo)."""
+    global _litellm_memo
+    if _litellm_memo is _UNSET:
+        _litellm_memo = _fetch_litellm_data()
+    memoized: dict[str, Any] | None = _litellm_memo
+    return memoized
+
+
+def _fetch_litellm_data() -> dict[str, Any] | None:
+    """Read the cached LiteLLM feed, fetching it once if the cache is cold."""
     cache_file = _litellm_cache_file()
     fresh = (
         cache_file.exists()
@@ -499,15 +521,21 @@ def _litellm_cache_file() -> Path:
 
 
 def _cache_key(provider_key: str) -> str:
-    """Cache key for a provider.
+    """Cache key for a provider's resolved model list.
 
-    Ollama lists models from a base URL that can change between runs, so its
-    key includes that base — otherwise a changed host would serve the previous
-    host's models until the entry expired.
+    Includes the inputs that change what a fetch would return, so a cached
+    entry is only reused when those inputs still match:
+
+    - Ollama lists models from a base URL that can change between runs.
+    - Whether the vendor's API key is present flips between a live fetch and
+      the negatively-cached fallback — so a key added after a no-key call is
+      not shadowed by the cached fallback.
     """
     if provider_key == "ollama":
         return f"ollama@{_ollama_base()}"
-    return provider_key
+    key_env = _PROVIDER_KEY_ENV.get(provider_key)
+    suffix = "key" if key_env and os.environ.get(key_env) else "nokey"
+    return f"{provider_key}#{suffix}"
 
 
 def _read_catalog_cache(provider_key: str) -> list[tuple[str, str]] | None:
