@@ -840,18 +840,21 @@ class ToolUsage:
     ) -> ToolCalling | InstructorToolCalling | ToolUsageError:
         tool_name = self.action.tool
         tool = self._select_tool(tool_name)
+        tool_arguments_error = ToolUsageError(
+            f"{I18N_DEFAULT.errors('tool_arguments_error')}"
+        )
         try:
             arguments = self._validate_tool_input(self.action.tool_input)
 
         except Exception:
             if raise_error:
                 raise
-            return ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
+            return tool_arguments_error
 
         if not isinstance(arguments, dict):
             if raise_error:
-                raise ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
-            return ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
+                raise tool_arguments_error
+            return tool_arguments_error
 
         return ToolCalling(
             tool_name=sanitize_tool_name(tool.name),
