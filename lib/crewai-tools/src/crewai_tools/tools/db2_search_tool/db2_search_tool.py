@@ -160,10 +160,9 @@ class DB2VectorSearchTool(BaseTool):
     cursor: Any | None = None
 
     def _connect(self) -> None:
-        if not self.connection:
-            self.connection = self.db2_package.connect(self.connection_string, "", "")
-            self.dbi_connection = self.db2_dbi_package.Connection(self.connection)
-            self.cursor = self.dbi_connection.cursor()
+        self.connection = self.db2_package.connect(self.connection_string, "", "")
+        self.dbi_connection = self.db2_dbi_package.Connection(self.connection)
+        self.cursor = self.dbi_connection.cursor()
 
     def _disconnect(self) -> None:
         try:

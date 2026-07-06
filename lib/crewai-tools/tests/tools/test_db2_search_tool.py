@@ -575,19 +575,18 @@ class TestConnectDisconnect:
         assert tool.connection is mock_conn
         assert tool.cursor is not None
 
-    def test_connect_is_idempotent(self):
+    def test_connect_opens_fresh_connection_each_call(self):
         tool = _make_tool(custom_embedding_fn=_fake_embedding)
         mock_conn = MagicMock()
-        # Use a fresh local mock so call counts from other tests don't bleed in
         local_connect = MagicMock(return_value=mock_conn)
         tool.db2_package = MagicMock()
         tool.db2_package.connect = local_connect
         tool.db2_package.close = MagicMock()
 
         tool._connect()
-        tool._connect()  # second call should be a no-op
+        tool._connect()  # connect-per-call: each invocation opens a new connection
 
-        local_connect.assert_called_once()
+        assert local_connect.call_count == 2
 
     def test_disconnect_resets_all_handles(self):
         tool = _make_tool(custom_embedding_fn=_fake_embedding)
