@@ -2761,26 +2761,30 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     "AgentExecutor.llm or .prompt is unset; the executor was "
                     "not fully restored or initialized before execution."
                 )
-            if "system" in self.prompt:
+            use_cache_breakpoint = getattr(self.llm, "is_anthropic", False)
+            if use_cache_breakpoint:
                 from crewai.llms.cache import mark_cache_breakpoint
-
+                def _maybe_mark(msg):
+                    return mark_cache_breakpoint(msg)
+            else:
+                def _maybe_mark(msg):
+                    return msg
+            if "system" in self.prompt:
                 prompt = cast("SystemPromptResult", self.prompt)
                 system_prompt = self._format_prompt(prompt["system"], inputs)
                 user_prompt = self._format_prompt(prompt["user"], inputs)
                 self.state.messages.append(
-                    mark_cache_breakpoint(
+                    _maybe_mark(
                         format_message_for_llm(system_prompt, role="system")
                     )
                 )
                 self.state.messages.append(
-                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
+                    _maybe_mark(format_message_for_llm(user_prompt))
                 )
             else:
-                from crewai.llms.cache import mark_cache_breakpoint
-
                 user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
                 self.state.messages.append(
-                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
+                    _maybe_mark(format_message_for_llm(user_prompt))
                 )
 
             self._inject_files_from_inputs(inputs)
@@ -2867,26 +2871,30 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     "AgentExecutor.llm or .prompt is unset; the executor was "
                     "not fully restored or initialized before execution."
                 )
-            if "system" in self.prompt:
+            use_cache_breakpoint = getattr(self.llm, "is_anthropic", False)
+            if use_cache_breakpoint:
                 from crewai.llms.cache import mark_cache_breakpoint
-
+                def _maybe_mark(msg):
+                    return mark_cache_breakpoint(msg)
+            else:
+                def _maybe_mark(msg):
+                    return msg
+            if "system" in self.prompt:
                 prompt = cast("SystemPromptResult", self.prompt)
                 system_prompt = self._format_prompt(prompt["system"], inputs)
                 user_prompt = self._format_prompt(prompt["user"], inputs)
                 self.state.messages.append(
-                    mark_cache_breakpoint(
+                    _maybe_mark(
                         format_message_for_llm(system_prompt, role="system")
                     )
                 )
                 self.state.messages.append(
-                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
+                    _maybe_mark(format_message_for_llm(user_prompt))
                 )
             else:
-                from crewai.llms.cache import mark_cache_breakpoint
-
                 user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
                 self.state.messages.append(
-                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
+                    _maybe_mark(format_message_for_llm(user_prompt))
                 )
 
             await self._ainject_files_from_inputs(inputs)
