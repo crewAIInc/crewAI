@@ -2541,10 +2541,7 @@ class TestVisionImageFormatContract:
         )
 
     def test_anthropic_provider_has_image_block_converter(self):
-        try:
-            from crewai.llms.providers.anthropic.completion import AnthropicCompletion
-        except ImportError:
-            pytest.skip("Anthropic extra is not installed")
+        from crewai.llms.providers.anthropic.completion import AnthropicCompletion
 
         assert hasattr(AnthropicCompletion, "_convert_image_blocks"), (
             "Anthropic provider must have _convert_image_blocks for auto-conversion"
