@@ -218,6 +218,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     _instance_id: str = PrivateAttr(default_factory=lambda: str(uuid4())[:8])
     _step_executor: Any = PrivateAttr(default=None)
     _planner_observer: PlannerObserver | None = PrivateAttr(default=None)
+    _is_feedback_iteration: bool = PrivateAttr(default=False)
 
     @model_validator(mode="after")
     def _setup_executor(self) -> Self:
@@ -341,6 +342,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         enabled on the agent, it generates a plan before execution begins.
         The plan is stored in state and todos are created from the steps.
         """
+        if self._is_feedback_iteration:
+            return
         if not getattr(self.agent, "planning_enabled", False):
             return
 
@@ -3193,14 +3196,27 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     def _prepare_feedback_iteration(self) -> None:
         """Reset flow completion state before rerunning with feedback."""
         self._finalize_called = False
+        self._is_feedback_iteration = True
         self.state.current_answer = None
         self.state.is_finished = False
+        self.state.iterations = 0
+        self.state.use_native_tools = False
         self.state.pending_tool_calls = []
+        self.state.plan = None
+        self.state.plan_ready = False
+        self.state.todos = TodoList()
+        self.state.replan_count = 0
+        self.state.last_replan_reason = None
+        self.state.observations = {}
+        self.state.execution_log = []
 
     def _invoke_loop(self) -> AgentFinish:
         """Re-run the executor flow using the existing feedback messages."""
         self._prepare_feedback_iteration()
-        self.kickoff()
+        try:
+            self.kickoff()
+        finally:
+            self._is_feedback_iteration = False
 
         if not isinstance(self.state.current_answer, AgentFinish):
             raise RuntimeError("Agent execution ended without reaching a final answer.")
@@ -3210,7 +3226,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     async def _ainvoke_loop(self) -> AgentFinish:
         """Re-run the executor flow asynchronously using feedback messages."""
         self._prepare_feedback_iteration()
-        await self.kickoff_async()
+        try:
+            await self.kickoff_async()
+        finally:
+            self._is_feedback_iteration = False
 
         if not isinstance(self.state.current_answer, AgentFinish):
             raise RuntimeError("Agent execution ended without reaching a final answer.")

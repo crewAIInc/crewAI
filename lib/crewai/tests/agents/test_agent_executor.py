@@ -58,6 +58,7 @@ def _build_executor(**kwargs: Any) -> AgentExecutor:
     executor._last_context_error = None
     executor._step_executor = None
     executor._planner_observer = None
+    executor._is_feedback_iteration = False
     return executor
 from crewai.agents.planner_observer import PlannerObserver
 from crewai.experimental.agent_executor import (
@@ -76,7 +77,7 @@ from crewai.events.types.tool_usage_events import (
 )
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities.step_execution_context import StepExecutionContext
-from crewai.utilities.planning_types import TodoItem
+from crewai.utilities.planning_types import TodoItem, TodoList
 from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 from crewai.utilities.file_store import clear_files, clear_task_files, store_files
 from crewai_files import TextFile
@@ -195,11 +196,21 @@ class TestAgentExecutor:
         executor.state.is_finished = True
         executor._finalize_called = True
         executor.ask_for_human_input = True
+        executor.state.iterations = executor.max_iter
+        executor.state.plan = "completed plan"
+        executor.state.plan_ready = True
+        executor.state.todos = TodoList(
+            items=[TodoItem(step_number=1, description="Done", status="completed")]
+        )
 
         improved_answer = AgentFinish(thought="", output="improved", text="improved")
         feedback_responses = iter(["make it friendlier", ""])
 
         def finish_feedback_iteration(*_args: Any, **_kwargs: Any) -> None:
+            assert executor._is_feedback_iteration is True
+            assert executor.state.iterations == 0
+            assert executor.state.plan is None
+            assert executor.state.todos.items == []
             executor.state.current_answer = improved_answer
             executor.state.is_finished = True
 
@@ -226,6 +237,7 @@ class TestAgentExecutor:
         assert executor.state.current_answer is improved_answer
         assert executor.state.is_finished is True
         assert executor._finalize_called is True
+        assert executor._is_feedback_iteration is False
 
     @pytest.mark.asyncio
     async def test_async_human_feedback_reruns_flow_with_state_messages(self):
@@ -238,11 +250,21 @@ class TestAgentExecutor:
         executor.state.is_finished = True
         executor._finalize_called = True
         executor.ask_for_human_input = True
+        executor.state.iterations = executor.max_iter
+        executor.state.plan = "completed plan"
+        executor.state.plan_ready = True
+        executor.state.todos = TodoList(
+            items=[TodoItem(step_number=1, description="Done", status="completed")]
+        )
 
         improved_answer = AgentFinish(thought="", output="improved", text="improved")
         feedback_responses = iter(["make it friendlier", ""])
 
         async def finish_feedback_iteration(*_args: Any, **_kwargs: Any) -> None:
+            assert executor._is_feedback_iteration is True
+            assert executor.state.iterations == 0
+            assert executor.state.plan is None
+            assert executor.state.todos.items == []
             executor.state.current_answer = improved_answer
             executor.state.is_finished = True
 
@@ -273,6 +295,22 @@ class TestAgentExecutor:
         assert executor.state.current_answer is improved_answer
         assert executor.state.is_finished is True
         assert executor._finalize_called is True
+        assert executor._is_feedback_iteration is False
+
+    def test_feedback_iteration_skips_plan_generation(self):
+        """Feedback reruns should reason over feedback without regenerating a plan."""
+        executor = _build_executor(
+            agent=SimpleNamespace(planning_enabled=True, verbose=False),
+            task=SimpleNamespace(),
+        )
+        executor._is_feedback_iteration = True
+
+        with patch("crewai.utilities.reasoning_handler.AgentReasoning") as reasoning:
+            executor.generate_plan()
+
+        reasoning.assert_not_called()
+        assert executor.state.plan is None
+        assert executor.state.todos.items == []
 
     def test_inject_files_from_crew_task_store(self):
         """Crew-level input_files should attach to the LLM user message."""
