@@ -10,7 +10,7 @@ from hashlib import md5
 import inspect
 import json
 import logging
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import threading
 from typing import (
     Annotated,
@@ -504,6 +504,29 @@ class Task(BaseModel):
         if value is None:
             return None
 
+        if "{" in value or "}" in value:
+            template_vars = [part.split("}")[0] for part in value.split("{")[1:]]
+            for var in template_vars:
+                if not var.isidentifier():
+                    raise ValueError(f"Invalid template variable name: {var}")
+            # Literal portions are still checked here; the fully interpolated
+            # path is re-validated at runtime (see
+            # interpolate_inputs_and_add_conversation_history) because template
+            # variables may be filled from untrusted kickoff inputs.
+            cls._sanitize_output_file_path(value)
+            return value
+
+        return cls._sanitize_output_file_path(value)
+
+    @staticmethod
+    def _sanitize_output_file_path(value: str) -> str:
+        """Enforce path-safety on an ``output_file`` value.
+
+        Shared by the field validator's literal and template branches. Rejects
+        traversal sequences, shell expansion, and shell metacharacters, and
+        strips a leading ``/`` so a literal path stays relative to the working
+        directory.
+        """
         if ".." in value:
             raise ValueError(
                 "Path traversal attempts are not allowed in output_file paths"
@@ -519,16 +542,55 @@ class Task(BaseModel):
                 "Shell special characters are not allowed in output_file paths"
             )
 
-        if "{" in value or "}" in value:
-            template_vars = [part.split("}")[0] for part in value.split("{")[1:]]
-            for var in template_vars:
-                if not var.isidentifier():
-                    raise ValueError(f"Invalid template variable name: {var}")
-            return value
-
         if value.startswith("/"):
             return value[1:]
         return value
+
+    def _validate_output_file_input_values(
+        self, inputs: dict[str, str | int | float | dict[str, Any] | list[Any]]
+    ) -> None:
+        """Reject untrusted input values that would escape the output path.
+
+        Only the variables that actually appear in the ``output_file`` template
+        are checked. The developer-authored template is trusted (it may contain
+        an absolute base directory), but a value substituted into it must not
+        introduce path traversal (``..``), an absolute path, a home/variable
+        expansion (``~``/``$``), or shell metacharacters that would redirect the
+        write outside the intended location.
+        """
+        if not self._original_output_file:
+            return
+
+        template_vars = [
+            part.split("}")[0] for part in self._original_output_file.split("{")[1:]
+        ]
+        for var in template_vars:
+            if var not in inputs:
+                continue
+            value = str(inputs[var])
+            if ".." in value:
+                raise ValueError(
+                    f"Invalid value for output_file variable '{var}': path "
+                    "traversal sequences ('..') are not allowed"
+                )
+            if value.startswith(("~", "$")):
+                raise ValueError(
+                    f"Invalid value for output_file variable '{var}': shell "
+                    "expansion characters are not allowed"
+                )
+            if any(char in value for char in ["|", ">", "<", "&", ";"]):
+                raise ValueError(
+                    f"Invalid value for output_file variable '{var}': shell "
+                    "special characters are not allowed"
+                )
+            if (
+                PurePosixPath(value).is_absolute()
+                or PureWindowsPath(value).is_absolute()
+            ):
+                raise ValueError(
+                    f"Invalid value for output_file variable '{var}': absolute "
+                    "paths are not allowed"
+                )
 
     @model_validator(mode="after")
     def set_attributes_based_on_config(self) -> Task:
@@ -1026,6 +1088,12 @@ Follow these guidelines:
             raise ValueError(f"Error interpolating expected_output: {e!s}") from e
 
         if self.output_file is not None:
+            # Values interpolated into the output path may come from untrusted
+            # kickoff inputs. The developer-authored template (including any
+            # absolute base directory) is trusted, but an injected value must
+            # not introduce path traversal, an absolute path, or shell
+            # expansion that would escape the intended location.
+            self._validate_output_file_input_values(inputs)
             try:
                 self.output_file = interpolate_only(
                     input_string=self._original_output_file, inputs=inputs
