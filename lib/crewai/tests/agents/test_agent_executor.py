@@ -28,6 +28,13 @@ def _build_executor(**kwargs: Any) -> AgentExecutor:
     Uses model_construct to skip Pydantic validators so plain Mock()
     objects are accepted for typed fields like llm, agent, crew, task.
     """
+    prompt = kwargs.get("prompt")
+    if isinstance(prompt, dict):
+        if "system" in prompt:
+            kwargs["prompt"] = SystemPromptResult(**prompt)
+        else:
+            kwargs["prompt"] = StandardPromptResult(**prompt)
+
     executor = AgentExecutor.model_construct(**kwargs)
     executor._state = AgentExecutorState()
     executor._methods = {}
@@ -70,7 +77,7 @@ from crewai.events.types.tool_usage_events import (
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities.step_execution_context import StepExecutionContext
 from crewai.utilities.planning_types import TodoItem
-from crewai.utilities.prompts import StandardPromptResult
+from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 from crewai.utilities.file_store import clear_files, clear_task_files, store_files
 from crewai_files import TextFile
 
@@ -2534,7 +2541,10 @@ class TestVisionImageFormatContract:
         )
 
     def test_anthropic_provider_has_image_block_converter(self):
-        from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+        try:
+            from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+        except ImportError:
+            pytest.skip("Anthropic extra is not installed")
 
         assert hasattr(AnthropicCompletion, "_convert_image_blocks"), (
             "Anthropic provider must have _convert_image_blocks for auto-conversion"
