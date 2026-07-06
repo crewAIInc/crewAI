@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import re
@@ -201,9 +202,9 @@ class DB2VectorSearchTool(BaseTool):
         if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable is missing. Required for default embeddings.")
         
+        openai = importlib.import_module("openai")
         return (
-            __import__("openai")
-            .OpenAI(api_key=api_key)
+            openai.OpenAI(api_key=api_key)
             .embeddings.create(
                 input=[text],
                 model=self.embedding_model,
