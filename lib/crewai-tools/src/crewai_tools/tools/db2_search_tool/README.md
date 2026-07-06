@@ -34,14 +34,14 @@ DB2_CONNECTION_STRING=DATABASE=TESTDB;HOSTNAME=localhost;PORT=50000;PROTOCOL=TCP
 # Example Usage
 
 ```python
-from db2_search_tool import DB2VectorSearchTool
+from crewai_tools.tools.db2_search_tool import DB2VectorSearchTool
 
 tool = DB2VectorSearchTool(
     connection_string="DATABASE=TESTDB;HOSTNAME=localhost;PORT=50000;PROTOCOL=TCPIP;UID=db2user;PWD=password;",
     table_name="documents",
 )
 
-result = tool._run(
+result = tool.run(
     query="What is machine learning?",
 )
 
@@ -53,7 +53,7 @@ print(result)
 # Example With Metadata Filtering
 
 ```python
-result = tool._run(
+result = tool.run(
     query="AI papers",
     filter_by="category",
     filter_value="AI",
