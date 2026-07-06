@@ -571,9 +571,7 @@ def run_crew(
         definition: Optional path to a declarative Flow definition.
         inputs: Optional JSON object passed to a declarative Flow.
     """
-    if inputs is not None and definition is None:
-        raise click.UsageError("--inputs requires --definition")
-
+    # --definition is a pure override: run that flow directly.
     if definition is not None:
         _run_explicit_declarative_flow(
             definition=definition,
@@ -584,6 +582,7 @@ def run_crew(
 
     pyproject_data = read_toml()
     if json_crew_definition := configured_project_json_crew(pyproject_data):
+        _reject_inputs_for_non_flow(inputs)
         _run_json_crew_in_project_env(
             trained_agents_file=trained_agents_file,
             crew_path=json_crew_definition,
@@ -594,16 +593,25 @@ def run_crew(
     project_type = get_crewai_project_type(pyproject_data)
 
     if project_type == "flow":
+        # No --definition: resolve the configured [tool.crewai] flow — the same
+        # resolution as a bare `crewai run` — and pass --inputs straight through.
         _run_flow_project(
             pyproject_data=pyproject_data,
             trained_agents_file=trained_agents_file,
+            inputs=inputs,
         )
         return
 
+    _reject_inputs_for_non_flow(inputs)
     _run_classic_crew_project(
         pyproject_data=pyproject_data,
         trained_agents_file=trained_agents_file,
     )
+
+
+def _reject_inputs_for_non_flow(inputs: str | None) -> None:
+    if inputs is not None:
+        raise click.UsageError("--inputs is only supported for declarative flows")
 
 
 def _run_explicit_declarative_flow(
@@ -618,7 +626,9 @@ def _run_explicit_declarative_flow(
 
 
 def _run_flow_project(
-    pyproject_data: dict[str, Any], trained_agents_file: str | None
+    pyproject_data: dict[str, Any],
+    trained_agents_file: str | None,
+    inputs: str | None = None,
 ) -> None:
     if trained_agents_file is not None:
         raise click.UsageError("--filename can only be used when running crews")
@@ -629,8 +639,15 @@ def _run_flow_project(
     )
 
     if definition := configured_project_declarative_flow(pyproject_data):
-        run_declarative_flow_in_project_env(definition=definition)
+        run_declarative_flow_in_project_env(definition=definition, inputs=inputs)
         return
+
+    # No configured declarative flow definition to resolve inputs against.
+    if inputs is not None:
+        raise click.UsageError(
+            "--inputs requires a declarative flow definition "
+            "([tool.crewai].definition) or --definition"
+        )
 
     from crewai_cli.kickoff_flow import (
         _load_conversational_flow_from_kickoff_script,

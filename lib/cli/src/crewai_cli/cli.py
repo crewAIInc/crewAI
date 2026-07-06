@@ -526,8 +526,8 @@ def run(
     inputs: str | None,
 ) -> None:
     """Run the Crew or Flow."""
-    if inputs is not None and definition is None:
-        raise click.UsageError("--inputs requires --definition")
+    # --inputs no longer requires --definition: with no override it resolves the
+    # configured [tool.crewai] flow, same as a bare `crewai run`.
     if trained_agents_file is not None and definition is not None:
         raise click.UsageError("--filename can only be used when running crews")
 

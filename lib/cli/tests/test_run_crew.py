@@ -682,11 +682,48 @@ def test_configured_project_json_crew_ignores_missing_pyproject(
     assert run_crew_module.configured_project_json_crew() is None
 
 
-def test_run_crew_rejects_inputs_without_definition():
+def test_run_crew_inputs_without_definition_rejected_for_non_flow(monkeypatch):
+    # --inputs is flow-only; in a non-flow project it now errors clearly instead
+    # of the old "--inputs requires --definition".
+    monkeypatch.setattr(run_crew_module, "read_toml", lambda *a, **k: {})
+    monkeypatch.setattr(
+        run_crew_module, "configured_project_json_crew", lambda *a, **k: None
+    )
+    monkeypatch.setattr(
+        run_crew_module, "_warn_if_old_poetry_project", lambda *a, **k: None
+    )
+    monkeypatch.setattr(run_crew_module, "get_crewai_project_type", lambda *a, **k: "crew")
+
     with pytest.raises(click.UsageError) as exc_info:
         run_crew_module.run_crew(inputs='{"topic":"AI"}')
 
-    assert "--inputs requires --definition" in exc_info.value.message
+    assert "--inputs is only supported for declarative flows" in exc_info.value.message
+
+
+def test_run_crew_inputs_without_definition_resolves_configured_flow(monkeypatch):
+    # --inputs with no --definition resolves the configured [tool.crewai] flow,
+    # exactly like a bare `crewai run`, and forwards the inputs.
+    import crewai_cli.run_declarative_flow as rdf
+
+    calls: dict[str, object] = {}
+    monkeypatch.setattr(run_crew_module, "read_toml", lambda *a, **k: {})
+    monkeypatch.setattr(
+        run_crew_module, "configured_project_json_crew", lambda *a, **k: None
+    )
+    monkeypatch.setattr(
+        run_crew_module, "_warn_if_old_poetry_project", lambda *a, **k: None
+    )
+    monkeypatch.setattr(run_crew_module, "get_crewai_project_type", lambda *a, **k: "flow")
+    monkeypatch.setattr(
+        rdf, "configured_project_declarative_flow", lambda *a, **k: Path("flow.yaml")
+    )
+    monkeypatch.setattr(
+        rdf, "run_declarative_flow_in_project_env", lambda **kw: calls.update(kw)
+    )
+
+    run_crew_module.run_crew(inputs='{"topic":"AI"}')
+
+    assert calls == {"definition": Path("flow.yaml"), "inputs": '{"topic":"AI"}'}
 
 
 def test_run_crew_rejects_filename_with_explicit_definition():
