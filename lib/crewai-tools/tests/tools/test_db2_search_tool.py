@@ -291,6 +291,7 @@ class TestGenerateEmbedding:
 
     def test_falls_back_to_openai_with_api_key(self):
         tool = _make_tool()
+        tool._openai_client = None  # ensure cache is clear
         mock_openai = MagicMock()
         mock_openai.OpenAI.return_value.embeddings.create.return_value.data = [
             MagicMock(embedding=[0.1, 0.2])
@@ -302,16 +303,30 @@ class TestGenerateEmbedding:
 
         assert result == [0.1, 0.2]
 
+    def test_openai_client_is_reused_across_calls(self):
+        tool = _make_tool()
+        tool._openai_client = None  # ensure cache is clear
+        mock_openai = MagicMock()
+        mock_client = mock_openai.OpenAI.return_value
+        mock_client.embeddings.create.return_value.data = [MagicMock(embedding=[0.1, 0.2])]
+
+        with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
+            with patch.dict("sys.modules", {"openai": mock_openai}):
+                tool._generate_embedding("first query")
+                tool._generate_embedding("second query")
+
+        # OpenAI() constructor called only once — client was reused
+        mock_openai.OpenAI.assert_called_once()
+
     def test_raises_when_no_openai_key_and_no_custom_fn(self):
         tool = _make_tool()
+        tool._openai_client = None  # ensure cache is clear
 
-        with patch.dict("os.environ", {}, clear=True):
-            # Remove OPENAI_API_KEY specifically if it exists
-            import os
-            env_without_key = {k: v for k, v in os.environ.items() if k != "OPENAI_API_KEY"}
-            with patch.dict("os.environ", env_without_key, clear=True):
-                with pytest.raises(ValueError, match="OPENAI_API_KEY"):
-                    tool._generate_embedding("test")
+        import os
+        env_without_key = {k: v for k, v in os.environ.items() if k != "OPENAI_API_KEY"}
+        with patch.dict("os.environ", env_without_key, clear=True):
+            with pytest.raises(ValueError, match="OPENAI_API_KEY"):
+                tool._generate_embedding("test")
 
 
 # ---------------------------------------------------------------------------

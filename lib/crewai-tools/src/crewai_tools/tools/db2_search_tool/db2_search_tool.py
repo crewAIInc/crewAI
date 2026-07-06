@@ -159,6 +159,7 @@ class DB2VectorSearchTool(BaseTool):
     connection: Any | None = None
     dbi_connection: Any | None = None
     cursor: Any | None = None
+    _openai_client: Any | None = None
 
     def _connect(self) -> None:
         self.connection = self.db2_package.connect(self.connection_string, "", "")
@@ -194,17 +195,21 @@ class DB2VectorSearchTool(BaseTool):
             raise ValueError(f"Security Alert: Invalid database identifier detected: {name}")
         return name
 
+    def _get_openai_client(self) -> Any:
+        if self._openai_client is None:
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("OPENAI_API_KEY environment variable is missing. Required for default embeddings.")
+            openai = importlib.import_module("openai")
+            self._openai_client = openai.OpenAI(api_key=api_key)
+        return self._openai_client
+
     def _generate_embedding(self, text: str) -> list[float]:
         if self.custom_embedding_fn:
             return self.custom_embedding_fn(text)
-            
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError("OPENAI_API_KEY environment variable is missing. Required for default embeddings.")
-        
-        openai = importlib.import_module("openai")
+
         return (
-            openai.OpenAI(api_key=api_key)
+            self._get_openai_client()
             .embeddings.create(
                 input=[text],
                 model=self.embedding_model,
