@@ -305,9 +305,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         from crewai.llms.cache import mark_cache_breakpoint
 
         if isinstance(self.prompt, SystemPromptResult):
-            prompt = self.prompt
-            system_prompt = self._format_prompt(prompt["system"], inputs)
-            user_prompt = self._format_prompt(prompt["user"], inputs)
+            system_prompt = self._format_prompt(self.prompt["system"], inputs)
+            user_prompt = self._format_prompt(self.prompt["user"], inputs)
             self.state.messages.append(
                 mark_cache_breakpoint(
                     format_message_for_llm(system_prompt, role="system")
@@ -317,8 +316,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 mark_cache_breakpoint(format_message_for_llm(user_prompt))
             )
         elif isinstance(self.prompt, StandardPromptResult):
-            prompt = self.prompt
-            user_prompt = self._format_prompt(prompt["prompt"], inputs)
+            user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
             self.state.messages.append(
                 mark_cache_breakpoint(format_message_for_llm(user_prompt))
             )
