@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib
 import json
 import os
 import re
@@ -160,32 +159,9 @@ class DB2VectorSearchTool(BaseTool):
     dbi_connection: Any | None = None
     cursor: Any | None = None
 
-    @model_validator(mode="after")
-    def _setup_db2(self) -> "DB2VectorSearchTool":
-        if isinstance(self.db2_package, str):
-            self.db2_package = importlib.import_module(self.db2_package)
-        if isinstance(self.db2_dbi_package, str):
-            self.db2_dbi_package = importlib.import_module(self.db2_dbi_package)
-        return self
-
-    def _build_connection_string(self) -> str:
-        config = self.db2_config
-        if config.hostname == "localhost" and not config.username:
-            return config.database
-
-        return (
-            f"DATABASE={config.database};"
-            f"HOSTNAME={config.hostname};"
-            f"PORT={config.port};"
-            f"PROTOCOL={config.protocol};"
-            f"UID={config.username};"
-            f"PWD={config.password};"
-        )
-
     def _connect(self) -> None:
         if not self.connection:
-            conn_str = self._build_connection_string()
-            self.connection = self.db2_package.connect(conn_str, "", "")
+            self.connection = self.db2_package.connect(self.connection_string, "", "")
             self.dbi_connection = self.db2_dbi_package.Connection(self.connection)
             self.cursor = self.dbi_connection.cursor()
 
