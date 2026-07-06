@@ -26,10 +26,7 @@ pip install ibm_db ibm_db_dbi openai
 ```env
 OPENAI_API_KEY=your_openai_key
 
-DB2_DATABASE=TESTDB
-DB2_HOSTNAME=localhost
-DB2_USERNAME=db2user
-DB2_PASSWORD=password
+DB2_CONNECTION_STRING=DATABASE=TESTDB;HOSTNAME=localhost;PORT=50000;PROTOCOL=TCPIP;UID=db2user;PWD=password;
 ```
 
 ---
@@ -37,19 +34,11 @@ DB2_PASSWORD=password
 # Example Usage
 
 ```python
-from db2_search_tool import (
-    DB2Config,
-    DB2VectorSearchTool,
-)
-
-config = DB2Config(
-    database="TESTDB",
-    hostname="localhost",
-    table_name="documents",
-)
+from db2_search_tool import DB2VectorSearchTool
 
 tool = DB2VectorSearchTool(
-    db2_config=config
+    connection_string="DATABASE=TESTDB;HOSTNAME=localhost;PORT=50000;PROTOCOL=TCPIP;UID=db2user;PWD=password;",
+    table_name="documents",
 )
 
 result = tool._run(

@@ -59,54 +59,6 @@ class DB2ToolSchema(BaseModel):
         return self
 
 
-class DB2Config(BaseModel):
-    """All DB2 connection and search settings."""
-
-    database: str
-    hostname: str = "localhost"
-    port: int = 50000
-    protocol: str = "TCPIP"
-    username: str | None = None
-    password: str | None = None
-    table_name: str = "documents"
-    vector_column: str = "embedding"
-    
-    # Configure the embedding model dynamically
-    embedding_model: str = "text-embedding-3-large"
-
-    # List of columns to return from the database
-    return_columns: list[str] = Field(
-        default_factory=lambda: ["content"]
-    )
-
-    @model_validator(mode="after")
-    def _validate_return_columns(self) -> "DB2Config":
-        if not self.return_columns:
-            raise ValueError(
-                "return_columns cannot be empty. At least one column must be specified "
-                "for the SELECT query to be valid."
-            )
-        return self
-
-    # Strictly bound the limit
-    limit: int = Field(
-        default=3,
-        ge=1,
-        le=100,
-        description="Number of documents to return. Must be between 1 and 100."
-    )
-    
-    # Distance metric to use (validated internally)
-    distance_metric: str = "COSINE"
-    
-    # Prevent negative maximum distances
-    max_distance: float | None = Field(
-        default=None,
-        ge=0.0,
-        description="Maximum allowed distance for results. Cannot be negative."
-    )
-
-
 class DB2VectorSearchTool(BaseTool):
     """
     Fortified IBM DB2 Vector Search Tool.
@@ -139,29 +91,53 @@ class DB2VectorSearchTool(BaseTool):
                 required=False,
             ),
             EnvVar(
-                name="DB2_DATABASE",
-                description="IBM DB2 database name.",
-                required=False,
-            ),
-            EnvVar(
-                name="DB2_HOSTNAME",
-                description="IBM DB2 hostname.",
-                required=False,
-            ),
-            EnvVar(
-                name="DB2_USERNAME",
-                description="IBM DB2 username.",
-                required=False,
-            ),
-            EnvVar(
-                name="DB2_PASSWORD",
-                description="IBM DB2 password.",
+                name="DB2_CONNECTION_STRING",
+                description="IBM DB2 connection string (e.g. 'DATABASE=mydb;HOSTNAME=localhost;PORT=50000;PROTOCOL=TCPIP;UID=user;PWD=pass;').",
                 required=False,
             ),
         ]
     )
 
-    db2_config: DB2Config
+    connection_string: str = Field(
+        description=(
+            "IBM DB2 connection string. "
+            "Format: 'DATABASE=mydb;HOSTNAME=localhost;PORT=50000;PROTOCOL=TCPIP;UID=user;PWD=pass;' "
+            "or just the database name for a local connection."
+        )
+    )
+
+    # Search settings
+    table_name: str = "documents"
+    vector_column: str = "embedding"
+    embedding_model: str = "text-embedding-3-large"
+
+    return_columns: list[str] = Field(
+        default_factory=lambda: ["content"]
+    )
+
+    limit: int = Field(
+        default=3,
+        ge=1,
+        le=100,
+        description="Number of documents to return. Must be between 1 and 100."
+    )
+
+    distance_metric: str = "COSINE"
+
+    max_distance: float | None = Field(
+        default=None,
+        ge=0.0,
+        description="Maximum allowed distance for results. Cannot be negative."
+    )
+
+    @model_validator(mode="after")
+    def _validate_return_columns(self) -> "DB2VectorSearchTool":
+        if not self.return_columns:
+            raise ValueError(
+                "return_columns cannot be empty. At least one column must be specified "
+                "for the SELECT query to be valid."
+            )
+        return self
 
     db2_package: ImportString[Any] = Field(
         default="ibm_db",
@@ -249,7 +225,7 @@ class DB2VectorSearchTool(BaseTool):
             .OpenAI(api_key=api_key)
             .embeddings.create(
                 input=[text],
-                model=self.db2_config.embedding_model,
+                model=self.embedding_model,
             )
             .data[0]
             .embedding
@@ -281,17 +257,15 @@ class DB2VectorSearchTool(BaseTool):
                 self._disconnect()  # Clean up any partial connection
                 return json.dumps({"success": False, "error": f"Failed to connect to DB2: {str(e)}"})
 
-            config = self.db2_config
-
             # Validate Metric
-            metric = config.distance_metric.upper()
+            metric = self.distance_metric.upper()
             if metric not in self._ALLOWED_METRICS:
                 raise ValueError(f"Invalid distance metric: {metric}")
 
             # Validate Identifiers
-            table = self._validate_identifier(config.table_name, allow_period=True)
-            v_col = self._validate_identifier(config.vector_column)
-            ret_cols = [self._validate_identifier(c) for c in config.return_columns]
+            table = self._validate_identifier(self.table_name, allow_period=True)
+            v_col = self._validate_identifier(self.vector_column)
+            ret_cols = [self._validate_identifier(c) for c in self.return_columns]
             
             vector_dimension = len(query_vector)
             vector_string = str(query_vector)
@@ -322,7 +296,7 @@ class DB2VectorSearchTool(BaseTool):
                 FROM {table}
                 {filter_clause}
                 ORDER BY distance ASC
-                FETCH FIRST {config.limit} ROWS ONLY
+                FETCH FIRST {self.limit} ROWS ONLY
             """
 
             self.cursor.execute(sql, tuple(params))
@@ -334,11 +308,11 @@ class DB2VectorSearchTool(BaseTool):
                 # The 'distance' is always the LAST column in our dynamic SELECT
                 distance = float(row[-1])
 
-                if config.max_distance is not None and distance > config.max_distance:
+                if self.max_distance is not None and distance > self.max_distance:
                     continue
 
                 # Automatically map the requested columns to their row values
-                row_data = dict(zip(config.return_columns, row[:-1]))
+                row_data = dict(zip(self.return_columns, row[:-1]))
 
                 normalized_results.append(
                     {
