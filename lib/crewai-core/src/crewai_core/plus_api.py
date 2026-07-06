@@ -232,10 +232,8 @@ class PlusAPI:
     def get_tool(self, handle: str) -> httpx.Response:
         return self._make_request("GET", f"{self.TOOLS_RESOURCE}/{handle}")
 
-    async def get_agent(self, handle: str) -> httpx.Response:
-        url = urljoin(self.base_url, f"{self.AGENTS_RESOURCE}/{handle}")
-        async with httpx.AsyncClient() as client:
-            return await client.get(url, headers=cast(dict[str, str], self.headers))
+    def get_agent(self, handle: str) -> httpx.Response:
+        return self._make_request("GET", f"{self.AGENTS_RESOURCE}/{handle}")
 
     def publish_tool(
         self,

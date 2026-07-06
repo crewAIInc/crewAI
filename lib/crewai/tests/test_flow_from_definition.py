@@ -11,6 +11,7 @@ from unittest.mock import patch
 import pytest
 from pydantic import BaseModel, ValidationError
 
+from crewai.agent.planning_config import PlanningConfig
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
@@ -27,9 +28,60 @@ from crewai.flow.flow_definition import FlowConfigDefinition, FlowDefinition
 from crewai.flow.persistence import persist
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.runtime._actions import FlowScriptExecutionDisabledError
+from crewai.project.crew_definition import AgentDefinition
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.tools import BaseTool
 from crewai.types.streaming import StreamSession
+
+
+AGENT_RUNTIME_CONTROL_FIELDS = (
+    "planning_config",
+    "allow_delegation",
+    "max_iter",
+    "max_rpm",
+    "max_execution_time",
+)
+
+
+def assert_agent_runtime_field_schema(properties: dict[str, Any]) -> None:
+    for field_name in AGENT_RUNTIME_CONTROL_FIELDS:
+        assert "default" in properties[field_name]
+        assert properties[field_name]["default"] is None
+        assert properties[field_name]["description"]
+
+
+def assert_planning_config_schema(schema_defs: dict[str, Any]) -> None:
+    properties = schema_defs["PlanningConfig"]["properties"]
+    max_attempts = properties["max_attempts"]
+    planning_config_field = PlanningConfig.model_fields["max_attempts"]
+
+    assert max_attempts["default"] == planning_config_field.default
+    assert max_attempts["description"] == planning_config_field.description
+
+
+def assert_llm_definition_schema(schema_defs: dict[str, Any]) -> None:
+    properties = schema_defs["LLMDefinition"]["properties"]
+
+    assert set(properties) >= {
+        "model",
+        "max_tokens",
+    }
+    assert properties["model"]["type"] == "string"
+    assert properties["max_tokens"]["default"] is None
+
+
+def test_inline_agent_definition_omits_unspecified_runtime_controls():
+    definition = AgentDefinition(
+        role="Analyst",
+        goal="Answer questions",
+        backstory="Knows things.",
+        input="${state.question}",
+    )
+
+    dumped = definition.model_dump(mode="python", exclude_none=True)
+
+    for field_name in AGENT_RUNTIME_CONTROL_FIELDS:
+        assert field_name not in dumped
 
 
 class StaticSearchTool(BaseTool):
@@ -46,6 +98,11 @@ class TypedInputsTool(BaseTool):
 
     def _run(self, count: int, include_domains: list[str]) -> str:
         return f"{count}:{','.join(include_domains)}"
+
+
+class TemplateInputFlow(Flow):
+    def capture_inputs(self, prompt: str, domains: list[str]) -> dict[str, Any]:
+        return {"prompt": prompt, "domains": domains}
 
 
 class AsyncResultTool(BaseTool):
@@ -681,7 +738,7 @@ methods:
     assert flow.kickoff(inputs={"topic": "ai"}) == "found:ai agents"
 
 
-def test_tool_action_treats_embedded_cel_marker_as_literal():
+def test_tool_action_interpolates_cel_string_literals():
     definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
@@ -702,10 +759,10 @@ def test_tool_action_treats_embedded_cel_marker_as_literal():
         }
     )
 
-    assert Flow.from_declaration(contents=definition).kickoff() == "p}x:wrapped ${'a}b'} value"
+    assert Flow.from_declaration(contents=definition).kickoff() == "p}x:wrapped a}b value"
 
 
-def test_tool_action_treats_marker_with_trailing_text_as_literal():
+def test_tool_action_interpolates_expression_with_surrounding_text():
     definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
@@ -726,11 +783,177 @@ def test_tool_action_treats_marker_with_trailing_text_as_literal():
         }
     )
 
-    assert Flow.from_declaration(contents=definition).kickoff() == "p:${state.topic} extra"
+    flow = Flow.from_declaration(contents=definition)
+
+    assert flow.kickoff(inputs={"topic": "ai"}) == "p:ai extra"
 
 
-def test_tool_action_rejects_adjacent_markers_as_invalid_cel():
-    with pytest.raises(ValidationError, match="invalid CEL expression"):
+def test_tool_action_interpolates_adjacent_expressions():
+    definition = FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}:StaticSearchTool",
+                        "with": {
+                            "search_query": "${'a'}${'b'}",
+                            "prefix": "p",
+                        },
+                    },
+                },
+            },
+        }
+    )
+
+    assert Flow.from_declaration(contents=definition).kickoff() == "p:ab"
+
+
+def test_tool_action_interpolates_multiple_expressions_with_literals():
+    definition = FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}:StaticSearchTool",
+                        "with": {
+                            "search_query": "here's ${state.a} and another ${state.b}!",
+                            "prefix": "p",
+                        },
+                    },
+                },
+            },
+        }
+    )
+
+    flow = Flow.from_declaration(contents=definition)
+
+    assert flow.kickoff(inputs={"a": "one", "b": "two"}) == "p:here's one and another two!"
+
+
+def test_tool_action_interpolates_non_string_values_as_json():
+    definition = FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}:StaticSearchTool",
+                        "with": {
+                            "search_query": "n=${state.n}; ok=${state.ok}; d=${state.d}",
+                            "prefix": "p",
+                        },
+                    },
+                },
+            },
+        }
+    )
+
+    flow = Flow.from_declaration(contents=definition)
+
+    assert (
+        flow.kickoff(inputs={"n": 3, "ok": True, "d": {"a": 1}})
+        == 'p:n=3; ok=true; d={"a": 1}'
+    )
+
+
+def test_tool_action_interpolates_null_as_empty_string():
+    definition = FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}:StaticSearchTool",
+                        "with": {
+                            "search_query": "note:${state.note};",
+                            "prefix": "p",
+                        },
+                    },
+                },
+            },
+        }
+    )
+
+    flow = Flow.from_declaration(contents=definition)
+
+    assert flow.kickoff(inputs={"note": None}) == "p:note:;"
+
+
+def test_tool_action_interpolates_object_literal_fields():
+    definition = FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}:StaticSearchTool",
+                        "with": {
+                            "search_query": "result: ${ {'k': 'v'}.k } end",
+                            "prefix": "p",
+                        },
+                    },
+                },
+            },
+        }
+    )
+
+    assert Flow.from_declaration(contents=definition).kickoff() == "p:result: v end"
+
+
+def test_tool_action_keeps_plain_dollar_signs_literal():
+    definition = FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}:StaticSearchTool",
+                        "with": {
+                            "search_query": "$5 or $more, escaped ${'${'}x",
+                            "prefix": "p",
+                        },
+                    },
+                },
+            },
+        }
+    )
+
+    assert Flow.from_declaration(contents=definition).kickoff() == "p:$5 or $more, escaped ${x"
+
+
+@pytest.mark.parametrize(
+    ("search_query", "error"),
+    [
+        ("cost ${state.a", "unterminated"),
+        ("x ${} y", "empty CEL expression"),
+        ("a ${foo.bar} b", "unknown CEL root"),
+    ],
+)
+def test_tool_action_rejects_invalid_interpolated_inputs(
+    search_query: str,
+    error: str,
+):
+    with pytest.raises(ValidationError, match=error):
         FlowDefinition.from_declaration(contents=
             {
                 "schema": "crewai.flow/v1",
@@ -742,7 +965,7 @@ def test_tool_action_rejects_adjacent_markers_as_invalid_cel():
                             "call": "tool",
                             "ref": f"{__name__}:StaticSearchTool",
                             "with": {
-                                "search_query": "${'a'}${'b'}",
+                                "search_query": search_query,
                                 "prefix": "p",
                             },
                         },
@@ -752,7 +975,7 @@ def test_tool_action_rejects_adjacent_markers_as_invalid_cel():
         )
 
 
-def test_tool_action_accepts_braces_in_full_cel_marker():
+def test_tool_action_preserves_type_for_object_literal_expression():
     definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
@@ -848,6 +1071,37 @@ methods:
     )
 
 
+def test_tool_action_interpolates_values_inside_list_inputs():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: ToolFlow
+methods:
+  typed:
+    do:
+      call: tool
+      ref: {__name__}:TypedInputsTool
+      with:
+        count: "${{state.limit}}"
+        include_domains:
+          - "${{state.primary_domain}}"
+          - "docs.${{state.domain_suffix}}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    assert (
+        flow.kickoff(
+            inputs={
+                "limit": 2,
+                "primary_domain": "crewai.com",
+                "domain_suffix": "example.com",
+            }
+        )
+        == "2:crewai.com,docs.example.com"
+    )
+
+
 def test_tool_action_renders_text_custom_expression_inputs():
     yaml_str = f"""
 schema: crewai.flow/v1
@@ -909,6 +1163,139 @@ methods:
     }
 
 
+def test_agent_action_runs_repository_yaml_definition(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from crewai import Agent
+    from crewai.plus_api import PlusAPI
+
+    fetched_agents: list[str] = []
+
+    class FakeResponse:
+        status_code = 200
+        text = ""
+
+        def json(self) -> dict[str, Any]:
+            return {
+                "role": "Repository specialist",
+                "goal": "Answer support questions",
+                "backstory": "Loaded from the agent repository.",
+                "max_iter": 3,
+                "tools": [],
+            }
+
+    def fake_get_agent(self: PlusAPI, handle: str) -> FakeResponse:
+        fetched_agents.append(handle)
+        return FakeResponse()
+
+    async def fake_kickoff_async(
+        self: Agent, messages: str, **_kwargs: Any
+    ) -> dict[str, Any]:
+        return {"agent": self.role, "input": messages, "max_iter": self.max_iter}
+
+    monkeypatch.setattr("crewai.auth.token.get_auth_token", lambda: "test-token")
+    monkeypatch.setattr(PlusAPI, "get_agent", fake_get_agent)
+    monkeypatch.setattr(Agent, "kickoff_async", fake_kickoff_async)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: AgentFlow
+methods:
+  answer:
+    do:
+      call: agent
+      with:
+        from_repository: support_specialist
+        input: "${state.question}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    assert flow.kickoff(inputs={"question": "What is CrewAI?"}) == {
+        "agent": "Repository specialist",
+        "input": "What is CrewAI?",
+        "max_iter": 3,
+    }
+    assert fetched_agents == ["support_specialist"]
+
+
+def test_agent_action_repository_fetch_does_not_block_event_loop(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from crewai import Agent
+    from crewai.plus_api import PlusAPI
+
+    loop_marker_ran = threading.Event()
+    fetch_started = threading.Event()
+    release_fetch = threading.Event()
+    fetch_saw_loop_marker = False
+
+    class FakeResponse:
+        status_code = 200
+        text = ""
+
+        def json(self) -> dict[str, Any]:
+            return {
+                "role": "Repository specialist",
+                "goal": "Answer support questions",
+                "backstory": "Loaded from the agent repository.",
+                "tools": [],
+            }
+
+    def fake_get_agent(self: PlusAPI, handle: str) -> FakeResponse:
+        nonlocal fetch_saw_loop_marker
+        fetch_started.set()
+        release_fetch.wait(timeout=1)
+        fetch_saw_loop_marker = loop_marker_ran.is_set()
+        return FakeResponse()
+
+    async def fake_kickoff_async(
+        self: Agent, messages: str, **_kwargs: Any
+    ) -> str:
+        return f"{self.role}:{messages}"
+
+    monkeypatch.setattr("crewai.auth.token.get_auth_token", lambda: "test-token")
+    monkeypatch.setattr(PlusAPI, "get_agent", fake_get_agent)
+    monkeypatch.setattr(Agent, "kickoff_async", fake_kickoff_async)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: AgentFlow
+methods:
+  answer:
+    do:
+      call: agent
+      with:
+        from_repository: support_specialist
+        input: "${state.question}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    async def run_flow() -> str:
+        async def mark_loop_progress() -> None:
+            while not fetch_started.is_set():
+                await asyncio.sleep(0)
+            loop_marker_ran.set()
+            release_fetch.set()
+
+        marker_task = asyncio.create_task(mark_loop_progress())
+        kickoff_task = asyncio.create_task(
+            flow.kickoff_async(inputs={"question": "What is CrewAI?"})
+        )
+        try:
+            result = await asyncio.wait_for(kickoff_task, timeout=2)
+            await asyncio.wait_for(marker_task, timeout=2)
+            return result
+        finally:
+            release_fetch.set()
+
+    assert asyncio.run(run_flow()) == "Repository specialist:What is CrewAI?"
+    assert fetch_saw_loop_marker
+
+
 def test_agent_action_renders_text_custom_expression_input(
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -932,7 +1319,7 @@ methods:
         role: Analyst
         goal: Answer questions
         backstory: Knows things.
-        input: "${'Ticket ID: ' + text(state, 'ticket.id') + '; Subject: ' + text(state, 'ticket.subject')}"
+        input: "Ticket ID: ${text(state, 'ticket.id')}; Subject: ${text(state, 'ticket.subject')}"
     start: true
 """
 
@@ -996,6 +1383,10 @@ def test_agent_action_round_trips_with_inline_definition():
                             "role": "Analyst",
                             "goal": "Answer questions",
                             "backstory": "Knows things.",
+                            "llm": {
+                                "model": "openai/gpt-4o-mini",
+                                "max_tokens": 4096,
+                            },
                             "settings": {"verbose": True},
                             "input": "${state.question}",
                         },
@@ -1010,20 +1401,29 @@ def test_agent_action_round_trips_with_inline_definition():
     assert action.call == "agent"
     assert action.with_.role == "Analyst"
     assert action.with_.input == "${state.question}"
+    assert action.with_.llm is not None
+    assert action.with_.llm.max_tokens == 4096
     assert action.with_.settings == {"verbose": True}
 
 
 def test_agent_action_json_schema_describes_inline_agent_definitions():
     schema_defs = FlowDefinition.model_json_schema(by_alias=True)["$defs"]
+    properties = schema_defs["AgentDefinition"]["properties"]
 
-    assert set(schema_defs["AgentDefinition"]["properties"]) >= {
+    assert set(properties) >= {
         "role",
         "goal",
         "backstory",
+        "from_repository",
         "settings",
+        "llm",
         "input",
         "response_format",
+        *AGENT_RUNTIME_CONTROL_FIELDS,
     }
+    assert_agent_runtime_field_schema(properties)
+    assert_planning_config_schema(schema_defs)
+    assert_llm_definition_schema(schema_defs)
 
 
 def test_agent_action_rejects_non_string_input_in_definition():
@@ -1116,6 +1516,219 @@ methods:
         "agents": ["Researcher"],
         "tasks": ["Research {topic}"],
         "inputs": {"topic": "AI"},
+    }
+
+
+def test_crew_action_runs_repository_agent_yaml_definition(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from crewai import Crew
+    from crewai.plus_api import PlusAPI
+
+    fetched_agents: list[str] = []
+
+    class FakeResponse:
+        status_code = 200
+        text = ""
+
+        def json(self) -> dict[str, Any]:
+            return {
+                "role": "Repository researcher",
+                "goal": "Research {topic}",
+                "backstory": "Loaded from the agent repository.",
+                "max_iter": 5,
+                "tools": [],
+            }
+
+    def fake_get_agent(self: PlusAPI, handle: str) -> FakeResponse:
+        fetched_agents.append(handle)
+        return FakeResponse()
+
+    async def fake_kickoff_async(
+        self: Crew, inputs: dict[str, Any] | None = None, **_kwargs: Any
+    ) -> dict[str, Any]:
+        return {
+            "crew": self.name,
+            "agents": [
+                {"role": agent.role, "max_iter": agent.max_iter}
+                for agent in self.agents
+            ],
+            "tasks": [task.description for task in self.tasks],
+            "inputs": inputs,
+        }
+
+    monkeypatch.setattr("crewai.auth.token.get_auth_token", lambda: "test-token")
+    monkeypatch.setattr(PlusAPI, "get_agent", fake_get_agent)
+    monkeypatch.setattr(Crew, "kickoff_async", fake_kickoff_async)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: CrewFlow
+methods:
+  research:
+    do:
+      call: crew
+      with:
+        name: inline_research
+        agents:
+          researcher:
+            from_repository: researcher
+        tasks:
+          - name: research_task
+            description: Research {topic}
+            expected_output: Findings about {topic}
+            agent: researcher
+      inputs:
+        topic: "${state.topic}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    assert flow.kickoff(inputs={"topic": "AI"}) == {
+        "crew": "inline_research",
+        "agents": [{"role": "Repository researcher", "max_iter": 5}],
+        "tasks": ["Research {topic}"],
+        "inputs": {"topic": "AI"},
+    }
+    assert fetched_agents == ["researcher"]
+
+
+def test_crew_action_repository_fetch_does_not_block_event_loop(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from crewai import Crew
+    from crewai.plus_api import PlusAPI
+
+    loop_marker_ran = threading.Event()
+    fetch_started = threading.Event()
+    release_fetch = threading.Event()
+    fetch_saw_loop_marker = False
+
+    class FakeResponse:
+        status_code = 200
+        text = ""
+
+        def json(self) -> dict[str, Any]:
+            return {
+                "role": "Repository researcher",
+                "goal": "Research {topic}",
+                "backstory": "Loaded from the agent repository.",
+                "tools": [],
+            }
+
+    def fake_get_agent(self: PlusAPI, handle: str) -> FakeResponse:
+        nonlocal fetch_saw_loop_marker
+        fetch_started.set()
+        release_fetch.wait(timeout=1)
+        fetch_saw_loop_marker = loop_marker_ran.is_set()
+        return FakeResponse()
+
+    async def fake_kickoff_async(
+        self: Crew, inputs: dict[str, Any] | None = None, **_kwargs: Any
+    ) -> dict[str, Any]:
+        return {"agents": [agent.role for agent in self.agents], "inputs": inputs}
+
+    monkeypatch.setattr("crewai.auth.token.get_auth_token", lambda: "test-token")
+    monkeypatch.setattr(PlusAPI, "get_agent", fake_get_agent)
+    monkeypatch.setattr(Crew, "kickoff_async", fake_kickoff_async)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: CrewFlow
+methods:
+  research:
+    do:
+      call: crew
+      with:
+        agents:
+          researcher:
+            from_repository: researcher
+        tasks:
+          - description: Research {topic}
+            expected_output: Findings about {topic}
+            agent: researcher
+      inputs:
+        topic: "${state.topic}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    async def run_flow() -> dict[str, Any]:
+        async def mark_loop_progress() -> None:
+            while not fetch_started.is_set():
+                await asyncio.sleep(0)
+            loop_marker_ran.set()
+            release_fetch.set()
+
+        marker_task = asyncio.create_task(mark_loop_progress())
+        kickoff_task = asyncio.create_task(
+            flow.kickoff_async(inputs={"topic": "AI"})
+        )
+        try:
+            result = await asyncio.wait_for(kickoff_task, timeout=2)
+            await asyncio.wait_for(marker_task, timeout=2)
+            return result
+        finally:
+            release_fetch.set()
+
+    assert asyncio.run(run_flow()) == {
+        "agents": ["Repository researcher"],
+        "inputs": {"topic": "AI"},
+    }
+    assert fetch_saw_loop_marker
+
+
+def test_crew_action_interpolates_runtime_strings_and_lists(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from crewai import Crew
+
+    async def fake_kickoff_async(
+        self: Crew, inputs: dict[str, Any] | None = None, **_kwargs: Any
+    ) -> dict[str, Any] | None:
+        return inputs
+
+    monkeypatch.setattr(Crew, "kickoff_async", fake_kickoff_async)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: CrewFlow
+methods:
+  research:
+    do:
+      call: crew
+      with:
+        name: inline_research
+        agents:
+          researcher:
+            role: Researcher
+            goal: Research {topic}
+            backstory: Knows things.
+        tasks:
+          - name: research_task
+            description: Research {topic} using {sources}
+            expected_output: Findings about {topic}
+            agent: researcher
+      inputs:
+        topic: "News about ${state.topic}"
+        sources:
+          - "${state.primary_source}"
+          - "archive-${state.topic}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    assert flow.kickoff(
+        inputs={
+            "topic": "AI",
+            "primary_source": "crewai.com",
+        }
+    ) == {
+        "topic": "News about AI",
+        "sources": ["crewai.com", "archive-AI"],
     }
 
 
@@ -1379,6 +1992,7 @@ def test_crew_action_normalizes_named_agent_list_definition():
 def test_crew_action_json_schema_describes_inline_crew_definitions():
     schema_defs = FlowDefinition.model_json_schema(by_alias=True)["$defs"]
     agents_schema = schema_defs["CrewDefinition"]["properties"]["agents"]
+    agent_properties = schema_defs["CrewAgentDefinition"]["properties"]
 
     assert set(schema_defs["CrewDefinition"]["properties"]) >= {
         "agents",
@@ -1386,15 +2000,21 @@ def test_crew_action_json_schema_describes_inline_crew_definitions():
         "inputs",
     }
     assert {option["type"] for option in agents_schema["anyOf"]} == {"array", "object"}
-    assert set(schema_defs["CrewAgentDefinition"]["properties"]) >= {
+    assert set(agent_properties) >= {
         "role",
         "goal",
         "backstory",
+        "from_repository",
         "settings",
+        "llm",
         "tools",
         "apps",
         "mcps",
+        *AGENT_RUNTIME_CONTROL_FIELDS,
     }
+    assert_agent_runtime_field_schema(agent_properties)
+    assert_planning_config_schema(schema_defs)
+    assert_llm_definition_schema(schema_defs)
     assert set(schema_defs["CrewTaskDefinition"]["properties"]) >= {
         "description",
         "expected_output",
@@ -1404,36 +2024,45 @@ def test_crew_action_json_schema_describes_inline_crew_definitions():
 
 
 def test_crew_action_rejects_incomplete_inline_agent_definition():
-    with pytest.raises(ValidationError, match="goal"):
-        FlowDefinition.from_declaration(contents=
-            {
-                "schema": "crewai.flow/v1",
-                "name": "CrewFlow",
-                "methods": {
-                    "research": {
-                        "start": True,
-                        "do": {
-                            "call": "crew",
-                            "with": {
-                                "agents": {
-                                    "researcher": {
-                                        "role": "Researcher",
-                                        "backstory": "Knows things.",
-                                    }
-                                },
-                                "tasks": [
-                                    {
-                                        "description": "Research",
-                                        "expected_output": "Findings",
-                                        "agent": "researcher",
-                                    }
-                                ],
+    from crewai.project.crew_loader import load_crew_from_definition
+    from crewai.project.json_loader import JSONProjectValidationError
+
+    definition = FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "CrewFlow",
+            "methods": {
+                "research": {
+                    "start": True,
+                    "do": {
+                        "call": "crew",
+                        "with": {
+                            "agents": {
+                                "researcher": {
+                                    "role": "Researcher",
+                                    "backstory": "Knows things.",
+                                }
                             },
+                            "tasks": [
+                                {
+                                    "description": "Research",
+                                    "expected_output": "Findings",
+                                    "agent": "researcher",
+                                }
+                            ],
                         },
-                    }
-                },
-            }
-        )
+                    },
+                }
+            },
+        }
+    )
+    crew_definition = definition.methods["research"].do.with_
+    assert crew_definition.agents["researcher"].goal is None
+
+    with pytest.raises(
+        JSONProjectValidationError, match="missing required field 'goal'"
+    ):
+        load_crew_from_definition(crew_definition, source="crew action")
 
 
 def test_crew_action_rejects_python_ref_field():
@@ -1528,6 +2157,37 @@ methods:
     assert flow.kickoff(inputs={"name": "hello"}) == "hello!"
 
 
+def test_code_action_interpolates_strings_and_lists():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: CodeTemplateFlow
+methods:
+  capture:
+    do:
+      call: code
+      ref: {__name__}:TemplateInputFlow.capture_inputs
+      with:
+        prompt: "Ticket ${{state.ticket.id}}: ${{state.ticket.subject}}"
+        domains:
+          - "${{state.primary_domain}}"
+          - "docs.${{state.domain_suffix}}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    assert flow.kickoff(
+        inputs={
+            "ticket": {"id": 123, "subject": "Login issue"},
+            "primary_domain": "crewai.com",
+            "domain_suffix": "example.com",
+        }
+    ) == {
+        "prompt": "Ticket 123: Login issue",
+        "domains": ["crewai.com", "docs.example.com"],
+    }
+
+
 def test_code_action_supports_callable_instance_refs():
     yaml_str = f"""
 schema: crewai.flow/v1
@@ -1571,6 +2231,42 @@ methods:
     assert flow.kickoff(inputs={"rows": ["a", "b"]}) == [
         "normalized:a",
         "normalized:b",
+    ]
+
+
+def test_each_action_interpolates_item_values_in_step_inputs():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: EachFlow
+methods:
+  process_rows:
+    do:
+      call: each
+      in: state.rows
+      do:
+        - name: normalize
+          action:
+            call: code
+            ref: {__name__}:EachActionFlow.normalize_row
+            with:
+              row: "Row ${{item.id}}: ${{item.value}}"
+              prefix: "${{state.prefix}}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    assert flow.kickoff(
+        inputs={
+            "prefix": "normalized",
+            "rows": [
+                {"id": 1, "value": "alpha"},
+                {"id": 2, "value": "beta"},
+            ],
+        }
+    ) == [
+        "normalized:Row 1: alpha",
+        "normalized:Row 2: beta",
     ]
 
 

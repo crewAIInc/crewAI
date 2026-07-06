@@ -29,7 +29,10 @@ from crewai.flow.conversational_definition import (
     FlowConversationalDefinition,
     FlowConversationalRouterDefinition,
 )
-from crewai.flow.expressions import ExpressionData
+from crewai.flow.expressions import (
+    ExpressionData,
+    flow_template_expression_description,
+)
 from crewai.project.crew_definition import AgentDefinition, CrewDefinition
 
 
@@ -362,12 +365,10 @@ class FlowCodeActionDefinition(BaseModel):
     with_: dict[str, ExpressionData] | None = Field(
         default=None,
         alias="with",
-        description=(
-            "Keyword arguments passed to the callable. String values are evaluated "
-            "as CEL only when the trimmed value starts with ${ and ends with }; "
-            "all other values are literal."
+        description=flow_template_expression_description(
+            "Keyword arguments passed to the callable."
         ),
-        examples=[{"topic": "${state.topic}"}],
+        examples=[{"topic": "${state.topic}", "query": "News about ${state.topic}"}],
     )
 
 
@@ -390,11 +391,7 @@ class FlowToolActionDefinition(BaseModel):
     with_: dict[str, ExpressionData] | None = Field(
         default=None,
         alias="with",
-        description=(
-            "Tool input arguments. String values are evaluated as CEL only when "
-            "the trimmed value starts with ${ and ends with }; all other values "
-            "are literal."
-        ),
+        description=flow_template_expression_description("Tool input arguments."),
         examples=[{"query": "${outputs.normalize_topic}", "limit": 5}],
     )
 
@@ -446,11 +443,12 @@ class FlowCrewActionDefinition(BaseModel):
     )
     inputs: dict[str, ExpressionData] | None = Field(
         default=None,
-        description=(
-            "Input overrides passed to the Crew. String values are evaluated as CEL "
-            "only when the trimmed value starts with ${ and ends with }; all other "
-            "values are literal. The resulting values are available to crew agent "
-            "and task interpolation as `{name}` placeholders."
+        description=flow_template_expression_description(
+            "Input overrides passed to the Crew."
+        )
+        + (
+            " The resulting values are available to crew agent and task "
+            "interpolation as `{name}` placeholders."
         ),
         examples=[{"topic": "${state.topic}"}],
     )
@@ -773,6 +771,15 @@ class FlowDefinition(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def _validate_trigger_namespace(self) -> FlowDefinition:
+        for method_name, method in self.methods.items():
+            if _condition_references(method.listen, method_name):
+                raise ValueError(
+                    f"methods.{method_name}.listen must not reference itself"
+                )
+        return self
+
+    @model_validator(mode="after")
     def _validate_cel_expressions(self) -> FlowDefinition:
         for method_name, method in self.methods.items():
             _validate_action_cel(
@@ -867,6 +874,18 @@ def _validate_step_list(steps: list[FlowEachStepDefinition], *, field: str) -> N
         if name in seen:
             raise ValueError(f"{field} step names must be unique: {name!r}")
         seen.add(name)
+
+
+def _condition_references(condition: FlowDefinitionCondition | None, name: str) -> bool:
+    if condition is None:
+        return False
+    if isinstance(condition, str):
+        return condition == name
+    return any(
+        _condition_references(child, name)
+        for key in ("and", "or")
+        for child in condition.get(key, [])
+    )
 
 
 def _validate_action_cel(
