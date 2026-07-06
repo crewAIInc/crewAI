@@ -24,7 +24,7 @@ SAMPLE_REPOS = [
 ]
 
 
-def _make_zipball(files: dict[str, str], top_dir: str = "crewAIInc-template_test-abc123") -> bytes:
+def _make_zipball(files: dict[str, str], top_dir: str = "crewAIInc-fde-template_test-abc123") -> bytes:
     """Create an in-memory zipball mimicking GitHub's format."""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:

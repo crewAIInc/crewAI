@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from contextlib import AbstractContextManager, nullcontext
 import os
 from pathlib import Path
 import re
 import subprocess
 import sys
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import click
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
@@ -17,9 +16,8 @@ from crewai_cli.utils import (
     build_env_with_all_tool_credentials,
     enable_prompt_line_editing,
     is_dmn_mode_enabled,
-    read_toml,
 )
-from crewai_cli.version import get_crewai_version
+from crewai_cli.version import get_crewai_tools_dependency, get_crewai_version
 
 
 if TYPE_CHECKING:
@@ -32,12 +30,13 @@ if TYPE_CHECKING:
 _INPUT_PLACEHOLDER_RE = re.compile(r"(?<!{){([A-Za-z_][A-Za-z0-9_\-]*)}(?!})")
 _CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV = "CREWAI_CLI_RUNNER_PACKAGE_DIR"
 _CREWAI_RUNNER_SOURCE_DIR_ENV = "CREWAI_RUNNER_SOURCE_DIR"
-_FULL_CREWAI_INSTALL_MESSAGE = """\
+_CREWAI_JSON_CREW_DEFINITION_ENV = "CREWAI_JSON_CREW_DEFINITION"
+_FULL_CREWAI_INSTALL_MESSAGE = f"""\
 CrewAI CLI is installed without the `crewai` package required to run crews.
 
-Install the full CrewAI prerelease package:
+Install the full CrewAI package:
 
-  uv tool install --force --prerelease=allow 'crewai[tools]==1.14.8a1'
+  uv tool install --force '{get_crewai_tools_dependency()}'
 
 The quotes are required in zsh so `crewai[tools]` is not treated as a glob.
 """
@@ -75,20 +74,18 @@ module_spec.loader.exec_module(module)
 
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 
+kwargs = {
+    "trained_agents_file": os.getenv(CREWAI_TRAINED_AGENTS_FILE_ENV),
+}
+if crew_definition := os.getenv("CREWAI_JSON_CREW_DEFINITION"):
+    kwargs["crew_path"] = crew_definition
+
 try:
-    module._run_json_crew(
-        trained_agents_file=os.getenv(CREWAI_TRAINED_AGENTS_FILE_ENV)
-    )
+    module._run_json_crew(**kwargs)
 except module.click.ClickException as exc:
     exc.show()
     raise SystemExit(exc.exit_code)
 """.strip()
-
-
-def _import_find_crew_json_file() -> Callable[[], Path | None]:
-    from crewai.project.json_loader import find_crew_json_file as _find_crew_json_file
-
-    return cast("Callable[[], Path | None]", _find_crew_json_file)
 
 
 def _is_missing_crewai_package(exc: ModuleNotFoundError) -> bool:
@@ -99,32 +96,40 @@ def _full_crewai_install_error() -> click.ClickException:
     return click.ClickException(_FULL_CREWAI_INSTALL_MESSAGE)
 
 
-def find_crew_json_file() -> Path | None:
-    try:
-        return _import_find_crew_json_file()()
-    except ModuleNotFoundError as exc:
-        if _is_missing_crewai_package(exc):
-            raise _full_crewai_install_error() from exc
-        raise
+def read_toml(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    from crewai_core.project import read_toml as _read_toml
+
+    return _read_toml(*args, **kwargs)
 
 
-def _has_json_crew() -> bool:
-    """Check if this is a JSON-defined crew project.
+def get_crewai_project_type(pyproject_data: dict[str, Any]) -> str | None:
+    from crewai_core.project import get_crewai_project_type as _get_crewai_project_type
 
-    The project type declared in pyproject.toml wins: a flow project that
-    happens to contain a crew.json(c) file still runs as a flow. A missing
-    or unreadable pyproject means a bare JSON crew project.
-    """
-    if find_crew_json_file() is None:
-        return False
-    try:
-        pyproject_data = read_toml()
-    except Exception:
-        return True
-    declared_type: str | None = (
-        pyproject_data.get("tool", {}).get("crewai", {}).get("type")
+    return _get_crewai_project_type(pyproject_data)
+
+
+def configured_project_json_crew(
+    pyproject_data: dict[str, Any] | None = None,
+    project_root: Path | None = None,
+) -> Path | None:
+    """Return the configured JSON crew definition for crew projects."""
+    from crewai_core.project import (
+        ProjectDefinitionError,
+        configured_project_definition,
     )
-    return declared_type != "flow"
+
+    root = project_root or Path.cwd()
+    if pyproject_data is None and not (root / "pyproject.toml").is_file():
+        return None
+
+    try:
+        return configured_project_definition(
+            "crew",
+            pyproject_data=pyproject_data,
+            project_root=root,
+        )
+    except ProjectDefinitionError as exc:
+        raise click.UsageError(str(exc)) from exc
 
 
 def _extract_input_placeholders(text: str | None) -> set[str]:
@@ -199,7 +204,12 @@ def _json_loading_status(message: str) -> AbstractContextManager[Any]:
 
 
 def _load_json_crew(crew_path: Path) -> tuple[Any, dict[str, Any]]:
-    from crewai.project.crew_loader import load_crew
+    try:
+        from crewai.project.crew_loader import load_crew
+    except ModuleNotFoundError as exc:
+        if _is_missing_crewai_package(exc):
+            raise _full_crewai_install_error() from exc
+        raise
 
     return load_crew(crew_path)
 
@@ -262,7 +272,10 @@ def _run_json_crew_without_tui(crew_path: Path) -> Any:
     return result
 
 
-def _run_json_crew(trained_agents_file: str | None = None) -> Any:
+def _run_json_crew(
+    trained_agents_file: str | None = None,
+    crew_path: str | Path | None = None,
+) -> Any:
     """Load and run a JSON-defined crew."""
     from dotenv import load_dotenv
 
@@ -275,9 +288,13 @@ def _run_json_crew(trained_agents_file: str | None = None) -> Any:
     if trained_agents_file:
         os.environ[CREWAI_TRAINED_AGENTS_FILE_ENV] = trained_agents_file
 
-    crew_path = find_crew_json_file()
     if crew_path is None:
-        raise FileNotFoundError("No crew.jsonc or crew.json found")
+        crew_path = configured_project_json_crew()
+    if crew_path is None:
+        raise FileNotFoundError(
+            "No JSON crew definition configured in [tool.crewai].definition"
+        )
+    crew_path = Path(crew_path)
 
     if is_dmn_mode_enabled():
         return _run_json_crew_without_tui(crew_path)
@@ -391,10 +408,16 @@ def _json_crew_run_command(project_root: Path | None = None) -> list[str]:
     return ["uv", "run", "--no-sync", "python", "-c", _JSON_CREW_RUNNER_CODE]
 
 
-def _run_json_crew_in_project_env(trained_agents_file: str | None = None) -> Any:
+def _run_json_crew_in_project_env(
+    trained_agents_file: str | None = None,
+    crew_path: str | Path | None = None,
+) -> Any:
     """Run JSON crews from the project's uv-managed environment."""
     if not (Path.cwd() / "pyproject.toml").is_file():
-        return _run_json_crew(trained_agents_file=trained_agents_file)
+        return _run_json_crew(
+            trained_agents_file=trained_agents_file,
+            crew_path=crew_path,
+        )
 
     _install_json_crew_dependencies_if_needed()
 
@@ -405,6 +428,8 @@ def _run_json_crew_in_project_env(trained_agents_file: str | None = None) -> Any
         env[_CREWAI_RUNNER_SOURCE_DIR_ENV] = str(local_crewai_source_dir)
     if trained_agents_file:
         env[CREWAI_TRAINED_AGENTS_FILE_ENV] = trained_agents_file
+    if crew_path is not None:
+        env[_CREWAI_JSON_CREW_DEFINITION_ENV] = str(crew_path)
 
     try:
         subprocess.run(  # noqa: S603
@@ -557,13 +582,16 @@ def run_crew(
         )
         return
 
-    if _has_json_crew():
-        _run_json_crew_in_project_env(trained_agents_file=trained_agents_file)
+    pyproject_data = read_toml()
+    if json_crew_definition := configured_project_json_crew(pyproject_data):
+        _run_json_crew_in_project_env(
+            trained_agents_file=trained_agents_file,
+            crew_path=json_crew_definition,
+        )
         return
 
-    pyproject_data = read_toml()
     _warn_if_old_poetry_project(pyproject_data)
-    project_type = _get_project_type(pyproject_data)
+    project_type = get_crewai_project_type(pyproject_data)
 
     if project_type == "flow":
         _run_flow_project(
@@ -604,6 +632,16 @@ def _run_flow_project(
         run_declarative_flow_in_project_env(definition=definition)
         return
 
+    from crewai_cli.kickoff_flow import (
+        _load_conversational_flow_from_kickoff_script,
+        _run_conversational_flow_tui,
+    )
+
+    flow = _load_conversational_flow_from_kickoff_script()
+    if flow is not None:
+        _run_conversational_flow_tui(flow)
+        return
+
     _execute_uv_script("kickoff", entity_type="flow")
 
 
@@ -615,11 +653,6 @@ def _run_classic_crew_project(
         entity_type="crew",
         trained_agents_file=trained_agents_file,
     )
-
-
-def _get_project_type(pyproject_data: dict[str, Any]) -> str | None:
-    project_type = pyproject_data.get("tool", {}).get("crewai", {}).get("type")
-    return project_type if isinstance(project_type, str) else None
 
 
 def _warn_if_old_poetry_project(pyproject_data: dict[str, Any]) -> None:

@@ -1,0 +1,321 @@
+---
+title: AWS Workload Identity (OIDC Federation)
+description: 로테이션 인식, 자격 증명 없는 시크릿 액세스를 위해 Workload Identity를 통해 AWS Secrets Manager를 구성합니다
+sidebarTitle: Workload Identity 사용
+icon: "id-badge"
+---
+
+## 개요
+
+이 가이드는 **Workload Identity Federation**을 사용하여 AWS Secrets Manager를 시크릿 공급자로 구성합니다: CrewAI Platform이 단기 OIDC 토큰을 발급하고, STS를 통해 이를 AWS 자격 증명과 교환하여 시크릿을 읽습니다 — 장기 AWS 액세스 키를 어디에도 저장하지 않습니다.
+
+<Note>
+**이 경로를 선택하는 이유:** 시크릿은 자동화 실행 시점에 해석되므로, **로테이션된 값이 재배포 없이 다음 kickoff에 전파됩니다**. 정적 자격 증명만 필요하고 로테이션 전파에 신경 쓰지 않는다면, 더 간단한 [AWS — 정적 키 / AssumeRole](/ko/enterprise/features/secrets-manager/aws) 가이드를 참조하세요.
+</Note>
+
+### 런타임 동작 방식
+
+1. 배포 워커가 CrewAI Platform에서 새 OIDC JWT를 요청합니다.
+2. 워커가 JWT를 제시하여 아래에서 설정한 IAM 역할에 대해 `sts:AssumeRoleWithWebIdentity`를 호출합니다.
+3. AWS STS가 CrewAI Platform의 공개 OIDC 발급자에 대해 JWT를 검증한 다음(따라서 플랫폼 설치가 AWS에서 접근 가능해야 함), 단기 AWS 자격 증명을 반환합니다.
+4. 워커가 해당 자격 증명을 사용하여 `secretsmanager:GetSecretValue`를 호출합니다.
+5. 가져온 값이 해당 자동화 kickoff의 환경 변수 값으로 주입됩니다.
+
+OIDC 주체 토큰은 매 kickoff마다 재발급을 피하기 위해 약 1시간 동안 캐시됩니다. 시크릿 값은 OIDC 캐시 상태와 관계없이 매 kickoff마다 새로 가져오며, 이것이 이 경로를 로테이션 인식으로 만드는 요소입니다.
+
+## 사전 준비 사항
+
+<Note>
+시작하기 전에 다음을 준비하세요:
+
+- 자동화 파드 이미지에 CrewAI 런타임 버전 `1.14.5` 이상이 포함되어야 합니다.
+- IAM OIDC 공급자, IAM 역할, IAM 정책을 생성할 권한이 있는 AWS 계정.
+- 시크릿이 위치한(또는 위치할) AWS 리전(예: `us-east-1`).
+- 사용자가 `workload_identity_configs: manage` 및 `secret_providers: manage` 권한을 가진 CrewAI Platform 조직. [권한 (RBAC)](/ko/enterprise/features/secrets-manager/usage#permissions-rbac)을 참조하세요.
+- **CrewAI 조직 UUID.** CrewAI Platform의 조직 설정 페이지에서 찾을 수 있습니다 — 3단계의 신뢰 정책이 IAM 역할을 이 특정 조직에 바인딩합니다.
+- **CrewAI Platform 설치가 AWS에서 HTTPS를 통해 접근 가능해야 합니다.** AWS STS가 토큰 검증 중 OIDC 디스커버리 문서와 JWKS를 가져올 수 있어야 합니다. 플랫폼 관리자에게 호스트가 인터넷에서 접근 가능한지(또는 AWS가 VPC 피어링/동등한 방법을 통해 네트워크에 도달할 수 있는지) 확인하세요.
+</Note>
+
+## 1단계 — CrewAI Platform OIDC 발급자 URL 찾기
+
+CrewAI Platform 설치는 `https://<your-platform-host>/.well-known/openid-configuration`에서 OpenID Connect 디스커버리 문서를 게시합니다. 해당 문서의 `issuer` 필드는 AWS가 신뢰할 수 있는 OIDC 공급자로 등록할 URL입니다.
+
+브라우저에서 URL을 엽니다(`<your-platform-host>`를 실제 호스트 이름으로 교체, 예: `app.crewai.com`):
+
+```
+https://<your-platform-host>/.well-known/openid-configuration
+```
+
+다음을 포함하는 JSON이 보일 것입니다:
+
+```json
+{
+  "issuer": "https://<your-platform-host>",
+  "jwks_uri": "https://<your-platform-host>/oauth2/jwks",
+  ...
+}
+```
+
+`issuer`의 정확한 값을 기록하세요 — 3단계에서 사용합니다.
+
+<Tip>
+URL이 404 또는 503을 반환하면 플랫폼 관리자에게 문의하세요. OIDC 발급자는 설치 시점에 개인 서명 키가 구성되어 있어야 합니다. `OIDC_PRIVATE_KEY` 및 `OIDC_ISSUER` 구성에 대한 내용은 플랫폼 설치 가이드를 참조하세요.
+</Tip>
+
+## 2단계 — CrewAI Platform을 IAM OIDC ID 공급자로 등록
+
+[IAM → Identity providers 콘솔](https://console.aws.amazon.com/iam/home#/identity_providers)을 열고 **Add provider**를 클릭합니다.
+
+- **Provider type:** OpenID Connect.
+- **Provider URL:** 1단계의 `issuer` 값(예: `https://app.crewai.com`).
+- **Audience:** `sts.amazonaws.com`
+
+**Add provider**를 클릭합니다.
+
+또는 CLI를 통해:
+
+```bash
+aws iam create-open-id-connect-provider \
+  --url "https://<your-platform-host>" \
+  --client-id-list "sts.amazonaws.com" \
+  --thumbprint-list "$(echo | openssl s_client -servername <your-platform-host> -connect <your-platform-host>:443 2>/dev/null | openssl x509 -fingerprint -noout -sha1 | cut -d= -f2 | tr -d ':')"
+```
+
+출력에서 **OpenIDConnectProviderArn**(또는 콘솔에서 공급자의 ARN)을 복사합니다. 3단계에서 사용합니다.
+
+<Note>
+AWS는 실제로 STS WebIdentity 호출의 thumbprint를 검증하지 않습니다 — 검증 시점에 항상 JWKS를 다시 가져옵니다 — 그러나 API에서 해당 필드가 존재해야 합니다.
+</Note>
+
+{/* SCREENSHOT: AWS IAM "Add identity provider" form filled with the Platform issuer URL and audience sts.amazonaws.com → /images/secrets-manager/aws-wi/01-add-oidc-provider.png */}
+{/* SCREENSHOT: Provider detail page showing the provider's ARN → /images/secrets-manager/aws-wi/02-oidc-provider-arn.png */}
+
+## 3단계 — IAM 역할 생성
+
+`trust-policy.json`으로 저장하고, `<YOUR_ACCOUNT_ID>`, `<your-platform-host>`(발급자 호스트로 `https://` 또는 `http://` **없음**, 예: `app.crewai.com`), `<YOUR_CREWAI_ORG_UUID>`(사전 준비 사항에서)를 교체합니다:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::<YOUR_ACCOUNT_ID>:oidc-provider/<your-platform-host>"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "<your-platform-host>:aud": "sts.amazonaws.com",
+          "<your-platform-host>:sub": "organization:<YOUR_CREWAI_ORG_UUID>"
+        }
+      }
+    }
+  ]
+}
+```
+
+역할을 생성합니다:
+
+```bash
+aws iam create-role \
+  --role-name crewai-secrets-reader \
+  --assume-role-policy-document file://trust-policy.json
+```
+
+출력에서 **Role Arn**을 복사합니다 — 이것이 `aws_role_arn`입니다. 6단계에서 CrewAI Platform에 붙여 넣습니다.
+
+<Tip>
+두 조건은 신뢰를 정확하게 범위 지정합니다: `aud`는 AWS STS audience를 가진 토큰으로만 가정을 제한하고, `sub`는 federation을 특정 CrewAI 조직으로 범위 지정합니다 — 해당 조직의 자동화를 위해 발급된 토큰만 수락됩니다. CrewAI Platform은 항상 AWS workload identity 토큰에 두 클레임을 모두 설정합니다.
+</Tip>
+
+{/* SCREENSHOT: IAM "Create role" with Web Identity trust type, federated provider selector pointing at the CrewAI Platform OIDC provider → /images/secrets-manager/aws-wi/03-create-role-trust.png */}
+
+## 4단계 — Secrets Manager + KMS 액세스용 IAM 정책 생성 및 연결
+
+`secrets-policy.json`으로 저장하고 자리 표시자를 계정 ID, 리전, 시크릿 이름 접두사, 그리고 해당 시크릿을 암호화하는 KMS 키 ARN으로 교체합니다:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SecretsManagerListForUI",
+      "Effect": "Allow",
+      "Action": "secretsmanager:ListSecrets",
+      "Resource": "*"
+    },
+    {
+      "Sid": "SecretsManagerRead",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue"
+      ],
+      "Resource": "arn:aws:secretsmanager:<REGION>:<YOUR_ACCOUNT_ID>:secret:<SECRET_NAME_PREFIX>-*"
+    },
+    {
+      "Sid": "KMSDecrypt",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt"
+      ],
+      "Resource": "arn:aws:kms:<REGION>:<YOUR_ACCOUNT_ID>:key/<KMS_KEY_ID>"
+    }
+  ]
+}
+```
+
+`SecretsManagerListForUI`는 환경 변수 폼의 **Secret Name 자동 완성**과 자격 증명의 **Test Connection** 버튼을 지원합니다. `secretsmanager:ListSecrets`는 `Resource: "*"`만 허용합니다 — IAM 계층에서 계정 범위로 제한됩니다.
+
+CLI(인라인 정책, 가장 간단함) 또는 콘솔 UI를 사용하여 역할에 정책을 연결합니다. 많은 역할에서 동일한 권한을 재사용하는 환경의 경우 재사용 가능한 명명된 정책을 위해 **Managed policy** 탭을 사용하세요.
+
+<Tabs>
+  <Tab title="인라인 정책 (CLI)">
+    ```bash
+    aws iam put-role-policy \
+      --role-name crewai-secrets-reader \
+      --policy-name SecretsManagerRead \
+      --policy-document file://secrets-policy.json
+    ```
+
+    이는 정책을 **인라인**으로 역할에 연결합니다. 인라인 정책은 역할에 연결되어 있으며 다른 역할에서 재사용할 수 없습니다.
+  </Tab>
+
+  <Tab title="관리형 정책 (CLI, 재사용 가능)">
+    ```bash
+    POLICY_ARN=$(aws iam create-policy \
+      --policy-name CrewAISecretsReader \
+      --policy-document file://secrets-policy.json \
+      --query 'Policy.Arn' --output text)
+
+    aws iam attach-role-policy \
+      --role-name crewai-secrets-reader \
+      --policy-arn "$POLICY_ARN"
+    ```
+
+    관리형 정책은 여러 역할에 연결할 수 있는 독립형 IAM 리소스입니다.
+  </Tab>
+
+  <Tab title="콘솔 (UI)">
+    1. [IAM → Roles 콘솔](https://console.aws.amazon.com/iam/home#/roles)을 열고 **crewai-secrets-reader**를 선택합니다.
+    2. **Permissions** 탭에서 **Add permissions** → **Create inline policy**를 클릭합니다.
+    3. **JSON** 편집기로 전환하고 `secrets-policy.json`의 내용을 붙여 넣습니다.
+    4. **Next**를 클릭하고 정책 이름(예: `SecretsManagerRead`)을 지정한 다음 **Create policy**를 클릭합니다.
+
+    대신 재사용 가능한 관리형 정책을 만들려면 **IAM → Policies → Create policy**를 사용한 다음, 역할의 **Permissions** 탭에서 역할에 연결합니다.
+
+    {/* SCREENSHOT: IAM Role detail → Permissions → Create inline policy with JSON editor → /images/secrets-manager/aws-wi/03b-attach-inline-policy.png */}
+  </Tab>
+</Tabs>
+
+## 5단계 — AWS에 최소 하나의 시크릿 생성
+
+테스트할 시크릿이 아직 없다면 지금 하나 만드세요:
+
+```bash
+aws secretsmanager create-secret \
+  --region <REGION> \
+  --name crewai-test-keyword \
+  --secret-string "hello from aws"
+```
+
+또는 [AWS Secrets Manager 콘솔](https://console.aws.amazon.com/secretsmanager/) → **Store a new secret**을 통해 만듭니다.
+
+{/* SCREENSHOT: AWS Secrets Manager "Store a new secret" page with a sample value → /images/secrets-manager/aws-wi/04-create-secret.png */}
+
+## 6단계 — CrewAI Platform에 Workload Identity 구성 추가
+
+CrewAI Platform에서 **Settings** → **Workload Identity**로 이동하여 **Add Workload Identity Config**를 클릭합니다.
+
+{/* SCREENSHOT: Sidebar highlighting Settings → Workload Identity → /images/secrets-manager/aws-wi/05-amp-settings-wi-nav.png */}
+{/* SCREENSHOT: Empty state of Workload Identity page with "Add Workload Identity Config" button → /images/secrets-manager/aws-wi/06-amp-wi-empty-state.png */}
+
+폼을 작성합니다:
+
+- **Name:** 설명적인 이름(예: `aws-prod`).
+- **Cloud Provider:** `AWS`.
+- **AWS Role ARN:** 3단계의 **Role Arn**.
+- **AWS Region:** 시크릿이 위치한 리전(예: `us-east-1`).
+- (선택) AWS 기반 시크릿 자격 증명을 생성할 때 이 WI 구성을 기본으로 선택하려면 **Set as default for AWS**를 체크합니다.
+
+**Create**를 클릭합니다.
+
+{/* SCREENSHOT: "Add Workload Identity Config" form with AWS, role ARN, and region filled in → /images/secrets-manager/aws-wi/07-amp-add-wi-config-aws.png */}
+{/* SCREENSHOT: Workload Identity list showing the new AWS row with "(default)" badge if applicable → /images/secrets-manager/aws-wi/08-amp-wi-list-with-aws.png */}
+
+## 7단계 — WI 구성에 바인딩된 Secret Provider Credential 추가
+
+**Settings** → **Secret Provider Credentials**로 이동하여 **Add Credential**을 클릭합니다.
+
+폼을 작성합니다:
+
+- **Name:** 설명적인 이름(예: `aws-prod-wi`).
+- **Provider:** `AWS Secrets Manager`.
+- **Authentication Method:** `Workload Identity`(정적 키 / AssumeRole 대신).
+- **Workload Identity Configuration:** 6단계에서 만든 구성을 선택합니다(예: `aws-prod`).
+- (선택) **Set as default credential for this provider**를 체크합니다.
+
+Workload Identity 아래에서는 폼이 **AWS Region**만 요청합니다 — 정적 자격 증명 필드(Access Key ID, Secret Access Key, Role ARN, External ID)는 이 경로에 적용되지 않으므로 의도적으로 숨겨집니다. 역할 ARN은 연결된 WI 구성에서 가져옵니다.
+
+**Create**를 클릭합니다.
+
+{/* SCREENSHOT: "Add Secret Provider Credential" form with AWS + Workload Identity + WI config dropdown selected → /images/secrets-manager/aws-wi/09-amp-add-credential-aws-wi.png */}
+
+## 8단계 — 연결 테스트
+
+자격 증명을 저장한 후 **Test Connection**을 클릭합니다. Workload Identity 자격 증명의 경우 OIDC 핸드셰이크를 검증합니다: CrewAI Platform이 JWT를 발급하고, `sts:AssumeRoleWithWebIdentity`를 통해 AWS STS와 교환한 다음, 결과로 받은 자격 증명이 가정된 역할에 대해 `sts:GetCallerIdentity`를 호출할 수 있는지 확인합니다. 녹색 결과는 federation 바인딩이 정상임을 의미합니다.
+
+성공적인 Test Connection은 신뢰 정책, OIDC 공급자 등록, audience 조건이 모두 올바르게 연결되었음을 증명합니다. 시크릿별 IAM이 올바르다는 것을 증명하지는 **않습니다** — 특정 시크릿 ARN에 대한 `secretsmanager:GetSecretValue`는 환경 변수가 kickoff에 해석될 때 별도로 수행됩니다. 핸드셰이크 실패 모드는 [문제 해결](#troubleshooting)을 참조하세요.
+
+## 9단계 — 환경 변수에서 시크릿 참조
+
+이제 다른 Secrets Manager 기반 환경 변수와 마찬가지로 자동화에서 시크릿을 참조합니다. 폼 필드와 동작은 [Secrets Manager 사용하기](/ko/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables)를 참조하세요.
+
+WI 기반과 정적 키 기반 환경 변수의 유일한 차이는 시크릿이 **언제** 읽히는지입니다:
+
+- **WI 기반:** 모든 자동화 kickoff에서 시크릿 값을 새로 읽습니다.
+- **정적 키 기반:** 배포 시점에 시크릿 값을 읽고 배포 이미지에 박힙니다.
+
+## 10단계 — 로테이션 확인
+
+배포가 실행 중인 상태에서 AWS의 시크릿을 로테이션합니다:
+
+```bash
+aws secretsmanager update-secret \
+  --region <REGION> \
+  --secret-id crewai-test-keyword \
+  --secret-string "rotated value"
+```
+
+새 자동화 kickoff를 트리거합니다. kickoff의 환경은 `"rotated value"`를 볼 것입니다 — 재배포, 워커 재시작, TTL 대기 없음.
+
+로그에서 확인하려면(워커에 액세스할 수 있는 경우) 다음을 찾으세요:
+
+```
+Workload identity config '<id>' (aws): N secret(s) resolved
+```
+
+이 줄은 모든 kickoff에 나타나며 AWS에 대한 새로운 `GetSecretValue` 호출을 의미합니다.
+
+## 문제 해결
+
+| 증상 | 가능한 원인 |
+|---|---|
+| Test Connection이 핸드셰이크 오류로 실패함 | `sts:AssumeRoleWithWebIdentity` 호출이 거부되었습니다. 신뢰 정책의 federated principal ARN이 `oidc-provider/<your-platform-host>`(호스트로 `https://` 또는 `http://` **없음**, 후행 슬래시 없음)를 참조하는지, audience 조건이 정확히 `sts.amazonaws.com`인지, `sub` 조건이 CrewAI 조직 UUID와 일치하는지, 플랫폼의 OIDC 디스커버리 URL이 공용 인터넷을 통해 AWS에서 접근 가능한지 확인하세요. |
+| `InvalidIdentityToken: Couldn't retrieve verification key from your identity provider` | AWS STS가 CrewAI Platform 호스트에 도달하여 JWKS를 가져올 수 없습니다. 호스트가 AWS에서 인터넷에 접근 가능한지, OIDC 디스커버리 URL이 200을 반환하는지, JWKS 엔드포인트가 접근 가능한지 확인하세요. |
+| `AccessDenied: Not authorized to perform sts:AssumeRoleWithWebIdentity` | 신뢰 정책 불일치. 3단계를 다시 확인하세요: federated principal ARN은 `oidc-provider/<your-platform-host>`(호스트로 `https://` 또는 `http://` **없음**, 후행 슬래시 없음)를 포함해야 하고, audience 조건은 정확히 `sts.amazonaws.com`이어야 하며, `sub` 조건은 `organization:<YOUR_CREWAI_ORG_UUID>`와 같아야 합니다. |
+| Secret Name 자동 완성에 `AccessDenied: secretsmanager:ListSecrets` 표시 | 역할에 `Resource: "*"`를 가진 `secretsmanager:ListSecrets`가 없습니다. 4단계의 `SecretsManagerListForUI` 문을 추가하세요. |
+| Test Connection은 통과하지만 kickoff가 시크릿을 해석하지 못함 | WI 바인딩은 정상이지만 실패한 시크릿에 리소스 범위 IAM이 없습니다. 해당 시크릿의 ARN과 KMS 키에 대한 역할의 `secretsmanager:GetSecretValue` 및 `kms:Decrypt` 권한을 감사하세요. |
+| `RegionDisabledException` / 시크릿을 찾을 수 없음 | Workload Identity Config의 리전이 시크릿이 위치한 곳과 일치하지 않습니다. 6단계를 다시 확인하세요. |
+| 다음 kickoff에서 로테이션된 값이 적용되지 않음 | 자동화의 환경 변수가 Workload Identity 기반 자격 증명을 참조하는지 확인하세요(정적 키 자격 증명이 아님). 정적 경로는 배포 이미지에 값을 박습니다. |
+
+### 참고 링크
+
+- AWS: [Creating OpenID Connect (OIDC) identity providers](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html)
+- AWS: [Configuring a role for OpenID Connect federation](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc_relying-party.html)
+- AWS: [STS:AssumeRoleWithWebIdentity API reference](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html)
+
+## 다음 단계
+
+- [환경 변수에서 시크릿 사용 및 권한 관리](/ko/enterprise/features/secrets-manager/usage)
+- 다중 클라우드의 경우 [GCP Workload Identity Federation](/ko/enterprise/features/secrets-manager/gcp-workload-identity) 및 [Azure Workload Identity Federation](/ko/enterprise/features/secrets-manager/azure-workload-identity)도 참조하세요.

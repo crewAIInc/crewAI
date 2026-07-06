@@ -4,6 +4,243 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="01 jul 2026">
+  ## v1.15.2a2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.2a2)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar aiobotocore ao extra bedrock
+  - Documentar opções do agente de fluxo
+  - Adicionar helper de texto ao exemplo de habilidade de fluxo
+  - Adicionar helper de texto para prompts CEL de fluxo
+  - Adicionar documentação de streaming à navegação
+
+  ### Correções de Bugs
+  - Rejeitar métodos de fluxo de autoescuta
+
+  ### Documentação
+  - Atualizar snapshot e changelog para v1.15.2a1
+  - Compactar arquivo AGENTS.md
+
+  ## Contribuidores
+
+  @akaKuruma, @github-code-quality[bot], @lorenzejay, @vinibrsl
+
+</Update>
+
+<Update label="30 jun 2026">
+  ## v1.15.2a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.2a1)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Reapontar comandos de template para a organização crewAIInc-fde
+  - Suporte a definições de habilidades inline
+  - Definir protocolo de quadro de fluxo para fluxos
+  - Adicionar ferramenta de tipo e aplicativo em CrewDefinition
+  - Adicionar habilidade de autoria de Definição de Fluxo gerada
+
+  ### Correções de Bugs
+  - Remover a navegação de versão de docs do Edge para evitar que novas páginas sejam descartadas
+
+  ### Documentação
+  - Documentar o tipo de regra Limite de Custo no Painel de Controle do Agente
+  - Remover referências a CREWAI_LOG_FORMAT do guia Datadog
+
+  ## Contribuidores
+
+  @danielfsbarreto, @joaomdmoura, @lorenzejay, @lucasgomide, @vinibrsl
+
+</Update>
+
+<Update label="26 jun 2026">
+  ## v1.15.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.1)
+
+  ## O Que Mudou
+
+  ### Funcionalidades
+  - Inicializar repositórios Git para projetos gerados (#6364)
+  - Exigir definições explícitas de projetos CrewAI (#6358)
+  - Abrir a página de implantação após o deploy pelo CLI (#6343)
+
+  ### Correções de Bugs
+  - Corrigir a resolução do ID do link da página de implantação (#6365)
+  - Corrigir a renderização do template de equipe em JSON (#6359)
+  - Corrigir o bloqueio da versão da equipe em JSON (#6342)
+  - Corrigir a bypass de redirecionamento SSRF em fetches de scraping (#6331)
+
+  ### Documentação
+  - Melhorar o posicionamento de código aberto no README (#6363)
+  - Melhorar a chamada para ação na configuração do agente de codificação (#6344)
+  - Adicionar snapshot e changelog para a versão 1.15.1a1 (#6362)
+
+  ## Contribuidores
+
+  @joaomdmoura, @lorenzejay, @oalami, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="26 jun 2026">
+  ## v1.15.1a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.1a1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Rastrear a telemetria dos botões TUI
+  - Exigir definições explícitas de projetos CrewAI
+  - Abrir a página de implantação após o deploy via CLI
+
+  ### Correções de Bugs
+  - Corrigir a renderização do template de equipe em JSON
+  - Corrigir o pin de versão da equipe em JSON
+  - Corrigir a bypass de redirecionamento SSRF em fetches de scraping
+
+  ### Documentação
+  - Melhorar o CTA de configuração do agente de codificação
+  - Snapshot e changelog para v1.15.0
+
+  ## Contribuidores
+
+  @joaomdmoura, @lorenzejay, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="25 jun 2026">
+  ## v1.15.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.0)
+
+  ## O que mudou
+
+  ### Recursos
+  - Rastrear o uso de turnos de fluxo conversacional na telemetria
+  - Suporte a fluxos conversacionais na TUI do CLI
+  - Adicionar carregamento de fluxo declarativo unificado
+  - Adicionar suporte a Flow CLI declarativo
+  - Adicionar expressão if opcional a cada etapa do each.do
+  - Adicionar ação de agente único às definições de Flow
+  - Adicionar ações de equipe à FlowDefinition
+  - Adicionar carregamento de definição de equipe inline
+  - Adicionar ação composta `each` à FlowDefinition
+  - Implementar suporte ao modo DMN na criação e execução de equipes
+
+  ### Correções de Bugs
+  - Corrigir a aplicação de permissões apenas para o proprietário em arquivos de credenciais
+  - Corrigir entradas de inicialização de estado de fluxo do esquema JSON
+  - Corrigir travessia de caminho de symlink na extração de arquivos de habilidade
+  - Agregar uso de token em todas as chamadas LLM
+  - Remover ferramenta Exa duplicada
+  - Resolver problemas de equipe JSON
+  - Corrigir o manuseio de equipe JSON e aprimorar a funcionalidade de redefinição de memória
+
+  ### Documentação
+  - Atualizar a documentação de instalação e início rápido para projetos de equipe com JSON primeiro
+  - Adicionar guia de integração do Datadog com painel de operações importável
+  - Adicionar página "Um Cartão por Passo" no Studio
+  - Adicionar instantâneas e changelogs para versões anteriores levando à v1.15.0
+
+  ### Desempenho
+  - Melhorar a experiência de inicialização do crewai run
+  - Manter o progresso do método de fluxo visível para equipes aninhadas
+
+  ### Refatoração
+  - Remover `StateProxy` do acesso ao estado do fluxo
+  - Consolidar `crewai run` e `crewai flow kickoff`
+  - Discriminar tipos de estado da FlowDefinition
+  - Conectar configuração e persistência da FlowDefinition ao tempo de execução
+
+  ## Contribuidores
+
+  @gabemilani, @github-code-quality[bot], @greysonlalonde, @iris-clawd, @jessemiller, @joaomdmoura, @lorenzejay, @lucasgomide, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="24 jun 2026">
+  ## v1.14.8a5
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.8a5)
+
+  ## O que mudou
+
+  ### Recursos
+  - Fazer referências declarativas funcionarem em diferentes fluxos e equipes (#6326)
+
+  ### Correções de Bugs
+  - Corrigir entradas de kickoff de estado de fluxo do esquema JSON (#6325)
+
+  ### Documentação
+  - Aninhar One Card por Etapa sob Crew Studio e remover banner de rollout (AGE-107) (#6317)
+  - Atualizar snapshot e changelog para v1.14.8a4 (#6319)
+
+  ### Refatoração
+  - Remover `StateProxy` do acesso ao estado de fluxo (#6327)
+
+  ## Contribuidores
+
+  @jessemiller, @vinibrsl
+
+</Update>
+
+<Update label="24 jun 2026">
+  ## v1.14.8a4
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.8a4)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Suporte a fluxos de conversa na TUI do CLI.
+
+  ### Correções de Bugs
+  - Corrigir a travessia de caminho de symlink na extração de arquivo de habilidade.
+  - Validar os caminhos de definição de fluxo declarativo.
+
+  ### Documentação
+  - Atualizar snapshot e changelog para v1.14.8a3.
+
+  ## Contribuidores
+
+  @lorenzejay, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="23 jun 2026">
+  ## v1.14.8a3
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.8a3)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar carregamento de fluxo declarativo unificado
+  - Melhorar a experiência de inicialização do crewai run
+  - Consolidar `crewai run` e `crewai flow kickoff`
+  - Manter o progresso do método de fluxo visível para equipes aninhadas
+  - Adicionar suporte a Flow CLI declarativo
+  - Permitir `@router()` como método de início de um fluxo
+  - Adicionar esquemas de saída tipados para ferramentas CrewAI
+
+  ### Correções de Bugs
+  - Fixar opentelemetry em ~=1.42.0
+
+  ### Documentação
+  - Adicionar página "Uma Cartão por Etapa" no Studio
+
+  ## Contribuidores
+
+  @jessemiller, @joaomdmoura, @lucasgomide, @vinibrsl
+
+</Update>
+
 <Update label="18 jun 2026">
   ## v1.14.8a2
 

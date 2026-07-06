@@ -4,6 +4,243 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 7월 1일">
+  ## v1.15.2a2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.2a2)
+
+  ## 변경 사항
+
+  ### 기능
+  - bedrock 추가에 aiobotocore 추가
+  - 흐름 에이전트 옵션 문서화
+  - 흐름 기술 예제에 텍스트 도우미 추가
+  - 흐름 CEL 프롬프트를 위한 텍스트 도우미 추가
+  - 탐색에 스트리밍 문서 추가
+
+  ### 버그 수정
+  - 자기 청취 흐름 메서드 거부
+
+  ### 문서
+  - v1.15.2a1에 대한 스냅샷 및 변경 로그 업데이트
+  - AGENTS.md 파일 압축
+
+  ## 기여자
+
+  @akaKuruma, @github-code-quality[bot], @lorenzejay, @vinibrsl
+
+</Update>
+
+<Update label="2026년 6월 30일">
+  ## v1.15.2a1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.2a1)
+
+  ## 변경 사항
+
+  ### 기능
+  - 템플릿 명령을 crewAIInc-fde 조직으로 재지정
+  - 인라인 기술 정의 지원
+  - 흐름을 위한 스트림 프레임 프로토콜 정의
+  - CrewDefinition에 타입 도구 및 앱 추가
+  - 생성된 흐름 정의 저작 기술 추가
+
+  ### 버그 수정
+  - 새로운 페이지가 삭제되는 것을 방지하기 위해 Edge에서 문서 버전 탐색 제거
+
+  ### 문서
+  - 에이전트 제어 평면에서 비용 한도 규칙 유형 문서화
+  - Datadog 가이드에서 CREWAI_LOG_FORMAT 참조 제거
+
+  ## 기여자
+
+  @danielfsbarreto, @joaomdmoura, @lorenzejay, @lucasgomide, @vinibrsl
+
+</Update>
+
+<Update label="2026년 6월 26일">
+  ## v1.15.1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.1)
+
+  ## 변경 사항
+
+  ### 기능
+  - 생성된 프로젝트에 대한 Git 저장소 초기화 (#6364)
+  - 명시적인 CrewAI 프로젝트 정의 필요 (#6358)
+  - CLI 배포 후 배포 페이지 열기 (#6343)
+
+  ### 버그 수정
+  - 배포 페이지 링크 ID 해상도 수정 (#6365)
+  - JSON 크루 템플릿 렌더링 수정 (#6359)
+  - JSON 크루 버전 고정 수정 (#6342)
+  - 스크래핑 페치에서 SSRF 리디렉션 우회 수정 (#6331)
+
+  ### 문서
+  - README에서 오픈 소스 위치 개선 (#6363)
+  - 코딩 에이전트 설정을 위한 행동 촉구 개선 (#6344)
+  - 버전 1.15.1a1에 대한 스냅샷 및 변경 로그 추가 (#6362)
+
+  ## 기여자
+
+  @joaomdmoura, @lorenzejay, @oalami, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="2026년 6월 26일">
+  ## v1.15.1a1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.1a1)
+
+  ## 변경 사항
+
+  ### 기능
+  - TUI 버튼 텔레메트리 추적
+  - 명시적인 CrewAI 프로젝트 정의 필요
+  - CLI 배포 후 배포 페이지 열기
+
+  ### 버그 수정
+  - JSON 크루 템플릿 렌더링 수정
+  - JSON 크루 버전 고정 수정
+  - 스크래핑 페치에서 SSRF 리다이렉트 우회 수정
+
+  ### 문서
+  - 코딩 에이전트 설정 CTA 개선
+  - v1.15.0에 대한 스냅샷 및 변경 로그
+
+  ## 기여자
+
+  @joaomdmoura, @lorenzejay, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="2026년 6월 25일">
+  ## v1.15.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.0)
+
+  ## 변경 사항
+
+  ### 기능
+  - 텔레메트리에서 대화 흐름 턴 사용 추적
+  - CLI TUI에서 대화 흐름 지원
+  - 통합 선언적 흐름 로딩 추가
+  - 선언적 흐름 CLI 지원 추가
+  - 각 단계에 선택적 if 표현식 추가
+  - 흐름 정의에 단일 에이전트 작업 추가
+  - FlowDefinition에 크루 작업 추가
+  - 인라인 크루 정의 로딩 추가
+  - FlowDefinition에 `each` 복합 작업 추가
+  - 크루 생성 및 실행에서 DMN 모드 지원 구현
+
+  ### 버그 수정
+  - 자격 증명 파일에 대한 소유자 전용 권한 집행 수정
+  - JSON 스키마 흐름 상태 시작 입력 수정
+  - 기술 아카이브 추출에서 심볼릭 링크 경로 탐색 수정
+  - 모든 LLM 호출에 대한 토큰 사용 집계
+  - 중복된 Exa 도구 제거
+  - JSON 크루 문제 해결
+  - JSON 크루 처리 수정 및 메모리 재설정 기능 향상
+
+  ### 문서
+  - JSON 우선 크루 프로젝트에 대한 설치 및 빠른 시작 문서 업데이트
+  - 가져올 수 있는 작업 대시보드와 함께 Datadog 통합 가이드 추가
+  - "단계당 한 카드" 스튜디오 페이지 추가
+  - v1.15.0으로 이어지는 이전 버전의 스냅샷 및 변경 로그 추가
+
+  ### 성능
+  - crewai 실행 시작 UX 개선
+  - 중첩된 크루에 대한 흐름 메서드 진행 상황 표시 유지
+
+  ### 리팩토링
+  - 흐름 상태 접근에서 `StateProxy` 제거
+  - `crewai run`과 `crewai flow kickoff` 통합
+  - FlowDefinition 상태 유형 구분
+  - FlowDefinition에서 런타임으로 구성 및 지속성 연결
+
+  ## 기여자
+
+  @gabemilani, @github-code-quality[bot], @greysonlalonde, @iris-clawd, @jessemiller, @joaomdmoura, @lorenzejay, @lucasgomide, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="2026년 6월 24일">
+  ## v1.14.8a5
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.8a5)
+
+  ## 변경 사항
+
+  ### 기능
+  - 선언적 참조가 흐름과 크루 간에 작동하도록 수정 (#6326)
+
+  ### 버그 수정
+  - JSON 스키마 흐름 상태 시작 입력 수정 (#6325)
+
+  ### 문서
+  - Crew Studio 아래에 단계별 One Card를 중첩하고 롤아웃 배너 제거 (AGE-107) (#6317)
+  - v1.14.8a4의 스냅샷 및 변경 로그 업데이트 (#6319)
+
+  ### 리팩토링
+  - 흐름 상태 접근에서 `StateProxy` 제거 (#6327)
+
+  ## 기여자
+
+  @jessemiller, @vinibrsl
+
+</Update>
+
+<Update label="2026년 6월 24일">
+  ## v1.14.8a4
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.8a4)
+
+  ## 변경 사항
+
+  ### 기능
+  - CLI TUI에서 대화형 흐름 지원.
+
+  ### 버그 수정
+  - 기술 아카이브 추출 시 심볼릭 링크 경로 탐색 문제 수정.
+  - 선언적 흐름 정의 경로 검증.
+
+  ### 문서
+  - v1.14.8a3에 대한 스냅샷 및 변경 로그 업데이트.
+
+  ## 기여자
+
+  @lorenzejay, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="2026년 6월 23일">
+  ## v1.14.8a3
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.8a3)
+
+  ## 변경 사항
+
+  ### 기능
+  - 통합 선언적 흐름 로딩 추가
+  - crewai run 시작 UX 개선
+  - `crewai run`과 `crewai flow kickoff` 통합
+  - 중첩된 크루의 흐름 메서드 진행 상황 표시 유지
+  - 선언적 Flow CLI 지원 추가
+  - 흐름의 시작 메서드로 `@router()` 허용
+  - CrewAI 도구에 대한 타입이 지정된 출력 스키마 추가
+
+  ### 버그 수정
+  - opentelemetry를 ~=1.42.0으로 고정
+
+  ### 문서
+  - "단계당 한 카드" 스튜디오 페이지 추가
+
+  ## 기여자
+
+  @jessemiller, @joaomdmoura, @lucasgomide, @vinibrsl
+
+</Update>
+
 <Update label="2026년 6월 18일">
   ## v1.14.8a2
 
