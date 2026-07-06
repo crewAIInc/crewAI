@@ -68,8 +68,7 @@ result = tool._run(
 - VECTOR_DISTANCE search
 - COSINE similarity
 - Metadata filtering
-- OpenAI embedding fallback
-- Custom embedding functions
+- Uses a custom embedding function if supplied, otherwise OpenAI embeddings
 
 ---
 
