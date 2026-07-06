@@ -180,9 +180,15 @@ class DB2VectorSearchTool(BaseTool):
     def _validate_identifier(self, name: str, allow_period: bool = False) -> str:
         """
         Validates table and column names to prevent SQL injection.
-        Regex allows alphanumeric, underscores, and optionally periods for schema.table.
+        Simple identifiers must start with a letter and contain only letters, digits,
+        or underscores. Schema-qualified names (allow_period=True) allow exactly one
+        period separating two valid simple identifiers (e.g. myschema.mytable).
         """
-        pattern = r'^[a-zA-Z0-9_.]+$' if allow_period else r'^[a-zA-Z0-9_]+$'
+        pattern = (
+            r'^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)?$'
+            if allow_period
+            else r'^[A-Za-z][A-Za-z0-9_]*$'
+        )
         if not re.match(pattern, name):
             raise ValueError(f"Security Alert: Invalid database identifier detected: {name}")
         return name

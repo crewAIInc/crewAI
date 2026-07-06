@@ -249,11 +249,27 @@ class TestValidateIdentifier:
         "col;name",
         "col OR 1=1",
         "",
+        "1table",          # must start with a letter
+        "123",             # must start with a letter
+        ".documents",      # leading period
+        "schema..table",   # double period
+        "schema.table.extra",  # more than one period
+        ".....",           # only dots — previously passed old regex
     ])
     def test_injection_strings_raise(self, bad_name: str):
         tool = _make_tool()
         with pytest.raises(ValueError, match="Security Alert"):
             tool._validate_identifier(bad_name)
+
+    def test_allow_period_rejects_digit_led_schema(self):
+        tool = _make_tool()
+        with pytest.raises(ValueError, match="Security Alert"):
+            tool._validate_identifier("1schema.table", allow_period=True)
+
+    def test_allow_period_rejects_digit_led_table(self):
+        tool = _make_tool()
+        with pytest.raises(ValueError, match="Security Alert"):
+            tool._validate_identifier("schema.1table", allow_period=True)
 
 
 # ---------------------------------------------------------------------------
