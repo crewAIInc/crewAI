@@ -70,6 +70,7 @@ from crewai.events.types.tool_usage_events import (
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities.step_execution_context import StepExecutionContext
 from crewai.utilities.planning_types import TodoItem
+from crewai.utilities.prompts import StandardPromptResult
 from crewai.utilities.file_store import clear_files, clear_task_files, store_files
 from crewai_files import TextFile
 
@@ -123,7 +124,7 @@ class TestAgentExecutor:
     def test_setup_messages_calls_human_input_provider_hooks(self):
         """Message setup should preserve the HumanInputProvider hook contract."""
         executor = _build_executor(
-            prompt={"prompt": "Original task: {input}"},
+            prompt=StandardPromptResult(prompt="Original task: {input}"),
         )
         provider = Mock()
         provider.setup_messages.return_value = False
@@ -154,7 +155,7 @@ class TestAgentExecutor:
     def test_setup_messages_can_be_owned_by_human_input_provider(self):
         """Providers can skip standard prompt setup by returning True."""
         executor = _build_executor(
-            prompt={"prompt": "Original task: {input}"},
+            prompt=StandardPromptResult(prompt="Original task: {input}"),
         )
         provider = Mock()
 

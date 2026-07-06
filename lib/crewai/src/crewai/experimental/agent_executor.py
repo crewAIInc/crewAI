@@ -106,6 +106,7 @@ from crewai.utilities.planning_types import (
     TodoItem,
     TodoList,
 )
+from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
@@ -118,7 +119,6 @@ if TYPE_CHECKING:
     from crewai.agents.tools_handler import ToolsHandler
     from crewai.llms.base_llm import BaseLLM
     from crewai.tools.tool_types import ToolResult
-    from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 
 _RouteT = TypeVar("_RouteT", bound=str)
 
@@ -304,8 +304,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         from crewai.llms.cache import mark_cache_breakpoint
 
-        if self.prompt is not None and "system" in self.prompt:
-            prompt = cast("SystemPromptResult", self.prompt)
+        if isinstance(self.prompt, SystemPromptResult):
+            prompt = self.prompt
             system_prompt = self._format_prompt(prompt["system"], inputs)
             user_prompt = self._format_prompt(prompt["user"], inputs)
             self.state.messages.append(
@@ -316,8 +316,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self.state.messages.append(
                 mark_cache_breakpoint(format_message_for_llm(user_prompt))
             )
-        elif self.prompt is not None:
-            prompt = cast("StandardPromptResult", self.prompt)
+        elif isinstance(self.prompt, StandardPromptResult):
+            prompt = self.prompt
             user_prompt = self._format_prompt(prompt["prompt"], inputs)
             self.state.messages.append(
                 mark_cache_breakpoint(format_message_for_llm(user_prompt))
