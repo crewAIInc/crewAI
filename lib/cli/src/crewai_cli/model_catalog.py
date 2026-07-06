@@ -108,6 +108,15 @@ _ACRONYMS = {
     "hd": "HD",
     "us": "US",
     "eu": "EU",
+    "oss": "OSS",
+    "it": "IT",
+}
+
+# Tokens with non-title-case brand capitalization.
+_BRAND_TOKENS = {
+    "deepseek": "DeepSeek",
+    "chatgpt": "ChatGPT",
+    "qwq": "QwQ",
 }
 
 
@@ -304,7 +313,8 @@ def _fetch_ollama(_api_key: str | None) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
     for item in data.get("models", []):
         model_id = item.get("model") or item.get("name")
-        if not model_id:
+        if not model_id or not _is_chat_model(model_id) or _is_fine_tune(model_id):
+            # /api/tags lists everything installed, including embedding models.
             continue
         # Ollama returns an ISO 8601 modified_at we can rank by.
         created = _parse_iso(item.get("modified_at"))
@@ -485,28 +495,42 @@ def _is_fine_tune(model_id: str) -> bool:
     return lowered.startswith("ft:") or ":ckpt" in lowered
 
 
+_SIZE_RE = re.compile(r"^\d+(?:\.\d+)?[bmk]$")  # 8b, 70b, 1.5b, 120m, 32k
+_OSERIES_RE = re.compile(r"^o\d+$")  # o1, o3, o4 — kept lowercase (OpenAI brand)
+
+
 def _humanize(model_id: str) -> str:
     """Derive a readable label from a raw model id.
 
     Best-effort only — vendor display names and the curated label map take
-    precedence. Keeps version/date tokens verbatim and upper-cases known
-    acronyms: ``gpt-4.1-mini`` → ``GPT 4.1 Mini``.
+    precedence. Drops embedded dates and applies light casing so raw ids read
+    cleanly: ``gpt-oss-120b`` → ``GPT OSS 120B``, ``qwen3-32b`` → ``Qwen3 32B``,
+    ``deepseek-r1:671b`` → ``DeepSeek R1 671B``, ``o3-mini`` → ``o3 Mini``.
     """
     base = model_id.split("/")[-1]
     # Drop embedded release dates — they're noise in a label, and the picker
     # already shows the full model id alongside it.
     base = _DATE_RE.sub(" ", base)
     words: list[str] = []
-    for part in re.split(r"[-_\s]+", base):
+    # Split on separators including ``:`` so Ollama tags (llama3.3:70b) read well.
+    for part in re.split(r"[-_\s:]+", base):
         if not part:
             continue
         low = part.lower()
         if low in _ACRONYMS:
             words.append(_ACRONYMS[low])
-        elif any(ch.isdigit() for ch in part):
-            words.append(part)
+        elif low in _BRAND_TOKENS:
+            words.append(_BRAND_TOKENS[low])
+        elif _SIZE_RE.match(low):
+            words.append(low[:-1] + low[-1].upper())  # 70b -> 70B
+        elif _OSERIES_RE.match(low):
+            words.append(low)  # o3 stays lowercase
+        elif part[0].isalpha():
+            # Capitalize the leading letter, preserve the rest (so a fused
+            # family+version keeps its digits): qwen3 -> Qwen3, mini -> Mini.
+            words.append(part[0].upper() + part[1:])
         else:
-            words.append(part.capitalize())
+            words.append(part)  # starts with a digit (4o, 4.1, 0905) — leave as-is
     return " ".join(words) or base
 
 

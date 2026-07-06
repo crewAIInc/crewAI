@@ -80,6 +80,14 @@ def test_search_substring_not_treated_as_non_chat():
 def test_humanize():
     assert mc._humanize("gpt-4.1-mini") == "GPT 4.1 Mini"
     assert mc._humanize("anthropic/claude-opus-4-6") == "Claude Opus 4 6"
+    # size suffixes uppercased, acronyms/brands cased, o-series preserved, ':' split
+    assert mc._humanize("openai/gpt-oss-120b") == "GPT OSS 120B"
+    assert mc._humanize("qwen/qwen3-32b") == "Qwen3 32B"
+    assert mc._humanize("deepseek-r1-distill-llama-70b") == "DeepSeek R1 Distill Llama 70B"
+    assert mc._humanize("o3-mini") == "o3 Mini"
+    assert mc._humanize("chatgpt-4o-latest") == "ChatGPT 4o Latest"
+    assert mc._humanize("llama3.3:70b") == "Llama3.3 70B"
+    assert mc._humanize("gemma2-9b-it") == "Gemma2 9B IT"
 
 
 # ── vendor tier ──────────────────────────────────────────────────
@@ -272,6 +280,23 @@ def test_ollama_unreachable_uses_fallback(monkeypatch):
     monkeypatch.setattr(mc, "_http_get_json", boom)
     models = mc.get_provider_models("ollama", [("llama3.3", "Llama 3.3")])
     assert models == [("llama3.3", "Llama 3.3")]
+
+
+def test_ollama_excludes_embedding_models(monkeypatch):
+    # /api/tags lists everything installed, including embeddings — filter them.
+    monkeypatch.setattr(
+        mc,
+        "_http_get_json",
+        lambda *a, **k: {
+            "models": [
+                {"model": "llama3.3:70b"},
+                {"model": "nomic-embed-text"},
+                {"model": "mxbai-embed-large"},
+            ]
+        },
+    )
+    ids = [m for m, _ in mc.get_provider_models("ollama", [])]
+    assert ids == ["llama3.3:70b"]
 
 
 def test_ollama_base_honors_ollama_host(monkeypatch):
@@ -479,7 +504,7 @@ def test_litellm_fills_uncurated_bedrock(monkeypatch):
     mc._litellm_cache_file().write_text(json.dumps(litellm_data), encoding="utf-8")
 
     models = mc.get_provider_models("bedrock", [])
-    assert models == [("anthropic.claude-v2", "Anthropic.claude v2")]
+    assert models == [("anthropic.claude-v2", "Anthropic.claude V2")]
 
 
 def test_failed_fetch_is_negatively_cached(monkeypatch):
