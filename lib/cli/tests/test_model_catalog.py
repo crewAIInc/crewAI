@@ -164,6 +164,28 @@ def test_vendor_gemini_requires_generate_content(monkeypatch):
     assert ids == ["gemini-2.5-pro", "gemini-1.5-pro"]
 
 
+def test_openai_excludes_fine_tunes_and_checkpoints(monkeypatch):
+    # Fine-tunes/checkpoints have recent `created` timestamps and would otherwise
+    # crowd out (and rank above) the base models — they must be excluded so the
+    # picker shows clean foundation models.
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    payload = {
+        "data": [
+            {"id": "ft:gpt-4o-mini-2024-07-18:crewai::DyJG86uF", "created": 1_900_000_000},
+            {
+                "id": "ft:gpt-4o-mini-2024-07-18:crewai::DyJG7Q9N:ckpt-step-84",
+                "created": 1_900_000_001,
+            },
+            {"id": "gpt-5.5", "created": 1_800_000_000},
+            {"id": "gpt-4.1", "created": 1_700_000_000},
+        ]
+    }
+    monkeypatch.setattr(mc, "_http_get_json", lambda *a, **k: payload)
+
+    ids = [m for m, _ in mc.get_provider_models("openai", [])]
+    assert ids == ["gpt-5.5", "gpt-4.1"]  # fine-tunes + checkpoints dropped
+
+
 def test_vendor_gemini_paginates(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "key")
     pages = {

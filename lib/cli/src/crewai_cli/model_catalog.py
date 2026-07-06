@@ -219,7 +219,7 @@ def _fetch_openai_compatible(
     entries: list[dict[str, Any]] = []
     for item in data.get("data", []):
         model_id = item.get("id")
-        if not model_id or not _is_chat_model(model_id):
+        if not model_id or not _is_chat_model(model_id) or _is_fine_tune(model_id):
             continue
         created = _as_float(item.get("created"))
         entries.append(_entry(model_id, _humanize(model_id), created=created))
@@ -471,6 +471,18 @@ def _is_chat_model(model_id: str) -> bool:
     """Heuristically reject embedding/audio/image/etc. models by their id."""
     lowered = model_id.lower()
     return not any(marker in lowered for marker in _NON_CHAT_MARKERS)
+
+
+def _is_fine_tune(model_id: str) -> bool:
+    """A user fine-tune or training checkpoint (``ft:...`` / ``...:ckpt-step-N``).
+
+    These are account-specific artifacts: they clutter the picker, crowd out the
+    foundation models (their recent ``created`` timestamps rank them first), and
+    humanize into unreadable labels. Excluded from the auto-list; a user who
+    wants one can still enter it via the picker's "Other" option.
+    """
+    lowered = model_id.lower()
+    return lowered.startswith("ft:") or ":ckpt" in lowered
 
 
 def _humanize(model_id: str) -> str:
