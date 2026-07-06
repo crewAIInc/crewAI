@@ -655,6 +655,8 @@ class TestToolMetadata:
     def test_tool_description(self):
         tool = _make_tool()
         assert "DB2" in tool.description
+        assert "custom embedding function" in tool.description
+        assert "OpenAI embeddings" in tool.description
 
     def test_args_schema_is_db2_tool_schema(self):
         tool = _make_tool()

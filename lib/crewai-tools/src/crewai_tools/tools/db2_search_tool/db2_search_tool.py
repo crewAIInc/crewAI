@@ -70,7 +70,7 @@ class DB2VectorSearchTool(BaseTool):
     )
 
     name: str = "DB2VectorSearchTool"
-    description: str = "Search IBM DB2 vector database for relevant documents."
+    description: str = "Search IBM DB2 vector database for relevant documents. Uses a custom embedding function if supplied, otherwise OpenAI embeddings."
     args_schema: type[BaseModel] = DB2ToolSchema
 
     # Internal Whitelist for distance metrics to prevent SQL injection
