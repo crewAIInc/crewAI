@@ -11,7 +11,7 @@ mode: "wide"
 
   - [Visão Geral](/pt-BR/enterprise/features/agent-control-plane/overview)
   - **Monitoramento** *(você está aqui)*
-  - [Regras](/pt-BR/enterprise/features/agent-control-plane/rules)
+  - [Políticas](/pt-BR/enterprise/features/agent-control-plane/policies)
 </Info>
 
 ## Visão Geral
@@ -58,7 +58,7 @@ A sub-aba **Automações** é o detalhamento por deployment da saúde da frota. 
 | **Última execução** | Tempo decorrido desde a execução mais recente. |
 | **Health Status Breakdown** | Barra empilhada com percentuais de `Critical` / `Warning` / `Healthy` para as execuções na janela. |
 | **Executions with Errors** | Total de execuções com falha na janela. |
-| **PII detection applied** | `Yes` se houver configuração de PII por deployment ou uma [regra de PII](/pt-BR/enterprise/features/agent-control-plane/rules) correspondente ativa. |
+| **PII detection applied** | `Yes` se houver configuração de PII por deployment ou uma [política de PII](/pt-BR/enterprise/features/agent-control-plane/policies) correspondente ativa. |
 | **Executions** | Total de execuções na janela. |
 | **Last updated** | Quando o deployment foi re-implantado pela última vez. |
 | **Crew Version** | A versão do `crewai` reportada pelo deployment. Um ícone de informação ao lado de versões abaixo de `1.13` indica linhas que não conseguem contribuir com métricas. |
@@ -96,8 +96,8 @@ Filtre por **LLM provider** e ordene por `Cost`, `Executions` ou `Last run`.
   <Card title="Agent Control Plane — Visão Geral" icon="book-open" href="/pt-BR/enterprise/features/agent-control-plane/overview">
     O que é o ACP, requisitos, planos suportados e RBAC.
   </Card>
-  <Card title="Agent Control Plane — Regras" icon="shield-check" href="/pt-BR/enterprise/features/agent-control-plane/rules">
-    Aplique regras de PII Redaction em nível de organização em muitas automações.
+  <Card title="Agent Control Plane — Políticas" icon="shield-check" href="/pt-BR/enterprise/features/agent-control-plane/policies">
+    Aplique políticas de PII Redaction em nível de organização em muitas automações.
   </Card>
   <Card title="Traces" icon="timeline" href="/pt-BR/enterprise/features/traces">
     Aprofunde em uma única execução para ver o raciocínio do agente, chamadas de ferramentas e uso de tokens.
