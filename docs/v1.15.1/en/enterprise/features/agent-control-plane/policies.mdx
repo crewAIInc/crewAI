@@ -19,7 +19,7 @@ mode: "wide"
 Policies let you enforce organization-wide controls — today: **PII Redaction** — across many automations at once, instead of configuring each deployment individually. Open the **Policies** tab in the [Agent Control Plane](/en/enterprise/features/agent-control-plane/overview) to manage them.
 
 <Frame>
-  ![Policies list](/images/enterprise/acp-rules-list.png)
+  ![Policies list](/images/enterprise/acp-policies-list.png)
 </Frame>
 
 Each policy card shows the name, description, the **scope** the policy applies to (selected tools and tags), and a count of **engaged automations** — deployments that currently match the scope. The toggle on the right enables or disables the policy without deleting it.
@@ -45,7 +45,7 @@ More policy types will be added over time.
 ## Creating a policy
 
 <Frame>
-  <img src="/images/enterprise/acp-rules-edit-side-panel.png" alt="Policy edit side panel with conditions and PII mask type" width="450" />
+  <img src="/images/enterprise/acp-policies-new-side-panel.png" alt="Policy edit side panel with conditions and PII mask type" width="450" />
 </Frame>
 
 <Steps>
@@ -84,7 +84,7 @@ More policy types will be added over time.
 Click **Engaged N automations** on any policy card to see exactly which deployments the policy is currently matching, along with each one's last execution.
 
 <Frame>
-  ![Engaged automations modal](/images/enterprise/acp-rules-engaged-modal.png)
+  ![Engaged automations modal](/images/enterprise/acp-policies-engaged-modal.png)
 </Frame>
 
 This is the fastest way to sanity-check a policy's scope before enabling it — for example, to confirm that a policy scoped to the `production` tag isn't accidentally matching a staging deployment.

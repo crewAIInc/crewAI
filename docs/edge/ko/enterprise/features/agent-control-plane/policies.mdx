@@ -19,7 +19,7 @@ mode: "wide"
 정책(Policies)은 각 deployment를 개별 설정하는 대신, 정책 — 현재: **PII Redaction** — 을 한 번에 여러 자동화에 적용할 수 있게 해줍니다. 관리하려면 [Agent Control Plane](/ko/enterprise/features/agent-control-plane/overview)에서 **Policies** 탭을 엽니다.
 
 <Frame>
-  ![정책 목록](/images/enterprise/acp-rules-list.png)
+  ![정책 목록](/images/enterprise/acp-policies-list.png)
 </Frame>
 
 각 정책 카드에는 이름, 설명, 정책이 적용되는 **범위(scope)**(선택된 도구와 태그), 그리고 현재 범위와 일치하는 deployment의 수인 **engaged automations**가 표시됩니다. 오른쪽 토글로 정책을 삭제하지 않고 활성/비활성할 수 있습니다.
@@ -45,7 +45,7 @@ mode: "wide"
 ## 정책 만들기
 
 <Frame>
-  <img src="/images/enterprise/acp-rules-edit-side-panel.png" alt="조건 및 PII 마스크 유형이 있는 정책 편집 사이드 패널" width="450" />
+  <img src="/images/enterprise/acp-policies-new-side-panel.png" alt="조건 및 PII 마스크 유형이 있는 정책 편집 사이드 패널" width="450" />
 </Frame>
 
 <Steps>
@@ -84,7 +84,7 @@ mode: "wide"
 정책 카드의 **Engaged N automations**를 클릭하면 현재 정책이 일치시키고 있는 deployment와 각 deployment의 마지막 실행을 정확히 확인할 수 있습니다.
 
 <Frame>
-  ![Engaged automations 모달](/images/enterprise/acp-rules-engaged-modal.png)
+  ![Engaged automations 모달](/images/enterprise/acp-policies-engaged-modal.png)
 </Frame>
 
 정책을 활성화하기 전에 범위를 빠르게 점검하는 가장 좋은 방법입니다. 예를 들어, `production` 태그로 범위를 지정한 정책이 의도치 않게 staging deployment를 일치시키지 않는지 확인할 수 있습니다.

@@ -19,7 +19,7 @@ mode: "wide"
 As Políticas permitem aplicar políticas — hoje: **PII Redaction** — em muitas automações de uma só vez, em vez de configurar cada deployment individualmente. Abra a aba **Políticas** no [Agent Control Plane](/pt-BR/enterprise/features/agent-control-plane/overview) para gerenciá-las.
 
 <Frame>
-  ![Lista de políticas](/images/enterprise/acp-rules-list.png)
+  ![Lista de políticas](/images/enterprise/acp-policies-list.png)
 </Frame>
 
 Cada card de política mostra o nome, a descrição, o **escopo** ao qual a política se aplica (ferramentas e tags selecionadas) e a contagem de **automações engajadas** — deployments que atualmente correspondem ao escopo. O toggle à direita ativa ou desativa a política sem excluí-la.
@@ -45,7 +45,7 @@ Mais tipos de políticas serão adicionados ao longo do tempo.
 ## Criando uma política
 
 <Frame>
-  <img src="/images/enterprise/acp-rules-edit-side-panel.png" alt="Painel lateral de edição de política com condições e tipo de máscara de PII" width="450" />
+  <img src="/images/enterprise/acp-policies-new-side-panel.png" alt="Painel lateral de edição de política com condições e tipo de máscara de PII" width="450" />
 </Frame>
 
 <Steps>
@@ -84,7 +84,7 @@ Mais tipos de políticas serão adicionados ao longo do tempo.
 Clique em **Engaged N automations** em qualquer card de política para ver exatamente quais deployments a política está correspondendo no momento, junto com a última execução de cada um.
 
 <Frame>
-  ![Modal de automações engajadas](/images/enterprise/acp-rules-engaged-modal.png)
+  ![Modal de automações engajadas](/images/enterprise/acp-policies-engaged-modal.png)
 </Frame>
 
 Esta é a forma mais rápida de validar o escopo de uma política antes de habilitá-la — por exemplo, para confirmar que uma política com escopo na tag `production` não está acidentalmente correspondendo a um deployment de staging.
