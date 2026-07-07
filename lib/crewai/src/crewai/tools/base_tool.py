@@ -356,6 +356,7 @@ class BaseTool(BaseModel, ABC):
     async def _arun(
         self,
         *args: Any,
+        config: Optional[Any] = None,
         **kwargs: Any,
     ) -> Any:
         """Async implementation of the tool. Override for async support."""
@@ -376,6 +377,7 @@ class BaseTool(BaseModel, ABC):
     def _run(
         self,
         *args: Any,
+        config: Optional[Any] = None,
         **kwargs: Any,
     ) -> Any:
         """Sync implementation of the tool.
