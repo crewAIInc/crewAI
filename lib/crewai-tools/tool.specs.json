@@ -20159,6 +20159,107 @@
       }
     },
     {
+      "description": "A tool that performs web searches using the SearchApi.io API. It supports 100+ search engines (e.g. google, bing, baidu) and returns the organic results as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SearchApi.io search service",
+          "name": "SEARCHAPI_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SearchApi Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that performs web searches using the SearchApi.io API.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The SearchApi.io API key. If not provided, it will be loaded from the environment variable SEARCHAPI_API_KEY.",
+            "title": "Api Key"
+          },
+          "engine": {
+            "default": "google",
+            "title": "Engine",
+            "type": "string"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "search_url": {
+            "default": "https://www.searchapi.io/api/v1/search",
+            "title": "Search Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "SearchApiSearchTool",
+        "type": "object"
+      },
+      "name": "SearchApiSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input schema for SearchApiSearchTool.",
+        "properties": {
+          "query": {
+            "description": "The search query string.",
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SearchApiSearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to read a website content.",
       "env_vars": [],
       "humanized_name": "Read a website content",
