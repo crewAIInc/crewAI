@@ -10,17 +10,17 @@ icon: "book-open"
 
   - **Visão Geral** *(você está aqui)*
   - [Monitoramento](/pt-BR/enterprise/features/agent-control-plane/monitoring)
-  - [Políticas](/pt-BR/enterprise/features/agent-control-plane/policies)
+  - [Regras](/pt-BR/enterprise/features/agent-control-plane/rules)
 </Info>
 
 ## Visão Geral
 
-O **Agent Control Plane** (ACP) é o hub de operações para tudo que você tem rodando no CrewAI AMP. É uma tela única — dividida nas abas **Automações** e **Políticas** — que permite à sua equipe:
+O **Agent Control Plane** (ACP) é o hub de operações para tudo que você tem rodando no CrewAI AMP. É uma tela única — dividida nas abas **Automações** e **Regras** — que permite à sua equipe:
 
 - Monitorar a **saúde** de cada automação ao vivo (crew ou flow), com detalhamentos `Critical` / `Warning` / `Healthy` e contagem de execuções.
 - Acompanhar o **consumo de LLM** — tokens e custo — por automação, por provedor e por modelo, com a variação em relação ao período anterior.
 - Aprofundar em qualquer automação ou provedor de modelo para ver gráficos de série temporal e detalhamentos por provedor.
-- Aplicar **Políticas** em nível de organização (hoje: PII Redaction) em muitas automações de uma só vez, em vez de editar cada deployment individualmente.
+- Aplicar **Regras** em nível de organização (hoje: PII Redaction) em muitas automações de uma só vez, em vez de editar cada deployment individualmente.
 
 <Frame>
   ![Visão geral do Agent Control Plane](/images/enterprise/acp-overview-automations-sankey.png)
@@ -33,7 +33,7 @@ O **Agent Control Plane** (ACP) é o hub de operações para tudo que você tem 
 As duas abas respondem a duas perguntas distintas:
 
 - **Automações** — *"Como minha frota está se comportando agora e quanto está me custando?"* Veja [Monitoramento](/pt-BR/enterprise/features/agent-control-plane/monitoring).
-- **Políticas** — *"Como aplico uma política (por exemplo, PII redaction) em muitos deployments sem precisar reimplantar cada um?"* Veja [Políticas](/pt-BR/enterprise/features/agent-control-plane/policies).
+- **Regras** — *"Como aplico uma política (por exemplo, PII redaction) em muitos deployments sem precisar reimplantar cada um?"* Veja [Regras](/pt-BR/enterprise/features/agent-control-plane/rules).
 
 ## Requisitos
 
@@ -42,11 +42,11 @@ As duas abas respondem a duas perguntas distintas:
 </Warning>
 
 <Warning>
-  **Plano Enterprise ou Ultra** é necessário para criar ou editar [Políticas](/pt-BR/enterprise/features/agent-control-plane/policies). Organizações em planos inferiores ainda podem abrir a aba Políticas e visualizar políticas existentes, mas o editor é renderizado em modo somente leitura, com um selo "Enterprise" de bloqueio e o alerta *"PII Redaction policies require an Enterprise plan."* O Monitoramento (a aba Automações) está disponível em todos os planos em que o recurso esteja habilitado.
+  **Plano Enterprise ou Ultra** é necessário para criar ou editar [Regras](/pt-BR/enterprise/features/agent-control-plane/rules). Organizações em planos inferiores ainda podem abrir a aba Regras e visualizar regras existentes, mas o editor é renderizado em modo somente leitura, com um selo "Enterprise" de bloqueio e o alerta *"PII Redaction rules require an Enterprise plan."* O Monitoramento (a aba Automações) está disponível em todos os planos em que o recurso esteja habilitado.
 </Warning>
 
 - O recurso **Agent Control Plane** precisa estar habilitado para sua organização. Se você não o vê na barra lateral, peça ao owner da conta para solicitar a habilitação.
-- Dentro do ACP, o [RBAC](/pt-BR/enterprise/features/rbac) controla o acesso: `read` para visualizar o dashboard e as políticas, `manage` para criar, editar, ligar/desligar ou excluir políticas.
+- Dentro do ACP, o [RBAC](/pt-BR/enterprise/features/rbac) controla o acesso: `read` para visualizar o dashboard e as regras, `manage` para criar, editar, ligar/desligar ou excluir regras.
 - Todos os gráficos e tabelas podem ser ajustados para **Últimas 24 horas**, **Última Semana** ou **Últimos 30 dias** usando o seletor de tempo no canto superior direito. As variações (`↑ 8 vs ontem`, `↓ $20.57 vs ontem`, etc.) comparam a janela selecionada com a janela anterior de mesma duração.
 
 ## O que você pode fazer aqui
@@ -55,7 +55,7 @@ As duas abas respondem a duas perguntas distintas:
   <Card title="Monitoramento" icon="gauge" href="/pt-BR/enterprise/features/agent-control-plane/monitoring">
     Acompanhe a saúde da frota e o gasto com LLM com cards de métricas, um sankey interativo, tabelas por automação e painéis laterais de detalhamento para qualquer automação ou provedor.
   </Card>
-  <Card title="Políticas" icon="shield-check" href="/pt-BR/enterprise/features/agent-control-plane/policies">
+  <Card title="Regras" icon="shield-check" href="/pt-BR/enterprise/features/agent-control-plane/rules">
     Aplique políticas de PII Redaction em nível de organização, com escopo por ferramentas e tags. As mudanças entram em vigor na próxima execução — sem necessidade de re-implantação.
   </Card>
 </CardGroup>
@@ -67,10 +67,10 @@ As duas abas respondem a duas perguntas distintas:
     Aprofunde em uma única execução para ver o raciocínio do agente, chamadas de ferramentas e uso de tokens.
   </Card>
   <Card title="RBAC" icon="users" href="/pt-BR/enterprise/features/rbac">
-    Gerencie quem pode ler o Agent Control Plane e quem pode editar políticas.
+    Gerencie quem pode ler o Agent Control Plane e quem pode editar regras.
   </Card>
   <Card title="PII Redaction para Traces" icon="lock" href="/pt-BR/enterprise/features/pii-trace-redactions">
-    Catálogo de entidades e configuração de PII por deployment, referenciados pelas Políticas.
+    Catálogo de entidades e configuração de PII por deployment, referenciados pelas Regras.
   </Card>
   <Card title="Deploy no AMP" icon="rocket" href="/pt-BR/enterprise/guides/deploy-to-amp">
     Implante uma crew em uma versão do crewAI que suporta o Agent Control Plane.
@@ -78,5 +78,5 @@ As duas abas respondem a duas perguntas distintas:
 </CardGroup>
 
 <Card title="Precisa de ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nosso time de suporte para interpretar métricas ou desenhar políticas.
+  Entre em contato com nosso time de suporte para interpretar métricas ou desenhar regras.
 </Card>

@@ -10,17 +10,17 @@ icon: "book-open"
 
   - **Overview** *(you are here)*
   - [Monitoring](/en/enterprise/features/agent-control-plane/monitoring)
-  - [Policies](/en/enterprise/features/agent-control-plane/policies)
+  - [Rules](/en/enterprise/features/agent-control-plane/rules)
 </Info>
 
 ## Overview
 
-The **Agent Control Plane** (ACP) is the operations hub for everything you have running on CrewAI AMP. It is a single screen — split into **Automations** and **Policies** tabs — that lets your team:
+The **Agent Control Plane** (ACP) is the operations hub for everything you have running on CrewAI AMP. It is a single screen — split into **Automations** and **Rules** tabs — that lets your team:
 
 - Monitor the **health** of every live automation (crew or flow), with `Critical` / `Warning` / `Healthy` breakdowns and execution counts.
 - Track **LLM consumption** — tokens and cost — per automation, per provider, and per model, with a delta vs the previous period.
 - Drill into any single automation or model provider for time-series charts and per-provider breakdowns.
-- Apply organization-wide **Policies** (today: PII Redaction) across many automations at once instead of editing each deployment individually.
+- Apply organization-wide **Rules** (today: PII Redaction) across many automations at once instead of editing each deployment individually.
 
 <Frame>
   ![Agent Control Plane overview](/images/enterprise/acp-overview-automations-sankey.png)
@@ -33,7 +33,7 @@ The **Agent Control Plane** (ACP) is the operations hub for everything you have 
 The two tabs answer two different questions:
 
 - **Automations** — *"How is my fleet behaving right now, and what is it costing me?"* See [Monitoring](/en/enterprise/features/agent-control-plane/monitoring).
-- **Policies** — *"How do I enforce a policy (e.g. PII redaction) across many deployments without re-deploying each one?"* See [Policies](/en/enterprise/features/agent-control-plane/policies).
+- **Rules** — *"How do I enforce a policy (e.g. PII redaction) across many deployments without re-deploying each one?"* See [Rules](/en/enterprise/features/agent-control-plane/rules).
 
 ## Requirements
 
@@ -42,11 +42,11 @@ The two tabs answer two different questions:
 </Warning>
 
 <Warning>
-  **Enterprise Plan or Ultra Plan** is required to create or edit [Policies](/en/enterprise/features/agent-control-plane/policies). Lower-tier organizations can open the Policies tab and view existing policies, but the editor renders read-only with an "Enterprise" lock pill and the alert *"PII Redaction policies require an Enterprise plan."* Monitoring (the Automations tab) is available on all plans where the feature is enabled.
+  **Enterprise Plan or Ultra Plan** is required to create or edit [Rules](/en/enterprise/features/agent-control-plane/rules). Lower-tier organizations can open the Rules tab and view existing rules, but the editor renders read-only with an "Enterprise" lock pill and the alert *"PII Redaction rules require an Enterprise plan."* Monitoring (the Automations tab) is available on all plans where the feature is enabled.
 </Warning>
 
 - The **Agent Control Plane** feature must be enabled for your organization. If you don't see it in the sidebar, ask your account owner to request enablement.
-- Inside ACP, [RBAC](/en/enterprise/features/rbac) governs access: `read` to view the dashboard and policies, `manage` to create, edit, toggle, or delete policies.
+- Inside ACP, [RBAC](/en/enterprise/features/rbac) governs access: `read` to view the dashboard and rules, `manage` to create, edit, toggle, or delete rules.
 - All charts and tables can be scoped to the **Last 24 hours**, **Last Week**, or **Last 30 days** using the time selector at the top right. Deltas (`↑ 8 vs yesterday`, `↓ $20.57 vs yesterday`, etc.) compare the selected window against the previous one of the same length.
 
 ## What you can do here
@@ -55,7 +55,7 @@ The two tabs answer two different questions:
   <Card title="Monitoring" icon="gauge" href="/en/enterprise/features/agent-control-plane/monitoring">
     Watch fleet health and LLM spend with metric cards, an interactive sankey, per-automation tables, and drill-down side panels for any automation or provider.
   </Card>
-  <Card title="Policies" icon="shield-check" href="/en/enterprise/features/agent-control-plane/policies">
+  <Card title="Rules" icon="shield-check" href="/en/enterprise/features/agent-control-plane/rules">
     Apply organization-wide PII Redaction policies scoped by tools and tags. Changes take effect on the next execution — no re-deploy required.
   </Card>
 </CardGroup>
@@ -67,10 +67,10 @@ The two tabs answer two different questions:
     Drill into a single execution to see agent reasoning, tool calls, and token usage.
   </Card>
   <Card title="RBAC" icon="users" href="/en/enterprise/features/rbac">
-    Manage who can read the Agent Control Plane and who can edit policies.
+    Manage who can read the Agent Control Plane and who can edit rules.
   </Card>
   <Card title="PII Redaction for Traces" icon="lock" href="/en/enterprise/features/pii-trace-redactions">
-    Entity catalog and per-deployment PII configuration referenced by Policies.
+    Entity catalog and per-deployment PII configuration referenced by Rules.
   </Card>
   <Card title="Deploy to AMP" icon="rocket" href="/en/enterprise/guides/deploy-to-amp">
     Deploy a crew on a crewAI version that supports the Agent Control Plane.
@@ -78,5 +78,5 @@ The two tabs answer two different questions:
 </CardGroup>
 
 <Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
-  Contact our support team for help interpreting metrics or designing policies.
+  Contact our support team for help interpreting metrics or designing rules.
 </Card>
