@@ -463,7 +463,7 @@ class BaseTool(BaseModel, ABC):
             fields: dict[str, Any] = {}
 
             for param_name, param in run_sig.parameters.items():
-                if param_name in ("self", "return"):
+                if param_name in ("self", "return", "config"):
                     continue
                 if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
                     continue
