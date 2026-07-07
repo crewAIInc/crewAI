@@ -351,3 +351,14 @@ def test_reserved_id_input_is_forwarded_not_dropped(
     captured = capsys.readouterr()
     assert captured.out == "a@b.com\n"
     assert "Ignoring unknown input 'id'" not in captured.err
+
+
+def test_id_only_input_skips_required_validation(tmp_path: Path) -> None:
+    # Resume via `crewai run --inputs '{"id":"..."}'` must not be blocked by the
+    # required-field check: kickoff hydrates required state from persistence.
+    path = _write(tmp_path, REQUIRED_FLOW_YAML)
+    flow = run_declarative_flow_module.load_declarative_flow(str(path))
+
+    resolved = run_declarative_flow_module._resolve_flow_inputs(flow, {"id": "run-123"})
+
+    assert resolved == {"id": "run-123"}

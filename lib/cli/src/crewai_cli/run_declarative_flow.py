@@ -80,6 +80,13 @@ def _resolve_flow_inputs(flow: Any, provided: dict[str, Any]) -> dict[str, Any]:
         # dict / unschematized state — nothing to derive; pass inputs through.
         return dict(provided)
 
+    # ``id`` signals a persistence restore: kickoff hydrates the full state from
+    # storage, so required fields may come from the restored state rather than
+    # --inputs. Forward the inputs unchanged instead of prompting/erroring for
+    # fields the resume will supply.
+    if "id" in provided:
+        return dict(provided)
+
     properties = {
         name: spec
         for name, spec in (schema.get("properties") or {}).items()
@@ -89,11 +96,10 @@ def _resolve_flow_inputs(flow: Any, provided: dict[str, Any]) -> dict[str, Any]:
     defaults = _flow_state_defaults(flow)
 
     # Unknown keys are almost always typos — warn and drop them (they'd fail
-    # structured-state validation at kickoff anyway). ``id`` is a reserved
-    # kickoff key (persistence restore), so let it through untouched.
+    # structured-state validation at kickoff anyway).
     collected: dict[str, Any] = {}
     for key, value in provided.items():
-        if key in properties or key == "id":
+        if key in properties:
             collected[key] = value
             continue
         suggestion = _closest_key(key, properties)
