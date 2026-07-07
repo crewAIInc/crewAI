@@ -52,6 +52,15 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     for interactively, and everything is validated against the schema before
     kickoff — so a bare ``crewai run`` on a configured flow just works.
     """
+    # Load the project's .env before kickoff, mirroring the JSON-crew path
+    # (run_crew._run_json_crew) so flow projects pick up API keys/config the
+    # same way regardless of where crewai is installed.
+    from dotenv import load_dotenv
+
+    env_file = Path.cwd() / ".env"
+    if env_file.exists():
+        load_dotenv(env_file, override=True)
+
     provided = _parse_inputs(inputs) or {}
 
     flow = load_declarative_flow(definition)

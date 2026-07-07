@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -351,6 +352,23 @@ def test_reserved_id_input_is_forwarded_not_dropped(
     captured = capsys.readouterr()
     assert captured.out == "a@b.com\n"
     assert "Ignoring unknown input 'id'" not in captured.err
+
+
+def test_run_declarative_flow_loads_project_env(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Flow projects must pick up the project's .env, like crew projects do,
+    # overriding any pre-existing value.
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("DECL_FLOW_ENV_PROBE", "old")
+    (tmp_path / ".env").write_text("DECL_FLOW_ENV_PROBE=from_dotenv\n", encoding="utf-8")
+    path = _write(tmp_path, REQUIRED_FLOW_YAML)
+
+    run_declarative_flow_module.run_declarative_flow(
+        str(path), '{"prospect_email":"a@b.com"}'
+    )
+
+    assert os.environ["DECL_FLOW_ENV_PROBE"] == "from_dotenv"
 
 
 def test_id_only_input_skips_required_validation(tmp_path: Path) -> None:
