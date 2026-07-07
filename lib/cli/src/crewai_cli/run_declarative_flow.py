@@ -1,21 +1,21 @@
 from __future__ import annotations
 
-import difflib
 import json
 from pathlib import Path
 import subprocess
-import sys
 from typing import Any
 
 import click
 from crewai_core.project import ProjectDefinitionError, configured_project_definition
 from pydantic import ValidationError
 
-from crewai_cli.utils import (
-    build_env_with_all_tool_credentials,
-    enable_prompt_line_editing,
-    is_dmn_mode_enabled,
+from crewai_cli.input_prompt import (
+    closest_name,
+    is_interactive,
+    parse_inputs_json,
+    prompt_for_inputs,
 )
+from crewai_cli.utils import build_env_with_all_tool_credentials
 
 
 def run_declarative_flow_in_project_env(
@@ -61,7 +61,7 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     if env_file.exists():
         load_dotenv(env_file, override=True)
 
-    provided = _parse_inputs(inputs) or {}
+    provided = parse_inputs_json(inputs) or {}
 
     flow = load_declarative_flow(definition)
     resolved_inputs = _resolve_flow_inputs(flow, provided)
@@ -111,7 +111,7 @@ def _resolve_flow_inputs(flow: Any, provided: dict[str, Any]) -> dict[str, Any]:
         if key in properties:
             collected[key] = value
             continue
-        suggestion = _closest_key(key, properties)
+        suggestion = closest_name(key, properties)
         hint = f" Did you mean '{suggestion}'?" if suggestion else ""
         click.secho(
             f"  Ignoring unknown input '{key}' — not in the flow's state schema.{hint}",
@@ -121,7 +121,15 @@ def _resolve_flow_inputs(flow: Any, provided: dict[str, Any]) -> dict[str, Any]:
 
     missing = _missing_required(state_model, {**defaults, **collected})
     if missing and _is_interactive():
-        collected.update(_prompt_for_flow_inputs(missing, properties))
+        collected.update(
+            prompt_for_inputs(
+                missing,
+                title="Flow inputs",
+                subtitle="This flow needs the following to run.",
+                describe=lambda name: (properties.get(name) or {}).get("description"),
+                coerce=lambda name, raw: _coerce_input(raw, properties.get(name) or {}),
+            )
+        )
         missing = _missing_required(state_model, {**defaults, **collected})
 
     if missing:
@@ -139,7 +147,7 @@ def _resolve_flow_inputs(flow: Any, provided: dict[str, Any]) -> dict[str, Any]:
 
 def _is_interactive() -> bool:
     """Prompt only in an interactive terminal, never in non-interactive mode."""
-    return not is_dmn_mode_enabled() and sys.stdin.isatty()
+    return is_interactive()
 
 
 def _flow_state_schema(flow: Any) -> dict[str, Any] | None:
@@ -190,30 +198,6 @@ def _validate_flow_inputs(state_model: Any, values: dict[str, Any]) -> None:
         raise SystemExit(1) from exc
 
 
-def _prompt_for_flow_inputs(
-    missing: list[str], properties: dict[str, Any]
-) -> dict[str, Any]:
-    """Prompt for each missing required field, showing its schema description."""
-    enable_prompt_line_editing()
-    # Prompt chrome goes to stderr so stdout carries only the flow result.
-    click.echo(err=True)
-    click.secho("  Flow inputs", fg="cyan", bold=True, err=True)
-    click.secho("  This flow needs the following to run.", dim=True, err=True)
-
-    collected: dict[str, Any] = {}
-    for name in missing:
-        spec = properties.get(name) or {}
-        description = spec.get("description")
-        if description:
-            click.secho(f"  {description}", dim=True, err=True)
-        raw = click.prompt(
-            click.style(f"  {name}", fg="cyan"),
-            prompt_suffix=click.style(" > ", fg="bright_white"),
-        )
-        collected[name] = _coerce_input(raw, spec)
-    return collected
-
-
 def _coerce_input(raw: str, spec: dict[str, Any]) -> Any:
     """Best-effort coerce a prompted string to the field's JSON-schema type."""
     field_type = spec.get("type")
@@ -230,12 +214,6 @@ def _coerce_input(raw: str, spec: dict[str, Any]) -> Any:
     if field_type == "boolean":
         return raw.strip().lower() in {"1", "true", "yes", "y", "on"}
     return raw
-
-
-def _closest_key(key: str, properties: dict[str, Any]) -> str | None:
-    """Nearest schema field name to a likely typo, if one is close enough."""
-    matches = difflib.get_close_matches(key, list(properties), n=1, cutoff=0.7)
-    return matches[0] if matches else None
 
 
 def plot_declarative_flow(definition: str | Path) -> None:
@@ -337,23 +315,6 @@ def is_declarative_flow_project_env() -> bool:
 def _has_project_file(project_root: Path | None = None) -> bool:
     root = project_root or Path.cwd()
     return (root / "pyproject.toml").is_file()
-
-
-def _parse_inputs(inputs: str | None) -> dict[str, Any] | None:
-    if inputs is None:
-        return None
-
-    try:
-        parsed = json.loads(inputs)
-    except json.JSONDecodeError as exc:
-        click.echo(f"Invalid --inputs JSON: {exc}", err=True)
-        raise SystemExit(1) from exc
-
-    if not isinstance(parsed, dict):
-        click.echo("Invalid --inputs JSON: expected an object.", err=True)
-        raise SystemExit(1)
-
-    return parsed
 
 
 def _format_result(result: Any) -> str:

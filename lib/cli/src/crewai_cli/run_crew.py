@@ -12,9 +12,14 @@ import click
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 from packaging import version
 
+from crewai_cli.input_prompt import (
+    closest_name,
+    is_interactive,
+    parse_inputs_json,
+    prompt_for_inputs,
+)
 from crewai_cli.utils import (
     build_env_with_all_tool_credentials,
-    enable_prompt_line_editing,
     is_dmn_mode_enabled,
 )
 from crewai_cli.version import get_crewai_tools_dependency, get_crewai_version
@@ -31,6 +36,7 @@ _INPUT_PLACEHOLDER_RE = re.compile(r"(?<!{){([A-Za-z_][A-Za-z0-9_\-]*)}(?!})")
 _CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV = "CREWAI_CLI_RUNNER_PACKAGE_DIR"
 _CREWAI_RUNNER_SOURCE_DIR_ENV = "CREWAI_RUNNER_SOURCE_DIR"
 _CREWAI_JSON_CREW_DEFINITION_ENV = "CREWAI_JSON_CREW_DEFINITION"
+_CREWAI_JSON_CREW_INPUTS_ENV = "CREWAI_JSON_CREW_INPUTS"
 _FULL_CREWAI_INSTALL_MESSAGE = f"""\
 CrewAI CLI is installed without the `crewai` package required to run crews.
 
@@ -79,6 +85,8 @@ kwargs = {
 }
 if crew_definition := os.getenv("CREWAI_JSON_CREW_DEFINITION"):
     kwargs["crew_path"] = crew_definition
+if crew_inputs := os.getenv("CREWAI_JSON_CREW_INPUTS"):
+    kwargs["inputs"] = crew_inputs
 
 try:
     module._run_json_crew(**kwargs)
@@ -138,8 +146,8 @@ def _extract_input_placeholders(text: str | None) -> set[str]:
     return set(_INPUT_PLACEHOLDER_RE.findall(text))
 
 
-def _missing_input_names(crew: Any, inputs: dict[str, Any]) -> list[str]:
-    """Return input placeholders used by a crew but not provided as defaults."""
+def _referenced_input_names(crew: Any) -> set[str]:
+    """All ``{placeholder}`` names referenced by a crew's agents and tasks."""
     placeholders: set[str] = set()
 
     for agent in getattr(crew, "agents", []) or []:
@@ -160,32 +168,70 @@ def _missing_input_names(crew: Any, inputs: dict[str, Any]) -> list[str]:
             _extract_input_placeholders(getattr(task, "output_file", None))
         )
 
-    return sorted(name for name in placeholders if name not in inputs)
+    return placeholders
 
 
-def _prompt_for_missing_inputs(
-    crew: Any, default_inputs: dict[str, Any]
+def _missing_input_names(crew: Any, inputs: dict[str, Any]) -> list[str]:
+    """Return input placeholders referenced by a crew but not provided as inputs."""
+    return sorted(name for name in _referenced_input_names(crew) if name not in inputs)
+
+
+def _resolve_crew_inputs(
+    crew: Any,
+    default_inputs: dict[str, Any],
+    provided: dict[str, Any] | None,
+    *,
+    interactive: bool,
 ) -> dict[str, Any]:
-    """Ask for runtime values for placeholders that lack default inputs."""
+    """Resolve kickoff inputs for a declarative crew.
+
+    Mirrors the declarative-flow experience (``_resolve_flow_inputs``): layers
+    ``--inputs`` over the crew's declared ``inputs`` defaults, warns on provided
+    keys that aren't referenced as ``{placeholder}``s, prompts for any
+    still-missing placeholders when interactive, and exits with a pointed
+    message when one is still missing.
+
+    Unlike flows — whose state schema is an authoritative contract, so unknown
+    keys are dropped — the crew placeholder scan is heuristic (it only covers
+    agent/task text fields). An unrecognized key is therefore warned about but
+    *kept*, never dropped: dropping could silently discard a value that a field
+    the scan doesn't cover actually relies on.
+    """
+    referenced = _referenced_input_names(crew)
     inputs = dict(default_inputs or {})
+
+    for key, value in (provided or {}).items():
+        if key not in referenced:
+            suggestion = closest_name(key, referenced)
+            hint = f" Did you mean '{suggestion}'?" if suggestion else ""
+            click.secho(
+                f"  Input '{key}' isn't referenced by any {{placeholder}} "
+                f"in the crew.{hint}",
+                fg="yellow",
+                err=True,
+            )
+        inputs[key] = value
+
     missing = _missing_input_names(crew, inputs)
-    if not missing:
-        return inputs
-
-    enable_prompt_line_editing()
-
-    click.echo()
-    click.secho("  Runtime inputs", fg="cyan", bold=True)
-    click.secho(
-        "  Values for {placeholder} references in your agents and tasks.",
-        dim=True,
-    )
-
-    for name in missing:
-        inputs[name] = click.prompt(
-            click.style(f"  {name}", fg="cyan"),
-            prompt_suffix=click.style(" > ", fg="bright_white"),
+    if missing and interactive:
+        inputs.update(
+            prompt_for_inputs(
+                missing,
+                title="Crew inputs",
+                subtitle="This crew needs the following to run.",
+            )
         )
+        missing = _missing_input_names(crew, inputs)
+
+    if missing:
+        for name in missing:
+            click.secho(f"  Missing required input '{name}'", fg="red", err=True)
+        click.secho(
+            "  Provide them via --inputs or the `inputs` object in crew.json(c).",
+            dim=True,
+            err=True,
+        )
+        raise SystemExit(1)
 
     return inputs
 
@@ -243,29 +289,14 @@ def _prepare_json_crew_for_tui(crew: Any) -> None:
             agent.llm.stream = True
 
 
-def _runtime_inputs_without_prompt(
-    crew: Any, default_inputs: dict[str, Any]
-) -> dict[str, Any]:
-    """Return runtime inputs in non-interactive mode or exit on missing values."""
-    inputs = dict(default_inputs or {})
-    missing = _missing_input_names(crew, inputs)
-    if missing:
-        missing_list = ", ".join(missing)
-        click.echo(
-            "Missing runtime inputs for CREWAI_DMN mode: "
-            f"{missing_list}. Add them to the `inputs` object in crew.json(c).",
-            err=True,
-        )
-        raise SystemExit(1)
-    return inputs
-
-
-def _run_json_crew_without_tui(crew_path: Path) -> Any:
+def _run_json_crew_without_tui(crew_path: Path, provided: dict[str, Any] | None) -> Any:
     """Run a JSON-defined crew with plain terminal output."""
     with _json_loading_status("Preparing crew..."):
         crew, default_inputs = _load_json_crew(crew_path)
 
-    runtime_inputs = _runtime_inputs_without_prompt(crew, default_inputs)
+    runtime_inputs = _resolve_crew_inputs(
+        crew, default_inputs, provided, interactive=False
+    )
     result = crew.kickoff(inputs=runtime_inputs)
     if result is not None:
         click.echo(str(result))
@@ -275,6 +306,7 @@ def _run_json_crew_without_tui(crew_path: Path) -> Any:
 def _run_json_crew(
     trained_agents_file: str | None = None,
     crew_path: str | Path | None = None,
+    inputs: str | None = None,
 ) -> Any:
     """Load and run a JSON-defined crew."""
     from dotenv import load_dotenv
@@ -296,13 +328,17 @@ def _run_json_crew(
         )
     crew_path = Path(crew_path)
 
+    provided = parse_inputs_json(inputs)
+
     if is_dmn_mode_enabled():
-        return _run_json_crew_without_tui(crew_path)
+        return _run_json_crew_without_tui(crew_path, provided)
 
     crew_run_app_cls, crew, default_inputs, task_names, agent_names = (
         _load_json_crew_for_tui(crew_path)
     )
-    runtime_inputs = _prompt_for_missing_inputs(crew, default_inputs)
+    runtime_inputs = _resolve_crew_inputs(
+        crew, default_inputs, provided, interactive=is_interactive()
+    )
 
     app = crew_run_app_cls(
         crew_name=crew.name or "Crew",
@@ -411,12 +447,18 @@ def _json_crew_run_command(project_root: Path | None = None) -> list[str]:
 def _run_json_crew_in_project_env(
     trained_agents_file: str | None = None,
     crew_path: str | Path | None = None,
+    inputs: str | None = None,
 ) -> Any:
     """Run JSON crews from the project's uv-managed environment."""
+    # Validate --inputs up front so bad JSON fails before we spin up the uv env.
+    if inputs is not None:
+        parse_inputs_json(inputs)
+
     if not (Path.cwd() / "pyproject.toml").is_file():
         return _run_json_crew(
             trained_agents_file=trained_agents_file,
             crew_path=crew_path,
+            inputs=inputs,
         )
 
     _install_json_crew_dependencies_if_needed()
@@ -430,6 +472,8 @@ def _run_json_crew_in_project_env(
         env[CREWAI_TRAINED_AGENTS_FILE_ENV] = trained_agents_file
     if crew_path is not None:
         env[_CREWAI_JSON_CREW_DEFINITION_ENV] = str(crew_path)
+    if inputs is not None:
+        env[_CREWAI_JSON_CREW_INPUTS_ENV] = inputs
 
     try:
         subprocess.run(  # noqa: S603
@@ -569,7 +613,9 @@ def run_crew(
             ``CREWAI_TRAINED_AGENTS_FILE`` so agents load suggestions from this
             file instead of the default ``trained_agents_data.pkl``.
         definition: Optional path to a declarative Flow definition.
-        inputs: Optional JSON object passed to a declarative Flow.
+        inputs: Optional JSON object of runtime inputs for a declarative flow
+            or declarative (JSON) crew. Layered over the definition's own
+            defaults; missing required values are prompted for interactively.
     """
     # --definition is a pure override: run that flow directly.
     if definition is not None:
@@ -582,10 +628,13 @@ def run_crew(
 
     pyproject_data = read_toml()
     if json_crew_definition := configured_project_json_crew(pyproject_data):
-        _reject_inputs_for_non_flow(inputs)
+        # Declarative (JSON) crews resolve inputs the same way flows do: --inputs
+        # layers over the crew's declared defaults, missing {placeholder}s are
+        # prompted for, and unknown keys are flagged. Forward the raw JSON.
         _run_json_crew_in_project_env(
             trained_agents_file=trained_agents_file,
             crew_path=json_crew_definition,
+            inputs=inputs,
         )
         return
 
@@ -611,7 +660,9 @@ def run_crew(
 
 def _reject_inputs_for_non_flow(inputs: str | None) -> None:
     if inputs is not None:
-        raise click.UsageError("--inputs is only supported for declarative flows")
+        raise click.UsageError(
+            "--inputs is only supported for declarative flows and crews"
+        )
 
 
 def _run_explicit_declarative_flow(

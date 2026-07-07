@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+import crewai_cli.input_prompt as input_prompt_module
 import crewai_cli.run_declarative_flow as run_declarative_flow_module
 
 
@@ -289,7 +290,7 @@ def test_prompts_for_missing_required_when_interactive(
         prompted.append(text)
         return "typed@example.com"
 
-    monkeypatch.setattr(run_declarative_flow_module.click, "prompt", fake_prompt)
+    monkeypatch.setattr(input_prompt_module.click, "prompt", fake_prompt)
 
     run_declarative_flow_module.run_declarative_flow(str(path))
 
