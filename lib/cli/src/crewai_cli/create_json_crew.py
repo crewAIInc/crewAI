@@ -14,6 +14,7 @@ from rich.text import Text
 
 from crewai_cli.constants import ENV_VARS
 from crewai_cli.git import initialize_if_git_available
+from crewai_cli.model_catalog import get_provider_models
 from crewai_cli.tui_picker import pick_many, pick_one
 from crewai_cli.utils import (
     enable_prompt_line_editing,
@@ -42,41 +43,50 @@ _PROVIDERS: list[tuple[str, str]] = [
     ("watson", "IBM watsonx"),
 ]
 
+# Curated offline fallback / label source. The picker prefers models pulled
+# live from the vendor's own API via ``model_catalog.get_provider_models``;
+# this list is the hand-verified backstop used when no API key is available.
+# Keep entries to real, current model ids — last verified against each vendor's
+# official model docs on 2026-07-05.
 _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
     "openai": [
         ("gpt-5.5", "GPT-5.5"),
         ("gpt-5.5-pro", "GPT-5.5 Pro"),
         ("gpt-5.4", "GPT-5.4"),
-        ("o4-mini", "o4-mini"),
+        ("gpt-5.4-mini", "GPT-5.4 Mini"),
+        ("gpt-5.2", "GPT-5.2"),
         ("gpt-4.1", "GPT-4.1"),
-        ("gpt-4.1-mini", "GPT-4.1 Mini"),
     ],
     "anthropic": [
-        ("claude-opus-4-6", "Claude Opus 4.6"),
+        ("claude-fable-5", "Claude Fable 5"),
+        ("claude-opus-4-8", "Claude Opus 4.8"),
+        ("claude-sonnet-5", "Claude Sonnet 5"),
+        ("claude-opus-4-7", "Claude Opus 4.7"),
+        ("claude-haiku-4-5", "Claude Haiku 4.5"),
         ("claude-sonnet-4-6", "Claude Sonnet 4.6"),
-        ("claude-haiku-4-5-20251001", "Claude Haiku 4.5"),
-        ("claude-3-7-sonnet-20250219", "Claude 3.7 Sonnet"),
-        ("claude-3-5-sonnet-20241022", "Claude 3.5 Sonnet"),
     ],
     "gemini": [
-        ("gemini-3-pro-preview", "Gemini 3 Pro (preview)"),
-        ("gemini-2.5-pro-exp-03-25", "Gemini 2.5 Pro"),
-        ("gemini-2.5-flash-preview-04-17", "Gemini 2.5 Flash"),
-        ("gemini-2.0-flash-001", "Gemini 2.0 Flash"),
-        ("gemini-1.5-pro", "Gemini 1.5 Pro"),
+        ("gemini-3.5-flash", "Gemini 3.5 Flash"),
+        ("gemini-3.1-pro-preview", "Gemini 3.1 Pro (preview)"),
+        ("gemini-3-flash-preview", "Gemini 3 Flash (preview)"),
+        ("gemini-2.5-pro", "Gemini 2.5 Pro"),
+        ("gemini-2.5-flash", "Gemini 2.5 Flash"),
+        ("gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite"),
     ],
     "groq": [
+        ("meta-llama/llama-4-maverick-17b-128e-instruct", "Llama 4 Maverick"),
+        ("meta-llama/llama-4-scout-17b-16e-instruct", "Llama 4 Scout"),
+        ("openai/gpt-oss-120b", "GPT-OSS 120B"),
+        ("qwen/qwen3-32b", "Qwen3 32B"),
+        ("moonshotai/kimi-k2-instruct-0905", "Kimi K2"),
         ("llama-3.3-70b-versatile", "Llama 3.3 70B"),
-        ("llama-3.1-70b-versatile", "Llama 3.1 70B"),
-        ("llama-3.1-8b-instant", "Llama 3.1 8B"),
-        ("deepseek-r1-distill-llama-70b", "DeepSeek R1 70B"),
-        ("mixtral-8x7b-32768", "Mixtral 8x7B"),
     ],
     "ollama": [
         ("llama3.3", "Llama 3.3"),
-        ("llama3.1", "Llama 3.1"),
+        ("qwen3", "Qwen 3"),
         ("deepseek-r1", "DeepSeek R1"),
-        ("qwen2.5", "Qwen 2.5"),
+        ("gpt-oss", "GPT-OSS"),
+        ("gemma3", "Gemma 3"),
         ("mistral", "Mistral"),
     ],
 }
@@ -758,7 +768,9 @@ def _select_model() -> str:
     provider_key, provider_name = _PROVIDERS[p_idx]
     click.secho(f"  → {provider_name}", fg="green")
 
-    models = _PROVIDER_MODELS.get(provider_key, [])
+    # Prefer the latest models pulled live from the vendor / LiteLLM; the
+    # curated ``_PROVIDER_MODELS`` entry is the offline fallback and label source.
+    models = get_provider_models(provider_key, _PROVIDER_MODELS.get(provider_key, []))
     if not models:
         custom = click.prompt(
             click.style(f"  Enter model name for {provider_key}/", fg="cyan"),

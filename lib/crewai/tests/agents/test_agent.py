@@ -3,13 +3,14 @@
 import os
 import threading
 from unittest import mock
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 import warnings
 
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
 from crewai.constants import DEFAULT_LLM_MODEL
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
+from crewai.experimental.agent_executor import AgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -800,6 +801,97 @@ def test_agent_human_input():
         # It should have requested feedback twice.
         assert mock_prompt_input.call_count == 2
         assert output.strip().lower() == "hello"
+
+
+def test_agent_default_executor_human_input():
+    from crewai.core.providers.human_input import SyncHumanInputProvider
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+    )
+    task = Task(
+        agent=agent,
+        description="Say the word: Hi",
+        expected_output="The word: Hi",
+        human_input=True,
+    )
+    answers = iter(
+        [
+            AgentFinish(output="Hi", thought="", text="Hi"),
+            AgentFinish(output="Hello", thought="", text="Hello"),
+        ]
+    )
+    feedback_responses = iter(["Don't say hi, say Hello instead!", ""])
+
+    def kickoff_side_effect(executor, *_args, **_kwargs):
+        executor.state.current_answer = next(answers)
+        executor.state.is_finished = True
+
+    with (
+        patch.object(
+            SyncHumanInputProvider,
+            "_prompt_input",
+            side_effect=lambda *_args, **_kwargs: next(feedback_responses),
+        ) as mock_prompt_input,
+        patch.object(
+            AgentExecutor, "kickoff", autospec=True, side_effect=kickoff_side_effect
+        ) as mock_kickoff,
+    ):
+        output = agent.execute_task(task)
+
+    assert output == "Hello"
+    assert mock_prompt_input.call_count == 2
+    assert mock_kickoff.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_agent_default_executor_async_human_input():
+    from crewai.core.providers.human_input import SyncHumanInputProvider
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+    )
+    task = Task(
+        agent=agent,
+        description="Say the word: Hi",
+        expected_output="The word: Hi",
+        human_input=True,
+    )
+    answers = iter(
+        [
+            AgentFinish(output="Hi", thought="", text="Hi"),
+            AgentFinish(output="Hello", thought="", text="Hello"),
+        ]
+    )
+    feedback_responses = iter(["Don't say hi, say Hello instead!", ""])
+
+    async def kickoff_side_effect(executor, *_args, **_kwargs):
+        executor.state.current_answer = next(answers)
+        executor.state.is_finished = True
+
+    with (
+        patch.object(
+            SyncHumanInputProvider,
+            "_prompt_input_async",
+            new_callable=AsyncMock,
+            side_effect=lambda *_args, **_kwargs: next(feedback_responses),
+        ) as mock_prompt_input,
+        patch.object(
+            AgentExecutor,
+            "kickoff_async",
+            autospec=True,
+            side_effect=kickoff_side_effect,
+        ) as mock_kickoff,
+    ):
+        output = await agent.aexecute_task(task)
+
+    assert output == "Hello"
+    assert mock_prompt_input.await_count == 2
+    assert mock_kickoff.await_count == 2
 
 
 def test_interpolate_inputs():
