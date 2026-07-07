@@ -89,13 +89,6 @@ def _resolve_flow_inputs(flow: Any, provided: dict[str, Any]) -> dict[str, Any]:
         # dict / unschematized state — nothing to derive; pass inputs through.
         return dict(provided)
 
-    # ``id`` signals a persistence restore: kickoff hydrates the full state from
-    # storage, so required fields may come from the restored state rather than
-    # --inputs. Forward the inputs unchanged instead of prompting/erroring for
-    # fields the resume will supply.
-    if "id" in provided:
-        return dict(provided)
-
     properties = {
         name: spec
         for name, spec in (schema.get("properties") or {}).items()
@@ -104,10 +97,21 @@ def _resolve_flow_inputs(flow: Any, provided: dict[str, Any]) -> dict[str, Any]:
     state_model = type(flow.state)
     defaults = _flow_state_defaults(flow)
 
+    # ``id`` signals a persistence restore: kickoff hydrates the full state from
+    # storage, so required fields may come from the restored state rather than
+    # --inputs. We still filter the rest of the payload below, but skip the
+    # required-field prompt and pre-kickoff validation, which would otherwise
+    # fail on fields the resume will supply.
+    restoring = "id" in provided
+
     # Unknown keys are almost always typos — warn and drop them (they'd fail
-    # structured-state validation at kickoff anyway).
+    # structured-state validation at kickoff anyway). ``id`` is a reserved
+    # kickoff key rather than a state field, so forward it untouched.
     collected: dict[str, Any] = {}
     for key, value in provided.items():
+        if key == "id":
+            collected["id"] = value
+            continue
         if key in properties:
             collected[key] = value
             continue
@@ -118,6 +122,9 @@ def _resolve_flow_inputs(flow: Any, provided: dict[str, Any]) -> dict[str, Any]:
             fg="yellow",
             err=True,
         )
+
+    if restoring:
+        return collected
 
     missing = _missing_required(state_model, {**defaults, **collected})
     if missing and _is_interactive():

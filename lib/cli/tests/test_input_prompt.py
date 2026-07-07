@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-import crewai_cli.input_prompt as input_prompt_module
 from crewai_cli.input_prompt import (
     closest_name,
     parse_inputs_json,
@@ -51,7 +50,7 @@ def test_prompt_for_inputs_uses_describe_and_coerce(monkeypatch, capsys):
         seen.append(text)
         return "42"
 
-    monkeypatch.setattr(input_prompt_module.click, "prompt", fake_prompt)
+    monkeypatch.setattr("crewai_cli.input_prompt.click.prompt", fake_prompt)
 
     result = prompt_for_inputs(
         ["count"],
@@ -71,7 +70,7 @@ def test_prompt_for_inputs_uses_describe_and_coerce(monkeypatch, capsys):
 
 def test_prompt_for_inputs_keeps_raw_string_without_coerce(monkeypatch):
     monkeypatch.setattr(
-        input_prompt_module.click, "prompt", lambda text, **kwargs: "AI"
+        "crewai_cli.input_prompt.click.prompt", lambda text, **kwargs: "AI"
     )
 
     result = prompt_for_inputs(

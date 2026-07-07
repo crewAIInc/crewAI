@@ -381,3 +381,22 @@ def test_id_only_input_skips_required_validation(tmp_path: Path) -> None:
     resolved = run_declarative_flow_module._resolve_flow_inputs(flow, {"id": "run-123"})
 
     assert resolved == {"id": "run-123"}
+
+
+def test_id_restore_still_drops_unknown_keys(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # A persistence restore (`id` present) still filters typo keys so they don't
+    # reach kickoff and trip strict (extra="forbid") state models — it only
+    # skips the required-field prompt/validation, not the unknown-key warning.
+    path = _write(tmp_path, REQUIRED_FLOW_YAML)
+    flow = run_declarative_flow_module.load_declarative_flow(str(path))
+
+    resolved = run_declarative_flow_module._resolve_flow_inputs(
+        flow, {"id": "run-123", "prospect_emai": "typo"}
+    )
+
+    captured = capsys.readouterr()
+    assert resolved == {"id": "run-123"}  # id kept, typo dropped
+    assert "Ignoring unknown input 'prospect_emai'" in captured.err
+    assert "Ignoring unknown input 'id'" not in captured.err
