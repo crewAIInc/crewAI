@@ -335,3 +335,19 @@ def test_validates_input_types_before_kickoff(
         run_declarative_flow_module.run_declarative_flow(str(path), '{"count":"nope"}')
 
     assert "Invalid input 'count'" in capsys.readouterr().err
+
+
+def test_reserved_id_input_is_forwarded_not_dropped(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # `id` is a reserved kickoff key (persistence restore); it must pass through
+    # instead of being flagged as an unknown key and dropped.
+    path = _write(tmp_path, REQUIRED_FLOW_YAML)
+
+    run_declarative_flow_module.run_declarative_flow(
+        str(path), '{"id":"run-123","prospect_email":"a@b.com"}'
+    )
+
+    captured = capsys.readouterr()
+    assert captured.out == "a@b.com\n"
+    assert "Ignoring unknown input 'id'" not in captured.err

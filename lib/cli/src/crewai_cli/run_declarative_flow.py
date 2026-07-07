@@ -89,10 +89,11 @@ def _resolve_flow_inputs(flow: Any, provided: dict[str, Any]) -> dict[str, Any]:
     defaults = _flow_state_defaults(flow)
 
     # Unknown keys are almost always typos — warn and drop them (they'd fail
-    # structured-state validation at kickoff anyway).
+    # structured-state validation at kickoff anyway). ``id`` is a reserved
+    # kickoff key (persistence restore), so let it through untouched.
     collected: dict[str, Any] = {}
     for key, value in provided.items():
-        if key in properties:
+        if key in properties or key == "id":
             collected[key] = value
             continue
         suggestion = _closest_key(key, properties)
@@ -112,7 +113,9 @@ def _resolve_flow_inputs(flow: Any, provided: dict[str, Any]) -> dict[str, Any]:
         for name in missing:
             description = (properties.get(name) or {}).get("description")
             suffix = f" — {description}" if description else ""
-            click.secho(f"  Missing required input '{name}'{suffix}", fg="red", err=True)
+            click.secho(
+                f"  Missing required input '{name}'{suffix}", fg="red", err=True
+            )
         raise SystemExit(1)
 
     _validate_flow_inputs(state_model, {**defaults, **collected})
