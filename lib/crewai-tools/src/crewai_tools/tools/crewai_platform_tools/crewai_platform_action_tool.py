@@ -1,7 +1,6 @@
 """Crewai Enterprise Tools."""
 
 import json
-import os
 from typing import Any
 
 from crewai.tools import BaseTool
@@ -12,6 +11,7 @@ import requests
 from crewai_tools.tools.crewai_platform_tools.misc import (
     get_platform_api_base_url,
     get_platform_integration_token,
+    platform_tls_verify,
 )
 
 
@@ -72,7 +72,7 @@ class CrewAIPlatformActionTool(BaseTool):
                 headers=headers,
                 json=payload,
                 timeout=60,
-                verify=os.environ.get("CREWAI_FACTORY", "false").lower() != "true",
+                verify=platform_tls_verify(),
             )
 
             data = response.json()

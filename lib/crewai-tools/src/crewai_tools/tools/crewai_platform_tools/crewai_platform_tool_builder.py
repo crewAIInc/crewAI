@@ -1,7 +1,6 @@
 """CrewAI platform tool builder for fetching and creating action tools."""
 
 import logging
-import os
 from types import TracebackType
 from typing import Any
 
@@ -14,6 +13,7 @@ from crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool import
 from crewai_tools.tools.crewai_platform_tools.misc import (
     get_platform_api_base_url,
     get_platform_integration_token,
+    platform_tls_verify,
 )
 
 
@@ -49,7 +49,7 @@ class CrewaiPlatformToolBuilder:
                 headers=headers,
                 timeout=30,
                 params={"apps": ",".join(self._apps)},
-                verify=os.environ.get("CREWAI_FACTORY", "false").lower() != "true",
+                verify=platform_tls_verify(),
             )
             response.raise_for_status()
         except Exception as e:
