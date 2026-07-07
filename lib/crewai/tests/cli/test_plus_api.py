@@ -1,8 +1,6 @@
 import os
 import unittest
-from unittest.mock import ANY, AsyncMock, MagicMock, patch
-
-import pytest
+from unittest.mock import ANY, MagicMock, patch
 
 from crewai.plus_api import PlusAPI
 
@@ -396,28 +394,23 @@ class TestPlusAPI(unittest.TestCase):
         )
 
 
-@pytest.mark.asyncio
-@patch("httpx.AsyncClient")
-async def test_get_agent(mock_async_client_class):
+@patch("crewai_core.plus_api.PlusAPI._make_request")
+def test_get_agent(mock_make_request):
     api = PlusAPI("test_api_key")
     mock_response = MagicMock()
-    mock_client_instance = AsyncMock()
-    mock_client_instance.get.return_value = mock_response
-    mock_async_client_class.return_value.__aenter__.return_value = mock_client_instance
+    mock_make_request.return_value = mock_response
 
-    response = await api.get_agent("test_agent_handle")
+    response = api.get_agent("test_agent_handle")
 
-    mock_client_instance.get.assert_called_once_with(
-        f"{api.base_url}/crewai_plus/api/v1/agents/test_agent_handle",
-        headers=api.headers,
+    mock_make_request.assert_called_once_with(
+        "GET", "/crewai_plus/api/v1/agents/test_agent_handle"
     )
     assert response == mock_response
 
 
-@pytest.mark.asyncio
-@patch("httpx.AsyncClient")
+@patch("crewai_core.plus_api.PlusAPI._make_request")
 @patch("crewai_core.plus_api.Settings")
-async def test_get_agent_with_org_uuid(mock_settings_class, mock_async_client_class):
+def test_get_agent_with_org_uuid(mock_settings_class, mock_make_request):
     org_uuid = "test-org-uuid"
     mock_settings = MagicMock()
     mock_settings.org_uuid = org_uuid
@@ -427,15 +420,12 @@ async def test_get_agent_with_org_uuid(mock_settings_class, mock_async_client_cl
     api = PlusAPI("test_api_key")
 
     mock_response = MagicMock()
-    mock_client_instance = AsyncMock()
-    mock_client_instance.get.return_value = mock_response
-    mock_async_client_class.return_value.__aenter__.return_value = mock_client_instance
+    mock_make_request.return_value = mock_response
 
-    response = await api.get_agent("test_agent_handle")
+    response = api.get_agent("test_agent_handle")
 
-    mock_client_instance.get.assert_called_once_with(
-        f"{api.base_url}/crewai_plus/api/v1/agents/test_agent_handle",
-        headers=api.headers,
+    mock_make_request.assert_called_once_with(
+        "GET", "/crewai_plus/api/v1/agents/test_agent_handle"
     )
     assert "X-Crewai-Organization-Id" in api.headers
     assert api.headers["X-Crewai-Organization-Id"] == org_uuid
