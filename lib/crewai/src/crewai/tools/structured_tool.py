@@ -54,6 +54,16 @@ def _infer_result_schema_from_callable(
     return None
 
 
+def _try_json_serialize(raw_result: Any) -> str | None:
+    """Attempt to JSON-serialize a dict/list result; return None on failure."""
+    if isinstance(raw_result, (dict, list)):
+        try:
+            return json.dumps(raw_result, ensure_ascii=False)
+        except Exception:
+            return None
+    return None
+
+
 def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
     """Format the raw tool output into a string representation for the agent.
 
@@ -66,12 +76,8 @@ def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
 
     result_schema = getattr(tool, "result_schema", None)
     if not (isinstance(result_schema, type) and issubclass(result_schema, BaseModel)):
-        if isinstance(raw_result, (dict, list)):
-            try:
-                return json.dumps(raw_result, ensure_ascii=False)
-            except Exception:
-                return str(raw_result)
-        return str(raw_result)
+        serialized = _try_json_serialize(raw_result)
+        return serialized if serialized is not None else str(raw_result)
 
     try:
         validation_input = raw_result
@@ -83,22 +89,19 @@ def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
         validated = result_schema.model_validate(validation_input)
         return validated.model_dump_json()
     except Exception as exc:
-        if isinstance(raw_result, (dict, list)):
-            try:
-                serialized = json.dumps(raw_result, ensure_ascii=False)
-                warnings.warn(
-                    (
-                        f"Failed to validate output from tool "
-                        f"'{getattr(tool, 'name', '<unknown>')}' using result_schema "
-                        f"'{result_schema.__name__}': {exc}. "
-                        "Falling back to JSON-serialized raw_result."
-                    ),
-                    RuntimeWarning,
-                    stacklevel=2,
-                )
-                return serialized
-            except Exception:
-                pass
+        serialized = _try_json_serialize(raw_result)
+        if serialized is not None:
+            warnings.warn(
+                (
+                    f"Failed to validate output from tool "
+                    f"'{getattr(tool, 'name', '<unknown>')}' using result_schema "
+                    f"'{result_schema.__name__}': {exc}. "
+                    "Falling back to JSON-serialized raw_result."
+                ),
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            return serialized
 
         warnings.warn(
             (
