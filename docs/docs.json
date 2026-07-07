@@ -34617,6 +34617,42 @@
   },
   "redirects": [
     {
+      "source": "/enterprise/features/agent-control-plane/rules",
+      "destination": "/edge/en/enterprise/features/agent-control-plane/policies"
+    },
+    {
+      "source": "/en/enterprise/features/agent-control-plane/rules",
+      "destination": "/edge/en/enterprise/features/agent-control-plane/policies"
+    },
+    {
+      "source": "/edge/en/enterprise/features/agent-control-plane/rules",
+      "destination": "/edge/en/enterprise/features/agent-control-plane/policies"
+    },
+    {
+      "source": "/pt-BR/enterprise/features/agent-control-plane/rules",
+      "destination": "/edge/pt-BR/enterprise/features/agent-control-plane/policies"
+    },
+    {
+      "source": "/edge/pt-BR/enterprise/features/agent-control-plane/rules",
+      "destination": "/edge/pt-BR/enterprise/features/agent-control-plane/policies"
+    },
+    {
+      "source": "/ko/enterprise/features/agent-control-plane/rules",
+      "destination": "/edge/ko/enterprise/features/agent-control-plane/policies"
+    },
+    {
+      "source": "/edge/ko/enterprise/features/agent-control-plane/rules",
+      "destination": "/edge/ko/enterprise/features/agent-control-plane/policies"
+    },
+    {
+      "source": "/ar/enterprise/features/agent-control-plane/rules",
+      "destination": "/edge/ar/enterprise/features/agent-control-plane/policies"
+    },
+    {
+      "source": "/edge/ar/enterprise/features/agent-control-plane/rules",
+      "destination": "/edge/ar/enterprise/features/agent-control-plane/policies"
+    },
+    {
       "source": "/api-reference",
       "destination": "/v1.15.1/en/api-reference/introduction"
     },
@@ -34703,42 +34739,6 @@
     {
       "source": "/examples/:path*",
       "destination": "/v1.15.1/en/examples/:path*"
-    },
-    {
-      "source": "/enterprise/features/agent-control-plane/rules",
-      "destination": "/edge/en/enterprise/features/agent-control-plane/policies"
-    },
-    {
-      "source": "/en/enterprise/features/agent-control-plane/rules",
-      "destination": "/edge/en/enterprise/features/agent-control-plane/policies"
-    },
-    {
-      "source": "/edge/en/enterprise/features/agent-control-plane/rules",
-      "destination": "/edge/en/enterprise/features/agent-control-plane/policies"
-    },
-    {
-      "source": "/pt-BR/enterprise/features/agent-control-plane/rules",
-      "destination": "/edge/pt-BR/enterprise/features/agent-control-plane/policies"
-    },
-    {
-      "source": "/edge/pt-BR/enterprise/features/agent-control-plane/rules",
-      "destination": "/edge/pt-BR/enterprise/features/agent-control-plane/policies"
-    },
-    {
-      "source": "/ko/enterprise/features/agent-control-plane/rules",
-      "destination": "/edge/ko/enterprise/features/agent-control-plane/policies"
-    },
-    {
-      "source": "/edge/ko/enterprise/features/agent-control-plane/rules",
-      "destination": "/edge/ko/enterprise/features/agent-control-plane/policies"
-    },
-    {
-      "source": "/ar/enterprise/features/agent-control-plane/rules",
-      "destination": "/edge/ar/enterprise/features/agent-control-plane/policies"
-    },
-    {
-      "source": "/edge/ar/enterprise/features/agent-control-plane/rules",
-      "destination": "/edge/ar/enterprise/features/agent-control-plane/policies"
     },
     {
       "source": "/en/:slug*",
