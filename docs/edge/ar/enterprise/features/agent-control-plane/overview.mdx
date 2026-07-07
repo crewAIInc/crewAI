@@ -10,17 +10,17 @@ icon: "book-open"
 
   - **نظرة عامة** *(أنت هنا)*
   - [المراقبة](/ar/enterprise/features/agent-control-plane/monitoring)
-  - [القواعد](/ar/enterprise/features/agent-control-plane/rules)
+  - [السياسات](/edge/ar/enterprise/features/agent-control-plane/policies)
 </Info>
 
 ## نظرة عامة
 
-**Agent Control Plane** (ACP) هو مركز العمليات لكل ما يعمل لديك على CrewAI AMP. إنها شاشة واحدة — مقسّمة إلى تبويبَي **Automations** و **Rules** — تمنح فريقك القدرة على:
+**Agent Control Plane** (ACP) هو مركز العمليات لكل ما يعمل لديك على CrewAI AMP. إنها شاشة واحدة — مقسّمة إلى تبويبَي **Automations** و **Policies** — تمنح فريقك القدرة على:
 
 - مراقبة **حالة (الصحة)** كل أتمتة حيّة (crew أو flow) بتفصيل `Critical` / `Warning` / `Healthy` وعدد عمليات التنفيذ.
 - تتبع **استهلاك LLM** — الرموز (tokens) والتكلفة — لكل أتمتة ولكل مزود ولكل نموذج، مع الفرق مقابل الفترة السابقة.
 - التعمّق في أي أتمتة منفردة أو مزود نماذج لرؤية المخططات الزمنية وتفصيل البيانات لكل مزود.
-- تطبيق **قواعد (Rules)** على مستوى المؤسسة (اليوم: PII Redaction) عبر العديد من الأتمتات دفعة واحدة بدلاً من تعديل كل deployment على حدة.
+- تطبيق **سياسات (Policies)** على مستوى المؤسسة (اليوم: PII Redaction) عبر العديد من الأتمتات دفعة واحدة بدلاً من تعديل كل deployment على حدة.
 
 <Frame>
   ![نظرة عامة على Agent Control Plane](/images/enterprise/acp-overview-automations-sankey.png)
@@ -33,7 +33,7 @@ icon: "book-open"
 يجيب التبويبان عن سؤالَين مختلفَين:
 
 - **Automations** — *"كيف يتصرف أسطولي الآن، وكم يكلّفني؟"* راجع [المراقبة](/ar/enterprise/features/agent-control-plane/monitoring).
-- **Rules** — *"كيف أفرض سياسة (مثل PII redaction) عبر العديد من عمليات النشر دون إعادة نشر كل واحدة؟"* راجع [القواعد](/ar/enterprise/features/agent-control-plane/rules).
+- **Policies** — *"كيف أفرض سياسة (مثل PII redaction) عبر العديد من عمليات النشر دون إعادة نشر كل واحدة؟"* راجع [السياسات](/edge/ar/enterprise/features/agent-control-plane/policies).
 
 ## المتطلبات
 
@@ -42,11 +42,11 @@ icon: "book-open"
 </Warning>
 
 <Warning>
-  يُشترط **خطة Enterprise أو Ultra** لإنشاء أو تعديل [القواعد](/ar/enterprise/features/agent-control-plane/rules). يمكن للمؤسسات على الخطط الأدنى فتح تبويب Rules وعرض القواعد الموجودة، ولكن يُعرض المحرر للقراءة فقط مع شارة قفل "Enterprise" والتنبيه *"PII Redaction rules require an Enterprise plan."*. المراقبة (تبويب Automations) متاحة في جميع الخطط حيث يكون هذا الميزة مفعّلة.
+  يُشترط **خطة Enterprise أو Ultra** لإنشاء أو تعديل [السياسات](/edge/ar/enterprise/features/agent-control-plane/policies). يمكن للمؤسسات على الخطط الأدنى فتح تبويب Policies وعرض السياسات الموجودة، ولكن يُعرض المحرر للقراءة فقط مع شارة قفل "Enterprise" والتنبيه *"PII Redaction policies require an Enterprise plan."*. المراقبة (تبويب Automations) متاحة في جميع الخطط حيث يكون هذا الميزة مفعّلة.
 </Warning>
 
 - يجب أن تكون ميزة **Agent Control Plane** مفعّلة لمؤسستك. إن لم ترها في الشريط الجانبي، اطلب من مالك الحساب تفعيلها.
-- داخل ACP، يحكم [RBAC](/ar/enterprise/features/rbac) الوصول: `read` للعرض في لوحة المعلومات والقواعد، و`manage` لإنشاء وتعديل وتشغيل/إيقاف وحذف القواعد.
+- داخل ACP، يحكم [RBAC](/ar/enterprise/features/rbac) الوصول: `read` للعرض في لوحة المعلومات والسياسات، و`manage` لإنشاء وتعديل وتشغيل/إيقاف وحذف السياسات.
 - يمكن ضبط نطاق جميع المخططات والجداول إلى **آخر 24 ساعة** أو **الأسبوع الماضي** أو **آخر 30 يوماً** عبر مُحدّد الوقت في أعلى اليمين. تقارن قيم الفرق (`↑ 8 vs yesterday`, `↓ $20.57 vs yesterday` وغيرها) النافذة المختارة بالنافذة السابقة بنفس الطول.
 
 ## ما يمكنك فعله هنا
@@ -55,7 +55,7 @@ icon: "book-open"
   <Card title="المراقبة" icon="gauge" href="/ar/enterprise/features/agent-control-plane/monitoring">
     راقب صحة الأسطول وإنفاق LLM عبر بطاقات المقاييس و sankey التفاعلي وجداول لكل أتمتة ولوحات جانبية للتعمق في أي أتمتة أو مزود.
   </Card>
-  <Card title="القواعد" icon="shield-check" href="/ar/enterprise/features/agent-control-plane/rules">
+  <Card title="السياسات" icon="shield-check" href="/edge/ar/enterprise/features/agent-control-plane/policies">
     طبّق سياسات PII Redaction على مستوى المؤسسة بنطاق محدد بالأدوات والوسوم. تسري التغييرات في التنفيذ التالي — دون الحاجة لإعادة نشر.
   </Card>
 </CardGroup>
@@ -67,10 +67,10 @@ icon: "book-open"
     تعمّق في تنفيذ واحد لرؤية تفكير الوكيل واستدعاءات الأدوات واستخدام الرموز.
   </Card>
   <Card title="RBAC" icon="users" href="/ar/enterprise/features/rbac">
-    أدِر من يمكنه قراءة Agent Control Plane ومن يمكنه تعديل القواعد.
+    أدِر من يمكنه قراءة Agent Control Plane ومن يمكنه تعديل السياسات.
   </Card>
   <Card title="PII Redaction للـ Traces" icon="lock" href="/ar/enterprise/features/pii-trace-redactions">
-    كتالوج الكيانات وضبط PII لكل deployment التي تستند إليها القواعد.
+    كتالوج الكيانات وضبط PII لكل deployment التي تستند إليها السياسات.
   </Card>
   <Card title="النشر إلى AMP" icon="rocket" href="/ar/enterprise/guides/deploy-to-amp">
     انشر crew على إصدار crewAI يدعم Agent Control Plane.
@@ -78,5 +78,5 @@ icon: "book-open"
 </CardGroup>
 
 <Card title="تحتاج مساعدة؟" icon="headset" href="mailto:support@crewai.com">
-  تواصل مع فريق الدعم للمساعدة في تفسير المقاييس أو تصميم القواعد.
+  تواصل مع فريق الدعم للمساعدة في تفسير المقاييس أو تصميم السياسات.
 </Card>

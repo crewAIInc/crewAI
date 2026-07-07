@@ -11,7 +11,7 @@ mode: "wide"
 
   - [Overview](/en/enterprise/features/agent-control-plane/overview)
   - **Monitoring** *(you are here)*
-  - [Rules](/en/enterprise/features/agent-control-plane/rules)
+  - [Policies](/edge/en/enterprise/features/agent-control-plane/policies)
 </Info>
 
 ## Overview
@@ -58,7 +58,7 @@ The **Automations** sub-tab is the per-deployment breakdown of fleet health. Eac
 | **Last execution** | Time since the most recent run. |
 | **Health Status Breakdown** | Stacked bar of `Critical` / `Warning` / `Healthy` percentages for executions in the window. |
 | **Executions with Errors** | Total failed executions in the window. |
-| **PII detection applied** | `Yes` if a per-deployment PII config or a matching [PII rule](/en/enterprise/features/agent-control-plane/rules) is active. |
+| **PII detection applied** | `Yes` if a per-deployment PII config or a matching [PII policy](/edge/en/enterprise/features/agent-control-plane/policies) is active. |
 | **Executions** | Total executions in the window. |
 | **Last updated** | When the deployment was last re-deployed. |
 | **Crew Version** | The `crewai` version reported by the deployment. An info icon next to versions below `1.13` flags rows that can't contribute metrics. |
@@ -96,8 +96,8 @@ Filter by **LLM provider** and sort by `Cost`, `Executions`, or `Last run`.
   <Card title="Agent Control Plane — Overview" icon="book-open" href="/en/enterprise/features/agent-control-plane/overview">
     What ACP is, requirements, plan tiers, and RBAC.
   </Card>
-  <Card title="Agent Control Plane — Rules" icon="shield-check" href="/en/enterprise/features/agent-control-plane/rules">
-    Apply organization-wide PII Redaction rules across many automations.
+  <Card title="Agent Control Plane — Policies" icon="shield-check" href="/edge/en/enterprise/features/agent-control-plane/policies">
+    Apply organization-wide PII Redaction policies across many automations.
   </Card>
   <Card title="Traces" icon="timeline" href="/en/enterprise/features/traces">
     Drill into a single execution to see agent reasoning, tool calls, and token usage.

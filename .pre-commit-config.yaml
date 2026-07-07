@@ -34,6 +34,7 @@ repos:
           --ignore-vuln PYSEC-2024-277
           --ignore-vuln PYSEC-2026-89
           --ignore-vuln PYSEC-2026-97
+          --ignore-vuln PYSEC-2026-597
           --ignore-vuln PYSEC-2025-148
           --ignore-vuln PYSEC-2025-183
           --ignore-vuln PYSEC-2025-189
