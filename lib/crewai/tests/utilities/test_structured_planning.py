@@ -17,7 +17,39 @@ from crewai.utilities.reasoning_handler import (
     FUNCTION_SCHEMA,
     AgentReasoning,
     ReasoningPlan,
+    _detect_plan_ready,
 )
+
+
+class TestDetectPlanReady:
+    """Readiness detection must accept a bare READY marker, not only the full
+    'READY: I am ready to execute the task.' sentence (#6204)."""
+
+    def test_bare_ready_marker_is_ready(self):
+        assert _detect_plan_ready("1. do X\n2. do Y\n\n---\n\nREADY") is True
+
+    def test_full_sentence_still_ready(self):
+        assert _detect_plan_ready("plan...\nREADY: I am ready to execute the task.")
+
+    def test_not_ready_marker_is_not_ready(self):
+        assert (
+            _detect_plan_ready("plan...\n\nNOT READY: I need more detail.") is False
+        )
+
+    def test_last_marker_wins_over_mid_text_not_ready(self):
+        text = "Step 1 is not ready to run yet without input.\n\nREADY"
+        assert _detect_plan_ready(text) is True
+
+    def test_case_insensitive(self):
+        assert _detect_plan_ready("plan...\n\nready") is True
+        assert _detect_plan_ready("plan...\n\nnot ready") is False
+
+    def test_no_marker_defaults_to_not_ready(self):
+        assert _detect_plan_ready("just a plan with no verdict") is False
+
+    def test_parse_planning_response_detects_bare_ready(self):
+        _plan, ready = AgentReasoning._parse_planning_response("my plan\n\nREADY")
+        assert ready is True
 
 
 class TestFunctionSchema:
