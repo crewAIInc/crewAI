@@ -849,9 +849,13 @@ class ToolUsage:
             return ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
 
         if not isinstance(arguments, dict):
+            error = ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
+            # A bare ``raise`` here would fail with "No active exception to
+            # re-raise" (this path is outside the except block above), so raise
+            # the intended ToolUsageError explicitly.
             if raise_error:
-                raise
-            return ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
+                raise error
+            return error
 
         return ToolCalling(
             tool_name=sanitize_tool_name(tool.name),
