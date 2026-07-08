@@ -372,6 +372,7 @@ class OpenAICompletion(BaseLLM):
             "base_url": self.base_url
             or self.api_base
             or os.getenv("OPENAI_BASE_URL")
+            or os.getenv("OPENAI_API_BASE")
             or None,
             "timeout": self.timeout,
             "max_retries": self.max_retries,

@@ -435,8 +435,12 @@ class LLM(BaseLLM):
 
             canonical_provider = provider_mapping.get(prefix.lower())
 
-            if canonical_provider and cls._validate_model_in_constants(
-                model_part, canonical_provider
+            if canonical_provider and (
+                cls._validate_model_in_constants(model_part, canonical_provider)
+                or (
+                    canonical_provider == "openai"
+                    and cls._has_custom_openai_base_url(kwargs)
+                )
             ):
                 provider = canonical_provider
                 use_native = True
@@ -589,6 +593,15 @@ class LLM(BaseLLM):
             return True
 
         return cls._matches_provider_pattern(model, provider)
+
+    @staticmethod
+    def _has_custom_openai_base_url(kwargs: dict[str, Any]) -> bool:
+        return bool(
+            kwargs.get("base_url")
+            or kwargs.get("api_base")
+            or os.getenv("OPENAI_BASE_URL")
+            or os.getenv("OPENAI_API_BASE")
+        )
 
     @classmethod
     def _infer_provider_from_model(cls, model: str) -> str:

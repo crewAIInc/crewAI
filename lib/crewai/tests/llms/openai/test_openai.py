@@ -34,6 +34,42 @@ def test_openai_completion_is_used_when_no_provider_prefix():
     assert llm.provider == "openai"
     assert llm.model == "gpt-4o"
 
+def test_openai_prefixed_custom_endpoint_uses_native_sdk_for_nested_model_id():
+    """Custom OpenAI-compatible endpoints may serve non-OpenAI model ids."""
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False):
+        llm = LLM(
+            model="openai/anthropic/claude-sonnet-4-6",
+            base_url="https://asimov.example/v1",
+            is_litellm=False,
+        )
+
+    assert isinstance(llm, OpenAICompletion)
+    assert llm.is_litellm is False
+    assert llm.provider == "openai"
+    assert llm.model == "anthropic/claude-sonnet-4-6"
+    assert llm.base_url == "https://asimov.example/v1"
+
+def test_openai_prefixed_custom_endpoint_uses_legacy_api_base_env_var():
+    """Legacy OPENAI_API_BASE still marks the endpoint as OpenAI-compatible."""
+    with patch.dict(
+        os.environ,
+        {
+            "OPENAI_API_KEY": "test-key",
+            "OPENAI_API_BASE": "https://asimov.example/v1",
+        },
+        clear=False,
+    ):
+        os.environ.pop("OPENAI_BASE_URL", None)
+        llm = LLM(
+            model="openai/anthropic/claude-sonnet-4-6",
+            is_litellm=False,
+        )
+
+    assert isinstance(llm, OpenAICompletion)
+    assert llm.is_litellm is False
+    assert llm.provider == "openai"
+    assert llm.model == "anthropic/claude-sonnet-4-6"
+
 @pytest.mark.vcr()
 def test_openai_is_default_provider_without_explicit_llm_set_on_agent():
     """
@@ -421,12 +457,25 @@ def test_openai_get_client_params_with_env_var():
         client_params = llm._get_client_params()
         assert client_params["base_url"] == "https://env.openai.com/v1"
 
+def test_openai_get_client_params_with_legacy_api_base_env_var():
+    """
+    Test that _get_client_params uses OPENAI_API_BASE when OPENAI_BASE_URL is absent.
+    """
+    with patch.dict(os.environ, {
+        "OPENAI_API_BASE": "https://legacy-env.openai.com/v1",
+    }, clear=False):
+        os.environ.pop("OPENAI_BASE_URL", None)
+        llm = OpenAICompletion(model="gpt-4o")
+        client_params = llm._get_client_params()
+        assert client_params["base_url"] == "https://legacy-env.openai.com/v1"
+
 def test_openai_get_client_params_priority_order():
     """
-    Test the priority order: base_url > api_base > OPENAI_BASE_URL env var
+    Test the priority order: base_url > api_base > OPENAI_BASE_URL > OPENAI_API_BASE
     """
     with patch.dict(os.environ, {
         "OPENAI_BASE_URL": "https://env.openai.com/v1",
+        "OPENAI_API_BASE": "https://legacy-env.openai.com/v1",
     }):
         llm1 = OpenAICompletion(
             model="gpt-4o",
