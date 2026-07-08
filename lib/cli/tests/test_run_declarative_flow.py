@@ -540,6 +540,19 @@ def test_run_declarative_flow_tui_no_deploy_when_not_requested(
     assert deploy_calls == []
 
 
+def test_run_declarative_flow_tui_enables_flow_events(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The STEPS panel depends on flow method events; a flow that declared
+    # suppress_flow_events must have it forced off for the interactive TUI run.
+    _install_fake_flow_app(monkeypatch, status="completed")
+    flow = SimpleNamespace(name="Flow", suppress_flow_events=True)
+
+    run_declarative_flow_module._run_declarative_flow_tui(flow, None)
+
+    assert flow.suppress_flow_events is False
+
+
 def test_flow_method_types_from_definition() -> None:
     flow = SimpleNamespace(
         _definition=SimpleNamespace(

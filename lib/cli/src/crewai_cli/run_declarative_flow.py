@@ -102,6 +102,16 @@ def _run_declarative_flow_tui(flow: Any, resolved_inputs: dict[str, Any] | None)
     # listener, and the TUI's trace/telemetry features depend on it.
     EventListener()
 
+    # The STEPS panel and header are driven by flow method events. A flow may
+    # declare ``config.suppress_flow_events`` (a headless/production
+    # optimization) which would leave STEPS stuck on "waiting…" here — so force
+    # emission on for the interactive TUI run. The headless path never reaches
+    # this and keeps the flow's declared setting.
+    try:
+        flow.suppress_flow_events = False
+    except Exception:  # noqa: S110
+        pass
+
     app = CrewRunApp(crew_name=getattr(flow, "name", None) or type(flow).__name__)
     app._flow = flow
     app._flow_inputs = resolved_inputs
