@@ -725,6 +725,19 @@ FooterKey .footer-key--key {
                 step["status"] = status
                 return
 
+    def _clear_current_method(self, finished_name: str) -> None:
+        """Drop the header's active method once it ends. Caller holds the lock.
+
+        Falls back to another still-active step (methods can overlap) so the
+        header never keeps spinning a method the STEPS list already shows as
+        done or failed.
+        """
+        if self._current_method != finished_name:
+            return
+        self._current_method = next(
+            (s["name"] for s in self._flow_steps if s["status"] == "active"), None
+        )
+
     def _on_crew_done(self, output: str | None) -> None:
         with self._lock:
             self._status = "completed"
@@ -1341,7 +1354,12 @@ FooterKey .footer-key--key {
                     t.append(self._current_agent, style=f"bold {_C_TEXT}")
             else:
                 t.append(f"{self._spinner()} ", style=_C_PRIMARY)
-                t.append("Starting flow…", style=_C_DIM)
+                # "Working…" once a step has run (between/after methods);
+                # "Starting flow…" only before the first method.
+                t.append(
+                    "Working…" if self._flow_steps else "Starting flow…",
+                    style=_C_DIM,
+                )
             widget.update(t)
             return
 
@@ -2039,6 +2057,7 @@ FooterKey .footer-key--key {
         ) -> None:
             with self._lock:
                 self._set_flow_step_status(event.method_name, "done")
+                self._clear_current_method(event.method_name)
 
         self._register_handler(MethodExecutionFinishedEvent, on_method_finished)
 
@@ -2046,6 +2065,7 @@ FooterKey .footer-key--key {
         def on_method_failed(source: Any, event: MethodExecutionFailedEvent) -> None:
             with self._lock:
                 self._set_flow_step_status(event.method_name, "failed")
+                self._clear_current_method(event.method_name)
 
         self._register_handler(MethodExecutionFailedEvent, on_method_failed)
 

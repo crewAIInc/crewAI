@@ -1550,6 +1550,40 @@ def test_flow_method_events_build_steps() -> None:
         {"name": "research", "call_type": "crew", "status": "done"},
         {"name": "summarize", "call_type": "agent", "status": "failed"},
     ]
+    # The header must not keep spinning a method that already ended.
+    assert app._current_method is None
+
+
+def test_current_method_clears_and_falls_back_across_overlap() -> None:
+    app = CrewRunApp(crew_name="Demo")
+    app._flow = SimpleNamespace()
+    app._subscribe()
+    try:
+        _emit_event(
+            MethodExecutionStartedEvent(flow_name="Demo", method_name="a", state={})
+        )
+        _emit_event(
+            MethodExecutionStartedEvent(flow_name="Demo", method_name="b", state={})
+        )
+        assert app._current_method == "b"
+
+        # 'a' finishes while 'b' is still active → header stays on 'b'.
+        _emit_event(
+            MethodExecutionFinishedEvent(
+                flow_name="Demo", method_name="a", result=None, state={}
+            )
+        )
+        assert app._current_method == "b"
+
+        # 'b' finishes → nothing active left → header clears.
+        _emit_event(
+            MethodExecutionFinishedEvent(
+                flow_name="Demo", method_name="b", result=None, state={}
+            )
+        )
+        assert app._current_method is None
+    finally:
+        app._unsubscribe()
 
 
 @pytest.mark.asyncio
