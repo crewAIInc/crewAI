@@ -232,6 +232,7 @@ class OpenAICompletion(BaseLLM):
     auto_chain: bool = False
     auto_chain_reasoning: bool = False
     api_base: str | None = None
+    custom_openai: bool = False
     is_o1_model: bool = False
     is_gpt4_model: bool = False
 
@@ -355,6 +356,9 @@ class OpenAICompletion(BaseLLM):
             config["seed"] = self.seed
         if self.reasoning_effort is not None:
             config["reasoning_effort"] = self.reasoning_effort
+        if self.custom_openai:
+            config["model"] = self.model
+            config["custom_openai"] = True
         return config
 
     def _get_client_params(self) -> dict[str, Any]:

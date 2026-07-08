@@ -404,9 +404,20 @@ class LLM(BaseLLM):
         if not model or not isinstance(model, str):
             raise ValueError("Model must be a non-empty string")
 
+        custom_openai = bool(kwargs.pop("custom_openai", False))
+        custom_openai_route = custom_openai
         explicit_provider = kwargs.get("provider")
 
-        if explicit_provider:
+        if custom_openai:
+            if not cls._has_custom_openai_base_url(kwargs):
+                raise ValueError(
+                    "custom_openai=True requires base_url, api_base, "
+                    "OPENAI_BASE_URL, or OPENAI_API_BASE"
+                )
+            provider = "openai"
+            use_native = True
+            model_string = model
+        elif explicit_provider:
             provider = explicit_provider
             use_native = True
             model_string = model
@@ -435,13 +446,17 @@ class LLM(BaseLLM):
 
             canonical_provider = provider_mapping.get(prefix.lower())
 
-            if canonical_provider and (
-                cls._validate_model_in_constants(model_part, canonical_provider)
-                or (
-                    canonical_provider == "openai"
-                    and cls._has_custom_openai_base_url(kwargs)
-                )
-            ):
+            valid_native_model = bool(
+                canonical_provider
+                and cls._validate_model_in_constants(model_part, canonical_provider)
+            )
+            custom_openai_route = bool(
+                canonical_provider == "openai"
+                and not valid_native_model
+                and cls._has_custom_openai_base_url(kwargs)
+            )
+
+            if canonical_provider and (valid_native_model or custom_openai_route):
                 provider = canonical_provider
                 use_native = True
                 model_string = model_part
@@ -459,6 +474,8 @@ class LLM(BaseLLM):
             try:
                 # Remove 'provider' from kwargs if it exists to avoid duplicate keyword argument
                 kwargs_copy = {k: v for k, v in kwargs.items() if k != "provider"}
+                if custom_openai_route:
+                    kwargs_copy["custom_openai"] = True
                 return cast(
                     Self,
                     native_class(model=model_string, provider=provider, **kwargs_copy),

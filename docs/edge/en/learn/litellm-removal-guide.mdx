@@ -240,14 +240,15 @@ from crewai import LLM
 
 # After (OpenAI-compatible mode, no LiteLLM needed):
 llm = LLM(
-    model="openai/llama3",
+    model="llama3",
+    custom_openai=True,
     base_url="http://localhost:11434/v1",
     api_key="ollama"  # Ollama doesn't require a real API key
 )
 ```
 
 <Tip>
-  Many local inference servers (Ollama, vLLM, LM Studio, llama.cpp) expose an OpenAI-compatible API. You can use the `openai/` prefix with a custom `base_url` to connect to any of them natively.
+  Many local inference servers (Ollama, vLLM, LM Studio, llama.cpp) expose an OpenAI-compatible API. You can use `custom_openai=True` with a custom `base_url` to connect to any of them natively while keeping the model ID your gateway expects.
 </Tip>
 
 ### Step 4: Update your YAML configs
