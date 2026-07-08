@@ -66,15 +66,149 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     flow = load_declarative_flow(definition)
     resolved_inputs = _resolve_flow_inputs(flow, provided)
 
+    # The TUI is the interactive default. Headless contexts run directly on the
+    # terminal: deploy/CREWAI_DMN, piped output, CI — anything without an
+    # interactive TTY. is_interactive() already folds in the CREWAI_DMN check.
+    if is_interactive():
+        _run_declarative_flow_tui(flow, resolved_inputs or None)
+        return
+
     try:
         result = flow.kickoff(inputs=resolved_inputs or None)
     except Exception as exc:
         click.echo(
-            f"An error occurred while running the declarative flow: {exc}", err=True
+            f"An error occurred while running the declarative flow: {exc}",
+            err=True,
         )
         raise SystemExit(1) from exc
-
     click.echo(_format_result(result))
+
+
+def _run_declarative_flow_tui(flow: Any, resolved_inputs: dict[str, Any] | None) -> Any:
+    """Run a declarative flow on the CrewAI TUI (the interactive default).
+
+    Mirrors the declarative-crew TUI contract (``run_crew._run_json_crew``):
+    a failed flow exits non-zero, a user quit ends the process so in-flight LLM
+    work stops, and choosing Deploy chains into the deploy command.
+    """
+    import os
+    import sys
+
+    from crewai.events.event_listener import EventListener
+
+    from crewai_cli.crew_run_tui import CrewRunApp
+
+    # The flow runtime (unlike a Crew constructor) doesn't create the event
+    # listener, and the TUI's trace/telemetry features depend on it.
+    EventListener()
+
+    app = CrewRunApp(crew_name=getattr(flow, "name", None) or type(flow).__name__)
+    app._flow = flow
+    app._flow_inputs = resolved_inputs
+    app._flow_method_types = _flow_method_types(flow)
+
+    app.run()
+
+    _print_flow_post_tui_summary(app)
+
+    if app._status == "failed":
+        raise SystemExit(1)
+
+    if app._status not in ("completed", "failed"):
+        # User quit mid-run. kickoff runs in a thread worker that cannot be
+        # force-cancelled, so end the process to stop in-flight LLM and tool
+        # work instead of letting it burn tokens in the background.
+        click.secho("\n  Run cancelled.", fg="yellow")
+        sys.stdout.flush()
+        os._exit(130)
+
+    if getattr(app, "_want_deploy", False):
+        from crewai_cli.run_crew import _chain_deploy
+
+        _chain_deploy()
+
+    return app._crew_result
+
+
+def _flow_method_types(flow: Any) -> dict[str, str]:
+    """Map each declarative method name to its ``call`` type (crew/agent/…).
+
+    Best-effort: the STEPS panel shows this as a dim label. Method events don't
+    carry the call type, so it's read from the flow definition up front.
+    """
+    method_types: dict[str, str] = {}
+    try:
+        methods = getattr(getattr(flow, "_definition", None), "methods", None) or {}
+        for name, method_definition in methods.items():
+            call_type = getattr(getattr(method_definition, "do", None), "call", None)
+            if isinstance(call_type, str):
+                method_types[name] = call_type
+    except Exception:  # noqa: S110
+        pass
+    return method_types
+
+
+def _print_flow_post_tui_summary(app: Any) -> None:
+    """Print a compact result panel after the flow TUI exits."""
+    import time
+
+    from rich.console import Console
+    from rich.markdown import Markdown
+    from rich.padding import Padding
+    from rich.panel import Panel
+    from rich.text import Text
+
+    console = Console()
+    elapsed = (app._elapsed_frozen or (time.time() - app._start_time)) or 0.0
+
+    out_tokens = app._output_tokens + app._live_out_tokens
+    token_parts = []
+    if app._input_tokens:
+        token_parts.append(f"↑{app._input_tokens:,}")
+    if out_tokens:
+        token_parts.append(f"↓{out_tokens:,}")
+    token_str = "  ".join(token_parts)
+    if token_str:
+        token_str += " tokens"
+
+    crewai_red = "#FF5A50"
+    crewai_teal = "#1F7982"
+
+    if app._status == "completed":
+        summary = Text()
+        summary.append("  ✔ Flow complete", style=f"bold {crewai_teal}")
+        summary.append(f" in {elapsed:.1f}s", style="dim")
+        if token_str:
+            summary.append(f"  {token_str}", style="dim")
+        console.print(
+            Panel(
+                summary,
+                title=f" {app._crew_name} ",
+                title_align="left",
+                border_style=crewai_teal,
+                padding=(0, 1),
+            )
+        )
+        if app._final_output:
+            console.print()
+            console.print(Text("  Final Result", style=f"bold {crewai_teal}"))
+            console.print()
+            console.print(Padding(Markdown(app._final_output), (0, 2)))
+    elif app._status == "failed":
+        content = Text()
+        content.append("  ✘ Failed", style=f"bold {crewai_red}")
+        content.append(f" after {elapsed:.1f}s\n", style="dim")
+        if app._error:
+            content.append(f"\n  {app._error}\n", style=crewai_red)
+        console.print(
+            Panel(
+                content,
+                title=f" {app._crew_name} ",
+                title_align="left",
+                border_style=crewai_red,
+                padding=(0, 1),
+            )
+        )
 
 
 def _resolve_flow_inputs(flow: Any, provided: dict[str, Any]) -> dict[str, Any]:

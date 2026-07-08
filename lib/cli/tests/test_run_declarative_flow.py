@@ -2,11 +2,23 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 import crewai_cli.input_prompt as input_prompt_module
 import crewai_cli.run_declarative_flow as run_declarative_flow_module
+
+
+@pytest.fixture(autouse=True)
+def _headless_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Default these tests to the headless/terminal path.
+
+    ``run_declarative_flow`` now launches the TUI when interactive, which can't
+    run under pytest; tests here assert the terminal/headless contract. Tests
+    that exercise TUI routing override ``is_dmn_mode_enabled`` explicitly.
+    """
+    monkeypatch.setenv("CREWAI_DMN", "true")
 
 
 FLOW_YAML = """\
@@ -400,3 +412,147 @@ def test_id_restore_still_drops_unknown_keys(
     assert resolved == {"id": "run-123"}  # id kept, typo dropped
     assert "Ignoring unknown input 'prospect_emai'" in captured.err
     assert "Ignoring unknown input 'id'" not in captured.err
+
+
+# ── TUI vs terminal (headless/deploy) routing ──────────────────────
+
+
+def _install_fake_flow_app(monkeypatch, *, status, want_deploy=False):
+    """Replace CrewRunApp/EventListener/summary so _run_declarative_flow_tui is
+    driven by a controllable fake app."""
+
+    class FakeEventListener:
+        pass
+
+    class FakeApp:
+        def __init__(self, crew_name=""):
+            self._crew_name = crew_name
+            self._status = status
+            self._want_deploy = want_deploy
+            self._crew_result = "result"
+
+        def run(self):
+            pass
+
+    monkeypatch.setattr(
+        "crewai.events.event_listener.EventListener", FakeEventListener
+    )
+    monkeypatch.setattr("crewai_cli.crew_run_tui.CrewRunApp", FakeApp)
+    monkeypatch.setattr(
+        run_declarative_flow_module, "_print_flow_post_tui_summary", lambda app: None
+    )
+
+
+def test_run_declarative_flow_dmn_uses_terminal(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CREWAI_DMN", "true")
+    monkeypatch.setattr(
+        run_declarative_flow_module,
+        "_run_declarative_flow_tui",
+        lambda *a, **k: pytest.fail("DMN/headless mode must not launch the TUI"),
+    )
+    path = _write(tmp_path, REQUIRED_FLOW_YAML)
+
+    run_declarative_flow_module.run_declarative_flow(
+        str(path), '{"prospect_email":"a@b.com"}'
+    )
+
+    assert capsys.readouterr().out == "a@b.com\n"
+
+
+def test_run_declarative_flow_interactive_uses_tui(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        run_declarative_flow_module,
+        "_run_declarative_flow_tui",
+        lambda flow, resolved: captured.update(flow=flow, inputs=resolved),
+    )
+    path = _write(tmp_path, REQUIRED_FLOW_YAML)
+
+    run_declarative_flow_module.run_declarative_flow(
+        str(path), '{"prospect_email":"a@b.com"}'
+    )
+
+    assert captured["inputs"] == {"prospect_email": "a@b.com"}
+    assert captured["flow"] is not None
+
+
+def test_run_declarative_flow_tui_failed_exits_nonzero(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_fake_flow_app(monkeypatch, status="failed")
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_declarative_flow_module._run_declarative_flow_tui(
+            SimpleNamespace(name="Flow"), None
+        )
+
+    assert exc_info.value.code == 1
+
+
+def test_run_declarative_flow_tui_user_quit_exits_130(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_fake_flow_app(monkeypatch, status="chatting")
+    exit_calls: list[int] = []
+    monkeypatch.setattr(os, "_exit", lambda code: exit_calls.append(code))
+
+    run_declarative_flow_module._run_declarative_flow_tui(
+        SimpleNamespace(name="Flow"), None
+    )
+
+    assert exit_calls == [130]
+
+
+def test_run_declarative_flow_tui_chains_deploy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_fake_flow_app(monkeypatch, status="completed", want_deploy=True)
+    deploy_calls: list[bool] = []
+    monkeypatch.setattr(
+        "crewai_cli.run_crew._chain_deploy", lambda: deploy_calls.append(True)
+    )
+
+    run_declarative_flow_module._run_declarative_flow_tui(
+        SimpleNamespace(name="Flow"), None
+    )
+
+    assert deploy_calls == [True]
+
+
+def test_run_declarative_flow_tui_no_deploy_when_not_requested(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_fake_flow_app(monkeypatch, status="completed", want_deploy=False)
+    deploy_calls: list[bool] = []
+    monkeypatch.setattr(
+        "crewai_cli.run_crew._chain_deploy", lambda: deploy_calls.append(True)
+    )
+
+    run_declarative_flow_module._run_declarative_flow_tui(
+        SimpleNamespace(name="Flow"), None
+    )
+
+    assert deploy_calls == []
+
+
+def test_flow_method_types_from_definition() -> None:
+    flow = SimpleNamespace(
+        _definition=SimpleNamespace(
+            methods={
+                "fetch": SimpleNamespace(do=SimpleNamespace(call="expression")),
+                "research": SimpleNamespace(do=SimpleNamespace(call="crew")),
+            }
+        )
+    )
+
+    assert run_declarative_flow_module._flow_method_types(flow) == {
+        "fetch": "expression",
+        "research": "crew",
+    }
+    # No definition → empty map, no error.
+    assert run_declarative_flow_module._flow_method_types(SimpleNamespace()) == {}

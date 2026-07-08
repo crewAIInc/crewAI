@@ -6,6 +6,12 @@ from unittest.mock import Mock
 import pytest
 
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.flow_events import (
+    FlowStartedEvent,
+    MethodExecutionFailedEvent,
+    MethodExecutionFinishedEvent,
+    MethodExecutionStartedEvent,
+)
 from crewai.events.types.memory_events import (
     MemorySaveCompletedEvent,
     MemorySaveFailedEvent,
@@ -1481,3 +1487,98 @@ def test_overlapping_task_logs_keep_their_own_state() -> None:
         assert any(step.get("summary") == "thinking" for step in entry2["steps"])
     finally:
         app._unsubscribe()
+
+
+# ── Declarative-flow (non-conversational) TUI support ───────
+
+
+def test_is_flow_run_gating() -> None:
+    """The flow-render gate must be true only for a non-conversational flow."""
+    crew_app = CrewRunApp(total_tasks=1)
+    crew_app._crew = SimpleNamespace()
+    assert crew_app._is_flow_run is False
+
+    conv_app = CrewRunApp(conversational=True)
+    conv_app._flow = SimpleNamespace()
+    assert conv_app._is_flow_run is False
+
+    flow_app = CrewRunApp()
+    flow_app._flow = SimpleNamespace()
+    assert flow_app._is_flow_run is True
+
+
+def test_flow_method_events_build_steps() -> None:
+    app = CrewRunApp(crew_name="Demo")
+    app._flow = SimpleNamespace()
+    app._flow_method_types = {"research": "crew", "summarize": "agent"}
+    app._subscribe()
+    try:
+        _emit_event(FlowStartedEvent(flow_name="Demo"))
+        assert app._status == "working"
+
+        _emit_event(
+            MethodExecutionStartedEvent(
+                flow_name="Demo", method_name="research", state={}
+            )
+        )
+        assert app._flow_steps == [
+            {"name": "research", "call_type": "crew", "status": "active"}
+        ]
+        assert app._current_method == "research"
+
+        _emit_event(
+            MethodExecutionFinishedEvent(
+                flow_name="Demo", method_name="research", result="ok", state={}
+            )
+        )
+        _emit_event(
+            MethodExecutionStartedEvent(
+                flow_name="Demo", method_name="summarize", state={}
+            )
+        )
+        _emit_event(
+            MethodExecutionFailedEvent(
+                flow_name="Demo",
+                method_name="summarize",
+                error=RuntimeError("boom"),
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert app._flow_steps == [
+        {"name": "research", "call_type": "crew", "status": "done"},
+        {"name": "summarize", "call_type": "agent", "status": "failed"},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_declarative_flow_runs_on_tui() -> None:
+    """End-to-end: on_mount dispatches _run_flow_worker → flow.kickoff →
+    _on_crew_done, and any still-active step is swept to done on completion."""
+    kicked: dict[str, object] = {}
+
+    class FakeFlow:
+        name = "Demo Flow"
+
+        def kickoff(self, inputs=None):
+            kicked["inputs"] = inputs
+            return "flow result"
+
+    app = CrewRunApp(crew_name="Demo Flow")
+    app._flow = FakeFlow()
+    app._flow_inputs = {"topic": "AI"}
+    # A step left active (no Finished event) must be swept to done by _on_crew_done.
+    app._flow_steps = [{"name": "compute", "call_type": "expression", "status": "active"}]
+
+    async with app.run_test() as pilot:
+        for _ in range(100):
+            await pilot.pause(0.05)
+            if app._status == "completed":
+                break
+
+    assert kicked["inputs"] == {"topic": "AI"}
+    assert app._status == "completed"
+    assert app._final_output == "flow result"
+    assert app._crew_result == "flow result"
+    assert app._flow_steps[0]["status"] == "done"
