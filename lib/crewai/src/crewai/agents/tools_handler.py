@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.tools.cache_tools.cache_tools import CacheTools
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 class ToolsHandler(BaseModel):
@@ -37,7 +38,9 @@ class ToolsHandler(BaseModel):
             should_cache: Whether to cache the tool output.
         """
         self.last_used_tool = calling
-        if self.cache and should_cache and calling.tool_name != CacheTools().name:
+        if self.cache and should_cache and calling.tool_name != sanitize_tool_name(
+            CacheTools().name
+        ):
             input_str = ""
             if calling.arguments:
                 if isinstance(calling.arguments, dict):

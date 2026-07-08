@@ -24,8 +24,10 @@ from crewai.hooks.tool_hooks import (
     register_after_tool_call_hook,
 )
 from crewai.tools import BaseTool
+from crewai.tools.cache_tools.cache_tools import CacheTools
 from crewai.tools.tool_calling import ToolCalling
 from crewai.tools.tool_usage import ToolUsage
+from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from pydantic import BaseModel, Field
 import pytest
@@ -903,3 +905,25 @@ def test_tool_error_does_not_emit_finished_event():
     assert len(finished_events) == 0, (
         "ToolUsageFinishedEvent should NOT be emitted after ToolUsageErrorEvent"
     )
+
+
+def test_cache_tool_result_is_not_cached():
+    """The cache-read tool ('hit_cache') must not be added to the tool cache.
+
+    Regression test: the exclusion guard compared the raw default name
+    'Hit Cache' against the sanitized runtime name 'hit_cache', so the guard
+    was always True and the cache tool's own output got cached anyway.
+    """
+    cache = CacheHandler()
+    tools_handler = ToolsHandler(cache=cache)
+
+    tools_handler.on_tool_use(
+        calling=ToolCalling(
+            tool_name=sanitize_tool_name(CacheTools().name),
+            arguments={},
+        ),
+        output="cached value",
+    )
+
+    cached = cache.read(tool=sanitize_tool_name(CacheTools().name), input="")
+    assert cached is None, "Cache read tool result must not be cached"
