@@ -553,6 +553,48 @@ def test_run_declarative_flow_tui_enables_flow_events(
     assert flow.suppress_flow_events is False
 
 
+def test_flow_uses_human_feedback_detection() -> None:
+    hf_flow = SimpleNamespace(
+        _definition=SimpleNamespace(
+            methods={
+                "ask": SimpleNamespace(human_feedback=SimpleNamespace(emit=None)),
+                "plain": SimpleNamespace(human_feedback=None),
+            }
+        )
+    )
+    assert run_declarative_flow_module._flow_uses_human_feedback(hf_flow) is True
+
+    no_hf = SimpleNamespace(
+        _definition=SimpleNamespace(
+            methods={"a": SimpleNamespace(human_feedback=None)}
+        )
+    )
+    assert run_declarative_flow_module._flow_uses_human_feedback(no_hf) is False
+    # No definition → False, no error.
+    assert run_declarative_flow_module._flow_uses_human_feedback(SimpleNamespace()) is False
+
+
+def test_human_feedback_flow_uses_terminal_even_when_interactive(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A human-feedback flow must run on the terminal (blocking input / Rich
+    # prompts) even in an interactive session, never on the TUI.
+    monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
+    monkeypatch.setattr(
+        run_declarative_flow_module, "_flow_uses_human_feedback", lambda flow: True
+    )
+    monkeypatch.setattr(
+        run_declarative_flow_module,
+        "_run_declarative_flow_tui",
+        lambda *a, **k: pytest.fail("human-feedback flow must run on the terminal"),
+    )
+    path = _write(tmp_path, FLOW_YAML)
+
+    run_declarative_flow_module.run_declarative_flow(str(path), '{"topic":"AI"}')
+
+    assert capsys.readouterr().out == "AI\n"
+
+
 def test_flow_method_types_from_definition() -> None:
     flow = SimpleNamespace(
         _definition=SimpleNamespace(

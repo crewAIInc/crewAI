@@ -69,7 +69,11 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     # The TUI is the interactive default. Headless contexts run directly on the
     # terminal: deploy/CREWAI_DMN, piped output, CI — anything without an
     # interactive TTY. is_interactive() already folds in the CREWAI_DMN check.
-    if is_interactive():
+    # Human-feedback flows also run on the terminal: their methods collect input
+    # via the flow runtime's blocking input()/Rich prompts (and async feedback
+    # returns a pending marker rather than completing), neither of which the
+    # Textual TUI can handle correctly.
+    if is_interactive() and not _flow_uses_human_feedback(flow):
         _run_declarative_flow_tui(flow, resolved_inputs or None)
         return
 
@@ -138,6 +142,21 @@ def _run_declarative_flow_tui(flow: Any, resolved_inputs: dict[str, Any] | None)
         _chain_deploy()
 
     return app._crew_result
+
+
+def _flow_uses_human_feedback(flow: Any) -> bool:
+    """True if any declarative method declares ``@human_feedback``.
+
+    Such flows need the flow runtime's interactive stdin / Rich prompts, which
+    don't compose with Textual — so they run on the terminal, not the TUI.
+    """
+    try:
+        methods = getattr(getattr(flow, "_definition", None), "methods", None) or {}
+        return any(
+            getattr(m, "human_feedback", None) is not None for m in methods.values()
+        )
+    except Exception:
+        return False
 
 
 def _flow_method_types(flow: Any) -> dict[str, str]:
