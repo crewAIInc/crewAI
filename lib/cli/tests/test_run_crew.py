@@ -9,6 +9,7 @@ import click
 import pytest
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 
+import crewai_cli.input_prompt as input_prompt_module
 import crewai_cli.run_crew as run_crew_module
 
 
@@ -44,9 +45,12 @@ def test_run_crew_forwards_trained_agents_file_to_json_crews(monkeypatch):
     )
     called: dict = {}
 
-    def fake_run_json_crew_in_project_env(trained_agents_file=None, crew_path=None):
+    def fake_run_json_crew_in_project_env(
+        trained_agents_file=None, crew_path=None, inputs=None
+    ):
         called["trained_agents_file"] = trained_agents_file
         called["crew_path"] = crew_path
+        called["inputs"] = inputs
 
     monkeypatch.setattr(
         run_crew_module,
@@ -59,6 +63,7 @@ def test_run_crew_forwards_trained_agents_file_to_json_crews(monkeypatch):
     assert called == {
         "trained_agents_file": "some.pkl",
         "crew_path": Path("crew.jsonc"),
+        "inputs": None,
     }
 
 
@@ -305,9 +310,10 @@ def test_json_run_without_pyproject_runs_in_process(monkeypatch, tmp_path: Path)
     monkeypatch.chdir(tmp_path)
     called: dict = {}
 
-    def fake_run_json_crew(trained_agents_file=None, crew_path=None):
+    def fake_run_json_crew(trained_agents_file=None, crew_path=None, inputs=None):
         called["trained_agents_file"] = trained_agents_file
         called["crew_path"] = crew_path
+        called["inputs"] = inputs
         return "result"
 
     monkeypatch.setattr(run_crew_module, "_run_json_crew", fake_run_json_crew)
@@ -318,7 +324,11 @@ def test_json_run_without_pyproject_runs_in_process(monkeypatch, tmp_path: Path)
         )
         == "result"
     )
-    assert called == {"trained_agents_file": "trained.pkl", "crew_path": None}
+    assert called == {
+        "trained_agents_file": "trained.pkl",
+        "crew_path": None,
+        "inputs": None,
+    }
 
 
 def test_json_project_env_run_failure_exits_nonzero(monkeypatch, tmp_path: Path):
@@ -535,7 +545,9 @@ def _patch_tui_run(monkeypatch, status: str):
         lambda _path: (FakeApp, crew, {}, [], []),
     )
     monkeypatch.setattr(
-        run_crew_module, "_prompt_for_missing_inputs", lambda _crew, inputs: inputs
+        run_crew_module,
+        "_resolve_crew_inputs",
+        lambda _crew, default_inputs, _provided, *, interactive: default_inputs,
     )
     monkeypatch.setattr(run_crew_module, "_print_post_tui_summary", lambda _app: None)
 
@@ -636,7 +648,168 @@ def test_run_json_crew_dmn_mode_exits_on_missing_inputs(
 
     captured = capsys.readouterr()
     assert exc_info.value.code == 1
-    assert "Missing runtime inputs for CREWAI_DMN mode: topic" in captured.err
+    assert "Missing required input 'topic'" in captured.err
+
+
+# ── Declarative-crew inputs: merge --inputs, warn, prompt (flow parity) ──
+
+
+def _crew_with_placeholders(*names: str) -> object:
+    """A minimal crew whose agent goal references each ``{name}`` placeholder."""
+    from types import SimpleNamespace
+
+    goal = " ".join(f"{{{name}}}" for name in names)
+    return SimpleNamespace(
+        agents=[SimpleNamespace(role="Researcher", goal=goal, backstory="")],
+        tasks=[],
+    )
+
+
+def test_resolve_crew_inputs_merges_inputs_over_defaults():
+    crew = _crew_with_placeholders("topic")
+
+    resolved = run_crew_module._resolve_crew_inputs(
+        crew, {"topic": "AI"}, {"topic": "ML"}, interactive=False
+    )
+
+    assert resolved == {"topic": "ML"}
+
+
+def test_resolve_crew_inputs_warns_and_keeps_unknown_input(capsys):
+    # The placeholder scan is heuristic, so an unreferenced key is flagged but
+    # kept (never silently dropped like a flow's schema would).
+    crew = _crew_with_placeholders("topic")
+
+    resolved = run_crew_module._resolve_crew_inputs(
+        crew, {}, {"topic": "AI", "topi": "typo"}, interactive=False
+    )
+
+    captured = capsys.readouterr()
+    assert resolved == {"topic": "AI", "topi": "typo"}
+    assert "isn't referenced by any {placeholder}" in captured.err
+    assert "Did you mean 'topic'?" in captured.err
+
+
+def test_resolve_crew_inputs_prompts_when_interactive(monkeypatch):
+    crew = _crew_with_placeholders("topic")
+    prompted: list[str] = []
+
+    def fake_prompt(text: str, **kwargs: object) -> str:
+        prompted.append(text)
+        return "AI"
+
+    monkeypatch.setattr(input_prompt_module.click, "prompt", fake_prompt)
+
+    resolved = run_crew_module._resolve_crew_inputs(
+        crew, {}, None, interactive=True
+    )
+
+    assert resolved == {"topic": "AI"}
+    assert any("topic" in text for text in prompted)
+
+
+def test_resolve_crew_inputs_errors_when_missing_non_interactive(capsys):
+    crew = _crew_with_placeholders("topic")
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module._resolve_crew_inputs(crew, {}, None, interactive=False)
+
+    assert exc_info.value.code == 1
+    assert "Missing required input 'topic'" in capsys.readouterr().err
+
+
+def test_run_json_crew_accepts_inputs_argument(monkeypatch, tmp_path: Path, capsys):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_DMN", "True")
+    crew_path = tmp_path / "crew.jsonc"
+    crew_path.write_text("{}")
+    kickoff_calls: list[dict] = []
+
+    class FakeCrew:
+        name = "Demo"
+        agents = [_crew_with_placeholders("topic").agents[0]]
+        tasks: list = []
+
+        def kickoff(self, inputs):
+            kickoff_calls.append(inputs)
+            return "ok"
+
+    monkeypatch.setattr(
+        run_crew_module, "configured_project_json_crew", lambda: crew_path
+    )
+    monkeypatch.setattr(
+        run_crew_module, "_load_json_crew", lambda _path: (FakeCrew(), {})
+    )
+
+    assert run_crew_module._run_json_crew(inputs='{"topic":"AI"}') == "ok"
+    assert kickoff_calls == [{"topic": "AI"}]
+
+
+def test_run_json_crew_in_project_env_forwards_inputs(monkeypatch, tmp_path: Path):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(
+        run_crew_module, "_install_json_crew_dependencies_if_needed", lambda: None
+    )
+    monkeypatch.setattr(
+        run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
+    )
+    captured_kwargs: list[dict] = []
+    monkeypatch.setattr(
+        run_crew_module.subprocess,
+        "run",
+        lambda command, **kwargs: captured_kwargs.append(kwargs),
+    )
+
+    run_crew_module._run_json_crew_in_project_env(
+        crew_path=tmp_path / "crew.jsonc", inputs='{"topic":"AI"}'
+    )
+
+    env = captured_kwargs[0]["env"]
+    assert env[run_crew_module._CREWAI_JSON_CREW_INPUTS_ENV] == '{"topic":"AI"}'
+
+
+def test_run_json_crew_in_project_env_rejects_invalid_inputs_json(
+    monkeypatch, tmp_path: Path, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    monkeypatch.setattr(
+        run_crew_module.subprocess,
+        "run",
+        lambda *a, **k: pytest.fail("subprocess must not run on invalid --inputs"),
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module._run_json_crew_in_project_env(
+            crew_path=tmp_path / "crew.jsonc", inputs="not json"
+        )
+
+    assert exc_info.value.code == 1
+    assert "Invalid --inputs JSON" in capsys.readouterr().err
+
+
+def test_run_crew_forwards_inputs_to_json_crew(monkeypatch):
+    monkeypatch.setattr(run_crew_module, "read_toml", lambda *a, **k: {})
+    monkeypatch.setattr(
+        run_crew_module,
+        "configured_project_json_crew",
+        lambda *a, **k: Path("crew.jsonc"),
+    )
+    called: dict = {}
+    monkeypatch.setattr(
+        run_crew_module,
+        "_run_json_crew_in_project_env",
+        lambda **kw: called.update(kw),
+    )
+
+    run_crew_module.run_crew(inputs='{"topic":"AI"}')
+
+    assert called == {
+        "trained_agents_file": None,
+        "crew_path": Path("crew.jsonc"),
+        "inputs": '{"topic":"AI"}',
+    }
 
 
 def test_configured_project_json_crew_defers_to_declared_flow_type(
@@ -682,11 +855,51 @@ def test_configured_project_json_crew_ignores_missing_pyproject(
     assert run_crew_module.configured_project_json_crew() is None
 
 
-def test_run_crew_rejects_inputs_without_definition():
+def test_run_crew_inputs_rejected_for_classic_crew(monkeypatch):
+    # --inputs works for declarative flows and declarative (JSON) crews, but a
+    # classic crew takes its inputs from main.py, so it errors clearly.
+    monkeypatch.setattr(run_crew_module, "read_toml", lambda *a, **k: {})
+    monkeypatch.setattr(
+        run_crew_module, "configured_project_json_crew", lambda *a, **k: None
+    )
+    monkeypatch.setattr(
+        run_crew_module, "_warn_if_old_poetry_project", lambda *a, **k: None
+    )
+    monkeypatch.setattr(run_crew_module, "get_crewai_project_type", lambda *a, **k: "crew")
+
     with pytest.raises(click.UsageError) as exc_info:
         run_crew_module.run_crew(inputs='{"topic":"AI"}')
 
-    assert "--inputs requires --definition" in exc_info.value.message
+    assert (
+        "--inputs is only supported for declarative flows and crews"
+        in exc_info.value.message
+    )
+
+
+def test_run_crew_inputs_without_definition_resolves_configured_flow(monkeypatch):
+    # --inputs with no --definition resolves the configured [tool.crewai] flow,
+    # exactly like a bare `crewai run`, and forwards the inputs.
+    import crewai_cli.run_declarative_flow as rdf
+
+    calls: dict[str, object] = {}
+    monkeypatch.setattr(run_crew_module, "read_toml", lambda *a, **k: {})
+    monkeypatch.setattr(
+        run_crew_module, "configured_project_json_crew", lambda *a, **k: None
+    )
+    monkeypatch.setattr(
+        run_crew_module, "_warn_if_old_poetry_project", lambda *a, **k: None
+    )
+    monkeypatch.setattr(run_crew_module, "get_crewai_project_type", lambda *a, **k: "flow")
+    monkeypatch.setattr(
+        rdf, "configured_project_declarative_flow", lambda *a, **k: Path("flow.yaml")
+    )
+    monkeypatch.setattr(
+        rdf, "run_declarative_flow_in_project_env", lambda **kw: calls.update(kw)
+    )
+
+    run_crew_module.run_crew(inputs='{"topic":"AI"}')
+
+    assert calls == {"definition": Path("flow.yaml"), "inputs": '{"topic":"AI"}'}
 
 
 def test_run_crew_rejects_filename_with_explicit_definition():

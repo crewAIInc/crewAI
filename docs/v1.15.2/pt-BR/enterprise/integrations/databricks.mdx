@@ -1,0 +1,123 @@
+---
+title: Integração com Databricks
+description: "Conecte agentes CrewAI ao Databricks Genie, SQL, Unity Catalog Functions e Vector Search por meio dos servidores MCP gerenciados do Databricks."
+icon: "layer-group"
+mode: "wide"
+---
+
+## Visão geral
+
+Conecte seus agentes CrewAI diretamente ao seu workspace do Databricks por meio dos [servidores MCP gerenciados do Databricks](https://docs.databricks.com/aws/en/generative-ai/mcp/managed-mcp). A integração com o Databricks permite que seus agentes façam perguntas em linguagem natural com o **Genie**, executem **SQL** governado, chamem **Unity Catalog Functions** e recuperem documentos com o **Vector Search** — tudo sem escrever ou hospedar qualquer código de conector, e com as permissões do Unity Catalog aplicadas em cada chamada.
+
+Nos bastidores, a integração com o Databricks é um wrapper gerenciado sobre o suporte a [Servidores MCP personalizados](/pt-BR/enterprise/guides/custom-mcp-server) do CrewAI. O Databricks expõe cada recurso como seu próprio endpoint do [Model Context Protocol](https://modelcontextprotocol.io/), e o CrewAI se conecta a eles com segurança em seu nome. Como cada servidor é adicionado separadamente, você pode habilitar exatamente os recursos de que suas crews precisam.
+
+## Principais recursos
+
+<CardGroup cols={2}>
+  <Card title="Genie" icon="comments">
+    Faça perguntas em linguagem natural e obtenha respostas fundamentadas em seus dados com o [Genie](https://docs.databricks.com/aws/en/genie/), que consulta Genie Spaces e o Unity Catalog e fornece links de volta para a interface do Databricks.
+  </Card>
+  <Card title="Databricks SQL" icon="database">
+    Execute SQL governado nos seus warehouses do Databricks para consultar, transformar e criar pipelines de dados diretamente a partir dos seus agentes.
+  </Card>
+  <Card title="Unity Catalog Functions" icon="function">
+    Invoque [funções do Unity Catalog](https://docs.databricks.com/aws/en/udf/unity-catalog) para executar SQL predefinido e lógica de negócio personalizada como ferramentas governadas e reutilizáveis.
+  </Card>
+  <Card title="Vector Search" icon="magnifying-glass">
+    Recupere documentos relevantes para fluxos de RAG e de conhecimento a partir de índices do [Mosaic AI Vector Search](https://docs.databricks.com/aws/en/generative-ai/vector-search) usando similaridade semântica.
+  </Card>
+</CardGroup>
+
+Todos os servidores são executados por trás do Unity AI Gateway e aplicam os controles de acesso do Unity Catalog, de modo que seus agentes só enxergam os dados e as ferramentas que têm permissão para usar.
+
+## Pré-requisitos
+
+Antes de usar a integração com o Databricks, certifique-se de ter:
+
+- Uma conta [CrewAI AMP](https://app.crewai.com) com assinatura ativa
+- Um workspace do Databricks com os recursos que você deseja expor (Genie Spaces, warehouses SQL, funções do Unity Catalog ou índices do Vector Search)
+- [Privilégios apropriados do Unity Catalog](https://docs.databricks.com/aws/en/data-governance/unity-catalog) nos objetos subjacentes
+- O hostname do seu workspace do Databricks (ex.: `your-workspace.cloud.databricks.com`)
+
+## Servidores MCP gerenciados do Databricks
+
+O Databricks publica um servidor MCP gerenciado separado para cada recurso. O CrewAI os expõe como conexões individuais, cada uma configurada com o host do seu workspace e os identificadores relevantes do Unity Catalog. Os endpoints seguem estes padrões:
+
+| Servidor | O que faz | Padrão de URL MCP |
+|----------|-----------|-------------------|
+| **Genie** | Perguntas e respostas em linguagem natural sobre um Genie Space | `https://<workspace-hostname>/api/2.0/mcp/genie/{genie_space_id}` |
+| **Databricks SQL** | Executa SQL nos seus warehouses | `https://<workspace-hostname>/api/2.0/mcp/sql` |
+| **Unity Catalog Functions** | Executa funções UC registradas | `https://<workspace-hostname>/api/2.0/mcp/functions/{catalog}/{schema}` |
+| **Vector Search** | Consulta um índice do Vector Search | `https://<workspace-hostname>/api/2.0/mcp/vector-search/{catalog}/{schema}` |
+
+<Note>
+Você não precisa construir essas URLs manualmente — o CrewAI cria cada endpoint a partir do host do workspace e dos identificadores (Genie Space ID, ou catalog/schema) que você fornece ao configurar a conexão. Para a especificação completa e os detalhes mais recentes dos endpoints, consulte a [documentação de MCP gerenciado do Databricks](https://docs.databricks.com/aws/en/generative-ai/mcp/managed-mcp).
+</Note>
+
+## Conectando o Databricks no CrewAI AMP
+
+<Frame>
+    <img src="/images/enterprise/databricks-configure.png" alt="Configurar um servidor MCP gerenciado do Databricks no CrewAI AMP" />
+</Frame>
+
+Cada recurso do Databricks — **Databricks Genie**, **Databricks SQL**, **Databricks Unity Catalog Functions** e **Databricks Vector Search** — aparece como seu próprio servidor MCP no grupo Databricks da página **Tools & Integrations**. Configure os que você precisar:
+
+<Steps>
+    <Step title="Abra Tools & Integrations">
+        Navegue até **Tools & Integrations** na barra lateral esquerda do CrewAI AMP e localize o grupo **Databricks** na lista de Connections. Você verá os servidores Genie, SQL, Unity Catalog Functions e Vector Search listados abaixo dele.
+    </Step>
+
+    <Step title="Configure um servidor">
+        Clique em **Configure** ao lado do recurso que deseja habilitar e forneça os detalhes da conexão:
+
+        - **Workspace Host** — o hostname do seu workspace do Databricks (ex.: `my-workspace.cloud.databricks.com`).
+        - **Genie** — o **Genie Space ID** a ser consultado.
+        - **Unity Catalog Functions** — o **catalog** e o **schema** que contêm suas funções.
+        - **Vector Search** — o **catalog** e o **schema** que contêm seu índice.
+        - **Databricks SQL** — sem identificadores adicionais; as consultas são executadas nos warehouses SQL do seu workspace.
+    </Step>
+
+    <Step title="Escolha um método de autenticação">
+        Selecione como o CrewAI se autentica no Databricks. **OAuth** é recomendado.
+
+        - **Use OAuth** — Conecte-se com segurança usando OAuth 2.0. Cada usuário se autentica individualmente, e o Databricks emite tokens com escopo para o recurso (`genie`, `sql`, `unity-catalog` ou `vector-search`). O CrewAI gerencia o fluxo de autorização e renova os tokens automaticamente.
+        - **Use personal access token** — Autentique-se com um [token de acesso pessoal do Databricks](https://docs.databricks.com/aws/en/dev-tools/auth/pat). Use uma identidade com privilégios mínimos para limitar a exposição.
+    </Step>
+
+    <Step title="Autentique">
+        Conclua a autenticação. Uma vez conectado, as ferramentas do servidor ficam disponíveis para suas crews. Repita para qualquer outro recurso do Databricks que você queira habilitar.
+    </Step>
+</Steps>
+
+<Tip>
+Como cada recurso é uma conexão separada, você pode combiná-los livremente — por exemplo, habilitar Genie e Vector Search para uma crew de pesquisa e reservar SQL e Unity Catalog Functions para uma crew de engenharia de dados. As configurações de visibilidade permitem controlar quais membros da equipe podem usar cada um.
+</Tip>
+
+## Usando as ferramentas do Databricks nas suas crews
+
+Uma vez conectado, as ferramentas que cada servidor MCP expõe aparecem junto às conexões integradas na página **Tools & Integrations**. Você pode:
+
+- **Atribuir ferramentas aos agentes** nas suas crews, como qualquer outra ferramenta do CrewAI.
+- **Gerenciar a visibilidade** para controlar quais membros da equipe podem usar cada conexão.
+- **Editar ou remover** qualquer conexão a qualquer momento na lista de Connections.
+
+Seus agentes agora podem pedir respostas fundamentadas ao Genie, executar SQL nos seus warehouses, chamar funções do Unity Catalog e pesquisar índices do Vector Search — com os resultados retornando automaticamente ao raciocínio deles.
+
+<Warning>
+O Databricks aplica governança por meio do Unity Catalog e do Unity AI Gateway: um usuário só pode descobrir e invocar ferramentas que a identidade do seu workspace tem permissão para usar. Se uma chamada de ferramenta falhar, confirme se o usuário (ou a identidade do token) que está conectando tem os privilégios necessários do Unity Catalog no Genie Space, warehouse, função ou índice. Algumas consultas do Genie e do SQL são executadas de forma assíncrona e podem levar um momento para retornar resultados.
+</Warning>
+
+## Saiba mais
+
+<CardGroup cols={2}>
+  <Card title="Servidores MCP gerenciados do Databricks" icon="layer-group" href="https://docs.databricks.com/aws/en/generative-ai/mcp/managed-mcp">
+    Documentação oficial do Databricks para os servidores MCP gerenciados Genie, SQL, Unity Catalog Functions e Vector Search.
+  </Card>
+  <Card title="Servidores MCP personalizados no CrewAI" icon="plug" href="/pt-BR/enterprise/guides/custom-mcp-server">
+    Saiba como o CrewAI se conecta a qualquer servidor MCP, a base sobre a qual a integração com o Databricks é construída.
+  </Card>
+</CardGroup>
+
+<Card title="Precisa de ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para obter ajuda com a configuração da integração com o Databricks ou com a solução de problemas.
+</Card>
