@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 from collections.abc import Callable, Coroutine, Iterable, Mapping
 from typing import TYPE_CHECKING, Any
 
@@ -246,50 +247,41 @@ def _extract_files_from_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
     return files
 
 
-def prepare_kickoff(
-    crew: Crew,
-    inputs: dict[str, Any] | None,
-    input_files: dict[str, FileInput] | None = None,
-) -> dict[str, Any] | None:
-    """Prepare crew for kickoff execution.
-
-    Handles before callbacks, event emission, task handler reset, input
-    interpolation, task callbacks, agent setup, and planning.
-
-    Args:
-        crew: The crew instance to prepare.
-        inputs: Optional input dictionary to pass to the crew.
-        input_files: Optional dict of named file inputs for the crew.
-
-    Returns:
-        The potentially modified inputs dictionary after before callbacks.
-    """
+def _begin_prepare_kickoff(crew: Crew) -> bool:
+    """Reset emission counters and return whether the crew is resuming from a checkpoint."""
     from crewai.events.base_events import reset_emission_counter
-    from crewai.events.event_bus import crewai_event_bus
     from crewai.events.event_context import (
         get_current_parent_id,
         reset_last_event_id,
     )
-    from crewai.events.types.crew_events import CrewKickoffStartedEvent
 
     resuming = crew.checkpoint_kickoff_event_id is not None
-
     if not resuming and get_current_parent_id() is None:
         reset_emission_counter()
         reset_last_event_id()
+    return resuming
 
-    normalized: dict[str, Any] | None = None
-    if inputs is not None:
-        if not isinstance(inputs, Mapping):
-            raise TypeError(
-                f"inputs must be a dict or Mapping, got {type(inputs).__name__}"
-            )
-        normalized = dict(inputs)
 
-    for before_callback in crew.before_kickoff_callbacks:
-        if normalized is None:
-            normalized = {}
-        normalized = before_callback(normalized)
+def _normalize_inputs(inputs: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Validate and convert inputs to a plain dict."""
+    if inputs is None:
+        return None
+    if not isinstance(inputs, Mapping):
+        raise TypeError(
+            f"inputs must be a dict or Mapping, got {type(inputs).__name__}"
+        )
+    return dict(inputs)
+
+
+def _finish_prepare_kickoff(
+    crew: Crew,
+    normalized: dict[str, Any] | None,
+    input_files: dict[str, FileInput] | None,
+    resuming: bool,
+) -> dict[str, Any] | None:
+    """Shared post-callback kickoff preparation: events, inputs, agents, planning."""
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.crew_events import CrewKickoffStartedEvent
 
     if resuming and crew._kickoff_event_id:
         if crew.verbose:
@@ -356,6 +348,68 @@ def prepare_kickoff(
         crew._handle_crew_planning()
 
     return normalized
+
+
+def prepare_kickoff(
+    crew: Crew,
+    inputs: dict[str, Any] | None,
+    input_files: dict[str, FileInput] | None = None,
+) -> dict[str, Any] | None:
+    """Prepare crew for kickoff execution.
+
+    Handles before callbacks, event emission, task handler reset, input
+    interpolation, task callbacks, agent setup, and planning.
+
+    Args:
+        crew: The crew instance to prepare.
+        inputs: Optional input dictionary to pass to the crew.
+        input_files: Optional dict of named file inputs for the crew.
+
+    Returns:
+        The potentially modified inputs dictionary after before callbacks.
+    """
+    resuming = _begin_prepare_kickoff(crew)
+    normalized = _normalize_inputs(inputs)
+
+    for before_callback in crew.before_kickoff_callbacks:
+        if normalized is None:
+            normalized = {}
+        normalized = before_callback(normalized)
+
+    return _finish_prepare_kickoff(crew, normalized, input_files, resuming)
+
+
+async def aprepare_kickoff(
+    crew: Crew,
+    inputs: dict[str, Any] | None,
+    input_files: dict[str, FileInput] | None = None,
+) -> dict[str, Any] | None:
+    """Async variant of prepare_kickoff that awaits coroutine before-callbacks.
+
+    Used by akickoff to support both sync and async before_kickoff_callbacks
+    without blocking the event loop.
+
+    Args:
+        crew: The crew instance to prepare.
+        inputs: Optional input dictionary to pass to the crew.
+        input_files: Optional dict of named file inputs for the crew.
+
+    Returns:
+        The potentially modified inputs dictionary after before callbacks.
+    """
+    resuming = _begin_prepare_kickoff(crew)
+    normalized = _normalize_inputs(inputs)
+
+    for before_callback in crew.before_kickoff_callbacks:
+        if normalized is None:
+            normalized = {}
+        result = before_callback(normalized)
+        if inspect.isawaitable(result):
+            normalized = await result
+        else:
+            normalized = result
+
+    return _finish_prepare_kickoff(crew, normalized, input_files, resuming)
 
 
 class StreamingContext:
