@@ -737,6 +737,9 @@ FooterKey .footer-key--key {
         self._current_method = next(
             (s["name"] for s in self._flow_steps if s["status"] == "active"), None
         )
+        # The active method changed; drop its agent so the header doesn't show a
+        # stale agent until the next method's agent event arrives.
+        self._current_agent = ""
 
     def _on_crew_done(self, output: str | None) -> None:
         with self._lock:
@@ -2036,6 +2039,9 @@ FooterKey .footer-key--key {
             with self._lock:
                 name = event.method_name
                 self._current_method = name
+                # Agent is per-method; clear it so the header doesn't show the
+                # previous method's agent until a new agent event arrives.
+                self._current_agent = ""
                 for step in self._flow_steps:
                     if step["name"] == name:
                         step["status"] = "active"

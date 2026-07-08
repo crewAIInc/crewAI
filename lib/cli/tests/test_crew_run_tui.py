@@ -1586,6 +1586,34 @@ def test_current_method_clears_and_falls_back_across_overlap() -> None:
         app._unsubscribe()
 
 
+def test_flow_method_transitions_clear_current_agent() -> None:
+    app = CrewRunApp(crew_name="Demo")
+    app._flow = SimpleNamespace()
+    app._subscribe()
+    try:
+        _emit_event(
+            MethodExecutionStartedEvent(flow_name="Demo", method_name="a", state={})
+        )
+        app._current_agent = "Researcher"  # an agent ran during method 'a'
+
+        # Starting a new method clears the previous method's agent.
+        _emit_event(
+            MethodExecutionStartedEvent(flow_name="Demo", method_name="b", state={})
+        )
+        assert app._current_agent == ""
+
+        app._current_agent = "Writer"
+        # 'b' ending switches the active method ('a' still active) → agent clears.
+        _emit_event(
+            MethodExecutionFinishedEvent(
+                flow_name="Demo", method_name="b", result=None, state={}
+            )
+        )
+        assert app._current_agent == ""
+    finally:
+        app._unsubscribe()
+
+
 @pytest.mark.asyncio
 async def test_declarative_flow_runs_on_tui() -> None:
     """End-to-end: on_mount dispatches _run_flow_worker → flow.kickoff →
