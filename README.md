@@ -122,6 +122,15 @@ Four skills that activate automatically when you ask relevant CrewAI questions:
 | `design-task` | Writing task descriptions, dependencies, structured output (`output_pydantic`, `output_json`), human review |
 | `ask-docs` | Querying the live [CrewAI docs MCP server](https://docs.crewai.com/mcp) for up-to-date API details |
 
+**MCP Server Integration:**
+
+CrewAI supports MCP (Model Context Protocol) for integrating external tools. One powerful integration is [llm-box](https://github.com/alib8b8/llm-box), a terminal-first workflow automation engine with MCP server mode:
+
+- Generate and execute YAML workflows from plain English descriptions
+- 20+ built-in nodes including LLM calls, file operations, API requests
+- 15+ LLM providers (Ollama, DeepSeek, OpenAI-compatible)
+- Supports stdio and HTTP MCP modes
+
 **Cursor, Codex, Windsurf, and others ([skills.sh](https://skills.sh/crewaiinc/skills)):**
 ```shell
 npx skills add crewaiinc/skills
