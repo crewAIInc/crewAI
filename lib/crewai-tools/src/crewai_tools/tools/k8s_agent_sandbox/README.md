@@ -25,6 +25,8 @@ All tools that are meant to share the same sandbox settings and sandbox lifecycl
 
 ### Toolset example
 
+This example expects that you have a cluster with the Agent Sandbox installed and all remaining prerequisites like sandbox router, sandbox template and a sandbox warmpool deployed. Learn more [here](https://github.com/kubernetes-sigs/agent-sandbox/tree/main#installation).
+
 ```python
 from crewai_tools import (
     K8sAgentSandboxToolSandboxSettings as SandboxSettings,
