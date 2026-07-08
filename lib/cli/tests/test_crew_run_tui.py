@@ -6,10 +6,12 @@ from unittest.mock import Mock
 import pytest
 
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.crew_events import CrewKickoffStartedEvent
 from crewai.events.types.flow_events import (
     FlowStartedEvent,
     MethodExecutionFailedEvent,
     MethodExecutionFinishedEvent,
+    MethodExecutionPausedEvent,
     MethodExecutionStartedEvent,
 )
 from crewai.events.types.memory_events import (
@@ -1610,6 +1612,56 @@ def test_flow_method_transitions_clear_current_agent() -> None:
             )
         )
         assert app._current_agent == ""
+    finally:
+        app._unsubscribe()
+
+
+def test_crew_kickoff_does_not_rename_flow_run() -> None:
+    # A `call: crew` step must not relabel the flow with the nested crew's name.
+    app = CrewRunApp(crew_name="My Flow")
+    app._flow = SimpleNamespace()
+    app._subscribe()
+    try:
+        _emit_event(CrewKickoffStartedEvent(crew_name="Nested Crew", inputs=None))
+        assert app._crew_name == "My Flow"
+        assert app._status == "working"
+    finally:
+        app._unsubscribe()
+
+
+def test_crew_kickoff_renames_in_crew_mode() -> None:
+    # Regression: crew runs still adopt the crew name from the event.
+    app = CrewRunApp(crew_name="Crew")
+    app._crew = SimpleNamespace()
+    app._subscribe()
+    try:
+        _emit_event(CrewKickoffStartedEvent(crew_name="Real Crew", inputs=None))
+        assert app._crew_name == "Real Crew"
+    finally:
+        app._unsubscribe()
+
+
+def test_method_paused_marks_step_paused() -> None:
+    app = CrewRunApp(crew_name="Demo")
+    app._flow = SimpleNamespace()
+    app._subscribe()
+    try:
+        _emit_event(
+            MethodExecutionStartedEvent(flow_name="Demo", method_name="ask", state={})
+        )
+        _emit_event(
+            MethodExecutionPausedEvent(
+                flow_name="Demo",
+                method_name="ask",
+                state={},
+                flow_id="flow-1",
+                message="Need your input",
+            )
+        )
+        assert app._flow_steps == [
+            {"name": "ask", "call_type": None, "status": "paused"}
+        ]
+        assert app._current_method == "ask"
     finally:
         app._unsubscribe()
 

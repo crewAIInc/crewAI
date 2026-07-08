@@ -1242,6 +1242,9 @@ FooterKey .footer-key--key {
                 elif status == "failed":
                     t.append("  ✘ ", style=_C_RED)
                     t.append(name, style=_C_RED)
+                elif status == "paused":
+                    t.append("  ⏸ ", style=_C_TEAL)
+                    t.append(name, style=_C_TEAL)
                 else:
                     t.append("  ○ ", style=_C_DIM)
                     t.append(name, style=_C_DIM)
@@ -1347,12 +1350,22 @@ FooterKey .footer-key--key {
                 if self._error:
                     t.append(f"\n{self._error[:120]}", style=_C_RED)
             elif self._current_method:
-                t.append(f"{self._spinner()} ", style=_C_PRIMARY)
-                t.append(self._current_method, style=f"bold {_C_PRIMARY}")
+                paused = any(
+                    s["name"] == self._current_method and s["status"] == "paused"
+                    for s in self._flow_steps
+                )
+                if paused:
+                    t.append("⏸ ", style=_C_TEAL)
+                    t.append(self._current_method, style=f"bold {_C_TEAL}")
+                else:
+                    t.append(f"{self._spinner()} ", style=_C_PRIMARY)
+                    t.append(self._current_method, style=f"bold {_C_PRIMARY}")
                 call_type = self._flow_method_types.get(self._current_method)
                 if call_type:
                     t.append(f"  ({call_type})", style=_C_DIM)
-                if self._current_agent:
+                if paused:
+                    t.append("  waiting for feedback", style=_C_DIM)
+                elif self._current_agent:
                     t.append("\nAgent: ", style=_C_DIM)
                     t.append(self._current_agent, style=f"bold {_C_TEXT}")
             else:
@@ -1984,6 +1997,7 @@ FooterKey .footer-key--key {
             FlowStartedEvent,
             MethodExecutionFailedEvent,
             MethodExecutionFinishedEvent,
+            MethodExecutionPausedEvent,
             MethodExecutionStartedEvent,
         )
         from crewai.events.types.llm_events import (
@@ -2019,7 +2033,9 @@ FooterKey .footer-key--key {
         @crewai_event_bus.on(CrewKickoffStartedEvent)
         def on_crew_started(source: Any, event: CrewKickoffStartedEvent) -> None:
             with self._lock:
-                if event.crew_name:
+                # In flow mode the app is named for the flow; a nested crew's
+                # kickoff (a `call: crew` step) must not rename it.
+                if event.crew_name and not self._is_flow_run:
                     self._crew_name = event.crew_name
                     self.title = f"CrewAI — {event.crew_name}"
                 self._status = "working"
@@ -2074,6 +2090,16 @@ FooterKey .footer-key--key {
                 self._clear_current_method(event.method_name)
 
         self._register_handler(MethodExecutionFailedEvent, on_method_failed)
+
+        @crewai_event_bus.on(MethodExecutionPausedEvent)
+        def on_method_paused(source: Any, event: MethodExecutionPausedEvent) -> None:
+            # A @human_feedback method paused; flow status panels are suppressed
+            # in TUI mode, so surface the wait in STEPS/header instead of leaving
+            # a spinner. _current_method stays pointed at it.
+            with self._lock:
+                self._set_flow_step_status(event.method_name, "paused")
+
+        self._register_handler(MethodExecutionPausedEvent, on_method_paused)
 
         @crewai_event_bus.on(TaskStartedEvent)
         def on_task_started(source: Any, event: TaskStartedEvent) -> None:
