@@ -1,0 +1,117 @@
+---
+title: "Deployment Sizing"
+description: Choose the right deployment size for your crew workloads — and know when to scale up.
+---
+
+## Overview
+
+Every CrewAI Enterprise deployment runs on a fixed resource tier called an **instance size**. The size controls how much CPU, memory, and — most importantly — how many crew runs can execute simultaneously. Choosing the wrong size is the most common cause of queue build-up, slow run starts, and OOMKilled pods.
+
+This page explains what each size provides, how to read the signals that you've outgrown your current tier, and how to right-size for your workload.
+
+---
+
+## Instance Sizes
+
+| # | Name | vCPU | Memory | Max Concurrent Runs | Storage |
+|---|------|------|--------|---------------------|---------|
+| 1 | Small | 1 | 2 GiB | 4 | 20 GiB |
+| 2 | Regular | 2 | 4 GiB | 16 | 20 GiB |
+| 3 | Large | 4 | 8 GiB | 32 | 20 GiB |
+| 4 | Extra Large | 8 | 16 GiB | 64 | 100 GiB |
+| 5 | Extra Extra Large | 16 | 32 GiB | 128 | 100 GiB |
+| 6 | Insane Large | 32 | 64 GiB | 256 | 100 GiB |
+
+**vCPU** and **Memory** are the total resources allocated to the deployment (web server + workers + Redis combined).
+
+**Max Concurrent Runs** is the worker concurrency limit — the number of crew runs that can be actively executing at the same time. Runs submitted beyond this limit are queued and wait for a slot to open.
+
+<Note>
+  Concurrency is per-deployment, not per-crew. If you have 10 crews deployed on a Small instance, all 10 share the same pool of 4 concurrent run slots.
+</Note>
+
+---
+
+## What "concurrent runs" actually means
+
+A **concurrent run** is one active kickoff of a crew — from the moment it starts executing until it completes or errors. It does not mean the number of agents running in parallel inside a single crew (that's controlled by your crew's process type and agent configuration).
+
+**Example:** A Small deployment (concurrency = 4) with 20 incoming run requests will execute 4 runs simultaneously and queue the remaining 16. Each queued run starts as soon as a slot frees up.
+
+---
+
+## Symptoms of an undersized deployment
+
+| Symptom | Likely cause |
+|---------|-------------|
+| Runs sit in `queued` state for a long time | Concurrency limit reached — all worker slots are occupied |
+| Runs complete slowly even for simple tasks | CPU throttling — workers are competing for the same vCPU budget |
+| Pods restart with `OOMKilled` | Memory limit exceeded — reduce concurrency or upgrade size |
+| Builds fail or time out | Insufficient CPU/memory for the BuildKit image build step |
+| High p95/p99 run latency with normal p50 | Bursty traffic hitting the concurrency ceiling |
+
+---
+
+## How to choose a size
+
+### Start with your concurrency requirement
+
+Estimate the peak number of crew runs you expect to have in-flight simultaneously. Add ~25% headroom for bursts.
+
+| Peak concurrent runs | Recommended size |
+|----------------------|-----------------|
+| 1–3 | Small |
+| 4–12 | Regular |
+| 13–25 | Large |
+| 26–50 | Extra Large |
+| 51–100 | Extra Extra Large |
+| 100+ | Insane Large |
+
+### Factor in run duration
+
+Long-running crews (minutes to hours) hold concurrency slots for the full duration. If your crews run for 10 minutes on average and you receive 30 runs per hour, you need at least `30 × (10/60) = 5` concurrent slots — Regular or above.
+
+### Factor in memory per run
+
+Each concurrent run consumes memory proportional to the number of agents, the size of context windows, and any in-memory data processing. If individual runs are memory-heavy (large document processing, many parallel agents), size up even if your concurrency requirement is low.
+
+A rough heuristic: assume **~256 MiB per concurrent run** as a baseline, then add overhead for your specific workload. On a Small instance (2 GiB total, shared with web and Redis), you have roughly 1 GiB available for workers — enough for ~4 lightweight runs, which matches the concurrency limit.
+
+---
+
+## Changing your deployment size
+
+Deployment size is configurable from the **Admin Panel → Deployments → [your deployment] → Instance Size**. Changes take effect on the next deployment cycle (a rolling restart of the worker pods).
+
+<Warning>
+  Downsizing a deployment that is actively processing runs will cause in-flight runs to be interrupted when the old pods are replaced. Schedule size changes during low-traffic windows.
+</Warning>
+
+---
+
+## Monitoring utilization
+
+Use these signals to track whether your current size is appropriate:
+
+```bash
+# Check current pod resource usage
+kubectl top pods
+
+# Watch for OOMKilled restarts
+kubectl get pods -o wide
+kubectl describe pod <worker-pod-name> | grep -A5 "Last State"
+
+# Check worker queue depth (from a web pod)
+kubectl exec -it deploy/crewai-web -- bin/rails runner \
+  "puts Sidekiq::Queue.all.map { |q| \"#{q.name}: #{q.size}\" }.join(\"\\n\")"
+```
+
+A consistently non-zero queue depth on the default queue is the clearest signal that you need more concurrency (a larger instance size).
+
+---
+
+## Related
+
+- [Troubleshooting](/troubleshooting) — OOMKilled, pod restarts, build failures
+- [Factory Health & Debug](/factory-health) — health check endpoint and component status
+- [Aurora Instance Sizing](/deployment-guides/aws-workos-wharf-studio#aurora-instance-sizing) — database sizing to match your deployment tier
