@@ -1,0 +1,88 @@
+---
+title: Crew Studio
+description: "Build new automations with AI assistance, a visual editor, and integrated testing."
+icon: "pencil"
+mode: "wide"
+---
+
+## Overview
+
+Crew Studio is an interactive, AI‑assisted workspace for creating new automations from scratch using natural language and a visual workflow editor.
+
+<Frame>
+  ![Crew Studio Overview](/images/enterprise/crew-studio-overview.png)
+</Frame>
+
+## Prompt‑based Creation
+
+- Describe the automation you want; the AI generates agents, tasks, and tools.
+- Use voice input via the microphone icon if preferred.
+- Start from built‑in prompts for common use cases.
+
+<Frame>
+  ![Prompt Builder](/images/enterprise/crew-studio-prompt.png)
+</Frame>
+
+## Visual Editor
+
+The canvas reflects the workflow as nodes and edges with three supporting panels that allow you to configure the workflow easily without writing code; a.k.a. "**vibe coding AI Agents**".
+
+You can use the drag-and-drop functionality to add agents, tasks, and tools to the canvas or you can use the chat section to build the agents. Both approaches share state and can be used interchangeably.
+
+- **AI Thoughts (left)**: streaming reasoning as the workflow is designed
+- **Canvas (center)**: agents and tasks as connected nodes
+- **Resources (right)**: drag‑and‑drop components (agents, tasks, tools)
+
+<Frame>
+  ![Visual Canvas](/images/enterprise/crew-studio-canvas.png)
+</Frame>
+
+## Execution & Debugging
+
+Switch to the <b>Execution</b> view to run and observe the workflow:
+
+- Event timeline
+- Detailed logs (Details, Messages, Raw Data)
+- Local test runs before publishing
+
+<Frame>
+  ![Execution View](/images/enterprise/crew-studio-execution.png)
+</Frame>
+
+## Publish & Export
+
+- <b>Publish</b> to deploy a live automation
+- <b>Download</b> source as a ZIP for local development or customization
+
+<Frame>
+  ![Publish & Download](/images/enterprise/crew-studio-publish.png)
+</Frame>
+
+Once published, you can view the automation details and have the **Options** dropdown menu to `chat with this crew`, `Export React Component` and `Export as MCP`.
+
+<Frame>
+  ![Published Automation](/images/enterprise/crew-studio-published.png)
+</Frame>
+
+## Best Practices
+
+- Iterate quickly in Studio; publish only when stable
+- Keep tools constrained to minimum permissions needed
+- Use Traces to validate behavior and performance
+
+## Related
+
+<CardGroup cols={4}>
+  <Card title="Enable Crew Studio" href="/en/enterprise/guides/enable-crew-studio" icon="palette">
+    Enable Crew Studio.
+  </Card>
+  <Card title="Build a Crew" href="/en/enterprise/guides/build-crew" icon="paintbrush">
+    Build a Crew.
+  </Card>
+  <Card title="Deploy a Crew" href="/en/enterprise/guides/deploy-crew" icon="rocket">
+    Deploy a Crew from GitHub or ZIP file.
+  </Card>
+  <Card title="Export a React Component" href="/en/enterprise/guides/react-component-export" icon="download">
+    Export a React Component.
+  </Card>
+</CardGroup>
