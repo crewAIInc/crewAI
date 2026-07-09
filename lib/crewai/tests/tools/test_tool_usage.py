@@ -903,3 +903,91 @@ def test_tool_error_does_not_emit_finished_event():
     assert len(finished_events) == 0, (
         "ToolUsageFinishedEvent should NOT be emitted after ToolUsageErrorEvent"
     )
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for #6430 — bare raise in _original_tool_calling
+# ---------------------------------------------------------------------------
+
+
+def _make_tool_usage_for_non_dict_test() -> ToolUsage:
+    """Build a minimal ToolUsage for exercising _original_tool_calling."""
+    mock_agent = MagicMock()
+    mock_agent.key = "test"
+    mock_agent.role = "test"
+    mock_agent.verbose = False
+
+    class EchoTool(BaseTool):
+        name: str = "echo"
+        description: str = "Echo input"
+
+        def _run(self, x: str = "") -> str:
+            return x
+
+    return ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[EchoTool()],
+        task=MagicMock(),
+        function_calling_llm=None,
+        agent=mock_agent,
+        action=MagicMock(tool="echo", tool_input='["not", "a", "dict"]'),
+    )
+
+
+def test_original_tool_calling_non_dict_raises_tool_usage_error():
+    """raise_error=True on non-dict arguments must raise ToolUsageError.
+
+    Regression test for #6430: the bare `raise` outside an except block
+    produced RuntimeError instead of the intended ToolUsageError.
+    """
+    from crewai.tools.tool_usage import ToolUsageError
+
+    tu = _make_tool_usage_for_non_dict_test()
+    with patch.object(tu, "_validate_tool_input", return_value=["not", "a", "dict"]):
+        with pytest.raises(ToolUsageError, match="not a valid key"):
+            tu._original_tool_calling('["not", "a", "dict"]', raise_error=True)
+
+
+def test_original_tool_calling_non_dict_returns_error():
+    """raise_error=False on non-dict arguments returns ToolUsageError."""
+    from crewai.tools.tool_usage import ToolUsageError
+
+    tu = _make_tool_usage_for_non_dict_test()
+    with patch.object(tu, "_validate_tool_input", return_value=["not", "a", "dict"]):
+        result = tu._original_tool_calling('["not", "a", "dict"]', raise_error=False)
+        assert isinstance(result, ToolUsageError)
+        assert "not a valid key" in str(result)
+
+
+def test_tool_calling_fallback_on_non_dict():
+    """_tool_calling should fallback gracefully when _original_tool_calling raises.
+
+    When raise_error=True triggers ToolUsageError, _tool_calling catches it
+    and falls back to _original_tool_calling(raise_error=False), which returns
+    a ToolUsageError — not a crash.
+    """
+    from crewai.tools.tool_usage import ToolUsageError
+
+    tu = _make_tool_usage_for_non_dict_test()
+    tu._run_attempts = 0
+    tu._max_parsing_attempts = 3
+
+    with patch.object(tu, "_validate_tool_input", return_value=["not", "a", "dict"]):
+        result = tu._tool_calling('["not", "a", "dict"]')
+
+    assert isinstance(result, ToolUsageError)
+    assert "not a valid key" in str(result)
+
+
+def test_non_dict_raises_not_runtime_error():
+    """Ensure the raised exception is ToolUsageError, not RuntimeError.
+
+    This is the core regression: before the fix, bare `raise` with no active
+    exception raised RuntimeError.
+    """
+    tu = _make_tool_usage_for_non_dict_test()
+    with patch.object(tu, "_validate_tool_input", return_value=[1, 2, 3]):
+        with pytest.raises(Exception, match="not a valid key") as exc_info:
+            tu._original_tool_calling('[1, 2, 3]', raise_error=True)
+        assert type(exc_info.value).__name__ == "ToolUsageError"
+        assert not isinstance(exc_info.value, RuntimeError)
