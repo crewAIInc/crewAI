@@ -114,7 +114,8 @@ class GovernanceDecision(TypedDict, total=False):
     """Identifies which normalization was applied before computing params_hash
     and intent_digest. Examples:
       - 'jcs-sha256' (structured tool args, RFC 8785 canonical)
-      - 'agent-guard-unwrap-v1' (shell command unwrapping)
+      - 'agent-guard-unwrap-v1' (shell command unwrapping; annex + vectors:
+        https://github.com/XuebinMa/agent-guard/tree/spike/agent-guard-unwrap-v1/spikes/agent-guard-unwrap-v1)
       - 'sql-normalize-v1' (SQL query normalization)
     A verifier uses this to know how to recompute the digest."""
 
