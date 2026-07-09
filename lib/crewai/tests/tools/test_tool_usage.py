@@ -25,7 +25,7 @@ from crewai.hooks.tool_hooks import (
 )
 from crewai.tools import BaseTool
 from crewai.tools.tool_calling import ToolCalling
-from crewai.tools.tool_usage import ToolUsage
+from crewai.tools.tool_usage import ToolUsage, ToolUsageError
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from pydantic import BaseModel, Field
 import pytest
@@ -557,6 +557,58 @@ def test_validate_tool_input_large_json_content():
 
     arguments = tool_usage._validate_tool_input(tool_input)
     assert arguments == expected_arguments
+
+
+def test_original_tool_calling_raises_tool_usage_error_for_non_dict_arguments():
+    """A non-dict tool input must surface as ToolUsageError, not RuntimeError.
+
+    Regression test for the bare ``raise`` in ``_original_tool_calling``: when
+    the parsed arguments are not a dict, ``raise_error=True`` previously hit a
+    ``raise`` statement outside any active ``except`` block, producing
+    ``RuntimeError: No active exception to reraise`` instead of the intended
+    ``ToolUsageError``.
+    """
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        task=MagicMock(),
+        function_calling_llm=MagicMock(),
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    with patch.object(tool_usage, "_select_tool", return_value=MagicMock(name="tool")):
+        with patch.object(
+            ToolUsage,
+            "_validate_tool_input",
+            return_value=["not", "a", "dict"],
+        ):
+            with pytest.raises(ToolUsageError):
+                tool_usage._original_tool_calling("tool_string", raise_error=True)
+
+
+def test_original_tool_calling_returns_tool_usage_error_for_non_dict_without_raise():
+    """When ``raise_error=False`` a non-dict input returns a ToolUsageError."""
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        task=MagicMock(),
+        function_calling_llm=MagicMock(),
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    with patch.object(tool_usage, "_select_tool", return_value=MagicMock(name="tool")):
+        with patch.object(
+            ToolUsage,
+            "_validate_tool_input",
+            return_value=["not", "a", "dict"],
+        ):
+            result = tool_usage._original_tool_calling(
+                "tool_string", raise_error=False
+            )
+
+    assert isinstance(result, ToolUsageError)
 
 
 def test_tool_selection_error_event_direct():
