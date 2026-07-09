@@ -9,6 +9,7 @@ import contextvars
 from datetime import datetime
 import inspect
 import json
+import logging
 import os
 from pathlib import Path
 import time
@@ -115,6 +116,9 @@ try:
     from crewai.a2a.types import AgentResponseProtocol
 except ImportError:
     AgentResponseProtocol = None  # type: ignore[assignment, misc]
+
+
+logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
@@ -1012,6 +1016,39 @@ class Agent(BaseAgent):
             prompt_template=self.prompt_template,
             response_template=self.response_template,
         ).task_execution()
+
+        # Language-aware prompt optimization: translate system prompt to the
+        # language the target model handles best before sending to LLM.
+        # Only translates system-level prompts — user messages carry intent
+        # and must never be machine-translated.
+        if self.auto_translate_prompt and self.llm:
+            try:
+                from crewai.utilities.prompt_translator import (
+                    optimize_system_prompt,
+                )
+
+                model_name = getattr(self.llm, "model", "") or ""
+                if isinstance(prompt, SystemPromptResult):
+                    if prompt.system:
+                        prompt.system = optimize_system_prompt(
+                            prompt.system,
+                            model_name,
+                            self.prompt_glossary,
+                            llm_caller=self.llm,
+                        )
+                else:
+                    if prompt.prompt:
+                        prompt.prompt = optimize_system_prompt(
+                            prompt.prompt,
+                            model_name,
+                            self.prompt_glossary,
+                            llm_caller=self.llm,
+                        )
+            except Exception:
+                logger.debug(
+                    "Prompt translation failed; using original prompt.",
+                    exc_info=True,
+                )
 
         stop_words = [I18N_DEFAULT.slice("observation")]
         if self.response_template:
