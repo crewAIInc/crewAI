@@ -36,8 +36,9 @@ class IdempotencyGuard:
     Based on CCS (Conformance Checking Standard) Identity dimension.
     """
 
-    # Shared storage across all tool calls (in production, use Redis/DB)
+    # Class-level cache (shared within a process)
     _storage: Dict[str, Any] = {}
+    # File path for durable backend (shared across all instances using file backend)
     _storage_path: Optional[Path] = None
 
     def __init__(self, tool_name: str, storage_backend: str = "memory"):
@@ -51,9 +52,17 @@ class IdempotencyGuard:
 
         if storage_backend == "file":
             IdempotencyGuard._storage_path = Path(".ccs_idempotency.json")
-            if IdempotencyGuard._storage_path.exists():
-                with open(IdempotencyGuard._storage_path, "r") as f:
-                    IdempotencyGuard._storage = json.load(f)
+            self._load()
+
+    def _load(self):
+        """Load storage from file (if using file backend)."""
+        if (
+            self.storage_backend == "file"
+            and IdempotencyGuard._storage_path
+            and IdempotencyGuard._storage_path.exists()
+        ):
+            with open(IdempotencyGuard._storage_path, "r") as f:
+                IdempotencyGuard._storage = json.load(f)
 
     def _compute_hash(self, call_key: Dict[str, Any]) -> str:
         """Compute stable hash from tool_name + call key (args + kwargs)"""
@@ -111,8 +120,6 @@ def idempotent(storage_backend: str = "memory"):
             )
 
             # Build call key from BOTH positional and keyword arguments
-            # This ensures send_payment(100, "alice") and send_payment(200, "bob")
-            # are correctly identified as different calls
             call_key = {
                 "args": args,
                 "kwargs": {k: v for k, v in sorted(kwargs.items())},
