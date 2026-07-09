@@ -134,14 +134,13 @@ def test_openai_is_default_provider_without_explicit_llm_set_on_agent():
 
 
 
-def test_openai_completion_module_is_imported():
+def test_openai_completion_module_is_imported(monkeypatch):
     """
     Test that the completion module is properly imported when using OpenAI provider
     """
     module_name = "crewai.llms.providers.openai.completion"
 
-    if module_name in sys.modules:
-        del sys.modules[module_name]
+    monkeypatch.delitem(sys.modules, module_name, raising=False)
 
     LLM(model="gpt-4o")
 
