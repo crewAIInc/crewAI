@@ -246,6 +246,20 @@ class OpenAICompletion(BaseLLM):
     def _normalize_openai_fields(cls, data: Any) -> Any:
         if not isinstance(data, dict):
             return data
+        if data.get("custom_openai"):
+            custom_base_url = (
+                data.get("base_url")
+                or data.get("api_base")
+                or os.getenv("OPENAI_BASE_URL")
+                or os.getenv("OPENAI_API_BASE")
+            )
+            if not custom_base_url:
+                raise ValueError(
+                    "custom_openai=True requires base_url, api_base, "
+                    "OPENAI_BASE_URL, or OPENAI_API_BASE"
+                )
+            if not data.get("base_url") and not data.get("api_base"):
+                data["base_url"] = custom_base_url
         if not data.get("provider"):
             data["provider"] = "openai"
         data["api_key"] = data.get("api_key") or os.getenv("OPENAI_API_KEY")
@@ -359,6 +373,12 @@ class OpenAICompletion(BaseLLM):
         if self.custom_openai:
             config["model"] = self.model
             config["custom_openai"] = True
+            config["base_url"] = (
+                self.base_url
+                or self.api_base
+                or os.getenv("OPENAI_BASE_URL")
+                or os.getenv("OPENAI_API_BASE")
+            )
         return config
 
     def _get_client_params(self) -> dict[str, Any]:

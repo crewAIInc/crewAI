@@ -394,12 +394,14 @@ class LLM(BaseLLM):
         """Factory method that routes to native SDK or falls back to LiteLLM.
 
         Routing priority:
-            1. If 'provider' kwarg is present, use that provider with constants
-            2. If only 'model' kwarg, use constants to infer provider
-            3. If "/" in model name:
+            1. If ``custom_openai=True``, force the native OpenAI provider,
+               overriding any explicit provider. A custom endpoint is required.
+            2. If ``provider`` is present, use that provider.
+            3. If "/" is in the model name:
                - Check if prefix is a native provider (openai/anthropic/azure/bedrock/gemini)
                - If yes, validate model against constants
                - If valid, route to native SDK; otherwise route to LiteLLM
+            4. Otherwise, infer the provider from the model name.
         """
         if not model or not isinstance(model, str):
             raise ValueError("Model must be a non-empty string")
@@ -409,14 +411,17 @@ class LLM(BaseLLM):
         explicit_provider = kwargs.get("provider")
 
         if custom_openai:
-            if not cls._has_custom_openai_base_url(kwargs):
+            if not cls._has_custom_openai_endpoint(kwargs):
                 raise ValueError(
                     "custom_openai=True requires base_url, api_base, "
                     "OPENAI_BASE_URL, or OPENAI_API_BASE"
                 )
             provider = "openai"
             use_native = True
-            model_string = model
+            prefix, separator, model_part = model.partition("/")
+            model_string = (
+                model_part if separator and prefix.lower() == "openai" else model
+            )
         elif explicit_provider:
             provider = explicit_provider
             use_native = True
@@ -613,9 +618,14 @@ class LLM(BaseLLM):
 
     @staticmethod
     def _has_custom_openai_base_url(kwargs: dict[str, Any]) -> bool:
+        """Return whether this call explicitly configures a custom endpoint."""
+        return bool(kwargs.get("base_url") or kwargs.get("api_base"))
+
+    @classmethod
+    def _has_custom_openai_endpoint(cls, kwargs: dict[str, Any]) -> bool:
+        """Return whether a custom endpoint is configured explicitly or by env."""
         return bool(
-            kwargs.get("base_url")
-            or kwargs.get("api_base")
+            cls._has_custom_openai_base_url(kwargs)
             or os.getenv("OPENAI_BASE_URL")
             or os.getenv("OPENAI_API_BASE")
         )
