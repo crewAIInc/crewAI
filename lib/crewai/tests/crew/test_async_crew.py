@@ -1,5 +1,6 @@
 """Tests for async crew execution."""
 
+import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -220,6 +221,135 @@ class TestAsyncCrewKickoff:
         await crew.akickoff()
 
         assert callback_called
+
+    @pytest.mark.asyncio
+    @patch("crewai.task.Task.aexecute_sync", new_callable=AsyncMock)
+    async def test_akickoff_awaits_async_after_callback(
+        self, mock_execute: AsyncMock, test_agent: Agent
+    ) -> None:
+        """Test that akickoff correctly awaits async after_kickoff_callbacks."""
+        callback_executed = False
+
+        async def async_after_callback(result: CrewOutput) -> CrewOutput:
+            nonlocal callback_executed
+            await asyncio.sleep(0)  # simulate async work
+            callback_executed = True
+            return result
+
+        task = Task(
+            description="Test task",
+            expected_output="Test output",
+            agent=test_agent,
+        )
+        crew = Crew(
+            agents=[test_agent],
+            tasks=[task],
+            verbose=False,
+            after_kickoff_callbacks=[async_after_callback],
+        )
+
+        mock_output = TaskOutput(
+            description="Test task",
+            raw="Task result",
+            agent="Test Agent",
+        )
+        mock_execute.return_value = mock_output
+
+        await crew.akickoff()
+
+        assert callback_executed
+
+    @pytest.mark.asyncio
+    @patch("crewai.task.Task.aexecute_sync", new_callable=AsyncMock)
+    async def test_akickoff_awaits_async_before_callback(
+        self, mock_execute: AsyncMock, test_agent: Agent
+    ) -> None:
+        """Test that akickoff correctly awaits async before_kickoff_callbacks."""
+        callback_executed = False
+
+        async def async_before_callback(inputs: dict | None) -> dict:
+            nonlocal callback_executed
+            await asyncio.sleep(0)  # simulate async work
+            callback_executed = True
+            return inputs or {}
+
+        task = Task(
+            description="Test task",
+            expected_output="Test output",
+            agent=test_agent,
+        )
+        crew = Crew(
+            agents=[test_agent],
+            tasks=[task],
+            verbose=False,
+            before_kickoff_callbacks=[async_before_callback],
+        )
+
+        mock_output = TaskOutput(
+            description="Test task",
+            raw="Task result",
+            agent="Test Agent",
+        )
+        mock_execute.return_value = mock_output
+
+        await crew.akickoff()
+
+        assert callback_executed
+
+    @pytest.mark.asyncio
+    @patch("crewai.task.Task.aexecute_sync", new_callable=AsyncMock)
+    async def test_akickoff_mixed_sync_async_callbacks(
+        self, mock_execute: AsyncMock, test_agent: Agent
+    ) -> None:
+        """Test akickoff with a mix of sync and async callbacks."""
+        call_order = []
+
+        def sync_before(inputs: dict | None) -> dict:
+            call_order.append("sync_before")
+            return inputs or {}
+
+        async def async_before(inputs: dict | None) -> dict:
+            call_order.append("async_before")
+            await asyncio.sleep(0)
+            return inputs or {}
+
+        def sync_after(result: CrewOutput) -> CrewOutput:
+            call_order.append("sync_after")
+            return result
+
+        async def async_after(result: CrewOutput) -> CrewOutput:
+            call_order.append("async_after")
+            await asyncio.sleep(0)
+            return result
+
+        task = Task(
+            description="Test task",
+            expected_output="Test output",
+            agent=test_agent,
+        )
+        crew = Crew(
+            agents=[test_agent],
+            tasks=[task],
+            verbose=False,
+            before_kickoff_callbacks=[sync_before, async_before],
+            after_kickoff_callbacks=[sync_after, async_after],
+        )
+
+        mock_output = TaskOutput(
+            description="Test task",
+            raw="Task result",
+            agent="Test Agent",
+        )
+        mock_execute.return_value = mock_output
+
+        await crew.akickoff()
+
+        assert call_order == [
+            "sync_before",
+            "async_before",
+            "sync_after",
+            "async_after",
+        ]
 
 
 class TestAsyncCrewKickoffForEach:
