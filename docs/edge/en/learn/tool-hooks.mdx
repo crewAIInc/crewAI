@@ -203,7 +203,70 @@ def require_approval_for_actions(context: ToolCallHookContext) -> bool | None:
     return None
 ```
 
-### 3. Input Validation and Sanitization
+### 3. External Policy Layer with Pramagent
+
+You can also use a dedicated policy engine for tool authorization. This keeps
+tool policy outside the model and outside individual tool implementations.
+
+The example below uses [Pramagent](https://github.com/sriram7737/pramagent) to
+validate the proposed tool name and arguments before CrewAI executes the tool.
+Returning `False` from the hook prevents the side effect from running.
+
+```python
+from crewai.hooks import ToolCallHookContext, before_tool_call
+from pramagent import Pramagent, Verdict
+from pramagent.layers import ToolGuardLayer, ToolPolicy
+from pramagent.layers.tool_guard import SideEffect
+
+tool_guard = ToolGuardLayer(
+    policies=[
+        ToolPolicy(
+            name="charge_payment",
+            side_effect=SideEffect.PAYMENT,
+            action=Verdict.ESCALATE,
+            allowed_tenants={"finance_team"},
+            schema={
+                "type": "object",
+                "required": ["amount_usd", "customer_id"],
+                "properties": {
+                    "amount_usd": {
+                        "type": "number",
+                        "minimum": 0.01,
+                        "maximum": 5000,
+                    },
+                    "customer_id": {"type": "string"},
+                },
+                "additionalProperties": False,
+            },
+        )
+    ]
+)
+
+armor = Pramagent(tool_guard=tool_guard)
+
+
+@before_tool_call
+def enforce_pramagent_policy(context: ToolCallHookContext) -> bool | None:
+    decision = armor.validate_tool(
+        context.tool_name,
+        context.tool_input,
+        tenant_id="finance_team",
+        session_id=str(getattr(context.crew, "id", "crew-run")),
+        action_label=context.tool_name,
+    )
+
+    if decision.verdict == Verdict.ALLOW:
+        return None
+
+    print(f"Pramagent stopped {context.tool_name}: {decision.reason}")
+    return False
+```
+
+For approval workflows, route `Verdict.ESCALATE` to your human approval path
+and re-run the tool only after approval is recorded. The hook remains the
+pre-execution boundary.
+
+### 4. Input Validation and Sanitization
 
 ```python
 @before_tool_call
@@ -228,7 +291,7 @@ def validate_and_sanitize_inputs(context: ToolCallHookContext) -> bool | None:
     return None
 ```
 
-### 4. Result Sanitization
+### 5. Result Sanitization
 
 ```python
 @after_tool_call
@@ -264,7 +327,7 @@ def sanitize_sensitive_data(context: ToolCallHookContext) -> str | None:
     return result
 ```
 
-### 5. Tool Usage Analytics
+### 6. Tool Usage Analytics
 
 ```python
 import time
@@ -298,7 +361,7 @@ def track_tool_usage(context: ToolCallHookContext) -> None:
     return None
 ```
 
-### 6. Rate Limiting
+### 7. Rate Limiting
 
 ```python
 from collections import defaultdict
@@ -327,7 +390,7 @@ def rate_limit_tools(context: ToolCallHookContext) -> bool | None:
     return None
 ```
 
-### 7. Caching Tool Results
+### 8. Caching Tool Results
 
 ```python
 import hashlib
@@ -358,7 +421,7 @@ def cache_result(context: ToolCallHookContext) -> None:
     return None
 ```
 
-### 8. Debug Logging
+### 9. Debug Logging
 
 ```python
 @before_tool_call
