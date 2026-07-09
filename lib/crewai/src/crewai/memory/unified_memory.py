@@ -7,6 +7,7 @@ from contextlib import suppress
 import contextvars
 import copy
 from datetime import datetime
+import logging
 import threading
 import time
 from typing import TYPE_CHECKING, Annotated, Any, Literal
@@ -23,19 +24,22 @@ from crewai.events.types.memory_events import (
     MemorySaveStartedEvent,
 )
 from crewai.llms.base_llm import BaseLLM
-from crewai.memory.analyze import extract_memories_from_content
+from crewai.memory.analyze import extract_action_insights_from_content, extract_memories_from_content
 from crewai.memory.storage.backend import StorageBackend
 from crewai.memory.types import (
     MemoryConfig,
     MemoryMatch,
     MemoryRecord,
     ScopeInfo,
+    compute_behavioral_adjustment,
     compute_composite_score,
     embed_text,
 )
 from crewai.memory.utils import join_scope_paths
 from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
+
+_logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
@@ -678,6 +682,25 @@ class Memory(BaseModel):
         """
         return extract_memories_from_content(content, self._llm)
 
+    def extract_action_insights(self, content: str) -> list[Any]:
+        """Extract behavioral insights from a ReAct execution trace using the LLM.
+
+        This is a pure helper — it does NOT store anything. Callers should
+        call remember() on each insight's content to persist them, with
+        ``metadata.type = \"action_insight\"`` and the insight fields stored
+        in metadata.
+
+        On LLM failure, returns an empty list — behavioral extraction is
+        best-effort and should never block factual memory storage.
+
+        Args:
+            content: Raw ReAct execution trace (Thought/Action/Observation chain).
+
+        Returns:
+            List of ActionInsightItem objects (empty list on failure or blank input).
+        """
+        return extract_action_insights_from_content(content, self._llm)
+
     def recall(
         self,
         query: str,
@@ -752,6 +775,13 @@ class Memory(BaseModel):
                     results = []
                     for r, s in raw:
                         composite, reasons = compute_composite_score(r, s, self._config)
+                        # Behavioral insights get additional adjustment factors
+                        if r.metadata.get("type") == "action_insight":
+                            adj, adj_reasons = compute_behavioral_adjustment(
+                                r.metadata, self._config,
+                            )
+                            composite *= adj
+                            reasons.extend(adj_reasons)
                         results.append(
                             MemoryMatch(
                                 record=r,
@@ -780,6 +810,14 @@ class Memory(BaseModel):
                     }
                 )
                 results = flow.state.final_results
+                # Apply behavioral adjustment to action insights in deep recall too
+                for m in results:
+                    if m.record.metadata.get("type") == "action_insight":
+                        adj, adj_reasons = compute_behavioral_adjustment(
+                            m.record.metadata, self._config,
+                        )
+                        m.score *= adj
+                        m.match_reasons.extend(adj_reasons)
 
             if results:
                 try:
@@ -894,6 +932,106 @@ class Memory(BaseModel):
         updated = existing.model_copy(update=updates)
         self._storage.update(updated)
         return updated
+
+    def _save_action_insight(
+        self,
+        content: str,
+        insight_type: str,
+        domain: str,
+        rationale: str,
+        context_signals: list[str],
+        scope: str = "/behavioral",
+        agent_role: str | None = None,
+        root_scope: str | None = None,
+    ) -> MemoryRecord | None:
+        """Save or aggregate a behavioral action insight.
+
+        Bypasses EncodingFlow since all fields are pre-filled. Direct path:
+        embed → search for similar → update count (if found) or insert new.
+
+        Args:
+            content: The insight statement.
+            insight_type: One of 'decision', 'lesson', or 'pattern'.
+            domain: Professional domain tag.
+            rationale: Why this approach worked or failed.
+            context_signals: Observable conditions triggering this insight.
+            scope: Inner scope (default "/behavioral").
+            agent_role: Optional agent role for metadata.
+            root_scope: Optional root scope override.
+
+        Returns:
+            The saved MemoryRecord, or None on failure.
+        """
+        if self.read_only:
+            return None
+
+        try:
+            # 1. Embed the content
+            embedding = embed_text(self._embedder, content)
+            if not embedding:
+                _logger.warning("Failed to embed action insight content")
+                return None
+
+            # 2. Determine effective scope: per-call root_scope, then self.root_scope, then bare scope
+            effective_root = root_scope if root_scope is not None else self.root_scope
+            effective_scope = scope
+            if effective_root:
+                effective_scope = join_scope_paths(effective_root, scope)
+
+            # 3. Search for similar existing insights
+            similar = self._storage.search(
+                embedding,
+                scope_prefix=effective_scope,
+                limit=3,
+                min_score=0.0,
+            )
+
+            # 4. Aggregate or insert
+            threshold = self._config.consolidation_threshold  # default 0.85
+            now = datetime.utcnow()
+
+            for record, sim_score in similar:
+                if sim_score >= threshold:
+                    # Found similar insight — aggregate
+                    existing_meta = dict(record.metadata)
+                    count = existing_meta.get("observation_count", 1)
+                    existing_meta["observation_count"] = count + 1
+                    existing_meta["last_observed_at"] = now.isoformat()
+
+                    updated = record.model_copy(update={
+                        "last_accessed": now,
+                        "metadata": existing_meta,
+                    })
+                    self._storage.update(updated)
+                    return updated
+
+            # 5. No similar insight — insert new
+            metadata: dict[str, Any] = {
+                "type": "action_insight",
+                "insight_type": insight_type,
+                "domain": domain,
+                "rationale": rationale,
+                "context_signals": context_signals,
+                "observation_count": 1,
+                "first_observed_at": now.isoformat(),
+                "last_observed_at": now.isoformat(),
+            }
+            record = MemoryRecord(
+                content=content,
+                scope=effective_scope,
+                categories=[insight_type, domain],
+                metadata=metadata,
+                importance=0.5,
+                embedding=embedding,
+            )
+            self._storage.save([record])
+            return record
+
+        except Exception as e:
+            _logger.warning(
+                "Failed to save action insight: %s", e, exc_info=False,
+            )
+            return None
 
     def scope(self, path: str) -> Any:
         """Return a scoped view of this memory."""
@@ -1037,6 +1175,10 @@ class Memory(BaseModel):
     async def aextract_memories(self, content: str) -> list[str]:
         """Async variant of extract_memories."""
         return self.extract_memories(content)
+
+    async def aextract_action_insights(self, content: str) -> list[Any]:
+        """Async variant of extract_action_insights."""
+        return self.extract_action_insights(content)
 
     async def aremember(
         self,

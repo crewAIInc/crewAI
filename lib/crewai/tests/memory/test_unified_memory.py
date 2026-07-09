@@ -433,6 +433,94 @@ def test_executor_save_to_memory_skips_delegation_output() -> None:
     mock_memory.remember.assert_not_called()
 
 
+def test_executor_save_to_memory_saves_action_insights() -> None:
+    """_save_to_memory calls extract_action_insights then remember per insight with correct metadata."""
+    from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
+    from crewai.agents.parser import AgentFinish
+    from crewai.memory.analyze import ActionInsightItem
+
+    mock_memory = MagicMock()
+    mock_memory.read_only = False
+    mock_memory.extract_memories.return_value = []  # no factual memories
+    mock_memory.extract_action_insights.return_value = [
+        ActionInsightItem(
+            type="lesson",
+            content="Direct DB query more reliable than API.",
+            rationale="API had stale cache.",
+            domain="data analysis",
+            context_signals=["API timeout"],
+        ),
+        ActionInsightItem(
+            type="pattern",
+            content="Reformulate search on empty results.",
+            rationale="First search too narrow.",
+            domain="search strategy",
+            context_signals=["empty results"],
+        ),
+    ]
+
+    mock_agent = MagicMock()
+    mock_agent.memory = mock_memory
+    mock_agent._logger = MagicMock()
+    mock_agent.role = "Researcher"
+
+    mock_task = MagicMock()
+    mock_task.description = "Do research"
+    mock_task.expected_output = "A report"
+
+    executor = BaseAgentExecutor()
+    executor.agent = mock_agent
+    executor.task = mock_task
+    executor._save_to_memory(
+        AgentFinish(thought="", output="We queried DB.", text="We queried DB.")
+    )
+
+    mock_memory.extract_action_insights.assert_called_once()
+    assert mock_memory._save_action_insight.call_count == 2
+
+    call_1_args = mock_memory._save_action_insight.call_args_list[0].kwargs
+    assert call_1_args["content"] == "Direct DB query more reliable than API."
+    assert call_1_args["insight_type"] == "lesson"
+    assert call_1_args["domain"] == "data analysis"
+    assert call_1_args["context_signals"] == ["API timeout"]
+    assert call_1_args["scope"] == "/behavioral"
+
+    call_2_args = mock_memory._save_action_insight.call_args_list[1].kwargs
+    assert call_2_args["content"] == "Reformulate search on empty results."
+    assert call_2_args["insight_type"] == "pattern"
+    assert call_2_args["domain"] == "search strategy"
+
+
+def test_executor_save_to_memory_insight_extract_empty_noop() -> None:
+    """When extract_action_insights returns [], no _save_action_insight calls for insights."""
+    from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
+    from crewai.agents.parser import AgentFinish
+
+    mock_memory = MagicMock()
+    mock_memory.read_only = False
+    mock_memory.extract_memories.return_value = []
+    mock_memory.extract_action_insights.return_value = []
+
+    mock_agent = MagicMock()
+    mock_agent.memory = mock_memory
+    mock_agent._logger = MagicMock()
+    mock_agent.role = "Tester"
+
+    mock_task = MagicMock()
+    mock_task.description = "Task"
+    mock_task.expected_output = "Out"
+
+    executor = BaseAgentExecutor()
+    executor.agent = mock_agent
+    executor.task = mock_task
+    executor._save_to_memory(
+        AgentFinish(thought="", output="Done.", text="Done.")
+    )
+
+    mock_memory.extract_action_insights.assert_called_once()
+    mock_memory._save_action_insight.assert_not_called()
+
+
 def test_memory_scope_extract_memories_delegates() -> None:
     """MemoryScope.extract_memories delegates to underlying Memory."""
     from crewai.memory.memory_scope import MemoryScope
@@ -733,6 +821,116 @@ def test_agent_kickoff_memory_recall_and_save(tmp_path: Path, mock_embedder: Mag
     saved_contents = remember_many_mock.call_args.args[0]
     assert "PostgreSQL is used." in saved_contents
 
+
+def test_retrieve_memory_context_separates_factual_and_behavioral() -> None:
+    """_retrieve_memory_context post-filters factual and behavioral memories into separate sections."""
+    from unittest.mock import patch
+    from crewai.agent.core import Agent
+    from crewai.memory.types import MemoryRecord, MemoryMatch
+
+    # Build mock matches: 2 factual + 1 behavioral
+    factual_1 = MemoryMatch(
+        record=MemoryRecord(content="Team uses PostgreSQL.", metadata={}),
+        score=0.9,
+        match_reasons=["semantic"],
+    )
+    factual_2 = MemoryMatch(
+        record=MemoryRecord(content="API rate limit is 100/min.", metadata={}),
+        score=0.8,
+        match_reasons=["semantic"],
+    )
+    behavioral = MemoryMatch(
+        record=MemoryRecord(
+            content="When API times out, query DB directly.",
+            metadata={"type": "action_insight", "insight_type": "lesson", "domain": "data analysis"},
+        ),
+        score=0.75,
+        match_reasons=["semantic"],
+    )
+
+    mock_memory = MagicMock()
+    mock_memory.recall.return_value = [factual_1, behavioral, factual_2]
+
+    agent = Agent(role="Tester", goal="Test", backstory="Test", verbose=False)
+    agent.memory = mock_memory
+
+    # Mock _is_any_available_memory to return True
+    with patch.object(agent, "_is_any_available_memory", return_value=True):
+        result = agent._retrieve_memory_context(
+            MagicMock(description="What database do we use?", id="1"),
+            "Original prompt",
+        )
+
+    assert "Original prompt" in result
+    assert "Team uses PostgreSQL" in result
+    assert "API rate limit is 100/min" in result
+    assert "When API times out, query DB directly" in result
+    assert "Behavioral patterns from past experience" in result
+    assert "Relevant memories" in result
+
+
+def test_retrieve_memory_context_behavioral_only() -> None:
+    """When only behavioral matches exist, only the behavioral section appears."""
+    from unittest.mock import patch
+    from crewai.agent.core import Agent
+    from crewai.memory.types import MemoryRecord, MemoryMatch
+
+    behavioral = MemoryMatch(
+        record=MemoryRecord(
+            content="Query DB when API fails.",
+            metadata={"type": "action_insight"},
+        ),
+        score=0.8,
+        match_reasons=["semantic"],
+    )
+
+    mock_memory = MagicMock()
+    mock_memory.recall.return_value = [behavioral]
+
+    agent = Agent(role="Tester", goal="Test", backstory="Test", verbose=False)
+    agent.memory = mock_memory
+
+    with patch.object(agent, "_is_any_available_memory", return_value=True):
+        result = agent._retrieve_memory_context(
+            MagicMock(description="Test query", id="2"),
+            "Base prompt",
+        )
+
+    assert "Base prompt" in result
+    assert "Query DB when API fails" in result
+    assert "Behavioral patterns from past experience" in result
+    # No "Relevant memories" header for factual-only
+    assert "Relevant memories" not in result
+
+
+def test_retrieve_memory_context_factual_only() -> None:
+    """When only factual matches exist, only the factual section appears."""
+    from unittest.mock import patch
+    from crewai.agent.core import Agent
+    from crewai.memory.types import MemoryRecord, MemoryMatch
+
+    factual = MemoryMatch(
+        record=MemoryRecord(content="Team uses PostgreSQL."),
+        score=0.9,
+        match_reasons=["semantic"],
+    )
+
+    mock_memory = MagicMock()
+    mock_memory.recall.return_value = [factual]
+
+    agent = Agent(role="Tester", goal="Test", backstory="Test", verbose=False)
+    agent.memory = mock_memory
+
+    with patch.object(agent, "_is_any_available_memory", return_value=True):
+        result = agent._retrieve_memory_context(
+            MagicMock(description="Test query", id="3"),
+            "Base prompt",
+        )
+
+    assert "Base prompt" in result
+    assert "Team uses PostgreSQL" in result
+    assert "Relevant memories" in result
+    assert "Behavioral patterns from past experience" not in result
 
 
 
@@ -1109,3 +1307,344 @@ def test_close_drains_and_shuts_down(tmp_path: Path, mock_embedder: MagicMock) -
     mem.close()
     # After close, records should be persisted
     assert mem._storage.count() == 1
+
+
+# ── extract_action_insights tests ──────────────────────────────
+
+
+def test_extract_action_insights_returns_list_from_llm(tmp_path: Path) -> None:
+    """Memory.extract_action_insights() delegates to LLM and returns list of ActionInsightItem."""
+    from crewai.memory.analyze import ActionInsightItem, ExtractedActionInsights
+    from crewai.memory.unified_memory import Memory
+
+    mock_llm = MagicMock()
+    mock_llm.supports_function_calling.return_value = True
+    mock_llm.call.return_value = ExtractedActionInsights(
+        insights=[
+            ActionInsightItem(
+                type="lesson",
+                content="API returned incomplete data; direct DB query more reliable.",
+                rationale="API had stale cache.",
+                domain="data analysis",
+                context_signals=["API timeout", "incomplete results"],
+            ),
+            ActionInsightItem(
+                type="pattern",
+                content="Reformulating query with broader terms after empty search succeeds.",
+                rationale="First search too specific.",
+                domain="general",
+                context_signals=["empty search results"],
+            ),
+        ]
+    )
+
+    mem = Memory(
+        storage=str(tmp_path / "action_insights_db"),
+        llm=mock_llm,
+        embedder=MagicMock(return_value=[[0.1] * 1536]),
+    )
+    result = mem.extract_action_insights("ReAct trace: Thought → Action: search → Obs: no results. Thought → Action: search broader → Obs: found 5 docs.")
+
+    assert len(result) == 2
+    assert result[0].type == "lesson"
+    assert result[0].domain == "data analysis"
+    assert result[0].context_signals == ["API timeout", "incomplete results"]
+    assert result[1].type == "pattern"
+    mock_llm.call.assert_called_once()
+    call_kw = mock_llm.call.call_args[1]
+    assert call_kw.get("response_model") == ExtractedActionInsights
+
+
+def test_extract_action_insights_empty_content_returns_empty_list(tmp_path: Path) -> None:
+    """Memory.extract_action_insights() with empty/whitespace content returns [] without calling LLM."""
+    from crewai.memory.unified_memory import Memory
+
+    mock_llm = MagicMock()
+    mem = Memory(storage=str(tmp_path / "empty_ai_db"), llm=mock_llm, embedder=MagicMock())
+    assert mem.extract_action_insights("") == []
+    assert mem.extract_action_insights("   \n  ") == []
+    mock_llm.call.assert_not_called()
+
+
+def test_extract_action_insights_llm_failure_returns_empty(tmp_path: Path) -> None:
+    """When LLM raises, extract_action_insights_from_content returns [] (not raw content)."""
+    from crewai.memory.analyze import extract_action_insights_from_content
+
+    llm = MagicMock()
+    llm.call.side_effect = RuntimeError("Network error")
+    content = "Thought: search → Observation: no results."
+    result = extract_action_insights_from_content(content, llm)
+    assert result == []
+
+
+def test_memory_scope_extract_action_insights_delegates() -> None:
+    """MemoryScope.extract_action_insights delegates to underlying Memory."""
+    from crewai.memory.memory_scope import MemoryScope
+
+    mock_memory = MagicMock()
+    mock_memory.extract_action_insights.return_value = []
+    scope = MemoryScope(memory=mock_memory, root_path="/agent/1")
+    result = scope.extract_action_insights("ReAct trace")
+    mock_memory.extract_action_insights.assert_called_once_with("ReAct trace")
+    assert result == []
+
+
+def test_memory_slice_extract_action_insights_delegates() -> None:
+    """MemorySlice.extract_action_insights delegates to underlying Memory."""
+    from crewai.memory.memory_scope import MemorySlice
+
+    mock_memory = MagicMock()
+    mock_memory.extract_action_insights.return_value = []
+    sl = MemorySlice(memory=mock_memory, scopes=["/a", "/b"], read_only=True)
+    result = sl.extract_action_insights("ReAct trace")
+    mock_memory.extract_action_insights.assert_called_once_with("ReAct trace")
+    assert result == []
+
+
+def test_flow_extract_action_insights_delegates_when_memory_present() -> None:
+    """Flow.extract_action_insights delegates to flow memory and returns list."""
+    from crewai.flow.flow import Flow
+
+    mock_memory = MagicMock()
+    mock_memory.extract_action_insights.return_value = []
+
+    class FlowWithMemory(Flow):
+        memory = mock_memory
+
+    f = FlowWithMemory()
+    result = f.extract_action_insights("ReAct trace")
+    mock_memory.extract_action_insights.assert_called_once_with("ReAct trace")
+    assert result == []
+
+
+def test_flow_extract_action_insights_raises_when_memory_none() -> None:
+    """Flow.extract_action_insights raises ValueError when memory is explicitly None."""
+    from crewai.flow.flow import Flow
+
+    f = Flow()
+    f.memory = None
+    with pytest.raises(ValueError, match="No memory configured"):
+        f.extract_action_insights("some content")
+
+
+def test_aextract_action_insights_returns_list_from_llm(tmp_path: Path) -> None:
+    """Memory.aextract_action_insights() async variant returns list of ActionInsightItem."""
+    import asyncio
+    from crewai.memory.analyze import ActionInsightItem, ExtractedActionInsights
+    from crewai.memory.unified_memory import Memory
+
+    mock_llm = MagicMock()
+    mock_llm.supports_function_calling.return_value = True
+    mock_llm.call.return_value = ExtractedActionInsights(
+        insights=[
+            ActionInsightItem(
+                type="lesson",
+                content="Async test insight.",
+                rationale="Test rationale.",
+                domain="testing",
+                context_signals=["test signal"],
+            ),
+        ]
+    )
+
+    mem = Memory(
+        storage=str(tmp_path / "async_ai_db"),
+        llm=mock_llm,
+        embedder=MagicMock(return_value=[[0.1] * 1536]),
+    )
+
+    async def run() -> list[Any]:
+        return await mem.aextract_action_insights("Test ReAct trace")
+
+    result = asyncio.run(run())
+    assert len(result) == 1
+    assert result[0].type == "lesson"
+    assert result[0].domain == "testing"
+    assert result[0].context_signals == ["test signal"]
+
+
+def test_aextract_action_insights_llm_failure_returns_empty(tmp_path: Path) -> None:
+    """Memory.aextract_action_insights() async variant returns [] on LLM failure."""
+    import asyncio
+    from crewai.memory.unified_memory import Memory
+
+    mock_llm = MagicMock()
+    mock_llm.supports_function_calling.return_value = True
+    mock_llm.call.side_effect = RuntimeError("Async LLM error")
+
+    mem = Memory(
+        storage=str(tmp_path / "async_ai_fail_db"),
+        llm=mock_llm,
+        embedder=MagicMock(return_value=[[0.1] * 1536]),
+    )
+
+    async def run() -> list[Any]:
+        return await mem.aextract_action_insights("Test ReAct trace")
+
+    result = asyncio.run(run())
+    assert result == []
+
+
+# ── _save_action_insight aggregation tests ─────────────────────
+
+
+def test_save_action_insight_inserts_new(tmp_path: Path, mock_embedder: MagicMock) -> None:
+    """First save of an insight creates a record with observation_count=1."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(
+        storage=str(tmp_path / "agg_new"),
+        llm=MagicMock(),
+        embedder=mock_embedder,
+    )
+
+    record = mem._save_action_insight(
+        content="Test insight content.",
+        insight_type="lesson",
+        domain="testing",
+        rationale="Because.",
+        context_signals=["signal_a"],
+    )
+
+    assert record is not None
+    assert record.content == "Test insight content."
+    assert record.metadata["observation_count"] == 1
+    assert record.metadata["type"] == "action_insight"
+    assert record.metadata["first_observed_at"] == record.metadata["last_observed_at"]
+
+    # Verify it's persisted
+    assert mem._storage.count() == 1
+
+
+def test_save_action_insight_aggregates(tmp_path: Path, mock_embedder: MagicMock) -> None:
+    """Saving the same insight twice increments observation_count and keeps one record."""
+    from crewai.memory.unified_memory import Memory
+
+    embedder = MagicMock()
+    embedder.side_effect = lambda texts: [[0.5] * 1536 for _ in texts]
+
+    mem = Memory(
+        storage=str(tmp_path / "agg_twice"),
+        llm=MagicMock(),
+        embedder=embedder,
+    )
+
+    r1 = mem._save_action_insight(
+        content="Repeated insight.",
+        insight_type="lesson",
+        domain="testing",
+        rationale="Test.",
+        context_signals=[],
+    )
+    assert r1 is not None
+    assert r1.metadata["observation_count"] == 1
+    first_id = r1.id
+
+    # Second save with same content and embedder (identical embedding → high similarity)
+    r2 = mem._save_action_insight(
+        content="Repeated insight.",
+        insight_type="lesson",
+        domain="testing",
+        rationale="Test.",
+        context_signals=[],
+    )
+    assert r2 is not None
+    assert r2.metadata["observation_count"] == 2
+
+    # Should be the same record, not a dupe
+    assert r2.id == first_id
+    assert mem._storage.count() == 1
+
+
+def test_save_action_insight_skips_aggregation_on_low_similarity(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """Different content with distinct embeddings does NOT aggregate."""
+    from crewai.memory.unified_memory import Memory
+
+    call_count = 0
+    def distinct_embedder(texts):
+        nonlocal call_count
+        result = []
+        for i, _ in enumerate(texts):
+            emb = [0.0] * 1536
+            emb[(call_count + i) % 1536] = 1.0
+            result.append(emb)
+        call_count += len(texts)
+        return result
+
+    embedder = MagicMock(side_effect=distinct_embedder)
+    mem = Memory(
+        storage=str(tmp_path / "agg_distinct"),
+        llm=MagicMock(),
+        embedder=embedder,
+    )
+
+    mem._save_action_insight(
+        content="First unique insight.",
+        insight_type="lesson", domain="a", rationale="R1", context_signals=[],
+    )
+    mem._save_action_insight(
+        content="Second completely different insight.",
+        insight_type="pattern", domain="b", rationale="R2", context_signals=[],
+    )
+
+    assert mem._storage.count() == 2
+
+
+# ── compute_behavioral_adjustment tests ─────────────────────────
+
+
+def test_behavioral_adjustment_high_confidence() -> None:
+    """10+ observations → no confidence discount."""
+    from crewai.memory.types import MemoryConfig, compute_behavioral_adjustment
+
+    config = MemoryConfig()
+    now = datetime.utcnow().isoformat()
+    meta = {"observation_count": 10, "last_observed_at": now}
+    multiplier, reasons = compute_behavioral_adjustment(meta, config)
+    assert multiplier == pytest.approx(1.0, abs=1e-9)  # no discount at 10 obs
+    assert not any("low_confidence" in r for r in reasons)
+
+
+def test_behavioral_adjustment_low_confidence() -> None:
+    """1 observation → confidence discount applied."""
+    from crewai.memory.types import MemoryConfig, compute_behavioral_adjustment
+
+    config = MemoryConfig()
+    now = datetime.utcnow().isoformat()
+    meta = {"observation_count": 1, "last_observed_at": now}
+    multiplier, reasons = compute_behavioral_adjustment(meta, config)
+    assert multiplier < 1.0
+    assert any("low_confidence" in r for r in reasons)
+
+
+def test_behavioral_adjustment_contradiction() -> None:
+    """contradicts set → multiplier halved."""
+    from crewai.memory.types import MemoryConfig, compute_behavioral_adjustment
+
+    config = MemoryConfig()
+    now = datetime.utcnow().isoformat()
+    meta = {
+        "observation_count": 10,
+        "last_observed_at": now,
+        "contradicts": ["some-other-id"],
+    }
+    multiplier, reasons = compute_behavioral_adjustment(meta, config)
+    assert multiplier == pytest.approx(0.5, abs=1e-9)
+    assert "contradicted" in reasons
+
+
+def test_behavioral_adjustment_stale() -> None:
+    """Old last_observed_at → staleness discount applied."""
+    from crewai.memory.types import MemoryConfig, compute_behavioral_adjustment
+
+    config = MemoryConfig(recency_half_life_days=30)  # behavioral HL = 60d
+    old_date = "2026-01-01T00:00:00"  # ~166 days ago (no Z suffix for Python 3.11 compat)
+    meta = {
+        "observation_count": 10,
+        "last_observed_at": old_date,
+    }
+    multiplier, reasons = compute_behavioral_adjustment(meta, config)
+    assert multiplier < 0.5  # significant decay after 166d
+    assert "stale" in reasons
