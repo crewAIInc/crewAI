@@ -956,6 +956,22 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             return self.memory.remember_many(content, **kwargs)
         return self.memory.remember(content, **kwargs)
 
+    def _drain_memory_writes(self) -> None:
+        """Block until pending background memory saves for this flow finish.
+
+        Must run before ``FlowFinishedEvent`` is emitted: listeners (e.g.
+        telemetry sessions) tear down on that event, and any
+        ``MemorySaveCompletedEvent``/``MemorySaveFailedEvent`` emitted after
+        teardown is lost, leaving the save span orphaned.
+        """
+        mem = self.memory
+        if mem is None:
+            return
+        backing = getattr(mem, "_memory", None) or mem
+        drain = getattr(backing, "drain_writes", None)
+        if callable(drain):
+            drain()
+
     def extract_memories(self, content: str) -> list[str]:
         """Extract discrete memories from content. Delegates to this flow's memory.
 
@@ -1474,6 +1490,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             not self.suppress_flow_events
             and not self._should_defer_trace_finalization()
         ):
+            # Background memory saves must finish (and emit their
+            # completed/failed events) before flow-finished triggers
+            # listener teardown/finalization.
+            self._drain_memory_writes()
             future = crewai_event_bus.emit(
                 self,
                 FlowFinishedEvent(
@@ -2285,6 +2305,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # flag is read from either the instance attribute or an extension
             # definition.
             if not self._should_defer_trace_finalization():
+                # Background memory saves must finish (and emit their
+                # completed/failed events) before flow-finished triggers
+                # listener teardown/finalization.
+                self._drain_memory_writes()
                 future = crewai_event_bus.emit(
                     self,
                     FlowFinishedEvent(
@@ -2317,9 +2341,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
             return final_output
         finally:
-            # Ensure all background memory saves complete before returning
-            if self.memory is not None and hasattr(self.memory, "drain_writes"):
-                self.memory.drain_writes()
+            # Safety net for the exception path; the success path already
+            # drained before emitting FlowFinishedEvent.
+            self._drain_memory_writes()
             # Drain pending LLMCallCompletedEvent handlers before
             # detaching so `flow.usage_metrics` reflects every call
             # emitted during this kickoff — mirrors `Crew.kickoff()`,
