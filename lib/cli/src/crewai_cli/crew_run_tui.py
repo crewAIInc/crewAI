@@ -589,6 +589,11 @@ FooterKey .footer-key--key {
         """
         return self._flow is not None and not self._is_conversational
 
+    @property
+    def _run_noun(self) -> str:
+        """User-facing noun for the run — 'flow' for a declarative flow, else 'crew'."""
+        return "flow" if self._is_flow_run else "crew"
+
     # ── Layout ──────────────────────────────────────────────
 
     def compose(self) -> ComposeResult:
@@ -698,7 +703,7 @@ FooterKey .footer-key--key {
         except Exception as e:
             self.call_from_thread(self._on_crew_failed, str(e))
 
-    @work(thread=True, exclusive=True, group="crew")
+    @work(thread=True, exclusive=True, group="flow")
     def _run_flow_worker(self) -> None:
         from crewai.events.listeners.tracing.utils import (
             set_suppress_tracing_messages,
@@ -763,7 +768,9 @@ FooterKey .footer-key--key {
                     if entry["tool_name"] == "memory_save":
                         continue
                     entry["status"] = "timeout"
-                    entry["error"] = "No result received before crew completed"
+                    entry["error"] = (
+                        f"No result received before {self._run_noun} completed"
+                    )
                     entry["duration"] = now - entry["start_time"]
         try:
             from crewai.events.listeners.tracing.trace_listener import (
@@ -811,7 +818,9 @@ FooterKey .footer-key--key {
                     if entry["tool_name"] == "memory_save":
                         continue
                     entry["status"] = "error"
-                    entry["error"] = "No result received before crew failed"
+                    entry["error"] = (
+                        f"No result received before {self._run_noun} failed"
+                    )
                     entry["duration"] = now - entry["start_time"]
         self._tick()
         self.call_later(self._focus_activity_log)

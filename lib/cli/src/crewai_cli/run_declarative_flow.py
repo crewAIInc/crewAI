@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 import subprocess
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 from crewai_core.project import ProjectDefinitionError, configured_project_definition
@@ -16,6 +17,13 @@ from crewai_cli.input_prompt import (
     prompt_for_inputs,
 )
 from crewai_cli.utils import build_env_with_all_tool_credentials
+
+
+if TYPE_CHECKING:
+    from crewai.flow.flow import Flow
+
+
+logger = logging.getLogger(__name__)
 
 
 def run_declarative_flow_in_project_env(
@@ -88,7 +96,9 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     click.echo(_format_result(result))
 
 
-def _run_declarative_flow_tui(flow: Any, resolved_inputs: dict[str, Any] | None) -> Any:
+def _run_declarative_flow_tui(
+    flow: Flow[Any], resolved_inputs: dict[str, Any] | None
+) -> Any:
     """Run a declarative flow on the CrewAI TUI (the interactive default).
 
     Mirrors the declarative-crew TUI contract (``run_crew._run_json_crew``):
@@ -113,10 +123,12 @@ def _run_declarative_flow_tui(flow: Any, resolved_inputs: dict[str, Any] | None)
     # this and keeps the flow's declared setting.
     try:
         flow.suppress_flow_events = False
-    except Exception:  # noqa: S110
-        pass
+    except Exception:
+        logger.debug(
+            "Could not disable suppress_flow_events for the flow TUI", exc_info=True
+        )
 
-    app = CrewRunApp(crew_name=getattr(flow, "name", None) or type(flow).__name__)
+    app = CrewRunApp(crew_name=flow.name or type(flow).__name__)
     app._flow = flow
     app._flow_inputs = resolved_inputs
     app._flow_method_types = _flow_method_types(flow)
@@ -144,22 +156,23 @@ def _run_declarative_flow_tui(flow: Any, resolved_inputs: dict[str, Any] | None)
     return app._crew_result
 
 
-def _flow_uses_human_feedback(flow: Any) -> bool:
+def _flow_uses_human_feedback(flow: Flow[Any]) -> bool:
     """True if any declarative method declares ``@human_feedback``.
 
     Such flows need the flow runtime's interactive stdin / Rich prompts, which
     don't compose with Textual — so they run on the terminal, not the TUI.
     """
     try:
-        methods = getattr(getattr(flow, "_definition", None), "methods", None) or {}
         return any(
-            getattr(m, "human_feedback", None) is not None for m in methods.values()
+            method.human_feedback is not None
+            for method in flow._definition.methods.values()
         )
     except Exception:
+        logger.debug("Could not inspect flow for human feedback", exc_info=True)
         return False
 
 
-def _flow_method_types(flow: Any) -> dict[str, str]:
+def _flow_method_types(flow: Flow[Any]) -> dict[str, str]:
     """Map each declarative method name to its ``call`` type (crew/agent/…).
 
     Best-effort: the STEPS panel shows this as a dim label. Method events don't
@@ -167,13 +180,10 @@ def _flow_method_types(flow: Any) -> dict[str, str]:
     """
     method_types: dict[str, str] = {}
     try:
-        methods = getattr(getattr(flow, "_definition", None), "methods", None) or {}
-        for name, method_definition in methods.items():
-            call_type = getattr(getattr(method_definition, "do", None), "call", None)
-            if isinstance(call_type, str):
-                method_types[name] = call_type
-    except Exception:  # noqa: S110
-        pass
+        for name, method_definition in flow._definition.methods.items():
+            method_types[name] = method_definition.do.call
+    except Exception:
+        logger.debug("Could not derive flow method types", exc_info=True)
     return method_types
 
 

@@ -968,6 +968,31 @@ async def test_crew_done_does_not_mark_unfinished_tool_successful() -> None:
 
 
 @pytest.mark.asyncio
+async def test_flow_done_uses_flow_wording_for_unfinished_tool() -> None:
+    # The shared completion handler reports "flow" (not "crew") in flow mode.
+    app = CrewRunApp(crew_name="Demo Flow")
+    app._flow = SimpleNamespace()
+
+    async with app.run_test(size=(100, 40)) as pilot:
+        app._log_entries = [
+            {
+                "tool_name": "search",
+                "status": "running",
+                "args": None,
+                "result": None,
+                "error": None,
+                "start_time": time.time() - 2,
+                "duration": None,
+                "task_idx": 1,
+            }
+        ]
+        app._on_crew_done("final output")
+        await pilot.pause()
+
+    assert app._log_entries[0]["error"] == "No result received before flow completed"
+
+
+@pytest.mark.asyncio
 async def test_crew_done_does_not_timeout_memory_save() -> None:
     app = _app_with_plan()
 
