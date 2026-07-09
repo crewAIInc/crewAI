@@ -4,6 +4,6 @@ from typing import Annotated, Literal
 
 
 SupportedProvider = Annotated[
-    Literal["chromadb", "qdrant"],
+    Literal["chromadb", "qdrant", "turbopuffer"],
     "Supported RAG provider types, add providers here as they become available",
 ]

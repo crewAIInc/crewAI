@@ -54,7 +54,7 @@ class VectorDbConfig(TypedDict):
         config: RAG configuration options.
     """
 
-    provider: Literal["chromadb", "qdrant"]
+    provider: Literal["chromadb", "qdrant", "turbopuffer"]
     config: dict[str, Any]
 
 

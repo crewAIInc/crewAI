@@ -13,7 +13,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-07-04T15:35:51.457693Z"
+exclude-newer = "2026-07-06T16:12:05.359448Z"
 exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
@@ -1408,6 +1408,10 @@ qdrant-edge = [
 tools = [
     { name = "crewai-tools" },
 ]
+turbopuffer = [
+    { name = "fastembed" },
+    { name = "turbopuffer" },
+]
 voyageai = [
     { name = "voyageai" },
 ]
@@ -1438,6 +1442,7 @@ requires-dist = [
     { name = "crewai-tools", marker = "extra == 'tools'", editable = "lib/crewai-tools" },
     { name = "docling", marker = "extra == 'docling'", specifier = "~=2.97.0" },
     { name = "docling-core", extras = ["chunking"], marker = "extra == 'docling'", specifier = ">=2.74.1" },
+    { name = "fastembed", marker = "extra == 'turbopuffer'", specifier = ">=0.3.0" },
     { name = "google-genai", marker = "extra == 'google-genai'", specifier = "~=1.65.0" },
     { name = "httpx", specifier = "~=0.28.1" },
     { name = "httpx-auth", marker = "extra == 'a2a'", specifier = "~=0.23.1" },
@@ -1472,9 +1477,10 @@ requires-dist = [
     { name = "tokenizers", specifier = ">=0.21,<1" },
     { name = "tomli", specifier = "~=2.0.2" },
     { name = "tomli-w", specifier = "~=1.1.0" },
+    { name = "turbopuffer", marker = "extra == 'turbopuffer'", specifier = ">=1.0.0,<2" },
     { name = "voyageai", marker = "extra == 'voyageai'", specifier = "~=0.3.5" },
 ]
-provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "qdrant", "qdrant-edge", "tools", "voyageai", "watson"]
+provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "qdrant", "qdrant-edge", "tools", "turbopuffer", "voyageai", "watson"]
 
 [[package]]
 name = "crewai-cli"
@@ -9176,6 +9182,26 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/30/b1/b7507bb9815d403927c8dd51d4158ed2e11751a92dbc118a044f247b6848/triton-3.7.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a35d7afe3f3f058e7ec49fcce09794049e0ffc5c59019ac25ec3413741b8c4e7", size = 201453566, upload-time = "2026-05-07T18:46:20.427Z" },
     { url = "https://files.pythonhosted.org/packages/a6/8f/0bea7a6a0c989315c9135a1d7fb37e41905cfb3a17cbc1f10044ebd4cc3a/triton-3.7.0-cp313-cp313t-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:cc1d61c172d257db80ddf42595131fb196ad2e9bdd751e90fe2ef13531734e8b", size = 188612899, upload-time = "2026-05-07T19:05:24.955Z" },
     { url = "https://files.pythonhosted.org/packages/e1/02/d96f57828d0912aec733b9bc7e0e7dbfd2c6f079a8fa433ac25cb93d1a30/triton-3.7.0-cp313-cp313t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:70fb9bbdc9f400afc54bbf6eb2670af28829a6ae3996863317964783141daf56", size = 201553816, upload-time = "2026-05-07T18:46:27.49Z" },
+]
+
+[[package]]
+name = "turbopuffer"
+version = "1.21.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "anyio" },
+    { name = "distro" },
+    { name = "httpx" },
+    { name = "orjson" },
+    { name = "pybase64" },
+    { name = "pydantic" },
+    { name = "sniffio" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/17/e5/c7df3bde9efbbafdcf10ba5ae2a0159e4a894183393e2dc02d2cb1c19792/turbopuffer-1.21.0.tar.gz", hash = "sha256:988ddfceab082190673a097edb1e32636a8958cc6ad6c5260b2990513c12ded9", size = 337493, upload-time = "2026-04-07T15:47:34.586Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/39/30/995ae0edbb748d6a98bcbb0040ed354e2df31a06092a60e986763de52893/turbopuffer-1.21.0-py3-none-any.whl", hash = "sha256:adbea8fc118138e311047571f1438b4a2ce0d67aa759c1dd33fc3b90bdf2c424", size = 122566, upload-time = "2026-04-07T15:47:35.941Z" },
 ]
 
 [[package]]

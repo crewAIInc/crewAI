@@ -197,12 +197,12 @@ class RagTool(BaseTool):
             return self._create_provider_config("chromadb", {}, None)
 
         vectordb_cfg = cast(VectorDbConfig, config.get("vectordb", {}))
-        provider: Literal["chromadb", "qdrant"] = vectordb_cfg.get(
+        provider: Literal["chromadb", "qdrant", "turbopuffer"] = vectordb_cfg.get(
             "provider", "chromadb"
         )
         provider_config: dict[str, Any] = vectordb_cfg.get("config", {})
 
-        supported = ("chromadb", "qdrant")
+        supported = ("chromadb", "qdrant", "turbopuffer")
         if provider not in supported:
             raise ValueError(
                 f"Unsupported vector database provider: '{provider}'. "
@@ -222,7 +222,7 @@ class RagTool(BaseTool):
 
     @staticmethod
     def _create_provider_config(
-        provider: Literal["chromadb", "qdrant"],
+        provider: Literal["chromadb", "qdrant", "turbopuffer"],
         provider_config: dict[str, Any],
         embedding_function: EmbeddingFunction[Any] | None,
     ) -> Any:
@@ -242,6 +242,14 @@ class RagTool(BaseTool):
             if embedding_function is not None:
                 kwargs["embedding_function"] = embedding_function
             return QdrantConfig(**kwargs)
+
+        if provider == "turbopuffer":
+            from crewai.rag.turbopuffer.config import TurbopufferConfig
+
+            kwargs = dict(provider_config)
+            if embedding_function is not None:
+                kwargs["embedding_function"] = embedding_function
+            return TurbopufferConfig(**kwargs)
 
         raise ValueError(f"Unhandled provider: {provider}")
 

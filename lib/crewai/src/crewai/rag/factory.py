@@ -6,6 +6,7 @@ from typing import cast
 from crewai.rag.config.optional_imports.protocols import (
     ChromaFactoryModule,
     QdrantFactoryModule,
+    TurbopufferFactoryModule,
 )
 from crewai.rag.config.types import RagConfigType
 from crewai.rag.core.base_client import BaseClient
@@ -74,5 +75,15 @@ def create_client(config: RagConfigType) -> BaseClient:
             ),
         )
         return qdrant_mod.create_client(config)
+
+    if config.provider == "turbopuffer":
+        tpuf_mod = cast(
+            TurbopufferFactoryModule,
+            require(
+                "crewai.rag.turbopuffer.factory",
+                purpose="The 'turbopuffer' provider",
+            ),
+        )
+        return tpuf_mod.create_client(config)
 
     raise ValueError(f"Unsupported provider: {config.provider}")
