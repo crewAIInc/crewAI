@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Coroutine, Iterable, Mapping
+import inspect
 from typing import TYPE_CHECKING, Any
 
 from opentelemetry import baggage
@@ -264,6 +265,89 @@ def prepare_kickoff(
     Returns:
         The potentially modified inputs dictionary after before callbacks.
     """
+    return _prepare_kickoff_impl(crew, inputs, input_files, normalized_inputs=None)
+
+
+async def aprepare_kickoff(
+    crew: Crew,
+    inputs: dict[str, Any] | None,
+    input_files: dict[str, FileInput] | None = None,
+) -> dict[str, Any] | None:
+    """Async counterpart of :func:`prepare_kickoff`.
+
+    Used by ``Crew.akickoff`` so that async ``before_kickoff_callbacks`` are
+    awaited instead of silently dropped, and any blocking work inside them
+    does not stall the event loop. Sync before-callbacks continue to work
+    unchanged.
+
+    Args:
+        crew: The crew instance to prepare.
+        inputs: Optional input dictionary to pass to the crew.
+        input_files: Optional dict of named file inputs for the crew.
+
+    Returns:
+        The potentially modified inputs dictionary after before callbacks.
+    """
+    normalized = await _arun_before_kickoff_callbacks(crew, _normalize_inputs(inputs))
+    return _prepare_kickoff_impl(
+        crew, inputs, input_files, normalized_inputs=normalized
+    )
+
+
+def _normalize_inputs(inputs: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Validate and copy ``inputs`` into a normalized dict, preserving ``None``."""
+    if inputs is None:
+        return None
+    if not isinstance(inputs, Mapping):
+        raise TypeError(
+            f"inputs must be a dict or Mapping, got {type(inputs).__name__}"
+        )
+    return dict(inputs)
+
+
+def _run_before_kickoff_callbacks(
+    crew: Crew, normalized: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Run sync ``before_kickoff_callbacks``, returning the (possibly) new inputs."""
+    for before_callback in crew.before_kickoff_callbacks:
+        if normalized is None:
+            normalized = {}
+        normalized = before_callback(normalized)
+    return normalized  # type: ignore[return-value]
+
+
+async def _arun_before_kickoff_callbacks(
+    crew: Crew, normalized: dict[str, Any] | None
+) -> dict[str, Any] | None:
+    """Run ``before_kickoff_callbacks`` with async support.
+
+    Awaits callbacks that return an awaitable (coroutine functions), matching
+    how ``task_callback`` and ``step_callback`` are handled in the async path.
+    Sync callbacks run unchanged.
+    """
+    for before_callback in crew.before_kickoff_callbacks:
+        if normalized is None:
+            normalized = {}
+        result = before_callback(normalized)
+        if inspect.isawaitable(result):
+            result = await result
+        normalized = result
+    return normalized
+
+
+def _prepare_kickoff_impl(
+    crew: Crew,
+    inputs: dict[str, Any] | None,
+    input_files: dict[str, FileInput] | None,
+    *,
+    normalized_inputs: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Shared body of :func:`prepare_kickoff` and :func:`aprepare_kickoff`.
+
+    When ``normalized_inputs`` is ``None`` the sync before-callbacks are run
+    here; otherwise the caller (the async path) has already applied them and
+    they are skipped to avoid double-execution.
+    """
     from crewai.events.base_events import reset_emission_counter
     from crewai.events.event_bus import crewai_event_bus
     from crewai.events.event_context import (
@@ -281,13 +365,11 @@ def prepare_kickoff(
     from crewai.hooks.contexts import ExecutionStartContext, InputContext
     from crewai.hooks.dispatch import InterceptionPoint, dispatch
 
-    normalized: dict[str, Any] | None = None
-    if inputs is not None:
-        if not isinstance(inputs, Mapping):
-            raise TypeError(
-                f"inputs must be a dict or Mapping, got {type(inputs).__name__}"
-            )
-        normalized = dict(inputs)
+    if normalized_inputs is None:
+        normalized = _normalize_inputs(inputs)
+        normalized = _run_before_kickoff_callbacks(crew, normalized)
+    else:
+        normalized = normalized_inputs
 
     # ``inputs`` aliases the same object as ``payload`` (not a fresh ``{}`` from
     # ``or``) so in-place edits to either survive read-back, per the context
@@ -299,11 +381,6 @@ def prepare_kickoff(
     )
     dispatch(InterceptionPoint.EXECUTION_START, start_ctx)
     normalized = start_ctx.payload
-
-    for before_callback in crew.before_kickoff_callbacks:
-        if normalized is None:
-            normalized = {}
-        normalized = before_callback(normalized)
 
     input_ctx = InputContext(
         crew=crew,
