@@ -1048,8 +1048,9 @@ class Crew(FlowTrackable, BaseModel):
             )
             raise
         finally:
-            if self._memory is not None and hasattr(self._memory, "drain_writes"):
-                self._memory.drain_writes()
+            # Safety net for the exception path; the success path already
+            # drained in _create_crew_output before emitting completion.
+            self._drain_memory_writes()
             clear_files(self.id)
             detach(token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
@@ -1260,6 +1261,9 @@ class Crew(FlowTrackable, BaseModel):
             )
             raise
         finally:
+            # Safety net for the exception path; the success path already
+            # drained in _create_crew_output before emitting completion.
+            self._drain_memory_writes()
             clear_files(self.id)
             detach(token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
@@ -1841,6 +1845,38 @@ class Crew(FlowTrackable, BaseModel):
                 output=output.raw,
             )
 
+    def _drain_memory_writes(self) -> None:
+        """Block until all pending background memory saves have completed.
+
+        Covers the crew memory, per-agent memories, and the manager agent's
+        memory — agents save through ``agent.memory`` when set (see
+        ``BaseAgentExecutor._save_to_memory``), so draining only
+        ``self._memory`` can miss in-flight saves. Scope/slice views are
+        unwrapped to their backing ``Memory`` so each pool is drained once.
+
+        Must run before ``CrewKickoffCompletedEvent`` is emitted: listeners
+        (e.g. telemetry sessions) tear down on that event, and any
+        ``MemorySaveCompletedEvent``/``MemorySaveFailedEvent`` emitted after
+        teardown is lost, leaving the save span orphaned.
+        """
+        seen: set[int] = set()
+        candidates = [
+            self._memory,
+            self.memory,
+            getattr(self.manager_agent, "memory", None),
+            *(getattr(agent, "memory", None) for agent in self.agents),
+        ]
+        for mem in candidates:
+            if mem is None or isinstance(mem, bool):
+                continue
+            backing = getattr(mem, "_memory", None) or mem
+            if id(backing) in seen:
+                continue
+            seen.add(id(backing))
+            drain = getattr(backing, "drain_writes", None)
+            if callable(drain):
+                drain()
+
     def _create_crew_output(self, task_outputs: list[TaskOutput]) -> CrewOutput:
         if not task_outputs:
             raise ValueError("No task outputs available to create crew output.")
@@ -1853,6 +1889,10 @@ class Crew(FlowTrackable, BaseModel):
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
         self.token_usage = self.calculate_usage_metrics()
+        # Ensure background memory saves finish (and emit their
+        # completed/failed events) before the kickoff-completed event below
+        # triggers listener teardown/finalization.
+        self._drain_memory_writes()
         crewai_event_bus.flush()
         crewai_event_bus.emit(
             self,
