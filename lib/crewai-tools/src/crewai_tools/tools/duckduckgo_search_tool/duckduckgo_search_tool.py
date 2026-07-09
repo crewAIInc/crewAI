@@ -38,6 +38,7 @@ class DuckDuckGoSearchTool(BaseTool):
     package_dependencies: list[str] = Field(default_factory=lambda: ["ddgs"])
 
     def __init__(self, **kwargs: Any) -> None:
+        """Initialize the tool and verify the optional ``ddgs`` dependency is available."""
         super().__init__(**kwargs)
         try:
             from ddgs import DDGS  # noqa: F401
@@ -50,6 +51,7 @@ class DuckDuckGoSearchTool(BaseTool):
             ) from exc
 
     def _run(self, **kwargs: Any) -> str:
+        """Run a DuckDuckGo search and return formatted title/link/snippet results."""
         search_query = kwargs.get("search_query") or kwargs.get("query")
         if not search_query:
             return "Error: a 'search_query' is required to perform a DuckDuckGo search."

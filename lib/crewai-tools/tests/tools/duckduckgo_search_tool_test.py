@@ -44,7 +44,9 @@ def test_ddg_tool_search(mock_ddgs, ddg_tool):
     assert "Test Title" in result
     assert "http://test.com" in result
     assert "Test Snippet" in result
-    instance.text.assert_called_once()
+    instance.text.assert_called_once_with(
+        "test", region="wt-wt", safesearch="moderate", max_results=2
+    )
 
 
 @patch("ddgs.DDGS")
