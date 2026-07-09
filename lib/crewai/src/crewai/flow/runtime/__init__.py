@@ -1492,8 +1492,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         ):
             # Background memory saves must finish (and emit their
             # completed/failed events) before flow-finished triggers
-            # listener teardown/finalization.
-            self._drain_memory_writes()
+            # listener teardown/finalization. Offloaded to a thread so the
+            # blocking drain doesn't stall other coroutines on the loop.
+            await asyncio.to_thread(self._drain_memory_writes)
             future = crewai_event_bus.emit(
                 self,
                 FlowFinishedEvent(
@@ -2307,8 +2308,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if not self._should_defer_trace_finalization():
                 # Background memory saves must finish (and emit their
                 # completed/failed events) before flow-finished triggers
-                # listener teardown/finalization.
-                self._drain_memory_writes()
+                # listener teardown/finalization. Offloaded to a thread so the
+                # blocking drain doesn't stall other coroutines on the loop.
+                await asyncio.to_thread(self._drain_memory_writes)
                 future = crewai_event_bus.emit(
                     self,
                     FlowFinishedEvent(

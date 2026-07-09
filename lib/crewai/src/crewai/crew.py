@@ -1261,6 +1261,9 @@ class Crew(FlowTrackable, BaseModel):
             )
             raise
         finally:
+            # Safety net for the exception path; the success path already
+            # drained in _create_crew_output before emitting completion.
+            self._drain_memory_writes()
             clear_files(self.id)
             detach(token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
@@ -1845,8 +1848,8 @@ class Crew(FlowTrackable, BaseModel):
     def _drain_memory_writes(self) -> None:
         """Block until all pending background memory saves have completed.
 
-        Covers both the crew memory and per-agent memories — agents save
-        through ``agent.memory`` when set (see
+        Covers the crew memory, per-agent memories, and the manager agent's
+        memory — agents save through ``agent.memory`` when set (see
         ``BaseAgentExecutor._save_to_memory``), so draining only
         ``self._memory`` can miss in-flight saves. Scope/slice views are
         unwrapped to their backing ``Memory`` so each pool is drained once.
@@ -1860,6 +1863,7 @@ class Crew(FlowTrackable, BaseModel):
         candidates = [
             self._memory,
             self.memory,
+            getattr(self.manager_agent, "memory", None),
             *(getattr(agent, "memory", None) for agent in self.agents),
         ]
         for mem in candidates:

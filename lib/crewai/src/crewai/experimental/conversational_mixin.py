@@ -1190,6 +1190,13 @@ class _ConversationalMixin:
         )
         from crewai.events.types.flow_events import FlowFinishedEvent
 
+        # Background memory saves must finish (and emit their completed/failed
+        # events) before the session-end flow_finished / batch finalization
+        # below tears down listeners, mirroring the non-deferred kickoff path.
+        drain_memory_writes = getattr(self, "_drain_memory_writes", None)
+        if callable(drain_memory_writes):
+            drain_memory_writes()
+
         # Only emit the session-end event when a deferred flow_started is
         # actually pending. ``_deferred_flow_started_event_id`` is set only by
         # deferred kickoffs; when finalization was not deferred, each per-turn
