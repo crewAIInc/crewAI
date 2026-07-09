@@ -12,40 +12,34 @@ Fix:
   If the hash exists in durable storage, return cached result instead of re-executing.
 
 Usage:
-  from crewai.tools.idempotency import IdempotencyGuard
-  
+  from crewai.tools.idempotency import IdempotencyGuard, idempotent
+
   @tool
+  @idempotent(storage_backend="file")
   def send_payment(amount: float, recipient: str) -> str:
-      # CCS-style idempotency guard
-      guard = IdempotencyGuard(tool_name="send_payment")
-      if guard.is_duplicate(args={"amount": amount, "recipient": recipient}):
-          return guard.get_cached_result()
-      
-      # Execute only once
       result = stripe.charge(amount, recipient)
-      guard.record(result)
       return result
 """
 
 from __future__ import annotations
 import hashlib
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 from pathlib import Path
 
 
 class IdempotencyGuard:
     """
     Durable idempotency guard for CrewAI tools.
-    
+
     Survives task retries, worker re-dispatch, and process restarts.
     Based on CCS (Conformance Checking Standard) Identity dimension.
     """
-    
+
     # Shared storage across all tool calls (in production, use Redis/DB)
     _storage: Dict[str, Any] = {}
     _storage_path: Optional[Path] = None
-    
+
     def __init__(self, tool_name: str, storage_backend: str = "memory"):
         """
         Args:
@@ -54,44 +48,43 @@ class IdempotencyGuard:
         """
         self.tool_name = tool_name
         self.storage_backend = storage_backend
-        
+
         if storage_backend == "file":
-            # Use file-based storage for durability
             IdempotencyGuard._storage_path = Path(".ccs_idempotency.json")
             if IdempotencyGuard._storage_path.exists():
-                with open(IdempotencyGuard._storage_path, 'r') as f:
+                with open(IdempotencyGuard._storage_path, "r") as f:
                     IdempotencyGuard._storage = json.load(f)
-    
-    def _compute_hash(self, args: Dict[str, Any]) -> str:
-        """Compute stable hash from tool_name + arguments"""
+
+    def _compute_hash(self, call_key: Dict[str, Any]) -> str:
+        """Compute stable hash from tool_name + call key (args + kwargs)"""
         key = json.dumps({
             "tool": self.tool_name,
-            "args": args
+            "call_key": call_key
         }, sort_keys=True, default=str)
         return hashlib.sha256(key.encode()).hexdigest()[:16]
-    
+
     def _persist(self):
         """Persist storage to disk (if using file backend)"""
         if self.storage_backend == "file" and IdempotencyGuard._storage_path:
-            with open(IdempotencyGuard._storage_path, 'w') as f:
+            with open(IdempotencyGuard._storage_path, "w") as f:
                 json.dump(IdempotencyGuard._storage, f)
-    
-    def is_duplicate(self, args: Dict[str, Any]) -> bool:
+
+    def is_duplicate(self, call_key: Dict[str, Any]) -> bool:
         """Check if this tool call has already been executed"""
-        h = self._compute_hash(args)
+        h = self._compute_hash(call_key)
         return h in IdempotencyGuard._storage
-    
-    def get_cached_result(self, args: Dict[str, Any]) -> Any:
+
+    def get_cached_result(self, call_key: Dict[str, Any]) -> Any:
         """Get cached result for duplicate call"""
-        h = self._compute_hash(args)
+        h = self._compute_hash(call_key)
         return IdempotencyGuard._storage.get(h)
-    
-    def record(self, args: Dict[str, Any], result: Any):
+
+    def record(self, call_key: Dict[str, Any], result: Any):
         """Record tool execution result"""
-        h = self._compute_hash(args)
+        h = self._compute_hash(call_key)
         IdempotencyGuard._storage[h] = result
         self._persist()
-    
+
     @classmethod
     def reset(cls):
         """Reset storage (for testing)"""
@@ -100,11 +93,10 @@ class IdempotencyGuard:
             cls._storage_path.unlink()
 
 
-# Decorator for easy integration
 def idempotent(storage_backend: str = "memory"):
     """
     Decorator to make a tool idempotent.
-    
+
     Usage:
         @tool
         @idempotent(storage_backend="file")
@@ -114,16 +106,31 @@ def idempotent(storage_backend: str = "memory"):
     """
     def decorator(func):
         def wrapper(*args, **kwargs):
-            guard = IdempotencyGuard(tool_name=func.__name__, storage_backend=storage_backend)
-            
-            if guard.is_duplicate(kwargs):
-                cached = guard.get_cached_result(kwargs)
-                print(f"[CCS] Blocked duplicate: {func.__name__}, returning cached result")
+            guard = IdempotencyGuard(
+                tool_name=func.__name__, storage_backend=storage_backend
+            )
+
+            # Build call key from BOTH positional and keyword arguments
+            # This ensures send_payment(100, "alice") and send_payment(200, "bob")
+            # are correctly identified as different calls
+            call_key = {
+                "args": args,
+                "kwargs": {k: v for k, v in sorted(kwargs.items())},
+            }
+
+            if guard.is_duplicate(call_key):
+                cached = guard.get_cached_result(call_key)
+                print(
+                    f"[CCS] Blocked duplicate: {func.__name__}"
+                    f", returning cached result"
+                )
                 return cached
-            
+
             # Execute
             result = func(*args, **kwargs)
-            guard.record(kwargs, result)
+            guard.record(call_key, result)
             return result
+
         return wrapper
+
     return decorator
