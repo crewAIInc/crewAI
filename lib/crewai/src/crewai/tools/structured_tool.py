@@ -21,7 +21,10 @@ from pydantic import (
 from typing_extensions import Self
 
 from crewai.utilities.logger import Logger
-from crewai.utilities.pydantic_schema_utils import create_model_from_schema
+from crewai.utilities.pydantic_schema_utils import (
+    create_model_from_schema,
+    generate_model_description,
+)
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -108,6 +111,45 @@ def build_schema_hint(args_schema: type[BaseModel]) -> str:
         return ""
 
 
+def format_description_for_llm(
+    name: str,
+    args_schema: type[BaseModel] | None,
+    description: str,
+) -> str:
+    """Compose the LLM-facing tool description.
+
+    Combines the tool name, its argument JSON schema, and the authored
+    description into the prompt block agents see. The authored
+    ``description`` field itself is never mutated — prompt rendering calls
+    this on demand.
+
+    Idempotent: if ``description`` already contains a composed block (e.g.
+    a tool deserialized from a checkpoint written by an older version, or
+    an adapter that bakes the composite into the field), only the authored
+    text after the last ``"Tool Description:"`` marker is used.
+
+    Args:
+        name: The tool name (sanitized for the prompt).
+        args_schema: The tool's argument schema, if any.
+        description: The authored tool description.
+
+    Returns:
+        The composed, LLM-facing description block.
+    """
+    if "Tool Description:" in description:
+        description = description.split("Tool Description:")[-1].strip()
+    if args_schema is not None:
+        schema = generate_model_description(args_schema)
+        args_json = json.dumps(schema["json_schema"]["schema"], indent=2)
+    else:
+        args_json = "{}"
+    return (
+        f"Tool Name: {sanitize_tool_name(name)}\n"
+        f"Tool Arguments: {args_json}\n"
+        f"Tool Description: {description}"
+    )
+
+
 class ToolUsageLimitExceededError(Exception):
     """Exception raised when a tool has reached its maximum usage limit."""
 
@@ -140,6 +182,15 @@ class CrewStructuredTool(BaseModel):
     cache_function: Any = Field(default=None, exclude=True)
     _logger: Logger = PrivateAttr(default_factory=Logger)
     _original_tool: Any = PrivateAttr(default=None)
+
+    @property
+    def formatted_description(self) -> str:
+        """LLM-facing composite of name, argument schema, and description.
+
+        Use this when rendering the tool into a prompt; ``description``
+        holds only the authored text.
+        """
+        return format_description_for_llm(self.name, self.args_schema, self.description)
 
     @model_validator(mode="after")
     def _validate_func(self) -> Self:

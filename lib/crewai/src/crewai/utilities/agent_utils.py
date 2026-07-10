@@ -147,7 +147,7 @@ def render_text_description_and_args(
     Returns:
         Plain text description of tools.
     """
-    tool_strings = [tool.description for tool in tools]
+    tool_strings = [tool.formatted_description for tool in tools]
     return "\n".join(tool_strings)
 
 
