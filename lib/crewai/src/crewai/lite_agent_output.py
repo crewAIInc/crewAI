@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.planning_types import TodoItem
 from crewai.utilities.types import LLMMessage
 
@@ -39,8 +40,10 @@ class LiteAgentOutput(BaseModel):
     agent_role: str = Field(description="Role of the agent that produced this output")
     usage_metrics: dict[str, Any] | None = Field(
         description=(
-            "Token usage metrics for this kickoff call only (guardrail "
-            "retries included), not the LLM instance's cumulative totals"
+            "Token usage for this kickoff call only (guardrail retries "
+            "included), not the LLM instance's cumulative totals, as a "
+            "plain dict; ``token_usage`` exposes the same data as a "
+            "UsageMetrics object"
         ),
         default=None,
     )
@@ -89,6 +92,19 @@ class LiteAgentOutput(BaseModel):
         if self.pydantic:
             return self.pydantic.model_dump()
         return {}
+
+    @property
+    def token_usage(self) -> UsageMetrics:
+        """Token usage as a ``UsageMetrics`` object.
+
+        Same attribute name and type as ``CrewOutput.token_usage``, so a
+        usage accessor written for one result type works on both. Returns
+        zeroed metrics when no usage was captured (``usage_metrics`` is
+        ``None``).
+        """
+        if not self.usage_metrics:
+            return UsageMetrics()
+        return UsageMetrics.model_validate(self.usage_metrics)
 
     @property
     def completed_todos(self) -> list[TodoExecutionResult]:
