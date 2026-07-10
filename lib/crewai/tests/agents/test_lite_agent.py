@@ -1225,24 +1225,40 @@ class TestKickoffUsageMetricsArePerCall:
         assert r1.usage_metrics["prompt_tokens"] > 0
         assert r2.usage_metrics == r1.usage_metrics
 
-    def test_lite_agent_kickoff_reports_per_call_usage(self):
-        shared = _FixedUsageLLM()
+    def test_guardrail_retry_usage_includes_all_attempts(self):
+        """A guardrail retry re-invokes the LLM within the same kickoff, so
+        the result must report the whole call's usage — every attempt — not
+        just the last one."""
+        baseline = (
+            self._make_agent("baseline", _FixedUsageLLM())
+            .kickoff("question one")
+            .usage_metrics
+        )
 
-        def make_lite(role: str) -> LiteAgent:
-            return LiteAgent(
-                role=role,
-                goal="Answer questions.",
-                backstory="Test agent.",
-                llm=shared,
-                verbose=False,
-            )
+        attempts: list[str] = []
 
-        r1 = make_lite("agent one").kickoff("question one")
-        r2 = make_lite("agent two").kickoff("question two")
+        def flaky_guardrail(output):
+            attempts.append(output.raw)
+            if len(attempts) == 1:
+                return (False, "Please try again.")
+            return (True, output.raw)
 
-        assert r1.usage_metrics is not None
-        assert r1.usage_metrics["prompt_tokens"] > 0
-        assert r2.usage_metrics == r1.usage_metrics
+        agent = Agent(
+            role="agent",
+            goal="Answer questions.",
+            backstory="Test agent.",
+            llm=_FixedUsageLLM(),
+            guardrail=flaky_guardrail,
+            verbose=False,
+        )
+        result = agent.kickoff("question one")
+
+        assert len(attempts) == 2
+        assert result.usage_metrics["successful_requests"] == (
+            2 * baseline["successful_requests"]
+        )
+        assert result.usage_metrics["prompt_tokens"] == 2 * baseline["prompt_tokens"]
+        assert result.usage_metrics["total_tokens"] == 2 * baseline["total_tokens"]
 
 
 class TestUsageMetricsDeltaSince:

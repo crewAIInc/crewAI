@@ -72,7 +72,6 @@ from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
-from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.agent_utils import (
     enforce_rpm_limit,
     format_message_for_llm,
@@ -290,7 +289,6 @@ class LiteAgent(FlowTrackable, BaseModel):
     _key: str = PrivateAttr(default_factory=lambda: str(uuid.uuid4()))
     _messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     _iterations: int = PrivateAttr(default=0)
-    _kickoff_usage_baseline: UsageMetrics | None = PrivateAttr(default=None)
     _guardrail: GuardrailCallable | None = PrivateAttr(default=None)
     _guardrail_retry_count: int = PrivateAttr(default=0)
     _callbacks: list[TokenCalcHandler] = PrivateAttr(default_factory=list)
@@ -521,7 +519,6 @@ class LiteAgent(FlowTrackable, BaseModel):
         try:
             self._iterations = 0
             self.tools_results = []
-            self._kickoff_usage_baseline = self._current_usage_summary()
 
             self._messages = self._format_messages(
                 messages, response_format=response_format, input_files=input_files
@@ -547,25 +544,6 @@ class LiteAgent(FlowTrackable, BaseModel):
                 ),
             )
             raise e
-
-    def _current_usage_summary(self) -> UsageMetrics:
-        """Snapshot the cumulative usage counters backing this agent's LLM.
-
-        The counters live on the LLM instance (or the agent's token process
-        for non-BaseLLM models) and grow for the object's lifetime — across
-        calls and across agents sharing the instance. Per-call usage is the
-        delta between two snapshots.
-        """
-        if isinstance(self.llm, BaseLLM):
-            return self.llm.get_token_usage_summary()
-        return self._token_process.get_summary()
-
-    def _per_call_usage_metrics(self) -> UsageMetrics:
-        """Usage accrued since this kickoff started (including any retries)."""
-        usage_metrics = self._current_usage_summary()
-        if self._kickoff_usage_baseline is not None:
-            return usage_metrics.delta_since(self._kickoff_usage_baseline)
-        return usage_metrics
 
     def _get_last_user_content(self) -> str:
         """Get the last user message content from _messages for recall/input."""
@@ -697,7 +675,10 @@ class LiteAgent(FlowTrackable, BaseModel):
                             color="yellow",
                         )
 
-        usage_metrics = self._per_call_usage_metrics()
+        if isinstance(self.llm, BaseLLM):
+            usage_metrics = self.llm.get_token_usage_summary()
+        else:
+            usage_metrics = self._token_process.get_summary()
 
         raw_output = (
             agent_finish.output.model_dump_json()
@@ -750,7 +731,10 @@ class LiteAgent(FlowTrackable, BaseModel):
                 elif isinstance(guardrail_result.result, BaseModel):
                     output.pydantic = guardrail_result.result
 
-            usage_metrics = self._per_call_usage_metrics()
+            if isinstance(self.llm, BaseLLM):
+                usage_metrics = self.llm.get_token_usage_summary()
+            else:
+                usage_metrics = self._token_process.get_summary()
             output.usage_metrics = usage_metrics.model_dump() if usage_metrics else None
 
         crewai_event_bus.emit(
