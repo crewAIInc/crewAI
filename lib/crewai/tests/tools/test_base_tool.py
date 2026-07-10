@@ -752,6 +752,20 @@ class TestAuthoredDescriptionPreserved:
             "Tool Description: Edited description."
         )
 
+    def test_prose_mentioning_the_marker_is_not_truncated(self):
+        """Authored text that merely mentions "Tool Description:" must reach
+        the LLM untouched — only descriptions that ARE a pre-composed block
+        (anchored three-line shape) get stripped."""
+        tool_instance = self._make_tool()
+        prose = (
+            "Formats prompts. The output includes a line reading "
+            "'Tool Description:' followed by the tool's summary."
+        )
+        tool_instance.description = prose
+        assert tool_instance.formatted_description.endswith(
+            f"Tool Description: {prose}"
+        )
+
     def test_composite_is_not_reapplied_to_prebaked_descriptions(self):
         """A description that already contains a composed block (old
         checkpoints, adapters that bake the composite into the field) must

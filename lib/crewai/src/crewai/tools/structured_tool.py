@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import Callable
 import inspect
 import json
+import re
 import textwrap
 from typing import TYPE_CHECKING, Annotated, Any, cast, get_type_hints
 import warnings
@@ -111,6 +112,30 @@ def build_schema_hint(args_schema: type[BaseModel]) -> str:
         return ""
 
 
+# Matches a description that IS a pre-composed LLM block (as written by
+# older versions into the field, and by adapters that still bake it in).
+# Anchored to the full three-line shape so authored prose that merely
+# mentions "Tool Description:" is never mistaken for a composite. Greedy
+# ``.*`` keeps only the text after the LAST marker, matching the historical
+# split behavior for nested pre-baked blocks.
+_COMPOSITE_DESCRIPTION_RE = re.compile(
+    r"^Tool Name:.*\nTool Arguments:.*\nTool Description:\s*",
+    re.DOTALL,
+)
+
+
+def strip_composite_description_prefix(description: str) -> str:
+    """Return the authored text from a pre-composed LLM description block.
+
+    Descriptions that don't start with the composite shape are returned
+    unchanged.
+    """
+    match = _COMPOSITE_DESCRIPTION_RE.match(description)
+    if match:
+        return description[match.end() :]
+    return description
+
+
 def format_description_for_llm(
     name: str,
     args_schema: type[BaseModel] | None,
@@ -123,10 +148,12 @@ def format_description_for_llm(
     ``description`` field itself is never mutated — prompt rendering calls
     this on demand.
 
-    Idempotent: if ``description`` already contains a composed block (e.g.
-    a tool deserialized from a checkpoint written by an older version, or
-    an adapter that bakes the composite into the field), only the authored
-    text after the last ``"Tool Description:"`` marker is used.
+    Idempotent: if ``description`` already *is* a composed block (e.g. a
+    tool deserialized from a checkpoint written by an older version, or an
+    adapter that bakes the composite into the field), only the authored
+    text after the marker is used. The check is anchored to the composite
+    shape, so authored prose that merely mentions ``"Tool Description:"``
+    passes through untouched.
 
     Args:
         name: The tool name (sanitized for the prompt).
@@ -136,8 +163,7 @@ def format_description_for_llm(
     Returns:
         The composed, LLM-facing description block.
     """
-    if "Tool Description:" in description:
-        description = description.split("Tool Description:")[-1].strip()
+    description = strip_composite_description_prefix(description)
     if args_schema is not None:
         schema = generate_model_description(args_schema)
         args_json = json.dumps(schema["json_schema"]["schema"], indent=2)
