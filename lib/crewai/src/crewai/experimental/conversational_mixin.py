@@ -133,6 +133,7 @@ class _ConversationalMixin:
         _pending_user_message: str | dict[str, Any] | None
         _pending_intents: Sequence[str] | None
         _pending_intent_llm: str | BaseLLM | None
+        _turn_classified_intent: str | None
 
         def _clear_or_listeners(self) -> None:
             pass
@@ -185,12 +186,22 @@ class _ConversationalMixin:
             )
             return configured_route
 
-        if state.last_intent:
+        turn_intent = self._turn_classified_intent
+        if turn_intent:
+            state.last_intent = turn_intent
             self._emit_conversation_route_selected(
-                state.last_intent,
+                turn_intent,
                 previous_intent=previous_intent,
             )
-            return state.last_intent
+            return turn_intent
+
+        if previous_intent:
+            logger.debug(
+                "route_turn() returned no route and no intent was classified "
+                "this turn; ignoring stale last_intent=%r from a previous turn "
+                "and falling back to built-in routing",
+                previous_intent,
+            )
 
         if self.can_answer_from_history(context):
             state.last_intent = "answer_from_history"
@@ -550,6 +561,11 @@ class _ConversationalMixin:
         supply per-route descriptions, or change the default/fallback intent.
         Override this method to bypass the LLM router entirely (e.g.,
         permission gates before the LLM decision).
+
+        Returning a falsy value means "no routing decision": the turn falls
+        through to the built-in defaults (``answer_from_history`` when
+        configured, else ``converse``). It never replays a previous turn's
+        intent.
         """
         config = self._conversation_config
         if config is None:
@@ -722,6 +738,7 @@ class _ConversationalMixin:
                     context=self.conversation_messages,
                 )
                 state.last_intent = intent
+                object.__setattr__(self, "_turn_classified_intent", intent)
                 return intent
             return text
 
@@ -788,6 +805,8 @@ class _ConversationalMixin:
             object.__setattr__(self, "_pending_intent_llm", None)
         if not hasattr(self, "_streaming_conversation_turn"):
             object.__setattr__(self, "_streaming_conversation_turn", False)
+        if not hasattr(self, "_turn_classified_intent"):
+            object.__setattr__(self, "_turn_classified_intent", None)
 
     def _create_default_extension_state(self) -> ConversationState | None:
         initial_state_t = getattr(self, "_initial_state_t", None)
@@ -852,6 +871,7 @@ class _ConversationalMixin:
         self._method_call_counts.clear()
         self._clear_or_listeners()
         self._is_execution_resuming = False
+        object.__setattr__(self, "_turn_classified_intent", None)
 
     def _apply_pending_conversational_turn(self) -> None:
         """Drain the stashed user message + classify if intents configured.
@@ -859,6 +879,7 @@ class _ConversationalMixin:
         Called from ``Flow.kickoff_async`` AFTER persist state restore so
         the appended message survives ``self.persistence.load_state(...)``.
         """
+        object.__setattr__(self, "_turn_classified_intent", None)
         if self._pending_user_message is None:
             return
 
