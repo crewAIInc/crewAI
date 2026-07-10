@@ -47,7 +47,7 @@ from crewai.rag.qdrant.config import QdrantConfig
 set_rag_config(QdrantConfig())
 qdrant_client = get_rag_client()
 
-# turbopuffer
+# turbopuffer (see https://turbopuffer.com/docs/regions for available regions)
 from turbopuffer import Turbopuffer
 from crewai.rag.turbopuffer.config import TurbopufferConfig
 set_rag_config(TurbopufferConfig(client=Turbopuffer(region="gcp-us-central1")))
