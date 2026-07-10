@@ -167,12 +167,12 @@ def _skip_unless_live_config() -> dict[str, str]:
     config: dict[str, str] = {"compartment_id": compartment}
     if endpoint:
         config["service_endpoint"] = endpoint
-    if os.getenv("OCI_AUTH_TYPE"):
-        config["auth_type"] = os.getenv("OCI_AUTH_TYPE", "API_KEY")
-    if os.getenv("OCI_AUTH_PROFILE"):
-        config["auth_profile"] = os.getenv("OCI_AUTH_PROFILE", "DEFAULT")
-    if os.getenv("OCI_AUTH_FILE_LOCATION"):
-        config["auth_file_location"] = os.getenv("OCI_AUTH_FILE_LOCATION", "~/.oci/config")
+    if auth_type := os.getenv("OCI_AUTH_TYPE"):
+        config["auth_type"] = auth_type
+    if auth_profile := os.getenv("OCI_AUTH_PROFILE"):
+        config["auth_profile"] = auth_profile
+    if auth_file_location := os.getenv("OCI_AUTH_FILE_LOCATION"):
+        config["auth_file_location"] = auth_file_location
     return config
 
 
