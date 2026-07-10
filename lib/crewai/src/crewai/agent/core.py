@@ -86,6 +86,7 @@ from crewai.skills.models import Skill as SkillModel
 from crewai.state.checkpoint_config import CheckpointConfig, apply_checkpoint
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.types.callback import SerializableCallable
+from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.agent_utils import (
     get_tool_names,
     is_inside_event_loop,
@@ -1594,9 +1595,18 @@ class Agent(BaseAgent):
                 crewai_event_bus.emit(self, event=started_event)
                 self._kickoff_event_id = started_event.event_id
 
-            output = self._execute_and_build_output(executor, inputs, response_format)
+            usage_baseline = self._current_usage_summary()
+            output = self._execute_and_build_output(
+                executor, inputs, response_format, usage_baseline
+            )
             return self._finalize_kickoff(
-                output, executor, inputs, response_format, messages, agent_info
+                output,
+                executor,
+                inputs,
+                response_format,
+                messages,
+                agent_info,
+                usage_baseline,
             )
 
         except Exception as e:
@@ -1610,6 +1620,7 @@ class Agent(BaseAgent):
         response_format: type[Any] | None,
         messages: str | list[LLMMessage],
         agent_info: dict[str, Any],
+        usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Apply guardrails, save to memory, and emit completion event.
 
@@ -1620,6 +1631,8 @@ class Agent(BaseAgent):
             response_format: Optional response format.
             messages: The original messages.
             agent_info: Agent metadata for events.
+            usage_baseline: Usage snapshot taken at kickoff start, so retries
+                report per-call usage relative to it.
 
         Returns:
             The finalized output.
@@ -1630,6 +1643,7 @@ class Agent(BaseAgent):
                 executor=executor,
                 inputs=inputs,
                 response_format=response_format,
+                usage_baseline=usage_baseline,
             )
 
         self._save_kickoff_to_memory(messages, output.raw)
@@ -1681,11 +1695,24 @@ class Agent(BaseAgent):
         except Exception as e:
             self._logger.log("error", f"Failed to save kickoff result to memory: {e}")
 
+    def _current_usage_summary(self) -> UsageMetrics:
+        """Snapshot the cumulative usage counters backing this agent's LLM.
+
+        The counters live on the LLM instance (or the agent's token process
+        for non-BaseLLM models) and grow for the object's lifetime — across
+        calls and across agents sharing the instance. Per-call usage is the
+        delta between two snapshots.
+        """
+        if isinstance(self.llm, BaseLLM):
+            return self.llm.get_token_usage_summary()
+        return self._token_process.get_summary()
+
     def _build_output_from_result(
         self,
         result: dict[str, Any],
         executor: AgentExecutor,
         response_format: type[Any] | None = None,
+        usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Build a LiteAgentOutput from an executor result dict.
 
@@ -1695,6 +1722,9 @@ class Agent(BaseAgent):
             result: The result dictionary from executor.invoke / invoke_async.
             executor: The executor instance.
             response_format: Optional response format.
+            usage_baseline: Usage snapshot taken at kickoff start. When given,
+                the output carries only this call's usage (the delta) instead
+                of the LLM instance's cumulative lifetime counters.
 
         Returns:
             LiteAgentOutput with raw output, formatted result, and metrics.
@@ -1739,10 +1769,9 @@ class Agent(BaseAgent):
         else:
             raw_output = str(output) if not isinstance(output, str) else output
 
-        if isinstance(self.llm, BaseLLM):
-            usage_metrics = self.llm.get_token_usage_summary()
-        else:
-            usage_metrics = self._token_process.get_summary()
+        usage_metrics = self._current_usage_summary()
+        if usage_baseline is not None:
+            usage_metrics = usage_metrics.delta_since(usage_baseline)
 
         raw_str = (
             raw_output
@@ -1771,20 +1800,26 @@ class Agent(BaseAgent):
         executor: AgentExecutor,
         inputs: dict[str, str],
         response_format: type[Any] | None = None,
+        usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Execute the agent synchronously and build the output object."""
         result = cast(dict[str, Any], executor.invoke(inputs))
-        return self._build_output_from_result(result, executor, response_format)
+        return self._build_output_from_result(
+            result, executor, response_format, usage_baseline
+        )
 
     async def _execute_and_build_output_async(
         self,
         executor: AgentExecutor,
         inputs: dict[str, str],
         response_format: type[Any] | None = None,
+        usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Execute the agent asynchronously and build the output object."""
         result = await executor.invoke_async(inputs)
-        return self._build_output_from_result(result, executor, response_format)
+        return self._build_output_from_result(
+            result, executor, response_format, usage_baseline
+        )
 
     def _process_kickoff_guardrail(
         self,
@@ -1793,6 +1828,7 @@ class Agent(BaseAgent):
         inputs: dict[str, str],
         response_format: type[Any] | None = None,
         retry_count: int = 0,
+        usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Process guardrail for kickoff execution with retry logic.
 
@@ -1802,6 +1838,9 @@ class Agent(BaseAgent):
             inputs: Input dictionary for re-execution.
             response_format: Optional response format.
             retry_count: Current retry count.
+            usage_baseline: Usage snapshot taken at kickoff start, so a
+                retried output reports the whole call's usage, not just the
+                last attempt's.
 
         Returns:
             Validated/updated output.
@@ -1839,7 +1878,9 @@ class Agent(BaseAgent):
                 role="user",
             )
 
-            output = self._execute_and_build_output(executor, inputs, response_format)
+            output = self._execute_and_build_output(
+                executor, inputs, response_format, usage_baseline
+            )
 
             return self._process_kickoff_guardrail(
                 output=output,
@@ -1847,6 +1888,7 @@ class Agent(BaseAgent):
                 inputs=inputs,
                 response_format=response_format,
                 retry_count=retry_count + 1,
+                usage_baseline=usage_baseline,
             )
 
         if guardrail_result.result is not None:
@@ -1909,11 +1951,18 @@ class Agent(BaseAgent):
                 crewai_event_bus.emit(self, event=started_event)
                 self._kickoff_event_id = started_event.event_id
 
+            usage_baseline = self._current_usage_summary()
             output = await self._execute_and_build_output_async(
-                executor, inputs, response_format
+                executor, inputs, response_format, usage_baseline
             )
             return self._finalize_kickoff(
-                output, executor, inputs, response_format, messages, agent_info
+                output,
+                executor,
+                inputs,
+                response_format,
+                messages,
+                agent_info,
+                usage_baseline,
             )
 
         except Exception as e:
