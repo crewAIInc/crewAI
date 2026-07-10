@@ -233,3 +233,31 @@ def test_core_telemetry_records_feature_usage(
     tracer.start_span.assert_called_once_with("Feature Usage")
     span.set_attribute.assert_any_call("feature", "cli_usage:view_traces")
     span.end.assert_called_once()
+
+
+def test_core_telemetry_records_flow_creation_version(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from crewai_core.telemetry import Telemetry
+
+    Telemetry._instance = None
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TELEMETRY", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
+    monkeypatch.setattr("crewai_core.version.get_crewai_version", lambda: "1.0.0")
+
+    tracer = Mock()
+    span = Mock()
+    tracer.start_span.return_value = span
+    monkeypatch.setattr(
+        "crewai_core.telemetry.trace.get_tracer",
+        lambda _name: tracer,
+    )
+
+    telemetry = Telemetry()
+    telemetry.flow_creation_span("ResearchFlow")
+
+    tracer.start_span.assert_called_once_with("Flow Creation")
+    span.set_attribute.assert_any_call("crewai_version", "1.0.0")
+    span.set_attribute.assert_any_call("flow_name", "ResearchFlow")
+    span.end.assert_called_once()

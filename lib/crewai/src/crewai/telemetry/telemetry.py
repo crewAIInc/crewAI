@@ -949,6 +949,7 @@ class Telemetry:
         def _operation() -> None:
             tracer = trace.get_tracer("crewai.telemetry")
             span = tracer.start_span("Flow Creation")
+            self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "flow_name", flow_name)
             close_span(span)
 
