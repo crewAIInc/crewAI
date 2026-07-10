@@ -568,11 +568,31 @@ FooterKey .footer-key--key {
         self._default_inputs: dict[str, Any] | None = None
         self._crew_result: Any = None
         self._crew_json_path: Any = None
+        # Declarative-flow execution state. A flow renders per-method "STEPS"
+        # (built from flow method events) instead of the crew task list.
+        self._flow_inputs: dict[str, Any] | None = None
+        self._flow_method_types: dict[str, str] = {}
+        self._flow_steps: list[dict[str, Any]] = []
+        self._current_method: str | None = None
         self._elapsed_frozen: float | None = None
         self._want_deploy: bool = False
         self._trace_url: str | None = None
         self._consent_screen: TraceConsentScreen | None = None
         self._telemetry: Telemetry | None = None
+
+    @property
+    def _is_flow_run(self) -> bool:
+        """True for a non-conversational declarative flow (the STEPS view).
+
+        Gates every flow-specific rendering branch so crew and conversational
+        paths stay byte-identical.
+        """
+        return self._flow is not None and not self._is_conversational
+
+    @property
+    def _run_noun(self) -> str:
+        """User-facing noun for the run — 'flow' for a declarative flow, else 'crew'."""
+        return "flow" if self._is_flow_run else "crew"
 
     # ── Layout ──────────────────────────────────────────────
 
@@ -602,6 +622,8 @@ FooterKey .footer-key--key {
         self._tick_timer = self.set_interval(1 / 8, self._tick)
         if self._is_conversational and self._flow:
             self._start_conversational_session()
+        elif self._flow:
+            self._run_flow_worker()
         elif self._crew:
             self._run_crew_worker()
         elif self._crew_json_path:
@@ -681,6 +703,49 @@ FooterKey .footer-key--key {
         except Exception as e:
             self.call_from_thread(self._on_crew_failed, str(e))
 
+    @work(thread=True, exclusive=True, group="flow")
+    def _run_flow_worker(self) -> None:
+        from crewai.events.listeners.tracing.utils import (
+            set_suppress_tracing_messages,
+            set_tui_mode,
+        )
+
+        set_tui_mode(True)
+        set_suppress_tracing_messages(True)
+        try:
+            # A declarative flow returns either a CrewOutput (has ``.raw``) or a
+            # bare value (str/dict/pydantic); _stringify_output handles both.
+            result = self._flow.kickoff(inputs=self._flow_inputs)
+            output = self._stringify_output(result)
+            with self._lock:
+                self._crew_result = result
+            self.call_from_thread(self._on_crew_done, output)
+        except Exception as e:
+            self.call_from_thread(self._on_crew_failed, str(e))
+
+    def _set_flow_step_status(self, name: str, status: str) -> None:
+        """Update a flow method step's status. Caller must hold ``self._lock``."""
+        for step in self._flow_steps:
+            if step["name"] == name:
+                step["status"] = status
+                return
+
+    def _clear_current_method(self, finished_name: str) -> None:
+        """Drop the header's active method once it ends. Caller holds the lock.
+
+        Falls back to another still-active step (methods can overlap) so the
+        header never keeps spinning a method the STEPS list already shows as
+        done or failed.
+        """
+        if self._current_method != finished_name:
+            return
+        self._current_method = next(
+            (s["name"] for s in self._flow_steps if s["status"] == "active"), None
+        )
+        # The active method changed; drop its agent so the header doesn't show a
+        # stale agent until the next method's agent event arrives.
+        self._current_agent = ""
+
     def _on_crew_done(self, output: str | None) -> None:
         with self._lock:
             self._status = "completed"
@@ -694,13 +759,18 @@ FooterKey .footer-key--key {
             for k in self._task_statuses:
                 if self._task_statuses[k] == "active":
                     self._task_statuses[k] = "done"
+            for step in self._flow_steps:
+                if step["status"] == "active":
+                    step["status"] = "done"
             now = time.time()
             for entry in self._log_entries:
                 if entry["status"] == "running":
                     if entry["tool_name"] == "memory_save":
                         continue
                     entry["status"] = "timeout"
-                    entry["error"] = "No result received before crew completed"
+                    entry["error"] = (
+                        f"No result received before {self._run_noun} completed"
+                    )
                     entry["duration"] = now - entry["start_time"]
         try:
             from crewai.events.listeners.tracing.trace_listener import (
@@ -739,13 +809,18 @@ FooterKey .footer-key--key {
             self._is_streaming = False
             self._current_step = None
             self._elapsed_frozen = time.time() - self._start_time
+            for step in self._flow_steps:
+                if step["status"] == "active":
+                    step["status"] = "failed"
             now = time.time()
             for entry in self._log_entries:
                 if entry["status"] == "running":
                     if entry["tool_name"] == "memory_save":
                         continue
                     entry["status"] = "error"
-                    entry["error"] = "No result received before crew failed"
+                    entry["error"] = (
+                        f"No result received before {self._run_noun} failed"
+                    )
                     entry["duration"] = now - entry["start_time"]
         self._tick()
         self.call_later(self._focus_activity_log)
@@ -1156,6 +1231,45 @@ FooterKey .footer-key--key {
             widget.update(t)
             return
 
+        if self._is_flow_run:
+            t.append("  STEPS\n", style=f"bold {_C_PRIMARY}")
+            t.append("\n")
+            if not self._flow_steps:
+                t.append("  ○ waiting…\n", style=_C_DIM)
+            for step in self._flow_steps:
+                name = step["name"]
+                max_name = sidebar_width - 6
+                if len(name) > max_name:
+                    name = name[: max_name - 1] + "…"
+                status = step.get("status", "pending")
+                if status == "done":
+                    t.append("  ✔ ", style=_C_GREEN)
+                    t.append(name, style=_C_DIM)
+                elif status == "active":
+                    t.append(f"  {self._spinner()} ", style=_C_PRIMARY)
+                    t.append(name, style=f"bold {_C_TEXT}")
+                elif status == "failed":
+                    t.append("  ✘ ", style=_C_RED)
+                    t.append(name, style=_C_RED)
+                elif status == "paused":
+                    t.append("  ⏸ ", style=_C_TEAL)
+                    t.append(name, style=_C_TEAL)
+                else:
+                    t.append("  ○ ", style=_C_DIM)
+                    t.append(name, style=_C_DIM)
+                if step.get("call_type"):
+                    t.append(f"  ({step['call_type']})", style=_C_DIM)
+                t.append("\n")
+
+            t.append("\n")
+            t.append("  TOKENS\n", style=f"bold {_C_PRIMARY}")
+            t.append("\n")
+            out = self._output_tokens + self._live_out_tokens
+            t.append(f"  ↑ {self._input_tokens:,}\n", style=_C_DIM)
+            t.append(f"  ↓ {out:,}\n", style=_C_DIM)
+            widget.update(t)
+            return
+
         t.append("  TASKS\n", style=f"bold {_C_PRIMARY}")
         t.append("\n")
 
@@ -1222,6 +1336,55 @@ FooterKey .footer-key--key {
                 t.append("● ", style=f"bold {_C_GREEN}")
                 t.append("Conversational flow ready", style=f"bold {_C_GREEN}")
                 t.append("  Type a message below", style=_C_DIM)
+            widget.update(t)
+            return
+
+        if self._is_flow_run:
+            if self._status == "completed":
+                elapsed = self._elapsed_frozen or (time.time() - self._start_time)
+                t.append("✔ ", style=f"bold {_C_GREEN}")
+                t.append("Flow complete", style=f"bold {_C_GREEN}")
+                t.append(f"  {elapsed:.1f}s", style=_C_DIM)
+                out = self._output_tokens + self._live_out_tokens
+                parts = []
+                if self._input_tokens:
+                    parts.append(f"↑{self._input_tokens:,}")
+                if out:
+                    parts.append(f"↓{out:,}")
+                if parts:
+                    t.append(f"  {' '.join(parts)} tokens", style=_C_DIM)
+            elif self._status == "failed":
+                t.append("✘ ", style=f"bold {_C_RED}")
+                t.append("Failed", style=f"bold {_C_RED}")
+                if self._error:
+                    t.append(f"\n{self._error[:120]}", style=_C_RED)
+            elif self._current_method:
+                paused = any(
+                    s["name"] == self._current_method and s["status"] == "paused"
+                    for s in self._flow_steps
+                )
+                if paused:
+                    t.append("⏸ ", style=_C_TEAL)
+                    t.append(self._current_method, style=f"bold {_C_TEAL}")
+                else:
+                    t.append(f"{self._spinner()} ", style=_C_PRIMARY)
+                    t.append(self._current_method, style=f"bold {_C_PRIMARY}")
+                call_type = self._flow_method_types.get(self._current_method)
+                if call_type:
+                    t.append(f"  ({call_type})", style=_C_DIM)
+                if paused:
+                    t.append("  waiting for feedback", style=_C_DIM)
+                elif self._current_agent:
+                    t.append("\nAgent: ", style=_C_DIM)
+                    t.append(self._current_agent, style=f"bold {_C_TEXT}")
+            else:
+                t.append(f"{self._spinner()} ", style=_C_PRIMARY)
+                # "Working…" once a step has run (between/after methods);
+                # "Starting flow…" only before the first method.
+                t.append(
+                    "Working…" if self._flow_steps else "Starting flow…",
+                    style=_C_DIM,
+                )
             widget.update(t)
             return
 
@@ -1839,6 +2002,13 @@ FooterKey .footer-key--key {
     def _subscribe(self) -> None:
         from crewai.events.event_bus import crewai_event_bus
         from crewai.events.types.crew_events import CrewKickoffStartedEvent
+        from crewai.events.types.flow_events import (
+            FlowStartedEvent,
+            MethodExecutionFailedEvent,
+            MethodExecutionFinishedEvent,
+            MethodExecutionPausedEvent,
+            MethodExecutionStartedEvent,
+        )
         from crewai.events.types.llm_events import (
             LLMCallCompletedEvent,
             LLMCallStartedEvent,
@@ -1872,12 +2042,73 @@ FooterKey .footer-key--key {
         @crewai_event_bus.on(CrewKickoffStartedEvent)
         def on_crew_started(source: Any, event: CrewKickoffStartedEvent) -> None:
             with self._lock:
-                if event.crew_name:
+                # In flow mode the app is named for the flow; a nested crew's
+                # kickoff (a `call: crew` step) must not rename it.
+                if event.crew_name and not self._is_flow_run:
                     self._crew_name = event.crew_name
                     self.title = f"CrewAI — {event.crew_name}"
                 self._status = "working"
 
         self._register_handler(CrewKickoffStartedEvent, on_crew_started)
+
+        # ── Declarative-flow method events → STEPS panel ────────
+        @crewai_event_bus.on(FlowStartedEvent)
+        def on_flow_started(source: Any, event: FlowStartedEvent) -> None:
+            with self._lock:
+                self._status = "working"
+
+        self._register_handler(FlowStartedEvent, on_flow_started)
+
+        @crewai_event_bus.on(MethodExecutionStartedEvent)
+        def on_method_started(source: Any, event: MethodExecutionStartedEvent) -> None:
+            with self._lock:
+                name = event.method_name
+                self._current_method = name
+                # Agent is per-method; clear it so the header doesn't show the
+                # previous method's agent until a new agent event arrives.
+                self._current_agent = ""
+                for step in self._flow_steps:
+                    if step["name"] == name:
+                        step["status"] = "active"
+                        break
+                else:
+                    self._flow_steps.append(
+                        {
+                            "name": name,
+                            "call_type": self._flow_method_types.get(name),
+                            "status": "active",
+                        }
+                    )
+
+        self._register_handler(MethodExecutionStartedEvent, on_method_started)
+
+        @crewai_event_bus.on(MethodExecutionFinishedEvent)
+        def on_method_finished(
+            source: Any, event: MethodExecutionFinishedEvent
+        ) -> None:
+            with self._lock:
+                self._set_flow_step_status(event.method_name, "done")
+                self._clear_current_method(event.method_name)
+
+        self._register_handler(MethodExecutionFinishedEvent, on_method_finished)
+
+        @crewai_event_bus.on(MethodExecutionFailedEvent)
+        def on_method_failed(source: Any, event: MethodExecutionFailedEvent) -> None:
+            with self._lock:
+                self._set_flow_step_status(event.method_name, "failed")
+                self._clear_current_method(event.method_name)
+
+        self._register_handler(MethodExecutionFailedEvent, on_method_failed)
+
+        @crewai_event_bus.on(MethodExecutionPausedEvent)
+        def on_method_paused(source: Any, event: MethodExecutionPausedEvent) -> None:
+            # A @human_feedback method paused; flow status panels are suppressed
+            # in TUI mode, so surface the wait in STEPS/header instead of leaving
+            # a spinner. _current_method stays pointed at it.
+            with self._lock:
+                self._set_flow_step_status(event.method_name, "paused")
+
+        self._register_handler(MethodExecutionPausedEvent, on_method_paused)
 
         @crewai_event_bus.on(TaskStartedEvent)
         def on_task_started(source: Any, event: TaskStartedEvent) -> None:

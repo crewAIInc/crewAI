@@ -966,8 +966,15 @@ class BaseLLM(BaseModel, ABC):
     def get_token_usage_summary(self) -> UsageMetrics:
         """Get summary of token usage for this LLM instance.
 
+        The counters are cumulative for the lifetime of this instance: they
+        grow across every call made through it, including calls issued by
+        different agents sharing the instance. For usage scoped to a single
+        call, snapshot before and after and use
+        ``UsageMetrics.delta_since`` (agent kickoff results already report
+        per-call usage this way).
+
         Returns:
-            Dictionary with token usage totals
+            UsageMetrics with this instance's lifetime token usage totals.
         """
         return UsageMetrics(**self._token_usage)
 

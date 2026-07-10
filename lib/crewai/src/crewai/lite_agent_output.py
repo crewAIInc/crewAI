@@ -40,8 +40,10 @@ class LiteAgentOutput(BaseModel):
     agent_role: str = Field(description="Role of the agent that produced this output")
     usage_metrics: dict[str, Any] | None = Field(
         description=(
-            "Token usage metrics for this execution as a plain dict; "
-            "``token_usage`` exposes the same data as a UsageMetrics object"
+            "Token usage for this kickoff call only (guardrail retries "
+            "included), not the LLM instance's cumulative totals, as a "
+            "plain dict; ``token_usage`` exposes the same data as a "
+            "UsageMetrics object"
         ),
         default=None,
     )
