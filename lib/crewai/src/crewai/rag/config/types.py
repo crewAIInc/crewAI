@@ -10,8 +10,10 @@ from crewai.rag.config.constants import DISCRIMINATOR
 # Linter freaks out on conditional imports, assigning in the type checking fixes it
 if TYPE_CHECKING:
     from crewai.rag.chromadb.config import ChromaDBConfig as ChromaDBConfig_
+    from crewai.rag.milvus.config import MilvusConfig as MilvusConfig_
 
     ChromaDBConfig = ChromaDBConfig_
+    MilvusConfig = MilvusConfig_
     from crewai.rag.qdrant.config import QdrantConfig as QdrantConfig_
 
     QdrantConfig = QdrantConfig_
@@ -24,13 +26,20 @@ else:
         )
 
     try:
+        from crewai.rag.milvus.config import MilvusConfig
+    except ImportError:
+        from crewai.rag.config.optional_imports.providers import (
+            MissingMilvusConfig as MilvusConfig,
+        )
+
+    try:
         from crewai.rag.qdrant.config import QdrantConfig
     except ImportError:
         from crewai.rag.config.optional_imports.providers import (
             MissingQdrantConfig as QdrantConfig,
         )
 
-SupportedProviderConfig: TypeAlias = ChromaDBConfig | QdrantConfig
+SupportedProviderConfig: TypeAlias = ChromaDBConfig | MilvusConfig | QdrantConfig
 RagConfigType: TypeAlias = Annotated[
     SupportedProviderConfig, Field(discriminator=DISCRIMINATOR)
 ]
