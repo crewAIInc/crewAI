@@ -38,7 +38,11 @@ class LiteAgentOutput(BaseModel):
     )
     agent_role: str = Field(description="Role of the agent that produced this output")
     usage_metrics: dict[str, Any] | None = Field(
-        description="Token usage metrics for this execution", default=None
+        description=(
+            "Token usage metrics for this kickoff call only (guardrail "
+            "retries included), not the LLM instance's cumulative totals"
+        ),
+        default=None,
     )
     messages: list[LLMMessage] = Field(
         description="Messages of the agent", default_factory=list
