@@ -206,3 +206,45 @@ class TestAgentCacheWiring:
     def test_copy_of_explicit_cache_false_with_handler_stays_off(self):
         copied = self._agent(cache=False, cache_handler=CacheHandler()).copy()
         assert copied.tools_handler.cache is None
+
+
+class TestHierarchicalManagerCacheWiring:
+    """The auto-created hierarchical manager is built outside the agents
+    loop that offers the crew's cache handler; an opted-in crew must wire
+    the manager too (Bugbot review finding on the original PR)."""
+
+    def _crew(self, **crew_kwargs) -> Crew:
+        from crewai.process import Process
+
+        agent = Agent(role="worker", goal="Do work.", backstory="Test agent.")
+        task = Task(description="Do the work.", expected_output="Done.")
+        return Crew(
+            agents=[agent],
+            tasks=[task],
+            process=Process.hierarchical,
+            manager_llm="gpt-4o",
+            **crew_kwargs,
+        )
+
+    def test_manager_gets_crew_handler_when_cache_enabled(self):
+        crew = self._crew(cache=True)
+        crew._create_manager_agent()
+        assert crew.manager_agent.tools_handler.cache is crew._cache_handler
+
+    def test_manager_has_no_cache_when_crew_did_not_opt_in(self):
+        crew = self._crew()
+        crew._create_manager_agent()
+        assert crew.manager_agent.tools_handler.cache is None
+
+    def test_user_provided_manager_with_cache_false_stays_excluded(self):
+        manager = Agent(
+            role="manager",
+            goal="Manage.",
+            backstory="Test manager.",
+            cache=False,
+            allow_delegation=True,
+        )
+        crew = self._crew(cache=True)
+        crew.manager_agent = manager
+        crew._create_manager_agent()
+        assert manager.tools_handler.cache is None

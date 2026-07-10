@@ -1519,6 +1519,11 @@ class Crew(FlowTrackable, BaseModel):
             )
             self.manager_agent = manager
         manager.crew = self
+        # The manager is created outside the agents loop that offers the
+        # crew's cache handler at validation time; offer it here so an
+        # opted-in crew (cache=True) also dedupes the manager's tool calls.
+        if self.cache:
+            manager.set_cache_handler(self._cache_handler)
 
     def _get_execution_start_index(self, tasks: list[Task]) -> int | None:
         if self.checkpoint_kickoff_event_id is None:
