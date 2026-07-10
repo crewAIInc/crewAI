@@ -29,6 +29,9 @@ if TYPE_CHECKING:
 CUSTOM_ENDPOINT_PREFIX = "ocid1.generativeaiendpoint"
 DEFAULT_OCI_REGION = "us-chicago-1"
 DEFAULT_OCI_TIMEOUT = (10, 240)
+# Cohere models that reject the v1 COHERE api format and require COHEREV2
+# (verified live: command-a-vision returns 400 on CohereChatRequest).
+_COHERE_V2_MODEL_MARKERS = ("command-a-vision", "command-a-reasoning")
 _OCI_SCHEMA_NAME_PATTERN = re.compile(r"[^a-zA-Z0-9_-]")
 _OCI_TOOL_RESULT_GUIDANCE = (
     "You have received tool results above. Respond to the user with a helpful, "
@@ -155,10 +158,13 @@ class OCICompletion(BaseLLM):
     # ------------------------------------------------------------------
 
     def _infer_provider(self, model: str) -> str:
-        """Infer the OCI request family (``cohere`` or ``generic``) from the model id."""
+        """Infer the OCI request family (``cohere``, ``cohere_v2``, or ``generic``) from the model id."""
         if model.startswith(CUSTOM_ENDPOINT_PREFIX):
             return "generic"
-        if model.lower().startswith("cohere."):
+        model_lower = model.lower()
+        if model_lower.startswith("cohere."):
+            if any(marker in model_lower for marker in _COHERE_V2_MODEL_MARKERS):
+                return "cohere_v2"
             return "cohere"
         return "generic"
 
@@ -328,6 +334,93 @@ class OCICompletion(BaseLLM):
 
         return oci_messages
 
+    def _build_cohere_v2_content(self, content: Any) -> list[Any]:
+        """Translate CrewAI message content into Cohere v2 content objects (text + images)."""
+        models = self._oci.generative_ai_inference.models
+        if isinstance(content, str):
+            return [models.CohereTextContentV2(text=content or ".")]
+        if not isinstance(content, list):
+            return [models.CohereTextContentV2(text=self._coerce_text(content) or ".")]
+
+        processed: list[Any] = []
+        for item in content:
+            if isinstance(item, str):
+                processed.append(models.CohereTextContentV2(text=item or "."))
+                continue
+            if not isinstance(item, Mapping):
+                raise ValueError(
+                    f"OCI message content items must be strings or dictionaries, got: {type(item)}"
+                )
+            content_type = item.get("type")
+            if content_type == "text":
+                processed.append(
+                    models.CohereTextContentV2(text=str(item.get("text", "")) or ".")
+                )
+            elif content_type == "image_url":
+                image_url = item.get("image_url", {})
+                url = image_url.get("url") if isinstance(image_url, Mapping) else None
+                if not url:
+                    raise ValueError("OCI image_url content requires image_url.url")
+                processed.append(
+                    models.CohereImageContentV2(
+                        image_url=models.CohereImageUrlV2(url=url)
+                    )
+                )
+            else:
+                raise ValueError(
+                    f"OCI Cohere v2 models support text and image_url content, got: {content_type}"
+                )
+        return processed or [models.CohereTextContentV2(text=".")]
+
+    def _build_cohere_v2_messages(self, messages: list[LLMMessage]) -> list[Any]:
+        """Map CrewAI conversation messages into Cohere v2 chat messages."""
+        models = self._oci.generative_ai_inference.models
+        role_map = {
+            "user": models.CohereUserMessageV2,
+            "assistant": models.CohereAssistantMessageV2,
+            "system": models.CohereSystemMessageV2,
+        }
+        oci_messages: list[Any] = []
+
+        for message in messages:
+            role = str(message.get("role", "user")).lower()
+            if role == "tool":
+                tool_kwargs: dict[str, Any] = {
+                    "content": self._build_cohere_v2_content(message.get("content", "")),
+                }
+                if message.get("tool_call_id"):
+                    tool_kwargs["tool_call_id"] = message["tool_call_id"]
+                oci_messages.append(models.CohereToolMessageV2(**tool_kwargs))
+                continue
+
+            message_cls = role_map.get(role)
+            if message_cls is None:
+                logging.debug("Skipping unsupported OCI message role: %s", role)
+                continue
+
+            message_kwargs: dict[str, Any] = {
+                "content": self._build_cohere_v2_content(message.get("content", "")),
+            }
+            if role == "assistant" and message.get("tool_calls"):
+                message_kwargs["tool_calls"] = [
+                    models.CohereToolCallV2(
+                        id=tool_call.get("id"),
+                        type="FUNCTION",
+                        function={
+                            "name": tool_call.get("function", {}).get("name"),
+                            "arguments": tool_call.get("function", {}).get(
+                                "arguments", "{}"
+                            ),
+                        },
+                    )
+                    for tool_call in message.get("tool_calls", [])
+                    if tool_call.get("function", {}).get("name")
+                ]
+
+            oci_messages.append(message_cls(**message_kwargs))
+
+        return oci_messages
+
     def _build_cohere_chat_history(
         self, messages: list[LLMMessage]
     ) -> tuple[list[Any], list[Any] | None, str]:
@@ -488,6 +581,19 @@ class OCICompletion(BaseLLM):
                     description=function_spec.get("description", name),
                     parameter_definitions=param_defs,
                 ))
+            elif self.oci_provider == "cohere_v2":
+                formatted.append(models.CohereToolV2(
+                    type="FUNCTION",
+                    function=models.Function(
+                        name=name,
+                        description=function_spec.get("description", name),
+                        parameters={
+                            "type": parameters.get("type", "object"),
+                            "properties": parameters.get("properties", {}),
+                            "required": parameters.get("required", []),
+                        },
+                    ),
+                ))
             else:
                 formatted.append(models.FunctionDefinition(
                     name=name,
@@ -561,7 +667,7 @@ class OCICompletion(BaseLLM):
             schema=schema_description["schema"],
             is_strict=schema_description["strict"],
         )
-        if self.oci_provider == "cohere":
+        if self.oci_provider in ("cohere", "cohere_v2"):
             return models.CohereResponseJsonFormat(schema=json_schema.schema)
         return models.JsonSchemaResponseFormat(json_schema=json_schema)
 
@@ -591,6 +697,11 @@ class OCICompletion(BaseLLM):
             }
             if tool_results:
                 request_kwargs["tool_results"] = tool_results
+        elif self.oci_provider == "cohere_v2":
+            request_kwargs = {
+                "messages": self._build_cohere_v2_messages(messages),
+                "api_format": models.BaseChatRequest.API_FORMAT_COHEREV2,
+            }
         else:
             request_kwargs = {
                 "messages": self._build_generic_messages(messages),
@@ -612,20 +723,25 @@ class OCICompletion(BaseLLM):
             request_kwargs["top_p"] = self.top_p
         if self.top_k is not None:
             request_kwargs["top_k"] = self.top_k
-        if self.reasoning_effort is not None:
+        if self.reasoning_effort is not None and self.oci_provider == "generic":
             request_kwargs["reasoning_effort"] = self.reasoning_effort
 
         if self.stop and not self._is_openai_gpt5_family():
-            stop_key = "stop_sequences" if self.oci_provider == "cohere" else "stop"
+            stop_key = (
+                "stop_sequences"
+                if self.oci_provider in ("cohere", "cohere_v2")
+                else "stop"
+            )
             request_kwargs[stop_key] = list(self.stop)
 
         formatted_tools = self._format_tools(tools)
         if formatted_tools:
             request_kwargs["tools"] = formatted_tools
-            if self.oci_provider == "cohere":
+            if self.oci_provider in ("cohere", "cohere_v2"):
                 if self._parallel_tool_calls_enabled():
                     raise ValueError("OCI Cohere models do not support parallel_tool_calls.")
-                request_kwargs.setdefault("is_force_single_step", False)
+                if self.oci_provider == "cohere":
+                    request_kwargs.setdefault("is_force_single_step", False)
             else:
                 tool_choice = self._build_tool_choice()
                 if tool_choice is not None:
@@ -652,6 +768,15 @@ class OCICompletion(BaseLLM):
             request_kwargs.update(passthrough)
             return models.CohereChatRequest(**request_kwargs)
 
+        if self.oci_provider == "cohere_v2":
+            allowed = self._allowed_passthrough_request_keys(models.CohereChatRequestV2)
+            passthrough = {
+                k: v for k, v in self.additional_params.items()
+                if k not in _OCI_RESERVED_REQUEST_KWARGS and k in allowed
+            }
+            request_kwargs.update(passthrough)
+            return models.CohereChatRequestV2(**request_kwargs)
+
         allowed = self._allowed_passthrough_request_keys(models.GenericChatRequest)
         passthrough = {
             k: v for k, v in self.additional_params.items()
@@ -667,7 +792,7 @@ class OCICompletion(BaseLLM):
     def _extract_text(self, response: Any) -> str:
         """Pull the assistant text out of an OCI chat response, handling both Cohere and generic shapes."""
         chat_response = response.data.chat_response
-        if self.oci_provider == "cohere":
+        if self.oci_provider in ("cohere", "cohere_v2"):
             if getattr(chat_response, "text", None):
                 return chat_response.text or ""
             message = getattr(chat_response, "message", None)
@@ -693,6 +818,22 @@ class OCICompletion(BaseLLM):
         raw: list[Any] = []
         if self.oci_provider == "cohere":
             raw = getattr(chat_response, "tool_calls", None) or []
+        elif self.oci_provider == "cohere_v2":
+            message = getattr(chat_response, "message", None)
+            raw = getattr(message, "tool_calls", None) or []
+            return [
+                {
+                    "id": getattr(tc, "id", None) or uuid.uuid4().hex,
+                    "type": "function",
+                    "function": {
+                        "name": self._cohere_v2_function_field(tc, "name"),
+                        "arguments": self._cohere_v2_function_field(
+                            tc, "arguments", "{}"
+                        ),
+                    },
+                }
+                for tc in raw
+            ]
         else:
             choices = getattr(chat_response, "choices", None) or []
             if choices:
@@ -722,6 +863,17 @@ class OCICompletion(BaseLLM):
             }
             for tc in raw
         ]
+
+    @staticmethod
+    def _cohere_v2_function_field(tool_call: Any, field: str, default: str = "") -> str:
+        """Read ``name``/``arguments`` from a Cohere v2 tool call whose ``function`` may be an SDK object or a plain dict."""
+        function = getattr(tool_call, "function", None)
+        if isinstance(function, Mapping):
+            return str(function.get(field, default) or default)
+        value = getattr(function, field, None)
+        if value is None:
+            value = getattr(tool_call, field, None)
+        return str(value or default)
 
     def _extract_usage(self, response: Any) -> dict[str, int]:
         """Return ``{prompt_tokens, completion_tokens, total_tokens}`` from the OCI response, or an empty dict if unavailable."""
@@ -819,6 +971,17 @@ class OCICompletion(BaseLLM):
                 {"id": None, "type": "function", "function": {
                     "name": str(tc.get("name", "")),
                     "arguments": json.dumps(tc.get("parameters", {})),
+                }}
+                for tc in raw if isinstance(tc, Mapping)
+            ]
+        if self.oci_provider == "cohere_v2":
+            # Cohere v2 nests name/arguments under a `function` object.
+            return [
+                {"id": tc.get("id"), "type": "function", "function": {
+                    "name": (tc.get("function") or {}).get("name", tc.get("name")),
+                    "arguments": (tc.get("function") or {}).get(
+                        "arguments", tc.get("arguments", "{}")
+                    ),
                 }}
                 for tc in raw if isinstance(tc, Mapping)
             ]

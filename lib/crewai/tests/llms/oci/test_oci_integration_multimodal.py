@@ -4,7 +4,7 @@ Run with:
     OCI_AUTH_TYPE=API_KEY OCI_AUTH_PROFILE=API_KEY_AUTH \
     OCI_COMPARTMENT_ID=<compartment> OCI_REGION=us-chicago-1 \
     OCI_TEST_MULTIMODAL_MODELS="google.gemini-2.5-flash" \
-    uv run pytest tests/llms/oci/test_oci_integration_multimodal.py -v
+    uv run pytest lib/crewai/tests/llms/oci/test_oci_integration_multimodal.py -v
 """
 
 from __future__ import annotations

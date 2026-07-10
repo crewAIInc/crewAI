@@ -36,15 +36,27 @@ def _make_fake_oci_module() -> MagicMock:
         "CohereUserMessage",
         "CohereSystemMessage",
         "CohereChatBotMessage",
+        "CohereUserMessageV2",
+        "CohereSystemMessageV2",
+        "CohereAssistantMessageV2",
+        "CohereToolMessageV2",
+        "CohereTextContentV2",
+        "CohereImageContentV2",
+        "CohereImageUrlV2",
+        "CohereToolCallV2",
+        "CohereToolV2",
+        "Function",
     ):
         setattr(models, cls_name, MagicMock(side_effect=lambda **kw: MagicMock(**kw)))
 
     # Request types
     models.GenericChatRequest = MagicMock(side_effect=lambda **kw: MagicMock(**kw))
     models.CohereChatRequest = MagicMock(side_effect=lambda **kw: MagicMock(**kw))
+    models.CohereChatRequestV2 = MagicMock(side_effect=lambda **kw: MagicMock(**kw))
     models.BaseChatRequest = MagicMock()
     models.BaseChatRequest.API_FORMAT_GENERIC = "GENERIC"
     models.BaseChatRequest.API_FORMAT_COHERE = "COHERE"
+    models.BaseChatRequest.API_FORMAT_COHEREV2 = "COHEREV2"
 
     # ChatDetails
     models.ChatDetails = MagicMock(side_effect=lambda **kw: MagicMock(**kw))
