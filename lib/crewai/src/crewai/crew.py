@@ -168,8 +168,11 @@ class Crew(FlowTrackable, BaseModel):
         manager_agent: Custom agent that will be used as manager.
         memory: Whether the crew should use memory to store memories of it's
             execution.
-        cache: Whether the crew should use a cache to store the results of the
-            tools execution.
+        cache: Whether to cache tool results for the crew's agents. Off by
+            default; when enabled, repeated calls to the same tool with
+            identical arguments reuse the first result without re-executing —
+            avoid enabling for live-data or state-mutating tools unless they
+            gate writes with a cache_function.
         function_calling_llm: The language model that will run the tool calling
             for all the agents.
         process: The process flow that the crew will follow (e.g., sequential,

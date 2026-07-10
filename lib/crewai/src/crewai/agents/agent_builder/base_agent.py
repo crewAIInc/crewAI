@@ -205,7 +205,11 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         role (str): Role of the agent.
         goal (str): Objective of the agent.
         backstory (str): Backstory of the agent.
-        cache (bool): Whether the agent should use a cache for tool usage.
+        cache (bool): Whether the agent participates in tool-result caching
+            when a cache is enabled. The default (True) only permits
+            participation — caching activates when the crew sets cache=True
+            or the agent explicitly opts in with cache=True or a
+            cache_handler; cache=False excludes the agent entirely.
         config (dict[str, Any] | None): Configuration for the agent.
         verbose (bool): Verbose mode for the Agent Execution.
         max_rpm (int | None): Maximum number of requests per minute for the agent execution.
@@ -723,6 +727,11 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
 
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
+        # Tool-result caching distinguishes "explicitly enabled" from the
+        # field default via model_fields_set; don't let the dump turn the
+        # default into an explicit opt-in on the copy.
+        if "cache" not in self.model_fields_set:
+            copied_data.pop("cache", None)
         return type(self)(
             **copied_data,
             llm=existing_llm,

@@ -181,3 +181,15 @@ class TestAgentCacheWiring:
         agent = self._agent(cache=False)
         agent.set_cache_handler(CacheHandler())
         assert agent.tools_handler.cache is None
+
+    def test_copy_of_default_agent_does_not_opt_in(self):
+        """copy() rebuilds from model_dump(), which includes the field
+        default cache=True — that must not read as an explicit opt-in on
+        the copy (Bugbot review finding on the original PR)."""
+        copied = self._agent().copy()
+        assert copied.tools_handler.cache is None
+        assert copied.cache_handler is None
+
+    def test_copy_of_opted_in_agent_stays_opted_in(self):
+        copied = self._agent(cache=True).copy()
+        assert copied.tools_handler.cache is not None
