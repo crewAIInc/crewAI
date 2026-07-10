@@ -267,7 +267,14 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         description="Configuration for the agent", default=None, exclude=True
     )
     cache: bool = Field(
-        default=True, description="Whether the agent should use a cache for tool usage."
+        default=True,
+        description=(
+            "Whether the agent participates in tool-result caching when a "
+            "cache is enabled. Caching itself is opt-in: it activates only "
+            "when the crew sets cache=True or the agent explicitly opts in "
+            "(cache=True or a cache_handler at construction). Set False to "
+            "exclude this agent even when the crew enables caching."
+        ),
     )
     verbose: bool = Field(
         default=False, description="Verbose mode for the Agent Execution"

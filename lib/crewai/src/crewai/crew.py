@@ -216,7 +216,16 @@ class Crew(FlowTrackable, BaseModel):
     _kickoff_event_id: str | None = PrivateAttr(default=None)
 
     name: str | None = Field(default="crew")
-    cache: bool = Field(default=True)
+    cache: bool = Field(
+        default=False,
+        description=(
+            "Whether to cache tool results for the crew's agents. Opt-in: "
+            "when enabled, repeated calls to the same tool with identical "
+            "arguments return the first result without re-executing the "
+            "tool — do not enable for live-data or state-mutating tools "
+            "unless they set a cache_function that prevents caching."
+        ),
+    )
     tasks: list[Task] = Field(default_factory=list)
     agents: Annotated[
         list[BaseAgent],
