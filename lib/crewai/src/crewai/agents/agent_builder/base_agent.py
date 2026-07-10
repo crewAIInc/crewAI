@@ -729,9 +729,14 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
         # Tool-result caching distinguishes "explicitly enabled" from the
         # field default via model_fields_set; don't let the dump turn the
-        # default into an explicit opt-in on the copy.
+        # default into an explicit opt-in on the copy. An agent that opted
+        # in via an explicit cache_handler (excluded from the dump) must
+        # stay opted in — carry the consent as cache=True so the copy wires
+        # its own fresh handler.
         if "cache" not in self.model_fields_set:
             copied_data.pop("cache", None)
+            if self.cache_handler is not None and self.cache:
+                copied_data["cache"] = True
         return type(self)(
             **copied_data,
             llm=existing_llm,

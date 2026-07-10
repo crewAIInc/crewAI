@@ -193,3 +193,16 @@ class TestAgentCacheWiring:
     def test_copy_of_opted_in_agent_stays_opted_in(self):
         copied = self._agent(cache=True).copy()
         assert copied.tools_handler.cache is not None
+
+    def test_copy_of_handler_opted_in_agent_stays_opted_in(self):
+        """An explicit cache_handler is an opt-in too; copy() excludes the
+        handler itself, but the consent must survive — the copy wires its
+        own fresh handler (Bugbot review finding on the original PR)."""
+        source = self._agent(cache_handler=CacheHandler())
+        copied = source.copy()
+        assert copied.tools_handler.cache is not None
+        assert copied.tools_handler.cache is not source.tools_handler.cache
+
+    def test_copy_of_explicit_cache_false_with_handler_stays_off(self):
+        copied = self._agent(cache=False, cache_handler=CacheHandler()).copy()
+        assert copied.tools_handler.cache is None
