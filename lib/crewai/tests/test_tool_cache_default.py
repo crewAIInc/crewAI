@@ -207,6 +207,19 @@ class TestAgentCacheWiring:
         copied = self._agent(cache=False, cache_handler=CacheHandler()).copy()
         assert copied.tools_handler.cache is None
 
+    def test_copy_of_crew_wired_agent_does_not_opt_in(self):
+        """A handler offered by a crew at kickoff (set_cache_handler) is
+        runtime wiring, not construction-time consent — copies of such
+        agents must not become standalone cachers (Bugbot review finding
+        on the original PR)."""
+        agent = self._agent()
+        agent.set_cache_handler(CacheHandler())  # what Crew(cache=True) does
+        assert agent.tools_handler.cache is not None
+
+        copied = agent.copy()
+        assert copied.tools_handler.cache is None
+        assert copied.cache_handler is None
+
 
 class TestHierarchicalManagerCacheWiring:
     """The auto-created hierarchical manager is built outside the agents

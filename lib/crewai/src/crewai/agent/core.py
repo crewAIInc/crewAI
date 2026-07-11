@@ -410,6 +410,13 @@ class Agent(BaseAgent):
         repeated tool calls with identical arguments always re-execute the
         tool — the safe default for live-data and state-mutating tools.
         """
+        # Recorded before any crew can offer its shared handler at kickoff,
+        # so copy() can distinguish a construction-time opt-in from runtime
+        # crew wiring (which must not turn copies into cachers).
+        self._constructor_cache_opt_in = bool(
+            self.cache
+            and (self.cache_handler is not None or "cache" in self.model_fields_set)
+        )
         opted_in = self.cache_handler is not None or (
             "cache" in self.model_fields_set and self.cache
         )
