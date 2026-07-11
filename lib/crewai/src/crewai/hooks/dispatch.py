@@ -129,9 +129,17 @@ def register(point: InterceptionPoint, hook: HookFn) -> None:
 
 
 def unregister(point: InterceptionPoint, hook: HookFn) -> bool:
-    """Unregister a specific global hook. Returns True if it was removed."""
+    """Unregister a specific global hook. Returns True if it was removed.
+
+    When ``hook`` was registered through :func:`on` with ``agents``/``tools``
+    filters, the stored callable is a wrapper rather than ``hook`` itself. The
+    wrapper is stashed on ``hook._registered_hook`` at registration time, so it
+    can be resolved and removed here.
+    """
+    hooks = _global_hooks[point]
+    target = hook if hook in hooks else getattr(hook, "_registered_hook", hook)
     try:
-        _global_hooks[point].remove(hook)
+        hooks.remove(target)
         return True
     except ValueError:
         return False
@@ -235,10 +243,14 @@ def _emit_telemetry(
 
 
 def _default_reducer(ctx: Any, result: Any) -> bool:
-    """Default payload semantics: a non-None return replaces ``ctx.payload``."""
-    if result is not None:
-        if hasattr(ctx, "payload"):
-            ctx.payload = result
+    """Default payload semantics: a non-None return replaces ``ctx.payload``.
+
+    Only reports a modification when the payload was actually applied, so a
+    context without a ``payload`` attribute does not produce a misleading
+    ``"modified"`` telemetry outcome.
+    """
+    if result is not None and hasattr(ctx, "payload"):
+        ctx.payload = result
         return True
     return False
 
@@ -368,7 +380,10 @@ def _wrap_with_filters(
                 return None
         if agents:
             agent = getattr(ctx, "agent", None)
-            if agent is not None and getattr(agent, "role", None) not in agents:
+            role = getattr(agent, "role", None) if agent is not None else None
+            if role is None:
+                role = getattr(ctx, "agent_role", None)
+            if role is not None and role not in agents:
                 return None
         return func(ctx)
 
@@ -412,6 +427,9 @@ def on(
                 else func
             )
             register(point, hook)
+            # Remember the actually-registered callable so unregister_hook(func)
+            # can resolve the filter wrapper.
+            func._registered_hook = hook  # type: ignore[attr-defined]
 
         return func
 

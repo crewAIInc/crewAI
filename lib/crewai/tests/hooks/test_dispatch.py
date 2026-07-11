@@ -23,6 +23,7 @@ from crewai.hooks.dispatch import (
     register,
     register_scoped,
     scoped_hooks,
+    unregister as unregister_hook,
 )
 from crewai.hooks.llm_hooks import (
     get_before_llm_call_hooks,
@@ -36,6 +37,7 @@ class _Ctx:
     payload: object = None
     tool_name: str | None = None
     agent: object = None
+    agent_role: str | None = None
 
 
 @pytest.fixture(autouse=True)
@@ -143,6 +145,27 @@ class TestOnDecorator:
         dispatch(InterceptionPoint.PRE_MODEL_CALL, _Ctx(agent=_Agent("Researcher")))
         assert seen == ["Researcher"]
 
+    def test_agent_filter_falls_back_to_agent_role(self):
+        seen: list[str] = []
+
+        @on(InterceptionPoint.PRE_STEP, agents=["Researcher"])
+        def hook(ctx):
+            seen.append(ctx.agent_role)
+
+        # No agent object, only the agent_role string (e.g. flow seams).
+        dispatch(InterceptionPoint.PRE_STEP, _Ctx(agent_role="Writer"))
+        dispatch(InterceptionPoint.PRE_STEP, _Ctx(agent_role="Researcher"))
+        assert seen == ["Researcher"]
+
+    def test_unregister_resolves_filtered_wrapper(self):
+        @on(InterceptionPoint.PRE_TOOL_CALL, tools=["allowed_tool"])
+        def hook(ctx):
+            return None
+
+        assert len(get_hooks(InterceptionPoint.PRE_TOOL_CALL)) == 1
+        assert unregister_hook(InterceptionPoint.PRE_TOOL_CALL, hook) is True
+        assert get_hooks(InterceptionPoint.PRE_TOOL_CALL) == []
+
 
 class TestSharedQueueWithLegacyDialect:
     """Legacy registrations and @on hooks compose in one ordered queue."""
@@ -208,22 +231,66 @@ class TestTelemetry:
                 events.append(event)
 
             dispatch(InterceptionPoint.INPUT, _Ctx())
+            # Telemetry handlers run on the bus's thread pool; flush so the
+            # assertion doesn't race the emit.
+            crewai_event_bus.flush()
 
         assert len(events) == 1
         assert events[0].interception_point == "input"
         assert events[0].outcome == "modified"
         assert events[0].hook_count == 1
 
+    def test_event_reports_abort_outcome(self):
+        events: list[HookDispatchedEvent] = []
+
+        def blocker(ctx):
+            raise HookAborted(reason="blocked", source="policy")
+
+        register(InterceptionPoint.INPUT, blocker)
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(HookDispatchedEvent)
+            def _capture(_source, event):
+                events.append(event)
+
+            with pytest.raises(HookAborted):
+                dispatch(InterceptionPoint.INPUT, _Ctx())
+            crewai_event_bus.flush()
+
+        assert len(events) == 1
+        assert events[0].interception_point == "input"
+        assert events[0].outcome == "aborted"
+        assert events[0].abort_reason == "blocked"
+        assert events[0].abort_source == "policy"
+
 
 class TestNoOpOverhead:
     """The no-op fast path must stay cheap (a single dict lookup)."""
 
-    def test_noop_dispatch_overhead_budget(self):
+    def test_noop_dispatch_overhead_is_bounded(self):
+        # Relative (not absolute) budget: the no-op fast path is a dict lookup
+        # plus a guard, so it should stay within a wide multiple of a bare
+        # function call. This catches accidental O(n) regressions without
+        # depending on absolute timing on shared CI runners.
         ctx = _Ctx()
         iterations = 100_000
+
+        def _baseline(_c):
+            return _c
+
+        for _ in range(1000):  # warm up both paths
+            dispatch(InterceptionPoint.INPUT, ctx)
+            _baseline(ctx)
+
+        start = time.perf_counter()
+        for _ in range(iterations):
+            _baseline(ctx)
+        baseline = time.perf_counter() - start
+
         start = time.perf_counter()
         for _ in range(iterations):
             dispatch(InterceptionPoint.INPUT, ctx)
-        elapsed = time.perf_counter() - start
-        # Generous CI-safe budget: < 5µs per no-op dispatch on average.
-        assert elapsed / iterations < 5e-6
+        noop = time.perf_counter() - start
+
+        assert noop < baseline * 50 + 5e-3

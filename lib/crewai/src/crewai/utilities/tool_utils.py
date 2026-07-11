@@ -104,7 +104,20 @@ async def aexecute_tool_and_check_finality(
             blocked_message = (
                 f"Tool execution blocked by hook. Tool: {tool_calling.tool_name}"
             )
-            return ToolResult(blocked_message, False)
+            # Run POST_TOOL_CALL even on a blocked call so monitoring hooks
+            # still fire, matching the native tool-call paths.
+            blocked_hook_context = ToolCallHookContext(
+                tool_name=sanitized_tool_name,
+                tool_input=tool_input,
+                tool=tool,
+                agent=agent,
+                task=task,
+                crew=crew,
+                tool_result=blocked_message,
+                raw_tool_result=blocked_message,
+            )
+            modified_result = run_after_tool_call_hooks(blocked_hook_context)
+            return ToolResult(modified_result, False)
 
         tool_result = await tool_usage.ause(tool_calling, agent_action.text)
         raw_tool_result = tool_usage.get_last_raw_result(tool_result)
@@ -207,7 +220,20 @@ def execute_tool_and_check_finality(
             blocked_message = (
                 f"Tool execution blocked by hook. Tool: {tool_calling.tool_name}"
             )
-            return ToolResult(blocked_message, False)
+            # Run POST_TOOL_CALL even on a blocked call so monitoring hooks
+            # still fire, matching the native tool-call paths.
+            blocked_hook_context = ToolCallHookContext(
+                tool_name=sanitized_tool_name,
+                tool_input=tool_input,
+                tool=tool,
+                agent=agent,
+                task=task,
+                crew=crew,
+                tool_result=blocked_message,
+                raw_tool_result=blocked_message,
+            )
+            modified_result = run_after_tool_call_hooks(blocked_hook_context)
+            return ToolResult(modified_result, False)
 
         tool_result = tool_usage.use(tool_calling, agent_action.text)
         raw_tool_result = tool_usage.get_last_raw_result(tool_result)

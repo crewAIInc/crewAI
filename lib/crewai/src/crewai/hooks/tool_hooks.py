@@ -160,6 +160,15 @@ def after_tool_call_reducer(context: ToolCallHookContext, result: object) -> boo
     return False
 
 
+def _hook_verbose(context: ToolCallHookContext) -> bool:
+    """Whether swallowed-hook-error warnings should be printed.
+
+    Mirrors the pre-dispatcher behavior where a failing tool hook surfaced a
+    warning when the executing agent was verbose.
+    """
+    return bool(getattr(context.agent, "verbose", False))
+
+
 def run_before_tool_call_hooks(context: ToolCallHookContext) -> bool:
     """Run all ``pre_tool_call`` hooks against a context.
 
@@ -173,7 +182,7 @@ def run_before_tool_call_hooks(context: ToolCallHookContext) -> bool:
             InterceptionPoint.PRE_TOOL_CALL,
             context,
             reducer=before_tool_call_reducer,
-            verbose=False,
+            verbose=_hook_verbose(context),
         )
         return False
     except HookAborted:
@@ -190,7 +199,7 @@ def run_after_tool_call_hooks(context: ToolCallHookContext) -> str | None:
         InterceptionPoint.POST_TOOL_CALL,
         context,
         reducer=after_tool_call_reducer,
-        verbose=False,
+        verbose=_hook_verbose(context),
     )
     return context.tool_result
 
