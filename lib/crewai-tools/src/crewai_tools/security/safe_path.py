@@ -19,7 +19,6 @@ from typing import Any
 from urllib.parse import urlparse
 
 from requests.adapters import HTTPAdapter
-import urllib3
 
 
 logger = logging.getLogger(__name__)
@@ -273,18 +272,49 @@ class PinnedIPAdapter(HTTPAdapter):
     This prevents DNS rebinding attacks: the IP is validated once, then
     the connection is made directly to that IP while preserving the
     original hostname for ``Host`` header and TLS SNI.
+
+    Implementation: overrides ``send()`` to rewrite the request URL,
+    replacing the hostname with the pinned IP and setting the ``Host``
+    header to the original hostname. For HTTPS, ``server_hostname`` is
+    set on the SSL context so TLS SNI works correctly.
     """
 
     def __init__(self, resolved_ip: str, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._resolved_ip = resolved_ip
 
-    def send(self, request: Any, **kwargs: Any) -> Any:
-        """Send the request, overriding the connection with a pinned IP."""
-        return super().send(request, **kwargs)
+    def send(self, request: Any, **kwargs: Any) -> Any:  # type: ignore[override]
+        """Send the request, rewriting the URL to use the pinned IP."""
+        from urllib.parse import urlparse, urlunparse
 
-    def init_poolmanager(self, *args: Any, **kwargs: Any) -> None:  # type: ignore[override]
-        """Override to inject the pinned IP into the pool manager."""
-        kwargs["strict"] = kwargs.get("strict", False)
-        self._pool_manager = urllib3.PoolManager(*args, **kwargs)
-        self._pool_manager._resolved_ip = self._resolved_ip  # type: ignore[attr-defined]
+        parsed = urlparse(request.url)
+        original_host = parsed.hostname
+        if not original_host or not self._resolved_ip:
+            return super().send(request, **kwargs)
+
+        # Rewrite URL: replace hostname with pinned IP
+        pinned_netloc = self._resolved_ip
+        if parsed.port:
+            pinned_netloc = f"{self._resolved_ip}:{parsed.port}"
+        if parsed.username:
+            auth = parsed.username
+            if parsed.password:
+                auth += f":{parsed.password}"
+            pinned_netloc = f"{auth}@{pinned_netloc}"
+
+        pinned_url = urlunparse(
+            parsed._replace(netloc=pinned_netloc)
+        )
+        request.url = pinned_url
+
+        # Set Host header to original hostname for virtual hosting
+        if request.headers.get("Host") is None:
+            request.headers["Host"] = original_host
+        if "host" not in {k.lower() for k in request.headers}:
+            request.headers["Host"] = original_host
+
+        # For HTTPS, ensure TLS SNI uses the original hostname
+        if parsed.scheme == "https":
+            kwargs.setdefault("server_hostname", original_host)
+
+        return super().send(request, **kwargs)

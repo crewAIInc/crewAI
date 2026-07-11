@@ -8,13 +8,10 @@ concurrently by the executor.
 import asyncio
 from collections.abc import Callable
 import contextvars
-import re
 from typing import Any
 
 from crewai.tools import BaseTool
-
-
-_URL_PATTERN = re.compile(r"[a-zA-Z]+://[^\s\"']+")
+from crewai.tools.mcp_security import validate_mcp_tool_args_for_urls
 
 
 class MCPNativeTool(BaseTool):
@@ -84,7 +81,7 @@ class MCPNativeTool(BaseTool):
             Result from the MCP tool execution.
         """
         try:
-            _validate_mcp_tool_args_for_urls(kwargs)
+            validate_mcp_tool_args_for_urls(kwargs)
 
             try:
                 asyncio.get_running_loop()
@@ -105,33 +102,6 @@ class MCPNativeTool(BaseTool):
             raise RuntimeError(
                 f"Error executing MCP tool {self.original_tool_name}: {e!s}"
             ) from e
-
-
-def _validate_mcp_tool_args_for_urls(kwargs: dict[str, Any]) -> None:
-    """Scan MCP tool arguments for URLs and validate them against SSRF rules.
-
-    Recursively scans string values for http/https URLs and validates each
-    one. This prevents agents from using MCP tools to access internal
-    services, cloud metadata endpoints, or other private resources.
-
-    Raises:
-        ValueError: If any URL in the arguments resolves to a private/reserved IP.
-    """
-    from crewai_tools.security.safe_path import validate_url_and_resolve
-
-    for value in kwargs.values():
-        if isinstance(value, str):
-            for match in _URL_PATTERN.finditer(value):
-                validate_url_and_resolve(match.group())
-        elif isinstance(value, dict):
-            _validate_mcp_tool_args_for_urls(value)
-        elif isinstance(value, list):
-            for item in value:
-                if isinstance(item, str):
-                    for match in _URL_PATTERN.finditer(item):
-                        validate_url_and_resolve(match.group())
-                elif isinstance(item, dict):
-                    _validate_mcp_tool_args_for_urls(item)
 
     async def _run_async(self, **kwargs: Any) -> str:
         """Async implementation of tool execution.
