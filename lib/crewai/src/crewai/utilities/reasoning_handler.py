@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 
 _READY_MARKER: Final[re.Pattern[str]] = re.compile(
-    r"NOT\s+READY|READY", re.IGNORECASE
+    r"\bNOT\s+READY\b|\bREADY\b", re.IGNORECASE
 )
 
 

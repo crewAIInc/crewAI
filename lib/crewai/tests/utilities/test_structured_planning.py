@@ -47,6 +47,17 @@ class TestDetectPlanReady:
     def test_no_marker_defaults_to_not_ready(self):
         assert _detect_plan_ready("just a plan with no verdict") is False
 
+    def test_ready_substring_inside_words_is_ignored(self):
+        # "already" contains "ready" but is not a READY marker (word boundaries).
+        assert _detect_plan_ready("I am already prepared") is False
+        assert _detect_plan_ready("The steps are already documented") is False
+
+    def test_trailing_already_does_not_flip_not_ready(self):
+        # A trailing "already" must not override a concluding NOT READY.
+        assert (
+            _detect_plan_ready("NOT READY. I already have the tools.") is False
+        )
+
     def test_parse_planning_response_detects_bare_ready(self):
         _plan, ready = AgentReasoning._parse_planning_response("my plan\n\nREADY")
         assert ready is True
