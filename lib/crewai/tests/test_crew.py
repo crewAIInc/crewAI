@@ -859,6 +859,7 @@ def test_cache_hitting_between_agents(researcher, writer, ceo):
     crew = Crew(
         agents=[ceo, researcher],
         tasks=tasks,
+        cache=True,
     )
 
     with patch.object(CacheHandler, "read") as read:
@@ -2246,7 +2247,9 @@ def test_tools_with_custom_caching():
         agent=writer2,
     )
 
-    crew = Crew(agents=[writer1, writer2], tasks=[task1, task2, task3, task4])
+    crew = Crew(
+        agents=[writer1, writer2], tasks=[task1, task2, task3, task4], cache=True
+    )
 
     with patch.object(
         CacheHandler, "add", wraps=crew._cache_handler.add
