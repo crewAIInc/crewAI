@@ -198,11 +198,58 @@ def test_lancedb_scope_prefix_respects_path_boundary(lancedb_path: Path) -> None
     assert storage.count("/team") == 2  # /team and /team/x, NOT /team-b
     assert storage.count("/team-b") == 1
 
+    # search must scope hits to /team + descendants only (not the sibling).
+    hits = {rec.scope for rec, _ in storage.search([0.1] * 4, scope_prefix="/team", limit=100)}
+    assert hits == {"/team", "/team/x"}
+
     # reset must delete only the /team subtree, leaving the sibling intact.
     storage.reset("/team")
     assert storage.count("/team-b") == 1
     surviving = {r.scope for r in storage.list_records(limit=100)}
     assert surviving == {"/team-b"}
+
+
+def test_lancedb_delete_scope_prefix_respects_path_boundary(lancedb_path: Path) -> None:
+    """delete(scope_prefix=...) must remove only the subtree, not siblings."""
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(lancedb_path), vector_dim=4)
+    storage.save([
+        MemoryRecord(content="team", scope="/team", embedding=[0.1] * 4),
+        MemoryRecord(content="child", scope="/team/x", embedding=[0.3] * 4),
+        MemoryRecord(content="team-b", scope="/team-b", embedding=[0.2] * 4),
+    ])
+
+    deleted = storage.delete(scope_prefix="/team")
+    assert deleted == 2  # /team and /team/x, NOT /team-b
+    surviving = {r.scope for r in storage.list_records(limit=100)}
+    assert surviving == {"/team-b"}
+
+
+def test_lancedb_scope_prefix_treats_path_as_literal(lancedb_path: Path) -> None:
+    """Scope paths are matched literally, not as SQL LIKE patterns.
+
+    A path segment containing ``_`` (a LIKE single-char wildcard) must not
+    match a sibling subtree that differs only in that position -- e.g. a
+    ``LIKE '/team_x/%'`` predicate wrongly matches ``/teamAx/w`` (``_`` matching
+    ``A``), so ``/team_x`` must not pull in the ``/teamAx`` subtree.
+    """
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(lancedb_path), vector_dim=4)
+    storage.save([
+        MemoryRecord(content="a", scope="/team_x", embedding=[0.1] * 4),
+        MemoryRecord(content="b", scope="/team_x/z", embedding=[0.3] * 4),
+        MemoryRecord(content="c", scope="/teamAx/w", embedding=[0.2] * 4),
+    ])
+
+    assert storage.count("/team_x") == 2  # /team_x and /team_x/z, NOT /teamAx/w
+    hits = {rec.scope for rec, _ in storage.search([0.1] * 4, scope_prefix="/team_x", limit=100)}
+    assert hits == {"/team_x", "/team_x/z"}
+
+    storage.reset("/team_x")
+    surviving = {r.scope for r in storage.list_records(limit=100)}
+    assert surviving == {"/teamAx/w"}
 
 
 

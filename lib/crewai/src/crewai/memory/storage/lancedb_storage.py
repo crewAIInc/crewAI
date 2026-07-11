@@ -374,9 +374,13 @@ class LanceDBStorage:
 
         A scope such as ``/team`` owns itself and every descendant under
         ``/team/`` -- but *not* a lexicographic sibling like ``/team-b``.
-        Matching with a bare ``LIKE 'prefix%'`` (or a lexicographic range)
-        leaks into such siblings, so anchor the match on the ``/`` separator:
-        the exact scope, or anything beneath ``prefix + "/"``.
+        The match is anchored on the ``/`` separator via a half-open range
+        ``[prefix + "/", prefix + "0")``: ``/`` is ``0x2F`` so the next code
+        point is ``0`` (``0x30``), and every descendant ``prefix + "/..."``
+        sorts before ``prefix + "0"``. A range (rather than ``LIKE
+        'prefix/%'``) keeps the scope path a literal -- ``LIKE`` would treat
+        ``%`` and ``_`` inside the path as wildcards and leak into unrelated
+        siblings (e.g. ``/team_x`` matching ``/teamAx``).
 
         Args:
             scope_prefix: The scope path to match (already non-root).
@@ -387,8 +391,10 @@ class LanceDBStorage:
         prefix = scope_prefix.rstrip("/")
         if not prefix.startswith("/"):
             prefix = "/" + prefix
-        safe = prefix.replace("'", "''")
-        return f"(scope = '{safe}' OR scope LIKE '{safe}/%')"
+        exact = prefix.replace("'", "''")
+        lower = (prefix + "/").replace("'", "''")
+        upper = (prefix + "0").replace("'", "''")
+        return f"(scope = '{exact}' OR (scope >= '{lower}' AND scope < '{upper}'))"
 
     def search(
         self,
