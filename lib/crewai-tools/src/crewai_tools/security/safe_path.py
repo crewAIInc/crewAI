@@ -275,13 +275,19 @@ class PinnedIPAdapter(HTTPAdapter):
 
     Implementation: overrides ``send()`` to rewrite the request URL,
     replacing the hostname with the pinned IP and setting the ``Host``
-    header to the original hostname. For HTTPS, ``server_hostname`` is
-    set on the SSL context so TLS SNI works correctly.
+    header to the original hostname.  ``init_poolmanager`` is overridden
+    to configure ``assert_hostname=False`` so that TLS SNI verification
+    works correctly when the URL contains an IP address.
     """
 
     def __init__(self, resolved_ip: str, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._resolved_ip = resolved_ip
+
+    def init_poolmanager(self, *args: Any, **kwargs: Any) -> None:
+        """Configure pool manager with assert_hostname=False for IP-pinned HTTPS."""
+        super().init_poolmanager(*args, **kwargs)  # type: ignore[no-untyped-call]
+        self.poolmanager.assert_hostname = False
 
     def send(self, request: Any, **kwargs: Any) -> Any:  # type: ignore[override]
         """Send the request, rewriting the URL to use the pinned IP."""
@@ -302,19 +308,11 @@ class PinnedIPAdapter(HTTPAdapter):
                 auth += f":{parsed.password}"
             pinned_netloc = f"{auth}@{pinned_netloc}"
 
-        pinned_url = urlunparse(
-            parsed._replace(netloc=pinned_netloc)
-        )
+        pinned_url = urlunparse(parsed._replace(netloc=pinned_netloc))
         request.url = pinned_url
 
         # Set Host header to original hostname for virtual hosting
-        if request.headers.get("Host") is None:
-            request.headers["Host"] = original_host
         if "host" not in {k.lower() for k in request.headers}:
             request.headers["Host"] = original_host
-
-        # For HTTPS, ensure TLS SNI uses the original hostname
-        if parsed.scheme == "https":
-            kwargs.setdefault("server_hostname", original_host)
 
         return super().send(request, **kwargs)

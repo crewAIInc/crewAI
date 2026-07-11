@@ -209,19 +209,63 @@ def test_safe_get_uses_pinned_ip_adapter(
     assert captured_validated[0].url == "http://public.example/data"
 
 
-def test_pinned_adapter_rewrites_url(public_dns: None) -> None:
-    """Behavioral test: PinnedIPAdapter rewrites URL to use resolved IP."""
-    from crewai_tools.security.safe_path import PinnedIPAdapter, ValidatedURL
+def test_pinned_adapter_rewrites_url(public_dns: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Behavioral test: PinnedIPAdapter.send() rewrites URL and sets Host header."""
+    from unittest.mock import MagicMock
+
+    from crewai_tools.security.safe_path import PinnedIPAdapter
 
     adapter = PinnedIPAdapter(resolved_ip="93.184.216.34")
 
-    # Build a PreparedRequest as requests would
+    captured_requests: list[Any] = []
+
+    def fake_send(self: Any, request: Any, **kwargs: Any) -> MagicMock:
+        captured_requests.append(request)
+        resp = MagicMock()
+        resp.status_code = 200
+        return resp
+
+    monkeypatch.setattr(
+        "requests.adapters.HTTPAdapter.send", fake_send,
+    )
+
     req = requests.Request("GET", "http://public.example/data")
     prepared = req.prepare()
+    adapter.send(prepared)
 
-    # Verify adapter stores the IP
-    assert adapter._resolved_ip == "93.184.216.34"
+    assert len(captured_requests) == 1
+    sent = captured_requests[0]
+    assert "93.184.216.34" in sent.url
+    assert sent.headers["Host"] == "public.example"
 
-    # Verify send() method exists and can be called
-    assert hasattr(adapter, "send")
-    assert callable(adapter.send)
+
+def test_pinned_adapter_https_rewrites_url(
+    public_dns: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Behavioral test: PinnedIPAdapter rewrites HTTPS URL without TypeError."""
+    from unittest.mock import MagicMock
+
+    from crewai_tools.security.safe_path import PinnedIPAdapter
+
+    adapter = PinnedIPAdapter(resolved_ip="93.184.216.34")
+
+    captured_requests: list[Any] = []
+
+    def fake_send(self: Any, request: Any, **kwargs: Any) -> MagicMock:
+        captured_requests.append(request)
+        resp = MagicMock()
+        resp.status_code = 200
+        return resp
+
+    monkeypatch.setattr(
+        "requests.adapters.HTTPAdapter.send", fake_send,
+    )
+
+    req = requests.Request("GET", "https://public.example/secure")
+    prepared = req.prepare()
+    adapter.send(prepared)
+
+    assert len(captured_requests) == 1
+    sent = captured_requests[0]
+    assert "93.184.216.34" in sent.url
+    assert sent.headers["Host"] == "public.example"
