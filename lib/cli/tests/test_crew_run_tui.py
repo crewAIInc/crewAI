@@ -6,6 +6,14 @@ from unittest.mock import Mock
 import pytest
 
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.crew_events import CrewKickoffStartedEvent
+from crewai.events.types.flow_events import (
+    FlowStartedEvent,
+    MethodExecutionFailedEvent,
+    MethodExecutionFinishedEvent,
+    MethodExecutionPausedEvent,
+    MethodExecutionStartedEvent,
+)
 from crewai.events.types.memory_events import (
     MemorySaveCompletedEvent,
     MemorySaveFailedEvent,
@@ -960,6 +968,31 @@ async def test_crew_done_does_not_mark_unfinished_tool_successful() -> None:
 
 
 @pytest.mark.asyncio
+async def test_flow_done_uses_flow_wording_for_unfinished_tool() -> None:
+    # The shared completion handler reports "flow" (not "crew") in flow mode.
+    app = CrewRunApp(crew_name="Demo Flow")
+    app._flow = SimpleNamespace()
+
+    async with app.run_test(size=(100, 40)) as pilot:
+        app._log_entries = [
+            {
+                "tool_name": "search",
+                "status": "running",
+                "args": None,
+                "result": None,
+                "error": None,
+                "start_time": time.time() - 2,
+                "duration": None,
+                "task_idx": 1,
+            }
+        ]
+        app._on_crew_done("final output")
+        await pilot.pause()
+
+    assert app._log_entries[0]["error"] == "No result received before flow completed"
+
+
+@pytest.mark.asyncio
 async def test_crew_done_does_not_timeout_memory_save() -> None:
     app = _app_with_plan()
 
@@ -1481,3 +1514,210 @@ def test_overlapping_task_logs_keep_their_own_state() -> None:
         assert any(step.get("summary") == "thinking" for step in entry2["steps"])
     finally:
         app._unsubscribe()
+
+
+# ── Declarative-flow (non-conversational) TUI support ───────
+
+
+def test_is_flow_run_gating() -> None:
+    """The flow-render gate must be true only for a non-conversational flow."""
+    crew_app = CrewRunApp(total_tasks=1)
+    crew_app._crew = SimpleNamespace()
+    assert crew_app._is_flow_run is False
+
+    conv_app = CrewRunApp(conversational=True)
+    conv_app._flow = SimpleNamespace()
+    assert conv_app._is_flow_run is False
+
+    flow_app = CrewRunApp()
+    flow_app._flow = SimpleNamespace()
+    assert flow_app._is_flow_run is True
+
+
+def test_flow_method_events_build_steps() -> None:
+    app = CrewRunApp(crew_name="Demo")
+    app._flow = SimpleNamespace()
+    app._flow_method_types = {"research": "crew", "summarize": "agent"}
+    app._subscribe()
+    try:
+        _emit_event(FlowStartedEvent(flow_name="Demo"))
+        assert app._status == "working"
+
+        _emit_event(
+            MethodExecutionStartedEvent(
+                flow_name="Demo", method_name="research", state={}
+            )
+        )
+        assert app._flow_steps == [
+            {"name": "research", "call_type": "crew", "status": "active"}
+        ]
+        assert app._current_method == "research"
+
+        _emit_event(
+            MethodExecutionFinishedEvent(
+                flow_name="Demo", method_name="research", result="ok", state={}
+            )
+        )
+        _emit_event(
+            MethodExecutionStartedEvent(
+                flow_name="Demo", method_name="summarize", state={}
+            )
+        )
+        _emit_event(
+            MethodExecutionFailedEvent(
+                flow_name="Demo",
+                method_name="summarize",
+                error=RuntimeError("boom"),
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert app._flow_steps == [
+        {"name": "research", "call_type": "crew", "status": "done"},
+        {"name": "summarize", "call_type": "agent", "status": "failed"},
+    ]
+    # The header must not keep spinning a method that already ended.
+    assert app._current_method is None
+
+
+def test_current_method_clears_and_falls_back_across_overlap() -> None:
+    app = CrewRunApp(crew_name="Demo")
+    app._flow = SimpleNamespace()
+    app._subscribe()
+    try:
+        _emit_event(
+            MethodExecutionStartedEvent(flow_name="Demo", method_name="a", state={})
+        )
+        _emit_event(
+            MethodExecutionStartedEvent(flow_name="Demo", method_name="b", state={})
+        )
+        assert app._current_method == "b"
+
+        # 'a' finishes while 'b' is still active → header stays on 'b'.
+        _emit_event(
+            MethodExecutionFinishedEvent(
+                flow_name="Demo", method_name="a", result=None, state={}
+            )
+        )
+        assert app._current_method == "b"
+
+        # 'b' finishes → nothing active left → header clears.
+        _emit_event(
+            MethodExecutionFinishedEvent(
+                flow_name="Demo", method_name="b", result=None, state={}
+            )
+        )
+        assert app._current_method is None
+    finally:
+        app._unsubscribe()
+
+
+def test_flow_method_transitions_clear_current_agent() -> None:
+    app = CrewRunApp(crew_name="Demo")
+    app._flow = SimpleNamespace()
+    app._subscribe()
+    try:
+        _emit_event(
+            MethodExecutionStartedEvent(flow_name="Demo", method_name="a", state={})
+        )
+        app._current_agent = "Researcher"  # an agent ran during method 'a'
+
+        # Starting a new method clears the previous method's agent.
+        _emit_event(
+            MethodExecutionStartedEvent(flow_name="Demo", method_name="b", state={})
+        )
+        assert app._current_agent == ""
+
+        app._current_agent = "Writer"
+        # 'b' ending switches the active method ('a' still active) → agent clears.
+        _emit_event(
+            MethodExecutionFinishedEvent(
+                flow_name="Demo", method_name="b", result=None, state={}
+            )
+        )
+        assert app._current_agent == ""
+    finally:
+        app._unsubscribe()
+
+
+def test_crew_kickoff_does_not_rename_flow_run() -> None:
+    # A `call: crew` step must not relabel the flow with the nested crew's name.
+    app = CrewRunApp(crew_name="My Flow")
+    app._flow = SimpleNamespace()
+    app._subscribe()
+    try:
+        _emit_event(CrewKickoffStartedEvent(crew_name="Nested Crew", inputs=None))
+        assert app._crew_name == "My Flow"
+        assert app._status == "working"
+    finally:
+        app._unsubscribe()
+
+
+def test_crew_kickoff_renames_in_crew_mode() -> None:
+    # Regression: crew runs still adopt the crew name from the event.
+    app = CrewRunApp(crew_name="Crew")
+    app._crew = SimpleNamespace()
+    app._subscribe()
+    try:
+        _emit_event(CrewKickoffStartedEvent(crew_name="Real Crew", inputs=None))
+        assert app._crew_name == "Real Crew"
+    finally:
+        app._unsubscribe()
+
+
+def test_method_paused_marks_step_paused() -> None:
+    app = CrewRunApp(crew_name="Demo")
+    app._flow = SimpleNamespace()
+    app._subscribe()
+    try:
+        _emit_event(
+            MethodExecutionStartedEvent(flow_name="Demo", method_name="ask", state={})
+        )
+        _emit_event(
+            MethodExecutionPausedEvent(
+                flow_name="Demo",
+                method_name="ask",
+                state={},
+                flow_id="flow-1",
+                message="Need your input",
+            )
+        )
+        assert app._flow_steps == [
+            {"name": "ask", "call_type": None, "status": "paused"}
+        ]
+        assert app._current_method == "ask"
+    finally:
+        app._unsubscribe()
+
+
+@pytest.mark.asyncio
+async def test_declarative_flow_runs_on_tui() -> None:
+    """End-to-end: on_mount dispatches _run_flow_worker → flow.kickoff →
+    _on_crew_done, and any still-active step is swept to done on completion."""
+    kicked: dict[str, object] = {}
+
+    class FakeFlow:
+        name = "Demo Flow"
+
+        def kickoff(self, inputs=None):
+            kicked["inputs"] = inputs
+            return "flow result"
+
+    app = CrewRunApp(crew_name="Demo Flow")
+    app._flow = FakeFlow()
+    app._flow_inputs = {"topic": "AI"}
+    # A step left active (no Finished event) must be swept to done by _on_crew_done.
+    app._flow_steps = [{"name": "compute", "call_type": "expression", "status": "active"}]
+
+    async with app.run_test() as pilot:
+        for _ in range(100):
+            await pilot.pause(0.05)
+            if app._status == "completed":
+                break
+
+    assert kicked["inputs"] == {"topic": "AI"}
+    assert app._status == "completed"
+    assert app._final_output == "flow result"
+    assert app._crew_result == "flow result"
+    assert app._flow_steps[0]["status"] == "done"
