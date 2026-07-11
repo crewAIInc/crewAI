@@ -5,6 +5,7 @@ from __future__ import annotations
 import socket
 from io import BytesIO
 from typing import Any
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
@@ -50,10 +51,14 @@ def test_safe_get_blocks_direct_internal_url() -> None:
         safe_get("http://127.0.0.1/admin", timeout=15)
 
 
-def _mock_get(monkeypatch: pytest.MonkeyPatch, get_response: Any) -> None:
+def _mock_session_get(monkeypatch: pytest.MonkeyPatch, get_response: Any) -> None:
+    """Patch _build_pinned_session to return a session with a mocked get."""
+    mock_session = MagicMock()
+    mock_session.get = get_response
+    mock_session.close = MagicMock()
     monkeypatch.setattr(
-        "crewai_tools.security.safe_requests.requests.get",
-        get_response,
+        "crewai_tools.security.safe_requests._build_pinned_session",
+        lambda validated: mock_session,
     )
 
 
@@ -67,7 +72,7 @@ def test_safe_get_blocks_redirect_to_internal_url(
         assert kwargs["allow_redirects"] is False
         return _response(url, 302, location="http://127.0.0.1/admin")
 
-    _mock_get(monkeypatch, fake_get)
+    _mock_session_get(monkeypatch, fake_get)
 
     with pytest.raises(ValueError, match="private/reserved IP"):
         safe_get("http://public.example/start", timeout=15)
@@ -87,7 +92,7 @@ def test_safe_get_follows_safe_relative_redirect(
             return _response(url, 302, location="/final")
         return _response(url, 200)
 
-    _mock_get(monkeypatch, fake_get)
+    _mock_session_get(monkeypatch, fake_get)
 
     response = safe_get("http://public.example/start", timeout=15)
 
@@ -106,7 +111,7 @@ def test_safe_get_fails_closed_after_too_many_redirects(
     def fake_get(url: str, **kwargs: Any) -> requests.Response:
         return _response(url, 302, location="http://safe.example/again")
 
-    _mock_get(monkeypatch, fake_get)
+    _mock_session_get(monkeypatch, fake_get)
 
     with pytest.raises(ValueError, match="Too many redirects"):
         safe_get("http://public.example/start", max_redirects=1, timeout=15)
@@ -123,7 +128,7 @@ def test_safe_get_strips_credentials_on_cross_origin_redirect(
             return _response(url, 302, location="http://safe.example/final")
         return _response(url, 200)
 
-    _mock_get(monkeypatch, fake_get)
+    _mock_session_get(monkeypatch, fake_get)
 
     response = safe_get(
         "http://public.example/start",
@@ -164,7 +169,7 @@ def test_safe_get_preserves_credentials_on_same_origin_redirect(
             return _response(url, 302, location="/final")
         return _response(url, 200)
 
-    _mock_get(monkeypatch, fake_get)
+    _mock_session_get(monkeypatch, fake_get)
 
     safe_get(
         "http://public.example/start",
@@ -175,3 +180,30 @@ def test_safe_get_preserves_credentials_on_same_origin_redirect(
 
     assert requests_made[1][1]["headers"] == {"Authorization": "Bearer token"}
     assert requests_made[1][1]["cookies"] == {"session": "abc"}
+
+
+def test_safe_get_uses_pinned_ip_adapter(
+    monkeypatch: pytest.MonkeyPatch, public_dns: None
+) -> None:
+    """Verify that safe_get creates a session with the PinnedIPAdapter."""
+    from crewai_tools.security.safe_path import ValidatedURL
+
+    captured_validated: list[ValidatedURL] = []
+
+    def tracking_build(validated: ValidatedURL) -> requests.Session:
+        captured_validated.append(validated)
+        mock_session = MagicMock()
+        mock_session.get = lambda url, **kw: _response(url, 200)
+        mock_session.close = MagicMock()
+        return mock_session
+
+    monkeypatch.setattr(
+        "crewai_tools.security.safe_requests._build_pinned_session",
+        tracking_build,
+    )
+
+    safe_get("http://public.example/data", timeout=15)
+
+    assert len(captured_validated) == 1
+    assert captured_validated[0].resolved_ip == "93.184.216.34"
+    assert captured_validated[0].url == "http://public.example/data"
