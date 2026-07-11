@@ -1453,8 +1453,8 @@ def execute_single_native_tool_call(
     )
     from crewai.hooks.tool_hooks import (
         ToolCallHookContext,
-        get_after_tool_call_hooks,
-        get_before_tool_call_hooks,
+        run_after_tool_call_hooks,
+        run_before_tool_call_hooks,
     )
 
     info = extract_tool_call_info(tool_call)
@@ -1517,7 +1517,6 @@ def execute_single_native_tool_call(
 
     track_delegation_if_needed(func_name, args_dict, task)
 
-    hook_blocked = False
     before_hook_context = ToolCallHookContext(
         tool_name=func_name,
         tool_input=args_dict,
@@ -1526,13 +1525,7 @@ def execute_single_native_tool_call(
         task=task,
         crew=crew,
     )
-    try:
-        for hook in get_before_tool_call_hooks():
-            if hook(before_hook_context) is False:
-                hook_blocked = True
-                break
-    except Exception:  # noqa: S110
-        pass
+    hook_blocked = run_before_tool_call_hooks(before_hook_context)
 
     error_event_emitted = False
     if hook_blocked:
@@ -1587,14 +1580,7 @@ def execute_single_native_tool_call(
         tool_result=result,
         raw_tool_result=raw_tool_result,
     )
-    try:
-        for after_hook in get_after_tool_call_hooks():
-            hook_result = after_hook(after_hook_context)
-            if hook_result is not None:
-                result = hook_result
-                after_hook_context.tool_result = result
-    except Exception:  # noqa: S110
-        pass
+    result = run_after_tool_call_hooks(after_hook_context)
 
     if not error_event_emitted:
         crewai_event_bus.emit(
@@ -1691,27 +1677,31 @@ def _setup_before_llm_call_hooks(
         True if LLM execution should proceed, False if blocked by a hook.
     """
     if executor_context and executor_context.before_llm_call_hooks:
-        from crewai.hooks.llm_hooks import LLMCallHookContext
+        from crewai.hooks.dispatch import (
+            HookAborted,
+            InterceptionPoint,
+            run_hooks,
+        )
+        from crewai.hooks.llm_hooks import LLMCallHookContext, before_llm_call_reducer
 
         original_messages = executor_context.messages
 
         hook_context = LLMCallHookContext(executor_context)
         try:
-            for hook in executor_context.before_llm_call_hooks:
-                result = hook(hook_context)
-                if result is False:
-                    if verbose:
-                        printer.print(
-                            content="LLM call blocked by before_llm_call hook",
-                            color="yellow",
-                        )
-                    return False
-        except Exception as e:
+            run_hooks(
+                InterceptionPoint.PRE_MODEL_CALL,
+                hook_context,
+                executor_context.before_llm_call_hooks,
+                reducer=before_llm_call_reducer,
+                verbose=verbose,
+            )
+        except HookAborted:
             if verbose:
                 printer.print(
-                    content=f"Error in before_llm_call hook: {e}",
+                    content="LLM call blocked by before_llm_call hook",
                     color="yellow",
                 )
+            return False
 
         if not isinstance(executor_context.messages, list):
             if verbose:
@@ -1749,7 +1739,8 @@ def _setup_after_llm_call_hooks(
         The potentially modified response (string or Pydantic model).
     """
     if executor_context and executor_context.after_llm_call_hooks:
-        from crewai.hooks.llm_hooks import LLMCallHookContext
+        from crewai.hooks.dispatch import InterceptionPoint, run_hooks
+        from crewai.hooks.llm_hooks import LLMCallHookContext, after_llm_call_reducer
 
         # Don't stringify structured tool-call payloads: the executor would
         # treat the result as a final answer and skip tool execution (#6529).
@@ -1768,18 +1759,15 @@ def _setup_after_llm_call_hooks(
             hook_response = str(answer)
 
         hook_context = LLMCallHookContext(executor_context, response=hook_response)
-        try:
-            for hook in executor_context.after_llm_call_hooks:
-                modified_response = hook(hook_context)
-                if modified_response is not None and isinstance(modified_response, str):
-                    hook_response = modified_response
-
-        except Exception as e:
-            if verbose:
-                printer.print(
-                    content=f"Error in after_llm_call hook: {e}",
-                    color="yellow",
-                )
+        run_hooks(
+            InterceptionPoint.POST_MODEL_CALL,
+            hook_context,
+            executor_context.after_llm_call_hooks,
+            reducer=after_llm_call_reducer,
+            verbose=verbose,
+        )
+        if hook_context.response is not None:
+            hook_response = hook_context.response
 
         if not isinstance(executor_context.messages, list):
             if verbose:

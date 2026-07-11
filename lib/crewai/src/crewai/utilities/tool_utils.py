@@ -6,15 +6,14 @@ from crewai.agents.parser import AgentAction
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.hooks.tool_hooks import (
     ToolCallHookContext,
-    get_after_tool_call_hooks,
-    get_before_tool_call_hooks,
+    run_after_tool_call_hooks,
+    run_before_tool_call_hooks,
 )
 from crewai.security.fingerprint import Fingerprint
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_types import ToolResult
 from crewai.tools.tool_usage import ToolUsage, ToolUsageError
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.logger import Logger
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -57,11 +56,10 @@ async def aexecute_tool_and_check_finality(
         fingerprint_context: Optional context for fingerprinting.
         crew: Optional crew instance for hook context.
 
-    Returns:
+        Returns:
         ToolResult containing the execution result and whether it should be
         treated as a final answer.
     """
-    logger = Logger(verbose=crew.verbose if crew else False)
     tool_name_to_tool_map = {sanitize_tool_name(tool.name): tool for tool in tools}
 
     if agent_key and agent_role and agent:
@@ -102,18 +100,11 @@ async def aexecute_tool_and_check_finality(
             crew=crew,
         )
 
-        before_hooks = get_before_tool_call_hooks()
-        try:
-            for hook in before_hooks:
-                result = hook(hook_context)
-                if result is False:
-                    blocked_message = (
-                        f"Tool execution blocked by hook. "
-                        f"Tool: {tool_calling.tool_name}"
-                    )
-                    return ToolResult(blocked_message, False)
-        except Exception as e:
-            logger.log("error", f"Error in before_tool_call hook: {e}")
+        if run_before_tool_call_hooks(hook_context):
+            blocked_message = (
+                f"Tool execution blocked by hook. Tool: {tool_calling.tool_name}"
+            )
+            return ToolResult(blocked_message, False)
 
         tool_result = await tool_usage.ause(tool_calling, agent_action.text)
         raw_tool_result = tool_usage.get_last_raw_result(tool_result)
@@ -129,16 +120,7 @@ async def aexecute_tool_and_check_finality(
             raw_tool_result=raw_tool_result,
         )
 
-        after_hooks = get_after_tool_call_hooks()
-        modified_result: str = tool_result
-        try:
-            for after_hook in after_hooks:
-                hook_result = after_hook(after_hook_context)
-                if hook_result is not None:
-                    modified_result = hook_result
-                    after_hook_context.tool_result = modified_result
-        except Exception as e:
-            logger.log("error", f"Error in after_tool_call hook: {e}")
+        modified_result = run_after_tool_call_hooks(after_hook_context)
 
         return ToolResult(modified_result, tool.result_as_answer)
 
@@ -181,7 +163,6 @@ def execute_tool_and_check_finality(
     Returns:
         ToolResult containing the execution result and whether it should be treated as a final answer
     """
-    logger = Logger(verbose=crew.verbose if crew else False)
     tool_name_to_tool_map = {sanitize_tool_name(tool.name): tool for tool in tools}
 
     if agent_key and agent_role and agent:
@@ -222,18 +203,11 @@ def execute_tool_and_check_finality(
             crew=crew,
         )
 
-        before_hooks = get_before_tool_call_hooks()
-        try:
-            for hook in before_hooks:
-                result = hook(hook_context)
-                if result is False:
-                    blocked_message = (
-                        f"Tool execution blocked by hook. "
-                        f"Tool: {tool_calling.tool_name}"
-                    )
-                    return ToolResult(blocked_message, False)
-        except Exception as e:
-            logger.log("error", f"Error in before_tool_call hook: {e}")
+        if run_before_tool_call_hooks(hook_context):
+            blocked_message = (
+                f"Tool execution blocked by hook. Tool: {tool_calling.tool_name}"
+            )
+            return ToolResult(blocked_message, False)
 
         tool_result = tool_usage.use(tool_calling, agent_action.text)
         raw_tool_result = tool_usage.get_last_raw_result(tool_result)
@@ -249,16 +223,7 @@ def execute_tool_and_check_finality(
             raw_tool_result=raw_tool_result,
         )
 
-        after_hooks = get_after_tool_call_hooks()
-        modified_result: str = tool_result
-        try:
-            for after_hook in after_hooks:
-                hook_result = after_hook(after_hook_context)
-                if hook_result is not None:
-                    modified_result = hook_result
-                    after_hook_context.tool_result = modified_result
-        except Exception as e:
-            logger.log("error", f"Error in after_tool_call hook: {e}")
+        modified_result = run_after_tool_call_hooks(after_hook_context)
 
         return ToolResult(modified_result, tool.result_as_answer)
 

@@ -5,6 +5,12 @@ from typing import TYPE_CHECKING, Any
 from crewai_core.printer import PRINTER
 
 from crewai.events.event_listener import event_listener
+from crewai.hooks.dispatch import (
+    HookAborted,
+    InterceptionPoint,
+    dispatch,
+    get_global_hook_list,
+)
 from crewai.hooks.types import (
     AfterToolCallHookCallable,
     AfterToolCallHookType,
@@ -121,8 +127,72 @@ class ToolCallHookContext:
             event_listener.formatter.resume_live_updates()
 
 
-_before_tool_call_hooks: list[BeforeToolCallHookType | BeforeToolCallHookCallable] = []
-_after_tool_call_hooks: list[AfterToolCallHookType | AfterToolCallHookCallable] = []
+# The legacy registries are aliased to the generic dispatcher's global hook
+# lists for the tool-call points, so legacy registrations and new-dialect
+# ``@on(InterceptionPoint.PRE_TOOL_CALL)`` hooks share one ordered queue.
+_before_tool_call_hooks: list[BeforeToolCallHookType | BeforeToolCallHookCallable] = (
+    get_global_hook_list(InterceptionPoint.PRE_TOOL_CALL)
+)
+_after_tool_call_hooks: list[AfterToolCallHookType | AfterToolCallHookCallable] = (
+    get_global_hook_list(InterceptionPoint.POST_TOOL_CALL)
+)
+
+
+def before_tool_call_reducer(context: ToolCallHookContext, result: object) -> bool:
+    """Legacy calling convention for ``pre_tool_call`` hooks.
+
+    A ``False`` return blocks the call (mapped to :class:`HookAborted`); tool
+    input is modified in place, so no payload replacement occurs here.
+    """
+    if result is False:
+        raise HookAborted(reason="before_tool_call hook returned False")
+    return False
+
+
+def after_tool_call_reducer(context: ToolCallHookContext, result: object) -> bool:
+    """Legacy calling convention for ``post_tool_call`` hooks.
+
+    A non-None return replaces the tool result on the context.
+    """
+    if result is not None:
+        context.tool_result = result
+        return True
+    return False
+
+
+def run_before_tool_call_hooks(context: ToolCallHookContext) -> bool:
+    """Run all ``pre_tool_call`` hooks against a context.
+
+    Returns:
+        True if a hook blocked execution (returned False or raised
+        :class:`HookAborted`), False otherwise. Tool input mutations on the
+        context persist regardless.
+    """
+    try:
+        dispatch(
+            InterceptionPoint.PRE_TOOL_CALL,
+            context,
+            reducer=before_tool_call_reducer,
+            verbose=False,
+        )
+        return False
+    except HookAborted:
+        return True
+
+
+def run_after_tool_call_hooks(context: ToolCallHookContext) -> str | None:
+    """Run all ``post_tool_call`` hooks against a context.
+
+    Returns:
+        The (possibly modified) tool result carried on the context.
+    """
+    dispatch(
+        InterceptionPoint.POST_TOOL_CALL,
+        context,
+        reducer=after_tool_call_reducer,
+        verbose=False,
+    )
+    return context.tool_result
 
 
 def register_before_tool_call_hook(
