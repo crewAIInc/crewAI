@@ -645,7 +645,7 @@ class OpenAICompletion(BaseLLM):
 
     def _convert_message_to_responses_input_items(
         self, message: LLMMessage
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any] | LLMMessage]:
         """Convert a Chat-Completions-style message into Responses API input items.
 
         The Responses API has no message shape for an assistant turn carrying
@@ -657,7 +657,7 @@ class OpenAICompletion(BaseLLM):
         role = message.get("role")
 
         if role == "assistant" and message.get("tool_calls"):
-            items: list[dict[str, Any]] = []
+            items: list[dict[str, Any] | LLMMessage] = []
             for tool_call in message["tool_calls"]:
                 function = tool_call.get("function", {})
                 items.append(
