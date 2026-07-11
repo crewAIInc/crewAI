@@ -144,6 +144,18 @@ In this section, you'll find detailed examples that help you select, configure, 
     )
     ```
 
+    **Custom OpenAI-Compatible Endpoint:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-6",
+        custom_openai=True,
+        base_url="https://your-gateway.example.com/v1",
+        api_key="your-gateway-api-key",
+    )
+    ```
+
     **Advanced Configuration:**
     ```python Code
     from crewai import LLM
