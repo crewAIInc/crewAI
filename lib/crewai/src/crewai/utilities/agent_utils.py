@@ -27,7 +27,10 @@ from crewai.agents.parser import (
 from crewai.llms.base_llm import BaseLLM, call_stop_override
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
-from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.tools.structured_tool import (
+    CrewStructuredTool,
+    strip_composite_description_prefix,
+)
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -147,7 +150,14 @@ def render_text_description_and_args(
     Returns:
         Plain text description of tools.
     """
-    tool_strings = [tool.description for tool in tools]
+    # Fall back to the raw description for duck-typed tools (including test
+    # mocks) that don't provide a real formatted_description string.
+    tool_strings = [
+        formatted
+        if isinstance((formatted := getattr(tool, "formatted_description", None)), str)
+        else tool.description
+        for tool in tools
+    ]
     return "\n".join(tool_strings)
 
 
@@ -190,10 +200,10 @@ def convert_tools_to_openai_schema(
             except Exception:
                 parameters = {}
 
-        # BaseTool formats description as "Tool Name: ...\nTool Arguments: ...\nTool Description: {original}"
-        description = tool.description
-        if "Tool Description:" in description:
-            description = description.split("Tool Description:")[-1].strip()
+        # Old checkpoints and some adapters bake the composed LLM block
+        # ("Tool Name: ...\nTool Arguments: ...\nTool Description: {authored}")
+        # into the description field; keep only the authored text here.
+        description = strip_composite_description_prefix(tool.description)
 
         sanitized_name = sanitize_tool_name(tool.name)
 
