@@ -5,7 +5,6 @@ import asyncio
 from collections.abc import Awaitable, Callable
 import importlib
 from inspect import Parameter, signature
-import json
 import threading
 from typing import (
     Any,
@@ -37,9 +36,9 @@ from crewai.tools.structured_tool import (
     _infer_result_schema_from_callable,
     _serialize_schema,
     build_schema_hint,
+    format_description_for_llm,
 )
 from crewai.types.callback import SerializableCallable, _resolve_dotted_path
-from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -479,15 +478,27 @@ class BaseTool(BaseModel, ABC):
                 f"{self.__class__.__name__}Schema", **fields
             )
 
+    @property
+    def formatted_description(self) -> str:
+        """LLM-facing composite of name, argument schema, and description.
+
+        Use this when rendering the tool into a prompt; ``description``
+        holds only the authored text.
+        """
+        return format_description_for_llm(self.name, self.args_schema, self.description)
+
     def _generate_description(self) -> None:
-        """Generate the tool description with a JSON schema for arguments."""
-        schema = generate_model_description(self.args_schema)
-        args_json = json.dumps(schema["json_schema"]["schema"], indent=2)
-        self.description = (
-            f"Tool Name: {sanitize_tool_name(self.name)}\n"
-            f"Tool Arguments: {args_json}\n"
-            f"Tool Description: {self.description}"
-        )
+        """Deprecated hook kept for backward compatibility; does nothing.
+
+        Historically this rewrote the public ``description`` field at
+        construction time into the LLM-facing composite (``Tool Name: …\\n
+        Tool Arguments: …\\nTool Description: <authored>``). The authored
+        ``description`` is now preserved as written and the composite is
+        exposed separately via :attr:`formatted_description`.
+
+        ``model_post_init`` still calls this so subclasses that override it
+        (e.g. adapters that customize the composite) keep working.
+        """
 
 
 _BASE_TOOL_CLS = BaseTool

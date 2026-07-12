@@ -24,6 +24,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 import contextlib
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -45,8 +46,11 @@ MAX_MODELS = 8
 #: Timeout (seconds) for any network call made while resolving models.
 _TIMEOUT = 6.0
 
-#: How long a resolved (dynamic) catalog stays fresh before we refetch.
-_CATALOG_TTL = 6 * 3600
+#: How long a resolved (dynamic) catalog stays fresh before we refetch. Kept
+#: short: it only spares the picker repeated fetches within a wizard session,
+#: and a stale list (new/removed models, account changes) is worse than a ~1s
+#: refetch. Local providers (Ollama) are not cached at all — see _is_cacheable.
+_CATALOG_TTL = 300
 
 #: How long a fallback result is cached after a failed/empty fetch. Short, so a
 #: newly-added API key takes effect soon, but long enough to spare the picker a
@@ -171,9 +175,8 @@ def get_provider_models(
 
     # Nothing fresher than the curated list. Cache it briefly (negative cache)
     # so a failed vendor/LiteLLM fetch isn't retried on every subsequent call.
-    # Skip Ollama: it's a local, fast-failing server, so re-probing is cheap and
-    # avoids serving suggestions after the server comes up within the TTL.
-    if fallback and provider_key != "ollama":
+    # (_write_catalog_cache skips non-cacheable providers like Ollama.)
+    if fallback:
         _write_catalog_cache(provider_key, fallback, source="fallback")
     return fallback
 
@@ -601,25 +604,36 @@ def _litellm_cache_file() -> Path:
     return _cache_dir() / "provider_cache.json"
 
 
+def _is_cacheable(provider_key: str) -> bool:
+    """Whether a provider's resolved catalog may be cached.
+
+    Ollama is a local server (``/api/tags`` is fast), and its installed models
+    change out-of-band, so it is never cached — the picker re-probes every call
+    and always reflects what is currently installed.
+    """
+    return provider_key != "ollama"
+
+
 def _cache_key(provider_key: str) -> str:
     """Cache key for a provider's resolved model list.
 
-    Includes the inputs that change what a fetch would return, so a cached
-    entry is only reused when those inputs still match:
-
-    - Ollama lists models from a base URL that can change between runs.
-    - Whether the vendor's API key is present flips between a live fetch and
-      the negatively-cached fallback — so a key added after a no-key call is
-      not shadowed by the cached fallback.
+    Keyed by the exact API key (via a short, non-reversible digest — never the
+    key itself), so switching to a different key for the same provider misses
+    the previous account's cached entry and refetches. Absent key -> ``#nokey``,
+    which also keeps a negatively-cached no-key fallback from shadowing a run
+    after a key is added.
     """
-    if provider_key == "ollama":
-        return f"ollama@{_ollama_base()}"
-    suffix = "key" if _provider_api_key(provider_key) else "nokey"
-    return f"{provider_key}#{suffix}"
+    api_key = _provider_api_key(provider_key)
+    if not api_key:
+        return f"{provider_key}#nokey"
+    digest = hashlib.sha256(api_key.encode("utf-8")).hexdigest()[:12]
+    return f"{provider_key}#{digest}"
 
 
 def _read_catalog_cache(provider_key: str) -> list[tuple[str, str]] | None:
     """Return a fresh cached catalog for ``provider_key``, or ``None``."""
+    if not _is_cacheable(provider_key):
+        return None
     payload = _read_json(_catalog_cache_file())
     if not isinstance(payload, dict):
         return None
@@ -642,6 +656,8 @@ def _read_catalog_cache(provider_key: str) -> list[tuple[str, str]] | None:
 def _write_catalog_cache(
     provider_key: str, models: list[tuple[str, str]], *, source: str
 ) -> None:
+    if not _is_cacheable(provider_key):
+        return
     cache_file = _catalog_cache_file()
     payload = _read_json(cache_file)
     if not isinstance(payload, dict):
