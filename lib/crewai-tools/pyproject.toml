@@ -148,9 +148,9 @@ e2b = [
     "e2b-code-interpreter~=2.6.0",
 ]
 x402 = [
-    "x402[evm]>=2.0.0",
-    "eth-account>=0.13.0",
-    "requests>=2.31.0",
+    "x402[evm]>=2.0.0,<3",
+    "eth-account>=0.13.0,<1",
+    "requests>=2.31.0,<3",
 ]
 
 
