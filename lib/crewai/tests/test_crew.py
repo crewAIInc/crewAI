@@ -859,6 +859,7 @@ def test_cache_hitting_between_agents(researcher, writer, ceo):
     crew = Crew(
         agents=[ceo, researcher],
         tasks=tasks,
+        cache=True,
     )
 
     with patch.object(CacheHandler, "read") as read:
@@ -2246,7 +2247,9 @@ def test_tools_with_custom_caching():
         agent=writer2,
     )
 
-    crew = Crew(agents=[writer1, writer2], tasks=[task1, task2, task3, task4])
+    crew = Crew(
+        agents=[writer1, writer2], tasks=[task1, task2, task3, task4], cache=True
+    )
 
     with patch.object(
         CacheHandler, "add", wraps=crew._cache_handler.add
@@ -4596,6 +4599,98 @@ def test_reset_memory_uses_full_unified_memory_reset(researcher):
 
     reset_all.assert_called_once_with()
     reset.assert_not_called()
+
+
+def test_kickoff_drains_pending_memory_saves_before_completion_event(researcher):
+    """Background memory saves must finish (and emit their completion events)
+    before CrewKickoffCompletedEvent, otherwise listeners that tear down on
+    kickoff-completed (e.g. telemetry sessions) see the save span as orphaned."""
+    import time
+
+    from crewai.events.types.crew_events import CrewKickoffCompletedEvent
+
+    order: list[str] = []
+
+    def slow_save():
+        time.sleep(0.3)
+        order.append("save-done")
+
+    crew = Crew(
+        agents=[researcher],
+        process=Process.sequential,
+        tasks=[
+            Task(description="Task 1", expected_output="output", agent=researcher),
+        ],
+        memory=True,
+        task_callback=lambda _output: crew._memory._submit_save(slow_save),
+    )
+
+    completed = threading.Event()
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(CrewKickoffCompletedEvent)
+        def on_completed(_source, _event):
+            order.append("kickoff-completed")
+            completed.set()
+
+        with patch.object(Agent, "execute_task", return_value="ok"):
+            crew.kickoff()
+
+        assert completed.wait(timeout=5)
+
+    assert order.index("save-done") < order.index("kickoff-completed")
+
+
+def test_kickoff_drains_agent_memory_saves_before_completion_event(tmp_path):
+    """Agents save through their own ``agent.memory`` when set; those pools
+    must also be drained before CrewKickoffCompletedEvent."""
+    import time
+
+    from crewai.events.types.crew_events import CrewKickoffCompletedEvent
+
+    agent_memory = Memory(storage=str(tmp_path / "agent-mem"))
+    agent_with_memory = Agent(
+        role="Researcher",
+        goal="Research things",
+        backstory="Experienced researcher",
+        memory=agent_memory,
+    )
+
+    order: list[str] = []
+
+    def slow_save():
+        time.sleep(0.3)
+        order.append("save-done")
+
+    crew = Crew(
+        agents=[agent_with_memory],
+        process=Process.sequential,
+        tasks=[
+            Task(
+                description="Task 1",
+                expected_output="output",
+                agent=agent_with_memory,
+            ),
+        ],
+        task_callback=lambda _output: agent_memory._submit_save(slow_save),
+    )
+
+    completed = threading.Event()
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(CrewKickoffCompletedEvent)
+        def on_completed(_source, _event):
+            order.append("kickoff-completed")
+            completed.set()
+
+        with patch.object(Agent, "execute_task", return_value="ok"):
+            crew.kickoff()
+
+        assert completed.wait(timeout=5)
+
+    assert order.index("save-done") < order.index("kickoff-completed")
 
 
 def test_reset_knowledge_with_only_crew_knowledge(researcher, writer):

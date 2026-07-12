@@ -2353,3 +2353,41 @@ def test_locked_dict_proxy_ior():
 def test_locked_dict_proxy_reversed():
     flow = _make_dict_flow()
     assert list(reversed(flow.state.data)) == ["c", "b", "a"]
+
+
+def test_flow_drains_pending_memory_saves_before_finished_event(tmp_path):
+    """Background memory saves must finish (and emit their completion events)
+    before FlowFinishedEvent, otherwise listeners that tear down on
+    flow-finished (e.g. telemetry sessions) see the save span as orphaned."""
+    import time
+
+    from crewai.memory.unified_memory import Memory
+
+    order: list[str] = []
+
+    def slow_save():
+        time.sleep(0.3)
+        order.append("save-done")
+
+    class MemoryFlow(Flow):
+        @start()
+        def step_1(self):
+            self.memory._submit_save(slow_save)
+            return "done"
+
+    flow = MemoryFlow(memory=Memory(storage=str(tmp_path / "flow-mem")))
+
+    finished = threading.Event()
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(FlowFinishedEvent)
+        def on_finished(_source, _event):
+            order.append("flow-finished")
+            finished.set()
+
+        flow.kickoff()
+
+        assert finished.wait(timeout=5)
+
+    assert order.index("save-done") < order.index("flow-finished")

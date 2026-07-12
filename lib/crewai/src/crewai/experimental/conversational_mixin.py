@@ -133,6 +133,8 @@ class _ConversationalMixin:
         _pending_user_message: str | dict[str, Any] | None
         _pending_intents: Sequence[str] | None
         _pending_intent_llm: str | BaseLLM | None
+        _turn_classified_intent: str | None
+        _assistant_reply_appended: bool
 
         def _clear_or_listeners(self) -> None:
             pass
@@ -185,12 +187,22 @@ class _ConversationalMixin:
             )
             return configured_route
 
-        if state.last_intent:
+        turn_intent = self._turn_classified_intent
+        if turn_intent:
+            state.last_intent = turn_intent
             self._emit_conversation_route_selected(
-                state.last_intent,
+                turn_intent,
                 previous_intent=previous_intent,
             )
-            return state.last_intent
+            return turn_intent
+
+        if previous_intent:
+            logger.debug(
+                "route_turn() returned no route and no intent was classified "
+                "this turn; ignoring stale last_intent=%r from a previous turn "
+                "and falling back to built-in routing",
+                previous_intent,
+            )
 
         if self.can_answer_from_history(context):
             state.last_intent = "answer_from_history"
@@ -310,11 +322,11 @@ class _ConversationalMixin:
             if "from_checkpoint" not in kickoff_kwargs:
                 self._reset_turn_execution_state()
 
-            assistant_count = self._assistant_message_count()
+            object.__setattr__(self, "_assistant_reply_appended", False)
             result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
             if (
                 result is not None
-                and self._assistant_message_count() == assistant_count
+                and not self._assistant_reply_appended
                 and self._is_public_turn_result(result)
             ):
                 self.append_assistant_message(self._stringify_result(result))
@@ -387,7 +399,7 @@ class _ConversationalMixin:
                 if "from_checkpoint" not in kickoff_kwargs:
                     self._reset_turn_execution_state()
 
-                assistant_count = self._assistant_message_count()
+                object.__setattr__(self, "_assistant_reply_appended", False)
                 original_stream = bool(getattr(self, "stream", False))
                 original_streaming_turn = getattr(
                     self, "_streaming_conversation_turn", False
@@ -403,7 +415,7 @@ class _ConversationalMixin:
                     )
                 if (
                     result is not None
-                    and self._assistant_message_count() == assistant_count
+                    and not self._assistant_reply_appended
                     and self._is_public_turn_result(result)
                 ):
                     self.append_assistant_message(self._stringify_result(result))
@@ -550,6 +562,11 @@ class _ConversationalMixin:
         supply per-route descriptions, or change the default/fallback intent.
         Override this method to bypass the LLM router entirely (e.g.,
         permission gates before the LLM decision).
+
+        Returning a falsy value means "no routing decision": the turn falls
+        through to the built-in defaults (``answer_from_history`` when
+        configured, else ``converse``). It never replays a previous turn's
+        intent.
         """
         config = self._conversation_config
         if config is None:
@@ -618,6 +635,9 @@ class _ConversationalMixin:
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """Append a final user-visible assistant message."""
+        # Explicit signal for handle_turn's "did the handler reply?" check.
+        # A count heuristic breaks when handlers trim history mid-turn.
+        object.__setattr__(self, "_assistant_reply_appended", True)
         state = cast(ConversationState, self.state)
         state.messages.append(
             ConversationMessage(
@@ -722,6 +742,7 @@ class _ConversationalMixin:
                     context=self.conversation_messages,
                 )
                 state.last_intent = intent
+                object.__setattr__(self, "_turn_classified_intent", intent)
                 return intent
             return text
 
@@ -788,6 +809,10 @@ class _ConversationalMixin:
             object.__setattr__(self, "_pending_intent_llm", None)
         if not hasattr(self, "_streaming_conversation_turn"):
             object.__setattr__(self, "_streaming_conversation_turn", False)
+        if not hasattr(self, "_turn_classified_intent"):
+            object.__setattr__(self, "_turn_classified_intent", None)
+        if not hasattr(self, "_assistant_reply_appended"):
+            object.__setattr__(self, "_assistant_reply_appended", False)
 
     def _create_default_extension_state(self) -> ConversationState | None:
         initial_state_t = getattr(self, "_initial_state_t", None)
@@ -852,6 +877,7 @@ class _ConversationalMixin:
         self._method_call_counts.clear()
         self._clear_or_listeners()
         self._is_execution_resuming = False
+        object.__setattr__(self, "_turn_classified_intent", None)
 
     def _apply_pending_conversational_turn(self) -> None:
         """Drain the stashed user message + classify if intents configured.
@@ -859,6 +885,7 @@ class _ConversationalMixin:
         Called from ``Flow.kickoff_async`` AFTER persist state restore so
         the appended message survives ``self.persistence.load_state(...)``.
         """
+        object.__setattr__(self, "_turn_classified_intent", None)
         if self._pending_user_message is None:
             return
 
@@ -1107,10 +1134,6 @@ class _ConversationalMixin:
             return "public"
         return "private"
 
-    def _assistant_message_count(self) -> int:
-        state = cast(ConversationState, self.state)
-        return sum(1 for message in state.messages if message.role == "assistant")
-
     def _is_public_turn_result(self, result: Any) -> bool:
         if not isinstance(result, str):
             return False
@@ -1189,6 +1212,15 @@ class _ConversationalMixin:
             TraceCollectionListener,
         )
         from crewai.events.types.flow_events import FlowFinishedEvent
+
+        # Background memory saves must finish (and emit their completed/failed
+        # events) before the session-end flow_finished / batch finalization
+        # below tears down listeners, mirroring the non-deferred kickoff path.
+        # The flush then waits for those events' async bus handlers.
+        drain_memory_writes = getattr(self, "_drain_memory_writes", None)
+        if callable(drain_memory_writes):
+            drain_memory_writes()
+        crewai_event_bus.flush()
 
         # Only emit the session-end event when a deferred flow_started is
         # actually pending. ``_deferred_flow_started_event_id`` is set only by
