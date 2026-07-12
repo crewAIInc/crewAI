@@ -116,25 +116,6 @@ class SkimReaderTool(BaseTool):
         if self._session is not None:
             return self._session
 
-        try:
-            account_factory = importlib.import_module("eth_account").Account
-            x402_client_sync = importlib.import_module("x402").x402ClientSync
-            max_amount = importlib.import_module("x402.client").max_amount
-            wrap_with_payment = importlib.import_module(
-                "x402.http.clients.requests"
-            ).wrapRequestsWithPayment
-            register_exact_evm_client = importlib.import_module(
-                "x402.mechanisms.evm.exact.register"
-            ).register_exact_evm_client
-            eth_account_signer = importlib.import_module(
-                "x402.mechanisms.evm.signers"
-            ).EthAccountSigner
-        except ImportError as exc:
-            raise ImportError(
-                "SkimReaderTool needs the x402 client with EVM support. Install it "
-                "with:  pip install 'x402[evm]' requests eth-account"
-            ) from exc
-
         key = (
             self.private_key.get_secret_value()
             if self.private_key is not None
@@ -156,6 +137,25 @@ class SkimReaderTool(BaseTool):
                 "SKIM_WALLET_PRIVATE_KEY must be a 64-character hex string (with or "
                 "without a 0x prefix)."
             )
+
+        try:
+            account_factory = importlib.import_module("eth_account").Account
+            x402_client_sync = importlib.import_module("x402").x402ClientSync
+            max_amount = importlib.import_module("x402.client").max_amount
+            wrap_with_payment = importlib.import_module(
+                "x402.http.clients.requests"
+            ).wrapRequestsWithPayment
+            register_exact_evm_client = importlib.import_module(
+                "x402.mechanisms.evm.exact.register"
+            ).register_exact_evm_client
+            eth_account_signer = importlib.import_module(
+                "x402.mechanisms.evm.signers"
+            ).EthAccountSigner
+        except ImportError as exc:
+            raise ImportError(
+                "SkimReaderTool needs the x402 client with EVM support. Install it "
+                "with:  pip install 'x402[evm]' requests eth-account"
+            ) from exc
 
         account = account_factory.from_key("0x" + normalized)
         cap_atomic = round(self.max_price_usd * 1_000_000)  # USDC has 6 decimals
