@@ -41,6 +41,11 @@ class ConsoleFormatter:
 
     def __init__(self, verbose: bool = False):
         self.console = Console(width=None)
+        if hasattr(self.console.file, "reconfigure"):
+            try:
+                self.console.file.reconfigure(errors="replace")
+            except Exception:  # noqa: S110 - best-effort; stream may not support reconfigure
+                pass
         self.verbose = verbose
         self._streaming_live: Live | None = None
         self._is_streaming: bool = False
