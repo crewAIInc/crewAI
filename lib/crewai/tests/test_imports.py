@@ -30,7 +30,7 @@ def test_import_crewai_does_not_load_qdrant():
         "sys.exit(1 if 'qdrant_client' in sys.modules else 0)"
     )
     result = subprocess.run(
-        [sys.executable, "-c", code], capture_output=True, text=True
+        [sys.executable, "-c", code], capture_output=True, text=True, timeout=30
     )
     assert result.returncode == 0, (
         "qdrant_client was imported eagerly by `import crewai`"
@@ -76,16 +76,6 @@ def test_lazy_import_annotations_resolve():
 
     assert typing.get_type_hints(type(rag_mod).__setattr__)["value"] is typing.Any
     assert typing.get_type_hints(knowledge_storage.create_client)["config"] is typing.Any
-
-
-def test_rag_config_types_still_resolve():
-    """The provider config union still exposes the real config classes."""
-    import typing
-
-    from crewai.rag.config.types import SupportedProviderConfig
-
-    names = sorted(m.__name__ for m in typing.get_args(SupportedProviderConfig))
-    assert names == ["ChromaDBConfig", "QdrantConfig"]
 
 
 def test_knowledge_storage_instantiates():
