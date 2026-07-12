@@ -134,6 +134,7 @@ class _ConversationalMixin:
         _pending_intents: Sequence[str] | None
         _pending_intent_llm: str | BaseLLM | None
         _turn_classified_intent: str | None
+        _assistant_reply_appended: bool
 
         def _clear_or_listeners(self) -> None:
             pass
@@ -321,11 +322,11 @@ class _ConversationalMixin:
             if "from_checkpoint" not in kickoff_kwargs:
                 self._reset_turn_execution_state()
 
-            assistant_count = self._assistant_message_count()
+            object.__setattr__(self, "_assistant_reply_appended", False)
             result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
             if (
                 result is not None
-                and self._assistant_message_count() == assistant_count
+                and not self._assistant_reply_appended
                 and self._is_public_turn_result(result)
             ):
                 self.append_assistant_message(self._stringify_result(result))
@@ -398,7 +399,7 @@ class _ConversationalMixin:
                 if "from_checkpoint" not in kickoff_kwargs:
                     self._reset_turn_execution_state()
 
-                assistant_count = self._assistant_message_count()
+                object.__setattr__(self, "_assistant_reply_appended", False)
                 original_stream = bool(getattr(self, "stream", False))
                 original_streaming_turn = getattr(
                     self, "_streaming_conversation_turn", False
@@ -414,7 +415,7 @@ class _ConversationalMixin:
                     )
                 if (
                     result is not None
-                    and self._assistant_message_count() == assistant_count
+                    and not self._assistant_reply_appended
                     and self._is_public_turn_result(result)
                 ):
                     self.append_assistant_message(self._stringify_result(result))
@@ -634,6 +635,9 @@ class _ConversationalMixin:
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """Append a final user-visible assistant message."""
+        # Explicit signal for handle_turn's "did the handler reply?" check.
+        # A count heuristic breaks when handlers trim history mid-turn.
+        object.__setattr__(self, "_assistant_reply_appended", True)
         state = cast(ConversationState, self.state)
         state.messages.append(
             ConversationMessage(
@@ -807,6 +811,8 @@ class _ConversationalMixin:
             object.__setattr__(self, "_streaming_conversation_turn", False)
         if not hasattr(self, "_turn_classified_intent"):
             object.__setattr__(self, "_turn_classified_intent", None)
+        if not hasattr(self, "_assistant_reply_appended"):
+            object.__setattr__(self, "_assistant_reply_appended", False)
 
     def _create_default_extension_state(self) -> ConversationState | None:
         initial_state_t = getattr(self, "_initial_state_t", None)
@@ -1127,10 +1133,6 @@ class _ConversationalMixin:
         if visible == "all" or (visible is not None and agent_name in visible):
             return "public"
         return "private"
-
-    def _assistant_message_count(self) -> int:
-        state = cast(ConversationState, self.state)
-        return sum(1 for message in state.messages if message.role == "assistant")
 
     def _is_public_turn_result(self, result: Any) -> bool:
         if not isinstance(result, str):

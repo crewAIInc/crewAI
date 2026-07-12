@@ -401,10 +401,29 @@ class Agent(BaseAgent):
         return self.planning_config is not None or self.planning
 
     def _setup_agent_executor(self) -> None:
-        """Initialize the agent executor with a default cache handler."""
-        if not self.cache_handler:
-            self.cache_handler = CacheHandler()
-        self.set_cache_handler(self.cache_handler)
+        """Initialize the agent's tools handler and optional tool cache.
+
+        Tool-result caching is opt-in: a standalone agent gets a cache only
+        when it was constructed with an explicit ``cache=True`` or a
+        ``cache_handler``. Agents inside a crew additionally receive the
+        crew's shared handler when ``Crew(cache=True)``. Without an opt-in,
+        repeated tool calls with identical arguments always re-execute the
+        tool — the safe default for live-data and state-mutating tools.
+        """
+        # Recorded before any crew can offer its shared handler at kickoff,
+        # so copy() can distinguish a construction-time opt-in from runtime
+        # crew wiring (which must not turn copies into cachers).
+        self._constructor_cache_opt_in = bool(
+            self.cache
+            and (self.cache_handler is not None or "cache" in self.model_fields_set)
+        )
+        opted_in = self.cache_handler is not None or (
+            "cache" in self.model_fields_set and self.cache
+        )
+        if opted_in:
+            if not self.cache_handler:
+                self.cache_handler = CacheHandler()
+            self.set_cache_handler(self.cache_handler)
 
     def set_knowledge(self, crew_embedder: EmbedderConfig | None = None) -> None:
         """Initialize knowledge sources with the agent or crew embedder config."""

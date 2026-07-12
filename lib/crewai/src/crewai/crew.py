@@ -168,8 +168,11 @@ class Crew(FlowTrackable, BaseModel):
         manager_agent: Custom agent that will be used as manager.
         memory: Whether the crew should use memory to store memories of it's
             execution.
-        cache: Whether the crew should use a cache to store the results of the
-            tools execution.
+        cache: Whether to cache tool results for the crew's agents. Off by
+            default; when enabled, repeated calls to the same tool with
+            identical arguments reuse the first result without re-executing —
+            avoid enabling for live-data or state-mutating tools unless they
+            gate writes with a cache_function.
         function_calling_llm: The language model that will run the tool calling
             for all the agents.
         process: The process flow that the crew will follow (e.g., sequential,
@@ -216,7 +219,16 @@ class Crew(FlowTrackable, BaseModel):
     _kickoff_event_id: str | None = PrivateAttr(default=None)
 
     name: str | None = Field(default="crew")
-    cache: bool = Field(default=True)
+    cache: bool = Field(
+        default=False,
+        description=(
+            "Whether to cache tool results for the crew's agents. Opt-in: "
+            "when enabled, repeated calls to the same tool with identical "
+            "arguments return the first result without re-executing the "
+            "tool — do not enable for live-data or state-mutating tools "
+            "unless they set a cache_function that prevents caching."
+        ),
+    )
     tasks: list[Task] = Field(default_factory=list)
     agents: Annotated[
         list[BaseAgent],
@@ -1507,6 +1519,11 @@ class Crew(FlowTrackable, BaseModel):
             )
             self.manager_agent = manager
         manager.crew = self
+        # The manager is created outside the agents loop that offers the
+        # crew's cache handler at validation time; offer it here so an
+        # opted-in crew (cache=True) also dedupes the manager's tool calls.
+        if self.cache:
+            manager.set_cache_handler(self._cache_handler)
 
     def _get_execution_start_index(self, tasks: list[Task]) -> int | None:
         if self.checkpoint_kickoff_event_id is None:

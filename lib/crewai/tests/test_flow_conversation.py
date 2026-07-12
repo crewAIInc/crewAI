@@ -1555,6 +1555,71 @@ class TestConversationalFlow:
         )
 
 
+class TestHandleTurnReplyFallback:
+    """Regression tests for EPD-181: ``handle_turn()`` decided "did the
+    handler append its reply?" by comparing assistant-message counts. A
+    handler that appends its reply AND trims history to a cap left the count
+    unchanged, so the fallback appended the reply a second time — every turn,
+    once trimming engaged. The check now uses an explicit appended-this-turn
+    flag.
+    """
+
+    MAX_MESSAGES = 4
+
+    def _make_bot(self) -> ConversationalFlow:
+        max_messages = self.MAX_MESSAGES
+
+        class EchoBot(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "ECHO"
+
+            @listen("ECHO")
+            def echo(self) -> str:
+                reply = f"echo: {self.state.current_user_message or ''}"
+                self.append_assistant_message(reply)  # handler DOES append
+                if len(self.state.messages) > max_messages:  # ...and trims
+                    self.state.messages = self.state.messages[-max_messages:]
+                return reply
+
+        return EchoBot()
+
+    def test_no_duplicate_reply_when_handler_trims_history(self) -> None:
+        bot = self._make_bot()
+        for i in range(1, 5):
+            bot.handle_turn(f"message {i}")
+            contents = [message.content for message in bot.state.messages]
+            assert len(contents) == len(set(contents)), (
+                f"duplicate reply on turn {i}: {contents}"
+            )
+
+        # The capped window holds the last two full turns, in order.
+        assert [message.content for message in bot.state.messages] == [
+            "message 3",
+            "echo: message 3",
+            "message 4",
+            "echo: message 4",
+        ]
+
+    def test_fallback_still_appends_when_handler_does_not_reply(self) -> None:
+        class SilentBot(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "WORK"
+
+            @listen("WORK")
+            def work(self) -> str:
+                return "computed reply"  # returns without appending
+
+        bot = SilentBot()
+        bot.handle_turn("hello")
+
+        assistant_messages = [
+            message.content
+            for message in bot.state.messages
+            if message.role == "assistant"
+        ]
+        assert assistant_messages == ["computed reply"]
+
+
 class TestFalsyRouteTurnFallback:
     """A falsy ``route_turn()`` must never replay a previous turn's intent.
 
