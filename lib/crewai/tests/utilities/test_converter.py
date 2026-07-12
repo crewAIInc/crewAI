@@ -225,6 +225,24 @@ def test_handle_partial_json_falls_through_for_non_json_curly_blocks(
         mock_convert.assert_called_once()
 
 
+def test_handle_partial_json_ignores_braces_in_trailing_commentary() -> None:
+    """Valid JSON followed by commentary that itself contains curly braces
+    must still be parsed - the trailing text shouldn't be swallowed into the
+    match just because it also has ``{``/``}`` characters in it.
+    """
+    result = (
+        "Here is the extracted data:\n"
+        '{"name": "Alice", "age": 30}\n\n'
+        'Note: this follows the requested schema (see {"type": "object"} '
+        "in the task description)."
+    )
+    output = handle_partial_json(result, SimpleModel, False, None)
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Alice"
+    assert output.age == 30
+
+
+
 @patch("crewai.utilities.converter.create_converter")
 @patch("crewai.utilities.converter.get_conversion_instructions")
 def test_convert_with_instructions_success(
