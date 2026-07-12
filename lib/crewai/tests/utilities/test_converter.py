@@ -7,6 +7,7 @@ from crewai.llm import LLM
 from crewai.utilities.converter import (
     Converter,
     ConverterError,
+    async_handle_partial_json,
     convert_to_model,
     convert_with_instructions,
     create_converter,
@@ -237,6 +238,23 @@ def test_handle_partial_json_ignores_braces_in_trailing_commentary() -> None:
         "in the task description)."
     )
     output = handle_partial_json(result, SimpleModel, False, None)
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Alice"
+    assert output.age == 30
+
+
+@pytest.mark.asyncio
+async def test_async_handle_partial_json_ignores_braces_in_trailing_commentary() -> None:
+    """Async equivalent of the sync test above - async_handle_partial_json
+    shares the same _extract_first_json_object helper, so it needs the same
+    coverage for the trailing-brace-commentary case."""
+    result = (
+        "Here is the extracted data:\n"
+        '{"name": "Alice", "age": 30}\n\n'
+        'Note: this follows the requested schema (see {"type": "object"} '
+        "in the task description)."
+    )
+    output = await async_handle_partial_json(result, SimpleModel, False, None)
     assert isinstance(output, SimpleModel)
     assert output.name == "Alice"
     assert output.age == 30
