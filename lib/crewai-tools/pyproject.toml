@@ -148,6 +148,10 @@ e2b = [
     "e2b-code-interpreter~=2.6.0",
 ]
 
+chdb = [
+    "chdb>=4.2.1",
+]
+
 
 [tool.uv]
 exclude-newer = "3 days"

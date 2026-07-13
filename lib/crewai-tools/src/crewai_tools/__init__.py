@@ -32,6 +32,16 @@ from crewai_tools.tools.brightdata_tool.brightdata_unlocker import (
 from crewai_tools.tools.browserbase_load_tool.browserbase_load_tool import (
     BrowserbaseLoadTool,
 )
+from crewai_tools.tools.chdb_tool.chdb_tool import (
+    ChDBAttachFileTool,
+    ChDBDescribeTableTool,
+    ChDBGetSampleDataTool,
+    ChDBListDatabasesTool,
+    ChDBListFunctionsTool,
+    ChDBListTablesTool,
+    ChDBRunSelectQueryTool,
+    chdb_tools,
+)
 from crewai_tools.tools.code_docs_search_tool.code_docs_search_tool import (
     CodeDocsSearchTool,
 )
@@ -237,6 +247,13 @@ __all__ = [
     "BrightDataWebUnlockerTool",
     "BrowserbaseLoadTool",
     "CSVSearchTool",
+    "ChDBAttachFileTool",
+    "ChDBDescribeTableTool",
+    "ChDBGetSampleDataTool",
+    "ChDBListDatabasesTool",
+    "ChDBListFunctionsTool",
+    "ChDBListTablesTool",
+    "ChDBRunSelectQueryTool",
     "CodeDocsSearchTool",
     "ComposioTool",
     "ContextualAICreateAgentTool",
@@ -328,6 +345,7 @@ __all__ = [
     "YoutubeVideoSearchTool",
     "ZapierActionTool",
     "ZapierActionTools",
+    "chdb_tools",
 ]
 
 __version__ = "1.15.2"
