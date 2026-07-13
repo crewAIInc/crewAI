@@ -209,7 +209,7 @@ def _source_name(source: Any) -> str | None:
     if isinstance(source, str):
         return source
     name = getattr(source, "__name__", None)
-    if name:
+    if isinstance(name, str):
         return name
     return type(source).__name__
 
@@ -231,7 +231,7 @@ def _emit_telemetry(
             _TELEMETRY_SOURCE,
             event=HookDispatchedEvent(
                 interception_point=point.value,
-                outcome=outcome,  # type: ignore[arg-type]
+                outcome=outcome,
                 hook_count=hook_count,
                 duration_ms=duration_ms,
                 abort_reason=abort_reason,

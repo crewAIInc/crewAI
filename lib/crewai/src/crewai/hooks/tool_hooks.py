@@ -154,7 +154,7 @@ def after_tool_call_reducer(context: ToolCallHookContext, result: object) -> boo
 
     A non-None return replaces the tool result on the context.
     """
-    if result is not None:
+    if isinstance(result, str):
         context.tool_result = result
         return True
     return False

@@ -1011,12 +1011,10 @@ class BaseLLM(BaseModel, ABC):
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
             before_llm_call_reducer,
-            get_before_llm_call_hooks,
         )
 
-        if not get_before_llm_call_hooks():
-            return True
-
+        # No early global-list guard: dispatch resolves global + execution-scoped
+        # hooks and has its own no-op fast path, so scoped hooks still run here.
         hook_context = LLMCallHookContext(
             executor=None,
             messages=messages,
@@ -1074,12 +1072,10 @@ class BaseLLM(BaseModel, ABC):
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
             after_llm_call_reducer,
-            get_after_llm_call_hooks,
         )
 
-        if not get_after_llm_call_hooks():
-            return response
-
+        # No early global-list guard: dispatch resolves global + execution-scoped
+        # hooks and has its own no-op fast path, so scoped hooks still run here.
         hook_context = LLMCallHookContext(
             executor=None,
             messages=messages,

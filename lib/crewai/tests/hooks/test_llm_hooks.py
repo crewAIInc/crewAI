@@ -497,3 +497,77 @@ class TestLLMHooksIntegration:
         finally:
             unregister_before_llm_call_hook(before_hook)
             unregister_after_llm_call_hook(after_hook)
+
+
+class TestDirectLLMScopedHooks:
+    """Direct (agent-less) LLM calls must honor execution-scoped hooks.
+
+    Regression: the direct-call helpers used to short-circuit when the global
+    hook list was empty, so hooks registered only for the current
+    ``scoped_hooks()`` context never ran on this path.
+    """
+
+    @staticmethod
+    def _stub_llm():
+        from crewai.llms.base_llm import BaseLLM
+
+        class _StubLLM(BaseLLM):
+            def call(self, *args: object, **kwargs: object) -> str:
+                return ""
+
+        return _StubLLM(model="stub")
+
+    def test_scoped_before_hook_runs_on_direct_call(self):
+        from crewai.hooks import InterceptionPoint
+        from crewai.hooks.dispatch import register_scoped, scoped_hooks
+
+        llm = self._stub_llm()
+        seen: list[int] = []
+
+        with scoped_hooks():
+            register_scoped(
+                InterceptionPoint.PRE_MODEL_CALL,
+                lambda ctx: seen.append(len(ctx.messages)),
+            )
+            proceed = llm._invoke_before_llm_call_hooks(
+                [{"role": "user", "content": "hi"}], from_agent=None
+            )
+
+        assert proceed is True
+        assert seen == [1]
+
+    def test_scoped_before_hook_can_block_direct_call(self):
+        from crewai.hooks import InterceptionPoint
+        from crewai.hooks.dispatch import HookAborted, register_scoped, scoped_hooks
+
+        llm = self._stub_llm()
+
+        def block(ctx: LLMCallHookContext) -> None:
+            raise HookAborted(reason="blocked by scoped hook")
+
+        with scoped_hooks():
+            register_scoped(InterceptionPoint.PRE_MODEL_CALL, block)
+            proceed = llm._invoke_before_llm_call_hooks(
+                [{"role": "user", "content": "hi"}], from_agent=None
+            )
+
+        assert proceed is False
+
+    def test_scoped_after_hook_modifies_direct_response(self):
+        from crewai.hooks import InterceptionPoint
+        from crewai.hooks.dispatch import register_scoped, scoped_hooks
+
+        llm = self._stub_llm()
+
+        def redact(ctx: LLMCallHookContext) -> str:
+            return ctx.response.replace("SECRET", "[REDACTED]")
+
+        with scoped_hooks():
+            register_scoped(InterceptionPoint.POST_MODEL_CALL, redact)
+            result = llm._invoke_after_llm_call_hooks(
+                [{"role": "user", "content": "hi"}],
+                "contains SECRET",
+                from_agent=None,
+            )
+
+        assert result == "contains [REDACTED]"

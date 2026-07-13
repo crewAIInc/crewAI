@@ -117,7 +117,10 @@ async def aexecute_tool_and_check_finality(
                 raw_tool_result=blocked_message,
             )
             modified_result = run_after_tool_call_hooks(blocked_hook_context)
-            return ToolResult(modified_result, False)
+            return ToolResult(
+                modified_result if modified_result is not None else blocked_message,
+                False,
+            )
 
         tool_result = await tool_usage.ause(tool_calling, agent_action.text)
         raw_tool_result = tool_usage.get_last_raw_result(tool_result)
@@ -135,7 +138,10 @@ async def aexecute_tool_and_check_finality(
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
 
-        return ToolResult(modified_result, tool.result_as_answer)
+        return ToolResult(
+            modified_result if modified_result is not None else tool_result,
+            tool.result_as_answer,
+        )
 
     tool_result = I18N_DEFAULT.errors("wrong_tool_name").format(
         tool=sanitized_tool_name,
@@ -233,7 +239,10 @@ def execute_tool_and_check_finality(
                 raw_tool_result=blocked_message,
             )
             modified_result = run_after_tool_call_hooks(blocked_hook_context)
-            return ToolResult(modified_result, False)
+            return ToolResult(
+                modified_result if modified_result is not None else blocked_message,
+                False,
+            )
 
         tool_result = tool_usage.use(tool_calling, agent_action.text)
         raw_tool_result = tool_usage.get_last_raw_result(tool_result)
@@ -251,7 +260,10 @@ def execute_tool_and_check_finality(
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
 
-        return ToolResult(modified_result, tool.result_as_answer)
+        return ToolResult(
+            modified_result if modified_result is not None else tool_result,
+            tool.result_as_answer,
+        )
 
     tool_result = I18N_DEFAULT.errors("wrong_tool_name").format(
         tool=sanitized_tool_name,

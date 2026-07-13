@@ -2047,7 +2047,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             tool_result=result,
             raw_tool_result=raw_tool_result,
         )
-        result = run_after_tool_call_hooks(after_hook_context)
+        modified_result = run_after_tool_call_hooks(after_hook_context)
+        if modified_result is not None:
+            result = modified_result
 
         if not error_event_emitted:
             crewai_event_bus.emit(
