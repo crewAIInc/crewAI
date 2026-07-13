@@ -224,6 +224,33 @@ class TestFileToolDeleteAction:
             == f"rm -r {shlex.quote(file_path)}"
         )
 
+    @pytest.mark.parametrize(
+        "path,expect_error",
+        [
+            ("/", True),
+            ("/usr", True),
+            ("/etc", True),
+            ("/app", True),
+            ("/app/some-path", False),
+        ]
+    )
+    def test_delete_root_error(
+        self,
+        k8s_file_tool,
+        mock_sandbox,
+        path,
+        expect_error,
+    ):
+        mock_sandbox.commands.run.return_value = ExecutionResult(
+            exit_code=0, stdout="", stderr=""
+        )
+
+        if expect_error:
+          with pytest.raises(RuntimeError, match="cannot be deleted"):
+              k8s_file_tool.run(action="delete", path=path)
+        else:
+              k8s_file_tool.run(action="delete", path=path)
+
 
 class TestFileToolMkdirAction:
     def test_success(self, k8s_file_tool, mock_sandbox):

@@ -215,6 +215,12 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
     def _delete(self, sandbox: Sandbox, path: str, *, timeout: int) -> dict[str, Any]:
         # TODO: Fall back to deleting with shell command.
         # Use normal file delete API when it is available in SDK.
+
+        path = posixpath.normpath(path)
+
+        if posixpath.dirname(path) == "/":
+            raise RuntimeError(f"The path {path} cannot be deleted.")
+
         command = f"rm -r {shlex.quote(path)}"
         try:
             result = sandbox.commands.run(command, timeout=timeout)
