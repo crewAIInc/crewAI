@@ -16,6 +16,7 @@ from pydantic.types import ImportString
 
 class DB2JSONEncoder(json.JSONEncoder):
     """Safely handles Decimal, Timestamps, and Bytes from DB2."""
+
     def default(self, obj: object) -> object:
         if isinstance(obj, decimal.Decimal):
             return float(obj)
@@ -45,8 +46,7 @@ class DB2ToolSchema(BaseModel):
     filter_value: Any | None = Field(
         default=None,
         description=(
-            "Value used for metadata filtering. "
-            "Must be used together with filter_by."
+            "Value used for metadata filtering. Must be used together with filter_by."
         ),
     )
 
@@ -65,21 +65,24 @@ class DB2VectorSearchTool(BaseTool):
     Includes SQL injection protection, dynamic relational support, and type-safe serialization.
     """
 
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True
-    )
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     name: str = "DB2VectorSearchTool"
     description: str = "Search IBM DB2 vector database for relevant documents. Uses a custom embedding function if supplied, otherwise OpenAI embeddings."
     args_schema: type[BaseModel] = DB2ToolSchema
 
     # Internal Whitelist for distance metrics to prevent SQL injection
-    _ALLOWED_METRICS: ClassVar[set[str]] = {"COSINE", "EUCLIDEAN", "DOT_PRODUCT", "L2_DISTANCE"}
+    _ALLOWED_METRICS: ClassVar[set[str]] = {
+        "COSINE",
+        "EUCLIDEAN",
+        "DOT_PRODUCT",
+        "L2_DISTANCE",
+    }
 
     package_dependencies: list[str] = Field(
         default_factory=lambda: [
             "ibm_db",
-            "openai", # Optional openai is used for embeddings
+            "openai",  # Optional openai is used for embeddings
         ]
     )
 
@@ -111,15 +114,13 @@ class DB2VectorSearchTool(BaseTool):
     vector_column: str = "embedding"
     embedding_model: str = "text-embedding-3-large"
 
-    return_columns: list[str] = Field(
-        default_factory=lambda: ["content"]
-    )
+    return_columns: list[str] = Field(default_factory=lambda: ["content"])
 
     limit: int = Field(
         default=3,
         ge=1,
         le=100,
-        description="Number of documents to return. Must be between 1 and 100."
+        description="Number of documents to return. Must be between 1 and 100.",
     )
 
     distance_metric: str = "COSINE"
@@ -127,7 +128,7 @@ class DB2VectorSearchTool(BaseTool):
     max_distance: float | None = Field(
         default=None,
         ge=0.0,
-        description="Maximum allowed distance for results. Cannot be negative."
+        description="Maximum allowed distance for results. Cannot be negative.",
     )
 
     @model_validator(mode="after")
@@ -149,9 +150,7 @@ class DB2VectorSearchTool(BaseTool):
         description="IBM DB2 DBI package.",
     )
 
-    custom_embedding_fn: (
-        ImportString[Callable[[str], list[float]]] | None
-    ) = Field(
+    custom_embedding_fn: ImportString[Callable[[str], list[float]]] | None = Field(
         default=None,
         description="Optional custom embedding function.",
     )
@@ -187,19 +186,23 @@ class DB2VectorSearchTool(BaseTool):
         period separating two valid simple identifiers (e.g. myschema.mytable).
         """
         pattern = (
-            r'^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)?$'
+            r"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)?$"
             if allow_period
-            else r'^[A-Za-z][A-Za-z0-9_]*$'
+            else r"^[A-Za-z][A-Za-z0-9_]*$"
         )
         if not re.match(pattern, name):
-            raise ValueError(f"Security Alert: Invalid database identifier detected: {name}")
+            raise ValueError(
+                f"Security Alert: Invalid database identifier detected: {name}"
+            )
         return name
 
     def _get_openai_client(self) -> Any:
         if self._openai_client is None:
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
-                raise ValueError("OPENAI_API_KEY environment variable is missing. Required for default embeddings.")
+                raise ValueError(
+                    "OPENAI_API_KEY environment variable is missing. Required for default embeddings."
+                )
             openai = importlib.import_module("openai")
             self._openai_client = openai.OpenAI(api_key=api_key)
         return self._openai_client
@@ -230,7 +233,13 @@ class DB2VectorSearchTool(BaseTool):
     ) -> str:
         parts = [
             "SELECT " + column_query + ",",
-            " VECTOR_DISTANCE(" + v_col + ", VECTOR(CAST(? AS CLOB), " + str(vector_dimension) + ", FLOAT32), " + metric + ") AS distance",
+            " VECTOR_DISTANCE("
+            + v_col
+            + ", VECTOR(CAST(? AS CLOB), "
+            + str(vector_dimension)
+            + ", FLOAT32), "
+            + metric
+            + ") AS distance",
             " FROM " + table,
             " " + filter_clause if filter_clause else "",
             " ORDER BY distance ASC",
@@ -262,7 +271,9 @@ class DB2VectorSearchTool(BaseTool):
                 self._connect()
             except Exception as e:
                 self._disconnect()  # Clean up any partial connection
-                return json.dumps({"success": False, "error": f"Failed to connect to DB2: {e!s}"})
+                return json.dumps(
+                    {"success": False, "error": f"Failed to connect to DB2: {e!s}"}
+                )
 
             # Validate Metric
             metric = self.distance_metric.upper()
@@ -278,7 +289,7 @@ class DB2VectorSearchTool(BaseTool):
             vector_string = str(query_vector)
 
             filter_clause = ""
-            params = [vector_string] # The vector string for the CLOB cast
+            params = [vector_string]  # The vector string for the CLOB cast
 
             if filter_by and filter_value is not None:
                 f_col = self._validate_identifier(filter_by)
@@ -324,7 +335,7 @@ class DB2VectorSearchTool(BaseTool):
                     "results": normalized_results,
                 },
                 indent=2,
-                cls=DB2JSONEncoder
+                cls=DB2JSONEncoder,
             )
 
         except Exception as error:
