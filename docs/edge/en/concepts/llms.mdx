@@ -1279,6 +1279,33 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```
   </Accordion>
 
+  <Accordion title="DaoXE">
+    DaoXE is a multi-model multi-protocol API gateway with an OpenAI-compatible Chat Completions endpoint. Prefer an exact model ID from your DaoXE account catalog (`GET /v1/models`) rather than hardcoding example names. Not available in mainland China. Community contribution from a DaoXE maintainer.
+
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    DAOXE_API_KEY=<your-api-key>
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    from crewai import LLM
+    import os
+
+    llm = LLM(
+        model="openai/YOUR_DAOXE_MODEL_ID",  # exact ID from your DaoXE account catalog
+        custom_openai=True,
+        base_url="https://daoxe.com/v1",
+        api_key=os.getenv("DAOXE_API_KEY"),
+    )
+    ```
+
+    <Info>
+      DaoXE also exposes OpenAI Responses and Anthropic Messages for other clients; CrewAI uses the OpenAI-compatible path above.
+      Docs: https://github.com/seven7763/DaoXE-AI
+    </Info>
+  </Accordion>
+
   <Accordion title="Nebius AI Studio">
     Set the following environment variables in your `.env` file:
     ```toml Code
