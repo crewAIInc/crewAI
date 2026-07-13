@@ -1232,13 +1232,16 @@ class ValkeyStorage:
         """Perform server-side vector search using Valkey Search.
 
         Uses FT.SEARCH command with KNN query for vector similarity.
-        Applies filters for scope, categories, and metadata in the same query.
+        Applies filters for scope and categories in the FT query. Metadata
+        filters are applied as a post-filter since arbitrary metadata keys
+        are not part of the FT index schema (see #5795).
 
         Args:
             query_embedding: Embedding vector for the query.
             scope_prefix: Optional scope path prefix to filter results.
             categories: Optional list of categories (OR logic).
             metadata_filter: Optional metadata key-value pairs (AND logic).
+                Applied as post-filter over search results.
             limit: Maximum number of results to return.
             min_score: Minimum similarity score threshold (0.0 to 1.0).
 
@@ -1275,25 +1278,23 @@ class ValkeyStorage:
             cat_query = "|".join(escaped_categories)
             query_parts.append(f"@categories:{{{cat_query}}}")
 
-        # Metadata filters (AND logic)
-        # Format: @{key}:{value}
-        if metadata_filter:
-            for key, value in metadata_filter.items():
-                # Escape key and value
-                escaped_key = self._escape_search_query(key)
-                escaped_value = self._escape_search_query(str(value))
-                query_parts.append(f"@{escaped_key}:{{{escaped_value}}}")
+        # Note: metadata_filter is NOT injected into the FT.SEARCH query because
+        # arbitrary metadata keys are not part of the index schema. Instead, we
+        # over-fetch candidates and post-filter after deserialization. See #5795.
 
         # Combine filters
         filter_query = " ".join(query_parts) if query_parts else "*"
+
+        # Over-fetch when metadata_filter is present to compensate for post-filtering
+        fetch_limit = limit * 3 if metadata_filter else limit
 
         # Build KNN query with filters
         # Format: (filter)=>[KNN limit @field $BLOB AS score]
         # Note: Don't wrap single "*" in parentheses
         if filter_query == "*":
-            query = f"{filter_query}=>[KNN {limit} @embedding $BLOB AS score]"
+            query = f"{filter_query}=>[KNN {fetch_limit} @embedding $BLOB AS score]"
         else:
-            query = f"({filter_query})=>[KNN {limit} @embedding $BLOB AS score]"
+            query = f"({filter_query})=>[KNN {fetch_limit} @embedding $BLOB AS score]"
 
         # Prepare embedding blob for PARAMS
         embedding_blob = self._embedding_to_bytes(query_embedding)
@@ -1318,7 +1319,7 @@ class ValkeyStorage:
         search_options = FtSearchOptions(
             return_fields=return_fields,
             params={"BLOB": embedding_blob},
-            limit=FtSearchLimit(0, limit),
+            limit=FtSearchLimit(0, fetch_limit),
         )
 
         try:
@@ -1363,7 +1364,20 @@ class ValkeyStorage:
                     if rec.scope == normalized or rec.scope.startswith(f"{normalized}/")
                 ]
 
-            return records
+            # Post-filter by metadata_filter (AND logic). These fields are not
+            # part of the FT index schema, so we filter after retrieval. (#5795)
+            if metadata_filter:
+                records = [
+                    (rec, score)
+                    for rec, score in records
+                    if all(
+                        str(rec.metadata.get(k)) == str(v)
+                        for k, v in metadata_filter.items()
+                    )
+                ]
+
+            # Enforce original limit after post-filtering
+            return records[:limit]
 
         except Exception as e:
             error_msg = str(e).lower()
