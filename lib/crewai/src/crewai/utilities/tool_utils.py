@@ -8,6 +8,7 @@ from crewai.hooks.tool_hooks import (
     ToolCallHookContext,
     get_after_tool_call_hooks,
     get_before_tool_call_hooks,
+    resolve_tool_call_decision,
 )
 from crewai.security.fingerprint import Fingerprint
 from crewai.tools.structured_tool import CrewStructuredTool
@@ -106,11 +107,10 @@ async def aexecute_tool_and_check_finality(
         try:
             for hook in before_hooks:
                 result = hook(hook_context)
-                if result is False:
-                    blocked_message = (
-                        f"Tool execution blocked by hook. "
-                        f"Tool: {tool_calling.tool_name}"
-                    )
+                blocked_message = resolve_tool_call_decision(
+                    result, tool_calling.tool_name
+                )
+                if blocked_message is not None:
                     return ToolResult(blocked_message, False)
         except Exception as e:
             logger.log("error", f"Error in before_tool_call hook: {e}")
@@ -226,11 +226,10 @@ def execute_tool_and_check_finality(
         try:
             for hook in before_hooks:
                 result = hook(hook_context)
-                if result is False:
-                    blocked_message = (
-                        f"Tool execution blocked by hook. "
-                        f"Tool: {tool_calling.tool_name}"
-                    )
+                blocked_message = resolve_tool_call_decision(
+                    result, tool_calling.tool_name
+                )
+                if blocked_message is not None:
                     return ToolResult(blocked_message, False)
         except Exception as e:
             logger.log("error", f"Error in before_tool_call hook: {e}")

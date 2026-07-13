@@ -4,6 +4,8 @@ from unittest.mock import Mock
 
 from crewai.hooks import (
     clear_all_tool_call_hooks,
+    ToolCallDecision,
+    ToolCallDecisionType,
     unregister_after_tool_call_hook,
     unregister_before_tool_call_hook,
 )
@@ -13,6 +15,7 @@ from crewai.hooks.tool_hooks import (
     get_before_tool_call_hooks,
     register_after_tool_call_hook,
     register_before_tool_call_hook,
+    resolve_tool_call_decision,
 )
 import pytest
 
@@ -460,6 +463,115 @@ class TestToolHooksIntegration:
 
         assert "SECRET_KEY=[REDACTED]" in result
         assert "abc123" not in result
+
+    def test_needs_review_decision_blocks_react_tool_execution(self):
+        """A pre-tool release decision can require review without executing the tool."""
+        from crewai.agents.parser import AgentAction
+        from crewai.tools.structured_tool import CrewStructuredTool
+        from crewai.utilities.tool_utils import execute_tool_and_check_finality
+
+        tool_executed = False
+
+        def transfer_funds(account: str) -> str:
+            """Transfer funds to the requested account."""
+            nonlocal tool_executed
+            tool_executed = True
+            return f"transferred to {account}"
+
+        structured_tool = CrewStructuredTool.from_function(
+            transfer_funds,
+            name="transfer_funds",
+            description="Transfer funds to an account.",
+        )
+
+        def mediation_hook(context: ToolCallHookContext) -> ToolCallDecision:
+            assert context.tool_name == "transfer_funds"
+            return ToolCallDecision.needs_review(
+                reason="payment release requires human approval",
+                review_context={"ticket": "REL-42"},
+            )
+
+        register_before_tool_call_hook(mediation_hook)
+        try:
+            result = execute_tool_and_check_finality(
+                agent_action=AgentAction(
+                    thought="Need to transfer funds",
+                    tool="transfer_funds",
+                    tool_input='{"account": "acct_123"}',
+                    text=(
+                        "Thought: Need to transfer funds\n"
+                        "Action: transfer_funds\n"
+                        'Action Input: {"account": "acct_123"}'
+                    ),
+                ),
+                tools=[structured_tool],
+            )
+        finally:
+            clear_all_tool_call_hooks()
+
+        assert tool_executed is False
+        assert result.result_as_answer is False
+        assert "requires review" in result.result
+        assert "payment release requires human approval" in result.result
+        assert "REL-42" in result.result
+
+    def test_tool_call_decision_factories(self):
+        """Release-control decisions expose the tri-state runtime vocabulary."""
+        assert ToolCallDecision.proceed().decision is ToolCallDecisionType.PROCEED
+        assert ToolCallDecision.needs_review().decision is ToolCallDecisionType.NEEDS_REVIEW
+        assert ToolCallDecision.silence().decision is ToolCallDecisionType.SILENCE
+
+    def test_tool_call_decision_copies_review_context(self):
+        """Release-control review context is not mutated through caller aliases."""
+        review_context = {"ticket": "REL-42"}
+        decision = ToolCallDecision.needs_review(review_context=review_context)
+
+        review_context["ticket"] = "REL-99"
+
+        assert decision.review_context == {"ticket": "REL-42"}
+
+    def test_tool_call_decision_constructor_copies_review_context(self):
+        """Direct construction preserves frozen review context semantics."""
+        review_context = {"ticket": "REL-42"}
+        decision = ToolCallDecision(
+            decision=ToolCallDecisionType.NEEDS_REVIEW,
+            review_context=review_context,
+        )
+
+        review_context["ticket"] = "REL-99"
+
+        assert decision.review_context == {"ticket": "REL-42"}
+
+    def test_unexpected_before_hook_result_fails_closed(self):
+        """Unexpected before-hook results block execution instead of allowing it."""
+        block_message = resolve_tool_call_decision("invalid", "send_email")
+
+        assert block_message is not None
+        assert "Invalid before_tool_call hook return type" in block_message
+        assert "send_email" in block_message
+
+    def test_non_serializable_review_context_still_blocks_execution(self):
+        """Review decisions fail closed even when context cannot be JSON serialized."""
+        review_context = {}
+        review_context["self"] = review_context
+
+        decision = ToolCallDecision.needs_review(review_context=review_context)
+        block_message = resolve_tool_call_decision(decision, "send_email")
+
+        assert block_message is not None
+        assert "requires review" in block_message
+        assert "Review context:" in block_message
+        assert "send_email" in block_message
+
+    def test_string_decision_value_still_blocks_execution(self):
+        """Runtime-constructed decisions with string values do not fail open."""
+        decision = ToolCallDecision("NEEDS_REVIEW")  # type: ignore[arg-type]
+
+        block_message = resolve_tool_call_decision(decision, "send_email")
+
+        assert block_message is not None
+        assert "requires review" in block_message
+        assert "send_email" in block_message
 
 
     def test_unregister_before_hook(self):

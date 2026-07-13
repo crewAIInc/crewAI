@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 from crewai_core.printer import PRINTER
 
 from crewai.events.event_listener import event_listener
+from crewai.hooks.tool_call_decision import ToolCallDecision
 from crewai.hooks.types import (
     AfterToolCallHookCallable,
     AfterToolCallHookType,
@@ -121,6 +122,28 @@ class ToolCallHookContext:
             event_listener.formatter.resume_live_updates()
 
 
+def resolve_tool_call_decision(
+    hook_result: Any,
+    tool_name: str,
+) -> str | None:
+    """Return a block message for hook results that should stop execution."""
+    if isinstance(hook_result, ToolCallDecision):
+        if hook_result.should_execute:
+            return None
+        return hook_result.block_message(tool_name)
+
+    if hook_result is False:
+        return f"Tool execution blocked by hook. Tool: {tool_name}"
+
+    if hook_result is None or hook_result is True:
+        return None
+
+    return (
+        "Invalid before_tool_call hook return type: "
+        f"{type(hook_result).__name__}. Tool: {tool_name}"
+    )
+
+
 _before_tool_call_hooks: list[BeforeToolCallHookType | BeforeToolCallHookCallable] = []
 _after_tool_call_hooks: list[AfterToolCallHookType | AfterToolCallHookCallable] = []
 
@@ -138,6 +161,7 @@ def register_before_tool_call_hook(
         hook: Function that receives ToolCallHookContext and can:
             - Modify tool_input in-place
             - Return False to block tool execution
+            - Return ToolCallDecision to proceed, require review, or silence execution
             - Return True or None to allow execution
             IMPORTANT: Modify tool_input in-place (e.g., context.tool_input['key'] = value).
             Do NOT replace the dict (context.tool_input = {}), as this will not affect

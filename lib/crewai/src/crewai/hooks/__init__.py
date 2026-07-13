@@ -18,6 +18,7 @@ from crewai.hooks.llm_hooks import (
     unregister_after_llm_call_hook,
     unregister_before_llm_call_hook,
 )
+from crewai.hooks.tool_call_decision import ToolCallDecision, ToolCallDecisionType
 from crewai.hooks.tool_hooks import (
     ToolCallHookContext,
     clear_after_tool_call_hooks,
@@ -75,6 +76,8 @@ def clear_all_global_hooks() -> dict[str, tuple[int, int]]:
 
 __all__ = [
     "LLMCallHookContext",
+    "ToolCallDecision",
+    "ToolCallDecisionType",
     "ToolCallHookContext",
     "after_llm_call",
     "after_tool_call",

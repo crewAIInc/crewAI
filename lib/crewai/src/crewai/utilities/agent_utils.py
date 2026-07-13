@@ -1455,6 +1455,7 @@ def execute_single_native_tool_call(
         ToolCallHookContext,
         get_after_tool_call_hooks,
         get_before_tool_call_hooks,
+        resolve_tool_call_decision,
     )
 
     info = extract_tool_call_info(tool_call)
@@ -1517,7 +1518,7 @@ def execute_single_native_tool_call(
 
     track_delegation_if_needed(func_name, args_dict, task)
 
-    hook_blocked = False
+    hook_blocked_message: str | None = None
     before_hook_context = ToolCallHookContext(
         tool_name=func_name,
         tool_input=args_dict,
@@ -1528,15 +1529,17 @@ def execute_single_native_tool_call(
     )
     try:
         for hook in get_before_tool_call_hooks():
-            if hook(before_hook_context) is False:
-                hook_blocked = True
+            hook_blocked_message = resolve_tool_call_decision(
+                hook(before_hook_context), func_name
+            )
+            if hook_blocked_message is not None:
                 break
     except Exception:  # noqa: S110
         pass
 
     error_event_emitted = False
-    if hook_blocked:
-        result = f"Tool execution blocked by hook. Tool: {func_name}"
+    if hook_blocked_message is not None:
+        result = hook_blocked_message
         raw_tool_result = result
     elif not from_cache:
         if func_name in available_functions and output_tool is not None:
@@ -1632,7 +1635,7 @@ def execute_single_native_tool_call(
         and hasattr(original_tool, "result_as_answer")
         and original_tool.result_as_answer
         and not error_event_emitted
-        and not hook_blocked
+        and hook_blocked_message is None
     )
 
     return NativeToolCallResult(
