@@ -41,7 +41,6 @@ class K8sAgentSandboxFileToolSchema(BaseModel):
               - list: lists a directory.
               - delete: removes a file/directory.
               - mkdir: creates a directory.
-              - info: Not currntly supported. Returns file metadata.
               - exists: returns a boolean for whether the path exists.
         """),
     )
@@ -235,9 +234,6 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
             )
 
         return {"status": "deleted", "path": path}
-
-    def _info(self, sandbox: Sandbox, path: str) -> dict[str, Any]:
-        raise NotImplementedError("The info action is not currently supoported.")
 
     def _mkdir(self, sandbox: Sandbox, path: str, *, timeout: int):
         try:

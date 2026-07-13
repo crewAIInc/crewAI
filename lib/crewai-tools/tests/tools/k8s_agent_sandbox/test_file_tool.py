@@ -271,12 +271,6 @@ class TestFileToolMkdirAction:
         )
 
 
-class TestFileToolInfoAction:
-    def test_not_implemented_error(self, k8s_file_tool):
-        with pytest.raises(NotImplementedError, match="is not currently supoported"):
-            k8s_file_tool.run(action="info", path="parent/file.txt")
-
-
 class TestFileToolExistsAction:
     def test_success(self, k8s_file_tool, mock_sandbox):
         mock_sandbox.files.exists.return_value = True
