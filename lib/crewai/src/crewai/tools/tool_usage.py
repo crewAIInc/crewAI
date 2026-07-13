@@ -430,7 +430,7 @@ class ToolUsage:
                         ).format(
                             error=e,
                             tool=sanitize_tool_name(tool.name),
-                            tool_inputs=tool.description,
+                            tool_inputs=tool.formatted_description,
                         )
                         result = ToolUsageError(
                             f"\n{error_message}.\nMoving on then. {I18N_DEFAULT.slice('format').format(tool_names=self.tools_names)}"
@@ -670,7 +670,7 @@ class ToolUsage:
                         ).format(
                             error=e,
                             tool=sanitize_tool_name(tool.name),
-                            tool_inputs=tool.description,
+                            tool_inputs=tool.formatted_description,
                         )
                         result = ToolUsageError(
                             f"\n{error_message}.\nMoving on then. {I18N_DEFAULT.slice('format').format(tool_names=self.tools_names)}"
@@ -803,7 +803,7 @@ class ToolUsage:
 
     def _render(self) -> str:
         """Render the tool name and description in plain text."""
-        descriptions = [tool.description for tool in self.tools]
+        descriptions = [tool.formatted_description for tool in self.tools]
         return "\n--\n".join(descriptions)
 
     def _function_calling(
