@@ -1557,10 +1557,10 @@ def _wait_for_pypi(package: str, version: str) -> None:
         try:
             response = requests.get(url, timeout=30)
             if response.status_code == 200:
-                    console.print(
-                        f"[green]✓[/green] {package}=={version} is available on PyPI"
-                    )
-                    return
+                console.print(
+                    f"[green]✓[/green] {package}=={version} is available on PyPI"
+                )
+                return
         except Exception:  # noqa: S110
             pass
         time.sleep(_PYPI_POLL_INTERVAL)

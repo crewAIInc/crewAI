@@ -136,3 +136,51 @@ def test_run_with_max_results(mock_fetch, tool):
 
     result = tool._run(search_query="test", max_results=100)
     assert result.count("Title:") == 100
+
+
+@patch("crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool.requests.get")
+@patch(
+    "crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool.validate_url",
+    return_value="https://validated.example/api/query?search_query=transformer&start=0&max_results=1",
+)
+def test_fetch_arxiv_data_validates_url_before_request(mock_validate_url, mock_get, tool):
+    mock_response = MagicMock()
+    mock_response.text = mock_arxiv_response()
+    mock_get.return_value = mock_response
+
+    tool.fetch_arxiv_data("transformer", 1)
+
+    mock_validate_url.assert_called_once()
+    validated_url = mock_validate_url.call_args.args[0]
+    assert validated_url.startswith(ArxivPaperTool.BASE_API_URL)
+    assert "search_query=transformer" in validated_url
+    assert "max_results=1" in validated_url
+    mock_get.assert_called_once_with(
+        "https://validated.example/api/query?search_query=transformer&start=0&max_results=1",
+        timeout=ArxivPaperTool.REQUEST_TIMEOUT,
+    )
+
+
+@patch("crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool.requests.get")
+@patch(
+    "crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool.validate_url",
+    side_effect=ValueError("URL resolves to private/reserved IP"),
+)
+def test_fetch_arxiv_data_rejects_unsafe_url(mock_validate_url, mock_get, tool):
+    with pytest.raises(ValueError, match="private/reserved IP"):
+        tool.fetch_arxiv_data("transformer", 1)
+
+    mock_validate_url.assert_called_once()
+    mock_get.assert_not_called()
+
+
+@patch("crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool.requests.get")
+@patch(
+    "crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool.validate_url",
+    side_effect=ValueError("URL resolves to private/reserved IP"),
+)
+def test_run_returns_error_when_url_validation_fails(mock_validate_url, mock_get, tool):
+    result = tool._run("transformer", 1)
+
+    assert "Failed to fetch or download Arxiv papers" in result
+    mock_get.assert_not_called()
