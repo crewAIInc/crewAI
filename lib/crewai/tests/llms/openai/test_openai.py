@@ -1006,6 +1006,37 @@ def test_openai_responses_api_converts_assistant_tool_calls_message():
     }
 
 
+def test_openai_responses_api_preserves_assistant_content_with_tool_calls():
+    """Assistant text must be retained when it accompanies tool calls."""
+    llm = OpenAICompletion(model="gpt-4o-mini", api="responses")
+
+    messages = [
+        {
+            "role": "assistant",
+            "content": "I'll fetch that page now.",
+            "tool_calls": [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "fetch_page",
+                        "arguments": {"url": "https://example.com"},
+                    },
+                }
+            ],
+        }
+    ]
+
+    params = llm._prepare_responses_params(messages)
+
+    assert params["input"][0] == {
+        "role": "assistant",
+        "content": "I'll fetch that page now.",
+    }
+    assert params["input"][1]["type"] == "function_call"
+    assert params["input"][1]["call_id"].startswith("call_")
+    assert params["input"][1]["arguments"] == '{"url": "https://example.com"}'
+
+
 def test_openai_responses_api_converts_tool_result_message():
     """Regression: tool-role messages (Chat-Completions shape) must become
     function_call_output input items for the Responses API.

@@ -683,14 +683,17 @@ class OpenAICompletion(BaseLLM):
 
         if role == "assistant" and message.get("tool_calls"):
             items: list[dict[str, Any] | LLMMessage] = []
+            if message.get("content"):
+                items.append({"role": "assistant", "content": message["content"]})
             for tool_call in message["tool_calls"]:
                 function = tool_call.get("function", {})
+                args = function.get("arguments", "")
                 items.append(
                     {
                         "type": "function_call",
-                        "call_id": tool_call.get("id", ""),
+                        "call_id": tool_call.get("id") or f"call_{id(tool_call)}",
                         "name": function.get("name", ""),
-                        "arguments": function.get("arguments", ""),
+                        "arguments": args if isinstance(args, str) else json.dumps(args),
                     }
                 )
             return items

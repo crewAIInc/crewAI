@@ -1277,7 +1277,9 @@ def is_tool_call_list(response: list[Any]) -> bool:
     # Bedrock-style
     if isinstance(first_item, dict) and "name" in first_item and "input" in first_item:
         return True
-    # OpenAI Responses API-style (flat dict, no nested "function" key)
+    # OpenAI Responses API-style (flat dict, no nested "function" key). This
+    # intentionally accepts the same broad shape as the Bedrock check above;
+    # only provider paths that return lists reach this classifier.
     if (
         isinstance(first_item, dict)
         and "name" in first_item
