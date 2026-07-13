@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+import datetime
+import decimal
 import importlib
 import json
 import os
 import re
-import decimal
-import datetime
-from collections.abc import Callable
-from typing import Any
+from typing import Any, ClassVar
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -16,7 +16,7 @@ from pydantic.types import ImportString
 
 class DB2JSONEncoder(json.JSONEncoder):
     """Safely handles Decimal, Timestamps, and Bytes from DB2."""
-    def default(self, obj):
+    def default(self, obj: object) -> object:
         if isinstance(obj, decimal.Decimal):
             return float(obj)
         if isinstance(obj, (datetime.date, datetime.datetime)):
@@ -51,7 +51,7 @@ class DB2ToolSchema(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _validate_filter_pair(self) -> "DB2ToolSchema":
+    def _validate_filter_pair(self) -> DB2ToolSchema:
         if self.filter_by is not None and not self.filter_by.strip():
             raise ValueError("filter_by must be a non-empty column name.")
         if (self.filter_by is None) ^ (self.filter_value is None):
@@ -74,7 +74,7 @@ class DB2VectorSearchTool(BaseTool):
     args_schema: type[BaseModel] = DB2ToolSchema
 
     # Internal Whitelist for distance metrics to prevent SQL injection
-    _ALLOWED_METRICS: set[str] = {"COSINE", "EUCLIDEAN", "DOT_PRODUCT", "L2_DISTANCE"}
+    _ALLOWED_METRICS: ClassVar[set[str]] = {"COSINE", "EUCLIDEAN", "DOT_PRODUCT", "L2_DISTANCE"}
 
     package_dependencies: list[str] = Field(
         default_factory=lambda: [
@@ -131,7 +131,7 @@ class DB2VectorSearchTool(BaseTool):
     )
 
     @model_validator(mode="after")
-    def _validate_return_columns(self) -> "DB2VectorSearchTool":
+    def _validate_return_columns(self) -> DB2VectorSearchTool:
         if not self.return_columns:
             raise ValueError(
                 "return_columns cannot be empty. At least one column must be specified "
@@ -208,7 +208,7 @@ class DB2VectorSearchTool(BaseTool):
         if self.custom_embedding_fn:
             return self.custom_embedding_fn(text)
 
-        return (
+        result = (
             self._get_openai_client()
             .embeddings.create(
                 input=[text],
@@ -217,6 +217,26 @@ class DB2VectorSearchTool(BaseTool):
             .data[0]
             .embedding
         )
+        return list(result)
+
+    def _build_sql(
+        self,
+        column_query: str,
+        v_col: str,
+        vector_dimension: int,
+        metric: str,
+        table: str,
+        filter_clause: str,
+    ) -> str:
+        parts = [
+            "SELECT " + column_query + ",",
+            " VECTOR_DISTANCE(" + v_col + ", VECTOR(CAST(? AS CLOB), " + str(vector_dimension) + ", FLOAT32), " + metric + ") AS distance",
+            " FROM " + table,
+            " " + filter_clause if filter_clause else "",
+            " ORDER BY distance ASC",
+            " FETCH FIRST " + str(self.limit) + " ROWS ONLY",
+        ]
+        return "".join(parts)
 
     def _run(
         self,
@@ -236,13 +256,13 @@ class DB2VectorSearchTool(BaseTool):
 
         try:
             query_vector = self._generate_embedding(query)
-            
+
             # Explicit Connection Handling
             try:
                 self._connect()
             except Exception as e:
                 self._disconnect()  # Clean up any partial connection
-                return json.dumps({"success": False, "error": f"Failed to connect to DB2: {str(e)}"})
+                return json.dumps({"success": False, "error": f"Failed to connect to DB2: {e!s}"})
 
             # Validate Metric
             metric = self.distance_metric.upper()
@@ -253,13 +273,13 @@ class DB2VectorSearchTool(BaseTool):
             table = self._validate_identifier(self.table_name, allow_period=True)
             v_col = self._validate_identifier(self.vector_column)
             ret_cols = [self._validate_identifier(c) for c in self.return_columns]
-            
+
             vector_dimension = len(query_vector)
             vector_string = str(query_vector)
-            
+
             filter_clause = ""
             params = [vector_string] # The vector string for the CLOB cast
-            
+
             if filter_by and filter_value is not None:
                 f_col = self._validate_identifier(filter_by)
                 filter_clause = f"WHERE {f_col} = ?"
@@ -268,24 +288,11 @@ class DB2VectorSearchTool(BaseTool):
             # DYNAMIC COLUMN SELECTION
             column_query = ", ".join(ret_cols)
 
-            sql = f"""
-                SELECT
-                    {column_query},
-                    VECTOR_DISTANCE(
-                        {v_col},
-                        VECTOR(
-                            CAST(? AS CLOB),
-                            {vector_dimension},
-                            FLOAT32
-                        ),
-                        {metric}
-                    ) AS distance
-                FROM {table}
-                {filter_clause}
-                ORDER BY distance ASC
-                FETCH FIRST {self.limit} ROWS ONLY
-            """
+            sql = self._build_sql(
+                column_query, v_col, vector_dimension, metric, table, filter_clause
+            )
 
+            assert self.cursor is not None  # noqa: S101
             self.cursor.execute(sql, tuple(params))
             rows = self.cursor.fetchall()
 
@@ -299,7 +306,7 @@ class DB2VectorSearchTool(BaseTool):
                     continue
 
                 # Automatically map the requested columns to their row values
-                row_data = dict(zip(self.return_columns, row[:-1]))
+                row_data = dict(zip(self.return_columns, row[:-1], strict=False))
 
                 normalized_results.append(
                     {
@@ -331,5 +338,5 @@ class DB2VectorSearchTool(BaseTool):
                 indent=2,
             )
 
-    def __del__(self):
+    def __del__(self) -> None:
         self._disconnect()
