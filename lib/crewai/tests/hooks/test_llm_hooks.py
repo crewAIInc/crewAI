@@ -337,6 +337,60 @@ class TestLLMHooksIntegration:
         hooks = get_before_llm_call_hooks()
         assert len(hooks) == 0
 
+    def test_raising_before_hook_does_not_skip_later_hooks(self, mock_executor):
+        """Fail-open is per-hook: a crashing hook must not disable its neighbors.
+
+        Regression guard for the dispatcher migration: previously the
+        ``except Exception`` wrapped the whole hook loop, so a raising hook
+        silently skipped every hook registered after it. Now swallowing is
+        per-hook — later hooks still run and the LLM call still proceeds.
+        """
+        from crewai.utilities.agent_utils import _setup_before_llm_call_hooks
+
+        ran: list[str] = []
+
+        def crashing_hook(context):
+            ran.append("crashing")
+            raise ValueError("bug in user hook")
+
+        def later_hook(context):
+            ran.append("later")
+
+        register_before_llm_call_hook(crashing_hook)
+        register_before_llm_call_hook(later_hook)
+        mock_executor.before_llm_call_hooks = get_before_llm_call_hooks()
+
+        proceed = _setup_before_llm_call_hooks(
+            mock_executor, printer=Mock(), verbose=False
+        )
+
+        assert ran == ["crashing", "later"]
+        assert proceed is True
+
+    def test_intentional_block_still_short_circuits_later_hooks(self, mock_executor):
+        """A hook returning False blocks the call and skips later hooks (unchanged)."""
+        from crewai.utilities.agent_utils import _setup_before_llm_call_hooks
+
+        ran: list[str] = []
+
+        def blocking_hook(context):
+            ran.append("blocking")
+            return False
+
+        def later_hook(context):
+            ran.append("later")
+
+        register_before_llm_call_hook(blocking_hook)
+        register_before_llm_call_hook(later_hook)
+        mock_executor.before_llm_call_hooks = get_before_llm_call_hooks()
+
+        proceed = _setup_before_llm_call_hooks(
+            mock_executor, printer=Mock(), verbose=False
+        )
+
+        assert ran == ["blocking"]
+        assert proceed is False
+
     @pytest.mark.vcr()
     def test_lite_agent_hooks_integration_with_real_llm(self):
         """Test that LiteAgent executes before/after LLM call hooks and prints messages correctly."""
