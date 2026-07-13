@@ -63,6 +63,8 @@ Ephemeral mode is the safe default: nothing leaks if the agent forgets to clean 
 
 K8s agent sandboxes also auto-expire after an idle timeout. Tune it via `sandbox_timeout` (seconds, default `300`).
 
+All tool operations to a sandbox are syncronized with a lock to prevent races between different tools.
+
 ### Sandbox client settings
 
 By default the `K8sAgentSandboxToolset.create` creates a client in the "Local Tunnel" configuration. To specify another configurations,
