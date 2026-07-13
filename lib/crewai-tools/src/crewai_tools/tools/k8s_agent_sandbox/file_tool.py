@@ -96,11 +96,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
         "Perform filesystem operations inside an K8s agent sandbox: read a file, "
         "write content to a path, append content to an existing file, list a "
         "directory, delete a path, make a directory, fetch file metadata, or "
-        "check whether a path exists. For files larger than a few KB, create "
-        "the file with action='write' and empty content, then send the body "
-        "via multiple 'append' calls of ~4KB each to stay within tool-call "
-        "payload limits."
-    )
+        "check whether a path exists.")
     args_schema: type[BaseModel] = K8sAgentSandboxFileToolSchema
 
     def _run_with_sandbox(
