@@ -1,5 +1,4 @@
-from typing import Any
-
+import time
 from pydantic import (
     BaseModel,
     Field,
@@ -21,6 +20,12 @@ class k8sAgentSandboxPythonToolSchema(BaseModel):
     )
 
 
+class K8sAgentSandboxPythonToolOutput(BaseModel):
+    exit_code: int | None = Field(default=None, description="The exit code of the Python script execution.")
+    stdout: str | None = Field(default=None, description="The standard output produced by the Python script.")
+    stderr: str | None = Field(default=None, description="The standard error output produced by the Python script.")
+
+
 class K8sAgentSandboxPythonTool(K8sAgentSandboxBaseTool):
     name: str = "K8s Agent Sandbox Python Tool"
     description: str = (
@@ -31,14 +36,18 @@ class K8sAgentSandboxPythonTool(K8sAgentSandboxBaseTool):
 
     def _run_with_sandbox(
         self, sandbox: Sandbox, code: str, timeout: int
-    ) -> dict[str, Any]:
+    ) -> K8sAgentSandboxPythonToolOutput:
 
         timeout_tracker = create_timeout_tracker(timeout)
-        sandbox.files.write("main.py", code, timeout=timeout_tracker())
-        result = sandbox.commands.run("python3 main.py", timeout=timeout_tracker())
 
-        return {
-            "exit_code": result.exit_code,
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-        }
+        tmp_file_path = f"/tmp/crewai-{int(time.time())}.py"
+
+        sandbox.files.write(tmp_file_path, code.encode("utf-8"), timeout=timeout_tracker())
+
+        result = sandbox.commands.run(f"python3 {tmp_file_path}", timeout=timeout_tracker())
+
+        return K8sAgentSandboxPythonToolOutput(
+            exit_code=result.exit_code,
+            stdout=result.stdout,
+            stderr=result.stderr,
+        )
