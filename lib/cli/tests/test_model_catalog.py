@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 
 import pytest
 
@@ -534,18 +535,72 @@ def test_bad_cache_json_does_not_crash(monkeypatch):
     assert models == FALLBACK_ANTHROPIC
 
 
-def test_ollama_cache_keyed_by_base(monkeypatch):
-    # Changing OLLAMA_API_BASE must not serve the previous host's cached models.
-    monkeypatch.setenv("OLLAMA_API_BASE", "http://host-a:11434")
-    monkeypatch.setattr(
-        mc, "_http_get_json", lambda *a, **k: {"models": [{"model": "llama-a"}]}
+def test_ollama_is_not_cached_reflects_installed_changes(monkeypatch):
+    # Ollama is local and never cached: the picker re-probes /api/tags on every
+    # call, so a model deleted locally drops out immediately (no stale entry).
+    responses = iter(
+        [
+            {"models": [{"model": "llama3.3"}, {"model": "qwen3"}]},
+            {"models": [{"model": "llama3.3"}]},  # qwen3 deleted between calls
+        ]
     )
-    first = mc.get_provider_models("ollama", [])
-    assert [m for m, _ in first] == ["llama-a"]
+    monkeypatch.setattr(mc, "_http_get_json", lambda *a, **k: next(responses))
 
-    monkeypatch.setenv("OLLAMA_API_BASE", "http://host-b:11434")
+    first = {m for m, _ in mc.get_provider_models("ollama", [])}
+    second = {m for m, _ in mc.get_provider_models("ollama", [])}
+
+    assert first == {"llama3.3", "qwen3"}
+    assert second == {"llama3.3"}  # re-probed, not served from a stale cache
+
+
+def test_ollama_never_written_to_catalog_cache(monkeypatch):
     monkeypatch.setattr(
-        mc, "_http_get_json", lambda *a, **k: {"models": [{"model": "llama-b"}]}
+        mc, "_http_get_json", lambda *a, **k: {"models": [{"model": "llama3.3"}]}
     )
-    second = mc.get_provider_models("ollama", [])
-    assert [m for m, _ in second] == ["llama-b"]  # not the host-a cache
+    mc.get_provider_models("ollama", [])
+    assert not mc._catalog_cache_file().exists()
+
+
+def test_different_api_key_uses_separate_cache_entry(monkeypatch):
+    # Cache is keyed by the exact key: switching keys must refetch, not serve
+    # the previous account's cached list.
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-account-A")
+    monkeypatch.setattr(
+        mc, "_http_get_json", lambda *a, **k: {"data": [{"id": "gpt-5.5", "created": 1}]}
+    )
+    assert [m for m, _ in mc.get_provider_models("openai", [])] == ["gpt-5.5"]
+
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-account-B")
+    monkeypatch.setattr(
+        mc, "_http_get_json", lambda *a, **k: {"data": [{"id": "gpt-4.1", "created": 1}]}
+    )
+    # New key -> distinct cache entry -> refetch, not the account-A cache.
+    assert [m for m, _ in mc.get_provider_models("openai", [])] == ["gpt-4.1"]
+
+
+def test_cache_key_hashes_key_and_never_stores_it(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-super-secret")
+    key = mc._cache_key("openai")
+    assert key.startswith("openai#") and key != "openai#nokey"
+    assert "sk-super-secret" not in key  # only a digest, never the raw key
+
+
+def test_dynamic_cache_expires_after_catalog_ttl(monkeypatch):
+    # A dynamic entry older than the (now short) catalog TTL is not served.
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    entry_key = mc._cache_key("anthropic")
+    stale_ts = time.time() - (mc._CATALOG_TTL + 5)
+    mc._catalog_cache_file().write_text(
+        json.dumps(
+            {
+                entry_key: {
+                    "ts": stale_ts,
+                    "source": "dynamic",
+                    "models": [["stale-model", "Stale"]],
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert mc._read_catalog_cache("anthropic") is None
