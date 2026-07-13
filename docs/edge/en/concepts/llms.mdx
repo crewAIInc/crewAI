@@ -1155,6 +1155,26 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```
   </Accordion>
 
+  <Accordion title="Crusoe">
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    CRUSOE_API_KEY=<your-api-key>
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    llm = LLM(
+        model="crusoe/meta-llama/Llama-3.3-70B-Instruct",
+        temperature=0.7
+    )
+    ```
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
   <Accordion title="Perplexity AI">
     Set the following environment variables in your `.env` file:
     ```toml Code
