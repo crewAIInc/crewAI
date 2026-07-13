@@ -229,7 +229,7 @@ class TestValkeyStorageVectorSearch:
         self, mock_ft_list: AsyncMock, mock_ft_search: AsyncMock,
         valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
     ) -> None:
-        """Test search with metadata filter only."""
+        """Test search with metadata filter uses post-filtering (not FT query)."""
         record1 = MemoryRecord(
             id="record-1",
             content="Record with metadata",
@@ -248,14 +248,15 @@ class TestValkeyStorageVectorSearch:
             limit=10
         )
 
-        # Verify query contains metadata filters (AND logic)
+        # metadata_filter fields are NOT in the FT query (they're not indexed).
+        # Instead, KNN over-fetches by 3x and results are post-filtered. (#5795)
         call_args = mock_ft_search.call_args
         query = call_args[0][2]
-        assert "@agent_id:{agent\\-1}" in query or "@agent_id:{agent-1}" in query
-        assert "@priority:{high}" in query
-        assert "=>[KNN 10 @embedding $BLOB AS score]" in query
+        assert "@agent_id:" not in query
+        assert "@priority:" not in query
+        assert "=>[KNN 30 @embedding $BLOB AS score]" in query
 
-        # Verify results
+        # Verify results pass the post-filter
         assert len(results) == 1
         assert results[0][0].id == "record-1"
         assert results[0][0].metadata["agent_id"] == "agent-1"
@@ -264,11 +265,99 @@ class TestValkeyStorageVectorSearch:
     @pytest.mark.asyncio
     @patch("crewai.memory.storage.valkey_storage.ft.search")
     @patch("crewai.memory.storage.valkey_storage.ft.list")
+    async def test_search_metadata_filter_excludes_non_matching_records(
+        self, mock_ft_list: AsyncMock, mock_ft_search: AsyncMock,
+        valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
+    ) -> None:
+        """Test that metadata post-filter excludes records that don't match."""
+        record_match = MemoryRecord(
+            id="record-match",
+            content="Matching record",
+            scope="/test",
+            metadata={"agent_id": "agent-1", "priority": "high"},
+            embedding=[0.1, 0.2, 0.3, 0.4],
+        )
+        record_no_match = MemoryRecord(
+            id="record-no-match",
+            content="Non-matching record",
+            scope="/test",
+            metadata={"agent_id": "agent-2", "priority": "low"},
+            embedding=[0.1, 0.2, 0.3, 0.4],
+        )
+        record_partial = MemoryRecord(
+            id="record-partial",
+            content="Partially matching record",
+            scope="/test",
+            metadata={"agent_id": "agent-1", "priority": "low"},
+            embedding=[0.1, 0.2, 0.3, 0.4],
+        )
+
+        mock_ft_list.return_value = [b"memory_index"]
+        # All three records come back from FT.SEARCH (over-fetched)
+        mock_ft_search.return_value = create_mock_ft_search_response([
+            (record_match, 0.95),
+            (record_no_match, 0.90),
+            (record_partial, 0.85),
+        ])
+
+        query_embedding = [0.1, 0.2, 0.3, 0.4]
+        results = await valkey_storage.asearch(
+            query_embedding,
+            metadata_filter={"agent_id": "agent-1", "priority": "high"},
+            limit=10
+        )
+
+        # Only the record matching ALL metadata criteria should be returned
+        assert len(results) == 1
+        assert results[0][0].id == "record-match"
+
+    @pytest.mark.asyncio
+    @patch("crewai.memory.storage.valkey_storage.ft.search")
+    @patch("crewai.memory.storage.valkey_storage.ft.list")
+    async def test_search_metadata_filter_respects_limit_after_filtering(
+        self, mock_ft_list: AsyncMock, mock_ft_search: AsyncMock,
+        valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
+    ) -> None:
+        """Test that limit is enforced after metadata post-filtering."""
+        records = [
+            (
+                MemoryRecord(
+                    id=f"record-{i}",
+                    content=f"Record {i}",
+                    scope="/test",
+                    metadata={"agent_id": "agent-1"},
+                    embedding=[0.1, 0.2, 0.3, 0.4],
+                ),
+                0.95 - i * 0.01,
+            )
+            for i in range(5)
+        ]
+
+        mock_ft_list.return_value = [b"memory_index"]
+        mock_ft_search.return_value = create_mock_ft_search_response(records)
+
+        query_embedding = [0.1, 0.2, 0.3, 0.4]
+        results = await valkey_storage.asearch(
+            query_embedding,
+            metadata_filter={"agent_id": "agent-1"},
+            limit=3
+        )
+
+        # All 5 match the filter but limit=3 should be enforced
+        assert len(results) == 3
+        # Results should be in descending score order
+        assert results[0][0].id == "record-0"
+        assert results[1][0].id == "record-1"
+        assert results[2][0].id == "record-2"
+
+    @pytest.mark.asyncio
+    @patch("crewai.memory.storage.valkey_storage.ft.search")
+    @patch("crewai.memory.storage.valkey_storage.ft.list")
     async def test_search_with_combined_filters(
         self, mock_ft_list: AsyncMock, mock_ft_search: AsyncMock,
         valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
     ) -> None:
-        """Test search with combined filters (scope + categories + metadata)."""
+        """Test search with combined filters (scope + categories in FT query, metadata post-filtered)."""
         record1 = MemoryRecord(
             id="record-1",
             content="Record matching all filters",
@@ -290,15 +379,16 @@ class TestValkeyStorageVectorSearch:
             limit=10
         )
 
-        # Verify query contains all filters
+        # Verify query contains indexed filters (scope, categories) but NOT metadata
         call_args = mock_ft_search.call_args
         query = call_args[0][2]
-        assert "@scope:{/agent*}" in query
+        assert "@scope:" in query
         assert "@categories:{planning}" in query
-        assert "@agent_id:{agent\\-1}" in query or "@agent_id:{agent-1}" in query
-        assert "=>[KNN 10 @embedding $BLOB AS score]" in query
+        assert "@agent_id:" not in query
+        # Over-fetches by 3x when metadata_filter is present
+        assert "=>[KNN 30 @embedding $BLOB AS score]" in query
 
-        # Verify results
+        # Verify results pass both FT query and post-filter
         assert len(results) == 1
         assert results[0][0].id == "record-1"
 
@@ -520,7 +610,7 @@ class TestValkeyStorageVectorSearch:
         self, mock_ft_list: AsyncMock, mock_ft_search: AsyncMock,
         valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
     ) -> None:
-        """Test search with numeric metadata values."""
+        """Test search with numeric metadata values uses string comparison in post-filter."""
         record1 = MemoryRecord(
             id="record-1",
             content="Record with numeric metadata",
@@ -539,11 +629,17 @@ class TestValkeyStorageVectorSearch:
             limit=10
         )
 
-        # Verify query contains string-converted metadata values
+        # metadata_filter is NOT in the FT query; post-filtered instead (#5795)
         call_args = mock_ft_search.call_args
         query = call_args[0][2]
-        assert "@count:{42}" in query
-        assert "@score:{3" in query and "14}" in query
+        assert "@count:" not in query
+        assert "@score:" not in query
+        assert "=>[KNN 30 @embedding $BLOB AS score]" in query
+
+        # Verify numeric values match via string comparison in post-filter
+        assert len(results) == 1
+        assert results[0][0].metadata["count"] == 42
+        assert results[0][0].metadata["score"] == 3.14
 
     @pytest.mark.asyncio
     @patch("crewai.memory.storage.valkey_storage.ft.search")
@@ -883,7 +979,7 @@ class TestValkeyStorageVectorSearch:
         self, mock_ft_list: AsyncMock, mock_ft_search: AsyncMock,
         valkey_storage: ValkeyStorage, mock_glide_client: AsyncMock
     ) -> None:
-        """Test search with multiple metadata filters uses AND logic."""
+        """Test search with multiple metadata filters uses AND logic in post-filter."""
         record1 = MemoryRecord(
             id="record-1",
             content="Record matching all metadata",
@@ -902,14 +998,15 @@ class TestValkeyStorageVectorSearch:
             limit=10
         )
 
-        # Verify query contains AND logic for metadata
+        # metadata_filter fields are NOT in the FT query (#5795)
         call_args = mock_ft_search.call_args
         query = call_args[0][2]
-        assert "@agent_id:" in query
-        assert "@priority:" in query
-        assert "@status:" in query
+        assert "@agent_id:" not in query
+        assert "@priority:" not in query
+        assert "@status:" not in query
+        assert "=>[KNN 30 @embedding $BLOB AS score]" in query
 
-        # Verify record matching all metadata is returned
+        # Verify record matching all metadata is returned via post-filter
         assert len(results) == 1
         assert results[0][0].id == "record-1"
 
