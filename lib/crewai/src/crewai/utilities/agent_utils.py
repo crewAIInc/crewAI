@@ -1751,11 +1751,9 @@ def _setup_after_llm_call_hooks(
     if executor_context and executor_context.after_llm_call_hooks:
         from crewai.hooks.llm_hooks import LLMCallHookContext
 
-        # Structured tool-call payloads are not a textual response yet, so the
-        # response-rewrite pass below would stringify them and the executor
-        # would treat the result as a final answer instead of executing the
-        # tools. Mirror _invoke_after_llm_call_hooks' isinstance guard and pass
-        # them through untouched; hooks fire on the follow-up textual response.
+        # Don't stringify structured tool-call payloads: the executor would
+        # treat the result as a final answer and skip tool execution (#6529).
+        # Hooks still run on the follow-up textual response.
         if not isinstance(answer, (str, BaseModel)):
             return answer
 
