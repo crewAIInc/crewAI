@@ -1290,13 +1290,12 @@ In this section, you'll find detailed examples that help you select, configure, 
     Example usage in your CrewAI project:
     ```python Code
     from crewai import LLM
-    import os
 
     llm = LLM(
         model="openai/YOUR_DAOXE_MODEL_ID",  # exact ID from your DaoXE account catalog
         custom_openai=True,
         base_url="https://daoxe.com/v1",
-        api_key=os.getenv("DAOXE_API_KEY"),
+        api_key=DAOXE_API_KEY,
     )
     ```
 
