@@ -59,7 +59,7 @@ with the `K8sAgentSandboxToolset.create` factory method:
 | **Persistent** (`persistent=True`) | Lazily on first use | At process exit (via `atexit`), or manually via `toolset.close()` |
 | **Attach** (`claim_name="…"`) | Never — the tool attaches to an existing sandbox | Never — the tool will not kill a sandbox it did not create |
 
-Ephemeral mode is the safe default: nothing leaks if the agent forgets to clean up. Use persistent mode when you want filesystem state or installed packages to carry across steps.
+Ephemeral mode is the safe default: nothing leaks if the agent forgets to clean up, but since it has to create a new sandbox on each new run, the increased execution time is expected. Use persistent mode when you want filesystem state or installed packages to carry across steps.
 
 K8s agent sandboxes also auto-expire after an idle timeout. Tune it via `sandbox_timeout` (seconds, default `300`).
 
