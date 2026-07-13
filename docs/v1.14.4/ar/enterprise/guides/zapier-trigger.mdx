@@ -1,0 +1,105 @@
+---
+title: "مشغل Zapier"
+description: "تشغيل أطقم CrewAI من سير عمل Zapier لأتمتة سير العمل عبر التطبيقات"
+icon: "bolt"
+mode: "wide"
+---
+
+سيرشدك هذا الدليل خلال عملية إعداد مشغلات Zapier لـ CrewAI AMP، مما يتيح لك أتمتة سير العمل بين CrewAI AMP والتطبيقات الأخرى.
+
+## المتطلبات الأساسية
+
+- حساب CrewAI AMP
+- حساب Zapier
+- حساب Slack (لهذا المثال المحدد)
+
+## الإعداد خطوة بخطوة
+
+<Steps>
+    <Step title="إعداد مشغل Slack">
+        - في Zapier، أنشئ Zap جديدًا.
+
+        <Frame>
+            <img src="/images/enterprise/zapier-1.png" alt="Zapier 1" />
+        </Frame>
+    </Step>
+
+    <Step title="اختر Slack كتطبيق المشغل">
+        <Frame>
+            <img src="/images/enterprise/zapier-2.png" alt="Zapier 2" />
+        </Frame>
+        - اختر `New Pushed Message` كحدث المشغل.
+        - اربط حساب Slack الخاص بك إذا لم تفعل ذلك بالفعل.
+    </Step>
+
+    <Step title="تكوين إجراء CrewAI AMP">
+        - أضف خطوة إجراء جديدة إلى Zap الخاص بك.
+        - اختر CrewAI+ كتطبيق الإجراء وKickoff كحدث الإجراء
+
+        <Frame>
+            <img src="/images/enterprise/zapier-3.png" alt="Zapier 5" />
+        </Frame>
+    </Step>
+
+    <Step title="ربط حساب CrewAI AMP">
+        - اربط حساب CrewAI AMP الخاص بك.
+        - اختر الطاقم المناسب لسير عملك.
+
+        <Frame>
+            <img src="/images/enterprise/zapier-4.png" alt="Zapier 6" />
+        </Frame>
+        - كوّن مدخلات الطاقم باستخدام البيانات من رسالة Slack.
+    </Step>
+
+    <Step title="تنسيق مخرجات CrewAI AMP">
+        - أضف خطوة إجراء أخرى لتنسيق مخرجات النص من CrewAI AMP.
+        - استخدم أدوات التنسيق في Zapier لتحويل مخرجات Markdown إلى HTML.
+
+        <Frame>
+            <img src="/images/enterprise/zapier-5.png" alt="Zapier 8" />
+        </Frame>
+        <Frame>
+            <img src="/images/enterprise/zapier-6.png" alt="Zapier 9" />
+        </Frame>
+    </Step>
+
+    <Step title="إرسال المخرجات عبر البريد الإلكتروني">
+        - أضف خطوة إجراء نهائية لإرسال المخرجات المنسقة عبر البريد الإلكتروني.
+        - اختر خدمة البريد الإلكتروني المفضلة لديك (مثال: Gmail، Outlook).
+        - كوّن تفاصيل البريد الإلكتروني، بما في ذلك المستلم والموضوع والنص.
+        - أدرج مخرجات CrewAI AMP المنسقة في نص البريد الإلكتروني.
+
+        <Frame>
+            <img src="/images/enterprise/zapier-7.png" alt="Zapier 7" />
+        </Frame>
+    </Step>
+
+    <Step title="بدء تشغيل الطاقم من Slack">
+        - أدخل النص في قناة Slack الخاصة بك
+
+        <Frame>
+            <img src="/images/enterprise/zapier-7b.png" alt="Zapier 10" />
+        </Frame>
+
+        - اختر زر النقاط الثلاث ثم اختر Push to Zapier
+
+        <Frame>
+            <img src="/images/enterprise/zapier-8.png" alt="Zapier 11" />
+        </Frame>
+    </Step>
+
+    <Step title="اختر الطاقم ثم اضغط Push للبدء">
+        <Frame>
+            <img src="/images/enterprise/zapier-9.png" alt="Zapier 12" />
+        </Frame>
+    </Step>
+
+</Steps>
+
+## نصائح للنجاح
+
+- تأكد من أن مدخلات CrewAI AMP مربوطة بشكل صحيح من رسالة Slack.
+- اختبر Zap الخاص بك جيدًا قبل تفعيله لاكتشاف أي مشاكل محتملة.
+- فكر في إضافة خطوات معالجة الأخطاء لإدارة حالات الفشل المحتملة في سير العمل.
+
+باتباع هذه الخطوات، ستكون قد أعددت بنجاح مشغلات Zapier لـ CrewAI AMP، مما يتيح سير عمل آلي يتم تشغيله بواسطة رسائل Slack وينتج عنه إشعارات بالبريد الإلكتروني مع مخرجات CrewAI AMP.

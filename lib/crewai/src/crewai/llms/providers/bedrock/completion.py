@@ -428,7 +428,7 @@ class BedrockCompletion(BaseLLM):
                         self.additional_model_response_field_paths
                     )
 
-                if self.stream:
+                if self._effective_stream():
                     return self._handle_streaming_converse(
                         formatted_messages,
                         body,
@@ -492,7 +492,7 @@ class BedrockCompletion(BaseLLM):
         if not AIOBOTOCORE_AVAILABLE:
             raise NotImplementedError(
                 "Async support for AWS Bedrock requires aiobotocore. "
-                'Install with: uv add "crewai[bedrock-async]"'
+                'Install with: uv add "crewai[bedrock]"'
             )
 
         with llm_call_context():
@@ -556,7 +556,7 @@ class BedrockCompletion(BaseLLM):
                         self.additional_model_response_field_paths
                     )
 
-                if self.stream:
+                if self._effective_stream():
                     return await self._ahandle_streaming_converse(
                         formatted_messages,
                         body,
@@ -677,7 +677,7 @@ class BedrockCompletion(BaseLLM):
             if usage:
                 self._track_token_usage_internal(usage)
 
-            stop_reason = response.get("stopReason")
+            stop_reason, response_id = self._extract_finish_reason_and_id(response)
             if stop_reason:
                 logging.debug(f"Response stop reason: {stop_reason}")
                 if stop_reason == "max_tokens":
@@ -716,6 +716,8 @@ class BedrockCompletion(BaseLLM):
                                 from_agent=from_agent,
                                 messages=messages,
                                 usage=usage,
+                                finish_reason=stop_reason,
+                                response_id=response_id,
                             )
                             return result
                         except Exception as e:
@@ -738,6 +740,8 @@ class BedrockCompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=messages,
                     usage=usage,
+                    finish_reason=stop_reason,
+                    response_id=response_id,
                 )
                 return non_structured_output_tool_uses
 
@@ -812,6 +816,8 @@ class BedrockCompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=messages,
                 usage=usage,
+                finish_reason=stop_reason,
+                response_id=response_id,
             )
 
             return self._invoke_after_llm_call_hooks(
@@ -951,7 +957,9 @@ class BedrockCompletion(BaseLLM):
             )
 
             stream = response.get("stream")
-            response_id = None
+            _, stream_response_id = self._extract_finish_reason_and_id(response)
+            response_id = stream_response_id
+            stream_finish_reason: str | None = None
             if stream:
                 for event in stream:
                     if "messageStart" in event:
@@ -1042,6 +1050,9 @@ class BedrockCompletion(BaseLLM):
                                     result = response_model.model_validate(
                                         function_args
                                     )
+                                    # contentBlockStop fires before messageStop sets
+                                    # stream_finish_reason; structured output always
+                                    # completes via the tool-call path.
                                     self._emit_call_completed_event(
                                         response=result.model_dump_json(),
                                         call_type=LLMCallType.LLM_CALL,
@@ -1049,6 +1060,9 @@ class BedrockCompletion(BaseLLM):
                                         from_agent=from_agent,
                                         messages=messages,
                                         usage=usage_data,
+                                        finish_reason=stream_finish_reason
+                                        or "tool_use",
+                                        response_id=response_id,
                                     )
                                     return result  # type: ignore[return-value]
                                 except Exception as e:
@@ -1102,6 +1116,7 @@ class BedrockCompletion(BaseLLM):
                             tool_use_id = None
                     elif "messageStop" in event:
                         stop_reason = event["messageStop"].get("stopReason")
+                        stream_finish_reason = stop_reason
                         logging.debug(f"Streaming message stopped: {stop_reason}")
                         if stop_reason == "max_tokens":
                             logging.warning(
@@ -1147,6 +1162,8 @@ class BedrockCompletion(BaseLLM):
             from_agent=from_agent,
             messages=messages,
             usage=usage_data,
+            finish_reason=stream_finish_reason,
+            response_id=response_id,
         )
 
         return full_response
@@ -1262,7 +1279,7 @@ class BedrockCompletion(BaseLLM):
             if usage:
                 self._track_token_usage_internal(usage)
 
-            stop_reason = response.get("stopReason")
+            stop_reason, response_id = self._extract_finish_reason_and_id(response)
             if stop_reason:
                 logging.debug(f"Response stop reason: {stop_reason}")
                 if stop_reason == "max_tokens":
@@ -1300,6 +1317,8 @@ class BedrockCompletion(BaseLLM):
                                 from_agent=from_agent,
                                 messages=messages,
                                 usage=usage,
+                                finish_reason=stop_reason,
+                                response_id=response_id,
                             )
                             return result
                         except Exception as e:
@@ -1322,6 +1341,8 @@ class BedrockCompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=messages,
                     usage=usage,
+                    finish_reason=stop_reason,
+                    response_id=response_id,
                 )
                 return non_structured_output_tool_uses
 
@@ -1397,6 +1418,8 @@ class BedrockCompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=messages,
                 usage=usage,
+                finish_reason=stop_reason,
+                response_id=response_id,
             )
 
             return text_content
@@ -1531,7 +1554,9 @@ class BedrockCompletion(BaseLLM):
             )
 
             stream = response.get("stream")
-            response_id = None
+            _, stream_response_id = self._extract_finish_reason_and_id(response)
+            response_id = stream_response_id
+            stream_finish_reason: str | None = None
             if stream:
                 async for event in stream:
                     if "messageStart" in event:
@@ -1623,6 +1648,9 @@ class BedrockCompletion(BaseLLM):
                                     result = response_model.model_validate(
                                         function_args
                                     )
+                                    # contentBlockStop fires before messageStop sets
+                                    # stream_finish_reason; structured output always
+                                    # completes via the tool-call path.
                                     self._emit_call_completed_event(
                                         response=result.model_dump_json(),
                                         call_type=LLMCallType.LLM_CALL,
@@ -1630,6 +1658,9 @@ class BedrockCompletion(BaseLLM):
                                         from_agent=from_agent,
                                         messages=messages,
                                         usage=usage_data,
+                                        finish_reason=stream_finish_reason
+                                        or "tool_use",
+                                        response_id=response_id,
                                     )
                                     return result  # type: ignore[return-value]
                                 except Exception as e:
@@ -1687,6 +1718,7 @@ class BedrockCompletion(BaseLLM):
 
                     elif "messageStop" in event:
                         stop_reason = event["messageStop"].get("stopReason")
+                        stream_finish_reason = stop_reason
                         logging.debug(f"Streaming message stopped: {stop_reason}")
                         if stop_reason == "max_tokens":
                             logging.warning(
@@ -1733,6 +1765,8 @@ class BedrockCompletion(BaseLLM):
             from_agent=from_agent,
             messages=messages,
             usage=usage_data,
+            finish_reason=stream_finish_reason,
+            response_id=response_id,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -1987,6 +2021,25 @@ class BedrockCompletion(BaseLLM):
             config["topK"] = int(self.top_k)
 
         return config
+
+    @staticmethod
+    def _extract_finish_reason_and_id(
+        response: Any,
+    ) -> tuple[str | None, str | None]:
+        """Extract raw finish_reason (``stopReason``) from a Bedrock Converse
+        response dict. Defensive — returns (None, None) on any failure.
+
+        Bedrock Converse has no model-level response id; ResponseMetadata.RequestId
+        is an AWS infra trace id (semantically different from OpenAI's chatcmpl-XXX),
+        so we omit response_id rather than mislead downstream telemetry consumers.
+        """
+        finish_reason: str | None = None
+        try:
+            if isinstance(response, dict):
+                finish_reason = response.get("stopReason")
+        except (AttributeError, KeyError, TypeError, IndexError):
+            finish_reason = None
+        return finish_reason, None
 
     def _handle_client_error(self, e: ClientError) -> str:
         """Handle AWS ClientError with specific error codes and return error message."""

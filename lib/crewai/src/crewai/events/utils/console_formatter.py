@@ -211,6 +211,13 @@ To enable tracing, do any one of these:
         """Print a panel with consistent formatting if verbose is enabled."""
         panel = self.create_panel(content, title, style)
         if is_flow:
+            # A TUI (e.g. the CLI's CrewRunApp) owns the screen and renders flow
+            # progress in its own STEPS panel; emitting Rich panels here would
+            # interleave with and corrupt the TUI, so suppress them in TUI mode.
+            from crewai.events.listeners.tracing.utils import is_tui_mode
+
+            if is_tui_mode():
+                return
             self.print(panel)
             self.print()
         else:
@@ -373,9 +380,6 @@ To enable tracing, do any one of these:
         status: str = "running",
     ) -> None:
         """Show method status panel."""
-        if not self.verbose:
-            return
-
         if status == "running":
             style = "yellow"
             panel_title = "🔄 Flow Method Running"

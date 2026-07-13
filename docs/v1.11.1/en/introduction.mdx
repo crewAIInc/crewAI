@@ -1,0 +1,144 @@
+---
+title: Introduction
+description: Build AI agent teams that work together to tackle complex tasks
+icon: handshake
+mode: "wide"
+---
+
+# What is CrewAI?
+
+**CrewAI is the leading open-source framework for orchestrating autonomous AI agents and building complex workflows.**
+
+It empowers developers to build production-ready multi-agent systems by combining the collaborative intelligence of **Crews** with the precise control of **Flows**.
+
+- **[CrewAI Flows](/en/guides/flows/first-flow)**: The backbone of your AI application. Flows allow you to create structured, event-driven workflows that manage state and control execution. They provide the scaffolding for your AI agents to work within.
+- **[CrewAI Crews](/en/guides/crews/first-crew)**: The units of work within your Flow. Crews are teams of autonomous agents that collaborate to solve specific tasks delegated to them by the Flow.
+
+With over 100,000 developers certified through our community courses, CrewAI is the standard for enterprise-ready AI automation.
+
+## The CrewAI Architecture
+
+CrewAI's architecture is designed to balance autonomy with control.
+
+### 1. Flows: The Backbone
+
+<Note>
+  Think of a Flow as the "manager" or the "process definition" of your application. It defines the steps, the logic, and how data moves through your system.
+</Note>
+
+<Frame caption="CrewAI Framework Overview">
+  <img src="/images/flows.png" alt="CrewAI Framework Overview" />
+</Frame>
+
+Flows provide:
+- **State Management**: Persist data across steps and executions.
+- **Event-Driven Execution**: Trigger actions based on events or external inputs.
+- **Control Flow**: Use conditional logic, loops, and branching.
+
+### 2. Crews: The Intelligence
+
+<Note>
+  Crews are the "teams" that do the heavy lifting. Within a Flow, you can trigger a Crew to tackle a complex problem requiring creativity and collaboration.
+</Note>
+
+<Frame caption="CrewAI Framework Overview">
+  <img src="/images/crews.png" alt="CrewAI Framework Overview" />
+</Frame>
+
+Crews provide:
+- **Role-Playing Agents**: Specialized agents with specific goals and tools.
+- **Autonomous Collaboration**: Agents work together to solve tasks.
+- **Task Delegation**: Tasks are assigned and executed based on agent capabilities.
+
+## How It All Works Together
+
+1.  **The Flow** triggers an event or starts a process.
+2.  **The Flow** manages the state and decides what to do next.
+3.  **The Flow** delegates a complex task to a **Crew**.
+4.  **The Crew**'s agents collaborate to complete the task.
+5.  **The Crew** returns the result to the **Flow**.
+6.  **The Flow** continues execution based on the result.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Production-Grade Flows" icon="arrow-progress">
+    Build reliable, stateful workflows that can handle long-running processes and complex logic.
+  </Card>
+  <Card title="Autonomous Crews" icon="users">
+    Deploy teams of agents that can plan, execute, and collaborate to achieve high-level goals.
+  </Card>
+  <Card title="Flexible Tools" icon="screwdriver-wrench">
+     Connect your agents to any API, database, or local tool.
+  </Card>
+  <Card title="Enterprise Security" icon="lock">
+    Designed with security and compliance in mind for enterprise deployments.
+  </Card>
+</CardGroup>
+
+## When to Use Crews vs. Flows
+
+**The short answer: Use both.**
+
+For any production-ready application, **start with a Flow**.
+
+- **Use a Flow** to define the overall structure, state, and logic of your application.
+- **Use a Crew** within a Flow step when you need a team of agents to perform a specific, complex task that requires autonomy.
+
+| Use Case | Architecture |
+| :--- | :--- |
+| **Simple Automation** | Single Flow with Python tasks |
+| **Complex Research** | Flow managing state -> Crew performing research |
+| **Application Backend** | Flow handling API requests -> Crew generating content -> Flow saving to DB |
+
+## Why Choose CrewAI?
+
+- 🧠 **Autonomous Operation**: Agents make intelligent decisions based on their roles and available tools
+- 📝 **Natural Interaction**: Agents communicate and collaborate like human team members
+- 🛠️ **Extensible Design**: Easy to add new tools, roles, and capabilities
+- 🚀 **Production Ready**: Built for reliability and scalability in real-world applications
+- 🔒 **Security-Focused**: Designed with enterprise security requirements in mind
+- 💰 **Cost-Efficient**: Optimized to minimize token usage and API calls
+
+## Ready to Start Building?
+
+<CardGroup cols={2}>
+  <Card
+    title="Build Your First Flow"
+    icon="diagram-project"
+    href="/en/guides/flows/first-flow"
+  >
+    Learn how to create structured, event-driven workflows with precise control over execution.
+  </Card>
+  <Card
+    title="Build Your First Crew"
+    icon="users-gear"
+    href="/en/guides/crews/first-crew"
+  >
+    Step-by-step tutorial to create a collaborative AI team that works together to solve complex problems.
+  </Card>
+</CardGroup>
+
+<CardGroup cols={3}>
+  <Card
+    title="Install CrewAI"
+    icon="wrench"
+    href="/en/installation"
+  >
+    Get started with CrewAI in your development environment.
+  </Card>
+  <Card
+    title="Quick Start"
+    icon="bolt"
+    href="en/quickstart"
+  >
+    Follow our quickstart guide to create your first CrewAI agent and get hands-on experience.
+  </Card>
+  <Card
+    title="Join the Community"
+    icon="comments"
+    href="https://community.crewai.com"
+  >
+    Connect with other developers, get help, and share your CrewAI experiences.
+  </Card>
+</CardGroup>

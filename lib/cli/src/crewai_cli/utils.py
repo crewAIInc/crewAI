@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 import os
 from pathlib import Path
+import re
 import shutil
 from typing import Any
 
@@ -19,18 +21,23 @@ from crewai_core.tool_credentials import (
 )
 from rich.console import Console
 
+from crewai_cli.version import get_crewai_tools_dependency
+
 
 __all__ = [
     "build_env_with_all_tool_credentials",
     "build_env_with_tool_repository_credentials",
     "copy_template",
+    "enable_prompt_line_editing",
     "fetch_and_json_env_file",
     "get_project_description",
     "get_project_name",
     "get_project_version",
+    "is_dmn_mode_enabled",
     "load_env_vars",
     "parse_toml",
     "read_toml",
+    "render_template",
     "tree_copy",
     "tree_find_and_replace",
     "write_env_file",
@@ -38,23 +45,57 @@ __all__ = [
 
 
 console = Console()
+_TEMPLATE_TOKEN_RE = re.compile(r"{{([a-zA-Z_][a-zA-Z0-9_]*)}}")
+
+
+def is_dmn_mode_enabled() -> bool:
+    """Return True when the enterprise non-interactive mode is enabled."""
+    value = os.environ.get("CREWAI_DMN")
+    if value is None:
+        return False
+    return value.strip().lower() not in {"", "0", "false", "no", "off"}
+
+
+def enable_prompt_line_editing() -> None:
+    """Enable cursor movement/history editing for Click text prompts when available."""
+    try:
+        import readline
+    except ImportError:
+        return
+
+    try:
+        readline.parse_and_bind("set editing-mode emacs")
+    except Exception:  # pragma: no cover - readline backends vary by platform
+        return
 
 
 def copy_template(
     src: Path, dst: Path, name: str, class_name: str, folder_name: str
 ) -> None:
     """Copy a file from src to dst."""
-    with open(src, "r") as file:
-        content = file.read()
-
-    content = content.replace("{{name}}", name)
-    content = content.replace("{{crew_name}}", class_name)
-    content = content.replace("{{folder_name}}", folder_name)
+    content = render_template(
+        src,
+        {
+            "name": name,
+            "crew_name": class_name,
+            "folder_name": folder_name,
+            "crewai_tools_dependency": get_crewai_tools_dependency(),
+        },
+    )
 
     with open(dst, "w") as file:
         file.write(content)
 
     click.secho(f"  - Created {dst}", fg="green")
+
+
+def render_template(src: Path, replacements: Mapping[str, str]) -> str:
+    """Render a template file using ``{{placeholder}}`` replacements."""
+    content = src.read_text(encoding="utf-8")
+    return _TEMPLATE_TOKEN_RE.sub(
+        lambda match: replacements.get(match.group(1), match.group(0)),
+        content,
+    )
 
 
 def fetch_and_json_env_file(env_file_path: str = ".env") -> dict[str, Any]:

@@ -46,6 +46,7 @@ from crewai.state.checkpoint_config import CheckpointConfig, _coerce_checkpoint
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.config import process_config
+from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.logger import Logger
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.string_utils import interpolate_only
@@ -81,16 +82,42 @@ _LLM_TYPE_REGISTRY: dict[str, str] = {
 def _validate_llm_ref(value: Any) -> Any:
     if isinstance(value, dict):
         import importlib
+        import inspect
 
         llm_type = value.get("llm_type")
-        if not llm_type or llm_type not in _LLM_TYPE_REGISTRY:
+        if not llm_type:
+            model = (
+                value.get("model")
+                or value.get("model_name")
+                or value.get("deployment_name")
+            )
+            if not model:
+                raise ValueError(
+                    "LLM config objects must include 'model', 'model_name', "
+                    "or 'deployment_name', or a serialized 'llm_type'. "
+                    f"Got keys: {list(value)}"
+                )
+            from crewai.llm import LLM
+
+            llm_kwargs = {**value, "model": model}
+            llm_kwargs.pop("model_name", None)
+            llm_kwargs.pop("deployment_name", None)
+            return LLM(**llm_kwargs)
+
+        if llm_type not in _LLM_TYPE_REGISTRY:
             raise ValueError(
-                f"Unknown or missing llm_type: {llm_type!r}. "
+                f"Unknown llm_type: {llm_type!r}. "
                 f"Expected one of {list(_LLM_TYPE_REGISTRY)}"
             )
         dotted = _LLM_TYPE_REGISTRY[llm_type]
         mod_path, cls_name = dotted.rsplit(".", 1)
         cls = getattr(importlib.import_module(mod_path), cls_name)
+        if inspect.isabstract(cls):
+            from crewai.llm import LLM
+
+            return LLM(
+                **{k: v for k, v in value.items() if v is not None and k != "llm_type"}
+            )
         return cls(**value)
     return value
 
@@ -178,7 +205,11 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         role (str): Role of the agent.
         goal (str): Objective of the agent.
         backstory (str): Backstory of the agent.
-        cache (bool): Whether the agent should use a cache for tool usage.
+        cache (bool): Whether the agent participates in tool-result caching
+            when a cache is enabled. The default (True) only permits
+            participation — caching activates when the crew sets cache=True
+            or the agent explicitly opts in with cache=True or a
+            cache_handler; cache=False excludes the agent entirely.
         config (dict[str, Any] | None): Configuration for the agent.
         verbose (bool): Verbose mode for the Agent Execution.
         max_rpm (int | None): Maximum number of requests per minute for the agent execution.
@@ -186,6 +217,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         tools (list[Any] | None): Tools at the agent's disposal.
         max_iter (int): Maximum iterations for an agent to execute a task.
         agent_executor: An instance of the CrewAgentExecutor class.
+        i18n (I18N): Internationalization settings.
         llm (Any): Language model that will run the agent.
         crew (Any): Crew to which the agent belongs.
 
@@ -226,6 +258,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     _logger: Logger = PrivateAttr(default_factory=lambda: Logger(verbose=False))
     _rpm_controller: RPMController | None = PrivateAttr(default=None)
     _request_within_rpm_limit: SerializableCallable | None = PrivateAttr(default=None)
+    _constructor_cache_opt_in: bool = PrivateAttr(default=False)
     _original_role: str | None = PrivateAttr(default=None)
     _original_goal: str | None = PrivateAttr(default=None)
     _original_backstory: str | None = PrivateAttr(default=None)
@@ -239,7 +272,14 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         description="Configuration for the agent", default=None, exclude=True
     )
     cache: bool = Field(
-        default=True, description="Whether the agent should use a cache for tool usage."
+        default=True,
+        description=(
+            "Whether the agent participates in tool-result caching when a "
+            "cache is enabled. Caching itself is opt-in: it activates only "
+            "when the crew sets cache=True or the agent explicitly opts in "
+            "(cache=True or a cache_handler at construction). Set False to "
+            "exclude this agent even when the crew enables caching."
+        ),
     )
     verbose: bool = Field(
         default=False, description="Verbose mode for the Agent Execution"
@@ -265,6 +305,14 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             _serialize_executor_ref, return_type=dict | None, when_used="json"
         ),
     ] = Field(default=None, description="An instance of the CrewAgentExecutor class.")
+    i18n: I18N = Field(
+        default_factory=get_i18n,
+        description="Internationalization settings.",
+        deprecated=(
+            "Agent.i18n is deprecated and will be removed in a future release. "
+            "Use crewai.utilities.i18n.get_i18n() or Crew(prompt_file=...) instead."
+        ),
+    )
 
     llm: Annotated[
         str | BaseLLM | None,
@@ -352,7 +400,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     )
     skills: list[Path | Skill | str] | None = Field(
         default=None,
-        description="Agent Skills. Accepts paths for discovery, pre-loaded Skill objects, or '@org/name' registry refs.",
+        description="Agent Skills. Accepts paths for discovery, inline SKILL.md strings, pre-loaded Skill objects, or '@org/name' registry refs.",
         min_length=1,
     )
     execution_context: ExecutionContext | None = Field(default=None)
@@ -457,20 +505,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     @classmethod
     def process_model_config(cls, values: Any) -> dict[str, Any]:
         return process_config(values, cls)
-
-    @field_validator("skills", mode="before")
-    @classmethod
-    def coerce_skill_strings(cls, skills: Any) -> Any:
-        """Coerce plain path strings to Path objects; keep @-prefixed refs as str."""
-        if not isinstance(skills, list):
-            return skills
-        result = []
-        for item in skills:
-            if isinstance(item, str) and not item.startswith("@"):
-                result.append(Path(item))
-            else:
-                result.append(item)
-        return result
 
     @field_validator("tools")
     @classmethod
@@ -601,7 +635,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         if self.memory is True:
             from crewai.memory.unified_memory import Memory
 
-            self.memory = Memory()
+            memory_kwargs: dict[str, Any] = {}
+            if self.llm is not None:
+                memory_kwargs["llm"] = self.llm
+            self.memory = Memory(**memory_kwargs)
         elif self.memory is False:
             self.memory = None
         return self
@@ -691,6 +728,19 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
 
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
+        # Tool-result caching distinguishes "explicitly enabled" from the
+        # field default via model_fields_set; don't let the dump turn the
+        # default into an explicit opt-in on the copy. An agent that opted
+        # in at construction via an explicit cache_handler (excluded from
+        # the dump) must stay opted in — carry the consent as cache=True so
+        # the copy wires its own fresh handler. A handler merely offered by
+        # a crew at kickoff is runtime wiring, not consent, and must not
+        # opt the copy in; _constructor_cache_opt_in is recorded before any
+        # crew wiring can happen.
+        if "cache" not in self.model_fields_set:
+            copied_data.pop("cache", None)
+            if self._constructor_cache_opt_in:
+                copied_data["cache"] = True
         return type(self)(
             **copied_data,
             llm=existing_llm,

@@ -52,7 +52,7 @@ class CrewPlanner:
             planning_agent_llm: Optional LLM model for the planning agent. Defaults to None.
         """
         self.tasks = tasks
-        self.planning_agent_llm = planning_agent_llm or "gpt-4o-mini"
+        self.planning_agent_llm = planning_agent_llm or "gpt-5.4-mini"
 
     def _handle_crew_planning(self) -> PlannerTaskPydanticOutput:
         """Handles the Crew planning by creating detailed step-by-step plans for each task.

@@ -323,7 +323,7 @@ class AnthropicCompletion(BaseLLM):
 
                 effective_response_model = response_model or self.response_format
 
-                if self.stream:
+                if self._effective_stream():
                     return self._handle_streaming_completion(
                         completion_params,
                         available_functions,
@@ -393,7 +393,7 @@ class AnthropicCompletion(BaseLLM):
 
                 effective_response_model = response_model or self.response_format
 
-                if self.stream:
+                if self._effective_stream():
                     return await self._ahandle_streaming_completion(
                         completion_params,
                         available_functions,
@@ -441,7 +441,7 @@ class AnthropicCompletion(BaseLLM):
             "model": self.model,
             "messages": messages,
             "max_tokens": self.max_tokens,
-            "stream": self.stream,
+            "stream": self._effective_stream(),
         }
 
         if system_message:
@@ -923,6 +923,8 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
 
+        finish_reason, response_id = self._extract_finish_reason_and_id(response)
+
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
                 for block in response.content:
@@ -935,6 +937,8 @@ class AnthropicCompletion(BaseLLM):
                             from_agent=from_agent,
                             messages=params["messages"],
                             usage=usage,
+                            finish_reason=finish_reason,
+                            response_id=response_id,
                         )
                         return structured_data
             else:
@@ -951,6 +955,8 @@ class AnthropicCompletion(BaseLLM):
                             from_agent=from_agent,
                             messages=params["messages"],
                             usage=usage,
+                            finish_reason=finish_reason,
+                            response_id=response_id,
                         )
                         return structured_data
 
@@ -973,6 +979,8 @@ class AnthropicCompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=response_id,
                     )
                     return list(tool_uses)
 
@@ -1005,6 +1013,8 @@ class AnthropicCompletion(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=usage,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
 
         if usage.get("total_tokens", 0) > 0:
@@ -1147,6 +1157,10 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
 
+        finish_reason, final_response_id = self._extract_finish_reason_and_id(
+            final_message
+        )
+
         if _is_pydantic_model_class(response_model):
             if use_native_structured_output:
                 structured_data = response_model.model_validate_json(full_response)
@@ -1157,6 +1171,8 @@ class AnthropicCompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=final_response_id,
                 )
                 return structured_data
             for block in final_message.content:
@@ -1172,6 +1188,8 @@ class AnthropicCompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=final_response_id,
                     )
                     return structured_data
 
@@ -1201,6 +1219,8 @@ class AnthropicCompletion(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=usage,
+            finish_reason=finish_reason,
+            response_id=final_response_id,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -1361,6 +1381,10 @@ class AnthropicCompletion(BaseLLM):
 
             final_content = self._apply_stop_words(final_content)
 
+            finish_reason, final_response_id = self._extract_finish_reason_and_id(
+                final_response
+            )
+
             self._emit_call_completed_event(
                 response=final_content,
                 call_type=LLMCallType.LLM_CALL,
@@ -1368,6 +1392,8 @@ class AnthropicCompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=follow_up_params["messages"],
                 usage=follow_up_usage,
+                finish_reason=finish_reason,
+                response_id=final_response_id,
             )
 
             total_usage = {
@@ -1447,6 +1473,8 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
 
+        finish_reason, response_id = self._extract_finish_reason_and_id(response)
+
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
                 for block in response.content:
@@ -1459,6 +1487,8 @@ class AnthropicCompletion(BaseLLM):
                             from_agent=from_agent,
                             messages=params["messages"],
                             usage=usage,
+                            finish_reason=finish_reason,
+                            response_id=response_id,
                         )
                         return structured_data
             else:
@@ -1475,6 +1505,8 @@ class AnthropicCompletion(BaseLLM):
                             from_agent=from_agent,
                             messages=params["messages"],
                             usage=usage,
+                            finish_reason=finish_reason,
+                            response_id=response_id,
                         )
                         return structured_data
 
@@ -1495,6 +1527,8 @@ class AnthropicCompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=response_id,
                     )
                     return list(tool_uses)
 
@@ -1519,6 +1553,8 @@ class AnthropicCompletion(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=usage,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
 
         if usage.get("total_tokens", 0) > 0:
@@ -1647,6 +1683,10 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
 
+        finish_reason, final_response_id = self._extract_finish_reason_and_id(
+            final_message
+        )
+
         if _is_pydantic_model_class(response_model):
             if use_native_structured_output:
                 structured_data = response_model.model_validate_json(full_response)
@@ -1657,6 +1697,8 @@ class AnthropicCompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=final_response_id,
                 )
                 return structured_data
             for block in final_message.content:
@@ -1672,6 +1714,8 @@ class AnthropicCompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=final_response_id,
                     )
                     return structured_data
 
@@ -1701,6 +1745,8 @@ class AnthropicCompletion(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=usage,
+            finish_reason=finish_reason,
+            response_id=final_response_id,
         )
 
         return full_response
@@ -1753,6 +1799,10 @@ class AnthropicCompletion(BaseLLM):
 
             final_content = self._apply_stop_words(final_content)
 
+            finish_reason, final_response_id = self._extract_finish_reason_and_id(
+                final_response
+            )
+
             self._emit_call_completed_event(
                 response=final_content,
                 call_type=LLMCallType.LLM_CALL,
@@ -1760,6 +1810,8 @@ class AnthropicCompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=follow_up_params["messages"],
                 usage=follow_up_usage,
+                finish_reason=finish_reason,
+                response_id=final_response_id,
             )
 
             total_usage = {
@@ -1812,6 +1864,20 @@ class AnthropicCompletion(BaseLLM):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
         return int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+    @staticmethod
+    def _extract_finish_reason_and_id(
+        message: Any,
+    ) -> tuple[str | None, str | None]:
+        """Extract raw finish_reason and response_id from an Anthropic
+        ``Message`` / ``BetaMessage``. Anthropic exposes ``stop_reason`` (e.g.
+        ``"end_turn"``, ``"max_tokens"``, ``"tool_use"``); we forward it raw
+        and let downstream telemetry map to the OTel GenAI enum.
+        """
+        return (
+            getattr(message, "stop_reason", None),
+            getattr(message, "id", None),
+        )
 
     @staticmethod
     def _extract_anthropic_token_usage(

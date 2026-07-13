@@ -1,0 +1,112 @@
+---
+title: "자동화 살펴보기"
+description: "Automations 탭에서 플릿 상태, LLM 소비, 자동화별 동작을 확인합니다."
+sidebarTitle: "모니터링"
+icon: "gauge"
+mode: "wide"
+---
+
+<Info>
+  **ACP (베타) 문서 내비게이션**
+
+  - [개요](/ko/enterprise/features/agent-control-plane/overview)
+  - **모니터링** *(현재 페이지)*
+  - [정책](/edge/ko/enterprise/features/agent-control-plane/policies)
+</Info>
+
+## 개요
+
+**Automations** 탭은 [Agent Control Plane](/ko/enterprise/features/agent-control-plane/overview)의 읽기 전용 운영 뷰입니다. 두 개의 메트릭 카드, 인터랙티브 sankey, 그리고 **Automations**와 **Consumption** 두 개의 서브 테이블을 결합해 검색·필터·정렬을 지원합니다.
+
+<Frame>
+  ![Agent Control Plane 개요](/images/enterprise/acp-overview-automations-sankey.png)
+</Frame>
+
+모든 차트와 테이블은 오른쪽 상단의 **지난 24시간 / 지난 1주 / 지난 30일** 선택기를 따릅니다. 변화량은 선택한 윈도우를 같은 길이의 이전 윈도우와 비교합니다.
+
+<Note>
+  행은 **crewAI v1.13 이상**의 deployment에 대해서만 데이터를 표시합니다. 그 이전 deployment는 sankey 아래 *"We've detected N other automations that we can't display"* 배너에 나타나며, 업데이트하고 재배포할 때까지 어떤 메트릭에도 기여하지 않습니다. [개요 — 요구사항](/ko/enterprise/features/agent-control-plane/overview#요구사항)을 참고하세요.
+</Note>
+
+## 대시보드
+
+페이지 상단에는 두 개의 메트릭 카드와 인터랙티브 sankey가 있습니다. 어느 카드를 클릭해도 sankey가 다음 두 모드 사이를 전환합니다:
+
+- **상태 모드** — `전체 자동화 → 상태 버킷(Critical / Warning / Healthy)`. 버킷을 클릭하면 Automations 테이블이 해당 deployment로 필터링됩니다.
+- **소비 모드** — `모델 공급자 → 자동화 → 총 비용`. 공급자를 클릭하면 Consumption 테이블이 해당 공급자로 필터링됩니다.
+
+| 카드 | 표시 내용 |
+|------|---------------|
+| **Automations** | `active` 자동화(및 전체 개수), 윈도우 내 총 `errors`, 현재 `active executions`(및 윈도우 내 총합), 이전 기간 대비 변화량. |
+| **Consumption** | 총 `cost`와 `tokens used`, 이전 기간 대비 비용 변화량. |
+
+<Frame>
+  ![소비 sankey가 적용된 개요](/images/enterprise/acp-overview-consumption-sankey.png)
+</Frame>
+
+## Automations 테이블
+
+**Automations** 서브 탭은 deployment 단위의 플릿 상태 분해입니다. 각 행은 배포된 하나의 crew 또는 flow입니다.
+
+<Frame>
+  ![상태 분해가 있는 자동화 테이블](/images/enterprise/acp-automations-table.png)
+</Frame>
+
+| 열 | 표시 내용 |
+|--------|---------------|
+| **Automation** | deployment 이름과 할당된 태그(예: `production`, `financial`). |
+| **Last execution** | 가장 최근 실행 이후 경과 시간. |
+| **Health Status Breakdown** | 윈도우 내 실행에 대한 `Critical` / `Warning` / `Healthy` 비율의 누적 막대. |
+| **Executions with Errors** | 윈도우 내 총 실패 실행 수. |
+| **PII detection applied** | deployment별 PII 설정 또는 일치하는 [PII 정책](/edge/ko/enterprise/features/agent-control-plane/policies)이 활성화된 경우 `Yes`. |
+| **Executions** | 윈도우 내 총 실행 수. |
+| **Last updated** | deployment의 마지막 재배포 시점. |
+| **Crew Version** | deployment가 보고한 `crewai` 버전. `1.13` 미만 버전 옆의 정보 아이콘은 메트릭에 기여할 수 없는 행을 표시합니다. |
+
+이름으로 검색하고 `Status`(`Healthy` / `Warning` / `Critical`)로 필터링하며, 컬럼 헤더로 정렬할 수 있습니다. deployment 이름을 클릭하면 **Automation 패널**이 열립니다.
+
+## Consumption 테이블
+
+**Consumption** 서브 탭은 deployment 단위의 LLM 지출 및 토큰 사용량 분해입니다.
+
+<Frame>
+  ![LLM 공급자별로 분해된 소비 테이블](/images/enterprise/acp-consumption-table.png)
+</Frame>
+
+| 열 | 표시 내용 |
+|--------|---------------|
+| **Automation** | deployment 이름. |
+| **Last execution** | 가장 최근 실행 이후 경과 시간. |
+| **Tokens used** | 이 자동화가 사용한 LLM 공급자별로 한 행, 이전 기간 대비 변화량 포함. |
+| **Cost** | LLM 공급자별 비용, 이전 기간 대비 변화량 포함. |
+| **Total cost** | 모든 공급자의 합계, 변화량 포함. |
+| **Executions** | 윈도우 내 총 실행 수. |
+| **Last updated** | deployment의 마지막 재배포 시점. |
+| **Crew Version** | deployment가 보고한 `crewai` 버전. |
+
+**LLM provider**로 필터링하고 `Cost`, `Executions` 또는 `Last run`으로 정렬할 수 있습니다.
+
+<Info>
+  **빈 셀(`—` 또는 `$0.00`)은 보통 deployment가 crewAI v1.13 미만임을 의미합니다.** 위 스크린샷에서 *Automation F*(`1.7.0`)와 *Automation I*(`1.12.2`)는 토큰과 비용이 비어 있습니다. 실행은 여전히 동작하지만, 이 테이블을 채우는 공급자 수준 텔레메트리를 emit하지 않습니다. 이 crew들을 업데이트하고 재배포하면 소비 데이터가 수집되기 시작합니다.
+</Info>
+
+## 관련 문서
+
+<CardGroup cols={2}>
+  <Card title="Agent Control Plane — 개요" icon="book-open" href="/ko/enterprise/features/agent-control-plane/overview">
+    ACP란 무엇이며, 요구사항, 플랜 등급, RBAC에 대해.
+  </Card>
+  <Card title="Agent Control Plane — 정책" icon="shield-check" href="/edge/ko/enterprise/features/agent-control-plane/policies">
+    조직 단위 PII Redaction 정책을 여러 자동화에 적용합니다.
+  </Card>
+  <Card title="Traces" icon="timeline" href="/ko/enterprise/features/traces">
+    개별 실행을 드릴다운하여 에이전트의 추론, 도구 호출, 토큰 사용량을 확인합니다.
+  </Card>
+  <Card title="AMP에 배포" icon="rocket" href="/ko/enterprise/guides/deploy-to-amp">
+    Agent Control Plane을 지원하는 crewAI 버전으로 crew를 배포합니다.
+  </Card>
+</CardGroup>
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Agent Control Plane에서 메트릭을 해석하는 데 도움이 필요하시면 지원 팀에 문의하세요.
+</Card>
