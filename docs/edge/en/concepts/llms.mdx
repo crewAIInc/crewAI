@@ -1282,20 +1282,21 @@ In this section, you'll find detailed examples that help you select, configure, 
   <Accordion title="DaoXE">
     DaoXE is a multi-model multi-protocol API gateway with an OpenAI-compatible Chat Completions endpoint. Prefer an exact model ID from your DaoXE account catalog (`GET /v1/models`) rather than hardcoding example names. Not available in mainland China. Community contribution from a DaoXE maintainer.
 
-    Set the following environment variables in your `.env` file:
-    ```toml Code
-    DAOXE_API_KEY=<your-api-key>
+    Export the API key in your shell before running (or ensure your process already loads `.env` — this example does not call `load_dotenv()`):
+    ```bash Code
+    export DAOXE_API_KEY=<your-api-key>
     ```
 
     Example usage in your CrewAI project:
     ```python Code
     from crewai import LLM
+    import os
 
     llm = LLM(
         model="openai/YOUR_DAOXE_MODEL_ID",  # exact ID from your DaoXE account catalog
         custom_openai=True,
         base_url="https://daoxe.com/v1",
-        api_key=DAOXE_API_KEY,
+        api_key=os.getenv("DAOXE_API_KEY"),
     )
     ```
 
