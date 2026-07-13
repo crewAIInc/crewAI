@@ -367,6 +367,51 @@ class TestLLMHooksIntegration:
         assert ran == ["crashing", "later"]
         assert proceed is True
 
+    def test_scoped_hooks_fire_on_agent_executor_llm_seams(self, mock_executor):
+        """register_scoped hooks must run on the executor model seams.
+
+        Regression: `_setup_before/after_llm_call_hooks` only ran the
+        executor's snapshot lists, so execution-scoped hooks never fired on
+        PRE/POST_MODEL_CALL during normal agent execution (while tool seams,
+        which go through `dispatch`, merged them). Scoped hooks run after the
+        snapshot, matching dispatch's global-then-scoped ordering.
+        """
+        from crewai.hooks import InterceptionPoint
+        from crewai.hooks.dispatch import register_scoped, scoped_hooks
+        from crewai.utilities.agent_utils import (
+            _setup_after_llm_call_hooks,
+            _setup_before_llm_call_hooks,
+        )
+
+        order: list[str] = []
+
+        def snapshot_hook(context):
+            order.append("snapshot")
+
+        mock_executor.before_llm_call_hooks = [snapshot_hook]
+        mock_executor.after_llm_call_hooks = []
+
+        with scoped_hooks():
+            register_scoped(
+                InterceptionPoint.PRE_MODEL_CALL,
+                lambda ctx: order.append("scoped_pre"),
+            )
+            register_scoped(
+                InterceptionPoint.POST_MODEL_CALL,
+                lambda ctx: order.append("scoped_post"),
+            )
+
+            proceed = _setup_before_llm_call_hooks(
+                mock_executor, printer=Mock(), verbose=False
+            )
+            answer = _setup_after_llm_call_hooks(
+                mock_executor, "answer", printer=Mock(), verbose=False
+            )
+
+        assert order == ["snapshot", "scoped_pre", "scoped_post"]
+        assert proceed is True
+        assert answer == "answer"
+
     def test_intentional_block_still_short_circuits_later_hooks(self, mock_executor):
         """A hook returning False blocks the call and skips later hooks (unchanged)."""
         from crewai.utilities.agent_utils import _setup_before_llm_call_hooks

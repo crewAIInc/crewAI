@@ -165,6 +165,20 @@ def register_scoped(point: InterceptionPoint, hook: HookFn) -> None:
     scope.setdefault(point, []).append(hook)
 
 
+def get_scoped_hooks(point: InterceptionPoint) -> list[HookFn]:
+    """Return the hooks registered in the current execution scope for a point.
+
+    Used by seams that carry a pre-snapshotted hook list (e.g. the agent
+    executors' per-executor LLM hook lists) so they can merge in
+    execution-scoped hooks with the same snapshot-then-scoped ordering that
+    :func:`dispatch` applies to global vs scoped hooks.
+    """
+    scope = _scoped_hooks_var.get()
+    if not scope:
+        return []
+    return list(scope.get(point, []))
+
+
 def _resolve_hooks(point: InterceptionPoint) -> list[HookFn]:
     """Resolve the ordered hooks for a point: global first, then scoped."""
     global_hooks = _global_hooks[point]
