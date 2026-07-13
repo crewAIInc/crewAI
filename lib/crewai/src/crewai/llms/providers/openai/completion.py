@@ -693,7 +693,9 @@ class OpenAICompletion(BaseLLM):
                         "type": "function_call",
                         "call_id": tool_call.get("id") or f"call_{id(tool_call)}",
                         "name": function.get("name", ""),
-                        "arguments": args if isinstance(args, str) else json.dumps(args),
+                        "arguments": args
+                        if isinstance(args, str)
+                        else json.dumps(args),
                     }
                 )
             return items
