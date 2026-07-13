@@ -9,12 +9,13 @@ import sys
 import tempfile
 import time
 from typing import Final, Literal
-from urllib.request import urlopen
 
 import click
+from crewai_tools.security.safe_path import validate_url
 from dotenv import load_dotenv
 from github import Github
 from openai import OpenAI
+import requests
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -1548,14 +1549,14 @@ def _wait_for_pypi(package: str, version: str) -> None:
         package: PyPI package name.
         version: Version string to wait for.
     """
-    url = f"https://pypi.org/pypi/{package}/{version}/json"
+    url = validate_url(f"https://pypi.org/pypi/{package}/{version}/json")
     deadline = time.monotonic() + _PYPI_POLL_TIMEOUT
 
     console.print(f"[cyan]Waiting for {package}=={version} to appear on PyPI...[/cyan]")
     while time.monotonic() < deadline:
         try:
-            with urlopen(url) as resp:  # noqa: S310
-                if resp.status == 200:
+            response = requests.get(url, timeout=30)
+            if response.status_code == 200:
                     console.print(
                         f"[green]✓[/green] {package}=={version} is available on PyPI"
                     )

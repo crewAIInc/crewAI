@@ -10,6 +10,9 @@ import xml.etree.ElementTree as ET
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field
+import requests
+
+from crewai_tools.security.safe_path import validate_url
 
 
 logger = logging.getLogger(__file__)
@@ -78,17 +81,17 @@ class ArxivPaperTool(BaseTool):
     def fetch_arxiv_data(
         self, search_query: str, max_results: int
     ) -> list[dict[str, Any]]:
-        api_url = f"{self.BASE_API_URL}?search_query={urllib.parse.quote(search_query)}&start=0&max_results={max_results}"
+        api_url = validate_url(
+            f"{self.BASE_API_URL}?search_query={urllib.parse.quote(search_query)}"
+            f"&start=0&max_results={max_results}"
+        )
         logger.info(f"Fetching data from Arxiv API: {api_url}")
 
         try:
-            with urllib.request.urlopen(  # noqa: S310
-                api_url, timeout=self.REQUEST_TIMEOUT
-            ) as response:
-                if response.status != 200:
-                    raise Exception(f"HTTP {response.status}: {response.reason}")
-                data = response.read().decode("utf-8")
-        except urllib.error.URLError as e:
+            response = requests.get(api_url, timeout=self.REQUEST_TIMEOUT)
+            response.raise_for_status()
+            data = response.text
+        except requests.RequestException as e:
             logger.error(f"Error fetching data from Arxiv: {e}")
             raise
 
