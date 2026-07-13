@@ -1476,6 +1476,22 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             else (resumed_method_output if emit else result)
         )
 
+        # A resumed flow completes here rather than in kickoff_async, so the
+        # OUTPUT/EXECUTION_END seams must fire on this path too (before
+        # FlowFinishedEvent) to expose the final result to policy hooks.
+        from crewai.hooks.contexts import ExecutionEndContext, OutputContext
+        from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
+        output_ctx = OutputContext(flow=self, output=final_result, payload=final_result)
+        dispatch(InterceptionPoint.OUTPUT, output_ctx)
+        final_result = output_ctx.payload
+
+        end_ctx = ExecutionEndContext(
+            flow=self, output=final_result, payload=final_result
+        )
+        dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
+        final_result = end_ctx.payload
+
         if self._event_futures:
             await asyncio.gather(
                 *[
@@ -2037,6 +2053,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         flow_name_token = None
         flow_defer_trace_finalization_token = None
         request_id_token = None
+        # Re-published after the INPUT hook so trigger-payload injection reads
+        # the hook-rewritten inputs rather than the pre-hook baggage above.
+        flow_inputs_token = None
         if current_flow_id.get() is None:
             flow_id_token = current_flow_id.set(self.flow_id)
             flow_name_token = current_flow_name.set(
@@ -2070,15 +2089,28 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
             from crewai.hooks.dispatch import InterceptionPoint, dispatch
 
+            # ``inputs`` aliases the same object as ``payload`` (not a fresh
+            # ``{}`` from ``or``) so in-place edits survive read-back.
             start_ctx = ExecutionStartContext(
-                flow=self, inputs=inputs or {}, payload=inputs
+                flow=self,
+                inputs=inputs if inputs is not None else {},
+                payload=inputs,
             )
             dispatch(InterceptionPoint.EXECUTION_START, start_ctx)
             inputs = start_ctx.payload
 
-            input_ctx = InputContext(flow=self, inputs=inputs or {}, payload=inputs)
+            input_ctx = InputContext(
+                flow=self,
+                inputs=inputs if inputs is not None else {},
+                payload=inputs,
+            )
             dispatch(InterceptionPoint.INPUT, input_ctx)
             inputs = input_ctx.payload
+
+            # Publish the resolved inputs so trigger-payload injection and other
+            # baggage readers observe hook rewrites (the baggage set before the
+            # hooks carried the pre-hook inputs).
+            flow_inputs_token = attach(baggage.set_baggage("flow_inputs", inputs or {}))
 
             # Reset flow state for fresh execution unless restoring from persistence
             is_restoring = (
@@ -2321,6 +2353,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             dispatch(InterceptionPoint.OUTPUT, output_ctx)
             final_output = output_ctx.payload
 
+            # EXECUTION_END runs before FlowFinishedEvent so a HookAborted
+            # prevents a spurious finished signal and payload replacement is
+            # honored on the emitted result and the returned value.
+            end_ctx = ExecutionEndContext(
+                flow=self, output=final_output, payload=final_output
+            )
+            dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
+            final_output = end_ctx.payload
+
             if self._event_futures:
                 await asyncio.gather(
                     *[asyncio.wrap_future(f) for f in self._event_futures]
@@ -2371,11 +2412,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     else:
                         trace_listener.batch_manager.finalize_batch()
 
-            end_ctx = ExecutionEndContext(
-                flow=self, output=final_output, payload=final_output
-            )
-            dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
-
             return final_output
         finally:
             # Safety net for the exception path; the success path already
@@ -2399,6 +2435,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 current_flow_name.reset(flow_name_token)
             if flow_id_token is not None:
                 current_flow_id.reset(flow_id_token)
+            if flow_inputs_token is not None:
+                detach(flow_inputs_token)
             detach(flow_token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
 

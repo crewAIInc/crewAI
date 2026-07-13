@@ -289,8 +289,13 @@ def prepare_kickoff(
             )
         normalized = dict(inputs)
 
+    # ``inputs`` aliases the same object as ``payload`` (not a fresh ``{}`` from
+    # ``or``) so in-place edits to either survive read-back, per the context
+    # contract. ``None`` inputs are preserved rather than coerced to ``{}``.
     start_ctx = ExecutionStartContext(
-        crew=crew, inputs=normalized or {}, payload=normalized
+        crew=crew,
+        inputs=normalized if normalized is not None else {},
+        payload=normalized,
     )
     dispatch(InterceptionPoint.EXECUTION_START, start_ctx)
     normalized = start_ctx.payload
@@ -300,7 +305,11 @@ def prepare_kickoff(
             normalized = {}
         normalized = before_callback(normalized)
 
-    input_ctx = InputContext(crew=crew, inputs=normalized or {}, payload=normalized)
+    input_ctx = InputContext(
+        crew=crew,
+        inputs=normalized if normalized is not None else {},
+        payload=normalized,
+    )
     dispatch(InterceptionPoint.INPUT, input_ctx)
     normalized = input_ctx.payload
 
