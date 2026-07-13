@@ -272,6 +272,40 @@ class TestLLMHooksIntegration:
 
         assert result == "Original [hook1] [hook2]"
 
+    def test_after_hooks_do_not_clobber_native_tool_call_responses(
+        self, mock_executor
+    ):
+        """A registered after hook must not break native tool execution.
+
+        Regression for crewAIInc/crewAI#6529: `_setup_after_llm_call_hooks`
+        stringified structured tool-call payloads, so the executor treated the
+        raw tool call as the final answer and never executed the tool. Non-str,
+        non-BaseModel responses now pass through untouched; hooks still fire on
+        textual responses.
+        """
+        from crewai.utilities.agent_utils import _setup_after_llm_call_hooks
+
+        observed = []
+
+        def observer(context):
+            observed.append(context.response)
+            return None
+
+        register_after_llm_call_hook(observer)
+        mock_executor.after_llm_call_hooks = get_after_llm_call_hooks()
+
+        tool_calls = [Mock()]  # structured native tool-call payload
+        result = _setup_after_llm_call_hooks(
+            mock_executor, tool_calls, printer=Mock(), verbose=False
+        )
+        assert result is tool_calls
+
+        text = _setup_after_llm_call_hooks(
+            mock_executor, "final answer", printer=Mock(), verbose=False
+        )
+        assert text == "final answer"
+        assert observed == ["final answer"]
+
     def test_unregister_before_hook(self):
         """Test that before hooks can be unregistered."""
         def test_hook(context):
