@@ -1,7 +1,10 @@
 import pytest
 from k8s_agent_sandbox.models import ExecutionResult
 
-from crewai_tools.tools.k8s_agent_sandbox.exec_tool import K8sAgentSandboxExecTool
+from crewai_tools.tools.k8s_agent_sandbox.exec_tool import (
+    K8sAgentSandboxExecTool,
+    K8sAgentSandboxExecToolOutput,
+)
 from crewai_tools.tools.k8s_agent_sandbox.toolset import K8sAgentSandboxToolset
 
 
@@ -22,10 +25,10 @@ def test_run_success(exit_code, k8s_exec_tool, mock_sandbox):
 
     result = k8s_exec_tool.run("some-command", timeout=120)
 
-    assert result == {
-        "exit_code": exit_code,
-        "stdout": "some-output",
-        "stderr": "some-logs",
-    }
+    assert result == K8sAgentSandboxExecToolOutput(
+        exit_code=exit_code,
+        stdout="some-output",
+        stderr="some-logs",
+    )
 
     mock_sandbox.commands.run.assert_called_once_with("some-command", timeout=120)

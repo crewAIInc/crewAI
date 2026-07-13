@@ -1,13 +1,13 @@
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 import time
 import logging
 from pydantic import (
+    BaseModel,
     Field,
     SkipValidation,
 )
 from abc import abstractmethod
 
-from pydantic import Field
 from crewai.tools import BaseTool
 
 from .toolset import K8sAgentSandboxToolset
@@ -29,7 +29,7 @@ class K8sAgentSandboxBaseTool(BaseTool, arbitrary_types_allowed=True):
         self.toolset.add_tool(self)
         super().model_post_init(__context)
 
-    def _run(self, *args, **kwargs: Any) -> dict[str, Any]:
+    def _run(self, *args, **kwargs: Any) -> BaseModel:
         try:
             sandbox = self.toolset.lifecycle_manager.acquire_sandbox()
             return self._run_with_sandbox(sandbox, *args, **kwargs)
@@ -37,14 +37,14 @@ class K8sAgentSandboxBaseTool(BaseTool, arbitrary_types_allowed=True):
             self.toolset.lifecycle_manager.release_sandbox()
 
     @abstractmethod
-    def _run_with_sandbox(self, sandbox, *args, **kwargs) -> dict[str, Any]:
+    def _run_with_sandbox(self, sandbox, *args, **kwargs) -> BaseModel:
         pass
 
 
 def create_timeout_tracker(timeout: int) -> Callable[[], int]:
     """
     This returns a helper tracker to track one global timeout
-    in case where we run multple sandbox commands in one tool action.
+    in case where we run multiple sandbox commands in one tool action.
     """
 
     start_time = int(time.time())

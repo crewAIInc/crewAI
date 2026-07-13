@@ -81,8 +81,28 @@ class K8sAgentSandboxFileToolSchema(BaseModel):
         return self
 
 
+class FileEntryModel(BaseModel):
+    name: str | None = Field(default=None, description="The name of the file or directory.")
+    type: str | None = Field(default=None, description="The type of the entry, typically 'file' or 'directory'.")
+    size: int | None = Field(default=None, description="The size of the file in bytes.")
+    mod_time: float | None = Field(default=None, description="The last modification time of the entry as a Unix timestamp.")
+
+
+class K8sAgentSandboxFileToolOutput(BaseModel):
+    path: str | None = Field(default=None, description="The target path of the file or directory.")
+    status: str | None = Field(default=None, description="The status of the file operation, e.g., 'written', 'appended', 'created', 'deleted'.")
+    exists: bool | None = Field(default=None, description="Indicates whether the file or directory exists. Only returned for the 'exists' action.")
+    content: str | None = Field(default=None, description="The content of the file. Returned for the 'read' action.")
+    encoding: str | None = Field(default=None, description="The encoding of the content, e.g., 'utf-8' or 'base64'.")
+    note: str | None = Field(default=None, description="An optional note providing additional context about the operation (e.g., regarding non-utf8 files).")
+    bytes: int | None = Field(default=None, description="The number of bytes written. Returned for the 'write' action.")
+    appended_bytes: int | None = Field(default=None, description="The number of bytes appended to the file. Returned for the 'append' action.")
+    total_bytes: int | None = Field(default=None, description="The total size of the file in bytes after appending. Returned for the 'append' action.")
+    entries: list[FileEntryModel] | None = Field(default=None, description="A list of file and directory entries. Returned for the 'list' action.")
+
+
 class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
-    """Read, write, and manage files inside an K8s agent sandbox.
+    """Read, write, and manage files inside a K8s agent sandbox.
 
     Notes:
       - Most useful with `persistent=True` or an explicit `sandbox_id`. With
@@ -92,7 +112,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
 
     name: str = "K8s Agent Sandbox Files Tool"
     description: str = (
-        "Perform filesystem operations inside an K8s agent sandbox: read a file, "
+        "Perform filesystem operations inside a K8s agent sandbox: read a file, "
         "write content to a path, append content to an existing file, list a "
         "directory, delete a path, make a directory, fetch file metadata, or "
         "check whether a path exists.")
@@ -106,7 +126,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
         timeout: int,
         binary: bool,
         content: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> K8sAgentSandboxFileToolOutput:
 
         if action == "read":
             return self._read(sandbox, path, binary=binary, timeout=timeout)
@@ -132,12 +152,10 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
             return self._delete(sandbox, path, timeout=timeout)
         if action == "mkdir":
             self._mkdir(sandbox, path, timeout=timeout)
-            return {"status": "created", "path": path}
-        if action == "info":
-            return self._info(sandbox, path)
+            return K8sAgentSandboxFileToolOutput(status="created", path=path)
         if action == "exists":
             result = sandbox.files.exists(path, timeout=timeout)
-            return {"path": path, "exists": result}
+            return K8sAgentSandboxFileToolOutput(path=path, exists=result)
 
         raise ValueError(f"Unknown action: {action}")
 
@@ -148,24 +166,24 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
         *,
         binary: bool,
         timeout: int,
-    ) -> dict[str, Any]:
+    ) -> K8sAgentSandboxFileToolOutput:
 
         data: bytes = sandbox.files.read(path, timeout=timeout)
         if binary:
-            return {
-                "path": path,
-                "encoding": "base64",
-                "content": base64.b64encode(data).decode("ascii"),
-            }
+            return K8sAgentSandboxFileToolOutput(
+                path=path,
+                encoding="base64",
+                content=base64.b64encode(data).decode("ascii"),
+            )
         try:
-            return {"path": path, "encoding": "utf-8", "content": data.decode("utf-8")}
+            return K8sAgentSandboxFileToolOutput(path=path, encoding="utf-8", content=data.decode("utf-8"))
         except UnicodeDecodeError:
-            return {
-                "path": path,
-                "encoding": "base64",
-                "content": base64.b64encode(data).decode("ascii"),
-                "note": "File was not valid utf-8; returned as base64.",
-            }
+            return K8sAgentSandboxFileToolOutput(
+                path=path,
+                encoding="base64",
+                content=base64.b64encode(data).decode("ascii"),
+                note="File was not valid utf-8; returned as base64.",
+            )
 
     def _write(
         self,
@@ -175,12 +193,12 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
         *,
         binary: bool,
         timeout_tracker: Callable[[], int],
-    ) -> dict[str, Any]:
+    ) -> K8sAgentSandboxFileToolOutput:
 
         payload = base64.b64decode(content) if binary else content.encode("utf-8")
         self._ensure_parent_dir(sandbox, path, timeout=timeout_tracker())
         sandbox.files.write(path, payload, timeout=timeout_tracker())
-        return {"status": "written", "path": path, "bytes": len(payload)}
+        return K8sAgentSandboxFileToolOutput(status="written", path=path, bytes=len(payload))
 
     def _append(
         self,
@@ -190,28 +208,28 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
         *,
         binary: bool,
         timeout_tracker: Callable[[], int],
-    ) -> dict[str, Any]:
+    ) -> K8sAgentSandboxFileToolOutput:
         chunk: bytes = base64.b64decode(content) if binary else content.encode("utf-8")
         self._ensure_parent_dir(sandbox, path, timeout=timeout_tracker())
 
         existing = sandbox.files.read(path, timeout=timeout_tracker())
         payload = existing + chunk
         sandbox.files.write(path, payload, timeout=timeout_tracker())
-        return {
-            "status": "appended",
-            "path": path,
-            "appended_bytes": len(chunk),
-            "total_bytes": len(payload),
-        }
+        return K8sAgentSandboxFileToolOutput(
+            status="appended",
+            path=path,
+            appended_bytes=len(chunk),
+            total_bytes=len(payload),
+        )
 
-    def _list(self, sandbox: Sandbox, path: str, *, timeout: int) -> dict[str, Any]:
+    def _list(self, sandbox: Sandbox, path: str, *, timeout: int) -> K8sAgentSandboxFileToolOutput:
         entries = sandbox.files.list(path, timeout=timeout)
-        return {
-            "path": path,
-            "entries": [self._entry_to_dict(e) for e in entries],
-        }
+        return K8sAgentSandboxFileToolOutput(
+            path=path,
+            entries=[self._entry_to_dict(e) for e in entries],
+        )
 
-    def _delete(self, sandbox: Sandbox, path: str, *, timeout: int) -> dict[str, Any]:
+    def _delete(self, sandbox: Sandbox, path: str, *, timeout: int) -> K8sAgentSandboxFileToolOutput:
         # TODO: Fall back to deleting with shell command.
         # Use normal file delete API when it is available in SDK.
 
@@ -233,7 +251,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
                 f"Cannot delete directory {path}. Error: {result.stderr}."
             )
 
-        return {"status": "deleted", "path": path}
+        return K8sAgentSandboxFileToolOutput(status="deleted", path=path)
 
     def _mkdir(self, sandbox: Sandbox, path: str, *, timeout: int):
         try:
@@ -259,16 +277,10 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
         return self._mkdir(sandbox, parent, timeout=timeout)
 
     @staticmethod
-    def _entry_to_dict(entry: FileEntry) -> dict[str, Any]:
-
-        fields = (
-            "name",
-            "type",
-            "size",
-            "mod_time",
+    def _entry_to_dict(entry: FileEntry) -> FileEntryModel:
+        return FileEntryModel(
+            name=getattr(entry, "name", None),
+            type=getattr(entry, "type", None),
+            size=getattr(entry, "size", None),
+            mod_time=getattr(entry, "mod_time", None),
         )
-        result: dict[str, Any] = {}
-        for field in fields:
-            value = getattr(entry, field, None)
-            result[field] = value
-        return result

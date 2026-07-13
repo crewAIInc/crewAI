@@ -39,7 +39,7 @@ class K8sAgentSandboxLifecycleManager(ABC):
     def acquire_sandbox(self) -> Sandbox:
         """
         Acquires a sandbox based on this implementation and returns it.
-        In order tto be acquired again by someone else, it has to be
+        In order to be acquired again by someone else, it has to be
         released first by the :meth:`release_sandbox` method.
         """
         if self._closed:
@@ -67,6 +67,7 @@ class K8sAgentSandboxLifecycleManager(ABC):
             return
 
         self._close()
+        self._closed = True
 
     @abstractmethod
     def _acquire_sandbox(self) -> Sandbox:

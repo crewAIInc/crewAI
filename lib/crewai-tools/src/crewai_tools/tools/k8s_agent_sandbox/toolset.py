@@ -23,13 +23,13 @@ class K8sAgentSandboxToolset:
     The toolset is responsible for sharing the settings among many K8s Agent Sandbox tools.
     The tools that are added to a same toolset will share the sandbox settings and the sandbox itself.
 
-    It is recommended to use the factory method :meth:`create` insteat of the constructor.
+    It is recommended to use the factory method :meth:`create` instead of the constructor.
 
     Args:
-        lifecycle_manager: The instanse of a sandbox lifecycle manager that is responsible for
+        lifecycle_manager: The instance of a sandbox lifecycle manager that is responsible for
             managing a sandbox.
         cleanup_on_exit: When True, registers its :meth:`close` method at the `atexit` module
-            to be called when the programm exits.
+            to be called when the program exits.
     """
 
     def __init__(
@@ -71,7 +71,7 @@ class K8sAgentSandboxToolset:
         Create a toolset by using Agent Sandbox client and sandbox settings.
 
         Args:
-            sandbox_settings: Settings for the sandbox instanse that will be
+            sandbox_settings: Settings for the sandbox instance that will be
                 managed by this toolset.
             client_settings: Settings for K8s Agent Sandbox client. If None,
                 the default settings with Local Tunnel Mode is used.

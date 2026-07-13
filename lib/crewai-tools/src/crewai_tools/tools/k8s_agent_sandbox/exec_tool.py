@@ -17,6 +17,12 @@ class k8sAgentSandboxExecToolSchema(BaseModel):
     )
 
 
+class K8sAgentSandboxExecToolOutput(BaseModel):
+    exit_code: int | None = Field(default=None, description="The exit code of the executed command.")
+    stdout: str | None = Field(default=None, description="The standard output produced by the command.")
+    stderr: str | None = Field(default=None, description="The standard error output produced by the command.")
+
+
 class K8sAgentSandboxExecTool(K8sAgentSandboxBaseTool):
     name: str = "K8s Agent Sandbox Exec Tool"
     description: str = (
@@ -24,7 +30,7 @@ class K8sAgentSandboxExecTool(K8sAgentSandboxBaseTool):
     )
     args_schema: type[BaseModel] = k8sAgentSandboxExecToolSchema
 
-    def _run_with_sandbox(self, sandbox: Sandbox, *args, **kwargs) -> dict[str, Any]:
+    def _run_with_sandbox(self, sandbox: Sandbox, *args, **kwargs) -> K8sAgentSandboxExecToolOutput:
         return self._run_command(sandbox, *args, **kwargs)
 
     def _run_command(
@@ -32,10 +38,10 @@ class K8sAgentSandboxExecTool(K8sAgentSandboxBaseTool):
         sandbox: Sandbox,
         command: str,
         timeout: int,
-    ) -> dict[str, Any]:
+    ) -> K8sAgentSandboxExecToolOutput:
         result = sandbox.commands.run(command, timeout=timeout)
-        return {
-            "exit_code": result.exit_code,
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-        }
+        return K8sAgentSandboxExecToolOutput(
+            exit_code=result.exit_code,
+            stdout=result.stdout,
+            stderr=result.stderr,
+        )

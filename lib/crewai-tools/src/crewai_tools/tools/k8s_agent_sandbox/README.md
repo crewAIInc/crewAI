@@ -1,6 +1,6 @@
 # K8s Agent Sandbox Tools
 
-Run shell commands, execute Python, and manage files inside an [Kubernetes Agent Sandbox](https://github.com/kubernetes-sigs/agent-sandbox). K8s Agent Sandbox enables easy management of isolated, stateful, singleton workloads, ideal for use cases like AI agent runtimes.
+Run shell commands, execute Python, and manage files inside a [Kubernetes Agent Sandbox](https://github.com/kubernetes-sigs/agent-sandbox). K8s Agent Sandbox enables easy management of isolated, stateful, singleton workloads, ideal for use cases like AI agent runtimes.
 
 Three tools are provided so you can pick what the agent actually needs:
 
@@ -18,7 +18,7 @@ pip install "crewai-tools[k8s_agent_sandbox]"
 
 ## Sandbox toolset
 
-Instead of configuring sandbox-related settngs for each of the tools separately, the `K8sAgentSandboxToolset` class must be used.
+Instead of configuring sandbox-related settings for each of the tools separately, the `K8sAgentSandboxToolset` class must be used.
 
 All tools that are meant to share the same sandbox settings and sandbox lifecycle has to be added to the same instance of the
 `K8sAgentSandboxToolset` class.
@@ -36,7 +36,7 @@ from crewai_tools import (
 )
 
 toolset = K8sAgentSandboxToolset.create(
-    # Sandbox settigns for all tools in this toolset.
+    # Sandbox settings for all tools in this toolset.
     sandbox_settings=SandboxSettings(
         warmpool="my-warmpool",
         namespace="my-namespace",
@@ -72,7 +72,7 @@ The following example shows setting up the sandbox client to use the "Gateway" c
 
 ```python
 from crewai_tools import (
-    K8sAgentSandboxToolClientSettings as ClientSettings # <- import this.
+    K8sAgentSandboxToolClientSettings as ClientSettings, # <- import this.
     K8sAgentSandboxToolSandboxSettings as SandboxSettings,
     K8sAgentSandboxToolset,
     K8sAgentSandboxExecTool,

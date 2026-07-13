@@ -10,6 +10,8 @@ from k8s_agent_sandbox.models import (
 
 from crewai_tools.tools.k8s_agent_sandbox.file_tool import (
     K8sAgentSandboxFileTool,
+    K8sAgentSandboxFileToolOutput,
+    FileEntryModel,
 )
 
 
@@ -29,17 +31,17 @@ class TestFileToolReadAction:
         )
 
         if binary:
-            assert result == {
-                "content": base64.b64encode(content).decode("ascii"),
-                "path": "some/path",
-                "encoding": "base64",
-            }
+            assert result == K8sAgentSandboxFileToolOutput(
+                content=base64.b64encode(content).decode("ascii"),
+                path="some/path",
+                encoding="base64",
+            )
         else:
-            assert result == {
-                "content": "some-content",
-                "path": "some/path",
-                "encoding": "utf-8",
-            }
+            assert result == K8sAgentSandboxFileToolOutput(
+                content="some-content",
+                path="some/path",
+                encoding="utf-8",
+            )
 
         mock_sandbox.files.read.assert_called_once_with("some/path", timeout=120)
 
@@ -48,12 +50,12 @@ class TestFileToolReadAction:
         mock_sandbox.files.read.return_value = content
         result = k8s_file_tool.run(action="read", path="some/path")
 
-        assert result == {
-            "content": base64.b64encode(content).decode("ascii"),
-            "path": "some/path",
-            "encoding": "base64",
-            "note": "File was not valid utf-8; returned as base64.",
-        }
+        assert result == K8sAgentSandboxFileToolOutput(
+            content=base64.b64encode(content).decode("ascii"),
+            path="some/path",
+            encoding="base64",
+            note="File was not valid utf-8; returned as base64.",
+        )
 
 
 class TestFileToolWriteAction:
@@ -80,11 +82,11 @@ class TestFileToolWriteAction:
             timeout=120,
         )
 
-        assert result == {
-            "bytes": 12,
-            "path": "parent/file.txt",
-            "status": "written",
-        }
+        assert result == K8sAgentSandboxFileToolOutput(
+            bytes=12,
+            path="parent/file.txt",
+            status="written",
+        )
 
         mock_sandbox.commands.run.assert_called_once_with(
             "mkdir -p parent", timeout=120
@@ -153,12 +155,12 @@ class TestFileToolAppendAction:
             timeout=120,
         )
 
-        assert result == {
-            "path": "parent/file.txt",
-            "status": "appended",
-            "appended_bytes": 6,
-            "total_bytes": 11,
-        }
+        assert result == K8sAgentSandboxFileToolOutput(
+            path="parent/file.txt",
+            status="appended",
+            appended_bytes=6,
+            total_bytes=11,
+        )
 
         mock_sandbox.files.read.assert_called_once()
         assert mock_sandbox.files.read.call_args.args == ("parent/file.txt",)
@@ -186,23 +188,23 @@ class TestFileToolListAction:
 
         result = k8s_file_tool.run(action="list", path="some/directory")
 
-        assert result == {
-            "entries": [
-                {
-                    "mod_time": modification_time,
-                    "name": "test.txt",
-                    "size": 1000000,
-                    "type": "file",
-                },
-                {
-                    "mod_time": modification_time,
-                    "name": "subdir",
-                    "size": 4096,
-                    "type": "directory",
-                },
+        assert result == K8sAgentSandboxFileToolOutput(
+            entries=[
+                FileEntryModel(
+                    mod_time=modification_time,
+                    name="test.txt",
+                    size=1000000,
+                    type="file",
+                ),
+                FileEntryModel(
+                    mod_time=modification_time,
+                    name="subdir",
+                    size=4096,
+                    type="directory",
+                ),
             ],
-            "path": "some/directory",
-        }
+            path="some/directory",
+        )
 
 
 class TestFileToolDeleteAction:
@@ -213,10 +215,10 @@ class TestFileToolDeleteAction:
         )
         result = k8s_file_tool.run(action="delete", path=file_path)
 
-        assert result == {
-            "path": file_path,
-            "status": "deleted",
-        }
+        assert result == K8sAgentSandboxFileToolOutput(
+            path=file_path,
+            status="deleted",
+        )
 
         mock_sandbox.commands.run.assert_called_once()
         assert (
@@ -260,10 +262,10 @@ class TestFileToolMkdirAction:
 
         result = k8s_file_tool.run(action="mkdir", path="parent/subfolder", timeout=120)
 
-        assert result == {
-            "path": "parent/subfolder",
-            "status": "created",
-        }
+        assert result == K8sAgentSandboxFileToolOutput(
+            path="parent/subfolder",
+            status="created",
+        )
 
         mock_sandbox.commands.run.assert_called_once_with(
             f"mkdir -p {shlex.quote('parent/subfolder')}",
@@ -277,7 +279,7 @@ class TestFileToolExistsAction:
 
         result = k8s_file_tool.run(action="exists", path="parent/file.txt", timeout=120)
 
-        assert result == {"exists": True, "path": "parent/file.txt"}
+        assert result == K8sAgentSandboxFileToolOutput(exists=True, path="parent/file.txt")
 
         mock_sandbox.files.exists.assert_called_once_with(
             "parent/file.txt", timeout=120
