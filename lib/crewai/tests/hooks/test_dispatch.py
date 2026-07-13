@@ -53,7 +53,7 @@ class TestDispatchContract:
 
     def test_noop_fast_path_returns_context_unchanged(self):
         ctx = _Ctx(payload="original")
-        result = dispatch(InterceptionPoint.INPUT, ctx)
+        result = dispatch(InterceptionPoint.PRE_MODEL_CALL, ctx)
         assert result is ctx
         assert ctx.payload == "original"
 
@@ -61,9 +61,9 @@ class TestDispatchContract:
         def double(ctx):
             return ctx.payload * 2
 
-        register(InterceptionPoint.INPUT, double)
+        register(InterceptionPoint.PRE_MODEL_CALL, double)
         ctx = _Ctx(payload="ab")
-        dispatch(InterceptionPoint.INPUT, ctx)
+        dispatch(InterceptionPoint.PRE_MODEL_CALL, ctx)
         assert ctx.payload == "abab"
 
     def test_in_place_mutation_is_honored(self):
@@ -71,25 +71,25 @@ class TestDispatchContract:
             ctx.payload.append(1)
             return None
 
-        register(InterceptionPoint.INPUT, mutate)
+        register(InterceptionPoint.PRE_MODEL_CALL, mutate)
         ctx = _Ctx(payload=[])
-        dispatch(InterceptionPoint.INPUT, ctx)
+        dispatch(InterceptionPoint.PRE_MODEL_CALL, ctx)
         assert ctx.payload == [1]
 
     def test_hooks_run_in_registration_order(self):
         order: list[int] = []
-        register(InterceptionPoint.INPUT, lambda ctx: order.append(1))
-        register(InterceptionPoint.INPUT, lambda ctx: order.append(2))
-        dispatch(InterceptionPoint.INPUT, _Ctx())
+        register(InterceptionPoint.PRE_MODEL_CALL, lambda ctx: order.append(1))
+        register(InterceptionPoint.PRE_MODEL_CALL, lambda ctx: order.append(2))
+        dispatch(InterceptionPoint.PRE_MODEL_CALL, _Ctx())
         assert order == [1, 2]
 
     def test_hook_aborted_propagates_with_reason_and_source(self):
         def blocker(ctx):
             raise HookAborted(reason="nope", source="policy")
 
-        register(InterceptionPoint.INPUT, blocker)
+        register(InterceptionPoint.PRE_MODEL_CALL, blocker)
         with pytest.raises(HookAborted) as exc:
-            dispatch(InterceptionPoint.INPUT, _Ctx())
+            dispatch(InterceptionPoint.PRE_MODEL_CALL, _Ctx())
         assert exc.value.reason == "nope"
         assert exc.value.source == "policy"
 
@@ -103,9 +103,9 @@ class TestDispatchContract:
         def after(ctx):
             ran.append("after")
 
-        register(InterceptionPoint.INPUT, boom)
-        register(InterceptionPoint.INPUT, after)
-        dispatch(InterceptionPoint.INPUT, _Ctx(), verbose=False)
+        register(InterceptionPoint.PRE_MODEL_CALL, boom)
+        register(InterceptionPoint.PRE_MODEL_CALL, after)
+        dispatch(InterceptionPoint.PRE_MODEL_CALL, _Ctx(), verbose=False)
         assert ran == ["boom", "after"]
 
 
@@ -113,11 +113,11 @@ class TestOnDecorator:
     """The @on decorator registers and filters like the legacy decorators."""
 
     def test_on_registers_global_hook(self):
-        @on(InterceptionPoint.MEMORY_WRITE)
+        @on(InterceptionPoint.POST_TOOL_CALL)
         def hook(ctx):
             return None
 
-        assert hook in get_hooks(InterceptionPoint.MEMORY_WRITE)
+        assert hook in get_hooks(InterceptionPoint.POST_TOOL_CALL)
 
     def test_tool_filter_skips_non_matching_tools(self):
         seen: list[str] = []
@@ -148,13 +148,13 @@ class TestOnDecorator:
     def test_agent_filter_falls_back_to_agent_role(self):
         seen: list[str] = []
 
-        @on(InterceptionPoint.PRE_STEP, agents=["Researcher"])
+        @on(InterceptionPoint.PRE_TOOL_CALL, agents=["Researcher"])
         def hook(ctx):
             seen.append(ctx.agent_role)
 
         # No agent object, only the agent_role string (e.g. flow seams).
-        dispatch(InterceptionPoint.PRE_STEP, _Ctx(agent_role="Writer"))
-        dispatch(InterceptionPoint.PRE_STEP, _Ctx(agent_role="Researcher"))
+        dispatch(InterceptionPoint.PRE_TOOL_CALL, _Ctx(agent_role="Writer"))
+        dispatch(InterceptionPoint.PRE_TOOL_CALL, _Ctx(agent_role="Researcher"))
         assert seen == ["Researcher"]
 
     def test_unregister_resolves_filtered_wrapper(self):
@@ -192,14 +192,14 @@ class TestScopedHooks:
 
     def test_scoped_runs_after_global_then_cleared(self):
         order: list[str] = []
-        register(InterceptionPoint.OUTPUT, lambda ctx: order.append("global"))
+        register(InterceptionPoint.POST_MODEL_CALL, lambda ctx: order.append("global"))
 
         with scoped_hooks():
-            register_scoped(InterceptionPoint.OUTPUT, lambda ctx: order.append("scoped"))
-            dispatch(InterceptionPoint.OUTPUT, _Ctx())
+            register_scoped(InterceptionPoint.POST_MODEL_CALL, lambda ctx: order.append("scoped"))
+            dispatch(InterceptionPoint.POST_MODEL_CALL, _Ctx())
 
         # outside the scope the scoped hook is gone
-        dispatch(InterceptionPoint.OUTPUT, _Ctx())
+        dispatch(InterceptionPoint.POST_MODEL_CALL, _Ctx())
 
         assert order == ["global", "scoped", "global"]
 
@@ -215,14 +215,14 @@ class TestTelemetry:
             def _capture(_source, event):
                 events.append(event)
 
-            dispatch(InterceptionPoint.INPUT, _Ctx())
+            dispatch(InterceptionPoint.PRE_MODEL_CALL, _Ctx())
 
         assert events == []
 
     def test_event_reports_outcome(self):
         events: list[HookDispatchedEvent] = []
 
-        register(InterceptionPoint.INPUT, lambda ctx: "changed")
+        register(InterceptionPoint.PRE_MODEL_CALL, lambda ctx: "changed")
 
         with crewai_event_bus.scoped_handlers():
 
@@ -230,13 +230,13 @@ class TestTelemetry:
             def _capture(_source, event):
                 events.append(event)
 
-            dispatch(InterceptionPoint.INPUT, _Ctx())
+            dispatch(InterceptionPoint.PRE_MODEL_CALL, _Ctx())
             # Telemetry handlers run on the bus's thread pool; flush so the
             # assertion doesn't race the emit.
             crewai_event_bus.flush()
 
         assert len(events) == 1
-        assert events[0].interception_point == "input"
+        assert events[0].interception_point == "pre_model_call"
         assert events[0].outcome == "modified"
         assert events[0].hook_count == 1
 
@@ -246,7 +246,7 @@ class TestTelemetry:
         def blocker(ctx):
             raise HookAborted(reason="blocked", source="policy")
 
-        register(InterceptionPoint.INPUT, blocker)
+        register(InterceptionPoint.PRE_MODEL_CALL, blocker)
 
         with crewai_event_bus.scoped_handlers():
 
@@ -255,11 +255,11 @@ class TestTelemetry:
                 events.append(event)
 
             with pytest.raises(HookAborted):
-                dispatch(InterceptionPoint.INPUT, _Ctx())
+                dispatch(InterceptionPoint.PRE_MODEL_CALL, _Ctx())
             crewai_event_bus.flush()
 
         assert len(events) == 1
-        assert events[0].interception_point == "input"
+        assert events[0].interception_point == "pre_model_call"
         assert events[0].outcome == "aborted"
         assert events[0].abort_reason == "blocked"
         assert events[0].abort_source == "policy"
@@ -280,7 +280,7 @@ class TestNoOpOverhead:
             return _c
 
         for _ in range(1000):  # warm up both paths
-            dispatch(InterceptionPoint.INPUT, ctx)
+            dispatch(InterceptionPoint.PRE_MODEL_CALL, ctx)
             _baseline(ctx)
 
         start = time.perf_counter()
@@ -290,7 +290,7 @@ class TestNoOpOverhead:
 
         start = time.perf_counter()
         for _ in range(iterations):
-            dispatch(InterceptionPoint.INPUT, ctx)
+            dispatch(InterceptionPoint.PRE_MODEL_CALL, ctx)
         noop = time.perf_counter() - start
 
         assert noop < baseline * 50 + 5e-3

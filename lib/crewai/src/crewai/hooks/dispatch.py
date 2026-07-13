@@ -38,45 +38,19 @@ from crewai.utilities.string_utils import sanitize_tool_name
 
 
 class InterceptionPoint(str, Enum):
-    """Catalog of every interception point in the framework.
+    """Interception points wired by this layer.
 
-    The full catalog is frozen from day zero. Points without a live consumer
-    seam yet (``FILE_ACCESS``, ``ARTIFACT_OUTPUT``) can still be registered
-    against; dispatch for them is simply never triggered, which is the same
-    semantics as any point with no hooks.
+    New points are introduced alongside the seams that dispatch them, so the
+    enum only ever lists points with a live consumer. This layer ships the
+    model- and tool-call boundaries, which back the legacy
+    ``before/after_llm_call`` and ``before/after_tool_call`` hooks.
     """
-
-    # Execution-level boundaries
-    EXECUTION_START = "execution_start"
-    INPUT = "input"
-    OUTPUT = "output"
-    EXECUTION_END = "execution_end"
 
     # Model / tool boundaries (legacy-compatible)
     PRE_MODEL_CALL = "pre_model_call"
     POST_MODEL_CALL = "post_model_call"
     PRE_TOOL_CALL = "pre_tool_call"
     POST_TOOL_CALL = "post_tool_call"
-
-    # Step & agent points
-    PRE_STEP = "pre_step"
-    POST_STEP = "post_step"
-    TOOL_SELECTION = "tool_selection"
-    PRE_DELEGATION = "pre_delegation"
-    RETRY_ATTEMPT = "retry_attempt"
-
-    # Subsystem points
-    MEMORY_WRITE = "memory_write"
-    MEMORY_READ = "memory_read"
-    KNOWLEDGE_RETRIEVAL = "knowledge_retrieval"
-    PRE_CODE_EXECUTION = "pre_code_execution"
-    MCP_CONNECT = "mcp_connect"
-    FILE_ACCESS = "file_access"
-    ARTIFACT_OUTPUT = "artifact_output"
-
-    # Flow-specific points
-    FLOW_TRANSITION = "flow_transition"
-    ROUTER_DECISION = "router_decision"
 
 
 class HookAborted(Exception):  # noqa: N818 - public contract name from OSS-86
