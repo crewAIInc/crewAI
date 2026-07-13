@@ -278,6 +278,9 @@ def prepare_kickoff(
         reset_emission_counter()
         reset_last_event_id()
 
+    from crewai.hooks.contexts import ExecutionStartContext, InputContext
+    from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
     normalized: dict[str, Any] | None = None
     if inputs is not None:
         if not isinstance(inputs, Mapping):
@@ -286,10 +289,20 @@ def prepare_kickoff(
             )
         normalized = dict(inputs)
 
+    start_ctx = ExecutionStartContext(
+        crew=crew, inputs=normalized or {}, payload=normalized
+    )
+    dispatch(InterceptionPoint.EXECUTION_START, start_ctx)
+    normalized = start_ctx.payload
+
     for before_callback in crew.before_kickoff_callbacks:
         if normalized is None:
             normalized = {}
         normalized = before_callback(normalized)
+
+    input_ctx = InputContext(crew=crew, inputs=normalized or {}, payload=normalized)
+    dispatch(InterceptionPoint.INPUT, input_ctx)
+    normalized = input_ctx.payload
 
     if resuming and crew._kickoff_event_id:
         if crew.verbose:

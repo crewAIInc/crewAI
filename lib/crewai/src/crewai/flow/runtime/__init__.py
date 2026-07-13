@@ -2062,6 +2062,24 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._attach_usage_aggregation_listener()
 
         try:
+            from crewai.hooks.contexts import (
+                ExecutionEndContext,
+                ExecutionStartContext,
+                InputContext,
+                OutputContext,
+            )
+            from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
+            start_ctx = ExecutionStartContext(
+                flow=self, inputs=inputs or {}, payload=inputs
+            )
+            dispatch(InterceptionPoint.EXECUTION_START, start_ctx)
+            inputs = start_ctx.payload
+
+            input_ctx = InputContext(flow=self, inputs=inputs or {}, payload=inputs)
+            dispatch(InterceptionPoint.INPUT, input_ctx)
+            inputs = input_ctx.payload
+
             # Reset flow state for fresh execution unless restoring from persistence
             is_restoring = (
                 inputs and "id" in inputs and self.persistence is not None
@@ -2297,6 +2315,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             method_outputs = self.method_outputs
             final_output = method_outputs[-1] if method_outputs else None
 
+            output_ctx = OutputContext(
+                flow=self, output=final_output, payload=final_output
+            )
+            dispatch(InterceptionPoint.OUTPUT, output_ctx)
+            final_output = output_ctx.payload
+
             if self._event_futures:
                 await asyncio.gather(
                     *[asyncio.wrap_future(f) for f in self._event_futures]
@@ -2346,6 +2370,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         trace_listener.first_time_handler.handle_execution_completion()
                     else:
                         trace_listener.batch_manager.finalize_batch()
+
+            end_ctx = ExecutionEndContext(
+                flow=self, output=final_output, payload=final_output
+            )
+            dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
 
             return final_output
         finally:

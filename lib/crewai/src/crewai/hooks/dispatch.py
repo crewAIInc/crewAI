@@ -41,10 +41,14 @@ class InterceptionPoint(str, Enum):
     """Interception points wired by this layer.
 
     New points are introduced alongside the seams that dispatch them, so the
-    enum only ever lists points with a live consumer. This layer ships the
-    model- and tool-call boundaries, which back the legacy
-    ``before/after_llm_call`` and ``before/after_tool_call`` hooks.
+    enum only ever lists points with a live consumer.
     """
+
+    # Execution-level boundaries
+    EXECUTION_START = "execution_start"
+    INPUT = "input"
+    OUTPUT = "output"
+    EXECUTION_END = "execution_end"
 
     # Model / tool boundaries (legacy-compatible)
     PRE_MODEL_CALL = "pre_model_call"

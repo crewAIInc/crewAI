@@ -1924,13 +1924,25 @@ class Crew(FlowTrackable, BaseModel):
         # Finalization is handled by trace listener (always initialized)
         # The batch manager checks contextvar to determine if tracing is enabled
 
-        return CrewOutput(
+        from crewai.hooks.contexts import ExecutionEndContext, OutputContext
+        from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
+        crew_output = CrewOutput(
             raw=final_task_output.raw,
             pydantic=final_task_output.pydantic,
             json_dict=final_task_output.json_dict,
             tasks_output=task_outputs,
             token_usage=self.token_usage,
         )
+
+        output_ctx = OutputContext(crew=self, output=crew_output, payload=crew_output)
+        dispatch(InterceptionPoint.OUTPUT, output_ctx)
+        crew_output = output_ctx.payload
+
+        end_ctx = ExecutionEndContext(crew=self, output=crew_output, payload=crew_output)
+        dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
+
+        return crew_output
 
     def _process_async_tasks(
         self,
