@@ -301,7 +301,7 @@ class OCICompletion(BaseLLM):
 
             message_cls = role_map.get(role)
             if message_cls is None:
-                logging.debug("Skipping unsupported OCI message role: %s", role)
+                logging.warning("Skipping unsupported OCI message role: %s", role)
                 continue
 
             message_kwargs: dict[str, Any] = {
@@ -491,6 +491,10 @@ class OCICompletion(BaseLLM):
                             )
                         ]
                     )
+                )
+            else:
+                logging.warning(
+                    "Skipping unsupported OCI Cohere message role: %s", role
                 )
 
         last_message = messages[-1] if messages else {"role": "user", "content": ""}
@@ -1152,6 +1156,8 @@ class OCICompletion(BaseLLM):
         messages: list[LLMMessage],
         from_task: Task | None,
         from_agent: Agent | None,
+        usage: dict[str, Any] | None = None,
+        finish_reason: str | None = None,
     ) -> str:
         """Apply stop-word trimming and ``after_llm_call`` hooks, then emit the ``call_completed`` event."""
         content = self._apply_stop_words(content)
@@ -1162,6 +1168,8 @@ class OCICompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=messages,
+            usage=usage,
+            finish_reason=finish_reason,
         )
         return content
 
@@ -1224,6 +1232,8 @@ class OCICompletion(BaseLLM):
             messages=messages,
             from_task=from_task,
             from_agent=from_agent,
+            usage=usage or None,
+            finish_reason=(self.last_response_metadata or {}).get("finish_reason"),
         )
 
     def _stream_call_impl(
