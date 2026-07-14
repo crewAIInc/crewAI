@@ -18,7 +18,7 @@ LLM hooks are executed at two interception points:
 | `PRE_MODEL_CALL` | Before every LLM call | `LLMCallHookContext` |
 | `POST_MODEL_CALL` | After every LLM call | `LLMCallHookContext` (with `response` set) |
 
-Write them with the [`@on` decorator](/en/learn/execution-hooks). The
+Write them with the [`@on` decorator](/edge/en/learn/execution-hooks). The
 [legacy `@before_llm_call` / `@after_llm_call` decorators](#legacy-decorators)
 keep working unchanged — both styles register on the same engine and run in one
 ordered chain.
@@ -48,7 +48,7 @@ string to replace the response after it.
 
 Blocking a call raises `ValueError("LLM call blocked by before_llm_call hook")`
 inside the executor; the `HookAborted` reason and source are recorded in
-[telemetry](/en/learn/execution-hooks#telemetry).
+[telemetry](/edge/en/learn/execution-hooks#telemetry).
 
 ## LLM Hook Context
 
@@ -276,7 +276,7 @@ there is no behavioral penalty.
 
 ## Related Documentation
 
-- [Execution Hooks Overview →](/en/learn/execution-hooks)
-- [Tool Call Hooks →](/en/learn/tool-hooks)
-- [Execution Boundary Hooks →](/en/learn/execution-boundary-hooks)
-- [Step Hooks →](/en/learn/step-hooks)
+- [Execution Hooks Overview →](/edge/en/learn/execution-hooks)
+- [Tool Call Hooks →](/edge/en/learn/tool-hooks)
+- [Execution Boundary Hooks →](/edge/en/learn/execution-boundary-hooks)
+- [Step Hooks →](/edge/en/learn/step-hooks)

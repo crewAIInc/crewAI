@@ -38,7 +38,7 @@ def boundary_hook(ctx) -> Any | None:
 
 Boundary hooks follow the standard contract: proceed (`return None`), mutate in
 place, replace by returning, or abort by raising
-[`HookAborted`](/en/learn/execution-hooks#aborting-an-operation). An abort at any
+[`HookAborted`](/edge/en/learn/execution-hooks#aborting-an-operation). An abort at any
 boundary propagates out of `kickoff()` with its reason.
 
 ## Context Schema
@@ -157,7 +157,7 @@ clear_all_hooks()  # Clears every point, including boundaries
 
 ## Related Documentation
 
-- [Execution Hooks Overview →](/en/learn/execution-hooks)
-- [Step Hooks →](/en/learn/step-hooks)
-- [LLM Call Hooks →](/en/learn/llm-hooks)
-- [Tool Call Hooks →](/en/learn/tool-hooks)
+- [Execution Hooks Overview →](/edge/en/learn/execution-hooks)
+- [Step Hooks →](/edge/en/learn/step-hooks)
+- [LLM Call Hooks →](/edge/en/learn/llm-hooks)
+- [Tool Call Hooks →](/edge/en/learn/tool-hooks)

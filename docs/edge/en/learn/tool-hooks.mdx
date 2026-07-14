@@ -18,7 +18,7 @@ Tool hooks are executed at two interception points:
 | `PRE_TOOL_CALL` | Before every tool execution | `ToolCallHookContext` |
 | `POST_TOOL_CALL` | After every tool execution | `ToolCallHookContext` (with results set) |
 
-Write them with the [`@on` decorator](/en/learn/execution-hooks). The
+Write them with the [`@on` decorator](/edge/en/learn/execution-hooks). The
 [legacy `@before_tool_call` / `@after_tool_call` decorators](#legacy-decorators)
 keep working unchanged — both styles register on the same engine and run in one
 ordered chain.
@@ -334,7 +334,7 @@ there is no behavioral penalty.
 
 ## Related Documentation
 
-- [Execution Hooks Overview →](/en/learn/execution-hooks)
-- [LLM Call Hooks →](/en/learn/llm-hooks)
-- [Execution Boundary Hooks →](/en/learn/execution-boundary-hooks)
-- [Step Hooks →](/en/learn/step-hooks)
+- [Execution Hooks Overview →](/edge/en/learn/execution-hooks)
+- [LLM Call Hooks →](/edge/en/learn/llm-hooks)
+- [Execution Boundary Hooks →](/edge/en/learn/execution-boundary-hooks)
+- [Step Hooks →](/edge/en/learn/step-hooks)
