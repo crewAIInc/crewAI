@@ -137,6 +137,50 @@ Migrating to `restoreFromStateId` keeps every kickoff as its own execution — w
 its own status, traces, and row in the list — while still hydrating state from a
 previous run.
 
+### Operational notes
+
+A few current behaviors to be aware of when chaining runs over the AMP REST API:
+
+- **The API does not return the new run's state id yet.** A `restoreFromStateId`
+  kickoff mints a fresh `state.id` for the new run, but neither the `/kickoff`
+  response (which returns `kickoff_id`) nor the `/status` payload currently
+  surfaces it, so there is no way to read back the id you would need for the next
+  turn. Until the API exposes the minted state id (this gap is being tracked), the
+  working approach for multi-turn chains is to generate a UUID client-side and pin
+  it as the new run's id via `inputs.id` alongside `restoreFromStateId`:
+
+  ```bash
+  curl -X POST \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer YOUR_CREW_TOKEN" \
+    -d '{
+          "inputs": {"id": "NEW-CLIENT-GENERATED-UUID", "topic": "AI Agent Frameworks"},
+          "restoreFromStateId": "STATE-ID-FROM-PREVIOUS-TURN"
+        }' \
+    https://your-crew-url.crewai.com/kickoff
+  ```
+
+  This deliberately leans on the deprecated `inputs.id` parameter — today it is the
+  only way to know the new run's state id ahead of time. Keep the pinned UUID on
+  your side for the next turn's `restoreFromStateId`, and plan to drop `inputs.id`
+  once the API returns the minted state id.
+
+- **An unknown `restoreFromStateId` silently starts a fresh session.** If the
+  referenced state id does not exist (typo, deleted state, wrong deployment), the
+  kickoff does not fail — the run proceeds with a brand-new state, and nothing in
+  the kickoff response or status payload signals that hydration was skipped.
+  Validate state ids client-side before sending them.
+
+- **`inputs.id` must be a valid UUID on AMP.** The local SDK accepts arbitrary
+  strings, but AMP rejects non-UUID values with a `422`:
+
+  ```json
+  {
+    "error": "Validation Error",
+    "message": "'inputs.id' must be a valid UUID when provided; got 'test 1'."
+  }
+  ```
+
 <Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
   Contact our support team if you're unsure which mode your flow needs or hit issues
   during the migration.
