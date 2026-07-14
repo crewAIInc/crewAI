@@ -8,7 +8,7 @@ Maps CrewAI's pre-tool-call context into Correctover's 6-dimensional verificatio
   structure, schema, identity, integrity, latency, cost
 
 Usage:
-    from crewai.guardrails.providers import CorrectoverGuardrailProvider
+    from crewai.guardrails.providers.correctover import CorrectoverGuardrailProvider
     from crewai.guardrails.enable import enable_guardrail
 
     provider = CorrectoverGuardrailProvider()
@@ -23,7 +23,26 @@ import time
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from .providers.types import GuardrailDecision, GuardrailProvider, GuardrailRequest
+# NOTE: These types are expected to be defined by the crewAI GuardrailProvider protocol.
+# If the upstream module path changes, update this import accordingly.
+try:
+    from .types import GuardrailDecision, GuardrailProvider, GuardrailRequest
+except ImportError:
+    # Fallback: define minimal protocol types for standalone usage
+    @dataclass
+    class GuardrailRequest:
+        tool_name: str
+        tool_input: Any
+        agent_id: str | None = None
+        agent_role: str | None = None
+        timestamp: float | None = None
+
+    @dataclass
+    class GuardrailDecision:
+        allow: bool
+        reason: str | None = None
+        metadata: dict[str, Any] | None = None
+        action_id: str | None = None
 
 # Canonical dimension order for Correctover 6-dim verification
 VERIFICATION_DIMENSIONS = (
@@ -65,15 +84,15 @@ class CorrectoverGuardrailProvider:
     Correctover reference implementation of CrewAI's GuardrailProvider protocol.
 
     Runs 6-dimensional deterministic verification on the tool-call request:
-    - structure: tool_name and tool_input conform to expected schema
-    - schema: tool passes allow/block list policy
+    - structure: tool_name and tool_input have valid types (string, Mapping)
+    - schema: tool passes allow/block list policy (authorization check)
     - identity: agent_id and agent_role match registered principals
-    - integrity: tool_input has not been mutated since request construction
-    - latency: request is within acceptable time bounds
+    - integrity: tool_input keys are all strings (basic structural validation)
+    - latency: request is within acceptable time bounds since construction
     - cost: estimated cost is within policy limits
 
     Design principles:
-    - fail_closed: any dimension failure or provider error -> deny
+    - fail_closed: any dimension failure or provider error -> deny (configurable)
     - deterministic: same input -> same decision (no stochastic checks)
     - traceable: decision includes action_id for audit linkage
     - minimal latency: 6-dim check runs at ~22us P50
@@ -96,14 +115,27 @@ class CorrectoverGuardrailProvider:
         Initialize the Correctover guardrail provider.
 
         Args:
-            max_cost_usd: Maximum estimated cost per tool call (None = no limit)
-            max_latency_ms: Maximum acceptable latency in ms (None = no limit)
+            max_cost_usd: Maximum estimated cost per tool call (None = no limit). Must be >= 0.
+            max_latency_ms: Maximum acceptable latency in ms (None = no limit). Must be > 0.
             allowed_tools: Explicit whitelist of tool names (None = all allowed)
             blocked_tools: Explicit blacklist of tool names (None = none blocked)
             allowed_agents: Explicit whitelist of agent IDs (None = all allowed)
             require_agent_identity: If True, deny requests without agent_id
             fail_closed: If True, any error blocks execution (default)
+
+        Raises:
+            ValueError: If max_latency_ms <= 0 or max_cost_usd < 0
         """
+        # Validate config at construction time (fail fast)
+        if max_latency_ms is not None and max_latency_ms <= 0:
+            raise ValueError(
+                f"max_latency_ms must be positive, got {max_latency_ms}"
+            )
+        if max_cost_usd is not None and max_cost_usd < 0:
+            raise ValueError(
+                f"max_cost_usd must be non-negative, got {max_cost_usd}"
+            )
+
         self.max_cost_usd = max_cost_usd
         self.max_latency_ms = max_latency_ms
         self.allowed_tools = allowed_tools
@@ -173,7 +205,7 @@ class CorrectoverGuardrailProvider:
             dims_structure = self._check_structure(request)
             dimensions.append(dims_structure)
 
-            # Dimension 2: Schema
+            # Dimension 2: Schema (tool allow/block policy)
             dims_schema = self._check_schema(request)
             dimensions.append(dims_schema)
 
@@ -232,7 +264,7 @@ class CorrectoverGuardrailProvider:
         )
 
     def _check_structure(self, request: GuardrailRequest) -> DimensionResult:
-        """Check tool_name and tool_input have valid structure."""
+        """Check tool_name and tool_input have valid types."""
         if not request.tool_name:
             return DimensionResult(
                 "structure", False, "tool_name is empty or None"
@@ -254,12 +286,15 @@ class CorrectoverGuardrailProvider:
         return DimensionResult("structure", True)
 
     def _check_schema(self, request: GuardrailRequest) -> DimensionResult:
-        """Check tool against allow/block lists."""
+        """Check tool against allow/block list policy.
+
+        This is an authorization check (which tools are permitted), not a
+        parameter schema validation. The dimension name "schema" reflects
+        the CCS convention for policy-based access control.
+        """
         tool = request.tool_name
 
         # Guard against non-string tool_name that bypassed structure check.
-        # (In normal flow, structure check catches this first, but defense-in-depth
-        # ensures schema check never raises on set membership.)
         if not isinstance(tool, str):
             return DimensionResult(
                 "schema", False,
@@ -312,7 +347,13 @@ class CorrectoverGuardrailProvider:
         return DimensionResult("identity", True)
 
     def _check_integrity(self, request: GuardrailRequest) -> DimensionResult:
-        """Check tool_input has not been tampered with."""
+        """Check tool_input has valid structural integrity.
+
+        Validates that tool_input is a Mapping with all string keys.
+        Note: This is a structural check, not a tamper-detection mechanism.
+        For mutation detection across request lifecycle, use a separate
+        snapshot/hashing layer.
+        """
         if not isinstance(request.tool_input, Mapping):
             return DimensionResult(
                 "integrity", False, "tool_input is not a Mapping"
@@ -329,31 +370,25 @@ class CorrectoverGuardrailProvider:
         return DimensionResult("integrity", True)
 
     def _check_latency(self, request: GuardrailRequest) -> DimensionResult:
-        """Check latency bounds against request timestamp."""
-        if self.max_latency_ms is not None:
-            if self.max_latency_ms <= 0:
+        """Check request age against max_latency_ms threshold.
+
+        Config validation (max_latency_ms > 0) is enforced in __init__.
+        """
+        if self.max_latency_ms is not None and request.timestamp is not None:
+            elapsed_ms = (time.time() - request.timestamp) * 1000
+            if elapsed_ms > self.max_latency_ms:
                 return DimensionResult(
                     "latency", False,
-                    "max_latency_ms must be positive: " + str(self.max_latency_ms),
+                    "request age %.1fms exceeds limit %.1fms"
+                    % (elapsed_ms, self.max_latency_ms),
                 )
-            if request.timestamp is not None:
-                elapsed_ms = (time.time() - request.timestamp) * 1000
-                if elapsed_ms > self.max_latency_ms:
-                    return DimensionResult(
-                        "latency", False,
-                        "request age %.1fms exceeds limit %.1fms"
-                        % (elapsed_ms, self.max_latency_ms),
-                    )
         return DimensionResult("latency", True)
 
     def _check_cost(self, request: GuardrailRequest) -> DimensionResult:
-        """Check cost bounds (placeholder — actual cost estimated at runtime)."""
-        if self.max_cost_usd is not None:
-            if self.max_cost_usd < 0:
-                return DimensionResult(
-                    "cost", False,
-                    "max_cost_usd must be non-negative: " + str(self.max_cost_usd),
-                )
+        """Check cost bounds (placeholder — actual cost estimated at runtime).
+
+        Config validation (max_cost_usd >= 0) is enforced in __init__.
+        """
         return DimensionResult("cost", True)
 
     def get_stats(self) -> dict[str, Any]:
