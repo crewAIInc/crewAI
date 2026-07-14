@@ -30,7 +30,8 @@ from typing import (
     TypeVar,
     cast,
 )
-from uuid import uuid4
+from uuid import UUID, uuid4
+import warnings
 
 from opentelemetry import baggage
 from opentelemetry.context import attach, detach
@@ -159,6 +160,27 @@ ExecutionContext = Any  # type: ignore[assignment,misc]
 
 
 logger = logging.getLogger(__name__)
+
+
+def _warn_if_non_uuid_flow_state_id(value: Any) -> None:
+    """Warn once per kickoff when a persisted flow gets a non-UUID `id` input.
+
+    CrewAI AMP deployments reject non-UUID `inputs.id` values with HTTP 422,
+    while the OSS library accepts any string locally. Surfacing the mismatch
+    here keeps local development aligned with deployed behavior without
+    changing how the flow runs.
+    """
+    try:
+        UUID(str(value))
+    except (ValueError, TypeError):
+        warnings.warn(
+            f"Flow state id {value!r} is not a valid UUID. Non-UUID flow state "
+            "ids are rejected by CrewAI AMP deployments with HTTP 422; use a "
+            "UUID (e.g. str(uuid4())) for the 'id' input to keep local and "
+            "deployed behavior aligned.",
+            UserWarning,
+            stacklevel=2,
+        )
 
 
 def _condition_branches(
@@ -2062,6 +2084,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._attach_usage_aggregation_listener()
 
         try:
+            # AMP parity: persisted flows deployed to CrewAI AMP reject
+            # non-UUID `id` inputs with HTTP 422, so surface that locally.
+            if inputs and "id" in inputs and self.persistence is not None:
+                _warn_if_non_uuid_flow_state_id(inputs["id"])
+
             # Reset flow state for fresh execution unless restoring from persistence
             is_restoring = (
                 inputs and "id" in inputs and self.persistence is not None
