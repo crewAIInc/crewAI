@@ -1918,10 +1918,6 @@ class Crew(FlowTrackable, BaseModel):
             token_usage=self.token_usage,
         )
 
-        # OUTPUT/EXECUTION_END run before the kickoff-completed event (mirroring
-        # the flow OUTPUT-before-FlowFinishedEvent ordering) so a HookAborted
-        # prevents a spurious completed signal and any payload replacement is
-        # honored on the returned output.
         output_ctx = OutputContext(crew=self, output=crew_output, payload=crew_output)
         dispatch(InterceptionPoint.OUTPUT, output_ctx)
         crew_output = output_ctx.payload

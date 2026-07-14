@@ -1476,9 +1476,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             else (resumed_method_output if emit else result)
         )
 
-        # A resumed flow completes here rather than in kickoff_async, so the
-        # OUTPUT/EXECUTION_END seams must fire on this path too (before
-        # FlowFinishedEvent) to expose the final result to policy hooks.
         from crewai.hooks.contexts import ExecutionEndContext, OutputContext
         from crewai.hooks.dispatch import InterceptionPoint, dispatch
 

@@ -2,8 +2,7 @@
 
 For each wired point this suite asserts the shared contract: the probe hook
 sees a well-shaped payload, an in-place/returned modification is honored, and a
-:class:`HookAborted` interrupts the step. Enterprise / ACS adapters build
-against these guarantees.
+:class:`HookAborted` interrupts the step.
 """
 
 from __future__ import annotations
