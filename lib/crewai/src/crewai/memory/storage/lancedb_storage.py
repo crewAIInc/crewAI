@@ -451,7 +451,8 @@ class LanceDBStorage:
                 prefix = scope_prefix.rstrip("/")
                 if not prefix.startswith("/"):
                     prefix = "/" + prefix
-                conditions.append(f"(scope LIKE '{prefix}%')")
+                safe_prefix = prefix.replace("'", "''")
+                conditions.append(f"(scope LIKE '{safe_prefix}%')")
             if older_than is not None:
                 conditions.append(f"created_at < '{older_than.isoformat()}'")
             if not conditions:

@@ -64,3 +64,20 @@ def test_delete_by_scope_prefix_and_older_than_only_deletes_old_records(
 
     assert deleted == 1
     assert storage._table.count_rows() == 1
+
+
+def test_delete_by_scope_prefix_containing_single_quote_does_not_break_query(
+    lancedb_path: Path,
+) -> None:
+    storage = LanceDBStorage(path=str(lancedb_path), vector_dim=4)
+    storage.save(
+        [
+            _record("/o'brien", "quoted-scope memory"),
+            _record("/other", "unrelated memory"),
+        ]
+    )
+
+    deleted = storage.delete(scope_prefix="/o'brien")
+
+    assert deleted == 1
+    assert storage._table.count_rows() == 1
