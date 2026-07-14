@@ -1670,6 +1670,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         the lookup missed (or no persistence backend was configured) and the
         run proceeded without hydration. Lets callers detect silent restore
         misses without parsing logs.
+
+        Streaming timing: streaming kickoffs (``stream_events``/``astream``/
+        ``kickoff(stream=True)``) defer execution until frames are consumed.
+        Obtaining the session resets this signal to ``None``; it transitions
+        to ``True``/``False`` only once the deferred run evaluates the
+        restore, so read it after consuming the stream (with
+        ``raise_on_missing_state=True``, a miss still fails eagerly at
+        session creation and sets this to ``False``).
         """
         return self._last_restore_succeeded
 
@@ -1929,6 +1937,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         returned, so callers do not have to consume frames to see the error.
         """
         self._check_restore_conflict(from_checkpoint, restore_from_state_id)
+        # The deferred run only evaluates restore_from_state_id once frames are
+        # consumed; reset the signal now so a caller reading it right after
+        # session creation sees None (no outcome yet) instead of a stale value.
+        self._last_restore_succeeded = None
         self._ensure_restorable_state(restore_from_state_id, raise_on_missing_state)
         result_holder: list[Any] = []
         state = create_frame_streaming_state(result_holder, use_async=False)
@@ -1971,6 +1983,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         returned, so callers do not have to consume frames to see the error.
         """
         self._check_restore_conflict(from_checkpoint, restore_from_state_id)
+        # The deferred run only evaluates restore_from_state_id once frames are
+        # consumed; reset the signal now so a caller reading it right after
+        # session creation sees None (no outcome yet) instead of a stale value.
+        self._last_restore_succeeded = None
         self._ensure_restorable_state(restore_from_state_id, raise_on_missing_state)
         result_holder: list[Any] = []
         state = create_frame_streaming_state(result_holder, use_async=True)

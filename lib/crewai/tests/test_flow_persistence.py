@@ -567,6 +567,68 @@ def test_stream_eager_strict_miss_sets_last_restore_succeeded_false(tmp_path):
     assert flow4.last_restore_succeeded is False
 
 
+def test_stream_session_creation_resets_last_restore_succeeded(tmp_path):
+    """Obtaining a streaming session resets last_restore_succeeded to None (no
+    outcome yet) instead of exposing the previous kickoff's stale value; the
+    signal then transitions to the new outcome as frames are consumed."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class StreamResetFlow(Flow[TestState]):
+        @start()
+        @persist(persistence)
+        def step(self):
+            self.state.counter += 1
+
+    flow1 = StreamResetFlow(persistence=persistence)
+    flow1.kickoff()
+    source_uuid = flow1.state.id
+
+    # Prime a stale True from a successful non-streaming restore.
+    flow2 = StreamResetFlow(persistence=persistence)
+    flow2.kickoff(restore_from_state_id=source_uuid)
+    assert flow2.last_restore_succeeded is True
+
+    # New streaming kickoff with a different (missing) restore id: the deferred
+    # run has not evaluated the restore yet, so the signal must read None, not
+    # the stale True.
+    session = flow2.stream_events(restore_from_state_id="no-such-uuid")
+    assert flow2.last_restore_succeeded is None
+
+    with session:
+        list(session.events)
+    assert flow2.last_restore_succeeded is False
+
+
+@pytest.mark.asyncio
+async def test_astream_session_creation_resets_last_restore_succeeded(tmp_path):
+    """astream session creation resets the restore signal to None before the
+    deferred run evaluates restore_from_state_id."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class AsyncStreamResetFlow(Flow[TestState]):
+        @start()
+        @persist(persistence)
+        def step(self):
+            self.state.counter += 1
+
+    flow1 = AsyncStreamResetFlow(persistence=persistence)
+    await flow1.kickoff_async()
+    source_uuid = flow1.state.id
+
+    flow2 = AsyncStreamResetFlow(persistence=persistence)
+    await flow2.kickoff_async(restore_from_state_id=source_uuid)
+    assert flow2.last_restore_succeeded is True
+
+    stream = flow2.astream(restore_from_state_id="no-such-uuid")
+    assert flow2.last_restore_succeeded is None
+
+    async with stream:
+        _ = [frame async for frame in stream.events]
+    assert flow2.last_restore_succeeded is False
+
+
 def test_stream_conflict_check_wins_over_strict_restore_miss(tmp_path):
     """stream_events/astream with both from_checkpoint and restore_from_state_id
     raise the mutual-exclusion ValueError, not the restore-miss one, even with
