@@ -337,6 +337,105 @@ class TestLLMHooksIntegration:
         hooks = get_before_llm_call_hooks()
         assert len(hooks) == 0
 
+    def test_raising_before_hook_does_not_skip_later_hooks(self, mock_executor):
+        """Fail-open is per-hook: a crashing hook must not disable its neighbors.
+
+        Regression guard for the dispatcher migration: previously the
+        ``except Exception`` wrapped the whole hook loop, so a raising hook
+        silently skipped every hook registered after it. Now swallowing is
+        per-hook — later hooks still run and the LLM call still proceeds.
+        """
+        from crewai.utilities.agent_utils import _setup_before_llm_call_hooks
+
+        ran: list[str] = []
+
+        def crashing_hook(context):
+            ran.append("crashing")
+            raise ValueError("bug in user hook")
+
+        def later_hook(context):
+            ran.append("later")
+
+        register_before_llm_call_hook(crashing_hook)
+        register_before_llm_call_hook(later_hook)
+        mock_executor.before_llm_call_hooks = get_before_llm_call_hooks()
+
+        proceed = _setup_before_llm_call_hooks(
+            mock_executor, printer=Mock(), verbose=False
+        )
+
+        assert ran == ["crashing", "later"]
+        assert proceed is True
+
+    def test_scoped_hooks_fire_on_agent_executor_llm_seams(self, mock_executor):
+        """register_scoped hooks must run on the executor model seams.
+
+        Regression: `_setup_before/after_llm_call_hooks` only ran the
+        executor's snapshot lists, so execution-scoped hooks never fired on
+        PRE/POST_MODEL_CALL during normal agent execution (while tool seams,
+        which go through `dispatch`, merged them). Scoped hooks run after the
+        snapshot, matching dispatch's global-then-scoped ordering.
+        """
+        from crewai.hooks import InterceptionPoint
+        from crewai.hooks.dispatch import register_scoped, scoped_hooks
+        from crewai.utilities.agent_utils import (
+            _setup_after_llm_call_hooks,
+            _setup_before_llm_call_hooks,
+        )
+
+        order: list[str] = []
+
+        def snapshot_hook(context):
+            order.append("snapshot")
+
+        mock_executor.before_llm_call_hooks = [snapshot_hook]
+        mock_executor.after_llm_call_hooks = []
+
+        with scoped_hooks():
+            register_scoped(
+                InterceptionPoint.PRE_MODEL_CALL,
+                lambda ctx: order.append("scoped_pre"),
+            )
+            register_scoped(
+                InterceptionPoint.POST_MODEL_CALL,
+                lambda ctx: order.append("scoped_post"),
+            )
+
+            proceed = _setup_before_llm_call_hooks(
+                mock_executor, printer=Mock(), verbose=False
+            )
+            answer = _setup_after_llm_call_hooks(
+                mock_executor, "answer", printer=Mock(), verbose=False
+            )
+
+        assert order == ["snapshot", "scoped_pre", "scoped_post"]
+        assert proceed is True
+        assert answer == "answer"
+
+    def test_intentional_block_still_short_circuits_later_hooks(self, mock_executor):
+        """A hook returning False blocks the call and skips later hooks (unchanged)."""
+        from crewai.utilities.agent_utils import _setup_before_llm_call_hooks
+
+        ran: list[str] = []
+
+        def blocking_hook(context):
+            ran.append("blocking")
+            return False
+
+        def later_hook(context):
+            ran.append("later")
+
+        register_before_llm_call_hook(blocking_hook)
+        register_before_llm_call_hook(later_hook)
+        mock_executor.before_llm_call_hooks = get_before_llm_call_hooks()
+
+        proceed = _setup_before_llm_call_hooks(
+            mock_executor, printer=Mock(), verbose=False
+        )
+
+        assert ran == ["blocking"]
+        assert proceed is False
+
     @pytest.mark.vcr()
     def test_lite_agent_hooks_integration_with_real_llm(self):
         """Test that LiteAgent executes before/after LLM call hooks and prints messages correctly."""
@@ -497,3 +596,77 @@ class TestLLMHooksIntegration:
         finally:
             unregister_before_llm_call_hook(before_hook)
             unregister_after_llm_call_hook(after_hook)
+
+
+class TestDirectLLMScopedHooks:
+    """Direct (agent-less) LLM calls must honor execution-scoped hooks.
+
+    Regression: the direct-call helpers used to short-circuit when the global
+    hook list was empty, so hooks registered only for the current
+    ``scoped_hooks()`` context never ran on this path.
+    """
+
+    @staticmethod
+    def _stub_llm():
+        from crewai.llms.base_llm import BaseLLM
+
+        class _StubLLM(BaseLLM):
+            def call(self, *args: object, **kwargs: object) -> str:
+                return ""
+
+        return _StubLLM(model="stub")
+
+    def test_scoped_before_hook_runs_on_direct_call(self):
+        from crewai.hooks import InterceptionPoint
+        from crewai.hooks.dispatch import register_scoped, scoped_hooks
+
+        llm = self._stub_llm()
+        seen: list[int] = []
+
+        with scoped_hooks():
+            register_scoped(
+                InterceptionPoint.PRE_MODEL_CALL,
+                lambda ctx: seen.append(len(ctx.messages)),
+            )
+            proceed = llm._invoke_before_llm_call_hooks(
+                [{"role": "user", "content": "hi"}], from_agent=None
+            )
+
+        assert proceed is True
+        assert seen == [1]
+
+    def test_scoped_before_hook_can_block_direct_call(self):
+        from crewai.hooks import InterceptionPoint
+        from crewai.hooks.dispatch import HookAborted, register_scoped, scoped_hooks
+
+        llm = self._stub_llm()
+
+        def block(ctx: LLMCallHookContext) -> None:
+            raise HookAborted(reason="blocked by scoped hook")
+
+        with scoped_hooks():
+            register_scoped(InterceptionPoint.PRE_MODEL_CALL, block)
+            proceed = llm._invoke_before_llm_call_hooks(
+                [{"role": "user", "content": "hi"}], from_agent=None
+            )
+
+        assert proceed is False
+
+    def test_scoped_after_hook_modifies_direct_response(self):
+        from crewai.hooks import InterceptionPoint
+        from crewai.hooks.dispatch import register_scoped, scoped_hooks
+
+        llm = self._stub_llm()
+
+        def redact(ctx: LLMCallHookContext) -> str:
+            return ctx.response.replace("SECRET", "[REDACTED]")
+
+        with scoped_hooks():
+            register_scoped(InterceptionPoint.POST_MODEL_CALL, redact)
+            result = llm._invoke_after_llm_call_hooks(
+                [{"role": "user", "content": "hi"}],
+                "contains SECRET",
+                from_agent=None,
+            )
+
+        assert result == "contains [REDACTED]"
