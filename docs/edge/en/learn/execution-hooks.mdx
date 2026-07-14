@@ -87,7 +87,7 @@ class MyProjCrew:
 Each family has a detailed guide covering its context schema, payload
 semantics, and examples.
 
-### [Execution boundaries](/learn/execution-boundary-hooks)
+### [Execution boundaries](/en/learn/execution-boundary-hooks)
 
 | Point | When | `ctx.payload` |
 |-------|------|---------------|
@@ -96,7 +96,7 @@ semantics, and examples.
 | `OUTPUT` | Final result is ready | the output object |
 | `EXECUTION_END` | A crew or flow has finished | the output object |
 
-### [Model boundaries](/learn/llm-hooks) & [tool boundaries](/learn/tool-hooks)
+### [Model boundaries](/en/learn/llm-hooks) & [tool boundaries](/en/learn/tool-hooks)
 
 | Point | When | Hook receives |
 |-------|------|---------------|
@@ -110,7 +110,7 @@ its argument — there is no separate `ctx.payload`. Mutate `ctx.messages` /
 `ctx.tool_input` in place, and return a string from a post hook to replace the
 response / tool result.
 
-### [Step points](/learn/step-hooks)
+### [Step points](/en/learn/step-hooks)
 
 | Point | When | `ctx.payload` |
 |-------|------|---------------|
@@ -272,10 +272,10 @@ You might still prefer them for existing codebases that already use
 For the detailed guides — context attributes, patterns, and management APIs
 (`register_*` / `unregister_*` / `clear_*`) — see:
 
-- [LLM Call Hooks →](/learn/llm-hooks)
-- [Tool Call Hooks →](/learn/tool-hooks)
+- [LLM Call Hooks →](/en/learn/llm-hooks)
+- [Tool Call Hooks →](/en/learn/tool-hooks)
 
 ## Related documentation
 
-- [Before and After Kickoff Hooks →](/learn/before-and-after-kickoff-hooks)
-- [Human-in-the-Loop →](/learn/human-in-the-loop)
+- [Before and After Kickoff Hooks →](/en/learn/before-and-after-kickoff-hooks)
+- [Human-in-the-Loop →](/en/learn/human-in-the-loop)
