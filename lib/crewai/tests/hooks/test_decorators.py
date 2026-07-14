@@ -5,10 +5,13 @@ from __future__ import annotations
 from unittest.mock import Mock
 
 from crewai.hooks import (
+    GuardrailDecision,
+    GuardrailRequest,
     after_llm_call,
     after_tool_call,
     before_llm_call,
     before_tool_call,
+    enable_guardrail,
     get_after_llm_call_hooks,
     get_after_tool_call_hooks,
     get_before_llm_call_hooks,
@@ -348,3 +351,105 @@ class TestMultipleDecorators:
         hooks = get_before_tool_call_hooks()
 
         assert len(hooks) == 2
+
+
+class RecordingGuardrailProvider:
+    """Small provider fixture that records the latest detached request."""
+
+    def __init__(
+        self,
+        decision: GuardrailDecision | None = None,
+        error: Exception | None = None,
+    ) -> None:
+        self.decision = (
+            decision if decision is not None else GuardrailDecision(allow=True)
+        )
+        self.error = error
+        self.request: GuardrailRequest | None = None
+
+    def evaluate(self, request: GuardrailRequest) -> GuardrailDecision:
+        self.request = request
+        if self.error is not None:
+            raise self.error
+        return self.decision
+
+
+class TestGuardrailProviderAdapter:
+    """Test the provider adapter built on the existing before-tool hook registry."""
+
+    @staticmethod
+    def context() -> ToolCallHookContext:
+        tool = Mock()
+        tool.name = "Send Email"
+        agent = Mock()
+        agent.id = "agent-123"
+        agent.role = "Support Agent"
+        return ToolCallHookContext(
+            tool_name="send_email",
+            tool_input={
+                "recipient": "qa@example.com",
+                "body": "Hello",
+                "headers": {"x-trace": "original"},
+            },
+            tool=tool,
+            agent=agent,
+        )
+
+    def test_registers_provider_and_allows(self):
+        provider = RecordingGuardrailProvider()
+        hook = enable_guardrail(provider)
+
+        assert get_before_tool_call_hooks() == [hook]
+        assert hook(self.context()) is None
+        assert provider.request is not None
+        assert provider.request.tool_name == "Send Email"
+        assert provider.request.tool_alias == "send_email"
+        assert provider.request.agent_id == "agent-123"
+        assert provider.request.agent_role == "Support Agent"
+
+    def test_deny_maps_to_false(self):
+        provider = RecordingGuardrailProvider(
+            GuardrailDecision(allow=False, reason="policy")
+        )
+
+        assert enable_guardrail(provider)(self.context()) is False
+
+    def test_provider_receives_deeply_detached_tool_input(self):
+        context = self.context()
+        provider = RecordingGuardrailProvider()
+
+        assert enable_guardrail(provider)(context) is None
+        assert provider.request is not None
+        provider.request.tool_input["recipient"] = "other@example.com"
+        provider.request.tool_input["headers"]["x-trace"] = "changed"
+
+        assert context.tool_input["recipient"] == "qa@example.com"
+        assert context.tool_input["headers"]["x-trace"] == "original"
+
+    def test_provider_failure_is_fail_closed_by_default(self):
+        provider = RecordingGuardrailProvider(error=RuntimeError("unavailable"))
+
+        assert enable_guardrail(provider)(self.context()) is False
+
+    def test_provider_failure_can_fail_open(self):
+        provider = RecordingGuardrailProvider(error=RuntimeError("unavailable"))
+
+        assert enable_guardrail(provider, fail_closed=False)(self.context()) is None
+
+    @pytest.mark.parametrize("fail_closed, expected", [(True, False), (False, None)])
+    def test_invalid_provider_result_follows_failure_policy(
+        self,
+        fail_closed: bool,
+        expected: bool | None,
+    ):
+        provider = RecordingGuardrailProvider()
+        provider.decision = object()  # type: ignore[assignment]
+
+        assert enable_guardrail(provider, fail_closed=fail_closed)(self.context()) is expected
+
+    def test_non_boolean_allow_is_rejected(self):
+        decision = GuardrailDecision(allow=True)
+        object.__setattr__(decision, "allow", 1)
+        provider = RecordingGuardrailProvider(decision)
+
+        assert enable_guardrail(provider)(self.context()) is False

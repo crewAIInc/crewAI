@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import logging
+from collections.abc import Mapping
+from copy import deepcopy
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Protocol
 
 from crewai_core.printer import PRINTER
 
@@ -11,6 +15,9 @@ from crewai.hooks.types import (
     BeforeToolCallHookCallable,
     BeforeToolCallHookType,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
@@ -316,3 +323,93 @@ def clear_all_tool_call_hooks() -> tuple[int, int]:
     before_count = clear_before_tool_call_hooks()
     after_count = clear_after_tool_call_hooks()
     return (before_count, after_count)
+
+
+@dataclass(frozen=True, slots=True)
+class GuardrailRequest:
+    """Detached context for one provider decision before a tool call."""
+
+    tool_name: str
+    tool_alias: str
+    tool_input: Mapping[str, Any]
+    agent_id: str | None = None
+    agent_role: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class GuardrailDecision:
+    """Provider verdict for one proposed tool call."""
+
+    allow: bool
+    reason: str | None = None
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+
+class GuardrailProvider(Protocol):
+    """Contract for pluggable pre-tool-call guardrail providers."""
+
+    def evaluate(self, request: GuardrailRequest) -> GuardrailDecision:
+        """Evaluate whether the requested tool call may proceed."""
+        ...
+
+
+def enable_guardrail(
+    provider: GuardrailProvider,
+    *,
+    fail_closed: bool = True,
+) -> BeforeToolCallHookType:
+    """Register a provider through the existing before-tool-call registry.
+
+    Provider failures and invalid results block execution by default. Set
+    ``fail_closed=False`` only when availability is intentionally preferred.
+    The returned hook can be removed with ``unregister_before_tool_call_hook``.
+    """
+
+    def _hook(context: ToolCallHookContext) -> bool | None:
+        try:
+            request = _build_guardrail_request(context)
+            decision = provider.evaluate(request)
+            if not isinstance(decision, GuardrailDecision):
+                raise TypeError(
+                    "GuardrailProvider.evaluate() must return GuardrailDecision"
+                )
+            if not isinstance(decision.allow, bool):
+                raise TypeError("GuardrailDecision.allow must be a bool")
+        except Exception:
+            logger.exception("GuardrailProvider evaluation failed")
+            return False if fail_closed else None
+
+        return None if decision.allow else False
+
+    register_before_tool_call_hook(_hook)
+    return _hook
+
+
+def _build_guardrail_request(context: ToolCallHookContext) -> GuardrailRequest:
+    """Snapshot the mutable tool-call context before provider evaluation."""
+
+    original_tool_name = _optional_text(getattr(context, "tool", None), "name")
+    return GuardrailRequest(
+        tool_name=original_tool_name or context.tool_name,
+        tool_alias=context.tool_name,
+        tool_input=deepcopy(context.tool_input),
+        agent_id=_optional_identifier(context.agent, "id"),
+        agent_role=_optional_text(context.agent, "role"),
+    )
+
+
+def _optional_text(source: Any, attribute: str) -> str | None:
+    if source is None:
+        return None
+    value = getattr(source, attribute, None)
+    return value if isinstance(value, str) and value else None
+
+
+def _optional_identifier(source: Any, attribute: str) -> str | None:
+    if source is None:
+        return None
+    value = getattr(source, attribute, None)
+    if value is None:
+        return None
+    rendered = str(value)
+    return rendered if rendered else None
