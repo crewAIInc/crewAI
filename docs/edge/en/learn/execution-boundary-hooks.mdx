@@ -1,0 +1,163 @@
+---
+title: Execution Boundary Hooks
+description: Intercept the start, inputs, output, and end of crew and flow executions with the @on decorator
+mode: "wide"
+---
+
+Execution boundary hooks intercept the outermost edges of a run — before any
+work starts, when inputs are resolved, when the final result is ready, and when
+the execution finishes. They fire for both crews and flows and are the right
+place for run-level policy checks, input rewriting, and output sanitization.
+
+## Overview
+
+Four interception points cover the boundaries:
+
+| Point | When | `ctx.payload` |
+|-------|------|---------------|
+| `EXECUTION_START` | A crew or flow is about to begin | inputs `dict` |
+| `INPUT` | Resolved inputs for the execution | inputs `dict` |
+| `OUTPUT` | The final result is ready | the output object |
+| `EXECUTION_END` | The execution has finished | the output object |
+
+For a crew, the output payload is a `CrewOutput`. For a flow, it is the final
+flow-method result.
+
+## Hook Signature
+
+```python
+from crewai.hooks import on, HookAborted, InterceptionPoint
+
+@on(InterceptionPoint.EXECUTION_START)
+def boundary_hook(ctx) -> Any | None:
+    # Mutate ctx.payload in place, or
+    # return a non-None value to replace it, or
+    # raise HookAborted(reason, source) to stop the run
+    return None
+```
+
+Boundary hooks follow the standard contract: proceed (`return None`), mutate in
+place, replace by returning, or abort by raising
+[`HookAborted`](/learn/execution-hooks#aborting-an-operation). An abort at any
+boundary propagates out of `kickoff()` with its reason.
+
+## Context Schema
+
+Each point receives a typed context. All contexts share the base fields:
+
+```python
+class InterceptionContext:
+    payload: Any            # The interceptable value (see table above)
+    agent: Any = None       # Not populated at execution boundaries
+    agent_role: str | None  # Not populated at execution boundaries
+    task: Any = None        # Not populated at execution boundaries
+    crew: Any = None        # The Crew instance (crew runs only)
+    flow: Any = None        # The Flow instance (flow runs only)
+```
+
+The per-point contexts add a named alias for the payload:
+
+```python
+class ExecutionStartContext(InterceptionContext):
+    inputs: dict            # Same dict as payload
+
+class InputContext(InterceptionContext):
+    inputs: dict            # Same dict as payload
+
+class OutputContext(InterceptionContext):
+    output: Any             # The output object
+
+class ExecutionEndContext(InterceptionContext):
+    output: Any             # The output object
+```
+
+<Note>
+`ctx.inputs` aliases the **original** inputs dict, so in-place edits through
+either name are equivalent. If an earlier hook *replaced* the payload by
+returning a new dict, only `ctx.payload` is rebound — always read and write
+`ctx.payload` when hooks might chain.
+</Note>
+
+## Crew Runs vs. Flow Runs
+
+Boundary hooks fire on both runtimes, and crew execution internally rides on a
+flow runtime. During a `crew.kickoff()`, a global boundary hook therefore fires
+for the crew boundary (`ctx.crew` set, `ctx.flow` `None`) **and** for the
+internal flow (`ctx.flow` set, `ctx.crew` `None`). Discriminate by runtime:
+
+```python
+@on(InterceptionPoint.OUTPUT)
+def crew_output_only(ctx):
+    if ctx.crew is None:
+        return None  # Skip the internal flow (or a bare flow)
+    ctx.payload.raw = ctx.payload.raw.strip()
+```
+
+## Common Use Cases
+
+### Policy Check at Start
+
+```python
+@on(InterceptionPoint.EXECUTION_START)
+def enforce_policy(ctx):
+    if ctx.crew is not None and not ctx.payload.get("authorized"):
+        raise HookAborted(reason="unauthorized execution", source="access-control")
+```
+
+### Input Rewriting
+
+```python
+@on(InterceptionPoint.INPUT)
+def add_defaults(ctx):
+    if ctx.crew is None:
+        return None
+    ctx.payload.setdefault("locale", "en-US")
+    ctx.payload["topic"] = ctx.payload["topic"].strip().lower()
+```
+
+Rewritten inputs flow into task interpolation, so the run behaves as if it was
+kicked off with the modified dict.
+
+### Output Sanitization
+
+```python
+import re
+
+@on(InterceptionPoint.OUTPUT)
+def redact_emails(ctx):
+    if ctx.crew is None:
+        return None
+    ctx.payload.raw = re.sub(
+        r"\b[\w.+-]+@[\w-]+\.[\w.]+\b", "[EMAIL-REDACTED]", ctx.payload.raw
+    )
+```
+
+`OUTPUT` runs before `EXECUTION_END`, and both see the (possibly replaced)
+payload from earlier hooks; the final rewritten value is what `kickoff()`
+returns.
+
+## Ordering
+
+For a crew run the boundary order is:
+
+```
+EXECUTION_START → before_kickoff callbacks → INPUT → tasks execute → OUTPUT → EXECUTION_END
+```
+
+Hooks at the same point run in registration order, global hooks first, then
+crew-scoped hooks. Telemetry (`HookDispatchedEvent`) is emitted per dispatch.
+
+## Managing Hooks in Tests
+
+```python
+from crewai.hooks import clear_all_hooks
+
+clear_all_hooks()  # Clears every point, including boundaries
+```
+
+## Related Documentation
+
+- [Execution Hooks Overview →](/learn/execution-hooks)
+- [Step Hooks →](/learn/step-hooks)
+- [LLM Call Hooks →](/learn/llm-hooks)
+- [Tool Call Hooks →](/learn/tool-hooks)

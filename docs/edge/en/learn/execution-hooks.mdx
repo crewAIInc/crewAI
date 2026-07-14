@@ -64,7 +64,7 @@ from crewai.hooks import on, InterceptionPoint
 
 @on(InterceptionPoint.POST_TOOL_CALL, agents=["researcher"], tools=["web_search"])
 def log_search_results(ctx):
-    print(f"search returned: {str(ctx.payload)[:80]}")
+    print(f"search returned: {(ctx.tool_result or '')[:80]}")
 ```
 
 Applied to a method inside a `@CrewBase` class, `@on` registers a
@@ -84,30 +84,36 @@ class MyProjCrew:
 
 ## Interception point catalog
 
-`payload` is the value a hook may mutate or replace at each point.
+Each family has a detailed guide covering its context schema, payload
+semantics, and examples.
 
-### Execution boundaries
+### [Execution boundaries](/learn/execution-boundary-hooks)
 
-| Point | When | `payload` |
-|-------|------|-----------|
+| Point | When | `ctx.payload` |
+|-------|------|---------------|
 | `EXECUTION_START` | A crew or flow is about to begin | inputs `dict` |
 | `INPUT` | Resolved inputs for the execution | inputs `dict` |
 | `OUTPUT` | Final result is ready | the output object |
 | `EXECUTION_END` | A crew or flow has finished | the output object |
 
-### Model & tool boundaries
+### [Model boundaries](/learn/llm-hooks) & [tool boundaries](/learn/tool-hooks)
 
-| Point | When | `payload` |
-|-------|------|-----------|
+| Point | When | Hook receives |
+|-------|------|---------------|
 | `PRE_MODEL_CALL` | Before an LLM call | `LLMCallHookContext` |
-| `POST_MODEL_CALL` | After an LLM call | response |
+| `POST_MODEL_CALL` | After an LLM call | `LLMCallHookContext` (with `response` set) |
 | `PRE_TOOL_CALL` | Before a tool runs | `ToolCallHookContext` |
-| `POST_TOOL_CALL` | After a tool runs | tool result |
+| `POST_TOOL_CALL` | After a tool runs | `ToolCallHookContext` (with results set) |
 
-### Step points
+At these four points the hook receives the rich legacy context **directly** as
+its argument — there is no separate `ctx.payload`. Mutate `ctx.messages` /
+`ctx.tool_input` in place, and return a string from a post hook to replace the
+response / tool result.
 
-| Point | When | `payload` |
-|-------|------|-----------|
+### [Step points](/learn/step-hooks)
+
+| Point | When | `ctx.payload` |
+|-------|------|---------------|
 | `PRE_STEP` | Before a task or flow-method step | step input |
 | `POST_STEP` | After a task or flow-method step | step output |
 
@@ -147,12 +153,12 @@ def enforce_policy(ctx):
 @on(InterceptionPoint.PRE_TOOL_CALL)
 def block_dangerous_tools(ctx):
     dangerous = {"delete_file", "drop_table", "system_shutdown"}
-    if ctx.payload.tool_name in dangerous:
-        raise HookAborted(reason=f"{ctx.payload.tool_name} is blocked", source="safety-policy")
+    if ctx.tool_name in dangerous:
+        raise HookAborted(reason=f"{ctx.tool_name} is blocked", source="safety-policy")
 
 @on(InterceptionPoint.PRE_MODEL_CALL)
 def iteration_limit(ctx):
-    if ctx.payload.iterations > 15:
+    if ctx.iterations > 15:
         raise HookAborted(reason="maximum iterations exceeded", source="loop-guard")
 ```
 
@@ -161,8 +167,8 @@ def iteration_limit(ctx):
 ```python
 @on(InterceptionPoint.PRE_TOOL_CALL, tools=["send_email", "make_payment"])
 def require_approval(ctx):
-    response = ctx.payload.request_human_input(
-        prompt=f"Approve {ctx.payload.tool_name}?",
+    response = ctx.request_human_input(
+        prompt=f"Approve {ctx.tool_name}?",
         default_message="Type 'yes' to approve:",
     )
     if response.lower() != "yes":
@@ -171,8 +177,8 @@ def require_approval(ctx):
 
 ### Sanitizing outputs
 
-A non-`None` return value replaces the payload, so transformations are plain
-return statements:
+A non-`None` return value replaces the interceptable value, so transformations
+are plain return statements:
 
 ```python
 import re
@@ -182,7 +188,7 @@ def redact_keys(ctx):
     return re.sub(
         r'(api[_-]?key)["\']?\s*[:=]\s*["\']?[\w-]+',
         r"\1: [REDACTED]",
-        ctx.payload,
+        ctx.response,
         flags=re.IGNORECASE,
     )
 ```
@@ -254,10 +260,11 @@ Differences from `@on`:
 - They cover **only** the four model/tool points — no execution boundaries, no
   steps.
 - Blocking is `return False`, with no abort reason or source attached.
-- They receive rich point-specific contexts — `LLMCallHookContext` (with full
-  executor access) and `ToolCallHookContext` — the same objects `@on` exposes
-  as `ctx.payload` at the `PRE_MODEL_CALL` / `PRE_TOOL_CALL` points.
-- Crew-scoping uses the `*_crew` decorator variants inside `@CrewBase` classes.
+- They receive the same rich contexts — `LLMCallHookContext` (with full
+  executor access) and `ToolCallHookContext` — that `@on` hooks receive at the
+  model/tool points.
+- Crew-scoping works the same way: apply the decorator to a method inside a
+  `@CrewBase` class.
 - They support the same `agents=` / `tools=` filters.
 
 You might still prefer them for existing codebases that already use

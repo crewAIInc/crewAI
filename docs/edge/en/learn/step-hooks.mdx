@@ -1,0 +1,142 @@
+---
+title: Step Hooks
+description: Intercept task and flow-method steps with PRE_STEP and POST_STEP hooks in CrewAI
+mode: "wide"
+---
+
+Step hooks intercept each unit of work inside an execution: every crew **task**
+and every **flow method**. Use them to inspect or rewrite what goes into a
+step, transform what comes out, or trace step-by-step progress — without
+touching the level of individual LLM or tool calls.
+
+## Overview
+
+Two interception points cover steps:
+
+| Point | When | `ctx.payload` |
+|-------|------|---------------|
+| `PRE_STEP` | Before a task or flow method runs | step input (see below) |
+| `POST_STEP` | After a task or flow method runs | step output (see below) |
+
+What the payload holds depends on `ctx.kind`:
+
+| `ctx.kind` | `PRE_STEP` payload | `POST_STEP` payload |
+|------------|--------------------|---------------------|
+| `"task"` | The context string passed to the agent | The `TaskOutput` object |
+| `"flow_method"` | The method's parameters as a `dict` | The method's return value |
+
+For flow methods, positional arguments appear in the params dict under `_0`,
+`_1`, ... keys and keyword arguments under their own names; edits and
+replacements are mapped back onto the actual call.
+
+## Hook Signature
+
+```python
+from crewai.hooks import on, HookAborted, InterceptionPoint
+
+@on(InterceptionPoint.PRE_STEP)
+def step_hook(ctx) -> Any | None:
+    # Mutate ctx.payload in place, or
+    # return a non-None value to replace it, or
+    # raise HookAborted(reason, source) to stop the step
+    return None
+```
+
+## Context Schema
+
+Both points receive a `StepContext`:
+
+```python
+class StepContext(InterceptionContext):
+    payload: Any            # Step input (pre) or step output (post)
+    kind: str | None        # "task" or "flow_method"
+    step_name: str | None   # Task name/description, or flow method name
+    output: Any             # POST_STEP only: same object as payload
+    agent: Any              # Task steps: the executing agent (else None)
+    agent_role: str | None  # Task steps: the agent's role (else None)
+    task: Any               # Task steps: the Task instance (else None)
+    crew: Any               # None for step points
+    flow: Any               # Flow-method steps: the Flow instance (else None)
+```
+
+For task steps, `step_name` is the task's `name` (falling back to its
+description). For flow-method steps, it is the method name.
+
+## Common Use Cases
+
+### Step Tracing
+
+```python
+@on(InterceptionPoint.POST_STEP)
+def trace_steps(ctx):
+    print(f"{ctx.kind} '{ctx.step_name}' finished")
+```
+
+### Rewriting Task Context
+
+```python
+@on(InterceptionPoint.PRE_STEP)
+def inject_disclaimer(ctx):
+    if ctx.kind != "task":
+        return None
+    return f"{ctx.payload}\n\nNote: treat all figures as estimates."
+```
+
+### Transforming Task Output
+
+```python
+@on(InterceptionPoint.POST_STEP)
+def normalize_output(ctx):
+    if ctx.kind != "task":
+        return None
+    ctx.payload.raw = ctx.payload.raw.strip()
+```
+
+<Note>
+`POST_STEP` runs before the task's output is stored, so rewrites propagate
+everywhere the output is used: downstream task context, callbacks, the final
+crew output, and the task's `output_file` on disk.
+</Note>
+
+### Guarding Flow Methods
+
+```python
+@on(InterceptionPoint.PRE_STEP)
+def guard_publish(ctx):
+    if ctx.kind == "flow_method" and ctx.step_name == "publish":
+        if not ctx.flow.state.get("reviewed"):
+            raise HookAborted(reason="publish requires review", source="review-gate")
+```
+
+### Filtering by Agent
+
+Step hooks support the same `agents=` filter as the other points (matched
+against the executing agent's role on task steps):
+
+```python
+@on(InterceptionPoint.POST_STEP, agents=["Researcher"])
+def log_research_steps(ctx):
+    print(f"research step done: {ctx.step_name}")
+```
+
+## Aborting a Step
+
+Raising `HookAborted` in `PRE_STEP` stops the step before any agent or method
+work happens, and the abort propagates out of the execution with its reason —
+it is not swallowed. Any other exception raised by a step hook is swallowed
+(fail-open), like at every other point.
+
+## Managing Hooks in Tests
+
+```python
+from crewai.hooks import clear_all_hooks
+
+clear_all_hooks()  # Clears every point, including steps
+```
+
+## Related Documentation
+
+- [Execution Hooks Overview →](/learn/execution-hooks)
+- [Execution Boundary Hooks →](/learn/execution-boundary-hooks)
+- [LLM Call Hooks →](/learn/llm-hooks)
+- [Tool Call Hooks →](/learn/tool-hooks)
