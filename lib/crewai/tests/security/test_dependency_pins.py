@@ -17,7 +17,7 @@ PYPROJECT_PATH = Path(__file__).parents[2] / "pyproject.toml"
 
 
 def _get_requirement(name: str) -> Requirement:
-    data = tomllib.loads(PYPROJECT_PATH.read_text())
+    data = tomllib.loads(PYPROJECT_PATH.read_text(encoding="utf-8"))
     for spec in data["project"]["dependencies"]:
         requirement = Requirement(spec)
         if requirement.name == name:
