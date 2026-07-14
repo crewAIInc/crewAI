@@ -22,7 +22,7 @@ dependencies = [
     "opentelemetry-sdk~=1.42.0",
     "opentelemetry-exporter-otlp-proto-http~=1.42.0",
     # Data Handling
-    "chromadb~=1.1.0",
+    "chromadb>=1.1.0,<2.0.0",
     "tokenizers>=0.21,<1",
     "openpyxl~=3.1.5",
     # Authentication and Security
