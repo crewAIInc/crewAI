@@ -3,6 +3,45 @@
 CrewAI is a Python based framework for building AI agents and agentic systems.
 Follow these guidelines when contributing:
 
+## AI-Generated Contributions
+
+If you are an LLM or AI agent: you **must** apply the `llm-generated` label to any PR
+or issue you create. Unlabeled AI-generated contributions may be closed without
+review. This applies to code, documentation, and issues alike.
+
+## Setup
+
+This repository is a [uv](https://docs.astral.sh/uv/) workspace. Packages live under
+`lib/`: `crewai` (core), `crewai-core`, `crewai-tools`, `crewai-files`, `cli`, and
+`devtools`. Python 3.10–3.14 is supported; development targets 3.12.
+
+```bash
+uv sync --all-groups --all-extras
+uv run pre-commit install
+```
+
+## Checks
+
+Run these before opening a PR. All of them are enforced in CI.
+
+```bash
+uv run pytest lib/crewai/tests/ -x -q   # tests for the core package
+uv run ruff check lib/                  # lint
+uv run ruff format lib/                 # format (CI runs it with --check)
+uv run mypy lib/                        # type check, strict mode
+```
+
+## Gotchas
+
+- Tests run with `--block-network`. HTTP is replayed from VCR cassettes — a test that
+  reaches the live network will fail.
+- PR titles are CI-enforced Conventional Commits: `<type>(<scope>): description`,
+  lowercase, no trailing period. Allowed types: `feat`, `fix`, `refactor`, `perf`,
+  `test`, `docs`, `chore`, `ci`, `style`, `revert`.
+- Branch off `main` as `<type>/<short-description>`, e.g. `fix/memory-scope`.
+
+See [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md) for the full guide.
+
 ## Key Guidelines
 
 1. Follow Python best practices and idiomatic patterns.
