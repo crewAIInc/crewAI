@@ -149,7 +149,7 @@ paths:
                     silently starts as a fresh session — no error is returned. See the
                     [inputs.id deprecation guide](/en/guides/flows/inputs-id-deprecation)
                     for migration details and operational notes.
-                  example: "abcd1234-5678-90ef-ghij-klmnopqrstuv"
+                  example: "123e4567-e89b-42d3-a456-426614174000"
                 taskWebhookUrl:
                   type: string
                   format: uri
@@ -194,7 +194,7 @@ paths:
                 value:
                   inputs:
                     topic: "AI Agent Frameworks"
-                  restoreFromStateId: "abcd1234-5678-90ef-ghij-klmnopqrstuv"
+                  restoreFromStateId: "123e4567-e89b-42d3-a456-426614174000"
       responses:
         "200":
           description: Crew execution started successfully
