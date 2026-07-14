@@ -407,6 +407,112 @@ def test_strict_restore_without_persistence_raises():
     assert flow.last_restore_succeeded is False
 
 
+def test_stream_events_strict_restore_miss_raises_eagerly(tmp_path):
+    """stream_events with raise_on_missing_state=True raises at session creation
+    time on a restore_from_state_id miss, not while consuming frames."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class StreamStrictFlow(Flow[TestState]):
+        @start()
+        @persist(persistence)
+        def step(self):
+            self.state.counter += 1
+
+    flow = StreamStrictFlow(persistence=persistence)
+    with pytest.raises(ValueError) as excinfo:
+        flow.stream_events(
+            restore_from_state_id="no-such-uuid",
+            raise_on_missing_state=True,
+        )
+    assert "no-such-uuid" in str(excinfo.value)
+    # Nothing ran.
+    assert flow.state.counter == 0
+
+
+def test_kickoff_stream_strict_restore_miss_raises_eagerly(tmp_path):
+    """kickoff with stream=True and raise_on_missing_state=True raises immediately
+    on a restore miss instead of returning a StreamSession."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class StreamingKickoffFlow(Flow[TestState]):
+        @start()
+        @persist(persistence)
+        def step(self):
+            self.state.counter += 1
+
+    flow = StreamingKickoffFlow(persistence=persistence)
+    flow.stream = True
+    with pytest.raises(ValueError) as excinfo:
+        flow.kickoff(
+            restore_from_state_id="no-such-uuid",
+            raise_on_missing_state=True,
+        )
+    assert "no-such-uuid" in str(excinfo.value)
+    assert flow.state.counter == 0
+
+
+def test_stream_events_strict_restore_valid_id_streams(tmp_path):
+    """stream_events with raise_on_missing_state=True streams normally when the
+    source state exists: hydrates, mints a fresh state.id, reports success."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class StreamForkFlow(Flow[TestState]):
+        @start()
+        @persist(persistence)
+        def step(self):
+            self.state.counter += 1
+
+    flow1 = StreamForkFlow(persistence=persistence)
+    flow1.kickoff()
+    source_uuid = flow1.state.id
+
+    flow2 = StreamForkFlow(persistence=persistence)
+    with flow2.stream_events(
+        restore_from_state_id=source_uuid,
+        raise_on_missing_state=True,
+    ) as stream:
+        list(stream.events)
+
+    assert flow2.state.id != source_uuid
+    assert flow2.state.counter == 2
+    assert flow2.last_restore_succeeded is True
+
+
+@pytest.mark.asyncio
+async def test_astream_strict_restore_miss_raises_eagerly(tmp_path):
+    """astream and kickoff_async(stream=True) raise at call time on a restore miss
+    with raise_on_missing_state=True."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class AsyncStreamStrictFlow(Flow[TestState]):
+        @start()
+        @persist(persistence)
+        def step(self):
+            self.state.counter += 1
+
+    flow = AsyncStreamStrictFlow(persistence=persistence)
+    with pytest.raises(ValueError) as excinfo:
+        flow.astream(
+            restore_from_state_id="no-such-uuid",
+            raise_on_missing_state=True,
+        )
+    assert "no-such-uuid" in str(excinfo.value)
+    assert flow.state.counter == 0
+
+    flow2 = AsyncStreamStrictFlow(persistence=persistence)
+    flow2.stream = True
+    with pytest.raises(ValueError):
+        await flow2.kickoff_async(
+            restore_from_state_id="no-such-uuid",
+            raise_on_missing_state=True,
+        )
+    assert flow2.state.counter == 0
+
+
 def test_last_restore_succeeded_signal(tmp_path):
     """last_restore_succeeded is None when no restore was requested, False after a
     silent miss, and True after a successful restore."""

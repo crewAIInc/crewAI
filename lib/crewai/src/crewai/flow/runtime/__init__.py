@@ -1864,6 +1864,40 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if hasattr(self._state, key):
                     object.__setattr__(self._state, key, value)
 
+    @staticmethod
+    def _missing_state_error(restore_from_state_id: str) -> ValueError:
+        return ValueError(
+            f"No flow state found for restore_from_state_id: '{restore_from_state_id}'"
+        )
+
+    @staticmethod
+    def _no_persistence_error(restore_from_state_id: str) -> ValueError:
+        return ValueError(
+            "Cannot restore from restore_from_state_id: "
+            f"'{restore_from_state_id}'; no persistence backend "
+            "is configured for this flow."
+        )
+
+    def _ensure_restorable_state(
+        self,
+        restore_from_state_id: str | None,
+        raise_on_missing_state: bool,
+    ) -> None:
+        """Eagerly validate a strict restore request before deferred execution.
+
+        Streaming kickoffs return a session before the runtime evaluates
+        ``restore_from_state_id``; this pre-check keeps
+        ``raise_on_missing_state=True`` failing at call time, matching the
+        non-streaming path. The runtime still performs the authoritative load
+        (and raises again) during execution.
+        """
+        if not raise_on_missing_state or restore_from_state_id is None:
+            return
+        if self.persistence is None:
+            raise self._no_persistence_error(restore_from_state_id)
+        if not self.persistence.load_state(restore_from_state_id):
+            raise self._missing_state_error(restore_from_state_id)
+
     def stream_events(
         self,
         inputs: dict[str, Any] | None = None,
@@ -1872,7 +1906,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         restore_from_state_id: str | None = None,
         raise_on_missing_state: bool = False,
     ) -> StreamSession[Any]:
-        """Run the flow and stream all scoped public ``StreamFrame`` events."""
+        """Run the flow and stream all scoped public ``StreamFrame`` events.
+
+        With ``raise_on_missing_state=True``, a ``restore_from_state_id``
+        lookup miss raises ``ValueError`` here, before the session is
+        returned, so callers do not have to consume frames to see the error.
+        """
+        self._ensure_restorable_state(restore_from_state_id, raise_on_missing_state)
         result_holder: list[Any] = []
         state = create_frame_streaming_state(result_holder, use_async=False)
         output_holder: list[StreamSession[Any]] = []
@@ -1907,7 +1947,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         restore_from_state_id: str | None = None,
         raise_on_missing_state: bool = False,
     ) -> AsyncStreamSession[Any]:
-        """Run the flow asynchronously and stream scoped public frames."""
+        """Run the flow asynchronously and stream scoped public frames.
+
+        With ``raise_on_missing_state=True``, a ``restore_from_state_id``
+        lookup miss raises ``ValueError`` here, before the session is
+        returned, so callers do not have to consume frames to see the error.
+        """
+        self._ensure_restorable_state(restore_from_state_id, raise_on_missing_state)
         result_holder: list[Any] = []
         state = create_frame_streaming_state(result_holder, use_async=True)
         output_holder: list[AsyncStreamSession[Any]] = []
@@ -2152,10 +2198,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 else:
                     self._last_restore_succeeded = False
                     if raise_on_missing_state:
-                        raise ValueError(
-                            "No flow state found for restore_from_state_id: "
-                            f"'{restore_from_state_id}'"
-                        )
+                        raise self._missing_state_error(restore_from_state_id)
                     self._log_flow_event(
                         "No flow state found for restore_from_state_id: "
                         f"{restore_from_state_id}; proceeding without hydration",
@@ -2164,11 +2207,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             elif restore_from_state_id is not None:
                 self._last_restore_succeeded = False
                 if raise_on_missing_state:
-                    raise ValueError(
-                        "Cannot restore from restore_from_state_id: "
-                        f"'{restore_from_state_id}'; no persistence backend "
-                        "is configured for this flow."
-                    )
+                    raise self._no_persistence_error(restore_from_state_id)
 
             if inputs:
                 # Override the id in the state if it exists in inputs.
