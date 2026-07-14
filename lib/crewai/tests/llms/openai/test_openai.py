@@ -212,6 +212,18 @@ def test_openai_completion_module_is_imported(monkeypatch):
     """
     module_name = "crewai.llms.providers.openai.completion"
 
+    # The LLM(...) call below re-imports the module, which also rebinds the
+    # parent package's `completion` attribute to the NEW module object.
+    # monkeypatch.delitem only restores the sys.modules entry at teardown, so
+    # without also restoring the package attribute the two diverge for the
+    # rest of the process. On Python 3.10 `from ...openai.completion import X`
+    # then resolves through the stale package attribute while mock.patch
+    # targets the restored sys.modules entry, making later patches of
+    # OpenAICompletion silently miss (breaks e.g. test_azure_responses.py).
+    import crewai.llms.providers.openai as openai_pkg
+
+    if hasattr(openai_pkg, "completion"):
+        monkeypatch.setattr(openai_pkg, "completion", openai_pkg.completion)
     monkeypatch.delitem(sys.modules, module_name, raising=False)
 
     LLM(model="gpt-4o")
