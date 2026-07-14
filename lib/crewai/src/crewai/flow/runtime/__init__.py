@@ -1878,6 +1878,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             "is configured for this flow."
         )
 
+    @staticmethod
+    def _check_restore_conflict(
+        from_checkpoint: CheckpointConfig | None,
+        restore_from_state_id: str | None,
+    ) -> None:
+        """Reject combining ``from_checkpoint`` with ``restore_from_state_id``."""
+        if from_checkpoint is not None and restore_from_state_id is not None:
+            raise ValueError(
+                "Cannot combine `from_checkpoint` and `restore_from_state_id`. "
+                "These parameters target different state systems "
+                "(Checkpointing and @persist) and cannot be used together."
+            )
+
     def _ensure_restorable_state(
         self,
         restore_from_state_id: str | None,
@@ -1888,14 +1901,17 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         Streaming kickoffs return a session before the runtime evaluates
         ``restore_from_state_id``; this pre-check keeps
         ``raise_on_missing_state=True`` failing at call time, matching the
-        non-streaming path. The runtime still performs the authoritative load
-        (and raises again) during execution.
+        non-streaming path. It records the miss in ``last_restore_succeeded``
+        before raising, exactly like the runtime path. The runtime still
+        performs the authoritative load (and raises again) during execution.
         """
         if not raise_on_missing_state or restore_from_state_id is None:
             return
         if self.persistence is None:
+            self._last_restore_succeeded = False
             raise self._no_persistence_error(restore_from_state_id)
         if not self.persistence.load_state(restore_from_state_id):
+            self._last_restore_succeeded = False
             raise self._missing_state_error(restore_from_state_id)
 
     def stream_events(
@@ -1912,6 +1928,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         lookup miss raises ``ValueError`` here, before the session is
         returned, so callers do not have to consume frames to see the error.
         """
+        self._check_restore_conflict(from_checkpoint, restore_from_state_id)
         self._ensure_restorable_state(restore_from_state_id, raise_on_missing_state)
         result_holder: list[Any] = []
         state = create_frame_streaming_state(result_holder, use_async=False)
@@ -1953,6 +1970,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         lookup miss raises ``ValueError`` here, before the session is
         returned, so callers do not have to consume frames to see the error.
         """
+        self._check_restore_conflict(from_checkpoint, restore_from_state_id)
         self._ensure_restorable_state(restore_from_state_id, raise_on_missing_state)
         result_holder: list[Any] = []
         state = create_frame_streaming_state(result_holder, use_async=True)
@@ -2016,12 +2034,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         Returns:
             The final output from the flow or StreamSession if streaming.
         """
-        if from_checkpoint is not None and restore_from_state_id is not None:
-            raise ValueError(
-                "Cannot combine `from_checkpoint` and `restore_from_state_id`. "
-                "These parameters target different state systems "
-                "(Checkpointing and @persist) and cannot be used together."
-            )
+        self._check_restore_conflict(from_checkpoint, restore_from_state_id)
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return restored.kickoff(inputs=inputs, input_files=input_files)
@@ -2091,12 +2104,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
-        if from_checkpoint is not None and restore_from_state_id is not None:
-            raise ValueError(
-                "Cannot combine `from_checkpoint` and `restore_from_state_id`. "
-                "These parameters target different state systems "
-                "(Checkpointing and @persist) and cannot be used together."
-            )
+        self._check_restore_conflict(from_checkpoint, restore_from_state_id)
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return await restored.kickoff_async(inputs=inputs, input_files=input_files)

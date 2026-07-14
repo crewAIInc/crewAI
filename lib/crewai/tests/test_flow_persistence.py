@@ -513,6 +513,96 @@ async def test_astream_strict_restore_miss_raises_eagerly(tmp_path):
     assert flow2.state.counter == 0
 
 
+def test_stream_eager_strict_miss_sets_last_restore_succeeded_false(tmp_path):
+    """The eager streaming pre-check must record the miss in
+    last_restore_succeeded before raising — including overwriting a stale True
+    from a previous successful restore."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class EagerSignalFlow(Flow[TestState]):
+        @start()
+        @persist(persistence)
+        def step(self):
+            self.state.counter += 1
+
+    flow1 = EagerSignalFlow(persistence=persistence)
+    flow1.kickoff()
+    source_uuid = flow1.state.id
+
+    # Prime the signal with a successful restore first.
+    flow2 = EagerSignalFlow(persistence=persistence)
+    flow2.kickoff(restore_from_state_id=source_uuid)
+    assert flow2.last_restore_succeeded is True
+
+    # Eager streaming miss on the same instance: signal flips to False, not stale True.
+    with pytest.raises(ValueError):
+        flow2.stream_events(
+            restore_from_state_id="no-such-uuid",
+            raise_on_missing_state=True,
+        )
+    assert flow2.last_restore_succeeded is False
+
+    # Fresh instance failing in the astream pre-check: False, not None.
+    flow3 = EagerSignalFlow(persistence=persistence)
+    with pytest.raises(ValueError):
+        flow3.astream(
+            restore_from_state_id="no-such-uuid",
+            raise_on_missing_state=True,
+        )
+    assert flow3.last_restore_succeeded is False
+
+    # No-persistence eager failure records the miss too.
+    class NoPersistenceStreamFlow(Flow[TestState]):
+        @start()
+        def step(self):
+            self.state.counter += 1
+
+    flow4 = NoPersistenceStreamFlow()
+    with pytest.raises(ValueError):
+        flow4.stream_events(
+            restore_from_state_id="some-uuid",
+            raise_on_missing_state=True,
+        )
+    assert flow4.last_restore_succeeded is False
+
+
+def test_stream_conflict_check_wins_over_strict_restore_miss(tmp_path):
+    """stream_events/astream with both from_checkpoint and restore_from_state_id
+    raise the mutual-exclusion ValueError, not the restore-miss one, even with
+    raise_on_missing_state=True and a missing id (matches non-streaming precedence)."""
+    from crewai.state import CheckpointConfig
+
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class StreamConflictFlow(Flow[TestState]):
+        @start()
+        @persist(persistence)
+        def step(self):
+            self.state.counter += 1
+
+    flow = StreamConflictFlow(persistence=persistence)
+    with pytest.raises(ValueError) as excinfo:
+        flow.stream_events(
+            from_checkpoint=CheckpointConfig(),
+            restore_from_state_id="no-such-uuid",
+            raise_on_missing_state=True,
+        )
+    msg = str(excinfo.value)
+    assert "Cannot combine" in msg
+    assert "from_checkpoint" in msg
+
+    flow2 = StreamConflictFlow(persistence=persistence)
+    with pytest.raises(ValueError) as excinfo2:
+        flow2.astream(
+            from_checkpoint=CheckpointConfig(),
+            restore_from_state_id="no-such-uuid",
+            raise_on_missing_state=True,
+        )
+    assert "Cannot combine" in str(excinfo2.value)
+
+
 def test_last_restore_succeeded_signal(tmp_path):
     """last_restore_succeeded is None when no restore was requested, False after a
     silent miss, and True after a successful restore."""
