@@ -1920,11 +1920,13 @@ class Crew(FlowTrackable, BaseModel):
 
         output_ctx = OutputContext(crew=self, output=crew_output, payload=crew_output)
         dispatch(InterceptionPoint.OUTPUT, output_ctx)
-        crew_output = output_ctx.payload
+        crew_output = cast(CrewOutput, output_ctx.payload)
 
-        end_ctx = ExecutionEndContext(crew=self, output=crew_output, payload=crew_output)
+        end_ctx = ExecutionEndContext(
+            crew=self, output=crew_output, payload=crew_output
+        )
         dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
-        crew_output = end_ctx.payload
+        crew_output = cast(CrewOutput, end_ctx.payload)
 
         # Ensure background memory saves finish (and emit their
         # completed/failed events) before the kickoff-completed event below
