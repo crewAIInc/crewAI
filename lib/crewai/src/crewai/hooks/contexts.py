@@ -56,3 +56,16 @@ class ExecutionEndContext(InterceptionContext):
     """``execution_end``: a crew or flow has finished. ``payload`` = the output object."""
 
     output: Any = None
+
+
+@dataclass
+class StepContext(InterceptionContext):
+    """``pre_step`` / ``post_step``: a task or flow-method step boundary.
+
+    ``kind`` is ``"task"`` for crew tasks and ``"flow_method"`` for flow methods.
+    ``payload`` is the step input (pre) or step output (post).
+    """
+
+    kind: str | None = None
+    step_name: str | None = None
+    output: Any = None
