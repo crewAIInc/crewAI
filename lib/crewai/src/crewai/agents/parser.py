@@ -6,6 +6,7 @@ AgentAction or AgentFinish objects.
 """
 
 from dataclasses import dataclass
+import json
 
 from json_repair import repair_json  # type: ignore[import-untyped]
 from pydantic import BaseModel
@@ -174,6 +175,16 @@ def _safe_repair_json(tool_input: str) -> str:
 
     result = repair_json(tool_input)
     if result in UNABLE_TO_REPAIR_JSON_RESULTS:
+        return tool_input
+
+    # Non-JSON input (e.g. "{temperature in SF}") gets coerced into JSON
+    # scalars/arrays by json-repair rather than repaired; only a repaired
+    # object is a plausible tool input, so keep the original otherwise.
+    try:
+        repaired_object = json.loads(str(result))
+    except (ValueError, TypeError):
+        return tool_input
+    if not isinstance(repaired_object, dict):
         return tool_input
 
     return str(result)
