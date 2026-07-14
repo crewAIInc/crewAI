@@ -271,7 +271,9 @@ class Task(BaseModel):
         description="[DEPRECATED] Maximum number of retries when guardrail fails. Use guardrail_max_retries instead. Will be removed in v1.0.0",
     )
     guardrail_max_retries: int = Field(
-        default=3, description="Maximum number of retries when guardrail fails"
+        default=3,
+        description="Maximum number of retries when guardrail fails",
+        ge=0,
     )
     retry_count: int = Field(default=0, description="Current number of retries")
     start_time: datetime.datetime | None = Field(
@@ -700,23 +702,11 @@ class Task(BaseModel):
                 messages=agent.last_messages,  # type: ignore[attr-defined]
             )
 
-            if self._guardrails:
-                for idx, guardrail in enumerate(self._guardrails):
-                    task_output = await self._ainvoke_guardrail_function(
-                        task_output=task_output,
-                        agent=agent,
-                        tools=tools,
-                        guardrail=guardrail,
-                        guardrail_index=idx,
-                    )
-
-            if self._guardrail:
-                task_output = await self._ainvoke_guardrail_function(
-                    task_output=task_output,
-                    agent=agent,
-                    tools=tools,
-                    guardrail=self._guardrail,
-                )
+            task_output = await self._arun_guardrails(
+                task_output=task_output,
+                agent=agent,
+                tools=tools,
+            )
 
             self.output = task_output
             self.end_time = datetime.datetime.now()
@@ -825,23 +815,11 @@ class Task(BaseModel):
                 messages=agent.last_messages,  # type: ignore[attr-defined]
             )
 
-            if self._guardrails:
-                for idx, guardrail in enumerate(self._guardrails):
-                    task_output = self._invoke_guardrail_function(
-                        task_output=task_output,
-                        agent=agent,
-                        tools=tools,
-                        guardrail=guardrail,
-                        guardrail_index=idx,
-                    )
-
-            if self._guardrail:
-                task_output = self._invoke_guardrail_function(
-                    task_output=task_output,
-                    agent=agent,
-                    tools=tools,
-                    guardrail=self._guardrail,
-                )
+            task_output = self._run_guardrails(
+                task_output=task_output,
+                agent=agent,
+                tools=tools,
+            )
 
             self.output = task_output
             self.end_time = datetime.datetime.now()
@@ -1243,221 +1221,290 @@ Follow these guidelines:
         """
         return self.security_config.fingerprint
 
-    def _invoke_guardrail_function(
+    def _collect_guardrails(self) -> list[tuple[int | None, GuardrailCallable]]:
+        """Collect all guardrails into a single indexed list.
+
+        Returns a list of ``(index, callable)`` pairs.  When ``_guardrails``
+        is populated the index is the position in that list; for the legacy
+        single ``_guardrail`` the index is ``None``.
+        """
+        guardrails: list[tuple[int | None, GuardrailCallable]] = []
+        if self._guardrails:
+            for idx, g in enumerate(self._guardrails):
+                guardrails.append((idx, g))
+        elif self._guardrail:
+            guardrails.append((None, self._guardrail))
+        return guardrails
+
+    def _apply_guardrail_result(
+        self,
+        task_output: TaskOutput,
+        guardrail_result: Any,
+    ) -> TaskOutput:
+        """Apply a successful guardrail result to the task output (sync)."""
+        if guardrail_result.result is None:
+            raise Exception(
+                "Task guardrail returned None as result. This is not allowed."
+            )
+
+        if isinstance(guardrail_result.result, str):
+            task_output.raw = guardrail_result.result
+            pydantic_output, json_output = self._export_output(guardrail_result.result)
+            task_output.pydantic = pydantic_output
+            task_output.json_dict = json_output
+        elif isinstance(guardrail_result.result, TaskOutput):
+            task_output = guardrail_result.result
+
+        return task_output
+
+    async def _aapply_guardrail_result(
+        self,
+        task_output: TaskOutput,
+        guardrail_result: Any,
+    ) -> TaskOutput:
+        """Apply a successful guardrail result to the task output (async)."""
+        if guardrail_result.result is None:
+            raise Exception(
+                "Task guardrail returned None as result. This is not allowed."
+            )
+
+        if isinstance(guardrail_result.result, str):
+            task_output.raw = guardrail_result.result
+            pydantic_output, json_output = await self._aexport_output(
+                guardrail_result.result
+            )
+            task_output.pydantic = pydantic_output
+            task_output.json_dict = json_output
+        elif isinstance(guardrail_result.result, TaskOutput):
+            task_output = guardrail_result.result
+
+        return task_output
+
+    def _rebuild_task_output(
+        self,
+        result: Any,
+        agent: BaseAgent,
+    ) -> TaskOutput:
+        """Build a new TaskOutput from an agent execution result (sync)."""
+        if isinstance(result, BaseModel):
+            raw = result.model_dump_json()
+            if self.output_pydantic:
+                pydantic_output = result
+                json_output = None
+            elif self.output_json:
+                pydantic_output = None
+                json_output = result.model_dump()
+            else:
+                pydantic_output = None
+                json_output = None
+        else:
+            raw = result
+            pydantic_output, json_output = self._export_output(result)
+
+        return TaskOutput(
+            name=self.name or self.description,
+            description=self.description,
+            expected_output=self.expected_output,
+            raw=raw,
+            pydantic=pydantic_output,
+            json_dict=json_output,
+            agent=agent.role,
+            output_format=self._get_output_format(),
+            messages=agent.last_messages,  # type: ignore[attr-defined]
+        )
+
+    async def _arebuild_task_output(
+        self,
+        result: Any,
+        agent: BaseAgent,
+    ) -> TaskOutput:
+        """Build a new TaskOutput from an agent execution result (async)."""
+        if isinstance(result, BaseModel):
+            raw = result.model_dump_json()
+            if self.output_pydantic:
+                pydantic_output = result
+                json_output = None
+            elif self.output_json:
+                pydantic_output = None
+                json_output = result.model_dump()
+            else:
+                pydantic_output = None
+                json_output = None
+        else:
+            raw = result
+            pydantic_output, json_output = await self._aexport_output(result)
+
+        return TaskOutput(
+            name=self.name or self.description,
+            description=self.description,
+            expected_output=self.expected_output,
+            raw=raw,
+            pydantic=pydantic_output,
+            json_dict=json_output,
+            agent=agent.role,
+            output_format=self._get_output_format(),
+            messages=agent.last_messages,  # type: ignore[attr-defined]
+        )
+
+    def _run_guardrails(
         self,
         task_output: TaskOutput,
         agent: BaseAgent,
         tools: list[BaseTool],
-        guardrail: GuardrailCallable | None,
-        guardrail_index: int | None = None,
     ) -> TaskOutput:
-        if not guardrail:
+        """Run all guardrails with proper enforcement.
+
+        When any guardrail fails and a retry is triggered, ALL guardrails are
+        re-evaluated from the beginning on the new output.  This prevents
+        earlier guardrails from being silently bypassed by retry outputs.
+        """
+        guardrails = self._collect_guardrails()
+        if not guardrails:
             return task_output
 
-        if guardrail_index is not None:
-            current_retry_count = self._guardrail_retry_counts.get(guardrail_index, 0)
-        else:
-            current_retry_count = self.retry_count
+        max_retries = self.guardrail_max_retries
+        retry_count = 0
 
-        max_attempts = self.guardrail_max_retries + 1
+        while True:
+            failed = False
+            failed_guardrail_index: int | None = None
+            failed_error: str | None = None
 
-        for attempt in range(max_attempts):
-            guardrail_result = process_guardrail(
-                output=task_output,
-                guardrail=guardrail,
-                retry_count=current_retry_count,
-                event_source=self,
-                from_task=self,
-                from_agent=agent,
-            )
+            for guardrail_index, guardrail in guardrails:
+                guardrail_result = process_guardrail(
+                    output=task_output,
+                    guardrail=guardrail,
+                    retry_count=retry_count,
+                    event_source=self,
+                    from_task=self,
+                    from_agent=agent,
+                )
 
-            if guardrail_result.success:
-                if guardrail_result.result is None:
-                    raise Exception(
-                        "Task guardrail returned None as result. This is not allowed."
+                if guardrail_result.success:
+                    task_output = self._apply_guardrail_result(
+                        task_output, guardrail_result
                     )
+                    continue
 
-                if isinstance(guardrail_result.result, str):
-                    task_output.raw = guardrail_result.result
-                    pydantic_output, json_output = self._export_output(
-                        guardrail_result.result
-                    )
-                    task_output.pydantic = pydantic_output
-                    task_output.json_dict = json_output
-                elif isinstance(guardrail_result.result, TaskOutput):
-                    task_output = guardrail_result.result
+                failed = True
+                failed_guardrail_index = guardrail_index
+                failed_error = guardrail_result.error
+                break
 
+            if not failed:
                 return task_output
 
-            if attempt >= self.guardrail_max_retries:
+            if retry_count >= max_retries:
                 guardrail_name = (
-                    f"guardrail {guardrail_index}"
-                    if guardrail_index is not None
+                    f"guardrail {failed_guardrail_index}"
+                    if failed_guardrail_index is not None
                     else "guardrail"
                 )
                 raise Exception(
-                    f"Task failed {guardrail_name} validation after {self.guardrail_max_retries} retries. "
-                    f"Last error: {guardrail_result.error}"
+                    f"Task failed {guardrail_name} validation after "
+                    f"{max_retries} retries. Last error: {failed_error}"
                 )
 
-            if guardrail_index is not None:
-                current_retry_count += 1
-                self._guardrail_retry_counts[guardrail_index] = current_retry_count
-            else:
-                self.retry_count += 1
-                current_retry_count = self.retry_count
+            retry_count += 1
+            self.retry_count = retry_count
+            if failed_guardrail_index is not None:
+                self._guardrail_retry_counts[failed_guardrail_index] = (
+                    self._guardrail_retry_counts.get(failed_guardrail_index, 0) + 1
+                )
 
             context = I18N_DEFAULT.errors("validation_error").format(
-                guardrail_result_error=guardrail_result.error,
+                guardrail_result_error=failed_error,
                 task_output=task_output.raw,
             )
             if agent and agent.verbose:
+                max_attempts = max_retries + 1
                 PRINTER.print(
-                    content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
+                    content=(
+                        f"Guardrail {failed_guardrail_index if failed_guardrail_index is not None else ''} "
+                        f"blocked (attempt {retry_count}/{max_attempts}), "
+                        f"retrying due to: {failed_error}\n"
+                    ),
                     color="yellow",
                 )
 
-            result = agent.execute_task(
-                task=self,
-                context=context,
-                tools=tools,
-            )
+            result = agent.execute_task(task=self, context=context, tools=tools)
+            task_output = self._rebuild_task_output(result, agent)
 
-            if isinstance(result, BaseModel):
-                raw = result.model_dump_json()
-                if self.output_pydantic:
-                    pydantic_output = result
-                    json_output = None
-                elif self.output_json:
-                    pydantic_output = None
-                    json_output = result.model_dump()
-                else:
-                    pydantic_output = None
-                    json_output = None
-            else:
-                raw = result
-                pydantic_output, json_output = self._export_output(result)
-
-            task_output = TaskOutput(
-                name=self.name or self.description,
-                description=self.description,
-                expected_output=self.expected_output,
-                raw=raw,
-                pydantic=pydantic_output,
-                json_dict=json_output,
-                agent=agent.role,
-                output_format=self._get_output_format(),
-                messages=agent.last_messages,  # type: ignore[attr-defined]
-            )
-
-        return task_output
-
-    async def _ainvoke_guardrail_function(
+    async def _arun_guardrails(
         self,
         task_output: TaskOutput,
         agent: BaseAgent,
         tools: list[BaseTool],
-        guardrail: GuardrailCallable | None,
-        guardrail_index: int | None = None,
     ) -> TaskOutput:
-        """Invoke the guardrail function asynchronously."""
-        if not guardrail:
+        """Async version of ``_run_guardrails``."""
+        guardrails = self._collect_guardrails()
+        if not guardrails:
             return task_output
 
-        if guardrail_index is not None:
-            current_retry_count = self._guardrail_retry_counts.get(guardrail_index, 0)
-        else:
-            current_retry_count = self.retry_count
+        max_retries = self.guardrail_max_retries
+        retry_count = 0
 
-        max_attempts = self.guardrail_max_retries + 1
+        while True:
+            failed = False
+            failed_guardrail_index: int | None = None
+            failed_error: str | None = None
 
-        for attempt in range(max_attempts):
-            guardrail_result = process_guardrail(
-                output=task_output,
-                guardrail=guardrail,
-                retry_count=current_retry_count,
-                event_source=self,
-                from_task=self,
-                from_agent=agent,
-            )
+            for guardrail_index, guardrail in guardrails:
+                guardrail_result = process_guardrail(
+                    output=task_output,
+                    guardrail=guardrail,
+                    retry_count=retry_count,
+                    event_source=self,
+                    from_task=self,
+                    from_agent=agent,
+                )
 
-            if guardrail_result.success:
-                if guardrail_result.result is None:
-                    raise Exception(
-                        "Task guardrail returned None as result. This is not allowed."
+                if guardrail_result.success:
+                    task_output = await self._aapply_guardrail_result(
+                        task_output, guardrail_result
                     )
+                    continue
 
-                if isinstance(guardrail_result.result, str):
-                    task_output.raw = guardrail_result.result
-                    pydantic_output, json_output = await self._aexport_output(
-                        guardrail_result.result
-                    )
-                    task_output.pydantic = pydantic_output
-                    task_output.json_dict = json_output
-                elif isinstance(guardrail_result.result, TaskOutput):
-                    task_output = guardrail_result.result
+                failed = True
+                failed_guardrail_index = guardrail_index
+                failed_error = guardrail_result.error
+                break
 
+            if not failed:
                 return task_output
 
-            if attempt >= self.guardrail_max_retries:
+            if retry_count >= max_retries:
                 guardrail_name = (
-                    f"guardrail {guardrail_index}"
-                    if guardrail_index is not None
+                    f"guardrail {failed_guardrail_index}"
+                    if failed_guardrail_index is not None
                     else "guardrail"
                 )
                 raise Exception(
-                    f"Task failed {guardrail_name} validation after {self.guardrail_max_retries} retries. "
-                    f"Last error: {guardrail_result.error}"
+                    f"Task failed {guardrail_name} validation after "
+                    f"{max_retries} retries. Last error: {failed_error}"
                 )
 
-            if guardrail_index is not None:
-                current_retry_count += 1
-                self._guardrail_retry_counts[guardrail_index] = current_retry_count
-            else:
-                self.retry_count += 1
-                current_retry_count = self.retry_count
+            retry_count += 1
+            self.retry_count = retry_count
+            if failed_guardrail_index is not None:
+                self._guardrail_retry_counts[failed_guardrail_index] = (
+                    self._guardrail_retry_counts.get(failed_guardrail_index, 0) + 1
+                )
 
             context = I18N_DEFAULT.errors("validation_error").format(
-                guardrail_result_error=guardrail_result.error,
+                guardrail_result_error=failed_error,
                 task_output=task_output.raw,
             )
             if agent and agent.verbose:
+                max_attempts = max_retries + 1
                 PRINTER.print(
-                    content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
+                    content=(
+                        f"Guardrail {failed_guardrail_index if failed_guardrail_index is not None else ''} "
+                        f"blocked (attempt {retry_count}/{max_attempts}), "
+                        f"retrying due to: {failed_error}\n"
+                    ),
                     color="yellow",
                 )
 
-            result = await agent.aexecute_task(
-                task=self,
-                context=context,
-                tools=tools,
-            )
-
-            if isinstance(result, BaseModel):
-                raw = result.model_dump_json()
-                if self.output_pydantic:
-                    pydantic_output = result
-                    json_output = None
-                elif self.output_json:
-                    pydantic_output = None
-                    json_output = result.model_dump()
-                else:
-                    pydantic_output = None
-                    json_output = None
-            else:
-                raw = result
-                pydantic_output, json_output = await self._aexport_output(result)
-
-            task_output = TaskOutput(
-                name=self.name or self.description,
-                description=self.description,
-                expected_output=self.expected_output,
-                raw=raw,
-                pydantic=pydantic_output,
-                json_dict=json_output,
-                agent=agent.role,
-                output_format=self._get_output_format(),
-                messages=agent.last_messages,  # type: ignore[attr-defined]
-            )
-
-        return task_output
+            result = await agent.aexecute_task(task=self, context=context, tools=tools)
+            task_output = await self._arebuild_task_output(result, agent)
