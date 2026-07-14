@@ -10,7 +10,6 @@ import os
 import warnings
 from uuid import uuid4
 
-import pytest
 from crewai.flow.flow import Flow, start
 from crewai.flow.persistence import persist
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
@@ -75,6 +74,35 @@ def test_valid_uuid_id_with_persistence_does_not_warn(tmp_path):
     assert amp_warnings == []
     assert flow.state["id"] == valid_id
     assert flow.state["message"] == "ran"
+
+
+def test_non_uuid_id_with_method_level_persist_only_warns(tmp_path):
+    """Method-level @persist (no instance/class persistence) still warns.
+
+    Method-level @persist never sets `flow.persistence`, but the flow still
+    saves state under the provided id, so the AMP parity warning must fire.
+    """
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+    # No persistence= constructor arg: only the method is persisted.
+    flow = _build_persisted_flow_class(persistence)()
+    assert flow.persistence is None
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        flow.kickoff(inputs={"id": "session-1"})
+
+    amp_warnings = [
+        w for w in caught if AMP_WARNING_MATCH in str(w.message)
+    ]
+    assert len(amp_warnings) == 1, (
+        f"expected exactly one AMP parity warning, got {len(amp_warnings)}"
+    )
+
+    # Behavior is unchanged: the method-level @persist saved the state.
+    assert flow.state["id"] == "session-1"
+    assert flow.state["message"] == "ran"
+    assert persistence.load_state("session-1") is not None
 
 
 def test_non_uuid_id_without_persistence_does_not_warn():

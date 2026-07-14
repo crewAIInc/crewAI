@@ -2086,7 +2086,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         try:
             # AMP parity: persisted flows deployed to CrewAI AMP reject
             # non-UUID `id` inputs with HTTP 422, so surface that locally.
-            if inputs and "id" in inputs and self.persistence is not None:
+            # Covers instance/class-level persistence and method-level
+            # @persist (which never sets self.persistence).
+            if inputs and "id" in inputs and self._has_active_persistence():
                 _warn_if_non_uuid_flow_state_id(inputs["id"])
 
             # Reset flow state for fresh execution unless restoring from persistence
@@ -2691,6 +2693,23 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if future:
                     self._event_futures.append(future)
             raise e
+
+    def _has_active_persistence(self) -> bool:
+        """Whether this flow persists state anywhere.
+
+        True when an instance/class-level backend is set, the flow-level
+        definition enables persistence, or any method carries a method-level
+        ``@persist`` (which never sets ``self.persistence``).
+        """
+        if self.persistence is not None:
+            return True
+        flow_persist = self._definition.persist
+        if flow_persist is not None and flow_persist.enabled:
+            return True
+        return any(
+            method.persist is not None and method.persist.enabled
+            for method in self._definition.methods.values()
+        )
 
     def _persist_method_completion(self, method_name: FlowMethodName) -> None:
         method_definition = self._definition.methods[str(method_name)]
