@@ -167,10 +167,21 @@ def test_import_error_message_mentions_extra(monkeypatch):
 
 
 # --- integration tests against the real engine -------------------------------
+# Guarded per-test rather than with a module-level importorskip, which would
+# skip the whole file — including the mocked unit tests above — when chdb is
+# not installed.
 
-chdb = pytest.importorskip("chdb")
+try:
+    import chdb  # noqa: F401
+
+    HAS_CHDB = True
+except ImportError:
+    HAS_CHDB = False
+
+requires_chdb = pytest.mark.skipif(not HAS_CHDB, reason="chdb is not installed")
 
 
+@requires_chdb
 def test_end_to_end_select():
     tool = ChDBRunSelectQueryTool()
     try:
@@ -181,6 +192,7 @@ def test_end_to_end_select():
         tool.close()
 
 
+@requires_chdb
 def test_param_binding_end_to_end():
     tool = ChDBRunSelectQueryTool()
     try:
@@ -194,6 +206,7 @@ def test_param_binding_end_to_end():
         tool.close()
 
 
+@requires_chdb
 def test_read_only_rejects_writes_with_envelope():
     tool = ChDBRunSelectQueryTool()
     try:
@@ -206,6 +219,7 @@ def test_read_only_rejects_writes_with_envelope():
         tool.close()
 
 
+@requires_chdb
 def test_writable_suite_attach_then_query(tmp_path):
     csv = tmp_path / "people.csv"
     csv.write_text("name,age\nada,36\ngrace,45\n")
@@ -229,6 +243,7 @@ def test_writable_suite_attach_then_query(tmp_path):
         tools["run_select_query"].engine.close()
 
 
+@requires_chdb
 def test_read_only_suite_with_attachments(tmp_path):
     csv = tmp_path / "cities.csv"
     csv.write_text("city,pop\nparis,2100000\n")
@@ -242,6 +257,7 @@ def test_read_only_suite_with_attachments(tmp_path):
         tools[0].engine.close()
 
 
+@requires_chdb
 def test_introspection_tools_end_to_end():
     engine_owner = ChDBListDatabasesTool()
     try:
