@@ -72,7 +72,7 @@ class TaskOutput(BaseModel):
         return self
 
     @property
-    def json(self) -> str | None:  # type: ignore[override]
+    def json_output(self) -> str | None:
         """Get the JSON string representation of the task output.
 
         Returns:
@@ -80,9 +80,6 @@ class TaskOutput(BaseModel):
 
         Raises:
             ValueError: If output format is not JSON.
-
-        Notes:
-            TODO: Refactor to use model_dump_json() to avoid BaseModel method conflict
         """
         if self.output_format != OutputFormat.JSON:
             raise ValueError(
