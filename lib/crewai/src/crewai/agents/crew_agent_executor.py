@@ -46,8 +46,8 @@ from crewai.hooks.llm_hooks import (
 )
 from crewai.hooks.tool_hooks import (
     ToolCallHookContext,
-    get_after_tool_call_hooks,
-    get_before_tool_call_hooks,
+    run_after_tool_call_hooks,
+    run_before_tool_call_hooks,
 )
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
@@ -951,7 +951,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         track_delegation_if_needed(func_name, args_dict or {}, self.task)
 
-        hook_blocked = False
         before_hook_context = ToolCallHookContext(
             tool_name=func_name,
             tool_input=args_dict or {},
@@ -960,19 +959,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             task=self.task,
             crew=self.crew,
         )
-        before_hooks = get_before_tool_call_hooks()
-        try:
-            for hook in before_hooks:
-                hook_result = hook(before_hook_context)
-                if hook_result is False:
-                    hook_blocked = True
-                    break
-        except Exception as hook_error:
-            if self.agent.verbose:
-                PRINTER.print(
-                    content=f"Error in before_tool_call hook: {hook_error}",
-                    color="red",
-                )
+        hook_blocked = run_before_tool_call_hooks(before_hook_context)
 
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
@@ -1033,19 +1020,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
             tool_result=result,
             raw_tool_result=raw_tool_result,
         )
-        after_hooks = get_after_tool_call_hooks()
-        try:
-            for after_hook in after_hooks:
-                after_hook_result = after_hook(after_hook_context)
-                if after_hook_result is not None:
-                    result = after_hook_result
-                    after_hook_context.tool_result = result
-        except Exception as hook_error:
-            if self.agent.verbose:
-                PRINTER.print(
-                    content=f"Error in after_tool_call hook: {hook_error}",
-                    color="red",
-                )
+        modified_result = run_after_tool_call_hooks(after_hook_context)
+        if modified_result is not None:
+            result = modified_result
 
         if not error_event_emitted:
             crewai_event_bus.emit(
@@ -1068,6 +1045,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             "result": result,
             "from_cache": from_cache,
             "original_tool": original_tool,
+            "is_error": error_event_emitted,
         }
 
     def _append_tool_result_and_check_finality(
@@ -1078,6 +1056,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         result = cast(str, execution_result["result"])
         from_cache = cast(bool, execution_result["from_cache"])
         original_tool = execution_result["original_tool"]
+        is_error = cast(bool, execution_result.get("is_error", False))
 
         tool_message: LLMMessage = {
             "role": "tool",
@@ -1098,6 +1077,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             original_tool
             and hasattr(original_tool, "result_as_answer")
             and original_tool.result_as_answer
+            and not is_error
         ):
             return AgentFinish(
                 thought="Tool result is the final answer",
