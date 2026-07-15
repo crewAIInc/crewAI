@@ -373,9 +373,17 @@
                       "edge/en/learn/replay-tasks-from-latest-crew-kickoff",
                       "edge/en/learn/sequential-process",
                       "edge/en/learn/using-annotations",
-                      "edge/en/learn/execution-hooks",
-                      "edge/en/learn/llm-hooks",
-                      "edge/en/learn/tool-hooks"
+                      {
+                        "group": "Execution Hooks",
+                        "pages": [
+                          "edge/en/learn/execution-hooks",
+                          "edge/en/learn/llm-hooks",
+                          "edge/en/learn/tool-hooks",
+                          "edge/en/learn/execution-boundary-hooks",
+                          "edge/en/learn/step-hooks",
+                          "edge/en/learn/before-and-after-kickoff-hooks"
+                        ]
+                      }
                     ]
                   },
                   {
