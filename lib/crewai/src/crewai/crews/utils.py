@@ -273,6 +273,45 @@ def _normalize_inputs(inputs: dict[str, Any] | None) -> dict[str, Any] | None:
     return dict(inputs)
 
 
+def _dispatch_execution_start(
+    crew: Crew,
+    normalized: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Dispatch the EXECUTION_START interception point and return the (possibly modified) payload.
+
+    ``inputs`` aliases the same object as ``payload`` (not a fresh ``{}`` from
+    ``or``) so in-place edits to either survive read-back, per the context
+    contract. ``None`` inputs are preserved rather than coerced to ``{}``.
+    """
+    from crewai.hooks.contexts import ExecutionStartContext
+    from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
+    start_ctx = ExecutionStartContext(
+        crew=crew,
+        inputs=normalized if normalized is not None else {},
+        payload=normalized,
+    )
+    dispatch(InterceptionPoint.EXECUTION_START, start_ctx)
+    return start_ctx.payload
+
+
+def _dispatch_input(
+    crew: Crew,
+    normalized: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Dispatch the INPUT interception point and return the (possibly modified) payload."""
+    from crewai.hooks.contexts import InputContext
+    from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
+    input_ctx = InputContext(
+        crew=crew,
+        inputs=normalized if normalized is not None else {},
+        payload=normalized,
+    )
+    dispatch(InterceptionPoint.INPUT, input_ctx)
+    return input_ctx.payload
+
+
 def _finish_prepare_kickoff(
     crew: Crew,
     normalized: dict[str, Any] | None,
@@ -370,12 +409,14 @@ def prepare_kickoff(
     """
     resuming = _begin_prepare_kickoff(crew)
     normalized = _normalize_inputs(inputs)
+    normalized = _dispatch_execution_start(crew, normalized)
 
     for before_callback in crew.before_kickoff_callbacks:
         if normalized is None:
             normalized = {}
         normalized = before_callback(normalized)
 
+    normalized = _dispatch_input(crew, normalized)
     return _finish_prepare_kickoff(crew, normalized, input_files, resuming)
 
 
@@ -399,6 +440,7 @@ async def aprepare_kickoff(
     """
     resuming = _begin_prepare_kickoff(crew)
     normalized = _normalize_inputs(inputs)
+    normalized = _dispatch_execution_start(crew, normalized)
 
     for before_callback in crew.before_kickoff_callbacks:
         if normalized is None:
@@ -409,6 +451,7 @@ async def aprepare_kickoff(
         else:
             normalized = result
 
+    normalized = _dispatch_input(crew, normalized)
     return _finish_prepare_kickoff(crew, normalized, input_files, resuming)
 
 
