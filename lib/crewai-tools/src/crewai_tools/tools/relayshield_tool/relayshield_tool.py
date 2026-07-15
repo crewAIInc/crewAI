@@ -66,7 +66,8 @@ class RelayShieldMCPRiskTool(BaseTool):
             )
             resp.raise_for_status()
             # Every RelayShield response is wrapped as {"ok": bool, "data": {...}}.
-            data = resp.json().get("data", {})
+            response_json = resp.json()
+            data = response_json.get("data", {}) if isinstance(response_json, dict) else {}
         except requests.RequestException as exc:
             return f"RelayShield MCP registry risk check failed: {exc}"
 
@@ -119,7 +120,8 @@ class RelayShieldPromptInjectionBreachTool(BaseTool):
             )
             resp.raise_for_status()
             # Every RelayShield response is wrapped as {"ok": bool, "data": {...}}.
-            data = resp.json().get("data", {})
+            response_json = resp.json()
+            data = response_json.get("data", {}) if isinstance(response_json, dict) else {}
         except requests.RequestException as exc:
             return f"RelayShield prompt-injection breach check failed: {exc}"
 
