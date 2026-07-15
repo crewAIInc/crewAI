@@ -1,525 +1,274 @@
 ---
-title: Execution Hooks Overview
-description: Understanding and using execution hooks in CrewAI for fine-grained control over agent operations
+title: Execution Hooks
+description: Intercept, modify, and control CrewAI's runtime with the @on decorator - one contract covering every interception point
 mode: "wide"
 ---
 
-Execution Hooks provide fine-grained control over the runtime behavior of your CrewAI agents. Unlike kickoff hooks that run before and after crew execution, execution hooks intercept specific operations during agent execution, allowing you to modify behavior, implement safety checks, and add comprehensive monitoring.
+Execution hooks provide fine-grained control over the runtime behavior of your
+CrewAI agents. Unlike kickoff hooks that run before and after crew execution,
+execution hooks intercept specific operations during execution — from the moment
+a run starts, through every model call, tool call, and task or flow-method step,
+down to the final output.
 
-## Types of Execution Hooks
+Hooks are written with the `@on` decorator: one registration API and one
+contract cover every interception point in the framework.
 
-CrewAI provides two main categories of execution hooks:
+```python
+from crewai.hooks import on, HookAborted, InterceptionPoint
 
-### 1. [LLM Call Hooks](/learn/llm-hooks)
+@on(InterceptionPoint.PRE_TOOL_CALL, tools=["delete_file"])
+def guard_deletes(ctx):
+    raise HookAborted(reason="file deletion is not allowed", source="policy")
+```
 
-Control and monitor language model interactions:
-- **Before LLM Call**: Modify prompts, validate inputs, implement approval gates
-- **After LLM Call**: Transform responses, sanitize outputs, update conversation history
+<Note>
+The point-specific decorators (`@before_llm_call`, `@after_tool_call`, ...) keep
+working unchanged — they are adapters over the same engine. See
+[Point-specific decorators (legacy)](#point-specific-decorators-legacy) at the
+end of this page.
+</Note>
 
-**Use Cases:**
-- Iteration limiting
-- Cost tracking and token usage monitoring
-- Response sanitization and content filtering
-- Human-in-the-loop approval for LLM calls
-- Adding safety guidelines or context
-- Debug logging and request/response inspection
+## The contract
 
-[View LLM Hooks Documentation →](/learn/llm-hooks)
+Every hook is a **synchronous** callable that receives a single typed context:
 
-### 2. [Tool Call Hooks](/learn/tool-hooks)
+```python
+from crewai.hooks import on, HookAborted, InterceptionPoint
 
-Control and monitor tool execution:
-- **Before Tool Call**: Modify inputs, validate parameters, block dangerous operations
-- **After Tool Call**: Transform results, sanitize outputs, log execution details
+@on(InterceptionPoint.INPUT)
+def add_defaults(ctx):
+    # 1. Observe: read anything off the context.
+    # 2. Mutate in place: change ctx.payload or nested fields directly.
+    ctx.payload.setdefault("locale", "en-US")
+    # 3. Or replace: return a new value to swap ctx.payload.
+    # 4. Or abort: raise HookAborted(reason, source) to stop the operation.
+    return None
+```
 
-**Use Cases:**
-- Safety guardrails for destructive operations
-- Human approval for sensitive actions
-- Input validation and sanitization
-- Result caching and rate limiting
-- Tool usage analytics
-- Debug logging and monitoring
+A hook may do any of four things:
 
-[View Tool Hooks Documentation →](/learn/tool-hooks)
+| Action | How | Effect |
+|--------|-----|--------|
+| **Proceed** | `return None` (or nothing) | Operation continues unchanged |
+| **Mutate** | Change `ctx.payload` / fields in place | Change is visible downstream |
+| **Replace** | `return new_payload` | A non-`None` return replaces `ctx.payload` |
+| **Abort** | `raise HookAborted(reason, source)` | Operation is stopped; the reason propagates |
 
-## Hook Registration Methods
+## Registering hooks
 
-### 1. Decorator-Based Hooks (Recommended)
+Use `@on` for global hooks. It accepts `agents=` / `tools=` filters to scope a
+hook to specific agent roles or tool names:
 
-The cleanest and most Pythonic way to register hooks:
+```python
+from crewai.hooks import on, InterceptionPoint
+
+@on(InterceptionPoint.POST_TOOL_CALL, agents=["researcher"], tools=["web_search"])
+def log_search_results(ctx):
+    print(f"search returned: {str(ctx.payload)[:80]}")
+```
+
+Applied to a method inside a `@CrewBase` class, `@on` registers a
+**crew-scoped** hook, active only while that crew runs:
+
+```python
+from crewai import CrewBase
+from crewai.hooks import on, InterceptionPoint
+
+@CrewBase
+class MyProjCrew:
+    @on(InterceptionPoint.PRE_MODEL_CALL)
+    def validate_inputs(self, ctx):
+        # Only applies to this crew
+        return None
+```
+
+## Interception point catalog
+
+`payload` is the value a hook may mutate or replace at each point.
+
+### Execution boundaries
+
+| Point | When | `payload` |
+|-------|------|-----------|
+| `EXECUTION_START` | A crew or flow is about to begin | inputs `dict` |
+| `INPUT` | Resolved inputs for the execution | inputs `dict` |
+| `OUTPUT` | Final result is ready | the output object |
+| `EXECUTION_END` | A crew or flow has finished | the output object |
+
+### Model & tool boundaries
+
+| Point | When | `payload` |
+|-------|------|-----------|
+| `PRE_MODEL_CALL` | Before an LLM call | `LLMCallHookContext` |
+| `POST_MODEL_CALL` | After an LLM call | response |
+| `PRE_TOOL_CALL` | Before a tool runs | `ToolCallHookContext` |
+| `POST_TOOL_CALL` | After a tool runs | tool result |
+
+### Step points
+
+| Point | When | `payload` |
+|-------|------|-----------|
+| `PRE_STEP` | Before a task or flow-method step | step input |
+| `POST_STEP` | After a task or flow-method step | step output |
+
+`PRE_STEP` / `POST_STEP` carry `ctx.kind` (`"task"` or `"flow_method"`) and
+`ctx.step_name`.
+
+## Aborting an operation
+
+`HookAborted` carries a `reason` and an optional `source`. The `source` defaults
+to the aborting hook when omitted, which is useful for telemetry and failure
+messages:
+
+```python
+@on(InterceptionPoint.EXECUTION_START)
+def enforce_policy(ctx):
+    if not ctx.payload.get("authorized"):
+        raise HookAborted(reason="unauthorized execution", source="access-control")
+```
+
+## Composition, ordering, and fail-open
+
+- Multiple hooks on the same point run in **registration order**, global hooks
+  first, then execution-scoped hooks. Legacy hooks registered for the same point
+  participate in the same chain.
+- The (possibly mutated) payload flows from one hook to the next.
+- `HookAborted` **propagates by design** and stops the chain.
+- Any *other* exception raised by a hook is **swallowed** (fail-open) so a single
+  buggy hook can't crash a run.
+- When no hook is registered for a point, dispatch is a single dict lookup
+  (no-op fast path), so unused points cost effectively nothing.
+
+## Common patterns
+
+### Safety guardrails
+
+```python
+@on(InterceptionPoint.PRE_TOOL_CALL)
+def block_dangerous_tools(ctx):
+    dangerous = {"delete_file", "drop_table", "system_shutdown"}
+    if ctx.payload.tool_name in dangerous:
+        raise HookAborted(reason=f"{ctx.payload.tool_name} is blocked", source="safety-policy")
+
+@on(InterceptionPoint.PRE_MODEL_CALL)
+def iteration_limit(ctx):
+    if ctx.payload.iterations > 15:
+        raise HookAborted(reason="maximum iterations exceeded", source="loop-guard")
+```
+
+### Human-in-the-loop approval
+
+```python
+@on(InterceptionPoint.PRE_TOOL_CALL, tools=["send_email", "make_payment"])
+def require_approval(ctx):
+    response = ctx.payload.request_human_input(
+        prompt=f"Approve {ctx.payload.tool_name}?",
+        default_message="Type 'yes' to approve:",
+    )
+    if response.lower() != "yes":
+        raise HookAborted(reason="rejected by operator", source="approval-gate")
+```
+
+### Sanitizing outputs
+
+A non-`None` return value replaces the payload, so transformations are plain
+return statements:
+
+```python
+import re
+
+@on(InterceptionPoint.POST_MODEL_CALL)
+def redact_keys(ctx):
+    return re.sub(
+        r'(api[_-]?key)["\']?\s*[:=]\s*["\']?[\w-]+',
+        r"\1: [REDACTED]",
+        ctx.payload,
+        flags=re.IGNORECASE,
+    )
+```
+
+### Observing steps
+
+```python
+@on(InterceptionPoint.POST_STEP)
+def trace_steps(ctx):
+    print(f"{ctx.kind} '{ctx.step_name}' finished")
+```
+
+## Telemetry
+
+Whenever a point actually dispatches to at least one hook, CrewAI emits a
+`HookDispatchedEvent` on the event bus with the point, the outcome
+(`proceeded` / `modified` / `aborted`), the hook count, the duration, and — for
+aborts — the reason and source. The no-op fast path emits nothing.
+
+## Managing hooks in tests
+
+Global hooks persist for the lifetime of the process. Reset them between tests:
+
+```python
+import pytest
+from crewai.hooks import clear_all_hooks
+
+@pytest.fixture(autouse=True)
+def reset_hooks():
+    clear_all_hooks()
+    yield
+    clear_all_hooks()
+```
+
+## Best practices
+
+1. **Keep hooks focused** — one clear responsibility per hook; register several
+   small hooks rather than one that does everything.
+2. **Keep hooks fast** — hooks run on every dispatch of their point; avoid heavy
+   computation and lazy-import heavy dependencies.
+3. **Prefer scoping** — use `agents=` / `tools=` filters and crew-scoped
+   registration instead of unconditional global hooks.
+4. **Abort loudly** — raise `HookAborted` with a meaningful `reason` and
+   `source`; that context surfaces in error messages and telemetry. Remember
+   that any other exception is swallowed (fail-open), so don't rely on raising
+   `ValueError` to stop a run.
+
+## Point-specific decorators (legacy)
+
+Before `@on`, LLM and tool calls were hooked with dedicated decorator pairs.
+These keep working unchanged — they are adapters over the same dispatcher, so
+they compose with `@on` hooks in the same registration-order chain:
 
 ```python
 from crewai.hooks import before_llm_call, after_llm_call, before_tool_call, after_tool_call
 
 @before_llm_call
 def limit_iterations(context):
-    """Prevent infinite loops by limiting iterations."""
     if context.iterations > 10:
         return False  # Block execution
-    return None
-
-@after_llm_call
-def sanitize_response(context):
-    """Remove sensitive data from LLM responses."""
-    if "API_KEY" in context.response:
-        return context.response.replace("API_KEY", "[REDACTED]")
-    return None
-
-@before_tool_call
-def block_dangerous_tools(context):
-    """Block destructive operations."""
-    if context.tool_name == "delete_database":
-        return False  # Block execution
-    return None
 
 @after_tool_call
 def log_tool_result(context):
-    """Log tool execution."""
     print(f"Tool {context.tool_name} completed")
-    return None
 ```
 
-### 2. Crew-Scoped Hooks
-
-Apply hooks only to specific crew instances:
-
-```python
-from crewai import CrewBase
-from crewai.project import crew
-from crewai.hooks import before_llm_call_crew, after_tool_call_crew
-
-@CrewBase
-class MyProjCrew:
-    @before_llm_call_crew
-    def validate_inputs(self, context):
-        # Only applies to this crew
-        print(f"LLM call in {self.__class__.__name__}")
-        return None
-
-    @after_tool_call_crew
-    def log_results(self, context):
-        # Crew-specific logging
-        print(f"Tool result: {context.tool_result[:50]}...")
-        return None
-
-    @crew
-    def crew(self) -> Crew:
-        return Crew(
-            agents=self.agents,
-            tasks=self.tasks,
-            process=Process.sequential
-        )
-```
-
-## Hook Execution Flow
-
-### LLM Call Flow
-
-```
-Agent needs to call LLM
-    ↓
-[Before LLM Call Hooks Execute]
-    ├→ Hook 1: Validate iteration count
-    ├→ Hook 2: Add safety context
-    └→ Hook 3: Log request
-    ↓
-If any hook returns False:
-    ├→ Block LLM call
-    └→ Raise ValueError
-    ↓
-If all hooks return True/None:
-    ├→ LLM call proceeds
-    └→ Response generated
-    ↓
-[After LLM Call Hooks Execute]
-    ├→ Hook 1: Sanitize response
-    ├→ Hook 2: Log response
-    └→ Hook 3: Update metrics
-    ↓
-Final response returned
-```
-
-### Tool Call Flow
-
-```
-Agent needs to execute tool
-    ↓
-[Before Tool Call Hooks Execute]
-    ├→ Hook 1: Check if tool is allowed
-    ├→ Hook 2: Validate inputs
-    └→ Hook 3: Request approval if needed
-    ↓
-If any hook returns False:
-    ├→ Block tool execution
-    └→ Return error message
-    ↓
-If all hooks return True/None:
-    ├→ Tool execution proceeds
-    └→ Result generated
-    ↓
-[After Tool Call Hooks Execute]
-    ├→ Hook 1: Sanitize result
-    ├→ Hook 2: Cache result
-    └→ Hook 3: Log metrics
-    ↓
-Final result returned
-```
-
-## Hook Context Objects
-
-### LLMCallHookContext
-
-Provides access to LLM execution state:
-
-```python
-class LLMCallHookContext:
-    executor: CrewAgentExecutor  # Full executor access
-    messages: list               # Mutable message list
-    agent: Agent                 # Current agent
-    task: Task                   # Current task
-    crew: Crew                   # Crew instance
-    llm: BaseLLM                 # LLM instance
-    iterations: int              # Current iteration
-    response: str | None         # LLM response (after hooks)
-```
-
-### ToolCallHookContext
-
-Provides access to tool execution state:
-
-```python
-class ToolCallHookContext:
-    tool_name: str               # Tool being called
-    tool_input: dict             # Mutable input parameters
-    tool: CrewStructuredTool     # Tool instance
-    agent: Agent | None          # Agent executing
-    task: Task | None            # Current task
-    crew: Crew | None            # Crew instance
-    tool_result: str | None      # Agent-facing result string (after hooks)
-    raw_tool_result: Any | None  # Raw Python result (after hooks)
-```
-
-For typed tool outputs, `tool_result` is the string the agent sees. By default, this is JSON. If the tool uses custom formatting, it can be Markdown or another string. `raw_tool_result` is the original Python value returned by the tool.
-
-## Common Patterns
-
-### Safety and Validation
-
-```python
-@before_tool_call
-def safety_check(context):
-    """Block destructive operations."""
-    dangerous = ['delete_file', 'drop_table', 'system_shutdown']
-    if context.tool_name in dangerous:
-        print(f"🛑 Blocked: {context.tool_name}")
-        return False
-    return None
-
-@before_llm_call
-def iteration_limit(context):
-    """Prevent infinite loops."""
-    if context.iterations > 15:
-        print("⛔ Maximum iterations exceeded")
-        return False
-    return None
-```
-
-### Human-in-the-Loop
-
-```python
-@before_tool_call
-def require_approval(context):
-    """Require approval for sensitive operations."""
-    sensitive = ['send_email', 'make_payment', 'post_message']
-
-    if context.tool_name in sensitive:
-        response = context.request_human_input(
-            prompt=f"Approve {context.tool_name}?",
-            default_message="Type 'yes' to approve:"
-        )
-
-        if response.lower() != 'yes':
-            return False
-
-    return None
-```
-
-### Monitoring and Analytics
-
-```python
-from collections import defaultdict
-import time
-
-metrics = defaultdict(lambda: {'count': 0, 'total_time': 0})
-
-@before_tool_call
-def start_timer(context):
-    context.tool_input['_start'] = time.time()
-    return None
-
-@after_tool_call
-def track_metrics(context):
-    start = context.tool_input.get('_start', time.time())
-    duration = time.time() - start
-
-    metrics[context.tool_name]['count'] += 1
-    metrics[context.tool_name]['total_time'] += duration
-
-    return None
-
-# View metrics
-def print_metrics():
-    for tool, data in metrics.items():
-        avg = data['total_time'] / data['count']
-        print(f"{tool}: {data['count']} calls, {avg:.2f}s avg")
-```
-
-### Response Sanitization
-
-```python
-import re
-
-@after_llm_call
-def sanitize_llm_response(context):
-    """Remove sensitive data from LLM responses."""
-    if not context.response:
-        return None
-
-    result = context.response
-    result = re.sub(r'(api[_-]?key)["\']?\s*[:=]\s*["\']?[\w-]+',
-                   r'\1: [REDACTED]', result, flags=re.IGNORECASE)
-    return result
-
-@after_tool_call
-def sanitize_tool_result(context):
-    """Remove sensitive data from tool results."""
-    if not context.tool_result:
-        return None
-
-    result = context.tool_result
-    result = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
-                   '[EMAIL-REDACTED]', result)
-    return result
-```
-
-## Hook Management
-
-### Clearing All Hooks
-
-```python
-from crewai.hooks import clear_all_global_hooks
-
-# Clear all hooks at once
-result = clear_all_global_hooks()
-print(f"Cleared {result['total']} hooks")
-# Output: {'llm_hooks': (2, 1), 'tool_hooks': (1, 2), 'total': (3, 3)}
-```
-
-### Clearing Specific Hook Types
-
-```python
-from crewai.hooks import (
-    clear_before_llm_call_hooks,
-    clear_after_llm_call_hooks,
-    clear_before_tool_call_hooks,
-    clear_after_tool_call_hooks
-)
-
-# Clear specific types
-llm_before_count = clear_before_llm_call_hooks()
-tool_after_count = clear_after_tool_call_hooks()
-```
-
-### Unregistering Individual Hooks
-
-```python
-from crewai.hooks import (
-    unregister_before_llm_call_hook,
-    unregister_after_tool_call_hook
-)
-
-def my_hook(context):
-    ...
-
-# Register
-register_before_llm_call_hook(my_hook)
-
-# Later, unregister
-success = unregister_before_llm_call_hook(my_hook)
-print(f"Unregistered: {success}")
-```
-
-## Best Practices
-
-### 1. Keep Hooks Focused
-Each hook should have a single, clear responsibility:
-
-```python
-# ✅ Good - focused responsibility
-@before_tool_call
-def validate_file_path(context):
-    if context.tool_name == 'read_file':
-        if '..' in context.tool_input.get('path', ''):
-            return False
-    return None
-
-# ❌ Bad - too many responsibilities
-@before_tool_call
-def do_everything(context):
-    # Validation + logging + metrics + approval...
-    ...
-```
-
-### 2. Handle Errors Gracefully
-
-```python
-@before_llm_call
-def safe_hook(context):
-    try:
-        # Your logic
-        if some_condition:
-            return False
-    except Exception as e:
-        print(f"Hook error: {e}")
-        return None  # Allow execution despite error
-```
-
-### 3. Modify Context In-Place
-
-```python
-# ✅ Correct - modify in-place
-@before_llm_call
-def add_context(context):
-    context.messages.append({"role": "system", "content": "Be concise"})
-
-# ❌ Wrong - replaces reference
-@before_llm_call
-def wrong_approach(context):
-    context.messages = [{"role": "system", "content": "Be concise"}]
-```
-
-### 4. Use Type Hints
-
-```python
-from crewai.hooks import LLMCallHookContext, ToolCallHookContext
-
-def my_llm_hook(context: LLMCallHookContext) -> bool | None:
-    # IDE autocomplete and type checking
-    return None
-
-def my_tool_hook(context: ToolCallHookContext) -> str | None:
-    return None
-```
-
-### 5. Clean Up in Tests
-
-```python
-import pytest
-from crewai.hooks import clear_all_global_hooks
-
-@pytest.fixture(autouse=True)
-def clean_hooks():
-    """Reset hooks before each test."""
-    yield
-    clear_all_global_hooks()
-```
-
-## When to Use Which Hook
-
-### Use LLM Hooks When:
-- Implementing iteration limits
-- Adding context or safety guidelines to prompts
-- Tracking token usage and costs
-- Sanitizing or transforming responses
-- Implementing approval gates for LLM calls
-- Debugging prompt/response interactions
-
-### Use Tool Hooks When:
-- Blocking dangerous or destructive operations
-- Validating tool inputs before execution
-- Implementing approval gates for sensitive actions
-- Caching tool results
-- Tracking tool usage and performance
-- Sanitizing tool outputs
-- Rate limiting tool calls
-
-### Use Both When:
-Building comprehensive observability, safety, or approval systems that need to monitor all agent operations.
-
-## Alternative Registration Methods
-
-### Programmatic Registration (Advanced)
-
-For dynamic hook registration or when you need to register hooks programmatically:
-
-```python
-from crewai.hooks import (
-    register_before_llm_call_hook,
-    register_after_tool_call_hook
-)
-
-def my_hook(context):
-    return None
-
-# Register programmatically
-register_before_llm_call_hook(my_hook)
-
-# Useful for:
-# - Loading hooks from configuration
-# - Conditional hook registration
-# - Plugin systems
-```
-
-**Note:** For most use cases, decorators are cleaner and more maintainable.
-
-## Performance Considerations
-
-1. **Keep Hooks Fast**: Hooks execute on every call - avoid heavy computation
-2. **Cache When Possible**: Store expensive validations or lookups
-3. **Be Selective**: Use crew-scoped hooks when global hooks aren't needed
-4. **Monitor Hook Overhead**: Profile hook execution time in production
-5. **Lazy Import**: Import heavy dependencies only when needed
-
-## Debugging Hooks
-
-### Enable Debug Logging
-
-```python
-import logging
-
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
-@before_llm_call
-def debug_hook(context):
-    logger.debug(f"LLM call: {context.agent.role}, iteration {context.iterations}")
-    return None
-```
-
-### Hook Execution Order
-
-Hooks execute in registration order. If a before hook returns `False`, subsequent hooks don't execute:
-
-```python
-# Register order matters!
-register_before_tool_call_hook(hook1)  # Executes first
-register_before_tool_call_hook(hook2)  # Executes second
-register_before_tool_call_hook(hook3)  # Executes third
-
-# If hook2 returns False:
-# - hook1 executed
-# - hook2 executed and returned False
-# - hook3 NOT executed
-# - Tool call blocked
-```
-
-## Related Documentation
-
-- [LLM Call Hooks →](/learn/llm-hooks) - Detailed LLM hook documentation
-- [Tool Call Hooks →](/learn/tool-hooks) - Detailed tool hook documentation
-- [Before and After Kickoff Hooks →](/learn/before-and-after-kickoff-hooks) - Crew lifecycle hooks
-- [Human-in-the-Loop →](/learn/human-in-the-loop) - Human input patterns
-
-## Conclusion
-
-Execution hooks provide powerful control over agent runtime behavior. Use them to implement safety guardrails, approval workflows, comprehensive monitoring, and custom business logic. Combined with proper error handling, type safety, and performance considerations, hooks enable production-ready, secure, and observable agent systems.
+Differences from `@on`:
+
+- They cover **only** the four model/tool points — no execution boundaries, no
+  steps.
+- Blocking is `return False`, with no abort reason or source attached.
+- They receive rich point-specific contexts — `LLMCallHookContext` (with full
+  executor access) and `ToolCallHookContext` — the same objects `@on` exposes
+  as `ctx.payload` at the `PRE_MODEL_CALL` / `PRE_TOOL_CALL` points.
+- Crew-scoping uses the `*_crew` decorator variants inside `@CrewBase` classes.
+- They support the same `agents=` / `tools=` filters.
+
+You might still prefer them for existing codebases that already use
+`return False` semantics, or when you want the point-specific typed signatures.
+For the detailed guides — context attributes, patterns, and management APIs
+(`register_*` / `unregister_*` / `clear_*`) — see:
+
+- [LLM Call Hooks →](/learn/llm-hooks)
+- [Tool Call Hooks →](/learn/tool-hooks)
+
+## Related documentation
+
+- [Before and After Kickoff Hooks →](/learn/before-and-after-kickoff-hooks)
+- [Human-in-the-Loop →](/learn/human-in-the-loop)

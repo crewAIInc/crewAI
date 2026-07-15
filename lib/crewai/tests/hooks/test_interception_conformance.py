@@ -7,6 +7,9 @@ sees a well-shaped payload, an in-place/returned modification is honored, and a
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
+from crewai.agent import Agent
 from crewai.flow.flow import Flow, listen, start
 from crewai.hooks.dispatch import (
     HookAborted,
@@ -14,6 +17,7 @@ from crewai.hooks.dispatch import (
     clear_all,
     on,
 )
+from crewai.task import Task
 import pytest
 
 
@@ -86,3 +90,60 @@ class TestFlowExecutionBoundaries:
         with pytest.raises(HookAborted) as exc:
             _SimpleFlow().kickoff()
         assert exc.value.reason == "not allowed"
+
+
+class TestFlowStepPoints:
+    """pre_step / post_step for flow methods (kind=flow_method)."""
+
+    def test_pre_and_post_step_fire_per_method(self):
+        kinds: list[tuple[str, str | None]] = []
+
+        @on(InterceptionPoint.PRE_STEP)
+        def pre(ctx):
+            kinds.append(("pre", ctx.step_name))
+
+        @on(InterceptionPoint.POST_STEP)
+        def post(ctx):
+            kinds.append(("post", ctx.step_name))
+
+        _SimpleFlow().kickoff()
+
+        assert ("pre", "begin") in kinds
+        assert ("post", "begin") in kinds
+        assert ("pre", "finish") in kinds
+        assert ("post", "finish") in kinds
+
+    def test_post_step_can_rewrite_method_output(self):
+        @on(InterceptionPoint.POST_STEP)
+        def rewrite(ctx):
+            if ctx.step_name == "finish":
+                return "rewritten"
+            return None
+
+        assert _SimpleFlow().kickoff() == "rewritten"
+
+
+class TestTaskStepPoints:
+    """pre_step / post_step for task execution (kind=task)."""
+
+    def test_post_step_rewrite_is_persisted_to_output_file(
+        self, tmp_path, monkeypatch
+    ):
+        @on(InterceptionPoint.POST_STEP)
+        def sanitize(ctx):
+            return ctx.payload.model_copy(update={"raw": "sanitized output"})
+
+        monkeypatch.chdir(tmp_path)
+        agent = Agent(role="Writer", goal="Write", backstory="Writes things.")
+        task = Task(
+            description="Write something",
+            expected_output="Some text",
+            output_file="output.txt",
+            agent=agent,
+        )
+
+        with patch.object(Agent, "execute_task", return_value="original output"):
+            result = task.execute_sync(agent=agent)
+
+        assert result.raw == "sanitized output"
+        assert (tmp_path / "output.txt").read_text() == "sanitized output"

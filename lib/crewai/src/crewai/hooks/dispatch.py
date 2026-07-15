@@ -56,6 +56,10 @@ class InterceptionPoint(str, Enum):
     PRE_TOOL_CALL = "pre_tool_call"
     POST_TOOL_CALL = "post_tool_call"
 
+    # Step points
+    PRE_STEP = "pre_step"
+    POST_STEP = "post_step"
+
 
 class HookAborted(Exception):  # noqa: N818 - public contract name from OSS-86
     """Raised by a hook (or a legacy adapter) to abort the intercepted operation.
