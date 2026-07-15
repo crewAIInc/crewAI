@@ -43,7 +43,10 @@ class CrewOutput(BaseModel):
 
     @property
     def json(self) -> str | None:  # type: ignore[override]
-        if self.tasks_output[-1].output_format != OutputFormat.JSON:
+        if (
+            not self.tasks_output
+            or self.tasks_output[-1].output_format != OutputFormat.JSON
+        ):
             raise ValueError(
                 "No JSON output found in the final task. Please make sure to set the output_json property in the final task in your crew."
             )
