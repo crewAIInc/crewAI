@@ -1,5 +1,5 @@
 import os
-from typing import Any, ClassVar
+from typing import Any
 
 import requests
 from crewai.tools import BaseTool, EnvVar
@@ -10,16 +10,10 @@ from crewai_tools.tools.relayshield_tool.schemas import (
     PromptInjectionBreachParams,
 )
 
-API_BASE_URL: ClassVar[str] = "https://api.relayshield.net"
+API_BASE_URL: str = "https://api.relayshield.net"
 
 
-def _relayshield_headers() -> dict[str, str]:
-    api_key = os.environ.get("RELAYSHIELD_API_KEY", "")
-    if not api_key:
-        raise ValueError(
-            "RELAYSHIELD_API_KEY environment variable is required. "
-            "Get a key at https://api.relayshield.net/developers"
-        )
+def _relayshield_headers(api_key: str) -> dict[str, str]:
     # Note: relayshield_agentic_api.py (which hosts these two endpoints)
     # expects X-RS-API-KEY specifically, not the X-API-Key convention used
     # by RelayShield's other metered endpoints.
@@ -50,6 +44,13 @@ class RelayShieldMCPRiskTool(BaseTool):
         if not server_url and not package_name:
             return "Error: provide either server_url or package_name."
 
+        api_key = os.environ.get("RELAYSHIELD_API_KEY", "")
+        if not api_key:
+            return (
+                "Error: RELAYSHIELD_API_KEY environment variable is required. "
+                "Get a key at https://api.relayshield.net/developers"
+            )
+
         payload: dict[str, str] = {}
         if server_url:
             payload["server_url"] = server_url
@@ -60,15 +61,15 @@ class RelayShieldMCPRiskTool(BaseTool):
             resp = requests.post(
                 f"{API_BASE_URL}/v1/metered/mcp-registry-risk",
                 json=payload,
-                headers=_relayshield_headers(),
+                headers=_relayshield_headers(api_key),
                 timeout=15,
             )
             resp.raise_for_status()
+            # Every RelayShield response is wrapped as {"ok": bool, "data": {...}}.
+            data = resp.json().get("data", {})
         except requests.RequestException as exc:
             return f"RelayShield MCP registry risk check failed: {exc}"
 
-        # Every RelayShield response is wrapped as {"ok": bool, "data": {...}}.
-        data = resp.json().get("data", {})
         verdict = data.get("verdict", "UNKNOWN")
         findings = data.get("findings", [])
         if not findings:
@@ -102,19 +103,26 @@ class RelayShieldPromptInjectionBreachTool(BaseTool):
     ]
 
     def _run(self, email: str, **kwargs: Any) -> str:
+        api_key = os.environ.get("RELAYSHIELD_API_KEY", "")
+        if not api_key:
+            return (
+                "Error: RELAYSHIELD_API_KEY environment variable is required. "
+                "Get a key at https://api.relayshield.net/developers"
+            )
+
         try:
             resp = requests.post(
                 f"{API_BASE_URL}/v1/metered/prompt-injection-breach",
                 json={"email": email},
-                headers=_relayshield_headers(),
+                headers=_relayshield_headers(api_key),
                 timeout=15,
             )
             resp.raise_for_status()
+            # Every RelayShield response is wrapped as {"ok": bool, "data": {...}}.
+            data = resp.json().get("data", {})
         except requests.RequestException as exc:
             return f"RelayShield prompt-injection breach check failed: {exc}"
 
-        # Every RelayShield response is wrapped as {"ok": bool, "data": {...}}.
-        data = resp.json().get("data", {})
         if not data.get("found"):
             return f"No prompt-injection-sourced exposure found for {email}. {data.get('note', '')}"
 
