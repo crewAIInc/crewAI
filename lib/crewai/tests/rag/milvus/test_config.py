@@ -1,5 +1,8 @@
 """Tests for MilvusConfig."""
 
+import pytest
+from pydantic_core import ValidationError
+
 from crewai.rag.milvus.config import MilvusConfig
 
 
@@ -29,3 +32,12 @@ def test_milvus_config_accepts_server_options() -> None:
     assert config.options["token"] == "test-token"
     assert config.options["db_name"] == "crew"
     assert config.consistency_level == "Bounded"
+
+
+@pytest.mark.parametrize("embedding_function", [None, 42])
+def test_milvus_config_rejects_non_callable_embedding_function(
+    embedding_function: object,
+) -> None:
+    """Test that Milvus config rejects invalid embedding functions."""
+    with pytest.raises(ValidationError, match="callable"):
+        MilvusConfig(embedding_function=embedding_function)

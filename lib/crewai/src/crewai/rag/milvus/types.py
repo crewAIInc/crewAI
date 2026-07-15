@@ -40,7 +40,7 @@ class MilvusEmbeddingFunctionWrapper(EmbeddingFunction):
         cls, _source_type: Any, _handler: GetCoreSchemaHandler
     ) -> CoreSchema:
         """Generate Pydantic core schema for Milvus embedding functions."""
-        return core_schema.any_schema()
+        return core_schema.callable_schema()
 
 
 class MilvusClientParams(TypedDict, total=False):
