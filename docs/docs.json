@@ -409,10 +409,11 @@
                     "pages": [
                       "edge/en/enterprise/features/automations",
                       {
-                        "group": "Crew Studio",
+                        "group": "Studio",
                         "icon": "pencil",
                         "pages": [
                           "edge/en/enterprise/features/crew-studio",
+                          "edge/en/enterprise/features/studio-flows",
                           "edge/en/enterprise/features/merged-step-card"
                         ]
                       },
@@ -942,10 +943,11 @@
                     "pages": [
                       "v1.15.2/en/enterprise/features/automations",
                       {
-                        "group": "Crew Studio",
+                        "group": "Studio",
                         "icon": "pencil",
                         "pages": [
                           "v1.15.2/en/enterprise/features/crew-studio",
+                          "v1.15.2/en/enterprise/features/studio-flows",
                           "v1.15.2/en/enterprise/features/merged-step-card"
                         ]
                       },
@@ -10164,10 +10166,11 @@
                     "pages": [
                       "edge/pt-BR/enterprise/features/automations",
                       {
-                        "group": "Crew Studio",
+                        "group": "Studio",
                         "icon": "pencil",
                         "pages": [
                           "edge/pt-BR/enterprise/features/crew-studio",
+                          "edge/pt-BR/enterprise/features/studio-flows",
                           "edge/pt-BR/enterprise/features/merged-step-card"
                         ]
                       },
@@ -10672,10 +10675,11 @@
                     "pages": [
                       "v1.15.2/pt-BR/enterprise/features/automations",
                       {
-                        "group": "Crew Studio",
+                        "group": "Studio",
                         "icon": "pencil",
                         "pages": [
                           "v1.15.2/pt-BR/enterprise/features/crew-studio",
+                          "v1.15.2/pt-BR/enterprise/features/studio-flows",
                           "v1.15.2/pt-BR/enterprise/features/merged-step-card"
                         ]
                       },
@@ -19562,10 +19566,11 @@
                     "pages": [
                       "edge/ko/enterprise/features/automations",
                       {
-                        "group": "Crew Studio",
+                        "group": "Studio",
                         "icon": "pencil",
                         "pages": [
                           "edge/ko/enterprise/features/crew-studio",
+                          "edge/ko/enterprise/features/studio-flows",
                           "edge/ko/enterprise/features/merged-step-card"
                         ]
                       },
@@ -20082,10 +20087,11 @@
                     "pages": [
                       "v1.15.2/ko/enterprise/features/automations",
                       {
-                        "group": "Crew Studio",
+                        "group": "Studio",
                         "icon": "pencil",
                         "pages": [
                           "v1.15.2/ko/enterprise/features/crew-studio",
+                          "v1.15.2/ko/enterprise/features/studio-flows",
                           "v1.15.2/ko/enterprise/features/merged-step-card"
                         ]
                       },
@@ -29188,10 +29194,11 @@
                     "pages": [
                       "edge/ar/enterprise/features/automations",
                       {
-                        "group": "استوديو الطاقم",
+                        "group": "الاستوديو",
                         "icon": "pencil",
                         "pages": [
                           "edge/ar/enterprise/features/crew-studio",
+                          "edge/ar/enterprise/features/studio-flows",
                           "edge/ar/enterprise/features/merged-step-card"
                         ]
                       },
@@ -29708,10 +29715,11 @@
                     "pages": [
                       "v1.15.2/ar/enterprise/features/automations",
                       {
-                        "group": "استوديو الطاقم",
+                        "group": "الاستوديو",
                         "icon": "pencil",
                         "pages": [
                           "v1.15.2/ar/enterprise/features/crew-studio",
+                          "v1.15.2/ar/enterprise/features/studio-flows",
                           "v1.15.2/ar/enterprise/features/merged-step-card"
                         ]
                       },
