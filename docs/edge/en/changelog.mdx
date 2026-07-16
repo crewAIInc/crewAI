@@ -4,6 +4,42 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Jul 16, 2026">
+  ## v1.15.3a1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.3a1)
+
+  ## What's Changed
+
+  ### Features
+  - Add organization ID parameter to PlusAPI client.
+  - Add step interception points and rework execution hooks documentation around `@on`.
+  - Wire execution-boundary interception points.
+  - Add generic interception-hook dispatcher.
+  - Run declarative flows on the TUI (headless terminal fallback).
+  - Improve custom OpenAI URLs.
+
+  ### Bug Fixes
+  - Fix null repository agent attributes.
+  - Fix `after_llm_call` hooks to prevent breaking native tool execution.
+  - Stop double-appending the turn reply when a handler trims history.
+  - Make tool-result caching opt-in instead of on by default.
+  - Stop rewriting the authored tool description at construction.
+  - Expose token usage under both names on agent and crew results.
+  - Report per-call usage metrics on kickoff results.
+  - Stop replaying the previous turn's intent when `route_turn()` returns falsy.
+  - Drain memory writes before kickoff and flow completion events.
+
+  ### Documentation
+  - Group execution hooks and document all hook contexts.
+  - Update documentation for execution hooks.
+
+  ## Contributors
+
+  @joaomdmoura, @lorenzejay, @lucasgomide, @vinibrsl
+
+</Update>
+
 <Update label="Jul 07, 2026">
   ## v1.15.2
 
