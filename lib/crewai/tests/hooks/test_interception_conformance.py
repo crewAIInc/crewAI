@@ -10,6 +10,9 @@ from __future__ import annotations
 from unittest.mock import patch
 
 from crewai.agent import Agent
+from crewai.crew import Crew
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.crew_events import CrewKickoffCompletedEvent
 from crewai.flow.flow import Flow, listen, start
 from crewai.hooks.dispatch import (
     HookAborted,
@@ -147,3 +150,36 @@ class TestTaskStepPoints:
 
         assert result.raw == "sanitized output"
         assert (tmp_path / "output.txt").read_text() == "sanitized output"
+
+
+class TestCrewExecutionBoundaries:
+    """execution_start / input / output / execution_end on a crew."""
+
+    def test_output_modification_reaches_kickoff_completed_event(self):
+        @on(InterceptionPoint.OUTPUT)
+        def append_notice(ctx):
+            if hasattr(ctx.payload, "raw") and isinstance(ctx.payload.raw, str):
+                ctx.payload.raw += "\nchanged by hook"
+            return None
+
+        completed_raw: list[str] = []
+
+        @crewai_event_bus.on(CrewKickoffCompletedEvent)
+        def capture_completed(_source, event: CrewKickoffCompletedEvent):
+            completed_raw.append(event.output.raw)
+
+        agent = Agent(role="Writer", goal="Write", backstory="Writes things.")
+        task = Task(
+            description="Write something",
+            expected_output="Some text",
+            agent=agent,
+        )
+        crew = Crew(agents=[agent], tasks=[task], verbose=False)
+
+        with patch.object(Agent, "execute_task", return_value="original output"):
+            result = crew.kickoff()
+        crewai_event_bus.flush()
+
+        assert result.raw.endswith("changed by hook")
+        assert completed_raw
+        assert completed_raw[-1].endswith("changed by hook")
