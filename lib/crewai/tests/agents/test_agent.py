@@ -2336,6 +2336,25 @@ def test_agent_from_repository_override_attributes(mock_get_agent, mock_get_auth
 
 
 @patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_ignores_null_attributes(
+    mock_get_agent, mock_get_auth_token
+):
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "goal": "test goal",
+        "backstory": "test backstory",
+        "reasoning": None,
+    }
+    mock_get_agent.return_value = mock_get_response
+
+    agent = Agent(from_repository="test_agent")
+
+    assert agent.reasoning is False
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository_ignores_empty_skills(
     mock_get_agent, mock_get_auth_token
 ):
