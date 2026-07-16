@@ -943,11 +943,10 @@
                     "pages": [
                       "v1.15.2/en/enterprise/features/automations",
                       {
-                        "group": "Studio",
+                        "group": "Crew Studio",
                         "icon": "pencil",
                         "pages": [
                           "v1.15.2/en/enterprise/features/crew-studio",
-                          "v1.15.2/en/enterprise/features/studio-flows",
                           "v1.15.2/en/enterprise/features/merged-step-card"
                         ]
                       },
@@ -10675,11 +10674,10 @@
                     "pages": [
                       "v1.15.2/pt-BR/enterprise/features/automations",
                       {
-                        "group": "Studio",
+                        "group": "Crew Studio",
                         "icon": "pencil",
                         "pages": [
                           "v1.15.2/pt-BR/enterprise/features/crew-studio",
-                          "v1.15.2/pt-BR/enterprise/features/studio-flows",
                           "v1.15.2/pt-BR/enterprise/features/merged-step-card"
                         ]
                       },
@@ -20087,11 +20085,10 @@
                     "pages": [
                       "v1.15.2/ko/enterprise/features/automations",
                       {
-                        "group": "Studio",
+                        "group": "Crew Studio",
                         "icon": "pencil",
                         "pages": [
                           "v1.15.2/ko/enterprise/features/crew-studio",
-                          "v1.15.2/ko/enterprise/features/studio-flows",
                           "v1.15.2/ko/enterprise/features/merged-step-card"
                         ]
                       },
@@ -29715,11 +29712,10 @@
                     "pages": [
                       "v1.15.2/ar/enterprise/features/automations",
                       {
-                        "group": "الاستوديو",
+                        "group": "استوديو الطاقم",
                         "icon": "pencil",
                         "pages": [
                           "v1.15.2/ar/enterprise/features/crew-studio",
-                          "v1.15.2/ar/enterprise/features/studio-flows",
                           "v1.15.2/ar/enterprise/features/merged-step-card"
                         ]
                       },
