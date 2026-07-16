@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from pydantic import BaseModel, Field
@@ -25,6 +26,49 @@ if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.agent.planning_config import PlanningConfig
     from crewai.task import Task
+
+# Full instructional phrase still emitted by the default planning prompts.
+_READY_FULL_PHRASE: Final[str] = "READY: I am ready to execute the task."
+# Models (especially local/Ollama) often conclude with a bare READY / NOT READY
+# marker at the start of a line. Anchor at line start to avoid mid-sentence hits
+# like "I am ready to begin researching".
+_READY_LINE_RE: Final[re.Pattern[str]] = re.compile(
+    r"^\s*(NOT\s+)?READY\b",
+    re.IGNORECASE,
+)
+
+
+def response_indicates_ready(response: str) -> bool:
+    """Return whether a planning response concludes the agent is READY.
+
+    Accepts the full instructional phrase and short-form markers such as a
+    trailing ``READY`` / ``READY.`` line. ``NOT READY`` always wins over a
+    bare ``READY`` substring match (e.g. inside ``NOT READY``).
+
+    When multiple markers appear (common during plan refinement), the **last**
+    explicit READY / NOT READY line is authoritative.
+
+    Args:
+        response: Raw LLM planning response text.
+
+    Returns:
+        True if the response indicates readiness to execute the task.
+    """
+    if not response:
+        return False
+
+    if _READY_FULL_PHRASE in response:
+        return True
+
+    last_decision: bool | None = None
+    for line in response.splitlines():
+        match = _READY_LINE_RE.match(line)
+        if match is None:
+            continue
+        # Group 1 is the optional "NOT " prefix.
+        last_decision = match.group(1) is None
+
+    return bool(last_decision)
 
 
 class ReasoningPlan(BaseModel):
@@ -409,7 +453,7 @@ class AgentReasoning:
             return (
                 response_str,
                 [],
-                "READY: I am ready to execute the task." in response_str,
+                response_indicates_ready(response_str),
             )
 
         except Exception as e:
@@ -433,7 +477,7 @@ class AgentReasoning:
                 return (
                     fallback_str,
                     [],
-                    "READY: I am ready to execute the task." in fallback_str,
+                    response_indicates_ready(fallback_str),
                 )
             except Exception as inner_e:
                 self.logger.error(f"Error during fallback text parsing: {inner_e!s}")
@@ -593,7 +637,7 @@ class AgentReasoning:
             return "No plan was generated.", False
 
         plan = response
-        ready = "READY: I am ready to execute the task." in response
+        ready = response_indicates_ready(response)
 
         return plan, ready
 
