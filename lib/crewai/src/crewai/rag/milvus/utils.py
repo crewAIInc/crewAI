@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from functools import cache
 import hashlib
 import importlib.metadata
 import json
@@ -348,6 +349,7 @@ def _prepare_search_params(
     return search_kwargs
 
 
+@cache
 def _milvus_lite_uses_cosine_distance() -> bool:
     """Return whether the installed Milvus Lite version reports cosine distance."""
     try:
@@ -366,10 +368,13 @@ def _normalize_milvus_score(raw_score: float, metric_type: str) -> float:
             score = 1.0 - 0.5 * raw_score
         else:
             score = (raw_score + 1.0) / 2.0
+    elif normalized_metric == "IP":
+        # IP is already a higher-is-better Milvus score and may be unbounded.
+        return raw_score
     elif normalized_metric == "L2":
         score = 1.0 / (1.0 + raw_score)
     else:
-        score = (raw_score + 1.0) / 2.0
+        raise ValueError(f"Unsupported Milvus metric type: {metric_type}")
 
     return max(0.0, min(1.0, score))
 
