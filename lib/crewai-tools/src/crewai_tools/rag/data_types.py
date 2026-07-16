@@ -113,6 +113,9 @@ class DataTypes:
                 pass
 
         def get_file_type(path: str) -> DataType | None:
+            # Case-insensitive extension match: Windows scanners/exports often
+            # produce uppercase extensions (.PDF, .CSV, .DOCX) that must not fall
+            # through to the plain-text loader.
             mapping = {
                 ".pdf": DataType.PDF_FILE,
                 ".csv": DataType.CSV,
@@ -123,8 +126,9 @@ class DataTypes:
                 ".xml": DataType.XML,
                 ".txt": DataType.TEXT_FILE,
             }
+            lowered = path.lower()
             for ext, dtype in mapping.items():
-                if path.endswith(ext):
+                if lowered.endswith(ext):
                     return dtype
             return None
 
