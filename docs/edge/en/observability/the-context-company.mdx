@@ -1,0 +1,99 @@
+---
+title: The Context Company
+description: Monitor CrewAI agents with The Context Company
+icon: chart-line
+mode: "wide"
+---
+
+# The Context Company integration
+
+[The Context Company](https://www.thecontextcompany.com) provides observability for production AI agents. The CrewAI integration captures crew runs, LLM calls, tool executions, token usage, errors, and custom metadata so you can inspect individual traces and analyze behavior across runs.
+
+## Get started
+
+### Step 1: Install dependencies
+
+```bash
+uv add "contextcompany[crewai]" crewai
+```
+
+You can also install the packages with pip:
+
+```bash
+pip install "contextcompany[crewai]" crewai
+```
+
+### Step 2: Set environment variables
+
+Create an API key in The Context Company and set it together with the key for your model provider:
+
+```bash
+export TCC_API_KEY="your-tcc-api-key"
+export OPENAI_API_KEY="your-openai-api-key"
+```
+
+### Step 3: Initialize instrumentation
+
+Initialize the integration before importing CrewAI:
+
+```python
+from contextcompany.crewai import instrument_crewai
+
+instrument_crewai()
+
+from crewai import Agent, Crew, Task
+
+researcher = Agent(
+    role="Researcher",
+    goal="Research the requested topic",
+    backstory="You are an experienced technical researcher.",
+)
+
+task = Task(
+    description="Summarize recent developments in AI agent frameworks.",
+    expected_output="A concise summary with three key developments.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+print(result)
+```
+
+Crew executions, model calls, and tool executions will now be sent to The Context Company.
+
+## Add metadata
+
+Call `set_metadata` before `kickoff` to attach an explicit run ID, session, agent, user, organization, or custom metadata to the next crew execution:
+
+```python
+import uuid
+from contextcompany.crewai import set_metadata
+
+run_id = str(uuid.uuid4())
+
+set_metadata({
+    "tcc.runId": run_id,
+    "tcc.sessionId": "support-session-123",
+    "tcc.agent": "research-crew",
+    "tcc.userId": "user-123",
+    "tcc.orgId": "org-456",
+    "environment": "production",
+})
+
+result = crew.kickoff()
+```
+
+An explicit `tcc.runId` is useful when linking users to a trace or submitting feedback. Other fields outside the `tcc.*` namespace are stored as custom metadata.
+
+## What is captured
+
+The integration records:
+
+- Crew runs and task hierarchy
+- LLM inputs, outputs, model information, and token usage
+- Tool calls, arguments, results, and errors
+- Latency and execution status
+- Sessions, users, organizations, agents, and custom metadata
+
+See [The Context Company CrewAI documentation](https://docs.thecontextcompany.com/frameworks/crewai) for feedback, conversational runs, async execution, and the complete metadata reference.
