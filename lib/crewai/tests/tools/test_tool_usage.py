@@ -25,7 +25,7 @@ from crewai.hooks.tool_hooks import (
 )
 from crewai.tools import BaseTool
 from crewai.tools.tool_calling import ToolCalling
-from crewai.tools.tool_usage import ToolUsage
+from crewai.tools.tool_usage import ToolUsage, ToolUsageError
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from pydantic import BaseModel, Field
 import pytest
@@ -903,3 +903,82 @@ def test_tool_error_does_not_emit_finished_event():
     assert len(finished_events) == 0, (
         "ToolUsageFinishedEvent should NOT be emitted after ToolUsageErrorEvent"
     )
+
+
+def _make_tool_usage_for_args_test(tool_input: str = '["not", "a", "dict"]') -> ToolUsage:
+    """Build a minimal ToolUsage for argument-validation unit tests."""
+
+    class DummyTool(BaseTool):
+        name: str = "dummy_tool"
+        description: str = "A dummy tool."
+
+        def _run(self, x: str = "") -> str:
+            return x
+
+    action = MagicMock()
+    action.tool = "dummy_tool"
+    action.tool_input = tool_input
+
+    agent = MagicMock()
+    agent.verbose = False
+    agent.role = "tester"
+    agent._original_role = "tester"
+    agent.fingerprint = None
+
+    task = MagicMock()
+    task.name = "test"
+    task.description = "test"
+    task.id = "test-id"
+    task.delegations = 0
+
+    return ToolUsage(
+        tools_handler=MagicMock(cache=None, last_used_tool=None),
+        tools=[DummyTool()],
+        task=task,
+        function_calling_llm=None,
+        agent=agent,
+        action=action,
+    )
+
+
+class TestOriginalToolCallingNonDictArguments:
+    """Regression tests for #6430: bare raise on non-dict tool arguments."""
+
+    def test_raise_error_true_raises_tool_usage_error_not_runtime_error(self) -> None:
+        """Non-dict arguments with raise_error=True must raise ToolUsageError."""
+        tu = _make_tool_usage_for_args_test()
+
+        with (
+            patch.object(tu, "_select_tool", return_value=tu.tools[0]),
+            patch.object(tu, "_validate_tool_input", return_value=["not", "a", "dict"]),
+            pytest.raises(ToolUsageError) as exc_info,
+        ):
+            tu._original_tool_calling(tu.action.tool_input, raise_error=True)
+
+        assert not isinstance(exc_info.value, RuntimeError)
+        assert "No active exception" not in str(exc_info.value)
+
+    def test_raise_error_false_returns_tool_usage_error(self) -> None:
+        """Non-dict arguments with raise_error=False must return ToolUsageError."""
+        tu = _make_tool_usage_for_args_test()
+
+        with (
+            patch.object(tu, "_select_tool", return_value=tu.tools[0]),
+            patch.object(tu, "_validate_tool_input", return_value=["not", "a", "dict"]),
+        ):
+            result = tu._original_tool_calling(tu.action.tool_input, raise_error=False)
+
+        assert isinstance(result, ToolUsageError)
+
+    def test_tool_calling_fallback_does_not_crash_on_non_dict_args(self) -> None:
+        """_tool_calling should catch ToolUsageError and take the non-raise path."""
+        tu = _make_tool_usage_for_args_test()
+
+        with (
+            patch.object(tu, "_select_tool", return_value=tu.tools[0]),
+            patch.object(tu, "_validate_tool_input", return_value=["not", "a", "dict"]),
+        ):
+            result = tu._tool_calling(tu.action.tool_input)
+
+        assert isinstance(result, ToolUsageError)
+        assert not isinstance(result, RuntimeError)
