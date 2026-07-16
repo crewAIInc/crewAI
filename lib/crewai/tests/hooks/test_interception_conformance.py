@@ -152,9 +152,7 @@ class TestTaskStepPoints:
         assert (tmp_path / "output.txt").read_text() == "sanitized output"
 
 
-class TestCrewExecutionBoundaries:
-    """execution_start / input / output / execution_end on a crew."""
-
+class TestCrewOutput:
     def test_output_modification_reaches_kickoff_completed_event(self):
         @on(InterceptionPoint.OUTPUT)
         def append_notice(ctx):

@@ -1928,8 +1928,6 @@ class Crew(FlowTrackable, BaseModel):
         dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
         crew_output = cast(CrewOutput, end_ctx.payload)
 
-        # Keep KickoffCompletedEvent in sync with post-hook output so AMP /
-        # OTEL consumers see OUTPUT mutations (mirrors FlowFinishedEvent).
         if isinstance(crew_output, CrewOutput):
             final_task_output.raw = crew_output.raw
 
