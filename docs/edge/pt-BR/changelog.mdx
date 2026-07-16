@@ -4,6 +4,42 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="16 jul 2026">
+  ## v1.15.3a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.15.3a1)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar parâmetro de ID da organização ao cliente PlusAPI.
+  - Adicionar pontos de interceptação de etapas e reformular a documentação dos hooks de execução em torno de `@on`.
+  - Conectar pontos de interceptação de limites de execução.
+  - Adicionar despachador genérico de hooks de interceptação.
+  - Executar fluxos declarativos na TUI (fallback de terminal sem cabeça).
+  - Melhorar URLs personalizadas do OpenAI.
+
+  ### Correções de Bugs
+  - Corrigir atributos de agente de repositório nulos.
+  - Corrigir hooks `after_llm_call` para evitar quebrar a execução de ferramentas nativas.
+  - Parar de adicionar a resposta da rodada duas vezes quando um manipulador reduz o histórico.
+  - Tornar o cache de resultados de ferramentas opcional em vez de ativado por padrão.
+  - Parar de reescrever a descrição da ferramenta autoral na construção.
+  - Expor o uso de tokens sob ambos os nomes nos resultados de agente e equipe.
+  - Relatar métricas de uso por chamada nos resultados de início.
+  - Parar de reproduzir a intenção da rodada anterior quando `route_turn()` retorna um valor falso.
+  - Esvaziar gravações de memória antes dos eventos de início e conclusão de fluxo.
+
+  ### Documentação
+  - Agrupar hooks de execução e documentar todos os contextos de hooks.
+  - Atualizar a documentação para hooks de execução.
+
+  ## Contribuidores
+
+  @joaomdmoura, @lorenzejay, @lucasgomide, @vinibrsl
+
+</Update>
+
 <Update label="07 jul 2026">
   ## v1.15.2
 
