@@ -1150,6 +1150,8 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
 
         agent = response.json()
         for key, value in agent.items():
+            if value is None:
+                continue
             if key == "tools":
                 attributes[key] = []
                 for tool in value:
