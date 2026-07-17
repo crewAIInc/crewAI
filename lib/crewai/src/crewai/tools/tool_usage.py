@@ -706,13 +706,6 @@ class ToolUsage:
 
         return result
 
-    """def _format_result(self, result: Any) -> str:
-        if self.task:
-            self.task.used_tools += 1
-        if self._should_remember_format():
-            result = self._remember_format(result=result)
-        return str(result)"""
-
     def _format_result(self, result: Any) -> str:
 
         if self.task:
