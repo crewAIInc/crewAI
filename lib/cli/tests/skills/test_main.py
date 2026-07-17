@@ -171,6 +171,60 @@ class TestSkillPublish:
             # Skills are always org-scoped; there is no public visibility.
             assert call_kwargs.kwargs["is_public"] is False
 
+    def test_publish_blocked_when_git_not_synced(self, skill_command):
+        with in_temp_dir():
+            Path("SKILL.md").write_text(
+                "---\nname: my-skill\ndescription: A test skill.\nmetadata:\n  version: 1.0.0\n---\nInstructions."
+            )
+            skill_command.plus_api_client.publish_skill = MagicMock()
+            with patch("crewai_cli.skills.main.git.Repository") as mock_repo_cls:
+                mock_repo_cls.return_value.is_synced.return_value = False
+                with pytest.raises(SystemExit):
+                    skill_command.publish(org="acme")
+            skill_command.plus_api_client.publish_skill.assert_not_called()
+
+    def test_publish_force_skips_git_check(self, skill_command):
+        with in_temp_dir():
+            Path("SKILL.md").write_text(
+                "---\nname: my-skill\ndescription: A test skill.\nmetadata:\n  version: 1.0.0\n---\nInstructions."
+            )
+            mock_resp = MagicMock()
+            mock_resp.is_success = True
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = {}
+            skill_command.plus_api_client.publish_skill = MagicMock(return_value=mock_resp)
+            with (
+                patch("crewai_cli.skills.main.git.Repository") as mock_repo_cls,
+                patch("crewai_cli.skills.main.Settings") as mock_settings_cls,
+            ):
+                mock_settings_cls.return_value.org_name = "acme"
+                mock_settings_cls.return_value.enterprise_base_url = None
+                skill_command.publish(org="acme", force=True)
+            mock_repo_cls.assert_not_called()
+            skill_command.plus_api_client.publish_skill.assert_called_once()
+
+    def test_publish_proceeds_outside_git_repo(self, skill_command):
+        with in_temp_dir():
+            Path("SKILL.md").write_text(
+                "---\nname: my-skill\ndescription: A test skill.\nmetadata:\n  version: 1.0.0\n---\nInstructions."
+            )
+            mock_resp = MagicMock()
+            mock_resp.is_success = True
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = {}
+            skill_command.plus_api_client.publish_skill = MagicMock(return_value=mock_resp)
+            with (
+                patch(
+                    "crewai_cli.skills.main.git.Repository",
+                    side_effect=ValueError("not a Git repository"),
+                ),
+                patch("crewai_cli.skills.main.Settings") as mock_settings_cls,
+            ):
+                mock_settings_cls.return_value.org_name = "acme"
+                mock_settings_cls.return_value.enterprise_base_url = None
+                skill_command.publish(org="acme")
+            skill_command.plus_api_client.publish_skill.assert_called_once()
+
 
 class TestSkillListCached:
     def test_list_cached_empty(self, skill_command, capsys):

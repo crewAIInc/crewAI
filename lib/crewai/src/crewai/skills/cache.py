@@ -88,7 +88,9 @@ class SkillCacheManager:
             "version": version,
             "installed_at": datetime.now(tz=timezone.utc).isoformat(),
         }
-        (skill_dir / _META_FILENAME).write_text(json.dumps(meta, indent=2))
+        (skill_dir / _META_FILENAME).write_text(
+            json.dumps(meta, indent=2), encoding="utf-8"
+        )
         return skill_dir
 
     def list_cached(self) -> list[SkillMetadata]:
@@ -103,7 +105,9 @@ class SkillCacheManager:
                 meta_file = skill_dir / _META_FILENAME
                 if meta_file.exists():
                     try:
-                        results.append(json.loads(meta_file.read_text()))
+                        results.append(
+                            json.loads(meta_file.read_text(encoding="utf-8"))
+                        )
                     except (json.JSONDecodeError, KeyError):
                         _logger.debug(
                             "Skipping malformed cache entry: %s",
