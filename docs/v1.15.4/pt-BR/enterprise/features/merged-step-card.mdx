@@ -1,0 +1,82 @@
+---
+title: Um Card por Etapa
+description: "Cada etapa no canvas do Studio é um único card que combina a tarefa e o agente que a executa."
+icon: "layer-group"
+mode: "wide"
+---
+
+## Visão geral
+
+No canvas do Studio, cada etapa de trabalho é representada por um **único card**. O card combina dois elementos que antes ficavam em nós separados:
+
+- **A tarefa** — o que fazer (nome, descrição, saída esperada e formato da resposta).
+- **O agente** — quem faz (o agente atribuído, seu modelo e suas ferramentas).
+
+Um agente não é um participante independente do seu fluxo de trabalho — ele é um atributo da tarefa: *qual agente executa este trabalho.* Colocar a tarefa e seu agente em um único card torna essa relação explícita e transforma sua automação em uma única cadeia de unidades de trabalho, da esquerda para a direita, mais fácil de ler em uma olhada.
+
+<Frame caption="Um card por etapa: a tarefa com o agente atribuído resumido no rodapé.">
+  ![Cards de etapa unificados no canvas](/images/enterprise/merged-step-card-canvas.png)
+</Frame>
+
+## No canvas
+
+Cada card recolhido mostra:
+
+- O **nome e a descrição da tarefa** no topo.
+- Um **rodapé resumindo o agente atribuído** — avatar, nome, modelo e ferramentas.
+
+Não há nó de agente separado nem aresta vertical de agente → tarefa. Suas etapas se conectam diretamente umas às outras na ordem em que são executadas.
+
+## No editor
+
+Abra um card para editá-lo. A visão expandida é o mesmo card em um estado detalhado — não uma tela diferente — organizada em duas seções claramente identificadas.
+
+<Frame caption="O editor expandido: a seção da tarefa aberta, com o agente resumido abaixo.">
+  ![Editor de etapa expandido](/images/enterprise/merged-step-card-editor.png)
+</Frame>
+
+### A tarefa — o que fazer
+
+Aberta por padrão, já que é o que você costuma editar:
+
+- **Nome**
+- **Descrição**
+- **Saída Esperada**
+- **Formato da Resposta** — exibido aqui porque controla exatamente o que as etapas seguintes (como o roteamento) leem desta etapa.
+
+### O agente — quem faz
+
+O agente atribuído é mostrado como um resumo — **nome, modelo e ferramentas em linha**. Sua configuração mais detalhada é preservada por trás de duas seções recolhíveis:
+
+- **Papel, objetivo e história**
+- **Configurações do agente** — raciocínio, máximo de tentativas de raciocínio, permitir delegação, máximo de iterações e configurações de LLM.
+
+<Tip>
+  A configuração completa de um agente — Papel, Objetivo, História, Modelo, Ferramentas, Configurações de LLM e todo o bloco de Configurações do agente — fica por trás das seções recolhíveis **Papel, objetivo e história** e **Configurações do agente**, organizada pela frequência com que você a edita.
+</Tip>
+
+## Trocar vs. editar o agente
+
+Há duas maneiras distintas de trabalhar com o agente em um card, e elas fazem coisas diferentes:
+
+- **Trocar** reatribui *qual* agente executa esta tarefa. Use o controle **Trocar** para escolher um agente diferente deste projeto, selecionar um do seu Repositório de Agentes ou criar um novo agente. Isso tem escopo limitado à tarefa.
+- **Editar** o agente — abrindo **Papel, objetivo e história** ou **Configurações do agente** — altera o agente *em si*.
+
+<Frame caption="Trocar muda qual agente executa a tarefa.">
+  ![Painel de troca de agente](/images/enterprise/merged-step-card-swap-agent.png)
+</Frame>
+
+<Warning>
+  **Os agentes são reutilizáveis e compartilhados.** O mesmo agente pode executar mais de uma tarefa em todo o seu projeto. Editar o papel, a história ou as configurações de um agente atualiza esse agente **em todos os lugares onde ele é usado** — não apenas no card que você abriu. Se quiser que uma alteração se aplique a apenas uma etapa, **Troque** por um agente diferente em vez de editar o agente compartilhado.
+</Warning>
+
+## Relacionados
+
+<CardGroup cols={2}>
+  <Card title="Crew Studio" href="/pt-BR/enterprise/features/crew-studio" icon="pencil">
+    Crie automações com assistência de IA e um editor visual.
+  </Card>
+  <Card title="Repositórios de Agentes" href="/pt-BR/enterprise/features/agent-repositories" icon="users">
+    Gerencie e reutilize agentes em suas automações.
+  </Card>
+</CardGroup>
