@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from crewai.experimental.skills.cache import SkillCacheManager, _safe_extractall
+from crewai.skills.cache import SkillCacheManager, _safe_extractall
 
 
 def _make_tar_gz(files: dict[str, str]) -> bytes:
