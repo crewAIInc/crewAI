@@ -679,12 +679,35 @@ class ToolUsage:
 
         return result
 
-    def _format_result(self, result: Any) -> str:
+    """def _format_result(self, result: Any) -> str:
         if self.task:
             self.task.used_tools += 1
         if self._should_remember_format():
             result = self._remember_format(result=result)
-        return str(result)
+        return str(result)"""
+
+    def _format_result(self, result: Any) -> str:
+
+        if self.task:
+            self.task.used_tools += 1
+
+        if isinstance(result, (dict, list)):
+            try:
+                formatted_result = json.dumps(
+                    result,
+                    ensure_ascii=False,
+                )
+            except (TypeError, ValueError):
+                formatted_result = str(result)
+        else:
+            formatted_result = str(result)
+
+        if self._should_remember_format():
+            formatted_result = self._remember_format(
+                result=formatted_result,
+            )
+
+        return formatted_result
 
     def _should_remember_format(self) -> bool:
         if self.task:
