@@ -194,8 +194,14 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
 
         if not force:
             try:
-                repository = git.Repository()
-            except ValueError:
+                repository = git.Repository(fetch=False)
+            except ValueError as exc:
+                if "not a Git repository" not in str(exc):
+                    console.print(
+                        f"[red]Unable to validate git state: {exc}\n"
+                        "Fix the issue or pass --force to skip this check.[/red]"
+                    )
+                    raise SystemExit(1) from exc
                 # Standalone skill directories may live outside any git repo;
                 # there is no git state to validate in that case.
                 repository = None

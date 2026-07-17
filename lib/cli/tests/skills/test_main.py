@@ -203,6 +203,21 @@ class TestSkillPublish:
             mock_repo_cls.assert_not_called()
             skill_command.plus_api_client.publish_skill.assert_called_once()
 
+    def test_publish_blocked_when_git_state_cannot_be_validated(self, skill_command):
+        """Git errors other than 'not a repo' must fail closed, not skip the check."""
+        with in_temp_dir():
+            Path("SKILL.md").write_text(
+                "---\nname: my-skill\ndescription: A test skill.\nmetadata:\n  version: 1.0.0\n---\nInstructions."
+            )
+            skill_command.plus_api_client.publish_skill = MagicMock()
+            with patch(
+                "crewai_cli.skills.main.git.Repository",
+                side_effect=ValueError("Git fetch failed with exit code 128"),
+            ):
+                with pytest.raises(SystemExit):
+                    skill_command.publish(org="acme")
+            skill_command.plus_api_client.publish_skill.assert_not_called()
+
     def test_publish_proceeds_outside_git_repo(self, skill_command):
         with in_temp_dir():
             Path("SKILL.md").write_text(
