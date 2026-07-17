@@ -86,6 +86,14 @@ def test_valid_action_parsing_with_incomplete_json():
     assert result.tool_input == '{"query": "temperature in SF"}'
 
 
+def test_valid_action_parsing_with_incomplete_json_array():
+    text = "Thought: Let's search\nAction: search\nAction Input: [1, 2"
+    result = parser.parse(text)
+    assert isinstance(result, AgentAction)
+    assert result.tool == "search"
+    assert result.tool_input == "[1, 2]"
+
+
 def test_valid_action_parsing_with_special_characters():
     text = "Thought: Let's find the temperature\nAction: search\nAction Input: what is the temperature in SF? @$%^&*"
     result = parser.parse(text)

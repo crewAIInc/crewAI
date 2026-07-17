@@ -97,10 +97,10 @@ databricks-sdk = [
     "databricks-sdk>=0.46.0",
 ]
 couchbase = [
-    "couchbase>=4.3.5",
+    "couchbase>=4.6.0",
 ]
 mcp = [
-    "mcp>=1.6.0",
+    "mcp>=1.28.1,<2",
     "mcpadapt>=0.1.9",
 ]
 stagehand = [
