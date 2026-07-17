@@ -205,6 +205,17 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                 # Standalone skill directories may live outside any git repo;
                 # there is no git state to validate in that case.
                 repository = None
+            if repository is not None:
+                try:
+                    # Refresh remote-tracking refs so is_synced() compares
+                    # against the actual remote, not stale local state.
+                    repository.fetch()
+                except ValueError as exc:
+                    console.print(
+                        f"[red]Unable to validate git state: {exc}\n"
+                        "Fix the issue or pass --force to skip this check.[/red]"
+                    )
+                    raise SystemExit(1) from exc
             if repository is not None and not repository.is_synced():
                 console.print(
                     "[bold red]Failed to publish skill.[/bold red]\n"
