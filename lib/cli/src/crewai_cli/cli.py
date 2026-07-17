@@ -526,8 +526,8 @@ def run(
     inputs: str | None,
 ) -> None:
     """Run the Crew or Flow."""
-    if inputs is not None and definition is None:
-        raise click.UsageError("--inputs requires --definition")
+    # --inputs no longer requires --definition: with no override it resolves the
+    # configured [tool.crewai] flow, same as a bare `crewai run`.
     if trained_agents_file is not None and definition is not None:
         raise click.UsageError("--filename can only be used when running crews")
 
@@ -686,20 +686,9 @@ def tool_publish(is_public: bool, force: bool) -> None:
     tool_cmd.publish(is_public, force)
 
 
-@crewai.group()
-def experimental() -> None:
-    """Experimental, unstable commands. Subject to change without notice."""
-    import os
-
-    if os.environ.get("CREWAI_EXPERIMENTAL") != "1":
-        raise click.UsageError(
-            "Experimental commands are gated. Set CREWAI_EXPERIMENTAL=1 to enable."
-        )
-
-
-@experimental.group(name="skill")
+@crewai.group(name="skill")
 def skill() -> None:
-    """Skill Repository related commands (experimental)."""
+    """Create, publish, and install agent skills."""
 
 
 @skill.command(name="create")
@@ -713,7 +702,7 @@ def skill() -> None:
     help="Create skill in current dir instead of ./skills/",
 )
 def skill_create(name: str, in_project: bool) -> None:
-    from crewai_cli.experimental.skills.main import SkillCommand
+    from crewai_cli.skills.main import SkillCommand
 
     skill_cmd = SkillCommand()
     skill_cmd.create(name, in_project=in_project)
@@ -722,7 +711,7 @@ def skill_create(name: str, in_project: bool) -> None:
 @skill.command(name="install")
 @click.argument("ref")
 def skill_install(ref: str) -> None:
-    from crewai_cli.experimental.skills.main import SkillCommand
+    from crewai_cli.skills.main import SkillCommand
 
     skill_cmd = SkillCommand()
     skill_cmd.install(ref)
@@ -736,20 +725,19 @@ def skill_install(ref: str) -> None:
     show_default=True,
     help="Skip git-state validation.",
 )
-@click.option("--public", "is_public", flag_value=True, default=False)
-@click.option("--private", "is_public", flag_value=False)
 @click.option("--org", default=None, help="Organisation slug (overrides settings).")
-def skill_publish(is_public: bool, org: str | None, force: bool) -> None:
-    from crewai_cli.experimental.skills.main import SkillCommand
+def skill_publish(org: str | None, force: bool) -> None:
+    """Publish the skill in the current directory, scoped to your organization."""
+    from crewai_cli.skills.main import SkillCommand
 
     skill_cmd = SkillCommand()
-    skill_cmd.publish(is_public, org=org, force=force)
+    skill_cmd.publish(org=org, force=force)
 
 
 @skill.command(name="list")
 def skill_list() -> None:
     """List locally installed skills."""
-    from crewai_cli.experimental.skills.main import SkillCommand
+    from crewai_cli.skills.main import SkillCommand
 
     skill_cmd = SkillCommand()
     skill_cmd.list_cached()

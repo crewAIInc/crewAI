@@ -1510,42 +1510,36 @@ def test_conditional_router_events_exclusivity():
     assert "handle_event_c" not in execution_order
 
 
-def test_state_consistency_across_parallel_branches():
-    """Test that state remains consistent when branches execute in parallel.
+def test_and_join_waits_for_parallel_branches():
+    """Test that sibling branches complete before a joined listener runs.
 
-    Note: Branches triggered by the same parent execute in parallel for efficiency.
-    Thread-safe state access via StateProxy ensures no race conditions.
-    We check the execution order to ensure the branches execute in parallel.
+    Branches triggered by the same parent execute in parallel for efficiency.
+    Shared state updates are not guaranteed to be atomic, so this test uses a
+    locked local recorder instead of branch state mutation.
     """
     execution_order = []
+    execution_order_lock = threading.Lock()
+
+    def record(method_name: str) -> None:
+        with execution_order_lock:
+            execution_order.append(method_name)
 
     class StateConsistencyFlow(Flow):
-        def __init__(self):
-            super().__init__()
-            self.state["counter"] = 0
-            self.state["branch_a_value"] = None
-            self.state["branch_b_value"] = None
-
         @start()
         def init(self):
-            execution_order.append("init")
-            self.state["counter"] = 10
+            record("init")
 
         @listen(init)
         def branch_a(self):
-            execution_order.append("branch_a")
-            self.state["branch_a_value"] = self.state["counter"]
-            self.state["counter"] += 1
+            record("branch_a")
 
         @listen(init)
         def branch_b(self):
-            execution_order.append("branch_b")
-            self.state["branch_b_value"] = self.state["counter"]
-            self.state["counter"] += 5
+            record("branch_b")
 
         @listen(and_(branch_a, branch_b))
         def verify_state(self):
-            execution_order.append("verify_state")
+            record("verify_state")
 
     flow = StateConsistencyFlow()
     flow.kickoff()
@@ -1554,10 +1548,8 @@ def test_state_consistency_across_parallel_branches():
     assert "branch_b" in execution_order
     assert "verify_state" in execution_order
 
-    assert flow.state["branch_a_value"] is not None
-    assert flow.state["branch_b_value"] is not None
-
-    assert flow.state["counter"] == 16
+    assert execution_order.index("branch_a") < execution_order.index("verify_state")
+    assert execution_order.index("branch_b") < execution_order.index("verify_state")
 
 
 def test_deeply_nested_conditions():
@@ -2152,14 +2144,7 @@ def test_cyclic_flow_works_with_persist_and_id_input():
 
 
 @pytest.mark.timeout(5)
-def test_self_listening_method_does_not_loop():
-    """A method whose @listen label matches its own name must not loop forever.
-
-    Without the guard, 'process' re-triggers itself on every completion,
-    running indefinitely (timeout → FAIL).  The fix caps method calls
-    and raises RecursionError (PASS).
-    """
-
+def test_self_listening_method_is_rejected():
     class SelfListenFlow(Flow):
         @start()
         def begin(self):
@@ -2173,15 +2158,11 @@ def test_self_listening_method_does_not_loop():
         def process(self):
             pass
 
-    flow = SelfListenFlow()
-    with pytest.raises(RecursionError, match="infinite loop"):
-        flow.kickoff()
+    with pytest.raises(ValueError, match="methods.process.listen"):
+        SelfListenFlow.flow_definition()
 
 
-def test_or_condition_self_listen_fires_once():
-    """or_() with a self-referencing label only fires once due to or_() guard."""
-    call_count = 0
-
+def test_or_condition_self_listen_is_rejected():
     class OrSelfListenFlow(Flow):
         @start()
         def begin(self):
@@ -2193,12 +2174,25 @@ def test_or_condition_self_listen_fires_once():
 
         @listen(or_("other_trigger", "process"))
         def process(self):
-            nonlocal call_count
-            call_count += 1
+            pass
 
-    flow = OrSelfListenFlow()
-    flow.kickoff()
-    assert call_count == 1
+    with pytest.raises(ValueError, match="methods.process.listen"):
+        OrSelfListenFlow.flow_definition()
+
+
+def test_router_self_listening_method_is_rejected():
+    class RouterSelfListenFlow(Flow):
+        @start()
+        def begin(self):
+            return "route"
+
+        @router("route")
+        def route(self):
+            return "done"
+
+    with pytest.raises(ValueError, match="methods.route.listen"):
+        RouterSelfListenFlow.flow_definition()
+
 
 class ListState(BaseModel):
     items: list = []
@@ -2359,3 +2353,41 @@ def test_locked_dict_proxy_ior():
 def test_locked_dict_proxy_reversed():
     flow = _make_dict_flow()
     assert list(reversed(flow.state.data)) == ["c", "b", "a"]
+
+
+def test_flow_drains_pending_memory_saves_before_finished_event(tmp_path):
+    """Background memory saves must finish (and emit their completion events)
+    before FlowFinishedEvent, otherwise listeners that tear down on
+    flow-finished (e.g. telemetry sessions) see the save span as orphaned."""
+    import time
+
+    from crewai.memory.unified_memory import Memory
+
+    order: list[str] = []
+
+    def slow_save():
+        time.sleep(0.3)
+        order.append("save-done")
+
+    class MemoryFlow(Flow):
+        @start()
+        def step_1(self):
+            self.memory._submit_save(slow_save)
+            return "done"
+
+    flow = MemoryFlow(memory=Memory(storage=str(tmp_path / "flow-mem")))
+
+    finished = threading.Event()
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(FlowFinishedEvent)
+        def on_finished(_source, _event):
+            order.append("flow-finished")
+            finished.set()
+
+        flow.kickoff()
+
+        assert finished.wait(timeout=5)
+
+    assert order.index("save-done") < order.index("flow-finished")

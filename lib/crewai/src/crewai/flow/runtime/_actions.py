@@ -24,7 +24,11 @@ from crewai.flow.flow_definition import (
     FlowToolActionDefinition,
 )
 from crewai.flow.runtime._outputs import outputs_by_name
-from crewai.flow.runtime._refs import InvalidRefError, resolve_ref
+from crewai.utilities.declarative_refs import (
+    InvalidRefError,
+    resolve_class_ref,
+    resolve_ref,
+)
 
 
 if TYPE_CHECKING:
@@ -103,16 +107,17 @@ class ToolAction:
         )
 
     def _build_tool(self) -> Any:
-        target = resolve_ref(self.definition.ref, field="do")
         from crewai.tools import BaseTool
 
-        if not (inspect.isclass(target) and issubclass(target, BaseTool)):
-            raise InvalidRefError(
-                f"invalid tool ref {self.definition.ref!r}; expected a BaseTool class"
-            )
-
+        tool_cls = cast(
+            Callable[[], BaseTool],
+            resolve_class_ref(
+                self.definition.ref,
+                field="do",
+                base_class=BaseTool,
+            ),
+        )
         try:
-            tool_cls = cast(Callable[[], BaseTool], target)
             return tool_cls()
         except Exception as e:
             raise InvalidRefError(
@@ -133,11 +138,12 @@ class CrewAction:
 
         local_context = _pop_local_context(kwargs)
         if self.definition.from_declaration is not None:
-            crew, default_inputs = load_crew(
+            crew, default_inputs = await asyncio.to_thread(
+                load_crew,
                 _resolve_crew_declaration(
                     self.definition.from_declaration,
                     base_dir=self.flow._definition.source_dir,
-                )
+                ),
             )
             input_template = {**default_inputs, **(self.definition.inputs or {})}
         else:
@@ -150,7 +156,9 @@ class CrewAction:
                 **crew_definition.inputs,
                 **(self.definition.inputs or {}),
             }
-            crew, _ = load_crew_from_definition(crew_definition, source="crew action")
+            crew, _ = await asyncio.to_thread(
+                load_crew_from_definition, crew_definition, source="crew action"
+            )
 
         inputs = Expression.from_flow(
             cast(ExpressionData, input_template),
@@ -179,7 +187,8 @@ class AgentAction:
         if not isinstance(rendered_input, str):
             raise ValueError("agent input must render to a string")
 
-        agent, response_format = load_agent_from_definition(
+        agent, response_format = await asyncio.to_thread(
+            load_agent_from_definition,
             self.definition.with_,
             source="agent action",
         )

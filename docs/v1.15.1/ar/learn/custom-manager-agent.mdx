@@ -1,0 +1,81 @@
+---
+title: Agent مدير مخصص
+description: تعلم كيفية تعيين Agent مخصص كمدير في CrewAI، مما يوفر مزيدًا من التحكم في إدارة المهام والتنسيق.
+icon: user-shield
+mode: "wide"
+---
+
+# تعيين Agent محدد كمدير في CrewAI
+
+يتيح CrewAI للمستخدمين تعيين Agent محدد كمدير للـ Crew، مما يوفر مزيدًا من التحكم في إدارة المهام وتنسيقها.
+
+## استخدام سمة `manager_agent`
+
+تتيح لك سمة `manager_agent` تعريف Agent مخصص لإدارة الـ Crew. سيشرف هذا الـ Agent على العملية بأكملها لضمان إتمام المهام بكفاءة وبأعلى المعايير.
+
+```python Code
+import os
+from crewai import Agent, Task, Crew, Process
+
+researcher = Agent(
+    role="Researcher",
+    goal="Conduct thorough research and analysis on AI and AI agents",
+    backstory="You're an expert researcher...",
+    allow_delegation=False,
+)
+
+writer = Agent(
+    role="Senior Writer",
+    goal="Create compelling content about AI and AI agents",
+    backstory="You're a senior writer...",
+    allow_delegation=False,
+)
+
+task = Task(
+    description="Generate a list of 5 interesting ideas for an article...",
+    expected_output="5 bullet points, each with a paragraph and accompanying notes.",
+)
+
+manager = Agent(
+    role="Project Manager",
+    goal="Efficiently manage the crew and ensure high-quality task completion",
+    backstory="You're an experienced project manager...",
+    allow_delegation=True,
+)
+
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[task],
+    manager_agent=manager,
+    process=Process.hierarchical,
+)
+
+result = crew.kickoff()
+```
+
+## فوائد Agent المدير المخصص
+
+- **تحكم محسّن**: تخصيص نهج الإدارة ليناسب الاحتياجات المحددة لمشروعك.
+- **تنسيق محسّن**: ضمان تنسيق المهام وإدارتها بكفاءة من قبل Agent ذي خبرة.
+- **إدارة قابلة للتخصيص**: تعريف أدوار ومسؤوليات إدارية تتماشى مع أهداف مشروعك.
+
+## تعيين LLM للمدير
+
+إذا كنت تستخدم العملية الهرمية ولا تريد تعيين Agent مدير مخصص، يمكنك تحديد نموذج اللغة للمدير:
+
+```python Code
+from crewai import LLM
+
+manager_llm = LLM(model="gpt-4o")
+
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[task],
+    process=Process.hierarchical,
+    manager_llm=manager_llm
+)
+```
+
+<Note>
+يجب تعيين إما `manager_agent` أو `manager_llm` عند استخدام العملية الهرمية.
+</Note>

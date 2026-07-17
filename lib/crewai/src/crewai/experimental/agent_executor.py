@@ -54,7 +54,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.flow.flow import Flow, StateProxy, listen, or_, router, start
+from crewai.flow.flow import Flow, listen, or_, router, start
 from crewai.flow.types import FlowMethodName
 from crewai.hooks.llm_hooks import (
     get_after_llm_call_hooks,
@@ -62,8 +62,8 @@ from crewai.hooks.llm_hooks import (
 )
 from crewai.hooks.tool_hooks import (
     ToolCallHookContext,
-    get_after_tool_call_hooks,
-    get_before_tool_call_hooks,
+    run_after_tool_call_hooks,
+    run_before_tool_call_hooks,
 )
 from crewai.hooks.types import (
     AfterLLMCallHookCallable,
@@ -106,6 +106,7 @@ from crewai.utilities.planning_types import (
     TodoItem,
     TodoList,
 )
+from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
@@ -118,7 +119,6 @@ if TYPE_CHECKING:
     from crewai.agents.tools_handler import ToolsHandler
     from crewai.llms.base_llm import BaseLLM
     from crewai.tools.tool_types import ToolResult
-    from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 
 _RouteT = TypeVar("_RouteT", bound=str)
 
@@ -218,6 +218,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     _instance_id: str = PrivateAttr(default_factory=lambda: str(uuid4())[:8])
     _step_executor: Any = PrivateAttr(default=None)
     _planner_observer: PlannerObserver | None = PrivateAttr(default=None)
+    _is_feedback_iteration: bool = PrivateAttr(default=False)
 
     @model_validator(mode="after")
     def _setup_executor(self) -> Self:
@@ -276,11 +277,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         """
         return self.llm.supports_stop_words() if self.llm else False
 
-    @property
-    def state(self) -> AgentExecutorState:
-        """Get thread-safe state proxy."""
-        return StateProxy(self._state, self._state_lock)  # type: ignore[return-value]
-
     @property  # type: ignore[misc]
     def iterations(self) -> int:
         """Compatibility property for mixin - returns state iterations."""
@@ -301,6 +297,33 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         """Set state messages."""
         self._state.messages = value
 
+    def _setup_messages(self, inputs: dict[str, Any]) -> None:
+        """Set up messages for the agent execution."""
+        provider = get_provider()
+        if provider.setup_messages(cast("ExecutorContext", self)):
+            return
+
+        from crewai.llms.cache import mark_cache_breakpoint
+
+        if isinstance(self.prompt, SystemPromptResult):
+            system_prompt = self._format_prompt(self.prompt["system"], inputs)
+            user_prompt = self._format_prompt(self.prompt["user"], inputs)
+            self.state.messages.append(
+                mark_cache_breakpoint(
+                    format_message_for_llm(system_prompt, role="system")
+                )
+            )
+            self.state.messages.append(
+                mark_cache_breakpoint(format_message_for_llm(user_prompt))
+            )
+        elif isinstance(self.prompt, StandardPromptResult):
+            user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
+            self.state.messages.append(
+                mark_cache_breakpoint(format_message_for_llm(user_prompt))
+            )
+
+        provider.post_setup_messages(cast("ExecutorContext", self))
+
     @property
     def ask_for_human_input(self) -> bool:
         """Compatibility property - returns state ask_for_human_input."""
@@ -319,6 +342,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         enabled on the agent, it generates a plan before execution begins.
         The plan is stored in state and todos are created from the steps.
         """
+        if self._is_feedback_iteration:
+            return
         if not getattr(self.agent, "planning_enabled", False):
             return
 
@@ -1950,7 +1975,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         track_delegation_if_needed(func_name, args_dict, self.task)
 
-        hook_blocked = False
         before_hook_context = ToolCallHookContext(
             tool_name=func_name,
             tool_input=args_dict,
@@ -1959,19 +1983,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             task=self.task,
             crew=self.crew,
         )
-        before_hooks = get_before_tool_call_hooks()
-        try:
-            for hook in before_hooks:
-                hook_result = hook(before_hook_context)
-                if hook_result is False:
-                    hook_blocked = True
-                    break
-        except Exception as hook_error:
-            if self.agent.verbose:
-                PRINTER.print(
-                    content=f"Error in before_tool_call hook: {hook_error}",
-                    color="red",
-                )
+        hook_blocked = run_before_tool_call_hooks(before_hook_context)
 
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
@@ -2035,19 +2047,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             tool_result=result,
             raw_tool_result=raw_tool_result,
         )
-        after_hooks = get_after_tool_call_hooks()
-        try:
-            for after_hook in after_hooks:
-                after_hook_result = after_hook(after_hook_context)
-                if after_hook_result is not None:
-                    result = after_hook_result
-                    after_hook_context.tool_result = result
-        except Exception as hook_error:
-            if self.agent.verbose:
-                PRINTER.print(
-                    content=f"Error in after_tool_call hook: {hook_error}",
-                    color="red",
-                )
+        modified_result = run_after_tool_call_hooks(after_hook_context)
+        if modified_result is not None:
+            result = modified_result
 
         if not error_event_emitted:
             crewai_event_bus.emit(
@@ -2766,27 +2768,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     "AgentExecutor.llm or .prompt is unset; the executor was "
                     "not fully restored or initialized before execution."
                 )
-            if "system" in self.prompt:
-                from crewai.llms.cache import mark_cache_breakpoint
-
-                prompt = cast("SystemPromptResult", self.prompt)
-                system_prompt = self._format_prompt(prompt["system"], inputs)
-                user_prompt = self._format_prompt(prompt["user"], inputs)
-                self.state.messages.append(
-                    mark_cache_breakpoint(
-                        format_message_for_llm(system_prompt, role="system")
-                    )
-                )
-                self.state.messages.append(
-                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
-                )
-            else:
-                from crewai.llms.cache import mark_cache_breakpoint
-
-                user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
-                self.state.messages.append(
-                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
-                )
+            self._setup_messages(inputs)
 
             self._inject_files_from_inputs(inputs)
 
@@ -2872,27 +2854,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     "AgentExecutor.llm or .prompt is unset; the executor was "
                     "not fully restored or initialized before execution."
                 )
-            if "system" in self.prompt:
-                from crewai.llms.cache import mark_cache_breakpoint
-
-                prompt = cast("SystemPromptResult", self.prompt)
-                system_prompt = self._format_prompt(prompt["system"], inputs)
-                user_prompt = self._format_prompt(prompt["user"], inputs)
-                self.state.messages.append(
-                    mark_cache_breakpoint(
-                        format_message_for_llm(system_prompt, role="system")
-                    )
-                )
-                self.state.messages.append(
-                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
-                )
-            else:
-                from crewai.llms.cache import mark_cache_breakpoint
-
-                user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
-                self.state.messages.append(
-                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
-                )
+            self._setup_messages(inputs)
 
             await self._ainject_files_from_inputs(inputs)
 
@@ -3174,8 +3136,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         Returns:
             Final answer after feedback.
         """
+        self.messages = self.state.messages
         provider = get_provider()
-        return provider.handle_feedback(formatted_answer, cast("ExecutorContext", self))
+        final_answer = provider.handle_feedback(
+            formatted_answer, cast("ExecutorContext", self)
+        )
+        self._complete_feedback(final_answer)
+        return final_answer
 
     async def _ahandle_human_feedback(
         self, formatted_answer: AgentFinish
@@ -3188,10 +3155,63 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         Returns:
             Final answer after feedback.
         """
+        self.messages = self.state.messages
         provider = get_provider()
-        return await provider.handle_feedback_async(
+        final_answer = await provider.handle_feedback_async(
             formatted_answer, cast("AsyncExecutorContext", self)
         )
+        self._complete_feedback(final_answer)
+        return final_answer
+
+    def _complete_feedback(self, final_answer: AgentFinish) -> None:
+        """Mark the final reviewed answer as the completed executor state."""
+        self.state.current_answer = final_answer
+        self.state.is_finished = True
+        self.state.ask_for_human_input = False
+        self._finalize_called = True
+
+    def _prepare_feedback_iteration(self) -> None:
+        """Reset flow completion state before rerunning with feedback."""
+        self._finalize_called = False
+        self._is_feedback_iteration = True
+        self.state.current_answer = None
+        self.state.is_finished = False
+        self.state.iterations = 0
+        self.state.use_native_tools = False
+        self.state.pending_tool_calls = []
+        self.state.plan = None
+        self.state.plan_ready = False
+        self.state.todos = TodoList()
+        self.state.replan_count = 0
+        self.state.last_replan_reason = None
+        self.state.observations = {}
+        self.state.execution_log = []
+
+    def _invoke_loop(self) -> AgentFinish:
+        """Re-run the executor flow using the existing feedback messages."""
+        self._prepare_feedback_iteration()
+        try:
+            self.kickoff()
+        finally:
+            self._is_feedback_iteration = False
+
+        if not isinstance(self.state.current_answer, AgentFinish):
+            raise RuntimeError("Agent execution ended without reaching a final answer.")
+
+        return self.state.current_answer
+
+    async def _ainvoke_loop(self) -> AgentFinish:
+        """Re-run the executor flow asynchronously using feedback messages."""
+        self._prepare_feedback_iteration()
+        try:
+            await self.kickoff_async()
+        finally:
+            self._is_feedback_iteration = False
+
+        if not isinstance(self.state.current_answer, AgentFinish):
+            raise RuntimeError("Agent execution ended without reaching a final answer.")
+
+        return self.state.current_answer
 
     def _is_training_mode(self) -> bool:
         """Check if training mode is active.
@@ -3200,6 +3220,12 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             True if in training mode.
         """
         return bool(self.crew and self.crew._train)
+
+    def _format_feedback_message(self, feedback: str) -> LLMMessage:
+        """Format human feedback as an LLM message."""
+        return format_message_for_llm(
+            I18N_DEFAULT.slice("feedback_instructions").format(feedback=feedback)
+        )
 
 
 # Backward compatibility alias (deprecated)

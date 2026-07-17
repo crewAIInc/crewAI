@@ -149,7 +149,13 @@ class PlusAPI:
     EPHEMERAL_TRACING_RESOURCE: Final = "/crewai_plus/api/v1/tracing/ephemeral"
     INTEGRATIONS_RESOURCE: Final = "/crewai_plus/api/v1/integrations"
 
-    def __init__(self, api_key: str | None = None) -> None:
+    def __init__(
+        self,
+        api_key: str | None = None,
+        *,
+        base_url: str | None = None,
+        organization_id: str | None = None,
+    ) -> None:
         version = get_crewai_version()
         self.api_key = api_key
         self.headers: Headers = {
@@ -161,12 +167,13 @@ class PlusAPI:
             self.headers["Authorization"] = f"Bearer {api_key}"
 
         settings = Settings()
-        if settings.org_uuid:
-            self.headers["X-Crewai-Organization-Id"] = settings.org_uuid
+        if organization_id := organization_id or settings.org_uuid:
+            self.headers["X-Crewai-Organization-Id"] = organization_id
 
         self.base_url = (
-            os.getenv("CREWAI_PLUS_URL")
-            or str(settings.enterprise_base_url)
+            base_url
+            or os.getenv("CREWAI_PLUS_URL")
+            or settings.enterprise_base_url
             or DEFAULT_CREWAI_ENTERPRISE_URL
         )
 
@@ -232,10 +239,8 @@ class PlusAPI:
     def get_tool(self, handle: str) -> httpx.Response:
         return self._make_request("GET", f"{self.TOOLS_RESOURCE}/{handle}")
 
-    async def get_agent(self, handle: str) -> httpx.Response:
-        url = urljoin(self.base_url, f"{self.AGENTS_RESOURCE}/{handle}")
-        async with httpx.AsyncClient() as client:
-            return await client.get(url, headers=cast(dict[str, str], self.headers))
+    def get_agent(self, handle: str) -> httpx.Response:
+        return self._make_request("GET", f"{self.AGENTS_RESOURCE}/{handle}")
 
     def publish_tool(
         self,

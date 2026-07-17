@@ -73,7 +73,6 @@ from crewai.events.types.memory_events import (
     MemoryRetrievalFailedEvent,
     MemoryRetrievalStartedEvent,
 )
-from crewai.events.types.skill_events import SkillActivatedEvent
 from crewai.experimental.agent_executor import AgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -82,11 +81,12 @@ from crewai.llms.base_llm import BaseLLM
 from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
-from crewai.skills.loader import activate_skill, discover_skills
-from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
+from crewai.skills.loader import load_skills
+from crewai.skills.models import Skill as SkillModel
 from crewai.state.checkpoint_config import CheckpointConfig, apply_checkpoint
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.types.callback import SerializableCallable
+from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.agent_utils import (
     get_tool_names,
     is_inside_event_loop,
@@ -202,7 +202,7 @@ class Agent(BaseAgent):
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     max_execution_time: int | None = Field(
         default=None,
-        description="Maximum execution time for an agent to execute a task",
+        description="Maximum execution time in seconds for an agent to execute a task",
     )
     step_callback: SerializableCallable | None = Field(
         default=None,
@@ -401,10 +401,29 @@ class Agent(BaseAgent):
         return self.planning_config is not None or self.planning
 
     def _setup_agent_executor(self) -> None:
-        """Initialize the agent executor with a default cache handler."""
-        if not self.cache_handler:
-            self.cache_handler = CacheHandler()
-        self.set_cache_handler(self.cache_handler)
+        """Initialize the agent's tools handler and optional tool cache.
+
+        Tool-result caching is opt-in: a standalone agent gets a cache only
+        when it was constructed with an explicit ``cache=True`` or a
+        ``cache_handler``. Agents inside a crew additionally receive the
+        crew's shared handler when ``Crew(cache=True)``. Without an opt-in,
+        repeated tool calls with identical arguments always re-execute the
+        tool — the safe default for live-data and state-mutating tools.
+        """
+        # Recorded before any crew can offer its shared handler at kickoff,
+        # so copy() can distinguish a construction-time opt-in from runtime
+        # crew wiring (which must not turn copies into cachers).
+        self._constructor_cache_opt_in = bool(
+            self.cache
+            and (self.cache_handler is not None or "cache" in self.model_fields_set)
+        )
+        opted_in = self.cache_handler is not None or (
+            "cache" in self.model_fields_set and self.cache
+        )
+        if opted_in:
+            if not self.cache_handler:
+                self.cache_handler = CacheHandler()
+            self.set_cache_handler(self.cache_handler)
 
     def set_knowledge(self, crew_embedder: EmbedderConfig | None = None) -> None:
         """Initialize knowledge sources with the agent or crew embedder config."""
@@ -429,13 +448,12 @@ class Agent(BaseAgent):
         self,
         resolved_crew_skills: list[SkillModel] | None = None,
     ) -> None:
-        """Resolve skill paths while preserving explicit disclosure levels.
+        """Load configured skills while preserving explicit disclosure levels.
 
-        Path entries trigger discovery and activation because directory-based
-        skills opt into eager loading. Pre-loaded Skill objects keep their
-        current disclosure level so callers can attach METADATA-only skills and
-        progressively activate them later. Crew-level skills are merged in with
-        event emission so observability is consistent regardless of origin.
+        Path strings, Path objects, inline SKILL.md strings, and registry refs
+        are loaded through the shared skill loader. Pre-loaded Skill objects
+        keep their current disclosure level so callers can attach METADATA-only
+        skills and progressively activate them later.
 
         Args:
             resolved_crew_skills: Pre-resolved crew skills. When provided,
@@ -444,7 +462,7 @@ class Agent(BaseAgent):
         from crewai.crew import Crew
 
         if resolved_crew_skills is None:
-            crew_skills: list[Path | SkillModel | str] | None = (
+            crew_skills = (
                 self.crew.skills
                 if isinstance(self.crew, Crew) and isinstance(self.crew.skills, list)
                 else None
@@ -455,58 +473,14 @@ class Agent(BaseAgent):
         if not self.skills and not crew_skills:
             return
 
-        needs_work = self.skills and any(
-            isinstance(s, (Path, str))
-            or (isinstance(s, SkillModel) and s.disclosure_level < INSTRUCTIONS)
-            for s in self.skills
-        )
-        if not needs_work and not crew_skills:
-            return
-
-        seen: set[str] = set()
-        resolved: list[Path | SkillModel | str] = []
-        items: list[Path | SkillModel | str] = list(self.skills) if self.skills else []
-
+        items = list(self.skills) if self.skills else []
         if crew_skills:
             items.extend(crew_skills)
 
-        for item in items:
-            if isinstance(item, str):
-                from crewai.experimental.skills.registry import (
-                    is_registry_ref,
-                    parse_registry_ref,
-                    resolve_registry_ref,
-                )
-
-                if is_registry_ref(item):
-                    skill = resolve_registry_ref(item, source=self)
-                    org, _ = parse_registry_ref(item)
-                    dedup_key = f"{org}/{skill.name}"
-                    if dedup_key not in seen:
-                        seen.add(dedup_key)
-                        resolved.append(skill)
-            elif isinstance(item, Path):
-                discovered = discover_skills(item, source=self)
-                for skill in discovered:
-                    if skill.name not in seen:
-                        seen.add(skill.name)
-                        resolved.append(activate_skill(skill, source=self))
-            elif isinstance(item, SkillModel):
-                if item.name not in seen:
-                    seen.add(item.name)
-                    if item.disclosure_level >= INSTRUCTIONS:
-                        crewai_event_bus.emit(
-                            self,
-                            event=SkillActivatedEvent(
-                                from_agent=self,
-                                skill_name=item.name,
-                                skill_path=item.path,
-                                disclosure_level=item.disclosure_level,
-                            ),
-                        )
-                    resolved.append(item)
-
-        self.skills = resolved if resolved else None
+        self.skills = cast(
+            list[Path | SkillModel | str] | None,
+            load_skills(items, source=self) or None,
+        )
 
     def _is_any_available_memory(self) -> bool:
         """Check if unified memory is available (agent or crew)."""
@@ -1628,9 +1602,18 @@ class Agent(BaseAgent):
                 crewai_event_bus.emit(self, event=started_event)
                 self._kickoff_event_id = started_event.event_id
 
-            output = self._execute_and_build_output(executor, inputs, response_format)
+            usage_baseline = self._current_usage_summary()
+            output = self._execute_and_build_output(
+                executor, inputs, response_format, usage_baseline
+            )
             return self._finalize_kickoff(
-                output, executor, inputs, response_format, messages, agent_info
+                output,
+                executor,
+                inputs,
+                response_format,
+                messages,
+                agent_info,
+                usage_baseline,
             )
 
         except Exception as e:
@@ -1644,6 +1627,7 @@ class Agent(BaseAgent):
         response_format: type[Any] | None,
         messages: str | list[LLMMessage],
         agent_info: dict[str, Any],
+        usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Apply guardrails, save to memory, and emit completion event.
 
@@ -1654,6 +1638,8 @@ class Agent(BaseAgent):
             response_format: Optional response format.
             messages: The original messages.
             agent_info: Agent metadata for events.
+            usage_baseline: Usage snapshot taken at kickoff start, so retries
+                report per-call usage relative to it.
 
         Returns:
             The finalized output.
@@ -1664,6 +1650,7 @@ class Agent(BaseAgent):
                 executor=executor,
                 inputs=inputs,
                 response_format=response_format,
+                usage_baseline=usage_baseline,
             )
 
         self._save_kickoff_to_memory(messages, output.raw)
@@ -1715,11 +1702,24 @@ class Agent(BaseAgent):
         except Exception as e:
             self._logger.log("error", f"Failed to save kickoff result to memory: {e}")
 
+    def _current_usage_summary(self) -> UsageMetrics:
+        """Snapshot the cumulative usage counters backing this agent's LLM.
+
+        The counters live on the LLM instance (or the agent's token process
+        for non-BaseLLM models) and grow for the object's lifetime — across
+        calls and across agents sharing the instance. Per-call usage is the
+        delta between two snapshots.
+        """
+        if isinstance(self.llm, BaseLLM):
+            return self.llm.get_token_usage_summary()
+        return self._token_process.get_summary()
+
     def _build_output_from_result(
         self,
         result: dict[str, Any],
         executor: AgentExecutor,
         response_format: type[Any] | None = None,
+        usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Build a LiteAgentOutput from an executor result dict.
 
@@ -1729,6 +1729,9 @@ class Agent(BaseAgent):
             result: The result dictionary from executor.invoke / invoke_async.
             executor: The executor instance.
             response_format: Optional response format.
+            usage_baseline: Usage snapshot taken at kickoff start. When given,
+                the output carries only this call's usage (the delta) instead
+                of the LLM instance's cumulative lifetime counters.
 
         Returns:
             LiteAgentOutput with raw output, formatted result, and metrics.
@@ -1773,10 +1776,9 @@ class Agent(BaseAgent):
         else:
             raw_output = str(output) if not isinstance(output, str) else output
 
-        if isinstance(self.llm, BaseLLM):
-            usage_metrics = self.llm.get_token_usage_summary()
-        else:
-            usage_metrics = self._token_process.get_summary()
+        usage_metrics = self._current_usage_summary()
+        if usage_baseline is not None:
+            usage_metrics = usage_metrics.delta_since(usage_baseline)
 
         raw_str = (
             raw_output
@@ -1805,20 +1807,26 @@ class Agent(BaseAgent):
         executor: AgentExecutor,
         inputs: dict[str, str],
         response_format: type[Any] | None = None,
+        usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Execute the agent synchronously and build the output object."""
         result = cast(dict[str, Any], executor.invoke(inputs))
-        return self._build_output_from_result(result, executor, response_format)
+        return self._build_output_from_result(
+            result, executor, response_format, usage_baseline
+        )
 
     async def _execute_and_build_output_async(
         self,
         executor: AgentExecutor,
         inputs: dict[str, str],
         response_format: type[Any] | None = None,
+        usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Execute the agent asynchronously and build the output object."""
         result = await executor.invoke_async(inputs)
-        return self._build_output_from_result(result, executor, response_format)
+        return self._build_output_from_result(
+            result, executor, response_format, usage_baseline
+        )
 
     def _process_kickoff_guardrail(
         self,
@@ -1827,6 +1835,7 @@ class Agent(BaseAgent):
         inputs: dict[str, str],
         response_format: type[Any] | None = None,
         retry_count: int = 0,
+        usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Process guardrail for kickoff execution with retry logic.
 
@@ -1836,6 +1845,9 @@ class Agent(BaseAgent):
             inputs: Input dictionary for re-execution.
             response_format: Optional response format.
             retry_count: Current retry count.
+            usage_baseline: Usage snapshot taken at kickoff start, so a
+                retried output reports the whole call's usage, not just the
+                last attempt's.
 
         Returns:
             Validated/updated output.
@@ -1873,7 +1885,9 @@ class Agent(BaseAgent):
                 role="user",
             )
 
-            output = self._execute_and_build_output(executor, inputs, response_format)
+            output = self._execute_and_build_output(
+                executor, inputs, response_format, usage_baseline
+            )
 
             return self._process_kickoff_guardrail(
                 output=output,
@@ -1881,6 +1895,7 @@ class Agent(BaseAgent):
                 inputs=inputs,
                 response_format=response_format,
                 retry_count=retry_count + 1,
+                usage_baseline=usage_baseline,
             )
 
         if guardrail_result.result is not None:
@@ -1943,11 +1958,18 @@ class Agent(BaseAgent):
                 crewai_event_bus.emit(self, event=started_event)
                 self._kickoff_event_id = started_event.event_id
 
+            usage_baseline = self._current_usage_summary()
             output = await self._execute_and_build_output_async(
-                executor, inputs, response_format
+                executor, inputs, response_format, usage_baseline
             )
             return self._finalize_kickoff(
-                output, executor, inputs, response_format, messages, agent_info
+                output,
+                executor,
+                inputs,
+                response_format,
+                messages,
+                agent_info,
+                usage_baseline,
             )
 
         except Exception as e:

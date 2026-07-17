@@ -26,6 +26,17 @@ def test_create_flow_declarative_project_can_run(
     assert pyproject["project"]["requires-python"]
     assert pyproject["project"]["dependencies"]
     assert (project_root / pyproject["tool"]["crewai"]["definition"]).is_file()
+    agents_md = (project_root / "AGENTS.md").read_text(encoding="utf-8")
+    assert "CrewAI Flow declaration" in agents_md
+    assert "schema: crewai.flow/v1" in agents_md
+    assert "do not assemble the string with CEL `+`" in agents_md
+    assert "Agent prompt template. Insert Flow values with `${...}`" in agents_md
+    assert "Runtime inputs passed to the Crew" in agents_md
+    assert "call: expression" in agents_md
+    assert "call: tool" not in agents_md
+    assert "call: script" not in agents_md
+    assert "call: each" not in agents_md
+    assert "human_feedback" not in agents_md
 
     monkeypatch.chdir(project_root)
     result = CliRunner().invoke(crewai, ["run"], env={"UV_RUN_RECURSION_DEPTH": "1"})

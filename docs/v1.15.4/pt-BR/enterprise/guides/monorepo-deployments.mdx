@@ -1,0 +1,234 @@
+---
+title: "Implantações em Monorepo"
+description: "Implante um Crew ou Flow a partir de uma subpasta em um repositório maior"
+icon: "folder-tree"
+mode: "wide"
+---
+
+<Note>
+  Use um diretório de trabalho quando seu Crew ou Flow estiver dentro de um
+  repositório maior. O CrewAI AMP valida, faz o build e executa a automação a
+  partir dessa subpasta em vez da raiz do repositório.
+</Note>
+
+## Quando Usar
+
+Implantações em monorepo são úteis quando um repositório contém múltiplas
+automações, pacotes compartilhados ou outro código de aplicação:
+
+```text
+company-ai/
+|-- uv.lock
+|-- packages/
+|   `-- shared_tools/
+`-- crews/
+    |-- support_agent/
+    |   |-- pyproject.toml
+    |   |-- crew.jsonc
+    |   `-- agents/
+    |       `-- support_agent.jsonc
+    `-- research_flow/
+        |-- pyproject.toml
+        `-- src/
+            `-- research_flow/
+                `-- main.py
+```
+
+Para implantar `support_agent`, defina o diretório de trabalho como:
+
+```text
+crews/support_agent
+```
+
+O AMP ainda baixa ou recebe o repositório inteiro, mas trata a pasta
+selecionada como a raiz do projeto da automação.
+
+## O Que o Diretório de Trabalho Controla
+
+Quando um diretório de trabalho é definido, o AMP usa essa pasta para:
+
+- Validação do projeto, incluindo `pyproject.toml`, arquivos de crew JSON e qualquer ponto de entrada clássico de Crew ou Flow
+- Instalação de dependências com `uv`
+- O diretório de trabalho do processo em execução
+- A variável de ambiente `CREW_ROOT_DIR`
+
+Deixar o campo vazio mantém o comportamento existente e usa a raiz do
+repositório.
+
+## Fontes Suportadas
+
+Você pode definir um diretório de trabalho ao criar uma implantação a partir de:
+
+- Um repositório GitHub conectado
+- Um repositório Git configurado no AMP
+- Um upload de ZIP
+
+<Info>
+  Configure diretórios de trabalho na interface web do AMP. O fluxo
+  `crewai deploy create` da CLI não solicita esse campo.
+</Info>
+
+Você também pode adicionar ou alterar o diretório de trabalho de uma implantação
+existente pela página **Settings** da implantação. A alteração passa a valer no
+próximo deploy.
+
+<Warning>
+  Diretórios de trabalho e auto-deploy não podem ser usados juntos. Se uma
+  implantação tiver um diretório de trabalho, o auto-deploy fica desabilitado
+  para ela. Desative o auto-deploy antes de definir um diretório de trabalho.
+</Warning>
+
+## Configurar uma Nova Implantação
+
+<Steps>
+  <Step title="Abra Deploy from Code">
+    No CrewAI AMP, crie uma nova implantação e escolha sua fonte: GitHub, Git
+    Repository ou upload de ZIP.
+  </Step>
+
+  <Step title="Selecione o repositório, branch ou arquivo ZIP">
+    Escolha o repositório e a branch que contêm seu monorepo, ou envie um ZIP
+    cuja raiz contenha os arquivos do monorepo.
+  </Step>
+
+  <Step title="Abra as configurações avançadas">
+    Expanda a seção **Advanced** no formulário de deploy.
+  </Step>
+
+  <Step title="Informe o diretório de trabalho">
+    Informe o caminho da raiz do repositório até o projeto Crew ou Flow:
+
+    ```text
+    crews/support_agent
+    ```
+
+    Não inclua uma barra inicial.
+  </Step>
+
+  <Step title="Implante">
+    Adicione as variáveis de ambiente necessárias e inicie a implantação.
+  </Step>
+</Steps>
+
+## Configurar uma Implantação Existente
+
+<Steps>
+  <Step title="Abra as configurações da implantação">
+    Acesse sua automação no AMP e abra **Settings**.
+  </Step>
+
+  <Step title="Desative o auto-deploy, se necessário">
+    Se o auto-deploy estiver habilitado, desative-o primeiro. O campo de
+    diretório de trabalho fica indisponível enquanto o auto-deploy está ativo.
+  </Step>
+
+  <Step title="Defina o diretório de trabalho">
+    Em **Basic settings**, informe o caminho da subpasta, como:
+
+    ```text
+    crews/support_agent
+    ```
+  </Step>
+
+  <Step title="Reimplante">
+    Salve a configuração e reimplante a automação. O novo diretório de trabalho
+    será usado no próximo deploy.
+  </Step>
+</Steps>
+
+## Regras de Caminho
+
+O diretório de trabalho deve ser um caminho relativo dentro da raiz do
+repositório ou do ZIP.
+
+| Regra | Exemplo |
+|-------|---------|
+| Use um caminho relativo | `crews/support_agent` |
+| Não comece com `/` | `/crews/support_agent` é inválido |
+| Não use segmentos de caminho `.` ou `..` | `crews/../support_agent` é inválido |
+| Use apenas letras, números, hifens, underscores, pontos e barras | `crews/support agent` é inválido |
+| Mantenha o caminho com 255 caracteres ou menos | Caminhos maiores são rejeitados |
+
+O AMP remove espaços em branco no início e no fim, reduz barras repetidas e
+remove barras finais. Um valor em branco usa a raiz do repositório.
+
+## Arquivos Lock e Workspaces UV
+
+A pasta selecionada deve conter o `pyproject.toml` e os arquivos exigidos pelo
+tipo de projeto:
+
+- Crew JSON-first: `crew.jsonc` ou `crew.json`, além de `agents/`
+- Crew clássico ou Flow: `src/` com o ponto de entrada Python esperado
+
+Um arquivo `uv.lock` ou `poetry.lock` pode ficar na pasta selecionada ou na raiz
+do repositório.
+
+Isso oferece suporte aos dois layouts comuns de arquivo lock:
+
+<Tabs>
+  <Tab title="Arquivo lock do projeto">
+    ```text
+    company-ai/
+    `-- crews/
+        `-- support_agent/
+            |-- pyproject.toml
+            |-- uv.lock
+            |-- crew.jsonc
+            `-- agents/
+                `-- support_agent.jsonc
+    ```
+  </Tab>
+
+  <Tab title="Arquivo lock do workspace">
+    ```text
+    company-ai/
+    |-- uv.lock
+    |-- packages/
+    |   `-- shared_tools/
+    `-- crews/
+        `-- support_agent/
+            |-- pyproject.toml
+            |-- crew.jsonc
+            `-- agents/
+                `-- support_agent.jsonc
+    ```
+  </Tab>
+</Tabs>
+
+<Tip>
+  Se sua automação importar pacotes compartilhados de outro lugar do monorepo,
+  declare esses pacotes no `pyproject.toml` usando configuração de workspace,
+  caminho ou source do UV. O AMP executa a automação a partir da pasta
+  selecionada, então o código compartilhado deve ser instalado como dependência
+  em vez de depender da raiz do repositório no Python path.
+</Tip>
+
+## Solução de Problemas
+
+### Diretório de Trabalho Não Encontrado
+
+Verifique se o caminho é relativo à raiz do repositório ou do ZIP. Para uploads
+de ZIP, o conteúdo do ZIP deve incluir exatamente o caminho informado como
+diretório de trabalho.
+
+### pyproject.toml Ausente
+
+O diretório de trabalho deve apontar para a pasta do projeto Crew ou Flow, não
+apenas para uma pasta pai que contém vários projetos.
+
+### uv.lock ou poetry.lock Ausente
+
+Faça commit de um arquivo lock na pasta do projeto selecionada ou na raiz do
+repositório. Para workspaces UV, manter `uv.lock` na raiz do workspace é
+suportado.
+
+### Auto-Deploy Indisponível
+
+O auto-deploy fica desabilitado enquanto um diretório de trabalho está definido.
+Use reimplantações manuais ou acione reimplantações a partir de CI/CD com a API
+do AMP.
+
+<Card title="Deploy para AMP" icon="rocket" href="/pt-BR/enterprise/guides/deploy-to-amp">
+  Continue com o guia de implantação depois de escolher o diretório de trabalho
+  do monorepo.
+</Card>
