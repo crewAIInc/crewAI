@@ -1,0 +1,64 @@
+---
+title: Lians Agent Memory Tools
+description: Add durable, timestamped memory to CrewAI agents with Lians.
+icon: brain
+---
+
+# Lians Agent Memory Tools
+
+[Lians](https://www.lians.ai/) provides four CrewAI tools for storing, retrieving, replaying, and flushing agent memory. It can run locally without an API key or connect to a remote Lians service.
+
+## Installation
+
+Install CrewAI and the Lians CrewAI integration. Include the `local` extra for zero-setup local storage.
+
+```bash
+pip install "crewai lians-sdk[crewai,local]"
+```
+
+## Usage
+
+Create a local client, build the tools, and attach them to an agent.
+
+```python
+from crewai import Agent, Crew, Task
+from lians import LocalLiansClient
+from lians.crewai_integration import build_crewai_tools
+
+client = LocalLiansClient()
+memory_tools = build_crewai_tools(client, agent_id="research-crew")
+
+researcher = Agent(
+    role="Researcher",
+    goal="Build on verified findings from earlier research",
+    backstory="You preserve useful evidence and retrieve it when relevant.",
+    tools=memory_tools,
+    verbose=True,
+)
+
+task = Task(
+    description="Research the topic, recall relevant prior findings, and save new evidence.",
+    expected_output="A concise research brief with the useful findings saved to memory.",
+    agent=researcher,
+)
+
+result = Crew(agents=[researcher], tasks=[task]).kickoff()
+print(result)
+```
+
+## Available tools
+
+| Tool | Purpose |
+|:-----|:--------|
+| `remember_fact` | Store a fact with source and confidence metadata |
+| `recall_facts` | Retrieve memories relevant to the current query |
+| `recall_facts_at` | Reconstruct what the agent knew at a specified time |
+| `flush_memory` | Persist pending memory updates |
+
+Use a stable `agent_id` when multiple crew runs should share the same memory history. Use a different ID when runs need isolated memory.
+
+## Remote service
+
+To use a deployed Lians service, create the standard Lians client with your service URL and credentials, then pass it to `build_crewai_tools` in place of `LocalLiansClient`.
+
+For configuration and API details, see the [Lians documentation](https://www.lians.ai/docs).
