@@ -24,15 +24,23 @@ Frequentemente você precisa de **ambos**: skills para expertise, ferramentas pa
 
 ## Início Rápido
 
-### 1. Crie um Diretório de Skill
+### 1. Crie uma Skill com a CLI
+
+A CLI é a forma suportada de criar uma skill — ela gera a estrutura de diretórios e um `SKILL.md` válido para você:
+
+```shell Terminal
+crewai skill create code-review
+```
+
+Dentro de um projeto de crew (onde o `pyproject.toml` está) isso cria `./skills/code-review/`; fora de um projeto, cria `./code-review/` no diretório atual (você pode forçar esse comportamento com `--no-project`):
 
 ```
 skills/
 └── code-review/
-    ├── SKILL.md          # Obrigatório — instruções
+    ├── SKILL.md          # Obrigatório — instruções (template pré-preenchido)
     ├── references/       # Opcional — documentos de referência
-    │   └── style-guide.md
-    └── scripts/          # Opcional — scripts executáveis
+    ├── scripts/          # Opcional — scripts executáveis
+    └── assets/           # Opcional — arquivos estáticos
 ```
 
 ### 2. Escreva seu SKILL.md
@@ -161,6 +169,65 @@ agent = Agent(
     apps=["gmail", "zendesk"],             # Pode enviar emails e atualizar tickets
 )
 ```
+
+---
+
+## Criando, Publicando e Instalando Skills
+
+Skills têm um ciclo de vida completo gerenciado pela CLI: **crie-as com `crewai skill create`, publique-as com `crewai skill publish`** — criar diretórios à mão funciona para experimentos locais, mas a CLI é o fluxo de trabalho pretendido e mantém a estrutura e o frontmatter da sua skill válidos.
+
+### Criar
+
+```shell Terminal
+crewai skill create my-skill
+```
+
+Gera o diretório (em `./skills/` dentro de um projeto de crew) com um `SKILL.md` de template, além dos diretórios vazios `scripts/`, `references/` e `assets/`. Edite o `SKILL.md` para definir as instruções.
+
+### Publicar
+
+Execute de dentro do diretório da skill (onde o `SKILL.md` está):
+
+```shell Terminal
+cd skills/my-skill
+crewai skill publish
+```
+
+A publicação lê `name`, `description` e `metadata.version` do frontmatter do `SKILL.md` e envia a skill para o registro da CrewAI. **Skills publicadas são sempre escopadas à sua organização** — assim como ferramentas, apenas membros da organização que publicou podem vê-las e instalá-las; não há visibilidade pública. Flags úteis:
+
+| Flag | Efeito |
+| :--- | :--- |
+| `--org <slug>` | Publica sob uma organização específica (sobrepõe as configurações). |
+| `--force` | Pula a validação de estado do git (alterações não commitadas, etc.). |
+
+### Instalar
+
+Instale uma skill publicada pela sua referência `@org/name`:
+
+```shell Terminal
+crewai skill install @acme/code-review
+```
+
+Dentro de um projeto de crew, a skill é colocada em `./skills/{name}/`; fora de um projeto, vai para o cache compartilhado em `~/.crewai/skills/{org}/{name}/`.
+
+Agentes também podem referenciar skills do registro diretamente — elas são resolvidas a partir do cache local (ou do diretório `skills/` do projeto) em tempo de execução:
+
+```python
+agent = Agent(
+    role="Senior Code Reviewer",
+    goal="Review pull requests for quality and security issues",
+    backstory="Staff engineer with expertise in secure coding practices.",
+    skills=["@acme/code-review"],  # registry ref, resolved locally
+)
+```
+
+### Listar
+
+```shell Terminal
+crewai skill list
+```
+
+Mostra as skills instaladas tanto do diretório `./skills/` do projeto quanto do cache global, com suas versões e caminhos.
 
 ---
 

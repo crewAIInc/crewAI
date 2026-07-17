@@ -725,14 +725,13 @@ def skill_install(ref: str) -> None:
     show_default=True,
     help="Skip git-state validation.",
 )
-@click.option("--public", "is_public", flag_value=True, default=False)
-@click.option("--private", "is_public", flag_value=False)
 @click.option("--org", default=None, help="Organisation slug (overrides settings).")
-def skill_publish(is_public: bool, org: str | None, force: bool) -> None:
+def skill_publish(org: str | None, force: bool) -> None:
+    """Publish the skill in the current directory, scoped to your organization."""
     from crewai_cli.skills.main import SkillCommand
 
     skill_cmd = SkillCommand()
-    skill_cmd.publish(is_public, org=org, force=force)
+    skill_cmd.publish(org=org, force=force)
 
 
 @skill.command(name="list")

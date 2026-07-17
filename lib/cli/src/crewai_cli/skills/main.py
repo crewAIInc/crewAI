@@ -175,8 +175,12 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                 f"[green]Installed [bold]{ref}[/bold]{' (' + version + ')' if version else ''} to global cache.[/green]"
             )
 
-    def publish(self, is_public: bool, org: str | None, force: bool = False) -> None:
-        """Publish the skill in the current directory to the registry."""
+    def publish(self, org: str | None = None, force: bool = False) -> None:
+        """Publish the skill in the current directory to the registry.
+
+        Skills are always scoped to the publishing organization; there is no
+        public visibility option.
+        """
         skill_md = Path("SKILL.md")
         if not skill_md.exists():
             console.print(
@@ -233,7 +237,7 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             org=effective_org,
             name=name,
             version=version,
-            is_public=is_public,
+            is_public=False,
             description=description,
             encoded_file=encoded_file,
         )

@@ -46,3 +46,18 @@ class TestSkillGroupIsTopLevel:
         mock_cmd.return_value.create.assert_called_once_with(
             "my-skill", in_project=False
         )
+
+
+class TestSkillPublishIsOrgScopedOnly:
+    def test_publish_rejects_public_flag(self, runner, no_experimental_env):
+        result = runner.invoke(crewai, ["skill", "publish", "--public"])
+        assert result.exit_code != 0
+        assert "No such option" in result.output
+
+    def test_publish_passes_org_and_force_only(self, runner, no_experimental_env):
+        with mock.patch("crewai_cli.skills.main.SkillCommand") as mock_cmd:
+            result = runner.invoke(
+                crewai, ["skill", "publish", "--org", "acme", "--force"]
+            )
+        assert result.exit_code == 0, result.output
+        mock_cmd.return_value.publish.assert_called_once_with(org="acme", force=True)

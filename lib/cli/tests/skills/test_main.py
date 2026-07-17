@@ -113,7 +113,7 @@ class TestSkillPublish:
     def test_publish_no_skill_md(self, skill_command):
         with in_temp_dir():
             with pytest.raises(SystemExit):
-                skill_command.publish(is_public=True, org="acme")
+                skill_command.publish(org="acme")
 
     def test_publish_missing_version(self, skill_command):
         with in_temp_dir():
@@ -121,7 +121,7 @@ class TestSkillPublish:
                 "---\nname: my-skill\ndescription: Test.\n---\nInstructions."
             )
             with pytest.raises(SystemExit):
-                skill_command.publish(is_public=True, org="acme")
+                skill_command.publish(org="acme")
 
     def test_publish_missing_name(self, skill_command):
         with in_temp_dir():
@@ -129,7 +129,7 @@ class TestSkillPublish:
                 "---\ndescription: Test.\nversion: 1.0.0\n---\nInstructions."
             )
             with pytest.raises(SystemExit):
-                skill_command.publish(is_public=True, org="acme")
+                skill_command.publish(org="acme")
 
     def test_publish_no_org(self, skill_command):
         with in_temp_dir():
@@ -146,7 +146,7 @@ class TestSkillPublish:
                     mock_settings_cls.return_value.org_name = None
                     mock_settings_cls.return_value.enterprise_base_url = None
                     with pytest.raises(SystemExit):
-                        skill_command.publish(is_public=True, org=None)
+                        skill_command.publish(org=None)
 
     def test_publish_calls_api(self, skill_command):
         with in_temp_dir():
@@ -162,12 +162,14 @@ class TestSkillPublish:
                 mock_settings_cls.return_value.org_name = "acme"
                 mock_settings_cls.return_value.enterprise_base_url = None
 
-                skill_command.publish(is_public=False, org="acme")
+                skill_command.publish(org="acme")
 
             skill_command.plus_api_client.publish_skill.assert_called_once()
             call_kwargs = skill_command.plus_api_client.publish_skill.call_args
             assert call_kwargs.kwargs["name"] == "my-skill"
             assert call_kwargs.kwargs["version"] == "1.0.0"
+            # Skills are always org-scoped; there is no public visibility.
+            assert call_kwargs.kwargs["is_public"] is False
 
 
 class TestSkillListCached:

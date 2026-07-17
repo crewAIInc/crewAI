@@ -190,15 +190,13 @@ Run from inside the skill directory (where `SKILL.md` is):
 
 ```shell Terminal
 cd skills/my-skill
-crewai skill publish            # private to your organization (default)
-crewai skill publish --public   # anyone can install it
+crewai skill publish
 ```
 
-Publishing reads `name`, `description`, and `metadata.version` from the `SKILL.md` frontmatter and pushes the skill to the CrewAI registry under your organization. Useful flags:
+Publishing reads `name`, `description`, and `metadata.version` from the `SKILL.md` frontmatter and pushes the skill to the CrewAI registry. **Published skills are always scoped to your organization** — like tools, only members of the publishing org can see and install them; there is no public visibility. Useful flags:
 
 | Flag | Effect |
 | :--- | :--- |
-| `--public` / `--private` | Visibility on the registry (private is the default). |
 | `--org <slug>` | Publish under a specific organization (overrides settings). |
 | `--force` | Skip git-state validation (uncommitted changes, etc.). |
 

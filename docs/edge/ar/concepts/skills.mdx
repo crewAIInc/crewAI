@@ -24,15 +24,23 @@ mode: "wide"
 
 ## البداية السريعة
 
-### 1. إنشاء مجلد المهارة
+### 1. إنشاء مهارة باستخدام سطر الأوامر (CLI)
+
+واجهة سطر الأوامر هي الطريقة المدعومة لإنشاء مهارة — فهي تُنشئ لك هيكل المجلد وملف `SKILL.md` صالحًا:
+
+```shell Terminal
+crewai skill create code-review
+```
+
+داخل مشروع طاقم (حيث يوجد `pyproject.toml`) يُنشئ هذا الأمر `./skills/code-review/`؛ وخارج المشروع يُنشئ `./code-review/` في المجلد الحالي (يمكنك فرض هذا السلوك باستخدام `--no-project`):
 
 ```
 skills/
 └── code-review/
-    ├── SKILL.md          # مطلوب — التعليمات
-    ├── references/       # اختياري — مستندات مرجعية
-    │   └── style-guide.md
-    └── scripts/          # اختياري — سكربتات قابلة للتنفيذ
+    ├── SKILL.md          # Required — instructions (pre-filled template)
+    ├── references/       # Optional — reference docs
+    ├── scripts/          # Optional — executable scripts
+    └── assets/           # Optional — static files
 ```
 
 ### 2. كتابة SKILL.md الخاص بك
@@ -161,6 +169,65 @@ agent = Agent(
     apps=["gmail", "zendesk"],             # يمكنه إرسال رسائل بريد وتحديث التذاكر
 )
 ```
+
+---
+
+## إنشاء المهارات ونشرها وتثبيتها
+
+للمهارات دورة حياة كاملة تُدار عبر واجهة سطر الأوامر: **أنشئها باستخدام `crewai skill create`، وانشرها باستخدام `crewai skill publish`** — إنشاء المجلدات يدويًا يصلح للتجارب المحلية، لكن واجهة سطر الأوامر هي سير العمل المقصود، وهي تحافظ على صحة هيكل المهارة وبياناتها الوصفية.
+
+### الإنشاء
+
+```shell Terminal
+crewai skill create my-skill
+```
+
+يُنشئ هذا الأمر المجلد (داخل `./skills/` في مشروع الطاقم) مع قالب `SKILL.md`، بالإضافة إلى مجلدات فارغة `scripts/` و `references/` و `assets/`. عدّل `SKILL.md` لتعريف التعليمات.
+
+### النشر
+
+نفّذ الأمر من داخل مجلد المهارة (حيث يوجد `SKILL.md`):
+
+```shell Terminal
+cd skills/my-skill
+crewai skill publish
+```
+
+يقرأ النشر الحقول `name` و `description` و `metadata.version` من البيانات الوصفية في مقدمة `SKILL.md` ويدفع المهارة إلى سجل CrewAI. **المهارات المنشورة تكون دائمًا مقيّدة بنطاق مؤسستك** — مثل الأدوات، لا يستطيع رؤيتها وتثبيتها إلا أعضاء المؤسسة الناشرة؛ ولا توجد رؤية عامة. أعلام مفيدة:
+
+| العلم | التأثير |
+| :--- | :--- |
+| `--org <slug>` | النشر تحت مؤسسة محددة (يتجاوز الإعدادات). |
+| `--force` | تخطي التحقق من حالة git (تغييرات غير مُثبتة، إلخ). |
+
+### التثبيت
+
+ثبّت مهارة منشورة عبر مرجعها `@org/name`:
+
+```shell Terminal
+crewai skill install @acme/code-review
+```
+
+داخل مشروع الطاقم تُثبَّت المهارة في `./skills/{name}/`؛ وخارج المشروع تذهب إلى ذاكرة التخزين المؤقتة المشتركة في `~/.crewai/skills/{org}/{name}/`.
+
+يمكن للوكلاء أيضًا الإشارة إلى مهارات السجل مباشرة — يتم حلّها من ذاكرة التخزين المؤقتة المحلية (أو من مجلد `skills/` في المشروع) وقت التشغيل:
+
+```python
+agent = Agent(
+    role="Senior Code Reviewer",
+    goal="Review pull requests for quality and security issues",
+    backstory="Staff engineer with expertise in secure coding practices.",
+    skills=["@acme/code-review"],  # registry ref, resolved locally
+)
+```
+
+### عرض القائمة
+
+```shell Terminal
+crewai skill list
+```
+
+يعرض المهارات المثبّتة من مجلد المشروع `./skills/` ومن ذاكرة التخزين المؤقتة العامة معًا، مع إصداراتها ومساراتها.
 
 ---
 

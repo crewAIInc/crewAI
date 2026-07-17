@@ -24,15 +24,23 @@ mode: "wide"
 
 ## 빠른 시작
 
-### 1. 스킬 디렉터리 생성
+### 1. CLI로 스킬 생성
+
+CLI는 스킬을 생성하는 공식 지원 방식입니다 — 디렉터리 레이아웃과 유효한 `SKILL.md`를 자동으로 스캐폴딩해 줍니다:
+
+```shell Terminal
+crewai skill create code-review
+```
+
+크루 프로젝트 내부(`pyproject.toml`이 있는 곳)에서는 `./skills/code-review/`가 생성되고, 프로젝트 외부에서는 현재 디렉터리에 `./code-review/`가 생성됩니다 (`--no-project`로 이 동작을 강제할 수 있습니다):
 
 ```
 skills/
 └── code-review/
-    ├── SKILL.md          # 필수 — 지침
+    ├── SKILL.md          # 필수 — 지침 (미리 채워진 템플릿)
     ├── references/       # 선택 — 참조 문서
-    │   └── style-guide.md
-    └── scripts/          # 선택 — 실행 가능한 스크립트
+    ├── scripts/          # 선택 — 실행 가능한 스크립트
+    └── assets/           # 선택 — 정적 파일
 ```
 
 ### 2. SKILL.md 작성
@@ -161,6 +169,65 @@ agent = Agent(
     apps=["gmail", "zendesk"],             # 이메일 전송 및 티켓 업데이트 가능
 )
 ```
+
+---
+
+## 스킬 생성, 게시 및 설치
+
+스킬은 CLI로 관리되는 전체 라이프사이클을 갖습니다: **`crewai skill create`로 생성하고, `crewai skill publish`로 게시하세요** — 디렉터리를 직접 만드는 방식도 로컬 실험에는 사용할 수 있지만, CLI가 의도된 워크플로우이며 스킬 레이아웃과 프론트매터를 유효하게 유지해 줍니다.
+
+### 생성
+
+```shell Terminal
+crewai skill create my-skill
+```
+
+디렉터리를 스캐폴딩하고 (크루 프로젝트 내부에서는 `./skills/`에 생성) 템플릿 `SKILL.md`와 함께 빈 `scripts/`, `references/`, `assets/` 디렉터리를 만듭니다. `SKILL.md`를 편집하여 지침을 정의하세요.
+
+### 게시
+
+스킬 디렉터리 내부(`SKILL.md`가 있는 곳)에서 실행하세요:
+
+```shell Terminal
+cd skills/my-skill
+crewai skill publish
+```
+
+게시 시 `SKILL.md` 프론트매터에서 `name`, `description`, `metadata.version`을 읽어 스킬을 CrewAI 레지스트리로 푸시합니다. **게시된 스킬은 항상 조직 범위로 제한됩니다** — 도구와 마찬가지로 게시한 조직의 멤버만 스킬을 보고 설치할 수 있으며, 공개 가시성은 없습니다. 유용한 플래그:
+
+| 플래그 | 효과 |
+| :--- | :--- |
+| `--org <slug>` | 특정 조직으로 게시합니다 (설정을 재정의). |
+| `--force` | git 상태 검증을 건너뜁니다 (커밋되지 않은 변경 사항 등). |
+
+### 설치
+
+게시된 스킬을 `@org/name` 참조로 설치합니다:
+
+```shell Terminal
+crewai skill install @acme/code-review
+```
+
+크루 프로젝트 내부에서는 스킬이 `./skills/{name}/`에 설치되고, 프로젝트 외부에서는 공유 캐시인 `~/.crewai/skills/{org}/{name}/`에 저장됩니다.
+
+에이전트는 레지스트리 스킬을 직접 참조할 수도 있습니다 — 런타임에 로컬 캐시(또는 프로젝트 `skills/` 디렉터리)에서 해석됩니다:
+
+```python
+agent = Agent(
+    role="Senior Code Reviewer",
+    goal="Review pull requests for quality and security issues",
+    backstory="Staff engineer with expertise in secure coding practices.",
+    skills=["@acme/code-review"],  # registry ref, resolved locally
+)
+```
+
+### 목록 조회
+
+```shell Terminal
+crewai skill list
+```
+
+프로젝트 `./skills/` 디렉터리와 전역 캐시 양쪽에 설치된 스킬을 버전 및 경로와 함께 보여줍니다.
 
 ---
 
