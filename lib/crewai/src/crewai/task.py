@@ -662,6 +662,21 @@ class Task(BaseModel):
                 crewai_event_bus.emit(
                     self, TaskStartedEvent(context=context, task=self)
                 )
+
+            from crewai.hooks.contexts import StepContext
+            from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
+            pre_step_ctx = StepContext(
+                kind="task",
+                step_name=self.name or self.description,
+                agent=agent,
+                agent_role=getattr(agent, "role", None),
+                task=self,
+                payload=context,
+            )
+            dispatch(InterceptionPoint.PRE_STEP, pre_step_ctx)
+            context = pre_step_ctx.payload
+
             result = await agent.aexecute_task(
                 task=self,
                 context=context,
@@ -718,6 +733,18 @@ class Task(BaseModel):
                     guardrail=self._guardrail,
                 )
 
+            post_step_ctx = StepContext(
+                kind="task",
+                step_name=self.name or self.description,
+                agent=agent,
+                agent_role=getattr(agent, "role", None),
+                task=self,
+                output=task_output,
+                payload=task_output,
+            )
+            dispatch(InterceptionPoint.POST_STEP, post_step_ctx)
+            task_output = cast(TaskOutput, post_step_ctx.payload)
+
             self.output = task_output
             self.end_time = datetime.datetime.now()
 
@@ -739,10 +766,12 @@ class Task(BaseModel):
 
             if self.output_file:
                 content = (
-                    json_output
-                    if json_output
+                    task_output.json_dict
+                    if task_output.json_dict
                     else (
-                        pydantic_output.model_dump_json() if pydantic_output else result
+                        task_output.pydantic.model_dump_json()
+                        if task_output.pydantic
+                        else task_output.raw
                     )
                 )
                 self._save_file(content)
@@ -787,6 +816,21 @@ class Task(BaseModel):
                 crewai_event_bus.emit(
                     self, TaskStartedEvent(context=context, task=self)
                 )
+
+            from crewai.hooks.contexts import StepContext
+            from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
+            pre_step_ctx = StepContext(
+                kind="task",
+                step_name=self.name or self.description,
+                agent=agent,
+                agent_role=getattr(agent, "role", None),
+                task=self,
+                payload=context,
+            )
+            dispatch(InterceptionPoint.PRE_STEP, pre_step_ctx)
+            context = pre_step_ctx.payload
+
             result = agent.execute_task(
                 task=self,
                 context=context,
@@ -843,6 +887,18 @@ class Task(BaseModel):
                     guardrail=self._guardrail,
                 )
 
+            post_step_ctx = StepContext(
+                kind="task",
+                step_name=self.name or self.description,
+                agent=agent,
+                agent_role=getattr(agent, "role", None),
+                task=self,
+                output=task_output,
+                payload=task_output,
+            )
+            dispatch(InterceptionPoint.POST_STEP, post_step_ctx)
+            task_output = cast(TaskOutput, post_step_ctx.payload)
+
             self.output = task_output
             self.end_time = datetime.datetime.now()
 
@@ -864,10 +920,12 @@ class Task(BaseModel):
 
             if self.output_file:
                 content = (
-                    json_output
-                    if json_output
+                    task_output.json_dict
+                    if task_output.json_dict
                     else (
-                        pydantic_output.model_dump_json() if pydantic_output else result
+                        task_output.pydantic.model_dump_json()
+                        if task_output.pydantic
+                        else task_output.raw
                     )
                 )
                 self._save_file(content)
@@ -1316,7 +1374,6 @@ Follow these guidelines:
                     content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
                     color="yellow",
                 )
-
             result = agent.execute_task(
                 task=self,
                 context=context,
@@ -1426,7 +1483,6 @@ Follow these guidelines:
                     content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
                     color="yellow",
                 )
-
             result = await agent.aexecute_task(
                 task=self,
                 context=context,

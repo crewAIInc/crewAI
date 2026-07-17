@@ -19,7 +19,8 @@ from crewai.flow.dsl._types import FlowMethodDecorator, FlowTrigger
 from crewai.flow.dsl._utils import (
     P,
     R,
-    _set_flow_method_definition,
+    _merge_flow_method_definition,
+    _method_action,
 )
 from crewai.flow.flow_definition import FlowMethodDefinition
 from crewai.flow.flow_wrappers import RouterMethod
@@ -94,7 +95,7 @@ def _normalize_router_emit(value: Sequence[Any] | str) -> list[str]:
 
 
 def router(
-    condition: FlowTrigger,
+    condition: FlowTrigger | None = None,
     *,
     emit: Sequence[str] | str | None = None,
 ) -> FlowMethodDecorator:
@@ -106,6 +107,7 @@ def router(
 
     Args:
         condition: Specifies when the router should execute. Can be:
+            - None: no listen trigger, used when stacking with @start() or @listen()
             - str: Route label or method name that triggers this router
             - FlowCondition: Result from or_() or and_(), including nested conditions
             - Flow method reference: A method whose completion triggers this router
@@ -145,13 +147,17 @@ def router(
         else:
             router_events = _get_router_return_events(func) or []
 
-        _set_flow_method_definition(
+        method_definition_kwargs: dict[str, Any] = {
+            "do": _method_action(func),
+            "router": True,
+            "emit": router_events or None,
+        }
+        if condition is not None:
+            method_definition_kwargs["listen"] = _to_definition_condition(condition)
+
+        _merge_flow_method_definition(
             wrapper,
-            FlowMethodDefinition(
-                listen=_to_definition_condition(condition),
-                router=True,
-                emit=router_events or None,
-            ),
+            FlowMethodDefinition(**method_definition_kwargs),
         )
         return wrapper
 

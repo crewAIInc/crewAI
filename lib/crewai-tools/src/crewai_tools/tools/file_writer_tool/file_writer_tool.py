@@ -5,6 +5,11 @@ from typing import Any
 from crewai.tools import BaseTool
 from pydantic import BaseModel
 
+from crewai_tools.security.safe_path import (
+    format_error_for_display,
+    format_path_for_display,
+)
+
 
 def strtobool(val: str | bool) -> bool:
     if isinstance(val, bool):
@@ -44,6 +49,9 @@ class FileWriterTool(BaseTool):
             # itself, since that is not a valid file target.
             real_directory = Path(directory).resolve()
             real_filepath = Path(filepath).resolve()
+            display_filepath = format_path_for_display(
+                str(real_filepath), str(real_directory)
+            )
             if (
                 not real_filepath.is_relative_to(real_directory)
                 or real_filepath == real_directory
@@ -56,15 +64,18 @@ class FileWriterTool(BaseTool):
             kwargs["overwrite"] = strtobool(kwargs["overwrite"])
 
             if os.path.exists(real_filepath) and not kwargs["overwrite"]:
-                return f"File {real_filepath} already exists and overwrite option was not passed."
+                return f"File {display_filepath} already exists and overwrite option was not passed."
 
             mode = "w" if kwargs["overwrite"] else "x"
             with open(real_filepath, mode) as file:
                 file.write(kwargs["content"])
-            return f"Content successfully written to {real_filepath}"
+            return f"Content successfully written to {display_filepath}"
         except FileExistsError:
-            return f"File {real_filepath} already exists and overwrite option was not passed."
+            return f"File {display_filepath} already exists and overwrite option was not passed."
         except KeyError as e:
             return f"An error occurred while accessing key: {e!s}"
         except Exception as e:
-            return f"An error occurred while writing to the file: {e!s}"
+            return (
+                "An error occurred while writing to the file: "
+                f"{format_error_for_display(e)}"
+            )

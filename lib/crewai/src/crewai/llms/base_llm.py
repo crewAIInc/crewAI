@@ -42,8 +42,13 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.types.streaming import StreamSession
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.pydantic_schema_utils import serialize_model_class
+from crewai.utilities.streaming import (
+    create_frame_generator,
+    create_frame_streaming_state,
+)
 
 
 try:
@@ -76,6 +81,9 @@ _current_call_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 )
 _call_stop_override_var: contextvars.ContextVar[dict[int, list[str]] | None] = (
     contextvars.ContextVar("_call_stop_override_var", default=None)
+)
+_call_stream_override_var: contextvars.ContextVar[dict[int, bool] | None] = (
+    contextvars.ContextVar("_call_stream_override_var", default=None)
 )
 
 
@@ -113,6 +121,19 @@ def call_stop_override(
         yield
     finally:
         _call_stop_override_var.reset(token)
+
+
+@contextmanager
+def call_stream_override(llm: BaseLLM, stream: bool) -> Generator[None, None, None]:
+    """Override streaming for ``llm`` within the current call scope."""
+    current = _call_stream_override_var.get()
+    new_overrides: dict[int, bool] = dict(current) if current else {}
+    new_overrides[id(llm)] = stream
+    token = _call_stream_override_var.set(new_overrides)
+    try:
+        yield
+    finally:
+        _call_stream_override_var.reset(token)
 
 
 def get_current_call_id() -> str:
@@ -212,6 +233,13 @@ class BaseLLM(BaseModel, ABC):
             if override is not None:
                 return override
         return self.stop
+
+    def _effective_stream(self) -> bool | None:
+        """Return the call-scoped streaming mode for this instance."""
+        overrides = _call_stream_override_var.get()
+        if overrides is not None and id(self) in overrides:
+            return overrides[id(self)]
+        return self.stream
 
     _token_usage: dict[str, int] = PrivateAttr(
         default_factory=lambda: {
@@ -317,6 +345,39 @@ class BaseLLM(BaseModel, ABC):
             TimeoutError: If the LLM request times out.
             RuntimeError: If the LLM request fails for other reasons.
         """
+
+    def stream_events(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Task | None = None,
+        from_agent: BaseAgent | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> StreamSession[Any]:
+        """Run the LLM call and stream scoped public ``StreamFrame`` events."""
+        result_holder: list[Any] = []
+        state = create_frame_streaming_state(result_holder, use_async=False)
+        output_holder: list[StreamSession[Any]] = []
+
+        def run_llm_call() -> Any:
+            with call_stream_override(self, True):
+                return self.call(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
+
+        stream_session: StreamSession[Any] = StreamSession(
+            sync_iterator=create_frame_generator(state, run_llm_call, output_holder)
+        )
+        output_holder.append(stream_session)
+        return stream_session
 
     async def acall(
         self,
@@ -509,7 +570,7 @@ class BaseLLM(BaseModel, ABC):
         if max_tokens is None:
             max_tokens = self._effective_max_tokens()
         if stream is None:
-            stream = self.stream
+            stream = self._effective_stream()
         if seed is None:
             seed = self.seed
         if stop_sequences is None:
@@ -890,47 +951,30 @@ class BaseLLM(BaseModel, ABC):
         Args:
             usage_data: Token usage data from the API response
         """
-        prompt_tokens = (
-            usage_data.get("prompt_tokens")
-            or usage_data.get("prompt_token_count")
-            or usage_data.get("input_tokens")
-            or 0
-        )
+        metrics = UsageMetrics.from_provider_dict(usage_data)
+        if metrics is None:
+            return
 
-        completion_tokens = (
-            usage_data.get("completion_tokens")
-            or usage_data.get("candidates_token_count")
-            or usage_data.get("output_tokens")
-            or 0
-        )
-
-        cached_tokens = (
-            usage_data.get("cached_tokens")
-            or usage_data.get("cached_prompt_tokens")
-            or usage_data.get("cache_read_input_tokens")
-            or 0
-        )
-        if not cached_tokens:
-            prompt_details = usage_data.get("prompt_tokens_details")
-            if isinstance(prompt_details, dict):
-                cached_tokens = prompt_details.get("cached_tokens", 0) or 0
-
-        reasoning_tokens = usage_data.get("reasoning_tokens", 0) or 0
-        cache_creation_tokens = usage_data.get("cache_creation_tokens", 0) or 0
-
-        self._token_usage["prompt_tokens"] += prompt_tokens
-        self._token_usage["completion_tokens"] += completion_tokens
-        self._token_usage["total_tokens"] += prompt_tokens + completion_tokens
-        self._token_usage["successful_requests"] += 1
-        self._token_usage["cached_prompt_tokens"] += cached_tokens
-        self._token_usage["reasoning_tokens"] += reasoning_tokens
-        self._token_usage["cache_creation_tokens"] += cache_creation_tokens
+        self._token_usage["prompt_tokens"] += metrics.prompt_tokens
+        self._token_usage["completion_tokens"] += metrics.completion_tokens
+        self._token_usage["total_tokens"] += metrics.total_tokens
+        self._token_usage["successful_requests"] += metrics.successful_requests
+        self._token_usage["cached_prompt_tokens"] += metrics.cached_prompt_tokens
+        self._token_usage["reasoning_tokens"] += metrics.reasoning_tokens
+        self._token_usage["cache_creation_tokens"] += metrics.cache_creation_tokens
 
     def get_token_usage_summary(self) -> UsageMetrics:
         """Get summary of token usage for this LLM instance.
 
+        The counters are cumulative for the lifetime of this instance: they
+        grow across every call made through it, including calls issued by
+        different agents sharing the instance. For usage scoped to a single
+        call, snapshot before and after and use
+        ``UsageMetrics.delta_since`` (agent kickoff results already report
+        per-call usage this way).
+
         Returns:
-            Dictionary with token usage totals
+            UsageMetrics with this instance's lifetime token usage totals.
         """
         return UsageMetrics(**self._token_usage)
 
@@ -963,15 +1007,14 @@ class BaseLLM(BaseModel, ABC):
 
         from crewai_core.printer import PRINTER
 
+        from crewai.hooks.dispatch import HookAborted, InterceptionPoint, dispatch
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
-            get_before_llm_call_hooks,
+            before_llm_call_reducer,
         )
 
-        before_hooks = get_before_llm_call_hooks()
-        if not before_hooks:
-            return True
-
+        # No early global-list guard: dispatch resolves global + execution-scoped
+        # hooks and has its own no-op fast path, so scoped hooks still run here.
         hook_context = LLMCallHookContext(
             executor=None,
             messages=messages,
@@ -980,24 +1023,19 @@ class BaseLLM(BaseModel, ABC):
             task=None,
             crew=None,
         )
-        verbose = getattr(from_agent, "verbose", True) if from_agent else True
 
         try:
-            for hook in before_hooks:
-                result = hook(hook_context)
-                if result is False:
-                    if verbose:
-                        PRINTER.print(
-                            content="LLM call blocked by before_llm_call hook",
-                            color="yellow",
-                        )
-                    return False
-        except Exception as e:
-            if verbose:
-                PRINTER.print(
-                    content=f"Error in before_llm_call hook: {e}",
-                    color="yellow",
-                )
+            dispatch(
+                InterceptionPoint.PRE_MODEL_CALL,
+                hook_context,
+                reducer=before_llm_call_reducer,
+            )
+        except HookAborted:
+            PRINTER.print(
+                content="LLM call blocked by before_llm_call hook",
+                color="yellow",
+            )
+            return False
 
         return True
 
@@ -1030,17 +1068,14 @@ class BaseLLM(BaseModel, ABC):
         if from_agent is not None or not isinstance(response, str):
             return response
 
-        from crewai_core.printer import PRINTER
-
+        from crewai.hooks.dispatch import InterceptionPoint, dispatch
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
-            get_after_llm_call_hooks,
+            after_llm_call_reducer,
         )
 
-        after_hooks = get_after_llm_call_hooks()
-        if not after_hooks:
-            return response
-
+        # No early global-list guard: dispatch resolves global + execution-scoped
+        # hooks and has its own no-op fast path, so scoped hooks still run here.
         hook_context = LLMCallHookContext(
             executor=None,
             messages=messages,
@@ -1050,20 +1085,11 @@ class BaseLLM(BaseModel, ABC):
             crew=None,
             response=response,
         )
-        verbose = getattr(from_agent, "verbose", True) if from_agent else True
-        modified_response = response
 
-        try:
-            for hook in after_hooks:
-                result = hook(hook_context)
-                if result is not None and isinstance(result, str):
-                    modified_response = result
-                    hook_context.response = modified_response
-        except Exception as e:
-            if verbose:
-                PRINTER.print(
-                    content=f"Error in after_llm_call hook: {e}",
-                    color="yellow",
-                )
+        dispatch(
+            InterceptionPoint.POST_MODEL_CALL,
+            hook_context,
+            reducer=after_llm_call_reducer,
+        )
 
-        return modified_response
+        return hook_context.response if hook_context.response is not None else response

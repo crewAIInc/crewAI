@@ -5,7 +5,6 @@ import asyncio
 from collections.abc import Awaitable, Callable
 import importlib
 from inspect import Parameter, signature
-import json
 import threading
 from typing import (
     Any,
@@ -33,11 +32,13 @@ from typing_extensions import TypeIs
 from crewai.tools.structured_tool import (
     CrewStructuredTool,
     _deserialize_schema,
+    _format_tool_output_for_agent,
+    _infer_result_schema_from_callable,
     _serialize_schema,
     build_schema_hint,
+    format_description_for_llm,
 )
 from crewai.types.callback import SerializableCallable, _resolve_dotted_path
-from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -149,9 +150,20 @@ class BaseTool(BaseModel, ABC):
         validate_default=True,
         description="The schema for the arguments that the tool accepts.",
     )
+    result_schema: type[PydanticBaseModel] | None = Field(
+        default=None,
+        validate_default=True,
+        description="The schema for the output that the tool returns.",
+    )
 
     @field_serializer("args_schema", when_used="json")
     def _serialize_args_schema(
+        self, schema: type[PydanticBaseModel] | None
+    ) -> dict[str, Any] | None:
+        return _serialize_schema(schema)
+
+    @field_serializer("result_schema", when_used="json")
+    def _serialize_result_schema(
         self, schema: type[PydanticBaseModel] | None
     ) -> dict[str, Any] | None:
         return _serialize_schema(schema)
@@ -232,6 +244,17 @@ class BaseTool(BaseModel, ABC):
                     fields[param_name] = (annotation, param.default)
 
         return create_model(f"{cls.__name__}Schema", **fields)
+
+    @field_validator("result_schema", mode="before")
+    @classmethod
+    def _default_result_schema(
+        cls, v: type[PydanticBaseModel] | dict[str, Any] | None
+    ) -> type[PydanticBaseModel] | None:
+        if isinstance(v, dict):
+            return _deserialize_schema(v)
+        if v is not None:
+            return v
+        return _infer_result_schema_from_callable(cls._run)
 
     @field_validator("max_usage_count", mode="before")
     @classmethod
@@ -340,6 +363,10 @@ class BaseTool(BaseModel, ABC):
             "Override _arun for async support or use run() for sync execution."
         )
 
+    def format_output_for_agent(self, raw_result: Any) -> str:
+        """Format a raw tool result into the string representation sent to an agent."""
+        return _format_tool_output_for_agent(self, raw_result)
+
     def reset_usage_count(self) -> None:
         """Reset the current usage count to zero."""
         self.current_usage_count = 0
@@ -369,6 +396,7 @@ class BaseTool(BaseModel, ABC):
             name=self.name,
             description=self.description,
             args_schema=self.args_schema,
+            result_schema=self.result_schema,
             func=self._run,
             result_as_answer=self.result_as_answer,
             max_usage_count=self.max_usage_count,
@@ -390,6 +418,9 @@ class BaseTool(BaseModel, ABC):
             raise ValueError("The provided tool must have a callable 'func' attribute.")
 
         args_schema = getattr(tool, "args_schema", None)
+        result_schema = getattr(tool, "result_schema", None)
+        if result_schema is None:
+            result_schema = _infer_result_schema_from_callable(tool.func)
 
         if args_schema is None:
             func_signature = signature(tool.func)
@@ -420,6 +451,7 @@ class BaseTool(BaseModel, ABC):
             description=getattr(tool, "description", ""),
             func=tool.func,
             args_schema=args_schema,
+            result_schema=result_schema,
         )
 
     def _set_args_schema(self) -> None:
@@ -446,15 +478,27 @@ class BaseTool(BaseModel, ABC):
                 f"{self.__class__.__name__}Schema", **fields
             )
 
+    @property
+    def formatted_description(self) -> str:
+        """LLM-facing composite of name, argument schema, and description.
+
+        Use this when rendering the tool into a prompt; ``description``
+        holds only the authored text.
+        """
+        return format_description_for_llm(self.name, self.args_schema, self.description)
+
     def _generate_description(self) -> None:
-        """Generate the tool description with a JSON schema for arguments."""
-        schema = generate_model_description(self.args_schema)
-        args_json = json.dumps(schema["json_schema"]["schema"], indent=2)
-        self.description = (
-            f"Tool Name: {sanitize_tool_name(self.name)}\n"
-            f"Tool Arguments: {args_json}\n"
-            f"Tool Description: {self.description}"
-        )
+        """Deprecated hook kept for backward compatibility; does nothing.
+
+        Historically this rewrote the public ``description`` field at
+        construction time into the LLM-facing composite (``Tool Name: …\\n
+        Tool Arguments: …\\nTool Description: <authored>``). The authored
+        ``description`` is now preserved as written and the composite is
+        exposed separately via :attr:`formatted_description`.
+
+        ``model_post_init`` still calls this so subclasses that override it
+        (e.g. adapters that customize the composite) keep working.
+        """
 
 
 _BASE_TOOL_CLS = BaseTool
@@ -568,6 +612,9 @@ class Tool(BaseTool, Generic[P, R]):
             raise ValueError("The provided tool must have a callable 'func' attribute.")
 
         args_schema = getattr(tool, "args_schema", None)
+        result_schema = getattr(tool, "result_schema", None)
+        if result_schema is None:
+            result_schema = _infer_result_schema_from_callable(tool.func)
 
         if args_schema is None:
             func_signature = signature(tool.func)
@@ -598,6 +645,7 @@ class Tool(BaseTool, Generic[P, R]):
             description=getattr(tool, "description", ""),
             func=tool.func,
             args_schema=args_schema,
+            result_schema=result_schema,
         )
 
 
@@ -621,6 +669,7 @@ def tool(
     name: str,
     /,
     *,
+    result_schema: type[BaseModel] | None = ...,
     result_as_answer: bool = ...,
     max_usage_count: int | None = ...,
 ) -> Callable[[Callable[P2, R2]], Tool[P2, R2]]: ...
@@ -629,6 +678,7 @@ def tool(
 @overload
 def tool(
     *,
+    result_schema: type[BaseModel] | None = ...,
     result_as_answer: bool = ...,
     max_usage_count: int | None = ...,
 ) -> Callable[[Callable[P2, R2]], Tool[P2, R2]]: ...
@@ -636,6 +686,7 @@ def tool(
 
 def tool(
     *args: Callable[P2, R2] | str,
+    result_schema: type[BaseModel] | None = None,
     result_as_answer: bool = False,
     max_usage_count: int | None = None,
 ) -> Tool[P2, R2] | Callable[[Callable[P2, R2]], Tool[P2, R2]]:
@@ -649,6 +700,7 @@ def tool(
     Args:
         *args: Either the function to decorate or a custom tool name.
         result_as_answer: If True, the tool result becomes the final agent answer.
+        result_schema: Optional schema for the output that the tool returns.
         max_usage_count: Maximum times this tool can be used. None means unlimited.
 
     Returns:
@@ -690,12 +742,16 @@ def tool(
 
             class_name = "".join(tool_name.split()).title()
             args_schema = create_model(class_name, **fields)
+            resolved_result_schema = (
+                result_schema or _infer_result_schema_from_callable(f)
+            )
 
             return Tool(
                 name=tool_name,
                 description=f.__doc__,
                 func=f,
                 args_schema=args_schema,
+                result_schema=resolved_result_schema,
                 result_as_answer=result_as_answer,
                 max_usage_count=max_usage_count,
                 current_usage_count=0,

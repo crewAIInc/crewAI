@@ -8,15 +8,21 @@ from pydantic import BaseModel
 from typing_extensions import TypeIs
 
 from crewai.flow.flow_definition import (
+    FlowActionDefinition,
+    FlowCodeActionDefinition,
     FlowConfigDefinition,
     FlowConversationalDefinition,
     FlowConversationalRouterDefinition,
     FlowDefinition,
-    FlowDefinitionDiagnostic,
+    FlowDictStateDefinition,
     FlowHumanFeedbackDefinition,
     FlowMethodDefinition,
     FlowPersistenceDefinition,
+    FlowPydanticStateDefinition,
     FlowStateDefinition,
+    FlowUnknownStateDefinition,
+    _object_ref,
+    log_flow_definition_issues,
 )
 from crewai.flow.flow_wrappers import (
     FlowMethod,
@@ -34,15 +40,12 @@ _FLOW_METHOD_METADATA_ATTRS = [
     "__flow_method_definition__",
     "__flow_persistence_config__",
     "__human_feedback_config__",
-    "_human_feedback_llm",
 ]
 
 
 def is_flow_method(obj: Any) -> TypeIs[FlowMethod[Any, Any]]:
     """Check if the object carries Flow method wrapper metadata."""
-    return hasattr(obj, "__is_flow_method__") or hasattr(
-        obj, _FLOW_METHOD_DEFINITION_ATTR
-    )
+    return hasattr(obj, _FLOW_METHOD_DEFINITION_ATTR)
 
 
 def _should_include_flow_method(flow_class: type, method: Any) -> bool:
@@ -80,8 +83,11 @@ def _stamp_inherited_conversational_metadata(
     for attr in _FLOW_METHOD_METADATA_ATTRS:
         if hasattr(inherited, attr):
             setattr(method, attr, getattr(inherited, attr))
-    method.__is_flow_method__ = True
     return method
+
+
+def _method_action(method: Any) -> FlowActionDefinition:
+    return FlowCodeActionDefinition(ref=f"{method.__module__}:{method.__qualname__}")
 
 
 def _set_flow_method_definition(
@@ -100,11 +106,23 @@ def _get_flow_method_definition(method: Any) -> FlowMethodDefinition | None:
     return None
 
 
-def _object_ref(value: Any) -> str:
-    target = value if isinstance(value, type) else type(value)
-    module = getattr(target, "__module__", "")
-    qualname = getattr(target, "__qualname__", getattr(target, "__name__", ""))
-    return f"{module}:{qualname}" if module and qualname else repr(value)
+def _merge_flow_method_definition(
+    wrapper: FlowMethod[P, R],
+    definition: FlowMethodDefinition,
+) -> None:
+    existing = _get_flow_method_definition(wrapper)
+    if existing is None:
+        _set_flow_method_definition(wrapper, definition)
+        return
+
+    updates = {
+        field_name: getattr(definition, field_name)
+        for field_name in definition.model_fields_set
+    }
+    _set_flow_method_definition(
+        wrapper,
+        existing.model_copy(deep=True, update=updates),
+    )
 
 
 def _is_json_serializable(value: Any) -> bool:
@@ -117,7 +135,6 @@ def _is_json_serializable(value: Any) -> bool:
 
 def _serialize_static_value(
     value: Any,
-    diagnostics: list[FlowDefinitionDiagnostic],
     path: str,
 ) -> Any:
     if value is None or _is_json_serializable(value):
@@ -149,12 +166,11 @@ def _serialize_static_value(
             )
 
     ref = _object_ref(value)
-    diagnostics.append(
-        FlowDefinitionDiagnostic(
-            code="non_serializable_value",
-            path=path,
-            message=f"value is not fully serializable; preserved import reference {ref}",
-        )
+    logger.warning(
+        "Flow definition value at %s is not fully serializable; "
+        "preserved import reference %s.",
+        path,
+        ref,
     )
     return {"ref": ref}
 
@@ -170,10 +186,7 @@ def _state_ref(value: Any) -> str | None:
     return None
 
 
-def _build_state_definition(
-    flow_class: type,
-    diagnostics: list[FlowDefinitionDiagnostic],
-) -> FlowStateDefinition | None:
+def _build_state_definition(flow_class: type) -> FlowStateDefinition | None:
     from pydantic import BaseModel as PydanticBaseModel
 
     state_value = getattr(flow_class, "_initial_state_t", None)
@@ -188,48 +201,44 @@ def _build_state_definition(
     if state_value is dict or isinstance(state_value, dict):
         default = None
         if isinstance(state_value, dict):
-            default = _serialize_static_value(state_value, diagnostics, "state.default")
-        return FlowStateDefinition(type="dict", default=default)
+            default = _serialize_static_value(state_value, "state.default")
+        return FlowDictStateDefinition(default=default)
     if isinstance(state_value, type) and issubclass(state_value, PydanticBaseModel):
-        return FlowStateDefinition(type="pydantic", ref=_state_ref(state_value))
+        return FlowPydanticStateDefinition(ref=_state_ref(state_value))
     if isinstance(state_value, PydanticBaseModel):
-        return FlowStateDefinition(
-            type="pydantic",
+        return FlowPydanticStateDefinition(
             ref=_state_ref(state_value),
-            default=_serialize_static_value(state_value, diagnostics, "state.default"),
+            default=_serialize_static_value(state_value, "state.default"),
         )
-    diagnostics.append(
-        FlowDefinitionDiagnostic(
-            code="unknown_state_type",
-            path="state",
-            message=f"could not serialize state type {_object_ref(state_value)}",
-        )
+    logger.warning(
+        "Flow definition state could not serialize state type %s.",
+        _object_ref(state_value),
     )
-    return FlowStateDefinition(type="unknown", ref=_state_ref(state_value))
+    return FlowUnknownStateDefinition(ref=_state_ref(state_value))
 
 
-def _build_config_definition(
-    flow_class: type,
-    diagnostics: list[FlowDefinitionDiagnostic],
-) -> FlowConfigDefinition:
+def _build_config_definition(flow_class: type) -> FlowConfigDefinition:
     config_field_names = set(FlowConfigDefinition.model_fields)
     field_defaults = {
-        name: field.default
+        name: field.get_default(call_default_factory=True)
         for name, field in getattr(flow_class, "model_fields", {}).items()
         if name in config_field_names
     }
     values: dict[str, Any] = {}
     for field_name, default in field_defaults.items():
         value = getattr(flow_class, field_name, default)
-        values[field_name] = _serialize_static_value(
-            value, diagnostics, f"config.{field_name}"
-        )
+        if field_name == "input_provider":
+            # A string value is already a ref; only live objects degrade.
+            values[field_name] = (
+                value if value is None or isinstance(value, str) else _object_ref(value)
+            )
+        else:
+            values[field_name] = _serialize_static_value(value, f"config.{field_name}")
     return FlowConfigDefinition(**values)
 
 
 def _build_human_feedback_definition(
     method: Any,
-    diagnostics: list[FlowDefinitionDiagnostic],
     path: str,
 ) -> FlowHumanFeedbackDefinition | None:
     config = getattr(method, "__human_feedback_config__", None)
@@ -239,44 +248,36 @@ def _build_human_feedback_definition(
     return FlowHumanFeedbackDefinition(
         message=str(config.message),
         emit=[str(value) for value in emit] if emit is not None else None,
-        llm=_serialize_static_value(
-            getattr(config, "llm", None), diagnostics, f"{path}.llm"
-        ),
+        # llm and provider stay live: the engine consumes them in-process and
+        # the contract degrades them to serializable forms at JSON dump time.
+        llm=getattr(config, "llm", None),
         default_outcome=getattr(config, "default_outcome", None),
         metadata=_serialize_static_value(
-            getattr(config, "metadata", None), diagnostics, f"{path}.metadata"
+            getattr(config, "metadata", None), f"{path}.metadata"
         ),
-        provider=_serialize_static_value(
-            getattr(config, "provider", None), diagnostics, f"{path}.provider"
-        ),
+        provider=getattr(config, "provider", None),
         learn=bool(getattr(config, "learn", False)),
         learn_source=str(getattr(config, "learn_source", "hitl")),
         learn_strict=bool(getattr(config, "learn_strict", False)),
     )
 
 
-def _build_persistence_definition(
-    value: Any,
-    diagnostics: list[FlowDefinitionDiagnostic],
-    path: str,
-) -> FlowPersistenceDefinition | None:
+def _build_persistence_definition(value: Any) -> FlowPersistenceDefinition | None:
     config = getattr(value, "__flow_persistence_config__", None)
     if config is None:
         return None
-    persistence = getattr(config, "persistence", None)
-    verbose = bool(getattr(config, "verbose", False))
     return FlowPersistenceDefinition(
         enabled=True,
-        verbose=verbose,
-        persistence=_serialize_static_value(
-            persistence, diagnostics, f"{path}.persistence"
-        ),
+        verbose=bool(getattr(config, "verbose", False)),
+        # The backend stays live: the engine persists through the exact
+        # instance the user configured; the contract degrades it to a
+        # serialized config at JSON dump time.
+        persistence=getattr(config, "persistence", None),
     )
 
 
 def _build_conversational_router_definition(
     router_config: Any,
-    diagnostics: list[FlowDefinitionDiagnostic],
     path: str,
 ) -> FlowConversationalRouterDefinition | None:
     if router_config is None:
@@ -287,12 +288,9 @@ def _build_conversational_router_definition(
         prompt=getattr(router_config, "prompt", None),
         response_format=_serialize_static_value(
             getattr(router_config, "response_format", None),
-            diagnostics,
             f"{path}.response_format",
         ),
-        llm=_serialize_static_value(
-            getattr(router_config, "llm", None), diagnostics, f"{path}.llm"
-        ),
+        llm=_serialize_static_value(getattr(router_config, "llm", None), f"{path}.llm"),
         routes=[str(route) for route in routes] if routes is not None else None,
         route_descriptions=getattr(router_config, "route_descriptions", None),
         default_intent=getattr(router_config, "default_intent", "converse"),
@@ -303,7 +301,6 @@ def _build_conversational_router_definition(
 
 def _build_conversational_definition(
     flow_class: type,
-    diagnostics: list[FlowDefinitionDiagnostic],
 ) -> FlowConversationalDefinition | None:
     if not _is_conversational_flow(flow_class):
         return None
@@ -327,12 +324,9 @@ def _build_conversational_definition(
     return FlowConversationalDefinition(
         enabled=True,
         system_prompt=getattr(config, "system_prompt", None),
-        llm=_serialize_static_value(
-            getattr(config, "llm", None), diagnostics, "conversational.llm"
-        ),
+        llm=_serialize_static_value(getattr(config, "llm", None), "conversational.llm"),
         router=_build_conversational_router_definition(
             getattr(config, "router", None),
-            diagnostics,
             "conversational.router",
         ),
         answer_from_history_prompt=getattr(config, "answer_from_history_prompt", None),
@@ -343,12 +337,10 @@ def _build_conversational_definition(
         ),
         intent_llm=_serialize_static_value(
             getattr(config, "intent_llm", None),
-            diagnostics,
             "conversational.intent_llm",
         ),
         answer_from_history_llm=_serialize_static_value(
             getattr(config, "answer_from_history_llm", None),
-            diagnostics,
             "conversational.answer_from_history_llm",
         ),
         visible_agent_outputs=(
@@ -368,27 +360,24 @@ def _build_conversational_definition(
 
 def _build_method_definition(
     method: Any,
-    diagnostics: list[FlowDefinitionDiagnostic],
     path: str,
 ) -> FlowMethodDefinition:
     fragment = _get_flow_method_definition(method)
     if fragment is None:
-        method_definition = FlowMethodDefinition()
+        method_definition = FlowMethodDefinition(do=_method_action(method))
     else:
-        method_definition = fragment.model_copy(deep=True)
+        method_definition = fragment.model_copy(
+            deep=True, update={"do": _method_action(method)}
+        )
 
-    human_feedback = _build_human_feedback_definition(
-        method, diagnostics, f"{path}.human_feedback"
-    )
+    human_feedback = _build_human_feedback_definition(method, f"{path}.human_feedback")
     if human_feedback is not None:
         method_definition.human_feedback = human_feedback
         if human_feedback.emit:
             method_definition.router = True
             method_definition.emit = None
 
-    method_definition.persist = _build_persistence_definition(
-        method, diagnostics, f"{path}.persist"
-    )
+    method_definition.persist = _build_persistence_definition(method)
 
     return method_definition
 
@@ -447,7 +436,6 @@ def _build_flow_definition_from_class(
     flow_class: type,
     namespace: dict[str, Any] | None = None,
 ) -> FlowDefinition:
-    diagnostics: list[FlowDefinitionDiagnostic] = []
     methods: dict[str, FlowMethodDefinition] = {}
     flow_methods = _iter_flow_methods(flow_class)
     if namespace is not None:
@@ -459,7 +447,7 @@ def _build_flow_definition_from_class(
 
     for method_name, method in flow_methods.items():
         methods[method_name] = _build_method_definition(
-            method, diagnostics, f"methods.{method_name}"
+            method, f"methods.{method_name}"
         )
 
     description = None
@@ -470,15 +458,13 @@ def _build_flow_definition_from_class(
     definition = FlowDefinition(
         name=getattr(flow_class, "__name__", "Flow"),
         description=description,
-        state=_build_state_definition(flow_class, diagnostics),
-        config=_build_config_definition(flow_class, diagnostics),
-        persist=_build_persistence_definition(flow_class, diagnostics, "persist"),
-        conversational=_build_conversational_definition(flow_class, diagnostics),
+        state=_build_state_definition(flow_class),
+        config=_build_config_definition(flow_class),
+        persist=_build_persistence_definition(flow_class),
+        conversational=_build_conversational_definition(flow_class),
         methods=methods,
-        diagnostics=diagnostics,
     )
-    definition.diagnostics.extend(definition.validate_contract())
-    definition.log_diagnostics()
+    log_flow_definition_issues(definition)
     return definition
 
 

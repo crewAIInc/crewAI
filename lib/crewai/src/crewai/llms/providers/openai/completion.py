@@ -232,6 +232,7 @@ class OpenAICompletion(BaseLLM):
     auto_chain: bool = False
     auto_chain_reasoning: bool = False
     api_base: str | None = None
+    custom_openai: bool = False
     is_o1_model: bool = False
     is_gpt4_model: bool = False
 
@@ -245,6 +246,20 @@ class OpenAICompletion(BaseLLM):
     def _normalize_openai_fields(cls, data: Any) -> Any:
         if not isinstance(data, dict):
             return data
+        if data.get("custom_openai"):
+            custom_base_url = (
+                data.get("base_url")
+                or data.get("api_base")
+                or os.getenv("OPENAI_BASE_URL")
+                or os.getenv("OPENAI_API_BASE")
+            )
+            if not custom_base_url:
+                raise ValueError(
+                    "custom_openai=True requires base_url, api_base, "
+                    "OPENAI_BASE_URL, or OPENAI_API_BASE"
+                )
+            if not data.get("base_url") and not data.get("api_base"):
+                data["base_url"] = custom_base_url
         if not data.get("provider"):
             data["provider"] = "openai"
         data["api_key"] = data.get("api_key") or os.getenv("OPENAI_API_KEY")
@@ -355,6 +370,15 @@ class OpenAICompletion(BaseLLM):
             config["seed"] = self.seed
         if self.reasoning_effort is not None:
             config["reasoning_effort"] = self.reasoning_effort
+        if self.custom_openai:
+            config["model"] = self.model
+            config["custom_openai"] = True
+            config["base_url"] = (
+                self.base_url
+                or self.api_base
+                or os.getenv("OPENAI_BASE_URL")
+                or os.getenv("OPENAI_API_BASE")
+            )
         return config
 
     def _get_client_params(self) -> dict[str, Any]:
@@ -372,6 +396,7 @@ class OpenAICompletion(BaseLLM):
             "base_url": self.base_url
             or self.api_base
             or os.getenv("OPENAI_BASE_URL")
+            or os.getenv("OPENAI_API_BASE")
             or None,
             "timeout": self.timeout,
             "max_retries": self.max_retries,
@@ -469,7 +494,7 @@ class OpenAICompletion(BaseLLM):
             messages=messages, tools=tools
         )
 
-        if self.stream:
+        if self._effective_stream():
             return self._handle_streaming_completion(
                 params=completion_params,
                 available_functions=available_functions,
@@ -564,7 +589,7 @@ class OpenAICompletion(BaseLLM):
             messages=messages, tools=tools
         )
 
-        if self.stream:
+        if self._effective_stream():
             return await self._ahandle_streaming_completion(
                 params=completion_params,
                 available_functions=available_functions,
@@ -595,7 +620,7 @@ class OpenAICompletion(BaseLLM):
             messages=messages, tools=tools, response_model=response_model
         )
 
-        if self.stream:
+        if self._effective_stream():
             return self._handle_streaming_responses(
                 params=params,
                 available_functions=available_functions,
@@ -626,7 +651,7 @@ class OpenAICompletion(BaseLLM):
             messages=messages, tools=tools, response_model=response_model
         )
 
-        if self.stream:
+        if self._effective_stream():
             return await self._ahandle_streaming_responses(
                 params=params,
                 available_functions=available_functions,
@@ -685,7 +710,7 @@ class OpenAICompletion(BaseLLM):
         if instructions:
             params["instructions"] = instructions
 
-        if self.stream:
+        if self._effective_stream():
             params["stream"] = True
 
         if self.store is not None:
@@ -1540,8 +1565,8 @@ class OpenAICompletion(BaseLLM):
             "model": self.model,
             "messages": messages,
         }
-        if self.stream:
-            params["stream"] = self.stream
+        if self._effective_stream():
+            params["stream"] = self._effective_stream()
             params["stream_options"] = {"include_usage": True}
 
         params.update(self.additional_params)
@@ -2406,6 +2431,7 @@ class OpenAICompletion(BaseLLM):
             "gpt-4": 8192,
             "gpt-4o": 128000,
             "gpt-4o-mini": 200000,
+            "gpt-5.4-mini": 200000,
             "gpt-4-turbo": 128000,
             "gpt-4.1": 1047576,
             "gpt-4.1-mini-2025-04-14": 1047576,
