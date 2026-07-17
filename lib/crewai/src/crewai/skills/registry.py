@@ -11,7 +11,7 @@ from pathlib import Path
 import sys
 from typing import Any
 
-from crewai.experimental.skills.cache import SkillCacheManager
+from crewai.skills.cache import SkillCacheManager
 
 
 _logger = logging.getLogger(__name__)
@@ -100,11 +100,9 @@ def resolve_registry_ref(
     Raises:
         SkillNotCachedError: When not cached and running in non-interactive mode.
     """
-    from crewai.experimental.skills._flag import require_experimental_skills
     from crewai.skills.loader import activate_skill
     from crewai.skills.parser import load_skill_metadata
 
-    require_experimental_skills()
     org, name = parse_registry_ref(ref)
 
     local_path = Path.cwd() / "skills" / name
@@ -154,7 +152,7 @@ def download_skill(
 
     try:
         from crewai.events.event_bus import crewai_event_bus
-        from crewai.experimental.skills.events import (
+        from crewai.skills.events import (
             SkillDownloadCompletedEvent,
             SkillDownloadStartedEvent,
         )

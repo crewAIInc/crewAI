@@ -24,15 +24,23 @@ You often need **both**: skills for expertise, tools for action. They are config
 
 ## Quick Start
 
-### 1. Create a Skill Directory
+### 1. Create a Skill with the CLI
+
+The CLI is the supported way to create a skill — it scaffolds the directory layout and a valid `SKILL.md` for you:
+
+```shell Terminal
+crewai skill create code-review
+```
+
+Inside a crew project (where `pyproject.toml` lives) this creates `./skills/code-review/`; outside a project it creates `./code-review/` in the current directory (you can force that behavior with `--no-project`):
 
 ```
 skills/
 └── code-review/
-    ├── SKILL.md          # Required — instructions
+    ├── SKILL.md          # Required — instructions (pre-filled template)
     ├── references/       # Optional — reference docs
-    │   └── style-guide.md
-    └── scripts/          # Optional — executable scripts
+    ├── scripts/          # Optional — executable scripts
+    └── assets/           # Optional — static files
 ```
 
 ### 2. Write Your SKILL.md
@@ -161,6 +169,67 @@ agent = Agent(
     apps=["gmail", "zendesk"],             # Can send emails and update tickets
 )
 ```
+
+---
+
+## Creating, Publishing, and Installing Skills
+
+Skills have a full lifecycle managed by the CLI: **create them with `crewai skill create`, publish them with `crewai skill publish`** — hand-rolling directories works for local experiments, but the CLI is the intended workflow and keeps your skill layout and frontmatter valid.
+
+### Create
+
+```shell Terminal
+crewai skill create my-skill
+```
+
+Scaffolds the directory (into `./skills/` inside a crew project) with a template `SKILL.md`, plus empty `scripts/`, `references/`, and `assets/` directories. Edit `SKILL.md` to define the instructions.
+
+### Publish
+
+Run from inside the skill directory (where `SKILL.md` is):
+
+```shell Terminal
+cd skills/my-skill
+crewai skill publish            # private to your organization (default)
+crewai skill publish --public   # anyone can install it
+```
+
+Publishing reads `name`, `description`, and `metadata.version` from the `SKILL.md` frontmatter and pushes the skill to the CrewAI registry under your organization. Useful flags:
+
+| Flag | Effect |
+| :--- | :--- |
+| `--public` / `--private` | Visibility on the registry (private is the default). |
+| `--org <slug>` | Publish under a specific organization (overrides settings). |
+| `--force` | Skip git-state validation (uncommitted changes, etc.). |
+
+### Install
+
+Install a published skill by its `@org/name` reference:
+
+```shell Terminal
+crewai skill install @acme/code-review
+```
+
+Inside a crew project the skill lands in `./skills/{name}/`; outside a project it goes to the shared cache at `~/.crewai/skills/{org}/{name}/`.
+
+Agents can also reference registry skills directly — they resolve from the local cache (or project `skills/` directory) at runtime:
+
+```python
+agent = Agent(
+    role="Senior Code Reviewer",
+    goal="Review pull requests for quality and security issues",
+    backstory="Staff engineer with expertise in secure coding practices.",
+    skills=["@acme/code-review"],  # registry ref, resolved locally
+)
+```
+
+### List
+
+```shell Terminal
+crewai skill list
+```
+
+Shows installed skills from both the project `./skills/` directory and the global cache, with their versions and paths.
 
 ---
 

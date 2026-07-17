@@ -686,20 +686,9 @@ def tool_publish(is_public: bool, force: bool) -> None:
     tool_cmd.publish(is_public, force)
 
 
-@crewai.group()
-def experimental() -> None:
-    """Experimental, unstable commands. Subject to change without notice."""
-    import os
-
-    if os.environ.get("CREWAI_EXPERIMENTAL") != "1":
-        raise click.UsageError(
-            "Experimental commands are gated. Set CREWAI_EXPERIMENTAL=1 to enable."
-        )
-
-
-@experimental.group(name="skill")
+@crewai.group(name="skill")
 def skill() -> None:
-    """Skill Repository related commands (experimental)."""
+    """Create, publish, and install agent skills."""
 
 
 @skill.command(name="create")
@@ -713,7 +702,7 @@ def skill() -> None:
     help="Create skill in current dir instead of ./skills/",
 )
 def skill_create(name: str, in_project: bool) -> None:
-    from crewai_cli.experimental.skills.main import SkillCommand
+    from crewai_cli.skills.main import SkillCommand
 
     skill_cmd = SkillCommand()
     skill_cmd.create(name, in_project=in_project)
@@ -722,7 +711,7 @@ def skill_create(name: str, in_project: bool) -> None:
 @skill.command(name="install")
 @click.argument("ref")
 def skill_install(ref: str) -> None:
-    from crewai_cli.experimental.skills.main import SkillCommand
+    from crewai_cli.skills.main import SkillCommand
 
     skill_cmd = SkillCommand()
     skill_cmd.install(ref)
@@ -740,7 +729,7 @@ def skill_install(ref: str) -> None:
 @click.option("--private", "is_public", flag_value=False)
 @click.option("--org", default=None, help="Organisation slug (overrides settings).")
 def skill_publish(is_public: bool, org: str | None, force: bool) -> None:
-    from crewai_cli.experimental.skills.main import SkillCommand
+    from crewai_cli.skills.main import SkillCommand
 
     skill_cmd = SkillCommand()
     skill_cmd.publish(is_public, org=org, force=force)
@@ -749,7 +738,7 @@ def skill_publish(is_public: bool, org: str | None, force: bool) -> None:
 @skill.command(name="list")
 def skill_list() -> None:
     """List locally installed skills."""
-    from crewai_cli.experimental.skills.main import SkillCommand
+    from crewai_cli.skills.main import SkillCommand
 
     skill_cmd = SkillCommand()
     skill_cmd.list_cached()

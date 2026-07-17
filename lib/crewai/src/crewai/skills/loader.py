@@ -164,7 +164,7 @@ def load_skill(
             for s in discover_skills(skill, source=source)
         ]
     if isinstance(skill, str) and skill.startswith("@"):
-        from crewai.experimental.skills.registry import resolve_registry_ref
+        from crewai.skills.registry import resolve_registry_ref
 
         return [resolve_registry_ref(skill, source=source)]
     if isinstance(skill, str) and skill.lstrip().startswith("---\n"):
@@ -202,7 +202,7 @@ def load_skills(
         for skill in load_skill(skill_input, source=source):
             dedup_key = skill.name
             if isinstance(skill_input, str) and skill_input.startswith("@"):
-                from crewai.experimental.skills.registry import parse_registry_ref
+                from crewai.skills.registry import parse_registry_ref
 
                 org, _ = parse_registry_ref(skill_input)
                 dedup_key = f"{org}/{skill.name}"
