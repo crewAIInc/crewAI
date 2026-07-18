@@ -74,6 +74,7 @@ def _input_file_path(value) -> Path:
 
 
 def _write_skill(skills_dir: Path, name: str) -> Path:
+    """Create a discoverable skill directory containing a minimal SKILL.md."""
     skill_dir = skills_dir / name
     skill_dir.mkdir(parents=True)
     (skill_dir / "SKILL.md").write_text(
@@ -978,6 +979,7 @@ class TestLoadCrew:
     def test_crew_loads_agent_skill_path_relative_to_project_root(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
+        """Agent skill paths resolve against project_root, not the process cwd."""
         agents_dir = tmp_path / "agents"
         agents_dir.mkdir()
         _write_agent(agents_dir, "helper", skills=["skills"])
@@ -1011,6 +1013,7 @@ class TestLoadCrew:
     def test_crew_loads_crew_level_skill_path_relative_to_project_root(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
+        """Crew-level skill paths resolve against project_root, not the process cwd."""
         agents_dir = tmp_path / "agents"
         agents_dir.mkdir()
         _write_agent(agents_dir, "helper")
@@ -1042,6 +1045,7 @@ class TestLoadCrew:
         assert crew.skills == [str(tmp_path / "skills")]
 
     def test_crew_leaves_registry_skill_reference_unresolved(self, tmp_path: Path):
+        """Registry refs reach the resolver verbatim instead of being path-resolved."""
         agents_dir = tmp_path / "agents"
         agents_dir.mkdir()
         _write_agent(agents_dir, "helper", skills=["@acme/research"])
@@ -1077,6 +1081,7 @@ class TestLoadCrew:
         assert captured == ["@acme/research"]
 
     def test_crew_rejects_agent_skill_path_outside_project(self, tmp_path: Path):
+        """Skill paths escaping the project root are rejected during validation."""
         agents_dir = tmp_path / "agents"
         agents_dir.mkdir()
         _write_agent(agents_dir, "helper", skills=["../evil_skills"])
