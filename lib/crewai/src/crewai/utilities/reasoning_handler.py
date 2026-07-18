@@ -57,9 +57,6 @@ def response_indicates_ready(response: str) -> bool:
     if not response:
         return False
 
-    if _READY_FULL_PHRASE in response:
-        return True
-
     last_decision: bool | None = None
     for line in response.splitlines():
         match = _READY_LINE_RE.match(line)
@@ -68,7 +65,10 @@ def response_indicates_ready(response: str) -> bool:
         # Group 1 is the optional "NOT " prefix.
         last_decision = match.group(1) is None
 
-    return bool(last_decision)
+    if last_decision is not None:
+        return last_decision
+
+    return _READY_FULL_PHRASE in response
 
 
 class ReasoningPlan(BaseModel):
