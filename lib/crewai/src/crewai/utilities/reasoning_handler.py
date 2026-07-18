@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 
 _READY_MARKER: Final[re.Pattern[str]] = re.compile(
-    r"\bNOT\s+READY\b|\bREADY\b", re.IGNORECASE
+    r"^\s*(NOT\s+)?READY\b", re.IGNORECASE | re.MULTILINE
 )
 
 
@@ -41,9 +41,11 @@ def _detect_plan_ready(text: str) -> bool:
     bare ``READY`` rather than the full "READY: I am ready to execute the task."
     sentence, which the previous exact-substring check missed (#6204).
 
-    Matches the LAST readiness marker so a "not ready" mentioned earlier in the
-    plan doesn't override a final "READY", and so "NOT READY" wins over the bare
-    "READY" it contains.
+    The verdict is only recognized when READY / NOT READY is the first
+    non-whitespace on its own line, mirroring how the prompt asks the model to
+    conclude. This avoids treating ordinary prose (e.g. "I am ready to begin")
+    as a verdict, while still accepting "READY", "READY.", "READY: ...", etc.
+    The LAST such marker wins, so a later line overrides an earlier one.
 
     Args:
         text: The raw model response.
@@ -52,10 +54,12 @@ def _detect_plan_ready(text: str) -> bool:
         True if the concluding marker is READY, False for NOT READY or if no
         marker is present.
     """
-    markers = _READY_MARKER.findall(text)
+    # findall returns the optional ``(NOT\\s+)`` group: "" => READY, a non-empty
+    # value (e.g. "NOT ") => NOT READY.
+    markers: list[str] = _READY_MARKER.findall(text)
     if not markers:
         return False
-    return "NOT" not in markers[-1].upper()
+    return markers[-1].strip() == ""
 
 
 class ReasoningPlan(BaseModel):

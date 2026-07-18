@@ -58,6 +58,20 @@ class TestDetectPlanReady:
             _detect_plan_ready("NOT READY. I already have the tools.") is False
         )
 
+    def test_ready_as_ordinary_prose_word_is_not_a_verdict(self):
+        # "ready" mid-sentence is prose, not a verdict marker (line-anchored).
+        assert _detect_plan_ready("I am ready to begin researching.") is False
+        assert _detect_plan_ready("The tool is ready when the file exists.") is False
+
+    def test_verdict_on_its_own_line_after_prose(self):
+        # A concluding marker on its own line is still detected past prose.
+        assert (
+            _detect_plan_ready("I am ready to begin researching.\n\nREADY") is True
+        )
+        assert (
+            _detect_plan_ready("Everything looks ready.\n\nNOT READY: gap") is False
+        )
+
     def test_parse_planning_response_detects_bare_ready(self):
         _plan, ready = AgentReasoning._parse_planning_response("my plan\n\nREADY")
         assert ready is True
