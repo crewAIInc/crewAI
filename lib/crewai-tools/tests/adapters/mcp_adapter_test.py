@@ -235,3 +235,19 @@ def test_connect_timeout_passed_to_mcpadapt(mock_mcpadapt):
     MCPServerAdapter(serverparams, connect_timeout=5)
     mock_mcpadapt.assert_called_once()
     assert mock_mcpadapt.call_args[0][2] == 5
+
+
+@patch("crewai_tools.adapters.mcp_adapter.MCP_AVAILABLE", False)
+@patch("click.confirm", return_value=True)
+@patch("subprocess.run")
+def test_missing_mcp_installs_package_extra(mock_run, mock_confirm):
+    serverparams = StdioServerParameters(command="uv", args=["run", "echo", "test"])
+
+    with pytest.raises(ImportError, match="Restart Python and retry"):
+        MCPServerAdapter(serverparams)
+
+    mock_confirm.assert_called_once()
+    mock_run.assert_called_once_with(
+        ["uv", "add", "crewai-tools[mcp]"],
+        check=True,
+    )

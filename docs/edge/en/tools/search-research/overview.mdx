@@ -30,6 +30,10 @@ These tools enable your agents to search the web, research topics, and find info
     Search GitHub repositories, code, issues, and documentation.
   </Card>
 
+  <Card title="Xquik Tools" icon="magnifying-glass-chart" href="/en/tools/search-research/xquiktool">
+    Search and inspect public X/Twitter data.
+  </Card>
+
   <Card title="Website Search Tool" icon="globe" href="/en/tools/search-research/websitesearchtool">
     Search within specific websites and domains.
   </Card>
@@ -91,12 +95,14 @@ from crewai_tools import (
     TavilyGetResearchTool,
     TavilyResearchTool,
     TavilySearchTool,
+    XquikSearchTweetsTool,
     YoutubeVideoSearchTool,
 )
 
 # Create research tools
 web_search = SerperDevTool()
 code_search = GitHubSearchTool()
+x_search = XquikSearchTweetsTool()
 video_research = YoutubeVideoSearchTool()
 tavily_search = TavilySearchTool()
 content_extractor = TavilyExtractorTool()
@@ -109,6 +115,7 @@ agent = Agent(
     tools=[
         web_search,
         code_search,
+        x_search,
         video_research,
         tavily_search,
         content_extractor,
