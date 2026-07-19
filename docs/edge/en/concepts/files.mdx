@@ -108,7 +108,7 @@ passed into `crew.kickoff(inputs=...)` without changing the crew definition.
 Start FunASR locally:
 
 ```bash
-funasr-server --model sensevoice --device cuda --port 8000
+funasr-server --model sensevoice --device cuda --host 127.0.0.1 --port 8000
 ```
 
 Transcribe the recording and pass the text into the crew:
