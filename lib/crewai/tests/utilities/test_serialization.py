@@ -209,3 +209,31 @@ def test_exclude_keys():
         "birthday": "1994-01-01",
         "skills": ["Python", "Testing"],
     }
+
+
+def test_exclude_applies_recursively_inside_nested_models():
+    class Address(BaseModel):
+        street: str
+        secret: str
+
+    class Person(BaseModel):
+        name: str
+        address: Address
+
+    person = Person(name="John", address=Address(street="123 Main St", secret="TOP-SECRET"))
+    result = to_serializable(person, exclude={"secret"})
+    assert result == {"name": "John", "address": {"street": "123 Main St"}}
+
+
+def test_exclude_nested_model_matches_plain_dict_path():
+    class Address(BaseModel):
+        street: str
+        secret: str
+
+    class Person(BaseModel):
+        name: str
+        address: Address
+
+    person = Person(name="John", address=Address(street="123 Main St", secret="TOP-SECRET"))
+    plain = {"name": "John", "address": {"street": "123 Main St", "secret": "TOP-SECRET"}}
+    assert to_serializable(person, exclude={"secret"}) == to_serializable(plain, exclude={"secret"})

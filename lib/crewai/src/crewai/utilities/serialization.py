@@ -100,6 +100,7 @@ def to_serializable(
         try:
             return to_serializable(
                 obj=obj.model_dump(mode="json", exclude=exclude, serialize_as_any=True),
+                exclude=exclude,
                 max_depth=max_depth,
                 _current_depth=_current_depth + 1,
                 _ancestors=new_ancestors,
@@ -109,6 +110,7 @@ def to_serializable(
                 return {
                     _to_serializable_key(k): to_serializable(
                         v,
+                        exclude=exclude,
                         max_depth=max_depth,
                         _current_depth=_current_depth + 1,
                         _ancestors=new_ancestors,
