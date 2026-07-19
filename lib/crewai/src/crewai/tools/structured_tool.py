@@ -4,8 +4,10 @@ import asyncio
 from collections.abc import Callable
 import inspect
 import json
+import re
 import textwrap
-from typing import TYPE_CHECKING, Annotated, Any, get_type_hints
+from typing import TYPE_CHECKING, Annotated, Any, cast, get_type_hints
+import warnings
 
 from pydantic import (
     BaseModel,
@@ -20,7 +22,10 @@ from pydantic import (
 from typing_extensions import Self
 
 from crewai.utilities.logger import Logger
-from crewai.utilities.pydantic_schema_utils import create_model_from_schema
+from crewai.utilities.pydantic_schema_utils import (
+    create_model_from_schema,
+    generate_model_description,
+)
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -34,6 +39,52 @@ def _deserialize_schema(v: Any) -> type[BaseModel] | None:
     if isinstance(v, dict):
         return create_model_from_schema(v)
     return None
+
+
+def _infer_result_schema_from_callable(
+    func: Callable[..., Any],
+) -> type[BaseModel] | None:
+    try:
+        return_annotation = get_type_hints(func).get("return", inspect.Signature.empty)
+    except Exception:
+        return_annotation = inspect.signature(func).return_annotation
+
+    if isinstance(return_annotation, type) and issubclass(return_annotation, BaseModel):
+        return return_annotation
+
+    return None
+
+
+def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
+    original_tool = getattr(tool, "_original_tool", None)
+    if original_tool is not None:
+        return cast(str, original_tool.format_output_for_agent(raw_result))
+
+    result_schema = getattr(tool, "result_schema", None)
+    if not (isinstance(result_schema, type) and issubclass(result_schema, BaseModel)):
+        return str(raw_result)
+
+    try:
+        validation_input = raw_result
+        if isinstance(raw_result, BaseModel) and not isinstance(
+            raw_result, result_schema
+        ):
+            validation_input = raw_result.model_dump()
+
+        validated = result_schema.model_validate(validation_input)
+        return validated.model_dump_json()
+    except Exception as exc:
+        warnings.warn(
+            (
+                f"Failed to validate or serialize output from tool "
+                f"'{getattr(tool, 'name', '<unknown>')}' using result_schema "
+                f"'{result_schema.__name__}': {exc.__class__.__name__}. "
+                "Falling back to str(raw_result)."
+            ),
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return str(raw_result)
 
 
 if TYPE_CHECKING:
@@ -61,6 +112,70 @@ def build_schema_hint(args_schema: type[BaseModel]) -> str:
         return ""
 
 
+# Matches a description that IS a pre-composed LLM block (as written by
+# older versions into the field, and by adapters that still bake it in).
+# Anchored to the full three-line shape so authored prose that merely
+# mentions "Tool Description:" is never mistaken for a composite. Greedy
+# ``.*`` keeps only the text after the LAST marker, matching the historical
+# split behavior for nested pre-baked blocks.
+_COMPOSITE_DESCRIPTION_RE = re.compile(
+    r"^Tool Name:.*\nTool Arguments:.*\nTool Description:\s*",
+    re.DOTALL,
+)
+
+
+def strip_composite_description_prefix(description: str) -> str:
+    """Return the authored text from a pre-composed LLM description block.
+
+    Descriptions that don't start with the composite shape are returned
+    unchanged.
+    """
+    match = _COMPOSITE_DESCRIPTION_RE.match(description)
+    if match:
+        return description[match.end() :]
+    return description
+
+
+def format_description_for_llm(
+    name: str,
+    args_schema: type[BaseModel] | None,
+    description: str,
+) -> str:
+    """Compose the LLM-facing tool description.
+
+    Combines the tool name, its argument JSON schema, and the authored
+    description into the prompt block agents see. The authored
+    ``description`` field itself is never mutated — prompt rendering calls
+    this on demand.
+
+    Idempotent: if ``description`` already *is* a composed block (e.g. a
+    tool deserialized from a checkpoint written by an older version, or an
+    adapter that bakes the composite into the field), only the authored
+    text after the marker is used. The check is anchored to the composite
+    shape, so authored prose that merely mentions ``"Tool Description:"``
+    passes through untouched.
+
+    Args:
+        name: The tool name (sanitized for the prompt).
+        args_schema: The tool's argument schema, if any.
+        description: The authored tool description.
+
+    Returns:
+        The composed, LLM-facing description block.
+    """
+    description = strip_composite_description_prefix(description)
+    if args_schema is not None:
+        schema = generate_model_description(args_schema)
+        args_json = json.dumps(schema["json_schema"]["schema"], indent=2)
+    else:
+        args_json = "{}"
+    return (
+        f"Tool Name: {sanitize_tool_name(name)}\n"
+        f"Tool Arguments: {args_json}\n"
+        f"Tool Description: {description}"
+    )
+
+
 class ToolUsageLimitExceededError(Exception):
     """Exception raised when a tool has reached its maximum usage limit."""
 
@@ -81,6 +196,11 @@ class CrewStructuredTool(BaseModel):
         BeforeValidator(_deserialize_schema),
         PlainSerializer(_serialize_schema),
     ] = Field(default=None)
+    result_schema: Annotated[
+        type[BaseModel] | None,
+        BeforeValidator(_deserialize_schema),
+        PlainSerializer(_serialize_schema),
+    ] = Field(default=None)
     func: Any = Field(default=None, exclude=True)
     result_as_answer: bool = Field(default=False)
     max_usage_count: int | None = Field(default=None)
@@ -88,6 +208,15 @@ class CrewStructuredTool(BaseModel):
     cache_function: Any = Field(default=None, exclude=True)
     _logger: Logger = PrivateAttr(default_factory=Logger)
     _original_tool: Any = PrivateAttr(default=None)
+
+    @property
+    def formatted_description(self) -> str:
+        """LLM-facing composite of name, argument schema, and description.
+
+        Use this when rendering the tool into a prompt; ``description``
+        holds only the authored text.
+        """
+        return format_description_for_llm(self.name, self.args_schema, self.description)
 
     @model_validator(mode="after")
     def _validate_func(self) -> Self:
@@ -103,6 +232,7 @@ class CrewStructuredTool(BaseModel):
         description: str | None = None,
         return_direct: bool = False,
         args_schema: type[BaseModel] | None = None,
+        result_schema: type[BaseModel] | None = None,
         infer_schema: bool = True,
         **kwargs: Any,
     ) -> CrewStructuredTool:
@@ -114,6 +244,7 @@ class CrewStructuredTool(BaseModel):
             description: The description of the tool. Defaults to the function docstring
             return_direct: Whether to return the output directly
             args_schema: Optional schema for the function arguments
+            result_schema: Optional schema for the function output
             infer_schema: Whether to infer the schema from the function signature
             **kwargs: Additional arguments to pass to the tool
 
@@ -149,9 +280,15 @@ class CrewStructuredTool(BaseModel):
             name=name,
             description=description,
             args_schema=schema,
+            result_schema=result_schema or _infer_result_schema_from_callable(func),
             func=func,
             result_as_answer=return_direct,
+            **kwargs,
         )
+
+    def format_output_for_agent(self, raw_result: Any) -> str:
+        """Format a raw tool result into the string representation sent to an agent."""
+        return _format_tool_output_for_agent(self, raw_result)
 
     @staticmethod
     def _create_schema_from_function(

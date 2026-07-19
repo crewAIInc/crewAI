@@ -62,6 +62,9 @@ OPENAI_BIGGER_MODELS: list[
 ]
 
 
+_RAW_RESULT_UNSET = object()
+
+
 class ToolUsageError(Exception):
     """Exception raised for errors in the tool usage."""
 
@@ -106,6 +109,7 @@ class ToolUsage:
         self.action = action
         self.function_calling_llm = function_calling_llm
         self.fingerprint_context = fingerprint_context or {}
+        self.last_raw_result: Any = _RAW_RESULT_UNSET
 
         if (
             self.function_calling_llm
@@ -119,6 +123,11 @@ class ToolUsage:
     ) -> ToolCalling | InstructorToolCalling | ToolUsageError:
         """Parse the tool string and return the tool calling."""
         return self._tool_calling(tool_string)
+
+    def get_last_raw_result(self, fallback: Any) -> Any:
+        if self.last_raw_result is _RAW_RESULT_UNSET:
+            return fallback
+        return self.last_raw_result
 
     def use(
         self, calling: ToolCalling | InstructorToolCalling, tool_string: str
@@ -231,6 +240,7 @@ class ToolUsage:
                 result = I18N_DEFAULT.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
                 )
+                self.last_raw_result = result
                 self._telemetry.tool_repeated_usage(
                     llm=self.function_calling_llm,
                     tool_name=sanitize_tool_name(tool.name),
@@ -298,6 +308,7 @@ class ToolUsage:
             )
             if usage_limit_error:
                 result = usage_limit_error
+                self.last_raw_result = result
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
                 result = self._format_result(result=result)
             elif result is None:
@@ -359,7 +370,10 @@ class ToolUsage:
                         tool_name=sanitize_tool_name(tool.name),
                         attempts=self._run_attempts,
                     )
-                    result = self._format_result(result=result)
+                    self.last_raw_result = result
+                    result = self._format_result(
+                        result=tool.format_output_for_agent(result)
+                    )
                     data = {
                         "result": result,
                         "tool_name": sanitize_tool_name(tool.name),
@@ -416,11 +430,12 @@ class ToolUsage:
                         ).format(
                             error=e,
                             tool=sanitize_tool_name(tool.name),
-                            tool_inputs=tool.description,
+                            tool_inputs=tool.formatted_description,
                         )
                         result = ToolUsageError(
                             f"\n{error_message}.\nMoving on then. {I18N_DEFAULT.slice('format').format(tool_names=self.tools_names)}"
                         ).message
+                        self.last_raw_result = result
                         if self.task:
                             self.task.increment_tools_errors()
                         if self.agent and self.agent.verbose:
@@ -430,7 +445,10 @@ class ToolUsage:
                             self.task.increment_tools_errors()
                         should_retry = True
             else:
-                result = self._format_result(result=result)
+                self.last_raw_result = result
+                result = self._format_result(
+                    result=tool.format_output_for_agent(result)
+                )
 
         finally:
             if started_event_emitted and not error_event_emitted:
@@ -460,6 +478,7 @@ class ToolUsage:
                 result = I18N_DEFAULT.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
                 )
+                self.last_raw_result = result
                 self._telemetry.tool_repeated_usage(
                     llm=self.function_calling_llm,
                     tool_name=sanitize_tool_name(tool.name),
@@ -529,6 +548,7 @@ class ToolUsage:
             )
             if usage_limit_error:
                 result = usage_limit_error
+                self.last_raw_result = result
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
                 result = self._format_result(result=result)
             elif result is None:
@@ -590,7 +610,10 @@ class ToolUsage:
                         tool_name=sanitize_tool_name(tool.name),
                         attempts=self._run_attempts,
                     )
-                    result = self._format_result(result=result)
+                    self.last_raw_result = result
+                    result = self._format_result(
+                        result=tool.format_output_for_agent(result)
+                    )
                     data = {
                         "result": result,
                         "tool_name": sanitize_tool_name(tool.name),
@@ -647,11 +670,12 @@ class ToolUsage:
                         ).format(
                             error=e,
                             tool=sanitize_tool_name(tool.name),
-                            tool_inputs=tool.description,
+                            tool_inputs=tool.formatted_description,
                         )
                         result = ToolUsageError(
                             f"\n{error_message}.\nMoving on then. {I18N_DEFAULT.slice('format').format(tool_names=self.tools_names)}"
                         ).message
+                        self.last_raw_result = result
                         if self.task:
                             self.task.increment_tools_errors()
                         if self.agent and self.agent.verbose:
@@ -661,7 +685,10 @@ class ToolUsage:
                             self.task.increment_tools_errors()
                         should_retry = True
             else:
-                result = self._format_result(result=result)
+                self.last_raw_result = result
+                result = self._format_result(
+                    result=tool.format_output_for_agent(result)
+                )
 
         finally:
             if started_event_emitted and not error_event_emitted:
@@ -776,7 +803,7 @@ class ToolUsage:
 
     def _render(self) -> str:
         """Render the tool name and description in plain text."""
-        descriptions = [tool.description for tool in self.tools]
+        descriptions = [tool.formatted_description for tool in self.tools]
         return "\n--\n".join(descriptions)
 
     def _function_calling(

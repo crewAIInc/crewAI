@@ -161,6 +161,27 @@ def test_flow_with_or_condition():
     )
 
 
+def test_flow_executes_and_condition_with_single_branch_or():
+    class NestedConditionFlow(Flow):
+        @start()
+        def event_a(self):
+            return "a"
+
+        @listen(event_a)
+        def event_b(self):
+            return "b"
+
+        @router(event_b)
+        def emit_event_c(self):
+            return "event_c"
+
+        @listen(and_(event_a, event_b, or_("event_c")))
+        def event_d(self):
+            return "done"
+
+    assert NestedConditionFlow().kickoff() == "done"
+
+
 def test_or_listener_fires_once_across_parallel_starts():
     """Parallel ``@start`` paths feeding ``or_`` must not double-fire the listener."""
     fire_count = 0
@@ -270,6 +291,169 @@ def test_flow_with_router():
     flow.kickoff()
 
     assert execution_order == ["start_method", "router", "step_if_true"]
+
+
+def test_start_runtime_uses_flow_definition_without_legacy_start_metadata():
+    execution_order = []
+
+    class DefinitionStartFlow(Flow):
+        @start()
+        def begin(self):
+            execution_order.append("begin")
+            return "begin"
+
+        @router(begin)
+        def route(self):
+            execution_order.append("route")
+            return "branch_event"
+
+        @start("branch_event")
+        def branch(self):
+            execution_order.append("branch")
+            return "branch"
+
+        @listen(branch)
+        def done(self):
+            execution_order.append("done")
+
+    assert not hasattr(DefinitionStartFlow.__dict__["begin"], "__is_start_method__")
+    assert not hasattr(DefinitionStartFlow.__dict__["branch"], "__trigger_methods__")
+
+    DefinitionStartFlow().kickoff()
+
+    assert execution_order == ["begin", "route", "branch", "done"]
+
+
+def test_listen_runtime_uses_flow_definition_without_legacy_listener_metadata():
+    execution_order = []
+
+    class DefinitionListenFlow(Flow):
+        @start()
+        def begin(self):
+            execution_order.append("begin")
+
+        @listen(begin)
+        def by_callable(self):
+            execution_order.append("by_callable")
+
+        @listen(and_(begin, by_callable))
+        def by_and(self):
+            execution_order.append("by_and")
+
+        @listen(or_(and_(begin, by_callable), "fallback"))
+        def nested(self):
+            execution_order.append("nested")
+
+    for method_name in ("by_callable", "by_and", "nested"):
+        method = DefinitionListenFlow.__dict__[method_name]
+        assert not hasattr(method, "__trigger_methods__")
+        assert not hasattr(method, "__condition_type__")
+        assert not hasattr(method, "__trigger_condition__")
+
+    DefinitionListenFlow().kickoff()
+
+    assert execution_order[0] == "begin"
+    assert {"by_callable", "by_and", "nested"}.issubset(execution_order)
+
+
+def test_router_runtime_uses_flow_definition_without_legacy_router_metadata():
+    execution_order = []
+
+    class DefinitionRouterFlow(Flow):
+        @start()
+        def begin(self):
+            execution_order.append("begin")
+            return "begin"
+
+        @router(begin, emit=["go_left"])
+        def decide(self):
+            execution_order.append("decide")
+            return "go_left"
+
+        @listen("go_left")
+        def handle_left(self):
+            execution_order.append("handle_left")
+
+    route = DefinitionRouterFlow.__dict__["decide"]
+    assert not hasattr(route, "__is_router__")
+    assert not hasattr(route, "__router_emit__")
+    assert not hasattr(route, "__trigger_methods__")
+    assert not hasattr(route, "__condition_type__")
+    assert not hasattr(route, "__trigger_condition__")
+
+    DefinitionRouterFlow().kickoff()
+
+    assert execution_order == ["begin", "decide", "handle_left"]
+
+
+def test_start_router_runtime_routes_public_dsl_return_value():
+    execution_order = []
+
+    class StartRouterFlow(Flow):
+        @start()
+        @router(emit=["continue"])
+        def decide(self):
+            execution_order.append("decide")
+            return "continue"
+
+        @listen("continue")
+        def handle_continue(self, result):
+            execution_order.append(f"handle_continue:{result}")
+            return "done"
+
+    assert StartRouterFlow().kickoff() == "done"
+    assert execution_order == ["decide", "handle_continue:continue"]
+
+
+def test_start_router_runtime_chains_to_stacked_listener_router():
+    execution_order = []
+
+    class ChainedStartRouterFlow(Flow):
+        @start()
+        @router(emit=["approved", "not_approved"])
+        def first_router(self):
+            execution_order.append("first_router")
+            return "approved"
+
+        @listen("approved")
+        @router(emit=["second_approval", "not_approved"])
+        def second_router(self):
+            execution_order.append("second_router")
+            return "second_approval"
+
+        @listen("second_approval")
+        def handle_second_approval(self, result):
+            execution_order.append(f"handle_second_approval:{result}")
+            return "done"
+
+    assert ChainedStartRouterFlow().kickoff() == "done"
+    assert execution_order == [
+        "first_router",
+        "second_router",
+        "handle_second_approval:second_approval",
+    ]
+
+
+def test_router_falsy_result_emits_runtime_event():
+    execution_order = []
+
+    class FalsyRouterResultFlow(Flow):
+        @start()
+        def begin(self):
+            execution_order.append("begin")
+
+        @router(begin)
+        def decide(self):
+            execution_order.append("decide")
+            return 0
+
+        @listen("0")
+        def handle_zero(self):
+            execution_order.append("handle_zero")
+
+    FalsyRouterResultFlow().kickoff()
+
+    assert execution_order == ["begin", "decide", "handle_zero"]
 
 
 def test_async_flow():
@@ -904,7 +1088,7 @@ def test_flow_plotting():
         received_events.append(event)
         event_received.set()
 
-    flow.plot("test_flow")
+    flow.plot("test_flow", show=False)
 
     assert event_received.wait(timeout=5), "Timeout waiting for plot event"
     assert len(received_events) == 1
@@ -1019,6 +1203,26 @@ def test_flow_name():
 
     flow = MyFlow()
     assert flow.name == "MyFlow"
+
+
+def test_flow_custom_name_overrides_class_name_in_events():
+    class InternalFlowClass(Flow):
+        name = "PublicName"
+
+        @start()
+        def begin(self):
+            return "done"
+
+    received = []
+
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(FlowStartedEvent)
+        def handle(source, event):
+            received.append(event)
+
+        InternalFlowClass().kickoff()
+
+    assert received[0].flow_name == "PublicName"
 
 
 def test_nested_and_or_conditions():
@@ -1306,42 +1510,36 @@ def test_conditional_router_events_exclusivity():
     assert "handle_event_c" not in execution_order
 
 
-def test_state_consistency_across_parallel_branches():
-    """Test that state remains consistent when branches execute in parallel.
+def test_and_join_waits_for_parallel_branches():
+    """Test that sibling branches complete before a joined listener runs.
 
-    Note: Branches triggered by the same parent execute in parallel for efficiency.
-    Thread-safe state access via StateProxy ensures no race conditions.
-    We check the execution order to ensure the branches execute in parallel.
+    Branches triggered by the same parent execute in parallel for efficiency.
+    Shared state updates are not guaranteed to be atomic, so this test uses a
+    locked local recorder instead of branch state mutation.
     """
     execution_order = []
+    execution_order_lock = threading.Lock()
+
+    def record(method_name: str) -> None:
+        with execution_order_lock:
+            execution_order.append(method_name)
 
     class StateConsistencyFlow(Flow):
-        def __init__(self):
-            super().__init__()
-            self.state["counter"] = 0
-            self.state["branch_a_value"] = None
-            self.state["branch_b_value"] = None
-
         @start()
         def init(self):
-            execution_order.append("init")
-            self.state["counter"] = 10
+            record("init")
 
         @listen(init)
         def branch_a(self):
-            execution_order.append("branch_a")
-            self.state["branch_a_value"] = self.state["counter"]
-            self.state["counter"] += 1
+            record("branch_a")
 
         @listen(init)
         def branch_b(self):
-            execution_order.append("branch_b")
-            self.state["branch_b_value"] = self.state["counter"]
-            self.state["counter"] += 5
+            record("branch_b")
 
         @listen(and_(branch_a, branch_b))
         def verify_state(self):
-            execution_order.append("verify_state")
+            record("verify_state")
 
     flow = StateConsistencyFlow()
     flow.kickoff()
@@ -1350,10 +1548,8 @@ def test_state_consistency_across_parallel_branches():
     assert "branch_b" in execution_order
     assert "verify_state" in execution_order
 
-    assert flow.state["branch_a_value"] is not None
-    assert flow.state["branch_b_value"] is not None
-
-    assert flow.state["counter"] == 16
+    assert execution_order.index("branch_a") < execution_order.index("verify_state")
+    assert execution_order.index("branch_b") < execution_order.index("verify_state")
 
 
 def test_deeply_nested_conditions():
@@ -1403,6 +1599,66 @@ def test_deeply_nested_conditions():
     and_ab_satisfied = result_idx > a_idx and result_idx > b_idx
     and_cd_satisfied = result_idx > c_idx and result_idx > d_idx
     assert and_ab_satisfied or and_cd_satisfied
+
+
+def test_or_branch_does_not_leave_stale_and_state():
+    fired = []
+
+    class StaleStateFlow(Flow):
+        @start()
+        def begin(self):
+            pass
+
+        @listen(begin)
+        def a(self):
+            pass
+
+        @listen(begin)
+        def c(self):
+            pass
+
+        @listen(and_(a, c))
+        def x(self):
+            pass
+
+        @listen(or_(and_("a", "x"), and_("c", "y")))
+        def joined(self):
+            fired.append("joined")
+
+        @router(joined)
+        def emit_y(self):
+            return "y"
+
+    StaleStateFlow().kickoff()
+
+    assert fired == ["joined"]
+
+
+def test_and_branch_inside_or_does_not_race():
+    execution_order = []
+
+    class DiamondWithFallbackFlow(Flow):
+        @start()
+        def go(self):
+            execution_order.append("go")
+
+        @listen(go)
+        def a(self):
+            execution_order.append("a")
+
+        @listen(go)
+        def b(self):
+            execution_order.append("b")
+
+        @listen(or_(and_(a, b), "fallback"))
+        def done(self):
+            execution_order.append("done")
+
+    DiamondWithFallbackFlow().kickoff()
+
+    assert "done" in execution_order
+    assert execution_order.index("done") > execution_order.index("a")
+    assert execution_order.index("done") > execution_order.index("b")
 
 
 def test_mixed_sync_async_execution_order():
@@ -1888,14 +2144,7 @@ def test_cyclic_flow_works_with_persist_and_id_input():
 
 
 @pytest.mark.timeout(5)
-def test_self_listening_method_does_not_loop():
-    """A method whose @listen label matches its own name must not loop forever.
-
-    Without the guard, 'process' re-triggers itself on every completion,
-    running indefinitely (timeout → FAIL).  The fix caps method calls
-    and raises RecursionError (PASS).
-    """
-
+def test_self_listening_method_is_rejected():
     class SelfListenFlow(Flow):
         @start()
         def begin(self):
@@ -1909,15 +2158,11 @@ def test_self_listening_method_does_not_loop():
         def process(self):
             pass
 
-    flow = SelfListenFlow()
-    with pytest.raises(RecursionError, match="infinite loop"):
-        flow.kickoff()
+    with pytest.raises(ValueError, match="methods.process.listen"):
+        SelfListenFlow.flow_definition()
 
 
-def test_or_condition_self_listen_fires_once():
-    """or_() with a self-referencing label only fires once due to or_() guard."""
-    call_count = 0
-
+def test_or_condition_self_listen_is_rejected():
     class OrSelfListenFlow(Flow):
         @start()
         def begin(self):
@@ -1929,12 +2174,25 @@ def test_or_condition_self_listen_fires_once():
 
         @listen(or_("other_trigger", "process"))
         def process(self):
-            nonlocal call_count
-            call_count += 1
+            pass
 
-    flow = OrSelfListenFlow()
-    flow.kickoff()
-    assert call_count == 1
+    with pytest.raises(ValueError, match="methods.process.listen"):
+        OrSelfListenFlow.flow_definition()
+
+
+def test_router_self_listening_method_is_rejected():
+    class RouterSelfListenFlow(Flow):
+        @start()
+        def begin(self):
+            return "route"
+
+        @router("route")
+        def route(self):
+            return "done"
+
+    with pytest.raises(ValueError, match="methods.route.listen"):
+        RouterSelfListenFlow.flow_definition()
+
 
 class ListState(BaseModel):
     items: list = []
@@ -2095,3 +2353,41 @@ def test_locked_dict_proxy_ior():
 def test_locked_dict_proxy_reversed():
     flow = _make_dict_flow()
     assert list(reversed(flow.state.data)) == ["c", "b", "a"]
+
+
+def test_flow_drains_pending_memory_saves_before_finished_event(tmp_path):
+    """Background memory saves must finish (and emit their completion events)
+    before FlowFinishedEvent, otherwise listeners that tear down on
+    flow-finished (e.g. telemetry sessions) see the save span as orphaned."""
+    import time
+
+    from crewai.memory.unified_memory import Memory
+
+    order: list[str] = []
+
+    def slow_save():
+        time.sleep(0.3)
+        order.append("save-done")
+
+    class MemoryFlow(Flow):
+        @start()
+        def step_1(self):
+            self.memory._submit_save(slow_save)
+            return "done"
+
+    flow = MemoryFlow(memory=Memory(storage=str(tmp_path / "flow-mem")))
+
+    finished = threading.Event()
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(FlowFinishedEvent)
+        def on_finished(_source, _event):
+            order.append("flow-finished")
+            finished.set()
+
+        flow.kickoff()
+
+        assert finished.wait(timeout=5)
+
+    assert order.index("save-done") < order.index("flow-finished")

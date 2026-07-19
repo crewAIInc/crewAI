@@ -3,7 +3,11 @@ from typing import Any
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from crewai_tools.security.safe_path import validate_file_path
+from crewai_tools.security.safe_path import (
+    format_error_for_display,
+    format_path_for_display,
+    validate_file_path,
+)
 
 
 class FileReadToolSchema(BaseModel):
@@ -58,8 +62,9 @@ class FileReadTool(BaseTool):
             **kwargs: Additional keyword arguments passed to BaseTool.
         """
         if file_path is not None:
+            display_path = format_path_for_display(file_path)
             kwargs["description"] = (
-                f"A tool that reads file content. The default file is {file_path}, but you can provide a different 'file_path' parameter to read another file. You can also specify 'start_line' and 'line_count' to read specific parts of the file."
+                f"A tool that reads file content. The default file is {display_path}, but you can provide a different 'file_path' parameter to read another file. You can also specify 'start_line' and 'line_count' to read specific parts of the file."
             )
 
         super().__init__(**kwargs)
@@ -78,7 +83,12 @@ class FileReadTool(BaseTool):
         if file_path is None:
             return "Error: No file path provided. Please provide a file path either in the constructor or as an argument."
 
-        file_path = validate_file_path(file_path)
+        try:
+            file_path = validate_file_path(file_path)
+        except ValueError as e:
+            return f"Error: Invalid file path: {e!s}"
+
+        display_path = format_path_for_display(file_path)
         try:
             with open(file_path, "r") as file:
                 if start_line == 1 and line_count is None:
@@ -98,8 +108,11 @@ class FileReadTool(BaseTool):
 
                 return "".join(selected_lines)
         except FileNotFoundError:
-            return f"Error: File not found at path: {file_path}"
+            return f"Error: File not found at path: {display_path}"
         except PermissionError:
-            return f"Error: Permission denied when trying to read file: {file_path}"
+            return f"Error: Permission denied when trying to read file: {display_path}"
         except Exception as e:
-            return f"Error: Failed to read file {file_path}. {e!s}"
+            return (
+                f"Error: Failed to read file {display_path}. "
+                f"{format_error_for_display(e)}"
+            )

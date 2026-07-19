@@ -23,7 +23,7 @@ def load_from_url(
     Raises:
         ValueError: If there's an error fetching the URL
     """
-    import requests
+    from crewai_tools.security.safe_requests import safe_get
 
     headers = kwargs.get(
         "headers",
@@ -34,7 +34,7 @@ def load_from_url(
     )
 
     try:
-        response = requests.get(url, headers=headers, timeout=30)
+        response = safe_get(url, headers=headers, timeout=30)
         response.raise_for_status()
         return response.text
     except Exception as e:

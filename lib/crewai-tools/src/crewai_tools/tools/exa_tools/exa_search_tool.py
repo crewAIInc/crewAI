@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from builtins import type as type_
 import os
-from typing import Any, TypedDict
+from typing import Any, ClassVar, TypedDict
 import warnings
 
 from crewai.tools import BaseTool, EnvVar
@@ -159,6 +159,8 @@ class ExaSearchTool(BaseTool):
 
 class EXASearchTool(ExaSearchTool):
     """Deprecated alias for :class:`ExaSearchTool`. Kept for backwards compatibility."""
+
+    is_deprecated_alias: ClassVar[bool] = True
 
     name: str = "ExaSearchTool"
 

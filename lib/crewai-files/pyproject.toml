@@ -8,8 +8,8 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
-    "Pillow~=12.1.1",
-    "pypdf~=6.10.0",
+    "Pillow~=12.3.0",
+    "pypdf~=6.13.3",
     "python-magic>=0.4.27",
     "aiocache~=0.12.3",
     "aiofiles~=24.1.0",
@@ -19,6 +19,8 @@ dependencies = [
 
 [tool.uv]
 exclude-newer = "3 days"
+# pypdf 6.13.3 is a security fix newer than the global supply-chain cutoff.
+exclude-newer-package = { pypdf = "2026-06-18T00:00:00Z" }
 
 [build-system]
 requires = ["hatchling"]

@@ -77,12 +77,22 @@ class ComplexFlow(Flow):
         return "complete"
 
 
-def _attach_flow_definition(flow_class: type[Flow], methods: dict[str, object]) -> None:
-    flow_class._flow_definition = FlowDefinition.from_dict(
+def _attach_flow_definition(
+    flow_class: type[Flow], methods: dict[str, dict[str, object]]
+) -> None:
+    flow_class._flow_definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": flow_class.__name__,
-            "methods": methods,
+            "methods": {
+                name: {
+                    "do": {
+                        "ref": f"{flow_class.__module__}:{flow_class.__name__}.{name}"
+                    },
+                    **spec,
+                }
+                for name, spec in methods.items()
+            },
         }
     )
 
@@ -120,18 +130,25 @@ def test_build_flow_structure_from_flow_class():
 
 def test_build_flow_structure_from_flow_definition():
     """Test building visualization directly from a FlowDefinition."""
-    definition = FlowDefinition.from_dict(
+    definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "DefinedFlow",
             "methods": {
-                "begin": {"start": True},
+                "begin": {
+                    "do": {"ref": "defined_flows:DefinedFlow.begin"},
+                    "start": True,
+                },
                 "decide": {
+                    "do": {"ref": "defined_flows:DefinedFlow.decide"},
                     "listen": "begin",
                     "router": True,
                     "emit": ["done"],
                 },
-                "finish": {"listen": "done"},
+                "finish": {
+                    "do": {"ref": "defined_flows:DefinedFlow.finish"},
+                    "listen": "done",
+                },
             },
         }
     )
@@ -357,7 +374,7 @@ def test_topological_path_counting():
     assert len(structure["edges"]) > 0
 
 
-def test_class_metadata_comes_from_definition():
+def test_class_metadata_comes_from_declaration():
     """Test that nodes include only definition-derived class metadata."""
     flow = SimpleFlow()
     structure = build_flow_structure(flow)

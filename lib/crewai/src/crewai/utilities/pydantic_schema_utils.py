@@ -999,7 +999,11 @@ def _json_schema_to_pydantic_field(
     if examples:
         schema_extra["examples"] = examples
 
-    default = ... if is_required else None
+    default = (
+        json_schema["default"]
+        if "default" in json_schema
+        else (... if is_required else None)
+    )
 
     if isinstance(type_, type) and issubclass(type_, (int, float)):
         if "minimum" in json_schema:

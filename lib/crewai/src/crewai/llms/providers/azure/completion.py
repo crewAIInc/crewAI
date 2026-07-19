@@ -42,7 +42,7 @@ try:
     )
 
     from crewai.events.types.llm_events import LLMCallType
-    from crewai.llms.base_llm import BaseLLM, llm_call_context
+    from crewai.llms.base_llm import BaseLLM, call_stream_override, llm_call_context
 
 except ImportError:
     raise ImportError(
@@ -493,15 +493,18 @@ class AzureCompletion(BaseLLM):
             Completion response or tool call result
         """
         if self.api == "responses":
-            return self._responses_delegate.call(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-                response_model=response_model,
-            )
+            with call_stream_override(
+                self._responses_delegate, bool(self._effective_stream())
+            ):
+                return self._responses_delegate.call(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
 
         with llm_call_context():
             try:
@@ -527,7 +530,7 @@ class AzureCompletion(BaseLLM):
                     formatted_messages, tools, effective_response_model
                 )
 
-                if self.stream:
+                if self._effective_stream():
                     return self._handle_streaming_completion(
                         completion_params,
                         available_functions,
@@ -572,15 +575,18 @@ class AzureCompletion(BaseLLM):
             Completion response or tool call result
         """
         if self.api == "responses":
-            return await self._responses_delegate.acall(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-                response_model=response_model,
-            )
+            with call_stream_override(
+                self._responses_delegate, bool(self._effective_stream())
+            ):
+                return await self._responses_delegate.acall(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
 
         with llm_call_context():
             try:
@@ -601,7 +607,7 @@ class AzureCompletion(BaseLLM):
                     formatted_messages, tools, effective_response_model
                 )
 
-                if self.stream:
+                if self._effective_stream():
                     return await self._ahandle_streaming_completion(
                         completion_params,
                         available_functions,
@@ -639,11 +645,11 @@ class AzureCompletion(BaseLLM):
         """
         params: AzureCompletionParams = {
             "messages": messages,
-            "stream": self.stream,
+            "stream": bool(self._effective_stream()),
         }
 
         model_extras: dict[str, Any] = {}
-        if self.stream:
+        if self._effective_stream():
             model_extras["stream_options"] = {"include_usage": True}
 
         if response_model and self.is_openai_model:
@@ -1300,6 +1306,7 @@ class AzureCompletion(BaseLLM):
             "gpt-4": 8192,
             "gpt-4o": 128000,
             "gpt-4o-mini": 200000,
+            "gpt-5.4-mini": 200000,
             "gpt-4-turbo": 128000,
             "gpt-35-turbo": 16385,
             "gpt-3.5-turbo": 16385,

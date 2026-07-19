@@ -1,26 +1,29 @@
-"""Conversational graph + helpers as a mixin for ``Flow`` (experimental).
+"""Conversational graph + helpers as an experimental Flow extension.
 
-The experimental conversational chat surface lives here as a mixin so that
-``crewai.flow.runtime`` stays focused on the execution engine. ``Flow``
-inherits from ``_ConversationalMixin``; the methods only register on
-subclasses that opt in via ``conversational = True`` (enforced by the
-``_conversational_only`` marker + ``FlowMeta`` gating in
-``crewai.flow.runtime``).
+The conversational chat surface remains experimental and may change before the
+v2 graduation path. It lives here so ``crewai.flow.runtime`` can stay focused
+on the execution engine. ``crewai.flow.flow`` composes this mixin onto the
+public ``Flow`` class for backwards compatibility.
+
+The built-in conversational graph only registers for subclasses that opt in
+with ``conversational = True``. Static conversational metadata is projected
+into ``FlowDefinition.conversational`` via the Python DSL builder.
 
 Import surface:
-    - :class:`_ConversationalMixin` — internal; ``Flow`` mixes it in. Users
-      don't import it directly.
+    - :class:`_ConversationalMixin` — internal; the public ``Flow`` class
+      composes it in. Users don't import it directly.
     - The data types this mixin uses live in
       :mod:`crewai.experimental.conversational`.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from enum import Enum
 import json
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeVar, cast
 
 from pydantic import BaseModel, Field, create_model
 
@@ -28,6 +31,9 @@ from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.flow_events import (
     ConversationMessageAddedEvent,
     ConversationRouteSelectedEvent,
+    ConversationTurnCompletedEvent,
+    ConversationTurnFailedEvent,
+    ConversationTurnStartedEvent,
 )
 from crewai.experimental.conversational import (
     AgentMessage,
@@ -39,30 +45,74 @@ from crewai.experimental.conversational import (
     _conversational_only,
     message_to_llm_dict,
 )
+from crewai.flow.async_feedback import HumanFeedbackPending
 from crewai.flow.conversation import (
     append_message as _append_conversation_message,
     get_conversation_messages,
     receive_user_message as _receive_user_message,
 )
-from crewai.flow.dsl import listen, router, start
+from crewai.flow.dsl import listen, start
+from crewai.flow.dsl._utils import _method_action, _set_flow_method_definition
+from crewai.flow.flow_definition import FlowMethodDefinition
 from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.flow.runtime import Flow
     from crewai.llms.base_llm import BaseLLM
 
 
 logger = logging.getLogger(__name__)
 
 
-class _ConversationalMixin:
-    """Built-in conversational graph for ``Flow`` (gated on ``conversational``).
+def _iter_condition_labels(condition: Any) -> set[str]:
+    if isinstance(condition, str):
+        return {condition}
+    if isinstance(condition, dict):
+        labels: set[str] = set()
+        for value in condition.values():
+            if isinstance(value, list):
+                for item in value:
+                    labels.update(_iter_condition_labels(item))
+            else:
+                labels.update(_iter_condition_labels(value))
+        return labels
+    return set()
 
-    Mixed into ``Flow`` so its execution engine (``runtime.py``) stays focused
-    on running graphs. The methods here only register on subclasses that set
-    ``conversational = True``; non-chat flows see them as inert attributes.
+
+def _conversation_start_router(func: Callable[..., Any]) -> Any:
+    wrapper = start()(func)
+    _set_flow_method_definition(
+        cast(Any, wrapper),
+        FlowMethodDefinition(do=_method_action(func), start=True, router=True),
+    )
+    return wrapper
+
+
+class _ConversationalMixin:
+    """Experimental conversational graph for ``Flow``.
+
+    This mixin owns chat behavior and runtime hooks. Non-chat flows see these
+    methods as inert attributes unless they opt in with ``conversational = True``.
     """
+
+    # === EXPERIMENTAL: conversational mode ===
+    # When ``conversational = True`` on a Flow subclass, this mixin's built-in
+    # graph registers and ``handle_turn`` / ``chat`` become chat entry points.
+    conversational: ClassVar[bool] = False
+    conversational_config: ClassVar[ConversationConfig | None] = None
+    builtin_routes: ClassVar[tuple[str, ...]] = ("converse", "end")
+    internal_routes: ClassVar[tuple[str, ...]] = ("answer_from_history",)
+    builtin_route_descriptions: ClassVar[dict[str, str]] = {
+        "converse": (
+            "Ordinary chat, follow-ups, summaries, clarifications, and "
+            "questions answerable from prior conversation history."
+        ),
+        "end": ("User signals the conversation is finished (goodbye, exit, done)."),
+        "answer_from_history": (
+            "Answer directly from prior conversation history without invoking "
+            "tools, agents, or custom routes."
+        ),
+    }
 
     # The metaclass + state attributes referenced below live on ``Flow`` —
     # this mixin is never instantiated standalone. These type-only
@@ -71,25 +121,20 @@ class _ConversationalMixin:
     # (otherwise mypy flags "Cannot override instance variable with class
     # variable" when Flow declares them as ``ClassVar``).
     if TYPE_CHECKING:
-        conversational: ClassVar[bool]
-        conversational_config: ClassVar[ConversationConfig | None]
-        builtin_routes: ClassVar[tuple[str, ...]]
-        internal_routes: ClassVar[tuple[str, ...]]
-        builtin_route_descriptions: ClassVar[dict[str, str]]
-        # Registry ClassVars populated by ``FlowMeta`` at class creation.
-        _listeners: ClassVar[dict[Any, Any]]
-
         # Instance attrs from ``Flow``.
         state: Any
         name: str | None
         _completed_methods: set[Any]
         _method_outputs: list[Any]
-        _pending_and_listeners: dict[Any, Any]
+        _pending_events: dict[Any, Any]
         _method_call_counts: dict[Any, int]
         _is_execution_resuming: bool
+        _conversation_messages: list[LLMMessage]
         _pending_user_message: str | dict[str, Any] | None
         _pending_intents: Sequence[str] | None
         _pending_intent_llm: str | BaseLLM | None
+        _turn_classified_intent: str | None
+        _assistant_reply_appended: bool
 
         def _clear_or_listeners(self) -> None:
             pass
@@ -97,8 +142,8 @@ class _ConversationalMixin:
         def _collapse_to_outcome(
             self,
             feedback: str,
-            outcomes: tuple[str, ...],
-            llm: str | BaseLLM | Any,
+            outcomes: Sequence[str],
+            llm: str | BaseLLM,
         ) -> str:
             pass
 
@@ -108,23 +153,28 @@ class _ConversationalMixin:
         def kickoff(self, *args: Any, **kwargs: Any) -> Any:
             pass
 
-    @start()
-    @_conversational_only
-    def conversation_start(self) -> str | None:
-        """Internal Flow entrypoint that hands the user message to the router.
+        @property
+        def method_outputs(self) -> list[Any]:
+            pass
 
-        In conversational mode, ``Flow.kickoff_async`` runs all ``@start``
-        methods sequentially and this one is registered last, so any user
-        ``@start`` methods (e.g. permission loading) have already finished
-        before the returned value triggers ``route_conversation``.
+    def conversation_start(self) -> str | None:
+        """Return the current user message for conversational route selection.
+
+        This remains as a plain overridable helper for compatibility. It is not
+        registered as a Flow method; ``route_conversation`` is the synthetic
+        built-in start/router that begins a conversational turn.
         """
         state = cast(ConversationState, self.state)
         return state.current_user_message
 
-    @router(conversation_start)
+    @_conversation_start_router
     @_conversational_only
     def route_conversation(self) -> str:
         """Route the current turn to a listener label."""
+        if "conversation_start" not in {
+            str(method_name) for method_name in self._completed_methods
+        }:
+            self.conversation_start()
         state = cast(ConversationState, self.state)
         context = self.build_router_context()
         previous_intent = state.last_intent
@@ -137,12 +187,22 @@ class _ConversationalMixin:
             )
             return configured_route
 
-        if state.last_intent:
+        turn_intent = self._turn_classified_intent
+        if turn_intent:
+            state.last_intent = turn_intent
             self._emit_conversation_route_selected(
-                state.last_intent,
+                turn_intent,
                 previous_intent=previous_intent,
             )
-            return state.last_intent
+            return turn_intent
+
+        if previous_intent:
+            logger.debug(
+                "route_turn() returned no route and no intent was classified "
+                "this turn; ignoring stale last_intent=%r from a previous turn "
+                "and falling back to built-in routing",
+                previous_intent,
+            )
 
         if self.can_answer_from_history(context):
             state.last_intent = "answer_from_history"
@@ -175,7 +235,9 @@ class _ConversationalMixin:
             messages.append({"role": "system", "content": system_prompt})
         messages.extend(self.conversation_messages)
 
-        response = self._coerce_llm(llm).call(messages=messages)
+        llm_instance = self._coerce_llm(llm)
+        with self._conversation_streaming_enabled(llm_instance):
+            response = llm_instance.call(messages=messages)
         content = self._stringify_result(response)
         self.append_assistant_message(content)
         return content
@@ -208,7 +270,8 @@ class _ConversationalMixin:
             },
             *self.build_agent_context("answer_from_history"),
         ]
-        response = llm_instance.call(messages=messages)
+        with self._conversation_streaming_enabled(llm_instance):
+            response = llm_instance.call(messages=messages)
         content = self._stringify_result(response)
         self.append_assistant_message(content)
         return content
@@ -237,33 +300,172 @@ class _ConversationalMixin:
         """
         state = cast(ConversationState, self.state)
         sid = session_id or state.id
+        crewai_event_bus.emit(
+            self,
+            ConversationTurnStartedEvent(
+                type="conversation_turn_started",
+                flow_name=self.name or self.__class__.__name__,
+                session_id=sid,
+            ),
+        )
 
-        # Stash the pending turn so ``_apply_pending_conversational_turn``
-        # picks it up AFTER persist restore.
+        # Stash the pending turn so the kickoff extension hook picks it up
+        # after persist restore.
         self._pending_user_message = message
         self._pending_intents = list(intents) if intents else None
         self._pending_intent_llm = intent_llm
 
-        # Each turn is a fresh execution; clear graph tracking so the second
-        # turn re-runs instead of being treated as a checkpoint restore.
-        if "from_checkpoint" not in kickoff_kwargs:
-            self._reset_turn_execution_state()
-
-        assistant_count = self._assistant_message_count()
+        failed_event: ConversationTurnFailedEvent | None = None
         try:
+            # Each turn is a fresh execution; clear graph tracking so the second
+            # turn re-runs instead of being treated as a checkpoint restore.
+            if "from_checkpoint" not in kickoff_kwargs:
+                self._reset_turn_execution_state()
+
+            object.__setattr__(self, "_assistant_reply_appended", False)
             result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
+            if (
+                result is not None
+                and not self._assistant_reply_appended
+                and self._is_public_turn_result(result)
+            ):
+                self.append_assistant_message(self._stringify_result(result))
+        except Exception as exc:
+            failed_event = ConversationTurnFailedEvent(
+                type="conversation_turn_failed",
+                flow_name=self.name or self.__class__.__name__,
+                session_id=sid,
+                error=exc,
+            )
+            raise
         finally:
             self._pending_user_message = None
             self._pending_intents = None
             self._pending_intent_llm = None
+            if failed_event is not None:
+                self._emit_terminal_conversation_turn_event(failed_event)
 
-        if (
-            result is not None
-            and self._assistant_message_count() == assistant_count
-            and self._is_public_turn_result(result)
-        ):
-            self.append_assistant_message(self._stringify_result(result))
+        self._emit_terminal_conversation_turn_event(
+            ConversationTurnCompletedEvent(
+                type="conversation_turn_completed",
+                flow_name=self.name or self.__class__.__name__,
+                session_id=sid,
+            ),
+        )
         return result
+
+    def stream_turn(
+        self,
+        message: str,
+        *,
+        session_id: str | None = None,
+        intents: Sequence[str] | None = None,
+        intent_llm: str | BaseLLM | None = None,
+        **kickoff_kwargs: Any,
+    ) -> Any:
+        """Append a user message and stream one conversational turn as frames."""
+        if not self._is_conversational_enabled():
+            raise ValueError(
+                "Flow.stream_turn() is only available on conversational flows"
+            )
+
+        from crewai.types.streaming import StreamSession
+        from crewai.utilities.streaming import (
+            create_frame_generator,
+            create_frame_streaming_state,
+        )
+
+        state = cast(ConversationState, self.state)
+        sid = session_id or state.id
+        result_holder: list[Any] = []
+        frame_state = create_frame_streaming_state(result_holder, use_async=False)
+        output_holder: list[StreamSession[Any]] = []
+
+        def run_turn() -> Any:
+            crewai_event_bus.emit(
+                self,
+                ConversationTurnStartedEvent(
+                    type="conversation_turn_started",
+                    flow_name=self.name or self.__class__.__name__,
+                    session_id=sid,
+                ),
+            )
+
+            self._pending_user_message = message
+            self._pending_intents = list(intents) if intents else None
+            self._pending_intent_llm = intent_llm
+
+            try:
+                if "from_checkpoint" not in kickoff_kwargs:
+                    self._reset_turn_execution_state()
+
+                object.__setattr__(self, "_assistant_reply_appended", False)
+                original_stream = bool(getattr(self, "stream", False))
+                original_streaming_turn = getattr(
+                    self, "_streaming_conversation_turn", False
+                )
+                try:
+                    object.__setattr__(self, "stream", False)
+                    object.__setattr__(self, "_streaming_conversation_turn", True)
+                    result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
+                finally:
+                    object.__setattr__(self, "stream", original_stream)
+                    object.__setattr__(
+                        self, "_streaming_conversation_turn", original_streaming_turn
+                    )
+                if (
+                    result is not None
+                    and not self._assistant_reply_appended
+                    and self._is_public_turn_result(result)
+                ):
+                    self.append_assistant_message(self._stringify_result(result))
+            except HumanFeedbackPending as exc:
+                return exc
+            except Exception as exc:
+                failed_event = ConversationTurnFailedEvent(
+                    type="conversation_turn_failed",
+                    flow_name=self.name or self.__class__.__name__,
+                    session_id=sid,
+                    error=exc,
+                )
+                self._emit_terminal_conversation_turn_event(failed_event)
+                raise
+            finally:
+                self._pending_user_message = None
+                self._pending_intents = None
+                self._pending_intent_llm = None
+
+            self._emit_terminal_conversation_turn_event(
+                ConversationTurnCompletedEvent(
+                    type="conversation_turn_completed",
+                    flow_name=self.name or self.__class__.__name__,
+                    session_id=sid,
+                ),
+            )
+            return result
+
+        stream_session: StreamSession[Any] = StreamSession(
+            sync_iterator=create_frame_generator(frame_state, run_turn, output_holder)
+        )
+        output_holder.append(stream_session)
+        return stream_session
+
+    def _emit_terminal_conversation_turn_event(
+        self,
+        event: ConversationTurnCompletedEvent | ConversationTurnFailedEvent,
+    ) -> None:
+        """Emit a terminal turn event and wait for its own handlers."""
+        future = crewai_event_bus.emit(self, event)
+        if future is None:
+            return
+        try:
+            future.result(timeout=30)
+        except Exception:
+            logger.warning(
+                "%s handler failed or timed out",
+                event.__class__.__name__,
+                exc_info=True,
+            )
 
     def chat(
         self,
@@ -286,7 +488,7 @@ class _ConversationalMixin:
         callers can customize prompts or exercise the loop without patching
         builtins.
         """
-        if not getattr(type(self), "conversational", False):
+        if not self._is_conversational_enabled():
             raise ValueError("Flow.chat() is only available on conversational flows")
 
         exit_set = {command.lower() for command in exit_commands}
@@ -360,6 +562,11 @@ class _ConversationalMixin:
         supply per-route descriptions, or change the default/fallback intent.
         Override this method to bypass the LLM router entirely (e.g.,
         permission gates before the LLM decision).
+
+        Returning a falsy value means "no routing decision": the turn falls
+        through to the built-in defaults (``answer_from_history`` when
+        configured, else ``converse``). It never replays a previous turn's
+        intent.
         """
         config = self._conversation_config
         if config is None:
@@ -428,6 +635,9 @@ class _ConversationalMixin:
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """Append a final user-visible assistant message."""
+        # Explicit signal for handle_turn's "did the handler reply?" check.
+        # A count heuristic breaks when handlers trim history mid-turn.
+        object.__setattr__(self, "_assistant_reply_appended", True)
         state = cast(ConversationState, self.state)
         state.messages.append(
             ConversationMessage(
@@ -491,14 +701,14 @@ class _ConversationalMixin:
         **extra: Any,
     ) -> None:
         """Append a message to conversation history (legacy ChatState path)."""
-        _append_conversation_message(cast("Flow[Any]", self), role, content, **extra)
+        _append_conversation_message(cast(Any, self), role, content, **extra)
 
     @property
     def conversation_messages(self) -> list[LLMMessage]:
         """Message history from state, coerced to LLM-shaped dicts."""
         return [
             message_to_llm_dict(message)
-            for message in get_conversation_messages(cast("Flow[Any]", self))
+            for message in get_conversation_messages(cast(Any, self))
         ]
 
     def receive_user_message(
@@ -514,7 +724,7 @@ class _ConversationalMixin:
         ``state.messages`` and preserve ``last_intent`` across turns.
         Non-conversational flows fall through to the legacy helper.
         """
-        if self.conversational:
+        if self._is_conversational_enabled():
             state = cast(ConversationState, self.state)
             state.messages.append(ConversationMessage(role="user", content=text))
             self._emit_conversation_message_added(
@@ -532,12 +742,11 @@ class _ConversationalMixin:
                     context=self.conversation_messages,
                 )
                 state.last_intent = intent
+                object.__setattr__(self, "_turn_classified_intent", intent)
                 return intent
             return text
 
-        return _receive_user_message(
-            cast("Flow[Any]", self), text, outcomes=outcomes, llm=llm
-        )
+        return _receive_user_message(cast(Any, self), text, outcomes=outcomes, llm=llm)
 
     def classify_intent(
         self,
@@ -561,30 +770,114 @@ class _ConversationalMixin:
     def _conversation_config(self) -> ConversationConfig | None:
         return getattr(type(self), "conversational_config", None)
 
+    @property
+    def _conversation_definition(self) -> Any | None:
+        return self._conversation_flow_definition().conversational
+
+    def _conversation_flow_definition(self) -> Any:
+        flow_definition = getattr(type(self), "flow_definition", None)
+        if not callable(flow_definition):
+            raise AttributeError(
+                f"{type(self).__name__} does not expose flow_definition()"
+            )
+        return flow_definition()
+
+    @classmethod
+    def _conversational_definition(cls) -> Any | None:
+        flow_definition = getattr(cls, "flow_definition", None)
+        if not callable(flow_definition):
+            return None
+        return flow_definition().conversational
+
+    @classmethod
+    def _is_conversational(cls) -> bool:
+        definition = cls._conversational_definition()
+        return bool(definition and definition.enabled)
+
+    def _is_conversational_enabled(self) -> bool:
+        definition = self._conversation_definition
+        return bool(definition and definition.enabled)
+
+    def _initialize_runtime_extension_attrs(self) -> None:
+        if not isinstance(getattr(self, "_conversation_messages", None), list):
+            object.__setattr__(self, "_conversation_messages", [])
+        if not hasattr(self, "_pending_user_message"):
+            object.__setattr__(self, "_pending_user_message", None)
+        if not hasattr(self, "_pending_intents"):
+            object.__setattr__(self, "_pending_intents", None)
+        if not hasattr(self, "_pending_intent_llm"):
+            object.__setattr__(self, "_pending_intent_llm", None)
+        if not hasattr(self, "_streaming_conversation_turn"):
+            object.__setattr__(self, "_streaming_conversation_turn", False)
+        if not hasattr(self, "_turn_classified_intent"):
+            object.__setattr__(self, "_turn_classified_intent", None)
+        if not hasattr(self, "_assistant_reply_appended"):
+            object.__setattr__(self, "_assistant_reply_appended", False)
+
+    def _create_default_extension_state(self) -> ConversationState | None:
+        initial_state_t = getattr(self, "_initial_state_t", None)
+        if type(self)._is_conversational() and (
+            not hasattr(self, "_initial_state_t")
+            or isinstance(initial_state_t, TypeVar)
+        ):
+            return ConversationState()
+        return None
+
+    def _should_apply_pending_kickoff_context(self) -> bool:
+        return (
+            type(self)._is_conversational() and self._pending_user_message is not None
+        )
+
+    def _apply_pending_kickoff_context(self) -> None:
+        self._apply_pending_conversational_turn()
+
+    def _order_start_methods_for_kickoff(
+        self,
+        start_methods: list[Any],
+    ) -> tuple[list[Any], bool]:
+        if not type(self)._is_conversational():
+            return start_methods, False
+
+        route_conversation = "route_conversation"
+        if route_conversation not in {str(method) for method in start_methods}:
+            return start_methods, False
+
+        ordered_starts = [
+            method for method in start_methods if str(method) != route_conversation
+        ]
+        ordered_starts.append(
+            next(
+                method for method in start_methods if str(method) == route_conversation
+            )
+        )
+        return ordered_starts, True
+
     def _should_defer_trace_finalization(self) -> bool:
         """Whether per-turn ``FlowFinished`` + ``finalize_batch`` should be skipped.
 
         True when either:
           - ``flow.defer_trace_finalization`` is set on the instance, OR
-          - the class-level ``ConversationConfig.defer_trace_finalization``
-            on a conversational subclass is True.
+          - the static conversational definition enables deferred finalization.
 
         Either source enables the deferred-session pattern. The caller
         eventually invokes ``finalize_session_traces()`` to close the batch.
         """
         if getattr(self, "defer_trace_finalization", False):
             return True
-        config = self._conversation_config
-        return bool(config and config.defer_trace_finalization)
+        definition = self._conversation_definition
+        return bool(
+            definition and definition.enabled and definition.defer_trace_finalization
+        )
 
     def _reset_turn_execution_state(self) -> None:
         """Clear per-execution tracking so the next turn re-runs the graph."""
         self._completed_methods.clear()
         self._method_outputs.clear()
-        self._pending_and_listeners.clear()
+        self._pending_events.clear()
         self._method_call_counts.clear()
         self._clear_or_listeners()
         self._is_execution_resuming = False
+        object.__setattr__(self, "_turn_classified_intent", None)
 
     def _apply_pending_conversational_turn(self) -> None:
         """Drain the stashed user message + classify if intents configured.
@@ -592,6 +885,7 @@ class _ConversationalMixin:
         Called from ``Flow.kickoff_async`` AFTER persist state restore so
         the appended message survives ``self.persistence.load_state(...)``.
         """
+        object.__setattr__(self, "_turn_classified_intent", None)
         if self._pending_user_message is None:
             return
 
@@ -733,11 +1027,12 @@ class _ConversationalMixin:
         router_config: RouterConfig | None,
     ) -> dict[str, str]:
         label_to_method: dict[str, str] = {}
-        for listener_name, condition in self._listeners.items():
-            if isinstance(condition, tuple):
-                _, trigger_labels = condition
-                for trigger_label in trigger_labels:
-                    label_to_method.setdefault(str(trigger_label), str(listener_name))
+        flow_definition = self._conversation_flow_definition()
+        for listener_name, method_definition in flow_definition.methods.items():
+            if method_definition.listen is None or method_definition.router:
+                continue
+            for trigger_label in _iter_condition_labels(method_definition.listen):
+                label_to_method.setdefault(trigger_label, listener_name)
 
         routes = self._effective_routes(router_config)
         overrides = (
@@ -788,21 +1083,31 @@ class _ConversationalMixin:
 
     def _valid_route_labels(self) -> set[str]:
         labels: set[str] = set()
-        for condition in self._listeners.values():
-            if isinstance(condition, tuple):
-                _, methods = condition
-                labels.update(str(method) for method in methods)
+        flow_definition = self._conversation_flow_definition()
+        for method_definition in flow_definition.methods.values():
+            if method_definition.listen is None or method_definition.router:
+                continue
+            labels.update(_iter_condition_labels(method_definition.listen))
         return labels
 
     def _effective_routes(self, router_config: RouterConfig | None = None) -> set[str]:
         custom_routes = set(router_config.routes or ()) if router_config else set()
+        definition = self._conversation_definition
+        builtin_routes = (
+            tuple(definition.builtin_routes)
+            if definition is not None
+            else self.builtin_routes
+        )
+        internal_routes = (
+            tuple(definition.internal_routes)
+            if definition is not None
+            else self.internal_routes
+        )
         if not custom_routes:
             custom_routes = (
-                self._valid_route_labels()
-                - set(self.builtin_routes)
-                - set(self.internal_routes)
+                self._valid_route_labels() - set(builtin_routes) - set(internal_routes)
             )
-        return custom_routes | set(self.builtin_routes)
+        return custom_routes | set(builtin_routes)
 
     def _default_conversation_llm(self) -> Any | None:
         config = self._conversation_config
@@ -828,10 +1133,6 @@ class _ConversationalMixin:
         if visible == "all" or (visible is not None and agent_name in visible):
             return "public"
         return "private"
-
-    def _assistant_message_count(self) -> int:
-        state = cast(ConversationState, self.state)
-        return sum(1 for message in state.messages if message.role == "assistant")
 
     def _is_public_turn_result(self, result: Any) -> bool:
         if not isinstance(result, str):
@@ -880,6 +1181,19 @@ class _ConversationalMixin:
             return llm
         raise ValueError(f"Invalid llm type: {type(llm)}. Expected str or BaseLLM.")
 
+    @contextmanager
+    def _conversation_streaming_enabled(self, llm: Any) -> Iterator[None]:
+        if not getattr(self, "_streaming_conversation_turn", False) or not hasattr(
+            llm, "stream"
+        ):
+            yield
+            return
+
+        from crewai.llms.base_llm import call_stream_override
+
+        with call_stream_override(llm, True):
+            yield
+
     def finalize_session_traces(self) -> None:
         """Emit a final ``FlowFinishedEvent`` and finalize the trace batch.
 
@@ -899,6 +1213,15 @@ class _ConversationalMixin:
         )
         from crewai.events.types.flow_events import FlowFinishedEvent
 
+        # Background memory saves must finish (and emit their completed/failed
+        # events) before the session-end flow_finished / batch finalization
+        # below tears down listeners, mirroring the non-deferred kickoff path.
+        # The flush then waits for those events' async bus handlers.
+        drain_memory_writes = getattr(self, "_drain_memory_writes", None)
+        if callable(drain_memory_writes):
+            drain_memory_writes()
+        crewai_event_bus.flush()
+
         # Only emit the session-end event when a deferred flow_started is
         # actually pending. ``_deferred_flow_started_event_id`` is set only by
         # deferred kickoffs; when finalization was not deferred, each per-turn
@@ -908,7 +1231,8 @@ class _ConversationalMixin:
         # of warning about an empty scope stack.
         started_id = getattr(self, "_deferred_flow_started_event_id", None)
         if started_id:
-            last_output = self._method_outputs[-1] if self._method_outputs else None
+            method_outputs = self.method_outputs
+            last_output = method_outputs[-1] if method_outputs else None
             restore_event_scope(((started_id, "flow_started"),))
             try:
                 crewai_event_bus.emit(
@@ -931,12 +1255,15 @@ class _ConversationalMixin:
 
         trace_listener = TraceCollectionListener()
         batch_manager = trace_listener.batch_manager
-        if batch_manager.batch_owner_type == "flow":
-            if trace_listener.first_time_handler.is_first_time:
-                trace_listener.first_time_handler.mark_events_collected()
-                trace_listener.first_time_handler.handle_execution_completion()
-            else:
-                batch_manager.finalize_batch()
+        try:
+            if batch_manager.batch_owner_type == "flow":
+                if trace_listener.first_time_handler.is_first_time:
+                    trace_listener.first_time_handler.mark_events_collected()
+                    trace_listener.first_time_handler.handle_execution_completion()
+                else:
+                    batch_manager.finalize_batch()
+        finally:
+            batch_manager.defer_session_finalization = False
 
 
 __all__ = ["_ConversationalMixin"]

@@ -5,6 +5,12 @@ from typing import TYPE_CHECKING, Any
 from crewai_core.printer import PRINTER
 
 from crewai.events.event_listener import event_listener
+from crewai.hooks.dispatch import (
+    HookAborted,
+    InterceptionPoint,
+    dispatch,
+    get_global_hook_list,
+)
 from crewai.hooks.types import (
     AfterToolCallHookCallable,
     AfterToolCallHookType,
@@ -40,6 +46,8 @@ class ToolCallHookContext:
         crew: Crew instance (may be None)
         tool_result: Tool execution result (only set for after_tool_call hooks).
             Can be modified by returning a new string from after_tool_call hook.
+        raw_tool_result: Raw Python tool execution result (only set for
+            after_tool_call hooks). This is not modified by after hooks.
     """
 
     def __init__(
@@ -51,6 +59,7 @@ class ToolCallHookContext:
         task: Task | None = None,
         crew: Crew | None = None,
         tool_result: str | None = None,
+        raw_tool_result: Any | None = None,
     ) -> None:
         """Initialize tool call hook context.
 
@@ -62,6 +71,7 @@ class ToolCallHookContext:
             task: Optional current task
             crew: Optional crew instance
             tool_result: Optional tool result (for after hooks)
+            raw_tool_result: Optional raw tool result (for after hooks)
         """
         self.tool_name = tool_name
         self.tool_input = tool_input
@@ -70,6 +80,7 @@ class ToolCallHookContext:
         self.task = task
         self.crew = crew
         self.tool_result = tool_result
+        self.raw_tool_result = raw_tool_result
 
     def request_human_input(
         self,
@@ -116,8 +127,81 @@ class ToolCallHookContext:
             event_listener.formatter.resume_live_updates()
 
 
-_before_tool_call_hooks: list[BeforeToolCallHookType | BeforeToolCallHookCallable] = []
-_after_tool_call_hooks: list[AfterToolCallHookType | AfterToolCallHookCallable] = []
+# The legacy registries are aliased to the generic dispatcher's global hook
+# lists for the tool-call points, so legacy registrations and new-dialect
+# ``@on(InterceptionPoint.PRE_TOOL_CALL)`` hooks share one ordered queue.
+_before_tool_call_hooks: list[BeforeToolCallHookType | BeforeToolCallHookCallable] = (
+    get_global_hook_list(InterceptionPoint.PRE_TOOL_CALL)
+)
+_after_tool_call_hooks: list[AfterToolCallHookType | AfterToolCallHookCallable] = (
+    get_global_hook_list(InterceptionPoint.POST_TOOL_CALL)
+)
+
+
+def before_tool_call_reducer(context: ToolCallHookContext, result: object) -> bool:
+    """Legacy calling convention for ``pre_tool_call`` hooks.
+
+    A ``False`` return blocks the call (mapped to :class:`HookAborted`); tool
+    input is modified in place, so no payload replacement occurs here.
+    """
+    if result is False:
+        raise HookAborted(reason="before_tool_call hook returned False")
+    return False
+
+
+def after_tool_call_reducer(context: ToolCallHookContext, result: object) -> bool:
+    """Legacy calling convention for ``post_tool_call`` hooks.
+
+    A non-None return replaces the tool result on the context.
+    """
+    if isinstance(result, str):
+        context.tool_result = result
+        return True
+    return False
+
+
+def _hook_verbose(context: ToolCallHookContext) -> bool:
+    """Whether swallowed-hook-error warnings should be printed.
+
+    Mirrors the pre-dispatcher behavior where a failing tool hook surfaced a
+    warning when the executing agent was verbose.
+    """
+    return bool(getattr(context.agent, "verbose", False))
+
+
+def run_before_tool_call_hooks(context: ToolCallHookContext) -> bool:
+    """Run all ``pre_tool_call`` hooks against a context.
+
+    Returns:
+        True if a hook blocked execution (returned False or raised
+        :class:`HookAborted`), False otherwise. Tool input mutations on the
+        context persist regardless.
+    """
+    try:
+        dispatch(
+            InterceptionPoint.PRE_TOOL_CALL,
+            context,
+            reducer=before_tool_call_reducer,
+            verbose=_hook_verbose(context),
+        )
+        return False
+    except HookAborted:
+        return True
+
+
+def run_after_tool_call_hooks(context: ToolCallHookContext) -> str | None:
+    """Run all ``post_tool_call`` hooks against a context.
+
+    Returns:
+        The (possibly modified) tool result carried on the context.
+    """
+    dispatch(
+        InterceptionPoint.POST_TOOL_CALL,
+        context,
+        reducer=after_tool_call_reducer,
+        verbose=_hook_verbose(context),
+    )
+    return context.tool_result
 
 
 def register_before_tool_call_hook(
