@@ -20501,6 +20501,139 @@
       }
     },
     {
+      "description": "Search the live web and get back answer-ready page content, not a list of links. Each result carries the actual text of the page (url, title, date, content), already extracted and cleaned, so facts can be quoted and cited straight from the response. Use it for anything that needs current or post-training information: news, prices, releases, docs, niche facts. Write the query the way a person would type it, in any language: localization is automatic.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SERPdive, free at https://serpdive.com/dashboard/keys",
+          "name": "SERPDIVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SERPdive Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Tool that uses the SERPdive Search API to perform web searches.\n\nEvery result carries the actual text of the page (url, title, date,\ncontent), already extracted and cleaned for LLM consumption, so agents\ncan quote and cite straight from the tool output.\n\nAttributes:\n    client: An instance of SerpDive (sync client).\n    async_client: An instance of AsyncSerpDive.\n    name: The name of the tool.\n    description: A description of the tool's purpose.\n    args_schema: The schema for the tool's arguments.\n    api_key: The SERPdive API key.\n    model: Retrieval depth, \"mako\" (key sentences, fast) or \"moby\"\n        (full page text, deep research).\n    answer: Whether to also return a direct answer synthesized from\n        the sources.\n    max_results: Hard cap on delivered results (1-10).",
+        "properties": {
+          "answer": {
+            "default": false,
+            "description": "When True, the output also carries an \"answer\" field: a direct answer synthesized from the sources (concise on mako, cited on moby).",
+            "title": "Answer",
+            "type": "boolean"
+          },
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The SERPdive API key. If not provided, it is read from the SERPDIVE_API_KEY environment variable.",
+            "title": "Api Key"
+          },
+          "async_client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Async Client"
+          },
+          "client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Client"
+          },
+          "max_results": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Hard cap on delivered results (1-10). None lets the engine pick its calibrated mix.",
+            "title": "Max Results"
+          },
+          "model": {
+            "default": "mako",
+            "description": "Retrieval depth: \"mako\" (default) returns the fact-carrying sentences of each page, fast; \"moby\" returns the full readable text, for deep research.",
+            "title": "Model",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "SerpdiveSearchTool",
+        "type": "object"
+      },
+      "name": "SerpdiveSearchTool",
+      "package_dependencies": [
+        "serpdive"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for SerpdiveSearchTool.",
+        "properties": {
+          "query": {
+            "description": "The search query, in any language, phrased like a real web search.",
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SerpdiveSearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to search the internet with a search_query. Supports different search types: 'search' (default), 'news'",
       "env_vars": [
         {
