@@ -6,6 +6,7 @@ via the CrewAI+ API with a global cache at ~/.crewai/skills/.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import logging
 from pathlib import Path
 import sys
@@ -15,6 +16,12 @@ from crewai.skills.cache import SkillCacheManager
 
 
 _logger = logging.getLogger(__name__)
+
+# Hook for injecting an authenticated PlusAPI client in environments that lack
+# interactive auth (e.g. the Studio Runner subprocess).  When set, it must be a
+# callable that returns a ``PlusAPI`` instance.  See the analogous pattern in
+# ``crewai.utilities.agent_utils._create_plus_client_hook``.
+_create_plus_client_hook: Callable[[], Any] | None = None
 
 
 class SkillNotCachedError(Exception):
@@ -125,7 +132,11 @@ def resolve_registry_ref(
             )
 
     if _is_noninteractive():
-        raise SkillNotCachedError(ref)
+        if not callable(_create_plus_client_hook):
+            raise SkillNotCachedError(ref)
+        _logger.debug(
+            "Non-interactive but auth hook available; attempting download for %s", ref
+        )
 
     return download_skill(org, name, source=source)
 
@@ -170,9 +181,12 @@ def download_skill(
         )
 
     try:
-        from crewai_core.plus_api import PlusAPI
+        if callable(_create_plus_client_hook):
+            api = _create_plus_client_hook()
+        else:
+            from crewai_core.plus_api import PlusAPI
 
-        api = PlusAPI()
+            api = PlusAPI()
         response = api.get_skill(org, name)
         response.raise_for_status()
         data = response.json()
