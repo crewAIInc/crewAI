@@ -8,8 +8,8 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
-    "crewai-core==1.15.4",
-    "crewai-cli==1.15.4",
+    "crewai-core==1.15.5",
+    "crewai-cli==1.15.5",
     # Core Dependencies
     "pydantic>=2.11.9,<2.13",
     "openai>=2.30.0,<3",
@@ -55,7 +55,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.15.4",
+    "crewai-tools==1.15.5",
 ]
 embeddings = [
     "tiktoken>=0.8.0,<0.13"
