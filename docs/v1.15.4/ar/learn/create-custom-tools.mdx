@@ -1,0 +1,77 @@
+---
+title: إنشاء أدوات مخصصة
+description: دليل شامل لصياغة واستخدام وإدارة الأدوات المخصصة ضمن إطار عمل CrewAI، بما في ذلك الوظائف الجديدة ومعالجة الأخطاء.
+icon: hammer
+mode: "wide"
+---
+
+## إنشاء واستخدام الأدوات في CrewAI
+
+يقدم هذا الدليل تعليمات مفصلة لإنشاء أدوات مخصصة لإطار عمل CrewAI وكيفية إدارة واستخدام هذه الأدوات بكفاءة، مع دمج أحدث الوظائف مثل تفويض الأدوات ومعالجة الأخطاء واستدعاء الأدوات الديناميكي.
+
+<Tip>
+  **هل تريد نشر أداتك للمجتمع؟** إذا كنت تبني أداة يمكن أن تفيد الآخرين، اطلع على دليل [نشر أدوات مخصصة](/ar/guides/tools/publish-custom-tools) لتعلم كيفية تعبئة وتوزيع أداتك على PyPI.
+</Tip>
+
+### وراثة `BaseTool`
+
+لإنشاء أداة مخصصة، ورث من `BaseTool` وعرّف السمات الضرورية بما في ذلك `args_schema` للتحقق من المدخلات وطريقة `_run`.
+
+```python Code
+from typing import Type
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+class MyToolInput(BaseModel):
+    """Input schema for MyCustomTool."""
+    argument: str = Field(..., description="Description of the argument.")
+
+class MyCustomTool(BaseTool):
+    name: str = "Name of my tool"
+    description: str = "What this tool does. It's vital for effective utilization."
+    args_schema: Type[BaseModel] = MyToolInput
+
+    def _run(self, argument: str) -> str:
+        return "Tool's result"
+```
+
+### استخدام مزخرف `tool`
+
+```python Code
+from crewai.tools import tool
+
+@tool("Tool Name")
+def my_simple_tool(question: str) -> str:
+    """Tool description for clarity."""
+    return "Tool output"
+```
+
+### تعريف دالة تخزين مؤقت للأداة
+
+```python Code
+@tool("Tool with Caching")
+def cached_tool(argument: str) -> str:
+    """Tool functionality description."""
+    return "Cacheable result"
+
+def my_cache_strategy(arguments: dict, result: str) -> bool:
+    return True if some_condition else False
+
+cached_tool.cache_function = my_cache_strategy
+```
+
+### إنشاء أدوات غير متزامنة
+
+يدعم CrewAI الأدوات غير المتزامنة لعمليات I/O غير المحجوبة.
+
+```python Code
+import aiohttp
+from crewai.tools import tool
+
+@tool("Async Web Fetcher")
+async def fetch_webpage(url: str) -> str:
+    """Fetch content from a webpage asynchronously."""
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            return await response.text()
+```
