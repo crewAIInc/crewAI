@@ -1,9 +1,11 @@
+from typing import TYPE_CHECKING
 from threading import Lock
 from abc import ABC, abstractmethod
 import logging
 
-from k8s_agent_sandbox.exceptions import SandboxNotFoundError
-from k8s_agent_sandbox.sandbox import Sandbox
+if TYPE_CHECKING:
+    from k8s_agent_sandbox.exceptions import SandboxNotFoundError
+    from k8s_agent_sandbox.sandbox import Sandbox
 
 
 from .settings import (
@@ -11,6 +13,7 @@ from .settings import (
     K8sAgentSandboxToolSandboxSettings,
 )
 
+from .utils import lazy_import_k8s_agent_sandbox
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +36,10 @@ class K8sAgentSandboxLifecycleManager(ABC):
         self._lock = Lock()
         self._closed = False
 
-        self._sandbox: Sandbox | None = None
+        self._sandbox: 'Sandbox | None' = None
         self._sandbox_acquired: bool = False
 
-    def acquire_sandbox(self) -> Sandbox:
+    def acquire_sandbox(self) -> "Sandbox":
         """
         Acquires a sandbox based on this implementation and returns it.
         In order to be acquired again by someone else, it has to be
@@ -70,7 +73,7 @@ class K8sAgentSandboxLifecycleManager(ABC):
         self._closed = True
 
     @abstractmethod
-    def _acquire_sandbox(self) -> Sandbox:
+    def _acquire_sandbox(self) -> "Sandbox":
         pass
 
     @abstractmethod
@@ -88,7 +91,7 @@ class K8sAgentSandboxLifecycleManager(ABC):
         self._sandbox.terminate()
         self._sandbox = None
 
-    def _create_sandbox(self) -> Sandbox:
+    def _create_sandbox(self) -> "Sandbox":
         return self._client.create_sandbox(
             warmpool=self._sandbox_settings.warmpool,
             namespace=self._sandbox_settings.namespace,
@@ -102,7 +105,7 @@ class EphemeralModeK8sAgentSandboxLifecycleManager(K8sAgentSandboxLifecycleManag
     method and terminates it on `release_sandbox`.
     """
 
-    def _acquire_sandbox(self) -> Sandbox:
+    def _acquire_sandbox(self) -> "Sandbox":
         self._sandbox = self._create_sandbox()
         return self._sandbox
 
@@ -128,19 +131,21 @@ class AttachModeK8sAgentSandboxLifecycleManager(K8sAgentSandboxLifecycleManager)
         super().__init__(client_settings, sandbox_settings)
         self._claim_name = claim_name
 
-    def _acquire_sandbox(self) -> Sandbox:
+    def _acquire_sandbox(self) -> "Sandbox":
+        kas_exceptions_module = lazy_import_k8s_agent_sandbox("exceptions")
         try:
             self._sandbox = self._client.get_sandbox(
                 self._claim_name,
                 namespace=self._sandbox_settings.namespace,
             )
-        except SandboxNotFoundError:
+
+        except kas_exceptions_module.SandboxNotFoundError:
             self._sandbox = None
 
         if self._sandbox is not None:
             return self._sandbox
 
-        raise SandboxNotFoundError(
+        raise kas_exceptions_module.SandboxNotFoundError(
             f"A sandbox with sandbox claim '{self._claim_name}' "
             "is expected to exist, but cannot be found."
         )
@@ -158,7 +163,7 @@ class PersistentModeK8sAgentSandboxLifecycleManager(K8sAgentSandboxLifecycleMana
     of the`acquire_sandbox` and `release_sandbox`.
     """
 
-    def _acquire_sandbox(self) -> Sandbox:
+    def _acquire_sandbox(self) -> "Sandbox":
         if self._sandbox is not None:
             return self._sandbox
 

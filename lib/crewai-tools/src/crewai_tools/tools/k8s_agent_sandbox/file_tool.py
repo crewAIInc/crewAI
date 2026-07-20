@@ -1,7 +1,10 @@
-from typing import Callable, Literal
+from typing import (
+    Callable,
+    Literal,
+    TYPE_CHECKING,
+)
 import base64
 import shlex
-from typing import Any
 import posixpath
 import logging
 from textwrap import dedent
@@ -11,8 +14,10 @@ from pydantic import (
     BaseModel,
     model_validator,
 )
-from k8s_agent_sandbox.models import FileEntry
-from k8s_agent_sandbox.sandbox import Sandbox
+
+if TYPE_CHECKING:
+    from k8s_agent_sandbox.models import FileEntry
+    from k8s_agent_sandbox.sandbox import Sandbox
 
 from crewai_tools.tools.k8s_agent_sandbox.base_tool import (
     DEFAULT_TOOL_TIMEOUT_SEC,
@@ -120,7 +125,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
 
     def _run_with_sandbox(
         self,
-        sandbox: Sandbox,
+        sandbox: "Sandbox",
         action: FileAction,
         path: str,
         timeout: int,
@@ -161,7 +166,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
 
     def _read(
         self,
-        sandbox: Sandbox,
+        sandbox: "Sandbox",
         path: str,
         *,
         binary: bool,
@@ -187,7 +192,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
 
     def _write(
         self,
-        sandbox: Sandbox,
+        sandbox: "Sandbox",
         path: str,
         content: str,
         *,
@@ -202,7 +207,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
 
     def _append(
         self,
-        sandbox: Sandbox,
+        sandbox: "Sandbox",
         path: str,
         content: str,
         *,
@@ -222,14 +227,14 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
             total_bytes=len(payload),
         )
 
-    def _list(self, sandbox: Sandbox, path: str, *, timeout: int) -> K8sAgentSandboxFileToolOutput:
+    def _list(self, sandbox: "Sandbox", path: str, *, timeout: int) -> K8sAgentSandboxFileToolOutput:
         entries = sandbox.files.list(path, timeout=timeout)
         return K8sAgentSandboxFileToolOutput(
             path=path,
             entries=[self._entry_to_dict(e) for e in entries],
         )
 
-    def _delete(self, sandbox: Sandbox, path: str, *, timeout: int) -> K8sAgentSandboxFileToolOutput:
+    def _delete(self, sandbox: "Sandbox", path: str, *, timeout: int) -> K8sAgentSandboxFileToolOutput:
         # TODO: Fall back to deleting with shell command.
         # Use normal file delete API when it is available in SDK.
 
@@ -256,7 +261,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
 
         return K8sAgentSandboxFileToolOutput(status="deleted", path=path)
 
-    def _mkdir(self, sandbox: Sandbox, path: str, *, timeout: int):
+    def _mkdir(self, sandbox: "Sandbox", path: str, *, timeout: int):
         try:
             result = sandbox.commands.run(
                 f"mkdir -p {shlex.quote(path)}",
@@ -272,7 +277,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
                 f"Cannot create directory {path}. Error: {result.stderr}."
             )
 
-    def _ensure_parent_dir(self, sandbox: Sandbox, path: str, timeout: int):
+    def _ensure_parent_dir(self, sandbox: "Sandbox", path: str, timeout: int):
         parent = posixpath.dirname(path)
         if not parent or parent in ("/", "."):
             return
@@ -280,7 +285,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
         return self._mkdir(sandbox, parent, timeout=timeout)
 
     @staticmethod
-    def _entry_to_dict(entry: FileEntry) -> FileEntryModel:
+    def _entry_to_dict(entry: "FileEntry") -> FileEntryModel:
         return FileEntryModel(
             name=getattr(entry, "name", None),
             type=getattr(entry, "type", None),

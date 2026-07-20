@@ -1,9 +1,12 @@
+from typing import TYPE_CHECKING
 import time
 from pydantic import (
     BaseModel,
     Field,
 )
-from k8s_agent_sandbox.sandbox import Sandbox
+
+if TYPE_CHECKING:
+    from k8s_agent_sandbox.sandbox import Sandbox
 
 from crewai_tools.tools.k8s_agent_sandbox.base_tool import (
     K8sAgentSandboxBaseTool,
@@ -35,7 +38,7 @@ class K8sAgentSandboxPythonTool(K8sAgentSandboxBaseTool):
     args_schema: type[BaseModel] = k8sAgentSandboxPythonToolSchema
 
     def _run_with_sandbox(
-        self, sandbox: Sandbox, code: str, timeout: int
+        self, sandbox: "Sandbox", code: str, timeout: int
     ) -> K8sAgentSandboxPythonToolOutput:
 
         timeout_tracker = create_timeout_tracker(timeout)
