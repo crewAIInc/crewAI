@@ -346,7 +346,7 @@ class CKGGuardrailProvider(GuardrailProvider):
             reason=(
                 "All constraints satisfied"
                 if all_satisfied
-                else f"Constraints failed: {[k for k, v in results.items() if not v]}"
+                else f"Constraints failed: {[k for k, v in results if not v]}"
             ),
             provider_name="ckg",
         )
