@@ -6,7 +6,7 @@ Three tools are provided so you can pick what the agent actually needs:
 
 - **`K8sAgentSandboxExecTool`** — run a shell command.
 - **`K8sAgentSandboxFileTool`** — read / write / list / delete files.
-- **`K8sAgentSandboxPythonTool`** — run a Python code.
+- **`K8sAgentSandboxPythonTool`** — run Python code.
 
 ## Installation
 
@@ -20,7 +20,7 @@ pip install "crewai-tools[k8s_agent_sandbox]"
 
 Instead of configuring sandbox-related settings for each of the tools separately, the `K8sAgentSandboxToolset` class must be used.
 
-All tools that are meant to share the same sandbox settings and sandbox lifecycle has to be added to the same instance of the
+All tools that are meant to share the same sandbox settings and sandbox lifecycle have to be added to the same instance of the
 `K8sAgentSandboxToolset` class.
 
 ### Toolset example
@@ -61,9 +61,9 @@ with the `K8sAgentSandboxToolset.create` factory method:
 
 Ephemeral mode is the safe default: nothing leaks if the agent forgets to clean up, but since it has to create a new sandbox on each new run, the increased execution time is expected. Use persistent mode when you want filesystem state or installed packages to carry across steps.
 
-K8s agent sandboxes also auto-expire after an idle timeout. Tune it via `sandbox_timeout` (seconds, default `300`).
+K8s agent sandboxes also auto-expire via an absolute TTL from creation. Tune it via `sandbox_timeout` (seconds, default `300`).
 
-All tool operations to a sandbox are syncronized with a lock to prevent races between different tools.
+All tool operations to a sandbox are synchronized with a lock to prevent races between different tools.
 
 ### Sandbox client settings
 

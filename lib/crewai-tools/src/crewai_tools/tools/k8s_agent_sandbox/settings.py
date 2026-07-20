@@ -53,7 +53,7 @@ class K8sAgentSandboxToolSandboxSettings:
     Args:
         warmpool: Name of the warm pool where a sandbox should be created.
         namespace: Name of the namespace where a sandbox should be created.
-        sandbox_timeout: The timeout in seconds after which the sandbox will be automatically killed.
+        sandbox_timeout: The absolute TTL in seconds from creation after which the sandbox will be automatically killed.
     """
 
     warmpool: str
