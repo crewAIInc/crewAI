@@ -62,6 +62,7 @@ class K8sAgentSandboxLifecycleManager(ABC):
         try:
             self._release_sandbox()
         finally:
+            self._sandbox_acquired = False
             self._lock.release()
 
     def close(self) -> None:
