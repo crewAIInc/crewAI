@@ -138,9 +138,7 @@ class TestFileToolAppendAction:
             stderr="",
         )
 
-        mock_sandbox.files.read.return_value = b"Hello"
-
-        content_to_append = " World"
+        content_to_append = "some content"
 
         if binary:
             content = base64.b64encode(content_to_append.encode("ascii"))
@@ -158,20 +156,20 @@ class TestFileToolAppendAction:
         assert result == K8sAgentSandboxFileToolOutput(
             path="parent/file.txt",
             status="appended",
-            appended_bytes=6,
-            total_bytes=11,
+            appended_bytes=12,
         )
 
-        mock_sandbox.files.read.assert_called_once()
-        assert mock_sandbox.files.read.call_args.args == ("parent/file.txt",)
-        assert mock_sandbox.files.read.call_args.kwargs["timeout"] == 120
+
+        assert "mkdir" in mock_sandbox.commands.run.call_args_list[0].args[0]
 
         mock_sandbox.files.write.assert_called_once()
-        assert mock_sandbox.files.write.call_args.args == (
-            "parent/file.txt",
-            b"Hello World",
-        )
+        assert mock_sandbox.files.write.call_args.args[1] == b"some content"
+        tmp_file_path = mock_sandbox.files.write.call_args.args[0]
+        assert tmp_file_path.startswith("/tmp")
         assert 0 <= mock_sandbox.files.write.call_args.kwargs["timeout"] <= 120
+
+        assert "cat /tmp" in mock_sandbox.commands.run.call_args_list[1].args[0]
+
 
 
 class TestFileToolListAction:
