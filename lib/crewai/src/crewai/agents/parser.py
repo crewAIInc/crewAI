@@ -183,7 +183,7 @@ def _safe_repair_json(tool_input: str) -> str:
     # back to a JSON object; otherwise keep the original string.
     try:
         parsed = json.loads(result)
-    except ValueError:
+    except json.JSONDecodeError:
         return tool_input
     if not isinstance(parsed, dict):
         return tool_input
