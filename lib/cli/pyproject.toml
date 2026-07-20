@@ -11,7 +11,7 @@ dependencies = [
     "crewai-core==1.15.5",
     "click>=8.1.7,<9",
     "pydantic>=2.11.9,<2.13",
-    "pydantic-settings~=2.10.1",
+    "pydantic-settings>=2.14.2,<3",
     "appdirs~=1.4.4",
     "cryptography>=42.0",
     "httpx~=0.28.1",
