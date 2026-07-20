@@ -2384,16 +2384,25 @@ class LLM(BaseLLM):
         Note: This validation only applies to the litellm fallback path.
         Native providers have their own validation.
         """
+        if self.response_format is None:
+            return
+
         if not _ensure_litellm() or supports_response_schema is None:
             # When litellm is not available, skip validation
             # (this path should only be reached for litellm fallback models)
             return
 
         provider = self._get_custom_llm_provider()
-        if self.response_format is not None and not supports_response_schema(
-            model=self.model,
-            custom_llm_provider=provider,
-        ):
+        try:
+            is_supported = supports_response_schema(
+                model=self.model,
+                custom_llm_provider=provider,
+            )
+        except Exception as e:
+            logger.debug(f"LiteLLM supports_response_schema check failed: {e!s}")
+            is_supported = True
+
+        if not is_supported:
             raise ValueError(
                 f"The model {self.model} does not support response_format for provider '{provider}'. "
                 "Please remove response_format or use a supported model."

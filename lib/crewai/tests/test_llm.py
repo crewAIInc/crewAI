@@ -1177,3 +1177,13 @@ async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0].function.name == "search"
+
+
+def test_validate_call_params_handles_introspection_error():
+    """Verify that _validate_call_params gracefully handles LiteLLM introspection errors without crashing."""
+    llm = LLM(model="custom/unsupported-model", is_litellm=True, response_format={"type": "json_object"})
+
+    with patch("crewai.llm.supports_response_schema", side_effect=Exception("Introspection error")):
+        # Should not raise exception
+        llm._validate_call_params()
+
