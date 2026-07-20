@@ -1004,3 +1004,107 @@ def test_internal_instructor_omits_unset_base_url_and_api_key() -> None:
         InternalInstructor(content="x", model=SimpleModel, llm=mock_llm)
 
         mock_from_provider.assert_called_once_with("openai/gpt-4o")
+
+
+# ── Output validation retry (max_retries) ────────────────────────────
+
+
+class TestConvertToModelWithRetry:
+    """Tests for the max_retries parameter in convert_to_model."""
+
+    def test_retry_succeeds_on_second_attempt(self, mock_agent: Mock) -> None:
+        """When first conversion fails and retry succeeds, return valid result."""
+        result = "Invalid JSON that will fail validation"
+
+        # Use a wrapper so ConverterError is returned, not raised
+        call_count = [0]
+
+        def _mock_convert(*args: object, **kwargs: object) -> object:
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return ConverterError("First attempt failed: missing field 'age'")
+            return SimpleModel(name="John", age=30)
+
+        with patch(
+            "crewai.utilities.converter.handle_partial_json"
+        ) as mock_handle, patch(
+            "crewai.utilities.converter.convert_with_instructions"
+        ) as mock_convert:
+            mock_handle.return_value = result
+
+            mock_convert.side_effect = _mock_convert
+
+            output = convert_to_model(
+                result, SimpleModel, None, mock_agent, max_retries=2,
+            )
+
+            assert isinstance(output, SimpleModel)
+            assert output.name == "John"
+            assert output.age == 30
+            assert call_count[0] == 2
+
+    def test_retry_exhausted_returns_error(self, mock_agent: Mock) -> None:
+        """When all retries fail, return ConverterError."""
+        result = "Bad JSON that never validates"
+
+        with patch(
+            "crewai.utilities.converter.handle_partial_json"
+        ) as mock_handle, patch(
+            "crewai.utilities.converter.convert_with_instructions"
+        ) as mock_convert:
+            mock_handle.return_value = result
+            mock_convert.return_value = ConverterError("Conversion failed")
+
+            output = convert_to_model(
+                result, SimpleModel, None, mock_agent, max_retries=2,
+            )
+
+            assert isinstance(output, ConverterError)
+            assert mock_convert.call_count == 2  # max_retries=2 → 2 calls
+
+    def test_zero_retries_no_llm_calls(self, mock_agent: Mock) -> None:
+        """With max_retries=0, convert_with_instructions is NOT called."""
+        result = "Invalid"
+
+        with patch(
+            "crewai.utilities.converter.handle_partial_json"
+        ) as mock_handle, patch(
+            "crewai.utilities.converter.convert_with_instructions"
+        ) as mock_convert:
+            mock_handle.return_value = result
+
+            convert_to_model(
+                result, SimpleModel, None, mock_agent, max_retries=0,
+            )
+
+            mock_convert.assert_not_called()
+
+    def test_retry_includes_error_in_prompt(self, mock_agent: Mock) -> None:
+        """On retry, validation error details are included in the prompt."""
+        result = '{"name": "John"}'
+
+        call_count = [0]
+
+        def _mock_convert(*args: object, **kwargs: object) -> object:
+            call_count[0] += 1
+            if call_count[0] <= 2:
+                return ConverterError(f"Conversion failed (attempt {call_count[0]})")
+            return SimpleModel(name="John", age=25)
+
+        with patch(
+            "crewai.utilities.converter.handle_partial_json"
+        ) as mock_handle, patch(
+            "crewai.utilities.converter.convert_with_instructions"
+        ) as mock_convert:
+            mock_handle.return_value = result
+            mock_convert.side_effect = _mock_convert
+
+            convert_to_model(
+                result, SimpleModel, None, mock_agent, max_retries=3,
+            )
+
+            # First retry call should include original validation error
+            first_retry_result = mock_convert.call_args_list[0][1]["result"]
+            assert "Validation Error (attempt 1/3)" in first_retry_result
+            assert "Please fix the JSON" in first_retry_result
+            assert "age" in first_retry_result  # field name in error
