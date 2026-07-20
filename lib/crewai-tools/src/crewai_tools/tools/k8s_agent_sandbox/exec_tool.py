@@ -11,7 +11,7 @@ from crewai_tools.tools.k8s_agent_sandbox.base_tool import (
 )
 
 
-class k8sAgentSandboxExecToolSchema(BaseModel):
+class K8sAgentSandboxExecToolSchema(BaseModel):
     command: str = Field(..., description="Shell command to execute in the sandbox.")
     timeout: int = Field(
         default=DEFAULT_TOOL_TIMEOUT_SEC,
@@ -30,7 +30,7 @@ class K8sAgentSandboxExecTool(K8sAgentSandboxBaseTool):
     description: str = (
         "Executes shell commands inside an isolated Kubernetes pod sandbox."
     )
-    args_schema: type[BaseModel] = k8sAgentSandboxExecToolSchema
+    args_schema: type[BaseModel] = K8sAgentSandboxExecToolSchema
 
     def _run_with_sandbox(self, sandbox: "Sandbox", *args, **kwargs) -> K8sAgentSandboxExecToolOutput:
         return self._run_command(sandbox, *args, **kwargs)
