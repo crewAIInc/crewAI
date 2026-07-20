@@ -15,7 +15,6 @@ from crewai.skills.loader import (
 from crewai.skills.models import Skill, SkillFrontmatter
 from crewai.skills.parser import SkillParseError
 from crewai.skills.registry import (
-    SkillNotCachedError,
     is_registry_ref,
     parse_registry_ref,
     resolve_registry_ref,
@@ -26,7 +25,6 @@ __all__ = [
     "Skill",
     "SkillCacheManager",
     "SkillFrontmatter",
-    "SkillNotCachedError",
     "SkillParseError",
     "activate_skill",
     "discover_skills",

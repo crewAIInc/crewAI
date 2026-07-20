@@ -12,7 +12,6 @@ import sys
 from crewai.skills import cache, events, registry
 from crewai.skills.cache import SkillCacheManager
 from crewai.skills.registry import (
-    SkillNotCachedError,
     is_registry_ref,
     parse_registry_ref,
     resolve_registry_ref,
@@ -27,7 +26,6 @@ sys.modules[__name__ + ".registry"] = registry
 
 __all__ = [
     "SkillCacheManager",
-    "SkillNotCachedError",
     "cache",
     "events",
     "is_registry_ref",
