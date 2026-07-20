@@ -51,8 +51,8 @@ def create_timeout_tracker(timeout: int) -> Callable[[], int]:
 
     def get_remaining():
         remaining_time = timeout - (int(time.time()) - start_time)
-        if remaining_time < 0:
+        if remaining_time <= 0:
             raise TimeoutError("Timeout. Cannot continue the tool action.")
-        return remaining_time if remaining_time >= 0 else 0
+        return remaining_time
 
     return get_remaining
