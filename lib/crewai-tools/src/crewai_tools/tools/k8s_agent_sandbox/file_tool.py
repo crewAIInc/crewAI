@@ -3,12 +3,12 @@ from typing import (
     Literal,
     TYPE_CHECKING,
 )
-import time
 import base64
 import shlex
 import posixpath
 import logging
 from textwrap import dedent
+import uuid
 
 from pydantic import (
     Field,
@@ -218,7 +218,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
         chunk: bytes = base64.b64decode(content) if binary else content.encode("utf-8")
         self._ensure_parent_dir(sandbox, path, timeout=timeout_tracker())
 
-        tmp_file_path = f"/tmp/crewai-file-append{int(time.time())}.py"
+        tmp_file_path = f"/tmp/crewai-file-append{uuid.uuid4()}.py"
         sandbox.files.write(tmp_file_path, chunk, timeout=timeout_tracker())
         sandbox.commands.run(f"cat {tmp_file_path} >> path && rm {tmp_file_path}", timeout=timeout_tracker())
         return K8sAgentSandboxFileToolOutput(

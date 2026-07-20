@@ -1,5 +1,5 @@
 from typing import TYPE_CHECKING
-import time
+import uuid
 from pydantic import (
     BaseModel,
     Field,
@@ -43,7 +43,7 @@ class K8sAgentSandboxPythonTool(K8sAgentSandboxBaseTool):
 
         timeout_tracker = create_timeout_tracker(timeout)
 
-        tmp_file_path = f"/tmp/crewai-{int(time.time())}.py"
+        tmp_file_path = f"/tmp/crewai-{uuid.uuid4()}.py"
 
         sandbox.files.write(tmp_file_path, code.encode("utf-8"), timeout=timeout_tracker())
 
