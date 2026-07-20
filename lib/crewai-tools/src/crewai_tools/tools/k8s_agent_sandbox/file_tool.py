@@ -235,6 +235,9 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
 
         path = posixpath.normpath(path)
 
+        if path in {".", "..", ""}:
+            raise RuntimeError(f"Invalid path {path}.")
+
         if posixpath.dirname(path) == "/":
             raise RuntimeError(f"The path {path} cannot be deleted.")
 
