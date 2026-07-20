@@ -24,7 +24,7 @@ from crewai_tools.tools.k8s_agent_sandbox.base_tool import (
 logger = logging.getLogger(__name__)
 
 FileAction = Literal[
-    "read", "write", "append", "list", "delete", "mkdir", "info", "exists"
+    "read", "write", "append", "list", "delete", "mkdir", "exists"
 ]
 
 
