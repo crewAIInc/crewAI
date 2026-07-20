@@ -1108,3 +1108,32 @@ class TestConvertToModelWithRetry:
             assert "Validation Error (attempt 1/3)" in first_retry_result
             assert "Please fix the JSON" in first_retry_result
             assert "age" in first_retry_result  # field name in error
+
+    def test_converter_cls_path_still_called_with_zero_retries(
+        self, mock_agent: Mock
+    ) -> None:
+        """When converter_cls is set and max_retries=0, still call converter.
+
+        Ensures the _convert_with_retry loop runs at least one attempt so
+        the converter_cls dispatch path is not silently skipped.
+        """
+        result = "Convert me"
+
+        with patch(
+            "crewai.utilities.converter.convert_with_instructions"
+        ) as mock_convert:
+            mock_convert.return_value = SimpleModel(name="Jane", age=28)
+
+            output = convert_to_model(
+                result,
+                SimpleModel,
+                None,
+                mock_agent,
+                converter_cls=CustomConverter,
+                max_retries=0,
+            )
+
+            assert isinstance(output, SimpleModel)
+            assert output.name == "Jane"
+            assert output.age == 28
+            assert mock_convert.call_count == 1

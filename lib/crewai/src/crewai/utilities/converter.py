@@ -353,12 +353,12 @@ def _convert_with_retry(
     current_result = result
     converted: dict[str, Any] | BaseModel | str | ConverterError = result
 
-    for attempt in range(1, max_retries + 1):
+    for attempt in range(1, max(max_retries, 1) + 1):
         # Include the validation error so the LLM can self-correct
         if last_error:
             current_result = (
                 f"{result}\n\n"
-                f"[Validation Error (attempt {attempt}/{max_retries})]: {last_error}\n"
+                f"[Validation Error (attempt {attempt}/{max(max_retries, 1)})]: {last_error}\n"
                 f"Please fix the JSON to match the expected schema and try again."
             )
 
@@ -381,7 +381,7 @@ def _convert_with_retry(
                 PRINTER.print(
                     content=(
                         f"Output validation failed (attempt {attempt}/"
-                        f"{max_retries}): {last_error}"
+                        f"{max(max_retries, 1)}): {last_error}"
                     ),
                     color="yellow",
                 )
@@ -390,8 +390,8 @@ def _convert_with_retry(
     if agent and getattr(agent, "verbose", True):
         PRINTER.print(
             content=(
-                f"Output validation failed after {max_retries + 1} attempt(s). "
-                f"Returning best-effort result."
+                f"Output validation failed after {max(max_retries, 1)} "
+                f"attempt(s). Returning best-effort result."
             ),
             color="red",
         )
@@ -637,11 +637,11 @@ async def _async_convert_with_retry(
     current_result = result
     converted: dict[str, Any] | BaseModel | str | ConverterError = result
 
-    for attempt in range(1, max_retries + 1):
+    for attempt in range(1, max(max_retries, 1) + 1):
         if last_error:
             current_result = (
                 f"{result}\n\n"
-                f"[Validation Error (attempt {attempt}/{max_retries})]: {last_error}\n"
+                f"[Validation Error (attempt {attempt}/{max(max_retries, 1)})]: {last_error}\n"
                 f"Please fix the JSON to match the expected schema and try again."
             )
 
@@ -661,8 +661,8 @@ async def _async_convert_with_retry(
             if agent and getattr(agent, "verbose", True):
                 PRINTER.print(
                     content=(
-                        f"Output validation failed (attempt {attempt + 1}/"
-                        f"{max_retries + 1}): {last_error}"
+                        f"Output validation failed (attempt {attempt}/"
+                        f"{max(max_retries, 1)}): {last_error}"
                     ),
                     color="yellow",
                 )
@@ -670,8 +670,8 @@ async def _async_convert_with_retry(
     if agent and getattr(agent, "verbose", True):
         PRINTER.print(
             content=(
-                f"Output validation failed after {max_retries + 1} attempt(s). "
-                f"Returning best-effort result."
+                f"Output validation failed after {max(max_retries, 1)} "
+                f"attempt(s). Returning best-effort result."
             ),
             color="red",
         )
