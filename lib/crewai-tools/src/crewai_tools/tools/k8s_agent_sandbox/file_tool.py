@@ -72,7 +72,7 @@ class K8sAgentSandboxFileToolSchema(BaseModel):
         ),
     )
 
-    timeout: int | None = Field(
+    timeout: int = Field(
         default=DEFAULT_TOOL_TIMEOUT_SEC,
         description="Maximum seconds to wait for the action to finish.",
     )

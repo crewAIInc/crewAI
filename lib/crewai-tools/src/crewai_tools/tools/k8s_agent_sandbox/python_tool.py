@@ -16,10 +16,10 @@ from crewai_tools.tools.k8s_agent_sandbox.base_tool import (
 
 
 class k8sAgentSandboxPythonToolSchema(BaseModel):
-    code: str = Field(..., description="Shell command to execute in the sandbox.")
+    code: str = Field(..., description="Python code to execute in the sandbox.")
     timeout: int = Field(
         default=DEFAULT_TOOL_TIMEOUT_SEC,
-        description="Maximum seconds to wait for the command to finish.",
+        description="Maximum seconds to wait for the code execution to finish.",
     )
 
 

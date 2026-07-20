@@ -166,7 +166,7 @@ file_tool = K8sAgentSandboxFileTool(toolset=toolset)
 
 ### `K8sAgentSandboxFileTool`
 - `action: "read" | "write" | "append" | "list" | "delete" | "mkdir" | "info" | "exists"`
-- `path: str` — absolute path inside the sandbox.
+- `path: str` — relative path inside the sandbox.
 - `content: str | None` — required for `append`; optional for `write`.
 - `binary: bool` — if `True`, `content` is base64 on write / returned as base64 on read.
 
