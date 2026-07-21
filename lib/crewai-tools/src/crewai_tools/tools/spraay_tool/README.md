@@ -10,9 +10,9 @@ A suite of CrewAI tools for batch cryptocurrency payments, escrow, and balance q
 
 The gateway uses the [x402 payment protocol](https://www.x402.org/) — no API key or signup required. Free endpoints (validate, estimate, balance) cost nothing. Paid endpoints (execute, escrow) are paid per request via x402 micropayment and require a funded wallet private key in the `SPRAAY_WALLET_PRIVATE_KEY` environment variable (see [Paid Endpoints and Wallet Setup](#paid-endpoints-and-wallet-setup)).
 
-Supported chains include Base, Ethereum, Solana, Polygon, Arbitrum, Optimism, Avalanche, BNB Chain, and more.
+Batch payments and escrow support nine EVM chains: Base (8453), Ethereum (1), BNB Chain (56), Unichain (130), Polygon (137), Plasma (9745), Arbitrum (42161), Avalanche (43114), and BOB (60808).
 
-Amounts are given as human-readable decimal strings (e.g. `"50.0"`); the tools convert them to the token's base units at the request boundary using known token decimals (USDC/USDT/EURC use 6, other tokens default to the ERC-20 standard 18).
+Amounts are given as human-readable decimal strings (e.g. `"50.0"`); the tools convert them to the token's base units at the request boundary. Token decimals are resolved per chain and token — from a known-token table, the gateway's free token directory (`/api/v1/tokens`, Base), or the token contract's `decimals()` via public RPC — and the result is cached. If decimals cannot be resolved, the tool returns an error instead of guessing, since a wrong decimals value would mis-scale every amount (e.g. USDC uses 6 decimals, not 18).
 
 ## Installation
 
