@@ -5,11 +5,13 @@ for trustless transactions via the Spraay x402 payment gateway.
 """
 
 import json
-from typing import Any, Optional
+from typing import Any
 
-import requests
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
+import requests
+
+from crewai_tools.tools.spraay_tool.spraay_x402 import post_with_x402
 
 
 class SpraayEscrowInput(BaseModel):
@@ -38,11 +40,10 @@ class SpraayEscrowInput(BaseModel):
         default=8453,
         description="Chain ID for the escrow. Default: 8453 (Base).",
     )
-    conditions: Optional[str] = Field(
+    conditions: str | None = Field(
         default=None,
         description=(
-            "Optional human-readable description of release conditions "
-            "for the escrow."
+            "Optional human-readable description of release conditions for the escrow."
         ),
     )
 
@@ -58,7 +59,11 @@ class SpraayEscrowTool(BaseTool):
     milestone-based disbursements, and dispute-protected purchases.
 
     The gateway uses the x402 payment protocol — no API key or signup
-    required.
+    required. Escrow creation is a paid endpoint: set a funded wallet
+    private key in the SPRAAY_WALLET_PRIVATE_KEY environment variable
+    to pay the x402 micropayment automatically. Without it, the tool
+    returns the gateway's payment requirements instead of creating
+    the escrow.
 
     Attributes:
         gateway_url: Base URL of the Spraay gateway.
@@ -101,14 +106,13 @@ class SpraayEscrowTool(BaseTool):
             payload["conditions"] = conditions
 
         try:
-            response = requests.post(
+            paid, data = post_with_x402(
                 f"{self.gateway_url}/api/v1/escrow/create",
-                json=payload,
-                headers={"Content-Type": "application/json"},
+                payload,
                 timeout=60,
             )
-            response.raise_for_status()
-            data = response.json()
+            if not paid:
+                return json.dumps(data, indent=2)
             return json.dumps(
                 {
                     "status": "escrow_created",

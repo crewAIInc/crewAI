@@ -8,7 +8,7 @@ A suite of CrewAI tools for batch cryptocurrency payments, escrow, and balance q
 - **SpraayEscrowTool**: Create on-chain escrow contracts between two parties with programmable release conditions
 - **SpraayBalanceTool**: Check token balances across 16 supported chains
 
-The gateway uses the [x402 payment protocol](https://www.x402.org/) — no API key or signup required. Free endpoints (validate, estimate, balance) cost nothing. Paid endpoints (execute, escrow) are paid per request via x402 micropayment.
+The gateway uses the [x402 payment protocol](https://www.x402.org/) — no API key or signup required. Free endpoints (validate, estimate, balance) cost nothing. Paid endpoints (execute, escrow) are paid per request via x402 micropayment and require a funded wallet private key in the `SPRAAY_WALLET_PRIVATE_KEY` environment variable (see [Paid Endpoints and Wallet Setup](#paid-endpoints-and-wallet-setup)).
 
 Supported chains include Base, Ethereum, Solana, Polygon, Arbitrum, Optimism, Avalanche, BNB Chain, and more.
 
@@ -19,6 +19,26 @@ To incorporate these tools into your project, follow the installation instructio
 ```bash
 pip install crewai[tools] requests
 ```
+
+To use the paid endpoints (batch `execute` and escrow creation), also install the official [x402](https://pypi.org/project/x402/) package with its `requests` and EVM extras:
+
+```bash
+pip install 'x402[requests,evm]'
+```
+
+## Paid Endpoints and Wallet Setup
+
+Free endpoints (validate, estimate, balance) need no setup. Paid endpoints — batch `execute` ($0.02/request) and escrow creation ($0.10/request) — are paid via x402 micropayment in USDC on Base, and require a funded wallet:
+
+```bash
+export SPRAAY_WALLET_PRIVATE_KEY="0xYourPrivateKey"
+```
+
+When a paid endpoint responds with an HTTP 402 payment challenge, the tool signs the payment requirements with this key via the official x402 client and retries the request with the payment header attached. The wallet must hold enough USDC on Base (chain ID 8453) to cover the per-request fee.
+
+If `SPRAAY_WALLET_PRIVATE_KEY` is not set, the tool does not fail — it returns the gateway's parsed payment requirements as structured JSON (`"status": "payment_required"`) so the agent can report what payment is needed.
+
+> **Security note:** The private key signs real on-chain payments. Use a dedicated wallet funded with only the amount you intend to spend, and never commit the key to source control.
 
 ## Examples
 
