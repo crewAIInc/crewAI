@@ -1136,6 +1136,17 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
             client = PlusAPI(api_key=get_auth_token())
         _print_current_organization()
         response = client.get_agent(from_repository)
+        if inspect.isawaitable(response):
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    response = pool.submit(asyncio.run, response).result()
+            else:
+                response = asyncio.run(response)
         if response.status_code == 404:
             raise AgentRepositoryError(
                 f"Agent {from_repository} does not exist, make sure the name is correct or the agent is available on your organization."
