@@ -196,6 +196,14 @@ class Task(BaseModel):
         description="A Pydantic model for structured LLM outputs using native provider features.",
         default=None,
     )
+    output_validation_max_retries: int = Field(
+        default=0,
+        description=(
+            "Maximum number of LLM-based retry attempts when output_pydantic or "
+            "output_json validation fails. Each retry feeds the validation error "
+            "back to the LLM for self-correction. Defaults to 0 (no retry)."
+        ),
+    )
     output_file: str | None = Field(
         description="A file path to be used to create a file output.",
         default=None,
@@ -1184,6 +1192,7 @@ Follow these guidelines:
                 self.output_json,
                 self.agent,
                 self.converter_cls,
+                max_retries=self.output_validation_max_retries,
             )
             pydantic_output, json_output = self._unpack_model_output(model_output)
 
@@ -1203,6 +1212,7 @@ Follow these guidelines:
                 self.output_json,
                 self.agent,
                 self.converter_cls,
+                max_retries=self.output_validation_max_retries,
             )
             pydantic_output, json_output = self._unpack_model_output(model_output)
 
