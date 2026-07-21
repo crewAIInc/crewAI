@@ -277,7 +277,7 @@ class TestAsyncCrewKickoff:
             agent="Test Agent",
         )
 
-        async def after_callback(_result: CrewOutput) -> CrewOutput:
+        async def after_callback(_result: CrewOutput) -> TaskOutput:
             return marker
 
         task = Task(
