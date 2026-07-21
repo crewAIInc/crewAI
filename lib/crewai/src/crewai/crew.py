@@ -1964,6 +1964,10 @@ class Crew(FlowTrackable, BaseModel):
         No-op when EXECUTION_START never dispatched (pairing invariant) or when
         EXECUTION_END already fired for this execution (exactly-once). Never
         raises, so the original kickoff exception propagates unchanged.
+
+        Instance-level flags are sufficient here because crew kickoffs are not
+        reentrant on the same instance (``kickoff_for_each`` copies the crew;
+        unlike Flow, nothing in the crew runtime supports nested kickoffs).
         """
         if not self._execution_start_dispatched or self._execution_end_dispatched:
             return

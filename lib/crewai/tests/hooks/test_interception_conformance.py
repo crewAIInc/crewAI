@@ -48,6 +48,18 @@ class _FailingFlow(Flow):
         raise RuntimeError("flow boom")
 
 
+class _ReentrantFailingFlow(Flow):
+    """Kicks itself off once from inside a method, then fails in the outer run."""
+
+    @start()
+    async def begin(self):
+        if getattr(self, "_reentered", False):
+            return "inner-ok"
+        self._reentered = True
+        await self.kickoff_async()
+        raise RuntimeError("outer boom")
+
+
 class TestFlowExecutionBoundaries:
     """execution_start / input / output / execution_end on a flow."""
 
@@ -242,6 +254,27 @@ class TestExecutionEndOnFailure:
         assert seen[0].status == "failed"
         assert isinstance(seen[0].error, RuntimeError)
         assert seen[0].output is None
+
+    def test_reentrant_flow_kickoff_pairs_ends_per_invocation(self):
+        seen: list[tuple[str, str | None]] = []
+
+        @on(InterceptionPoint.EXECUTION_START)
+        def capture_start(ctx):
+            seen.append(("start", None))
+
+        @on(InterceptionPoint.EXECUTION_END)
+        def capture_end(ctx):
+            seen.append(("end", ctx.status))
+
+        with pytest.raises(RuntimeError, match="outer boom"):
+            _ReentrantFailingFlow().kickoff()
+
+        assert seen == [
+            ("start", None),
+            ("start", None),
+            ("end", "completed"),
+            ("end", "failed"),
+        ]
 
     def test_no_execution_end_when_execution_start_aborts(self):
         seen = []

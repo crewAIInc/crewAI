@@ -730,8 +730,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _usage_aggregation_handler: Callable[..., Any] | None = PrivateAttr(default=None)
     _persist_backends: dict[int, FlowPersistence] = PrivateAttr(default_factory=dict)
     _instance_persistence: bool = PrivateAttr(default=False)
-    _execution_start_dispatched: bool = PrivateAttr(default=False)
-    _execution_end_dispatched: bool = PrivateAttr(default=False)
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
         class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
@@ -1334,10 +1332,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if self._flow_match_id is not None:
             flow_id_token = current_flow_id.set(self._flow_match_id)
         self._attach_usage_aggregation_listener()
+        # Per-invocation pairing state: a resumed execution's EXECUTION_START
+        # fired in the original kickoff, so a failure here still owes the
+        # paired EXECUTION_END (unless the body already dispatched it).
+        hook_state = {"end_dispatched": False}
         try:
-            return await self._resume_async_body(feedback)
+            return await self._resume_async_body(feedback, hook_state)
         except Exception as e:
-            self._dispatch_execution_end_failure(e)
+            if not hook_state["end_dispatched"]:
+                self._dispatch_execution_end_failure(e)
             raise
         finally:
             # Match kickoff_async: drain pending handlers so the resumed
@@ -1348,13 +1351,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if flow_id_token is not None:
                 current_flow_id.reset(flow_id_token)
 
-    async def _resume_async_body(self, feedback: str = "") -> Any:
-        # A resumed execution counts as started: its EXECUTION_START fired in
-        # the original kickoff (possibly in another process), and this path
-        # already dispatches EXECUTION_END unconditionally on success.
-        self._execution_start_dispatched = True
-        self._execution_end_dispatched = False
-
+    async def _resume_async_body(
+        self, feedback: str = "", hook_state: dict[str, bool] | None = None
+    ) -> Any:
         if get_current_parent_id() is None:
             reset_emission_counter()
             reset_last_event_id()
@@ -1497,7 +1496,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         end_ctx = ExecutionEndContext(
             flow=self, output=final_result, payload=final_result
         )
-        self._execution_end_dispatched = True
+        # Flag set before dispatching so an EXECUTION_END hook that raises
+        # HookAborted does not trigger a second (failure) dispatch upstream.
+        if hook_state is not None:
+            hook_state["end_dispatched"] = True
         dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
         final_result = end_ctx.payload
 
@@ -2089,6 +2091,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._aggregated_usage_metrics = UsageMetrics()
             self._attach_usage_aggregation_listener()
 
+        # Pairing state is local (per invocation) so reentrant kickoffs on the
+        # same instance (see usage aggregation above) each track their own
+        # EXECUTION_START/EXECUTION_END dispatch independently.
+        execution_start_dispatched = False
+        execution_end_dispatched = False
+
         try:
             from crewai.hooks.contexts import (
                 ExecutionEndContext,
@@ -2105,12 +2113,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 inputs=inputs if inputs is not None else {},
                 payload=inputs,
             )
-            # Pairing flags: EXECUTION_END fires (once) only for executions
-            # whose EXECUTION_START actually dispatched, including on failure.
-            self._execution_start_dispatched = False
-            self._execution_end_dispatched = False
             dispatch(InterceptionPoint.EXECUTION_START, start_ctx)
-            self._execution_start_dispatched = True
+            execution_start_dispatched = True
             inputs = start_ctx.payload
 
             input_ctx = InputContext(
@@ -2375,7 +2379,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
             # Flag set before dispatching so an EXECUTION_END hook that raises
             # HookAborted does not trigger a second (failure) dispatch below.
-            self._execution_end_dispatched = True
+            execution_end_dispatched = True
             dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
             final_output = end_ctx.payload
 
@@ -2431,7 +2435,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
             return final_output
         except Exception as e:
-            self._dispatch_execution_end_failure(e)
+            # Pairing invariant: only fire the failure EXECUTION_END when this
+            # invocation's EXECUTION_START dispatched and its EXECUTION_END has
+            # not (exactly-once per invocation).
+            if execution_start_dispatched and not execution_end_dispatched:
+                self._dispatch_execution_end_failure(e)
             raise
         finally:
             # Safety net for the exception path; the success path already
@@ -2463,14 +2471,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     def _dispatch_execution_end_failure(self, error: BaseException) -> None:
         """Dispatch EXECUTION_END with status="failed" for an execution that raised.
 
-        No-op when EXECUTION_START never dispatched (pairing invariant) or when
-        EXECUTION_END already fired for this execution (exactly-once). Never
-        raises, so the original exception propagates unchanged.
+        Callers enforce the pairing invariant (EXECUTION_START dispatched,
+        EXECUTION_END not yet) with per-invocation state, so reentrant kickoffs
+        on the same instance stay exactly-once. Never raises, so the original
+        exception propagates unchanged.
         """
-        if not self._execution_start_dispatched or self._execution_end_dispatched:
-            return
-        self._execution_end_dispatched = True
-
         from crewai.hooks.contexts import ExecutionEndContext
         from crewai.hooks.dispatch import InterceptionPoint, dispatch
 
