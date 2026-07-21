@@ -7,9 +7,9 @@ via the Spraay x402 payment gateway.
 import json
 from typing import Any
 
-import requests
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
+import requests
 
 
 class SpraayBalanceInput(BaseModel):

@@ -5,11 +5,23 @@ payments on Base and 15+ supported chains via the Spraay x402 payment gateway.
 """
 
 import json
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
-import requests
 from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
+import requests
+
+from crewai_tools.tools.spraay_tool.spraay_x402 import post_with_x402
+
+
+class SpraayRecipient(BaseModel):
+    """A single recipient in a batch payment."""
+
+    address: str = Field(..., description="Recipient wallet address.")
+    amount: str = Field(
+        ...,
+        description="Token amount to send, as a string (e.g. '10.0').",
+    )
 
 
 class SpraayBatchPaymentInput(BaseModel):
@@ -31,7 +43,7 @@ class SpraayBatchPaymentInput(BaseModel):
             "or '0x0000000000000000000000000000000000000000' for native ETH."
         ),
     )
-    recipients: list[dict[str, str]] = Field(
+    recipients: list[SpraayRecipient] = Field(
         ...,
         description=(
             "List of payment recipients. Each entry must have "
@@ -43,7 +55,7 @@ class SpraayBatchPaymentInput(BaseModel):
         default=8453,
         description="Chain ID for the payment. Default: 8453 (Base).",
     )
-    sender_address: Optional[str] = Field(
+    sender_address: str | None = Field(
         default=None,
         description=(
             "Sender wallet address. Required for 'estimate' and 'execute' actions."
@@ -61,9 +73,12 @@ class SpraayBatchPaymentTool(BaseTool):
     Use cases include payroll, grant distributions, DAO disbursements,
     airdrops, and bounty payouts.
 
-    The gateway uses the x402 payment protocol. Validation is free.
-    Estimation and execution are paid per request via x402 micropayment
-    — no API key or signup required.
+    The gateway uses the x402 payment protocol. Validation and estimation
+    are free. Execution is paid per request via x402 micropayment — no API
+    key or signup required, but a funded wallet private key must be set in
+    the SPRAAY_WALLET_PRIVATE_KEY environment variable. Without it, the
+    'execute' action returns the gateway's payment requirements instead of
+    executing.
 
     Attributes:
         gateway_url: Base URL of the Spraay gateway.
@@ -92,9 +107,18 @@ class SpraayBatchPaymentTool(BaseTool):
             )
 
         token_address = kwargs.get("token_address", "")
-        recipients = kwargs.get("recipients", [])
         chain_id = kwargs.get("chain_id", 8453)
         sender_address = kwargs.get("sender_address")
+
+        try:
+            recipients = [
+                r
+                if isinstance(r, SpraayRecipient)
+                else SpraayRecipient.model_validate(r)
+                for r in kwargs.get("recipients", [])
+            ]
+        except ValidationError as e:
+            return f"Error: Invalid recipient entry: {e}"
 
         if not recipients:
             return "Error: 'recipients' list is required and cannot be empty."
@@ -104,9 +128,7 @@ class SpraayBatchPaymentTool(BaseTool):
 
         payload = {
             "tokenAddress": token_address,
-            "recipients": [
-                {"address": r["address"], "amount": r["amount"]} for r in recipients
-            ],
+            "recipients": [r.model_dump() for r in recipients],
             "chainId": chain_id,
         }
         if sender_address:
@@ -114,10 +136,9 @@ class SpraayBatchPaymentTool(BaseTool):
 
         if action == "validate":
             return self._validate_batch(payload)
-        elif action == "estimate":
+        if action == "estimate":
             return self._estimate_batch(payload)
-        else:
-            return self._execute_batch(payload)
+        return self._execute_batch(payload)
 
     def _validate_batch(self, payload: dict) -> str:
         """Validate a batch payment recipient list (free endpoint)."""
@@ -171,14 +192,13 @@ class SpraayBatchPaymentTool(BaseTool):
     def _execute_batch(self, payload: dict) -> str:
         """Execute a batch payment (x402 paid endpoint)."""
         try:
-            response = requests.post(
+            paid, data = post_with_x402(
                 f"{self.gateway_url}/api/v1/batch/execute",
-                json=payload,
-                headers={"Content-Type": "application/json"},
+                payload,
                 timeout=60,
             )
-            response.raise_for_status()
-            data = response.json()
+            if not paid:
+                return json.dumps(data, indent=2)
             return json.dumps(
                 {
                     "status": "executed",
