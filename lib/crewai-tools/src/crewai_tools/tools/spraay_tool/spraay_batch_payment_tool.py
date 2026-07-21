@@ -11,6 +11,11 @@ from crewai.tools import BaseTool
 from pydantic import BaseModel, Field, ValidationError
 import requests
 
+from crewai_tools.tools.spraay_tool.spraay_payload import (
+    chain_slug,
+    to_base_units,
+    token_decimals,
+)
 from crewai_tools.tools.spraay_tool.spraay_x402 import post_with_x402
 
 
@@ -126,34 +131,53 @@ class SpraayBatchPaymentTool(BaseTool):
         if action in ("estimate", "execute") and not sender_address:
             return f"Error: 'sender_address' is required for '{action}' action."
 
-        payload = {
-            "tokenAddress": token_address,
-            "recipients": [r.model_dump() for r in recipients],
-            "chainId": chain_id,
-        }
-        if sender_address:
-            payload["senderAddress"] = sender_address
+        try:
+            chain = chain_slug(chain_id)
+            decimals = token_decimals(token_address)
+            base_amounts = [to_base_units(r.amount, decimals) for r in recipients]
+        except ValueError as e:
+            return f"Error: {e}"
 
         if action == "validate":
-            return self._validate_batch(payload)
+            return self._validate_batch(chain, token_address, recipients, base_amounts)
         if action == "estimate":
-            return self._estimate_batch(payload)
-        return self._execute_batch(payload)
+            return self._estimate_batch(chain, len(recipients))
+        return self._execute_batch(
+            chain, token_address, recipients, base_amounts, sender_address, decimals
+        )
 
-    def _validate_batch(self, payload: dict) -> str:
-        """Validate a batch payment recipient list (free endpoint)."""
+    def _validate_batch(
+        self,
+        chain: str,
+        token: str,
+        recipients: list[SpraayRecipient],
+        base_amounts: list[str],
+    ) -> str:
+        """Validate a batch payment recipient list (free endpoint).
+
+        The gateway expects {chain, token, recipients: [{to, amount}]} with
+        amounts in base units (verified against /free/validate-batch).
+        """
+        body = {
+            "chain": chain,
+            "token": token,
+            "recipients": [
+                {"to": r.address, "amount": amount}
+                for r, amount in zip(recipients, base_amounts, strict=True)
+            ],
+        }
         try:
             response = requests.post(
                 f"{self.gateway_url}/free/validate-batch",
-                json=payload,
+                json=body,
                 timeout=30,
             )
             response.raise_for_status()
             data = response.json()
             return json.dumps(
                 {
-                    "status": "valid",
-                    "recipientCount": len(payload["recipients"]),
+                    "status": "valid" if data.get("valid") else "invalid",
+                    "recipientCount": len(recipients),
                     "details": data,
                 },
                 indent=2,
@@ -161,19 +185,15 @@ class SpraayBatchPaymentTool(BaseTool):
         except requests.RequestException as e:
             return f"Error validating batch: {e}"
 
-    def _estimate_batch(self, payload: dict) -> str:
-        """Estimate gas and fees for a batch payment (free endpoint)."""
+    def _estimate_batch(self, chain: str, recipient_count: int) -> str:
+        """Estimate gas and fees for a batch payment (free endpoint).
+
+        The gateway expects ?recipients=<count>&chain=<slug> query params.
+        """
         try:
-            params = {
-                "tokenAddress": payload["tokenAddress"],
-                "chainId": payload["chainId"],
-                "recipientCount": len(payload["recipients"]),
-            }
-            if "senderAddress" in payload:
-                params["senderAddress"] = payload["senderAddress"]
             response = requests.get(
                 f"{self.gateway_url}/free/estimate-batch",
-                params=params,
+                params={"recipients": recipient_count, "chain": chain},
                 timeout=30,
             )
             response.raise_for_status()
@@ -181,7 +201,7 @@ class SpraayBatchPaymentTool(BaseTool):
             return json.dumps(
                 {
                     "status": "estimated",
-                    "recipientCount": len(payload["recipients"]),
+                    "recipientCount": recipient_count,
                     "estimate": data,
                 },
                 indent=2,
@@ -189,12 +209,34 @@ class SpraayBatchPaymentTool(BaseTool):
         except requests.RequestException as e:
             return f"Error estimating batch: {e}"
 
-    def _execute_batch(self, payload: dict) -> str:
-        """Execute a batch payment (x402 paid endpoint)."""
+    def _execute_batch(
+        self,
+        chain: str,
+        token: str,
+        recipients: list[SpraayRecipient],
+        base_amounts: list[str],
+        sender: str,
+        decimals: int,
+    ) -> str:
+        """Execute a batch payment (x402 paid endpoint).
+
+        The gateway expects {token, recipients, amounts, sender} — token as
+        contract address or native symbol, recipients as a flat address
+        array, amounts as a parallel base-unit array (per the gateway
+        OpenAPI spec and BPA 1.0 §12). The chain slug is included for
+        non-Base batches; the gateway tolerates extra fields.
+        """
+        body = {
+            "token": token,
+            "recipients": [r.address for r in recipients],
+            "amounts": base_amounts,
+            "sender": sender,
+            "chain": chain,
+        }
         try:
             paid, data = post_with_x402(
                 f"{self.gateway_url}/api/v1/batch/execute",
-                payload,
+                body,
                 timeout=60,
             )
             if not paid:
@@ -202,7 +244,9 @@ class SpraayBatchPaymentTool(BaseTool):
             return json.dumps(
                 {
                     "status": "executed",
-                    "recipientCount": len(payload["recipients"]),
+                    "recipientCount": len(recipients),
+                    "chain": chain,
+                    "tokenDecimals": decimals,
                     "result": data,
                 },
                 indent=2,

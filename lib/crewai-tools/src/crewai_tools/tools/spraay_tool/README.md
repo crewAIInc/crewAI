@@ -12,6 +12,8 @@ The gateway uses the [x402 payment protocol](https://www.x402.org/) — no API k
 
 Supported chains include Base, Ethereum, Solana, Polygon, Arbitrum, Optimism, Avalanche, BNB Chain, and more.
 
+Amounts are given as human-readable decimal strings (e.g. `"50.0"`); the tools convert them to the token's base units at the request boundary using known token decimals (USDC/USDT/EURC use 6, other tokens default to the ERC-20 standard 18).
+
 ## Installation
 
 To incorporate these tools into your project, follow the installation instructions below:
