@@ -61,9 +61,9 @@ class SpraayBatchPaymentTool(BaseTool):
     Use cases include payroll, grant distributions, DAO disbursements,
     airdrops, and bounty payouts.
 
-    The gateway uses the x402 payment protocol. Validation and estimation
-    endpoints are free. The execute endpoint is paid per request via x402
-    micropayment — no API key or signup required.
+    The gateway uses the x402 payment protocol. Validation is free.
+    Estimation and execution are paid per request via x402 micropayment
+    — no API key or signup required.
 
     Attributes:
         gateway_url: Base URL of the Spraay gateway.
@@ -143,9 +143,16 @@ class SpraayBatchPaymentTool(BaseTool):
     def _estimate_batch(self, payload: dict) -> str:
         """Estimate gas and fees for a batch payment (free endpoint)."""
         try:
-            response = requests.post(
+            params = {
+                "tokenAddress": payload["tokenAddress"],
+                "chainId": payload["chainId"],
+                "recipientCount": len(payload["recipients"]),
+            }
+            if "senderAddress" in payload:
+                params["senderAddress"] = payload["senderAddress"]
+            response = requests.get(
                 f"{self.gateway_url}/free/estimate-batch",
-                json=payload,
+                params=params,
                 timeout=30,
             )
             response.raise_for_status()

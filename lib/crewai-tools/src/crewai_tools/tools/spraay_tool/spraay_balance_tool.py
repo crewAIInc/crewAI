@@ -1,7 +1,7 @@
-﻿"""Spraay Balance Tool for CrewAI.
+"""Spraay Balance Tool for CrewAI.
 
 Enables AI agents to check token balances across supported chains
-via the Spraay x402 payment gateway's free endpoints.
+via the Spraay x402 payment gateway.
 """
 
 import json
@@ -36,9 +36,11 @@ class SpraayBalanceInput(BaseModel):
 class SpraayBalanceTool(BaseTool):
     """Tool for checking token balances via the Spraay x402 gateway.
 
-    Query wallet balances across 16 supported chains. This is a free
-    endpoint that requires no API key, making it useful for pre-flight
-    checks before batch payments or escrow creation.
+    Query wallet balances across 16 supported chains. Useful for
+    pre-flight checks before batch payments or escrow creation.
+
+    The gateway uses the x402 payment protocol — no API key or
+    signup required.
 
     Attributes:
         gateway_url: Base URL of the Spraay gateway.
@@ -47,8 +49,9 @@ class SpraayBalanceTool(BaseTool):
     name: str = "Spraay Balance Check"
     description: str = (
         "Check the token balance of a wallet address on any supported chain. "
-        "Free endpoint — no API key required. Useful for verifying sufficient "
-        "funds before executing batch payments or creating escrow contracts."
+        "Useful for verifying sufficient funds before executing batch payments "
+        "or creating escrow contracts. No API key required — the gateway uses "
+        "the x402 payment protocol."
     )
     args_schema: type[BaseModel] = SpraayBalanceInput
 
@@ -73,7 +76,7 @@ class SpraayBalanceTool(BaseTool):
 
         try:
             response = requests.get(
-                f"{self.gateway_url}/free/balance",
+                f"{self.gateway_url}/api/v1/balances",
                 params=params,
                 timeout=30,
             )
