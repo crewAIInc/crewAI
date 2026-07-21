@@ -1137,7 +1137,7 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
         _print_current_organization()
         response = client.get_agent(from_repository)
         if inspect.isawaitable(response):
-            coro = response  # type: ignore[assignment]
+            coro = response
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
