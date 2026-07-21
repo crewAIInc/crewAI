@@ -11,6 +11,11 @@ from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 import requests
 
+from crewai_tools.tools.spraay_tool.spraay_payload import (
+    chain_slug,
+    to_base_units,
+    token_decimals,
+)
 from crewai_tools.tools.spraay_tool.spraay_x402 import post_with_x402
 
 
@@ -95,12 +100,21 @@ class SpraayEscrowTool(BaseTool):
                 "'beneficiary' are all required."
             )
 
+        try:
+            chain = chain_slug(chain_id)
+            base_amount = to_base_units(amount, token_decimals(token_address))
+        except ValueError as e:
+            return f"Error: {e}"
+
+        # The gateway expects {depositor, beneficiary, token, amount} with
+        # the amount in base units (per the gateway OpenAPI spec). The chain
+        # slug and conditions are extra hints the gateway tolerates.
         payload = {
-            "tokenAddress": token_address,
-            "amount": amount,
             "depositor": depositor,
             "beneficiary": beneficiary,
-            "chainId": chain_id,
+            "token": token_address,
+            "amount": base_amount,
+            "chain": chain,
         }
         if conditions:
             payload["conditions"] = conditions
@@ -119,6 +133,7 @@ class SpraayEscrowTool(BaseTool):
                     "depositor": depositor,
                     "beneficiary": beneficiary,
                     "amount": amount,
+                    "amountBaseUnits": base_amount,
                     "result": data,
                 },
                 indent=2,
