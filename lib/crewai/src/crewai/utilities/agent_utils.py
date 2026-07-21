@@ -1137,6 +1137,7 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
         _print_current_organization()
         response = client.get_agent(from_repository)
         if inspect.isawaitable(response):
+            coro = response  # type: ignore[assignment]
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
@@ -1144,9 +1145,9 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
 
             if loop and loop.is_running():
                 with concurrent.futures.ThreadPoolExecutor() as pool:
-                    response = pool.submit(asyncio.run, response).result()
+                    response = pool.submit(asyncio.run, coro).result()  # type: ignore[arg-type]
             else:
-                response = asyncio.run(response)
+                response = asyncio.run(coro)  # type: ignore[arg-type]
         if response.status_code == 404:
             raise AgentRepositoryError(
                 f"Agent {from_repository} does not exist, make sure the name is correct or the agent is available on your organization."
