@@ -4,7 +4,7 @@ from typing import Any
 
 import requests
 from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 from crewai_tools.security.safe_path import validate_url
 
@@ -32,17 +32,18 @@ class HauntExtractTool(BaseTool):
         "cannot be read."
     )
     args_schema: type[BaseModel] = HauntExtractToolInput
-    api_key: str | None = None
     base_url: str = "https://hauntapi.com"
     timeout: int = 120
     response_format: str | None = None
 
+    _api_key: str | None = PrivateAttr(default=None)
+
     def __init__(self, api_key: str | None = None, **kwargs: Any):
         super().__init__(**kwargs)
-        self.api_key = api_key or os.environ.get("HAUNT_API_KEY")
+        self._api_key = api_key or os.environ.get("HAUNT_API_KEY")
 
     def _run(self, url: str, prompt: str) -> str:
-        if not self.api_key:
+        if not self._api_key:
             raise ValueError(
                 "Haunt API key missing. Pass api_key or set the HAUNT_API_KEY "
                 "environment variable. Free key: https://hauntapi.com/#signup"
@@ -53,12 +54,15 @@ class HauntExtractTool(BaseTool):
             body["response_format"] = self.response_format
         response = requests.post(
             f"{self.base_url}/v1/extract",
-            headers={"X-API-Key": self.api_key, "Content-Type": "application/json"},
+            headers={"X-API-Key": self._api_key, "Content-Type": "application/json"},
             json=body,
             timeout=self.timeout,
         )
-        data = response.json()
-        if response.status_code in (401, 402, 429):
+        try:
+            data = response.json()
+        except ValueError:
+            data = {}
+        if not response.ok:
             raise ValueError(
                 data.get("message")
                 or data.get("error")
