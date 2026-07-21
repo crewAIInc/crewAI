@@ -1,10 +1,14 @@
 """
-GovernanceDecision -- Vendor-neutral governance hook return type for CrewAI.
+GovernanceDecision -- Vendor-neutral governance contract types for CrewAI.
 
-This module defines the serialized contract that crew-level governance hooks
-(before_tool_call / after_tool_call) can optionally return. External governance
-engines (TealTiger, Neura Relay, Vaara, agent-guard, AlgoVoi, etc.) implement
-this contract without requiring CrewAI to depend on any vendor package.
+This module defines the serialized contract shape for governance authorization
+records. A future reducer integration will consume these types from
+before_tool_call / after_tool_call hooks; this PR establishes the wire format
+only and does NOT modify existing hook dispatch behavior.
+
+External governance engines (TealTiger, Neura Relay, Vaara, agent-guard,
+AlgoVoi, etc.) implement this contract without requiring CrewAI to depend on
+any vendor package.
 
 The GovernanceDecision is the pre-execution authorization record.
 The GovernanceOutcome is the post-execution result record, linked back
@@ -323,6 +327,9 @@ class GovernanceSeal(TypedDict, total=False):
 # --- Validation ---
 
 
+_VALID_VERDICTS = {"allow", "deny", "require_approval", "revise"}
+
+
 def validate_governance_decision(d: GovernanceDecision) -> tuple[bool, list[str]]:
     """Validate a GovernanceDecision has the required fields for its route.
 
@@ -345,6 +352,13 @@ def validate_governance_decision(d: GovernanceDecision) -> tuple[bool, list[str]
         errors.append("'decision' field is required")
         return (False, errors)
 
+    # Reject unknown verdicts — fail closed on unrecognized decision routes
+    if decision not in _VALID_VERDICTS:
+        errors.append(
+            f"Unknown decision '{decision}' — must be one of: {sorted(_VALID_VERDICTS)}"
+        )
+        return (False, errors)
+
     # All routes need at minimum:
     if not d.get("decision_id"):
         errors.append(f"'{decision}' requires 'decision_id'")
@@ -355,7 +369,7 @@ def validate_governance_decision(d: GovernanceDecision) -> tuple[bool, list[str]
         required = [
             "agent_id", "tool", "normalized_scope", "normalization_id",
             "intent_digest", "intent_ref", "idempotency_key",
-            "issued_at",
+            "params_hash", "issued_at",
         ]
         for field in required:
             if not d.get(field):
@@ -376,7 +390,7 @@ def validate_governance_decision(d: GovernanceDecision) -> tuple[bool, list[str]
         required = [
             "agent_id", "tool", "normalized_scope", "normalization_id",
             "intent_digest", "intent_ref", "idempotency_key",
-            "issued_at",
+            "params_hash", "issued_at",
             "continuation_id", "expires_at",
         ]
         for field in required:
