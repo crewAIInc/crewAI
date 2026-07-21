@@ -1,7 +1,8 @@
 """Spraay Batch Payment Tool for CrewAI.
 
 Enables AI agents to validate, estimate, and execute batch cryptocurrency
-payments on Base and 15+ supported chains via the Spraay x402 payment gateway.
+payments on nine EVM chains (Base, Ethereum, BNB Chain, Unichain, Polygon,
+Plasma, Arbitrum, Avalanche, BOB) via the Spraay x402 payment gateway.
 """
 
 import json
@@ -73,7 +74,8 @@ class SpraayBatchPaymentTool(BaseTool):
 
     Send payments to up to 200 recipients in a single transaction with
     ~80% gas savings compared to individual transfers. Supports ERC-20
-    tokens and native ETH on Base, Ethereum, Solana, and 13+ other chains.
+    tokens and native coins on nine EVM chains: Base, Ethereum, BNB Chain,
+    Unichain, Polygon, Plasma, Arbitrum, Avalanche, and BOB.
 
     Use cases include payroll, grant distributions, DAO disbursements,
     airdrops, and bounty payouts.
@@ -93,7 +95,8 @@ class SpraayBatchPaymentTool(BaseTool):
     description: str = (
         "Validate, estimate gas costs for, and execute batch cryptocurrency "
         "payments to multiple recipients in a single transaction. Supports "
-        "ERC-20 tokens and native ETH on Base, Ethereum, Solana, and 13+ chains. "
+        "ERC-20 tokens and native coins on nine EVM chains (Base, Ethereum, "
+        "BNB Chain, Unichain, Polygon, Plasma, Arbitrum, Avalanche, BOB). "
         "Use 'validate' to check a recipient list, 'estimate' to preview fees, "
         "and 'execute' to send the payment. No API key required — the gateway "
         "uses the x402 payment protocol."
@@ -133,7 +136,7 @@ class SpraayBatchPaymentTool(BaseTool):
 
         try:
             chain = chain_slug(chain_id)
-            decimals = token_decimals(token_address)
+            decimals = token_decimals(token_address, chain_id)
             base_amounts = [to_base_units(r.amount, decimals) for r in recipients]
         except ValueError as e:
             return f"Error: {e}"

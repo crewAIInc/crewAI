@@ -78,8 +78,9 @@ class SpraayEscrowTool(BaseTool):
     description: str = (
         "Create an on-chain escrow contract between two parties. "
         "Funds are locked in a smart contract and released when "
-        "conditions are met. Supports ERC-20 tokens and native ETH "
-        "on Base, Ethereum, and 14+ other chains. No API key required "
+        "conditions are met. Supports ERC-20 tokens and native coins "
+        "on nine EVM chains (Base, Ethereum, BNB Chain, Unichain, "
+        "Polygon, Plasma, Arbitrum, Avalanche, BOB). No API key required "
         "— the gateway uses the x402 payment protocol."
     )
     args_schema: type[BaseModel] = SpraayEscrowInput
@@ -102,7 +103,7 @@ class SpraayEscrowTool(BaseTool):
 
         try:
             chain = chain_slug(chain_id)
-            base_amount = to_base_units(amount, token_decimals(token_address))
+            base_amount = to_base_units(amount, token_decimals(token_address, chain_id))
         except ValueError as e:
             return f"Error: {e}"
 

@@ -29,7 +29,8 @@ def post_with_x402(
     Returns:
         A ``(paid, data)`` tuple. When ``paid`` is True, ``data`` is the
         endpoint's success response. When False, payment could not be
-        completed (missing wallet key or missing x402 dependency) and
+        completed (missing or malformed wallet key, or missing x402
+        dependency) and
         ``data`` explains why, including the parsed payment requirements.
 
     Raises:
@@ -73,8 +74,21 @@ def post_with_x402(
             "paymentRequirements": requirements,
         }
 
-    client = x402ClientSync()
-    register_exact_evm_client(client, EthAccountSigner(Account.from_key(private_key)))
+    try:
+        client = x402ClientSync()
+        register_exact_evm_client(
+            client, EthAccountSigner(Account.from_key(private_key))
+        )
+    except Exception as e:
+        return False, {
+            "status": "payment_required",
+            "message": (
+                f"Could not initialize the x402 payment signer from the "
+                f"{WALLET_ENV_VAR} environment variable: {e}. Set it to a "
+                "valid EVM wallet private key (0x-prefixed 32-byte hex)."
+            ),
+            "paymentRequirements": requirements,
+        }
     with x402_requests(client) as session:
         paid_response = session.post(url, json=payload, timeout=timeout)
     paid_response.raise_for_status()
