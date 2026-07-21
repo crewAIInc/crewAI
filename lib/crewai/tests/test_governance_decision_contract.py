@@ -498,8 +498,10 @@ def test_seal_with_external_parameter() -> None:
 def test_intent_ref_stable_across_retries() -> None:
     """Same authorized intent with different timestamps produces same intent_ref.
 
-    intent_ref = SHA-256(JCS({agent_id, tool, normalized_scope, intent_digest,
-    idempotency_key})) — no timestamp. Retries don't change it.
+      intent_ref = SHA-256(JCS({agent_id, tool, normalized_scope, intent_digest}))
+      Note: idempotency_key is explicitly EXCLUDED (pair model).
+      Duplicate enforcement uses the pair (intent_ref, idempotency_key)."""
+
     """
     # Two decisions for the same intent, different issued_at
     decision_1: GovernanceDecision = {
@@ -869,3 +871,47 @@ def test_different_idempotency_key_same_intent_ref_is_allowed() -> None:
     assert new_execution["intent_ref"] == FIXTURE_ALLOW["intent_ref"]
     assert new_execution["idempotency_key"] != FIXTURE_ALLOW["idempotency_key"]
     # Oracle should ALLOW this (no terminal outcome for this idempotency_key)
+
+
+
+# =============================================================================
+# Section 14: Unknown Verdict and params_hash Regression Tests
+# =============================================================================
+
+
+def test_unknown_verdict_fails_validation() -> None:
+    """Unknown decision values must fail closed — not silently validate."""
+    invalid_decisions: list[GovernanceDecision] = [
+        {"decision_id": "d-bad-1", "decision": "approve"},
+        {"decision_id": "d-bad-2", "decision": "ALLOW"},
+        {"decision_id": "d-bad-3", "decision": "permit"},
+    ]
+
+    for d in invalid_decisions:
+        is_valid, errors = validate_governance_decision(d)
+        assert not is_valid, f"Expected invalid for decision='{d['decision']}'"
+        assert any("Unknown decision" in e for e in errors)
+
+
+def test_missing_params_hash_fails_allow_validation() -> None:
+    """An allow decision without params_hash must fail validation."""
+    decision: GovernanceDecision = {
+        "decision_id": "d-no-hash",
+        "decision": "allow",
+        "agent_id": "bot",
+        "tool": "search",
+        "normalized_scope": "docs/public",
+        "normalization_id": "jcs-sha256",
+        "intent_digest": "sha256:abc",
+        "intent_ref": "sha256:def",
+        "idempotency_key": "idem:001",
+        "issued_at": "2026-07-21T10:00:00Z",
+        "policy_refs": ["allow-v1"],
+        "target_state_digest": None,
+        # params_hash intentionally missing
+    }
+
+    is_valid, errors = validate_governance_decision(decision)
+    assert not is_valid
+    assert any("params_hash" in e for e in errors)
+
