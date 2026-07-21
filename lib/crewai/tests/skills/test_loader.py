@@ -197,7 +197,7 @@ class TestLoadSkill:
             }[ref]
 
         monkeypatch.setattr(
-            "crewai.experimental.skills.registry.resolve_registry_ref",
+            "crewai.skills.registry.resolve_registry_ref",
             resolve_registry_ref,
         )
 
