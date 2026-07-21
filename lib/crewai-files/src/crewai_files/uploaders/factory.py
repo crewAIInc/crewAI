@@ -196,7 +196,10 @@ def get_uploader(
                 "Bedrock S3 uploader not configured. "
                 "Set CREWAI_BEDROCK_S3_BUCKET environment variable to enable."
             )
-            raise
+            raise ValueError(
+                "Bedrock S3 uploader requires CREWAI_BEDROCK_S3_BUCKET "
+                "environment variable or bucket_name kwarg"
+            )
         try:
             from crewai_files.uploaders.bedrock import BedrockFileUploader
 
@@ -213,4 +216,4 @@ def get_uploader(
             raise
 
     logger.debug(f"No file uploader available for provider: {provider}")
-    raise
+    raise ValueError(f"Unsupported file uploader provider: {provider}")
