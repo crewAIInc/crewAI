@@ -168,8 +168,11 @@ class Crew(FlowTrackable, BaseModel):
         manager_agent: Custom agent that will be used as manager.
         memory: Whether the crew should use memory to store memories of it's
             execution.
-        cache: Whether the crew should use a cache to store the results of the
-            tools execution.
+        cache: Whether to cache tool results for the crew's agents. Off by
+            default; when enabled, repeated calls to the same tool with
+            identical arguments reuse the first result without re-executing —
+            avoid enabling for live-data or state-mutating tools unless they
+            gate writes with a cache_function.
         function_calling_llm: The language model that will run the tool calling
             for all the agents.
         process: The process flow that the crew will follow (e.g., sequential,
@@ -216,7 +219,16 @@ class Crew(FlowTrackable, BaseModel):
     _kickoff_event_id: str | None = PrivateAttr(default=None)
 
     name: str | None = Field(default="crew")
-    cache: bool = Field(default=True)
+    cache: bool = Field(
+        default=False,
+        description=(
+            "Whether to cache tool results for the crew's agents. Opt-in: "
+            "when enabled, repeated calls to the same tool with identical "
+            "arguments return the first result without re-executing the "
+            "tool — do not enable for live-data or state-mutating tools "
+            "unless they set a cache_function that prevents caching."
+        ),
+    )
     tasks: list[Task] = Field(default_factory=list)
     agents: Annotated[
         list[BaseAgent],
@@ -1507,6 +1519,11 @@ class Crew(FlowTrackable, BaseModel):
             )
             self.manager_agent = manager
         manager.crew = self
+        # The manager is created outside the agents loop that offers the
+        # crew's cache handler at validation time; offer it here so an
+        # opted-in crew (cache=True) also dedupes the manager's tool calls.
+        if self.cache:
+            manager.set_cache_handler(self._cache_handler)
 
     def _get_execution_start_index(self, tasks: list[Task]) -> int | None:
         if self.checkpoint_kickoff_event_id is None:
@@ -1889,6 +1906,31 @@ class Crew(FlowTrackable, BaseModel):
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
         self.token_usage = self.calculate_usage_metrics()
+
+        from crewai.hooks.contexts import ExecutionEndContext, OutputContext
+        from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
+        crew_output = CrewOutput(
+            raw=final_task_output.raw,
+            pydantic=final_task_output.pydantic,
+            json_dict=final_task_output.json_dict,
+            tasks_output=task_outputs,
+            token_usage=self.token_usage,
+        )
+
+        output_ctx = OutputContext(crew=self, output=crew_output, payload=crew_output)
+        dispatch(InterceptionPoint.OUTPUT, output_ctx)
+        crew_output = cast(CrewOutput, output_ctx.payload)
+
+        end_ctx = ExecutionEndContext(
+            crew=self, output=crew_output, payload=crew_output
+        )
+        dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
+        crew_output = cast(CrewOutput, end_ctx.payload)
+
+        if isinstance(crew_output, CrewOutput):
+            final_task_output.raw = crew_output.raw
+
         # Ensure background memory saves finish (and emit their
         # completed/failed events) before the kickoff-completed event below
         # triggers listener teardown/finalization.
@@ -1907,13 +1949,7 @@ class Crew(FlowTrackable, BaseModel):
         # Finalization is handled by trace listener (always initialized)
         # The batch manager checks contextvar to determine if tracing is enabled
 
-        return CrewOutput(
-            raw=final_task_output.raw,
-            pydantic=final_task_output.pydantic,
-            json_dict=final_task_output.json_dict,
-            tasks_output=task_outputs,
-            token_usage=self.token_usage,
-        )
+        return crew_output
 
     def _process_async_tasks(
         self,

@@ -5,6 +5,11 @@ from typing import TYPE_CHECKING, Any, cast
 from crewai_core.printer import PRINTER
 
 from crewai.events.event_listener import event_listener
+from crewai.hooks.dispatch import (
+    HookAborted,
+    InterceptionPoint,
+    get_global_hook_list,
+)
 from crewai.hooks.types import (
     AfterLLMCallHookCallable,
     AfterLLMCallHookType,
@@ -150,8 +155,37 @@ class LLMCallHookContext:
             event_listener.formatter.resume_live_updates()
 
 
-_before_llm_call_hooks: list[BeforeLLMCallHookType | BeforeLLMCallHookCallable] = []
-_after_llm_call_hooks: list[AfterLLMCallHookType | AfterLLMCallHookCallable] = []
+# The legacy registries are aliased to the generic dispatcher's global hook
+# lists for the model-call points, so legacy registrations and new-dialect
+# ``@on(InterceptionPoint.PRE_MODEL_CALL)`` hooks share one ordered queue.
+_before_llm_call_hooks: list[BeforeLLMCallHookType | BeforeLLMCallHookCallable] = (
+    get_global_hook_list(InterceptionPoint.PRE_MODEL_CALL)
+)
+_after_llm_call_hooks: list[AfterLLMCallHookType | AfterLLMCallHookCallable] = (
+    get_global_hook_list(InterceptionPoint.POST_MODEL_CALL)
+)
+
+
+def before_llm_call_reducer(context: LLMCallHookContext, result: object) -> bool:
+    """Legacy calling convention for ``pre_model_call`` hooks.
+
+    A ``False`` return aborts the call (mapped to :class:`HookAborted`); messages
+    are modified in place, so no payload replacement occurs here.
+    """
+    if result is False:
+        raise HookAborted(reason="before_llm_call hook returned False")
+    return False
+
+
+def after_llm_call_reducer(context: LLMCallHookContext, result: object) -> bool:
+    """Legacy calling convention for ``post_model_call`` hooks.
+
+    A non-empty string return replaces the response on the context.
+    """
+    if result is not None and isinstance(result, str):
+        context.response = result
+        return True
+    return False
 
 
 def register_before_llm_call_hook(
