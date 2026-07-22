@@ -770,6 +770,34 @@ def template_add(name: str, output_dir: str | None) -> None:
     template_cmd.add_template(name, output_dir)
 
 
+@crewai.command(name="starter")
+@click.argument("name", required=False)
+@click.argument("target_dir", required=False)
+@click.option(
+    "-o",
+    "--output-dir",
+    type=str,
+    default=None,
+    help="Directory name for the starter pack (defaults to starter pack name)",
+)
+def starter(name: str | None, target_dir: str | None, output_dir: str | None) -> None:
+    """Browse or install starter packs backed by external templates."""
+    template_cmd = TemplateCommand()
+
+    if name is None or name == "list":
+        if target_dir or output_dir:
+            raise click.UsageError(
+                "Starter pack list does not accept an output directory."
+            )
+        template_cmd.list_starter_packs()
+        return
+
+    if target_dir and output_dir:
+        raise click.UsageError("Use either TARGET_DIR or --output-dir, not both.")
+
+    template_cmd.add_starter_pack(name, output_dir or target_dir)
+
+
 @crewai.group()
 def flow() -> None:
     """Flow related commands."""
