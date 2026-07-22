@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from crewai.types.usage_metrics import UsageMetrics
-from crewai.utilities.planning_types import TodoItem
+from crewai.utilities.planning_types import StepOutcome, TodoItem
 from crewai.utilities.types import LLMMessage
 
 
@@ -22,6 +22,13 @@ class TodoExecutionResult(BaseModel):
     status: str = Field(description="Final status: completed, failed, pending")
     result: str | None = Field(
         default=None, description="Result or error message from execution"
+    )
+    outcome: StepOutcome | None = Field(
+        default=None, description="How execution of the step terminated"
+    )
+    termination_reason: str | None = Field(
+        default=None,
+        description="Human-readable reason for non-completed step termination",
     )
     depends_on: list[int] = Field(
         default_factory=list, description="Step numbers this depended on"
@@ -82,6 +89,8 @@ class LiteAgentOutput(BaseModel):
                 tool_used=item.tool_to_use,
                 status=item.status,
                 result=item.result,
+                outcome=item.outcome,
+                termination_reason=item.termination_reason,
                 depends_on=item.depends_on,
             )
             for item in todo_items
