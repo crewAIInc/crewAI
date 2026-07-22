@@ -90,15 +90,15 @@ class TaskOutput(BaseModel):
             over pydantic model dump if both are available.
         """
         output_dict = {}
-        if self.json_dict:
+        if self.json_dict is not None:
             output_dict.update(self.json_dict)
-        elif self.pydantic:
+        elif self.pydantic is not None:
             output_dict.update(self.pydantic.model_dump())
         return output_dict
 
     def __str__(self) -> str:
-        if self.pydantic:
+        if self.pydantic is not None:
             return str(self.pydantic)
-        if self.json_dict:
+        if self.json_dict is not None:
             return str(self.json_dict)
         return self.raw
