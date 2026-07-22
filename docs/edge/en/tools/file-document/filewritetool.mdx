@@ -11,7 +11,13 @@ mode: "wide"
 
 The `FileWriterTool` is a component of the crewai_tools package, designed to simplify the process of writing content to files with cross-platform compatibility (Windows, Linux, macOS). 
 It is particularly useful in scenarios such as generating reports, saving logs, creating configuration files, and more. 
-This tool handles path differences across operating systems, supports UTF-8 encoding, and automatically creates directories if they don't exist, making it easier to organize your output reliably across different platforms.
+This tool handles path differences across operating systems, guards against path-traversal and symlink escapes, and creates parent directories (when a `directory` is explicitly provided) if they don't exist, making it easier to organize your output reliably across different platforms.
+
+<Note type="warning">
+The tool writes `content` in **text mode** — it is intended for plain-text files only (`.txt`, `.md`, `.json`, `.yaml`, `.csv`, `.log`, `.py`, config files, generated source, reports, etc.). It is **not** suitable for binary files such as images, PDFs, archives, or executables; writing binary data through it will raise or corrupt the output.
+
+No explicit `encoding` is passed to `open()`, so the byte encoding follows `locale.getpreferredencoding()` — UTF-8 on Linux/macOS, but typically cp1252 on stock Windows. Set `PYTHONUTF8=1` (or otherwise configure the locale) if you need guaranteed UTF-8 on Windows.
+</Note>
 
 ## Installation
 
@@ -23,24 +29,47 @@ pip install 'crewai[tools]'
 
 ## Example
 
-To get started with the `FileWriterTool`:
+The `FileWriterTool` is attached to an agent and invoked by that agent during a task — you don't call it yourself. Initialize the tool, hand it to an `Agent` via `tools=[...]`, and let the crew run.
 
 ```python Code
+from crewai import Agent, Crew, Task, Process
 from crewai_tools import FileWriterTool
 
 # Initialize the tool
 file_writer_tool = FileWriterTool()
 
-# Write content to a file in a specified directory
-result = file_writer_tool._run('example.txt', 'This is a test content.', 'test_directory')
-print(result)
+# Define an agent that can write files
+report_writer = Agent(
+    role="Report Writer",
+    goal="Produce written reports and save them to disk",
+    backstory="A meticulous writer who files every report as a .md file.",
+    tools=[file_writer_tool],
+)
+
+# Task that asks the agent to write a file
+write_task = Task(
+    description="Write a short markdown report summarizing the Q3 results to a file named q3_report.md inside the reports directory.",
+    expected_output="Confirmation that q3_report.md was written to the reports directory.",
+    agent=report_writer,
+)
+
+crew = Crew(
+    agents=[report_writer],
+    tasks=[write_task],
+    process=Process.sequential,
+)
+result = crew.kickoff()
+print(result.raw)
 ```
+
+When the agent decides to write a file, it calls the tool with `filename`, `content`, and optionally `directory` and `overwrite` (see Arguments).
 
 ## Arguments
 
 - `filename`: The name of the file you want to create or overwrite.
-- `content`: The content to write into the file.
-- `directory` (optional): The path to the directory where the file will be created. Defaults to the current directory (`.`). If the directory does not exist, it will be created.
+- `content`: The text content to write into the file (string).
+- `directory` (optional): The path to the directory where the file will be created. Defaults to the current directory (`./`). Parent directories are created **only when `directory` is explicitly provided**; the default `./` does not trigger directory creation.
+- `overwrite` (optional, default `False`): Whether to overwrite an existing file. Accepts a bool or a string (`"true"`/`"false"`, `"yes"`/`"no"`, `"1"`/`"0"`, etc.). When `False`, the tool opens in exclusive-create mode (`"x"`) and returns an error if the file already exists; when truthy, it opens in write mode (`"w"`) and replaces the file.
 
 ## Conclusion
 
