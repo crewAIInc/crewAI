@@ -337,12 +337,13 @@ async def _arun_before_kickoff_callbacks(
 
 #: Sentinel marking that no caller has pre-applied the before callbacks.
 #:
-#: Using a distinct object (instead of ``None``) lets ``None`` round-trip as a
-#: legitimate value: a before-callback that returns ``None`` (e.g. one that
-#: mutates the dict in place and falls off the end of the function) must not be
-#: mistaken for "callbacks not yet applied", which would re-run them. See
+#: Using a distinct object (instead of ``None``) lets a pre-applied ``None`` be
+#: distinguished from "callbacks not yet applied": the async path runs the
+#: callbacks itself and passes their result through ``normalized_inputs``, so a
+#: before-callback that returns ``None`` must not be mistaken for "not yet
+#: applied" (which would re-run every callback). See
 #: :func:`_prepare_kickoff_impl`.
-_NOT_APPLIED: object = object()
+_NOT_APPLIED = object()
 
 
 def _prepare_kickoff_impl(
@@ -359,7 +360,13 @@ def _prepare_kickoff_impl(
     never passes the argument). Otherwise the caller — the async path through
     :func:`aprepare_kickoff` — has already applied them and they are skipped to
     avoid double-execution. A pre-applied ``None`` is a real value here, not the
-    "not applied" marker, so it is preserved rather than triggering a re-run.
+    "not applied" marker, so it no longer triggers a re-run.
+
+    Note that a before-callback which returns ``None`` (rather than the inputs
+    dict) does not contribute its inputs to the crew on either path — the runner
+    keeps whatever the callback returned. Returning the (possibly mutated) dict
+    is the supported way to flow inputs through callbacks; ``None`` only stops
+    being misread as "callbacks not yet applied".
     """
     from crewai.events.base_events import reset_emission_counter
     from crewai.events.event_bus import crewai_event_bus
@@ -470,7 +477,9 @@ def _prepare_kickoff_impl(
     if crew.planning:
         crew._handle_crew_planning()
 
-    return normalized
+    # ``normalized`` was last assigned from ``InterceptionContext.payload``
+    # (typed ``Any``); narrow back to the declared return type.
+    return cast(dict[str, Any] | None, normalized)
 
 
 class StreamingContext:
