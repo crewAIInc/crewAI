@@ -1,0 +1,104 @@
+---
+title: Channels
+description: Run the same CrewAI agent as a bot on Slack, Discord, Telegram, WhatsApp, and Microsoft Teams.
+icon: slack
+mode: "wide"
+---
+
+## Meet your users where they already are
+
+The CrewAI agent you built in the [Overview](/en/guides/frontend/overview) does not have to live behind a web app. The same Crew or Flow can run as a bot inside Slack, Discord, Telegram, WhatsApp, and Microsoft Teams. No rebuild, no second copy of your agent logic, no separate deployment of the Crew itself.
+
+The trick is that your agent is already exposed over the [AG-UI protocol](https://docs.ag-ui.com). Anything that can speak AG-UI can drive it, including a messaging bot.
+
+## How it fits together
+
+Nothing about your agent server changes. It keeps serving your Crew or Flow over AG-UI exactly as it did in the Overview. What you add is a small, separate **bot process**: it connects to a platform adapter (Slack, Discord, and so on), listens for incoming messages, and calls your agent whenever it is messaged. The agent's reply is streamed back into the channel.
+
+The bot process looks roughly like this. Treat it as the shape of a bot, not an exact API, and check the [CopilotKit docs](https://docs.copilotkit.ai) for the current package and function names.
+
+```ts
+// bot.ts (illustrative)
+import { startSlackBot } from "@copilotkit/bot";
+import { CrewAIAgent } from "@ag-ui/crewai";
+
+startSlackBot({
+  agent: new CrewAIAgent({ url: "http://localhost:8000/recipe" }),
+  botToken: process.env.SLACK_BOT_TOKEN,
+  appToken: process.env.SLACK_APP_TOKEN,
+});
+```
+
+The full picture is one extra hop off the same agent server:
+
+```
+Slack / Discord / Teams  ──►  Bot process  ──►  CrewAI server (AG-UI)  ──►  Crew / Flow
+```
+
+Your agent server can keep serving the web frontend from the Overview at the same time. The web app and the bot are just two clients of one AG-UI endpoint.
+
+<Note>
+Exact package names, function signatures, tokens, and per-platform configuration are maintained by CopilotKit. Follow [docs.copilotkit.ai](https://docs.copilotkit.ai) for the authoritative, up-to-date setup.
+</Note>
+
+## Slack
+
+At a high level, running your `recipe` agent as a Slack bot looks like this.
+
+<Steps>
+
+<Step title="Create a Slack app">
+
+Create an app in the Slack API dashboard for the workspace you want the bot to live in, and give it the message and event permissions it needs to read and reply in channels.
+
+</Step>
+
+<Step title="Get your tokens">
+
+From the Slack app, grab a bot token and an app-level token. Expose them to the bot process as environment variables:
+
+```bash
+export SLACK_BOT_TOKEN=xoxb-...
+export SLACK_APP_TOKEN=xapp-...
+```
+
+</Step>
+
+<Step title="Point the bot at your agent">
+
+Keep your CrewAI agent server running over AG-UI (from the Overview), and configure the bot process to call it, as sketched above.
+
+</Step>
+
+<Step title="Run the bot">
+
+Start the bot process alongside your agent server:
+
+```bash
+node bot.ts   # illustrative — see the CopilotKit docs for the real command
+```
+
+Message the bot in Slack and it runs your Crew or Flow.
+
+</Step>
+
+</Steps>
+
+<Note>
+The commands and tokens above are illustrative. See [CopilotKit's platform documentation](https://docs.copilotkit.ai) together with Slack's own app setup guide for the exact steps and scopes.
+</Note>
+
+## Other platforms
+
+Discord, Telegram, WhatsApp, and Microsoft Teams follow the same pattern: keep the agent server unchanged, run a bot process that connects to the platform, and swap in that platform's credentials. Only the adapter and the tokens differ. See the [CopilotKit docs](https://docs.copilotkit.ai) for each platform's specifics.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Frontend Overview" icon="browser" href="/en/guides/frontend/overview">
+    Serve your Crew or Flow over AG-UI — the foundation every channel builds on.
+  </Card>
+  <Card title="Human-in-the-Loop" icon="user-check" href="/en/guides/frontend/human-in-the-loop">
+    Pause the agent to collect user approval or input mid-run.
+  </Card>
+</CardGroup>

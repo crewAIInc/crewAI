@@ -1,0 +1,79 @@
+---
+title: Generative UI
+description: Render your CrewAI agent's tool calls and state as live React components instead of plain text.
+icon: wand-magic-sparkles
+mode: "wide"
+---
+
+## Beyond the chat bubble
+
+Generative UI means the agent's work shows up as real interface, not just text. When your Crew or Flow calls a tool or updates its state, you decide what the user sees: a progress checklist, a recipe card, a chart, a form.
+
+CopilotKit renders generative UI along a spectrum, from fully author-controlled to agent-driven:
+
+| Approach | Who decides the UI | Use it for |
+| --- | --- | --- |
+| **Tool rendering** | You map each tool to a component | Rendering the result of a specific agent action |
+| **State rendering** | You render off the agent's live state | Showing long-running work as it progresses |
+
+Both approaches are covered below. They compose freely; a single app usually uses both.
+
+## Tool rendering
+
+The agent calls a tool on the backend. You register a matching component on the frontend with `useFrontendTool`, and CopilotKit renders it, streaming the arguments in as they arrive.
+
+```tsx
+"use client";
+import { useFrontendTool } from "@copilotkit/react-core/v2";
+import { z } from "zod";
+
+useFrontendTool({
+  agentId: "recipe",
+  name: "generate_recipe",
+  parameters: z.object({
+    title: z.string(),
+    ingredients: z.array(z.string()),
+  }),
+  render: ({ args }) => <RecipeCard title={args.title} ingredients={args.ingredients} />,
+});
+```
+
+See [Tool-Based Generative UI](/en/guides/frontend/tool-based-generative-ui) for the full backend + frontend walkthrough, including progressive rendering as arguments stream.
+
+## State rendering
+
+Instead of reacting to a single tool call, render the agent's **state** as it changes. This is the right pattern for multi-step work: read the agent's working state with `useAgent` and paint it however you like.
+
+```tsx
+"use client";
+import { useAgent } from "@copilotkit/react-core/v2";
+
+function TaskProgress() {
+  const { agent } = useAgent({ agentId: "task_runner" });
+  const steps = agent?.state?.steps ?? [];
+  return <StepList steps={steps} />;
+}
+```
+
+See [Agentic Generative UI](/en/guides/frontend/agentic-generative-ui) for streaming state from a Flow, and [Shared State](/en/guides/frontend/shared-state) for editing that state from the UI.
+
+<Note>
+State-driven patterns rely on a Flow's custom state (`Flow[AgentState]`). Tool rendering works with both Crews and Flows.
+</Note>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Tool-Based Generative UI" icon="puzzle-piece" href="/en/guides/frontend/tool-based-generative-ui">
+    Map agent tool calls to components.
+  </Card>
+  <Card title="Agentic Generative UI" icon="list-check" href="/en/guides/frontend/agentic-generative-ui">
+    Render live agent state.
+  </Card>
+  <Card title="Human-in-the-Loop" icon="user-check" href="/en/guides/frontend/human-in-the-loop">
+    Collect user decisions mid-run.
+  </Card>
+  <Card title="Predictive State" icon="gauge-high" href="/en/guides/frontend/predictive-state-updates">
+    Stream in-progress tool arguments into state.
+  </Card>
+</CardGroup>

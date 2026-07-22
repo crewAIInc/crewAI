@@ -119,6 +119,21 @@
                         ]
                       },
                       {
+                        "group": "Frontend",
+                        "icon": "browser",
+                        "pages": [
+                          "edge/en/guides/frontend/overview",
+                          "edge/en/guides/frontend/generative-ui",
+                          "edge/en/guides/frontend/tool-based-generative-ui",
+                          "edge/en/guides/frontend/agentic-generative-ui",
+                          "edge/en/guides/frontend/human-in-the-loop",
+                          "edge/en/guides/frontend/shared-state",
+                          "edge/en/guides/frontend/frontend-actions",
+                          "edge/en/guides/frontend/predictive-state-updates",
+                          "edge/en/guides/frontend/channels"
+                        ]
+                      },
+                      {
                         "group": "Tools",
                         "icon": "wrench",
                         "pages": [
