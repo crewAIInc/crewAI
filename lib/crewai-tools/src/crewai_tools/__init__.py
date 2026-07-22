@@ -193,6 +193,12 @@ from crewai_tools.tools.snowflake_search_tool.snowflake_search_tool import (
     SnowflakeSearchTool,
 )
 from crewai_tools.tools.spider_tool.spider_tool import SpiderTool
+from crewai_tools.tools.spraay_tool.spraay_balance_tool import SpraayBalanceTool
+from crewai_tools.tools.spraay_tool.spraay_batch_payment_tool import (
+    SpraayBatchPaymentTool,
+    SpraayRecipient,
+)
+from crewai_tools.tools.spraay_tool.spraay_escrow_tool import SpraayEscrowTool
 from crewai_tools.tools.stagehand_tool.stagehand_tool import StagehandTool
 from crewai_tools.tools.tavily_extractor_tool.tavily_extractor_tool import (
     TavilyExtractorTool,
@@ -314,6 +320,10 @@ __all__ = [
     "SnowflakeConfig",
     "SnowflakeSearchTool",
     "SpiderTool",
+    "SpraayBalanceTool",
+    "SpraayBatchPaymentTool",
+    "SpraayEscrowTool",
+    "SpraayRecipient",
     "StagehandTool",
     "TXTSearchTool",
     "TavilyExtractorTool",
