@@ -902,7 +902,7 @@ class ToolUsage:
             if isinstance(arguments, dict):
                 return arguments
         except (ValueError, SyntaxError):
-            repaired_input = repair_json(tool_input)
+            pass
 
         try:
             arguments = json5.loads(tool_input)
