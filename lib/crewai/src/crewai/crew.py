@@ -264,7 +264,10 @@ class Crew(FlowTrackable, BaseModel):
         str | BaseLLM | None,
         BeforeValidator(_validate_llm_ref),
         PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
-    ] = Field(description="Language model that will run the agent.", default=None)
+    ] = Field(
+        description="Language model that will run the manager agent in hierarchical process.",
+        default=None,
+    )
     manager_agent: Annotated[
         BaseAgent | None,
         BeforeValidator(_resolve_agent),
