@@ -7,7 +7,7 @@ AgentAction or AgentFinish objects.
 
 from dataclasses import dataclass
 
-from json_repair import repair_json  # type: ignore[import-untyped]
+from json_repair import repair_json
 from pydantic import BaseModel
 
 from crewai.agents.constants import (
