@@ -219,6 +219,8 @@ class Crew(FlowTrackable, BaseModel):
         default_factory=TaskOutputStorageHandler
     )
     _kickoff_event_id: str | None = PrivateAttr(default=None)
+    _execution_start_dispatched: bool = PrivateAttr(default=False)
+    _execution_end_dispatched: bool = PrivateAttr(default=False)
 
     name: str | None = Field(default="crew")
     cache: bool = Field(
@@ -1052,6 +1054,7 @@ class Crew(FlowTrackable, BaseModel):
 
             return result
         except Exception as e:
+            self._dispatch_execution_end_failure(e)
             crewai_event_bus.emit(
                 self,
                 CrewKickoffFailedEvent(
@@ -1267,6 +1270,7 @@ class Crew(FlowTrackable, BaseModel):
 
             return result
         except Exception as e:
+            self._dispatch_execution_end_failure(e)
             crewai_event_bus.emit(
                 self,
                 CrewKickoffFailedEvent(
@@ -1929,8 +1933,14 @@ class Crew(FlowTrackable, BaseModel):
         end_ctx = ExecutionEndContext(
             crew=self, output=crew_output, payload=crew_output
         )
+        # Flag set before dispatching so an EXECUTION_END hook that raises
+        # HookAborted does not trigger a second (failure) dispatch upstream.
+        self._execution_end_dispatched = True
         dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
         crew_output = cast(CrewOutput, end_ctx.payload)
+
+        if isinstance(crew_output, CrewOutput):
+            final_task_output.raw = crew_output.raw
 
         # Ensure background memory saves finish (and emit their
         # completed/failed events) before the kickoff-completed event below
@@ -1951,6 +1961,32 @@ class Crew(FlowTrackable, BaseModel):
         # The batch manager checks contextvar to determine if tracing is enabled
 
         return crew_output
+
+    def _dispatch_execution_end_failure(self, error: BaseException) -> None:
+        """Dispatch EXECUTION_END with status="failed" for a kickoff that raised.
+
+        No-op when EXECUTION_START never dispatched (pairing invariant) or when
+        EXECUTION_END already fired for this execution (exactly-once). Never
+        raises, so the original kickoff exception propagates unchanged.
+
+        Instance-level flags are sufficient here because crew kickoffs are not
+        reentrant on the same instance (``kickoff_for_each`` copies the crew;
+        unlike Flow, nothing in the crew runtime supports nested kickoffs).
+        """
+        if not self._execution_start_dispatched or self._execution_end_dispatched:
+            return
+        self._execution_end_dispatched = True
+
+        from crewai.hooks.contexts import ExecutionEndContext
+        from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
+        try:
+            dispatch(
+                InterceptionPoint.EXECUTION_END,
+                ExecutionEndContext(crew=self, status="failed", error=error),
+            )
+        except Exception:  # noqa: S110 - aborting an already-failed execution is meaningless
+            pass
 
     def _process_async_tasks(
         self,

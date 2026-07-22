@@ -291,7 +291,12 @@ def _dispatch_execution_start(
         inputs=normalized if normalized is not None else {},
         payload=normalized,
     )
+    # Pairing flags: EXECUTION_END fires (once) only for executions whose
+    # EXECUTION_START actually dispatched, including on the failure path.
+    crew._execution_start_dispatched = False
+    crew._execution_end_dispatched = False
     dispatch(InterceptionPoint.EXECUTION_START, start_ctx)
+    crew._execution_start_dispatched = True
     return start_ctx.payload
 
 

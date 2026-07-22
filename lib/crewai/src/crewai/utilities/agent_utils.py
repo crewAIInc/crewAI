@@ -1136,6 +1136,18 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
             client = PlusAPI(api_key=get_auth_token())
         _print_current_organization()
         response = client.get_agent(from_repository)
+        if inspect.isawaitable(response):
+            coro = response
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    response = pool.submit(asyncio.run, coro).result()  # type: ignore[arg-type]
+            else:
+                response = asyncio.run(coro)  # type: ignore[arg-type]
         if response.status_code == 404:
             raise AgentRepositoryError(
                 f"Agent {from_repository} does not exist, make sure the name is correct or the agent is available on your organization."
@@ -1150,6 +1162,8 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
 
         agent = response.json()
         for key, value in agent.items():
+            if value is None:
+                continue
             if key == "tools":
                 attributes[key] = []
                 for tool in value:
