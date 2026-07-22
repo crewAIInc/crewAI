@@ -27,7 +27,7 @@ CrewAI provides an extensive collection of powerful tools ready to enhance your 
 - **Database Integrations**: `MySQLSearchTool`
 - **Vector Database Integrations**: `MongoDBVectorSearchTool`, `QdrantVectorSearchTool`, `WeaviateVectorSearchTool`
 - **API Integrations**: `SerperApiTool`, `ExaSearchTool`
-- **AI-powered Tools**: `DallETool`, `VisionTool`, `StagehandTool`
+- **AI-powered Tools**: `DallETool`, `VisionTool`, `StagehandTool`, `TwelveLabsAnalyzeTool`
 
 And many more robust tools to simplify your agent integrations.
 
