@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable, Coroutine, Iterable, Mapping
 import inspect
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from opentelemetry import baggage
 
@@ -265,7 +265,7 @@ def prepare_kickoff(
     Returns:
         The potentially modified inputs dictionary after before callbacks.
     """
-    return _prepare_kickoff_impl(crew, inputs, input_files, normalized_inputs=None)
+    return _prepare_kickoff_impl(crew, inputs, input_files)
 
 
 async def aprepare_kickoff(
@@ -335,18 +335,31 @@ async def _arun_before_kickoff_callbacks(
     return normalized
 
 
+#: Sentinel marking that no caller has pre-applied the before callbacks.
+#:
+#: Using a distinct object (instead of ``None``) lets ``None`` round-trip as a
+#: legitimate value: a before-callback that returns ``None`` (e.g. one that
+#: mutates the dict in place and falls off the end of the function) must not be
+#: mistaken for "callbacks not yet applied", which would re-run them. See
+#: :func:`_prepare_kickoff_impl`.
+_NOT_APPLIED: object = object()
+
+
 def _prepare_kickoff_impl(
     crew: Crew,
     inputs: dict[str, Any] | None,
     input_files: dict[str, FileInput] | None,
     *,
-    normalized_inputs: dict[str, Any] | None,
+    normalized_inputs: dict[str, Any] | object = _NOT_APPLIED,
 ) -> dict[str, Any] | None:
     """Shared body of :func:`prepare_kickoff` and :func:`aprepare_kickoff`.
 
-    When ``normalized_inputs`` is ``None`` the sync before-callbacks are run
-    here; otherwise the caller (the async path) has already applied them and
-    they are skipped to avoid double-execution.
+    When ``normalized_inputs`` is :data:`_NOT_APPLIED` the before-callbacks have
+    not been pre-applied by the caller and are run here (the sync path, which
+    never passes the argument). Otherwise the caller — the async path through
+    :func:`aprepare_kickoff` — has already applied them and they are skipped to
+    avoid double-execution. A pre-applied ``None`` is a real value here, not the
+    "not applied" marker, so it is preserved rather than triggering a re-run.
     """
     from crewai.events.base_events import reset_emission_counter
     from crewai.events.event_bus import crewai_event_bus
@@ -365,11 +378,14 @@ def _prepare_kickoff_impl(
     from crewai.hooks.contexts import ExecutionStartContext, InputContext
     from crewai.hooks.dispatch import InterceptionPoint, dispatch
 
-    if normalized_inputs is None:
+    if normalized_inputs is _NOT_APPLIED:
         normalized = _normalize_inputs(inputs)
         normalized = _run_before_kickoff_callbacks(crew, normalized)
     else:
-        normalized = normalized_inputs
+        # Caller pre-applied the callbacks. ``normalized_inputs`` may be ``None``
+        # if a before-callback returned it; that is a real value here, not a
+        # signal to re-run the callbacks.
+        normalized = cast(dict[str, Any] | None, normalized_inputs)
 
     # ``inputs`` aliases the same object as ``payload`` (not a fresh ``{}`` from
     # ``or``) so in-place edits to either survive read-back, per the context
