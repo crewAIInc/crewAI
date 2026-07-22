@@ -16,7 +16,7 @@ Supports:
 # Installation
 
 ```bash
-pip install ibm_db ibm_db_dbi openai
+uv add ibm_db openai
 ```
 
 ---
@@ -34,7 +34,7 @@ DB2_CONNECTION_STRING=DATABASE=TESTDB;HOSTNAME=localhost;PORT=50000;PROTOCOL=TCP
 # Example Usage
 
 ```python
-from crewai_tools.tools.db2_search_tool import DB2VectorSearchTool
+from crewai_tools import DB2VectorSearchTool
 
 tool = DB2VectorSearchTool(
     connection_string="DATABASE=TESTDB;HOSTNAME=localhost;PORT=50000;PROTOCOL=TCPIP;UID=db2user;PWD=password;",
