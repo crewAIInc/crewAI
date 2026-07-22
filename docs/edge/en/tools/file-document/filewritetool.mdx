@@ -42,6 +42,25 @@ print(result)
 - `content`: The content to write into the file.
 - `directory` (optional): The path to the directory where the file will be created. Defaults to the current directory (`.`). If the directory does not exist, it will be created.
 
+## Path confinement
+
+Because `filename` and `directory` may be supplied at runtime by an agent acting on untrusted content, `FileWriterTool` confines writes to an **allow-listed set of root directories**. The resolved target (after expanding symlinks and `..`) must fall inside one of these roots or the write is rejected — a `directory` argument pointing outside them (e.g. `~/.ssh`, `/etc`) no longer grants write access.
+
+The allow-list is, by default, the current working directory. You can extend it for deployments that legitimately write elsewhere:
+
+- `CREWAI_TOOLS_ALLOWED_DIRS` — one or more additional root directories, separated by the OS path separator (`:` on Linux/macOS, `;` on Windows).
+
+```shell
+# Allow writes under /data and /workspace in addition to the cwd
+export CREWAI_TOOLS_ALLOWED_DIRS="/data:/workspace"
+```
+
+<Warning>
+  If the process runs with its working directory set to the filesystem root (`/`) — common in containers started without a `WORKDIR` — the tool will **not** fall back to allow-listing the entire filesystem. Writes fail with a `ValueError` until you set `CREWAI_TOOLS_ALLOWED_DIRS` to an explicit directory. Set a `WORKDIR` (or the env var) in such deployments.
+</Warning>
+
+The `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true` escape hatch disables path validation entirely. It is intended only for trusted local development and should not be set in any environment that runs agent-generated or otherwise untrusted instructions.
+
 ## Conclusion
 
 By integrating the `FileWriterTool` into your crews, the agents can reliably write content to files across different operating systems. 
