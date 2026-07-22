@@ -53,9 +53,13 @@ from crewai_tools.tools.daytona_sandbox_tool import (
     DaytonaFileTool,
     DaytonaPythonTool,
 )
-# from crewai_tools.tools.directory_read_tool.directory_read_tool import (
-#     DirectoryReadTool,
-# )
+from crewai_tools.tools.db2_search_tool import (
+    DB2ToolSchema,
+    DB2VectorSearchTool,
+)
+from crewai_tools.tools.directory_read_tool.directory_read_tool import (
+    DirectoryReadTool,
+)
 from crewai_tools.tools.directory_search_tool.directory_search_tool import (
     DirectorySearchTool,
 )
@@ -233,10 +237,12 @@ __all__ = [
     "DOCXSearchTool",
     "DallETool",
     "DatabricksQueryTool",
+    "DB2ToolSchema",
+    "DB2VectorSearchTool",
     "DaytonaExecTool",
     "DaytonaFileTool",
     "DaytonaPythonTool",
-    # "DirectoryReadTool",
+    "DirectoryReadTool",
     "DirectorySearchTool",
     "E2BExecTool",
     "E2BFileTool",
