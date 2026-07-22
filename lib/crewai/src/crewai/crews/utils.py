@@ -247,6 +247,15 @@ def _extract_files_from_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
     return files
 
 
+_UNSET: Any = object()
+"""Sentinel for detecting whether before-callback iteration has started.
+
+Using ``None`` as a sentinel is unsafe because a before-callback can
+legitimately return ``None`` — the next callback would then receive the
+pre-callback inputs instead of the callback's return value.
+"""
+
+
 def _run_before_callbacks(
     crew: Crew,
     normalized: dict[str, Any] | None,
@@ -429,16 +438,16 @@ async def aprepare_kickoff(
         The potentially modified inputs dictionary after before callbacks.
     """
     normalized = _normalize_inputs(crew, inputs)
-    # Run callbacks in async mode so awaitable results are resolved.
-    result: dict[str, Any] | None = None
+    result: dict[str, Any] | None = _UNSET
     for before_callback in crew.before_kickoff_callbacks:
-        if result is None:
+        if result is _UNSET:
             result = normalized if normalized is not None else {}
         result = before_callback(result)
         if inspect.isawaitable(result):
             result = await result
-    normalized = result
-    return _prepare_kickoff_common(crew, normalized, input_files)
+    if result is _UNSET:
+        result = normalized
+    return _prepare_kickoff_common(crew, result, input_files)
 
 
 class StreamingContext:
