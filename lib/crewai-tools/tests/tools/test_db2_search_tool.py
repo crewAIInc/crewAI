@@ -697,3 +697,11 @@ class TestToolMetadata:
         env_var_names = {ev.name for ev in tool.env_vars}
         assert "OPENAI_API_KEY" in env_var_names
         assert "DB2_CONNECTION_STRING" in env_var_names
+
+    def test_public_import_from_crewai_tools(self):
+        """from crewai_tools import DB2VectorSearchTool must work at package level."""
+        from crewai_tools import DB2ToolSchema  # noqa: PLC0415
+        from crewai_tools import DB2VectorSearchTool  # noqa: PLC0415
+
+        assert DB2VectorSearchTool is not None
+        assert DB2ToolSchema is not None

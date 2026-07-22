@@ -59,6 +59,10 @@ from crewai_tools.tools.dalle_tool.dalle_tool import DallETool
 from crewai_tools.tools.databricks_query_tool.databricks_query_tool import (
     DatabricksQueryTool,
 )
+from crewai_tools.tools.db2_search_tool import (
+    DB2ToolSchema,
+    DB2VectorSearchTool,
+)
 from crewai_tools.tools.daytona_sandbox_tool import (
     DaytonaExecTool,
     DaytonaFileTool,
@@ -247,6 +251,8 @@ __all__ = [
     "CrewaiPlatformTools",
     "DOCXSearchTool",
     "DallETool",
+    "DB2ToolSchema",
+    "DB2VectorSearchTool",
     "DatabricksQueryTool",
     "DaytonaExecTool",
     "DaytonaFileTool",
