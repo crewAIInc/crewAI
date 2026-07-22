@@ -1,5 +1,7 @@
 import logging
 import os
+import sys
+import threading
 from time import sleep
 from unittest.mock import MagicMock, patch
 
@@ -1177,3 +1179,57 @@ async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0].function.name == "search"
+
+
+def test_set_callbacks_is_thread_safe():
+    """Regression test for concurrent set_callbacks (discussion #2939).
+
+    Multiple crews launched via ``kickoff_async()`` end up running
+    ``LLM.set_callbacks`` from different threads. Because it mutated litellm's
+    process-global ``success_callback`` list with ``list.remove`` it could race
+    and raise ``ValueError: list.remove(x): x not in list``. This hammers the
+    method from many threads and asserts it never raises.
+    """
+    from crewai import llm as llm_module
+
+    if not llm_module._ensure_litellm():
+        pytest.skip("litellm not available")
+
+    litellm = llm_module.litellm
+
+    n_threads = 24
+    errors: list[BaseException] = []
+    start = threading.Barrier(n_threads)
+
+    def worker() -> None:
+        start.wait()  # release all threads together to maximise contention
+        try:
+            for _ in range(150):
+                # Register a SINGLE-copy callback of the filtered type, then call
+                # set_callbacks. Many threads now race to remove each other's
+                # single entry: the old list.remove() implementation raises
+                # `ValueError: list.remove(x): x not in list` when another thread
+                # removed it first. The fixed slice-assignment cannot.
+                cb = TokenCalcHandler(token_cost_process=TokenProcess())
+                litellm.success_callback.append(cb)
+                litellm._async_success_callback.append(cb)
+                LLM.set_callbacks(
+                    [TokenCalcHandler(token_cost_process=TokenProcess())]
+                )
+        except BaseException as exc:  # noqa: BLE001 - capture for assertion
+            errors.append(exc)
+
+    # Force frequent thread switches so the read-modify-write window in the old
+    # implementation is actually interleaved rather than completed in one slice.
+    old_interval = sys.getswitchinterval()
+    sys.setswitchinterval(1e-6)
+    try:
+        threads = [threading.Thread(target=worker) for _ in range(n_threads)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+    finally:
+        sys.setswitchinterval(old_interval)
+
+    assert not errors, f"set_callbacks raced under concurrency: {errors[:3]}"
