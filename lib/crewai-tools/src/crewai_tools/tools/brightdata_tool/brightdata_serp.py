@@ -32,6 +32,7 @@ class BrightDataSearchToolSchema(BaseModel):
         search_type (Optional[str]): Type of search, such as "isch" (images), "nws" (news), "jobs", etc.
         device_type (Optional[str]): Device type to simulate ("desktop", "mobile", "ios", "android"). Default is "desktop".
         parse_results (Optional[bool]): If True, results will be returned in structured JSON. If False, raw HTML. Default is True.
+        results_count (Optional[int]): Number of search results to fetch. Default is 10.
     """
 
     query: str = Field(..., description="Search query to perform")
@@ -58,6 +59,10 @@ class BrightDataSearchToolSchema(BaseModel):
     parse_results: bool | None = Field(
         default=True,
         description="Whether to parse and return JSON (True) or raw HTML/text (False)",
+    )
+    results_count: int | None = Field(
+        default=10,
+        description="Number of search results to fetch (default: 10)",
     )
 
 
@@ -131,10 +136,10 @@ class BrightDataSearchTool(BaseTool):
 
     def get_search_url(self, engine: str, query: str) -> str:
         if engine == "yandex":
-            return f"https://yandex.com/search/?text=${query}"
+            return f"https://yandex.com/search/?text={query}"
         if engine == "bing":
-            return f"https://www.bing.com/search?q=${query}"
-        return f"https://www.google.com/search?q=${query}"
+            return f"https://www.bing.com/search?q={query}"
+        return f"https://www.google.com/search?q={query}"
 
     def _run(
         self,
@@ -145,6 +150,7 @@ class BrightDataSearchTool(BaseTool):
         search_type: str | None = None,
         device_type: str | None = None,
         parse_results: bool | None = None,
+        results_count: int | None = None,
         **kwargs: Any,
     ) -> Any:
         """Executes a search query using Bright Data SERP API and returns results.
@@ -157,7 +163,7 @@ class BrightDataSearchTool(BaseTool):
             search_type (str): Optional type of search such as "nws", "isch", "jobs".
             device_type (str): Optional device type to simulate (e.g., "mobile", "ios", "desktop").
             parse_results (bool): If True, returns structured data; else raw page (default: True).
-            results_count (str or int): Number of search results to fetch (default: "10").
+            results_count (int): Number of search results to fetch (default: 10).
 
         Returns:
             dict or str: Parsed JSON data from Bright Data if available, otherwise error message.
@@ -171,7 +177,7 @@ class BrightDataSearchTool(BaseTool):
         parse_results = (
             parse_results if parse_results is not None else self.parse_results
         )
-        results_count = kwargs.get("results_count", "10")
+        effective_results_count = results_count if results_count is not None else 10
 
         if not query:
             raise ValueError("query is required either in constructor or method call")
@@ -187,8 +193,7 @@ class BrightDataSearchTool(BaseTool):
         if language:
             params.append(f"hl={language}")
 
-        if results_count:
-            params.append(f"num={results_count}")
+        params.append(f"num={effective_results_count}")
 
         if parse_results:
             params.append("brd_json=1")
