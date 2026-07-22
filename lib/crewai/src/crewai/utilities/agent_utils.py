@@ -10,6 +10,7 @@ from datetime import datetime
 import inspect
 import json
 import re
+import traceback
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
 
 from crewai_core.printer import PRINTER, ColoredText, Printer
@@ -1565,7 +1566,7 @@ def execute_single_native_tool_call(
 
                 result = format_native_tool_output_for_agent(output_tool, raw_result)
             except Exception as e:
-                result = f"Error executing tool: {e}"
+                result = f"Error executing tool: {e}\nTraceback:\n{traceback.format_exc(limit=5)}"
                 raw_tool_result = result
                 if task:
                     task.increment_tools_errors()
