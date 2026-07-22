@@ -158,11 +158,18 @@ class DB2VectorSearchTool(BaseTool):
     _openai_client: Any | None = None
 
     def _resolve_db2_packages(self) -> None:
-        """Lazily resolve IBM DB2 packages on first use."""
-        if self.db2_package is None:
-            self.db2_package = importlib.import_module("ibm_db")
-        if self.db2_dbi_package is None:
-            self.db2_dbi_package = importlib.import_module("ibm_db_dbi")
+        """Lazily resolve IBM DB2 packages on first use.
+
+        Handles both default None values and explicit string inputs
+        (e.g. db2_package="ibm_db") so the field always ends up as
+        the real module object before _connect() uses it.
+        """
+        if self.db2_package is None or isinstance(self.db2_package, str):
+            pkg_name = self.db2_package or "ibm_db"
+            self.db2_package = importlib.import_module(pkg_name)
+        if self.db2_dbi_package is None or isinstance(self.db2_dbi_package, str):
+            pkg_name = self.db2_dbi_package or "ibm_db_dbi"
+            self.db2_dbi_package = importlib.import_module(pkg_name)
 
     def _connect(self) -> None:
         self._resolve_db2_packages()

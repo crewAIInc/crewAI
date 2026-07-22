@@ -642,6 +642,32 @@ class TestConnectDisconnect:
             tool.__del__()
         mock_disconnect.assert_called_once()
 
+    def test_connect_resolves_packages_without_injection(self):
+        """Constructs the tool WITHOUT injecting db2_package / db2_dbi_package.
+
+        Verifies that _connect() automatically resolves package fields from sys.modules
+        when left at their default of None, and successfully establishes a connection.
+        """
+        tool = DB2VectorSearchTool(
+            connection_string="DATABASE=TESTDB;HOSTNAME=localhost;PORT=50000;PROTOCOL=TCPIP;UID=user;PWD=pass;",
+            custom_embedding_fn=_fake_embedding,
+        )
+        # Both fields start as None
+        assert tool.db2_package is None
+        assert tool.db2_dbi_package is None
+
+        # Exercise behavior via _connect()
+        _ibm_db_stub.connect.return_value = MagicMock()
+        tool._connect()
+
+        # Verify side-effects: packages were resolved and connections established
+        assert tool.db2_package is _ibm_db_stub
+        assert tool.db2_dbi_package is _ibm_db_dbi_stub
+        assert tool.connection is not None
+        assert tool.cursor is not None
+
+        tool._disconnect()
+
 
 # ---------------------------------------------------------------------------
 # Tool metadata
