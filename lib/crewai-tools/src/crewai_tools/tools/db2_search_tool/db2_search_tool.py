@@ -72,11 +72,15 @@ class DB2VectorSearchTool(BaseTool):
     args_schema: type[BaseModel] = DB2ToolSchema
 
     # Internal Whitelist for distance metrics to prevent SQL injection
+    # Aligned with Db2 VECTOR_DISTANCE API:
+    # https://www.ibm.com/docs/en/db2/12.1.x?topic=functions-vector-distance
     _ALLOWED_METRICS: ClassVar[set[str]] = {
         "COSINE",
         "EUCLIDEAN",
-        "DOT_PRODUCT",
-        "L2_DISTANCE",
+        "EUCLIDEAN_SQUARED",
+        "DOT",
+        "HAMMING",
+        "MANHATTAN",
     }
 
     package_dependencies: list[str] = Field(
@@ -140,15 +144,8 @@ class DB2VectorSearchTool(BaseTool):
             )
         return self
 
-    db2_package: ImportString[Any] = Field(
-        default="ibm_db",
-        description="IBM DB2 base package.",
-    )
-
-    db2_dbi_package: ImportString[Any] = Field(
-        default="ibm_db_dbi",
-        description="IBM DB2 DBI package.",
-    )
+    db2_package: Any = Field(default=None, description="IBM DB2 base package.")
+    db2_dbi_package: Any = Field(default=None, description="IBM DB2 DBI package.")
 
     custom_embedding_fn: ImportString[Callable[[str], list[float]]] | None = Field(
         default=None,
@@ -160,7 +157,15 @@ class DB2VectorSearchTool(BaseTool):
     cursor: Any | None = None
     _openai_client: Any | None = None
 
+    def _resolve_db2_packages(self) -> None:
+        """Lazily resolve IBM DB2 packages on first use."""
+        if self.db2_package is None:
+            self.db2_package = importlib.import_module("ibm_db")
+        if self.db2_dbi_package is None:
+            self.db2_dbi_package = importlib.import_module("ibm_db_dbi")
+
     def _connect(self) -> None:
+        self._resolve_db2_packages()
         self.connection = self.db2_package.connect(self.connection_string, "", "")
         self.dbi_connection = self.db2_dbi_package.Connection(self.connection)
         self.cursor = self.dbi_connection.cursor()
