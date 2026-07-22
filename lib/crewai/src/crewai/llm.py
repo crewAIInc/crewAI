@@ -165,6 +165,42 @@ MIN_CONTEXT: Final[int] = 1024
 MAX_CONTEXT: Final[int] = 2097152  # Current max from gemini-1.5-pro
 ANTHROPIC_PREFIXES: Final[tuple[str, str, str]] = ("anthropic/", "claude-", "claude/")
 
+# Static provider capability lists.  These are checked *before* LiteLLM
+# introspection so that well-known providers always receive correct capability
+# detection even when LiteLLM's model-mapping table is unavailable or raises.
+RESPONSE_FORMAT_SUPPORTED_PROVIDERS: Final[frozenset[str]] = frozenset(
+    {
+        "openai",
+        "azure",
+        "azure_openai",
+        "google",
+        "gemini",
+        "anthropic",
+        "bedrock",
+        "deepseek",
+        "openrouter",
+        "mistral",
+        "groq",
+        "fireworks_ai",
+        "together_ai",
+        "anyscale",
+        "cerebras",
+        "dashscope",
+    }
+)
+
+REASONING_EFFORT_SUPPORTED_PROVIDERS: Final[frozenset[str]] = frozenset(
+    {
+        "openai",
+        "azure",
+        "azure_openai",
+        "anthropic",
+        "bedrock",
+        "deepseek",
+        "openrouter",
+    }
+)
+
 LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "gpt-4": 8192,
     "gpt-4o": 128000,
@@ -2375,29 +2411,47 @@ class LLM(BaseLLM):
     def _validate_call_params(self) -> None:
         """Validate call parameters before executing a completion request.
 
-        Checks whether the requested ``response_format`` is supported by the
-        target model/provider via LiteLLM introspection.  When introspection
-        raises an exception (e.g. an unmapped custom model ID or proxy
-        endpoint), the failure is logged at DEBUG level and validation is
-        skipped so the request can proceed — this mirrors the permissive
-        fallback used in :meth:`supports_function_calling`.
+        Performs two kinds of checks in order:
 
-        When no ``response_format`` is configured (including when only
-        ``reasoning_effort`` or other parameters are set) this method returns
-        immediately without performing any checks.
+        1. **Static capability checks** (always run): ``response_format`` and
+           ``reasoning_effort`` are tested against
+           :data:`RESPONSE_FORMAT_SUPPORTED_PROVIDERS` and
+           :data:`REASONING_EFFORT_SUPPORTED_PROVIDERS` respectively.  These
+           module-level frozensets encode well-known provider support and run
+           unconditionally — regardless of whether LiteLLM is available.
+
+        2. **LiteLLM introspection** (best-effort): When the provider is *not*
+           in the static lists, ``supports_response_schema`` is called for
+           additional coverage.  If introspection raises (e.g. an unmapped
+           custom model ID or proxy endpoint), the failure is logged at DEBUG
+           level and validation is skipped — permitting the request to proceed.
 
         Note: This validation only applies to the litellm fallback path.
         Native providers perform their own parameter validation.
         """
+        provider = self._get_custom_llm_provider() or "openai"
+
+        # --- Static reasoning_effort check (always runs) ---
+        if self.reasoning_effort is not None:
+            if provider not in REASONING_EFFORT_SUPPORTED_PROVIDERS:
+                logger.debug(
+                    f"Provider '{provider}' does not appear in the static reasoning_effort "
+                    "support list; the parameter will be forwarded and may be ignored."
+                )
+
+        # --- response_format checks ---
         if self.response_format is None:
             return
 
-        if not _ensure_litellm() or supports_response_schema is None:
-            # When litellm is not available, skip validation
-            # (this path should only be reached for litellm fallback models)
+        # 1. Static check: known-supported providers skip LiteLLM introspection.
+        if provider in RESPONSE_FORMAT_SUPPORTED_PROVIDERS:
             return
 
-        provider = self._get_custom_llm_provider()
+        # 2. LiteLLM introspection for providers not in the static list.
+        if not _ensure_litellm() or supports_response_schema is None:
+            # LiteLLM unavailable; static list was already consulted — allow.
+            return
+
         try:
             is_supported = supports_response_schema(
                 model=self.model,
