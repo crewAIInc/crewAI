@@ -1169,6 +1169,7 @@ async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
     response = _build_response_with_text_and_tool_calls()
 
     async def _ret(*args, **kwargs):
+        """Return the pre-built mock response."""
         return response
 
     with patch("crewai.llm.litellm.acompletion", side_effect=_ret):
@@ -1184,6 +1185,35 @@ def test_validate_call_params_handles_introspection_error():
     llm = LLM(model="custom/unsupported-model", is_litellm=True, response_format={"type": "json_object"})
 
     with patch("crewai.llm.supports_response_schema", side_effect=Exception("Introspection error")):
-        # Should not raise exception
+        # Should not raise exception — permissive fallback applies
         llm._validate_call_params()
+
+
+def test_validate_call_params_raises_for_confirmed_unsupported_model():
+    """Verify _validate_call_params still raises ValueError when introspection confirms no support.
+
+    This ensures the validation path is not silently skipped — only introspection
+    *errors* are swallowed; a clear ``False`` return still produces a ValueError.
+    """
+    llm = LLM(model="my-provider/my-model", is_litellm=True, response_format={"type": "json_object"})
+
+    with patch("crewai.llm.supports_response_schema", return_value=False):
+        with pytest.raises(ValueError, match="does not support response_format"):
+            llm._validate_call_params()
+
+
+def test_validate_call_params_skips_check_when_no_response_format():
+    """Verify _validate_call_params is a no-op when response_format is not set.
+
+    This covers scenarios where only ``reasoning_effort`` or other parameters
+    are configured: the method must return immediately so those parameters are
+    forwarded to the provider without interference.
+    """
+    llm = LLM(model="gpt-4o", is_litellm=True, reasoning_effort="medium")
+
+    # If supports_response_schema were called, patching it to raise would surface the bug
+    with patch("crewai.llm.supports_response_schema", side_effect=Exception("Should not be called")):
+        # No exception — response_format is None so introspection is never invoked
+        llm._validate_call_params()
+
 

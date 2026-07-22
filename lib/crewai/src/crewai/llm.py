@@ -2373,16 +2373,21 @@ class LLM(BaseLLM):
         return None
 
     def _validate_call_params(self) -> None:
-        """
-        Validate parameters before making a call. Currently this only checks if
-        a response_format is provided and whether the model supports it.
-        The custom_llm_provider is dynamically determined from the model:
-          - E.g., "openrouter/deepseek/deepseek-chat" yields "openrouter"
-          - "gemini/gemini-1.5-pro" yields "gemini"
-          - If no slash is present, "openai" is assumed.
+        """Validate call parameters before executing a completion request.
+
+        Checks whether the requested ``response_format`` is supported by the
+        target model/provider via LiteLLM introspection.  When introspection
+        raises an exception (e.g. an unmapped custom model ID or proxy
+        endpoint), the failure is logged at DEBUG level and validation is
+        skipped so the request can proceed — this mirrors the permissive
+        fallback used in :meth:`supports_function_calling`.
+
+        When no ``response_format`` is configured (including when only
+        ``reasoning_effort`` or other parameters are set) this method returns
+        immediately without performing any checks.
 
         Note: This validation only applies to the litellm fallback path.
-        Native providers have their own validation.
+        Native providers perform their own parameter validation.
         """
         if self.response_format is None:
             return
