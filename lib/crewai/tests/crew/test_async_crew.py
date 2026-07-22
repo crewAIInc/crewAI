@@ -378,16 +378,22 @@ class TestAsyncCrewKickoff:
         assert captured.get("base") == "value"
 
     @pytest.mark.asyncio
+    @patch("crewai.crews.utils._run_before_kickoff_callbacks")
     @patch("crewai.task.Task.aexecute_sync", new_callable=AsyncMock)
     async def test_akickoff_before_callback_returning_none_runs_once(
-        self, mock_execute: AsyncMock, test_agent: Agent
+        self,
+        mock_execute: AsyncMock,
+        sync_runner: MagicMock,
+        test_agent: Agent,
     ) -> None:
         """An async before-callback that returns ``None`` runs exactly once.
 
         Regression for a ``None``-sentinel collision: a callback that mutates
         the inputs dict in place and falls off the end of the function returns
         ``None``, which must not be mistaken for "callbacks not yet applied" —
-        otherwise every before-callback is silently re-run on the async path.
+        otherwise every before-callback is silently re-run via the *sync* runner
+        on the async path (producing an un-awaited coroutine for async
+        callbacks, the original symptom this PR fixes).
         """
 
         call_count = 0
@@ -398,6 +404,11 @@ class TestAsyncCrewKickoff:
             if inputs is not None:
                 inputs["injected"] = "from-before"
             return None
+
+        # If the sync runner is reached on the async path it is the double-run
+        # bug; have it return a plain dict so the failure surfaces as the
+        # assertion below rather than a downstream ValidationError.
+        sync_runner.side_effect = lambda crew, normalized: normalized or {}
 
         task = Task(
             description="Test task for {injected}",
@@ -411,21 +422,21 @@ class TestAsyncCrewKickoff:
             before_kickoff_callbacks=[before_callback],
         )
 
-        async def capture_inputs(*args: Any, **kwargs: Any) -> TaskOutput:
-            # ``_inputs`` reflects the in-place edit the callback made before
-            # returning None. If the in-place mutation survives and the call
-            # count is 1, the callback ran exactly once and None round-tripped.
-            return TaskOutput(
-                description="Test task",
-                raw="Task result",
-                agent="Test Agent",
-            )
-
-        mock_execute.side_effect = capture_inputs
+        mock_execute.return_value = TaskOutput(
+            description="Test task",
+            raw="Task result",
+            agent="Test Agent",
+        )
 
         await crew.akickoff(inputs={"base": "value"})
 
+        # The async path runs callbacks via ``_arun_before_kickoff_callbacks``
+        # and must not fall back to the sync runner. On the pre-sentinel branch
+        # the returned ``None`` was misread as "not yet applied" and the sync
+        # runner was entered a second time, invoking the async callback without
+        # an await.
         assert call_count == 1
+        assert sync_runner.call_count == 0
 
     @pytest.mark.asyncio
     @patch("crewai.task.Task.aexecute_sync", new_callable=AsyncMock)
