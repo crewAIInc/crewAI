@@ -32,6 +32,9 @@ class ProviderConfig:
         default_headers: HTTP headers to include in all requests.
         api_key_required: Whether an API key is required for this provider.
         default_api_key: Default API key to use if none is provided and not required.
+        supports_json_schema: Whether the endpoint accepts OpenAI's
+            ``json_schema`` structured-output ``response_format``. Some
+            OpenAI-compatible endpoints (e.g. DeepSeek) reject it.
     """
 
     base_url: str
@@ -40,6 +43,7 @@ class ProviderConfig:
     default_headers: dict[str, str] = field(default_factory=dict)
     api_key_required: bool = True
     default_api_key: str | None = None
+    supports_json_schema: bool = True
 
 
 OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
@@ -55,6 +59,9 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         api_key_env="DEEPSEEK_API_KEY",
         base_url_env="DEEPSEEK_BASE_URL",
         api_key_required=True,
+        # DeepSeek rejects OpenAI's json_schema response_format with
+        # "This response_format type is unavailable now" (#5990).
+        supports_json_schema=False,
     ),
     "ollama": ProviderConfig(
         base_url="http://localhost:11434/v1",
@@ -261,3 +268,16 @@ class OpenAICompatibleCompletion(OpenAICompletion):
             Whether the model supports function calling.
         """
         return super().supports_function_calling()
+
+    def supports_native_structured_output(self) -> bool:
+        """Honor each provider's json_schema support (#5990).
+
+        Some OpenAI-compatible endpoints (e.g. DeepSeek) reject OpenAI's
+        ``json_schema`` ``response_format``. For those, structured output
+        falls back to a plain completion and client-side validation.
+
+        Returns:
+            Whether the configured provider accepts json_schema response_format.
+        """
+        config = OPENAI_COMPATIBLE_PROVIDERS.get(self.provider)
+        return config.supports_json_schema if config else True

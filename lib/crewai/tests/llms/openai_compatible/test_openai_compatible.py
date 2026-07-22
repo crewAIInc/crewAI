@@ -1,11 +1,13 @@
 """Tests for OpenAI-compatible providers."""
 
 import os
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic import BaseModel
 
 from crewai.llm import LLM
+from crewai.llms.providers.openai.completion import OpenAICompletion
 from crewai.llms.providers.openai_compatible.completion import (
     OPENAI_COMPATIBLE_PROVIDERS,
     OpenAICompatibleCompletion,
@@ -36,6 +38,7 @@ class TestProviderConfig:
         assert config.default_headers == {}
         assert config.api_key_required is True
         assert config.default_api_key is None
+        assert config.supports_json_schema is True
 
 
 class TestProviderRegistry:
@@ -56,6 +59,8 @@ class TestProviderRegistry:
         assert config.base_url == "https://api.deepseek.com/v1"
         assert config.api_key_env == "DEEPSEEK_API_KEY"
         assert config.api_key_required is True
+        # DeepSeek rejects OpenAI's json_schema response_format (#5990)
+        assert config.supports_json_schema is False
 
     def test_ollama_config(self):
         """Test Ollama provider configuration."""
@@ -307,3 +312,150 @@ class TestCallMocking:
         completion = OpenAICompatibleCompletion(model="llama3", provider="ollama")
         assert hasattr(completion, "acall")
         assert callable(completion.acall)
+
+
+class _Answer(BaseModel):
+    value: int
+
+
+def _stream_chunk(content: str | None = None, finish: str | None = None) -> MagicMock:
+    """Build a minimal OpenAI streaming chunk for the regular (non-native) path."""
+    chunk = MagicMock()
+    chunk.id = "id"
+    chunk.usage = None  # not a usage chunk
+    choice = MagicMock()
+    delta = MagicMock()
+    delta.content = content
+    delta.tool_calls = None
+    choice.delta = delta
+    choice.finish_reason = finish
+    chunk.choices = [choice]
+    return chunk
+
+
+class TestStructuredOutputFallback:
+    """Structured output must degrade gracefully on OpenAI-compatible
+    endpoints that reject OpenAI's json_schema response_format (#5990).
+    """
+
+    def test_deepseek_does_not_support_native_structured_output(self):
+        with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-key"}):
+            llm = OpenAICompatibleCompletion(model="deepseek-chat", provider="deepseek")
+        assert llm.supports_native_structured_output() is False
+
+    def test_openrouter_supports_native_structured_output(self):
+        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}):
+            llm = OpenAICompatibleCompletion(model="some-model", provider="openrouter")
+        assert llm.supports_native_structured_output() is True
+
+    def test_openai_supports_native_structured_output(self):
+        assert OpenAICompletion(model="gpt-4o").supports_native_structured_output()
+
+    def test_deepseek_omits_json_schema_response_format(self):
+        """A Pydantic response_format must not be sent as json_schema to DeepSeek."""
+        with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-key"}):
+            llm = OpenAICompatibleCompletion(
+                model="deepseek-chat", provider="deepseek", response_format=_Answer
+            )
+        params = llm._prepare_completion_params([{"role": "user", "content": "hi"}])
+        assert "response_format" not in params
+
+    def test_openai_keeps_json_schema_response_format(self):
+        """OpenAI still receives the json_schema response_format (no regression)."""
+        llm = OpenAICompletion(model="gpt-4o", response_format=_Answer)
+        params = llm._prepare_completion_params([{"role": "user", "content": "hi"}])
+        assert params.get("response_format", {}).get("type") == "json_schema"
+
+    def test_deepseek_completion_skips_native_parse_and_validates_client_side(self):
+        """DeepSeek + response_model must use a plain completion (no json_schema
+        parse) and still return the validated model via client-side parsing.
+        """
+        with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-key"}):
+            llm = OpenAICompatibleCompletion(model="deepseek-chat", provider="deepseek")
+
+        client = MagicMock()
+        message = MagicMock()
+        message.content = '{"value": 42}'
+        message.tool_calls = None
+        response = MagicMock()
+        response.choices = [MagicMock(message=message)]
+        client.chat.completions.create.return_value = response
+
+        with (
+            patch.object(llm, "_get_sync_client", return_value=client),
+            patch.object(llm, "_extract_openai_token_usage", return_value={}),
+            patch.object(
+                llm, "_extract_chat_finish_reason_and_id", return_value=("stop", "id")
+            ),
+            patch.object(llm, "_emit_call_completed_event"),
+        ):
+            result = llm._handle_completion(
+                {"messages": [{"role": "user", "content": "hi"}]},
+                response_model=_Answer,
+            )
+
+        client.beta.chat.completions.parse.assert_not_called()
+        client.chat.completions.create.assert_called_once()
+        assert isinstance(result, _Answer)
+        assert result.value == 42
+
+    def test_deepseek_streaming_skips_native_stream_and_validates_client_side(self):
+        """DeepSeek + streaming + response_model must use a plain streaming
+        completion (no json_schema beta.stream) and still parse the accumulated
+        text into the requested model, matching the non-streaming fallback.
+        """
+
+        with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-key"}):
+            llm = OpenAICompatibleCompletion(model="deepseek-chat", provider="deepseek")
+
+        client = MagicMock()
+        client.chat.completions.create.return_value = [
+            _stream_chunk(content='{"value": '),
+            _stream_chunk(content="42}", finish="stop"),
+        ]
+
+        with (
+            patch.object(llm, "_get_sync_client", return_value=client),
+            patch.object(llm, "_emit_stream_chunk_event"),
+            patch.object(llm, "_emit_call_completed_event"),
+        ):
+            result = llm._handle_streaming_completion(
+                {"messages": [{"role": "user", "content": "hi"}]},
+                response_model=_Answer,
+            )
+
+        # The native json_schema streaming path must be skipped entirely.
+        client.beta.chat.completions.stream.assert_not_called()
+        client.chat.completions.create.assert_called_once()
+        # ...and the accumulated text is still parsed into the model.
+        assert isinstance(result, _Answer)
+        assert result.value == 42
+
+    def test_deepseek_streaming_validates_configured_response_format(self):
+        """stream=True with a configured response_format (not a per-call
+        response_model) must also be parsed into the model on the fallback
+        path, matching the non-streaming behavior.
+        """
+        with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-key"}):
+            llm = OpenAICompatibleCompletion(
+                model="deepseek-chat", provider="deepseek", response_format=_Answer
+            )
+
+        client = MagicMock()
+        client.chat.completions.create.return_value = [
+            _stream_chunk(content='{"value": '),
+            _stream_chunk(content="7}", finish="stop"),
+        ]
+
+        with (
+            patch.object(llm, "_get_sync_client", return_value=client),
+            patch.object(llm, "_emit_stream_chunk_event"),
+            patch.object(llm, "_emit_call_completed_event"),
+        ):
+            result = llm._handle_streaming_completion(
+                {"messages": [{"role": "user", "content": "hi"}]},
+            )
+
+        client.beta.chat.completions.stream.assert_not_called()
+        assert isinstance(result, _Answer)
+        assert result.value == 7
