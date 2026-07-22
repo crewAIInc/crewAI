@@ -2881,7 +2881,9 @@ def test_manager_agent_in_agents_raises_exception(researcher, writer):
 
 
 @pytest.mark.vcr()
-def test_manager_agent_with_tools_raises_exception(researcher, writer):
+def test_manager_agent_with_tools_logs_warning_and_strips_tools(researcher, writer):
+    """Test that manager agent tools are stripped after a warning."""
+
     @tool
     def testing_tool(first_number: int, second_number: int) -> int:
         """Useful for when you need to multiply two numbers together."""
@@ -2907,8 +2909,16 @@ def test_manager_agent_with_tools_raises_exception(researcher, writer):
         tasks=[task],
     )
 
-    with pytest.raises(Exception, match="Manager agent should not have tools"):
-        crew.kickoff()
+    with patch("crewai.crew.Logger.log", autospec=True) as log:
+        crew._create_manager_agent()
+
+    log.assert_called_once_with(
+        crew._logger,
+        "warning",
+        "Manager agent should not have tools",
+        color="bold_yellow",
+    )
+    assert manager.tools == []
 
 
 @pytest.mark.vcr()
