@@ -2841,3 +2841,88 @@ class TestSharedLLMStopWords:
 
         assert seen == [{"Original:", "Observation:"}]
         assert shared.stop == ["Original:"]
+
+
+class TestOutputPydanticDoesNotLeakIntoResponseModel:
+    """Regression tests for issue #5472.
+
+    output_pydantic / output_json should NOT be mapped onto
+    executor.response_model. Only explicit task.response_model
+    should use native structured output.
+    """
+
+    def test_output_pydantic_does_not_set_response_model(self):
+        """output_pydantic should stay in post-processing, not set response_model."""
+        from pydantic import BaseModel, Field
+
+        class MyOutput(BaseModel):
+            answer: str = Field(description="The answer")
+
+        agent = Agent(role="test", goal="test", backstory="test")
+        task = Task(
+            description="test",
+            expected_output="test",
+            output_pydantic=MyOutput,
+        )
+
+        agent.create_agent_executor(task=task)
+        assert agent.agent_executor.response_model is None
+
+    def test_output_json_does_not_set_response_model(self):
+        """output_json should stay in post-processing, not set response_model."""
+        from pydantic import BaseModel, Field
+
+        class MyOutput(BaseModel):
+            answer: str = Field(description="The answer")
+
+        agent = Agent(role="test", goal="test", backstory="test")
+        task = Task(
+            description="test",
+            expected_output="test",
+            output_json=MyOutput,
+        )
+
+        agent.create_agent_executor(task=task)
+        assert agent.agent_executor.response_model is None
+
+    def test_explicit_response_model_still_works(self):
+        """Explicit task.response_model should still propagate to the executor."""
+        from pydantic import BaseModel, Field
+
+        class MyOutput(BaseModel):
+            answer: str = Field(description="The answer")
+
+        agent = Agent(role="test", goal="test", backstory="test")
+        task = Task(
+            description="test",
+            expected_output="test",
+            response_model=MyOutput,
+        )
+
+        agent.create_agent_executor(task=task)
+        assert agent.agent_executor.response_model is MyOutput
+
+    def test_update_executor_parameters_respects_fix(self):
+        """_update_executor_parameters should apply the same mapping fix."""
+        from pydantic import BaseModel, Field
+
+        class MyOutput(BaseModel):
+            answer: str = Field(description="The answer")
+
+        agent = Agent(role="test", goal="test", backstory="test")
+        task_with_pydantic = Task(
+            description="test",
+            expected_output="test",
+            output_pydantic=MyOutput,
+        )
+        task_with_response_model = Task(
+            description="test",
+            expected_output="test",
+            response_model=MyOutput,
+        )
+
+        agent.create_agent_executor(task=task_with_pydantic)
+        assert agent.agent_executor.response_model is None
+
+        agent.create_agent_executor(task=task_with_response_model)
+        assert agent.agent_executor.response_model is MyOutput
