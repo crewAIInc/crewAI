@@ -33,6 +33,7 @@ import { z } from "zod";
 useFrontendTool({
   agentId: "assistant",
   name: "set_theme",
+  description: "Switch the app between light and dark mode.",
   parameters: z.object({
     theme: z.enum(["light", "dark"]),
   }),
@@ -47,6 +48,7 @@ useFrontendTool({
 The arguments:
 
 - **`name`** — the tool name the model calls (`set_theme`).
+- **`description`** — a short explanation of what the tool does. The model reads it to decide *when* to call the tool, so make it specific. Omitting it leaves the model guessing from the name alone.
 - **`parameters`** — a [zod](https://zod.dev) schema describing the arguments the model must supply. CopilotKit turns this into the tool's JSON schema and validates the incoming call.
 - **`handler(args)`** — runs in the browser with the parsed arguments. Do your side effect here (set the theme, navigate, update state). The string you return is handed back to the agent as the tool result.
 - **`followUp: false`** — stops the agent from taking another turn after the action runs. Leave it out (or set `true`) when you want the agent to respond after acting.

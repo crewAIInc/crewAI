@@ -114,31 +114,34 @@ Register the agent with the CopilotKit runtime and point `<CopilotKit>` at it ex
 
 <Step title="Register the rendering component">
 
-On the frontend, call `useFrontendTool` with the same `name` the backend declared. Provide a `render` function and no handler: this tool is pure display, so there is nothing to execute in the browser.
+On the frontend, call `useRenderTool` with the same `name` the backend declared. `useRenderTool` is the hook for *rendering* a tool call: it takes a `render` function and nothing to execute, because this tool is pure display.
+
+<Note>
+Use `useRenderTool` when the tool only draws UI. If the tool also needs to *run* something in the browser, use [`useFrontendTool`](/en/guides/frontend/frontend-actions) instead, which pairs a `handler` with an optional `render`.
+</Note>
 
 ```tsx
 "use client";
-import { useFrontendTool } from "@copilotkit/react-core/v2";
+import { useRenderTool } from "@copilotkit/react-core/v2";
 import { z } from "zod";
 
-useFrontendTool({
-  agentId: "haiku",
+useRenderTool({
   name: "generate_haiku",
   parameters: z.object({
     japanese: z.array(z.string()),
     english: z.array(z.string()),
   }),
-  render: ({ args }) => {
+  render: ({ args, status }) => {
     if (!args.japanese) return <></>; // still streaming
     return <HaikuCard japanese={args.japanese} english={args.english} />;
   },
 });
 ```
 
-A few things to note:
+The tool is scoped to the active agent by the `<CopilotKit agent="haiku">` provider, so no `agentId` is needed here. A few things to note:
 
 - **`name` must match the backend tool name** exactly (`generate_haiku`). That match is how CopilotKit routes the call to this component.
-- **`render` receives `{ args }`**, which fills in progressively as the model streams the call. Early on, `args` may be an empty object or hold only a partial field.
+- **`render` receives `{ args, status }`.** `args` fills in progressively as the model streams the call; early on it may be empty or partial. `status` moves through `"inProgress"` / `"executing"` to `"complete"` if you want to show a loading state while arguments stream.
 - **Guard against partial args.** Return an empty fragment until the fields you need exist. Here we wait for `args.japanese` before rendering the card.
 
 </Step>

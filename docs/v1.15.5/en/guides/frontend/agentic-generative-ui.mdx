@@ -14,7 +14,7 @@ The pattern has two halves:
 1. Your Flow writes progress into its own state as it works.
 2. Your frontend reads that state with `useAgent` and paints it, re-rendering as the state streams in.
 
-Because a Flow's state is streamed to the frontend automatically over AG-UI, you never wire up the transport yourself. You subclass the state to add your own fields, update them in the Flow, and read them in React.
+The Flow's state reaches the frontend over AG-UI without you wiring up any transport. A state snapshot is emitted automatically at each step (method) boundary of the Flow, and you can push intermediate updates during a long-running step by calling `copilotkit_emit_state` explicitly. You subclass the state to add your own fields, update them in the Flow, and read them in React.
 
 <Note>
 State-driven rendering requires a **Flow** with custom state (`Flow[AgentState]`). Crews are chat-oriented and do not expose custom state this way, so with a Crew use [tool rendering](/en/guides/frontend/tool-based-generative-ui) instead.
@@ -45,7 +45,7 @@ class AgentState(CopilotKitState):
     steps: List[TaskStep] = []
 ```
 
-Everything on `AgentState` is streamed to the frontend as it changes. That is the whole contract: write to `self.state`, and the UI sees it.
+Everything on `AgentState` is included in the state snapshot the frontend receives. A snapshot is emitted automatically at each step boundary, so writing to `self.state` is enough for the UI to pick it up between steps. To update the UI *during* a long step, emit explicitly (shown below).
 
 </Step>
 
@@ -103,7 +103,27 @@ class TaskPlannerFlow(Flow[AgentState]):
         self.state.messages.append(message)
 ```
 
-Wrapping the LLM call in `copilotkit_stream` streams tokens and state deltas to the frontend as they are produced, so the UI updates mid-run rather than only at the end.
+Wrapping the LLM call in `copilotkit_stream` streams the assistant's tokens and tool call to the frontend as they are produced. The `steps` you write to `self.state` are sent in the state snapshot emitted at the end of this step.
+
+</Step>
+
+<Step title="Stream progress during a long step (optional)">
+
+The automatic snapshot fires at step boundaries. If a single step does substantial work and you want the checklist to fill in *as it happens*, emit intermediate state yourself with `copilotkit_emit_state`. Each call pushes the current state to the frontend immediately.
+
+```python
+from ag_ui_crewai.sdk import copilotkit_emit_state
+
+class TaskPlannerFlow(Flow[AgentState]):
+    @start()
+    async def execute(self):
+        for step in self.state.steps:
+            step.status = "disabled"          # mark done as you go
+            await copilotkit_emit_state(self.state)   # push update now
+            await do_work(step)
+```
+
+`copilotkit_emit_state` is re-exported from `ag_ui_crewai.sdk` (it wraps `copilotkit.crewai`, so `pip install "copilotkit[crewai]"` must be present). Reach for it only when a step is long enough that waiting for its boundary snapshot would feel unresponsive.
 
 </Step>
 

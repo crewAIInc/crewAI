@@ -115,7 +115,7 @@ class SharedStateFlow(Flow[AgentState]):
         pass
 ```
 
-Two things make this shared rather than one-way: dumping `self.state` into the prompt means the agent always works from the latest recipe (including edits the user made in the UI), and assigning `self.state.recipe` streams the new value out to every connected client.
+Two things make this shared rather than one-way: dumping `self.state` into the prompt means the agent always works from the latest recipe (including edits the user made in the UI), and assigning `self.state.recipe` puts the new value into the state snapshot sent to connected clients at the end of the step. For updates during a long step, emit explicitly with `copilotkit_emit_state` (see [Agentic Generative UI](/en/guides/frontend/agentic-generative-ui)).
 
 </Step>
 
@@ -155,19 +155,22 @@ function RecipeEditor() {
   });
 
   const state = agent?.state as { recipe?: Recipe } | undefined;
-  const setState = (s: any) => agent.setState(s); // write back to shared state
   const isLoading = agent?.isRunning;
 
   const recipe = state?.recipe;
+
+  // setState replaces the whole state object, so spread the current
+  // state and override only the field you changed. Passing just
+  // `{ recipe }` would drop messages and other runtime fields.
+  const updateRecipe = (patch: Partial<Recipe>) =>
+    agent.setState({ ...agent.state, recipe: { ...recipe, ...patch } });
 
   return (
     <div>
       <input
         value={recipe?.title ?? ""}
         disabled={isLoading}
-        onChange={(e) =>
-          setState({ recipe: { ...recipe, title: e.target.value } })
-        }
+        onChange={(e) => updateRecipe({ title: e.target.value })}
       />
       {/* render inputs for ingredients and instructions the same way */}
     </div>
@@ -177,6 +180,10 @@ function RecipeEditor() {
 
 `agent.state` reads the shared state, `agent.setState(...)` writes it back so the agent sees the change on its next turn, and `agent.isRunning` reflects whether the agent is currently working.
 
+<Note>
+`setState` **replaces** the entire state object rather than merging. Always spread the current state (`{ ...agent.state, ... }`) and override only the fields you are changing, or you will drop the conversation and other runtime fields the agent depends on.
+</Note>
+
 </Step>
 
 </Steps>
@@ -185,7 +192,7 @@ function RecipeEditor() {
 
 Putting the pieces together, a single recipe object is kept in sync in both directions:
 
-- **Agent edits, UI updates.** The Flow assigns `self.state.recipe`, the new value streams to the client, and `OnStateChanged` re-renders your inputs.
+- **Agent edits, UI updates.** The Flow assigns `self.state.recipe`, the new value ships in the step's state snapshot, and `OnStateChanged` re-renders your inputs.
 - **User edits, agent sees it.** A change in the UI calls `agent.setState(...)`, and because the Flow dumps `self.state` into its prompt, the agent works from the edited recipe on its next turn.
 
 ## Related

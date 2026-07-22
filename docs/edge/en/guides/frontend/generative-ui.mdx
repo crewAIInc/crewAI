@@ -20,15 +20,14 @@ Both approaches are covered below. They compose freely; a single app usually use
 
 ## Tool rendering
 
-The agent calls a tool on the backend. You register a matching component on the frontend with `useFrontendTool`, and CopilotKit renders it, streaming the arguments in as they arrive.
+The agent calls a tool on the backend. You register a matching component on the frontend with `useRenderTool`, and CopilotKit renders it, streaming the arguments in as they arrive.
 
 ```tsx
 "use client";
-import { useFrontendTool } from "@copilotkit/react-core/v2";
+import { useRenderTool } from "@copilotkit/react-core/v2";
 import { z } from "zod";
 
-useFrontendTool({
-  agentId: "recipe",
+useRenderTool({
   name: "generate_recipe",
   parameters: z.object({
     title: z.string(),
@@ -37,6 +36,10 @@ useFrontendTool({
   render: ({ args }) => <RecipeCard title={args.title} ingredients={args.ingredients} />,
 });
 ```
+
+<Note>
+`useRenderTool` renders a tool call. When a tool also needs to *run* code in the browser, use [`useFrontendTool`](/en/guides/frontend/frontend-actions) (a `handler`, with optional `render`).
+</Note>
 
 See [Tool-Based Generative UI](/en/guides/frontend/tool-based-generative-ui) for the full backend + frontend walkthrough, including progressive rendering as arguments stream.
 
