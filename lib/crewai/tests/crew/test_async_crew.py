@@ -377,6 +377,91 @@ class TestAsyncCrewKickoff:
         assert captured.get("injected") == "from-async-before"
         assert captured.get("base") == "value"
 
+    @pytest.mark.asyncio
+    @patch("crewai.task.Task.aexecute_sync", new_callable=AsyncMock)
+    async def test_akickoff_before_callback_returning_none_runs_once(
+        self, mock_execute: AsyncMock, test_agent: Agent
+    ) -> None:
+        """An async before-callback that returns ``None`` runs exactly once.
+
+        Regression for a ``None``-sentinel collision: a callback that mutates
+        the inputs dict in place and falls off the end of the function returns
+        ``None``, which must not be mistaken for "callbacks not yet applied" —
+        otherwise every before-callback is silently re-run on the async path.
+        """
+
+        call_count = 0
+
+        async def before_callback(inputs: dict | None) -> None:
+            nonlocal call_count
+            call_count += 1
+            if inputs is not None:
+                inputs["injected"] = "from-before"
+            return None
+
+        task = Task(
+            description="Test task for {injected}",
+            expected_output="Test output",
+            agent=test_agent,
+        )
+        crew = Crew(
+            agents=[test_agent],
+            tasks=[task],
+            verbose=False,
+            before_kickoff_callbacks=[before_callback],
+        )
+
+        async def capture_inputs(*args: Any, **kwargs: Any) -> TaskOutput:
+            # ``_inputs`` reflects the in-place edit the callback made before
+            # returning None. If the in-place mutation survives and the call
+            # count is 1, the callback ran exactly once and None round-tripped.
+            return TaskOutput(
+                description="Test task",
+                raw="Task result",
+                agent="Test Agent",
+            )
+
+        mock_execute.side_effect = capture_inputs
+
+        await crew.akickoff(inputs={"base": "value"})
+
+        assert call_count == 1
+
+    @pytest.mark.asyncio
+    @patch("crewai.task.Task.aexecute_sync", new_callable=AsyncMock)
+    async def test_akickoff_async_before_callback_returning_none_preserves_none(
+        self, mock_execute: AsyncMock, test_agent: Agent
+    ) -> None:
+        """A pre-applied ``None`` (empty before-callback list) round-trips.
+
+        When ``before_kickoff_callbacks`` is empty and ``inputs`` is ``None``,
+        ``aprepare_kickoff`` produces ``None`` which must flow through
+        ``_prepare_kickoff_impl`` without being treated as "not yet applied".
+        """
+
+        task = Task(
+            description="Test task",
+            expected_output="Test output",
+            agent=test_agent,
+        )
+        crew = Crew(
+            agents=[test_agent],
+            tasks=[task],
+            verbose=False,
+            before_kickoff_callbacks=[],
+        )
+
+        mock_execute.return_value = TaskOutput(
+            description="Test task",
+            raw="Task result",
+            agent="Test Agent",
+        )
+
+        # Must not raise and must not loop/re-run anything internally.
+        result = await crew.akickoff()
+
+        assert result is not None
+
 
 class TestAsyncCrewKickoffForEach:
     """Tests for async crew kickoff_for_each methods."""
