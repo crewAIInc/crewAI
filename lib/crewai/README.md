@@ -547,6 +547,35 @@ This example demonstrates how to:
 3. Use Flow decorators to manage the sequence of operations
 4. Implement conditional branching based on Crew results
 
+### Mimir Memory Backend
+
+CrewAI now supports **Mimir** as a persistent memory engine, integrated seamlessly via the Model Context Protocol (MCP).
+
+#### Prerequisites
+Ensure you have the official Mimir binary installed and accessible in your system environment. For detailed setup and installation instructions, please visit the official repository:
+👉 [Perseus-Computing-LLC/mimir](https://github.com/Perseus-Computing-LLC/mimir)
+
+#### Setup
+Since CrewAI communicates with Mimir using MCP via standard I/O subprocesses, you must ensure the `mcp` Python package is installed (automatically handled by CrewAI dependencies).
+
+To use `MimirStorage` as your memory backend, initialize it within your Crew setup by providing the configuration dictionary containing your custom database path:
+
+```python
+from crewai import Crew
+from crewai.memory.storage.mimir_storage import MimirStorage
+
+mimir_config = {
+    "db_path": "~/.mimir/custom_mimir.db"
+}
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=True,
+    storage=MimirStorage(config=mimir_config)
+)
+
+
 ## Connecting Your Crew to a Model
 
 CrewAI supports using various LLMs through a variety of connection options. By default your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents to use a local model via the Ollama tool.
