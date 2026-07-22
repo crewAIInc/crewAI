@@ -1182,18 +1182,24 @@ async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
     assert result[0].function.name == "search"
 
 
-def test_validate_call_params_handles_introspection_error():
+def test_validate_call_params_handles_introspection_error(caplog):
     """Verify _validate_call_params gracefully handles LiteLLM introspection errors without crashing.
 
     When the provider is not in the static list, introspection is attempted.
     An exception during introspection must be caught and treated as supported
-    so the request can proceed with custom/proxy models.
+    so the request can proceed with custom/proxy models.  The failure is
+    logged at DEBUG level so developers can trace the fallback.
     """
+    import logging
+
     llm = LLM(model="custom/unsupported-model", is_litellm=True, response_format={"type": "json_object"})
 
-    with patch("crewai.llm.supports_response_schema", side_effect=Exception("Introspection error")):
-        # Should not raise exception -- permissive fallback applies
-        llm._validate_call_params()
+    with caplog.at_level(logging.DEBUG, logger="crewai.llm"):
+        with patch("crewai.llm.supports_response_schema", side_effect=Exception("Introspection error")):
+            # Should not raise exception -- permissive fallback applies
+            llm._validate_call_params()
+
+    assert any("LiteLLM supports_response_schema check failed" in r.message for r in caplog.records)
 
 
 def test_validate_call_params_raises_for_confirmed_unsupported_model():
