@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from crewai.utilities.planning_types import StepOutcome
+
 
 @dataclass(frozen=True)
 class StepExecutionContext:
@@ -50,15 +52,25 @@ class StepResult:
     to subsequent steps or the Planner.
 
     Attributes:
-        success: Whether the step completed successfully.
+        outcome: How execution of the step terminated.
         result: The final output string from the step.
-        error: Error message if the step failed (None on success).
+        termination_reason: Human-readable reason for a non-completed outcome.
         tool_calls_made: List of tool names invoked (for debugging/logging only).
         execution_time: Wall-clock time in seconds for the step execution.
     """
 
-    success: bool
+    outcome: StepOutcome
     result: str
-    error: str | None = None
+    termination_reason: str | None = None
     tool_calls_made: list[str] = field(default_factory=list)
     execution_time: float = 0.0
+
+    @property
+    def success(self) -> bool:
+        """Whether the step reached the completed outcome."""
+        return self.outcome == "completed"
+
+    @property
+    def error(self) -> str | None:
+        """Backward-compatible alias for the termination reason."""
+        return self.termination_reason

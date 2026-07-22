@@ -8,6 +8,7 @@ continuation, refinement, or replanning.
 from typing import Any, Literal
 
 from crewai.events.base_events import BaseEvent
+from crewai.utilities.planning_types import StepOutcome
 
 
 class ObservationEvent(BaseEvent):
@@ -54,6 +55,8 @@ class PlanStepCompletedEvent(PlanStepEvent):
 
     type: Literal["plan_step_completed"] = "plan_step_completed"
     success: bool = True
+    outcome: StepOutcome = "completed"
+    termination_reason: str | None = None
     result: str | None = None
     error: str | None = None
 

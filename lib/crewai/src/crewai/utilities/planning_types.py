@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, field_validator
 
 
 TodoStatus = Literal["pending", "running", "completed", "failed"]
+StepOutcome = Literal["completed", "timed_out", "iteration_exhausted", "failed"]
 
 
 class PlanStep(BaseModel):
@@ -39,6 +40,14 @@ class TodoItem(BaseModel):
     )
     result: str | None = Field(
         default=None, description="Result after completion, if any"
+    )
+    outcome: StepOutcome | None = Field(
+        default=None,
+        description="How execution of this step terminated, once available",
+    )
+    termination_reason: str | None = Field(
+        default=None,
+        description="Human-readable reason for non-completed step termination",
     )
 
 
@@ -98,14 +107,25 @@ class TodoList(BaseModel):
         item = self.get_by_step_number(step_number)
         if item:
             item.status = "completed"
+            item.outcome = "completed"
+            item.termination_reason = None
             if result is not None:
                 item.result = result
 
-    def mark_failed(self, step_number: int, result: str | None = None) -> None:
+    def mark_failed(
+        self,
+        step_number: int,
+        result: str | None = None,
+        *,
+        outcome: StepOutcome = "failed",
+        termination_reason: str | None = None,
+    ) -> None:
         """Mark a todo as failed by step number."""
         item = self.get_by_step_number(step_number)
         if item:
             item.status = "failed"
+            item.outcome = outcome
+            item.termination_reason = termination_reason
             if result is not None:
                 item.result = result
 
