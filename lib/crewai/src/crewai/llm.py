@@ -342,6 +342,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "cerebras",
     "dashscope",
     "snowflake",
+    "oci",
 ]
 
 
@@ -447,6 +448,7 @@ class LLM(BaseLLM):
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
                 "snowflake": "snowflake",
+                "oci": "oci",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -579,6 +581,9 @@ class LLM(BaseLLM):
         if provider == "snowflake":
             return True
 
+        if provider == "oci":
+            return model_lower.startswith("ocid1.generativeaiendpoint") or "." in model_lower
+
         return False
 
     @classmethod
@@ -614,6 +619,7 @@ class LLM(BaseLLM):
             # azure does not provide a list of available models, determine a better way to handle this
             return True
 
+        # Fallback to pattern matching for models not in constants (includes OCI)
         return cls._matches_provider_pattern(model, provider)
 
     @staticmethod
@@ -711,6 +717,11 @@ class LLM(BaseLLM):
             )
 
             return OpenAICompatibleCompletion
+
+        if provider == "oci":
+            from crewai.llms.providers.oci.completion import OCICompletion
+
+            return OCICompletion
 
         return None
 
