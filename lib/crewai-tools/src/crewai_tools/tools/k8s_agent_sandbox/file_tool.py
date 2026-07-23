@@ -120,7 +120,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
     description: str = (
         "Perform filesystem operations inside a K8s agent sandbox: read a file, "
         "write content to a path, append content to an existing file, list a "
-        "directory, delete a path, make a directory, fetch file metadata, or "
+        "directory, delete a path, make a directory or "
         "check whether a path exists.")
     args_schema: type[BaseModel] = K8sAgentSandboxFileToolSchema
 
