@@ -233,10 +233,12 @@ def test_validate_call_params_not_supported():
     class DummyResponse(BaseModel):
         a: int
 
-    # Patch supports_response_schema to simulate an unsupported model.
+    # Use an unknown provider (not in RESPONSE_FORMAT_SUPPORTED_PROVIDERS) so the
+    # LiteLLM introspection path is exercised and supports_response_schema can
+    # report False, which should raise ValueError.
     with patch("crewai.llm.supports_response_schema", return_value=False):
         llm = LLM(
-            model="gemini/gemini-1.5-pro",
+            model="unknown-llm-provider/some-model",
             response_format=DummyResponse,
             is_litellm=True,
         )
@@ -1169,6 +1171,7 @@ async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
     response = _build_response_with_text_and_tool_calls()
 
     async def _ret(*args, **kwargs):
+        """Return the pre-built mock response."""
         return response
 
     with patch("crewai.llm.litellm.acompletion", side_effect=_ret):
@@ -1177,3 +1180,80 @@ async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0].function.name == "search"
+
+
+def test_validate_call_params_handles_introspection_error(caplog):
+    """Verify _validate_call_params gracefully handles LiteLLM introspection errors without crashing.
+
+    When the provider is not in the static list, introspection is attempted.
+    An exception during introspection must be caught and treated as supported
+    so the request can proceed with custom/proxy models.  The failure is
+    logged at DEBUG level so developers can trace the fallback.
+    """
+    import logging
+
+    llm = LLM(model="custom/unsupported-model", is_litellm=True, response_format={"type": "json_object"})
+
+    with caplog.at_level(logging.DEBUG, logger="crewai.llm"):
+        with patch("crewai.llm.supports_response_schema", side_effect=Exception("Introspection error")):
+            # Should not raise exception -- permissive fallback applies
+            llm._validate_call_params()
+
+    assert any("LiteLLM supports_response_schema check failed" in r.message for r in caplog.records)
+
+
+def test_validate_call_params_raises_for_confirmed_unsupported_model():
+    """Verify _validate_call_params still raises ValueError when introspection confirms no support.
+
+    This ensures the validation path is not silently skipped -- only introspection
+    errors are swallowed; a clear False return still produces a ValueError.
+    """
+    llm = LLM(model="my-provider/my-model", is_litellm=True, response_format={"type": "json_object"})
+
+    with patch("crewai.llm.supports_response_schema", return_value=False):
+        with pytest.raises(ValueError, match="does not support response_format"):
+            llm._validate_call_params()
+
+
+def test_validate_call_params_skips_check_when_no_response_format():
+    """Verify _validate_call_params is a no-op for params that require no validation.
+
+    When no response_format is set, the method must return without ever
+    calling the LiteLLM introspection function.
+    """
+    llm = LLM(model="gpt-4o", is_litellm=True, temperature=0.5)
+
+    with patch("crewai.llm.supports_response_schema", side_effect=Exception("Should not be called")):
+        # No exception -- response_format is None so introspection is never invoked
+        llm._validate_call_params()
+
+
+def test_validate_call_params_reasoning_effort_supported_provider():
+    """Verify _validate_call_params passes without error for reasoning_effort on a supported provider.
+
+    openai is in REASONING_EFFORT_SUPPORTED_PROVIDERS, so no warning or
+    error should be raised and introspection must not be triggered.
+    """
+    llm = LLM(model="openai/o3-mini", is_litellm=True, reasoning_effort="medium")
+
+    with patch("crewai.llm.supports_response_schema", side_effect=Exception("Should not be called")):
+        # No response_format set -- introspection is never invoked
+        llm._validate_call_params()
+
+
+def test_validate_call_params_reasoning_effort_unknown_provider_logs_debug(caplog):
+    """Verify _validate_call_params logs a debug message for unknown providers with reasoning_effort.
+
+    Unknown providers are not rejected outright: parameters are forwarded and
+    may be silently ignored by the underlying provider. The debug log signals
+    this to developers without breaking the call.
+    """
+    import logging
+
+    llm = LLM(model="unknown-provider/some-model", is_litellm=True, reasoning_effort="high")
+
+    with caplog.at_level(logging.DEBUG, logger="crewai.llm"):
+        llm._validate_call_params()
+
+    assert any("reasoning_effort" in record.message for record in caplog.records)
+

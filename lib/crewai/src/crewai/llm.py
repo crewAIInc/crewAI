@@ -165,6 +165,42 @@ MIN_CONTEXT: Final[int] = 1024
 MAX_CONTEXT: Final[int] = 2097152  # Current max from gemini-1.5-pro
 ANTHROPIC_PREFIXES: Final[tuple[str, str, str]] = ("anthropic/", "claude-", "claude/")
 
+# Static provider capability lists.  These are checked *before* LiteLLM
+# introspection so that well-known providers always receive correct capability
+# detection even when LiteLLM's model-mapping table is unavailable or raises.
+RESPONSE_FORMAT_SUPPORTED_PROVIDERS: Final[frozenset[str]] = frozenset(
+    {
+        "openai",
+        "azure",
+        "azure_openai",
+        "google",
+        "gemini",
+        "anthropic",
+        "bedrock",
+        "deepseek",
+        "openrouter",
+        "mistral",
+        "groq",
+        "fireworks_ai",
+        "together_ai",
+        "anyscale",
+        "cerebras",
+        "dashscope",
+    }
+)
+
+REASONING_EFFORT_SUPPORTED_PROVIDERS: Final[frozenset[str]] = frozenset(
+    {
+        "openai",
+        "azure",
+        "azure_openai",
+        "anthropic",
+        "bedrock",
+        "deepseek",
+        "openrouter",
+    }
+)
+
 LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "gpt-4": 8192,
     "gpt-4o": 128000,
@@ -2373,27 +2409,59 @@ class LLM(BaseLLM):
         return None
 
     def _validate_call_params(self) -> None:
-        """
-        Validate parameters before making a call. Currently this only checks if
-        a response_format is provided and whether the model supports it.
-        The custom_llm_provider is dynamically determined from the model:
-          - E.g., "openrouter/deepseek/deepseek-chat" yields "openrouter"
-          - "gemini/gemini-1.5-pro" yields "gemini"
-          - If no slash is present, "openai" is assumed.
+        """Validate call parameters before executing a completion request.
+
+        Performs two kinds of checks in order:
+
+        1. **Static capability checks** (always run): ``response_format`` and
+           ``reasoning_effort`` are tested against
+           :data:`RESPONSE_FORMAT_SUPPORTED_PROVIDERS` and
+           :data:`REASONING_EFFORT_SUPPORTED_PROVIDERS` respectively.  These
+           module-level frozensets encode well-known provider support and run
+           unconditionally — regardless of whether LiteLLM is available.
+
+        2. **LiteLLM introspection** (best-effort): When the provider is *not*
+           in the static lists, ``supports_response_schema`` is called for
+           additional coverage.  If introspection raises (e.g. an unmapped
+           custom model ID or proxy endpoint), the failure is logged at DEBUG
+           level and validation is skipped — permitting the request to proceed.
 
         Note: This validation only applies to the litellm fallback path.
-        Native providers have their own validation.
+        Native providers perform their own parameter validation.
         """
-        if not _ensure_litellm() or supports_response_schema is None:
-            # When litellm is not available, skip validation
-            # (this path should only be reached for litellm fallback models)
+        provider = self._get_custom_llm_provider() or "openai"
+
+        # --- Static reasoning_effort check (always runs) ---
+        if self.reasoning_effort is not None:
+            if provider not in REASONING_EFFORT_SUPPORTED_PROVIDERS:
+                logger.debug(
+                    f"Provider '{provider}' does not appear in the static reasoning_effort "
+                    "support list; the parameter will be forwarded and may be ignored."
+                )
+
+        # --- response_format checks ---
+        if self.response_format is None:
             return
 
-        provider = self._get_custom_llm_provider()
-        if self.response_format is not None and not supports_response_schema(
-            model=self.model,
-            custom_llm_provider=provider,
-        ):
+        # 1. Static check: known-supported providers skip LiteLLM introspection.
+        if provider in RESPONSE_FORMAT_SUPPORTED_PROVIDERS:
+            return
+
+        # 2. LiteLLM introspection for providers not in the static list.
+        if not _ensure_litellm() or supports_response_schema is None:
+            # LiteLLM unavailable; static list was already consulted — allow.
+            return
+
+        try:
+            is_supported = supports_response_schema(
+                model=self.model,
+                custom_llm_provider=provider,
+            )
+        except Exception as e:
+            logger.debug(f"LiteLLM supports_response_schema check failed: {e!s}")
+            is_supported = True
+
+        if not is_supported:
             raise ValueError(
                 f"The model {self.model} does not support response_format for provider '{provider}'. "
                 "Please remove response_format or use a supported model."
