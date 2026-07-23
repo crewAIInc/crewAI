@@ -21,12 +21,22 @@ def extract_json_from_llm_response(text: str) -> dict[str, Any]:
         r"`([{\\[].*[}\]])`",
     ]
 
+    # Collect ALL parseable JSON from code blocks, then return the LAST one.
+    # The judge's own verdict is the authoritative JSON and appears last;
+    # earlier JSON may have originated from model-under-test output that was
+    # referenced in the judge's reasoning (verdict injection).
+    all_parsed: list[dict[str, Any]] = []
+
     for pattern in json_patterns:
         matches = re.findall(pattern, text, re.IGNORECASE | re.DOTALL)
         for match in matches:
             try:
                 parsed: dict[str, Any] = json.loads(match.strip())
-                return parsed
+                all_parsed.append(parsed)
             except json.JSONDecodeError:  # noqa: PERF203
                 continue
+
+    if all_parsed:
+        return all_parsed[-1]
+
     raise ValueError("No valid JSON found in the response")
