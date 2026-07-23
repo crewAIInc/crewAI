@@ -218,7 +218,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
         chunk: bytes = base64.b64decode(content) if binary else content.encode("utf-8")
         self._ensure_parent_dir(sandbox, path, timeout=timeout_tracker())
 
-        tmp_file_path = f"/tmp/crewai-file-append{uuid.uuid4()}.py"
+        tmp_file_path = f"/tmp/crewai-file-append{uuid.uuid4()}.tmp"
         sandbox.files.write(tmp_file_path, chunk, timeout=timeout_tracker(), allow_unsafe_paths=True)
         q = shlex.quote(path)
         qt = shlex.quote(tmp_file_path)
