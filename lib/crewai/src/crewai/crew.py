@@ -1360,9 +1360,7 @@ class Crew(FlowTrackable, BaseModel):
                     continue
 
             if task.async_execution:
-                context = self._get_context(
-                    task, [last_sync_output] if last_sync_output else []
-                )
+                context = self._get_context(task, task_outputs)
                 async_task = asyncio.create_task(
                     task.aexecute_sync(
                         agent=exec_data.agent,
@@ -1577,9 +1575,7 @@ class Crew(FlowTrackable, BaseModel):
                     continue
 
             if task.async_execution:
-                context = self._get_context(
-                    task, [last_sync_output] if last_sync_output else []
-                )
+                context = self._get_context(task, task_outputs)
                 future = task.execute_async(
                     agent=exec_data.agent,
                     context=context,
