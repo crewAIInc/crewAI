@@ -1,0 +1,84 @@
+---
+title: SERPdive Search Tool
+description: The `SerpdiveSearchTool` performs web searches that return answer-ready page content using the SERPdive API.
+icon: water
+mode: "wide"
+---
+
+# `SerpdiveSearchTool`
+
+## Description
+
+The `SerpdiveSearchTool` connects your agents to [SERPdive](https://serpdive.com), an AI search API that returns answer-ready web content: every result carries the actual text of the page (url, title, date, content), already extracted, cleaned, and sized for LLM consumption, so agents can quote and cite straight from the tool output. On a [public, replayable 1,000-question benchmark](https://github.com/edendalexis/serpdive-benchmark), SERPdive runs at the same speed as Tavily, feeds your LLM 20.2% fewer tokens, and wins 60.7% of decided quality duels.
+
+## Installation
+
+To use this tool, you need to install the SERPdive SDK:
+
+```shell
+uv add serpdive
+```
+
+## Steps to Get Started
+
+1. **API Key**: Get a free API key (no card required) at [serpdive.com/dashboard/keys](https://serpdive.com/dashboard/keys).
+2. **Environment Setup**: Set the key as the `SERPDIVE_API_KEY` environment variable.
+3. **Install SDK**: Install the SERPdive SDK using the command above.
+
+## Example
+
+The following example demonstrates how to initialize the tool and use it in an agent:
+
+```python Code
+from crewai import Agent
+from crewai_tools import SerpdiveSearchTool
+
+# Reads the SERPDIVE_API_KEY environment variable
+serpdive_tool = SerpdiveSearchTool()
+
+researcher = Agent(
+    role="Market Researcher",
+    goal="Find current information about the solid state battery market",
+    backstory="An expert market researcher specializing in energy technology.",
+    tools=[serpdive_tool],
+)
+```
+
+## Parameters
+
+### Constructor Parameters
+
+- **model**: Optional. Retrieval depth. `"mako"` (default) returns the fact-carrying sentences of each page, fast. `"moby"` returns the full readable text of each page, for deep research.
+- **answer**: Optional. When `True`, the output also carries an `answer` field: a direct answer synthesized from the sources (concise on `mako`, cited on `moby`). Default is `False`.
+- **max_results**: Optional. Hard cap on delivered results (1-10). By default the engine picks its calibrated mix.
+- **api_key**: Optional. Your SERPdive API key. If not provided, it is read from the `SERPDIVE_API_KEY` environment variable.
+
+### Run Parameters
+
+- **query**: Required. The search query, in any language.
+
+There is no country or locale parameter to configure: the language of the query picks where the search runs, automatically. Failed searches are never billed.
+
+## Return Format
+
+The tool returns a JSON string in the following format:
+
+```json
+{
+  "query": "latest developments in solid state batteries",
+  "results": [
+    {
+      "url": "https://example.com/article",
+      "title": "Article title",
+      "date": "2026-07-11",
+      "content": "The fact-carrying text of the page, extracted and cleaned..."
+    }
+  ],
+  "answer": "Only present when the answer option is enabled."
+}
+```
+
+## Links
+
+- [API reference](https://serpdive.com/docs)
+- [Public benchmark](https://github.com/edendalexis/serpdive-benchmark) (replayable end to end: same questions, same judge, your machine)
