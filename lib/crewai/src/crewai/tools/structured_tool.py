@@ -30,10 +30,12 @@ from crewai.utilities.string_utils import sanitize_tool_name
 
 
 def _serialize_schema(v: type[BaseModel] | None) -> dict[str, Any] | None:
+    """Serialize a Pydantic model class to its JSON schema dict representation."""
     return v.model_json_schema() if v else None
 
 
 def _deserialize_schema(v: Any) -> type[BaseModel] | None:
+    """Deserialize a schema dict or class into a Pydantic model class."""
     if v is None or isinstance(v, type):
         return v
     if isinstance(v, dict):
@@ -44,6 +46,7 @@ def _deserialize_schema(v: Any) -> type[BaseModel] | None:
 def _infer_result_schema_from_callable(
     func: Callable[..., Any],
 ) -> type[BaseModel] | None:
+    """Infer the Pydantic result schema from a callable's return type annotation."""
     try:
         return_annotation = get_type_hints(func).get("return", inspect.Signature.empty)
     except Exception:
@@ -55,14 +58,30 @@ def _infer_result_schema_from_callable(
     return None
 
 
+def _try_json_serialize(raw_result: Any) -> str | None:
+    """Attempt to JSON-serialize a dict/list result; return None on failure."""
+    if isinstance(raw_result, (dict, list)):
+        try:
+            return json.dumps(raw_result, ensure_ascii=False)
+        except Exception:
+            return None
+    return None
+
+
 def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
+    """Format the raw tool output into a string representation for the agent.
+
+    If result_schema is not set and the output is a dict or list, it will
+    automatically JSON-serialize the output to avoid single-quote invalid JSON issues.
+    """
     original_tool = getattr(tool, "_original_tool", None)
     if original_tool is not None:
         return cast(str, original_tool.format_output_for_agent(raw_result))
 
     result_schema = getattr(tool, "result_schema", None)
     if not (isinstance(result_schema, type) and issubclass(result_schema, BaseModel)):
-        return str(raw_result)
+        serialized = _try_json_serialize(raw_result)
+        return serialized if serialized is not None else str(raw_result)
 
     try:
         validation_input = raw_result
@@ -74,11 +93,25 @@ def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
         validated = result_schema.model_validate(validation_input)
         return validated.model_dump_json()
     except Exception as exc:
+        serialized = _try_json_serialize(raw_result)
+        if serialized is not None:
+            warnings.warn(
+                (
+                    f"Failed to validate output from tool "
+                    f"'{getattr(tool, 'name', '<unknown>')}' using result_schema "
+                    f"'{result_schema.__name__}': {exc}. "
+                    "Falling back to JSON-serialized raw_result."
+                ),
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            return serialized
+
         warnings.warn(
             (
-                f"Failed to validate or serialize output from tool "
+                f"Failed to validate output from tool "
                 f"'{getattr(tool, 'name', '<unknown>')}' using result_schema "
-                f"'{result_schema.__name__}': {exc.__class__.__name__}. "
+                f"'{result_schema.__name__}': {exc}. "
                 "Falling back to str(raw_result)."
             ),
             RuntimeWarning,
@@ -220,6 +253,7 @@ class CrewStructuredTool(BaseModel):
 
     @model_validator(mode="after")
     def _validate_func(self) -> Self:
+        """Validate the tool function configuration and signature."""
         if self.func is not None:
             self._validate_function_signature()
         return self
@@ -462,4 +496,5 @@ class CrewStructuredTool(BaseModel):
         return schema
 
     def __repr__(self) -> str:
+        """Return the string representation of the tool."""
         return f"CrewStructuredTool(name='{sanitize_tool_name(self.name)}', description='{self.description}')"
