@@ -156,5 +156,10 @@ exclude-newer = "3 days"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[dependency-groups]
+dev = [
+    "responses>=0.26.0",
+]
+
 [tool.hatch.version]
 path = "src/crewai_tools/__init__.py"
