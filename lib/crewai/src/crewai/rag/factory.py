@@ -5,6 +5,7 @@ from typing import cast
 
 from crewai.rag.config.optional_imports.protocols import (
     ChromaFactoryModule,
+    MilvusFactoryModule,
     QdrantFactoryModule,
 )
 from crewai.rag.config.types import RagConfigType
@@ -74,5 +75,15 @@ def create_client(config: RagConfigType) -> BaseClient:
             ),
         )
         return qdrant_mod.create_client(config)
+
+    if config.provider == "milvus":
+        milvus_mod = cast(
+            MilvusFactoryModule,
+            require(
+                "crewai.rag.milvus.factory",
+                purpose="The 'milvus' provider",
+            ),
+        )
+        return milvus_mod.create_client(config)
 
     raise ValueError(f"Unsupported provider: {config.provider}")

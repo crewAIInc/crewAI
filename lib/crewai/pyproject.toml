@@ -77,6 +77,9 @@ docling = [
 qdrant = [
     "qdrant-client[fastembed]~=1.14.3",
 ]
+milvus = [
+    "pymilvus[milvus-lite]>=3.0.0,<4",
+]
 aws = [
     "boto3~=1.42.90",
     "aiobotocore~=3.5.0",

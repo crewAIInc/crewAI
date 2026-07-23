@@ -27,11 +27,12 @@ mode: "wide"
 
 ### إعداد عميل المتجه (RAG)
 
-يوفر CrewAI تجريدًا لعميل RAG محايد بالنسبة للمزود لمتاجر المتجهات. المزود الافتراضي هو ChromaDB، ويتم دعم Qdrant أيضًا. يمكنك التبديل بين المزودين باستخدام أدوات الإعداد.
+يوفر CrewAI تجريدًا لعميل RAG محايد بالنسبة للمزود لمتاجر المتجهات. المزود الافتراضي هو ChromaDB، ويتم دعم Qdrant وMilvus أيضًا. يمكنك التبديل بين المزودين باستخدام أدوات الإعداد.
 
 المدعوم حاليًا:
 - ChromaDB (افتراضي)
 - Qdrant
+- Milvus
 
 ```python Code
 from crewai.rag.config.utils import set_rag_config, get_rag_client, clear_rag_config
@@ -46,12 +47,21 @@ from crewai.rag.qdrant.config import QdrantConfig
 set_rag_config(QdrantConfig())
 qdrant_client = get_rag_client()
 
+# Milvus (defaults to Milvus Lite at ./milvus.db)
+from crewai.rag.milvus.config import MilvusConfig
+set_rag_config(MilvusConfig())
+milvus_client = get_rag_client()
+
+# Milvus server or Zilliz Cloud
+# set_rag_config(MilvusConfig(options={"uri": "http://localhost:19530"}))
+# set_rag_config(MilvusConfig(options={"uri": "https://your-endpoint", "token": "your-token"}))
+
 # Example operations (same API for any provider)
-client = qdrant_client  # or chromadb_client
+client = milvus_client  # or chromadb_client / qdrant_client
 client.create_collection(collection_name="docs")
 client.add_documents(
     collection_name="docs",
-    documents=[{"id": "1", "content": "CrewAI enables collaborative AI agents."}],
+    documents=[{"doc_id": "1", "content": "CrewAI enables collaborative AI agents."}],
 )
 results = client.search(collection_name="docs", query="collaborative agents", limit=3)
 
