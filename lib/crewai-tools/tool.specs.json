@@ -2907,6 +2907,61 @@
       }
     },
     {
+      "description": "Check whether an agent action complies with applicable African regulatory requirements before executing it. Returns a JSON decision: allow / deny / escalate / audit \u2014 with the triggered rule and exact regulatory citation. Covers Nigeria (CBN, NDPA 2023, NIIRA 2025, NFIU AML), Kenya (KDPA), South Africa (POPIA), Ghana, Rwanda, Egypt, and 5 more African jurisdictions. No API key required \u2014 evaluation runs fully offline via in-process Rego (regopy).",
+      "env_vars": [],
+      "humanized_name": "Comply54 Compliance Tool",
+      "init_params_schema": {
+        "properties": {
+          "compliance": {
+            "description": "A SectorCompliance instance from comply54 (e.g. NigeriaFintechCompliance()).",
+            "title": "Compliance"
+          }
+        },
+        "required": [
+          "compliance"
+        ],
+        "title": "Comply54ComplianceTool",
+        "type": "object"
+      },
+      "name": "Comply54ComplianceTool",
+      "package_dependencies": [
+        "comply54"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for Comply54ComplianceTool.",
+        "properties": {
+          "action": {
+            "description": "The action or tool name the agent intends to perform (e.g. 'transfer_funds', 'approve_loan').",
+            "title": "Action",
+            "type": "string"
+          },
+          "params": {
+            "default": {},
+            "description": "Parameters for the action (e.g. amount, recipient, account number).",
+            "title": "Params",
+            "type": "object"
+          },
+          "output": {
+            "default": "",
+            "description": "Proposed output text to check for PII leakage or policy violations.",
+            "title": "Output",
+            "type": "string"
+          },
+          "context": {
+            "default": {},
+            "description": "Session context used to evaluate dynamic rules (e.g. {'kyc_tier': 3}).",
+            "title": "Context",
+            "type": "object"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "_ComplianceInput",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to semantic search a query from a CSV's content.",
       "env_vars": [],
       "humanized_name": "Search a CSV's content",
