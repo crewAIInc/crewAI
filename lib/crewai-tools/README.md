@@ -26,7 +26,7 @@ CrewAI provides an extensive collection of powerful tools ready to enhance your 
 - **Web Scraping**: `ScrapeWebsiteTool`, `SeleniumScrapingTool`
 - **Database Integrations**: `MySQLSearchTool`
 - **Vector Database Integrations**: `MongoDBVectorSearchTool`, `QdrantVectorSearchTool`, `WeaviateVectorSearchTool`
-- **API Integrations**: `SerperApiTool`, `ExaSearchTool`
+- **API Integrations**: `SerperApiTool`, `ExaSearchTool`, `XquikSearchTweetsTool`, `XquikGetTweetTool`, `XquikGetUserTool`, `XquikGetUserTweetsTool`, `XquikGetTrendsTool`
 - **AI-powered Tools**: `DallETool`, `VisionTool`, `StagehandTool`
 
 And many more robust tools to simplify your agent integrations.
@@ -83,7 +83,7 @@ To quickly get started with MCP in CrewAI you have 2 options:
 
 ### Option 1: Fully managed connection
 
-In this scenario we use a contextmanager (`with` statement) to start and stop the the connection with the MCP server.
+In this scenario we use a contextmanager (`with` statement) to start and stop the connection with the MCP server.
 This is done in the background and you only get to interact with the CrewAI tools corresponding to the MCP server's tools.
 
 For an STDIO based MCP server:
