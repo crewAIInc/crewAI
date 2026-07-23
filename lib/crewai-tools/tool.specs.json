@@ -18630,6 +18630,310 @@
       }
     },
     {
+      "description": "A tool that performs web searches using the Querit Search API. It returns the original Querit API JSON response.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for the Querit search service",
+          "name": "QUERIT_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Querit Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Tool that searches the web using the Querit Search API.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The Querit API key. If not provided, it will be loaded from QUERIT_API_KEY.",
+            "title": "Api Key"
+          },
+          "chunksPerDoc": {
+            "anyOf": [
+              {
+                "maximum": 3,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 3,
+            "description": "The number of summary chunks to return per document.",
+            "title": "Chunksperdoc"
+          },
+          "count": {
+            "default": 10,
+            "description": "The maximum number of results to return.",
+            "minimum": 1,
+            "title": "Count",
+            "type": "integer"
+          },
+          "country_include": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Countries to include in the search results.",
+            "title": "Country Include"
+          },
+          "language_include": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Languages to include in the search results.",
+            "title": "Language Include"
+          },
+          "search_url": {
+            "default": "https://api.querit.ai/v1/search",
+            "title": "Search Url",
+            "type": "string"
+          },
+          "site_exclude": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Websites to exclude from the search results.",
+            "title": "Site Exclude"
+          },
+          "site_include": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Websites to include in the search results.",
+            "title": "Site Include"
+          },
+          "time_range": {
+            "anyOf": [
+              {
+                "pattern": "^([dwmy][1-9][0-9]*|\\d{4}-\\d{2}-\\d{2}to\\d{4}-\\d{2}-\\d{2})$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Time range filter, such as d7, w1, m3, y1, or a date range.",
+            "title": "Time Range"
+          },
+          "timeout": {
+            "default": 30,
+            "description": "The request timeout in seconds.",
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "QueritSearchTool",
+        "type": "object"
+      },
+      "name": "QueritSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for QueritSearchTool.",
+        "properties": {
+          "chunksPerDoc": {
+            "anyOf": [
+              {
+                "maximum": 3,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The number of summary chunks to return per document.",
+            "title": "Chunksperdoc"
+          },
+          "count": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of results to return.",
+            "title": "Count"
+          },
+          "country_include": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Countries to include in the search results.",
+            "title": "Country Include"
+          },
+          "language_include": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Languages to include in the search results.",
+            "title": "Language Include"
+          },
+          "query": {
+            "description": "The search query string.",
+            "title": "Query",
+            "type": "string"
+          },
+          "site_exclude": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Websites to exclude from the search results.",
+            "title": "Site Exclude"
+          },
+          "site_include": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Websites to include in the search results.",
+            "title": "Site Include"
+          },
+          "time_range": {
+            "anyOf": [
+              {
+                "pattern": "^([dwmy][1-9][0-9]*|\\d{4}-\\d{2}-\\d{2}to\\d{4}-\\d{2}-\\d{2})$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Time range filter, such as d7, w1, m3, y1, or a date range.",
+            "title": "Time Range"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "QueritSearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A knowledge base that can be used to answer questions.",
       "env_vars": [],
       "humanized_name": "Knowledge base",
