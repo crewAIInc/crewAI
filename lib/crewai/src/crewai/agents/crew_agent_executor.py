@@ -1045,6 +1045,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             "result": result,
             "from_cache": from_cache,
             "original_tool": original_tool,
+            "is_error": error_event_emitted,
         }
 
     def _append_tool_result_and_check_finality(
@@ -1055,6 +1056,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         result = cast(str, execution_result["result"])
         from_cache = cast(bool, execution_result["from_cache"])
         original_tool = execution_result["original_tool"]
+        is_error = cast(bool, execution_result.get("is_error", False))
 
         tool_message: LLMMessage = {
             "role": "tool",
@@ -1075,6 +1077,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             original_tool
             and hasattr(original_tool, "result_as_answer")
             and original_tool.result_as_answer
+            and not is_error
         ):
             return AgentFinish(
                 thought="Tool result is the final answer",
