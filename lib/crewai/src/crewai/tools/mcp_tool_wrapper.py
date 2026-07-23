@@ -5,6 +5,10 @@ from collections.abc import Callable, Coroutine
 from typing import Any
 
 from crewai.tools import BaseTool
+from crewai.tools.mcp_security import (
+    validate_mcp_server_url,
+    validate_mcp_tool_args_for_urls,
+)
 
 
 MCP_CONNECTION_TIMEOUT = 15
@@ -76,7 +80,11 @@ class MCPToolWrapper(BaseTool):
             Result from the MCP tool execution
         """
         try:
+            validate_mcp_server_url(self.mcp_server_params.get("url", ""))
+            validate_mcp_tool_args_for_urls(kwargs)
             return asyncio.run(self._run_async(**kwargs))
+        except ValueError as e:
+            return f"SSRF protection blocked MCP tool execution: {e}"
         except asyncio.TimeoutError:
             return f"MCP tool '{self.original_tool_name}' timed out after {MCP_TOOL_EXECUTION_TIMEOUT} seconds"
         except Exception as e:
