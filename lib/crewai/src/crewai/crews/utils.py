@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Coroutine, Iterable, Mapping
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from opentelemetry import baggage
@@ -13,7 +12,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crews.crew_output import CrewOutput
 from crewai.llms.base_llm import BaseLLM
 from crewai.rag.embeddings.types import EmbedderConfig
-from crewai.skills.loader import activate_skill, discover_skills
+from crewai.skills.loader import activate_skill, load_skills
 from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
 from crewai.utilities.file_store import store_files
@@ -60,23 +59,13 @@ def _resolve_crew_skills(crew: Crew) -> list[SkillModel] | None:
     if not isinstance(crew.skills, list) or not crew.skills:
         return None
 
-    resolved: list[SkillModel] = []
-    seen: set[str] = set()
-    for item in crew.skills:
-        if isinstance(item, Path):
-            for skill in discover_skills(item):
-                if skill.name not in seen:
-                    seen.add(skill.name)
-                    resolved.append(activate_skill(skill))
-        elif isinstance(item, SkillModel):
-            if item.name not in seen:
-                seen.add(item.name)
-                resolved.append(
-                    activate_skill(item)
-                    if item.disclosure_level < INSTRUCTIONS
-                    else item
-                )
-    return resolved
+    resolved = load_skills(crew.skills)
+    if not resolved:
+        return None
+    return [
+        activate_skill(skill) if skill.disclosure_level < INSTRUCTIONS else skill
+        for skill in resolved
+    ]
 
 
 def setup_agents(
@@ -289,6 +278,9 @@ def prepare_kickoff(
         reset_emission_counter()
         reset_last_event_id()
 
+    from crewai.hooks.contexts import ExecutionStartContext, InputContext
+    from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
     normalized: dict[str, Any] | None = None
     if inputs is not None:
         if not isinstance(inputs, Mapping):
@@ -297,10 +289,34 @@ def prepare_kickoff(
             )
         normalized = dict(inputs)
 
+    # ``inputs`` aliases the same object as ``payload`` (not a fresh ``{}`` from
+    # ``or``) so in-place edits to either survive read-back, per the context
+    # contract. ``None`` inputs are preserved rather than coerced to ``{}``.
+    start_ctx = ExecutionStartContext(
+        crew=crew,
+        inputs=normalized if normalized is not None else {},
+        payload=normalized,
+    )
+    # Pairing flags: EXECUTION_END fires (once) only for executions whose
+    # EXECUTION_START actually dispatched, including on the failure path.
+    crew._execution_start_dispatched = False
+    crew._execution_end_dispatched = False
+    dispatch(InterceptionPoint.EXECUTION_START, start_ctx)
+    crew._execution_start_dispatched = True
+    normalized = start_ctx.payload
+
     for before_callback in crew.before_kickoff_callbacks:
         if normalized is None:
             normalized = {}
         normalized = before_callback(normalized)
+
+    input_ctx = InputContext(
+        crew=crew,
+        inputs=normalized if normalized is not None else {},
+        payload=normalized,
+    )
+    dispatch(InterceptionPoint.INPUT, input_ctx)
+    normalized = input_ctx.payload
 
     if resuming and crew._kickoff_event_id:
         if crew.verbose:

@@ -1,7 +1,7 @@
-"""Flow Structure: the serializable, language-agnostic Flow contract.
+"""Flow Definition: the serializable, declarative Flow contract.
 
-Defines :class:`FlowDefinition` and its sub-models — a static, textual
-(JSON/YAML) representation of a Flow: its methods, trigger conditions,
+Defines :class:`FlowDefinition` and its sub-models — a static declarative
+representation of a Flow: its methods, trigger conditions,
 state, and configuration. It is independent of the Python authoring
 layer that may have produced it and of the engine that runs it (see
 ``runtime``).
@@ -9,8 +9,9 @@ layer that may have produced it and of the engine that runs it (see
 
 from __future__ import annotations
 
-import json
+from collections.abc import Sequence
 import logging
+from pathlib import Path
 import re
 from typing import Annotated, Any, Literal, TypeAlias, cast
 
@@ -18,6 +19,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    PrivateAttr,
     field_serializer,
     model_validator,
 )
@@ -27,7 +29,10 @@ from crewai.flow.conversational_definition import (
     FlowConversationalDefinition,
     FlowConversationalRouterDefinition,
 )
-from crewai.flow.expressions import ExpressionData
+from crewai.flow.expressions import (
+    ExpressionData,
+    flow_template_expression_description,
+)
 from crewai.project.crew_definition import AgentDefinition, CrewDefinition
 
 
@@ -85,7 +90,7 @@ class FlowDictStateDefinition(BaseModel):
     )
     default: dict[str, Any] | None = Field(
         default=None,
-        description="Default state values applied before kickoff inputs.",
+        description="Default values used to initialize Flow state.",
         examples=[{"topic": "AI agents", "limit": 3}],
     )
 
@@ -120,7 +125,7 @@ class FlowPydanticStateDefinition(BaseModel):
     )
     default: dict[str, Any] | None = Field(
         default=None,
-        description="Default state values applied before kickoff inputs.",
+        description="Default values used to initialize Flow state.",
         examples=[{"topic": "AI agents", "limit": 3}],
     )
 
@@ -147,7 +152,7 @@ class FlowJsonSchemaStateDefinition(BaseModel):
     )
     default: dict[str, Any] | None = Field(
         default=None,
-        description="Default state values applied before kickoff inputs.",
+        description="Default values used to initialize Flow state.",
         examples=[{"topic": "AI agents", "limit": 3}],
     )
 
@@ -159,7 +164,7 @@ class FlowUnknownStateDefinition(BaseModel):
 
     type: Literal["unknown"] = Field(
         default="unknown",
-        description="Unknown state representation; runtime falls back to dictionary state.",
+        description="Unknown state representation; execution uses dictionary state.",
         examples=["unknown"],
     )
     ref: str | None = Field(
@@ -169,7 +174,7 @@ class FlowUnknownStateDefinition(BaseModel):
     )
     default: dict[str, Any] | None = Field(
         default=None,
-        description="Default state values applied before kickoff inputs.",
+        description="Default values used to initialize Flow state.",
         examples=[{"topic": "AI agents", "limit": 3}],
     )
 
@@ -188,7 +193,7 @@ class FlowConfigDefinition(BaseModel):
 
     tracing: bool | None = Field(
         default=None,
-        description="Override for flow tracing; when omitted, runtime defaults apply.",
+        description="Override for flow tracing; when omitted, execution defaults apply.",
         examples=[True],
     )
     stream: bool = Field(
@@ -203,7 +208,7 @@ class FlowConfigDefinition(BaseModel):
     )
     input_provider: str | None = Field(
         default=None,
-        description="Import reference or provider key used to supply flow inputs.",
+        description="Provider key used to supply initial state.",
         examples=["my_project.inputs:load_inputs"],
     )
     suppress_flow_events: bool = Field(
@@ -233,7 +238,7 @@ class FlowPersistenceDefinition(BaseModel):
 
     ``persistence`` may hold a live backend when the definition is built from
     a decorated class — the engine then persists through the exact instance
-    the user configured; the JSON/YAML projection degrades it to its
+    the user configured; the declarative projection degrades it to its
     serialized config.
     """
 
@@ -273,7 +278,7 @@ class FlowHumanFeedbackDefinition(BaseModel):
     """Static human feedback configuration.
 
     ``llm`` and ``provider`` may hold live Python objects when the definition
-    is built from a decorated class; the JSON/YAML projection degrades them to
+    is built from a decorated class; the declarative projection degrades them to
     a serialized config (``llm``) or a ``module:qualname`` ref (``provider``).
     """
 
@@ -360,12 +365,10 @@ class FlowCodeActionDefinition(BaseModel):
     with_: dict[str, ExpressionData] | None = Field(
         default=None,
         alias="with",
-        description=(
-            "Keyword arguments passed to the callable. String values are evaluated "
-            "as CEL only when the trimmed value starts with ${ and ends with }; "
-            "all other values are literal."
+        description=flow_template_expression_description(
+            "Keyword arguments passed to the callable."
         ),
-        examples=[{"topic": "${state.topic}"}],
+        examples=[{"topic": "${state.topic}", "query": "News about ${state.topic}"}],
     )
 
 
@@ -382,17 +385,13 @@ class FlowToolActionDefinition(BaseModel):
         examples=["tool"],
     )
     ref: str = Field(
-        description="Import reference for a BaseTool class, formatted as module:qualname.",
+        description="Reference to the CrewAI tool to run.",
         examples=["my_project.tools:SearchTool"],
     )
     with_: dict[str, ExpressionData] | None = Field(
         default=None,
         alias="with",
-        description=(
-            "Tool input arguments. String values are evaluated as CEL only when "
-            "the trimmed value starts with ${ and ends with }; all other values "
-            "are literal."
-        ),
+        description=flow_template_expression_description("Tool input arguments."),
         examples=[{"query": "${outputs.normalize_topic}", "limit": 5}],
     )
 
@@ -406,10 +405,19 @@ class FlowCrewActionDefinition(BaseModel):
     )
 
     call: Literal["crew"] = Field(
-        description="Action discriminator. Use crew to run an inline Crew definition.",
+        description=(
+            "Action discriminator. Use crew to run an inline or referenced Crew "
+            "definition."
+        ),
         examples=["crew"],
     )
-    with_: CrewDefinition = Field(
+    from_declaration: str | None = Field(
+        default=None,
+        description="Path to a JSON/JSONC Crew declaration file or folder.",
+        examples=["crews/research_crew"],
+    )
+    with_: CrewDefinition | None = Field(
+        default=None,
         alias="with",
         description="Inline Crew definition to load and execute for this action.",
         examples=[
@@ -430,14 +438,32 @@ class FlowCrewActionDefinition(BaseModel):
                         "agent": "researcher",
                     }
                 ],
-                "inputs": {"topic": "${state.topic}"},
             }
         ],
     )
+    inputs: dict[str, ExpressionData] | None = Field(
+        default=None,
+        description=flow_template_expression_description(
+            "Input overrides passed to the Crew."
+        )
+        + (
+            " The resulting values are available to crew agent and task "
+            "interpolation as `{name}` placeholders."
+        ),
+        examples=[{"topic": "${state.topic}"}],
+    )
+
+    @model_validator(mode="after")
+    def _validate_crew_source(self) -> FlowCrewActionDefinition:
+        if bool(self.from_declaration) == (self.with_ is not None):
+            raise ValueError(
+                "crew action requires exactly one of from_declaration or with"
+            )
+        return self
 
 
 class FlowAgentActionDefinition(BaseModel):
-    """A Flow method action that builds and kicks off a CrewAI agent."""
+    """A Flow method action that builds and kicks off one agent outside a crew."""
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -445,12 +471,18 @@ class FlowAgentActionDefinition(BaseModel):
     )
 
     call: Literal["agent"] = Field(
-        description="Action discriminator. Use agent to run an inline Agent definition.",
+        description=(
+            "Action discriminator. Use agent to run an individual inline Agent "
+            "definition outside of a crew."
+        ),
         examples=["agent"],
     )
     with_: AgentDefinition = Field(
         alias="with",
-        description="Inline Agent definition to load and execute for this action.",
+        description=(
+            "Individual Agent definition to load and execute outside of a crew "
+            "for this action."
+        ),
         examples=[
             {
                 "role": "Analyst",
@@ -489,12 +521,11 @@ class FlowScriptActionDefinition(BaseModel):
     )
     code: str = Field(
         description=(
-            "Trusted Python source executed as a generated function. Runtime values are "
-            "passed as state, outputs, input, and item; they are not interpolated into "
-            "the source. This is not sandboxed."
+            "Trusted inline Python source. Values are available as state and outputs; "
+            "they are not interpolated into the source. This is not sandboxed."
         ),
         examples=[
-            "state['normalized_topic'] = input.strip()\n"
+            "state['normalized_topic'] = state['topic'].strip()\n"
             "return state['normalized_topic']"
         ],
     )
@@ -619,13 +650,13 @@ class FlowMethodDefinition(BaseModel):
     )
     do: FlowActionDefinition = Field(
         description="Action executed when this method runs.",
-        examples=[{"call": "script", "code": "return input.strip()"}],
+        examples=[{"call": "expression", "expr": "state.topic"}],
     )
     start: bool | FlowDefinitionCondition | None = Field(
         default=None,
         description=(
             "Marks a start method. True starts unconditionally; a condition starts "
-            "when the kickoff inputs or events satisfy it."
+            "when the initial state or events satisfy it."
         ),
         examples=[True],
     )
@@ -684,10 +715,12 @@ class FlowDefinition(BaseModel):
         arbitrary_types_allowed=True,
     )
 
+    _source_path: Path | None = PrivateAttr(default=None)
+
     schema_: Literal["crewai.flow/v1"] = Field(
         default="crewai.flow/v1",
         alias="schema",
-        description="Flow Definition schema identifier and version.",
+        description="Declarative Flow schema identifier and version.",
         examples=["crewai.flow/v1"],
     )
     name: str = Field(
@@ -701,12 +734,12 @@ class FlowDefinition(BaseModel):
     )
     state: FlowStateDefinition | None = Field(
         default=None,
-        description="State contract for kickoff inputs and runtime state.",
+        description="State contract for the initial state and updates during execution.",
         examples=[{"type": "dict", "default": {"topic": "AI agents"}}],
     )
     config: FlowConfigDefinition = Field(
         default_factory=FlowConfigDefinition,
-        description="Serializable flow-level runtime configuration.",
+        description="Serializable flow-level execution configuration.",
         examples=[{"stream": True, "max_method_calls": 20}],
     )
     persist: FlowPersistenceDefinition | None = Field(
@@ -738,6 +771,15 @@ class FlowDefinition(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def _validate_trigger_namespace(self) -> FlowDefinition:
+        for method_name, method in self.methods.items():
+            if _condition_references(method.listen, method_name):
+                raise ValueError(
+                    f"methods.{method_name}.listen must not reference itself"
+                )
+        return self
+
+    @model_validator(mode="after")
     def _validate_cel_expressions(self) -> FlowDefinition:
         for method_name, method in self.methods.items():
             _validate_action_cel(
@@ -748,46 +790,76 @@ class FlowDefinition(BaseModel):
         return self
 
     def to_dict(self, *, exclude_none: bool = True) -> dict[str, Any]:
-        """Serialize the definition to a JSON/YAML-ready dictionary."""
+        """Serialize the definition to a declaration-ready dictionary."""
         return self.model_dump(by_alias=True, exclude_none=exclude_none, mode="json")
 
-    def to_json(self, *, indent: int | None = 2, exclude_none: bool = True) -> str:
-        """Serialize the definition to JSON."""
-        data = self.to_dict(exclude_none=exclude_none)
-        return json.dumps(data, indent=indent)
+    @property
+    def source_path(self) -> Path | None:
+        """Original definition file path, when loaded from a file."""
+        return self._source_path
 
-    def to_yaml(self, *, exclude_none: bool = True) -> str:
-        """Serialize the definition to YAML."""
-        return yaml.safe_dump(
-            self.to_dict(exclude_none=exclude_none),
-            sort_keys=False,
-            allow_unicode=True,
-        )
+    @property
+    def source_dir(self) -> Path | None:
+        """Directory used to resolve relative paths in the definition."""
+        if self._source_path is None:
+            return None
+        return self._source_path.parent
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> FlowDefinition:
-        """Load a definition from a dictionary."""
+    def from_declaration(
+        cls,
+        *,
+        contents: FlowDefinition | str | dict[str, Any] | None = None,
+        path: Path | str | None = None,
+    ) -> FlowDefinition:
+        """Load a declarative flow from contents or a file path."""
+        if isinstance(contents, cls):
+            return contents
+
+        source_path: Path | None = None
+        if contents is None:
+            if path is None:
+                raise ValueError("Provide contents or path")
+            source_path = Path(path)
+            contents = source_path.expanduser().read_text(encoding="utf-8")
+
+        if isinstance(contents, dict):
+            return cls._load_mapping(contents)
+
+        if not isinstance(contents, str):
+            raise TypeError("Flow declaration contents must be a string or dictionary")
+
+        if not contents.strip():
+            if source_path is not None:
+                raise ValueError(f"Flow declaration file is empty: {source_path}")
+            raise ValueError("Flow declaration contents are empty")
+
+        loaded = yaml.safe_load(contents)
+        if not isinstance(loaded, dict):
+            raise ValueError("Flow declaration must contain a mapping")
+        return cls._load_mapping(loaded, source_path=source_path)
+
+    @classmethod
+    def _load_mapping(
+        cls, data: dict[str, Any], *, source_path: Path | None = None
+    ) -> FlowDefinition:
         definition = cls.model_validate(data)
+        if source_path is not None:
+            definition._source_path = source_path.expanduser().resolve()
         log_flow_definition_issues(definition)
         return definition
 
     @classmethod
-    def from_json(cls, data: str) -> FlowDefinition:
-        """Load a definition from JSON."""
-        return cls.from_dict(json.loads(data))
+    def skill(
+        cls,
+        *,
+        skips: Sequence[str] = (),
+        examples_format: Literal["yaml", "json"] = "yaml",
+    ) -> str:
+        """Return a portable Markdown skill for authoring Flow declarations."""
+        from crewai.flow.skill import render_skill_markdown
 
-    @classmethod
-    def from_yaml(cls, data: str) -> FlowDefinition:
-        """Load a definition from YAML."""
-        loaded = yaml.safe_load(data) or {}
-        if not isinstance(loaded, dict):
-            raise ValueError("Flow definition YAML must contain a mapping")
-        return cls.from_dict(loaded)
-
-    @classmethod
-    def json_schema(cls) -> dict[str, Any]:
-        """Return the JSON Schema for the Flow Definition contract."""
-        return cls.model_json_schema(by_alias=True)
+        return render_skill_markdown(skips=skips, examples_format=examples_format)
 
 
 def _validate_step_name(name: str, *, field: str) -> None:
@@ -802,6 +874,18 @@ def _validate_step_list(steps: list[FlowEachStepDefinition], *, field: str) -> N
         if name in seen:
             raise ValueError(f"{field} step names must be unique: {name!r}")
         seen.add(name)
+
+
+def _condition_references(condition: FlowDefinitionCondition | None, name: str) -> bool:
+    if condition is None:
+        return False
+    if isinstance(condition, str):
+        return condition == name
+    return any(
+        _condition_references(child, name)
+        for key in ("and", "or")
+        for child in condition.get(key, [])
+    )
 
 
 def _validate_action_cel(
@@ -826,10 +910,16 @@ def _validate_action_cel(
         return
 
     if isinstance(action, FlowCrewActionDefinition):
-        Expression(cast(ExpressionData, action.with_.inputs)).validate_template(
-            allowed_roots=allowed_roots,
-            source=f"{path}.with.inputs",
-        )
+        if action.with_ is not None:
+            Expression(cast(ExpressionData, action.with_.inputs)).validate_template(
+                allowed_roots=allowed_roots,
+                source=f"{path}.with.inputs",
+            )
+        if action.inputs is not None:
+            Expression(cast(ExpressionData, action.inputs)).validate_template(
+                allowed_roots=allowed_roots,
+                source=f"{path}.inputs",
+            )
         return
 
     if isinstance(action, FlowAgentActionDefinition):
@@ -870,14 +960,6 @@ def _validate_action_cel(
 def log_flow_definition_issues(definition: FlowDefinition) -> None:
     for method_name, method in definition.methods.items():
         path = f"methods.{method_name}"
-        if method.router and not method.is_start and method.listen is None:
-            _log_flow_definition_issue(
-                definition.name,
-                code="router_without_trigger",
-                severity="error",
-                path=path,
-                message="router: true requires either start or listen",
-            )
         if method.emit and not method.router:
             _log_flow_definition_issue(
                 definition.name,

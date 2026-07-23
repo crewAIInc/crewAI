@@ -62,7 +62,7 @@ crewai create flow <name> --skip_provider  # New flow project
 
 # Running
 crewai run                  # Run crew or flow (auto-detects from pyproject.toml)
-crewai flow kickoff         # Legacy flow execution
+crewai flow kickoff         # Deprecated compatibility alias for crewai run
 
 # Testing & training
 crewai test                           # Test crew (default: 2 iterations, gpt-4o-mini)

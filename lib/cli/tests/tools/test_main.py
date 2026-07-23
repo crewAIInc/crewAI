@@ -54,6 +54,10 @@ def test_create_success(mock_subprocess, capsys, tool_command):
         )
         assert os.path.isfile(os.path.join("test_tool", "src", "test_tool", "tool.py"))
 
+        with open(os.path.join("test_tool", "pyproject.toml"), "r") as f:
+            content = f.read()
+            assert '"crewai[tools]>=1.15.0,<2.0.0"' in content
+
         with open(os.path.join("test_tool", "src", "test_tool", "tool.py"), "r") as f:
             content = f.read()
             assert "class TestTool" in content

@@ -1,6 +1,7 @@
 import os
 import unittest
-from unittest.mock import ANY, AsyncMock, MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
@@ -395,29 +396,63 @@ class TestPlusAPI(unittest.TestCase):
             "https://custom-url-from-env.com",
         )
 
+    @patch.dict(os.environ, {"CREWAI_PLUS_URL": "https://url-from-env.com"})
+    def test_explicit_target_takes_precedence(self):
+        api = PlusAPI(
+            "test_key",
+            base_url="https://explicit-url.com",
+            organization_id="explicit-org-id",
+        )
 
-@pytest.mark.asyncio
-@patch("httpx.AsyncClient")
-async def test_get_agent(mock_async_client_class):
+        self.assertEqual(api.base_url, "https://explicit-url.com")
+        self.assertEqual(
+            api.headers["X-Crewai-Organization-Id"], "explicit-org-id"
+        )
+
+    @patch("crewai_core.plus_api.Settings")
+    def test_explicit_base_url_uses_organization_from_settings(
+        self, mock_settings_class
+    ):
+        mock_settings_class.return_value.org_uuid = "settings-org-id"
+
+        api = PlusAPI("test_key", base_url="https://explicit-url.com")
+
+        self.assertEqual(api.base_url, "https://explicit-url.com")
+        self.assertEqual(api.headers["X-Crewai-Organization-Id"], "settings-org-id")
+
+    @patch("crewai_core.plus_api.Settings")
+    @patch.dict(os.environ, {"CREWAI_PLUS_URL": ""})
+    def test_explicit_organization_uses_base_url_from_settings(
+        self, mock_settings_class
+    ):
+        mock_settings_class.return_value.enterprise_base_url = (
+            "https://url-from-settings.com"
+        )
+
+        api = PlusAPI("test_key", organization_id="explicit-org-id")
+
+        self.assertEqual(api.base_url, "https://url-from-settings.com")
+        self.assertEqual(
+            api.headers["X-Crewai-Organization-Id"], "explicit-org-id"
+        )
+
+@patch("crewai_core.plus_api.PlusAPI._make_request")
+def test_get_agent(mock_make_request):
     api = PlusAPI("test_api_key")
     mock_response = MagicMock()
-    mock_client_instance = AsyncMock()
-    mock_client_instance.get.return_value = mock_response
-    mock_async_client_class.return_value.__aenter__.return_value = mock_client_instance
+    mock_make_request.return_value = mock_response
 
-    response = await api.get_agent("test_agent_handle")
+    response = api.get_agent("test_agent_handle")
 
-    mock_client_instance.get.assert_called_once_with(
-        f"{api.base_url}/crewai_plus/api/v1/agents/test_agent_handle",
-        headers=api.headers,
+    mock_make_request.assert_called_once_with(
+        "GET", "/crewai_plus/api/v1/agents/test_agent_handle"
     )
     assert response == mock_response
 
 
-@pytest.mark.asyncio
-@patch("httpx.AsyncClient")
+@patch("crewai_core.plus_api.PlusAPI._make_request")
 @patch("crewai_core.plus_api.Settings")
-async def test_get_agent_with_org_uuid(mock_settings_class, mock_async_client_class):
+def test_get_agent_with_org_uuid(mock_settings_class, mock_make_request):
     org_uuid = "test-org-uuid"
     mock_settings = MagicMock()
     mock_settings.org_uuid = org_uuid
@@ -427,16 +462,63 @@ async def test_get_agent_with_org_uuid(mock_settings_class, mock_async_client_cl
     api = PlusAPI("test_api_key")
 
     mock_response = MagicMock()
-    mock_client_instance = AsyncMock()
-    mock_client_instance.get.return_value = mock_response
-    mock_async_client_class.return_value.__aenter__.return_value = mock_client_instance
+    mock_make_request.return_value = mock_response
 
-    response = await api.get_agent("test_agent_handle")
+    response = api.get_agent("test_agent_handle")
 
-    mock_client_instance.get.assert_called_once_with(
-        f"{api.base_url}/crewai_plus/api/v1/agents/test_agent_handle",
-        headers=api.headers,
+    mock_make_request.assert_called_once_with(
+        "GET", "/crewai_plus/api/v1/agents/test_agent_handle"
     )
     assert "X-Crewai-Organization-Id" in api.headers
     assert api.headers["X-Crewai-Organization-Id"] == org_uuid
     assert response == mock_response
+
+
+@pytest.mark.parametrize(
+    ("target", "other_target"),
+    (
+        (
+            ("https://first.example.com", "first-org"),
+            ("https://second.example.com", "second-org"),
+        ),
+        (
+            ("https://second.example.com", "second-org"),
+            ("https://first.example.com", "first-org"),
+        ),
+    ),
+)
+def test_clients_keep_targets_independent(target, other_target):
+    base_url, organization_id = target
+    api = PlusAPI(
+        "test_key",
+        base_url=base_url,
+        organization_id=organization_id,
+    )
+    other_base_url, other_organization_id = other_target
+    PlusAPI(
+        "test_key",
+        base_url=other_base_url,
+        organization_id=other_organization_id,
+    )
+
+    assert (api.base_url, api.headers["X-Crewai-Organization-Id"]) == target
+
+
+@patch("crewai_core.plus_api.Settings")
+@patch.dict(os.environ, {"CREWAI_PLUS_URL": ""})
+def test_default_target_uses_single_settings_snapshot(mock_settings_class):
+    mock_settings_class.side_effect = (
+        SimpleNamespace(
+            org_uuid="first-org",
+            enterprise_base_url="https://first.example.com",
+        ),
+        SimpleNamespace(
+            org_uuid="second-org",
+            enterprise_base_url="https://second.example.com",
+        ),
+    )
+
+    api = PlusAPI("test_key")
+
+    assert api.base_url == "https://first.example.com"
+    assert api.headers["X-Crewai-Organization-Id"] == "first-org"

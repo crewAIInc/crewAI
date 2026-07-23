@@ -1,23 +1,35 @@
-"""Experimental Skills Repository — registry refs, global cache, downloads.
+"""Deprecated location for the Skills Repository.
 
-This package contains the registry-backed pieces of the skills feature
-(`@org/name` refs, `~/.crewai/skills/` cache, download events). The stable
-filesystem-based skill loader still lives in `crewai.skills`.
+The registry-backed skills feature graduated out of experimental; it now
+lives in `crewai.skills` alongside the filesystem-based loader. This module
+re-exports the public names and aliases the old submodules so imports
+written against the experimental namespace keep working, and will be
+removed in a future release.
 """
 
-from crewai.experimental.skills.cache import SkillCacheManager
-from crewai.experimental.skills.registry import (
-    SkillNotCachedError,
+import sys
+
+from crewai.skills import cache, events, registry
+from crewai.skills.cache import SkillCacheManager
+from crewai.skills.registry import (
     is_registry_ref,
     parse_registry_ref,
     resolve_registry_ref,
 )
 
 
+# Keep `crewai.experimental.skills.<module>` imports (and patch targets)
+# resolving to the real modules in crewai.skills.
+sys.modules[__name__ + ".cache"] = cache
+sys.modules[__name__ + ".events"] = events
+sys.modules[__name__ + ".registry"] = registry
+
 __all__ = [
     "SkillCacheManager",
-    "SkillNotCachedError",
+    "cache",
+    "events",
     "is_registry_ref",
     "parse_registry_ref",
+    "registry",
     "resolve_registry_ref",
 ]

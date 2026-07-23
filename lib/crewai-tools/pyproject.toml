@@ -10,7 +10,7 @@ requires-python = ">=3.10, <3.14"
 dependencies = [
     "pytube~=15.0.0",
     "requests>=2.33.0,<3",
-    "crewai==1.14.8a2",
+    "crewai==1.15.5",
     "tiktoken>=0.8.0,<0.13",
     "beautifulsoup4~=4.13.4",
     "python-docx~=1.2.0",
@@ -97,17 +97,17 @@ databricks-sdk = [
     "databricks-sdk>=0.46.0",
 ]
 couchbase = [
-    "couchbase>=4.3.5",
+    "couchbase>=4.6.0",
 ]
 mcp = [
-    "mcp>=1.6.0",
+    "mcp>=1.28.1,<2",
     "mcpadapt>=0.1.9",
 ]
 stagehand = [
     "stagehand>=0.4.1",
 ]
 github = [
-    "gitpython>=3.1.50,<4",
+    "gitpython>=3.1.51,<4",
     "PyGithub==1.59.1",
 ]
 rag = [
