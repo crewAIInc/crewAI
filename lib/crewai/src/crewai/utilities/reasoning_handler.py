@@ -105,6 +105,13 @@ FUNCTION_SCHEMA: Final[dict[str, Any]] = {
 }
 
 
+def _is_ready(response: str) -> bool:
+    """Check if the response indicates the agent is ready."""
+    if re.search(r"(?i)\bnot\s+ready\b", response):
+        return False
+    return bool(re.search(r"(?i)\bready\b", response))
+
+
 class AgentReasoning:
     """
     Handles the agent planning/reasoning process, enabling an agent to reflect
@@ -410,7 +417,7 @@ class AgentReasoning:
             return (
                 response_str,
                 [],
-                bool(re.search(r"(?i)(?<!not )\bready\b", response_str)),
+                _is_ready(response_str),
             )
 
         except Exception as e:
@@ -434,7 +441,7 @@ class AgentReasoning:
                 return (
                     fallback_str,
                     [],
-                    bool(re.search(r"(?i)(?<!not )\bready\b", fallback_str)),
+                    _is_ready(fallback_str),
                 )
             except Exception as inner_e:
                 self.logger.error(f"Error during fallback text parsing: {inner_e!s}")
@@ -594,7 +601,7 @@ class AgentReasoning:
             return "No plan was generated.", False
 
         plan = response
-        ready = bool(re.search(r"(?i)(?<!not )\bready\b", response))
+        ready = _is_ready(response)
 
         return plan, ready
 
