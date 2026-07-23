@@ -500,7 +500,7 @@ def test_intent_ref_stable_across_retries() -> None:
 
       intent_ref = SHA-256(JCS({agent_id, tool, normalized_scope, intent_digest}))
       Note: idempotency_key is explicitly EXCLUDED (pair model).
-      Duplicate enforcement uses the pair (intent_ref, idempotency_key)."""
+      Duplicate enforcement uses the pair (intent_ref, idempotency_key).
 
     """
     # Two decisions for the same intent, different issued_at
