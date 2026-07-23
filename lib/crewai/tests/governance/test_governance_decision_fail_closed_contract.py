@@ -8,7 +8,7 @@ executable candidate.
 
 Invariant:
   authorization binds exact action + exact target state + exact continuation
-  + non-duplicate outcome
+  + non-duplicate outcome + exact idempotency key + same boundary (run)
 """
 
 from __future__ import annotations
@@ -27,6 +27,15 @@ def evaluate_contract_binding(
 ) -> tuple[BindingVerdict, str]:
     """Small test oracle for the fail-closed GovernanceDecision contract.
 
+    Binding checks:
+      1. decision must be "allow"
+      2. agent_id, tool, target, normalized_scope must match exactly
+      3. intent_ref, intent_digest, params_hash must match exactly
+      4. continuation_id must match
+      5. idempotency_key on candidate must match authorized key
+      6. target_state_digest drift => revalidate
+      7. duplicate (intent_ref, idempotency_key) terminal outcome => deny
+
     Duplicate enforcement keys on (intent_ref, idempotency_key) only.
     decision_id is NOT part of the duplicate predicate — a fresh decision_id
     with the same semantic side effect must still be denied.
@@ -36,17 +45,27 @@ def evaluate_contract_binding(
     if decision.get("decision") != "allow":
         return "deny", "decision_not_allow"
 
+    # Exact spatial binding: agent, tool, target, scope
     for field in ("agent_id", "tool", "target", "normalized_scope"):
         if decision.get(field) != candidate.get(field):
             return "deny", f"{field}_mismatch"
 
+    # Exact intent binding: intent_ref, intent_digest, params_hash
     for field in ("intent_ref", "intent_digest", "params_hash"):
         if decision.get(field) and decision.get(field) != candidate.get(field):
             return "deny", "exact_intent_mismatch"
 
+    # Continuation binding
     if decision.get("continuation_id") != candidate.get("continuation_id"):
         return "deny", "continuation_mismatch"
 
+    # Idempotency key binding: the candidate MUST present the same key
+    # that was authorized. A candidate with a different key cannot use
+    # this decision's authorization.
+    if decision.get("idempotency_key") != candidate.get("idempotency_key"):
+        return "deny", "idempotency_key_mismatch"
+
+    # Target state drift => revalidation required
     if decision.get("target_state_digest") != candidate.get("target_state_digest"):
         return "revalidate", "target_state_drift"
 
@@ -84,6 +103,7 @@ def base_allow_decision() -> GovernanceDecision:
         "decision": "allow",
         "reason": "Authorized exact outbound summary email.",
         "issued_at": "2026-06-25T14:00:00Z",
+        "boundary_id": "crew-run-abc-001",
         "seq": 0,
         "running_count": 1,
     }
@@ -104,6 +124,9 @@ def matching_candidate() -> dict[str, Any]:
     }
 
 
+# --- Exact intent binding ---
+
+
 def test_exact_intent_mismatch_denies() -> None:
     """Changed executable intent must deny, even if actor/tool/target match."""
     decision = base_allow_decision()
@@ -114,6 +137,21 @@ def test_exact_intent_mismatch_denies() -> None:
 
     assert verdict == "deny"
     assert reason == "exact_intent_mismatch"
+
+
+def test_params_hash_mismatch_denies() -> None:
+    """Changed params_hash must deny — exact recomputation boundary."""
+    decision = base_allow_decision()
+    candidate = matching_candidate()
+    candidate["params_hash"] = "sha256:params-mutated"
+
+    verdict, reason = evaluate_contract_binding(decision, candidate)
+
+    assert verdict == "deny"
+    assert reason == "exact_intent_mismatch"
+
+
+# --- Target state drift ---
 
 
 def test_target_state_drift_revalidates() -> None:
@@ -128,6 +166,9 @@ def test_target_state_drift_revalidates() -> None:
     assert reason == "target_state_drift"
 
 
+# --- Continuation binding ---
+
+
 def test_continuation_mismatch_denies() -> None:
     """Approved action cannot be replayed under another continuation."""
     decision = base_allow_decision()
@@ -138,6 +179,29 @@ def test_continuation_mismatch_denies() -> None:
 
     assert verdict == "deny"
     assert reason == "continuation_mismatch"
+
+
+# --- Idempotency key binding ---
+
+
+def test_candidate_idempotency_key_mismatch_denies() -> None:
+    """Candidate presenting a different idempotency_key cannot use this authorization.
+
+    The oracle must verify that the candidate's presented key matches
+    the authorized key. A candidate that changes its key to a different value
+    is not the same side effect — deny.
+    """
+    decision = base_allow_decision()
+    candidate = matching_candidate()
+    candidate["idempotency_key"] = "idem:send-summary:user@example.com:TAMPERED"
+
+    verdict, reason = evaluate_contract_binding(decision, candidate)
+
+    assert verdict == "deny"
+    assert reason == "idempotency_key_mismatch"
+
+
+# --- Duplicate outcome enforcement ---
 
 
 def test_duplicate_outcome_idempotency_collision_denies() -> None:
@@ -152,6 +216,7 @@ def test_duplicate_outcome_idempotency_collision_denies() -> None:
         "outcome": "executed",
         "tool_output_hash": "sha256:tool-output-001",
         "completed_at": "2026-06-25T14:00:02Z",
+        "boundary_id": "crew-run-abc-001",
         "seq": 0,
     }
 
@@ -186,6 +251,7 @@ def test_duplicate_different_decision_id_denies() -> None:
         "outcome": "executed",
         "tool_output_hash": "sha256:tool-output-001",
         "completed_at": "2026-06-25T14:00:02Z",
+        "boundary_id": "crew-run-abc-001",
         "seq": 0,
     }
 
@@ -199,6 +265,9 @@ def test_duplicate_different_decision_id_denies() -> None:
 
     assert verdict == "deny"
     assert reason == "duplicate_outcome"
+
+
+# --- Genuinely new invocation ---
 
 
 def test_different_idempotency_key_same_intent_is_allowed() -> None:
@@ -221,6 +290,7 @@ def test_different_idempotency_key_same_intent_is_allowed() -> None:
         "outcome": "executed",
         "tool_output_hash": "sha256:tool-output-001",
         "completed_at": "2026-06-25T14:00:02Z",
+        "boundary_id": "crew-run-abc-001",
         "seq": 0,
     }
 
@@ -233,3 +303,93 @@ def test_different_idempotency_key_same_intent_is_allowed() -> None:
 
     assert verdict == "allow"
     assert reason == "contract_binding_ok"
+
+
+# --- Cross-run splice rejection (boundary_id) ---
+
+
+def test_cross_run_record_splice_detected_by_contiguity() -> None:
+    """Records from different runs (different boundary_id) must fail contiguity.
+
+    A missing seq=1 from run A cannot be replaced by a seq=1 record from run B.
+    verify_contiguity() requires all records share the same boundary_id.
+    """
+    from crewai.governance.governance_decision import verify_contiguity
+
+    # Records from two different runs spliced together
+    records = [
+        {
+            "decision_id": "d-run-a-0",
+            "boundary_id": "crew-run-A",
+            "seq": 0,
+            "running_count": 1,
+        },
+        {
+            "decision_id": "d-run-b-1",
+            "boundary_id": "crew-run-B",  # DIFFERENT run
+            "seq": 1,
+            "running_count": 2,
+        },
+        {
+            "decision_id": "d-run-a-2",
+            "boundary_id": "crew-run-A",
+            "seq": 2,
+            "running_count": 3,
+        },
+    ]
+
+    # Must fail: mixed boundary_ids
+    assert verify_contiguity(records) is False
+
+
+def test_same_boundary_id_contiguity_passes() -> None:
+    """Records from the same run with consistent boundary_id pass contiguity."""
+    from crewai.governance.governance_decision import verify_contiguity
+
+    records = [
+        {
+            "decision_id": "d-run-a-0",
+            "boundary_id": "crew-run-A",
+            "seq": 0,
+            "running_count": 1,
+        },
+        {
+            "decision_id": "d-run-a-1",
+            "boundary_id": "crew-run-A",
+            "seq": 1,
+            "running_count": 2,
+        },
+        {
+            "decision_id": "d-run-a-2",
+            "boundary_id": "crew-run-A",
+            "seq": 2,
+            "running_count": 3,
+        },
+    ]
+
+    assert verify_contiguity(records) is True
+
+
+def test_seal_boundary_id_mismatch_fails() -> None:
+    """Seal with different boundary_id than records must fail."""
+    from crewai.governance.governance_decision import verify_contiguity
+
+    records = [
+        {
+            "decision_id": "d-run-a-0",
+            "boundary_id": "crew-run-A",
+            "seq": 0,
+            "running_count": 1,
+        },
+        {
+            "decision_id": "d-run-a-1",
+            "boundary_id": "crew-run-A",
+            "seq": 1,
+            "running_count": 2,
+        },
+    ]
+
+    # Seal claims boundary_id from a DIFFERENT run
+    seal = {"boundary_id": "crew-run-B", "sealed": True, "total": 2}
+
+    assert verify_contiguity(records, seal=seal) is False
