@@ -236,7 +236,6 @@ inspect_task = Task(
         "and summarize the results."
     ),
     expected_output="A brief summary of the sandbox pod's operating system based on the command output.",
-    # expected_output="Only name of the Operating System.",
     agent=devops_agent,
 )
 
