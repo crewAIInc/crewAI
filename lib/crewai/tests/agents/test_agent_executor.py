@@ -7,6 +7,7 @@ flow methods, routing logic, and error handling.
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import threading
 from types import SimpleNamespace
 import time
@@ -1390,6 +1391,115 @@ class TestNativeToolExecution:
 
         running.tool_to_use = None
         assert executor.check_native_todo_completion() == "todo_satisfied"
+
+    def test_execute_native_tool_awaits_async_tools_on_parent_loop(
+        self, mock_dependencies
+    ):
+        """Regression for #6611: async tool wrappers must be awaited on the
+        parent event loop (via ``asyncio.run_coroutine_threadsafe``) instead of
+        being left as bare coroutines that ``BaseTool.run`` had to bridge via
+        ``asyncio.run(...)`` inside worker threads.
+        """
+        import asyncio
+
+        from crewai.experimental.agent_executor import _NATIVE_TOOL_LOOP
+        from crewai.tools.base_tool import BaseTool
+
+        executor = _build_executor(**mock_dependencies)
+
+        recorded: dict[str, threading.Thread] = {}
+
+        async def async_tool(label: str) -> str:
+            loop = asyncio.get_running_loop()
+            # The worker thread must NOT have its own loop; the coroutine
+            # should be scheduled onto the loop captured in
+            # ``_NATIVE_TOOL_LOOP`` (the parent thread's).
+            recorded[label] = threading.current_thread()
+            return f"hello:{label}"
+
+        executor._available_functions = {"async_tool": async_tool}
+        # Provide original_tools with a matching BaseTool so output_tool lookup succeeds.
+        mock_tool = Mock(spec=BaseTool)
+        mock_tool.name = "async_tool"
+        mock_tool.max_usage_count = None
+        mock_tool.current_usage_count = 0
+        executor.original_tools = [mock_tool]
+        executor._tool_name_mapping = {}
+        executor.state.pending_tool_calls = [
+            {
+                "id": "call_async",
+                "function": {"name": "async_tool", "arguments": '{"label": "A"}'},
+            }
+        ]
+
+        async def run_executor() -> str:
+            # execute_native_tool is synchronous and blocks the event loop.
+            # Run it in a thread pool executor. We must capture the parent
+            # event loop FIRST (on this thread) so that the ContextVar
+            # _NATIVE_TOOL_LOOP is propagated to the worker threads via
+            # contextvars.copy_context().run().
+            loop = asyncio.get_running_loop()
+            _NATIVE_TOOL_LOOP.set(loop)
+            try:
+                ctx = contextvars.copy_context()
+                result = await loop.run_in_executor(None, ctx.run, executor.execute_native_tool)
+            finally:
+                _NATIVE_TOOL_LOOP.set(None)
+            return result
+
+        async def main() -> str:
+            return await run_executor()
+
+        outer_loop = asyncio.new_event_loop()
+        try:
+            outer_thread = threading.current_thread()
+            result = outer_loop.run_until_complete(main())
+        finally:
+            outer_loop.close()
+
+        assert result == "native_tool_completed"
+        assert recorded["A"] is outer_thread
+        tool_messages = [
+            m for m in executor.state.messages if m.get("role") == "tool"
+        ]
+        assert len(tool_messages) == 1
+        assert tool_messages[0]["content"] == "hello:A"
+        # ContextVar must be reset after dispatch.
+        assert _NATIVE_TOOL_LOOP.get() is None
+
+    def test_execute_native_tool_handles_sync_callables_without_loop(
+        self, mock_dependencies
+    ):
+        """Sync tools must keep working unchanged (no parent loop needed)."""
+        from crewai.tools.base_tool import BaseTool
+
+        executor = _build_executor(**mock_dependencies)
+
+        def sync_tool(value: str) -> str:
+            return f"got:{value}"
+
+        executor._available_functions = {"sync_tool": sync_tool}
+        # Provide a mock BaseTool so output_tool lookup succeeds.
+        mock_tool = Mock(spec=BaseTool)
+        mock_tool.name = "sync_tool"
+        mock_tool.max_usage_count = None
+        mock_tool.current_usage_count = 0
+        executor.original_tools = [mock_tool]
+        executor._tool_name_mapping = {}
+        executor.state.pending_tool_calls = [
+            {
+                "id": "call_sync",
+                "function": {"name": "sync_tool", "arguments": '{"value": "x"}'},
+            }
+        ]
+
+        result = executor.execute_native_tool()
+
+        assert result == "native_tool_completed"
+        tool_messages = [
+            m for m in executor.state.messages if m.get("role") == "tool"
+        ]
+        assert tool_messages[0]["content"] == "got:x"
 
 
 class TestPlannerObserver:
