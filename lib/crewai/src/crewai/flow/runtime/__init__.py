@@ -730,6 +730,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _usage_aggregation_handler: Callable[..., Any] | None = PrivateAttr(default=None)
     _persist_backends: dict[int, FlowPersistence] = PrivateAttr(default_factory=dict)
     _instance_persistence: bool = PrivateAttr(default=False)
+    _last_restore_succeeded: bool | None = PrivateAttr(default=None)
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
         class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
@@ -1688,6 +1689,26 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         return cast(T, self._state)
 
     @property
+    def last_restore_succeeded(self) -> bool | None:
+        """Outcome of the most recent ``restore_from_state_id`` request.
+
+        ``None`` when the latest kickoff did not request a restore, ``True``
+        when the referenced state was found and hydrated, and ``False`` when
+        the lookup missed (or no persistence backend was configured) and the
+        run proceeded without hydration. Lets callers detect silent restore
+        misses without parsing logs.
+
+        Streaming timing: streaming kickoffs (``stream_events``/``astream``/
+        ``kickoff(stream=True)``) defer execution until frames are consumed.
+        Obtaining the session resets this signal to ``None``; it transitions
+        to ``True``/``False`` only once the deferred run evaluates the
+        restore, so read it after consuming the stream (with
+        ``raise_on_missing_state=True``, a miss still fails eagerly at
+        session creation and sets this to ``False``).
+        """
+        return self._last_restore_succeeded
+
+    @property
     def method_outputs(self) -> list[Any]:
         """Returns the list of all outputs from executed methods."""
         outputs: list[Any] = []
@@ -1878,14 +1899,76 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if hasattr(self._state, key):
                     object.__setattr__(self._state, key, value)
 
+    @staticmethod
+    def _missing_state_error(restore_from_state_id: str) -> ValueError:
+        return ValueError(
+            f"No flow state found for restore_from_state_id: '{restore_from_state_id}'"
+        )
+
+    @staticmethod
+    def _no_persistence_error(restore_from_state_id: str) -> ValueError:
+        return ValueError(
+            "Cannot restore from restore_from_state_id: "
+            f"'{restore_from_state_id}'; no persistence backend "
+            "is configured for this flow."
+        )
+
+    @staticmethod
+    def _check_restore_conflict(
+        from_checkpoint: CheckpointConfig | None,
+        restore_from_state_id: str | None,
+    ) -> None:
+        """Reject combining ``from_checkpoint`` with ``restore_from_state_id``."""
+        if from_checkpoint is not None and restore_from_state_id is not None:
+            raise ValueError(
+                "Cannot combine `from_checkpoint` and `restore_from_state_id`. "
+                "These parameters target different state systems "
+                "(Checkpointing and @persist) and cannot be used together."
+            )
+
+    def _ensure_restorable_state(
+        self,
+        restore_from_state_id: str | None,
+        raise_on_missing_state: bool,
+    ) -> None:
+        """Eagerly validate a strict restore request before deferred execution.
+
+        Streaming kickoffs return a session before the runtime evaluates
+        ``restore_from_state_id``; this pre-check keeps
+        ``raise_on_missing_state=True`` failing at call time, matching the
+        non-streaming path. It records the miss in ``last_restore_succeeded``
+        before raising, exactly like the runtime path. The runtime still
+        performs the authoritative load (and raises again) during execution.
+        """
+        if not raise_on_missing_state or restore_from_state_id is None:
+            return
+        if self.persistence is None:
+            self._last_restore_succeeded = False
+            raise self._no_persistence_error(restore_from_state_id)
+        if not self.persistence.load_state(restore_from_state_id):
+            self._last_restore_succeeded = False
+            raise self._missing_state_error(restore_from_state_id)
+
     def stream_events(
         self,
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
         restore_from_state_id: str | None = None,
+        raise_on_missing_state: bool = False,
     ) -> StreamSession[Any]:
-        """Run the flow and stream all scoped public ``StreamFrame`` events."""
+        """Run the flow and stream all scoped public ``StreamFrame`` events.
+
+        With ``raise_on_missing_state=True``, a ``restore_from_state_id``
+        lookup miss raises ``ValueError`` here, before the session is
+        returned, so callers do not have to consume frames to see the error.
+        """
+        self._check_restore_conflict(from_checkpoint, restore_from_state_id)
+        # The deferred run only evaluates restore_from_state_id once frames are
+        # consumed; reset the signal now so a caller reading it right after
+        # session creation sees None (no outcome yet) instead of a stale value.
+        self._last_restore_succeeded = None
+        self._ensure_restorable_state(restore_from_state_id, raise_on_missing_state)
         result_holder: list[Any] = []
         state = create_frame_streaming_state(result_holder, use_async=False)
         output_holder: list[StreamSession[Any]] = []
@@ -1899,6 +1982,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     input_files=input_files,
                     from_checkpoint=from_checkpoint,
                     restore_from_state_id=restore_from_state_id,
+                    raise_on_missing_state=raise_on_missing_state,
                 )
             except HumanFeedbackPending as e:
                 return e
@@ -1917,8 +2001,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
         restore_from_state_id: str | None = None,
+        raise_on_missing_state: bool = False,
     ) -> AsyncStreamSession[Any]:
-        """Run the flow asynchronously and stream scoped public frames."""
+        """Run the flow asynchronously and stream scoped public frames.
+
+        With ``raise_on_missing_state=True``, a ``restore_from_state_id``
+        lookup miss raises ``ValueError`` here, before the session is
+        returned, so callers do not have to consume frames to see the error.
+        """
+        self._check_restore_conflict(from_checkpoint, restore_from_state_id)
+        # The deferred run only evaluates restore_from_state_id once frames are
+        # consumed; reset the signal now so a caller reading it right after
+        # session creation sees None (no outcome yet) instead of a stale value.
+        self._last_restore_succeeded = None
+        self._ensure_restorable_state(restore_from_state_id, raise_on_missing_state)
         result_holder: list[Any] = []
         state = create_frame_streaming_state(result_holder, use_async=True)
         output_holder: list[AsyncStreamSession[Any]] = []
@@ -1932,6 +2028,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     input_files=input_files,
                     from_checkpoint=from_checkpoint,
                     restore_from_state_id=restore_from_state_id,
+                    raise_on_missing_state=raise_on_missing_state,
                 )
             except HumanFeedbackPending as e:
                 return e
@@ -1950,6 +2047,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
         restore_from_state_id: str | None = None,
+        raise_on_missing_state: bool = False,
     ) -> Any | StreamSession[Any]:
         """Start the flow execution in a synchronous context.
 
@@ -1967,18 +2065,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 pinned), so its ``@persist`` writes land under a separate
                 persistence key and the source flow's history is preserved.
                 If the referenced state is not found, the kickoff falls back
-                silently to baseline behavior. Cannot be combined with
-                ``from_checkpoint``; passing both raises ``ValueError``.
+                silently to baseline behavior (see ``raise_on_missing_state``
+                to opt out). Cannot be combined with ``from_checkpoint``;
+                passing both raises ``ValueError``.
+            raise_on_missing_state: When True and ``restore_from_state_id`` is
+                provided but the referenced state cannot be loaded, raise
+                ``ValueError`` instead of silently running without hydration.
+                Defaults to False. ``last_restore_succeeded`` reports the
+                restore outcome either way.
 
         Returns:
             The final output from the flow or StreamSession if streaming.
         """
-        if from_checkpoint is not None and restore_from_state_id is not None:
-            raise ValueError(
-                "Cannot combine `from_checkpoint` and `restore_from_state_id`. "
-                "These parameters target different state systems "
-                "(Checkpointing and @persist) and cannot be used together."
-            )
+        self._check_restore_conflict(from_checkpoint, restore_from_state_id)
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return restored.kickoff(inputs=inputs, input_files=input_files)
@@ -1988,6 +2087,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 input_files=input_files,
                 from_checkpoint=from_checkpoint,
                 restore_from_state_id=restore_from_state_id,
+                raise_on_missing_state=raise_on_missing_state,
             )
 
         async def _run_flow() -> Any:
@@ -1995,6 +2095,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 inputs,
                 input_files,
                 restore_from_state_id=restore_from_state_id,
+                raise_on_missing_state=raise_on_missing_state,
             )
 
         runtime_scope = crewai_event_bus._enter_runtime_scope()
@@ -2015,6 +2116,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
         restore_from_state_id: str | None = None,
+        raise_on_missing_state: bool = False,
     ) -> Any | AsyncStreamSession[Any]:
         """Start the flow execution asynchronously.
 
@@ -2033,18 +2135,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 run is assigned a fresh ``state.id`` (or ``inputs["id"]`` if
                 pinned), so subsequent ``@persist`` writes land under a
                 separate persistence key. If the referenced state is not
-                found, falls back silently to baseline. Cannot be combined
+                found, falls back silently to baseline (see
+                ``raise_on_missing_state`` to opt out). Cannot be combined
                 with ``from_checkpoint``; passing both raises ``ValueError``.
+            raise_on_missing_state: When True and ``restore_from_state_id`` is
+                provided but the referenced state cannot be loaded, raise
+                ``ValueError`` instead of silently running without hydration.
+                Defaults to False. ``last_restore_succeeded`` reports the
+                restore outcome either way.
 
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
-        if from_checkpoint is not None and restore_from_state_id is not None:
-            raise ValueError(
-                "Cannot combine `from_checkpoint` and `restore_from_state_id`. "
-                "These parameters target different state systems "
-                "(Checkpointing and @persist) and cannot be used together."
-            )
+        self._check_restore_conflict(from_checkpoint, restore_from_state_id)
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return await restored.kickoff_async(inputs=inputs, input_files=input_files)
@@ -2054,6 +2157,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 input_files=input_files,
                 from_checkpoint=from_checkpoint,
                 restore_from_state_id=restore_from_state_id,
+                raise_on_missing_state=raise_on_missing_state,
             )
 
         ctx = baggage.set_baggage("flow_inputs", inputs or {})
@@ -2158,7 +2262,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # available, hydrate self._state from the source UUID's latest snapshot
             # and reassign state.id to a fresh value so subsequent @persist writes
             # don't extend the source flow's history. If the source state is not
-            # found, fall through silently to the existing inputs handling.
+            # found, fall through silently to the existing inputs handling
+            # (unless raise_on_missing_state is set). last_restore_succeeded
+            # records the outcome for callers either way.
+            self._last_restore_succeeded = None
             fork_succeeded = False
             if restore_from_state_id is not None and self.persistence is not None:
                 stored_state = self.persistence.load_state(restore_from_state_id)
@@ -2179,12 +2286,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     elif isinstance(self._state, BaseModel):
                         setattr(self._state, "id", new_state_id)  # noqa: B010
                     fork_succeeded = True
+                    self._last_restore_succeeded = True
                 else:
+                    self._last_restore_succeeded = False
+                    if raise_on_missing_state:
+                        raise self._missing_state_error(restore_from_state_id)
                     self._log_flow_event(
                         "No flow state found for restore_from_state_id: "
                         f"{restore_from_state_id}; proceeding without hydration",
                         color="yellow",
                     )
+            elif restore_from_state_id is not None:
+                self._last_restore_succeeded = False
+                if raise_on_missing_state:
+                    raise self._no_persistence_error(restore_from_state_id)
 
             if inputs:
                 # Override the id in the state if it exists in inputs.
@@ -2493,6 +2608,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
         restore_from_state_id: str | None = None,
+        raise_on_missing_state: bool = False,
     ) -> Any | AsyncStreamSession[Any]:
         """Native async method to start the flow execution. Alias for kickoff_async.
 
@@ -2504,6 +2620,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             restore_from_state_id: Optional UUID of a previously-persisted flow
                 whose latest snapshot should hydrate this run's state. See
                 ``kickoff_async`` for full semantics.
+            raise_on_missing_state: When True, a ``restore_from_state_id``
+                lookup miss raises ``ValueError`` instead of silently running
+                without hydration. See ``kickoff_async``.
 
         Returns:
             The final output from the flow, which is the result of the last executed method.
@@ -2513,6 +2632,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             input_files,
             from_checkpoint,
             restore_from_state_id=restore_from_state_id,
+            raise_on_missing_state=raise_on_missing_state,
         )
 
     async def _replay_recorded_events(self) -> None:
