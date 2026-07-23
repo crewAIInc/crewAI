@@ -1,21 +1,60 @@
+from typing import cast
+from unittest.mock import MagicMock
+from abc import ABC, abstractmethod
+
 import pytest
 
 from k8s_agent_sandbox.exceptions import SandboxNotFoundError
 
 from crewai_tools.tools.k8s_agent_sandbox.lifecycle_manager import (
+    K8sAgentSandboxLifecycleManager,
     EphemeralModeK8sAgentSandboxLifecycleManager,
     AttachModeK8sAgentSandboxLifecycleManager,
     PersistentModeK8sAgentSandboxLifecycleManager,
 )
 
 
-class TestEphemeralModeManager:
-    @pytest.fixture
-    def manager(self, mock_client_settings, sample_sandbox_settings):
+class LifecycleModeManagetTestBase(ABC):
+    @abstractmethod
+    def _create_manager(
+        self,
+        mock_client_settings,
+        sample_sandbox_settings,
+        **kwargs,
+    ) -> K8sAgentSandboxLifecycleManager:
+        pass
+
+    @pytest.mark.usefixtures("mock_client_returns_mock_sandbox_in_create_sandbox")
+    def test_close_acquired(self, mock_client_settings, sample_sandbox_settings, caplog):
+        manager = self._create_manager(
+            mock_client_settings,
+            sample_sandbox_settings,
+            # This has to make the manager close without releaseing a sandbox, otherwise the test case will hang
+            close_timeout=0,
+        )
+
+        manager.acquire_sandbox()
+        manager.close()
+
+        assert "Closing anyway" in caplog.text
+
+
+class TestEphemeralModeManager(LifecycleModeManagetTestBase):
+    def _create_manager(
+        self,
+        mock_client_settings,
+        sample_sandbox_settings,
+        **kwargs,
+    ):
         return EphemeralModeK8sAgentSandboxLifecycleManager(
             mock_client_settings,
             sample_sandbox_settings,
+            **kwargs,
         )
+
+    @pytest.fixture
+    def manager(self, mock_client_settings, sample_sandbox_settings):
+        return self._create_manager(mock_client_settings, sample_sandbox_settings)
 
     def test_main(self, manager, mock_sandbox_client):
 
@@ -45,22 +84,24 @@ class TestEphemeralModeManager:
         manager.close()
         assert mock_sandbox.terminate.call_count == 0
 
-    @pytest.mark.usefixtures("mock_client_returns_mock_sandbox_in_create_sandbox")
-    def test_close_acquired(self, manager):
-        sandbox = manager.acquire_sandbox()
-        assert sandbox.terminate.call_count == 0
-        manager.close()
-        assert sandbox.terminate.call_count == 1
 
-
-class TestAttachModeManager:
-    @pytest.fixture
-    def manager(self, mock_client_settings, sample_sandbox_settings):
+class TestAttachModeManager(LifecycleModeManagetTestBase):
+    def _create_manager(
+        self,
+        mock_client_settings,
+        sample_sandbox_settings,
+        **kwargs,
+    ):
         return AttachModeK8sAgentSandboxLifecycleManager(
             mock_client_settings,
             sample_sandbox_settings,
             "my-claim",
+            **kwargs,
         )
+
+    @pytest.fixture
+    def manager(self, mock_client_settings, sample_sandbox_settings):
+        return self._create_manager(mock_client_settings, sample_sandbox_settings)
 
     @pytest.mark.usefixtures("mock_client_returns_mock_sandbox_in_create_sandbox")
     def test_acquire_and_release(
@@ -100,21 +141,22 @@ class TestAttachModeManager:
         manager.close()
         assert mock_sandbox.terminate.call_count == 0
 
-    @pytest.mark.usefixtures("mock_client_returns_mock_sandbox_in_create_sandbox")
-    def test_close_acquired(self, manager):
-        sandbox = manager.acquire_sandbox()
-        assert sandbox.terminate.call_count == 0
-        manager.close()
-        assert sandbox.terminate.call_count == 0
 
-
-class TestPersistentModeManager:
-    @pytest.fixture
-    def manager(self, mock_client_settings, sample_sandbox_settings):
+class TestPersistentModeManager(LifecycleModeManagetTestBase):
+    def _create_manager(
+        self,
+        mock_client_settings,
+        sample_sandbox_settings,
+        **kwargs,
+    ):
         return PersistentModeK8sAgentSandboxLifecycleManager(
             mock_client_settings,
             sample_sandbox_settings,
+            **kwargs,
         )
+    @pytest.fixture
+    def manager(self, mock_client_settings, sample_sandbox_settings):
+        return self._create_manager(mock_client_settings, sample_sandbox_settings)
 
     def test_acquire_and_release(self, manager, mock_sandbox_client):
         sandbox = manager.acquire_sandbox()
@@ -141,10 +183,3 @@ class TestPersistentModeManager:
         assert mock_sandbox.terminate.call_count == 0
         manager.close()
         assert mock_sandbox.terminate.call_count == 0
-
-    @pytest.mark.usefixtures("mock_client_returns_mock_sandbox_in_create_sandbox")
-    def test_close_acquired(self, manager):
-        sandbox = manager.acquire_sandbox()
-        assert sandbox.terminate.call_count == 0
-        manager.close()
-        assert sandbox.terminate.call_count == 1

@@ -27,6 +27,7 @@ class K8sAgentSandboxLifecycleManager(ABC):
         self,
         client_settings: K8sAgentSandboxToolClientSettings,
         sandbox_settings: K8sAgentSandboxToolSandboxSettings,
+        close_timeout: int = 60,
     ):
         self._sandbox_settings = sandbox_settings
         self._client_settings = client_settings or K8sAgentSandboxToolClientSettings()
@@ -38,6 +39,8 @@ class K8sAgentSandboxLifecycleManager(ABC):
 
         self._sandbox: 'Sandbox | None' = None
         self._sandbox_acquired: bool = False
+
+        self._close_timeout = close_timeout
 
     def acquire_sandbox(self) -> "Sandbox":
         """
@@ -70,8 +73,16 @@ class K8sAgentSandboxLifecycleManager(ABC):
         if self._closed:
             return
 
-        self._close()
-        self._closed = True
+        acquired = self._lock.acquire(timeout=self._close_timeout)
+        if not acquired:
+            logger.warning("Failed to acquire lock on close before the timeout. Closing anyway.")
+
+        try:
+            self._close()
+            self._closed = True
+        finally:
+            if acquired:
+                self._lock.release()
 
     @abstractmethod
     def _acquire_sandbox(self) -> "Sandbox":
@@ -128,8 +139,13 @@ class AttachModeK8sAgentSandboxLifecycleManager(K8sAgentSandboxLifecycleManager)
         client_settings: K8sAgentSandboxToolClientSettings,
         sandbox_settings: K8sAgentSandboxToolSandboxSettings,
         claim_name: str,
+        close_timeout: int = 60,
     ):
-        super().__init__(client_settings, sandbox_settings)
+        super().__init__(
+            client_settings,
+            sandbox_settings,
+            close_timeout=close_timeout,
+        )
         self._claim_name = claim_name
 
     def _acquire_sandbox(self) -> "Sandbox":

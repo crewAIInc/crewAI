@@ -66,6 +66,7 @@ class K8sAgentSandboxToolset:
         persistent: bool = False,
         claim_name: str | None = None,
         cleanup_on_exit: bool = True,
+        close_timeout: int = 60,
     ) -> Self:
         """
         Create a toolset by using Agent Sandbox client and sandbox settings.
@@ -82,6 +83,8 @@ class K8sAgentSandboxToolset:
                 and this sandbox can be killed by closing the toolset. Mutually exclusive with
                 the `claim_name` argument.
             cleanup_on_exit: Same as in the constructor.
+            close_timeout: Time in seconds to wait for all ongoing sandbox operations before closing
+                the toolset.
 
         """
         if persistent and claim_name is not None:
@@ -89,23 +92,31 @@ class K8sAgentSandboxToolset:
 
         client_settings = client_settings or K8sAgentSandboxToolClientSettings()
 
+        kwargs = {
+            "close_timeout": close_timeout
+        }
+
         if claim_name is not None:
             lifecycle_manager = AttachModeK8sAgentSandboxLifecycleManager(
                 client_settings,
                 sandbox_settings,
                 claim_name,
+                **kwargs,
+
             )
 
         elif persistent:
             lifecycle_manager = PersistentModeK8sAgentSandboxLifecycleManager(
                 client_settings,
                 sandbox_settings,
+                **kwargs,
             )
 
         else:
             lifecycle_manager = EphemeralModeK8sAgentSandboxLifecycleManager(
                 client_settings,
                 sandbox_settings,
+                **kwargs,
             )
 
         return cls(
