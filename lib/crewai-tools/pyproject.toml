@@ -26,6 +26,9 @@ Documentation = "https://docs.crewai.com"
 
 
 [project.optional-dependencies]
+comply54 = [
+    "comply54>=0.4.1",
+]
 scrapfly-sdk = [
     "scrapfly-sdk>=0.8.19",
 ]
