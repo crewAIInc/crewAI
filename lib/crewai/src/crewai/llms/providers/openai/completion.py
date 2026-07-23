@@ -1127,6 +1127,7 @@ class OpenAICompletion(BaseLLM):
         """Handle streaming Responses API call."""
         full_response = ""
         function_calls: list[dict[str, Any]] = []
+        streaming_function_calls: dict[str, dict[str, Any]] = {}
         final_response: Response | None = None
         usage: dict[str, Any] | None = None
 
@@ -1148,11 +1149,46 @@ class OpenAICompletion(BaseLLM):
                 )
 
             elif event.type == "response.function_call_arguments.delta":
-                pass
+                self._process_responses_function_call_delta(
+                    event=event,
+                    function_calls=streaming_function_calls,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_id=response_id_stream,
+                )
+
+            elif event.type == "response.function_call_arguments.done":
+                self._process_responses_function_call_done(
+                    event=event,
+                    function_calls=streaming_function_calls,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_id=response_id_stream,
+                )
+
+            elif event.type == "response.output_item.added":
+                item = event.item
+                if item.type == "function_call":
+                    self._process_responses_function_call_started(
+                        event=event,
+                        function_calls=streaming_function_calls,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        response_id=response_id_stream,
+                    )
 
             elif event.type == "response.output_item.done":
                 item = event.item
                 if item.type == "function_call":
+                    call_key = self._responses_function_call_key(event)
+                    if call_key in streaming_function_calls:
+                        streaming_function_calls[call_key].update(
+                            {
+                                "id": item.call_id,
+                                "name": item.name,
+                                "arguments": item.arguments,
+                            }
+                        )
                     function_calls.append(
                         {
                             "id": item.call_id,
@@ -1264,6 +1300,7 @@ class OpenAICompletion(BaseLLM):
         """Handle async streaming Responses API call."""
         full_response = ""
         function_calls: list[dict[str, Any]] = []
+        streaming_function_calls: dict[str, dict[str, Any]] = {}
         final_response: Response | None = None
         usage: dict[str, Any] | None = None
 
@@ -1285,11 +1322,46 @@ class OpenAICompletion(BaseLLM):
                 )
 
             elif event.type == "response.function_call_arguments.delta":
-                pass
+                self._process_responses_function_call_delta(
+                    event=event,
+                    function_calls=streaming_function_calls,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_id=response_id_stream,
+                )
+
+            elif event.type == "response.function_call_arguments.done":
+                self._process_responses_function_call_done(
+                    event=event,
+                    function_calls=streaming_function_calls,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_id=response_id_stream,
+                )
+
+            elif event.type == "response.output_item.added":
+                item = event.item
+                if item.type == "function_call":
+                    self._process_responses_function_call_started(
+                        event=event,
+                        function_calls=streaming_function_calls,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        response_id=response_id_stream,
+                    )
 
             elif event.type == "response.output_item.done":
                 item = event.item
                 if item.type == "function_call":
+                    call_key = self._responses_function_call_key(event)
+                    if call_key in streaming_function_calls:
+                        streaming_function_calls[call_key].update(
+                            {
+                                "id": item.call_id,
+                                "name": item.name,
+                                "arguments": item.arguments,
+                            }
+                        )
                     function_calls.append(
                         {
                             "id": item.call_id,
@@ -1387,6 +1459,135 @@ class OpenAICompletion(BaseLLM):
         )
 
         return full_response
+
+    @staticmethod
+    def _responses_function_call_key(event: Any) -> str:
+        item = getattr(event, "item", None)
+        item_id = getattr(event, "item_id", None) or getattr(item, "id", None)
+        if item_id:
+            return str(item_id)
+        output_index = getattr(event, "output_index", None)
+        if output_index is not None:
+            return f"output:{output_index}"
+        return "output:0"
+
+    def _process_responses_function_call_delta(
+        self,
+        *,
+        event: Any,
+        function_calls: dict[str, dict[str, Any]],
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_id: str | None = None,
+    ) -> None:
+        call_key = self._responses_function_call_key(event)
+        output_index = getattr(event, "output_index", 0) or 0
+        item_id = getattr(event, "item_id", None)
+        delta = getattr(event, "delta", "") or ""
+        call_data = function_calls.setdefault(
+            call_key,
+            {
+                "id": item_id,
+                "name": "",
+                "arguments": "",
+                "index": output_index,
+                "streamed_arguments": False,
+            },
+        )
+        if item_id and not call_data.get("id"):
+            call_data["id"] = item_id
+        call_data["arguments"] += delta
+        call_data["streamed_arguments"] = True
+
+        self._emit_tool_call_stream_chunk_event(
+            chunk=delta,
+            tool_call_id=call_data.get("id"),
+            tool_name=call_data.get("name"),
+            arguments=call_data["arguments"],
+            index=call_data["index"],
+            from_task=from_task,
+            from_agent=from_agent,
+            response_id=response_id,
+        )
+
+    def _process_responses_function_call_started(
+        self,
+        *,
+        event: Any,
+        function_calls: dict[str, dict[str, Any]],
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_id: str | None = None,
+    ) -> None:
+        call_key = self._responses_function_call_key(event)
+        output_index = getattr(event, "output_index", 0) or 0
+        item = getattr(event, "item", None)
+        item_id = getattr(item, "id", None)
+        call_data = function_calls.setdefault(
+            call_key,
+            {
+                "id": getattr(item, "call_id", None) or item_id,
+                "name": getattr(item, "name", None) or "",
+                "arguments": "",
+                "index": output_index,
+                "streamed_arguments": False,
+            },
+        )
+        call_data["id"] = call_data.get("id") or getattr(item, "call_id", None)
+        call_data["name"] = call_data.get("name") or getattr(item, "name", None) or ""
+
+        self._emit_tool_call_stream_chunk_event(
+            chunk="",
+            tool_call_id=call_data.get("id"),
+            tool_name=call_data.get("name"),
+            arguments=call_data["arguments"],
+            index=call_data["index"],
+            from_task=from_task,
+            from_agent=from_agent,
+            response_id=response_id,
+        )
+
+    def _process_responses_function_call_done(
+        self,
+        *,
+        event: Any,
+        function_calls: dict[str, dict[str, Any]],
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_id: str | None = None,
+    ) -> None:
+        call_key = self._responses_function_call_key(event)
+        output_index = getattr(event, "output_index", 0) or 0
+        item_id = getattr(event, "item_id", None)
+        arguments = getattr(event, "arguments", "") or ""
+        call_data = function_calls.setdefault(
+            call_key,
+            {
+                "id": item_id,
+                "name": "",
+                "arguments": "",
+                "index": output_index,
+                "streamed_arguments": False,
+            },
+        )
+        if item_id and not call_data.get("id"):
+            call_data["id"] = item_id
+        call_data["name"] = getattr(event, "name", None) or call_data.get("name", "")
+
+        if not call_data.get("streamed_arguments") and arguments:
+            call_data["arguments"] = arguments
+            self._emit_tool_call_stream_chunk_event(
+                chunk=arguments,
+                tool_call_id=call_data.get("id"),
+                tool_name=call_data.get("name"),
+                arguments=call_data["arguments"],
+                index=call_data["index"],
+                from_task=from_task,
+                from_agent=from_agent,
+                response_id=response_id,
+            )
+        elif arguments:
+            call_data["arguments"] = arguments
 
     def _extract_function_calls_from_response(
         self, response: Response

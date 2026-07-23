@@ -444,6 +444,8 @@ To enable tracing, do any one of these:
         if not self.verbose:
             return
 
+        self.pause_live_updates()
+
         with self._tool_counts_lock:
             self.tool_usage_counts[tool_name] = (
                 self.tool_usage_counts.get(tool_name, 0) + 1
@@ -475,6 +477,8 @@ To enable tracing, do any one of these:
         if not self.verbose:
             return
 
+        self.pause_live_updates()
+
         with self._tool_counts_lock:
             iteration = self.tool_usage_counts.get(tool_name, 1)
 
@@ -501,6 +505,8 @@ To enable tracing, do any one of these:
         """Handle tool usage error event with panel display."""
         if not self.verbose:
             return
+
+        self.pause_live_updates()
 
         with self._tool_counts_lock:
             iteration = self.tool_usage_counts.get(tool_name, 1)
@@ -550,6 +556,15 @@ To enable tracing, do any one of these:
         if should_suppress_console_output():
             return
 
+        from crewai.events.types.llm_events import LLMCallType
+
+        if call_type == LLMCallType.TOOL_CALL:
+            self.pause_live_updates()
+            self._is_streaming = False
+            self._last_stream_call_type = call_type
+            self._just_streamed_final_answer = False
+            return
+
         self._is_streaming = True
         self._last_stream_call_type = call_type
 
@@ -561,17 +576,9 @@ To enable tracing, do any one of these:
             display_text = "...\n" + display_text
 
         content = Text()
-
-        from crewai.events.types.llm_events import LLMCallType
-
-        if call_type == LLMCallType.TOOL_CALL:
-            content.append(display_text, style="yellow")
-            title = "🔧 Tool Arguments"
-            border_style = "yellow"
-        else:
-            content.append(display_text, style="bright_green")
-            title = "✅ Agent Final Answer"
-            border_style = "green"
+        content.append(display_text, style="bright_green")
+        title = "✅ Agent Final Answer"
+        border_style = "green"
 
         streaming_panel = Panel(
             content,
