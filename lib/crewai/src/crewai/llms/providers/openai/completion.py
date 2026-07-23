@@ -668,6 +668,49 @@ class OpenAICompletion(BaseLLM):
             response_model=response_model,
         )
 
+    def _convert_message_to_responses_input_items(
+        self, message: LLMMessage
+    ) -> list[dict[str, Any] | LLMMessage]:
+        """Convert a Chat-Completions-style message into Responses API input items.
+
+        The Responses API has no message shape for an assistant turn carrying
+        ``tool_calls`` or for a ``tool`` role reply - those become standalone
+        ``function_call`` / ``function_call_output`` input items instead. Plain
+        user/assistant text messages pass through unchanged (accepted as-is by
+        the Responses API's lenient "easy input message" shape).
+        """
+        role = message.get("role")
+
+        if role == "assistant" and message.get("tool_calls"):
+            items: list[dict[str, Any] | LLMMessage] = []
+            if message.get("content"):
+                items.append({"role": "assistant", "content": message["content"]})
+            for tool_call in message["tool_calls"]:
+                function = tool_call.get("function", {})
+                args = function.get("arguments", "")
+                items.append(
+                    {
+                        "type": "function_call",
+                        "call_id": tool_call.get("id") or f"call_{id(tool_call)}",
+                        "name": function.get("name", ""),
+                        "arguments": args
+                        if isinstance(args, str)
+                        else json.dumps(args),
+                    }
+                )
+            return items
+
+        if role == "tool":
+            return [
+                {
+                    "type": "function_call_output",
+                    "call_id": message.get("tool_call_id", ""),
+                    "output": message.get("content") or "",
+                }
+            ]
+
+        return [message]
+
     def _prepare_responses_params(
         self,
         messages: list[LLMMessage],
@@ -683,7 +726,7 @@ class OpenAICompletion(BaseLLM):
         - Internally-tagged tool format (flat structure)
         """
         instructions: str | None = self.instructions
-        input_messages: list[LLMMessage] = []
+        input_messages: list[Any] = []
 
         for message in messages:
             if message.get("role") == "system":
@@ -694,7 +737,9 @@ class OpenAICompletion(BaseLLM):
                 else:
                     instructions = content_str
             else:
-                input_messages.append(message)
+                input_messages.extend(
+                    self._convert_message_to_responses_input_items(message)
+                )
 
         # Prepend reasoning items for ZDR (zero-data-retention) chaining when configured
         final_input: list[Any] = []

@@ -970,6 +970,140 @@ def test_openai_responses_api_with_system_message_extraction():
     assert result.isupper() or "HELLO" in result.upper()
 
 
+def test_openai_responses_api_converts_assistant_tool_calls_message():
+    """Regression: assistant messages carrying tool_calls (Chat-Completions
+    shape) must become standalone function_call input items, since the
+    Responses API has no message shape for an assistant tool-call turn.
+    """
+    llm = OpenAICompletion(model="gpt-4o-mini", api="responses")
+
+    messages = [
+        {"role": "user", "content": "Fetch https://example.com"},
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "call_abc123",
+                    "type": "function",
+                    "function": {
+                        "name": "fetch_page",
+                        "arguments": '{"url": "https://example.com"}',
+                    },
+                }
+            ],
+        },
+    ]
+
+    params = llm._prepare_responses_params(messages)
+
+    assert params["input"][0] == {"role": "user", "content": "Fetch https://example.com"}
+    assert params["input"][1] == {
+        "type": "function_call",
+        "call_id": "call_abc123",
+        "name": "fetch_page",
+        "arguments": '{"url": "https://example.com"}',
+    }
+
+
+def test_openai_responses_api_preserves_assistant_content_with_tool_calls():
+    """Assistant text must be retained when it accompanies tool calls."""
+    llm = OpenAICompletion(model="gpt-4o-mini", api="responses")
+
+    messages = [
+        {
+            "role": "assistant",
+            "content": "I'll fetch that page now.",
+            "tool_calls": [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "fetch_page",
+                        "arguments": {"url": "https://example.com"},
+                    },
+                }
+            ],
+        }
+    ]
+
+    params = llm._prepare_responses_params(messages)
+
+    assert params["input"][0] == {
+        "role": "assistant",
+        "content": "I'll fetch that page now.",
+    }
+    assert params["input"][1]["type"] == "function_call"
+    assert params["input"][1]["call_id"].startswith("call_")
+    assert params["input"][1]["arguments"] == '{"url": "https://example.com"}'
+
+
+def test_openai_responses_api_converts_tool_result_message():
+    """Regression: tool-role messages (Chat-Completions shape) must become
+    function_call_output input items for the Responses API.
+    """
+    llm = OpenAICompletion(model="gpt-4o-mini", api="responses")
+
+    messages = [
+        {
+            "role": "tool",
+            "tool_call_id": "call_abc123",
+            "name": "fetch_page",
+            "content": "<html>page text</html>",
+        },
+    ]
+
+    params = llm._prepare_responses_params(messages)
+
+    assert params["input"] == [
+        {
+            "type": "function_call_output",
+            "call_id": "call_abc123",
+            "output": "<html>page text</html>",
+        }
+    ]
+
+
+def test_openai_responses_api_multi_turn_tool_conversation_shape():
+    """Regression: a full multi-turn tool-calling conversation (user ->
+    assistant tool_calls -> tool result) must convert entirely into valid
+    Responses API input items, with no leftover Chat-Completions-only keys
+    ("tool_calls", "tool_call_id") that the Responses API would reject.
+    """
+    llm = OpenAICompletion(model="gpt-4o-mini", api="responses")
+
+    messages = [
+        {"role": "user", "content": "Fetch https://example.com"},
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "call_abc123",
+                    "type": "function",
+                    "function": {
+                        "name": "fetch_page",
+                        "arguments": '{"url": "https://example.com"}',
+                    },
+                }
+            ],
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "call_abc123",
+            "name": "fetch_page",
+            "content": "<html>page text</html>",
+        },
+    ]
+
+    params = llm._prepare_responses_params(messages)
+
+    for item in params["input"]:
+        assert "tool_calls" not in item
+        assert "tool_call_id" not in item
+    assert params["input"][1]["type"] == "function_call"
+    assert params["input"][2]["type"] == "function_call_output"
+
+
 @pytest.mark.vcr()
 def test_openai_responses_api_streaming():
     """Test Responses API with streaming enabled."""

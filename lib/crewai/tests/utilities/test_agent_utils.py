@@ -25,6 +25,8 @@ from crewai.utilities.agent_utils import (
     _split_messages_into_chunks,
     convert_tools_to_openai_schema,
     execute_single_native_tool_call,
+    extract_tool_call_info,
+    is_tool_call_list,
     NativeToolCallResult,
     parse_tool_call_args,
     summarize_messages,
@@ -979,6 +981,88 @@ class TestParallelSummarizationVCR:
         assert summary_msg["role"] == "user"
         assert "files" in summary_msg
         assert "report.pdf" in summary_msg["files"]
+
+
+class TestIsToolCallListResponsesApiShape:
+    """Regression tests: OpenAI Responses API tool-call dicts must be recognized.
+
+    Responses API function_call output items are flat dicts shaped
+    {"id", "name", "arguments"} - no nested "function" key, and "arguments"
+    instead of Anthropic/Bedrock-style "input".
+    """
+
+    def test_responses_api_dict_is_recognized_as_tool_call(self) -> None:
+        response = [
+            {
+                "id": "call_abc123",
+                "name": "fetch_page",
+                "arguments": '{"url": "https://example.com"}',
+            }
+        ]
+        assert is_tool_call_list(response) is True
+
+    def test_plain_text_answer_not_misclassified(self) -> None:
+        assert is_tool_call_list(["just a string, not a tool call"]) is False
+
+    def test_empty_list_returns_false(self) -> None:
+        assert is_tool_call_list([]) is False
+
+    def test_chat_completions_style_still_recognized(self) -> None:
+        response = [{"function": {"name": "fetch_page", "arguments": "{}"}}]
+        assert is_tool_call_list(response) is True
+
+    def test_bedrock_anthropic_style_still_recognized(self) -> None:
+        response = [{"name": "fetch_page", "input": {"url": "https://example.com"}}]
+        assert is_tool_call_list(response) is True
+
+
+class TestExtractToolCallInfoResponsesApiShape:
+    """Regression tests: extract_tool_call_info must parse Responses API dicts."""
+
+    def test_responses_api_dict_extracts_real_arguments(self) -> None:
+        tool_call = {
+            "id": "call_abc123",
+            "name": "fetch_page",
+            "arguments": '{"url": "https://example.com"}',
+        }
+        result = extract_tool_call_info(tool_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "call_abc123"
+        assert func_name == "fetch_page"
+        assert func_args == '{"url": "https://example.com"}'
+
+    def test_responses_api_dict_does_not_return_empty_args(self) -> None:
+        tool_call = {
+            "id": "call_xyz",
+            "name": "fetch_page",
+            "arguments": '{"url": "https://example.com"}',
+        }
+        _, _, func_args = extract_tool_call_info(tool_call)
+        assert func_args != {}
+
+    def test_bedrock_anthropic_style_still_uses_input(self) -> None:
+        tool_call = {"name": "fetch_page", "input": {"url": "https://example.com"}}
+        _, func_name, func_args = extract_tool_call_info(tool_call)
+        assert func_name == "fetch_page"
+        assert func_args == {"url": "https://example.com"}
+
+    def test_chat_completions_style_still_uses_nested_function(self) -> None:
+        tool_call = {
+            "id": "call_1",
+            "function": {"name": "fetch_page", "arguments": "{}"},
+        }
+        _, func_name, func_args = extract_tool_call_info(tool_call)
+        assert func_name == "fetch_page"
+        assert func_args == "{}"
+
+    def test_non_dict_unrecognized_shape_returns_none(self) -> None:
+        assert extract_tool_call_info("just a string") is None
+
+    def test_unrecognized_dict_shape_returns_empty_name_and_args(self) -> None:
+        call_id, func_name, func_args = extract_tool_call_info({"unrelated": "data"})
+        assert func_name == ""
+        assert func_args == {}
 
 
 class TestParseToolCallArgs:
