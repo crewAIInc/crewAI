@@ -1,4 +1,4 @@
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 import logging
 import os
 import re
@@ -246,6 +246,26 @@ class NL2SQLTool(BaseTool):
             "write operations."
         ),
     )
+    require_approval: bool = Field(
+        default=False,
+        title="Require Approval",
+        description=(
+            "When True, every query is shown to a human for approval "
+            "before execution. The approval_handler callable is invoked "
+            "with the SQL string and must return True to proceed. "
+            "Defaults to an interactive terminal prompt."
+        ),
+    )
+    approval_handler: Callable[[str], bool] | None = Field(
+        default=None,
+        exclude=True,
+        description=(
+            "Custom callable invoked when require_approval is True. "
+            "Receives the SQL query string and must return True to "
+            "allow execution or False to reject it. When None, a "
+            "built-in interactive terminal prompt is used."
+        ),
+    )
     tables: list[dict[str, Any]] = Field(default_factory=list)
     columns: dict[str, list[dict[str, Any]] | str] = Field(default_factory=dict)
     args_schema: type[BaseModel] = NL2SQLToolInput
@@ -420,9 +440,31 @@ class NL2SQLTool(BaseTool):
 
     # Core execution
 
+    def _request_approval(self, sql_query: str) -> bool:
+        """Ask for human approval before executing the query.
+
+        Uses ``approval_handler`` if provided, otherwise falls back to an
+        interactive terminal prompt via ``input()``.
+        """
+        if self.approval_handler is not None:
+            return self.approval_handler(sql_query)
+        try:
+            answer = input(
+                f"\n[NL2SQLTool] The following query requires approval "
+                f"before execution:\n\n  {sql_query}\n\n"
+                f"Execute this query? (y/n): "
+            )
+        except (EOFError, KeyboardInterrupt):
+            return False
+        return answer.strip().lower() in ("y", "yes")
+
     def _run(self, sql_query: str) -> list[dict[str, Any]] | str:
         try:
             self._validate_query(sql_query)
+            if self.require_approval and not self._request_approval(sql_query):
+                return (
+                    f"Query execution was rejected by the human reviewer: {sql_query}"
+                )
             data = self.execute_sql(sql_query)
         except ValueError:
             raise
