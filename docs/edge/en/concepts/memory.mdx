@@ -758,6 +758,60 @@ memory = Memory(
 )
 ```
 
+### Custom OpenAI-compatible gateway
+
+Any OpenAI-compatible gateway or proxy can sit in front of memory LLM calls by changing the model's `base_url`. Use this when you want a gateway to observe or route the same LLM traffic CrewAI already sends while keeping CrewAI's native `Memory` API, storage, scopes, and retrieval behavior unchanged.
+
+```python
+from crewai import Agent, Crew, LLM, Memory, Process, Task
+
+
+gateway_llm = LLM(
+    model="openai/gpt-4o-mini",
+    api_key="your-gateway-api-key",
+    base_url="https://your-gateway.example.com/v1",
+    default_headers={"x-session-id": "customer-support-user"},
+)
+
+memory = Memory(
+    llm=gateway_llm,
+    root_scope="/crew/customer-support",
+)
+
+# Use Crew(memory=True) when the default CrewAI memory settings are enough;
+# pass Memory(...) when you need custom storage, scoring, or root_scope.
+
+support_agent = Agent(
+    role="Support Analyst",
+    goal="Answer customer questions using durable support context",
+    backstory="You remember support preferences and recurring product issues.",
+    llm=gateway_llm,
+)
+
+support_task = Task(
+    description="Answer the customer's question: {question}. Preserve useful follow-up context.",
+    expected_output="A concise answer with any reusable context captured in memory.",
+    agent=support_agent,
+)
+
+crew = Crew(
+    agents=[support_agent],
+    tasks=[support_task],
+    process=Process.sequential,
+    memory=memory,
+)
+
+crew.kickoff(inputs={"question": "What plan includes SSO?"})
+```
+
+You can also configure the same gateway globally for OpenAI-compatible calls, then keep passing `default_headers` on the `LLM` if the gateway needs a user or session identifier. Replace the example URL with your gateway endpoint:
+
+```bash
+export OPENAI_BASE_URL="https://your-gateway.example.com/v1"
+```
+
+CrewAI does not need a gateway-specific SDK or runtime dependency for this path. The integration boundary is the OpenAI-compatible LLM endpoint: CrewAI continues to manage local memory persistence, `root_scope` isolation, explicit `scope` values, forgetting, and recall scoring; the gateway receives the proxied LLM calls and can use headers such as `x-session-id` to link interactions to a specific end user.
+
 
 ## Storage Backend
 
