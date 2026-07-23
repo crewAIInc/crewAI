@@ -2614,6 +2614,59 @@ def test_agent_without_apps_no_platform_tools():
     assert tools == []
 
 
+def test_get_platform_tools_warns_when_apps_resolve_to_zero_tools(monkeypatch):
+    """A non-empty `apps` that resolves to no tools must warn loudly."""
+    import crewai_tools
+
+    monkeypatch.setattr(crewai_tools, "CrewaiPlatformTools", lambda apps: [])
+    agent = Agent(
+        role="Empty Apps Agent",
+        goal="Use apps",
+        backstory="b",
+        apps=["gmail", "slack"],
+    )
+
+    with pytest.warns(UserWarning, match="resolved to any tools"):
+        result = agent.get_platform_tools(agent.apps)
+
+    assert result == []
+
+
+def test_get_platform_tools_quiet_when_tools_resolve(monkeypatch):
+    """No warning when the apps resolve to at least one tool."""
+    from crewai.tools import tool
+
+    @tool
+    def platform_tool() -> str:
+        """A resolved platform tool."""
+        return "ok"
+
+    import crewai_tools
+
+    monkeypatch.setattr(crewai_tools, "CrewaiPlatformTools", lambda apps: [platform_tool])
+    agent = Agent(role="A", goal="g", backstory="b", apps=["gmail"])
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = agent.get_platform_tools(agent.apps)
+
+    assert result == [platform_tool]
+    assert not any("resolved to any tools" in str(w.message) for w in caught)
+
+
+def test_crew_prepare_tools_warns_on_empty_apps(monkeypatch):
+    """The warning also fires through the crew tool-injection path."""
+    import crewai_tools
+
+    monkeypatch.setattr(crewai_tools, "CrewaiPlatformTools", lambda apps: [])
+    agent = Agent(role="A", goal="g", backstory="b", apps=["gmail"])
+    task = Task(description="d", expected_output="o", agent=agent)
+    crew = Crew(agents=[agent], tasks=[task])
+
+    with pytest.warns(UserWarning, match="resolved to any tools"):
+        crew._prepare_tools(agent, task, [])
+
+
 def test_agent_mcps_accepts_slug_with_specific_tool():
     """Agent(mcps=["notion#get_page"]) must pass validation (_SLUG_RE)."""
     agent = Agent(
