@@ -30,7 +30,7 @@ from pydantic import BaseModel, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
-from crewai.llms.base_llm import BaseLLM, JsonResponseFormat, llm_call_context
+from crewai.llms.base_llm import PROVIDERS_WITHOUT_RESPONSE_FORMAT, BaseLLM, JsonResponseFormat, llm_call_context
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.llms.providers.utils.common import safe_tool_conversion
@@ -1594,7 +1594,13 @@ class OpenAICompletion(BaseLLM):
         if self.is_o1_model and self.reasoning_effort:
             params["reasoning_effort"] = self.reasoning_effort
 
-        if self.response_format is not None:
+        # Skip response_format for providers that don't support it
+        # (e.g., Deepseek returns "response_format type is unavailable")
+        if (
+            self.response_format is not None
+            and self._extract_provider(self.model)
+            not in PROVIDERS_WITHOUT_RESPONSE_FORMAT
+        ):
             if isinstance(self.response_format, type) and issubclass(
                 self.response_format, BaseModel
             ):
