@@ -109,6 +109,7 @@ from crewai.utilities.planning_types import (
 from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
+from crewai.utilities.tool_errors import format_tool_error
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
 from crewai.utilities.types import LLMMessage
@@ -1640,9 +1641,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             if self.task:
                 self.task.increment_tools_errors()
 
-            error_observation = f"\nObservation: Error executing tool: {e}"
+            structured_error = format_tool_error(e)
+            error_observation = f"\nObservation: {structured_error}"
             action.text += error_observation
-            action.result = str(e)
+            action.result = structured_error
             self._append_message_to_state(action.text)
 
             reasoning_prompt = I18N_DEFAULT.slice("post_tool_reasoning")
@@ -1761,7 +1763,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                         ordered_results[idx] = {
                             "call_id": call_id,
                             "func_name": func_name,
-                            "result": f"Error executing tool: {e}",
+                            "result": format_tool_error(e),
                             "from_cache": False,
                             "original_tool": None,
                         }
@@ -2011,7 +2013,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                         output_tool, raw_result
                     )
                 except Exception as e:
-                    result = f"Error executing tool: {e}"
+                    result = format_tool_error(e)
                     raw_tool_result = result
                     if self.task:
                         self.task.increment_tools_errors()
