@@ -2090,6 +2090,20 @@ class BedrockCompletion(BaseLLM):
         """Check if the model supports stop words."""
         return True
 
+    @staticmethod
+    def _strip_inference_profile_prefix(model_id: str) -> str:
+        """Strip geographic cross-region inference profile prefixes.
+
+        AWS Bedrock inference profile ids look like
+        ``us.anthropic.claude-sonnet-4-...`` / ``eu.`` / ``apac.`` / ``us-gov.``.
+        Context-window tables are keyed on the bare foundation-model id.
+        """
+        model_id = model_id.removeprefix("bedrock/")
+        for geo in ("us-gov.", "apac.", "us.", "eu.", "jp.", "au.", "ca."):
+            if model_id.startswith(geo):
+                return model_id[len(geo) :]
+        return model_id
+
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
         from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
@@ -2114,8 +2128,12 @@ class BedrockCompletion(BaseLLM):
             "deepseek.r1": 32768,
         }
 
-        for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
+        model_id = self._strip_inference_profile_prefix(self.model)
+        # Longest prefix first so claude-3-5-sonnet wins over claude-3
+        for model_prefix, size in sorted(
+            context_windows.items(), key=lambda item: len(item[0]), reverse=True
+        ):
+            if model_id.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
         return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
