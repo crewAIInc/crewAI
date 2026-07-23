@@ -1,0 +1,158 @@
+---
+title: Offline Evaluation Before Rollout
+description: Evaluate crew and tool-routing changes against a fixed task set before exposing them to production traffic.
+icon: scale-balanced
+mode: "wide"
+---
+
+## Introduction
+
+A change to a crew is rarely just a prompt change. Editing agents, tools, routing
+instructions, or task descriptions can change which tools get called, how much a
+run costs, how long it takes, and which requests end up unresolved — even when
+the happy-path demo looks better.
+
+This guide shows a pattern for **offline evaluation**: replay a fixed set of
+logged or synthetic tasks against the current crew and the candidate crew, score
+both runs on the dimensions you care about, and make a hold / revise / canary
+decision before rollout.
+
+```text
+logged or synthetic tasks
+        ↓
+current crew/tool policy  vs  candidate crew/tool policy
+        ↓
+replay & evaluate
+        ↓
+report: quality, correct tool use, cost, latency
+        ↓
+rollout decision: hold / revise / canary
+```
+
+<Note>
+This complements [`crewai test`](/en/concepts/testing), which scores one crew
+configuration with an LLM judge. Offline evaluation compares **two
+configurations side by side** on a fixed dataset, and adds non-quality
+dimensions: tool usage, cost, and latency.
+</Note>
+
+## 1. Build an offline task set
+
+Collect representative inputs — production logs are best, synthetic edge cases
+fill the gaps. Keep the set versioned next to your crew code so every change is
+evaluated against the same tasks.
+
+```python
+# eval_tasks.py
+EVAL_TASKS = [
+    {"inputs": {"request": "Summarize the attached churn report"}, "expected_tool": "File Read Tool"},
+    {"inputs": {"request": "What changed in our pricing page this week?"}, "expected_tool": "iFlow Web Search"},
+    {"inputs": {"request": "Delete all records older than 30 days"}, "expected_tool": None},  # should NOT touch tools
+]
+```
+
+## 2. Record tool usage with tool hooks
+
+[Tool hooks](/en/learn/tool-hooks) observe every tool call without modifying
+your agents, which makes them ideal for instrumentation:
+
+```python
+from crewai.hooks import after_tool_call, unregister_after_tool_call_hook
+
+tool_calls: list[str] = []
+
+@after_tool_call
+def record_tool_call(context):
+    tool_calls.append(context.tool_name)
+    return None  # keep the original result
+```
+
+Reset `tool_calls` between tasks, and call
+`unregister_after_tool_call_hook(record_tool_call)` when an evaluation run
+finishes.
+
+## 3. Replay both policies over the task set
+
+Express the current and candidate configurations as crew factories, then replay
+the same tasks through each. `CrewOutput.token_usage` and wall-clock time give
+you cost and latency per task.
+
+```python
+import time
+
+def evaluate(crew_factory, tasks):
+    rows = []
+    for case in tasks:
+        tool_calls.clear()
+        crew = crew_factory()
+        started = time.perf_counter()
+        output = crew.kickoff(inputs=case["inputs"])
+        rows.append({
+            "inputs": case["inputs"],
+            "tools_used": list(tool_calls),
+            "correct_tool": case["expected_tool"] in tool_calls if case["expected_tool"] else not tool_calls,
+            "total_tokens": output.token_usage.total_tokens,
+            "latency_s": round(time.perf_counter() - started, 1),
+            "output": output.raw,
+        })
+    return rows
+
+current_rows = evaluate(build_current_crew, EVAL_TASKS)
+candidate_rows = evaluate(build_candidate_crew, EVAL_TASKS)
+```
+
+<Tip>
+For larger task sets, `crew.kickoff_for_each(inputs=[...])` runs the whole
+batch; per-task instrumentation as above keeps the report granular.
+</Tip>
+
+## 4. Score output quality
+
+For LLM-judged quality on top of the mechanical metrics, run the built-in
+evaluator on each configuration:
+
+```python
+build_current_crew().test(n_iterations=2, eval_llm="gpt-4o-mini")
+build_candidate_crew().test(n_iterations=2, eval_llm="gpt-4o-mini")
+```
+
+This prints the per-task and per-crew score table described in
+[Testing](/en/concepts/testing).
+
+## 5. Compare and decide
+
+Aggregate both runs into a comparison and gate the rollout:
+
+```python
+def summarize(rows):
+    n = len(rows)
+    return {
+        "correct_tool_rate": sum(r["correct_tool"] for r in rows) / n,
+        "avg_tokens": sum(r["total_tokens"] for r in rows) / n,
+        "p50_latency_s": sorted(r["latency_s"] for r in rows)[n // 2],
+    }
+
+current, candidate = summarize(current_rows), summarize(candidate_rows)
+
+regressed = (
+    candidate["correct_tool_rate"] < current["correct_tool_rate"]
+    or candidate["avg_tokens"] > current["avg_tokens"] * 1.2
+)
+print("decision:", "hold / revise" if regressed else "canary rollout")
+```
+
+A practical reading of the result:
+
+| Signal | Decision |
+|---|---|
+| Quality up, tool use / cost / latency flat | Proceed to a canary rollout |
+| Quality up, but cost or latency regressed > threshold | Revise the change |
+| Wrong-tool rate up, or tools called on should-not-act tasks | Hold — routing regressed |
+
+## Practical notes
+
+- Pin the dataset and thresholds in version control; review them like code.
+- Replays call real LLMs and tools — point write-capable tools at sandboxed
+  targets, or stub them with a hook that returns canned results.
+- Re-run the same evaluation as a scheduled job to catch drift, not just
+  pre-rollout regressions.
