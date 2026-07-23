@@ -21,6 +21,9 @@ from crewai_tools.tools.brightdata_tool import (
 from crewai_tools.tools.browserbase_load_tool.browserbase_load_tool import (
     BrowserbaseLoadTool,
 )
+from crewai_tools.tools.chronoverify_image_verification_tool.chronoverify_image_verification_tool import (
+    ChronoVerifyImageVerificationTool,
+)
 from crewai_tools.tools.code_docs_search_tool.code_docs_search_tool import (
     CodeDocsSearchTool,
 )
@@ -222,6 +225,7 @@ __all__ = [
     "BrightDataWebUnlockerTool",
     "BrowserbaseLoadTool",
     "CSVSearchTool",
+    "ChronoVerifyImageVerificationTool",
     "CodeDocsSearchTool",
     "ComposioTool",
     "ContextualAICreateAgentTool",
