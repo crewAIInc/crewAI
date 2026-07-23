@@ -20,6 +20,10 @@ from crewai_tools.tools.brave_search_tool.brave_local_pois_tool import (
 )
 from crewai_tools.tools.brave_search_tool.brave_news_tool import BraveNewsSearchTool
 from crewai_tools.tools.brave_search_tool.brave_search_tool import BraveSearchTool
+from crewai_tools.tools.relayshield_tool.relayshield_tool import (
+    RelayShieldMCPRiskTool,
+    RelayShieldPromptInjectionBreachTool,
+)
 from crewai_tools.tools.brave_search_tool.brave_video_tool import BraveVideoSearchTool
 from crewai_tools.tools.brave_search_tool.brave_web_tool import BraveWebSearchTool
 from crewai_tools.tools.brightdata_tool.brightdata_dataset import (
@@ -230,6 +234,8 @@ __all__ = [
     "BraveLocalPOIsTool",
     "BraveNewsSearchTool",
     "BraveSearchTool",
+    "RelayShieldMCPRiskTool",
+    "RelayShieldPromptInjectionBreachTool",
     "BraveVideoSearchTool",
     "BraveWebSearchTool",
     "BrightDataDatasetTool",
