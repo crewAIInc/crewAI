@@ -206,6 +206,15 @@ class GovernanceDecision(TypedDict, total=False):
 
     # --- Completeness evidence (omission detection) ---
 
+    boundary_id: str
+    """Run/session identifier that scopes all seq-bearing records.
+    Every GovernanceDecision, GovernanceOutcome, and GovernanceSeal in the
+    same governed run MUST share the same boundary_id. A verifier MUST
+    require equality between record boundary_id and seal boundary_id.
+    This prevents cross-run record splicing: a record from run A cannot
+    satisfy a gap in run B because boundary_id will mismatch.
+    Kept out of intent_ref so semantic identity remains cross-run stable."""
+
     seq: int
     """0-indexed monotonic position of this decision within the crew run.
     First decision is seq=0. No gaps allowed.
@@ -273,7 +282,13 @@ class GovernanceOutcome(TypedDict, total=False):
     extensions: dict[str, Any]
     """Vendor-specific post-execution evidence."""
 
-    # Completeness back-reference
+    # --- Completeness / run binding ---
+
+    boundary_id: str
+    """Same run/session identifier as the GovernanceDecision and GovernanceSeal.
+    A verifier MUST require equality across all records in the same run.
+    Prevents cross-run record splicing."""
+
     seq: int
     """Same seq value as the GovernanceDecision this outcome links to.
     Enables omission detection for outcomes: a missing outcome for a known
@@ -300,7 +315,8 @@ class GovernanceSeal(TypedDict, total=False):
     """
 
     boundary_id: str
-    """Identifier for the run/session this seal covers (e.g., crew_run_id)."""
+    """Identifier for the run/session this seal covers (e.g., crew_run_id).
+    MUST equal boundary_id on every seq-bearing record in the same run."""
 
     sealed: Literal[True]
     """Always True. Distinguishes seal records from decision records."""
@@ -436,16 +452,19 @@ def verify_contiguity(
     """Verify that records form a complete, gap-free 0-indexed sequence.
 
     Checks:
-      1. seq values form a contiguous 0..N-1 range (no gaps, no duplicates)
-      2. running_count == seq + 1 for every record
-      3. len(seq_records) == expected count
+      1. All records share the same boundary_id (no cross-run splicing)
+      2. seq values form a contiguous 0..N-1 range (no gaps, no duplicates)
+      3. running_count == seq + 1 for every record
+      4. len(seq_records) == expected count
 
-    When a seal is provided, additionally checks that len(seq_records) ==
-    seal["total"]. This catches tail-truncation that per-record fields alone
-    cannot detect.
+    When a seal is provided, additionally checks that:
+      - len(seq_records) == seal["total"]
+      - seal boundary_id matches record boundary_id
+
+    This catches tail-truncation that per-record fields alone cannot detect.
 
     Returns True if complete. Returns False if any gap, duplicate, count
-    mismatch, or seal violation exists.
+    mismatch, boundary_id mismatch, or seal violation exists.
 
     NOTE: This detects internal gaps and (with seal) tail drops. It CANNOT
     detect a suffix drop that also suppresses the seal — that requires an
@@ -467,6 +486,18 @@ def verify_contiguity(
 
     if not seq_records:
         return sealed_total == 0
+
+    # Verify boundary_id consistency across all records
+    boundary_ids = {r.get("boundary_id") for r in seq_records if r.get("boundary_id")}
+    if seal and seal.get("boundary_id"):
+        boundary_ids.add(seal["boundary_id"])
+    for sr in sealed_records:
+        if sr.get("boundary_id"):
+            boundary_ids.add(sr["boundary_id"])
+
+    # If any boundary_ids are present, they must all be the same
+    if len(boundary_ids) > 1:
+        return False
 
     seqs = [int(r["seq"]) for r in seq_records]
     counts = [int(r["running_count"]) for r in seq_records]
