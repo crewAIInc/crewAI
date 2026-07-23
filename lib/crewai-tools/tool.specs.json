@@ -2907,7 +2907,7 @@
       }
     },
     {
-      "description": "Check whether an agent action complies with applicable African regulatory requirements before executing it. Returns a JSON decision: allow / deny / escalate / audit \u2014 with the triggered rule and exact regulatory citation. Covers Nigeria (CBN, NDPA 2023, NIIRA 2025, NFIU AML), Kenya (KDPA), South Africa (POPIA), Ghana, Rwanda, Egypt, and 5 more African jurisdictions. No API key required \u2014 evaluation runs fully offline via in-process Rego (regopy).",
+      "description": "Check whether an agent action complies with applicable African regulatory requirements before executing it. Returns a JSON decision: allow / deny / escalate / audit \u2014 with the triggered rule and exact regulatory citation. Covers Nigeria (CBN, NDPA 2023, NIIRA 2025, NFIU AML, BVN/NIN), Kenya (KDPA), South Africa (POPIA), Ghana, Rwanda, Egypt, Tanzania, Uganda, Ethiopia, Mauritius \u2014 21 policy packs across 10 countries. No API key required \u2014 evaluation runs fully offline via in-process Rego (regopy).",
       "env_vars": [],
       "humanized_name": "Comply54 Compliance Tool",
       "init_params_schema": {

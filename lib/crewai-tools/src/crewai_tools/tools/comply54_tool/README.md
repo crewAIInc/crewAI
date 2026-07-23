@@ -4,7 +4,7 @@ Pre-execution African regulatory enforcement for CrewAI agents. Evaluates agent 
 
 **No API key required.** Evaluation runs fully offline via in-process Rego evaluation (regopy). No OPA binary, no network call.
 
-## Covered jurisdictions
+## Covered jurisdictions (21 policy packs, 10 countries)
 
 | Country | Regulations |
 |---|---|
@@ -14,7 +14,10 @@ Pre-execution African regulatory enforcement for CrewAI agents. Evaluates agent 
 | Ghana | Ghana DPA 2012 |
 | Rwanda | Rwanda DPA 2021 |
 | Egypt | Egypt PDPL No. 151/2020 |
-| Tanzania, Uganda, Ethiopia, Mauritius | Jurisdiction-specific packs |
+| Tanzania | Tanzania Personal Data Protection Act |
+| Uganda | Uganda Data Protection and Privacy Act |
+| Ethiopia | Ethiopia Data Protection Proclamation No. 1321/2024 |
+| Mauritius | Mauritius Data Protection Act 2017 |
 
 ## Installation
 
@@ -103,6 +106,7 @@ guarded = Comply54GuardedTool(
 Block PII leakage (BVN, NIN, account numbers) in task output before delivery:
 
 ```python
+from crewai import Task
 from comply54.crewai import Comply54TaskGuardrail
 from comply54.sectors import NigeriaFintechCompliance
 
@@ -125,7 +129,7 @@ from comply54.sectors import (
     NigeriaInsuranceCompliance, # NAICOM, NDPA 2023
     KenyaCompliance,            # KDPA 2019
     SouthAfricaCompliance,      # POPIA
-    PanAfricanCompliance,       # All 21 packs across 12 jurisdictions
+    PanAfricanCompliance,       # All 21 packs across 10 jurisdictions
 )
 ```
 

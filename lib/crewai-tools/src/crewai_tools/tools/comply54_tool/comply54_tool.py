@@ -44,6 +44,18 @@ from pydantic import BaseModel, Field
 from crewai.tools import BaseTool
 
 
+def _ensure_comply54_installed() -> None:
+    try:
+        from comply54.sectors._base import SectorCompliance  # noqa: F401
+    except ImportError as exc:
+        raise ImportError(
+            "Missing optional dependency 'comply54'. Install with:\n"
+            "  pip install crewai-tools[comply54]\n"
+            "or\n"
+            "  pip install comply54"
+        ) from exc
+
+
 class _ComplianceInput(BaseModel):
     """Input schema for Comply54ComplianceTool."""
 
@@ -111,16 +123,7 @@ class Comply54ComplianceTool(BaseTool):
     model_config = {"arbitrary_types_allowed": True}
 
     def __init__(self, compliance: Any, **kwargs: Any) -> None:
-        try:
-            from comply54.sectors._base import SectorCompliance  # noqa: F401
-        except ImportError as exc:
-            raise ImportError(
-                "Missing optional dependency 'comply54'. Install with:\n"
-                "  pip install crewai-tools[comply54]\n"
-                "or\n"
-                "  pip install comply54"
-            ) from exc
-
+        _ensure_comply54_installed()
         super().__init__(
             compliance=compliance,
             name=f"comply54_{type(compliance).__name__.lower()}",
@@ -201,16 +204,7 @@ class Comply54GuardedTool(BaseTool):
         block_on_escalate: bool = False,
         **kwargs: Any,
     ) -> None:
-        try:
-            from comply54.sectors._base import SectorCompliance  # noqa: F401
-        except ImportError as exc:
-            raise ImportError(
-                "Missing optional dependency 'comply54'. Install with:\n"
-                "  pip install crewai-tools[comply54]\n"
-                "or\n"
-                "  pip install comply54"
-            ) from exc
-
+        _ensure_comply54_installed()
         inner_schema = getattr(inner_tool, "args_schema", _FallbackInput)
 
         super().__init__(
@@ -232,6 +226,7 @@ class Comply54GuardedTool(BaseTool):
         result = self.compliance.check(
             action=self.inner_tool.name,
             params=kwargs,
+            output="",
             context=self.guard_context,
         )
         is_blocked = result.overall == "deny" or (

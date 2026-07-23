@@ -121,6 +121,17 @@ class TestComply54ComplianceTool:
         assert len(result["violations"]) == 1
         assert result["violations"][0]["regulation"] == "CBN NIP Framework"
 
+    def test_audit_decision_returns_json(self):
+        compliance = _make_compliance(overall="audit", blocked=False)
+        with patch.dict("sys.modules", {"comply54": MagicMock(), "comply54.sectors._base": MagicMock()}):
+            tool = Comply54ComplianceTool(compliance=compliance)
+
+        result = json.loads(tool._run(action="transfer_funds", params={"amount": 5000}))
+
+        assert result["overall"] == "audit"
+        assert result["blocked"] is False
+        assert result["audit_id"] == "c54-test-001"
+
     def test_missing_comply54_raises_import_error(self):
         with patch.dict("sys.modules", {"comply54": None, "comply54.sectors._base": None}):
             with pytest.raises(ImportError, match="comply54"):
@@ -150,28 +161,38 @@ class TestComply54GuardedTool:
         return guarded, compliance, inner
 
     def test_allow_passes_through_to_inner_tool(self):
-        guarded, compliance, _ = self._make_guarded(overall="allow", blocked=False)
+        guarded, compliance, inner = self._make_guarded(overall="allow", blocked=False)
 
         result = json.loads(guarded._run(amount=5000.0, recipient="0123456789"))
 
         assert result["status"] == "ok"
         assert result["amount"] == 5000.0
+        compliance.check.assert_called_once_with(
+            action=inner.name,
+            params={"amount": 5000.0, "recipient": "0123456789"},
+            output="",
+            context={"kyc_tier": 3},
+        )
 
     def test_deny_blocks_inner_tool(self):
         guarded, compliance, inner = self._make_guarded(overall="deny", blocked=True)
 
-        result = json.loads(guarded._run(amount=15_000_000.0, recipient="0123456789"))
+        with patch.object(inner, "_run", wraps=inner._run) as inner_run:
+            result = json.loads(guarded._run(amount=15_000_000.0, recipient="0123456789"))
 
+        inner_run.assert_not_called()
         assert result["blocked"] is True
         assert result["decision"] == "deny"
         assert "CBN NIP Framework" in result["regulation"]
         assert result["audit_id"] == "c54-test-001"
 
     def test_escalate_passes_through_by_default(self):
-        guarded, _, _ = self._make_guarded(overall="escalate", blocked=False, block_on_escalate=False)
+        guarded, compliance, inner = self._make_guarded(overall="escalate", blocked=False, block_on_escalate=False)
 
-        result = json.loads(guarded._run(amount=5000.0, recipient="0123456789"))
+        with patch.object(inner, "_run", wraps=inner._run) as inner_run:
+            result = json.loads(guarded._run(amount=5000.0, recipient="0123456789"))
 
+        inner_run.assert_called_once()
         assert result["status"] == "ok"
 
     def test_escalate_blocked_when_block_on_escalate_true(self):
@@ -189,8 +210,10 @@ class TestComply54GuardedTool:
         with patch.dict("sys.modules", {"comply54": MagicMock(), "comply54.sectors._base": MagicMock()}):
             guarded = Comply54GuardedTool(inner, compliance, block_on_escalate=True)
 
-        result = json.loads(guarded._run(amount=5000.0, recipient="0123456789"))
+        with patch.object(inner, "_run", wraps=inner._run) as inner_run:
+            result = json.loads(guarded._run(amount=5000.0, recipient="0123456789"))
 
+        inner_run.assert_not_called()
         assert result["blocked"] is True
         assert result["decision"] == "escalate"
 
