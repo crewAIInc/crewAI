@@ -518,3 +518,123 @@ async def run_for_each_async(
 
     crew._task_output_handler.reset()
     return list(results)
+async def aprepare_kickoff(
+    crew: "Crew",
+    inputs: dict[str, Any] | None,
+    input_files: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Prepare crew for kickoff execution asynchronously.
+
+    Handles before callbacks, event emission, task handler reset, input
+    interpolation, task callbacks, agent setup, and planning.
+
+    Args:
+        crew: The crew instance to prepare.
+        inputs: Optional input dictionary to pass to the crew.
+        input_files: Optional dict of named file inputs for the crew.
+
+    Returns:
+        The potentially modified inputs dictionary after before callbacks.
+    """
+    import inspect
+    from crewai.events.base_events import reset_emission_counter
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.event_context import (
+        get_current_parent_id,
+        reset_last_event_id,
+    )
+    from crewai.events.types.crew_events import CrewKickoffStartedEvent
+
+    resuming = crew.checkpoint_kickoff_event_id is not None
+
+    if not resuming and get_current_parent_id() is None:
+        reset_emission_counter()
+        reset_last_event_id()
+
+    normalized: dict[str, Any] | None = None
+    if inputs is not None:
+        from collections.abc import Mapping
+        if not isinstance(inputs, Mapping):
+            raise TypeError(
+                f"inputs must be a dict or Mapping, got {type(inputs).__name__}"
+            )
+        normalized = dict(inputs)
+
+    for before_callback in crew.before_kickoff_callbacks:
+        if normalized is None:
+            normalized = {}
+        if inspect.iscoroutinefunction(before_callback):
+            normalized = await before_callback(normalized)
+        else:
+            normalized = before_callback(normalized)
+
+    if resuming and crew._kickoff_event_id:
+        if crew.verbose:
+            from crewai.events.utils.console_formatter import ConsoleFormatter
+
+            fmt = ConsoleFormatter(verbose=True)
+            content = fmt.create_status_content(
+                "Resuming from Checkpoint",
+                crew.name or "Crew",
+                "bright_magenta",
+                ID=str(crew.id),
+            )
+            fmt.print_panel(
+                content, "\U0001f504 Resuming from Checkpoint", "bright_magenta"
+            )
+    else:
+        started_event = CrewKickoffStartedEvent(crew_name=crew.name, inputs=normalized)
+        crew._kickoff_event_id = started_event.event_id
+        future = crewai_event_bus.emit(crew, started_event)
+        if future is not None:
+            try:
+                future.result()
+            except Exception:
+                pass
+
+    crew._task_output_handler.reset()
+    crew._logging_color = "bold_purple"
+
+    from crewai.telemetry import baggage
+    _flow_files = baggage.get_baggage("flow_input_files")
+    flow_files: dict[str, Any] = _flow_files if isinstance(_flow_files, dict) else {}
+
+    if normalized is not None:
+        unpacked_files = _extract_files_from_inputs(normalized)
+
+        all_files = {**flow_files, **(input_files or {}), **unpacked_files}
+        if all_files:
+            from crewai.memory.storage.files_storage import store_files
+            store_files(crew.id, all_files)
+
+        crew._inputs = normalized
+        crew._interpolate_inputs(normalized)
+    else:
+        all_files = {**flow_files, **(input_files or {})}
+        if all_files:
+            from crewai.memory.storage.files_storage import store_files
+            store_files(crew.id, all_files)
+    crew._set_tasks_callbacks()
+    crew._set_allow_crewai_trigger_context_for_first_task()
+
+    agents_to_setup = list(crew.agents)
+    seen_agent_ids: set[int] = {id(agent) for agent in agents_to_setup}
+    for task in crew.tasks:
+        if task.agent is not None and id(task.agent) not in seen_agent_ids:
+            agents_to_setup.append(task.agent)
+            seen_agent_ids.add(id(task.agent))
+
+    from crewai.agents.agent_builder.utilities.base_setup import setup_agents
+    setup_agents(
+        crew,
+        agents_to_setup,
+        crew.embedder,
+        crew.function_calling_llm,
+        crew.step_callback,
+    )
+
+    if crew.planning:
+        crew._handle_crew_planning()
+
+    return normalized
+

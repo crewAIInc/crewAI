@@ -1246,7 +1246,8 @@ class Crew(FlowTrackable, BaseModel):
 
         runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
-            inputs = prepare_kickoff(self, inputs, input_files)
+            from crewai.crews.utils import aprepare_kickoff
+            inputs = await aprepare_kickoff(self, inputs, input_files)
 
             if self.process == Process.sequential:
                 result = await self._arun_sequential_process()
@@ -1257,8 +1258,12 @@ class Crew(FlowTrackable, BaseModel):
                     f"The process '{self.process}' is not implemented yet."
                 )
 
+            import inspect
             for after_callback in self.after_kickoff_callbacks:
-                result = after_callback(result)
+                if inspect.iscoroutinefunction(after_callback):
+                    result = await after_callback(result)
+                else:
+                    result = after_callback(result)
 
             result = self._post_kickoff(result)
 
