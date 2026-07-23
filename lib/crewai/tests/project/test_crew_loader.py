@@ -6,12 +6,14 @@ import json
 from pathlib import Path
 import sys
 import types
+from unittest.mock import patch
 
 import pytest
 
 from crewai.llms.base_llm import BaseLLM
 from crewai.project.json_loader import JSONProjectError, JSONProjectValidationError
 from crewai.project.crew_loader import load_crew, load_crew_from_definition
+from crewai.skills.models import Skill, SkillFrontmatter
 
 
 def _write_python_defs(tmp_path: Path) -> None:
@@ -69,6 +71,16 @@ def _input_file_path(value) -> Path:
         source = getattr(value, "source", value)
     path = getattr(source, "path", source)
     return Path(str(path))
+
+
+def _write_skill(skills_dir: Path, name: str) -> Path:
+    """Create a discoverable skill directory containing a minimal SKILL.md."""
+    skill_dir = skills_dir / name
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text(
+        f"---\nname: {name}\ndescription: {name} description\n---\n\nDo the thing.\n"
+    )
+    return skill_dir
 
 
 class TestLoadCrew:
@@ -963,3 +975,130 @@ class TestLoadCrew:
 
         crew, _ = load_crew(crew_file)
         assert crew.verbose is True
+
+    def test_crew_loads_agent_skill_path_relative_to_project_root(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """Agent skill paths resolve against project_root, not the process cwd."""
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "helper", skills=["skills"])
+        skill_dir = _write_skill(tmp_path / "skills", "pdf-report")
+
+        elsewhere = tmp_path.parent / "elsewhere_agent"
+        elsewhere.mkdir(exist_ok=True)
+        monkeypatch.chdir(elsewhere)
+
+        crew_def = {
+            "name": "skills_crew",
+            "agents": ["helper"],
+            "tasks": [
+                {
+                    "name": "write",
+                    "description": "Write a report",
+                    "expected_output": "A report",
+                    "agent": "helper",
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        crew, _ = load_crew(crew_file)
+        loaded = crew.agents[0].skills
+
+        assert loaded, "Expected the agent skill to be discovered from the project root"
+        assert [s.name for s in loaded] == ["pdf-report"]
+        assert Path(loaded[0].path) == skill_dir
+
+    def test_crew_loads_crew_level_skill_path_relative_to_project_root(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """Crew-level skill paths resolve against project_root, not the process cwd."""
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "helper")
+        _write_skill(tmp_path / "skills", "shared-skill")
+
+        elsewhere = tmp_path.parent / "elsewhere_crew"
+        elsewhere.mkdir(exist_ok=True)
+        monkeypatch.chdir(elsewhere)
+
+        crew_def = {
+            "name": "crew_skills_crew",
+            "agents": ["helper"],
+            "skills": ["skills"],
+            "tasks": [
+                {
+                    "name": "write",
+                    "description": "Write a report",
+                    "expected_output": "A report",
+                    "agent": "helper",
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        crew, _ = load_crew(crew_file)
+
+        # Crew-level skills are loaded per agent at kickoff, so the loader's
+        # contract is that the stored path is already rooted at project_root.
+        assert crew.skills == [str(tmp_path / "skills")]
+
+    def test_crew_leaves_registry_skill_reference_unresolved(self, tmp_path: Path):
+        """Registry refs reach the resolver verbatim instead of being path-resolved."""
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "helper", skills=["@acme/research"])
+
+        crew_def = {
+            "name": "registry_skills_crew",
+            "agents": ["helper"],
+            "tasks": [
+                {
+                    "name": "write",
+                    "description": "Write a report",
+                    "expected_output": "A report",
+                    "agent": "helper",
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        captured: list[str] = []
+
+        def _fake_resolve(ref, source=None):
+            captured.append(ref)
+            return Skill(
+                frontmatter=SkillFrontmatter(
+                    name="research", description="research description"
+                ),
+                path=Path("."),
+            )
+
+        with patch("crewai.skills.registry.resolve_registry_ref", _fake_resolve):
+            load_crew(crew_file)
+
+        assert captured == ["@acme/research"]
+
+    def test_crew_rejects_agent_skill_path_outside_project(self, tmp_path: Path):
+        """Skill paths escaping the project root are rejected during validation."""
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "helper", skills=["../evil_skills"])
+
+        crew_def = {
+            "name": "unsafe_skills_crew",
+            "agents": ["helper"],
+            "tasks": [
+                {
+                    "name": "write",
+                    "description": "Write a report",
+                    "expected_output": "A report",
+                    "agent": "helper",
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        with pytest.raises(JSONProjectValidationError, match="outside the project root"):
+            load_crew(crew_file)

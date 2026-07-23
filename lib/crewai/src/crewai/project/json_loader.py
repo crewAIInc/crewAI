@@ -1013,6 +1013,10 @@ def _agent_kwargs_from_definition(
     if resolve_tools:
         _resolve_tool_fields(agent_kwargs, path, project_root=project_root)
         _resolve_agent_python_refs(agent_kwargs, path, project_root)
+        if "skills" in agent_kwargs:
+            agent_kwargs["skills"] = _normalize_skills(
+                agent_kwargs["skills"], path, project_root
+            )
     else:
         # Validation/deploy mode: check tool declarations structurally without
         # importing or instantiating anything — custom:<name> tools execute
@@ -1117,6 +1121,10 @@ def _crew_kwargs_from_definition(
         crew_kwargs["manager_agent"] = agents_map[manager_agent]
 
     _resolve_crew_python_refs(crew_kwargs, source, project_root)
+    if "skills" in crew_kwargs:
+        crew_kwargs["skills"] = _normalize_skills(
+            crew_kwargs["skills"], source, project_root
+        )
 
     return crew_kwargs
 
@@ -1709,6 +1717,54 @@ def _normalize_input_files(
             continue
         normalized[name] = file_spec
     return normalized
+
+
+def _is_skill_path_ref(item: Any) -> bool:
+    """Return True when a skill entry denotes a filesystem path.
+
+    Mirrors the string dispatch order of ``crewai.skills.loader.load_skill``:
+    registry references (``@org/name``) and inline SKILL.md documents are not
+    paths and must reach the loader untouched.
+
+    Args:
+        item: A single entry from a ``skills`` definition list.
+
+    Returns:
+        True if the entry should be resolved against the project root.
+    """
+    if not isinstance(item, str) or not item.strip():
+        return False
+    if item.startswith("@"):
+        return False
+    return not item.lstrip().startswith("---\n")
+
+
+def _normalize_skills(
+    value: Any,
+    source: str | Path,
+    project_root: Path | None,
+) -> Any:
+    """Resolve filesystem skill paths against the project root.
+
+    Registry references, inline SKILL.md content and already-resolved ``Skill``
+    objects are returned unchanged.
+
+    Args:
+        value: The ``skills`` value from an agent or crew definition.
+        source: Definition source used in error messages.
+        project_root: Root the relative paths are resolved against.
+
+    Returns:
+        The skills value with filesystem paths resolved.
+    """
+    if not isinstance(value, list):
+        return value
+    return [
+        _resolve_project_path(item, project_root, f"{source}: skills[{index}]")
+        if _is_skill_path_ref(item)
+        else item
+        for index, item in enumerate(value)
+    ]
 
 
 def _input_files_definition_errors(
