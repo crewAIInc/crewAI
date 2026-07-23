@@ -184,7 +184,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     prompt: SystemPromptResult | StandardPromptResult | None = Field(
         default=None, exclude=True
     )
-    max_iter: int = Field(default=25, exclude=True)
+    max_iter: int = Field(default=25, gt=0, le=500, exclude=True)
     tools: list[CrewStructuredTool] = Field(default_factory=list, exclude=True)
     tools_names: str = Field(default="", exclude=True)
     stop_words: list[str] = Field(default_factory=list, exclude=True)

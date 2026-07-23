@@ -58,6 +58,13 @@ if TYPE_CHECKING:
     from crewai.state.runtime import RuntimeState
 
 
+# Upper bound for agent iteration count. Prevents denial-of-wallet attacks
+# where a misconfigured or malicious `max_iter` value (e.g. 10_000_000) would
+# burn unbounded API credits. The default of 25 is unchanged; no legitimate
+# workflow needs more than 500 iterations.
+MAX_ITER_CEILING: Final[int] = 500
+
+
 def _validate_crew_ref(value: Any) -> Any:
     return value
 
@@ -296,7 +303,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default_factory=list, description="Tools at agents' disposal"
     )
     max_iter: int = Field(
-        default=25, description="Maximum iterations for an agent to execute a task"
+        default=25,
+        gt=0,
+        le=MAX_ITER_CEILING,
+        description="Maximum iterations for an agent to execute a task",
     )
     agent_executor: Annotated[
         SerializeAsAny[BaseAgentExecutor] | None,
