@@ -903,3 +903,42 @@ def test_tool_error_does_not_emit_finished_event():
     assert len(finished_events) == 0, (
         "ToolUsageFinishedEvent should NOT be emitted after ToolUsageErrorEvent"
     )
+
+
+def test_original_tool_calling_non_dict_arguments_raises_tool_usage_error():
+    """Regression test: a non-dict tool input with raise_error=True must raise
+    ToolUsageError, not RuntimeError('No active exception to re-raise').
+
+    Previously this path used a bare ``raise`` outside any except block.
+    """
+    from unittest.mock import patch
+
+    from crewai.tools import tool as tool_decorator
+    from crewai.tools.tool_usage import ToolUsage, ToolUsageError
+
+    @tool_decorator("dummy_tool")
+    def dummy_tool(x: str) -> str:
+        """A dummy tool."""
+        return x
+
+    action = MagicMock()
+    action.tool = "dummy_tool"
+    action.tool_input = '["not", "a", "dict"]'
+
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[dummy_tool],
+        task=MagicMock(),
+        function_calling_llm=None,
+        agent=MagicMock(),
+        action=action,
+    )
+
+    with (
+        patch.object(tool_usage, "_select_tool", return_value=dummy_tool),
+        patch.object(
+            tool_usage, "_validate_tool_input", return_value=["not", "a", "dict"]
+        ),
+        pytest.raises(ToolUsageError),
+    ):
+        tool_usage._original_tool_calling(action.tool_input, raise_error=True)
