@@ -219,8 +219,13 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
         self._ensure_parent_dir(sandbox, path, timeout=timeout_tracker())
 
         tmp_file_path = f"/tmp/crewai-file-append{uuid.uuid4()}.py"
-        sandbox.files.write(tmp_file_path, chunk, timeout=timeout_tracker())
-        sandbox.commands.run(f"cat {tmp_file_path} >> path && rm {tmp_file_path}", timeout=timeout_tracker())
+        sandbox.files.write(tmp_file_path, chunk, timeout=timeout_tracker(), allow_unsafe_paths=True)
+        q = shlex.quote(path)
+        qt = shlex.quote(tmp_file_path)
+        result = sandbox.commands.run(f"cat {qt} >> {q}; rc=$?; rm -f {qt}; exit $rc", timeout=timeout_tracker())
+        if result.exit_code != 0:
+            raise RuntimeError(f"Cannot append to {path}. Error: {result.stderr}.")
+
         return K8sAgentSandboxFileToolOutput(
             status="appended",
             path=path,

@@ -170,6 +170,28 @@ class TestFileToolAppendAction:
 
         assert "cat /tmp" in mock_sandbox.commands.run.call_args_list[1].args[0]
 
+    @pytest.mark.parametrize("binary", [False, True])
+    def test_error(self, k8s_file_tool, mock_sandbox, binary):
+        mock_sandbox.commands.run.side_effect = [
+            ExecutionResult(exit_code=0, stdout="", stderr=""),
+            ExecutionResult(exit_code=1, stdout="", stderr="append error"),
+        ]
+
+        content_to_append = "some content"
+
+        if binary:
+            content = base64.b64encode(content_to_append.encode("ascii"))
+        else:
+            content = content_to_append
+
+        with pytest.raises(RuntimeError, match="append error"):
+            k8s_file_tool.run(
+                action="append",
+                path="parent/file.txt",
+                content=content,
+                binary=binary,
+                timeout=120,
+            )
 
 
 class TestFileToolListAction:
