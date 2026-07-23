@@ -30,7 +30,8 @@ from typing import (
     TypeVar,
     cast,
 )
-from uuid import uuid4
+from uuid import UUID, uuid4
+import warnings
 
 from opentelemetry import baggage
 from opentelemetry.context import attach, detach
@@ -159,6 +160,27 @@ ExecutionContext = Any  # type: ignore[assignment,misc]
 
 
 logger = logging.getLogger(__name__)
+
+
+def _warn_if_non_uuid_flow_state_id(value: Any) -> None:
+    """Warn once per kickoff when a persisted flow gets a non-UUID `id` input.
+
+    CrewAI AMP deployments reject non-UUID `inputs.id` values with HTTP 422,
+    while the OSS library accepts any string locally. Surfacing the mismatch
+    here keeps local development aligned with deployed behavior without
+    changing how the flow runs.
+    """
+    try:
+        UUID(str(value))
+    except (ValueError, TypeError):
+        warnings.warn(
+            f"Flow state id {value!r} is not a valid UUID. Non-UUID flow state "
+            "ids are rejected by CrewAI AMP deployments with HTTP 422; use a "
+            "UUID (e.g. str(uuid4())) for the 'id' input to keep local and "
+            "deployed behavior aligned.",
+            UserWarning,
+            stacklevel=2,
+        )
 
 
 def _condition_branches(
@@ -2130,6 +2152,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # hooks carried the pre-hook inputs).
             flow_inputs_token = attach(baggage.set_baggage("flow_inputs", inputs or {}))
 
+            # AMP parity: persisted flows deployed to CrewAI AMP reject
+            # non-UUID `id` inputs with HTTP 422, so surface that locally.
+            # Covers instance/class-level persistence and method-level
+            # @persist (which never sets self.persistence). Runs after the
+            # execution-start/input hooks so it validates the effective id.
+            if inputs and "id" in inputs and self._has_active_persistence():
+                _warn_if_non_uuid_flow_state_id(inputs["id"])
+
             # Reset flow state for fresh execution unless restoring from persistence
             is_restoring = (
                 inputs and "id" in inputs and self.persistence is not None
@@ -2819,6 +2849,23 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if future:
                     self._event_futures.append(future)
             raise e
+
+    def _has_active_persistence(self) -> bool:
+        """Whether this flow persists state anywhere.
+
+        True when an instance/class-level backend is set, the flow-level
+        definition enables persistence, or any method carries a method-level
+        ``@persist`` (which never sets ``self.persistence``).
+        """
+        if self.persistence is not None:
+            return True
+        flow_persist = self._definition.persist
+        if flow_persist is not None and flow_persist.enabled:
+            return True
+        return any(
+            method.persist is not None and method.persist.enabled
+            for method in self._definition.methods.values()
+        )
 
     def _persist_method_completion(self, method_name: FlowMethodName) -> None:
         method_definition = self._definition.methods[str(method_name)]
