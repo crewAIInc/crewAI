@@ -184,11 +184,11 @@ class OpenAICompatibleCompletion(OpenAICompletion):
             ValueError: If API key is required but not found.
         """
         if api_key:
-            return api_key
+            return api_key.strip()
 
         env_key = os.getenv(config.api_key_env)
         if env_key:
-            return env_key
+            return env_key.strip()
 
         if config.api_key_required:
             raise ValueError(
