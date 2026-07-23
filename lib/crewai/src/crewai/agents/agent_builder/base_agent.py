@@ -403,6 +403,22 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         description="Agent Skills. Accepts paths for discovery, inline SKILL.md strings, pre-loaded Skill objects, or '@org/name' registry refs.",
         min_length=1,
     )
+    auto_translate_prompt: bool = Field(
+        default=True,
+        description=(
+            "Automatically translate the system prompt to the language best "
+            "suited for the target model before each LLM call. Set to False "
+            "to disable and keep the prompt in its original language."
+        ),
+    )
+    prompt_glossary: dict[str, str] | None = Field(
+        default=None,
+        description=(
+            "Glossary of terms that should not be translated when "
+            "auto_translate_prompt is enabled. Maps source-term to "
+            "target-term (e.g. {'API Key': 'API Key', 'crewAI': 'crewAI'})."
+        ),
+    )
     execution_context: ExecutionContext | None = Field(default=None)
     checkpoint_kickoff_event_id: str | None = Field(default=None)
 
