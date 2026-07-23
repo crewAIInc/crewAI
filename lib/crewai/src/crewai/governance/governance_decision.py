@@ -178,9 +178,13 @@ class GovernanceDecision(TypedDict, total=False):
 
     decision_context_hash: str
     """SHA-256 digest over JCS-canonicalized:
-    {agent_id, tool, params_hash, intent_digest, seq, retrieved_policy_refs,
-    policy_digest, credential_scope, credential_tier, expires_at, revalidate_if}.
-    Enables drift detection: if any input changed, the hash changes."""
+    {agent_id, tool, params_hash, intent_digest, boundary_id, seq,
+    retrieved_policy_refs, policy_digest, credential_scope, credential_tier,
+    expires_at, revalidate_if}.
+    Enables drift detection: if any input changed, the hash changes.
+    boundary_id is included here (but NOT in intent_ref) so that run origin
+    is cryptographically bound to the decision context without breaking
+    cross-run semantic identity."""
 
     credential_scope: str
     """Authority scope available to the agent (e.g., 'read-only', 'production-write')."""
@@ -498,6 +502,22 @@ def verify_contiguity(
     # If any boundary_ids are present, they must all be the same
     if len(boundary_ids) > 1:
         return False
+
+    # Fail closed: if ANY record has boundary_id, ALL must have it.
+    # A record without boundary_id in a set where others have it is rejected.
+    if boundary_ids:
+        expected_boundary = next(iter(boundary_ids))
+        for r in seq_records:
+            if not r.get("boundary_id"):
+                return False
+            if r["boundary_id"] != expected_boundary:
+                return False
+        # Seal must also carry boundary_id when records do
+        if seal is not None and not seal.get("boundary_id"):
+            return False
+        for sr in sealed_records:
+            if not sr.get("boundary_id"):
+                return False
 
     seqs = [int(r["seq"]) for r in seq_records]
     counts = [int(r["running_count"]) for r in seq_records]
