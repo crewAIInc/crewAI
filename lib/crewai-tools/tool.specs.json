@@ -11598,6 +11598,184 @@
       }
     },
     {
+      "description": "Find independently-reviewed AI agents for a described need, ranked by Hlido trust score. Given a free-text need (e.g. 'AI coding agent'), returns matching agents from Hlido's public review registry with their score, tier and review URL. Uses the public Hlido API; no API key required.",
+      "env_vars": [],
+      "humanized_name": "Hlido Recommend",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Find Hlido-reviewed AI agents matching a free-text need, ranked by trust score.",
+        "properties": {
+          "base_url": {
+            "default": "https://hlido.eu",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 15,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "HlidoRecommendTool",
+        "type": "object"
+      },
+      "name": "HlidoRecommendTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for HlidoRecommendTool.",
+        "properties": {
+          "limit": {
+            "default": 5,
+            "description": "Maximum number of agents to return.",
+            "maximum": 25,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "min_score": {
+            "default": 70.0,
+            "description": "Only recommend agents scoring at or above this (0-100).",
+            "maximum": 100,
+            "minimum": 0,
+            "title": "Min Score",
+            "type": "number"
+          },
+          "need": {
+            "description": "Free-text description of what you need an agent for, e.g. 'AI coding assistant' or 'web scraping agent'.",
+            "title": "Need",
+            "type": "string"
+          }
+        },
+        "required": [
+          "need"
+        ],
+        "title": "HlidoRecommendInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Check an AI agent's independent Hlido trust verdict before relying on it. Given an agent slug (e.g. 'aider'), returns its Hlido score (0-100), tier (VITAL/STEADY/FADING/FLATLINE), a PASS/FAIL gate against min_score, and the reviewed strengths and red flags. Uses the public, evidence-backed Hlido API; no API key required.",
+      "env_vars": [],
+      "humanized_name": "Hlido Trust Check",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Independent trust verdict for a known AI agent, from Hlido's public reviews.",
+        "properties": {
+          "base_url": {
+            "default": "https://hlido.eu",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 15,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "HlidoTrustCheckTool",
+        "type": "object"
+      },
+      "name": "HlidoTrustCheckTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for HlidoTrustCheckTool.",
+        "properties": {
+          "min_score": {
+            "default": 70.0,
+            "description": "Minimum acceptable Hlido score (0-100). 70 = STEADY tier or above.",
+            "maximum": 100,
+            "minimum": 0,
+            "title": "Min Score",
+            "type": "number"
+          },
+          "slug": {
+            "description": "Hlido agent slug to check, e.g. 'aider', 'crewai', 'langchain'. Lowercase and hyphenated \u2014 the identifier in a Hlido review URL (hlido.eu/reviews/<slug>/).",
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug"
+        ],
+        "title": "HlidoTrustCheckInput",
+        "type": "object"
+      }
+    },
+    {
       "description": "Scrape or crawl a website using Hyperbrowser and return the contents in properly formatted markdown or html",
       "env_vars": [
         {
