@@ -10,6 +10,8 @@ if TYPE_CHECKING:
     from crewai.rag.chromadb.config import ChromaDBConfig
     from crewai.rag.qdrant.client import QdrantClient
     from crewai.rag.qdrant.config import QdrantConfig
+    from crewai.rag.turbopuffer.client import TurbopufferClient
+    from crewai.rag.turbopuffer.config import TurbopufferConfig
 
 
 class ChromaFactoryModule(Protocol):
@@ -25,4 +27,12 @@ class QdrantFactoryModule(Protocol):
 
     def create_client(self, config: QdrantConfig) -> QdrantClient:
         """Creates a Qdrant client from configuration."""
+        ...
+
+
+class TurbopufferFactoryModule(Protocol):
+    """Protocol for turbopuffer factory module."""
+
+    def create_client(self, config: TurbopufferConfig) -> TurbopufferClient:
+        """Creates a turbopuffer client from configuration."""
         ...

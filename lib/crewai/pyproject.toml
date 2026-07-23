@@ -77,6 +77,10 @@ docling = [
 qdrant = [
     "qdrant-client[fastembed]~=1.14.3",
 ]
+turbopuffer = [
+    "turbopuffer>=1.0.0,<2",
+    "fastembed>=0.3.0",
+]
 aws = [
     "boto3~=1.42.90",
     "aiobotocore~=3.5.0",

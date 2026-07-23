@@ -21,3 +21,10 @@ class MissingQdrantConfig(_MissingProvider):
     """Placeholder for missing Qdrant configuration."""
 
     provider: Literal["qdrant"] = field(default="qdrant")
+
+
+@pyd_dataclass(config=ConfigDict(extra="forbid"))
+class MissingTurbopufferConfig(_MissingProvider):
+    """Placeholder for missing turbopuffer configuration."""
+
+    provider: Literal["turbopuffer"] = field(default="turbopuffer")

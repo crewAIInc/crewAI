@@ -309,3 +309,47 @@ def test_rag_tool_config_with_qdrant_and_azure_embeddings(
 
         assert tool.adapter is not None
         assert isinstance(tool.adapter, CrewAIRagAdapter)
+
+
+@patch("crewai_tools.adapters.crewai_rag_adapter.create_client")
+def test_rag_tool_config_with_turbopuffer_and_azure_embeddings(
+    mock_create_client: Mock,
+) -> None:
+    """Test RagTool with Turbopuffer vector DB and Azure embeddings config."""
+    mock_embedding_func = MagicMock()
+    mock_embedding_func.return_value = [[0.1] * 1536]
+
+    mock_client = MagicMock()
+    mock_client.get_or_create_collection = MagicMock(return_value=None)
+    mock_create_client.return_value = mock_client
+
+    with patch(
+        "crewai_tools.tools.rag.rag_tool.build_embedder",
+        return_value=mock_embedding_func,
+    ):
+
+        class MyTool(RagTool):
+            pass
+
+        # Turbopuffer requires a pre-configured client in the provider config.
+        config = {
+            "vectordb": {
+                "provider": "turbopuffer",
+                "config": {"client": MagicMock()},
+            },
+            "embedding_model": {
+                "provider": "azure",
+                "config": {
+                    "model": "text-embedding-3-large",
+                    "api_key": "test-key",
+                    "api_base": "https://test.openai.azure.com/",
+                    "api_version": "2024-02-01",
+                    "deployment_id": "test-deployment",
+                },
+            },
+        }
+
+        tool = MyTool(config=config)
+
+        assert tool.adapter is not None
+        assert isinstance(tool.adapter, CrewAIRagAdapter)

@@ -15,6 +15,9 @@ if TYPE_CHECKING:
     from crewai.rag.qdrant.config import QdrantConfig as QdrantConfig_
 
     QdrantConfig = QdrantConfig_
+    from crewai.rag.turbopuffer.config import TurbopufferConfig as TurbopufferConfig_
+
+    TurbopufferConfig = TurbopufferConfig_
 else:
     try:
         from crewai.rag.chromadb.config import ChromaDBConfig
@@ -30,7 +33,14 @@ else:
             MissingQdrantConfig as QdrantConfig,
         )
 
-SupportedProviderConfig: TypeAlias = ChromaDBConfig | QdrantConfig
+    try:
+        from crewai.rag.turbopuffer.config import TurbopufferConfig
+    except ImportError:
+        from crewai.rag.config.optional_imports.providers import (
+            MissingTurbopufferConfig as TurbopufferConfig,
+        )
+
+SupportedProviderConfig: TypeAlias = ChromaDBConfig | QdrantConfig | TurbopufferConfig
 RagConfigType: TypeAlias = Annotated[
     SupportedProviderConfig, Field(discriminator=DISCRIMINATOR)
 ]
