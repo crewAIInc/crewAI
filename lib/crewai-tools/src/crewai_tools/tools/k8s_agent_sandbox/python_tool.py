@@ -45,9 +45,17 @@ class K8sAgentSandboxPythonTool(K8sAgentSandboxBaseTool):
 
         tmp_file_path = f"/tmp/crewai-{uuid.uuid4()}.py"
 
-        sandbox.files.write(tmp_file_path, code.encode("utf-8"), timeout=timeout_tracker())
+        sandbox.files.write(
+            tmp_file_path,
+            code.encode("utf-8"),
+            allow_unsafe_paths=True,
+            timeout=timeout_tracker(),
+        )
 
-        result = sandbox.commands.run(f"python3 {tmp_file_path}", timeout=timeout_tracker())
+        result = sandbox.commands.run(
+            f"python3 {tmp_file_path}; rc=$?; rm -f {tmp_file_path}; exit $rc",
+            timeout=timeout_tracker(),
+        )
 
         return K8sAgentSandboxPythonToolOutput(
             exit_code=result.exit_code,
