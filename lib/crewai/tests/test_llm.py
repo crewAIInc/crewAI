@@ -817,6 +817,7 @@ def test_format_messages_strips_cache_breakpoint_for_non_anthropic():
     ]
     formatted = llm._format_messages_for_provider(messages)
     assert all(CACHE_BREAKPOINT_KEY not in msg for msg in formatted)
+    assert messages[0][CACHE_BREAKPOINT_KEY] is True
 
 
 def test_format_messages_preserves_cache_breakpoint_for_anthropic():
