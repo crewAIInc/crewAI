@@ -535,7 +535,8 @@ class LLM(BaseLLM):
 
         if provider == "anthropic" or provider == "claude":
             return any(
-                model_lower.startswith(prefix) for prefix in ["claude-", "anthropic."]
+                model_lower.startswith(prefix)
+                for prefix in ["claude-", "anthropic.", "anthropic/"]
             )
 
         if provider == "gemini" or provider == "google":
