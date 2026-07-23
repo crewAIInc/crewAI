@@ -331,6 +331,7 @@
                       "edge/en/observability/arize-phoenix",
                       "edge/en/observability/braintrust",
                       "edge/en/observability/datadog",
+                      "edge/en/observability/dprovenancekit",
                       "edge/en/observability/galileo",
                       "edge/en/observability/langdb",
                       "edge/en/observability/langfuse",
