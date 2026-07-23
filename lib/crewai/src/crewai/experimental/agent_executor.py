@@ -123,6 +123,16 @@ if TYPE_CHECKING:
 _RouteT = TypeVar("_RouteT", bound=str)
 
 
+# Module-level ContextVar carrying the parent event loop into ``ThreadPoolExecutor``
+# workers that run native tool calls. ``contextvars.copy_context().run`` already
+# propagates context to those threads, so async tools can schedule coroutines
+# back onto the loop the agent is running on instead of being bridged via
+# ``asyncio.run(...)`` per call. Issue #6611.
+_NATIVE_TOOL_LOOP: contextvars.ContextVar[asyncio.AbstractEventLoop | None] = (
+    contextvars.ContextVar("_NATIVE_TOOL_LOOP", default=None)
+)
+
+
 class AgentExecutorState(BaseModel):
     """Structured state for agent executor flow.
 
@@ -1734,52 +1744,103 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             runnable_tool_calls
         )
 
-        execution_results: list[dict[str, Any]] = []
-        if should_parallelize:
-            max_workers = min(8, len(runnable_tool_calls))
-            with ThreadPoolExecutor(max_workers=max_workers) as pool:
-                future_to_idx = {
-                    pool.submit(
-                        contextvars.copy_context().run,
-                        self._execute_single_native_tool_call,
-                        tool_call,
-                    ): idx
-                    for idx, tool_call in enumerate(runnable_tool_calls)
-                }
-                ordered_results: list[dict[str, Any] | None] = [None] * len(
-                    runnable_tool_calls
-                )
-                for future in as_completed(future_to_idx):
-                    idx = future_to_idx[future]
-                    try:
-                        ordered_results[idx] = future.result()
-                    except Exception as e:
-                        tool_call = runnable_tool_calls[idx]
-                        info = extract_tool_call_info(tool_call)
-                        call_id = info[0] if info else "unknown"
-                        func_name = info[1] if info else "unknown"
-                        ordered_results[idx] = {
-                            "call_id": call_id,
-                            "func_name": func_name,
-                            "result": f"Error executing tool: {e}",
-                            "from_cache": False,
-                            "original_tool": None,
-                        }
-                execution_results = [
-                    result for result in ordered_results if result is not None
-                ]
-        else:
-            # Execute sequentially so result_as_answer tools can short-circuit
-            # immediately without running remaining calls.
-            for tool_call in runnable_tool_calls:
-                execution_result = self._execute_single_native_tool_call(tool_call)
+        # Capture the parent event loop in a ContextVar so worker threads (and
+        # any async tools invoked from inside them) can schedule coroutines
+        # back onto it. Issue #6611: this was previously missing, leaving bare
+        # coroutine objects in worker threads and forcing ``BaseTool.run`` to
+        # bridge them via ``asyncio.run(...)`` per call.
+        # Only capture the loop if not already set (e.g., when called from thread pool).
+        current_loop = _NATIVE_TOOL_LOOP.get()
+        if current_loop is None:
+            current_loop = asyncio.get_running_loop() if is_inside_event_loop() else None
+        loop_token = _NATIVE_TOOL_LOOP.set(current_loop)
+        try:
+            execution_results: list[dict[str, Any]] = []
+            if should_parallelize:
+                max_workers = min(8, len(runnable_tool_calls))
+                with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                    future_to_idx = {
+                        pool.submit(
+                            contextvars.copy_context().run,
+                            self._execute_single_native_tool_call,
+                            tool_call,
+                        ): idx
+                        for idx, tool_call in enumerate(runnable_tool_calls)
+                    }
+                    ordered_results: list[dict[str, Any] | None] = [None] * len(
+                        runnable_tool_calls
+                    )
+                    for future in as_completed(future_to_idx):
+                        idx = future_to_idx[future]
+                        try:
+                            ordered_results[idx] = future.result()
+                        except Exception as e:
+                            tool_call = runnable_tool_calls[idx]
+                            info = extract_tool_call_info(tool_call)
+                            call_id = info[0] if info else "unknown"
+                            func_name = info[1] if info else "unknown"
+                            ordered_results[idx] = {
+                                "call_id": call_id,
+                                "func_name": func_name,
+                                "result": f"Error executing tool: {e}",
+                                "from_cache": False,
+                                "original_tool": None,
+                            }
+                    execution_results = [
+                        result
+                        for result in ordered_results
+                        if result is not None
+                    ]
+            else:
+                # Execute sequentially so result_as_answer tools can short-circuit
+                # immediately without running remaining calls.
+                for tool_call in runnable_tool_calls:
+                    execution_result = self._execute_single_native_tool_call(tool_call)
+                    call_id = cast(str, execution_result["call_id"])
+                    func_name = cast(str, execution_result["func_name"])
+                    result = cast(str, execution_result["result"])
+                    from_cache = cast(bool, execution_result["from_cache"])
+                    original_tool = execution_result["original_tool"]
+
+                    tool_message: LLMMessage = {
+                        "role": "tool",
+                        "tool_call_id": call_id,
+                        "name": func_name,
+                        "content": result,
+                    }
+                    self.state.messages.append(tool_message)
+
+                    # Log the tool execution
+                    if self.agent and self.agent.verbose:
+                        cache_info = " (from cache)" if from_cache else ""
+                        PRINTER.print(
+                            content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
+                            color="green",
+                        )
+
+                    if (
+                        original_tool
+                        and hasattr(original_tool, "result_as_answer")
+                        and original_tool.result_as_answer
+                    ):
+                        self.state.current_answer = AgentFinish(
+                            thought="Tool result is the final answer",
+                            output=result,
+                            text=result,
+                        )
+                        self.state.is_finished = True
+                        return "tool_result_is_final"
+
+                return "native_tool_completed"
+
+            for execution_result in execution_results:
                 call_id = cast(str, execution_result["call_id"])
                 func_name = cast(str, execution_result["func_name"])
                 result = cast(str, execution_result["result"])
                 from_cache = cast(bool, execution_result["from_cache"])
                 original_tool = execution_result["original_tool"]
 
-                tool_message: LLMMessage = {
+                tool_message = {
                     "role": "tool",
                     "tool_call_id": call_id,
                     "name": func_name,
@@ -1800,6 +1861,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     and hasattr(original_tool, "result_as_answer")
                     and original_tool.result_as_answer
                 ):
+                    # Set the result as the final answer
                     self.state.current_answer = AgentFinish(
                         thought="Tool result is the final answer",
                         output=result,
@@ -1809,45 +1871,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     return "tool_result_is_final"
 
             return "native_tool_completed"
-
-        for execution_result in execution_results:
-            call_id = cast(str, execution_result["call_id"])
-            func_name = cast(str, execution_result["func_name"])
-            result = cast(str, execution_result["result"])
-            from_cache = cast(bool, execution_result["from_cache"])
-            original_tool = execution_result["original_tool"]
-
-            tool_message = {
-                "role": "tool",
-                "tool_call_id": call_id,
-                "name": func_name,
-                "content": result,
-            }
-            self.state.messages.append(tool_message)
-
-            # Log the tool execution
-            if self.agent and self.agent.verbose:
-                cache_info = " (from cache)" if from_cache else ""
-                PRINTER.print(
-                    content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
-                    color="green",
-                )
-
-            if (
-                original_tool
-                and hasattr(original_tool, "result_as_answer")
-                and original_tool.result_as_answer
-            ):
-                # Set the result as the final answer
-                self.state.current_answer = AgentFinish(
-                    thought="Tool result is the final answer",
-                    output=result,
-                    text=result,
-                )
-                self.state.is_finished = True
-                return "tool_result_is_final"
-
-        return "native_tool_completed"
+        finally:
+            _NATIVE_TOOL_LOOP.reset(loop_token)
 
     def _should_parallelize_native_tool_calls(self, tool_calls: list[Any]) -> bool:
         """Determine if native tool calls are safe to run in parallel."""
@@ -1881,6 +1906,43 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 return False
 
         return True
+
+    def _invoke_native_tool_func(
+        self,
+        tool_func: Callable[..., Any],
+        args_dict: dict[str, Any],
+    ) -> Any:
+        """Invoke a native tool callable, awaiting coroutines on the parent loop.
+
+        Issue #6611: ``_execute_single_native_tool_call`` previously called
+        ``tool_func(**args_dict)`` synchronously. When ``tool_func`` is a
+        coroutine function (e.g. an async ``_arun`` wrapper stored by
+        ``convert_tools_to_openai_schema``), the call returned a bare coroutine
+        that was never awaited on this thread. ``BaseTool.run`` then bridged
+        the coroutine via ``asyncio.run(...)`` inside the worker thread — a
+        fresh nested event loop per call that drops loop-bound state.
+
+        Instead, when the callable produces a coroutine, schedule it on the
+        parent event loop captured by ``execute_native_tool`` (via the
+        ``_NATIVE_TOOL_LOOP`` ContextVar, which ``contextvars.copy_context().run``
+        propagates to ``ThreadPoolExecutor`` workers) and block on the
+        resulting future. This keeps async tools on the same loop, avoids
+        per-call ``asyncio.run`` overhead, and preserves loop-bound context
+        like HTTP clients, tracing, and cancellation.
+        """
+        result = tool_func(**args_dict)
+        if not inspect.iscoroutine(result):
+            return result
+
+        loop = _NATIVE_TOOL_LOOP.get()
+        if loop is None:
+            # Defensive fallback: no parent loop in scope (executor driven
+            # outside an async flow). Run via a short-lived loop rather than
+            # leaving an unawaited coroutine behind.
+            return asyncio.run(result)
+
+        future = asyncio.run_coroutine_threadsafe(result, loop)
+        return future.result()
 
     def _execute_single_native_tool_call(self, tool_call: Any) -> dict[str, Any]:
         """Execute a single native tool call and return metadata/result."""
@@ -2005,7 +2067,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             if func_name in self._available_functions:
                 try:
                     tool_func = self._available_functions[func_name]
-                    raw_result = tool_func(**args_dict)
+                    raw_result = self._invoke_native_tool_func(tool_func, args_dict)
                     raw_tool_result = raw_result
 
                     # Add to cache after successful execution (before string conversion)
