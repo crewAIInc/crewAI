@@ -1152,6 +1152,27 @@ def test_output_file_validation(tmp_path):
         )
 
 
+def test_output_file_template_interpolation_revalidates_path():
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        output_file="{tenant}/output.txt",
+    )
+
+    with pytest.raises(ValueError, match="Path traversal"):
+        task.interpolate_inputs_and_add_conversation_history(
+            inputs={"tenant": "../escape"}
+        )
+
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        output_file="{tenant}/output.txt",
+    )
+    task.interpolate_inputs_and_add_conversation_history(inputs={"tenant": "//tmp"})
+    assert task.output_file == "tmp/output.txt"
+
+
 def test_create_directory_true():
     """Test that directories are created when create_directory=True."""
     from pathlib import Path
