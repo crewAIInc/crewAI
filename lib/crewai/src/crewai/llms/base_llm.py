@@ -72,6 +72,8 @@ class JsonResponseFormat(TypedDict):
     type: Literal["json_object"]
 
 
+logger = logging.getLogger(__name__)
+
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
 _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
@@ -437,6 +439,41 @@ class BaseLLM(BaseModel, ABC):
             True if the LLM supports stop words, False otherwise.
         """
         return DEFAULT_SUPPORTS_STOP_WORDS
+
+    def preload_probe(self, system_prompt: str) -> None:
+        """Fire a 1-token completion to warm the provider's prompt cache.
+
+        Sends the agent's system prompt with ``max_tokens=1`` so the provider
+        commits the prefix to its cache (e.g. Anthropic prompt caching,
+        OpenAI prefix caching). Subsequent calls within the TTL window get
+        cache-read pricing instead of the cold-write path.
+
+        The call is best-effort: failures are logged as warnings and never
+        propagated so they cannot break crew execution.
+
+        Args:
+            system_prompt: The full system prompt to warm.
+        """
+        original_max_tokens: int | float | None = getattr(self, "max_tokens", None)
+        original_temperature = self.temperature
+        try:
+            # Temporarily override for the probe call.  We go through the
+            # custom __setattr__ that BaseLLM already provides so that
+            # subclass fields (max_tokens, temperature) are set correctly
+            # even if they are not declared on BaseLLM itself.
+            self.__setattr__("max_tokens", 1)
+            self.temperature = 0
+            self.call(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": "Ready."},
+                ],
+            )
+        except Exception as exc:
+            logger.warning("Cache preload probe failed: %s", exc)
+        finally:
+            self.__setattr__("max_tokens", original_max_tokens)
+            self.temperature = original_temperature
 
     def _supports_stop_words_implementation(self) -> bool:
         """Check if stop words are configured for this LLM instance.

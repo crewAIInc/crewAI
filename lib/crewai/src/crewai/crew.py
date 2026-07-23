@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Sequence
-from concurrent.futures import Future
+from concurrent.futures import Future, ThreadPoolExecutor
 from copy import copy as shallow_copy
 from hashlib import md5
 import json
@@ -376,6 +376,24 @@ class Crew(FlowTrackable, BaseModel):
     skills: list[Path | Skill | str] | None = Field(
         default=None,
         description="Skill search paths, inline SKILL.md strings, pre-loaded Skill objects, or '@org/name' registry refs applied to all agents in the crew.",
+    )
+    cache_preload: bool = Field(
+        default=False,
+        description=(
+            "When True, fire lightweight 1-token cache-warming probes for each "
+            "agent's system prompt at kickoff time so the provider's prompt cache "
+            "is warm before the first real task runs."
+        ),
+    )
+    cache_preload_strategy: Literal["parallel", "sequential", "shared_prefix"] = Field(
+        default="parallel",
+        description=(
+            "Strategy for cache preloading: "
+            "'parallel' fires probes concurrently, "
+            "'sequential' fires them one by one, "
+            "'shared_prefix' detects the common system-prompt prefix across agents "
+            "and warms it once before per-agent suffixes."
+        ),
     )
 
     security_config: SecurityConfig = Field(
@@ -1034,6 +1052,9 @@ class Crew(FlowTrackable, BaseModel):
         try:
             inputs = prepare_kickoff(self, inputs, input_files)
 
+            if self.cache_preload and len(self.agents) >= 2:
+                self._preload_caches()
+
             if self.process == Process.sequential:
                 result = self._run_sequential_process()
             elif self.process == Process.hierarchical:
@@ -1072,6 +1093,111 @@ class Crew(FlowTrackable, BaseModel):
 
     def _post_kickoff(self, result: CrewOutput) -> CrewOutput:
         return result
+
+    def _get_agent_system_prompt(self, agent: BaseAgent) -> str:
+        """Build the system prompt that would be sent to the LLM for *agent*.
+
+        This mirrors how ``Agent.create_agent_executor`` constructs the prompt
+        via :class:`Prompts` so the cache-warming probe uses the exact same
+        bytes the provider will later see on the first real call.
+        """
+        from crewai.utilities.prompts import Prompts
+
+        prompt_result = Prompts(
+            agent=agent,
+            has_tools=bool(agent.tools),
+            use_system_prompt=getattr(agent, "use_system_prompt", True),
+            system_template=getattr(agent, "system_template", None),
+            prompt_template=getattr(agent, "prompt_template", None),
+            response_template=getattr(agent, "response_template", None),
+        ).task_execution()
+
+        system: str = prompt_result.get("system", "") or ""
+        if system:
+            return system
+        prompt: str = prompt_result.get("prompt", "") or ""
+        return prompt
+
+    @staticmethod
+    def _common_prefix(strings: list[str]) -> str:
+        """Return the longest common character prefix of *strings*."""
+        if not strings:
+            return ""
+        shortest = min(strings, key=len)
+        for i, char in enumerate(shortest):
+            for s in strings:
+                if s[i] != char:
+                    return shortest[:i]
+        return shortest
+
+    def _preload_caches(self) -> None:
+        """Warm each agent's LLM prompt cache at kickoff time.
+
+        Fires lightweight 1-token completions so the provider's cache is
+        primed before the first real task runs.  Supports three strategies:
+
+        * ``parallel``  -- probes fired concurrently via a thread-pool.
+        * ``sequential`` -- probes fired one-by-one in agent order.
+        * ``shared_prefix`` -- detects the common system-prompt prefix across
+          agents.  If it is >= 1024 characters (the typical provider
+          cache-breakpoint threshold), it warms the shared prefix once,
+          then warms each per-agent suffix.  Falls back to *parallel* when
+          no meaningful shared prefix exists.
+        """
+        self._logger.log("info", "Cache preload: warming agent prompt caches")
+
+        agent_prompts: list[tuple[BaseAgent, str]] = []
+        for agent in self.agents:
+            prompt = self._get_agent_system_prompt(agent)
+            if prompt:
+                agent_prompts.append((agent, prompt))
+
+        if not agent_prompts:
+            return
+
+        strategy = self.cache_preload_strategy
+
+        if strategy == "shared_prefix":
+            prompts = [p for _, p in agent_prompts]
+            prefix = self._common_prefix(prompts)
+            min_prefix_len = 1024
+
+            if len(prefix) >= min_prefix_len:
+                self._logger.log(
+                    "info",
+                    f"Cache preload: shared prefix detected ({len(prefix)} chars), "
+                    "warming shared prefix first",
+                )
+                first_agent, _ = agent_prompts[0]
+                if isinstance(first_agent.llm, BaseLLM):
+                    first_agent.llm.preload_probe(prefix)
+
+                for agent, prompt in agent_prompts:
+                    if isinstance(agent.llm, BaseLLM):
+                        agent.llm.preload_probe(prompt)
+                return
+            self._logger.log(
+                "info",
+                f"Cache preload: shared prefix too short ({len(prefix)} chars), "
+                "falling back to parallel strategy",
+            )
+            strategy = "parallel"
+
+        if strategy == "parallel":
+            with ThreadPoolExecutor(max_workers=min(len(agent_prompts), 4)) as pool:
+                futures = []
+                for agent, prompt in agent_prompts:
+                    if isinstance(agent.llm, BaseLLM):
+                        futures.append(pool.submit(agent.llm.preload_probe, prompt))
+                for f in futures:
+                    f.result()
+
+        elif strategy == "sequential":
+            for agent, prompt in agent_prompts:
+                if isinstance(agent.llm, BaseLLM):
+                    agent.llm.preload_probe(prompt)
+
+        self._logger.log("info", "Cache preload: done")
 
     def kickoff_for_each(
         self,
