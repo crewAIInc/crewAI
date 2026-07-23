@@ -177,7 +177,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if provider.setup_messages(cast(ExecutorContext, cast(object, self))):
             return
 
-        from crewai.llms.cache import mark_cache_breakpoint
+        from crewai.llms.cache import mark_cache_breakpoint, supports_cache_breakpoint
+
+        use_cache = supports_cache_breakpoint(self.llm)
 
         if self.prompt is not None and "system" in self.prompt:
             system_prompt = self._format_prompt(
@@ -189,19 +191,19 @@ class CrewAgentExecutor(BaseAgentExecutor):
             # Cache breakpoints: end-of-system caches the per-agent stable
             # prefix; end-of-user caches the per-task stable prefix across
             # ReAct-loop iterations.
-            self.messages.append(
-                mark_cache_breakpoint(
-                    format_message_for_llm(system_prompt, role="system")
-                )
-            )
-            self.messages.append(
-                mark_cache_breakpoint(format_message_for_llm(user_prompt))
-            )
+            system_msg = format_message_for_llm(system_prompt, role="system")
+            user_msg = format_message_for_llm(user_prompt)
+            if use_cache:
+                system_msg = mark_cache_breakpoint(system_msg)
+                user_msg = mark_cache_breakpoint(user_msg)
+            self.messages.append(system_msg)
+            self.messages.append(user_msg)
         elif self.prompt is not None:
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
-            self.messages.append(
-                mark_cache_breakpoint(format_message_for_llm(user_prompt))
-            )
+            user_msg = format_message_for_llm(user_prompt)
+            if use_cache:
+                user_msg = mark_cache_breakpoint(user_msg)
+            self.messages.append(user_msg)
 
         provider.post_setup_messages(cast(ExecutorContext, cast(object, self)))
 
