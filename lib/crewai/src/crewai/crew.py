@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
@@ -847,6 +847,55 @@ class Crew(FlowTrackable, BaseModel):
                                 )
                             if not self.tasks[j].async_execution:
                                 break
+        return self
+
+    @model_validator(mode="after")
+    def validate_context_no_circular_dependencies(self) -> Self:
+        """Validates that task context dependencies do not contain cycles."""
+        task_ids = {id(task) for task in self.tasks}
+        visited: set[int] = set()
+
+        def iter_context_tasks(task: Task) -> Iterator[Task]:
+            if isinstance(task.context, list):
+                for context_task in task.context:
+                    if id(context_task) in task_ids:
+                        yield context_task
+
+        for task in self.tasks:
+            if id(task) in visited:
+                continue
+
+            path: list[Task] = [task]
+            on_path: dict[int, int] = {id(task): 0}
+            stack: list[tuple[Task, Iterator[Task]]] = [
+                (task, iter_context_tasks(task))
+            ]
+
+            while stack:
+                current_task, context_tasks = stack[-1]
+                for context_task in context_tasks:
+                    context_task_id = id(context_task)
+                    if context_task_id in on_path:
+                        cycle_tasks = [*path[on_path[context_task_id] :], context_task]
+                        cycle_descriptions = " -> ".join(
+                            cycle_task.description for cycle_task in cycle_tasks
+                        )
+                        raise ValueError(
+                            "Task context dependencies contain a circular dependency: "
+                            f"{cycle_descriptions}."
+                        )
+                    if context_task_id in visited:
+                        continue
+
+                    on_path[context_task_id] = len(path)
+                    path.append(context_task)
+                    stack.append((context_task, iter_context_tasks(context_task)))
+                    break
+                else:
+                    stack.pop()
+                    path.pop()
+                    on_path.pop(id(current_task), None)
+                    visited.add(id(current_task))
         return self
 
     @model_validator(mode="after")
