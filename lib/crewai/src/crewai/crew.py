@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable, Sequence
 from concurrent.futures import Future
+from contextlib import suppress
 from copy import copy as shallow_copy
 from hashlib import md5
 import json
@@ -1421,13 +1422,23 @@ class Crew(FlowTrackable, BaseModel):
     ) -> list[TaskOutput]:
         """Process pending async tasks and return their outputs."""
         task_outputs: list[TaskOutput] = []
-        for future_task, async_task, task_index in pending_tasks:
-            task_output = await async_task
-            task_outputs.append(task_output)
-            self._process_task_result(future_task, task_output)
-            self._store_execution_log(
-                future_task, task_output, task_index, was_replayed
+        try:
+            for future_task, async_task, task_index in pending_tasks:
+                task_output = await async_task
+                task_outputs.append(task_output)
+                self._process_task_result(future_task, task_output)
+                self._store_execution_log(
+                    future_task, task_output, task_index, was_replayed
+                )
+        except Exception:
+            for _, async_task, _ in pending_tasks:
+                if not async_task.done():
+                    async_task.cancel()
+            await asyncio.gather(
+                *(async_task for _, async_task, _ in pending_tasks),
+                return_exceptions=True,
             )
+            raise
         return task_outputs
 
     def _handle_crew_planning(self) -> None:
@@ -1990,13 +2001,22 @@ class Crew(FlowTrackable, BaseModel):
         was_replayed: bool = False,
     ) -> list[TaskOutput]:
         task_outputs: list[TaskOutput] = []
-        for future_task, future, task_index in futures:
-            task_output = future.result()
-            task_outputs.append(task_output)
-            self._process_task_result(future_task, task_output)
-            self._store_execution_log(
-                future_task, task_output, task_index, was_replayed
-            )
+        try:
+            for future_task, future, task_index in futures:
+                task_output = future.result()
+                task_outputs.append(task_output)
+                self._process_task_result(future_task, task_output)
+                self._store_execution_log(
+                    future_task, task_output, task_index, was_replayed
+                )
+        except Exception:
+            for _, future, _ in futures:
+                if not future.done():
+                    future.cancel()
+                else:
+                    with suppress(Exception):
+                        future.result()
+            raise
         return task_outputs
 
     @staticmethod
