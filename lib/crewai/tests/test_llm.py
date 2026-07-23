@@ -974,6 +974,81 @@ def test_validate_model_in_constants():
         is True
     )
 
+
+def test_matches_provider_pattern_custom_anthropic_names():
+    """Test that _matches_provider_pattern handles custom-deployed Anthropic model names.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/5893
+    Users with custom-deployed models (e.g. 'anthropic--claude-...') were filtered
+    out because pattern matching only supported ["claude-", "anthropic."] prefixes.
+    """
+    # Standard patterns still work
+    assert LLM._matches_provider_pattern("claude-3-5-sonnet", "anthropic") is True
+    assert LLM._matches_provider_pattern("anthropic.claude-v2", "anthropic") is True
+
+    # Custom-deployed model names with non-standard separators (issue #5893)
+    assert LLM._matches_provider_pattern("anthropic--claude-3-5-sonnet", "anthropic") is True
+    assert LLM._matches_provider_pattern("anthropic--claude-opus-4", "anthropic") is True
+
+    # Models containing "claude" anywhere in the name
+    assert LLM._matches_provider_pattern("my-claude-model", "anthropic") is True
+    assert LLM._matches_provider_pattern("custom-claude-3-haiku", "anthropic") is True
+
+    # Models starting with "anthropic" regardless of separator
+    assert LLM._matches_provider_pattern("anthropic_custom_model", "anthropic") is True
+    assert LLM._matches_provider_pattern("anthropic-custom", "anthropic") is True
+
+    # Unrelated models should not match
+    assert LLM._matches_provider_pattern("gpt-4o", "anthropic") is False
+    assert LLM._matches_provider_pattern("gemini-2.0-flash", "anthropic") is False
+    assert LLM._matches_provider_pattern("llama-3-70b", "anthropic") is False
+
+
+def test_validate_model_in_constants_custom_anthropic_names():
+    """Test that _validate_model_in_constants accepts custom Anthropic model names.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/5893
+    """
+    # Custom naming conventions should be accepted via pattern matching fallback
+    assert LLM._validate_model_in_constants("anthropic--claude-3-5-sonnet", "anthropic") is True
+    assert LLM._validate_model_in_constants("anthropic--claude-3-5-sonnet", "claude") is True
+    assert LLM._validate_model_in_constants("custom-claude-model", "anthropic") is True
+
+
+def test_infer_provider_custom_anthropic_names():
+    """Test that _infer_provider_from_model infers anthropic for custom model names.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/5893
+    Models like 'anthropic--claude-...' should be inferred as anthropic, not openai.
+    """
+    assert LLM._infer_provider_from_model("anthropic--claude-3-5-sonnet") == "anthropic"
+    assert LLM._infer_provider_from_model("claude-3-5-sonnet") == "anthropic"
+
+    # Standard models should still be correctly inferred
+    assert LLM._infer_provider_from_model("gpt-4o") == "openai"
+    assert LLM._infer_provider_from_model("gemini-2.0-flash") == "gemini"
+
+
+def test_is_anthropic_model_custom_names():
+    """Test that _is_anthropic_model detects custom-deployed Anthropic models.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/5893
+    """
+    # Standard patterns
+    assert LLM._is_anthropic_model("anthropic/claude-3-5-sonnet") is True
+    assert LLM._is_anthropic_model("claude-3-5-sonnet") is True
+
+    # Custom naming with "claude-" substring
+    assert LLM._is_anthropic_model("anthropic--claude-3-5-sonnet") is True
+
+    # Bedrock-style naming with "anthropic."
+    assert LLM._is_anthropic_model("anthropic.claude-v2") is True
+
+    # Non-anthropic models
+    assert LLM._is_anthropic_model("gpt-4o") is False
+    assert LLM._is_anthropic_model("gemini-2.0-flash") is False
+
+
 @pytest.mark.vcr(record_mode="once",decode_compressed_response=True)
 def test_usage_info_non_streaming_with_call():
     llm = LLM(model="gpt-4o-mini", is_litellm=True)
