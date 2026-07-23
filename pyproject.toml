@@ -172,7 +172,8 @@ info = "Commits must follow Conventional Commits 1.0.0."
 [tool.uv]
 exclude-newer = "3 days"
 # These security fixes are newer than the global supply-chain cutoff.
-exclude-newer-package = { pypdf = "2026-06-18T00:00:00Z", msgpack = "2026-06-20T00:00:00Z", pydantic-settings = "2026-06-20T00:00:00Z", langsmith = "2026-06-20T00:00:00Z" }
+# chdb 4.2.1 (crewai-tools[chdb] minimum) released 2026-07-13, inside the rolling window.
+exclude-newer-package = { pypdf = "2026-06-18T00:00:00Z", msgpack = "2026-06-20T00:00:00Z", pydantic-settings = "2026-06-20T00:00:00Z", langsmith = "2026-06-20T00:00:00Z", chdb = "2026-07-14T00:00:00Z" }
 
 # composio-core pins rich<14 but textual requires rich>=14.
 # onnxruntime 1.24+ dropped Python 3.10 wheels; cap it so qdrant[fastembed] resolves on 3.10.
