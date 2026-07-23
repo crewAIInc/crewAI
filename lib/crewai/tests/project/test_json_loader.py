@@ -401,6 +401,33 @@ class TestLoadAgentFromDefinition:
         assert issubclass(response_format, BaseModel)
         assert response_format.__name__ == "AnswerModel"
 
+    def test_skills_resolve_relative_to_project_root_not_cwd(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        project_root = tmp_path / "project"
+        skill_dir = project_root / "skills" / "greeting"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text(
+            "---\nname: greeting\ndescription: Greets the user.\n---\nSay hello.\n"
+        )
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir()
+        monkeypatch.chdir(elsewhere)
+
+        agent, _ = load_agent_from_definition(
+            {
+                "role": "Greeter",
+                "goal": "Greet people",
+                "backstory": "Friendly greeter.",
+                "input": "Greet the user",
+                "skills": ["./skills"],
+            },
+            source="agent action",
+            project_root=project_root,
+        )
+
+        assert [skill.name for skill in agent.skills or []] == ["greeting"]
+
 
 class TestResolveTools:
     def test_import_ref_tool_resolves(self, tmp_path, monkeypatch):
@@ -673,3 +700,56 @@ class TestCustomToolPathSafety:
 
         assert len(tools) == 1
         assert tools[0].name == "echo"
+
+
+class TestResolveSkillPathStrings:
+    def test_resolves_relative_to_project_root_not_cwd(self, tmp_path, monkeypatch):
+        from crewai.project.json_loader import _resolve_skill_path_strings
+
+        project_root = tmp_path / "project"
+        (project_root / "skills").mkdir(parents=True)
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir()
+        monkeypatch.chdir(elsewhere)
+
+        resolved = _resolve_skill_path_strings(
+            ["./skills"], "agent: skills", project_root
+        )
+
+        assert resolved == [(project_root / "skills").resolve()]
+
+    def test_registry_ref_passes_through_unchanged(self):
+        from crewai.project.json_loader import _resolve_skill_path_strings
+
+        resolved = _resolve_skill_path_strings(
+            ["@acme/greeting"], "agent: skills", None
+        )
+
+        assert resolved == ["@acme/greeting"]
+
+    def test_inline_skill_definition_passes_through_unchanged(self):
+        from crewai.project.json_loader import _resolve_skill_path_strings
+
+        inline = "---\nname: greeting\ndescription: Greets.\n---\nSay hi.\n"
+
+        resolved = _resolve_skill_path_strings([inline], "agent: skills", None)
+
+        assert resolved == [inline]
+
+    def test_non_string_items_pass_through_unchanged(self):
+        from crewai.project.json_loader import _resolve_skill_path_strings
+        from crewai.skills.models import Skill, SkillFrontmatter
+
+        preloaded = Skill(
+            frontmatter=SkillFrontmatter(name="greeting", description="Greets."),
+            path=Path("."),
+        )
+
+        resolved = _resolve_skill_path_strings([preloaded], "agent: skills", None)
+
+        assert resolved == [preloaded]
+
+    def test_non_list_value_passes_through_unchanged(self):
+        from crewai.project.json_loader import _resolve_skill_path_strings
+
+        assert _resolve_skill_path_strings(None, "agent: skills", None) is None

@@ -1383,6 +1383,10 @@ def _resolve_agent_python_refs(
     _resolve_object_reference_fields(
         kwargs, source, _AGENT_OBJECT_REF_FIELDS, project_root
     )
+    if "skills" in kwargs:
+        kwargs["skills"] = _resolve_skill_path_strings(
+            kwargs["skills"], f"{source}: skills", project_root
+        )
 
 
 def _resolve_task_python_refs(
@@ -1442,6 +1446,44 @@ def _resolve_crew_python_refs(
     _resolve_object_reference_fields(
         kwargs, source, _CREW_OBJECT_REF_FIELDS, project_root
     )
+    if "skills" in kwargs:
+        kwargs["skills"] = _resolve_skill_path_strings(
+            kwargs["skills"], f"{source}: skills", project_root
+        )
+
+
+def _is_skill_registry_ref(value: str) -> bool:
+    return value.startswith("@")
+
+
+def _is_skill_inline_definition(value: str) -> bool:
+    return value.lstrip().startswith("---\n")
+
+
+def _resolve_skill_path_strings(
+    value: Any,
+    source: str | Path,
+    project_root: Path | None,
+) -> Any:
+    """Resolve filesystem 'skills' path strings against project_root.
+
+    Mirrors how 'tools' and 'output_pydantic' resolve relative paths against
+    project_root instead of the process cwd, so the same crew definition
+    behaves the same way regardless of the cwd at load time. Registry
+    references ('@org/name'), inline SKILL.md content, and any item already
+    resolved to a non-string object (e.g. via a Python reference) are passed
+    through unchanged.
+    """
+    if not isinstance(value, list):
+        return value
+    return [
+        Path(_resolve_project_path(item, project_root, f"{source}[{index}]"))
+        if isinstance(item, str)
+        and not _is_skill_registry_ref(item)
+        and not _is_skill_inline_definition(item)
+        else item
+        for index, item in enumerate(value)
+    ]
 
 
 def _resolve_object_reference_fields(
