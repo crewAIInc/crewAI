@@ -1413,13 +1413,29 @@ def format_native_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
     """Format native tool output when a tool explicitly defines a formatter."""
     formatter = inspect.getattr_static(tool, "format_output_for_agent", None)
     if formatter is None:
-        return str(raw_result)
+        return _serialize_tool_result(raw_result)
 
     runtime_formatter = getattr(tool, "format_output_for_agent", None)
     if not callable(runtime_formatter):
-        return str(raw_result)
+        return _serialize_tool_result(raw_result)
 
     return str(runtime_formatter(raw_result))
+
+
+def _serialize_tool_result(raw_result: Any) -> str:
+    """Serialize a tool result to a JSON string when possible.
+
+    For dict/list types, uses json.dumps() to produce valid JSON instead of
+    Python repr. Falls back to str() for non-serializable types.
+    """
+    import json
+
+    if isinstance(raw_result, (dict, list)):
+        try:
+            return json.dumps(raw_result)
+        except (TypeError, ValueError):
+            return str(raw_result)
+    return str(raw_result)
 
 
 def execute_single_native_tool_call(

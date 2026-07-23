@@ -62,7 +62,7 @@ def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
 
     result_schema = getattr(tool, "result_schema", None)
     if not (isinstance(result_schema, type) and issubclass(result_schema, BaseModel)):
-        return str(raw_result)
+        return _serialize_to_json_string(raw_result)
 
     try:
         validation_input = raw_result
@@ -84,7 +84,21 @@ def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
             RuntimeWarning,
             stacklevel=2,
         )
-        return str(raw_result)
+        return _serialize_to_json_string(raw_result)
+
+
+def _serialize_to_json_string(raw_result: Any) -> str:
+    """Serialize a tool result to a JSON string when possible.
+
+    For dict/list types, uses json.dumps() to produce valid JSON instead of
+    Python repr. Falls back to str() for non-serializable types.
+    """
+    if isinstance(raw_result, (dict, list)):
+        try:
+            return json.dumps(raw_result)
+        except (TypeError, ValueError):
+            return str(raw_result)
+    return str(raw_result)
 
 
 if TYPE_CHECKING:
