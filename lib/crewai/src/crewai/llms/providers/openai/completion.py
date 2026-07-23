@@ -387,7 +387,13 @@ class OpenAICompletion(BaseLLM):
         if self.api_key is None:
             self.api_key = os.getenv("OPENAI_API_KEY")
             if self.api_key is None:
-                raise ValueError("OPENAI_API_KEY is required")
+                raise ValueError(
+                    "OPENAI_API_KEY is required. Set the OPENAI_API_KEY "
+                    "environment variable or pass api_key to LLM(). On CrewAI "
+                    "AMP, code-first deployments read API keys from deployment "
+                    "environment variables — org-wide LLM Connections do not "
+                    "apply to code-first deployments."
+                )
 
         base_params = {
             "api_key": self.api_key,
