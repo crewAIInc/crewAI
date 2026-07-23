@@ -393,3 +393,108 @@ def test_seal_boundary_id_mismatch_fails() -> None:
     seal = {"boundary_id": "crew-run-B", "sealed": True, "total": 2}
 
     assert verify_contiguity(records, seal=seal) is False
+
+
+
+# --- Missing boundary_id fail-closed ---
+
+
+def test_missing_boundary_id_fails_when_others_have_it() -> None:
+    """A record without boundary_id in a set where others have it must fail.
+
+    verify_contiguity() fails closed: if any record carries boundary_id,
+    all records must carry it. A missing boundary_id is treated as a
+    potential splice from an unidentified run.
+    """
+    from crewai.governance.governance_decision import verify_contiguity
+
+    records = [
+        {
+            "decision_id": "d-run-a-0",
+            "boundary_id": "crew-run-A",
+            "seq": 0,
+            "running_count": 1,
+        },
+        {
+            "decision_id": "d-run-a-1",
+            # boundary_id MISSING — must fail closed
+            "seq": 1,
+            "running_count": 2,
+        },
+        {
+            "decision_id": "d-run-a-2",
+            "boundary_id": "crew-run-A",
+            "seq": 2,
+            "running_count": 3,
+        },
+    ]
+
+    assert verify_contiguity(records) is False
+
+
+def test_seal_missing_boundary_id_fails_when_records_have_it() -> None:
+    """A seal without boundary_id when records carry it must fail closed."""
+    from crewai.governance.governance_decision import verify_contiguity
+
+    records = [
+        {
+            "decision_id": "d-run-a-0",
+            "boundary_id": "crew-run-A",
+            "seq": 0,
+            "running_count": 1,
+        },
+        {
+            "decision_id": "d-run-a-1",
+            "boundary_id": "crew-run-A",
+            "seq": 1,
+            "running_count": 2,
+        },
+    ]
+
+    # Seal has NO boundary_id
+    seal = {"sealed": True, "total": 2}
+
+    assert verify_contiguity(records, seal=seal) is False
+
+
+# --- Isolated params_hash regression ---
+
+
+def test_only_params_hash_removed_fails_allow_validation() -> None:
+    """Removing ONLY params_hash from a valid allow decision must fail.
+
+    This isolates the params_hash invariant — the decision is otherwise
+    fully valid with all other binding fields present.
+    """
+    from crewai.governance.governance_decision import validate_governance_decision
+
+    # Start with a fully valid allow decision
+    valid_allow = {
+        "decision_id": "d-isolated-001",
+        "decision": "allow",
+        "agent_id": "bot-1",
+        "tool": "search",
+        "normalized_scope": "docs/public",
+        "normalization_id": "jcs-sha256",
+        "intent_digest": "sha256:abc123",
+        "intent_ref": "sha256:def456",
+        "idempotency_key": "idem:isolated-001",
+        "params_hash": "sha256:params-valid",
+        "issued_at": "2026-07-22T10:00:00Z",
+        "policy_refs": ["allow-v1"],
+        "target_state_digest": None,
+    }
+
+    # Verify it passes first
+    is_valid, errors = validate_governance_decision(valid_allow)
+    assert is_valid, f"Baseline should be valid: {errors}"
+
+    # Now remove ONLY params_hash
+    missing_hash = {k: v for k, v in valid_allow.items() if k != "params_hash"}
+
+    is_valid, errors = validate_governance_decision(missing_hash)
+    assert not is_valid
+    assert any("params_hash" in e for e in errors)
+    # Verify no OTHER fields caused failure (only params_hash)
+    non_params_errors = [e for e in errors if "params_hash" not in e]
+    assert len(non_params_errors) == 0, f"Unexpected errors: {non_params_errors}"
