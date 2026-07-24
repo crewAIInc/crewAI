@@ -1,0 +1,88 @@
+---
+title: "Crew Studio"
+description: "AI 보조, 비주얼 에디터, 통합 테스트로 새로운 자동화를 구축하세요."
+icon: "pencil"
+mode: "wide"
+---
+
+## 개요
+
+Crew Studio는 자연어와 시각적 워크플로 에디터로 처음부터 자동화를 만드는 인터랙티브한 AI 보조 작업 공간입니다.
+
+<Frame>
+  ![Crew Studio 개요](/images/enterprise/crew-studio-overview.png)
+</Frame>
+
+## 프롬프트 기반 생성
+
+- 원하는 자동화를 설명하면, AI가 에이전트/태스크/도구를 생성합니다.
+- 마이크 아이콘으로 음성 입력을 사용할 수 있습니다.
+- 공통 사용 사례용 프롬프트 템플릿으로 시작할 수 있습니다.
+
+<Frame>
+  ![프롬프트 빌더](/images/enterprise/crew-studio-prompt.png)
+</Frame>
+
+## 비주얼 에디터
+
+캔버스는 노드/엣지 형태로 플로우를 표현하며, 세 개의 보조 패널로 코드 없이 쉽게 구성할 수 있습니다 (일명 "vibe coding AI Agents"):
+
+- **AI Thoughts (좌측)**: 설계 중 스트리밍 추론
+- **Canvas (중앙)**: 에이전트/태스크 노드와 연결
+- **Resources (우측)**: 드래그앤드롭 컴포넌트 (에이전트, 태스크, 도구)
+
+드래그앤드롭으로 캔버스를 구성하거나, 채팅 섹션으로 에이전트를 생성할 수 있으며 두 방식은 상태를 공유합니다.
+
+<Frame>
+  ![비주얼 캔버스](/images/enterprise/crew-studio-canvas.png)
+</Frame>
+
+## 실행 & 디버깅
+
+<b>Execution</b> 뷰로 전환하여 실행을 관찰하세요:
+
+- 이벤트 타임라인
+- 상세 로그 (Details, Messages, Raw Data)
+- 게시 전 로컬 실행
+
+<Frame>
+  ![실행 뷰](/images/enterprise/crew-studio-execution.png)
+</Frame>
+
+## 게시 & 내보내기
+
+- <b>Publish</b>로 라이브 자동화 배포
+- <b>Download</b>로 소스 ZIP 다운로드 (로컬 개발용)
+
+<Frame>
+  ![게시 & 다운로드](/images/enterprise/crew-studio-publish.png)
+</Frame>
+
+게시 후 **Options** 드롭다운에서 `chat with this crew`, `Export React Component`, `Export as MCP`를 사용할 수 있습니다.
+
+<Frame>
+  ![게시된 자동화](/images/enterprise/crew-studio-published.png)
+</Frame>
+
+## 모범 사례
+
+- Studio에서 빠르게 반복하고, 안정화 후 게시
+- 도구 권한은 최소한으로 제한
+- Traces로 동작/성능 검증
+
+## 관련 문서
+
+<CardGroup cols={4}>
+  <Card title="Crew Studio 활성화" href="/ko/enterprise/guides/enable-crew-studio" icon="palette">
+    Crew Studio를 활성화하세요.
+  </Card>
+  <Card title="크루 빌드" href="/ko/enterprise/guides/build-crew" icon="paintbrush">
+    크루를 빌드하세요.
+  </Card>
+  <Card title="크루 배포" href="/ko/enterprise/guides/deploy-to-amp" icon="rocket">
+    GitHub 또는 ZIP 파일로 크루 배포.
+  </Card>
+  <Card title="React 컴포넌트 내보내기" href="/ko/enterprise/guides/react-component-export" icon="download">
+    React 컴포넌트를 내보내세요.
+  </Card>
+</CardGroup>
