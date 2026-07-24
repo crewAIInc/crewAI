@@ -367,7 +367,7 @@ def test_output_json_sequential():
 
     crew = Crew(agents=[scorer], tasks=[task], process=Process.sequential)
     result = crew.kickoff()
-    assert '{"score": 4}' == result.json
+    assert '{"score": 4}' == result.json_output
     assert result.to_dict() == {"score": 4}
 
     if os.path.exists(output_file):
@@ -400,7 +400,7 @@ def test_output_json_hierarchical():
         manager_llm="gpt-4o",
     )
     result = crew.kickoff()
-    assert result.json == '{"score": 4}'
+    assert result.json_output == '{"score": 4}'
     assert result.to_dict() == {"score": 4}
 
 
@@ -481,7 +481,7 @@ def test_no_inject_date():
 
 
 @pytest.mark.vcr()
-def test_json_property_without_output_json():
+def test_json_output_property_without_output_json():
     class ScoreOutput(BaseModel):
         score: int
 
@@ -503,7 +503,7 @@ def test_json_property_without_output_json():
     result = crew.kickoff()
 
     with pytest.raises(ValueError) as excinfo:
-        _ = result.json  # Attempt to access the json property
+        _ = result.json_output  # Attempt to access the json_output property
 
     assert "No JSON output found in the final task." in str(excinfo.value)
 
@@ -629,7 +629,7 @@ def test_output_json_to_another_task():
 
     crew = Crew(agents=[scorer], tasks=[task1, task2])
     result = crew.kickoff()
-    assert '{"score": 3}' == result.json
+    assert '{"score": 3}' == result.json_output
 
 
 @pytest.mark.vcr()

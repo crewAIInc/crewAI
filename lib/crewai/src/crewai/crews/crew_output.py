@@ -42,7 +42,15 @@ class CrewOutput(BaseModel):
         return self.token_usage.model_dump()
 
     @property
-    def json(self) -> str | None:  # type: ignore[override]
+    def json_output(self) -> str | None:
+        """Get the JSON string representation of the crew output.
+
+        Returns:
+            JSON string representation of the crew output.
+
+        Raises:
+            ValueError: If the final task output format is not JSON.
+        """
         if self.tasks_output[-1].output_format != OutputFormat.JSON:
             raise ValueError(
                 "No JSON output found in the final task. Please make sure to set the output_json property in the final task in your crew."
