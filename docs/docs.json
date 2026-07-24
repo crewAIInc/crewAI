@@ -307,7 +307,8 @@
                           "edge/en/tools/integration/overview",
                           "edge/en/tools/integration/bedrockinvokeagenttool",
                           "edge/en/tools/integration/crewaiautomationtool",
-                          "edge/en/tools/integration/mergeagenthandlertool"
+                          "edge/en/tools/integration/mergeagenthandlertool",
+                          "edge/en/tools/integration/crewai-paysafe.mdx"
                         ]
                       },
                       {
