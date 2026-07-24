@@ -16,6 +16,7 @@ from crewai.hooks.tool_hooks import (
     clear_before_tool_call_hooks,
     register_after_tool_call_hook,
 )
+from crewai.agents.parser import AgentAction, AgentFinish
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.agent_utils import (
     _asummarize_chunks,
@@ -27,6 +28,7 @@ from crewai.utilities.agent_utils import (
     execute_single_native_tool_call,
     NativeToolCallResult,
     parse_tool_call_args,
+    process_llm_response,
     summarize_messages,
 )
 
@@ -1256,3 +1258,107 @@ class TestExecuteSingleNativeToolCall:
         assert isinstance(result, NativeToolCallResult)
         assert result.result_as_answer is False
         assert "blocked by hook" in result.result
+
+
+class TestProcessLlmResponse:
+    """Tests for process_llm_response fabricated-Observation recovery.
+
+    Models that do not support stop words (e.g. gpt-5 and o1 family) generate
+    past the point where the "\nObservation:" stop sequence would have cut the
+    completion, fabricating an Observation and Final Answer after a real tool
+    call. process_llm_response must discard the fabricated continuation so the
+    actual Action executes.
+    """
+
+    FABRICATED_TRANSCRIPT = (
+        "Thought: I need to search the web for the latest AI trends.\n"
+        'Action: web_search\nAction Input: {"search_query": "latest AI trends 2026"}\n'
+        "Observation: The top AI trends are multimodal models and agentic workflows.\n"
+        "Thought: I now know the final answer.\n"
+        "Final Answer: The top AI trends are multimodal models and agentic workflows."
+    )
+
+    def test_fabricated_observation_recovers_real_action(self) -> None:
+        """Without stop words, the real Action wins over a fabricated Final Answer."""
+        result = process_llm_response(self.FABRICATED_TRANSCRIPT, use_stop_words=False)
+
+        assert isinstance(result, AgentAction)
+        assert result.tool == "web_search"
+        assert "latest AI trends 2026" in result.tool_input
+        assert "Observation:" not in result.text
+
+    def test_stop_word_models_keep_final_answer(self) -> None:
+        """With stop words supported, existing final-answer semantics are unchanged."""
+        result = process_llm_response(self.FABRICATED_TRANSCRIPT, use_stop_words=True)
+
+        assert isinstance(result, AgentFinish)
+        assert (
+            result.output
+            == "The top AI trends are multimodal models and agentic workflows."
+        )
+
+    @pytest.mark.parametrize("use_stop_words", [True, False])
+    def test_final_answer_only_unchanged(self, use_stop_words: bool) -> None:
+        """A plain final answer parses as AgentFinish regardless of stop words."""
+        text = "Thought: I know this already.\nFinal Answer: Paris is the capital."
+        result = process_llm_response(text, use_stop_words=use_stop_words)
+
+        assert isinstance(result, AgentFinish)
+        assert result.output == "Paris is the capital."
+
+    def test_final_answer_before_action_text_unchanged(self) -> None:
+        """Action-format text quoted after the final answer is not treated as a tool call."""
+        text = (
+            "Thought: I already know this.\n"
+            "Final Answer: To call a tool, respond using:\n"
+            "Action: the tool name\n"
+            "Action Input: the tool arguments\n"
+            "Observation: the tool result"
+        )
+        result = process_llm_response(text, use_stop_words=False)
+
+        assert isinstance(result, AgentFinish)
+
+    def test_observation_substring_in_action_input_preserved(self) -> None:
+        """An 'Observation:' inside the Action Input payload is not a truncation point.
+
+        The fabricated Observation is emitted on its own line, so anchoring the
+        truncation on the "\nObservation:" stop sequence leaves a payload that
+        merely mentions the word intact.
+        """
+        text = (
+            "Thought: I need to look this term up.\n"
+            'Action: web_search\n'
+            'Action Input: {"search_query": "what does Observation: mean in ReAct"}\n'
+            "Observation: It is the tool result step.\n"
+            "Final Answer: Observation is the tool result step in ReAct."
+        )
+        result = process_llm_response(text, use_stop_words=False)
+
+        assert isinstance(result, AgentAction)
+        assert result.tool == "web_search"
+        assert "what does Observation: mean in ReAct" in result.tool_input
+
+    def test_action_without_observation_unchanged(self) -> None:
+        """An Action followed directly by a Final Answer keeps current behavior."""
+        text = (
+            "Thought: I need to search.\n"
+            'Action: web_search\nAction Input: {"search_query": "AI trends"}\n'
+            "Final Answer: The top AI trends are multimodal models."
+        )
+        result = process_llm_response(text, use_stop_words=False)
+
+        assert isinstance(result, AgentFinish)
+        assert result.output == "The top AI trends are multimodal models."
+
+    @pytest.mark.parametrize("use_stop_words", [True, False])
+    def test_action_only_returns_agent_action(self, use_stop_words: bool) -> None:
+        """A well-formed tool call parses as AgentAction regardless of stop words."""
+        text = (
+            "Thought: I need to search.\n"
+            'Action: web_search\nAction Input: {"search_query": "AI trends"}'
+        )
+        result = process_llm_response(text, use_stop_words=use_stop_words)
+
+        assert isinstance(result, AgentAction)
+        assert result.tool == "web_search"

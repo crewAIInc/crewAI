@@ -17,7 +17,7 @@ from crewai_core.settings import Settings
 from pydantic import BaseModel
 from rich.console import Console
 
-from crewai.agents.constants import FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
+from crewai.agents.constants import ACTION_INPUT_REGEX, FINAL_ANSWER_ACTION
 from crewai.agents.parser import (
     AgentAction,
     AgentFinish,
@@ -586,12 +586,20 @@ def process_llm_response(
     Returns:
         Either an AgentAction or AgentFinish
     """
-    if not use_stop_words:
-        try:
-            format_answer(answer)
-        except OutputParserError as e:
-            if FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE in e.error:
-                answer = answer.split("Observation:")[0].strip()
+    if not use_stop_words and FINAL_ANSWER_ACTION in answer:
+        action_match = ACTION_INPUT_REGEX.search(answer)
+        final_answer_idx = answer.find(FINAL_ANSWER_ACTION)
+        if action_match and action_match.start() < final_answer_idx:
+            # Without the "\nObservation:" stop sequence the model generates past
+            # the real tool call, fabricating an Observation and Final Answer.
+            # Discard the fabricated continuation so the actual Action executes.
+            # Anchor on the newline (the real stop sequence) so an "Observation:"
+            # substring inside the Action Input payload isn't mistaken for it.
+            observation_idx = answer.find(
+                "\nObservation:", action_match.start(), final_answer_idx
+            )
+            if observation_idx != -1:
+                answer = answer[:observation_idx].strip()
 
     return format_answer(answer)
 
