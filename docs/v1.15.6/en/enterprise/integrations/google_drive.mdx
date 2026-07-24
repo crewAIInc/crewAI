@@ -1,0 +1,239 @@
+---
+title: Google Drive Integration
+description: "File storage and management with Google Drive integration for CrewAI."
+icon: "google"
+mode: "wide"
+---
+
+## Overview
+
+Enable your agents to manage files and folders through Google Drive. Upload, download, organize, and share files, create folders, and streamline your document management workflows with AI-powered automation.
+
+## Prerequisites
+
+Before using the Google Drive integration, ensure you have:
+
+- A [CrewAI AMP](https://app.crewai.com) account with an active subscription
+- A Google account with Google Drive access
+- Connected your Google account through the [Integrations page](https://app.crewai.com/crewai_plus/connectors)
+
+## Setting Up Google Drive Integration
+
+### 1. Connect Your Google Account
+
+1. Navigate to [CrewAI AMP Integrations](https://app.crewai.com/crewai_plus/connectors)
+2. Find **Google Drive** in the Authentication Integrations section
+3. Click **Connect** and complete the OAuth flow
+4. Grant the necessary permissions for file and folder management
+5. Copy your Enterprise Token from [Integration Settings](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. Install Required Package
+
+```bash
+uv add crewai-tools
+```
+
+### 3. Environment Variable Setup
+
+<Note>
+  To use integrations with `Agent(apps=[])`, you must set the
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise
+  Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+Or add it to your `.env` file:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## Available Actions
+
+<AccordionGroup>
+  <Accordion title="google_drive/get_file">
+    **Description:** Get a file by ID from Google Drive.
+
+    **Parameters:**
+    - `file_id` (string, required): The ID of the file to retrieve.
+
+  </Accordion>
+
+  <Accordion title="google_drive/list_files">
+    **Description:** List files in Google Drive.
+
+    **Parameters:**
+    - `q` (string, optional): Query string to filter files (example: "name contains 'report'").
+    - `page_size` (integer, optional): Maximum number of files to return (default: 100, max: 1000).
+    - `page_token` (string, optional): Token for retrieving the next page of results.
+    - `order_by` (string, optional): Sort order (example: "name", "createdTime desc", "modifiedTime").
+    - `spaces` (string, optional): Comma-separated list of spaces to query (drive, appDataFolder, photos).
+
+  </Accordion>
+
+  <Accordion title="google_drive/upload_file">
+    **Description:** Upload a file to Google Drive.
+
+    **Parameters:**
+    - `name` (string, required): Name of the file to create.
+    - `content` (string, required): Content of the file to upload.
+    - `mime_type` (string, optional): MIME type of the file (example: "text/plain", "application/pdf").
+    - `parent_folder_id` (string, optional): ID of the parent folder where the file should be created.
+    - `description` (string, optional): Description of the file.
+
+  </Accordion>
+
+  <Accordion title="google_drive/download_file">
+    **Description:** Download a file from Google Drive.
+
+    **Parameters:**
+    - `file_id` (string, required): The ID of the file to download.
+    - `mime_type` (string, optional): MIME type for export (required for Google Workspace documents).
+
+  </Accordion>
+
+  <Accordion title="google_drive/create_folder">
+    **Description:** Create a new folder in Google Drive.
+
+    **Parameters:**
+    - `name` (string, required): Name of the folder to create.
+    - `parent_folder_id` (string, optional): ID of the parent folder where the new folder should be created.
+    - `description` (string, optional): Description of the folder.
+
+  </Accordion>
+
+  <Accordion title="google_drive/delete_file">
+    **Description:** Delete a file from Google Drive.
+
+    **Parameters:**
+    - `file_id` (string, required): The ID of the file to delete.
+
+  </Accordion>
+
+  <Accordion title="google_drive/share_file">
+    **Description:** Share a file in Google Drive with specific users or make it public.
+
+    **Parameters:**
+    - `file_id` (string, required): The ID of the file to share.
+    - `role` (string, required): The role granted by this permission (reader, writer, commenter, owner).
+    - `type` (string, required): The type of the grantee (user, group, domain, anyone).
+    - `email_address` (string, optional): The email address of the user or group to share with (required for user/group types).
+    - `domain` (string, optional): The domain to share with (required for domain type).
+    - `send_notification_email` (boolean, optional): Whether to send a notification email (default: true).
+    - `email_message` (string, optional): A plain text custom message to include in the notification email.
+
+  </Accordion>
+
+  <Accordion title="google_drive/update_file">
+    **Description:** Update an existing file in Google Drive.
+
+    **Parameters:**
+    - `file_id` (string, required): The ID of the file to update.
+    - `name` (string, optional): New name for the file.
+    - `content` (string, optional): New content for the file.
+    - `mime_type` (string, optional): New MIME type for the file.
+    - `description` (string, optional): New description for the file.
+    - `add_parents` (string, optional): Comma-separated list of parent folder IDs to add.
+    - `remove_parents` (string, optional): Comma-separated list of parent folder IDs to remove.
+
+  </Accordion>
+</AccordionGroup>
+
+## Usage Examples
+
+### Basic Google Drive Agent Setup
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent with Google Drive capabilities
+drive_agent = Agent(
+    role="File Manager",
+    goal="Manage files and folders in Google Drive efficiently",
+    backstory="An AI assistant specialized in document and file management.",
+    apps=['google_drive']  # All Google Drive actions will be available
+)
+
+# Task to organize files
+organize_files_task = Task(
+    description="List all files in the root directory and organize them into appropriate folders",
+    agent=drive_agent,
+    expected_output="Summary of files organized with folder structure"
+)
+
+# Run the task
+crew = Crew(
+    agents=[drive_agent],
+    tasks=[organize_files_task]
+)
+
+crew.kickoff()
+```
+
+### Filtering Specific Google Drive Tools
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create agent with specific Google Drive actions only
+file_manager_agent = Agent(
+    role="Document Manager",
+    goal="Upload and manage documents efficiently",
+    backstory="An AI assistant that focuses on document upload and organization.",
+    apps=[
+        'google_drive/upload_file',
+        'google_drive/create_folder',
+        'google_drive/share_file'
+    ]  # Specific Google Drive actions
+)
+
+# Task to upload and share documents
+document_task = Task(
+    description="Upload the quarterly report and share it with the finance team",
+    agent=file_manager_agent,
+    expected_output="Document uploaded and sharing permissions configured"
+)
+
+crew = Crew(
+    agents=[file_manager_agent],
+    tasks=[document_task]
+)
+
+crew.kickoff()
+```
+
+### Advanced File Management
+
+```python
+from crewai import Agent, Task, Crew
+
+file_organizer = Agent(
+    role="File Organizer",
+    goal="Maintain organized file structure and manage permissions",
+    backstory="An experienced file manager who ensures proper organization and access control.",
+    apps=['google_drive']
+)
+
+# Complex task involving multiple Google Drive operations
+organization_task = Task(
+    description="""
+    1. List all files in the shared folder
+    2. Create folders for different document types (Reports, Presentations, Spreadsheets)
+    3. Move files to appropriate folders based on their type
+    4. Set appropriate sharing permissions for each folder
+    5. Create a summary document of the organization changes
+    """,
+    agent=file_organizer,
+    expected_output="Files organized into categorized folders with proper permissions and summary report"
+)
+
+crew = Crew(
+    agents=[file_organizer],
+    tasks=[organization_task]
+)
+
+crew.kickoff()
+```
