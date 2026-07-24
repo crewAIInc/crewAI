@@ -179,6 +179,18 @@ class TestFlowStreamingOutput:
         list(streaming)
         assert streaming.is_completed is True
 
+    def test_result_can_legitimately_be_none(self) -> None:
+        """Test that a flow result that is legitimately None (e.g. a final
+        method with no return value) does not raise, distinguishing 'never
+        set' from 'set to None'."""
+
+        def empty_gen() -> Generator[StreamChunk, None, None]:
+            yield StreamChunk(content="test")
+
+        streaming = FlowStreamingOutput(sync_iterator=empty_gen())
+        streaming._set_result(None)
+        assert streaming.result is None
+
 
 class TestCrewKickoffStreaming:
     """Tests for Crew(stream=True).kickoff() method."""
