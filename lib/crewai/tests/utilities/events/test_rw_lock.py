@@ -262,3 +262,36 @@ def test_manual_acquire_release():
 
     with lock.r_locked():
         pass
+
+
+def test_writer_not_starved_by_continuous_readers():
+    """Verify that a waiting writer eventually gets the lock
+    even when new readers keep arriving."""
+    lock = RWLock()
+    writer_acquired = threading.Event()
+    stop_readers = threading.Event()
+
+    def continuous_reader():
+        while not stop_readers.is_set():
+            with lock.r_locked():
+                time.sleep(0.01)
+
+    def writer():
+        time.sleep(0.05)  # let readers start first
+        with lock.w_locked():
+            writer_acquired.set()
+
+    reader_threads = [threading.Thread(target=continuous_reader) for _ in range(3)]
+    writer_thread = threading.Thread(target=writer)
+
+    for t in reader_threads:
+        t.start()
+    writer_thread.start()
+
+    # Writer should acquire within 2s (generous timeout)
+    assert writer_acquired.wait(2.0), "Writer was starved by readers"
+    stop_readers.set()
+
+    for t in reader_threads:
+        t.join(timeout=3)
+    writer_thread.join(timeout=3)
