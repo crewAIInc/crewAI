@@ -18,7 +18,7 @@ Four interception points cover the boundaries:
 | `EXECUTION_START` | A crew or flow is about to begin | inputs `dict` |
 | `INPUT` | Resolved inputs for the execution | inputs `dict` |
 | `OUTPUT` | The final result is ready | the output object |
-| `EXECUTION_END` | The execution has finished | the output object |
+| `EXECUTION_END` | The execution has finished (success or failure) | the output object, or `None` on failure |
 
 For a crew, the output payload is a `CrewOutput`. For a flow, it is the final
 flow-method result.
@@ -68,7 +68,9 @@ class OutputContext(InterceptionContext):
     output: Any             # The output object
 
 class ExecutionEndContext(InterceptionContext):
-    output: Any             # The output object
+    output: Any                    # The output object (None when status == "failed")
+    status: str                    # "completed" or "failed"
+    error: BaseException | None    # The exception when status == "failed"
 ```
 
 <Note>
@@ -135,6 +137,28 @@ def redact_emails(ctx):
 `OUTPUT` runs before `EXECUTION_END`, and both see the (possibly replaced)
 payload from earlier hooks; the final rewritten value is what `kickoff()`
 returns.
+
+### Observing Failures
+
+`EXECUTION_END` fires exactly once per execution, on success and on failure
+alike. When the run raises — a task error, a flow-method exception, or a
+`HookAborted` from an earlier point — the hook receives `status="failed"` with
+the exception in `ctx.error`, and the original exception still propagates out
+of `kickoff()` unchanged:
+
+```python
+@on(InterceptionPoint.EXECUTION_END)
+def report_outcome(ctx):
+    if ctx.status == "failed":
+        notify_policy_engine(status="failed", error=repr(ctx.error))
+    else:
+        notify_policy_engine(status="completed")
+```
+
+Two caveats: `EXECUTION_END` does not fire when `EXECUTION_START` never
+dispatched (an abort at start counts as the execution never beginning), and
+raising `HookAborted` from a failure-path `EXECUTION_END` dispatch is ignored —
+there is nothing left to abort, and the original error wins.
 
 ## Ordering
 
