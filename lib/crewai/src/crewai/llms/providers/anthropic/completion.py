@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Any, Final, Literal, TypeGuard, cast
+from typing import Any, Final, Literal, Protocol, TypeGuard, TypedDict, cast
 
 from pydantic import BaseModel, PrivateAttr, model_validator
 
@@ -124,31 +124,66 @@ def _contains_file_id_reference(messages: list[dict[str, Any]]) -> bool:
     return False
 
 
-def _is_tool_use_block(block: Any) -> bool:
-    """Return true for Anthropic tool-use blocks across SDK shapes.
+class _ToolUseDictBlock(TypedDict):
+    type: Literal["tool_use"]
+    id: str
+    name: str
+    input: dict[str, Any]
+
+
+class _ToolUseObjectBlock(Protocol):
+    type: Literal["tool_use"]
+    id: str
+    name: str
+    input: dict[str, object]
+
+
+_AnthropicToolUseBlock = (
+    ToolUseBlock | BetaToolUseBlock | _ToolUseDictBlock | _ToolUseObjectBlock
+)
+
+
+def _is_tool_use_block(block: Any) -> TypeGuard[_AnthropicToolUseBlock]:
+    """Return true for complete Anthropic tool-use blocks across SDK shapes.
 
     New/preview Anthropic models can return content blocks whose concrete SDK
-    class is not one of the imported ``ToolUseBlock`` aliases. The stable part
-    of the API shape is the block type plus ``name`` and ``input`` fields, so use
-    duck typing instead of relying only on SDK classes.
+    class is not one of the imported ``ToolUseBlock`` aliases. The stable API
+    contract used by execution, streaming, and follow-up paths is ``type``,
+    ``id``, ``name``, and ``input``, so validate that full shape before treating
+    a block as tool-use.
     """
-    if isinstance(block, (ToolUseBlock, BetaToolUseBlock)):
-        return True
     if isinstance(block, dict):
-        return block.get("type") == "tool_use" and "name" in block and "input" in block
+        return (
+            block.get("type") == "tool_use"
+            and isinstance(block.get("id"), str)
+            and isinstance(block.get("name"), str)
+            and isinstance(block.get("input"), dict)
+        )
+
     return (
         getattr(block, "type", None) == "tool_use"
-        and hasattr(block, "name")
-        and hasattr(block, "input")
+        and isinstance(getattr(block, "id", None), str)
+        and isinstance(getattr(block, "name", None), str)
+        and isinstance(getattr(block, "input", None), dict)
     )
 
 
-def _tool_use_blocks(blocks: list[Any]) -> list[Any]:
+def _tool_use_blocks(blocks: list[Any]) -> list[_AnthropicToolUseBlock]:
     return [block for block in blocks if _is_tool_use_block(block)]
 
 
-def _tool_use_attr(block: Any, attr: str) -> Any:
-    return block.get(attr) if isinstance(block, dict) else getattr(block, attr)
+def _tool_use_id(block: _AnthropicToolUseBlock) -> str:
+    return block["id"] if isinstance(block, dict) else block.id
+
+
+def _tool_use_name(block: _AnthropicToolUseBlock) -> str:
+    return block["name"] if isinstance(block, dict) else block.name
+
+
+def _tool_use_input(block: _AnthropicToolUseBlock) -> dict[str, Any]:
+    return (
+        block["input"] if isinstance(block, dict) else cast(dict[str, Any], block.input)
+    )
 
 
 class AnthropicThinkingConfig(BaseModel):
@@ -993,10 +1028,10 @@ class AnthropicCompletion(BaseLLM):
                 for block in response.content:
                     if (
                         _is_tool_use_block(block)
-                        and _tool_use_attr(block, "name") == "structured_output"
+                        and _tool_use_name(block) == "structured_output"
                     ):
                         structured_data = response_model.model_validate(
-                            _tool_use_attr(block, "input")
+                            _tool_use_input(block)
                         )
                         self._emit_call_completed_event(
                             response=structured_data.model_dump_json(),
@@ -1141,8 +1176,8 @@ class AnthropicCompletion(BaseLLM):
                     block = event.content_block
                     if _is_tool_use_block(block):
                         block_index = event.index
-                        tool_use_id = _tool_use_attr(block, "id")
-                        tool_name = _tool_use_attr(block, "name")
+                        tool_use_id = _tool_use_id(block)
+                        tool_name = _tool_use_name(block)
                         current_tool_calls[block_index] = {
                             "id": tool_use_id,
                             "name": tool_name,
@@ -1226,10 +1261,10 @@ class AnthropicCompletion(BaseLLM):
             for block in final_message.content:
                 if (
                     _is_tool_use_block(block)
-                    and _tool_use_attr(block, "name") == "structured_output"
+                    and _tool_use_name(block) == "structured_output"
                 ):
                     structured_data = response_model.model_validate(
-                        _tool_use_attr(block, "input")
+                        _tool_use_input(block)
                     )
                     self._emit_call_completed_event(
                         response=structured_data.model_dump_json(),
@@ -1275,7 +1310,7 @@ class AnthropicCompletion(BaseLLM):
 
     def _execute_tools_and_collect_results(
         self,
-        tool_uses: list[Any],
+        tool_uses: list[_AnthropicToolUseBlock],
         available_functions: dict[str, Any],
         from_task: Any | None = None,
         from_agent: Any | None = None,
@@ -1294,12 +1329,12 @@ class AnthropicCompletion(BaseLLM):
         tool_results = []
 
         for tool_use in tool_uses:
-            function_name = _tool_use_attr(tool_use, "name")
-            function_args = _tool_use_attr(tool_use, "input")
+            function_name = _tool_use_name(tool_use)
+            function_args = _tool_use_input(tool_use)
 
             result = self._handle_tool_execution(
                 function_name=function_name,
-                function_args=cast(dict[str, Any], function_args),
+                function_args=function_args,
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
@@ -1307,7 +1342,7 @@ class AnthropicCompletion(BaseLLM):
 
             tool_result = {
                 "type": "tool_result",
-                "tool_use_id": _tool_use_attr(tool_use, "id"),
+                "tool_use_id": _tool_use_id(tool_use),
                 "content": str(result)
                 if result is not None
                 else "Tool execution completed",
@@ -1318,7 +1353,7 @@ class AnthropicCompletion(BaseLLM):
 
     def _execute_first_tool(
         self,
-        tool_uses: list[Any],
+        tool_uses: list[_AnthropicToolUseBlock],
         available_functions: dict[str, Any],
         from_task: Any | None = None,
         from_agent: Any | None = None,
@@ -1339,8 +1374,8 @@ class AnthropicCompletion(BaseLLM):
             The result of the first tool execution, or None if execution failed
         """
         tool_use = tool_uses[0]
-        function_name = _tool_use_attr(tool_use, "name")
-        function_args = cast(dict[str, Any], _tool_use_attr(tool_use, "input"))
+        function_name = _tool_use_name(tool_use)
+        function_args = _tool_use_input(tool_use)
 
         return self._handle_tool_execution(
             function_name=function_name,
@@ -1354,7 +1389,7 @@ class AnthropicCompletion(BaseLLM):
     def _handle_tool_use_conversation(
         self,
         initial_response: Message | BetaMessage,
-        tool_uses: list[Any],
+        tool_uses: list[_AnthropicToolUseBlock],
         params: dict[str, Any],
         available_functions: dict[str, Any],
         from_task: Any | None = None,
@@ -1385,9 +1420,9 @@ class AnthropicCompletion(BaseLLM):
                 assistant_content.append(
                     {
                         "type": "tool_use",
-                        "id": _tool_use_attr(block, "id"),
-                        "name": _tool_use_attr(block, "name"),
-                        "input": _tool_use_attr(block, "input"),
+                        "id": _tool_use_id(block),
+                        "name": _tool_use_name(block),
+                        "input": _tool_use_input(block),
                     }
                 )
             elif hasattr(block, "text"):
@@ -1541,10 +1576,10 @@ class AnthropicCompletion(BaseLLM):
                 for block in response.content:
                     if (
                         _is_tool_use_block(block)
-                        and _tool_use_attr(block, "name") == "structured_output"
+                        and _tool_use_name(block) == "structured_output"
                     ):
                         structured_data = response_model.model_validate(
-                            _tool_use_attr(block, "input")
+                            _tool_use_input(block)
                         )
                         self._emit_call_completed_event(
                             response=structured_data.model_dump_json(),
@@ -1675,8 +1710,8 @@ class AnthropicCompletion(BaseLLM):
                     block = event.content_block
                     if _is_tool_use_block(block):
                         block_index = event.index
-                        tool_use_id = _tool_use_attr(block, "id")
-                        tool_name = _tool_use_attr(block, "name")
+                        tool_use_id = _tool_use_id(block)
+                        tool_name = _tool_use_name(block)
                         current_tool_calls[block_index] = {
                             "id": tool_use_id,
                             "name": tool_name,
@@ -1750,10 +1785,10 @@ class AnthropicCompletion(BaseLLM):
             for block in final_message.content:
                 if (
                     _is_tool_use_block(block)
-                    and _tool_use_attr(block, "name") == "structured_output"
+                    and _tool_use_name(block) == "structured_output"
                 ):
                     structured_data = response_model.model_validate(
-                        _tool_use_attr(block, "input")
+                        _tool_use_input(block)
                     )
                     self._emit_call_completed_event(
                         response=structured_data.model_dump_json(),
@@ -1798,7 +1833,7 @@ class AnthropicCompletion(BaseLLM):
     async def _ahandle_tool_use_conversation(
         self,
         initial_response: Message | BetaMessage,
-        tool_uses: list[Any],
+        tool_uses: list[_AnthropicToolUseBlock],
         params: dict[str, Any],
         available_functions: dict[str, Any],
         from_task: Any | None = None,

@@ -1456,6 +1456,49 @@ def test_anthropic_tool_use_dict_blocks_are_returned_as_tool_calls():
     assert result == mock_response.content
 
 
+def test_anthropic_dict_tool_use_blocks_require_id():
+    """Incomplete dict-shaped tool_use blocks are not valid tool calls."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5")
+    mock_response = _dict_tool_use_response()
+    del mock_response.content[0]["id"]
+
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = mock_response
+    llm._client = mock_client
+
+    result = llm.call("Search for CrewAI", tools=_MANY_TOOLS)
+
+    assert result == ""
+
+
+def test_anthropic_object_tool_use_blocks_require_id():
+    """Incomplete object-shaped tool_use blocks are not valid tool calls."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5")
+    mock_response = MagicMock()
+    mock_response.content = [
+        types.SimpleNamespace(
+            type="tool_use",
+            name="search_web",
+            input={"query": "CrewAI"},
+        )
+    ]
+    mock_response.usage = MagicMock(input_tokens=10, output_tokens=2)
+    mock_response.stop_reason = "tool_use"
+    mock_response.id = "msg_123"
+
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = mock_response
+    llm._client = mock_client
+
+    result = llm.call("Search for CrewAI", tools=_MANY_TOOLS)
+
+    assert result == ""
+
+
 @pytest.mark.asyncio
 async def test_anthropic_acall_returns_dict_tool_use_blocks_as_tool_calls():
     from crewai.llms.providers.anthropic.completion import AnthropicCompletion
