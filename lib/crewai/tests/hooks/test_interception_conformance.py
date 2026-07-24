@@ -7,6 +7,7 @@ sees a well-shaped payload, an in-place/returned modification is honored, and a
 
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import patch
 
 from crewai.agent import Agent
@@ -39,6 +40,24 @@ class _SimpleFlow(Flow):
     @listen(begin)
     def finish(self, _):
         return "flow-result"
+
+
+class _FailingFlow(Flow):
+    @start()
+    def begin(self):
+        raise RuntimeError("flow boom")
+
+
+class _ReentrantFailingFlow(Flow):
+    """Kicks itself off once from inside a method, then fails in the outer run."""
+
+    @start()
+    async def begin(self):
+        if getattr(self, "_reentered", False):
+            return "inner-ok"
+        self._reentered = True
+        await self.kickoff_async()
+        raise RuntimeError("outer boom")
 
 
 class TestFlowExecutionBoundaries:
@@ -150,6 +169,157 @@ class TestTaskStepPoints:
 
         assert result.raw == "sanitized output"
         assert (tmp_path / "output.txt").read_text() == "sanitized output"
+
+
+class TestExecutionEndOnFailure:
+    """execution_end fires exactly once, on success and on failure alike."""
+
+    @staticmethod
+    def _crew() -> Crew:
+        agent = Agent(role="Writer", goal="Write", backstory="Writes things.")
+        task = Task(
+            description="Write something",
+            expected_output="Some text",
+            agent=agent,
+        )
+        return Crew(agents=[agent], tasks=[task], verbose=False)
+
+    def test_crew_success_fires_completed_once(self):
+        seen: list[tuple[str, BaseException | None]] = []
+
+        @on(InterceptionPoint.EXECUTION_END)
+        def capture(ctx):
+            seen.append((ctx.status, ctx.error))
+
+        with patch.object(Agent, "execute_task", return_value="fine"):
+            self._crew().kickoff()
+
+        assert seen == [("completed", None)]
+
+    def test_crew_failure_fires_failed_once_and_reraises(self):
+        seen = []
+
+        @on(InterceptionPoint.EXECUTION_END)
+        def capture(ctx):
+            seen.append(ctx)
+
+        error = RuntimeError("crew boom")
+        with patch.object(Agent, "execute_task", side_effect=error):
+            with pytest.raises(RuntimeError, match="crew boom"):
+                self._crew().kickoff()
+
+        assert len(seen) == 1
+        assert seen[0].status == "failed"
+        assert seen[0].error is error
+        assert seen[0].output is None
+
+    def test_crew_kickoff_async_failure_fires_failed_once(self):
+        seen = []
+
+        @on(InterceptionPoint.EXECUTION_END)
+        def capture(ctx):
+            seen.append(ctx)
+
+        with patch.object(
+            Agent, "execute_task", side_effect=RuntimeError("crew boom")
+        ):
+            with pytest.raises(RuntimeError, match="crew boom"):
+                asyncio.run(self._crew().kickoff_async())
+
+        assert len(seen) == 1
+        assert seen[0].status == "failed"
+
+    def test_flow_success_fires_completed_once(self):
+        seen: list[tuple[str, BaseException | None]] = []
+
+        @on(InterceptionPoint.EXECUTION_END)
+        def capture(ctx):
+            seen.append((ctx.status, ctx.error))
+
+        _SimpleFlow().kickoff()
+
+        assert seen == [("completed", None)]
+
+    def test_flow_failure_fires_failed_once_and_reraises(self):
+        seen = []
+
+        @on(InterceptionPoint.EXECUTION_END)
+        def capture(ctx):
+            seen.append(ctx)
+
+        with pytest.raises(RuntimeError, match="flow boom"):
+            _FailingFlow().kickoff()
+
+        assert len(seen) == 1
+        assert seen[0].status == "failed"
+        assert isinstance(seen[0].error, RuntimeError)
+        assert seen[0].output is None
+
+    def test_reentrant_flow_kickoff_pairs_ends_per_invocation(self):
+        seen: list[tuple[str, str | None]] = []
+
+        @on(InterceptionPoint.EXECUTION_START)
+        def capture_start(ctx):
+            seen.append(("start", None))
+
+        @on(InterceptionPoint.EXECUTION_END)
+        def capture_end(ctx):
+            seen.append(("end", ctx.status))
+
+        with pytest.raises(RuntimeError, match="outer boom"):
+            _ReentrantFailingFlow().kickoff()
+
+        assert seen == [
+            ("start", None),
+            ("start", None),
+            ("end", "completed"),
+            ("end", "failed"),
+        ]
+
+    def test_no_execution_end_when_execution_start_aborts(self):
+        seen = []
+
+        @on(InterceptionPoint.EXECUTION_START)
+        def block(ctx):
+            raise HookAborted(reason="blocked")
+
+        @on(InterceptionPoint.EXECUTION_END)
+        def capture(ctx):
+            seen.append(ctx)
+
+        with pytest.raises(HookAborted):
+            _SimpleFlow().kickoff()
+        with pytest.raises(HookAborted):
+            self._crew().kickoff()
+
+        assert seen == []
+
+    def test_aborting_execution_end_hook_fires_once_for_flow(self):
+        calls: list[str] = []
+
+        @on(InterceptionPoint.EXECUTION_END)
+        def abort_end(ctx):
+            calls.append(ctx.status)
+            raise HookAborted(reason="no")
+
+        with pytest.raises(HookAborted):
+            _SimpleFlow().kickoff()
+
+        assert calls == ["completed"]
+
+    def test_aborting_execution_end_hook_fires_once_for_crew(self):
+        calls: list[str] = []
+
+        @on(InterceptionPoint.EXECUTION_END)
+        def abort_end(ctx):
+            calls.append(ctx.status)
+            raise HookAborted(reason="no")
+
+        with patch.object(Agent, "execute_task", return_value="fine"):
+            with pytest.raises(HookAborted):
+                self._crew().kickoff()
+
+        assert calls == ["completed"]
 
 
 class TestCrewOutput:

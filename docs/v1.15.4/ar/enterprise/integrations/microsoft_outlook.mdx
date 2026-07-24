@@ -1,0 +1,227 @@
+---
+title: تكامل Microsoft Outlook
+description: "إدارة البريد الإلكتروني والتقويم وجهات الاتصال مع تكامل Microsoft Outlook لـ CrewAI."
+icon: "envelope"
+mode: "wide"
+---
+
+## نظرة عامة
+
+مكّن وكلاءك من الوصول إلى رسائل Outlook الإلكترونية وأحداث التقويم وجهات الاتصال وإدارتها. أرسل رسائل البريد الإلكتروني، واسترجع الرسائل، وأدر أحداث التقويم، ونظّم جهات الاتصال باستخدام الأتمتة المدعومة بالذكاء الاصطناعي.
+
+## المتطلبات الأساسية
+
+قبل استخدام تكامل Microsoft Outlook، تأكد من توفر ما يلي:
+
+- حساب [CrewAI AMP](https://app.crewai.com) مع اشتراك فعّال
+- حساب Microsoft مع إمكانية الوصول إلى Outlook
+- ربط حساب Microsoft الخاص بك عبر [صفحة التكاملات](https://app.crewai.com/crewai_plus/connectors)
+
+## إعداد تكامل Microsoft Outlook
+
+### 1. ربط حساب Microsoft الخاص بك
+
+1. انتقل إلى [تكاملات CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
+2. ابحث عن **Microsoft Outlook** في قسم تكاملات المصادقة
+3. انقر على **Connect** وأكمل عملية OAuth
+4. امنح الصلاحيات اللازمة للوصول إلى البريد والتقويم وجهات الاتصال
+5. انسخ رمز المؤسسة من [إعدادات التكامل](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. تثبيت الحزمة المطلوبة
+
+```bash
+uv add crewai-tools
+```
+
+### 3. إعداد متغير البيئة
+
+<Note>
+  لاستخدام التكاملات مع `Agent(apps=[])`, يجب تعيين متغير البيئة
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` برمز المؤسسة الخاص بك.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+أو أضفه إلى ملف `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## الإجراءات المتاحة
+
+<AccordionGroup>
+  <Accordion title="microsoft_outlook/get_messages">
+    **الوصف:** الحصول على رسائل البريد الإلكتروني من صندوق بريد المستخدم.
+
+    **المعاملات:**
+    - `top` (integer, اختياري): عدد الرسائل (الحد الأقصى 1000). الافتراضي: `10`.
+    - `filter` (string, اختياري): تعبير فلتر OData (مثال: "isRead eq false").
+    - `search` (string, اختياري): سلسلة استعلام البحث.
+    - `orderby` (string, اختياري): الترتيب (مثال: "receivedDateTime desc"). الافتراضي: "receivedDateTime desc".
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/send_email">
+    **الوصف:** إرسال رسالة بريد إلكتروني.
+
+    **المعاملات:**
+    - `to_recipients` (array, مطلوب): مصفوفة عناوين المستلمين.
+    - `subject` (string, مطلوب): موضوع البريد الإلكتروني.
+    - `body` (string, مطلوب): محتوى البريد الإلكتروني.
+    - `body_type` (string, اختياري): نوع المحتوى. القيم: `Text`, `HTML`. الافتراضي: `HTML`.
+    - `importance` (string, اختياري): مستوى الأهمية. القيم: `low`, `normal`, `high`. الافتراضي: `normal`.
+    - `cc_recipients` (array, اختياري): مصفوفة عناوين النسخة الكربونية.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/get_calendar_events">
+    **الوصف:** الحصول على أحداث التقويم من تقويم المستخدم.
+
+    **المعاملات:**
+    - `top` (integer, اختياري): عدد الأحداث (الحد الأقصى 1000). الافتراضي: `10`.
+    - `filter` (string, اختياري): تعبير فلتر OData.
+    - `orderby` (string, اختياري): الترتيب. الافتراضي: "start/dateTime asc".
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/create_calendar_event">
+    **الوصف:** إنشاء حدث تقويم جديد.
+
+    **المعاملات:**
+    - `subject` (string, مطلوب): موضوع/عنوان الحدث.
+    - `start_datetime` (string, مطلوب): وقت البداية بصيغة ISO 8601.
+    - `end_datetime` (string, مطلوب): وقت النهاية بصيغة ISO 8601.
+    - `timezone` (string, اختياري): المنطقة الزمنية. الافتراضي: `UTC`.
+    - `location` (string, اختياري): موقع الحدث.
+    - `attendees` (array, اختياري): مصفوفة عناوين الحضور.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/get_contacts">
+    **الوصف:** الحصول على جهات الاتصال من دفتر عناوين المستخدم.
+
+    **المعاملات:**
+    - `top` (integer, اختياري): عدد جهات الاتصال (الحد الأقصى 1000). الافتراضي: `10`.
+    - `filter` (string, اختياري): تعبير فلتر OData.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/create_contact">
+    **الوصف:** إنشاء جهة اتصال جديدة في دفتر عناوين المستخدم.
+
+    **المعاملات:**
+    - `displayName` (string, مطلوب): اسم العرض لجهة الاتصال.
+    - `givenName` (string, اختياري): الاسم الأول.
+    - `surname` (string, اختياري): اسم العائلة.
+    - `emailAddresses` (array, اختياري): مصفوفة عناوين البريد الإلكتروني.
+    - `jobTitle` (string, اختياري): المسمى الوظيفي.
+    - `companyName` (string, اختياري): اسم الشركة.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/reply_to_email">
+    **الوصف:** الرد على رسالة بريد إلكتروني.
+
+    **المعاملات:**
+    - `message_id` (string, مطلوب): المعرّف الفريد للرسالة المراد الرد عليها.
+    - `comment` (string, مطلوب): محتوى الرد.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/forward_email">
+    **الوصف:** إعادة توجيه رسالة بريد إلكتروني.
+
+    **المعاملات:**
+    - `message_id` (string, مطلوب): المعرّف الفريد للرسالة المراد إعادة توجيهها.
+    - `to_recipients` (array, مطلوب): مصفوفة عناوين المستلمين.
+    - `comment` (string, اختياري): رسالة اختيارية لتضمينها فوق المحتوى المُعاد توجيهه.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/delete_message">
+    **الوصف:** حذف رسالة بريد إلكتروني.
+
+    **المعاملات:**
+    - `message_id` (string, مطلوب): المعرّف الفريد للرسالة المراد حذفها.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/update_event">
+    **الوصف:** تحديث حدث تقويم موجود.
+
+    **المعاملات:**
+    - `event_id` (string, مطلوب): المعرّف الفريد للحدث.
+    - `subject` (string, اختياري): الموضوع/العنوان الجديد.
+    - `start_time` (string, اختياري): وقت البداية الجديد بصيغة ISO 8601.
+    - `location` (string, اختياري): الموقع الجديد.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/delete_event">
+    **الوصف:** حذف حدث تقويم.
+
+    **المعاملات:**
+    - `event_id` (string, مطلوب): المعرّف الفريد للحدث المراد حذفه.
+
+  </Accordion>
+</AccordionGroup>
+
+## أمثلة الاستخدام
+
+### إعداد Agent أساسي لـ Microsoft Outlook
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent with Microsoft Outlook capabilities
+outlook_agent = Agent(
+    role="Email Assistant",
+    goal="Manage emails, calendar events, and contacts efficiently",
+    backstory="An AI assistant specialized in Microsoft Outlook operations and communication management.",
+    apps=['microsoft_outlook']  # All Outlook actions will be available
+)
+
+# Task to send an email
+send_email_task = Task(
+    description="Send an email to 'colleague@example.com' with subject 'Project Update' and body 'Hi, here is the latest project update. Best regards.'",
+    agent=outlook_agent,
+    expected_output="Email sent successfully to colleague@example.com"
+)
+
+# Run the task
+crew = Crew(
+    agents=[outlook_agent],
+    tasks=[send_email_task]
+)
+
+crew.kickoff()
+```
+
+## استكشاف الأخطاء وإصلاحها
+
+### المشاكل الشائعة
+
+**أخطاء المصادقة**
+
+- تأكد من أن حساب Microsoft الخاص بك لديه الصلاحيات اللازمة للوصول إلى البريد والتقويم وجهات الاتصال.
+- النطاقات المطلوبة تشمل: `Mail.Read`, `Mail.Send`, `Calendars.ReadWrite`, `Contacts.ReadWrite`.
+
+**مشاكل إرسال البريد الإلكتروني**
+
+- تأكد من توفير `to_recipients` و`subject` و`body` لـ `send_email`.
+- تحقق من صحة صيغة عناوين البريد الإلكتروني.
+
+**إنشاء أحداث التقويم**
+
+- تأكد من توفير `subject` و`start_datetime` و`end_datetime`.
+- استخدم صيغة ISO 8601 المناسبة لحقول التاريخ والوقت.
+
+### الحصول على المساعدة
+
+<Card title="تحتاج مساعدة؟" icon="headset" href="mailto:support@crewai.com">
+  تواصل مع فريق الدعم للحصول على المساعدة في إعداد تكامل Microsoft Outlook
+  أو استكشاف الأخطاء وإصلاحها.
+</Card>

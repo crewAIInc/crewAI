@@ -1,0 +1,134 @@
+---
+title: تكامل Snowflake
+description: "ربط وكلاء CrewAI بـ Snowflake Cortex Analyst و Cortex Search وتنفيذ SQL من خلال خادم MCP المُدار من Snowflake."
+icon: "snowflake"
+mode: "wide"
+---
+
+## نظرة عامة
+
+اربط وكلاء CrewAI مباشرة ببيانات Snowflake الخاصة بك من خلال [خادم MCP المُدار من Snowflake](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp). يتيح تكامل Snowflake لوكلائك الاستعلام عن البيانات المنظمة باستخدام **Cortex Analyst**، والبحث في البيانات غير المنظمة باستخدام **Cortex Search**، وتنفيذ SQL مُدار على مستودعات البيانات الخاصة بك — كل ذلك دون كتابة أو استضافة أي كود للموصّل.
+
+داخلياً، تكامل Snowflake هو غلاف مُدار حول دعم [Custom MCP Server](/ar/enterprise/guides/custom-mcp-server) في CrewAI. يكشف Snowflake عن قدرات Cortex AI الخاصة به من خلال نقطة نهاية [Model Context Protocol](https://modelcontextprotocol.io/)، ويتصل CrewAI بها بشكل آمن نيابةً عنك. أي أداة تكشفها على جانب Snowflake — Cortex Analyst أو Cortex Search أو تنفيذ SQL أو Cortex Agents أو أدواتك المخصصة — تصبح متاحة لطواقمك.
+
+## القدرات الرئيسية
+
+<CardGroup cols={3}>
+  <Card title="Cortex Analyst" icon="chart-bar">
+    اطرح أسئلة بلغة طبيعية ودع [Cortex Analyst](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-analyst) يولّد وينفذ SQL على بياناتك **المنظمة** باستخدام نماذج دلالية غنية.
+  </Card>
+  <Card title="Cortex Search" icon="magnifying-glass">
+    استرجع البيانات **غير المنظمة** ذات الصلة لسير عمل RAG والمعرفة باستخدام [Cortex Search](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-search/cortex-search-overview)، خدمة البحث المُدارة بالكامل من Snowflake.
+  </Card>
+  <Card title="تنفيذ SQL" icon="database">
+    نفّذ استعلامات SQL مُدارة مباشرة على مستودعات Snowflake الخاصة بك، مع وضع القراءة فقط القابل للتكوين، والمهلات الزمنية، واختيار المستودع.
+  </Card>
+</CardGroup>
+
+نظراً لأن التكامل يكشف عن أي أدوات ينشرها خادم MCP الخاص بك، يمكنك أيضاً كشف **Cortex Agents** و**الأدوات المخصصة** (الدوال المعرّفة من المستخدم والإجراءات المخزّنة) لوكلاء CrewAI.
+
+## المتطلبات الأساسية
+
+قبل استخدام تكامل Snowflake، تأكد من توفر ما يلي:
+
+- حساب [CrewAI AMP](https://app.crewai.com) مع اشتراك فعّال
+- حساب Snowflake مع إمكانية الوصول إلى ميزات Cortex AI
+- [خادم MCP مُدار من Snowflake](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp) مُكوّن بالأدوات التي تريد كشفها
+- صلاحيات Snowflake المناسبة (USAGE/SELECT) على خادم MCP والكائنات الأساسية
+
+## إعداد خادم Snowflake MCP
+
+يعمل خادم MCP المُدار من Snowflake داخل حساب Snowflake الخاص بك ويحدد الأدوات المتاحة للعملاء الخارجيين مثل CrewAI. أنشئ واحداً باستخدام أمر [`CREATE MCP SERVER`](https://docs.snowflake.com/en/sql-reference/sql/create-mcp-server)، مع سرد خدمات Cortex Search وعروض Cortex Analyst الدلالية وأدوات SQL التي تريد كشفها.
+
+```sql
+CREATE MCP SERVER my_mcp_server
+  FROM SPECIFICATION $$
+    tools:
+      - name: "sales_analyst"
+        type: "CORTEX_ANALYST"
+        identifier: "MY_DATABASE.MY_SCHEMA.sales_semantic_view"
+        description: "Answer questions about sales metrics"
+      - name: "docs_search"
+        type: "CORTEX_SEARCH_SERVICE_QUERY"
+        identifier: "MY_DATABASE.MY_SCHEMA.support_docs_search"
+        description: "Search internal support documentation"
+      - name: "run_sql"
+        type: "SQL_EXECUTION"
+        description: "Execute read-only SQL queries"
+  $$;
+```
+
+<Note>
+تتبع نقطة نهاية MCP التنسيق `https://<account_URL>/api/v2/databases/{database}/schemas/{schema}/mcp-servers/{name}`. يبني CrewAI هذا العنوان تلقائياً من **عنوان URL للحساب** و**قاعدة البيانات** و**المخطط** و**اسم خادم MCP** الذي تقدمه عند تكوين التكامل.
+</Note>
+
+للمواصفات الكاملة — بما في ذلك Cortex Agents والأدوات المخصصة وحدود حجم الاستجابة وخيارات الحوكمة — راجع [وثائق خادم MCP المُدار من Snowflake](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp).
+
+## ربط Snowflake في CrewAI AMP
+
+<Frame>
+    <img src="/images/enterprise/snowflake-configure.png" alt="تكوين تكامل Snowflake في CrewAI AMP" />
+</Frame>
+
+<Steps>
+    <Step title="فتح الأدوات والتكاملات">
+        انتقل إلى **الأدوات والتكاملات** في الشريط الجانبي الأيسر لـ CrewAI AMP، وابحث عن **Snowflake** في قائمة التطبيقات، وافتح لوحة التكوين الخاصة به.
+    </Step>
+
+    <Step title="تقديم تفاصيل الاتصال">
+        املأ حقول الاتصال التي يستخدمها CrewAI للوصول إلى خادم Snowflake MCP الخاص بك:
+
+        | الحقل | مطلوب | الوصف |
+        |-------|-------|-------|
+        | **الاسم** | نعم | اسم وصفي لهذا الاتصال (القيمة الافتراضية `Snowflake`). |
+        | **الوصف** | لا | ملخص اختياري لما يوفره هذا الاتصال. |
+        | **عنوان URL للحساب** | نعم | عنوان URL لحساب Snowflake الخاص بك، مثل `xy12345.us-east-1.snowflakecomputing.com`. |
+        | **قاعدة البيانات** | نعم | قاعدة البيانات التي تحتوي على خادم MCP الخاص بك (مثل `MY_DATABASE`). |
+        | **المخطط** | نعم | المخطط الذي يحتوي على خادم MCP الخاص بك (مثل `MY_SCHEMA`). |
+        | **اسم خادم MCP** | نعم | اسم كائن خادم MCP الذي أنشأته في Snowflake (مثل `MY_MCP_SERVER`). |
+    </Step>
+
+    <Step title="اختيار طريقة المصادقة">
+        اختر كيفية مصادقة CrewAI مع Snowflake. يُوصى باستخدام **OAuth**.
+
+        - **استخدام OAuth** — اتصل بشكل آمن باستخدام OAuth 2.0 للمصادقة القائمة على الرموز دون مشاركة بيانات الاعتماد الخاصة بك. يتعامل CrewAI مع تدفق التفويض الكامل ويجدد الرموز تلقائياً. انسخ **عنوان URI لإعادة التوجيه** المعروض في النموذج (`https://oauth.crewai.com/oauth/add`) وسجّله كعنوان URI لإعادة التوجيه المعتمد في [تكامل أمان OAuth](https://docs.snowflake.com/en/user-guide/oauth-custom) في Snowflake.
+        - **استخدام رمز وصول شخصي** — المصادقة باستخدام [رمز وصول برمجي](https://docs.snowflake.com/en/user-guide/programmatic-access-tokens) مُنشأ من إعدادات حساب Snowflake الخاص بك. قم بتعيين دور بأقل صلاحيات للرمز للحد من التعرض.
+    </Step>
+
+    <Step title="المصادقة">
+        انقر على **المصادقة**. بالنسبة لـ OAuth، ستتم إعادة توجيهك إلى Snowflake لتفويض الوصول. بمجرد المصادقة، يظهر خادم Snowflake في قائمة الاتصالات وتصبح أدواته متاحة لطواقمك.
+    </Step>
+</Steps>
+
+<Tip>
+مع OAuth، يتم مصادقة كل مستخدم بشكل فردي وتُنفّذ الاستعلامات بدور `DEFAULT_ROLE` الخاص به في Snowflake. تأكد من أن المستخدمين المتصلين لديهم دور ومستودع افتراضي محدد (`ALTER USER <username> SET DEFAULT_ROLE = '<role>' DEFAULT_WAREHOUSE = '<warehouse>'`) حتى تتوفر موارد الحوسبة لأدوات Cortex Analyst و SQL.
+</Tip>
+
+## استخدام أدوات Snowflake في طواقمك
+
+بمجرد الاتصال، تظهر الأدوات التي يكشفها خادم MCP الخاص بك إلى جانب الاتصالات المدمجة في صفحة **الأدوات والتكاملات**. يمكنك:
+
+- **تعيين الأدوات للوكلاء** في طواقمك تماماً مثل أي أداة CrewAI أخرى.
+- **إدارة الرؤية** للتحكم في أعضاء الفريق الذين يمكنهم استخدام الاتصال.
+- **تعديل أو إزالة** الاتصال في أي وقت من قائمة الاتصالات.
+
+يمكن لوكلائك الآن سؤال Cortex Analyst عن المقاييس، وتشغيل Cortex Search على مستنداتك، وتنفيذ SQL — مع تدفق النتائج تلقائياً إلى استدلالهم.
+
+<Warning>
+يفرض Snowflake الحوكمة على خادم MCP: يحدد التحكم في الوصول القائم على الأدوار الأدوات التي يمكن للمستخدم اكتشافها واستدعاؤها، وتنطبق حدود على حجم الاستجابة وعدد الأدوات (بحد أقصى 50 لكل خادم) وعمق التكرار. إذا فشل استدعاء أداة، تأكد من أن دور المستخدم المتصل لديه الصلاحيات المطلوبة على خادم MCP والكائنات الأساسية.
+</Warning>
+
+## معرفة المزيد
+
+<CardGroup cols={2}>
+  <Card title="خادم MCP المُدار من Snowflake" icon="snowflake" href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp">
+    الوثائق الرسمية من Snowflake لإنشاء وإدارة خادم MCP.
+  </Card>
+  <Card title="خوادم Custom MCP في CrewAI" icon="plug" href="/ar/enterprise/guides/custom-mcp-server">
+    تعرّف على كيفية اتصال CrewAI بأي خادم MCP، الأساس الذي يبني عليه تكامل Snowflake.
+  </Card>
+</CardGroup>
+
+<Card title="تحتاج مساعدة؟" icon="headset" href="mailto:support@crewai.com">
+  تواصل مع فريق الدعم للحصول على المساعدة في تكامل Snowflake أو استكشاف الأخطاء وإصلاحها.
+</Card>
