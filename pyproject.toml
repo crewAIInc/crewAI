@@ -230,6 +230,8 @@ override-dependencies = [
     "msgpack>=1.2.1",
     "pydantic-settings>=2.14.2",
     "setuptools>=83.0.0", # PYSEC-2026-3447
+    # scrapegraph-py 2.x removed Client class; pin until upstream fixes type ignores
+    "scrapegraph-py>=1.46.0,<2",
 ]
 
 [tool.uv.workspace]
