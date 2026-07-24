@@ -95,3 +95,12 @@ class TestTrainingConverter:
         response = "The quality score is 8.5 out of 10"
         result = self.converter._process_field_value(response, float)
         assert result == 8.5
+
+    def test_process_field_value_float_negative(self):
+        response = "The temperature delta is -3.2 degrees"
+        result = self.converter._process_field_value(response, float)
+        assert result == -3.2
+
+    def test_parse_float_preserves_negative_sign(self):
+        assert TrainingConverter._parse_float("-5.2") == -5.2
+        assert TrainingConverter._parse_float("-3 degrees") == -3.0
