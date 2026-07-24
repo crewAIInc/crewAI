@@ -15,7 +15,7 @@ compatibility; they are intentionally not redefined here.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 
 @dataclass
@@ -53,9 +53,17 @@ class OutputContext(InterceptionContext):
 
 @dataclass
 class ExecutionEndContext(InterceptionContext):
-    """``execution_end``: a crew or flow has finished. ``payload`` = the output object."""
+    """``execution_end``: a crew or flow has finished. ``payload`` = the output object.
+
+    Dispatched on both successful and failed executions. ``status`` is
+    ``"completed"`` on success and ``"failed"`` when the execution raised;
+    ``error`` carries the exception on failure (``output``/``payload`` are
+    ``None`` in that case).
+    """
 
     output: Any = None
+    status: Literal["completed", "failed"] = "completed"
+    error: BaseException | None = None
 
 
 @dataclass
