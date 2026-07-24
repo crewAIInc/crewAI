@@ -142,6 +142,9 @@ contextual = [
 daytona = [
     "daytona~=0.140.0",
 ]
+opensandbox = [
+    "opensandbox>=0.1.8",
+]
 
 e2b = [
     "e2b~=2.20.0",
