@@ -63,8 +63,8 @@ print(result)
 
 Initialization arguments:
 
-- `model` (str, optional): Retrieval depth. `"mako"` (default) returns the fact-carrying sentences of each page, fast. `"moby"` returns the full readable text of each page, for deep research.
-- `answer` (bool, optional): When `True`, the output also carries an `answer` field: a direct answer synthesized from the sources (concise on `mako`, cited on `moby`). Defaults to `False`.
+- `model` (str, optional): Retrieval depth. `"mako"` (default) returns the fact-carrying sentences of each page, fast. `"krill"` is the free tier: unlimited under fair use, a smaller set of the same sentences, one request at a time, at low priority. `"moby"` returns the full readable text of each page, for deep research.
+- `answer` (bool, optional): When `True`, the output also carries an `answer` field: a direct answer synthesized from the sources (concise on `mako`, cited on `moby`; unavailable on `krill`). Defaults to `False`.
 - `max_results` (int, optional): Hard cap on delivered results (1-10). By default the engine picks its calibrated mix.
 - `api_key` (str, optional): Your SERPdive API key. If not provided, it's read from the `SERPDIVE_API_KEY` environment variable.
 

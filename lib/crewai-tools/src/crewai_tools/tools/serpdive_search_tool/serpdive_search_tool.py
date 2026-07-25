@@ -36,7 +36,9 @@ class SerpdiveSearchTool(BaseTool):
         description: A description of the tool's purpose.
         args_schema: The schema for the tool's arguments.
         api_key: The SERPdive API key.
-        model: Retrieval depth, "mako" (key sentences, fast) or "moby"
+        model: Retrieval depth, "mako" (key sentences, fast), "krill" (the
+            free tier: unlimited under fair use, smallest payload, one
+            request at a time, low priority, no written answer) or "moby"
             (full page text, deep research).
         answer: Whether to also return a direct answer synthesized from
             the sources.
@@ -63,11 +65,11 @@ class SerpdiveSearchTool(BaseTool):
     )
     model: str = Field(
         default="mako",
-        description='Retrieval depth: "mako" (default) returns the fact-carrying sentences of each page, fast; "moby" returns the full readable text, for deep research.',
+        description='Retrieval depth: "mako" (default) returns the fact-carrying sentences of each page, fast; "krill" is free and unlimited under fair use, returning a smaller set of them at low priority, one request at a time, with no written answer; "moby" returns the full readable text, for deep research.',
     )
     answer: bool = Field(
         default=False,
-        description='When True, the output also carries an "answer" field: a direct answer synthesized from the sources (concise on mako, cited on moby).',
+        description='When True, the output also carries an "answer" field: a direct answer synthesized from the sources (concise on mako, cited on moby; unavailable on krill).',
     )
     max_results: int | None = Field(
         default=None,

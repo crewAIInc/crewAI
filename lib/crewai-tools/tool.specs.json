@@ -20553,7 +20553,7 @@
         "properties": {
           "answer": {
             "default": false,
-            "description": "When True, the output also carries an \"answer\" field: a direct answer synthesized from the sources (concise on mako, cited on moby).",
+            "description": "When True, the output also carries an \"answer\" field: a direct answer synthesized from the sources (concise on mako, cited on moby; unavailable on krill).",
             "title": "Answer",
             "type": "boolean"
           },
@@ -20604,7 +20604,7 @@
           },
           "model": {
             "default": "mako",
-            "description": "Retrieval depth: \"mako\" (default) returns the fact-carrying sentences of each page, fast; \"moby\" returns the full readable text, for deep research.",
+            "description": "Retrieval depth: \"mako\" (default) returns the fact-carrying sentences of each page, fast; \"krill\" is free and unlimited under fair use, returning a smaller set of them at low priority, one request at a time, with no written answer; \"moby\" returns the full readable text, for deep research.",
             "title": "Model",
             "type": "string"
           }
