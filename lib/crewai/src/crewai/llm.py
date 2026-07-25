@@ -767,6 +767,18 @@ class LLM(BaseLLM):
             messages = self._process_message_files(messages)
         formatted_messages = self._format_messages_for_provider(messages)
 
+        # Strip provider-internal cache_breakpoint flags before sending to
+        # LiteLLM. Native provider adapters (AnthropicCompletion, etc.) consume
+        # the flag in their own _format_messages path and never reach here.
+        # LiteLLM providers (Groq, OpenAI-compatible, etc.) have no concept of
+        # this flag and will raise an error if they receive it.
+        from crewai.llms.cache import CACHE_BREAKPOINT_KEY
+
+        formatted_messages = [
+            {k: v for k, v in msg.items() if k != CACHE_BREAKPOINT_KEY}
+            for msg in formatted_messages
+        ]
+
         params = {
             "model": self.model,
             "messages": formatted_messages,
