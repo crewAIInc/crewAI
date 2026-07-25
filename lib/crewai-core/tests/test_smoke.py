@@ -66,9 +66,19 @@ def test_user_data_round_trip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
         "crewai_core.paths.appdirs.user_data_dir",
         lambda app, author: str(tmp_path / app),
     )
-    user_data.update_user_data({"trace_consent": True, "first_execution_done": True})
+    user_data.update_user_data(
+        {
+            "trace_consent": True,
+            "first_execution_done": True,
+            "display_name": "José",
+        }
+    )
     data = user_data._load_user_data()
-    assert data == {"trace_consent": True, "first_execution_done": True}
+    assert data == {
+        "trace_consent": True,
+        "first_execution_done": True,
+        "display_name": "José",
+    }
     assert user_data.has_user_declined_tracing() is False
     monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
     assert user_data.is_tracing_enabled() is True

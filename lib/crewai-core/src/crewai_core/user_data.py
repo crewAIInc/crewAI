@@ -36,7 +36,7 @@ def _load_user_data() -> dict[str, Any]:
     p = _user_data_file()
     if p.exists():
         try:
-            return cast(dict[str, Any], json.loads(p.read_text()))
+            return cast(dict[str, Any], json.loads(p.read_text(encoding="utf-8")))
         except (json.JSONDecodeError, OSError, PermissionError) as e:
             logger.warning("Failed to load user data: %s", e)
     return {}
@@ -46,7 +46,7 @@ def _save_user_data(data: dict[str, Any]) -> None:
     """Write the full user-data dict, ignoring write errors with a warning."""
     try:
         p = _user_data_file()
-        p.write_text(json.dumps(data, indent=2))
+        p.write_text(json.dumps(data, indent=2), encoding="utf-8")
     except (OSError, PermissionError) as e:
         logger.warning("Failed to save user data: %s", e)
 
