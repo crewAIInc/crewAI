@@ -79,6 +79,7 @@ def test_user_data_round_trip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
         "first_execution_done": True,
         "display_name": "José",
     }
+    assert "José" in user_data._user_data_file().read_text(encoding="utf-8")
     assert user_data.has_user_declined_tracing() is False
     monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
     assert user_data.is_tracing_enabled() is True
