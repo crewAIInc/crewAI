@@ -713,9 +713,24 @@ def _run_flow_project(
     _execute_uv_script("kickoff", entity_type="flow")
 
 
+def _has_project_script(pyproject_data: dict[str, Any], script_name: str) -> bool:
+    project_config = pyproject_data.get("project")
+    if not isinstance(project_config, dict):
+        return False
+    scripts = project_config.get("scripts")
+    return isinstance(scripts, dict) and script_name in scripts
+
+
 def _run_classic_crew_project(
     pyproject_data: dict[str, Any], trained_agents_file: str | None
 ) -> None:
+    if not _has_project_script(pyproject_data, "run_crew"):
+        raise click.UsageError(
+            "The current directory is not a runnable CrewAI crew or flow project. "
+            "Run `crewai run` from the generated project directory, or add a "
+            "[project.scripts].run_crew entry to pyproject.toml."
+        )
+
     _execute_uv_script(
         "run_crew",
         entity_type="crew",
