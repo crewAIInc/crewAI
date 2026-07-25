@@ -7,25 +7,14 @@ via the CrewAI+ API with a global cache at ~/.crewai/skills/.
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
-import sys
 from typing import Any
 
 from crewai.skills.cache import SkillCacheManager
 
 
 _logger = logging.getLogger(__name__)
-
-
-class SkillNotCachedError(Exception):
-    """Raised when a registry skill is not cached and the environment is non-interactive."""
-
-    def __init__(self, ref: str) -> None:
-        super().__init__(
-            f"Skill {ref!r} is not cached locally. "
-            f"Run `crewai skill install {ref}` to install it first."
-        )
-        self.ref = ref
 
 
 def is_registry_ref(value: Any) -> bool:
@@ -68,17 +57,6 @@ def parse_registry_ref(ref: str) -> tuple[str, str]:
     return org, name
 
 
-def _is_noninteractive() -> bool:
-    """Return True in CI or explicitly non-interactive environments."""
-    import os
-
-    return (
-        os.environ.get("CI") == "1"
-        or os.environ.get("CREWAI_NONINTERACTIVE") == "1"
-        or not sys.stdin.isatty()
-    )
-
-
 def resolve_registry_ref(
     ref: str,
     source: Any = None,
@@ -88,7 +66,7 @@ def resolve_registry_ref(
     Resolution order:
     1. ./skills/{name}/ in the current working directory (project-local)
     2. ~/.crewai/skills/{org}/{name}/ (global cache)
-    3. Download from registry (interactive only; raises SkillNotCachedError in CI)
+    3. Download from registry
 
     Args:
         ref: A registry reference, e.g. '@acme/my-skill'.
@@ -96,9 +74,6 @@ def resolve_registry_ref(
 
     Returns:
         A Skill loaded at INSTRUCTIONS disclosure level.
-
-    Raises:
-        SkillNotCachedError: When not cached and running in non-interactive mode.
     """
     from crewai.skills.loader import activate_skill
     from crewai.skills.parser import load_skill_metadata
@@ -123,9 +98,6 @@ def resolve_registry_ref(
             _logger.debug(
                 "Failed to load cached skill at %s", cached_path, exc_info=True
             )
-
-    if _is_noninteractive():
-        raise SkillNotCachedError(ref)
 
     return download_skill(org, name, source=source)
 
@@ -172,7 +144,15 @@ def download_skill(
     try:
         from crewai_core.plus_api import PlusAPI
 
-        api = PlusAPI()
+        from crewai.auth.token import get_auth_token
+        from crewai.context import get_platform_integration_token
+
+        api = PlusAPI(
+            api_key=os.getenv("CREWAI_USER_PAT")
+            or get_platform_integration_token()
+            or get_auth_token(),
+            organization_id=os.getenv("CREWAI_ORGANIZATION_UUID"),
+        )
         response = api.get_skill(org, name)
         response.raise_for_status()
         data = response.json()

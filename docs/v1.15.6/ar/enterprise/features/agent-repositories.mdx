@@ -1,0 +1,155 @@
+---
+title: 'مستودعات الوكلاء'
+description: 'تعرّف على كيفية استخدام مستودعات الوكلاء لمشاركة وإعادة استخدام وكلائك عبر الفرق والمشاريع'
+icon: 'people-group'
+mode: "wide"
+---
+
+تتيح مستودعات الوكلاء لمستخدمي المؤسسات تخزين ومشاركة وإعادة استخدام تعريفات الوكلاء عبر الفرق والمشاريع. تُمكّن هذه الميزة المؤسسات من الاحتفاظ بمكتبة مركزية من الوكلاء الموحدين، مما يعزز الاتساق ويقلل من ازدواجية الجهود.
+
+<Frame>
+  ![Agent Repositories](/images/enterprise/agent-repositories.png)
+</Frame>
+
+## فوائد مستودعات الوكلاء
+
+- **التوحيد**: الحفاظ على تعريفات وكلاء متسقة عبر مؤسستك
+- **إعادة الاستخدام**: إنشاء وكيل مرة واحدة واستخدامه في أطقم ومشاريع متعددة
+- **الحوكمة**: تطبيق سياسات على مستوى المؤسسة لتهيئات الوكلاء
+- **التعاون**: تمكين الفرق من المشاركة والبناء على عمل بعضهم البعض
+
+## إنشاء واستخدام مستودعات الوكلاء
+
+1. يجب أن يكون لديك حساب في CrewAI، جرّب [الخطة المجانية](https://app.crewai.com).
+2. أنشئ وكلاء بأدوار وأهداف محددة لسير عملك.
+3. هيّئ الأدوات والقدرات لكل مساعد متخصص.
+4. انشر الوكلاء عبر المشاريع من خلال الواجهة المرئية أو تكامل API.
+
+<Frame>
+  ![Agent Repositories](/images/enterprise/create-agent-repository.png)
+</Frame>
+
+
+### تحميل الوكلاء من المستودعات
+
+يمكنك تحميل الوكلاء من المستودعات في الكود باستخدام معامل `from_repository` للتشغيل محليًا:
+
+```python
+from crewai import Agent
+
+# إنشاء وكيل بتحميله من مستودع
+# يتم تحميل الوكيل بجميع إعداداته المحددة مسبقًا
+researcher = Agent(
+    from_repository="market-research-agent"
+)
+```
+
+### تجاوز إعدادات المستودع
+
+يمكنك تجاوز إعدادات محددة من المستودع بتوفيرها في التهيئة:
+
+```python
+researcher = Agent(
+    from_repository="market-research-agent",
+    goal="Research the latest trends in AI development",  # تجاوز هدف المستودع
+    verbose=True  # إضافة إعداد غير موجود في المستودع
+)
+```
+
+### مثال: إنشاء طاقم مع وكلاء المستودع
+
+```python
+from crewai import Crew, Agent, Task
+
+# تحميل الوكلاء من المستودعات
+researcher = Agent(
+    from_repository="market-research-agent"
+)
+
+writer = Agent(
+    from_repository="content-writer-agent"
+)
+
+# إنشاء المهام
+research_task = Task(
+    description="Research the latest trends in AI",
+    agent=researcher
+)
+
+writing_task = Task(
+    description="Write a comprehensive report based on the research",
+    agent=writer
+)
+
+# إنشاء الطاقم
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    verbose=True
+)
+
+# تشغيل الطاقم
+result = crew.kickoff()
+```
+
+### مثال: استخدام `kickoff()` مع وكلاء المستودع
+
+يمكنك أيضًا استخدام وكلاء المستودع مباشرة مع طريقة `kickoff()` للتفاعلات الأبسط:
+
+```python
+from crewai import Agent
+from pydantic import BaseModel
+from typing import List
+
+# تعريف تنسيق مخرجات منظم
+class MarketAnalysis(BaseModel):
+    key_trends: List[str]
+    opportunities: List[str]
+    recommendation: str
+
+# تحميل وكيل من المستودع
+analyst = Agent(
+    from_repository="market-analyst-agent",
+    verbose=True
+)
+
+# الحصول على استجابة حرة
+result = analyst.kickoff("Analyze the AI market in 2025")
+print(result.raw)  # الوصول إلى الاستجابة الخام
+
+# الحصول على مخرجات منظمة
+structured_result = analyst.kickoff(
+    "Provide a structured analysis of the AI market in 2025",
+    response_format=MarketAnalysis
+)
+
+# الوصول إلى البيانات المنظمة
+print(f"Key Trends: {structured_result.pydantic.key_trends}")
+print(f"Recommendation: {structured_result.pydantic.recommendation}")
+```
+
+## أفضل الممارسات
+
+1. **اصطلاح التسمية**: استخدم أسماء واضحة ووصفية لوكلاء المستودع
+2. **التوثيق**: أدرج أوصافًا شاملة لكل وكيل
+3. **إدارة الأدوات**: تأكد من توفر الأدوات المشار إليها بواسطة وكلاء المستودع في بيئتك
+4. **التحكم في الوصول**: أدر الصلاحيات لضمان أن أعضاء الفريق المصرّح لهم فقط يمكنهم تعديل وكلاء المستودع
+
+## إدارة المؤسسة
+
+للتبديل بين المؤسسات أو عرض مؤسستك الحالية، استخدم واجهة سطر أوامر CrewAI:
+
+```bash
+# عرض المؤسسة الحالية
+crewai org current
+
+# التبديل إلى مؤسسة مختلفة
+crewai org switch <org_id>
+
+# عرض جميع المؤسسات المتاحة
+crewai org list
+```
+
+<Note>
+عند تحميل الوكلاء من المستودعات، يجب أن تكون مصادقًا ومتحولًا إلى المؤسسة الصحيحة. إذا تلقيت أخطاء، تحقق من حالة المصادقة وإعدادات المؤسسة باستخدام أوامر CLI أعلاه.
+</Note>

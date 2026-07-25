@@ -1,0 +1,321 @@
+---
+title: AWS Workload Identity (اتحاد OIDC)
+description: تكوين AWS Secrets Manager عبر Workload Identity للوصول إلى الأسرار بشكل مراعٍ للتدوير وبدون بيانات اعتماد
+sidebarTitle: بـ Workload Identity
+icon: "id-badge"
+---
+
+## نظرة عامة
+
+يُكوِّن هذا الدليل AWS Secrets Manager كمزود أسرار باستخدام **Workload Identity Federation**: تُصدر CrewAI Platform رموز OIDC قصيرة الأمد، وتُبادلها للحصول على بيانات اعتماد AWS عبر STS، وتقرأ أسرارك — دون تخزين أي مفتاح وصول AWS طويل الأمد في أي مكان.
+
+<Note>
+**لماذا هذا المسار:** تُحَلّ الأسرار وقت تنفيذ الأتمتة، لذا **تنتشر القيم المُدوَّرة إلى الإطلاق التالي بدون إعادة نشر**. إن كنت تحتاج فقط بيانات اعتماد ثابتة ولا تهتم بانتشار التدوير، راجع الدليل الأبسط [AWS — المفاتيح الثابتة / AssumeRole](/ar/enterprise/features/secrets-manager/aws).
+</Note>
+
+### كيف يعمل وقت التشغيل
+
+1. يطلب عامل النشر JWT OIDC طازج من CrewAI Platform.
+2. يستدعي العامل `sts:AssumeRoleWithWebIdentity` على دور IAM الذي ستُعدّه أدناه، مُقدِّماً الـ JWT.
+3. تتحقق AWS STS من الـ JWT مقابل مُصدر OIDC العام لـ CrewAI Platform (لذا يجب أن يكون تنصيب منصتك قابلاً للوصول من AWS)، ثم تُعيد بيانات اعتماد AWS قصيرة الأمد.
+4. يستخدم العامل تلك البيانات لاستدعاء `secretsmanager:GetSecretValue`.
+5. تُحقن القيمة المجلوبة كقيمة لمتغير البيئة لإطلاق الأتمتة ذاك.
+
+تُخزَّن رموز موضوع OIDC مؤقتاً لنحو ساعة لتفادي إعادة الإصدار في كل إطلاق. تُجلب قيم الأسرار طازجة في كل إطلاق بغض النظر عن حالة ذاكرة OIDC المؤقتة، وهذا ما يجعل هذا المسار مراعياً للتدوير.
+
+## المتطلبات المسبقة
+
+<Note>
+قبل البدء، تأكد من امتلاكك:
+
+- يجب أن تتضمن صورة حاوية الأتمتة إصدار CrewAI runtime رقم `1.14.5` أو أحدث.
+- حساب AWS لديه إذن إنشاء مزوّدي OIDC وأدوار وسياسات IAM.
+- منطقة AWS التي تعيش (أو ستعيش) فيها أسرارك، مثلاً `us-east-1`.
+- مؤسسة على CrewAI Platform يمتلك مستخدمك فيها إذني `workload_identity_configs: manage` و `secret_providers: manage`. راجع [الأذونات (RBAC)](/ar/enterprise/features/secrets-manager/usage#permissions-rbac).
+- **UUID مؤسسة CrewAI الخاصة بك.** يمكنك العثور عليه في صفحة إعدادات المؤسسة في CrewAI Platform — تُربط سياسة الثقة في الخطوة 3 دور IAM بهذه المؤسسة تحديداً.
+- **يجب أن يكون تنصيب CrewAI Platform قابلاً للوصول من AWS عبر HTTPS** ليتمكّن AWS STS من جلب وثيقة اكتشاف OIDC و JWKS أثناء التحقق من الرمز. تأكد مع مسؤول المنصة من أن المضيف متاح عبر الإنترنت (أو أن AWS يمكنه الوصول إليه شبكياً عبر VPC peering أو ما يعادله).
+</Note>
+
+## الخطوة 1 — العثور على عنوان مُصدر OIDC لـ CrewAI Platform
+
+ينشر تنصيب CrewAI Platform وثيقة اكتشاف OpenID Connect على `https://<your-platform-host>/.well-known/openid-configuration`. الحقل `issuer` في تلك الوثيقة هو الرابط الذي ستُسجِّله AWS كمزود OIDC موثوق.
+
+افتح الرابط في المتصفح (مع استبدال `<your-platform-host>` بمضيفك الفعلي، مثلاً `app.crewai.com`):
+
+```
+https://<your-platform-host>/.well-known/openid-configuration
+```
+
+ينبغي أن ترى JSON يحتوي على:
+
+```json
+{
+  "issuer": "https://<your-platform-host>",
+  "jwks_uri": "https://<your-platform-host>/oauth2/jwks",
+  ...
+}
+```
+
+سجّل القيمة الدقيقة لـ `issuer` — ستستخدمها في الخطوة 3.
+
+<Tip>
+إذا أعاد الرابط 404 أو 503، اتصل بمسؤول المنصة. يتطلب مُصدر OIDC تكوين مفتاح توقيع خاص وقت التنصيب. راجع دليل تنصيب المنصة لتكوين `OIDC_PRIVATE_KEY` و `OIDC_ISSUER`.
+</Tip>
+
+## الخطوة 2 — تسجيل CrewAI Platform كمزود هوية OIDC في IAM
+
+افتح [وحدة تحكم IAM ← Identity providers](https://console.aws.amazon.com/iam/home#/identity_providers) وانقر على **Add provider**.
+
+- **Provider type:** OpenID Connect.
+- **Provider URL:** قيمة `issuer` من الخطوة 1 (مثلاً `https://app.crewai.com`).
+- **Audience:** `sts.amazonaws.com`
+
+انقر على **Add provider**.
+
+أو عبر CLI:
+
+```bash
+aws iam create-open-id-connect-provider \
+  --url "https://<your-platform-host>" \
+  --client-id-list "sts.amazonaws.com" \
+  --thumbprint-list "$(echo | openssl s_client -servername <your-platform-host> -connect <your-platform-host>:443 2>/dev/null | openssl x509 -fingerprint -noout -sha1 | cut -d= -f2 | tr -d ':')"
+```
+
+انسخ **OpenIDConnectProviderArn** من المخرجات (أو ARN المزود من الوحدة). ستستخدمه في الخطوة 3.
+
+<Note>
+لا تتحقق AWS فعلياً من بصمة الإبهام لاستدعاءات STS WebIdentity — فهي دائماً تُعيد جلب JWKS وقت التحقق — لكن واجهة الـ API تتطلب وجود الحقل.
+</Note>
+
+{/* SCREENSHOT: AWS IAM "Add identity provider" form filled with the Platform issuer URL and audience sts.amazonaws.com → /images/secrets-manager/aws-wi/01-add-oidc-provider.png */}
+{/* SCREENSHOT: Provider detail page showing the provider's ARN → /images/secrets-manager/aws-wi/02-oidc-provider-arn.png */}
+
+## الخطوة 3 — إنشاء دور IAM
+
+احفظ كـ `trust-policy.json`، مع استبدال `<YOUR_ACCOUNT_ID>` و `<your-platform-host>` (مضيف المُصدر **بدون** `https://` أو `http://`، مثلاً `app.crewai.com`) و `<YOUR_CREWAI_ORG_UUID>` (من المتطلبات المسبقة):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::<YOUR_ACCOUNT_ID>:oidc-provider/<your-platform-host>"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "<your-platform-host>:aud": "sts.amazonaws.com",
+          "<your-platform-host>:sub": "organization:<YOUR_CREWAI_ORG_UUID>"
+        }
+      }
+    }
+  ]
+}
+```
+
+أنشئ الدور:
+
+```bash
+aws iam create-role \
+  --role-name crewai-secrets-reader \
+  --assume-role-policy-document file://trust-policy.json
+```
+
+انسخ **Role Arn** من المخرجات — هذا هو `aws_role_arn` الخاص بك. ستلصقه في CrewAI Platform في الخطوة 6.
+
+<Tip>
+يحدّد الشرطان نطاق الثقة بدقة: يقيّد `aud` افتراض الدور إلى الرموز ذات جمهور AWS STS، ويقصر `sub` الاتحاد على مؤسسة CrewAI محددة — تُقبل فقط الرموز المُصدَرة لأتمتات تلك المؤسسة. تُعيّن CrewAI Platform كلا الادّعاءين دائماً على رموز AWS workload identity.
+</Tip>
+
+{/* SCREENSHOT: IAM "Create role" with Web Identity trust type, federated provider selector pointing at the CrewAI Platform OIDC provider → /images/secrets-manager/aws-wi/03-create-role-trust.png */}
+
+## الخطوة 4 — إنشاء وإرفاق سياسة IAM لوصول Secrets Manager + KMS
+
+احفظ كـ `secrets-policy.json`، مع استبدال العناصر النائبة بمعرّف حسابك ومنطقتك وبادئة اسم السر و ARN(s) مفاتيح KMS التي تُشفّر تلك الأسرار:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SecretsManagerListForUI",
+      "Effect": "Allow",
+      "Action": "secretsmanager:ListSecrets",
+      "Resource": "*"
+    },
+    {
+      "Sid": "SecretsManagerRead",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue"
+      ],
+      "Resource": "arn:aws:secretsmanager:<REGION>:<YOUR_ACCOUNT_ID>:secret:<SECRET_NAME_PREFIX>-*"
+    },
+    {
+      "Sid": "KMSDecrypt",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt"
+      ],
+      "Resource": "arn:aws:kms:<REGION>:<YOUR_ACCOUNT_ID>:key/<KMS_KEY_ID>"
+    }
+  ]
+}
+```
+
+تُشغّل `SecretsManagerListForUI` ميزة **الاقتراح التلقائي لاسم السر** في نموذج متغيرات البيئة وزر **Test Connection** على بيانات الاعتماد. يقبل `secretsmanager:ListSecrets` فقط `Resource: "*"` — فهو محصور على مستوى الحساب في طبقة IAM.
+
+أرفق السياسة بالدور إما عبر CLI (سياسة مضمنة، أبسط) أو واجهة الوحدة؛ للبيئات التي تعيد استخدام نفس الأذونات عبر أدوار متعددة، استخدم علامة التبويب **Managed policy** لسياسة مُسمّاة قابلة لإعادة الاستخدام.
+
+<Tabs>
+  <Tab title="سياسة مضمنة (CLI)">
+    ```bash
+    aws iam put-role-policy \
+      --role-name crewai-secrets-reader \
+      --policy-name SecretsManagerRead \
+      --policy-document file://secrets-policy.json
+    ```
+
+    يُرفق هذا السياسة **مضمنةً** بالدور. السياسات المضمنة مرتبطة بالدور ولا يمكن إعادة استخدامها على أدوار أخرى.
+  </Tab>
+
+  <Tab title="سياسة مُدارة (CLI، قابلة لإعادة الاستخدام)">
+    ```bash
+    POLICY_ARN=$(aws iam create-policy \
+      --policy-name CrewAISecretsReader \
+      --policy-document file://secrets-policy.json \
+      --query 'Policy.Arn' --output text)
+
+    aws iam attach-role-policy \
+      --role-name crewai-secrets-reader \
+      --policy-arn "$POLICY_ARN"
+    ```
+
+    السياسة المُدارة هي مورد IAM مستقل يمكنك إرفاقه بأدوار متعددة.
+  </Tab>
+
+  <Tab title="وحدة التحكم (UI)">
+    1. افتح [وحدة تحكم IAM ← Roles](https://console.aws.amazon.com/iam/home#/roles) واختر **crewai-secrets-reader**.
+    2. في علامة التبويب **Permissions**، انقر على **Add permissions** ← **Create inline policy**.
+    3. بدّل إلى محرر **JSON** والصق محتوى `secrets-policy.json`.
+    4. انقر على **Next**، أعطِ السياسة اسماً (مثلاً `SecretsManagerRead`)، وانقر على **Create policy**.
+
+    لإنشاء سياسة مُدارة قابلة لإعادة الاستخدام بدلاً من ذلك، استخدم **IAM ← Policies ← Create policy** ثم أرفقها بالدور من علامة التبويب **Permissions** الخاصة بالدور.
+
+    {/* SCREENSHOT: IAM Role detail → Permissions → Create inline policy with JSON editor → /images/secrets-manager/aws-wi/03b-attach-inline-policy.png */}
+  </Tab>
+</Tabs>
+
+## الخطوة 5 — إنشاء سر واحد على الأقل في AWS
+
+إذا لم يكن لديك سر للاختبار، أنشئ واحداً الآن:
+
+```bash
+aws secretsmanager create-secret \
+  --region <REGION> \
+  --name crewai-test-keyword \
+  --secret-string "hello from aws"
+```
+
+أو عبر [وحدة تحكم AWS Secrets Manager](https://console.aws.amazon.com/secretsmanager/) ← **Store a new secret**.
+
+{/* SCREENSHOT: AWS Secrets Manager "Store a new secret" page with a sample value → /images/secrets-manager/aws-wi/04-create-secret.png */}
+
+## الخطوة 6 — إضافة تكوين Workload Identity في CrewAI Platform
+
+في CrewAI Platform، انتقل إلى **Settings** ← **Workload Identity** وانقر على **Add Workload Identity Config**.
+
+{/* SCREENSHOT: Sidebar highlighting Settings → Workload Identity → /images/secrets-manager/aws-wi/05-amp-settings-wi-nav.png */}
+{/* SCREENSHOT: Empty state of Workload Identity page with "Add Workload Identity Config" button → /images/secrets-manager/aws-wi/06-amp-wi-empty-state.png */}
+
+املأ النموذج:
+
+- **Name:** اسم وصفي، مثلاً `aws-prod`.
+- **Cloud Provider:** `AWS`.
+- **AWS Role ARN:** **Role Arn** من الخطوة 3.
+- **AWS Region:** المنطقة التي تعيش فيها أسرارك، مثلاً `us-east-1`.
+- (اختياري) حدّد **Set as default for AWS** إذا كنت ترغب في أن يكون تكوين WI هذا هو الافتراضي المُحدَّد عند إنشاء بيانات اعتماد سر مدعومة بـ AWS.
+
+انقر على **Create**.
+
+{/* SCREENSHOT: "Add Workload Identity Config" form with AWS, role ARN, and region filled in → /images/secrets-manager/aws-wi/07-amp-add-wi-config-aws.png */}
+{/* SCREENSHOT: Workload Identity list showing the new AWS row with "(default)" badge if applicable → /images/secrets-manager/aws-wi/08-amp-wi-list-with-aws.png */}
+
+## الخطوة 7 — إضافة بيانات اعتماد مزود أسرار مرتبطة بتكوين WI
+
+انتقل إلى **Settings** ← **Secret Provider Credentials** وانقر على **Add Credential**.
+
+املأ النموذج:
+
+- **Name:** اسم وصفي، مثلاً `aws-prod-wi`.
+- **Provider:** `AWS Secrets Manager`.
+- **Authentication Method:** `Workload Identity` (بدلاً من المفاتيح الثابتة / AssumeRole).
+- **Workload Identity Configuration:** اختر التكوين الذي أنشأته في الخطوة 6 (مثلاً `aws-prod`).
+- (اختياري) حدّد **Set as default credential for this provider**.
+
+سيطلب النموذج فقط **AWS Region** ضمن Workload Identity — حقول بيانات الاعتماد الثابتة (Access Key ID و Secret Access Key و Role ARN و External ID) مخفية عمداً لأنها لا تنطبق على هذا المسار؛ يأتي ARN الدور من تكوين WI المرتبط.
+
+انقر على **Create**.
+
+{/* SCREENSHOT: "Add Secret Provider Credential" form with AWS + Workload Identity + WI config dropdown selected → /images/secrets-manager/aws-wi/09-amp-add-credential-aws-wi.png */}
+
+## الخطوة 8 — اختبار الاتصال
+
+بعد حفظ بيانات الاعتماد، انقر على **Test Connection**. لبيانات اعتماد workload-identity، يتحقق هذا من مصافحة OIDC: تُصدر CrewAI Platform JWT، وتبادله مع AWS STS عبر `sts:AssumeRoleWithWebIdentity`، وتؤكد أن بيانات الاعتماد الناتجة يمكنها استدعاء `sts:GetCallerIdentity` مقابل الدور المُفترَض. نتيجة خضراء تعني أن ارتباط الاتحاد سليم.
+
+نجاح Test Connection يُثبت أن سياسة الثقة وتسجيل مزود OIDC وشرط الجمهور موصولة جميعها بشكل صحيح. لا يُثبت ذلك أن IAM لكل سر صحيح — يُمارَس `secretsmanager:GetSecretValue` على ARN سر محدد بشكل منفصل عندما يُحَلّ متغير بيئة عند الإطلاق. راجع [استكشاف الأخطاء](#troubleshooting) لأنماط فشل المصافحة.
+
+## الخطوة 9 — الإشارة إلى السر في متغير بيئة
+
+الآن أَشِر إلى السر على أتمتة، تماماً كما تفعل مع أي متغير بيئة مدعوم بمدير أسرار. راجع [استخدام مدير الأسرار](/ar/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables) لحقول النموذج والسلوك.
+
+الفرق الوحيد بين متغيرات البيئة المدعومة بـ WI والمدعومة بمفاتيح ثابتة هو **متى** يُقرأ السر:
+
+- **مدعوم بـ WI:** تُقرأ قيمة السر طازجة في كل إطلاق أتمتة.
+- **مدعوم بمفاتيح ثابتة:** تُقرأ قيمة السر وقت النشر وتُدمج في صورة النشر.
+
+## الخطوة 10 — التحقق من التدوير
+
+بعد تشغيل عملية النشر، دوّر السر في AWS:
+
+```bash
+aws secretsmanager update-secret \
+  --region <REGION> \
+  --secret-id crewai-test-keyword \
+  --secret-string "rotated value"
+```
+
+أطلق إطلاق أتمتة جديداً. ستكون بيئة الإطلاق ترى `"rotated value"` — بدون إعادة نشر ولا إعادة تشغيل عامل ولا انتظار TTL.
+
+للتأكد في السجلات (إذا كان لديك وصول إلى العامل)، ابحث عن:
+
+```
+Workload identity config '<id>' (aws): N secret(s) resolved
+```
+
+يظهر هذا السطر لكل إطلاق ويُشير إلى استدعاء `GetSecretValue` طازج مقابل AWS.
+
+## استكشاف الأخطاء
+
+| العَرَض | السبب المحتمل |
+|---|---|
+| يفشل Test Connection بخطأ مصافحة | رُفض استدعاء `sts:AssumeRoleWithWebIdentity`. تحقق من أن ARN الكيان الموحَّد في سياسة الثقة يشير إلى `oidc-provider/<your-platform-host>` (المضيف **بدون** `https://` أو `http://` وبدون شرطة مائلة لاحقة)، وأن شرط الجمهور هو بالضبط `sts.amazonaws.com`، وأن شرط `sub` يطابق UUID مؤسسة CrewAI الخاصة بك، وأن رابط اكتشاف OIDC للمنصة قابل للوصول من AWS عبر الإنترنت العام. |
+| `InvalidIdentityToken: Couldn't retrieve verification key from your identity provider` | لا يمكن لـ AWS STS الوصول إلى مضيف CrewAI Platform لجلب JWKS. تأكد من أن المضيف متاح عبر الإنترنت من AWS، وأن رابط اكتشاف OIDC يُعيد 200، وأن نقطة نهاية JWKS قابلة للوصول. |
+| `AccessDenied: Not authorized to perform sts:AssumeRoleWithWebIdentity` | عدم تطابق سياسة الثقة. تحقق من الخطوة 3 من جديد: يجب أن يتضمن ARN الكيان الموحَّد `oidc-provider/<your-platform-host>` (المضيف **بدون** `https://` أو `http://` وبدون شرطة مائلة لاحقة)، ويجب أن يكون شرط الجمهور بالضبط `sts.amazonaws.com`، وأن يساوي شرط `sub` بالضبط `organization:<YOUR_CREWAI_ORG_UUID>`. |
+| يُظهر الاقتراح التلقائي لاسم السر `AccessDenied: secretsmanager:ListSecrets` | يفتقد الدور إلى `secretsmanager:ListSecrets` مع `Resource: "*"`. أضف بيان `SecretsManagerListForUI` من الخطوة 4. |
+| يفشل الإطلاق في حلّ سر رغم نجاح Test Connection | ارتباط WI سليم، لكن IAM المحصور بالمورد مفقود على السر الفاشل. راجع أذونات `secretsmanager:GetSecretValue` و `kms:Decrypt` للدور على ARN ذلك السر بعينه ومفتاح KMS الخاص به. |
+| `RegionDisabledException` / لم يُعثر على أسرار | لا تطابق المنطقة في تكوين Workload Identity المكان الفعلي للسر. تحقق من الخطوة 6 من جديد. |
+| لا تُلتقط القيمة المُدوَّرة في الإطلاق التالي | تأكد من أن متغير البيئة على الأتمتة يشير إلى بيانات اعتماد مدعومة بـ Workload Identity (وليس بيانات اعتماد بمفاتيح ثابتة). يدمج المسار الثابت القيم في صورة النشر. |
+
+### روابط مرجعية
+
+- AWS: [Creating OpenID Connect (OIDC) identity providers](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html)
+- AWS: [Configuring a role for OpenID Connect federation](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc_relying-party.html)
+- AWS: [STS:AssumeRoleWithWebIdentity API reference](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html)
+
+## الخطوات التالية
+
+- [استخدام الأسرار في متغيرات البيئة وإدارة الأذونات](/ar/enterprise/features/secrets-manager/usage)
+- للتنوع متعدد السحاب، راجع أيضاً [GCP Workload Identity Federation](/ar/enterprise/features/secrets-manager/gcp-workload-identity) و [Azure Workload Identity Federation](/ar/enterprise/features/secrets-manager/azure-workload-identity).
