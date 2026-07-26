@@ -1,0 +1,273 @@
+---
+title: GCP Workload Identity Federation
+description: تكوين Google Cloud Secret Manager عبر Workload Identity Federation للوصول إلى الأسرار بشكل مراعٍ للتدوير وبدون بيانات اعتماد
+sidebarTitle: بـ Workload Identity
+icon: "id-badge"
+---
+
+## نظرة عامة
+
+يُكوِّن هذا الدليل Google Cloud Secret Manager كمزود أسرار باستخدام **Workload Identity Federation**: تُصدر CrewAI Platform رموز OIDC قصيرة الأمد، وتُبادلها للحصول على بيانات اعتماد Google Cloud عبر خدمة Security Token Service، وتقرأ أسرارك — دون تخزين أي مفتاح حساب خدمة طويل الأمد في أي مكان.
+
+<Note>
+**لماذا هذا المسار:** تُحَلّ الأسرار وقت تنفيذ الأتمتة، لذا **تنتشر القيم المُدوَّرة إلى الإطلاق التالي بدون إعادة نشر**. إن كنت تحتاج فقط بيانات اعتماد ثابتة، راجع الدليل الأبسط [GCP — مفتاح حساب الخدمة](/ar/enterprise/features/secrets-manager/gcp).
+</Note>
+
+### كيف يعمل وقت التشغيل
+
+1. يطلب عامل النشر JWT OIDC طازج من CrewAI Platform.
+2. يبادل العامل الـ JWT للحصول على بيانات اعتماد Google موحَّدة عبر [Security Token Service](https://cloud.google.com/iam/docs/reference/sts/rest)، مع الإشارة إلى Workload Identity Pool Provider الذي ستُعدّه أدناه.
+3. يستدعي العامل `secretmanager.googleapis.com:accessSecretVersion` لقراءة السر، باستخدام بيانات الاعتماد الموحَّدة مباشرةً (يمتلك الكيان الموحَّد `roles/secretmanager.secretAccessor` — راجع الخطوة 4).
+4. تُحقن القيمة المجلوبة كقيمة لمتغير البيئة لإطلاق الأتمتة ذاك.
+
+تُخزَّن رموز موضوع OIDC مؤقتاً لنحو ساعة لتفادي إعادة الإصدار في كل إطلاق. تُجلب قيم الأسرار طازجة في كل إطلاق بغض النظر عن حالة ذاكرة OIDC المؤقتة، وهذا ما يجعل هذا المسار مراعياً للتدوير.
+
+## المتطلبات المسبقة
+
+<Note>
+قبل البدء، تأكد من امتلاكك:
+
+- يجب أن تتضمن صورة حاوية الأتمتة إصدار CrewAI runtime رقم `1.14.5` أو أحدث.
+- مشروع Google Cloud مع تفعيل **Secret Manager API** و **Security Token Service API** و **IAM Credentials API**. فعّلها عبر الوحدة أو:
+
+  ```bash
+  gcloud services enable secretmanager.googleapis.com sts.googleapis.com iamcredentials.googleapis.com \
+    --project=<YOUR_PROJECT_ID>
+  ```
+
+- إذن في المشروع لإنشاء Workload Identity Pools وأدوار IAM وحسابات الخدمة و(إن لزم) الأسرار.
+- مؤسسة على CrewAI Platform يمتلك مستخدمك فيها إذني `workload_identity_configs: manage` و `secret_providers: manage`. راجع [الأذونات (RBAC)](/ar/enterprise/features/secrets-manager/usage#permissions-rbac).
+- **يجب أن يكون تنصيب CrewAI Platform قابلاً للوصول من Google Cloud عبر HTTPS** ليتمكّن GCP STS من جلب وثيقة اكتشاف OIDC و JWKS أثناء التحقق من الرمز. تأكد مع مسؤول المنصة من أن المضيف متاح عبر الإنترنت.
+</Note>
+
+## الخطوة 1 — العثور على عنوان مُصدر OIDC لـ CrewAI Platform
+
+ينشر تنصيب CrewAI Platform وثيقة اكتشاف OpenID Connect على `https://<your-platform-host>/.well-known/openid-configuration`. الحقل `issuer` هناك هو الرابط الذي ستُسجِّله Google كمزود OIDC موثوق.
+
+افتح الرابط في المتصفح:
+
+```
+https://<your-platform-host>/.well-known/openid-configuration
+```
+
+ينبغي أن ترى JSON يحتوي على:
+
+```json
+{
+  "issuer": "https://<your-platform-host>",
+  "jwks_uri": "https://<your-platform-host>/oauth2/jwks",
+  ...
+}
+```
+
+سجّل القيمة الدقيقة لـ `issuer` — ستستخدمها في الخطوة 3.
+
+<Tip>
+إذا أعاد الرابط 404 أو 503، اتصل بمسؤول المنصة. يتطلب مُصدر OIDC تكوين مفتاح توقيع خاص وقت التنصيب. راجع دليل تنصيب المنصة لتكوين `OIDC_PRIVATE_KEY` و `OIDC_ISSUER`.
+</Tip>
+
+## الخطوة 2 — إنشاء Workload Identity Pool
+
+Workload Identity Pool هو حاوية من جانب Google Cloud للهويات الخارجية الموثوقة. ستُسجِّل CrewAI Platform كمزود داخل هذه الحوض.
+
+```bash
+gcloud iam workload-identity-pools create crewai-pool \
+  --project=<YOUR_PROJECT_ID> \
+  --location=global \
+  --display-name="CrewAI Platform"
+```
+
+أو في [وحدة تحكم Workload Identity Pools](https://console.cloud.google.com/iam-admin/workload-identity-pools)، انقر على **Create Pool**.
+
+{/* SCREENSHOT: GCP "Create Workload Identity Pool" form with name "crewai-pool" → /images/secrets-manager/gcp-wi/01-create-pool.png */}
+
+## الخطوة 3 — إضافة CrewAI Platform كمزود OIDC في الحوض
+
+```bash
+gcloud iam workload-identity-pools providers create-oidc crewai-provider \
+  --project=<YOUR_PROJECT_ID> \
+  --location=global \
+  --workload-identity-pool=crewai-pool \
+  --display-name="CrewAI Platform OIDC" \
+  --issuer-uri="https://<your-platform-host>" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.organization=assertion.organization_id" \
+  --attribute-condition="assertion.organization_id != ''"
+```
+
+يُخبر `--attribute-mapping` Google كيفية ربط ادّعاءات JWT بسمات Google:
+- `google.subject` هو معرّف الكيان — نربطه بادّعاء `sub` في JWT، الذي تُعيّنه CrewAI Platform إلى `organization:<uuid>`.
+- `attribute.organization` هو سمة مخصصة — نربطها بادّعاء `organization_id` في JWT لتتمكّن من الإشارة إليها في ارتباطات IAM لاحقاً.
+
+`--attribute-condition` هو فحص دفاع في العمق يرفض الرموز التي تفتقد لادّعاء `organization_id`.
+
+احصل على **اسم مورد المزود** (ستحتاجه للجمهور وارتباطات IAM):
+
+```bash
+gcloud iam workload-identity-pools providers describe crewai-provider \
+  --project=<YOUR_PROJECT_ID> \
+  --location=global \
+  --workload-identity-pool=crewai-pool \
+  --format="value(name)"
+```
+
+يبدو الناتج هكذا:
+
+```
+projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/crewai-pool/providers/crewai-provider
+```
+
+هذه هي قيمة **Workload Identity Provider** الخاصة بك في CrewAI Platform في الخطوة 6. تحسب CrewAI Platform تلقائياً جمهور OIDC كـ `//iam.googleapis.com/<this-resource-name>` عند إصدار الرموز.
+
+{/* SCREENSHOT: "Add provider to pool" form with OIDC selected, issuer URI, audience defaults, attribute mapping → /images/secrets-manager/gcp-wi/02-add-oidc-provider.png */}
+
+## الخطوة 4 — منح الوصول إلى Secret Manager للكيان الموحَّد
+
+اربط دوري Secret Manager كليهما على نطاق المشروع بالكيان الموحَّد — دور يُفعّل الاقتراح التلقائي لاسم السر في نموذج متغير البيئة، والآخر يسمح بقراءة قيم الأسرار عند إطلاق الأتمتة. كلاهما مطلوبان لتعمل الميزة من البداية إلى النهاية.
+
+```bash
+PRINCIPAL_SET="principalSet://iam.googleapis.com/projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/crewai-pool/attribute.organization/<YOUR_CREWAI_ORG_UUID>"
+
+# Required for the Secret Name autocomplete (calls secretmanager.secrets.list)
+gcloud projects add-iam-policy-binding <YOUR_PROJECT_ID> \
+  --member="$PRINCIPAL_SET" \
+  --role="roles/secretmanager.viewer"
+
+# Required to read secret values at kickoff
+gcloud projects add-iam-policy-binding <YOUR_PROJECT_ID> \
+  --member="$PRINCIPAL_SET" \
+  --role="roles/secretmanager.secretAccessor"
+```
+
+استبدل `<PROJECT_NUMBER>` برقم المشروع الرقمي (`gcloud projects describe <YOUR_PROJECT_ID> --format='value(projectNumber)'`) و `<YOUR_CREWAI_ORG_UUID>` بـ UUID مؤسسة CrewAI Platform التي يجب أن يُسمح لها بقراءة أسرارك. يمكنك العثور على UUID المؤسسة في واجهة المنصة في صفحة إعدادات المؤسسة، أو عبر الـ API. يقصر هذا الاتحاد على مؤسسة CrewAI محددة — تُقبل فقط الرموز المُصدَرة لأتمتات تلك المؤسسة.
+
+أو عبر وحدة تحكم Google Cloud:
+
+1. افتح **IAM & Admin** ← **IAM** لمشروعك.
+2. انقر على **GRANT ACCESS**.
+3. **New principals:** الصق سلسلة `principalSet://...attribute.organization/<YOUR_CREWAI_ORG_UUID>` الكاملة.
+4. عيّن الدور **Secret Manager Viewer** (`roles/secretmanager.viewer`).
+5. انقر على **SAVE**.
+6. انقر على **GRANT ACCESS** مرة أخرى وكرّر مع الدور **Secret Manager Secret Accessor** (`roles/secretmanager.secretAccessor`).
+
+<Tip>
+**العزل لكل مؤسسة.** يقيّد النمط `principalSet://...attribute.organization/<UUID>` الوصول إلى رموز مؤسسة محددة. إذا كانت لديك مؤسسات CrewAI متعددة تتشارك مشروع Google Cloud واحد، كرّر كلا الارتباطين لكل مؤسسة بالـ UUID الصحيح — أو استخدم شرط سمة أقل تقييداً إن لم يكن العزل ضرورياً.
+</Tip>
+
+<Tip>
+**تحديد نطاق `secretAccessor` لكل سر (اختياري).** إذا كنت تفضّل عدم منح `roles/secretmanager.secretAccessor` على نطاق المشروع، احذف الارتباط الثاني أعلاه واربط لكل سر بدلاً من ذلك:
+
+```bash
+gcloud secrets add-iam-policy-binding <SECRET_NAME> \
+  --member="$PRINCIPAL_SET" \
+  --role="roles/secretmanager.secretAccessor" \
+  --project=<YOUR_PROJECT_ID>
+```
+
+أبقِ `roles/secretmanager.viewer` على نطاق المشروع في كلا الحالتين — `secretmanager.secrets.list` (الذي يعتمد عليه الاقتراح التلقائي) لا يمكن منحه لكل سر.
+</Tip>
+
+## الخطوة 5 — إنشاء سر واحد على الأقل في GCP
+
+إذا لم يكن لديك سر للاختبار، أنشئ واحداً عبر CLI `gcloud`:
+
+```bash
+echo -n "hello from gcp" | gcloud secrets create crewai-test-keyword \
+  --data-file=- \
+  --project=<YOUR_PROJECT_ID> \
+  --replication-policy=automatic
+```
+
+أو عبر [وحدة تحكم Secret Manager](https://console.cloud.google.com/security/secret-manager):
+
+1. افتح **Secret Manager** في مشروع GCP الخاص بك.
+2. انقر على **+ CREATE SECRET**.
+3. **Name:** `crewai-test-keyword`. **Secret value:** الصق قيمتك.
+4. انقر على **CREATE SECRET**.
+
+## الخطوة 6 — إضافة تكوين Workload Identity في CrewAI Platform
+
+في CrewAI Platform، انتقل إلى **Settings** ← **Workload Identity** وانقر على **Add Workload Identity Config**.
+
+املأ النموذج:
+
+- **Name:** اسم وصفي، مثلاً `gcp-prod`.
+- **Cloud Provider:** `GCP`.
+- **Workload Identity Provider:** اسم مورد المزود من الخطوة 3، مثلاً `projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/crewai-pool/providers/crewai-provider`.
+- (اختياري) بدّل **Default Configuration** إذا كنت ترغب في أن يكون هذا هو تكوين WI الافتراضي المُحدَّد عند إنشاء بيانات اعتماد سر مدعومة بـ GCP.
+
+انقر على **Create**.
+
+{/* SCREENSHOT: "Add Workload Identity Config" form with GCP and provider resource name → /images/secrets-manager/gcp-wi/03-amp-add-wi-config-gcp.png */}
+{/* SCREENSHOT: Workload Identity list showing both AWS and GCP rows → /images/secrets-manager/gcp-wi/04-amp-wi-list-with-gcp.png */}
+
+## الخطوة 7 — إضافة بيانات اعتماد مزود أسرار مرتبطة بتكوين WI
+
+انتقل إلى **Settings** ← **Secret Provider Credentials** وانقر على **Add Credential**.
+
+املأ النموذج:
+
+- **Name:** اسم وصفي، مثلاً `gcp-prod-wi`.
+- **Provider:** `Google Cloud Secret Manager`.
+- **Authentication Method:** `Workload Identity`.
+- **Workload Identity Configuration:** اختر التكوين الذي أنشأته في الخطوة 6.
+- **Project ID:** معرّف مشروع GCP الخاص بك (نفس المشروع الذي يملك الأسرار).
+- (اختياري) حدّد **Set as default credential for this provider**.
+
+سيطلب النموذج فقط **Project ID** ضمن Workload Identity — حقل **Service Account JSON** مخفي عمداً لأنه لا ينطبق على هذا المسار؛ تأتي الهوية الموحَّدة من تكوين WI المرتبط.
+
+انقر على **Create**.
+
+{/* SCREENSHOT: "Add Secret Provider Credential" form with GCP + Workload Identity + WI config dropdown → /images/secrets-manager/gcp-wi/05-amp-add-credential-gcp-wi.png */}
+
+## الخطوة 8 — اختبار الاتصال
+
+بعد حفظ بيانات الاعتماد، انقر على **Test Connection**. لبيانات اعتماد workload-identity، يتحقق هذا من مصافحة OIDC: تُصدر CrewAI Platform JWT وتبادله عبر Security Token Service للحصول على رمز وصول Google موحَّد. نتيجة خضراء تعني أن ارتباط الاتحاد سليم.
+
+نجاح Test Connection يُثبت أن Workload Identity Pool ومزود OIDC وربط السمات وشرط السمة موصولة جميعها بشكل صحيح. لا يُثبت ذلك أن IAM في Secret Manager صحيح — يُمارَس `secretmanager.secrets.list` و `secretmanager.versions.access` بشكل منفصل عند تحميل الاقتراح التلقائي لاسم السر أو عندما يُحَلّ متغير بيئة عند الإطلاق. راجع [استكشاف الأخطاء](#troubleshooting) لأنماط فشل المصافحة.
+
+## الخطوة 9 — الإشارة إلى السر في متغير بيئة
+
+أَشِر إلى السر على أتمتة، تماماً كما تفعل مع أي متغير بيئة مدعوم بمدير أسرار. راجع [استخدام مدير الأسرار](/ar/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables) لحقول النموذج والسلوك.
+
+## الخطوة 10 — التحقق من التدوير
+
+بعد تشغيل عملية النشر، دوّر السر في GCP بإضافة إصدار جديد (يقرأ Secret Manager دائماً أحدث إصدار مفعَّل افتراضياً):
+
+```bash
+echo -n "rotated value" | gcloud secrets versions add crewai-test-keyword \
+  --data-file=- \
+  --project=<YOUR_PROJECT_ID>
+```
+
+أطلق إطلاق أتمتة جديداً. ستكون بيئة الإطلاق ترى `"rotated value"` — بدون إعادة نشر ولا إعادة تشغيل عامل ولا انتظار TTL.
+
+للتأكد في سجلات العامل، ابحث عن:
+
+```
+Workload identity config '<id>' (gcp): N secret(s) resolved
+```
+
+يظهر هذا السطر لكل إطلاق ويُشير إلى استدعاء `accessSecretVersion` طازج مقابل GCP.
+
+## استكشاف الأخطاء
+
+| العَرَض | السبب المحتمل |
+|---|---|
+| يفشل Test Connection بخطأ مصافحة | رُفض تبادل رمز STS. تحقق من وجود Workload Identity Pool، وأن مُصدر مزود OIDC يطابق قيمة `issuer` للمنصة، وأن شرط السمة يقبل ادّعاءات JWT. تأكد من أن رابط اكتشاف OIDC للمنصة قابل للوصول من GCP عبر الإنترنت العام. |
+| `Could not refresh access token: invalid_target` | لا يطابق ادّعاء الجمهور الجمهور المتوقع لمزود Workload Identity. تُعيّن CrewAI Platform الجمهور تلقائياً؛ إذا خصّصته، فتأكد من أنه يطابق `//iam.googleapis.com/<provider-resource-name>`. |
+| `Failed to fetch JWKS from issuer` | لا يمكن لـ GCP STS الوصول إلى مضيف CrewAI Platform. تأكد من أن المضيف متاح عبر الإنترنت وأن `/.well-known/openid-configuration` يُعيد 200. |
+| `Attribute condition rejected token` | يتطلب شرط السمة لمزود OIDC (الخطوة 3) `organization_id`. تُعيّن CrewAI Platform هذا الادّعاء دائماً، لذا يعني هذا عادةً تكوين حوض/مزود خاطئاً. تحقق من شرط السمة للمزود من جديد. |
+| يُظهر الاقتراح التلقائي لاسم السر `PERMISSION_DENIED: secretmanager.secrets.list` | يفتقد الكيان الموحَّد إلى `roles/secretmanager.viewer` على نطاق المشروع. إذن `secretmanager.secrets.list` محصور بنطاق المشروع فقط ولا يمكن منحه لكل سر. راجع الخطوة 4. |
+| يفشل الإطلاق في حلّ سر رغم نجاح Test Connection | ارتباط WI سليم، لكن `secretmanager.versions.access` مفقود على السر الفاشل. راجع `roles/secretmanager.secretAccessor` (على نطاق المشروع، أو لكل سر إذا حدّدت النطاق بهذه الطريقة في الخطوة 4). |
+| لا تُلتقط القيمة المُدوَّرة في الإطلاق التالي | تأكد من أن متغير البيئة على الأتمتة يشير إلى بيانات اعتماد مدعومة بـ Workload Identity (وليس بيانات اعتماد بمفاتيح ثابتة). يدمج المسار الثابت القيم في صورة النشر. |
+
+### روابط مرجعية
+
+- GCP: [Workload Identity Federation overview](https://cloud.google.com/iam/docs/workload-identity-federation)
+- GCP: [Configure Workload Identity Federation with OIDC](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers)
+- GCP: [Secret Manager IAM roles](https://cloud.google.com/secret-manager/docs/access-control)
+
+## الخطوات التالية
+
+- [استخدام الأسرار في متغيرات البيئة وإدارة الأذونات](/ar/enterprise/features/secrets-manager/usage)
+- للتنوع متعدد السحاب، راجع أيضاً [AWS Workload Identity (اتحاد OIDC)](/ar/enterprise/features/secrets-manager/aws-workload-identity) و [Azure Workload Identity Federation](/ar/enterprise/features/secrets-manager/azure-workload-identity).
