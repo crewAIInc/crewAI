@@ -25,7 +25,7 @@ class JSONSearchToolSchema(FixedJSONSearchToolSchema):
 class JSONSearchTool(RagTool):
     name: str = "Search a JSON's content"
     description: str = (
-        "A tool that can be used to semantic search a query from a JSON's content."
+        "A tool that can be used to semantically search a query from a JSON's content."
     )
     args_schema: type[BaseModel] = JSONSearchToolSchema
 

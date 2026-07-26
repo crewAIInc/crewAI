@@ -30,7 +30,7 @@ class DOCXSearchToolSchema(FixedDOCXSearchToolSchema):
 class DOCXSearchTool(RagTool):
     name: str = "Search a DOCX's content"
     description: str = (
-        "A tool that can be used to semantic search a query from a DOCX's content."
+        "A tool that can be used to semantically search a query from a DOCX's content."
     )
     args_schema: type[BaseModel] = DOCXSearchToolSchema
 
