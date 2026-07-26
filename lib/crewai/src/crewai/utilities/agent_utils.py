@@ -1246,13 +1246,28 @@ def extract_tool_call_info(
         call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
         return call_id, sanitize_tool_name(tool_call.name), tool_call.input
     if isinstance(tool_call, dict):
-        # Support OpenAI "id", Bedrock "toolUseId", or generate one
+        # Prefer the Responses API "call_id", then OpenAI "id", then Bedrock
+        # "toolUseId", else generate one. A raw Responses function_call item carries
+        # both "id" (fc_...) and "call_id" (call_...) with different values, and the
+        # matching function_call_output must reference "call_id" -- reading "id"
+        # would produce a tool result that can't be correlated to its invocation.
         call_id = (
-            tool_call.get("id") or tool_call.get("toolUseId") or f"call_{id(tool_call)}"
+            tool_call.get("call_id")
+            or tool_call.get("id")
+            or tool_call.get("toolUseId")
+            or f"call_{id(tool_call)}"
         )
         func_info = tool_call.get("function", {})
         func_name = func_info.get("name", "") or tool_call.get("name", "")
-        func_args = func_info.get("arguments") or tool_call.get("input") or {}
+        # "arguments" is also read from the top level for the OpenAI Responses API,
+        # which emits {"id", "name", "arguments"} with no nested "function" object.
+        # Without it the args silently resolved to {} and the tool ran with no input.
+        func_args = (
+            func_info.get("arguments")
+            or tool_call.get("arguments")
+            or tool_call.get("input")
+            or {}
+        )
         return call_id, sanitize_tool_name(func_name), func_args
     return None
 
@@ -1283,6 +1298,16 @@ def is_tool_call_list(response: list[Any]) -> bool:
         return True
     # Bedrock-style
     if isinstance(first_item, dict) and "name" in first_item and "input" in first_item:
+        return True
+    # OpenAI Responses API style: {"id", "name", "arguments"}, with no nested
+    # "function" object and no "input". Without this the list isn't recognized as
+    # tool calls, so the executor hands it back verbatim and the agent returns raw
+    # tool-call JSON instead of running the tool and producing a final answer.
+    if (
+        isinstance(first_item, dict)
+        and "name" in first_item
+        and "arguments" in first_item
+    ):
         return True
     # Gemini-style
     if hasattr(first_item, "function_call") and first_item.function_call:
