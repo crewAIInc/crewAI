@@ -11,6 +11,7 @@ import crewai_cli.model_catalog as mc
 
 _ALL_KEY_ENVS = [
     "OPENAI_API_KEY",
+    "ATLASCLOUD_API_KEY",
     "ANTHROPIC_API_KEY",
     "GEMINI_API_KEY",
     "GOOGLE_API_KEY",
@@ -141,6 +142,33 @@ def test_vendor_openai_filters_non_chat_models(monkeypatch):
     ids = [m for m, _ in models]
 
     assert ids == ["gpt-5.5", "gpt-4.1"]  # embeddings/whisper dropped, newest first
+
+
+def test_vendor_atlascloud_uses_openai_compatible_catalog(monkeypatch):
+    monkeypatch.setenv("ATLASCLOUD_API_KEY", "atlas-test")
+    payload = {
+        "data": [
+            {"id": "deepseek-ai/deepseek-v4-pro"},
+            {"id": "qwen/qwen3.5-flash"},
+            {"id": "BAAI/text-embedding-m3"},
+        ]
+    }
+    requests: list[tuple[str, dict[str, str] | None]] = []
+
+    def fetch(url, headers=None, params=None):
+        requests.append((url, headers))
+        return payload
+
+    monkeypatch.setattr(mc, "_http_get_json", fetch)
+
+    ids = {model for model, _ in mc.get_provider_models("atlascloud", [])}
+    assert ids == {"deepseek-ai/deepseek-v4-pro", "qwen/qwen3.5-flash"}
+    assert requests == [
+        (
+            "https://api.atlascloud.ai/v1/models",
+            {"Authorization": "Bearer atlas-test"},
+        )
+    ]
 
 
 def test_vendor_gemini_requires_generate_content(monkeypatch):

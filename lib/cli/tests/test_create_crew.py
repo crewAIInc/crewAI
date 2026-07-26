@@ -875,6 +875,9 @@ def test_render_template_does_not_replace_tokens_inside_replacement_values(tmp_p
 
 def test_json_provider_default_model_helper():
     assert json_crew._default_model_for_provider("openai") == "openai/gpt-5.5"
+    assert json_crew._default_model_for_provider("atlascloud") == (
+        "atlascloud/deepseek-ai/deepseek-v4-pro"
+    )
     assert json_crew._default_model_for_provider("anthropic/claude-custom") == (
         "anthropic/claude-custom"
     )

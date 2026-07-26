@@ -30,6 +30,7 @@ from crewai_cli.version import get_crewai_tools_dependency
 
 _PROVIDERS: list[tuple[str, str]] = [
     ("openai", "OpenAI"),
+    ("atlascloud", "Atlas Cloud"),
     ("anthropic", "Anthropic"),
     ("gemini", "Google Gemini"),
     ("groq", "Groq"),
@@ -56,6 +57,11 @@ _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
         ("gpt-5.4-mini", "GPT-5.4 Mini"),
         ("gpt-5.2", "GPT-5.2"),
         ("gpt-4.1", "GPT-4.1"),
+    ],
+    "atlascloud": [
+        ("deepseek-ai/deepseek-v4-pro", "DeepSeek V4 Pro"),
+        ("deepseek-ai/deepseek-v4-flash", "DeepSeek V4 Flash"),
+        ("qwen/qwen3.5-flash", "Qwen3.5 Flash"),
     ],
     "anthropic": [
         ("claude-fable-5", "Claude Fable 5"),

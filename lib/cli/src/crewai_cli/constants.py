@@ -14,6 +14,12 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
             "key_name": "OPENAI_API_KEY",
         }
     ],
+    "atlascloud": [
+        {
+            "prompt": "Enter your Atlas Cloud API key (press Enter to skip)",
+            "key_name": "ATLASCLOUD_API_KEY",
+        }
+    ],
     "anthropic": [
         {
             "prompt": "Enter your ANTHROPIC API key (press Enter to skip)",
@@ -117,6 +123,7 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
 
 PROVIDERS: list[str] = [
     "openai",
+    "atlascloud",
     "anthropic",
     "gemini",
     "nvidia_nim",
@@ -159,6 +166,11 @@ MODELS: dict[str, list[str]] = {
         "gpt-4",
         "gpt-4.1-mini-2025-04-14",
         "gpt-4.1-nano-2025-04-14",
+    ],
+    "atlascloud": [
+        "atlascloud/deepseek-ai/deepseek-v4-pro",
+        "atlascloud/deepseek-ai/deepseek-v4-flash",
+        "atlascloud/qwen/qwen3.5-flash",
     ],
     "anthropic": [
         "claude-opus-4-6",

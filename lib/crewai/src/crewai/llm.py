@@ -335,6 +335,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "bedrock",
     "aws",
     "openrouter",
+    "atlascloud",
     "deepseek",
     "ollama",
     "ollama_chat",
@@ -440,6 +441,7 @@ class LLM(BaseLLM):
                 "bedrock": "bedrock",
                 "aws": "bedrock",
                 "openrouter": "openrouter",
+                "atlascloud": "atlascloud",
                 "deepseek": "deepseek",
                 "ollama": "ollama",
                 "ollama_chat": "ollama_chat",
@@ -557,6 +559,9 @@ class LLM(BaseLLM):
         # (DeepSeek, Dashscope) restrict to their own model prefixes
         if provider == "deepseek":
             return model_lower.startswith("deepseek")
+
+        if provider == "atlascloud":
+            return True
 
         if provider == "ollama" or provider == "ollama_chat":
             # Ollama accepts any local model name
@@ -698,6 +703,7 @@ class LLM(BaseLLM):
 
         openai_compatible_providers = {
             "openrouter",
+            "atlascloud",
             "deepseek",
             "ollama",
             "ollama_chat",

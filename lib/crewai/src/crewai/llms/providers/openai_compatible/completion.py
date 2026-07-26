@@ -1,8 +1,8 @@
 """OpenAI-compatible providers implementation.
 
 This module provides a thin subclass of OpenAICompletion that supports
-various OpenAI-compatible APIs like OpenRouter, DeepSeek, Ollama, vLLM,
-Cerebras, and Dashscope (Alibaba/Qwen).
+various OpenAI-compatible APIs like OpenRouter, Atlas Cloud, DeepSeek,
+Ollama, vLLM, Cerebras, and Dashscope (Alibaba/Qwen).
 
 Usage:
     llm = LLM(model="deepseek/deepseek-chat")  # Uses DeepSeek API
@@ -48,6 +48,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         api_key_env="OPENROUTER_API_KEY",
         base_url_env="OPENROUTER_BASE_URL",
         default_headers={"HTTP-Referer": "https://crewai.com"},
+        api_key_required=True,
+    ),
+    "atlascloud": ProviderConfig(
+        base_url="https://api.atlascloud.ai/v1",
+        api_key_env="ATLASCLOUD_API_KEY",
+        base_url_env="ATLASCLOUD_BASE_URL",
         api_key_required=True,
     ),
     "deepseek": ProviderConfig(
@@ -119,6 +125,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
 
     Supported providers:
         - openrouter: OpenRouter (https://openrouter.ai)
+        - atlascloud: Atlas Cloud (https://atlascloud.ai)
         - deepseek: DeepSeek (https://deepseek.com)
         - ollama: Ollama local server (https://ollama.ai)
         - ollama_chat: Alias for ollama
