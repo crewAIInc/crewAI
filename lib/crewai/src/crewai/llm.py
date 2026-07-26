@@ -342,6 +342,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "cerebras",
     "dashscope",
     "snowflake",
+    "monet",
 ]
 
 
@@ -447,6 +448,7 @@ class LLM(BaseLLM):
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
                 "snowflake": "snowflake",
+                "monet": "monet",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -579,6 +581,11 @@ class LLM(BaseLLM):
         if provider == "snowflake":
             return True
 
+        if provider == "monet":
+            # Monet proxies whichever models the end user's ChatGPT or Claude
+            # subscription exposes, so the set is not known at build time.
+            return True
+
         return False
 
     @classmethod
@@ -704,6 +711,7 @@ class LLM(BaseLLM):
             "hosted_vllm",
             "cerebras",
             "dashscope",
+            "monet",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (

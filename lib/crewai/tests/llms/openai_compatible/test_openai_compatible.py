@@ -95,6 +95,14 @@ class TestProviderRegistry:
         assert config.api_key_env == "DASHSCOPE_API_KEY"
         assert config.api_key_required is True
 
+    def test_monet_config(self):
+        """Test Monet provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["monet"]
+        assert config.base_url == "https://beta.monet.gg/api/v1"
+        assert config.api_key_env == "MONET_ACCESS_TOKEN"
+        assert config.base_url_env == "MONET_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -270,6 +278,26 @@ class TestLLMIntegration:
             llm = LLM(model="dashscope/qwen-turbo")
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "dashscope"
+
+    def test_llm_creates_openai_compatible_for_monet(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for Monet."""
+        with patch.dict(os.environ, {"MONET_ACCESS_TOKEN": "mat_test-token"}):
+            llm = LLM(model="monet/gpt-5.2")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "monet"
+            assert llm.base_url == "https://beta.monet.gg/api/v1"
+
+    def test_monet_base_url_override(self):
+        """Test Monet honors MONET_BASE_URL for self-hosted deployments."""
+        with patch.dict(
+            os.environ,
+            {
+                "MONET_ACCESS_TOKEN": "mat_test-token",
+                "MONET_BASE_URL": "https://monet.internal.example.com/api/v1",
+            },
+        ):
+            llm = LLM(model="monet/claude-sonnet-4.5")
+            assert llm.base_url == "https://monet.internal.example.com/api/v1"
 
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""
