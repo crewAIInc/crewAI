@@ -55,10 +55,10 @@ class MongoDBToolSchema(BaseModel):
 
 
 class MongoDBVectorSearchTool(BaseTool):
-    """Tool to perfrom a vector search the MongoDB database."""
+    """Tool to perform a vector search on the MongoDB database."""
 
     name: str = "MongoDBVectorSearchTool"
-    description: str = "A tool to perfrom a vector search on a MongoDB database for relevant information on internal documents."
+    description: str = "A tool to perform a vector search on a MongoDB database for relevant information on internal documents."
 
     args_schema: type[BaseModel] = MongoDBToolSchema
     query_config: MongoDBVectorSearchConfig | None = Field(
