@@ -1,42 +1,49 @@
 """Tests for models that /v1/chat/completions doesn't serve at all.
 
-The pro tier exists but is Responses-API-only. A chat completion returns 404 with
-one of two messages, depending on the family:
+The pro tier exists but is Responses-API-only. OpenAI reports it as a 404 that is
+distinguishable from a genuine unknown model:
 
-    This model is only supported in v1/responses and not in v1/chat/completions.
-    This is not a chat model and thus not supported in the v1/chat/completions
-    endpoint. Did you mean to use v1/completions?
+    responses-only   param="model", "only supported in v1/responses"
+                     or "This is not a chat model"
+    genuine typo     code="model_not_found", "does not exist"
 
-Measured 2026-07 against the live endpoints:
-
-    model         /v1/chat/completions   /v1/responses
-    gpt-5-pro     404                    OK
-    gpt-5.5-pro   404                    OK
-    gpt-5.4-pro   404                    OK
-    gpt-5.2-pro   404                    OK
-    o1-pro        404                    OK
-    o3-pro        404                    OK
-
-Since they work on the Responses API, requests are routed there rather than
-failing with a misleading "model not found".
+Measured 2026-07 against the live endpoints: gpt-5-pro, gpt-5.2-pro, gpt-5.4-pro,
+gpt-5.5-pro, o1-pro and o3-pro all 404 on chat completions and work on
+/v1/responses. Rather than hardcoding that list, the 404 is caught and the call is
+retried on the Responses API, then the model is remembered so the wasted round trip
+is paid once per process.
 """
 
 import httpx
 import pytest
 from openai import NotFoundError
 
+from crewai.llms.providers.openai import completion as completion_module
 from crewai.llms.providers.openai.completion import OpenAICompletion
 
 
 MESSAGES = [{"role": "user", "content": "hi"}]
+
+RESPONSES_ONLY_MESSAGES = (
+    "This model is only supported in v1/responses and not in /v1/chat/completions.",
+    "This is not a chat model and thus not supported in the v1/chat/completions "
+    "endpoint. Did you mean to use v1/completions?",
+)
 
 
 def build(model: str, **kwargs) -> OpenAICompletion:
     return OpenAICompletion(model=model, api_key="sk-test", **kwargs)
 
 
-def make_not_found(message: str) -> NotFoundError:
-    body = {"error": {"message": message, "type": "invalid_request_error"}}
+def make_not_found(message: str, code: str | None = None) -> NotFoundError:
+    body = {
+        "error": {
+            "message": message,
+            "type": "invalid_request_error",
+            "param": None if code else "model",
+            "code": code,
+        }
+    }
     response = httpx.Response(
         status_code=404,
         json=body,
@@ -45,165 +52,158 @@ def make_not_found(message: str) -> NotFoundError:
     return NotFoundError(message, response=response, body=body)
 
 
-class TestModelNameNormalization:
-    @pytest.mark.parametrize(
-        ("configured", "expected"),
-        [
-            ("gpt-5-pro", "gpt-5-pro"),
-            ("openai/gpt-5-pro", "gpt-5-pro"),
-            ("GPT-5-Pro", "gpt-5-pro"),
-            ("gpt-5-pro-2025-10-06", "gpt-5-pro"),
-            ("openai/gpt-5.5-pro-2026-04-23", "gpt-5.5-pro"),
-            ("gpt-5.5", "gpt-5.5"),
-        ],
-    )
-    def test_strips_prefix_and_snapshot(self, configured: str, expected: str):
-        assert OpenAICompletion._normalize_model_name(configured) == expected
+@pytest.fixture(autouse=True)
+def _clear_learned_models():
+    """Keep the process-wide learned set from leaking between tests."""
+    completion_module._LEARNED_RESPONSES_ONLY_MODELS.clear()
+    yield
+    completion_module._LEARNED_RESPONSES_ONLY_MODELS.clear()
 
 
-class TestResponsesOnlyDetection:
-    @pytest.mark.parametrize(
-        "model",
-        [
-            "gpt-5-pro",
-            "gpt-5.2-pro",
-            "gpt-5.4-pro",
-            "gpt-5.5-pro",
-            "o1-pro",
-            "o3-pro",
-            "openai/gpt-5.5-pro",
-            "gpt-5-pro-2025-10-06",
-        ],
-    )
-    def test_detects_responses_only_models(self, model: str):
-        assert OpenAICompletion._is_responses_only_model(model)
+class TestErrorClassification:
+    @pytest.mark.parametrize("message", RESPONSES_ONLY_MESSAGES)
+    def test_detects_responses_only_404(self, message: str):
+        assert OpenAICompletion._is_responses_only_error(make_not_found(message))
 
-    @pytest.mark.parametrize(
-        "model",
-        ["gpt-5.5", "gpt-5.6-sol", "gpt-4o", "o3", "o3-mini", "gpt-5.2"],
-    )
-    def test_leaves_chat_models_alone(self, model: str):
-        assert not OpenAICompletion._is_responses_only_model(model)
+    def test_ignores_genuine_unknown_model(self):
+        """A real typo must keep failing, not get retried on another endpoint."""
+        error = make_not_found(
+            "The model `gpt-5.99-fake` does not exist or you do not have access "
+            "to it.",
+            code="model_not_found",
+        )
+        assert not OpenAICompletion._is_responses_only_error(error)
 
-    def test_does_not_match_unrelated_pro_names(self):
-        """The check is an exact model list, not a bare '-pro' substring."""
-        assert not OpenAICompletion._is_responses_only_model("my-pro-deployment")
-        assert not OpenAICompletion._is_responses_only_model("gpt-4-pro-custom")
+    def test_ignores_unrelated_exceptions(self):
+        assert not OpenAICompletion._is_responses_only_error(RuntimeError("boom"))
 
 
-class TestEffectiveApiRouting:
-    def test_routes_responses_only_model_to_responses(self):
+class TestFallback:
+    def test_retries_on_responses_and_remembers_the_model(self, monkeypatch):
         llm = build("gpt-5-pro")
+        calls: list[str] = []
 
-        assert llm.api == "completions"
+        def fail_completion(**kwargs):
+            calls.append("completions")
+            raise ValueError("wrapped") from make_not_found(
+                RESPONSES_ONLY_MESSAGES[0]
+            )
+
+        monkeypatch.setattr(llm, "_handle_completion", fail_completion)
+        monkeypatch.setattr(
+            llm, "_call_responses", lambda **kwargs: calls.append("responses") or "ok"
+        )
+
+        assert llm._call_completions(MESSAGES) == "ok"
+        assert calls == ["completions", "responses"]
+        # Second call must skip the doomed chat-completions attempt.
         assert llm._effective_api() == "responses"
 
-    def test_leaves_chat_models_on_completions(self):
-        llm = build("gpt-5.5")
+    def test_does_not_retry_genuine_unknown_model(self, monkeypatch):
+        llm = build("gpt-5.99-fake")
+        calls: list[str] = []
 
-        assert llm._effective_api() == "completions"
+        def fail_completion(**kwargs):
+            calls.append("completions")
+            raise ValueError("wrapped") from make_not_found(
+                "The model does not exist.", code="model_not_found"
+            )
 
-    def test_explicit_responses_is_untouched(self):
-        llm = build("gpt-5.5", api="responses")
+        monkeypatch.setattr(llm, "_handle_completion", fail_completion)
+        monkeypatch.setattr(
+            llm, "_call_responses", lambda **kwargs: calls.append("responses") or "ok"
+        )
 
-        assert llm._effective_api() == "responses"
+        with pytest.raises(ValueError):
+            llm._call_completions(MESSAGES)
 
-    @pytest.mark.parametrize("model", ["o1-pro", "openai/gpt-5-pro", "gpt-5.5-pro"])
-    def test_custom_openai_endpoint_is_never_rerouted(self, model: str):
-        """An OpenAI-compatible server may serve any model name on chat completions.
+        assert calls == ["completions"]
+        assert not completion_module._LEARNED_RESPONSES_ONLY_MODELS
 
-        The model list describes OpenAI's own deployment. Most compatible servers
-        (vLLM, LiteLLM proxies, Ollama) don't implement /v1/responses at all, so
-        rerouting a self-hosted "o1-pro" would break a working setup.
+    def test_custom_endpoint_never_falls_back(self, monkeypatch):
+        """An OpenAI-compatible server may not implement /v1/responses at all.
+
+        Most (vLLM, LiteLLM proxies, Ollama) don't, so a self-hosted model must
+        keep the endpoint the user chose rather than being silently rerouted.
         """
         llm = build(
-            model, custom_openai=True, base_url="https://my-vllm.internal/v1"
+            "o1-pro", custom_openai=True, base_url="https://my-vllm.internal/v1"
+        )
+        calls: list[str] = []
+
+        def fail_completion(**kwargs):
+            calls.append("completions")
+            raise ValueError("wrapped") from make_not_found(
+                RESPONSES_ONLY_MESSAGES[0]
+            )
+
+        monkeypatch.setattr(llm, "_handle_completion", fail_completion)
+        monkeypatch.setattr(
+            llm, "_call_responses", lambda **kwargs: calls.append("responses") or "ok"
         )
 
-        assert llm._effective_api() == "completions"
+        with pytest.raises(ValueError):
+            llm._call_completions(MESSAGES)
 
-    def test_custom_openai_still_honours_explicit_responses(self):
-        llm = build(
-            "o1-pro",
-            api="responses",
-            custom_openai=True,
-            base_url="https://my-vllm.internal/v1",
-        )
+        assert calls == ["completions"]
+
+    @pytest.mark.asyncio
+    async def test_async_path_falls_back_too(self, monkeypatch):
+        llm = build("gpt-5-pro")
+        calls: list[str] = []
+
+        async def fail_completion(**kwargs):
+            calls.append("completions")
+            raise ValueError("wrapped") from make_not_found(
+                RESPONSES_ONLY_MESSAGES[0]
+            )
+
+        async def ok_responses(**kwargs):
+            calls.append("responses")
+            return "ok"
+
+        monkeypatch.setattr(llm, "_ahandle_completion", fail_completion)
+        monkeypatch.setattr(llm, "_acall_responses", ok_responses)
+
+        assert await llm._acall_completions(MESSAGES) == "ok"
+        assert calls == ["completions", "responses"]
+
+
+class TestEffectiveApi:
+    def test_defaults_to_completions_for_unknown_models(self):
+        """Nothing is assumed up front; the 404 is what teaches us."""
+        assert build("gpt-5-pro")._effective_api() == "completions"
+
+    def test_explicit_responses_is_honoured(self):
+        assert build("gpt-5.5", api="responses")._effective_api() == "responses"
+
+    def test_learned_model_routes_directly(self):
+        llm = build("gpt-5-pro")
+        llm._remember_responses_only_model()
 
         assert llm._effective_api() == "responses"
 
-    def test_call_dispatches_pro_model_to_responses_handler(self, monkeypatch):
-        """A pro model must reach the Responses path, not chat completions."""
-        llm = build("gpt-5-pro")
-        called: list[str] = []
-
-        monkeypatch.setattr(
-            llm, "_call_responses", lambda **kwargs: called.append("responses") or "ok"
+    def test_learned_model_still_respects_custom_endpoint(self):
+        llm = build(
+            "gpt-5-pro", custom_openai=True, base_url="https://my-vllm.internal/v1"
         )
-        monkeypatch.setattr(
-            llm,
-            "_call_completions",
-            lambda **kwargs: called.append("completions") or "ok",
-        )
+        completion_module._LEARNED_RESPONSES_ONLY_MODELS.add("gpt-5-pro")
 
-        result = llm.call("hi")
-
-        assert result == "ok"
-        assert called == ["responses"]
+        assert llm._effective_api() == "completions"
 
 
 class TestNotFoundMessage:
-    @pytest.mark.parametrize(
-        "message",
-        [
-            "This model is only supported in v1/responses and not in /v1/chat/completions.",
-            "This is not a chat model and thus not supported in the v1/chat/completions endpoint.",
-        ],
-    )
+    @pytest.mark.parametrize("message", RESPONSES_ONLY_MESSAGES)
     def test_points_at_responses_api(self, message: str):
-        llm = build("gpt-5.5")
-
-        msg = llm._model_not_found_message(make_not_found(message))
+        msg = build("gpt-5.5")._model_not_found_message(make_not_found(message))
 
         assert 'api="responses"' in msg
         assert "not available on /v1/chat/completions" in msg
 
     def test_keeps_plain_not_found_for_real_typos(self):
-        llm = build("gpt-5.5")
-
-        msg = llm._model_not_found_message(
-            make_not_found("The model `gpt-5.99` does not exist.")
+        msg = build("gpt-5.5")._model_not_found_message(
+            make_not_found("The model does not exist.", code="model_not_found")
         )
 
         assert "not found" in msg
         assert 'api="responses"' not in msg
-
-    def test_known_pro_model_is_flagged_regardless_of_wording(self):
-        """Even if OpenAI rewords the 404, a known pro model gets the hint."""
-        llm = build("gpt-5-pro")
-
-        msg = llm._model_not_found_message(make_not_found("Something went wrong."))
-
-        assert 'api="responses"' in msg
-
-    def test_custom_endpoint_does_not_get_name_based_hint(self):
-        """Don't advise api="responses" for a server that may not implement it."""
-        llm = build(
-            "o1-pro", custom_openai=True, base_url="https://my-vllm.internal/v1"
-        )
-
-        msg = llm._model_not_found_message(make_not_found("Model does not exist."))
-
-        assert 'api="responses"' not in msg
-
-    def test_custom_endpoint_still_trusts_the_server_response(self):
-        """If the server itself says responses-only, relay that regardless."""
-        llm = build(
-            "o1-pro", custom_openai=True, base_url="https://my-vllm.internal/v1"
-        )
-
-        msg = llm._model_not_found_message(
-            make_not_found("This model is only supported in v1/responses.")
-        )
-
-        assert 'api="responses"' in msg

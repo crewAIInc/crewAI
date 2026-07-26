@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 import json
 import logging
 import os
-import re
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict
 
 import httpx
@@ -52,28 +51,11 @@ if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
 
 
-# Models that exist but are not served by /v1/chat/completions at all. Sending a
-# chat completion returns 404 with either "This model is only supported in
-# v1/responses" or "This is not a chat model", depending on the family. They work
-# normally on /v1/responses, so requests are routed there instead of failing.
-#
-# Measured 2026-07: gpt-5-pro, gpt-5.2-pro, gpt-5.4-pro, gpt-5.5-pro, o1-pro and
-# o3-pro are all responses-only. Matched on the bare model name after stripping
-# any provider prefix and dated suffix, so "openai/gpt-5-pro" and
-# "gpt-5-pro-2025-10-06" resolve to "gpt-5-pro".
-_RESPONSES_ONLY_MODELS: frozenset[str] = frozenset(
-    {
-        "gpt-5-pro",
-        "gpt-5.2-pro",
-        "gpt-5.4-pro",
-        "gpt-5.5-pro",
-        "o1-pro",
-        "o3-pro",
-    }
-)
-
-# Trailing date stamp on pinned snapshots, e.g. "gpt-5-pro-2025-10-06".
-_MODEL_SNAPSHOT_SUFFIX = re.compile(r"-\d{4}-\d{2}-\d{2}$")
+# Models learned at runtime to be unavailable on /v1/chat/completions, keyed by
+# the model string as configured. Populated from the 404 by
+# `_remember_responses_only_model` so the wasted round trip is paid once per model
+# per process rather than on every call.
+_LEARNED_RESPONSES_ONLY_MODELS: set[str] = set()
 
 
 class WebSearchResult(TypedDict, total=False):
@@ -514,27 +496,52 @@ class OpenAICompletion(BaseLLM):
         from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
-        """Call OpenAI Chat Completions API."""
+        """Call OpenAI Chat Completions API.
+
+        Falls back to the Responses API when the model turns out not to be served
+        by chat completions, which OpenAI reports as a 404 distinct from a genuine
+        unknown model.
+        """
         completion_params = self._prepare_completion_params(
             messages=messages, tools=tools
         )
 
-        if self._effective_stream():
-            return self._handle_streaming_completion(
+        try:
+            if self._effective_stream():
+                return self._handle_streaming_completion(
+                    params=completion_params,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
+
+            return self._handle_completion(
                 params=completion_params,
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
                 response_model=response_model,
             )
-
-        return self._handle_completion(
-            params=completion_params,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
-        )
+        except Exception as e:
+            if self.custom_openai or not self._is_responses_only_error(
+                e.__cause__ or e
+            ):
+                raise
+            self._remember_responses_only_model()
+            logging.debug(
+                "Retrying %r on the Responses API: not served by "
+                '/v1/chat/completions. Set api="responses" to skip this.',
+                self.model,
+            )
+            return self._call_responses(
+                messages=messages,
+                tools=tools,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
 
     async def acall(
         self,
@@ -609,27 +616,46 @@ class OpenAICompletion(BaseLLM):
         from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
-        """Async call to OpenAI Chat Completions API."""
+        """Async call to OpenAI Chat Completions API.
+
+        Falls back to the Responses API for models not served by chat completions,
+        mirroring :meth:`_call_completions`.
+        """
         completion_params = self._prepare_completion_params(
             messages=messages, tools=tools
         )
 
-        if self._effective_stream():
-            return await self._ahandle_streaming_completion(
+        try:
+            if self._effective_stream():
+                return await self._ahandle_streaming_completion(
+                    params=completion_params,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
+
+            return await self._ahandle_completion(
                 params=completion_params,
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
                 response_model=response_model,
             )
-
-        return await self._ahandle_completion(
-            params=completion_params,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
-        )
+        except Exception as e:
+            if self.custom_openai or not self._is_responses_only_error(
+                e.__cause__ or e
+            ):
+                raise
+            self._remember_responses_only_model()
+            return await self._acall_responses(
+                messages=messages,
+                tools=tools,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
 
     def _call_responses(
         self,
@@ -1582,23 +1608,39 @@ class OpenAICompletion(BaseLLM):
         """
         return [item for item in response.output if item.type == "reasoning"]
 
+    @staticmethod
+    def _is_responses_only_error(error: BaseException) -> bool:
+        """Whether a 404 means the model exists but isn't on chat completions.
+
+        OpenAI distinguishes the two 404s it returns here:
+
+            responses-only  param="model", "only supported in v1/responses"
+                            or "This is not a chat model"
+            genuine typo    code="model_not_found", "does not exist"
+
+        Matching the former lets a newly Responses-only model be recovered without
+        needing to be listed in this file.
+        """
+        if not isinstance(error, NotFoundError):
+            return False
+        body = getattr(error, "body", None)
+        inner = body.get("error") if isinstance(body, dict) else None
+        if isinstance(inner, dict) and inner.get("code") == "model_not_found":
+            return False
+        text = str(getattr(error, "message", "") or error).lower()
+        return "only supported in v1/responses" in text or "not a chat model" in text
+
+    def _remember_responses_only_model(self) -> None:
+        """Record that this model must use the Responses API."""
+        _LEARNED_RESPONSES_ONLY_MODELS.add(self.model)
+
     def _model_not_found_message(self, error: Exception) -> str:
         """Build a 404 message that says what to do about it.
 
-        A chat-completions 404 usually means one of two things: the model doesn't
-        exist, or it exists but is only served by the Responses API. OpenAI's own
-        wording ("This is not a chat model") doesn't make the fix obvious, so
-        point at ``api="responses"`` when that's what the response indicates.
+        OpenAI's own wording ("This is not a chat model") doesn't make the fix
+        obvious, so point at ``api="responses"`` when that's what it means.
         """
-        text = str(error).lower()
-        # The name-based check is OpenAI-specific, so it only applies to OpenAI
-        # itself. What the server actually said is trusted either way.
-        responses_only = (
-            "only supported in v1/responses" in text
-            or "not a chat model" in text
-            or (not self.custom_openai and self._is_responses_only_model(self.model))
-        )
-        if responses_only:
+        if self._is_responses_only_error(error):
             return (
                 f"Model {self.model} is not available on /v1/chat/completions. "
                 f'Use api="responses" (LLM(model="{self.model}", api="responses")) '
@@ -1606,50 +1648,22 @@ class OpenAICompletion(BaseLLM):
             )
         return f"Model {self.model} not found: {error}"
 
-    @staticmethod
-    def _normalize_model_name(model: str) -> str:
-        """Reduce a configured model string to its bare OpenAI model name.
-
-        Strips any provider prefix and pinned date suffix, so
-        ``"openai/gpt-5-pro-2025-10-06"`` becomes ``"gpt-5-pro"``.
-        """
-        name = model.lower().rsplit("/", 1)[-1]
-        return _MODEL_SNAPSHOT_SUFFIX.sub("", name)
-
-    @classmethod
-    def _is_responses_only_model(cls, model: str) -> bool:
-        """Whether a model is unavailable on /v1/chat/completions entirely.
-
-        The pro tier returns 404 on chat completions but works on the Responses
-        API, so these requests are routed rather than allowed to fail.
-        """
-        return cls._normalize_model_name(model) in _RESPONSES_ONLY_MODELS
-
     def _effective_api(self) -> str:
         """Which OpenAI API to actually use for this model.
 
-        Honours an explicit ``api`` setting, but upgrades to ``"responses"`` when
-        the model is not served by chat completions at all. Without this, a pro
-        model fails with a bare ``Model ... not found``, which is misleading: the
-        model exists, the endpoint is simply wrong.
+        Honours an explicit ``api`` setting, but upgrades to ``"responses"`` for
+        models already known -- from a previous 404 in this process -- not to be
+        served by chat completions.
 
-        Skipped entirely for ``custom_openai=True``. The model list here describes
-        OpenAI's own deployment, and an OpenAI-compatible server is free to serve
-        any model name on /v1/chat/completions -- most don't implement /v1/responses
-        at all. Rerouting someone's self-hosted "o1-pro" would break a working
-        setup, so the user's choice stands.
+        Never overrides ``custom_openai=True``: an OpenAI-compatible server may
+        serve any model name on /v1/chat/completions and most don't implement
+        /v1/responses at all, so the user's choice stands.
         """
         if (
             self.api == "completions"
             and not self.custom_openai
-            and self._is_responses_only_model(self.model)
+            and self.model in _LEARNED_RESPONSES_ONLY_MODELS
         ):
-            logging.debug(
-                "Routing %r to the Responses API: it is not served by "
-                '/v1/chat/completions. Set api="responses" explicitly to silence '
-                "this.",
-                self.model,
-            )
             return "responses"
         return self.api
 
