@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 import json
 import logging
 import os
+import re
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict
 
 import httpx
@@ -49,6 +50,30 @@ if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
+
+
+# Models that exist but are not served by /v1/chat/completions at all. Sending a
+# chat completion returns 404 with either "This model is only supported in
+# v1/responses" or "This is not a chat model", depending on the family. They work
+# normally on /v1/responses, so requests are routed there instead of failing.
+#
+# Measured 2026-07: gpt-5-pro, gpt-5.2-pro, gpt-5.4-pro, gpt-5.5-pro, o1-pro and
+# o3-pro are all responses-only. Matched on the bare model name after stripping
+# any provider prefix and dated suffix, so "openai/gpt-5-pro" and
+# "gpt-5-pro-2025-10-06" resolve to "gpt-5-pro".
+_RESPONSES_ONLY_MODELS: frozenset[str] = frozenset(
+    {
+        "gpt-5-pro",
+        "gpt-5.2-pro",
+        "gpt-5.4-pro",
+        "gpt-5.5-pro",
+        "o1-pro",
+        "o3-pro",
+    }
+)
+
+# Trailing date stamp on pinned snapshots, e.g. "gpt-5-pro-2025-10-06".
+_MODEL_SNAPSHOT_SUFFIX = re.compile(r"-\d{4}-\d{2}-\d{2}$")
 
 
 class WebSearchResult(TypedDict, total=False):
@@ -453,7 +478,7 @@ class OpenAICompletion(BaseLLM):
                 ):
                     raise ValueError("LLM call blocked by before_llm_call hook")
 
-                if self.api == "responses":
+                if self._effective_api() == "responses":
                     return self._call_responses(
                         messages=formatted_messages,
                         tools=tools,
@@ -548,7 +573,7 @@ class OpenAICompletion(BaseLLM):
 
                 formatted_messages = self._format_messages(messages)
 
-                if self.api == "responses":
+                if self._effective_api() == "responses":
                     return await self._acall_responses(
                         messages=formatted_messages,
                         tools=tools,
@@ -1557,6 +1582,65 @@ class OpenAICompletion(BaseLLM):
         """
         return [item for item in response.output if item.type == "reasoning"]
 
+    def _model_not_found_message(self, error: Exception) -> str:
+        """Build a 404 message that says what to do about it.
+
+        A chat-completions 404 usually means one of two things: the model doesn't
+        exist, or it exists but is only served by the Responses API. OpenAI's own
+        wording ("This is not a chat model") doesn't make the fix obvious, so
+        point at ``api="responses"`` when that's what the response indicates.
+        """
+        text = str(error).lower()
+        responses_only = (
+            "only supported in v1/responses" in text
+            or "not a chat model" in text
+            or self._is_responses_only_model(self.model)
+        )
+        if responses_only:
+            return (
+                f"Model {self.model} is not available on /v1/chat/completions. "
+                f'Use api="responses" (LLM(model="{self.model}", api="responses")) '
+                f"to reach it: {error}"
+            )
+        return f"Model {self.model} not found: {error}"
+
+    @staticmethod
+    def _normalize_model_name(model: str) -> str:
+        """Reduce a configured model string to its bare OpenAI model name.
+
+        Strips any provider prefix and pinned date suffix, so
+        ``"openai/gpt-5-pro-2025-10-06"`` becomes ``"gpt-5-pro"``.
+        """
+        name = model.lower().rsplit("/", 1)[-1]
+        return _MODEL_SNAPSHOT_SUFFIX.sub("", name)
+
+    @classmethod
+    def _is_responses_only_model(cls, model: str) -> bool:
+        """Whether a model is unavailable on /v1/chat/completions entirely.
+
+        The pro tier returns 404 on chat completions but works on the Responses
+        API, so these requests are routed rather than allowed to fail.
+        """
+        return cls._normalize_model_name(model) in _RESPONSES_ONLY_MODELS
+
+    def _effective_api(self) -> str:
+        """Which OpenAI API to actually use for this model.
+
+        Honours an explicit ``api`` setting, but upgrades to ``"responses"`` when
+        the model is not served by chat completions at all. Without this, a pro
+        model fails with a bare ``Model ... not found``, which is misleading: the
+        model exists, the endpoint is simply wrong.
+        """
+        if self.api == "completions" and self._is_responses_only_model(self.model):
+            logging.debug(
+                "Routing %r to the Responses API: it is not served by "
+                '/v1/chat/completions. Set api="responses" explicitly to silence '
+                "this.",
+                self.model,
+            )
+            return "responses"
+        return self.api
+
     def _prepare_completion_params(
         self, messages: list[LLMMessage], tools: list[dict[str, BaseTool]] | None = None
     ) -> dict[str, Any]:
@@ -1786,7 +1870,7 @@ class OpenAICompletion(BaseLLM):
                 params["messages"], content, from_agent
             )
         except NotFoundError as e:
-            error_msg = f"Model {self.model} not found: {e}"
+            error_msg = self._model_not_found_message(e)
             logging.error(error_msg)
             self._emit_call_failed_event(
                 error=error_msg, from_task=from_task, from_agent=from_agent
@@ -2209,7 +2293,7 @@ class OpenAICompletion(BaseLLM):
             if usage.get("total_tokens", 0) > 0:
                 logging.info(f"OpenAI API usage: {usage}")
         except NotFoundError as e:
-            error_msg = f"Model {self.model} not found: {e}"
+            error_msg = self._model_not_found_message(e)
             logging.error(error_msg)
             self._emit_call_failed_event(
                 error=error_msg, from_task=from_task, from_agent=from_agent
