@@ -19,7 +19,12 @@ from crewai.events.types.skill_events import (
     SkillLoadFailedEvent,
     SkillLoadedEvent,
 )
-from crewai.skills.models import INSTRUCTIONS, RESOURCES, Skill, SkillFrontmatter
+from crewai.skills.models import (
+    INSTRUCTIONS,
+    RESOURCES,
+    Skill,
+    SkillFrontmatter,
+)
 from crewai.skills.parser import (
     SKILL_FILENAME,
     load_skill_instructions,
@@ -148,25 +153,39 @@ def activate_skill(
 def load_skill(
     skill: Path | Skill | str,
     source: BaseAgent | None = None,
+    *,
+    activate: bool = True,
 ) -> list[Skill]:
     """Load one skill input into Skill objects.
 
     Accepts a pre-loaded Skill object, skill search path, inline SKILL.md
     string, or '@org/name' registry reference. Path inputs can expand to many
-    skills. Path and inline inputs are activated immediately; pre-loaded Skill
-    objects keep their disclosure level.
+    skills. Pre-loaded Skill objects keep their disclosure level. Path and
+    registry inputs are activated by default; callers performing runtime
+    progressive disclosure can leave them at metadata level.
+
+    Args:
+        skill: Skill input to resolve.
+        source: Optional event source for event emission.
+        activate: Whether discovered path and registry skills should load their
+            full instructions immediately.
+
+    Returns:
+        Resolved Skill objects.
     """
     if isinstance(skill, Skill):
         return [skill]
     if isinstance(skill, Path):
-        return [
-            activate_skill(s, source=source)
-            for s in discover_skills(skill, source=source)
-        ]
+        discovered = discover_skills(skill, source=source)
+        if not activate:
+            return discovered
+        return [activate_skill(s, source=source) for s in discovered]
     if isinstance(skill, str) and skill.startswith("@"):
         from crewai.skills.registry import resolve_registry_ref
 
-        return [resolve_registry_ref(skill, source=source)]
+        if activate:
+            return [resolve_registry_ref(skill, source=source)]
+        return [resolve_registry_ref(skill, source=source, activate=False)]
     if isinstance(skill, str) and skill.lstrip().startswith("---\n"):
         frontmatter_dict, body = parse_frontmatter(skill.strip())
         return [
@@ -178,10 +197,10 @@ def load_skill(
             )
         ]
     if isinstance(skill, str):
-        return [
-            activate_skill(s, source=source)
-            for s in discover_skills(Path(skill), source=source)
-        ]
+        discovered = discover_skills(Path(skill), source=source)
+        if not activate:
+            return discovered
+        return [activate_skill(s, source=source) for s in discovered]
 
     msg = f"Unsupported skill input: {skill!r}"
     raise TypeError(msg)
@@ -190,16 +209,27 @@ def load_skill(
 def load_skills(
     skills: Iterable[Path | Skill | str],
     source: BaseAgent | None = None,
+    *,
+    activate: bool = True,
 ) -> list[Skill]:
     """Load skill inputs into de-duplicated Skill objects.
 
     Preserves first-seen order when multiple inputs resolve to the same skill
     name. Registry refs are scoped by org so different orgs can publish skills
     that share a frontmatter name.
+
+    Args:
+        skills: Skill inputs to resolve.
+        source: Optional event source for event emission.
+        activate: Whether discovered path and registry skills should load their
+            full instructions immediately.
+
+    Returns:
+        De-duplicated Skill objects.
     """
     loaded: dict[str, Skill] = {}
     for skill_input in skills:
-        for skill in load_skill(skill_input, source=source):
+        for skill in load_skill(skill_input, source=source, activate=activate):
             dedup_key = skill.name
             if isinstance(skill_input, str) and skill_input.startswith("@"):
                 from crewai.skills.registry import parse_registry_ref

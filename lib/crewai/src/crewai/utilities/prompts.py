@@ -115,22 +115,49 @@ class Prompts(BaseModel):
         )
 
     def _build_skill_block(self) -> str:
-        """Render the agent's activated skills as a stable XML block.
+        """Render always-on instructions and the available skill catalog.
 
-        Skills are agent-scoped (do not change per task), so they live in the
-        system prompt where prompt-cache prefixes can survive across calls.
+        Metadata-only skills remain a stable prompt-cache anchor. Their full
+        instructions are disclosed through the runtime ``load_skill`` tool only
+        when the model determines that a skill applies to the current request.
         """
         skills = getattr(self.agent, "skills", None)
         if not skills:
             return ""
 
         from crewai.skills.loader import format_skill_context
-        from crewai.skills.models import Skill
+        from crewai.skills.models import INSTRUCTIONS, Skill
 
-        sections = [format_skill_context(s) for s in skills if isinstance(s, Skill)]
-        if not sections:
+        active = [
+            format_skill_context(skill)
+            for skill in skills
+            if isinstance(skill, Skill)
+            and skill.disclosure_level >= INSTRUCTIONS
+        ]
+        available = [
+            format_skill_context(skill)
+            for skill in skills
+            if isinstance(skill, Skill)
+            and skill.disclosure_level < INSTRUCTIONS
+        ]
+
+        blocks: list[str] = []
+        if active:
+            blocks.append("<skills>\n" + "\n\n".join(active) + "\n</skills>")
+        if available:
+            catalog = "\n\n".join(available)
+            blocks.append(
+                "<available_skills>\n"
+                "Review these skill descriptions before answering. When one "
+                "clearly applies to the current request, call `load_skill` with "
+                "its exact name to load its full instructions. Do not use a "
+                "skill's instructions without loading it first.\n\n"
+                f"{catalog}\n"
+                "</available_skills>"
+            )
+        if not blocks:
             return ""
-        return "\n\n<skills>\n" + "\n\n".join(sections) + "\n</skills>"
+        return "\n\n" + "\n\n".join(blocks)
 
     def _build_prompt(
         self,
