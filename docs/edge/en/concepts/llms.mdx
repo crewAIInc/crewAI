@@ -1275,6 +1275,8 @@ CrewAI supports asynchronous LLM calls for improved performance and concurrency 
 
 CrewAI supports structured responses from LLM calls by allowing you to define a `response_format` using a Pydantic model. This enables the framework to automatically parse and validate the output, making it easier to integrate the response into your application without manual post-processing.
 
+Structured output support varies by provider and model. Test your chosen model before relying on structured responses in production.
+
 For example, you can define a Pydantic model to represent the expected response structure and pass it as the `response_format` when instantiating the LLM. The model will then be used to convert the LLM output into a structured Python object.
 
 ```python Code

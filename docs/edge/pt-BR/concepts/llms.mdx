@@ -772,6 +772,8 @@ O CrewAI suporta respostas em streaming de LLMs, permitindo que sua aplicação 
 
 O CrewAI suporta respostas estruturadas de LLMs permitindo que você defina um `response_format` usando um modelo Pydantic. Isso permite que o framework automaticamente faça o parsing e valide a saída, facilitando a integração da resposta em sua aplicação sem pós-processamento manual.
 
+O suporte a saídas estruturadas varia de acordo com o provedor e o modelo. Teste o modelo escolhido antes de depender de respostas estruturadas em produção.
+
 Por exemplo, é possível definir um modelo Pydantic para representar a resposta esperada e passá-lo como `response_format` ao instanciar o LLM. O modelo será utilizado para converter a resposta do LLM em um objeto Python estruturado.
 
 ```python Code
