@@ -77,37 +77,41 @@ def _clear_learned_conflicts():
     completion_module._LEARNED_TOOLS_REASONING_EFFORT_CONFLICTS.clear()
 
 
-class TestKnownFamiliesFastPath:
-    """Models we've measured are stripped before the request goes out."""
+class TestLearnedFastPath:
+    """Nothing is assumed up front; a 400 is what teaches us about a model."""
 
-    @pytest.mark.parametrize(
-        "model",
-        [
-            "gpt-5.6",
-            "openai/gpt-5.6",
-            "gpt-5.6-sol",
-            "GPT-5.6-Terra",
-            "gpt-5.6-luna",
-            "gpt-5.5",
-            "gpt-5.5-2026-04-23",
-            "gpt-5.4",
-            "gpt-5.4-mini",
-            "gpt-5.4-nano",
-        ],
-    )
-    def test_drops_reasoning_effort_for_incompatible_models(self, model: str):
-        llm = build(model, additional_params={"reasoning_effort": "high"})
+    def test_sends_reasoning_effort_for_an_unknown_model(self):
+        """No model list, so the first request goes out as the caller asked.
+
+        The 400 it may come back with is recovered in `_call_completions`.
+        """
+        llm = build("gpt-5.6", additional_params={"reasoning_effort": "high"})
 
         params = llm._prepare_completion_params(MESSAGES, tools=TOOLS)
 
+        assert params["reasoning_effort"] == "high"
+
+    def test_forces_none_once_the_model_is_known(self):
+        """After a 400, skip the doomed request and go straight to "none".
+
+        Explicit "none" rather than removing the key: gpt-5.6-* apply a
+        server-side default, so omitting it is rejected the same way.
+        """
+        llm = build("gpt-5.6", additional_params={"reasoning_effort": "high"})
+        llm._remember_reasoning_effort_conflict()
+
+        params = llm._prepare_completion_params(MESSAGES, tools=TOOLS)
+
+        assert "reasoning_effort" in params, "the key must be sent, not dropped"
         assert params["reasoning_effort"] == "none"
         # Tools must survive — they are the reason the call exists.
         assert params["tools"]
         assert params["tool_choice"] == "auto"
 
-    def test_drops_reasoning_effort_supplied_via_additional_params(self):
+    def test_learning_applies_to_the_additional_params_leak(self):
         """additional_params bypasses the typed field, so it must be checked too."""
         llm = build("gpt-5.5", additional_params={"reasoning_effort": "medium"})
+        llm._remember_reasoning_effort_conflict()
 
         params = llm._prepare_completion_params(MESSAGES, tools=TOOLS)
 
@@ -116,51 +120,27 @@ class TestKnownFamiliesFastPath:
     def test_keeps_reasoning_effort_without_tools(self):
         """Without tools the combination is legal, so nothing should change."""
         llm = build("gpt-5.5", additional_params={"reasoning_effort": "high"})
+        llm._remember_reasoning_effort_conflict()
 
         params = llm._prepare_completion_params(MESSAGES, tools=None)
 
         assert params["reasoning_effort"] == "high"
 
-    def test_forces_none_rather_than_removing_the_parameter(self):
-        """Omitting `reasoning_effort` is not sufficient.
+    def test_learning_does_not_touch_other_models(self):
+        """A conflict is remembered per model, not globally."""
+        build("gpt-5.5")._remember_reasoning_effort_conflict()
+        other = build("gpt-5.2", additional_params={"reasoning_effort": "high"})
 
-        Measured against the live endpoint: gpt-5.6-* apply a server-side default,
-        so a request carrying no `reasoning_effort` at all is rejected exactly like
-        one carrying "high". Only an explicit "none" is accepted with tools.
-
-            gpt-5.6-sol  tools, no reasoning_effort  -> 400
-            gpt-5.6-sol  tools, reasoning_effort=none -> OK
-        """
-        llm = build("gpt-5.6-sol", additional_params={"reasoning_effort": "high"})
-
-        params = llm._prepare_completion_params(MESSAGES, tools=TOOLS)
-
-        assert "reasoning_effort" in params, "the key must be sent, not dropped"
-        assert params["reasoning_effort"] == "none"
-
-    def test_keeps_explicit_none_effort_with_tools(self):
-        """OpenAI explicitly allows reasoning_effort='none' with tools here."""
-        llm = build("gpt-5.6", additional_params={"reasoning_effort": "none"})
-
-        params = llm._prepare_completion_params(MESSAGES, tools=TOOLS)
-
-        assert params["reasoning_effort"] == "none"
-
-    @pytest.mark.parametrize("model", ["o1", "o3-mini", "gpt-5.2", "gpt-5"])
-    def test_unaffected_models_keep_reasoning_effort_with_tools(self, model: str):
-        """Measured as accepting the combination — must not be stripped."""
-        llm = build(model, additional_params={"reasoning_effort": "high"})
-
-        params = llm._prepare_completion_params(MESSAGES, tools=TOOLS)
+        params = other._prepare_completion_params(MESSAGES, tools=TOOLS)
 
         assert params["reasoning_effort"] == "high"
 
     def test_fast_path_actually_has_something_to_drop(self):
-        """Guard against the drop tests passing vacuously.
+        """Guard against the assertions above passing vacuously.
 
         The typed `reasoning_effort` field is gated behind `is_o1_model`, so it
         never reaches the payload for gpt-5.x. If a test set it that way there
-        would be nothing to strip and the assertion would pass for the wrong
+        would be nothing to rewrite and the assertion would pass for the wrong
         reason — `additional_params` is the path that actually leaks.
         """
         leaked = build(
@@ -168,9 +148,9 @@ class TestKnownFamiliesFastPath:
         )._prepare_completion_params(MESSAGES, tools=None)
         assert leaked["reasoning_effort"] == "high"
 
-        typed = build(
-            "gpt-5.5", reasoning_effort="high"
-        )._prepare_completion_params(MESSAGES, tools=None)
+        typed = build("gpt-5.5", reasoning_effort="high")._prepare_completion_params(
+            MESSAGES, tools=None
+        )
         assert "reasoning_effort" not in typed
 
 

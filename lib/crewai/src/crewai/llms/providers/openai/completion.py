@@ -67,25 +67,10 @@ if TYPE_CHECKING:
 # conflict learned against one endpoint must not leak to another.
 _LEARNED_RESPONSES_ONLY_MODELS: set[tuple[str, str]] = set()
 
-# Known model families that reject `reasoning_effort` alongside function tools on
-# /v1/chat/completions. This is only a fast path to avoid a wasted round trip --
-# the authoritative check is `_is_tools_reasoning_effort_error`, which catches
-# families we haven't measured yet.
-#
-# Measured against /v1/chat/completions: gpt-5.4, gpt-5.5 and gpt-5.6 (including
-# -mini, -nano, dated snapshots and the 5.6 sol/terra/luna variants) all reject
-# the combination. gpt-5.2 and earlier, o1, o3 and o4-mini accept it.
-# Matched as substrings against the lowercased model name so provider prefixes
-# ("openai/gpt-5.5") and suffixed variants ("gpt-5.6-sol") are covered too.
-_TOOLS_REASONING_EFFORT_INCOMPATIBLE: tuple[str, ...] = (
-    "gpt-5.4",
-    "gpt-5.5",
-    "gpt-5.6",
-)
-
-# Models learned at runtime from a 400, keyed by the model string as configured.
-# Populated by `_remember_reasoning_effort_conflict` so the retry is paid once
-# per model per process rather than on every call.
+# Models learned at runtime to reject `reasoning_effort` alongside function tools,
+# keyed by (endpoint, model). Populated from the 400 by
+# `_remember_reasoning_effort_conflict` so the wasted round trip is paid once per
+# model per process rather than on every call.
 _LEARNED_TOOLS_REASONING_EFFORT_CONFLICTS: set[tuple[str, str]] = set()
 
 
@@ -1749,27 +1734,23 @@ class OpenAICompletion(BaseLLM):
         return f"Model {self.model} not found: {error}"
 
     def _supports_reasoning_effort_with_tools(self, model: str) -> bool:
-        """Whether a model accepts `reasoning_effort` together with function tools.
+        """Whether this model is already known to reject the combination.
 
-        On /v1/chat/completions, newer reasoning models reject the combination:
+        Nothing is assumed up front -- no model list. A model is only known once a
+        400 has been seen for it, which `_call_completions` recovers from:
 
             "Function tools with reasoning_effort are not supported for gpt-5.5
             in /v1/chat/completions. To use function tools, use /v1/responses or
             set reasoning_effort to 'none'."
 
-        Known families are listed in `_TOOLS_REASONING_EFFORT_INCOMPATIBLE` purely
-        to skip a doomed request. Models discovered through a 400 at runtime are
-        remembered in `_LEARNED_TOOLS_REASONING_EFFORT_CONFLICTS`, so OpenAI can
-        extend the restriction to new families without a release here.
+        So OpenAI can extend the restriction to new families without a release here.
 
         The Responses API has no such restriction (it takes
         `reasoning: {"effort": ...}`), so this only constrains the completions path.
         """
-        if self._model_cache_key(model) in _LEARNED_TOOLS_REASONING_EFFORT_CONFLICTS:
-            return False
-        model_lower = model.lower()
-        return not any(
-            family in model_lower for family in _TOOLS_REASONING_EFFORT_INCOMPATIBLE
+        return (
+            self._model_cache_key(model)
+            not in _LEARNED_TOOLS_REASONING_EFFORT_CONFLICTS
         )
 
     @staticmethod
@@ -1942,11 +1923,10 @@ class OpenAICompletion(BaseLLM):
             params["tools"] = self._convert_tools_for_interference(tools)
             params["tool_choice"] = "auto"
 
-        # gpt-5.4+ reject `reasoning_effort` on the completions endpoint as soon
-        # as function tools are present. Anything other than "none" is a hard 400,
-        # so drop it up front for models we already know about rather than burn a
-        # round trip. Families we haven't measured are caught by the 400 handler
-        # in `_call_completions` instead.
+        # Some models reject `reasoning_effort` on the completions endpoint as
+        # soon as function tools are present. Once a 400 has taught us that about
+        # this model, skip straight to "none" instead of repeating the doomed
+        # request; the first occurrence is recovered in `_call_completions`.
         # Checked after the tools block on purpose: `reasoning_effort` can also
         # arrive through `additional_params`, which bypasses the typed field.
         if (
