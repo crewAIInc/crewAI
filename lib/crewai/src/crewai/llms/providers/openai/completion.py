@@ -719,6 +719,52 @@ class OpenAICompletion(BaseLLM):
             response_model=response_model,
         )
 
+    @staticmethod
+    def _to_responses_input(message: LLMMessage) -> list[Any]:
+        """Translate a chat-format message into Responses ``input`` items.
+
+        Tool calling is expressed differently by the two APIs. Chat Completions
+        uses an assistant message carrying ``tool_calls`` (with ``content: None``)
+        followed by ``role: "tool"`` results; the Responses API uses flat
+        ``function_call`` / ``function_call_output`` items keyed by ``call_id``.
+
+        Passing the chat shape straight through is rejected:
+
+            Invalid type for 'input[1].content': expected one of an array of
+            objects or string, but got null instead.
+
+        Anything without tool calls is already valid and passes through unchanged.
+        """
+        role = message.get("role")
+
+        if role == "assistant" and message.get("tool_calls"):
+            items: list[Any] = []
+            content = message.get("content")
+            if content:
+                items.append({"role": "assistant", "content": content})
+            for call in message["tool_calls"]:
+                function = call.get("function", {})
+                items.append(
+                    {
+                        "type": "function_call",
+                        "call_id": call.get("id", ""),
+                        "name": function.get("name", ""),
+                        "arguments": function.get("arguments", "{}"),
+                    }
+                )
+            return items
+
+        if role == "tool":
+            return [
+                {
+                    "type": "function_call_output",
+                    "call_id": message.get("tool_call_id", ""),
+                    "output": str(message.get("content", "")),
+                }
+            ]
+
+        return [message]
+
     def _prepare_responses_params(
         self,
         messages: list[LLMMessage],
@@ -745,7 +791,7 @@ class OpenAICompletion(BaseLLM):
                 else:
                     instructions = content_str
             else:
-                input_messages.append(message)
+                input_messages.extend(self._to_responses_input(message))
 
         # Prepend reasoning items for ZDR (zero-data-retention) chaining when configured
         final_input: list[Any] = []
