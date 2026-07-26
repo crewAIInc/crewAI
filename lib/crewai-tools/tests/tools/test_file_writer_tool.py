@@ -12,8 +12,13 @@ def tool():
 
 
 @pytest.fixture
-def temp_env():
-    temp_dir = tempfile.mkdtemp()
+def temp_env(tmp_path, monkeypatch):
+    # FileWriterTool pins writes to the current working directory (the
+    # workspace), so the target directory must live inside the cwd. Run each
+    # test from an isolated workspace and use a nested directory within it.
+    monkeypatch.chdir(tmp_path)
+    temp_dir = os.path.join(str(tmp_path), "workspace")
+    os.makedirs(temp_dir, exist_ok=True)
     test_file = "test.txt"
     test_content = "Hello, World!"
 
@@ -194,5 +199,69 @@ def test_blocks_symlink_escape(tool, temp_env):
         )
         assert "Error" in result
         assert not os.path.exists(outside_file)
+    finally:
+        shutil.rmtree(outside_dir, ignore_errors=True)
+
+
+def test_blocks_absolute_directory_outside_workspace(tool, tmp_path, monkeypatch):
+    # The directory argument is fully model-controlled. An absolute directory
+    # outside the workspace (cwd) must be refused even when the filename itself
+    # is benign, otherwise the resolved path escapes the workspace.
+    monkeypatch.chdir(tmp_path)
+    outside_dir = tempfile.mkdtemp()
+    outside_file = os.path.join(outside_dir, "authorized_keys")
+    try:
+        result = tool._run(
+            filename="authorized_keys",
+            directory=outside_dir,
+            content="ssh-rsa AAAA...",
+            overwrite=True,
+        )
+        assert "Error" in result
+        assert "Invalid file path" in result
+        assert not os.path.exists(outside_file)
+        # The error must not disclose the absolute workspace/target prefix.
+        assert str(tmp_path) not in result
+    finally:
+        shutil.rmtree(outside_dir, ignore_errors=True)
+
+
+def test_does_not_create_directory_outside_workspace(tool, tmp_path, monkeypatch):
+    # os.makedirs(real_directory) must not run for a rejected out-of-workspace
+    # target — the model must not be able to create arbitrary directories.
+    monkeypatch.chdir(tmp_path)
+    parent = tempfile.mkdtemp()
+    target_dir = os.path.join(parent, "should_not_be_created")
+    try:
+        result = tool._run(
+            filename="x.txt",
+            directory=target_dir,
+            content="nope",
+            overwrite=True,
+        )
+        assert "Error" in result
+        assert not os.path.exists(target_dir)
+    finally:
+        shutil.rmtree(parent, ignore_errors=True)
+
+
+def test_escape_hatch_allows_outside_workspace_write(tool, tmp_path, monkeypatch):
+    # Callers that intentionally need to write outside the workspace can opt in
+    # via the documented CREWAI_TOOLS_ALLOW_UNSAFE_PATHS escape hatch. This keeps
+    # the guard backward-compatible for explicit, trusted usage.
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_TOOLS_ALLOW_UNSAFE_PATHS", "true")
+    outside_dir = tempfile.mkdtemp()
+    outside_file = os.path.join(outside_dir, "test.txt")
+    try:
+        result = tool._run(
+            filename="test.txt",
+            directory=outside_dir,
+            content="explicitly allowed",
+            overwrite=True,
+        )
+        assert "successfully written" in result
+        assert os.path.exists(outside_file)
+        assert read_file(outside_file) == "explicitly allowed"
     finally:
         shutil.rmtree(outside_dir, ignore_errors=True)

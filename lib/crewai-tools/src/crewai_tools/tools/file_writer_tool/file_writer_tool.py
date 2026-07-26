@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from crewai_tools.security.safe_path import (
     format_error_for_display,
     format_path_for_display,
+    validate_file_path,
 )
 
 
@@ -57,6 +58,19 @@ class FileWriterTool(BaseTool):
                 or real_filepath == real_directory
             ):
                 return "Error: Invalid file path — the filename must not escape the target directory."
+
+            # The is_relative_to() check above only confines ``filename`` within
+            # ``directory`` — but ``directory`` is itself a model-controlled
+            # argument with no workspace anchoring, so an absolute root such as
+            # ``/etc/cron.d`` or ``~/.ssh`` would otherwise allow writes outside
+            # the working directory. Pin the resolved target to the workspace
+            # (cwd) using the same validator FileReadTool relies on. The
+            # CREWAI_TOOLS_ALLOW_UNSAFE_PATHS escape hatch remains available for
+            # callers that intentionally need to write outside the workspace.
+            try:
+                validate_file_path(str(real_filepath))
+            except ValueError as e:
+                return f"Error: Invalid file path: {e!s}"
 
             if kwargs.get("directory"):
                 os.makedirs(real_directory, exist_ok=True)
