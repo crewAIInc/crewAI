@@ -1149,7 +1149,7 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
 
     # Create an LLM with streaming enabled
     llm = LLM(
-        model="openai/gpt-4o",
+        model="openai/gpt-5.6-terra",
         stream=True  # Enable streaming
     )
     ```
@@ -1199,7 +1199,7 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
 
     my_listener = MyCustomListener()
 
-    llm = LLM(model="gpt-4o-mini", temperature=0, stream=True)
+    llm = LLM(model="openai/gpt-5.6-terra", stream=True)
 
     researcher = Agent(
         role="About User",

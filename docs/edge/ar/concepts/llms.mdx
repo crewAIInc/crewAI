@@ -1011,7 +1011,7 @@ mode: "wide"
 
     # Create an LLM with streaming enabled
     llm = LLM(
-        model="openai/gpt-4o",
+        model="openai/gpt-5.6-terra",
         stream=True  # Enable streaming
     )
     ```
@@ -1061,7 +1061,7 @@ mode: "wide"
 
     my_listener = MyCustomListener()
 
-    llm = LLM(model="gpt-4o-mini", temperature=0, stream=True)
+    llm = LLM(model="openai/gpt-5.6-terra", stream=True)
 
     researcher = Agent(
         role="About User",

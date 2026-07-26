@@ -755,7 +755,7 @@ CrewAI는 LLM의 스트리밍 응답을 지원하여, 애플리케이션이 출�
 
     # 스트리밍이 활성화된 LLM 생성
     llm = LLM(
-        model="openai/gpt-4o",
+        model="openai/gpt-5.6-terra",
         stream=True  # 스트리밍 활성화
     )
     ```
@@ -805,7 +805,7 @@ CrewAI는 LLM의 스트리밍 응답을 지원하여, 애플리케이션이 출�
 
     my_listener = MyCustomListener()
 
-    llm = LLM(model="gpt-4o-mini", temperature=0, stream=True)
+    llm = LLM(model="openai/gpt-5.6-terra", stream=True)
 
     researcher = Agent(
         role="About User",
