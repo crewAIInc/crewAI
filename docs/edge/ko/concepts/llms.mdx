@@ -196,7 +196,7 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     )
     ```
 
-    현재 모델 ID, 모달리티, 컨텍스트 제한은 [Meta Llama API 모델 카탈로그](https://llama.developer.meta.com/docs/models/)를 확인하세요.
+    현재 모델 제품군, 모달리티, 컨텍스트 지침은 [Meta Llama 모델 개요](https://ai.meta.com/llama/get-started/)를 확인하세요.
 
     **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
     ```bash
@@ -330,18 +330,11 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
 
   </Accordion>
   <Accordion title="Google (Vertex AI)">
-    Google Cloud Console에서 자격증명을 받아 JSON 파일로 저장한 후, 다음 코드로 로드하세요:
-    ```python Code
-    import json
-
-    file_path = 'path/to/vertex_ai_service_account.json'
-
-    # Load the JSON file
-    with open(file_path, 'r') as file:
-        vertex_credentials = json.load(file)
-
-    # Convert the credentials to a JSON string
-    vertex_credentials_json = json.dumps(vertex_credentials)
+    [애플리케이션 기본 사용자 인증 정보](https://cloud.google.com/docs/authentication/provide-credentials-adc)로 인증한 다음, Vertex AI를 사용하도록 네이티브 Gemini 제공업체를 구성하세요:
+    ```toml .env
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_CLOUD_PROJECT=<your-project-id>
+    GOOGLE_CLOUD_LOCATION=<location>
     ```
 
     CrewAI 프로젝트에서의 예시 사용법:
@@ -349,16 +342,15 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-3.6-flash",
-        vertex_credentials=vertex_credentials_json
+        model="gemini/gemini-3.6-flash"
     )
     ```
 
     사용 가능한 Vertex AI 모델과 리전은 [Vertex AI 모델 정보](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models)를 확인하세요.
 
-    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    **참고:** 이 경로는 CrewAI의 네이티브 Gemini 통합을 사용합니다. 프로젝트에 의존성으로 추가하세요:
     ```bash
-    uv add 'crewai[litellm]'
+    uv add "crewai[google-genai]"
     ```
   </Accordion>
 
@@ -862,7 +854,7 @@ class Dog(BaseModel):
     breed: str
 
 
-llm = LLM(model="gpt-4o", response_format=Dog)
+llm = LLM(model="openai/gpt-5.6-terra", response_format=Dog)
 
 response = llm.call(
     "Analyze the following messages and return the name, age, and breed. "
@@ -891,8 +883,8 @@ LLM 설정을 최대한 활용하는 방법을 알아보세요:
     # 3. 큰 컨텍스트에 대한 작업 분할
 
     llm = LLM(
-        model="gpt-4",
-        max_tokens=4000,  # 응답 길이 제한
+        model="openai/gpt-5.6-terra",
+        max_completion_tokens=4000,  # 응답 길이 제한
     )
     ```
 

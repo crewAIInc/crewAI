@@ -248,7 +248,7 @@ mode: "wide"
     )
     ```
 
-    راجع [كتالوج نماذج Meta Llama API](https://llama.developer.meta.com/docs/models/) للحصول على معرّفات النماذج والوسائط وحدود السياق الحالية.
+    راجع [نظرة عامة على نماذج Meta Llama](https://ai.meta.com/llama/get-started/) للتعرّف على عائلات النماذج والوسائط وإرشادات حدود السياق الحالية.
 
     **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
     ```bash
@@ -516,18 +516,11 @@ mode: "wide"
   </Accordion>
 
   <Accordion title="Google (Vertex AI)">
-    احصل على بيانات الاعتماد من Google Cloud Console واحفظها في ملف JSON، ثم حمّلها بالكود التالي:
-    ```python Code
-    import json
-
-    file_path = 'path/to/vertex_ai_service_account.json'
-
-    # Load the JSON file
-    with open(file_path, 'r') as file:
-        vertex_credentials = json.load(file)
-
-    # Convert the credentials to a JSON string
-    vertex_credentials_json = json.dumps(vertex_credentials)
+    صادِق باستخدام [بيانات الاعتماد التلقائية للتطبيق](https://cloud.google.com/docs/authentication/provide-credentials-adc)، ثم اضبط مزود Gemini الأصلي لاستخدام Vertex AI:
+    ```toml .env
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_CLOUD_PROJECT=<your-project-id>
+    GOOGLE_CLOUD_LOCATION=<location>
     ```
 
     مثال الاستخدام في مشروع CrewAI:
@@ -535,14 +528,15 @@ mode: "wide"
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-3.6-flash",
-        vertex_credentials=vertex_credentials_json
+        model="gemini/gemini-3.6-flash"
     )
     ```
 
-    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    تختلف إتاحة Vertex AI باختلاف المنطقة. استخدم [كتالوج نماذج Vertex AI](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models) للتحقق من معرّف النموذج والمنطقة قبل النشر.
+
+    **ملاحظة:** يستخدم هذا المسار تكامل Gemini الأصلي في CrewAI. أضفه كتبعية لمشروعك:
     ```bash
-    uv add 'crewai[litellm]'
+    uv add "crewai[google-genai]"
     ```
   </Accordion>
 
@@ -648,8 +642,9 @@ mode: "wide"
     - يجب أن تكون الرسالة الأولى من المستخدم (يتم التعامل معها تلقائيًا)
     - بعض النماذج (مثل Cohere) تتطلب أن تنتهي المحادثة برسالة المستخدم
 
-    [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) هو خدمة مُدارة توفر الوصول إلى نماذج أساسية متعددة من أبرز شركات الذكاء الاصطناعي عبر واجهة API موحدة.
-
+    تختلف إتاحة نماذج Amazon Bedrock ومعرّفاتها باختلاف المنطقة. استخدم مرجع
+    [النماذج والمناطق المدعومة](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html)
+    لاختيار نموذج والتحقق من دعم Converse API.
 
     **ملاحظة:** لاستخدام AWS Bedrock، ثبّت التبعيات المطلوبة:
     ```bash
@@ -1157,7 +1152,7 @@ class Dog(BaseModel):
     breed: str
 
 
-llm = LLM(model="gpt-4o", response_format=Dog)
+llm = LLM(model="openai/gpt-5.6-terra", response_format=Dog)
 
 response = llm.call(
     "Analyze the following messages and return the name, age, and breed. "
@@ -1186,8 +1181,8 @@ print(response)
     # 3. Task splitting for large contexts
 
     llm = LLM(
-        model="gpt-4",
-        max_tokens=4000,  # Limit response length
+        model="openai/gpt-5.6-terra",
+        max_completion_tokens=4000,  # Limit response length
     )
     ```
 

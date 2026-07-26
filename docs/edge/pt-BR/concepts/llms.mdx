@@ -196,7 +196,7 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     )
     ```
 
-    Consulte o [catálogo de modelos da API Llama da Meta](https://llama.developer.meta.com/docs/models/) para obter IDs, modalidades e limites de contexto atuais.
+    Consulte a [visão geral dos modelos Meta Llama](https://ai.meta.com/llama/get-started/) para conhecer as famílias de modelos, modalidades e orientações de contexto atuais.
 
     **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
     ```bash
@@ -330,18 +330,11 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
 
   </Accordion>
   <Accordion title="Google (Vertex AI)">
-    Obtenha as credenciais pelo Google Cloud Console, salve em um arquivo JSON e carregue com o código a seguir:
-    ```python Code
-    import json
-
-    file_path = 'path/to/vertex_ai_service_account.json'
-
-    # Carregar o arquivo JSON
-    with open(file_path, 'r') as file:
-        vertex_credentials = json.load(file)
-
-    # Converter credenciais em string JSON
-    vertex_credentials_json = json.dumps(vertex_credentials)
+    Autentique-se com as [Credenciais Padrão do Aplicativo](https://cloud.google.com/docs/authentication/provide-credentials-adc) e configure o provedor Gemini nativo para usar o Vertex AI:
+    ```toml .env
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_CLOUD_PROJECT=<your-project-id>
+    GOOGLE_CLOUD_LOCATION=<location>
     ```
 
     Exemplo de uso em seu projeto CrewAI:
@@ -349,16 +342,15 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-3.6-flash",
-        vertex_credentials=vertex_credentials_json
+        model="gemini/gemini-3.6-flash"
     )
     ```
 
     Consulte as [informações de modelos do Vertex AI](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models) para verificar modelos e regiões disponíveis.
 
-    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    **Nota:** Esta configuração usa a integração Gemini nativa do CrewAI. Adicione-a como dependência ao seu projeto:
     ```bash
-    uv add 'crewai[litellm]'
+    uv add "crewai[google-genai]"
     ```
   </Accordion>
 
@@ -785,7 +777,7 @@ class Dog(BaseModel):
     breed: str
 
 
-llm = LLM(model="gpt-4o", response_format=Dog)
+llm = LLM(model="openai/gpt-5.6-terra", response_format=Dog)
 
 response = llm.call(
     "Analyze the following messages and return the name, age, and breed. "
@@ -814,8 +806,8 @@ Saiba como obter o máximo da configuração do seu LLM:
     # 3. Divisão de tarefas para grandes contextos
 
     llm = LLM(
-        model="gpt-4",
-        max_tokens=4000,  # Limitar tamanho da resposta
+        model="openai/gpt-5.6-terra",
+        max_completion_tokens=4000,  # Limitar tamanho da resposta
     )
     ```
 
