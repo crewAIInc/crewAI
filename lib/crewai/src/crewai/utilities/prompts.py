@@ -131,14 +131,12 @@ class Prompts(BaseModel):
         active = [
             format_skill_context(skill)
             for skill in skills
-            if isinstance(skill, Skill)
-            and skill.disclosure_level >= INSTRUCTIONS
+            if isinstance(skill, Skill) and skill.disclosure_level >= INSTRUCTIONS
         ]
         available = [
             format_skill_context(skill)
             for skill in skills
-            if isinstance(skill, Skill)
-            and skill.disclosure_level < INSTRUCTIONS
+            if isinstance(skill, Skill) and skill.disclosure_level < INSTRUCTIONS
         ]
 
         blocks: list[str] = []
