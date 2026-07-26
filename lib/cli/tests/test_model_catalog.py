@@ -149,6 +149,7 @@ def test_vendor_atlascloud_uses_openai_compatible_catalog(monkeypatch):
     payload = {
         "data": [
             {"id": "deepseek-ai/deepseek-v4-pro"},
+            {"id": "deepseek-ai/deepseek-v4-flash"},
             {"id": "qwen/qwen3.5-flash"},
             {"id": "BAAI/text-embedding-m3"},
         ]
@@ -162,7 +163,11 @@ def test_vendor_atlascloud_uses_openai_compatible_catalog(monkeypatch):
     monkeypatch.setattr(mc, "_http_get_json", fetch)
 
     ids = {model for model, _ in mc.get_provider_models("atlascloud", [])}
-    assert ids == {"deepseek-ai/deepseek-v4-pro", "qwen/qwen3.5-flash"}
+    assert ids == {
+        "deepseek-ai/deepseek-v4-pro",
+        "deepseek-ai/deepseek-v4-flash",
+        "qwen/qwen3.5-flash",
+    }
     assert requests == [
         (
             "https://api.atlascloud.ai/v1/models",
