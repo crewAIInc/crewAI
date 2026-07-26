@@ -100,7 +100,7 @@ class TestKnownFamiliesFastPath:
 
         params = llm._prepare_completion_params(MESSAGES, tools=TOOLS)
 
-        assert "reasoning_effort" not in params
+        assert params["reasoning_effort"] == "none"
         # Tools must survive — they are the reason the call exists.
         assert params["tools"]
         assert params["tool_choice"] == "auto"
@@ -111,7 +111,7 @@ class TestKnownFamiliesFastPath:
 
         params = llm._prepare_completion_params(MESSAGES, tools=TOOLS)
 
-        assert "reasoning_effort" not in params
+        assert params["reasoning_effort"] == "none"
 
     def test_keeps_reasoning_effort_without_tools(self):
         """Without tools the combination is legal, so nothing should change."""
@@ -120,6 +120,23 @@ class TestKnownFamiliesFastPath:
         params = llm._prepare_completion_params(MESSAGES, tools=None)
 
         assert params["reasoning_effort"] == "high"
+
+    def test_forces_none_rather_than_removing_the_parameter(self):
+        """Omitting `reasoning_effort` is not sufficient.
+
+        Measured against the live endpoint: gpt-5.6-* apply a server-side default,
+        so a request carrying no `reasoning_effort` at all is rejected exactly like
+        one carrying "high". Only an explicit "none" is accepted with tools.
+
+            gpt-5.6-sol  tools, no reasoning_effort  -> 400
+            gpt-5.6-sol  tools, reasoning_effort=none -> OK
+        """
+        llm = build("gpt-5.6-sol", additional_params={"reasoning_effort": "high"})
+
+        params = llm._prepare_completion_params(MESSAGES, tools=TOOLS)
+
+        assert "reasoning_effort" in params, "the key must be sent, not dropped"
+        assert params["reasoning_effort"] == "none"
 
     def test_keeps_explicit_none_effort_with_tools(self):
         """OpenAI explicitly allows reasoning_effort='none' with tools here."""
@@ -193,7 +210,7 @@ class TestRuntimeRetry:
 
         def fake_handle(params, **kwargs):
             seen.append(params)
-            if "reasoning_effort" in params:
+            if params.get("reasoning_effort") not in (None, "none"):
                 raise make_bad_request(model="gpt-5.9")
             return "ok"
 
@@ -204,7 +221,7 @@ class TestRuntimeRetry:
         assert result == "ok"
         assert len(seen) == 2, "expected one failed call and one retry"
         assert seen[0]["reasoning_effort"] == "high"
-        assert "reasoning_effort" not in seen[1]
+        assert seen[1]["reasoning_effort"] == "none"
         # Tools have to survive the retry.
         assert seen[1]["tools"]
 
@@ -212,7 +229,7 @@ class TestRuntimeRetry:
         llm = build("gpt-5.9", additional_params={"reasoning_effort": "high"})
 
         def fake_handle(params, **kwargs):
-            if "reasoning_effort" in params:
+            if params.get("reasoning_effort") not in (None, "none"):
                 raise make_bad_request(model="gpt-5.9")
             return "ok"
 
@@ -221,7 +238,7 @@ class TestRuntimeRetry:
 
         # Second call must strip up front instead of paying the 400 again.
         params = llm._prepare_completion_params(MESSAGES, tools=TOOLS)
-        assert "reasoning_effort" not in params
+        assert params["reasoning_effort"] == "none"
         assert not llm._supports_reasoning_effort_with_tools("gpt-5.9")
 
     def test_does_not_retry_unrelated_bad_request(self, monkeypatch):
@@ -239,9 +256,53 @@ class TestRuntimeRetry:
 
         assert len(calls) == 1, "must not retry errors it doesn't understand"
 
-    def test_does_not_retry_when_nothing_to_strip(self, monkeypatch):
-        """No reasoning_effort to remove means the retry can't help."""
+    def test_learning_is_scoped_to_the_endpoint(self, monkeypatch):
+        """A conflict learned against one endpoint must not leak to another.
+
+        An OpenAI-compatible proxy may accept the combination that api.openai.com
+        rejects, so stripping the parameter there would silently degrade it.
+        """
+        real = build("gpt-5.9", additional_params={"reasoning_effort": "high"})
+        proxy = build(
+            "gpt-5.9",
+            base_url="https://proxy.internal/v1",
+            additional_params={"reasoning_effort": "high"},
+        )
+
+        real._remember_reasoning_effort_conflict()
+
+        assert (
+            real._prepare_completion_params(MESSAGES, tools=TOOLS)["reasoning_effort"]
+            == "none"
+        )
+        assert (
+            proxy._prepare_completion_params(MESSAGES, tools=TOOLS)[
+                "reasoning_effort"
+            ]
+            == "high"
+        )
+
+    def test_recoverable_error_is_not_reported_as_a_failure(self):
+        """The retry must not surface a failure the user never experiences.
+
+        `_handle_completion` logs "OpenAI API call failed" and emits
+        LLMCallFailedEvent for anything it catches. For an error the caller is about
+        to recover from, that produces a user-visible error panel for a call that
+        ultimately succeeds.
+        """
         llm = build("gpt-5.9")
+
+        assert llm._is_recoverable_completion_error(
+            ValueError("wrapped").with_traceback(None)
+        ) is False
+
+        recoverable = ValueError("wrapped")
+        recoverable.__cause__ = make_bad_request()
+        assert llm._is_recoverable_completion_error(recoverable)
+
+    def test_does_not_retry_twice_when_already_none(self, monkeypatch):
+        """Once reasoning_effort is "none" there is nothing left to try."""
+        llm = build("gpt-5.9", additional_params={"reasoning_effort": "none"})
         calls: list[dict] = []
 
         def fake_handle(params, **kwargs):
@@ -253,7 +314,7 @@ class TestRuntimeRetry:
         with pytest.raises(BadRequestError):
             llm._call_completions(MESSAGES, tools=TOOLS)
 
-        assert len(calls) == 1
+        assert len(calls) == 1, "must not retry when already at 'none'"
 
     @pytest.mark.asyncio
     async def test_async_path_retries_too(self, monkeypatch):
@@ -262,7 +323,7 @@ class TestRuntimeRetry:
 
         async def fake_handle(params, **kwargs):
             seen.append(params)
-            if "reasoning_effort" in params:
+            if params.get("reasoning_effort") not in (None, "none"):
                 raise make_bad_request(model="gpt-5.9")
             return "ok"
 
@@ -272,7 +333,7 @@ class TestRuntimeRetry:
 
         assert result == "ok"
         assert len(seen) == 2
-        assert "reasoning_effort" not in seen[1]
+        assert seen[1]["reasoning_effort"] == "none"
 
 
 class TestResponsesApiUntouched:

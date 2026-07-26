@@ -62,7 +62,10 @@ if TYPE_CHECKING:
 # the model string as configured. Populated from the 404 by
 # `_remember_responses_only_model` so the wasted round trip is paid once per model
 # per process rather than on every call.
-_LEARNED_RESPONSES_ONLY_MODELS: set[str] = set()
+# Keyed by (endpoint, model) rather than model alone: the same model name can
+# behave differently on api.openai.com and on an OpenAI-compatible proxy, so a
+# conflict learned against one endpoint must not leak to another.
+_LEARNED_RESPONSES_ONLY_MODELS: set[tuple[str, str]] = set()
 
 # Known model families that reject `reasoning_effort` alongside function tools on
 # /v1/chat/completions. This is only a fast path to avoid a wasted round trip --
@@ -83,7 +86,7 @@ _TOOLS_REASONING_EFFORT_INCOMPATIBLE: tuple[str, ...] = (
 # Models learned at runtime from a 400, keyed by the model string as configured.
 # Populated by `_remember_reasoning_effort_conflict` so the retry is paid once
 # per model per process rather than on every call.
-_LEARNED_TOOLS_REASONING_EFFORT_CONFLICTS: set[str] = set()
+_LEARNED_TOOLS_REASONING_EFFORT_CONFLICTS: set[tuple[str, str]] = set()
 
 
 class WebSearchResult(TypedDict, total=False):
@@ -1687,7 +1690,7 @@ class OpenAICompletion(BaseLLM):
 
     def _remember_responses_only_model(self) -> None:
         """Record that this model must use the Responses API."""
-        _LEARNED_RESPONSES_ONLY_MODELS.add(self.model)
+        _LEARNED_RESPONSES_ONLY_MODELS.add(self._model_cache_key())
 
     def _model_not_found_message(self, error: Exception) -> str:
         """Build a 404 message that says what to do about it.
@@ -1720,7 +1723,7 @@ class OpenAICompletion(BaseLLM):
         The Responses API has no such restriction (it takes
         `reasoning: {"effort": ...}`), so this only constrains the completions path.
         """
-        if model in _LEARNED_TOOLS_REASONING_EFFORT_CONFLICTS:
+        if self._model_cache_key(model) in _LEARNED_TOOLS_REASONING_EFFORT_CONFLICTS:
             return False
         model_lower = model.lower()
         return not any(
@@ -1740,33 +1743,71 @@ class OpenAICompletion(BaseLLM):
         """
         if not isinstance(error, BadRequestError):
             return False
-        param = None
-        body = getattr(error, "body", None)
-        if isinstance(body, dict):
-            inner = body.get("error")
-            if isinstance(inner, dict):
-                param = inner.get("param")
+        param, body_message = OpenAICompletion._error_param_and_message(error)
         if param != "reasoning_effort":
             return False
-        message = str(getattr(error, "message", "") or error).lower()
-        return "function tools" in message and "reasoning_effort" in message
+        return "function tools" in body_message and "reasoning_effort" in body_message
+
+    @staticmethod
+    def _error_param_and_message(error: BaseException) -> tuple[str | None, str]:
+        """Pull ``param`` and the API message out of an OpenAI error body.
+
+        The SDK populates ``body`` either flat (``{"message": ..., "param": ...}``)
+        or nested under an ``"error"`` key depending on how the response was
+        parsed, so both are handled. Falls back to the exception text.
+        """
+        body = getattr(error, "body", None)
+        source: dict[str, Any] | None = None
+        if isinstance(body, dict):
+            inner = body.get("error")
+            source = inner if isinstance(inner, dict) else body
+        param = source.get("param") if source else None
+        message = str((source or {}).get("message") or "") or str(
+            getattr(error, "message", "") or error
+        )
+        return param, message.lower()
+
+    def _model_cache_key(self, model: str | None = None) -> tuple[str, str]:
+        """Identity for the learned-behaviour caches: the endpoint plus the model.
+
+        The same model string can be served by api.openai.com and by an
+        OpenAI-compatible proxy with different capabilities, so a conflict learned
+        against one endpoint must not silently apply to the other.
+        """
+        endpoint = self.base_url or self.api_base or "https://api.openai.com/v1"
+        return endpoint, model if model is not None else self.model
+
+    def _is_recoverable_completion_error(self, error: BaseException) -> bool:
+        """Whether ``_call_completions`` will retry instead of surfacing this error.
+
+        Kept next to the retry logic so the handlers that suppress failure
+        reporting and the handler that performs the retry can't drift apart.
+        """
+        cause = error.__cause__ or error
+        if self._is_tools_reasoning_effort_error(cause):
+            return True
+        return self._is_responses_only_error(cause) and not self.custom_openai
 
     def _remember_reasoning_effort_conflict(self) -> None:
         """Record that this model can't combine `reasoning_effort` with tools."""
-        _LEARNED_TOOLS_REASONING_EFFORT_CONFLICTS.add(self.model)
+        _LEARNED_TOOLS_REASONING_EFFORT_CONFLICTS.add(self._model_cache_key())
 
     def _retry_params_without_reasoning_effort(
         self, params: dict[str, Any]
     ) -> dict[str, Any] | None:
-        """Strip `reasoning_effort` for a retry, or None if there's nothing to strip."""
-        if params.get("reasoning_effort") is None:
+        """Force `reasoning_effort="none"` for a retry, or None if already there.
+
+        Omitting the parameter is not enough. Some models (gpt-5.6-*) apply a
+        server-side default, so a request with no `reasoning_effort` at all still
+        fails the same way -- only an explicit "none" is accepted alongside tools.
+        """
+        if params.get("reasoning_effort") == "none":
             return None
-        retry_params = {k: v for k, v in params.items() if k != "reasoning_effort"}
+        retry_params = {**params, "reasoning_effort": "none"}
         logging.warning(
-            "Dropping reasoning_effort=%r and retrying: %r rejects it alongside "
-            'function tools on /v1/chat/completions. Use api="responses" to keep '
-            "reasoning effort with tools.",
-            params["reasoning_effort"],
+            'Retrying with reasoning_effort="none": %r rejects reasoning effort '
+            'alongside function tools on /v1/chat/completions. Use api="responses" '
+            "to keep reasoning effort with tools.",
             self.model,
         )
         return retry_params
@@ -1785,7 +1826,7 @@ class OpenAICompletion(BaseLLM):
         if (
             self.api == "completions"
             and not self.custom_openai
-            and self.model in _LEARNED_RESPONSES_ONLY_MODELS
+            and self._model_cache_key() in _LEARNED_RESPONSES_ONLY_MODELS
         ):
             return "responses"
         return self.api
@@ -1853,12 +1894,15 @@ class OpenAICompletion(BaseLLM):
             and params.get("reasoning_effort") not in (None, "none")
             and not self._supports_reasoning_effort_with_tools(self.model)
         ):
-            dropped = params.pop("reasoning_effort")
+            requested = params["reasoning_effort"]
+            # Explicit "none" rather than removing the key: gpt-5.6-* apply a
+            # server-side default, so omitting it fails the same way.
+            params["reasoning_effort"] = "none"
             logging.debug(
-                "Dropping reasoning_effort=%r for model %r: function tools and "
-                "reasoning_effort cannot be combined on /v1/chat/completions. "
-                'Use api="responses" to keep reasoning effort with tools.',
-                dropped,
+                'Forcing reasoning_effort="none" (requested %r) for model %r: '
+                "function tools and reasoning effort cannot be combined on "
+                '/v1/chat/completions. Use api="responses" to keep both.',
+                requested,
                 self.model,
             )
 
@@ -2057,6 +2101,12 @@ class OpenAICompletion(BaseLLM):
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
+
+            # Recoverable by the caller: `_call_completions` retries these on the
+            # Responses API or without `reasoning_effort`. Reporting a failed call
+            # here would surface an error the user never actually experiences.
+            if self._is_recoverable_completion_error(e):
+                raise
 
             error_msg = f"OpenAI API call failed: {e!s}"
             logging.error(error_msg)
@@ -2480,6 +2530,12 @@ class OpenAICompletion(BaseLLM):
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
+
+            # Recoverable by the caller: `_call_completions` retries these on the
+            # Responses API or without `reasoning_effort`. Reporting a failed call
+            # here would surface an error the user never actually experiences.
+            if self._is_recoverable_completion_error(e):
+                raise
 
             error_msg = f"OpenAI API call failed: {e!s}"
             logging.error(error_msg)

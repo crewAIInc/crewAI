@@ -187,9 +187,23 @@ class TestEffectiveApi:
         llm = build(
             "gpt-5-pro", custom_openai=True, base_url="https://my-vllm.internal/v1"
         )
-        completion_module._LEARNED_RESPONSES_ONLY_MODELS.add("gpt-5-pro")
+        completion_module._LEARNED_RESPONSES_ONLY_MODELS.add(llm._model_cache_key())
 
         assert llm._effective_api() == "completions"
+
+    def test_learning_is_scoped_to_the_endpoint(self):
+        """A conflict learned against one endpoint must not leak to another.
+
+        The same model name can be served by api.openai.com and by an
+        OpenAI-compatible proxy with different capabilities.
+        """
+        real = build("gpt-5-pro")
+        proxy = build("gpt-5-pro", base_url="https://proxy.internal/v1")
+
+        real._remember_responses_only_model()
+
+        assert real._effective_api() == "responses"
+        assert proxy._effective_api() == "completions"
 
 
 class TestNotFoundMessage:
