@@ -8,7 +8,14 @@ import os
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict
 
 import httpx
-from openai import APIConnectionError, AsyncOpenAI, NotFoundError, OpenAI, Stream
+from openai import (
+    APIConnectionError,
+    AsyncOpenAI,
+    BadRequestError,
+    NotFoundError,
+    OpenAI,
+    Stream,
+)
 from openai.lib.streaming.chat import ChatCompletionStream
 from openai.types.chat import (
     ChatCompletion,
@@ -506,27 +513,40 @@ class OpenAICompletion(BaseLLM):
             messages=messages, tools=tools
         )
 
-        try:
+        def dispatch(params: dict[str, Any]) -> str | Any:
             if self._effective_stream():
                 return self._handle_streaming_completion(
-                    params=completion_params,
+                    params=params,
                     available_functions=available_functions,
                     from_task=from_task,
                     from_agent=from_agent,
                     response_model=response_model,
                 )
-
             return self._handle_completion(
-                params=completion_params,
+                params=params,
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
                 response_model=response_model,
             )
+
+        try:
+            return dispatch(completion_params)
         except Exception as e:
-            if self.custom_openai or not self._is_responses_only_error(
-                e.__cause__ or e
-            ):
+            cause = e.__cause__ or e
+
+            if self._rejects_reasoning_effort_with_tools(cause):
+                retry_params = self._reasoning_effort_none_params(completion_params)
+                if retry_params is not None:
+                    logging.debug(
+                        'Retrying %r with reasoning_effort="none": function tools '
+                        "and reasoning effort cannot be combined on "
+                        '/v1/chat/completions. Use api="responses" to keep both.',
+                        self.model,
+                    )
+                    return dispatch(retry_params)
+
+            if self.custom_openai or not self._is_responses_only_error(cause):
                 raise
             self._remember_responses_only_model()
             logging.debug(
@@ -625,27 +645,34 @@ class OpenAICompletion(BaseLLM):
             messages=messages, tools=tools
         )
 
-        try:
+        async def dispatch(params: dict[str, Any]) -> str | Any:
             if self._effective_stream():
                 return await self._ahandle_streaming_completion(
-                    params=completion_params,
+                    params=params,
                     available_functions=available_functions,
                     from_task=from_task,
                     from_agent=from_agent,
                     response_model=response_model,
                 )
-
             return await self._ahandle_completion(
-                params=completion_params,
+                params=params,
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
                 response_model=response_model,
             )
+
+        try:
+            return await dispatch(completion_params)
         except Exception as e:
-            if self.custom_openai or not self._is_responses_only_error(
-                e.__cause__ or e
-            ):
+            cause = e.__cause__ or e
+
+            if self._rejects_reasoning_effort_with_tools(cause):
+                retry_params = self._reasoning_effort_none_params(completion_params)
+                if retry_params is not None:
+                    return await dispatch(retry_params)
+
+            if self.custom_openai or not self._is_responses_only_error(cause):
                 raise
             self._remember_responses_only_model()
             return await self._acall_responses(
@@ -1694,6 +1721,46 @@ class OpenAICompletion(BaseLLM):
             )
         return f"Model {self.model} not found: {error}"
 
+    @staticmethod
+    def _rejects_reasoning_effort_with_tools(error: BaseException) -> bool:
+        """Whether a 400 is OpenAI refusing `reasoning_effort` alongside tools.
+
+        GPT-5.6 applies a server-side `reasoning_effort` default and then rejects
+        it when function tools are present, so a payload carrying no
+        `reasoning_effort` at all still fails:
+
+            "Function tools with reasoning_effort are not supported for
+            gpt-5.6-sol in /v1/chat/completions. To use function tools, use
+            /v1/responses or set reasoning_effort to 'none'."
+
+        Matched on the structured `param` field plus the message so the unrelated
+        "Unsupported value" 400 that o1/o3 return for `reasoning_effort="none"`
+        doesn't look recoverable.
+        """
+        if not isinstance(error, BadRequestError):
+            return False
+        body = getattr(error, "body", None)
+        source = None
+        if isinstance(body, dict):
+            inner = body.get("error")
+            source = inner if isinstance(inner, dict) else body
+        if not source or source.get("param") != "reasoning_effort":
+            return False
+        message = str(source.get("message") or "").lower()
+        return "function tools" in message and "reasoning_effort" in message
+
+    def _reasoning_effort_none_params(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Params with an explicit `reasoning_effort="none"`, or None if already set.
+
+        Removing the key is not enough: absence means "use the server default",
+        which is what the request was rejected for in the first place.
+        """
+        if params.get("reasoning_effort") == "none":
+            return None
+        return {**params, "reasoning_effort": "none"}
+
     def _effective_api(self) -> str:
         """Which OpenAI API to actually use for this model.
 
@@ -1959,6 +2026,11 @@ class OpenAICompletion(BaseLLM):
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
+
+            # `_call_completions` retries this one, so reporting a failed call
+            # here would surface an error the caller never experiences.
+            if self._rejects_reasoning_effort_with_tools(e):
+                raise
 
             error_msg = f"OpenAI API call failed: {e!s}"
             logging.error(error_msg)
@@ -2382,6 +2454,11 @@ class OpenAICompletion(BaseLLM):
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
+
+            # `_call_completions` retries this one, so reporting a failed call
+            # here would surface an error the caller never experiences.
+            if self._rejects_reasoning_effort_with_tools(e):
+                raise
 
             error_msg = f"OpenAI API call failed: {e!s}"
             logging.error(error_msg)
