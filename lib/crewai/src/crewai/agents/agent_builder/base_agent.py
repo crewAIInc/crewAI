@@ -6,7 +6,7 @@ from copy import copy as shallow_copy
 from hashlib import md5
 from pathlib import Path
 import re
-from typing import TYPE_CHECKING, Annotated, Any, Final, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Final, List, Literal, Optional
 import uuid
 
 from pydantic import (
@@ -252,6 +252,14 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             Set private attributes.
     """
 
+    capabilities: Optional[List[str]] = Field(
+        default=None, 
+        description="List of deterministic capabilities or permissions assigned to the agent."
+    )
+    require_approval_for: Optional[List[str]] = Field(
+        default=None, 
+        description="List of tools or capabilities that require manual human approval before execution."
+    )
     entity_type: Literal["agent"] = "agent"
 
     __hash__ = object.__hash__
