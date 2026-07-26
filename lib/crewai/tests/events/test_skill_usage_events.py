@@ -68,8 +68,8 @@ class TestSkillUsedEvent:
         assert event.skill_path is not None
         # Attribution is what makes the event useful in traces.
         assert event.agent_role == "Analyst"
-        assert event.agent_id
-        assert event.task_id
+        assert event.agent_id == str(agent.id)
+        assert event.task_id == str(task.id)
 
     def test_emits_for_every_skill(self, tmp_path: Path) -> None:
         _create_skill_dir(tmp_path, "alpha")
@@ -182,7 +182,7 @@ class TestSkillUsedEventThroughExecution:
             assert crewai_event_bus.flush(timeout=10)
 
         assert [e.skill_name for e in received] == ["alpha"]
-        assert received[0].task_id
+        assert received[0].task_id == str(task.id)
 
     @pytest.mark.asyncio
     async def test_emitted_during_aexecute_task(
@@ -208,4 +208,4 @@ class TestSkillUsedEventThroughExecution:
             assert crewai_event_bus.flush(timeout=10)
 
         assert [e.skill_name for e in received] == ["alpha"]
-        assert received[0].task_id
+        assert received[0].task_id == str(task.id)
