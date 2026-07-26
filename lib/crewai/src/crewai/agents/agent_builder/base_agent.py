@@ -205,7 +205,11 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         role (str): Role of the agent.
         goal (str): Objective of the agent.
         backstory (str): Backstory of the agent.
-        cache (bool): Whether the agent should use a cache for tool usage.
+        cache (bool): Whether the agent participates in tool-result caching
+            when a cache is enabled. The default (True) only permits
+            participation — caching activates when the crew sets cache=True
+            or the agent explicitly opts in with cache=True or a
+            cache_handler; cache=False excludes the agent entirely.
         config (dict[str, Any] | None): Configuration for the agent.
         verbose (bool): Verbose mode for the Agent Execution.
         max_rpm (int | None): Maximum number of requests per minute for the agent execution.
@@ -254,6 +258,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     _logger: Logger = PrivateAttr(default_factory=lambda: Logger(verbose=False))
     _rpm_controller: RPMController | None = PrivateAttr(default=None)
     _request_within_rpm_limit: SerializableCallable | None = PrivateAttr(default=None)
+    _constructor_cache_opt_in: bool = PrivateAttr(default=False)
     _original_role: str | None = PrivateAttr(default=None)
     _original_goal: str | None = PrivateAttr(default=None)
     _original_backstory: str | None = PrivateAttr(default=None)
@@ -267,7 +272,14 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         description="Configuration for the agent", default=None, exclude=True
     )
     cache: bool = Field(
-        default=True, description="Whether the agent should use a cache for tool usage."
+        default=True,
+        description=(
+            "Whether the agent participates in tool-result caching when a "
+            "cache is enabled. Caching itself is opt-in: it activates only "
+            "when the crew sets cache=True or the agent explicitly opts in "
+            "(cache=True or a cache_handler at construction). Set False to "
+            "exclude this agent even when the crew enables caching."
+        ),
     )
     verbose: bool = Field(
         default=False, description="Verbose mode for the Agent Execution"
@@ -716,6 +728,19 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
 
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
+        # Tool-result caching distinguishes "explicitly enabled" from the
+        # field default via model_fields_set; don't let the dump turn the
+        # default into an explicit opt-in on the copy. An agent that opted
+        # in at construction via an explicit cache_handler (excluded from
+        # the dump) must stay opted in — carry the consent as cache=True so
+        # the copy wires its own fresh handler. A handler merely offered by
+        # a crew at kickoff is runtime wiring, not consent, and must not
+        # opt the copy in; _constructor_cache_opt_in is recorded before any
+        # crew wiring can happen.
+        if "cache" not in self.model_fields_set:
+            copied_data.pop("cache", None)
+            if self._constructor_cache_opt_in:
+                copied_data["cache"] = True
         return type(self)(
             **copied_data,
             llm=existing_llm,

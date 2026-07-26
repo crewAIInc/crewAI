@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import Callable
 import inspect
 import json
+import re
 import textwrap
 from typing import TYPE_CHECKING, Annotated, Any, cast, get_type_hints
 import warnings
@@ -21,7 +22,10 @@ from pydantic import (
 from typing_extensions import Self
 
 from crewai.utilities.logger import Logger
-from crewai.utilities.pydantic_schema_utils import create_model_from_schema
+from crewai.utilities.pydantic_schema_utils import (
+    create_model_from_schema,
+    generate_model_description,
+)
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -108,6 +112,70 @@ def build_schema_hint(args_schema: type[BaseModel]) -> str:
         return ""
 
 
+# Matches a description that IS a pre-composed LLM block (as written by
+# older versions into the field, and by adapters that still bake it in).
+# Anchored to the full three-line shape so authored prose that merely
+# mentions "Tool Description:" is never mistaken for a composite. Greedy
+# ``.*`` keeps only the text after the LAST marker, matching the historical
+# split behavior for nested pre-baked blocks.
+_COMPOSITE_DESCRIPTION_RE = re.compile(
+    r"^Tool Name:.*\nTool Arguments:.*\nTool Description:\s*",
+    re.DOTALL,
+)
+
+
+def strip_composite_description_prefix(description: str) -> str:
+    """Return the authored text from a pre-composed LLM description block.
+
+    Descriptions that don't start with the composite shape are returned
+    unchanged.
+    """
+    match = _COMPOSITE_DESCRIPTION_RE.match(description)
+    if match:
+        return description[match.end() :]
+    return description
+
+
+def format_description_for_llm(
+    name: str,
+    args_schema: type[BaseModel] | None,
+    description: str,
+) -> str:
+    """Compose the LLM-facing tool description.
+
+    Combines the tool name, its argument JSON schema, and the authored
+    description into the prompt block agents see. The authored
+    ``description`` field itself is never mutated — prompt rendering calls
+    this on demand.
+
+    Idempotent: if ``description`` already *is* a composed block (e.g. a
+    tool deserialized from a checkpoint written by an older version, or an
+    adapter that bakes the composite into the field), only the authored
+    text after the marker is used. The check is anchored to the composite
+    shape, so authored prose that merely mentions ``"Tool Description:"``
+    passes through untouched.
+
+    Args:
+        name: The tool name (sanitized for the prompt).
+        args_schema: The tool's argument schema, if any.
+        description: The authored tool description.
+
+    Returns:
+        The composed, LLM-facing description block.
+    """
+    description = strip_composite_description_prefix(description)
+    if args_schema is not None:
+        schema = generate_model_description(args_schema)
+        args_json = json.dumps(schema["json_schema"]["schema"], indent=2)
+    else:
+        args_json = "{}"
+    return (
+        f"Tool Name: {sanitize_tool_name(name)}\n"
+        f"Tool Arguments: {args_json}\n"
+        f"Tool Description: {description}"
+    )
+
+
 class ToolUsageLimitExceededError(Exception):
     """Exception raised when a tool has reached its maximum usage limit."""
 
@@ -140,6 +208,15 @@ class CrewStructuredTool(BaseModel):
     cache_function: Any = Field(default=None, exclude=True)
     _logger: Logger = PrivateAttr(default_factory=Logger)
     _original_tool: Any = PrivateAttr(default=None)
+
+    @property
+    def formatted_description(self) -> str:
+        """LLM-facing composite of name, argument schema, and description.
+
+        Use this when rendering the tool into a prompt; ``description``
+        holds only the authored text.
+        """
+        return format_description_for_llm(self.name, self.args_schema, self.description)
 
     @model_validator(mode="after")
     def _validate_func(self) -> Self:

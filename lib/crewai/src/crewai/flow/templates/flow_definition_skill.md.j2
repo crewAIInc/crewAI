@@ -46,6 +46,7 @@ Pick the simplest action that does the job.
 - Use `call: tool` for packaged deterministic work: API calls, searches, lookups, scoring, file work, or custom CrewAI tools.
 {% endif %}
 - Use `call: agent` for one AI worker that classifies, decides, summarizes, writes, or drafts. Put `role`, `goal`, `backstory`, and `input` under `with`. Do not add an action-level `inputs` map to an agent.
+- Repository-backed agents may set `from_repository` and omit inline `role`, `goal`, and `backstory`. Explicitly provided fields override repository values.
 - Use `call: crew` for coordinated AI work with multiple agents or tasks. Define the crew under `with`. Pass runtime values with the action-level `inputs` map.
 {% if include_each_action %}
 - Use `call: each` when the same ordered mini-pipeline must run once per item. Give every step a `name`.
@@ -137,6 +138,7 @@ Dynamic value rules:
 - Do not use fields outside the declaration schema{% if include_tool_action %} or tool refs shown here{% endif %}.
 - Do not put more than one action under a method's `do`.
 - Do not make `do` a list.
+- Do not use CEL `+` to build text in action mappings. Keep the text literal and insert each dynamic value with `${...}`.
 - Do not reference `outputs.some_method` before `some_method` can run.
 - Do not set a method's `listen` to its own method name.
 - Do not use the same string for an emitted event and a method name unless the user asks for it.

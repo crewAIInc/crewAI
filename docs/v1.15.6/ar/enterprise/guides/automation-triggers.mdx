@@ -1,0 +1,321 @@
+---
+title: "نظرة عامة على المشغلات"
+description: "فهم كيفية عمل مشغلات CrewAI AMP وكيفية إدارتها وأين تجد أدلة التكامل الخاصة بكل خدمة"
+icon: "face-smile"
+mode: "wide"
+---
+
+تربط مشغلات CrewAI AMP أتمتاتك بالأحداث الفورية عبر الأدوات التي تستخدمها فرقك بالفعل. بدلاً من الاستعلام المتكرر عن الأنظمة أو الاعتماد على التشغيل اليدوي، تستمع المشغلات للتغييرات — رسائل بريد إلكتروني جديدة، تحديثات التقويم، تغييرات حالة CRM — وتطلق فوراً الطاقم أو التدفق الذي تحدده.
+
+<Frame>
+  ![نظرة عامة على مشغلات الأتمتة](/images/enterprise/crew_connectors.png)
+</Frame>
+
+### أدلة التكامل
+
+تقدم الأدلة المفصلة شرحاً لعملية الإعداد وأمثلة على سير العمل لكل تكامل:
+
+<CardGroup cols={2}>
+  <Card title="مشغل Gmail" icon="envelope">
+    <a href="/ar/enterprise/guides/gmail-trigger">فعّل الطواقم عند وصول رسائل بريد إلكتروني أو تحديث سلاسل المحادثات.</a>
+  </Card>
+
+{" "}
+<Card title="مشغل Google Calendar" icon="calendar-days">
+  <a href="/ar/enterprise/guides/google-calendar-trigger">
+    استجب لأحداث التقويم عند إنشائها أو تحديثها أو إلغائها.
+  </a>
+</Card>
+
+{" "}
+<Card title="مشغل Google Drive" icon="folder-open">
+  <a href="/ar/enterprise/guides/google-drive-trigger">
+    تعامل مع تحميلات وتعديلات وحذف ملفات Drive.
+  </a>
+</Card>
+
+{" "}
+<Card title="مشغل Outlook" icon="envelope-open">
+  <a href="/ar/enterprise/guides/outlook-trigger">
+    أتمت الاستجابات لرسائل Outlook الجديدة وتحديثات التقويم.
+  </a>
+</Card>
+
+{" "}
+<Card title="مشغل OneDrive" icon="cloud">
+  <a href="/ar/enterprise/guides/onedrive-trigger">
+    راقب نشاط الملفات وتغييرات المشاركة في OneDrive.
+  </a>
+</Card>
+
+{" "}
+<Card title="مشغل Microsoft Teams" icon="comments">
+  <a href="/ar/enterprise/guides/microsoft-teams-trigger">
+    ابدأ سير العمل عند إنشاء محادثات Teams جديدة.
+  </a>
+</Card>
+
+{" "}
+<Card title="مشغل HubSpot" icon="hubspot">
+  <a href="/ar/enterprise/guides/hubspot-trigger">
+    أطلق الأتمتات من سير عمل HubSpot وأحداث دورة الحياة.
+  </a>
+</Card>
+
+{" "}
+<Card title="مشغل Salesforce" icon="salesforce">
+  <a href="/ar/enterprise/guides/salesforce-trigger">
+    اربط عمليات Salesforce بـ CrewAI لأتمتة CRM.
+  </a>
+</Card>
+
+{" "}
+<Card title="مشغل Slack" icon="slack">
+  <a href="/ar/enterprise/guides/slack-trigger">
+    ابدأ الطواقم مباشرة من أوامر Slack.
+  </a>
+</Card>
+
+  <Card title="مشغل Zapier" icon="bolt">
+    <a href="/ar/enterprise/guides/zapier-trigger">اربط CrewAI بآلاف التطبيقات المدعومة من Zapier.</a>
+  </Card>
+</CardGroup>
+
+## قدرات المشغلات
+
+مع المشغلات، يمكنك:
+
+- **الاستجابة للأحداث الفورية** - تنفيذ سير العمل تلقائياً عند استيفاء شروط محددة
+- **التكامل مع الأنظمة الخارجية** - الاتصال بمنصات مثل Gmail وOutlook وOneDrive وJIRA وSlack وStripe والمزيد
+- **توسيع نطاق الأتمتة** - التعامل مع أحداث كبيرة الحجم دون تدخل يدوي
+- **الحفاظ على السياق** - الوصول إلى بيانات المشغل داخل طواقمك وتدفقاتك
+
+## إدارة المشغلات
+
+### عرض المشغلات المتاحة
+
+للوصول إلى مشغلات الأتمتة وإدارتها:
+
+1. انتقل إلى عملية النشر في لوحة تحكم CrewAI
+2. انقر على علامة تبويب **Triggers** لعرض جميع تكاملات المشغلات المتاحة
+
+<Frame caption="مثال على مشغلات الأتمتة المتاحة لنشر Gmail">
+  <img
+    src="/images/enterprise/list-available-triggers.png"
+    alt="قائمة مشغلات الأتمتة المتاحة"
+  />
+</Frame>
+
+يعرض هذا العرض جميع تكاملات المشغلات المتاحة لعملية النشر، مع حالة الاتصال الحالية.
+
+### تفعيل وتعطيل المشغلات
+
+يمكن تفعيل أو تعطيل كل مشغل بسهولة باستخدام مفتاح التبديل:
+
+<Frame caption="تفعيل أو تعطيل المشغلات بالتبديل">
+  <img
+    src="/images/enterprise/trigger-selected.png"
+    alt="تفعيل أو تعطيل المشغلات بالتبديل"
+  />
+</Frame>
+
+- **مُفعّل (تبديل أزرق)**: المشغل نشط وسينفذ عملية النشر تلقائياً عند حدوث الأحداث المحددة
+- **مُعطّل (تبديل رمادي)**: المشغل غير نشط ولن يستجيب للأحداث
+
+انقر ببساطة على التبديل لتغيير حالة المشغل. تسري التغييرات فوراً.
+
+### مراقبة عمليات تنفيذ المشغلات
+
+تتبع أداء وسجل عمليات التنفيذ المُشغّلة:
+
+<Frame caption="قائمة عمليات التنفيذ المُشغّلة بواسطة الأتمتة">
+  <img
+    src="/images/enterprise/list-executions.png"
+    alt="قائمة عمليات التنفيذ المُشغّلة بواسطة الأتمتة"
+  />
+</Frame>
+
+## بناء أتمتات مدفوعة بالمشغلات
+
+قبل بناء أتمتتك، من المفيد فهم هيكل حمولات المشغلات التي ستتلقاها طواقمك وتدفقاتك.
+
+### قائمة فحص إعداد المشغل
+
+قبل ربط مشغل بالإنتاج، تأكد من:
+
+- ربط التكامل تحت **Tools & Integrations** وإكمال خطوات OAuth أو مفتاح API
+- تفعيل تبديل المشغل في عملية النشر التي يجب أن تستجيب للأحداث
+- توفير متغيرات البيئة المطلوبة (رموز API، معرّفات المستأجر، الأسرار المشتركة)
+- إنشاء أو تحديث المهام التي يمكنها تحليل الحمولة الواردة في أول مهمة طاقم أو خطوة تدفق
+- تحديد ما إذا كنت ستمرر سياق المشغل تلقائياً باستخدام `allow_crewai_trigger_context`
+- إعداد المراقبة — سجلات webhook وسجل تنفيذ CrewAI والتنبيهات الخارجية الاختيارية
+
+### اختبار المشغلات محلياً باستخدام CLI
+
+يوفر CrewAI CLI أوامر قوية لمساعدتك في تطوير واختبار الأتمتات المدفوعة بالمشغلات دون النشر في الإنتاج.
+
+#### عرض المشغلات المتاحة
+
+اعرض جميع المشغلات المتاحة للتكاملات المتصلة:
+
+```bash
+crewai triggers list
+```
+
+يعرض هذا الأمر جميع المشغلات المتاحة بناءً على تكاملاتك المتصلة، ويظهر:
+
+- اسم التكامل وحالة الاتصال
+- أنواع المشغلات المتاحة
+- أسماء وأوصاف المشغلات
+
+#### محاكاة تنفيذ المشغل
+
+اختبر طاقمك بحمولات مشغل واقعية قبل النشر:
+
+```bash
+crewai triggers run <trigger_name>
+```
+
+على سبيل المثال:
+
+```bash
+crewai triggers run microsoft_onedrive/file_changed
+```
+
+يقوم هذا الأمر بـ:
+
+- تنفيذ طاقمك محلياً
+- تمرير حمولة مشغل كاملة وواقعية
+- محاكاة كيفية استدعاء طاقمك في الإنتاج بالضبط
+
+<Warning>
+  **ملاحظات تطوير مهمة:**
+  - استخدم `crewai triggers run <trigger>` لمحاكاة تنفيذ المشغل أثناء التطوير
+  - استخدام `crewai run` لن يحاكي استدعاءات المشغل ولن يمرر حمولة المشغل
+  - بعد النشر، سيتم تنفيذ طاقمك بحمولة المشغل الفعلية
+  - إذا كان طاقمك يتوقع معاملات غير موجودة في حمولة المشغل، فقد يفشل التنفيذ
+</Warning>
+
+### المشغلات مع الطاقم
+
+تعمل تعريفات طاقمك الحالية بسلاسة مع المشغلات، تحتاج فقط إلى مهمة لتحليل الحمولة المستلمة:
+
+```python
+@CrewBase
+class MyAutomatedCrew:
+    @agent
+    def researcher(self) -> Agent:
+        return Agent(
+            config=self.agents_config['researcher'],
+        )
+
+    @task
+    def parse_trigger_payload(self) -> Task:
+        return Task(
+            config=self.tasks_config['parse_trigger_payload'],
+            agent=self.researcher(),
+        )
+
+    @task
+    def analyze_trigger_content(self) -> Task:
+        return Task(
+            config=self.tasks_config['analyze_trigger_data'],
+            agent=self.researcher(),
+        )
+```
+
+سيتلقى الطاقم تلقائياً حمولة المشغل ويمكنه الوصول إليها عبر آليات سياق CrewAI القياسية.
+
+<Note>
+  يمكن أن تتضمن مدخلات الطاقم والتدفق `crewai_trigger_payload`. يحقن CrewAI
+  هذه الحمولة تلقائياً: - المهام: تُلحق بوصف المهمة الأولى افتراضياً ("Trigger Payload: {crewai_trigger_payload}") - التحكم
+  عبر `allow_crewai_trigger_context`: عيّن `True` للحقن دائماً، `False` لعدم
+  الحقن أبداً - التدفقات: أي دالة `@start()` تقبل معامل
+  `crewai_trigger_payload` ستستلمه
+</Note>
+
+### التكامل مع التدفقات
+
+للتدفقات، لديك تحكم أكبر في كيفية التعامل مع بيانات المشغل:
+
+#### الوصول إلى حمولة المشغل
+
+جميع دوال `@start()` في تدفقاتك ستقبل معاملاً إضافياً يسمى `crewai_trigger_payload`:
+
+```python
+from crewai.flow import Flow, start, listen
+
+class MyAutomatedFlow(Flow):
+    @start()
+    def handle_trigger(self, crewai_trigger_payload: dict = None):
+        """
+        This start method can receive trigger data
+        """
+        if crewai_trigger_payload:
+            # Process the trigger data
+            trigger_id = crewai_trigger_payload.get('id')
+            event_data = crewai_trigger_payload.get('payload', {})
+
+            # Store in flow state for use by other methods
+            self.state.trigger_id = trigger_id
+            self.state.trigger_type = event_data
+
+            return event_data
+
+        # Handle manual execution
+        return None
+
+    @listen(handle_trigger)
+    def process_data(self, trigger_data):
+        """
+        Process the data from the trigger
+        """
+        # ... process the trigger
+```
+
+#### تشغيل الطواقم من التدفقات
+
+عند تشغيل طاقم داخل تدفق تم تشغيله بمشغل، مرر حمولة المشغل كما هي:
+
+```python
+@start()
+def delegate_to_crew(self, crewai_trigger_payload: dict = None):
+    """
+    Delegate processing to a specialized crew
+    """
+    crew = MySpecializedCrew()
+
+    # Pass the trigger payload to the crew
+    result = crew.crew().kickoff(
+        inputs={
+            'a_custom_parameter': "custom_value",
+            'crewai_trigger_payload': crewai_trigger_payload
+        },
+    )
+
+    return result
+```
+
+## استكشاف الأخطاء وإصلاحها
+
+**المشغل لا يعمل:**
+
+- تحقق من أن المشغل مُفعّل في علامة تبويب Triggers الخاصة بعملية النشر
+- تحقق من حالة اتصال التكامل تحت Tools & Integrations
+- تأكد من تهيئة جميع متغيرات البيئة المطلوبة بشكل صحيح
+
+**فشل التنفيذ:**
+
+- تحقق من سجلات التنفيذ لتفاصيل الأخطاء
+- استخدم `crewai triggers run <trigger_name>` للاختبار محلياً ورؤية هيكل الحمولة بالضبط
+- تحقق من أن طاقمك يمكنه التعامل مع معامل `crewai_trigger_payload`
+- تأكد من أن طاقمك لا يتوقع معاملات غير مضمنة في حمولة المشغل
+
+**مشاكل التطوير:**
+
+- اختبر دائماً باستخدام `crewai triggers run <trigger>` قبل النشر لرؤية الحمولة الكاملة
+- تذكر أن `crewai run` لا يحاكي استدعاءات المشغل — استخدم `crewai triggers run` بدلاً من ذلك
+- استخدم `crewai triggers list` للتحقق من المشغلات المتاحة لتكاملاتك المتصلة
+- بعد النشر، سيتلقى طاقمك حمولة المشغل الفعلية، لذا اختبر بدقة محلياً أولاً
+
+تحوّل مشغلات الأتمتة عمليات نشر CrewAI إلى أنظمة استجابة مدفوعة بالأحداث يمكنها التكامل بسلاسة مع عمليات عملك وأدواتك الحالية.

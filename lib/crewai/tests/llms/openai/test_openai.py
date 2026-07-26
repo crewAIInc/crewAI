@@ -30,9 +30,155 @@ def test_openai_completion_is_used_when_no_provider_prefix():
     llm = LLM(model="gpt-4o")
 
     from crewai.llms.providers.openai.completion import OpenAICompletion
-    assert isinstance(llm, OpenAICompletion)
+    assert llm.__class__.__name__ == "OpenAICompletion"
     assert llm.provider == "openai"
     assert llm.model == "gpt-4o"
+
+
+def test_custom_openai_flag_uses_native_openai_without_provider_prefix():
+    """Custom OpenAI-compatible endpoints can serve arbitrary model ids."""
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False):
+        llm = LLM(
+            model="anthropic/claude-sonnet-4-6",
+            custom_openai=True,
+            base_url="https://gateway.example/v1",
+            is_litellm=False,
+        )
+
+    assert llm.__class__.__name__ == "OpenAICompletion"
+    assert llm.is_litellm is False
+    assert llm.provider == "openai"
+    assert llm.model == "anthropic/claude-sonnet-4-6"
+    assert llm.base_url == "https://gateway.example/v1"
+    assert llm.custom_openai is True
+    assert "custom_openai" not in llm.additional_params
+
+    config = llm.to_config_dict()
+    assert config["model"] == "anthropic/claude-sonnet-4-6"
+    assert config["custom_openai"] is True
+    assert config["base_url"] == "https://gateway.example/v1"
+
+    rebuilt = LLM(**config)
+    assert isinstance(rebuilt, OpenAICompletion)
+    assert rebuilt.model == "anthropic/claude-sonnet-4-6"
+    assert rebuilt.base_url == "https://gateway.example/v1"
+
+
+def test_custom_openai_flag_requires_custom_base_url():
+    """Avoid routing arbitrary custom model ids to api.openai.com by mistake."""
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True):
+        with pytest.raises(ValueError, match="custom_openai=True requires"):
+            LLM(
+                model="anthropic/claude-sonnet-4-6",
+                custom_openai=True,
+                is_litellm=False,
+            )
+
+
+def test_direct_custom_openai_completion_requires_custom_base_url():
+    """Direct construction must not silently fall back to api.openai.com."""
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True):
+        with pytest.raises(ValueError, match="custom_openai=True requires"):
+            OpenAICompletion(
+                model="anthropic/claude-sonnet-4-6",
+                custom_openai=True,
+            )
+
+
+def test_custom_openai_flag_strips_openai_routing_prefix():
+    """The openai/ routing prefix is not part of the gateway's model id."""
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False):
+        llm = LLM(
+            model="openai/anthropic/claude-sonnet-4-6",
+            custom_openai=True,
+            base_url="https://gateway.example/v1",
+            is_litellm=False,
+        )
+
+    assert isinstance(llm, OpenAICompletion)
+    assert llm.model == "anthropic/claude-sonnet-4-6"
+
+
+def test_openai_prefixed_custom_endpoint_uses_native_sdk_for_nested_model_id():
+    """Custom OpenAI-compatible endpoints may serve non-OpenAI model ids."""
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False):
+        llm = LLM(
+            model="openai/anthropic/claude-sonnet-4-6",
+            base_url="https://gateway.example/v1",
+            is_litellm=False,
+        )
+
+    assert llm.__class__.__name__ == "OpenAICompletion"
+    assert llm.is_litellm is False
+    assert llm.provider == "openai"
+    assert llm.model == "anthropic/claude-sonnet-4-6"
+    assert llm.custom_openai is True
+    assert llm.base_url == "https://gateway.example/v1"
+
+def test_explicit_custom_openai_uses_legacy_api_base_env_var():
+    """Explicit custom routing supports the legacy endpoint environment variable."""
+    with patch.dict(
+        os.environ,
+        {
+            "OPENAI_API_KEY": "test-key",
+            "OPENAI_API_BASE": "https://gateway.example/v1",
+        },
+        clear=False,
+    ):
+        os.environ.pop("OPENAI_BASE_URL", None)
+        llm = LLM(
+            model="openai/anthropic/claude-sonnet-4-6",
+            custom_openai=True,
+            is_litellm=False,
+        )
+
+    assert isinstance(llm, OpenAICompletion)
+    assert llm.is_litellm is False
+    assert llm.provider == "openai"
+    assert llm.model == "anthropic/claude-sonnet-4-6"
+    assert llm.custom_openai is True
+
+
+def test_openai_prefixed_unknown_model_ignores_ambient_base_url_for_routing():
+    """Ambient OpenAI configuration must not opt unknown models into native routing."""
+    with patch.dict(
+        os.environ,
+        {
+            "OPENAI_API_KEY": "test-key",
+            "OPENAI_BASE_URL": "https://gateway.example/v1",
+        },
+        clear=True,
+    ):
+        with (
+            patch("crewai.llm._ensure_litellm", return_value=False),
+            pytest.raises(ImportError, match="LiteLLM fallback package"),
+        ):
+            LLM(model="openai/not-a-real-openai-model")
+
+
+@pytest.mark.parametrize("endpoint_field", ["api_base", "env"])
+def test_custom_openai_config_preserves_resolved_endpoint(endpoint_field):
+    """Serialized custom OpenAI configs can reconstruct the same endpoint."""
+    kwargs = {}
+    env = {"OPENAI_API_KEY": "test-key"}
+    if endpoint_field == "api_base":
+        kwargs["api_base"] = "https://gateway.example/v1"
+    else:
+        env["OPENAI_API_BASE"] = "https://gateway.example/v1"
+
+    with patch.dict(os.environ, env, clear=True):
+        llm = LLM(
+            model="anthropic/claude-sonnet-4-6",
+            custom_openai=True,
+            **kwargs,
+        )
+
+    config = llm.to_config_dict()
+    assert config["base_url"] == "https://gateway.example/v1"
+    rebuilt = LLM(**config)
+    assert isinstance(rebuilt, OpenAICompletion)
+    assert rebuilt.base_url == "https://gateway.example/v1"
+
 
 @pytest.mark.vcr()
 def test_openai_is_default_provider_without_explicit_llm_set_on_agent():
@@ -60,14 +206,13 @@ def test_openai_is_default_provider_without_explicit_llm_set_on_agent():
 
 
 
-def test_openai_completion_module_is_imported():
+def test_openai_completion_module_is_imported(monkeypatch):
     """
     Test that the completion module is properly imported when using OpenAI provider
     """
     module_name = "crewai.llms.providers.openai.completion"
 
-    if module_name in sys.modules:
-        del sys.modules[module_name]
+    monkeypatch.delitem(sys.modules, module_name, raising=False)
 
     LLM(model="gpt-4o")
 
@@ -421,12 +566,25 @@ def test_openai_get_client_params_with_env_var():
         client_params = llm._get_client_params()
         assert client_params["base_url"] == "https://env.openai.com/v1"
 
+def test_openai_get_client_params_with_legacy_api_base_env_var():
+    """
+    Test that _get_client_params uses OPENAI_API_BASE when OPENAI_BASE_URL is absent.
+    """
+    with patch.dict(os.environ, {
+        "OPENAI_API_BASE": "https://legacy-env.openai.com/v1",
+    }, clear=False):
+        os.environ.pop("OPENAI_BASE_URL", None)
+        llm = OpenAICompletion(model="gpt-4o")
+        client_params = llm._get_client_params()
+        assert client_params["base_url"] == "https://legacy-env.openai.com/v1"
+
 def test_openai_get_client_params_priority_order():
     """
-    Test the priority order: base_url > api_base > OPENAI_BASE_URL env var
+    Test the priority order: base_url > api_base > OPENAI_BASE_URL > OPENAI_API_BASE
     """
     with patch.dict(os.environ, {
         "OPENAI_BASE_URL": "https://env.openai.com/v1",
+        "OPENAI_API_BASE": "https://legacy-env.openai.com/v1",
     }):
         llm1 = OpenAICompletion(
             model="gpt-4o",

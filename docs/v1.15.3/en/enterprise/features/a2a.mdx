@@ -1,0 +1,227 @@
+---
+title: A2A on AMP
+description: Production-grade Agent-to-Agent communication with distributed state and multi-scheme authentication
+icon: "network-wired"
+mode: "wide"
+---
+
+<Warning>
+A2A server agents on AMP are in early release. APIs may change in future versions.
+</Warning>
+
+## Overview
+
+CrewAI AMP extends the open-source [A2A protocol implementation](/en/learn/a2a-agent-delegation) with production infrastructure for deploying distributed agents at scale. AMP supports A2A protocol versions 0.2 and 0.3. When you deploy a crew or agent with A2A server configuration to AMP, the platform automatically provisions distributed state management, authentication, multi-transport endpoints, and lifecycle management.
+
+<Note>
+  For A2A protocol fundamentals, client/server configuration, and authentication schemes, see the [A2A Agent Delegation](/en/learn/a2a-agent-delegation) documentation. This page covers what AMP adds on top of the open-source implementation.
+</Note>
+
+### Usage
+
+Add `A2AServerConfig` to any agent in your crew and deploy to AMP. The platform detects agents with server configuration and automatically registers A2A endpoints, generates agent cards, and provisions the infrastructure described below.
+
+```python
+from crewai import Agent, Crew, Task
+from crewai.a2a import A2AServerConfig
+from crewai.a2a.auth import EnterpriseTokenAuth
+
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze datasets and provide insights",
+    backstory="Expert data scientist with statistical analysis skills",
+    llm="gpt-4o",
+    a2a=A2AServerConfig(
+        auth=EnterpriseTokenAuth()
+    )
+)
+
+task = Task(
+    description="Analyze the provided dataset",
+    expected_output="Statistical summary with key insights",
+    agent=agent
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+```
+
+After [deploying to AMP](/en/enterprise/guides/deploy-to-amp), the platform registers two levels of A2A endpoints:
+
+- **Crew-level**: an aggregate agent card at `/.well-known/agent-card.json` where each agent with `A2AServerConfig` is listed as a skill, with a JSON-RPC endpoint at `/a2a`
+- **Per-agent**: isolated agent cards and JSON-RPC endpoints mounted at `/a2a/agents/{role}/`, each with its own tenancy
+
+Clients can interact with the crew as a whole or target a specific agent directly. To route a request to a specific agent through the crew-level endpoint, include `"target_agent"` in the message metadata with the agent's slugified role name (e.g., `"data-analyst"` for an agent with role `"Data Analyst"`). If no `target_agent` is provided, the request is handled by the first agent in the crew.
+
+See [A2A Agent Delegation](/en/learn/a2a-agent-delegation#server-configuration-options) for the full list of `A2AServerConfig` options.
+
+<Warning>
+  Per the A2A protocol, agent cards are publicly accessible to enable discovery. This includes both the crew-level card at `/.well-known/agent-card.json` and per-agent cards at `/a2a/agents/{role}/.well-known/agent-card.json`. Do not include sensitive information in agent names, descriptions, or skill definitions.
+</Warning>
+
+### File Inputs and Structured Output
+
+A2A on AMP supports passing files and requesting structured output in both directions. Clients can send files as `FilePart`s and request structured responses by embedding a JSON schema in the message. Server agents receive files as `input_files` on the task, and return structured data as `DataPart`s when a schema is provided. See [File Inputs and Structured Output](/en/learn/a2a-agent-delegation#file-inputs-and-structured-output) for details.
+
+### What AMP Adds
+
+<CardGroup cols={2}>
+  <Card title="Distributed State" icon="database">
+    Persistent task, context, and result storage
+  </Card>
+  <Card title="Enterprise Authentication" icon="shield-halved">
+    OIDC, OAuth2, mTLS, and Enterprise token validation beyond simple bearer tokens
+  </Card>
+  <Card title="gRPC Transport" icon="bolt">
+    Full gRPC server with TLS and authentication
+  </Card>
+  <Card title="Context Lifecycle" icon="clock-rotate-left">
+    Automatic idle detection, expiration, and cleanup of long-running conversations
+  </Card>
+  <Card title="Signed Webhooks" icon="signature">
+    HMAC-SHA256 signed push notifications with replay protection
+  </Card>
+  <Card title="Multi-Transport" icon="arrows-split-up-and-left">
+    REST, JSON-RPC, and gRPC endpoints served simultaneously from a single deployment
+  </Card>
+</CardGroup>
+
+---
+
+## Distributed State Management
+
+In the open-source implementation, task and context state lives in memory on a single process. AMP replaces this with persistent, distributed stores.
+
+### Storage Layers
+
+| Store | Purpose |
+|---|---|
+| **Task Store** | Persists A2A task state and metadata |
+| **Context Store** | Tracks conversation context, creation time, last activity, and associated tasks |
+| **Result Store** | Caches task results for retrieval |
+| **Push Config Store** | Manages webhook subscriptions per task |
+
+Multiple A2A deployments are automatically isolated from each other, preventing data collisions when sharing infrastructure.
+
+---
+
+## Enterprise Authentication
+
+AMP supports six authentication schemes for incoming A2A requests, configurable per deployment. Authentication works across both HTTP and gRPC transports.
+
+| Scheme | Description | Use Case |
+|---|---|---|
+| **SimpleTokenAuth** | Static bearer token from `AUTH_TOKEN` env var | Development, simple deployments |
+| **EnterpriseTokenAuth** | Token verification via CrewAI PlusAPI with integration token claims | AMP-to-AMP agent communication |
+| **OIDCAuth** | OpenID Connect JWT validation with JWKS endpoint caching | Enterprise SSO integration |
+| **OAuth2ServerAuth** | OAuth2 with configurable scopes | Fine-grained access control |
+| **APIKeyServerAuth** | API key validation via header or query parameter | Third-party integrations |
+| **MTLSServerAuth** | Mutual TLS certificate-based authentication | Zero-trust environments |
+
+The configured auth scheme automatically populates the agent card's `securitySchemes` and `security` fields. Clients discover authentication requirements by fetching the agent card before making requests.
+
+---
+
+## Extended Agent Cards
+
+AMP supports role-based skill visibility through extended agent cards. Unauthenticated users see the standard agent card with public skills. Authenticated users receive an extended card with additional capabilities.
+
+This enables patterns like:
+- Public agents that expose basic skills to anyone, with advanced skills available to authenticated clients
+- Internal agents that advertise different capabilities based on the caller's identity
+
+---
+
+## gRPC Transport
+
+If enabled, AMP provides full gRPC support alongside the default JSON-RPC transport.
+
+- **TLS termination** with configurable certificate and key paths
+- **gRPC reflection** for debugging with tools like `grpcurl`
+- **Authentication** using the same schemes available for HTTP
+- **Extension validation** ensuring clients support required protocol extensions
+- **Version negotiation** across A2A protocol versions 0.2 and 0.3
+
+For deployments exposing multiple agents, AMP automatically allocates per-agent gRPC ports and coordinates TLS, startup, and shutdown across all servers.
+
+---
+
+## Context Lifecycle Management
+
+AMP tracks the lifecycle of A2A conversation contexts and automatically manages cleanup.
+
+### Lifecycle States
+
+| State | Condition | Action |
+|---|---|---|
+| **Active** | Context has recent activity | None |
+| **Idle** | No activity for a configured period | Marked idle, event emitted |
+| **Expired** | Context exceeds its maximum lifetime | Marked expired, associated tasks cleaned up, event emitted |
+
+A background cleanup task runs hourly to scan for idle and expired contexts. All state transitions emit CrewAI events that integrate with the platform's observability features.
+
+---
+
+## Signed Push Notifications
+
+When an A2A agent sends push notifications to a client webhook, AMP signs each request with HMAC-SHA256 to ensure integrity and prevent tampering.
+
+### Signature Headers
+
+| Header | Purpose |
+|---|---|
+| `X-A2A-Signature` | HMAC-SHA256 signature in `sha256={hex_digest}` format |
+| `X-A2A-Signature-Timestamp` | Unix timestamp bound to the signature |
+| `X-A2A-Notification-Token` | Optional notification auth token |
+
+### Security Properties
+
+- **Integrity**: payload cannot be modified without invalidating the signature
+- **Replay protection**: signatures are timestamp-bound with a configurable tolerance window
+- **Retry with backoff**: failed deliveries retry with exponential backoff
+
+---
+
+## Distributed Event Streaming
+
+In the open-source implementation, SSE streaming works within a single process. AMP propagates SSE events across instances so that clients receive updates even when the instance holding the streaming connection differs from the instance executing the task.
+
+---
+
+## Multi-Transport Endpoints
+
+AMP serves REST and JSON-RPC by default. gRPC is available as an additional transport if enabled.
+
+| Transport | Path Convention | Description |
+|---|---|---|
+| **REST** | `/v1/message:send`, `/v1/message:stream`, `/v1/tasks` | Google API conventions |
+| **JSON-RPC** | Standard A2A JSON-RPC endpoint | Default A2A protocol transport |
+| **gRPC** | Per-agent port allocation | Optional, high-performance binary protocol |
+
+All active transports share the same authentication, version negotiation, and extension validation. Agent cards are generated from agent and crew metadata — roles, goals, and tools become skills and descriptions — and automatically include interfaces for each active transport. They can also be manually configured via `A2AServerConfig`.
+
+---
+
+## Version and Extension Negotiation
+
+AMP validates A2A protocol versions and extensions at the transport layer.
+
+### Version Negotiation
+
+- Clients send the `A2A-Version` header with their preferred version
+- AMP validates against supported versions (0.2, 0.3) and falls back to 0.3 if unspecified
+- The negotiated version is returned in the response headers
+
+### Extension Validation
+
+- Clients declare supported extensions via the `X-A2A-Extensions` header
+- AMP validates that clients support all extensions the agent requires
+- Requests from clients missing required extensions receive an `UnsupportedExtensionError`
+
+---
+
+## Next Steps
+
+- [A2A Agent Delegation](/en/learn/a2a-agent-delegation) — A2A protocol fundamentals and configuration
+- [A2UI](/en/learn/a2ui) — Interactive UI rendering over A2A
+- [Deploy to AMP](/en/enterprise/guides/deploy-to-amp) — General deployment guide
+- [Webhook Streaming](/en/enterprise/features/webhook-streaming) — Event streaming for deployed automations

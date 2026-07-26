@@ -1,0 +1,57 @@
+---
+title: "OpenTelemetry 내보내기"
+description: "CrewAI AMP 배포에서 자체 OpenTelemetry 수집기로 트레이스와 로그를 내보내기"
+icon: "magnifying-glass-chart"
+mode: "wide"
+---
+
+CrewAI AMP는 배포에서 OpenTelemetry **트레이스**와 **로그**를 자체 수집기로 직접 내보낼 수 있습니다. 이를 통해 기존 관측 가능성 스택을 사용하여 에이전트 성능을 모니터링하고, LLM 호출을 추적하고, 문제를 디버깅할 수 있습니다.
+
+텔레메트리 데이터는 [OpenTelemetry GenAI 시맨틱 규칙](https://opentelemetry.io/docs/specs/semconv/gen-ai/)과 추가적인 CrewAI 전용 속성을 따릅니다.
+
+<Tip>
+OpenTelemetry는 **권장되는 관측 가능성 경로**입니다 — 벤더 중립적이며, OTLP 호환 백엔드(Grafana, Honeycomb, NewRelic, 자체 수집기)에서 작동합니다. Datadog을 사용하는 경우, Datadog Agent 경로와 Datadog의 OTLP 수집을 모두 다루는 전용 [Datadog 통합](./datadog) 가이드를 참조하세요.
+</Tip>
+
+## 사전 요구 사항
+
+<CardGroup cols={2}>
+  <Card title="CrewAI AMP 계정" icon="users">
+    조직에 활성 CrewAI AMP 계정이 있어야 합니다.
+  </Card>
+  <Card title="OpenTelemetry 수집기" icon="server">
+    OpenTelemetry 호환 수집기 엔드포인트가 필요합니다 (예: 자체 OTel Collector, Datadog, Grafana 또는 OTLP 호환 백엔드).
+  </Card>
+</CardGroup>
+
+## 수집기 설정
+
+1. CrewAI AMP에서 **Settings** > **OpenTelemetry Collectors**로 이동합니다.
+2. **Add Collector**를 클릭합니다.
+3. 통합을 선택합니다:
+   - **OpenTelemetry Traces** 및 **OpenTelemetry Logs** — OTLP 호환 수집기 또는 백엔드로 내보냅니다.
+   - **Datadog** — 별도의 수집기나 Datadog Agent 없이 트레이스를 Datadog의 OTLP 인테이크로 직접 전송합니다.
+4. 연결을 구성합니다. 필드는 선택한 통합에 따라 달라집니다:
+
+<Tabs>
+  <Tab title="OpenTelemetry Traces / Logs">
+    **OpenTelemetry Traces**와 **OpenTelemetry Logs**는 동일한 필드를 공유하는 별개의 통합입니다 — 내보내려는 신호에 맞는 것을 선택하세요.
+
+    - **Endpoint** — 수집기의 OTLP 엔드포인트 (예: `https://otel-collector.example.com:4317`).
+    - **Service Name** — 관측 가능성 플랫폼에서 이 서비스를 식별하기 위한 이름.
+    - **Custom Headers** *(선택 사항)* — 인증 또는 라우팅 헤더를 키-값 쌍으로 추가합니다.
+    - **Certificate** *(선택 사항)* — 수집기에서 TLS 인증서가 필요한 경우 제공합니다.
+
+    <Frame>![OpenTelemetry 수집기 구성](/images/crewai-otel-collector-opentelemetry.png)</Frame>
+  </Tab>
+  <Tab title="Datadog">
+    Datadog 설정은 전용 [Datadog 통합](./datadog) 가이드를 참조하세요 — Datadog Agent 경로(권장, 로그 볼륨에 더 저렴)와 Datadog의 OTLP 수집을 모두 다루며, 수집기 구성 단계를 완전히 설명합니다.
+  </Tab>
+</Tabs>
+
+5. *(선택 사항)* **Test Connection**을 클릭하여 제공한 자격 증명으로 CrewAI가 엔드포인트에 연결할 수 있는지 확인합니다.
+6. **Save**를 클릭합니다.
+
+<Tip>
+  여러 수집기를 추가할 수 있습니다 — 예를 들어, 트레이스용 하나와 로그용 하나를 추가하거나, 다른 목적을 위해 다른 백엔드로 전송할 수 있습니다.
+</Tip>

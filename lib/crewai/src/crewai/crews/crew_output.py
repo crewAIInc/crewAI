@@ -24,8 +24,22 @@ class CrewOutput(BaseModel):
         description="Output of each task", default_factory=list
     )
     token_usage: UsageMetrics = Field(
-        description="Processed token summary", default_factory=UsageMetrics
+        description=(
+            "Processed token summary; ``usage_metrics`` exposes the same "
+            "data as a plain dict"
+        ),
+        default_factory=UsageMetrics,
     )
+
+    @property
+    def usage_metrics(self) -> dict[str, Any]:
+        """Token usage as a plain dict.
+
+        Same attribute name and shape as ``LiteAgentOutput.usage_metrics``
+        (the ``Agent.kickoff()`` result), so a usage accessor written for one
+        result type works on both.
+        """
+        return self.token_usage.model_dump()
 
     @property
     def json(self) -> str | None:  # type: ignore[override]

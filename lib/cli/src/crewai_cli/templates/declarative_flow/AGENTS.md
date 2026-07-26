@@ -59,9 +59,9 @@ Use these expression forms correctly:
 - Raw CEL: use in `expr`. Do not wrap raw CEL in `${...}`.
 - Use `${...}` inside action mapping strings to read Flow data with CEL. Example value: `Ticket: ${state.ticket_id}`.
 - Use `state` for input data. Use `outputs.step_name` for a completed method result.
+- In action mapping strings, keep literal text outside `${...}` and interpolate each Flow value directly. Write `Ticket: ${state.ticket_id}`; do not assemble the string with CEL `+`.
 - If a value is only one `${...}` expression, the result keeps its type. Use this for numbers, booleans, objects, and lists.
 - If the string has other text, the final value is text. Non-text values become JSON. `null` becomes empty text.
-- Use `text(root, "path", "default")` for values that may be missing or null. The default is optional and is `""`.
 
 Expression examples:
 
@@ -76,12 +76,6 @@ Keep a list or number type:
 ```yaml
 domains: "${state.domains}"
 limit: "${state.limit}"
-```
-
-Use a default for missing text:
-
-```yaml
-input: "Ticket ${text(state, \"ticket.id\", \"unknown\")}"
 ```
 
 - Crew text: use `{name}` placeholders from crew inputs. Example: `Research {topic}`.
@@ -111,6 +105,7 @@ Dynamic value rules:
 - Do not use fields outside the declaration schema.
 - Do not put more than one action under a method's `do`.
 - Do not make `do` a list.
+- Do not use CEL `+` to build text in action mappings. Keep the text literal and insert each dynamic value with `${...}`.
 - Do not reference `outputs.some_method` before `some_method` can run.
 - Do not set a method's `listen` to its own method name.
 - Do not use the same string for an emitted event and a method name unless the user asks for it.
@@ -246,7 +241,7 @@ Shape:
 Fields:
 - `call` (required): must be `crew`. Action discriminator. Use crew to run an inline Crew definition. Example: `crew`
 - `with` (required): inline crew definition. Inline Crew definition to load and execute for this action. Example: `{"agents": {"researcher": {"backstory": "Knows the domain.", "goal": "Research {topic}", "role": "Researcher"}}, "name": "inline_research", "tasks": [{"agent": "researcher", "description": "Research {topic}", "expected_output": "Findings about {topic}", "name": "research_task"}]}`
-- `inputs` (optional): map of string to expression data | null; default `null`. Actual kickoff inputs passed to the Crew. Use `${...}` inside action mapping strings to read Flow data with CEL. Example value: `Ticket: ${state.ticket_id}`. Use `state` for input data. Use `outputs.step_name` for a completed method result. If a value is only one `${...}` expression, the result keeps its type. Use this for numbers, booleans, objects, and lists. If the string has other text, the final value is text. Non-text values become JSON. `null` becomes empty text. Use `text(root, "path", "default")` for values that may be missing or null. The default is optional and is `""`. The evaluated values are available to crew agent and task interpolation as `{name}` placeholders; reference each input the crew needs in agent or task text. Example: `{"topic": "${state.topic}"}`
+- `inputs` (optional): map of string to expression data | null; default `null`. Runtime inputs passed to the Crew. Insert Flow values with `${...}` and reference each input as `{name}` in agent or task text. Example: `{"topic": "${state.topic}"}`
 
 #### Crew Definition (`methods.<name>.do[call=crew].with`)
 
@@ -311,7 +306,7 @@ Fields:
 - `tools` (optional): list[string | map of string to any] | null; default `null`. Tool refs or serialized tool definitions available to this agent. String refs can use CrewAI tool names, `custom:<name>`, or fully qualified `module:Class` references. Example: `["crewai_tools:SerperDevTool", "custom:file_read"]`
 - `apps` (optional): list[string] | null; default `null`. Platform apps available to this agent. Can contain app names such as `gmail` or app/action refs such as `gmail/send_email`. Example: `["gmail", "slack/send_message"]`
 - `mcps` (optional): list[string | map of string to any] | null; default `null`. MCP server refs or serialized MCP server configs available to this agent. String refs can use HTTPS URLs, connected MCP integration slugs, or refs with a `#tool_name` suffix for specific tools. Example: `["https://api.weather.com/mcp#get_current_weather", "snowflake", "stripe#list_invoices", {"cache_tools_list": true, "headers": {"Authorization": "Bearer your_token"}, "streamable": true, "url": "https://api.example.com/mcp"}]`
-- `input` (required): string. Input passed to the individual agent kickoff outside of a crew. Use one string. Use `${...}` inside action mapping strings to read Flow data with CEL. Example value: `Ticket: ${state.ticket_id}`. Use `state` for input data. Use `outputs.step_name` for a completed method result. If a value is only one `${...}` expression, the result keeps its type. Use this for numbers, booleans, objects, and lists. If the string has other text, the final value is text. Non-text values become JSON. `null` becomes empty text. Use `text(root, "path", "default")` for values that may be missing or null. The default is optional and is `""`. When an agent needs multiple fields, write one string with labels and separators, for example `Ticket ID: ${state.ticket_id}; Message: ${state.message}`. Example: `${state.ticket.body}`
+- `input` (required): string. Agent prompt template. Insert Flow values with `${...}`, for example `Ticket: ${state.ticket_id}`. Example: `${state.ticket.body}`
 
 #### LLM Definition
 
@@ -349,4 +344,3 @@ Fields:
 - Crew action-level `inputs` are the Crew kickoff inputs; use CEL-wrapped strings there for runtime values.
 - Crew agent/task interpolation uses `{name}` placeholders from evaluated crew inputs.
 - Agent `with.input` must be text. Use `${outputs.method_name.raw}` or a text field like `${outputs.method_name.json_dict.summary}`.
-

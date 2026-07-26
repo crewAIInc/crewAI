@@ -933,7 +933,49 @@ class TestResolveRefsRecursive:
         assert resolved["properties"]["x"]["type"] == "integer"
 
 
-class TestSanitizeRecursiveSchemas:
+class TestSanitizeStrictSchemas:
+    def test_openai_strict_preserves_property_named_title(self) -> None:
+        from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_openai_strict
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "title": {"title": "Title", "type": "string"},
+                "url": {"title": "Url", "type": "string"},
+            },
+            "required": ["title", "url"],
+        }
+
+        san = sanitize_tool_params_for_openai_strict(deepcopy(schema))
+
+        assert "title" in san["properties"]
+        assert set(san["required"]) == set(san["properties"].keys())
+        assert "title" not in san["properties"]["title"]
+
+    def test_openai_strict_preserves_nested_property_named_title(self) -> None:
+        from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_openai_strict
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "payload": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"title": "Nested Title", "type": "string"},
+                    },
+                    "required": ["title"],
+                },
+            },
+            "required": ["payload"],
+        }
+
+        san = sanitize_tool_params_for_openai_strict(deepcopy(schema))
+        payload = san["properties"]["payload"]
+
+        assert "title" in payload["properties"]
+        assert payload["required"] == ["title"]
+        assert "title" not in payload["properties"]["title"]
+
     def test_anthropic_strict_preserves_recursive_type(self) -> None:
         from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_anthropic_strict
 

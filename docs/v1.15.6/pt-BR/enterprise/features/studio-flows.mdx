@@ -1,0 +1,123 @@
+---
+title: Flows no Studio
+description: "Crie fluxos de trabalho orientados a eventos que combinam controle determinístico passo a passo com inteligência agêntica — sem escrever código."
+icon: "diagram-project"
+mode: "wide"
+---
+
+<Info>
+**Lançamento em andamento**: Flows no Studio está sendo liberado gradualmente durante a semana de 20 de julho de 2026. Se você ainda não vê a opção Flows no Studio, o recurso ainda não chegou à sua organização — volte em breve.
+</Info>
+
+## Visão geral
+
+O Studio agora permite criar **Flows** além de Crews. Flows são fluxos de trabalho orientados a eventos em que você controla exatamente quais etapas são executadas, em que ordem e sob quais condições — enquanto delega o trabalho inteligente dentro de cada etapa a agentes de IA.
+
+Para criar um Flow, abra o Studio, descreva sua automação e selecione **Flows** no seletor ao lado da caixa de prompt.
+
+<Frame>
+  ![Seletor de Flows no Studio](/images/enterprise/studio-flows-selector.png)
+</Frame>
+
+## Por que Flows?
+
+Crews são ótimos quando você quer que uma equipe de agentes colabore de forma autônoma em direção a um objetivo. Mas muitas automações do mundo real precisam de mais previsibilidade: buscar estes dados primeiro, depois resumi-los, depois publicar o resultado — sempre, nessa ordem.
+
+Flows oferecem os dois:
+
+- **Determinismo onde importa**: as etapas são executadas em uma sequência definida com ramificações explícitas, tornando as execuções previsíveis, repetíveis e fáceis de depurar.
+- **Inteligência onde você precisa**: cada etapa é executada por um agente (ou por um crew inteiro), então o trabalho dentro da etapa — resumir, pontuar, redigir, decidir — se beneficia de todo o raciocínio do LLM.
+
+Essa combinação é o que torna os Flows adequados para automações em produção: a estrutura é garantida e a agência fica restrita às etapas que precisam dela.
+
+## Criando um Flow
+
+Descreva o que você quer em linguagem natural e o Studio Assistant projeta o Flow para você — criando as etapas, conectando-as e configurando os agentes e as integrações de apps de que cada etapa precisa. O canvas à direita mostra o fluxo resultante como nós conectados, e você pode continuar iterando por conversa ou editar qualquer nó diretamente.
+
+<Frame>
+  ![Canvas do Flow com o Studio Assistant](/images/enterprise/studio-flows-agent-node.png)
+</Frame>
+
+Quando estiver pronto, use **Run** para testar o Flow de ponta a ponta, inspecione os resultados nas abas **Output** e **Traces** e faça o **Deploy** quando estiver estável. Você também pode compartilhar o projeto (**Share**) ou baixar o código-fonte (**Download**).
+
+## Tipos de nós
+
+Flows são compostos por três tipos principais de nós. Cada nó é uma etapa do fluxo de trabalho, e você pode combiná-los livremente.
+
+### Single Agent
+
+Um nó Single Agent executa um agente em uma única tarefa focada — ideal para etapas bem delimitadas, como buscar dados de uma integração, transformar conteúdo ou publicar uma mensagem.
+
+Ao clicar em um nó de agente, você abre sua configuração completa:
+
+- **Task**: o que essa etapa deve realizar e qual saída deve produzir
+- **Profile**: o papel (role), o objetivo (goal) e a história (backstory) do agente
+- **Model**: qual LLM alimenta o agente
+- **Apps**: as integrações que o agente pode usar (ex.: Linear, Slack, HubSpot)
+- **Runtime Controls**: opções para planejar antes de executar, delegação e memória
+
+<Frame>
+  ![Configuração do nó Single Agent](/images/enterprise/studio-flows-agent-config.png)
+</Frame>
+
+### Crews
+
+Um nó Crew incorpora um crew inteiro — múltiplos agentes colaborando em múltiplas tarefas — como uma única etapa do seu Flow. Use-o quando uma etapa for rica demais para um único agente, como agrupar e resumir dados por equipe e depois formatar o resultado para entrega.
+
+<Frame>
+  ![Nó Crew em um Flow](/images/enterprise/studio-flows-crew-node.png)
+</Frame>
+
+Ao abrir um nó Crew, você vê sua estrutura interna: as tarefas que ele executa, os agentes atribuídos a cada uma e os apps que eles usam. O crew é executado de forma autônoma dentro da etapa e entrega sua saída ao próximo nó do Flow.
+
+<Frame>
+  ![Dentro de um nó Crew](/images/enterprise/studio-flows-crew-detail.png)
+</Frame>
+
+Esse é o padrão determinístico-mais-agêntico em ação: o Flow garante *quando* o crew é executado, e o crew traz inteligência colaborativa para *como* o trabalho é feito.
+
+### Router
+
+Um nó Router ramifica o Flow com base em condições, para que resultados diferentes sigam caminhos diferentes. Por exemplo, um Flow de roteamento de leads pode pontuar os leads recebidos e encaminhar os de alta qualidade para uma etapa de atribuição de vendas, enquanto registra os demais para nutrição futura.
+
+<Frame>
+  ![Nó Router com ramificações condicionais](/images/enterprise/studio-flows-router-node.png)
+</Frame>
+
+Os Routers são o que torna os Flows verdadeiramente orientados a eventos: o mesmo fluxo de trabalho lida com todos os casos, mas cada execução segue apenas o ramo que seus dados justificam — sem etapas desperdiçadas, sem ambiguidade sobre o que acontece a seguir.
+
+## Sincronização com o Agent Repository
+
+Os agentes que você cria em Flows não precisam ficar presos a um único projeto. Todo nó de agente inclui um botão **Publish to Agent Repository**, que salva o agente — papel, objetivo, história, modelo e configuração — no [Agent Repository](/pt-BR/enterprise/features/agent-repositories) da sua organização.
+
+Isso funciona nos dois sentidos:
+
+- **Publicar**: promova um agente refinado em um Flow para o repositório, para que outras equipes e projetos possam reutilizá-lo.
+- **Importar**: traga um agente existente do repositório para um novo Flow em vez de recriá-lo do zero.
+
+Como os agentes do repositório são sincronizados em toda a organização, uma melhoria feita em um agente compartilhado beneficia todos os Flows que o utilizam — mantendo o comportamento dos agentes consistente, governado e sem duplicação de esforço.
+
+## Boas práticas
+
+- **Escolha um Flow** quando a automação tiver uma sequência clara ou lógica de ramificação; escolha um Crew quando o caminho até o objetivo for aberto.
+- **Mantenha as tarefas dos agentes focadas** — um nó Single Agent com uma descrição de tarefa enxuta é mais confiável do que um agente encarregado de três coisas.
+- **Use Routers para tratar todos os casos explicitamente**, inclusive o caminho "não fazer nada" (ex.: registrar leads ignorados), para que as execuções fiquem totalmente contabilizadas.
+- **Publique agentes estáveis no Agent Repository** para que sua organização construa uma biblioteca compartilhada em vez de cópias paralelas.
+- **Teste com Run e inspecione os Traces** antes do deploy para detectar problemas de integração ou de prompt com antecedência.
+
+## Relacionados
+
+<CardGroup cols={4}>
+  <Card title="Crew Studio" href="/pt-BR/enterprise/features/crew-studio" icon="pencil">
+    Crie Crews no Studio.
+  </Card>
+  <Card title="Agent Repositories" href="/pt-BR/enterprise/features/agent-repositories" icon="people-group">
+    Compartilhe e reutilize agentes em toda a sua organização.
+  </Card>
+  <Card title="Conceitos de Flows" href="/pt-BR/concepts/flows" icon="diagram-project">
+    Saiba como os Flows funcionam no framework CrewAI.
+  </Card>
+  <Card title="Tools & Integrations" href="/pt-BR/enterprise/features/tools-and-integrations" icon="plug">
+    Conecte os apps que seus agentes usam.
+  </Card>
+</CardGroup>

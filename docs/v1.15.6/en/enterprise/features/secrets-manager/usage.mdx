@@ -1,0 +1,137 @@
+---
+title: Using the Secrets Manager
+description: Manage permissions and reference managed secrets from environment variables in CrewAI Platform
+sidebarTitle: Usage & Permissions
+icon: "list-check"
+---
+
+## Overview
+
+This guide is provider-agnostic. It assumes you (or another admin) have already configured at least one Secret Provider Credential. Pick your setup guide based on the path you want:
+
+- Static credentials: [AWS](/en/enterprise/features/secrets-manager/aws) · [GCP](/en/enterprise/features/secrets-manager/gcp)
+- Workload Identity (rotation-aware): [AWS](/en/enterprise/features/secrets-manager/aws-workload-identity) · [GCP](/en/enterprise/features/secrets-manager/gcp-workload-identity)
+
+Use this guide to:
+
+- Grant the right permissions to org members.
+- Reference secrets from environment variables on your automations.
+- Verify everything resolves correctly at runtime.
+
+## Permissions (RBAC)
+
+Three CrewAI Platform features are relevant when working with Secrets Manager:
+
+- `secret_providers` — controls access to the **Secret Provider Credentials** page.
+- `workload_identity_configs` — controls access to the **Workload Identity** page (only relevant if you use the WI path).
+- `environment_variables` — controls who can create or edit environment variables.
+
+Each feature has two action levels: `read` and `manage`. Granting `manage` automatically implies `read`.
+
+### What to Grant
+
+| Goal | `secret_providers` | `workload_identity_configs` | `environment_variables` |
+|---|---|---|---|
+| Use existing static credentials in environment variables (no provider edits) | `read` | — | `manage` |
+| Create, edit, or delete static credentials | `manage` | — | `manage` |
+| Use existing Workload Identity-backed credentials in env vars | `read` | — | `manage` |
+| Create, edit, or delete Workload Identity configs (and credentials referencing them) | `manage` | `manage` | `manage` |
+
+<Note>
+**Owners** automatically have full access to every feature. The default **Member** role intentionally excludes `secret_providers` and `workload_identity_configs` — admins must explicitly opt members in via a custom role.
+</Note>
+
+### How to Assign
+
+1. In CrewAI Platform, navigate to **Settings** → **Roles**. From this page you can create new roles, edit each role's permissions, and assign roles to existing members of the organization.
+
+   {/* SCREENSHOT: Sidebar highlighting Settings → Roles → /images/secrets-manager/usage/06-amp-settings-roles-nav.png */}
+   {/* SCREENSHOT: Roles list page with "Create Role" button visible → /images/secrets-manager/usage/07-amp-roles-list.png */}
+
+2. Click **Create Role** to make a new role, or open an existing role to edit its permissions.
+
+3. In the role's permission editor, toggle the relevant features per the table above:
+
+   - `secret_providers`: choose **read** if this role only needs to use existing credentials, or **manage** if it should also be able to create, edit, and delete credentials.
+   - `environment_variables`: choose **manage** so the role can create environment variables that reference secrets.
+
+   {/* SCREENSHOT: Role editor showing the secret_providers feature with read/manage toggles → /images/secrets-manager/usage/08-amp-role-editor-secret-providers-toggles.png */}
+   {/* SCREENSHOT: Role editor showing environment_variables toggles → /images/secrets-manager/usage/09-amp-role-editor-env-vars-toggles.png */}
+
+4. Save the role.
+
+5. Assign the role to the relevant members from the same Roles page (or the org Members list).
+
+   {/* SCREENSHOT: Member assignment screen where the new role is applied to a user → /images/secrets-manager/usage/10-amp-assign-role-to-member.png */}
+
+## Referencing Secrets in Environment Variables
+
+Once a provider credential exists and your role has the right permissions, you can reference managed secrets from any environment variable.
+
+In CrewAI Platform, navigate to **Environment Variables** and click **Add Environment Variables**.
+
+{/* SCREENSHOT: Environment Variables empty state with "Add" button → /images/secrets-manager/usage/11-amp-env-vars-empty.png */}
+
+Fill the form:
+
+- **Key** — the name of the environment variable. Must start with a letter or underscore and contain only letters, numbers, and underscores. Conventionally uppercase, e.g. `OPENAI_API_KEY`.
+
+- **Value Source** — choose where the value comes from:
+  - **Direct Value** — a plaintext value you type in. Use this when you do not want to involve a provider.
+  - **Use AWS default** (or the equivalent for your provider) — uses the credential currently marked as the default for that provider type.
+  - **A specific named credential** — select the credential by name. Use this if you have multiple credentials for the same provider (for example, `aws-prod` and `aws-staging`) and want to pick one explicitly.
+
+  {/* SCREENSHOT: Env var form with the "Value Source" dropdown open, showing "AWS default" + named credentials → /images/secrets-manager/usage/12-amp-env-var-form-source-selector.png */}
+
+- **Secret Name** — the name of the secret in your provider. Once a credential is selected, this field offers autocomplete: start typing and CrewAI Platform queries your provider for matching secret names.
+
+  Use the `secret-name#json_key` syntax to extract a single field from a structured (JSON) secret. For example, given a secret `database-credentials` with value `{"username": "...", "password": "..."}`, reference `database-credentials#password` to inject just the password.
+
+  {/* SCREENSHOT: Env var form with the secret name autocomplete dropdown showing live results → /images/secrets-manager/usage/13-amp-env-var-form-secret-name-autocomplete.png */}
+
+  <Note>
+  **Azure Key Vault note:** Azure secret names cannot contain underscores. CrewAI Platform automatically converts underscores in your `Secret Name` field to hyphens when calling Azure (e.g., `db_password` is sent as `db-password`).
+  </Note>
+
+Click **Create** to save the variable.
+
+{/* SCREENSHOT: Env var list with the new variable showing masked value and a "secret" indicator → /images/secrets-manager/usage/14-amp-env-var-created.png */}
+
+<Tip>
+When editing an existing environment variable, leaving the **Value** field blank preserves the current value. This is intentional — it lets you change other fields (like the secret name or credential) without re-entering the value.
+</Tip>
+
+## Verifying It Works
+
+To verify end-to-end:
+
+1. Reference the environment variable on an automation, crew, or deployment exactly as you would any other environment variable.
+2. Deploy the automation.
+3. Trigger a run and confirm it completes successfully.
+
+### Rotation behavior depends on the credential path
+
+| Credential path | When the secret is read | What rotation requires |
+|---|---|---|
+| **Static credentials** (AWS access keys, GCP service account JSON) | At **deploy time** — value is baked into the deployment image | Re-deploy the automation after rotating the secret |
+| **Workload Identity** (OIDC federation, AWS or GCP) | At **every automation kickoff** — value is fetched fresh from your cloud | Nothing — the next kickoff after rotation sees the new value |
+
+<Note>
+**If you need rotation-aware secrets** (no re-deploy on rotation), use the Workload Identity path: [AWS WI](/en/enterprise/features/secrets-manager/aws-workload-identity) or [GCP WI](/en/enterprise/features/secrets-manager/gcp-workload-identity). The trade-off is more setup effort up front (registering CrewAI Platform as an OIDC provider in your cloud) but simpler operations long-term.
+</Note>
+
+If the deploy or run fails with an error related to your secret, check the most common causes:
+
+| Symptom | Likely cause |
+|---|---|
+| `no credential found` | The environment variable references a provider but no specific credential was selected, and there is no default credential set for that provider type. Either select a credential explicitly on the variable, or mark a credential as default on the **Secret Provider Credentials** page. |
+| `secret not found` | Typo in the **Secret Name**, or the secret does not exist in the provider account/region the credential points to. Re-check both. |
+| Automation runs with the old value after rotating (static-credentials path) | The previous value is baked into the deployment's container image. Re-deploy the automation to pick up the rotated value. To avoid this entirely, switch the credential to the Workload Identity path. |
+| Automation runs with the old value after rotating (Workload Identity path) | Confirm the env var references a WI-backed credential (not a static-keys one). With WI, the next kickoff after rotation should see the new value. If it doesn't, check that the secret was actually updated in your cloud (e.g., `aws secretsmanager get-secret-value`). |
+| `JSON key not found` | When using `secret-name#json_key`, the underlying secret must be a valid JSON object containing that key. Verify by reading the secret directly in your provider. |
+
+## Next Steps
+
+- [Back to the Secrets Manager overview](/en/enterprise/features/secrets-manager/overview)
+- Static credentials: [AWS](/en/enterprise/features/secrets-manager/aws) · [GCP](/en/enterprise/features/secrets-manager/gcp)
+- Workload Identity (rotation-aware): [AWS](/en/enterprise/features/secrets-manager/aws-workload-identity) · [GCP](/en/enterprise/features/secrets-manager/gcp-workload-identity)

@@ -306,6 +306,62 @@ class TestCrewScopedHooks:
         assert len(execution_log) == 1
 
 
+class TestCrewOnDecoratedMethods:
+    """@on(InterceptionPoint.X) methods inside @CrewBase must register.
+
+    Regression: CrewBase only scanned the legacy ``is_*_hook`` markers, so
+    methods decorated with the generic ``@on`` decorator (which sets
+    ``_interception_point``) were silently dropped and never ran.
+    """
+
+    def test_on_decorated_method_registers_and_binds_self(self):
+        from crewai.hooks import InterceptionPoint, on
+        from crewai.hooks.dispatch import _resolve_hooks
+
+        execution_log = []
+
+        @CrewBase
+        class TestCrew:
+            def __init__(self):
+                self.name = "on-crew"
+
+            @on(InterceptionPoint.PRE_MODEL_CALL)
+            def on_pre_model(self, context):
+                execution_log.append(self.name)
+
+            @agent
+            def researcher(self):
+                return Agent(role="Researcher", goal="Research", backstory="Expert")
+
+            @crew
+            def crew(self):
+                return Crew(agents=self.agents, tasks=[], verbose=False)
+
+        before = len(_resolve_hooks(InterceptionPoint.PRE_MODEL_CALL))
+
+        instance = TestCrew()
+
+        hooks = _resolve_hooks(InterceptionPoint.PRE_MODEL_CALL)
+        assert len(hooks) == before + 1
+
+        assert (
+            InterceptionPoint.PRE_MODEL_CALL.value,
+            hooks[-1],
+        ) in instance._registered_hook_functions
+
+        mock_executor = Mock()
+        mock_executor.messages = []
+        mock_executor.agent = Mock(role="Test")
+        mock_executor.task = Mock()
+        mock_executor.crew = Mock()
+        mock_executor.llm = Mock()
+        mock_executor.iterations = 0
+
+        hooks[-1](LLMCallHookContext(executor=mock_executor))
+
+        assert execution_log == ["on-crew"]
+
+
 class TestCrewScopedHookAttributes:
     """Test that crew-scoped hooks have correct attributes set."""
 

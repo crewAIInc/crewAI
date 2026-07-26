@@ -76,6 +76,38 @@ class UsageMetrics(BaseModel):
         self.cache_creation_tokens += usage_metrics.cache_creation_tokens
         self.successful_requests += usage_metrics.successful_requests
 
+    def delta_since(self, baseline: Self) -> Self:
+        """Return the per-call usage accrued since ``baseline`` was captured.
+
+        Both objects must come from the same monotonically increasing
+        accumulator (e.g. an LLM instance's lifetime counters). Differences
+        are clamped at zero so a reset accumulator can't produce negative
+        usage.
+
+        Args:
+            baseline: A snapshot of the same accumulator taken earlier.
+
+        Returns:
+            A new UsageMetrics with the field-wise difference.
+        """
+        return type(self)(
+            total_tokens=max(0, self.total_tokens - baseline.total_tokens),
+            prompt_tokens=max(0, self.prompt_tokens - baseline.prompt_tokens),
+            cached_prompt_tokens=max(
+                0, self.cached_prompt_tokens - baseline.cached_prompt_tokens
+            ),
+            completion_tokens=max(
+                0, self.completion_tokens - baseline.completion_tokens
+            ),
+            reasoning_tokens=max(0, self.reasoning_tokens - baseline.reasoning_tokens),
+            cache_creation_tokens=max(
+                0, self.cache_creation_tokens - baseline.cache_creation_tokens
+            ),
+            successful_requests=max(
+                0, self.successful_requests - baseline.successful_requests
+            ),
+        )
+
     @classmethod
     def from_provider_dict(cls, usage_data: dict[str, Any] | None) -> Self | None:
         """Normalize a provider's raw usage dict into a ``UsageMetrics``.

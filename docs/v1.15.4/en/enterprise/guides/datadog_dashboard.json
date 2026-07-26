@@ -1,0 +1,582 @@
+{
+  "title": "crewAI -- Operations",
+  "description": "Monitoring dashboard for self-hosted crewAI deployments running structured JSON logs. Tracks executions, errors, token usage, and automation health.",
+  "widgets": [
+    {
+      "id": 8810001,
+      "definition": {
+        "title": "Header",
+        "background_color": "vivid_blue",
+        "show_title": true,
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "id": 9910001,
+            "definition": {
+              "title": "Total Executions",
+              "time": {
+                "live_span": "1h"
+              },
+              "type": "query_value",
+              "requests": [
+                {
+                  "response_format": "scalar",
+                  "queries": [
+                    {
+                      "data_source": "logs",
+                      "name": "query1",
+                      "search": {
+                        "query": "$automation $version $service"
+                      },
+                      "compute": {
+                        "aggregation": "cardinality",
+                        "metric": "@execution_id"
+                      },
+                      "indexes": [
+                        "*"
+                      ]
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "query1"
+                    }
+                  ]
+                }
+              ],
+              "autoscale": true,
+              "precision": 0
+            },
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "width": 3,
+              "height": 2
+            }
+          },
+          {
+            "id": 9910002,
+            "definition": {
+              "title": "Error Rate (%)",
+              "time": {
+                "live_span": "1h"
+              },
+              "type": "query_value",
+              "requests": [
+                {
+                  "response_format": "scalar",
+                  "queries": [
+                    {
+                      "data_source": "logs",
+                      "name": "query1",
+                      "search": {
+                        "query": "status:error $automation $version $service"
+                      },
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "indexes": [
+                        "*"
+                      ]
+                    },
+                    {
+                      "data_source": "logs",
+                      "name": "query2",
+                      "search": {
+                        "query": "$automation $version $service"
+                      },
+                      "compute": {
+                        "aggregation": "cardinality",
+                        "metric": "@execution_id"
+                      },
+                      "indexes": [
+                        "*"
+                      ]
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "query1 / query2 * 100"
+                    }
+                  ],
+                  "conditional_formats": [
+                    {
+                      "comparator": ">",
+                      "value": 10,
+                      "palette": "white_on_red"
+                    },
+                    {
+                      "comparator": ">",
+                      "value": 5,
+                      "palette": "white_on_yellow"
+                    },
+                    {
+                      "comparator": ">=",
+                      "value": 0,
+                      "palette": "white_on_green"
+                    }
+                  ]
+                }
+              ],
+              "autoscale": false,
+              "custom_unit": "%",
+              "precision": 2
+            },
+            "layout": {
+              "x": 3,
+              "y": 0,
+              "width": 3,
+              "height": 2
+            }
+          },
+          {
+            "id": 9910003,
+            "definition": {
+              "title": "Active Automations",
+              "time": {
+                "live_span": "1h"
+              },
+              "type": "query_value",
+              "requests": [
+                {
+                  "response_format": "scalar",
+                  "queries": [
+                    {
+                      "data_source": "logs",
+                      "name": "query1",
+                      "search": {
+                        "query": "$automation $version $service"
+                      },
+                      "compute": {
+                        "aggregation": "cardinality",
+                        "metric": "@automation_id"
+                      },
+                      "indexes": [
+                        "*"
+                      ]
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "query1"
+                    }
+                  ]
+                }
+              ],
+              "autoscale": true,
+              "precision": 0
+            },
+            "layout": {
+              "x": 6,
+              "y": 0,
+              "width": 3,
+              "height": 2
+            }
+          },
+          {
+            "id": 9910004,
+            "definition": {
+              "title": "CrewAI Versions in Use",
+              "time": {
+                "live_span": "1h"
+              },
+              "type": "query_value",
+              "requests": [
+                {
+                  "response_format": "scalar",
+                  "queries": [
+                    {
+                      "data_source": "logs",
+                      "name": "query1",
+                      "search": {
+                        "query": "$automation $version $service"
+                      },
+                      "compute": {
+                        "aggregation": "cardinality",
+                        "metric": "@crewai_version"
+                      },
+                      "indexes": [
+                        "*"
+                      ]
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "query1"
+                    }
+                  ]
+                }
+              ],
+              "autoscale": true,
+              "precision": 0
+            },
+            "layout": {
+              "x": 9,
+              "y": 0,
+              "width": 3,
+              "height": 2
+            }
+          }
+        ]
+      },
+      "layout": {
+        "x": 0,
+        "y": 0,
+        "width": 12,
+        "height": 3
+      }
+    },
+    {
+      "id": 8820001,
+      "definition": {
+        "title": "Throughput",
+        "background_color": "vivid_green",
+        "show_title": true,
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "id": 9920001,
+            "definition": {
+              "title": "Executions per Hour by Automation (top 10)",
+              "show_legend": false,
+              "type": "timeseries",
+              "requests": [
+                {
+                  "response_format": "timeseries",
+                  "queries": [
+                    {
+                      "data_source": "logs",
+                      "name": "query1",
+                      "search": {
+                        "query": "$automation $version $service"
+                      },
+                      "compute": {
+                        "aggregation": "cardinality",
+                        "metric": "@execution_id",
+                        "interval": 3600000
+                      },
+                      "group_by": [
+                        {
+                          "facet": "@automation_name",
+                          "limit": 10,
+                          "sort": {
+                            "aggregation": "cardinality",
+                            "metric": "@execution_id",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "*"
+                      ]
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "query1"
+                    }
+                  ],
+                  "style": {
+                    "palette": "semantic"
+                  },
+                  "display_type": "bars"
+                }
+              ]
+            },
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 3
+            }
+          }
+        ]
+      },
+      "layout": {
+        "x": 0,
+        "y": 3,
+        "width": 12,
+        "height": 4
+      }
+    },
+    {
+      "id": 8830001,
+      "definition": {
+        "title": "Errors",
+        "background_color": "vivid_orange",
+        "show_title": true,
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "id": 9930001,
+            "definition": {
+              "title": "Errors by Exception Type (top 5)",
+              "show_legend": false,
+              "type": "timeseries",
+              "requests": [
+                {
+                  "response_format": "timeseries",
+                  "queries": [
+                    {
+                      "data_source": "logs",
+                      "name": "query1",
+                      "search": {
+                        "query": "status:error $automation $version $service"
+                      },
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "group_by": [
+                        {
+                          "facet": "@exception.type",
+                          "limit": 5,
+                          "sort": {
+                            "aggregation": "count",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "*"
+                      ]
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "query1"
+                    }
+                  ],
+                  "style": {
+                    "palette": "warm"
+                  },
+                  "display_type": "bars"
+                }
+              ]
+            },
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 3
+            }
+          },
+          {
+            "id": 9930002,
+            "definition": {
+              "title": "Top Exception Types by Count",
+              "type": "toplist",
+              "requests": [
+                {
+                  "response_format": "scalar",
+                  "queries": [
+                    {
+                      "data_source": "logs",
+                      "name": "query1",
+                      "search": {
+                        "query": "status:error $automation $version $service"
+                      },
+                      "compute": {
+                        "aggregation": "count"
+                      },
+                      "group_by": [
+                        {
+                          "facet": "@exception.type",
+                          "limit": 10,
+                          "sort": {
+                            "aggregation": "count",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "*"
+                      ]
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "query1"
+                    }
+                  ],
+                  "sort": {
+                    "count": 10,
+                    "order_by": [
+                      {
+                        "type": "formula",
+                        "index": 0,
+                        "order": "desc"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "style": {
+                "palette": "datadog16"
+              }
+            },
+            "layout": {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 3
+            }
+          }
+        ]
+      },
+      "layout": {
+        "x": 0,
+        "y": 7,
+        "width": 12,
+        "height": 4
+      }
+    },
+    {
+      "id": 8840001,
+      "definition": {
+        "title": "Cost",
+        "background_color": "vivid_purple",
+        "show_title": true,
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": [
+          {
+            "id": 9940001,
+            "definition": {
+              "title": "Total Tokens per Hour by Model (input + output)",
+              "show_legend": false,
+              "type": "timeseries",
+              "requests": [
+                {
+                  "response_format": "timeseries",
+                  "queries": [
+                    {
+                      "data_source": "logs",
+                      "name": "query1",
+                      "search": {
+                        "query": "$automation $version $service"
+                      },
+                      "compute": {
+                        "aggregation": "sum",
+                        "metric": "@gen_ai.usage.input_tokens",
+                        "interval": 3600000
+                      },
+                      "group_by": [
+                        {
+                          "facet": "@gen_ai.request.model",
+                          "limit": 10,
+                          "sort": {
+                            "aggregation": "sum",
+                            "metric": "@gen_ai.usage.input_tokens",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "*"
+                      ]
+                    },
+                    {
+                      "data_source": "logs",
+                      "name": "query2",
+                      "search": {
+                        "query": "$automation $version $service"
+                      },
+                      "compute": {
+                        "aggregation": "sum",
+                        "metric": "@gen_ai.usage.output_tokens",
+                        "interval": 3600000
+                      },
+                      "group_by": [
+                        {
+                          "facet": "@gen_ai.request.model",
+                          "limit": 10,
+                          "sort": {
+                            "aggregation": "sum",
+                            "metric": "@gen_ai.usage.output_tokens",
+                            "order": "desc"
+                          }
+                        }
+                      ],
+                      "indexes": [
+                        "*"
+                      ]
+                    }
+                  ],
+                  "formulas": [
+                    {
+                      "formula": "query1 + query2",
+                      "alias": "Total Tokens"
+                    }
+                  ],
+                  "style": {
+                    "palette": "cool"
+                  },
+                  "display_type": "area"
+                }
+              ]
+            },
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 3
+            }
+          }
+        ]
+      },
+      "layout": {
+        "x": 0,
+        "y": 11,
+        "width": 12,
+        "height": 4
+      }
+    },
+    {
+      "id": 8850002,
+      "definition": {
+        "title": "Drill-Down",
+        "background_color": "gray",
+        "show_title": true,
+        "type": "group",
+        "layout_type": "ordered",
+        "widgets": []
+      },
+      "layout": {
+        "x": 0,
+        "y": 15,
+        "width": 12,
+        "height": 1
+      }
+    }
+  ],
+  "template_variables": [
+    {
+      "name": "automation",
+      "prefix": "@automation_name",
+      "available_values": [],
+      "default": "*"
+    },
+    {
+      "name": "version",
+      "prefix": "@crewai_version",
+      "available_values": [],
+      "default": "*"
+    },
+    {
+      "name": "service",
+      "prefix": "service",
+      "available_values": [],
+      "default": "*"
+    }
+  ],
+  "layout_type": "ordered",
+  "notify_list": [],
+  "pause_auto_refresh": false,
+  "reflow_type": "fixed",
+  "tags": [
+    "ai:created_with_ai"
+  ]
+}
