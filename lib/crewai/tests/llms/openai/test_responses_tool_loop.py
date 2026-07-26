@@ -29,6 +29,18 @@ RESPONSES_TOOL_CALL = {
     "arguments": '{"a": 17, "b": 23}',
 }
 
+# A raw Responses `function_call` output item, as returned by the API. Note that
+# "id" and "call_id" are different values -- the matching function_call_output must
+# reference "call_id".
+RAW_RESPONSES_ITEM = {
+    "type": "function_call",
+    "id": "fc_0adeb715c5d740c7006a65ccb7",
+    "call_id": "call_dEoHFrYnOgWYvk17FymdcDZ5",
+    "name": "multiply",
+    "arguments": '{"a": 17, "b": 23}',
+    "status": "completed",
+}
+
 
 def build(model: str = "gpt-5.5", **kwargs) -> OpenAICompletion:
     return OpenAICompletion(model=model, api_key="sk-test", api="responses", **kwargs)
@@ -62,6 +74,20 @@ class TestToolCallRecognition:
         """Chat Completions and Bedrock shapes must be unaffected."""
         assert is_tool_call_list([tool_call])
         assert extract_tool_call_info(tool_call)[2] == expected_args
+
+    def test_raw_responses_item_uses_call_id_not_item_id(self):
+        """A raw function_call item carries both; only call_id can be correlated.
+
+        function_call_output must reference call_id, so picking up the item's own
+        "id" (fc_...) would produce a tool result the model can't match to its
+        invocation.
+        """
+        call_id, name, args = extract_tool_call_info(RAW_RESPONSES_ITEM)
+
+        assert call_id == "call_dEoHFrYnOgWYvk17FymdcDZ5"
+        assert call_id != RAW_RESPONSES_ITEM["id"]
+        assert name == "multiply"
+        assert args == '{"a": 17, "b": 23}'
 
 
 class TestResponsesInputTranslation:
@@ -139,6 +165,29 @@ class TestResponsesInputTranslation:
         message = {"role": "tool", "tool_call_id": "c1", "content": 391}
 
         assert OpenAICompletion._to_responses_input(message)[0]["output"] == "391"
+
+    def test_call_and_output_ids_round_trip(self):
+        """The id extracted from a call must be the one sent back with its result.
+
+        This is the correlation the API relies on: a function_call_output whose
+        call_id doesn't match an emitted function_call is rejected or ignored.
+        """
+        call_id, name, args = extract_tool_call_info(RAW_RESPONSES_ITEM)
+
+        assistant = OpenAICompletion._to_responses_input(
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {"id": call_id, "function": {"name": name, "arguments": args}}
+                ],
+            }
+        )
+        result = OpenAICompletion._to_responses_input(
+            {"role": "tool", "tool_call_id": call_id, "content": "391"}
+        )
+
+        assert assistant[0]["call_id"] == result[0]["call_id"] == call_id
 
 
 class TestPreparedParams:

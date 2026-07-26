@@ -1246,9 +1246,16 @@ def extract_tool_call_info(
         call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
         return call_id, sanitize_tool_name(tool_call.name), tool_call.input
     if isinstance(tool_call, dict):
-        # Support OpenAI "id", Bedrock "toolUseId", or generate one
+        # Prefer the Responses API "call_id", then OpenAI "id", then Bedrock
+        # "toolUseId", else generate one. A raw Responses function_call item carries
+        # both "id" (fc_...) and "call_id" (call_...) with different values, and the
+        # matching function_call_output must reference "call_id" -- reading "id"
+        # would produce a tool result that can't be correlated to its invocation.
         call_id = (
-            tool_call.get("id") or tool_call.get("toolUseId") or f"call_{id(tool_call)}"
+            tool_call.get("call_id")
+            or tool_call.get("id")
+            or tool_call.get("toolUseId")
+            or f"call_{id(tool_call)}"
         )
         func_info = tool_call.get("function", {})
         func_name = func_info.get("name", "") or tool_call.get("name", "")
