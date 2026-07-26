@@ -279,10 +279,22 @@ def download_skill(
 
     Returns:
         The downloaded Skill at INSTRUCTIONS level.
+
+    Raises:
+        ValueError: If *version* is given but blank.
     """
     from crewai.skills.loader import activate_skill
     from crewai.skills.parser import load_skill_metadata
     from crewai.utilities.agent_utils import resolve_plus_response
+
+    if version is not None:
+        # A blank pin would otherwise read as "unpinned" and quietly float to
+        # the latest version, which is not what a caller passing one asked for.
+        version = version.strip()
+        if not version:
+            raise ValueError(
+                "A pinned skill version must be non-empty; omit it to fetch the latest."
+            )
 
     ref = str(SkillRef(org=org, name=name, version=version))
 

@@ -438,6 +438,18 @@ class TestDownloadSkillClient:
 
         assert calls == [("acme", "my-skill")]
 
+    @pytest.mark.parametrize("version", ["", "   "], ids=["empty", "whitespace"])
+    def test_rejects_a_blank_pin_rather_than_floating_to_latest(
+        self, monkeypatch: pytest.MonkeyPatch, version: str
+    ) -> None:
+        installed = _stub_api("my-skill")
+        _install_client(monkeypatch, installed)
+
+        with pytest.raises(ValueError, match="must be non-empty"):
+            download_skill("acme", "my-skill", version=version)
+
+        installed.get_skill.assert_not_called()
+
     def test_reports_the_pinned_ref_when_the_download_fails(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
