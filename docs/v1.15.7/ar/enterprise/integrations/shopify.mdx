@@ -1,0 +1,196 @@
+---
+title: تكامل Shopify
+description: "إدارة التجارة الإلكترونية والمتجر الإلكتروني مع تكامل Shopify لـ CrewAI."
+icon: "shopify"
+mode: "wide"
+---
+
+## نظرة عامة
+
+مكّن وكلاءك من إدارة عمليات التجارة الإلكترونية عبر Shopify. تعامل مع العملاء والطلبات والمنتجات والمخزون وتحليلات المتجر لتبسيط أعمالك التجارية عبر الإنترنت باستخدام الأتمتة المدعومة بالذكاء الاصطناعي.
+
+## المتطلبات الأساسية
+
+قبل استخدام تكامل Shopify، تأكد من توفر ما يلي:
+
+- حساب [CrewAI AMP](https://app.crewai.com) مع اشتراك فعّال
+- متجر Shopify بصلاحيات المسؤول المناسبة
+- ربط متجر Shopify الخاص بك عبر [صفحة التكاملات](https://app.crewai.com/integrations)
+
+## إعداد تكامل Shopify
+
+### 1. ربط متجر Shopify الخاص بك
+
+1. انتقل إلى [تكاملات CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
+2. ابحث عن **Shopify** في قسم تكاملات المصادقة
+3. انقر على **Connect** وأكمل عملية OAuth
+4. امنح الصلاحيات اللازمة لإدارة المتجر والمنتجات
+5. انسخ رمز المؤسسة من [إعدادات التكامل](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. تثبيت الحزمة المطلوبة
+
+```bash
+uv add crewai-tools
+```
+
+### 3. إعداد متغير البيئة
+
+<Note>
+  لاستخدام التكاملات مع `Agent(apps=[])`, يجب تعيين متغير البيئة
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` برمز المؤسسة الخاص بك.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+أو أضفه إلى ملف `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## الأدوات المتاحة
+
+### **إدارة العملاء**
+
+<AccordionGroup>
+  <Accordion title="shopify/get_customers">
+    **الوصف:** استرجاع قائمة العملاء من متجر Shopify.
+
+    **المعاملات:**
+    - `customerIds` (string, اختياري): قائمة معرّفات العملاء مفصولة بفواصل
+    - `limit` (string, اختياري): الحد الأقصى لعدد العملاء (الافتراضي: 250)
+
+  </Accordion>
+
+  <Accordion title="shopify/create_customer">
+    **الوصف:** إنشاء عميل جديد في متجر Shopify.
+
+    **المعاملات:**
+    - `firstName` (string, مطلوب): الاسم الأول للعميل
+    - `lastName` (string, مطلوب): اسم العائلة للعميل
+    - `email` (string, مطلوب): عنوان البريد الإلكتروني للعميل
+    - `phone` (string, اختياري): رقم الهاتف
+    - `tags` (string, اختياري): الوسوم كمصفوفة أو قائمة مفصولة بفواصل
+
+  </Accordion>
+
+  <Accordion title="shopify/update_customer">
+    **الوصف:** تحديث عميل موجود في متجر Shopify.
+
+    **المعاملات:**
+    - `customerId` (string, مطلوب): معرّف العميل المراد تحديثه
+    - `firstName` (string, اختياري): الاسم الأول
+    - `lastName` (string, اختياري): اسم العائلة
+    - `email` (string, اختياري): عنوان البريد الإلكتروني
+
+  </Accordion>
+</AccordionGroup>
+
+### **إدارة الطلبات**
+
+<AccordionGroup>
+  <Accordion title="shopify/get_orders">
+    **الوصف:** استرجاع قائمة الطلبات من متجر Shopify.
+
+    **المعاملات:**
+    - `orderIds` (string, اختياري): قائمة معرّفات الطلبات مفصولة بفواصل
+    - `limit` (string, اختياري): الحد الأقصى لعدد الطلبات (الافتراضي: 250)
+
+  </Accordion>
+
+  <Accordion title="shopify/create_order">
+    **الوصف:** إنشاء طلب جديد في متجر Shopify.
+
+    **المعاملات:**
+    - `email` (string, مطلوب): عنوان البريد الإلكتروني للعميل
+    - `lineItems` (object, مطلوب): عناصر سطر الطلب بصيغة JSON
+    - `fulfillmentStatus` (string, اختياري): حالة التنفيذ - الخيارات: fulfilled, null, partial, restocked
+
+  </Accordion>
+
+  <Accordion title="shopify/get_abandoned_carts">
+    **الوصف:** استرجاع سلال التسوق المهجورة من متجر Shopify.
+
+    **المعاملات:**
+    - `status` (string, اختياري): عرض عمليات الدفع بالحالة المحددة - الخيارات: open, closed (الافتراضي: open)
+    - `limit` (string, اختياري): الحد الأقصى لعدد السلال (الافتراضي: 250)
+
+  </Accordion>
+</AccordionGroup>
+
+### **إدارة المنتجات**
+
+<AccordionGroup>
+  <Accordion title="shopify/get_products">
+    **الوصف:** استرجاع قائمة المنتجات من متجر Shopify.
+
+    **المعاملات:**
+    - `title` (string, اختياري): تصفية حسب عنوان المنتج
+    - `status` (string, اختياري): تصفية حسب الحالة - الخيارات: active, archived, draft
+    - `limit` (string, اختياري): الحد الأقصى لعدد المنتجات (الافتراضي: 250)
+
+  </Accordion>
+
+  <Accordion title="shopify/create_product">
+    **الوصف:** إنشاء منتج جديد في متجر Shopify.
+
+    **المعاملات:**
+    - `title` (string, مطلوب): عنوان المنتج
+    - `productType` (string, مطلوب): نوع/فئة المنتج
+    - `vendor` (string, مطلوب): مورد المنتج
+    - `productDescription` (string, اختياري): وصف المنتج
+    - `price` (string, اختياري): سعر المنتج
+
+  </Accordion>
+
+  <Accordion title="shopify/update_product">
+    **الوصف:** تحديث منتج موجود في متجر Shopify.
+
+    **المعاملات:**
+    - `productId` (string, مطلوب): معرّف المنتج المراد تحديثه
+    - `title` (string, اختياري): عنوان المنتج
+    - `price` (string, اختياري): سعر المنتج
+
+  </Accordion>
+</AccordionGroup>
+
+## أمثلة الاستخدام
+
+### إعداد Agent أساسي لـ Shopify
+
+```python
+from crewai import Agent, Task, Crew
+from crewai import Agent, Task, Crew
+
+# Create an agent with Shopify capabilities
+shopify_agent = Agent(
+    role="E-commerce Manager",
+    goal="Manage online store operations and customer relationships efficiently",
+    backstory="An AI assistant specialized in e-commerce operations and online store management.",
+    apps=['shopify']  # All Shopify actions will be available
+)
+
+# Task to create a new customer
+create_customer_task = Task(
+    description="Create a new VIP customer Jane Smith with email jane.smith@example.com and phone +1-555-0123",
+    agent=shopify_agent,
+    expected_output="Customer created successfully with customer ID"
+)
+
+# Run the task
+crew = Crew(
+    agents=[shopify_agent],
+    tasks=[create_customer_task]
+)
+
+crew.kickoff()
+```
+
+### الحصول على المساعدة
+
+<Card title="تحتاج مساعدة؟" icon="headset" href="mailto:support@crewai.com">
+  تواصل مع فريق الدعم للحصول على المساعدة في إعداد تكامل Shopify أو
+  استكشاف الأخطاء وإصلاحها.
+</Card>
