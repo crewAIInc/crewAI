@@ -7,6 +7,8 @@ for a task, so observability can attribute usage to an agent and task.
 
 from pathlib import Path
 
+import pytest
+
 from crewai import Agent, Task
 from crewai.events import crewai_event_bus
 from crewai.events.types.skill_events import SkillUsedEvent
@@ -149,3 +151,61 @@ class TestSkillUsedEvent:
         from crewai.events import SkillUsedEvent as Exported
 
         assert Exported is SkillUsedEvent
+
+
+class TestSkillUsedEventThroughExecution:
+    """Coverage through the public execution entry points.
+
+    The helper-level tests above pin per-skill details; these prove the event
+    actually reaches the bus during a real `execute_task` / `aexecute_task`
+    run. The agent executor is stubbed so no LLM call is made.
+    """
+
+    def test_emitted_during_execute_task(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _create_skill_dir(tmp_path, "alpha")
+        agent = _agent_with_skills(tmp_path)
+        task = _task_for(agent)
+        monkeypatch.setattr(
+            Agent, "_execute_without_timeout", lambda self, prompt, task: "done"
+        )
+
+        received: list[SkillUsedEvent] = []
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(SkillUsedEvent)
+            def _handler(source, event: SkillUsedEvent) -> None:  # noqa: ARG001
+                received.append(event)
+
+            agent.execute_task(task)
+            assert crewai_event_bus.flush(timeout=10)
+
+        assert [e.skill_name for e in received] == ["alpha"]
+        assert received[0].task_id
+
+    @pytest.mark.asyncio
+    async def test_emitted_during_aexecute_task(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _create_skill_dir(tmp_path, "alpha")
+        agent = _agent_with_skills(tmp_path)
+        task = _task_for(agent)
+
+        async def _fake_execute(self, prompt: str, task: Task) -> str:  # noqa: ANN001
+            return "done"
+
+        monkeypatch.setattr(Agent, "_aexecute_without_timeout", _fake_execute)
+
+        received: list[SkillUsedEvent] = []
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(SkillUsedEvent)
+            def _handler(source, event: SkillUsedEvent) -> None:  # noqa: ARG001
+                received.append(event)
+
+            await agent.aexecute_task(task)
+            assert crewai_event_bus.flush(timeout=10)
+
+        assert [e.skill_name for e in received] == ["alpha"]
+        assert received[0].task_id
