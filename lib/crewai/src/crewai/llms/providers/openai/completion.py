@@ -1591,10 +1591,12 @@ class OpenAICompletion(BaseLLM):
         point at ``api="responses"`` when that's what the response indicates.
         """
         text = str(error).lower()
+        # The name-based check is OpenAI-specific, so it only applies to OpenAI
+        # itself. What the server actually said is trusted either way.
         responses_only = (
             "only supported in v1/responses" in text
             or "not a chat model" in text
-            or self._is_responses_only_model(self.model)
+            or (not self.custom_openai and self._is_responses_only_model(self.model))
         )
         if responses_only:
             return (
@@ -1630,8 +1632,18 @@ class OpenAICompletion(BaseLLM):
         the model is not served by chat completions at all. Without this, a pro
         model fails with a bare ``Model ... not found``, which is misleading: the
         model exists, the endpoint is simply wrong.
+
+        Skipped entirely for ``custom_openai=True``. The model list here describes
+        OpenAI's own deployment, and an OpenAI-compatible server is free to serve
+        any model name on /v1/chat/completions -- most don't implement /v1/responses
+        at all. Rerouting someone's self-hosted "o1-pro" would break a working
+        setup, so the user's choice stands.
         """
-        if self.api == "completions" and self._is_responses_only_model(self.model):
+        if (
+            self.api == "completions"
+            and not self.custom_openai
+            and self._is_responses_only_model(self.model)
+        ):
             logging.debug(
                 "Routing %r to the Responses API: it is not served by "
                 '/v1/chat/completions. Set api="responses" explicitly to silence '

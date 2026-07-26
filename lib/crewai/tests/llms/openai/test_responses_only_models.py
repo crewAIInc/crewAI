@@ -108,6 +108,30 @@ class TestEffectiveApiRouting:
 
         assert llm._effective_api() == "responses"
 
+    @pytest.mark.parametrize("model", ["o1-pro", "openai/gpt-5-pro", "gpt-5.5-pro"])
+    def test_custom_openai_endpoint_is_never_rerouted(self, model: str):
+        """An OpenAI-compatible server may serve any model name on chat completions.
+
+        The model list describes OpenAI's own deployment. Most compatible servers
+        (vLLM, LiteLLM proxies, Ollama) don't implement /v1/responses at all, so
+        rerouting a self-hosted "o1-pro" would break a working setup.
+        """
+        llm = build(
+            model, custom_openai=True, base_url="https://my-vllm.internal/v1"
+        )
+
+        assert llm._effective_api() == "completions"
+
+    def test_custom_openai_still_honours_explicit_responses(self):
+        llm = build(
+            "o1-pro",
+            api="responses",
+            custom_openai=True,
+            base_url="https://my-vllm.internal/v1",
+        )
+
+        assert llm._effective_api() == "responses"
+
     def test_call_dispatches_pro_model_to_responses_handler(self, monkeypatch):
         """A pro model must reach the Responses path, not chat completions."""
         llm = build("gpt-5-pro")
@@ -159,5 +183,27 @@ class TestNotFoundMessage:
         llm = build("gpt-5-pro")
 
         msg = llm._model_not_found_message(make_not_found("Something went wrong."))
+
+        assert 'api="responses"' in msg
+
+    def test_custom_endpoint_does_not_get_name_based_hint(self):
+        """Don't advise api="responses" for a server that may not implement it."""
+        llm = build(
+            "o1-pro", custom_openai=True, base_url="https://my-vllm.internal/v1"
+        )
+
+        msg = llm._model_not_found_message(make_not_found("Model does not exist."))
+
+        assert 'api="responses"' not in msg
+
+    def test_custom_endpoint_still_trusts_the_server_response(self):
+        """If the server itself says responses-only, relay that regardless."""
+        llm = build(
+            "o1-pro", custom_openai=True, base_url="https://my-vllm.internal/v1"
+        )
+
+        msg = llm._model_not_found_message(
+            make_not_found("This model is only supported in v1/responses.")
+        )
 
         assert 'api="responses"' in msg
