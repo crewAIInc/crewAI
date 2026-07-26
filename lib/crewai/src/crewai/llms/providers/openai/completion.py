@@ -1929,14 +1929,15 @@ class OpenAICompletion(BaseLLM):
         # request; the first occurrence is recovered in `_call_completions`.
         # Checked after the tools block on purpose: `reasoning_effort` can also
         # arrive through `additional_params`, which bypasses the typed field.
+        # An absent `reasoning_effort` is not safe either: these models apply a
+        # server-side default, so sending nothing is rejected exactly like sending
+        # "high". Only an explicit "none" is accepted alongside tools.
         if (
             params.get("tools")
-            and params.get("reasoning_effort") not in (None, "none")
+            and params.get("reasoning_effort") != "none"
             and not self._supports_reasoning_effort_with_tools(self.model)
         ):
-            requested = params["reasoning_effort"]
-            # Explicit "none" rather than removing the key: gpt-5.6-* apply a
-            # server-side default, so omitting it fails the same way.
+            requested = params.get("reasoning_effort")
             params["reasoning_effort"] = "none"
             logging.debug(
                 'Forcing reasoning_effort="none" (requested %r) for model %r: '

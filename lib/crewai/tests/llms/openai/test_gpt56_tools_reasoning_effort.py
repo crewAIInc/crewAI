@@ -108,6 +108,20 @@ class TestLearnedFastPath:
         assert params["tools"]
         assert params["tool_choice"] == "auto"
 
+    def test_absent_reasoning_effort_is_also_forced_to_none(self):
+        """Sending nothing is rejected exactly like sending "high".
+
+        These models apply a server-side default, so a learned model with no
+        `reasoning_effort` set would 400 on every call and never benefit from the
+        cache.
+        """
+        llm = build("gpt-5.6-sol")
+        llm._remember_reasoning_effort_conflict()
+
+        params = llm._prepare_completion_params(MESSAGES, tools=TOOLS)
+
+        assert params["reasoning_effort"] == "none"
+
     def test_learning_applies_to_the_additional_params_leak(self):
         """additional_params bypasses the typed field, so it must be checked too."""
         llm = build("gpt-5.5", additional_params={"reasoning_effort": "medium"})
