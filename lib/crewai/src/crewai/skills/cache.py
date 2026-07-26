@@ -15,6 +15,8 @@ import tarfile
 from typing import TypedDict
 import zipfile
 
+from crewai.skills.validation import versions_match
+
 
 _logger = logging.getLogger(__name__)
 
@@ -39,13 +41,45 @@ class SkillCacheManager:
     def _skill_dir(self, org: str, name: str) -> Path:
         return self._root / org / name
 
-    def get_cached_path(self, org: str, name: str) -> Path | None:
-        """Return the cached skill directory path if it exists, else None."""
+    def get_cached_path(
+        self, org: str, name: str, version: str | None = None
+    ) -> Path | None:
+        """Return the cached skill directory path if usable, else None.
+
+        Args:
+            org: Organisation slug.
+            name: Skill name.
+            version: When given, the cached entry must record this version.
+                The cache holds one version per skill, so a pinned lookup for a
+                different version reports a miss and the caller re-downloads
+                rather than loading the wrong version.
+
+        Returns:
+            The cached skill directory, or None on a miss.
+        """
         skill_dir = self._skill_dir(org, name)
         meta_file = skill_dir / _META_FILENAME
-        if skill_dir.is_dir() and meta_file.exists():
-            return skill_dir
-        return None
+        if not (skill_dir.is_dir() and meta_file.exists()):
+            return None
+        if version is not None and not self._records_version(meta_file, version):
+            return None
+        return skill_dir
+
+    def _records_version(self, meta_file: Path, version: str) -> bool:
+        """Return True when the cache metadata records *version*."""
+        try:
+            meta = json.loads(meta_file.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            # ValueError covers both JSONDecodeError and the UnicodeDecodeError
+            # a non-UTF-8 file raises, so a corrupted entry reads as a miss.
+            _logger.debug("Unreadable cache entry: %s", meta_file, exc_info=True)
+            return False
+        if not isinstance(meta, dict):
+            _logger.debug("Malformed cache entry: %s", meta_file)
+            return False
+        # versions_match() treats a non-string version as no match, so a
+        # corrupted entry reads as a miss rather than raising.
+        return versions_match(version, meta.get("version"))
 
     def store(
         self, org: str, name: str, version: str | None, archive_bytes: bytes

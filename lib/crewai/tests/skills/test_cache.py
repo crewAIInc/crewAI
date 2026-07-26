@@ -62,6 +62,67 @@ class TestSkillCacheManager:
         retrieved = cache.get_cached_path("acme", "my-skill")
         assert retrieved == dest
 
+    def test_get_cached_path_matches_a_requested_version(self, tmp_path: Path) -> None:
+        cache = SkillCacheManager(cache_root=tmp_path)
+        archive = _make_tar_gz({"SKILL.md": "---\nname: my-skill\n---\nHello"})
+        dest = cache.store("acme", "my-skill", "1.0.0", archive)
+
+        assert cache.get_cached_path("acme", "my-skill", version="1.0.0") == dest
+        # A leading "v" on either side describes the same version.
+        assert cache.get_cached_path("acme", "my-skill", version="v1.0.0") == dest
+
+    def test_get_cached_path_misses_a_different_version(self, tmp_path: Path) -> None:
+        cache = SkillCacheManager(cache_root=tmp_path)
+        archive = _make_tar_gz({"SKILL.md": "---\nname: my-skill\n---\nHello"})
+        cache.store("acme", "my-skill", "1.0.0", archive)
+
+        assert cache.get_cached_path("acme", "my-skill", version="2.0.0") is None
+
+    def test_get_cached_path_misses_when_the_recorded_version_is_not_a_string(
+        self, tmp_path: Path
+    ) -> None:
+        cache = SkillCacheManager(cache_root=tmp_path)
+        archive = _make_tar_gz({"SKILL.md": "---\nname: my-skill\n---\nHello"})
+        dest = cache.store("acme", "my-skill", "1.0.0", archive)
+        meta_file = dest / ".crewai_meta.json"
+        meta = json.loads(meta_file.read_text(encoding="utf-8"))
+        meta["version"] = 1.0
+        meta_file.write_text(json.dumps(meta), encoding="utf-8")
+
+        assert cache.get_cached_path("acme", "my-skill", version="1.0.0") is None
+
+    def test_get_cached_path_misses_when_metadata_is_not_valid_utf8(
+        self, tmp_path: Path
+    ) -> None:
+        cache = SkillCacheManager(cache_root=tmp_path)
+        archive = _make_tar_gz({"SKILL.md": "---\nname: my-skill\n---\nHello"})
+        dest = cache.store("acme", "my-skill", "1.0.0", archive)
+        (dest / ".crewai_meta.json").write_bytes(b"\x80\x81")
+
+        assert cache.get_cached_path("acme", "my-skill", version="1.0.0") is None
+
+    def test_get_cached_path_misses_when_metadata_is_not_an_object(
+        self, tmp_path: Path
+    ) -> None:
+        cache = SkillCacheManager(cache_root=tmp_path)
+        archive = _make_tar_gz({"SKILL.md": "---\nname: my-skill\n---\nHello"})
+        dest = cache.store("acme", "my-skill", "1.0.0", archive)
+        (dest / ".crewai_meta.json").write_text("[]", encoding="utf-8")
+
+        assert cache.get_cached_path("acme", "my-skill", version="1.0.0") is None
+
+    def test_get_cached_path_misses_when_the_cached_version_is_unknown(
+        self, tmp_path: Path
+    ) -> None:
+        cache = SkillCacheManager(cache_root=tmp_path)
+        archive = _make_tar_gz({"SKILL.md": "---\nname: my-skill\n---\nHello"})
+        dest = cache.store("acme", "my-skill", None, archive)
+
+        # Unversioned entries still satisfy unpinned lookups.
+        assert cache.get_cached_path("acme", "my-skill") == dest
+        # ...but can't confirm a pin, so a pinned lookup re-resolves.
+        assert cache.get_cached_path("acme", "my-skill", version="1.0.0") is None
+
     def test_store_writes_metadata(self, tmp_path: Path) -> None:
         cache = SkillCacheManager(cache_root=tmp_path)
         archive = _make_tar_gz({"SKILL.md": "content"})

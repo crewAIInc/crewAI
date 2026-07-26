@@ -221,6 +221,34 @@ agent = Agent(
 )
 ```
 
+### Pin a Version
+
+An unpinned reference resolves to the newest published version, so publishing a
+new version changes every agent that references it. Append `@<version>` to pin
+one instead:
+
+```python
+agent = Agent(
+    role="Senior Code Reviewer",
+    goal="Review pull requests for quality and security issues",
+    backstory="Staff engineer with expertise in secure coding practices.",
+    skills=["@acme/code-review@1.2.0"],  # pinned; a leading "v" also works
+)
+```
+
+A pinned reference re-downloads unless the copy it finds is that exact version —
+a pin asks for a specific version rather than hinting at one. A cached skill is
+matched on the version recorded when it was installed, so it needs nothing in
+its frontmatter; a project-local copy under `skills/` has no such record, so it
+is matched on `metadata.version` in its `SKILL.md` frontmatter. Pinning an
+unpublished version fails rather than falling back to the latest.
+
+<Note>
+Agents from the **Agent Repository** are pinned automatically: the repository
+records a version alongside each skill it assigns, and the runtime applies those
+pins when it loads the agent.
+</Note>
+
 ### List
 
 ```shell Terminal

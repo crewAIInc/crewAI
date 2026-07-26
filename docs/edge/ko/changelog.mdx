@@ -4,6 +4,32 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 7월 26일">
+  ## v1.15.7a1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.15.7a1)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - 런타임의 CrewAI+ 클라이언트를 통한 레지스트리 기술 해결 문제 수정.
+  - GPT-5.6 도구 및 reasoning_effort 400 오류에서 복구.
+  - Responses API 경로에서 도구 호출이 작동하도록 수정.
+  - 404 오류를 방지하기 위해 응답 전용 모델을 라우팅.
+  - CVE-2026-16796 패치를 위해 bedrock-agentcore 의존성 버전 증가.
+
+  ### 관찰 가능성
+  - 향상된 관찰 가능성을 위해 런타임에서 기술 사용 이벤트 방출.
+
+  ### 문서
+  - 버전 1.15.6에 대한 스냅샷 및 변경 로그 업데이트.
+
+  ## 기여자
+
+  @alex-clawd, @joaomdmoura, @lorenzejay
+
+</Update>
+
 <Update label="2026년 7월 24일">
   ## v1.15.6
 
