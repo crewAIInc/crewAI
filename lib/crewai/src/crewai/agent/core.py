@@ -73,6 +73,7 @@ from crewai.events.types.memory_events import (
     MemoryRetrievalFailedEvent,
     MemoryRetrievalStartedEvent,
 )
+from crewai.events.types.skill_events import SkillUsedEvent
 from crewai.experimental.agent_executor import AgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -551,8 +552,36 @@ class Agent(BaseAgent):
             The fully prepared task prompt.
         """
         prepare_tools(self, tools, task)
+        self._emit_skill_usage(task)
 
         return apply_training_data(self, task_prompt)
+
+    def _emit_skill_usage(self, task: Task) -> None:
+        """Emit one SkillUsedEvent per skill injected into this task's prompt.
+
+        Skills are agent-scoped and rendered into the prompt on every execution,
+        so this is the runtime usage signal traces need — attributing each skill
+        to the agent and task that used it.
+
+        Args:
+            task: The task whose prompt the skills are being applied to.
+        """
+        if not self.skills:
+            return
+
+        for skill in self.skills:
+            if not isinstance(skill, SkillModel):
+                continue
+            crewai_event_bus.emit(
+                self,
+                event=SkillUsedEvent(
+                    from_agent=self,
+                    from_task=task,
+                    skill_name=skill.name,
+                    skill_path=skill.path,
+                    disclosure_level=skill.disclosure_level,
+                ),
+            )
 
     def _retrieve_memory_context(self, task: Task, task_prompt: str) -> str:
         """Retrieve memory context and append it to the task prompt.
