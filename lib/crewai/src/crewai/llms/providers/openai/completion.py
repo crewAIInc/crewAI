@@ -431,11 +431,7 @@ class OpenAICompletion(BaseLLM):
             "api_key": self.api_key,
             "organization": self.organization,
             "project": self.project,
-            "base_url": self.base_url
-            or self.api_base
-            or os.getenv("OPENAI_BASE_URL")
-            or os.getenv("OPENAI_API_BASE")
-            or None,
+            "base_url": self._resolved_base_url(),
             "timeout": self.timeout,
             "max_retries": self.max_retries,
             "default_headers": self.default_headers,
@@ -1813,6 +1809,22 @@ class OpenAICompletion(BaseLLM):
         )
         return param, message.lower()
 
+    def _resolved_base_url(self) -> str | None:
+        """The endpoint this instance actually talks to, or None for OpenAI's own.
+
+        Environment variables count: an instance can be pointed at a proxy without
+        either field being set. Single source of truth for both the client config
+        and the learned-behaviour cache keys, which must agree on what "endpoint"
+        means or a proxy ends up sharing api.openai.com's cache.
+        """
+        return (
+            self.base_url
+            or self.api_base
+            or os.getenv("OPENAI_BASE_URL")
+            or os.getenv("OPENAI_API_BASE")
+            or None
+        )
+
     def _model_cache_key(self, model: str | None = None) -> tuple[str, str]:
         """Identity for the learned-behaviour caches: the endpoint plus the model.
 
@@ -1820,8 +1832,10 @@ class OpenAICompletion(BaseLLM):
         OpenAI-compatible proxy with different capabilities, so a conflict learned
         against one endpoint must not silently apply to the other.
         """
-        endpoint = self.base_url or self.api_base or "https://api.openai.com/v1"
-        return endpoint, model if model is not None else self.model
+        return (
+            self._resolved_base_url() or "https://api.openai.com/v1",
+            model if model is not None else self.model,
+        )
 
     def _is_recoverable_completion_error(self, error: BaseException) -> bool:
         """Whether ``_call_completions`` will retry instead of surfacing this error.
@@ -2130,6 +2144,12 @@ class OpenAICompletion(BaseLLM):
                 params["messages"], content, from_agent
             )
         except NotFoundError as e:
+            # `_call_completions` retries a responses-only model on the Responses
+            # API. Reporting a failed call here would surface an error the user
+            # never experiences, and the ValueError wrapper would also hide the
+            # NotFoundError that the retry needs in order to recognize it.
+            if self._is_recoverable_completion_error(e):
+                raise
             error_msg = self._model_not_found_message(e)
             logging.error(error_msg)
             self._emit_call_failed_event(
@@ -2559,6 +2579,12 @@ class OpenAICompletion(BaseLLM):
             if usage.get("total_tokens", 0) > 0:
                 logging.info(f"OpenAI API usage: {usage}")
         except NotFoundError as e:
+            # `_call_completions` retries a responses-only model on the Responses
+            # API. Reporting a failed call here would surface an error the user
+            # never experiences, and the ValueError wrapper would also hide the
+            # NotFoundError that the retry needs in order to recognize it.
+            if self._is_recoverable_completion_error(e):
+                raise
             error_msg = self._model_not_found_message(e)
             logging.error(error_msg)
             self._emit_call_failed_event(

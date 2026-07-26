@@ -14,6 +14,8 @@ retried on the Responses API, then the model is remembered so the wasted round t
 is paid once per process.
 """
 
+from types import SimpleNamespace
+
 import httpx
 import pytest
 from openai import NotFoundError
@@ -204,6 +206,85 @@ class TestEffectiveApi:
 
         assert real._effective_api() == "responses"
         assert proxy._effective_api() == "completions"
+
+
+class TestEndpointResolution:
+    """The cache key must agree with the endpoint the client actually uses."""
+
+    def test_env_configured_proxy_gets_its_own_key(self, monkeypatch):
+        """An instance can be pointed at a proxy purely through the environment.
+
+        `_get_client_params` honours OPENAI_BASE_URL, so a key that stopped at the
+        base_url/api_base fields would file a proxy under api.openai.com -- the
+        exact leakage the tuple key exists to prevent.
+        """
+        monkeypatch.setenv("OPENAI_BASE_URL", "https://proxy.internal/v1")
+        llm = build("gpt-5-pro")
+
+        assert llm._model_cache_key() == ("https://proxy.internal/v1", "gpt-5-pro")
+        assert llm._get_client_params()["base_url"] == "https://proxy.internal/v1"
+
+    def test_explicit_base_url_wins_over_env(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_BASE_URL", "https://proxy.internal/v1")
+        llm = build("gpt-5-pro", base_url="https://explicit.internal/v1")
+
+        assert llm._model_cache_key()[0] == "https://explicit.internal/v1"
+
+    def test_defaults_to_openai(self, monkeypatch):
+        monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+        monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+
+        assert build("gpt-5-pro")._model_cache_key() == (
+            "https://api.openai.com/v1",
+            "gpt-5-pro",
+        )
+
+    def test_env_proxy_does_not_inherit_openai_learning(self, monkeypatch):
+        monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+        monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+        real = build("gpt-5-pro")
+        real._remember_responses_only_model()
+        assert real._effective_api() == "responses"
+
+        # Same model string, different endpoint -> must not inherit the learning.
+        monkeypatch.setenv("OPENAI_BASE_URL", "https://proxy.internal/v1")
+        assert build("gpt-5-pro")._effective_api() == "completions"
+
+
+class TestFailureReportingSuppressed:
+    """A recovered 404 must not surface as a failed call."""
+
+    def test_not_found_handler_defers_to_the_retry(self, monkeypatch):
+        """NotFoundError is caught before the generic handler.
+
+        Without a guard there it logs, emits LLMCallFailedEvent, and re-raises as
+        ValueError -- which both reports a failure the user never sees and hides
+        the NotFoundError the retry needs to recognize.
+        """
+        llm = build("gpt-5-pro")
+        emitted: list[str] = []
+        monkeypatch.setattr(
+            llm,
+            "_emit_call_failed_event",
+            lambda **kwargs: emitted.append(kwargs.get("error", "")),
+        )
+        error = make_not_found(RESPONSES_ONLY_MESSAGES[0])
+
+        class FakeCompletions:
+            def create(self, **kwargs):
+                raise error
+
+        monkeypatch.setattr(
+            llm,
+            "_get_sync_client",
+            lambda: SimpleNamespace(chat=SimpleNamespace(completions=FakeCompletions())),
+        )
+
+        # The original NotFoundError must survive, not a ValueError wrapper.
+        with pytest.raises(NotFoundError):
+            llm._handle_completion({"model": "gpt-5-pro", "messages": MESSAGES})
+
+        assert emitted == []
 
 
 class TestNotFoundMessage:
