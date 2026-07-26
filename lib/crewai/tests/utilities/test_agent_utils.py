@@ -1307,6 +1307,22 @@ class TestResolvePlusResponse:
 
         assert asyncio.run(main()) is response
 
+    def test_carries_context_vars_into_the_worker_thread(self) -> None:
+        """Inside a running loop the coroutine runs on another thread; a client
+        reading runtime state (the platform token, flow context) must still see
+        the caller's values rather than defaults."""
+        from crewai.context import get_platform_integration_token, platform_context
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        async def call() -> Any:
+            return get_platform_integration_token()
+
+        async def main() -> Any:
+            with platform_context("token-from-caller"):
+                return resolve_plus_response(call())
+
+        assert asyncio.run(main()) == "token-from-caller"
+
     def test_rejects_an_awaitable_bound_to_a_loop(self) -> None:
         from crewai.utilities.agent_utils import resolve_plus_response
 

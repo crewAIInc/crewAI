@@ -108,10 +108,14 @@ def resolve_plus_response(response: Any) -> Any:
         loop = None
 
     # asyncio.run() refuses to nest inside a running loop, so hand the coroutine
-    # to a worker thread with a loop of its own.
+    # to a worker thread with a loop of its own — carrying a copy of the caller's
+    # context, since a fresh thread would otherwise start with empty ContextVars
+    # and a client reading runtime state (the platform token, flow context) would
+    # see defaults.
     if loop and loop.is_running():
+        ctx = contextvars.copy_context()
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            return pool.submit(asyncio.run, await_response()).result()
+            return pool.submit(ctx.run, asyncio.run, await_response()).result()
 
     return asyncio.run(await_response())
 
