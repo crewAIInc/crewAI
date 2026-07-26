@@ -76,12 +76,15 @@ class FileReadTool(BaseTool):
         start_line: int | None = 1,
         line_count: int | None = None,
     ) -> str:
-        file_path = file_path or self.file_path
-        start_line = start_line or 1
-        line_count = line_count or None
+        file_path = file_path if file_path is not None else self.file_path
+        start_line = start_line if start_line is not None else 1
+        line_count = line_count if line_count is not None else None
 
         if file_path is None:
             return "Error: No file path provided. Please provide a file path either in the constructor or as an argument."
+
+        if line_count == 0:
+            return "Error: zero lines from the file is requested."
 
         try:
             file_path = validate_file_path(file_path)
