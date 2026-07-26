@@ -1,0 +1,156 @@
+---
+title: 'Repositórios de Agentes'
+description: 'Aprenda a usar Repositórios de Agentes para compartilhar e reutilizar seus agentes entre equipes e projetos'
+icon: 'database'
+mode: "wide"
+---
+
+Repositórios de Agentes permitem que usuários do enterprise armazenem, compartilhem e reutilizem definições de agentes entre equipes e projetos. Esse recurso possibilita manter uma biblioteca centralizada de agentes padronizados, promovendo consistência e reduzindo a duplicidade de esforços.
+
+## Benefícios dos Repositórios de Agentes
+
+- **Padronização**: Mantenha definições de agentes consistentes em toda a sua organização
+- **Reutilização**: Crie um agente uma vez e use-o em vários crews e projetos
+- **Governança**: Implemente políticas organizacionais para configurações de agentes
+- **Colaboração**: Permita que equipes compartilhem e evoluam o trabalho umas das outras
+
+## Usando Repositórios de Agentes
+
+### Pré-requisitos
+
+1. Você deve ter uma conta na CrewAI, experimente o [plano gratuito](https://app.crewai.com).
+2. Você precisa estar autenticado usando o CLI da CrewAI.
+3. Se você tiver mais de uma organização, garanta que alternou para a organização correta usando o comando do CLI:
+
+```bash
+crewai org switch <org_id>
+```
+
+### Criando e gerenciando agentes em repositórios
+
+Para criar e gerenciar agentes em repositórios, utilize o Painel do Enterprise.
+
+### Carregando agentes de repositórios
+
+Você pode carregar agentes de repositórios no seu código usando o parâmetro `from_repository`:
+
+```python
+from crewai import Agent
+
+# Crie um agente carregando-o de um repositório
+# O agente é carregado com todas as suas configurações predefinidas
+researcher = Agent(
+    from_repository="market-research-agent"
+)
+
+```
+
+### Sobrescrevendo configurações do repositório
+
+Você pode sobrescrever configurações específicas do repositório informando-as na configuração do agente:
+
+```python
+researcher = Agent(
+    from_repository="market-research-agent",
+    goal="Pesquisar as tendências mais recentes em desenvolvimento de IA",  # Sobrescreve o goal do repositório
+    verbose=True  # Adiciona uma configuração que não está no repositório
+)
+```
+
+### Exemplo: criando um Crew com agentes do repositório
+
+```python
+from crewai import Crew, Agent, Task
+
+# Carregue agentes dos repositórios
+researcher = Agent(
+    from_repository="market-research-agent"
+)
+
+writer = Agent(
+    from_repository="content-writer-agent"
+)
+
+# Crie tarefas
+research_task = Task(
+    description="Pesquise as tendências mais recentes em IA",
+    agent=researcher
+)
+
+writing_task = Task(
+    description="Escreva um relatório abrangente com base na pesquisa",
+    agent=writer
+)
+
+# Crie o crew
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    verbose=True
+)
+
+# Execute o crew
+result = crew.kickoff()
+```
+
+### Exemplo: usando `kickoff()` com agentes do repositório
+
+Você também pode usar agentes de repositório diretamente com o método `kickoff()` para interações mais simples:
+
+```python
+from crewai import Agent
+from pydantic import BaseModel
+from typing import List
+
+# Defina um formato de saída estruturado
+class MarketAnalysis(BaseModel):
+    key_trends: List[str]
+    opportunities: List[str]
+    recommendation: str
+
+# Carregue um agente do repositório
+analyst = Agent(
+    from_repository="market-analyst-agent",
+    verbose=True
+)
+
+# Obtenha uma resposta livre (texto)
+result = analyst.kickoff("Analise o mercado de IA em 2025")
+print(result.raw)  # Acessa a resposta bruta
+
+# Obtenha saída estruturada
+structured_result = analyst.kickoff(
+    "Forneça uma análise estruturada do mercado de IA em 2025",
+    response_format=MarketAnalysis
+)
+
+# Acesse os dados estruturados
+print(f"Principais Tendências: {structured_result.pydantic.key_trends}")
+print(f"Recomendação: {structured_result.pydantic.recommendation}")
+```
+
+## Boas práticas
+
+1. **Convenção de nomes**: Use nomes claros e descritivos para seus agentes de repositório
+2. **Documentação**: Inclua descrições abrangentes para cada agente
+3. **Gestão de ferramentas**: Garanta que as ferramentas referenciadas pelos agentes do repositório estejam disponíveis no seu ambiente
+4. **Controle de acesso**: Gerencie permissões para que apenas membros autorizados possam modificar agentes do repositório
+
+## Gerenciamento de organização
+
+Para alternar entre organizações ou ver sua organização atual, use o CLI da CrewAI:
+
+```bash
+# Ver organização atual
+crewai org current
+
+# Alternar para outra organização
+crewai org switch <org_id>
+
+# Listar todas as organizações disponíveis
+crewai org list
+```
+
+<Note>
+Ao carregar agentes de repositórios, você deve estar autenticado e ter alternado para a organização correta. Se você receber erros, verifique seu status de autenticação e as configurações de organização usando os comandos do CLI acima.
+</Note>

@@ -1,0 +1,120 @@
+---
+title: "Workflows Human-in-the-Loop (HITL)"
+description: "Aprenda como implementar workflows Human-in-the-Loop na CrewAI para aprimorar a tomada de decisões"
+icon: "user-check"
+mode: "wide"
+---
+
+Human-in-the-Loop (HITL) é uma abordagem poderosa que combina a inteligência artificial com a experiência humana para aprimorar a tomada de decisões e melhorar os resultados das tarefas. CrewAI oferece várias maneiras de implementar HITL dependendo das suas necessidades.
+
+## Escolhendo Sua Abordagem HITL
+
+CrewAI oferece duas abordagens principais para implementar workflows human-in-the-loop:
+
+| Abordagem | Melhor Para | Integração | Versão |
+|----------|----------|-------------|---------|
+| **Baseada em Flow** (decorador `@human_feedback`) | Desenvolvimento local, revisão via console, workflows síncronos | [Feedback Humano em Flows](/pt-BR/learn/human-feedback-in-flows) | **1.8.0+** |
+| **Baseada em Webhook** (Enterprise) | Deployments em produção, workflows assíncronos, integrações externas (Slack, Teams, etc.) | Este guia | - |
+
+<Tip>
+Se você está construindo flows e deseja adicionar etapas de revisão humana com roteamento baseado em feedback, confira o guia [Feedback Humano em Flows](/pt-BR/learn/human-feedback-in-flows) para o decorador `@human_feedback`.
+</Tip>
+
+## Configurando Workflows HITL Baseados em Webhook
+
+<Steps>
+    <Step title="Configure sua Tarefa">
+        Configure sua tarefa com a entrada humana habilitada:
+        <Frame>
+            <img src="/images/enterprise/crew-human-input.png" alt="Entrada Humana Crew" />
+        </Frame>
+    </Step>
+
+    <Step title="Forneça a URL do Webhook">
+        Ao iniciar seu crew, inclua uma URL de webhook para entrada humana:
+        <Frame>
+            <img src="/images/enterprise/crew-webhook-url.png" alt="URL do Webhook Crew" />
+        </Frame>
+    </Step>
+
+    <Step title="Receba Notificação do Webhook">
+        Assim que o crew concluir a tarefa que requer entrada humana, você receberá uma notificação de webhook contendo:
+            - Execution ID
+            - Task ID
+            - Task output
+    </Step>
+
+    <Step title="Revise o Resultado da Tarefa">
+        O sistema irá pausar no estado `Pending Human Input`. Revise cuidadosamente o resultado da tarefa.
+    </Step>
+
+    <Step title="Envie o Feedback Humano">
+        Chame o endpoint de retomada do seu crew com as seguintes informações:
+        <Frame>
+            <img src="/images/enterprise/crew-resume-endpoint.png" alt="Endpoint de Retomada Crew" />
+        </Frame>
+
+        <Warning>
+            **Crítico: URLs de Webhook Devem Ser Fornecidas Novamente**:
+            Você **deve** fornecer as mesmas URLs de webhook (`taskWebhookUrl`, `stepWebhookUrl`, `crewWebhookUrl`) na chamada de resume que você usou na chamada de kickoff. As configurações de webhook **NÃO** são automaticamente transferidas do kickoff - elas devem ser explicitamente incluídas na solicitação de resume para continuar recebendo notificações de conclusão de tarefa, etapas do agente e conclusão do crew.
+        </Warning>
+
+        Exemplo de chamada resume com webhooks:
+        ```bash
+        curl -X POST {BASE_URL}/resume \
+          -H "Authorization: Bearer YOUR_API_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "execution_id": "abcd1234-5678-90ef-ghij-klmnopqrstuv",
+            "task_id": "research_task",
+            "human_feedback": "Ótimo trabalho! Por favor, adicione mais detalhes.",
+            "is_approve": true,
+            "taskWebhookUrl": "https://your-server.com/webhooks/task",
+            "stepWebhookUrl": "https://your-server.com/webhooks/step",
+            "crewWebhookUrl": "https://your-server.com/webhooks/crew"
+          }'
+        ```
+
+        <Warning>
+            **Impacto do Feedback na Execução da Tarefa**:
+            É fundamental ter cuidado ao fornecer feedback, pois todo o conteúdo do feedback será incorporado como contexto adicional para execuções futuras da tarefa.
+        </Warning>
+        Isso significa:
+        - Todas as informações do seu feedback passam a fazer parte do contexto da tarefa.
+        - Detalhes irrelevantes podem influenciar negativamente.
+        - Feedback conciso e relevante ajuda a manter o foco e a eficiência da tarefa.
+        - Sempre revise seu feedback cuidadosamente antes de enviar para garantir que contenha apenas informações pertinentes que irão guiar positivamente a execução da tarefa.
+    </Step>
+    <Step title="Lidar com Feedback Negativo">
+        Se você fornecer um feedback negativo:
+        - O crew irá tentar novamente a tarefa com o contexto adicionado do seu feedback.
+        - Você receberá outra notificação de webhook para nova revisão.
+        - Repita os passos 4-6 até ficar satisfeito.
+    </Step>
+
+    <Step title="Continuação da Execução">
+        Quando você enviar um feedback positivo, a execução prosseguirá para as próximas etapas.
+    </Step>
+</Steps>
+
+## Melhores Práticas
+
+- **Seja Específico**: Forneça feedback claro e acionável que trate diretamente da tarefa em questão
+- **Mantenha-se Relevante**: Inclua apenas informações que ajudem a melhorar a execução da tarefa
+- **Seja Ágil**: Responda rapidamente às solicitações HITL para evitar atrasos no fluxo
+- **Reveja Cuidadosamente**: Verifique seu feedback antes de enviar para garantir a precisão
+
+## Casos de Uso Comuns
+
+Workflows HITL são particularmente valiosos para:
+- Garantia de qualidade e validação
+- Cenários de tomada de decisão complexa
+- Operações sensíveis ou de alto risco
+- Tarefas criativas que requerem julgamento humano
+- Revisões de conformidade e regulamentação
+
+## Recursos Enterprise
+
+<Card title="Plataforma de Gerenciamento HITL para Flows" icon="users-gear" href="/pt-BR/enterprise/features/flow-hitl-management">
+  O CrewAI Enterprise oferece um sistema abrangente de gerenciamento HITL para Flows com revisão na plataforma, atribuição de respondentes, permissões, políticas de escalação, gerenciamento de SLA, roteamento dinâmico e análises completas. [Saiba mais →](/pt-BR/enterprise/features/flow-hitl-management)
+</Card>

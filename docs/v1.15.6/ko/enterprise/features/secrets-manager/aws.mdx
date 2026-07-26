@@ -1,0 +1,295 @@
+---
+title: AWS Secrets Manager (정적 자격 증명)
+description: 정적 액세스 키 또는 AssumeRole을 사용하여 AWS Secrets Manager를 CrewAI Platform의 시크릿 공급자로 구성합니다
+sidebarTitle: 정적 자격 증명 사용
+icon: "key"
+---
+
+## 개요
+
+이 가이드는 **정적 자격 증명**(액세스 키, 선택적으로 AssumeRole 포함)을 사용하여 AWS Secrets Manager를 CrewAI Platform 조직의 시크릿 공급자로 구성하는 방법을 안내합니다. 완료되면 CrewAI Platform이 AWS 계정에 저장된 시크릿을 읽고 런타임에 환경 변수 값으로 주입할 수 있습니다.
+
+<Note>
+이 가이드는 **정적 자격 증명** 경로를 다룹니다 — 시크릿은 배포 시점에 해석되고 배포 이미지에 박힙니다. 로테이션된 값은 재배포가 필요합니다. 매 자동화 kickoff마다 업데이트되는 로테이션 인식 시크릿을 원하면(재배포 없음), [AWS Workload Identity (OIDC Federation)](/ko/enterprise/features/secrets-manager/aws-workload-identity)을 참조하세요.
+</Note>
+
+<Note>
+이 가이드는 AWS 측 구성과 CrewAI Platform의 자격 증명 설정을 다룹니다. 환경 변수에서 시크릿을 참조하려면 [Secrets Manager 사용하기](/ko/enterprise/features/secrets-manager/usage)를 참조하세요.
+</Note>
+
+## 사전 준비 사항
+
+<Note>
+시작하기 전에 다음을 준비하세요:
+
+- IAM 사용자, 고객 관리형 정책, 그리고 (선택적으로) IAM 역할을 생성할 수 있는 권한이 있는 AWS 계정.
+- 시크릿이 위치한(또는 위치할) AWS 리전(예: `us-east-1`).
+- 사용자가 `secret_providers: manage` 권한을 가진 CrewAI Platform 조직. [권한 (RBAC)](/ko/enterprise/features/secrets-manager/usage#permissions-rbac)을 참조하세요.
+</Note>
+
+## 인증 방법 선택
+
+CrewAI Platform은 AWS Secrets Manager에 인증하는 두 가지 방법을 지원합니다. 시작하기 전에 하나를 선택하세요 — 아래 단계는 선택한 방법에 따라 다릅니다.
+
+| 방법 | 사용 시기 | 트레이드오프 |
+|---|---|---|
+| **정적 액세스 키** | 시작 단계, 단일 계정 배포 | 가장 간단한 설정; 액세스 키를 수동으로 로테이션해야 함 |
+| **AssumeRole** | 교차 계정, 프로덕션 강화 | 단기 자격 증명; External ID 지원; 추가 IAM 역할 필요 |
+
+이 가이드의 나머지 부분은 단계 3-5에서 탭을 사용하므로 선택한 경로에 맞는 단계를 따를 수 있습니다.
+
+## 1단계 — IAM 사용자 생성
+
+[IAM 콘솔](https://console.aws.amazon.com/iam/)을 열고 **Users**로 이동한 다음 **Create user**를 클릭합니다.
+
+- 권장 이름: `crewai-secrets-reader`.
+- **Provide user access to the AWS Management Console**은 선택하지 마세요 — 이 주체는 사람이 아닌 CrewAI Platform이 프로그래밍 방식으로 사용합니다.
+- **Next**를 클릭합니다.
+
+**Set permissions** 페이지에서 기본 선택을 유지합니다. 정책은 3단계에서 연결합니다.
+
+**Next**를 클릭하고 검토한 다음 **Create user**를 클릭합니다.
+
+자세한 내용은 AWS 문서를 참조하세요: [Create an IAM user in your AWS account](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html).
+
+{/* SCREENSHOT: AWS IAM "Create user" form filled with name "crewai-secrets-reader" → /images/secrets-manager/aws/01-create-iam-user.png */}
+
+## 2단계 — IAM 정책 생성
+
+CrewAI Platform은 AWS Secrets Manager에 대한 읽기 전용 액세스와 KMS를 통해 시크릿을 복호화할 수 있는 권한이 필요합니다. 다음 JSON으로 고객 관리형 정책을 생성하세요.
+
+IAM 콘솔에서 **Policies**로 이동한 다음 **Create policy**를 클릭합니다.
+
+**JSON** 탭을 선택하고 내용을 다음으로 바꿉니다:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SecretsManagerRead",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:ListSecrets",
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "KMSDecrypt",
+      "Effect": "Allow",
+      "Action": [
+        "kms:DescribeKey",
+        "kms:Decrypt"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+**Next**를 클릭한 다음 **Review and create** 페이지에서:
+
+- **Policy name:** `CrewAISecretsManagerRead`
+- **Description (optional):** `Read-only access to AWS Secrets Manager for CrewAI Platform`
+
+**Create policy**를 클릭합니다.
+
+<Tip>
+위 정책은 간소화를 위해 `Resource`에 `*`를 부여합니다. 프로덕션에서는 `Resource`를 CrewAI Platform이 액세스해야 하는 특정 시크릿의 ARN으로 좁히고, `kms:Decrypt`를 해당 시크릿을 암호화하는 특정 KMS 키 ARN으로 좁히세요. [AWS의 최소 권한 지침](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_create-console.html)을 참조하세요.
+</Tip>
+
+{/* SCREENSHOT: AWS IAM "Create policy" → JSON tab with the policy above pasted → /images/secrets-manager/aws/02-create-policy-json-editor.png */}
+{/* SCREENSHOT: AWS IAM "Review and create policy" page with name "CrewAISecretsManagerRead" → /images/secrets-manager/aws/03-policy-review-and-create.png */}
+
+## 3단계 — 정책 연결
+
+<Tabs>
+  <Tab title="정적 액세스 키">
+    1. IAM 콘솔에서 **Users**로 이동하여 1단계에서 만든 사용자를 클릭합니다.
+    2. **Permissions** 탭에서 **Add permissions** → **Attach policies directly**를 클릭합니다.
+    3. `CrewAISecretsManagerRead`를 검색하고 선택한 다음 **Next**를 클릭합니다.
+    4. **Add permissions**를 클릭합니다.
+
+    {/* SCREENSHOT: "Add permissions" → "Attach policies directly" with CrewAISecretsManagerRead selected → /images/secrets-manager/aws/04a-attach-policy-to-user.png */}
+  </Tab>
+
+  <Tab title="AssumeRole">
+    AssumeRole의 경우 정책은 (사용자가 아닌) 별도의 IAM **역할**에 연결됩니다. 1단계의 사용자는 해당 역할에 대해 `sts:AssumeRole`을 호출할 권한만 필요합니다.
+
+    **역할 생성:**
+
+    1. IAM 콘솔에서 **Roles**로 이동하여 **Create role**을 클릭합니다.
+    2. **Trusted entity type:** AWS account. **This account**를 선택합니다(또는 교차 계정 설정의 경우 **Another AWS account**를 선택하고 1단계 IAM 사용자를 호스팅하는 AWS 계정 ID를 입력합니다).
+    3. (권장) **Require external ID**를 체크하고 직접 생성한 값을 입력합니다 — 이는 5단계에서 CrewAI Platform에 붙여 넣을 공유 시크릿입니다.
+    4. **Next**를 클릭합니다.
+    5. `CrewAISecretsManagerRead` 정책을 연결합니다.
+    6. **Next**를 클릭하고 역할 이름을 `CrewAISecretsManagerRole`로 지정한 다음 **Create role**을 클릭합니다.
+
+    **IAM 사용자가 역할을 맡을 수 있도록 허용:**
+
+    1. 방금 만든 역할을 열고 **ARN**을 복사합니다.
+    2. IAM 콘솔에서 **Users**로 이동하여 1단계 사용자를 클릭한 다음 **Permissions** 탭에서 **Add permissions** → **Create inline policy**를 클릭합니다.
+    3. **JSON** 탭에서 다음을 붙여 넣습니다(`ROLE_ARN_FROM_ABOVE`를 교체):
+
+    ```json
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": "sts:AssumeRole",
+          "Resource": "ROLE_ARN_FROM_ABOVE"
+        }
+      ]
+    }
+    ```
+
+    4. 정책 이름을 `CrewAIAssumeSecretsRole`로 지정하고 **Create policy**를 클릭합니다.
+
+    {/* SCREENSHOT: IAM "Create role" trust policy step with External ID checkbox enabled → /images/secrets-manager/aws/04b-create-role-trust-policy.png */}
+    {/* SCREENSHOT: Inline sts:AssumeRole policy attached to the IAM user → /images/secrets-manager/aws/04c-attach-assumerole-on-user.png */}
+  </Tab>
+</Tabs>
+
+## 4단계 — 자격 증명 가져오기
+
+<Tabs>
+  <Tab title="정적 액세스 키">
+    1. IAM 콘솔에서 1단계 사용자를 엽니다.
+    2. **Security credentials** 탭을 클릭합니다.
+    3. **Access keys** 아래에서 **Create access key**를 클릭합니다.
+    4. 사용 사례로 **Application running outside AWS**(또는 **Other**)를 선택합니다. **Next**를 클릭합니다.
+    5. (선택) 설명 태그를 추가합니다. **Create access key**를 클릭합니다.
+    6. **Show**를 클릭하여 시크릿 액세스 키를 표시한 다음 **Access key ID**와 **Secret access key**를 모두 복사하거나 **Download .csv file**을 클릭합니다.
+
+    <Warning>
+    시크릿 액세스 키는 한 번만 표시됩니다. 복사하지 않고 이 페이지를 닫으면 키를 삭제하고 새 키를 만들어야 합니다.
+    </Warning>
+
+    자세한 내용은 AWS 문서를 참조하세요: [Manage access keys for IAM users](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html).
+
+    {/* SCREENSHOT: Access key use-case selector ("Application running outside AWS") → /images/secrets-manager/aws/05a-create-access-key-use-case.png */}
+    {/* SCREENSHOT: "Retrieve access keys" page with Show/Download buttons → /images/secrets-manager/aws/06a-retrieve-access-keys.png */}
+  </Tab>
+
+  <Tab title="AssumeRole">
+    AssumeRole을 사용하더라도 CrewAI Platform은 여전히 IAM 사용자에 대한 액세스 키가 필요합니다 — `sts:AssumeRole` 호출을 수행하기 위한 호출 신원으로 해당 키를 사용합니다.
+
+    1. 위의 **정적 액세스 키** 탭에서 설명한 대로 사용자에 대한 액세스 키를 생성합니다.
+    2. 3단계에서 만든 역할을 열고 다음을 복사합니다:
+       - **Role ARN** (역할 요약에서).
+       - 구성한 **External ID** (있는 경우) — 3단계에서 직접 설정했으므로 가지고 있는지 확인하세요.
+
+    {/* SCREENSHOT: IAM role detail page showing Role ARN → /images/secrets-manager/aws/05b-role-arn-detail.png */}
+  </Tab>
+</Tabs>
+
+## 5단계 — CrewAI Platform에 자격 증명 추가
+
+CrewAI Platform에서 **Settings** → **Secret Provider Credentials**로 이동하여 **Add Credential**을 클릭합니다.
+
+{/* SCREENSHOT: Sidebar/nav highlighting Settings → Secret Provider Credentials → /images/secrets-manager/usage/01-amp-settings-nav.png */}
+{/* SCREENSHOT: Empty state of Secret Provider Credentials page with "Add Credential" button → /images/secrets-manager/usage/02-amp-credentials-empty-state.png */}
+
+<Tabs>
+  <Tab title="정적 액세스 키">
+    폼을 작성합니다:
+
+    - **Name:** 설명적인 이름(예: `aws-prod`).
+    - **Provider:** `AWS Secrets Manager`.
+    - **Region:** 시크릿이 위치한 AWS 리전(예: `us-east-1`). 읽으려는 시크릿의 리전과 일치해야 합니다.
+    - **Access Key ID:** 4단계의 값.
+    - **Secret Access Key:** 4단계의 값.
+    - (선택) **Set as default credential for this provider**를 체크합니다. 기본 자격 증명은 자격 증명을 명시적으로 지정하지 않고 AWS 시크릿을 참조하는 환경 변수에서 사용됩니다.
+
+    **Role ARN**과 **External ID**는 비워둡니다.
+
+    **Create**를 클릭합니다.
+
+    {/* SCREENSHOT: "Add Secret Provider Credential" form with AWS + static access keys filled in → /images/secrets-manager/usage/03a-amp-add-credential-form-aws-static.png */}
+  </Tab>
+
+  <Tab title="AssumeRole">
+    폼을 작성합니다:
+
+    - **Name:** 설명적인 이름(예: `aws-prod-assumerole`).
+    - **Provider:** `AWS Secrets Manager`.
+    - **Region:** 시크릿이 위치한 AWS 리전.
+    - **Access Key ID:** 4단계의 IAM 사용자 액세스 키(STS 호출에 사용).
+    - **Secret Access Key:** 4단계의 IAM 사용자 시크릿 액세스 키.
+    - **Role ARN:** 4단계에서 복사한 Role ARN.
+    - **External ID:** 역할의 신뢰 정책에 설정한 External ID(없으면 생략).
+    - (선택) **Set as default credential for this provider**를 체크합니다.
+
+    **Create**를 클릭합니다.
+
+    {/* SCREENSHOT: "Add Secret Provider Credential" form with AWS + AssumeRole fields filled in → /images/secrets-manager/usage/03b-amp-add-credential-form-aws-assumerole.png */}
+  </Tab>
+</Tabs>
+
+<Note>
+**두 모드의 런타임 동작:**
+
+- **정적 액세스 키**만 사용하는 경우, CrewAI Platform은 제공된 키를 사용하여 AWS Secrets Manager를 직접 호출합니다.
+- **Role ARN**이 설정된 경우, CrewAI Platform은 먼저 제공된 액세스 키(구성된 경우 External ID 포함)로 `sts:AssumeRole`을 호출한 다음, STS가 반환한 단기 자격 증명을 사용하여 시크릿을 읽습니다.
+</Note>
+
+{/* SCREENSHOT: Credentials list showing the new AWS row, with "(default)" badge if applicable → /images/secrets-manager/usage/04-amp-credential-created.png */}
+
+## 6단계 — AWS에 최소 하나의 시크릿 생성
+
+AWS Secrets Manager에 시크릿이 아직 없다면, 7단계에서 연결을 확인할 수 있도록 지금 하나 만드세요.
+
+[AWS Secrets Manager 콘솔](https://console.aws.amazon.com/secretsmanager/)에서 **Store a new secret**을 클릭합니다.
+
+- **Secret type:** **Other type of secret**을 선택합니다.
+- **Key/value pairs** — 다음 중 하나:
+  - 하나 이상의 키/값 쌍 입력(구조화된 시크릿에 권장), 또는
+  - 단일 문자열 값을 위해 **Plaintext** 탭 사용.
+- **Encryption key:** 특정 KMS 키 요구 사항이 없으면 `aws/secretsmanager`(AWS 관리형 키)를 사용합니다.
+
+**Next**를 클릭한 다음 입력합니다:
+
+- **Secret name:** 고유한 이름(예: `crewai/openai-api-key`).
+- **Description (optional):** 시크릿 용도에 대한 간단한 메모.
+
+로테이션 및 검토 단계를 통해 **Next**를 클릭한 다음 **Store**를 클릭합니다.
+
+<Note>
+**JSON 키 참조 구문.** 여러 키/값 쌍(JSON 객체)이 있는 시크릿을 저장하는 경우, CrewAI Platform은 환경 변수 참조에서 `secret-name#json_key` 구문을 사용하여 특정 필드를 추출할 수 있습니다. 예를 들어, `{"username": "...", "password": "..."}`가 있는 `database-credentials`라는 시크릿은 `database-credentials#password`로 참조할 수 있습니다. 자세한 내용은 [Secrets Manager 사용하기](/ko/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables)를 참조하세요.
+</Note>
+
+자세한 내용은 AWS 문서를 참조하세요: [Create an AWS Secrets Manager secret](https://docs.aws.amazon.com/secretsmanager/latest/userguide/create_secret.html).
+
+{/* SCREENSHOT: AWS Secrets Manager "Choose secret type" page → /images/secrets-manager/aws/07-create-secret-store-type.png */}
+{/* SCREENSHOT: AWS Secrets Manager "Configure secret" page with name and description → /images/secrets-manager/aws/08-create-secret-name.png */}
+
+## 7단계 — 연결 테스트
+
+CrewAI Platform으로 돌아가 **Secret Provider Credentials** 페이지에서 방금 만든 자격 증명을 찾고 **Test Connection**을 클릭합니다.
+
+성공 토스트는 CrewAI Platform이 AWS에 인증하고 계정의 시크릿을 읽을 수 있음을 확인합니다.
+
+{/* SCREENSHOT: Success toast after clicking "Test Connection" → /images/secrets-manager/usage/05-amp-test-connection-success.png */}
+
+테스트가 실패하면 가장 일반적인 원인을 확인하세요:
+
+| 증상 | 가능한 원인 |
+|---|---|
+| `secretsmanager:ListSecrets`에서 `AccessDenied` | 정책이 연결되지 않았거나 잘못된 사용자입니다. 3단계를 다시 확인하세요. |
+| `kms:Decrypt`에서 `AccessDenied` | `KMSDecrypt` 문이 누락되었거나, 시크릿이 `Resource: "*"`로 다루지 않는 고객 관리형 KMS 키를 사용합니다. |
+| `InvalidClientTokenId` / `SignatureDoesNotMatch` | 잘못된 액세스 키 ID 또는 시크릿 액세스 키입니다. 4단계와 5단계를 다시 확인하세요. |
+| `RegionDisabledException` / 시크릿을 찾을 수 없음 | 자격 증명의 **Region**이 시크릿이 실제로 위치한 곳과 일치하지 않습니다. |
+| `sts:AssumeRole`에서 `AccessDenied` (AssumeRole만 해당) | IAM 사용자에 인라인 `sts:AssumeRole` 정책이 없거나, 역할의 신뢰 정책이 이 주체를 허용하지 않거나, External ID가 일치하지 않습니다. |
+| IAM 사용자 생성 직후 테스트는 통과하지만 다음 번에는 실패함 | IAM 자격 증명이 전역적으로 전파되는 데 1-2분 정도 걸릴 수 있습니다. 다시 시도하세요. |
+
+## 다음 단계
+
+이제 AWS가 연결되었으므로 [Secrets Manager 사용하기](/ko/enterprise/features/secrets-manager/usage)로 이동하여 다음을 수행하세요:
+
+- 조직 멤버에게 Secrets Manager를 사용(또는 관리)할 수 있는 적절한 권한을 부여합니다.
+- CrewAI Platform 환경 변수에서 AWS 시크릿을 참조합니다.
+
+재배포 없이 전파되는 **로테이션 인식** 시크릿을 원한다면 [AWS Workload Identity (OIDC Federation)](/ko/enterprise/features/secrets-manager/aws-workload-identity)으로 전환하세요 — 동일한 시크릿 저장소, 정적 자격 증명 없음, kickoff마다 시크릿을 가져옵니다.

@@ -51,6 +51,13 @@ if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
 
 
+# Models learned at runtime to be unavailable on /v1/chat/completions, keyed by
+# the model string as configured. Populated from the 404 by
+# `_remember_responses_only_model` so the wasted round trip is paid once per model
+# per process rather than on every call.
+_LEARNED_RESPONSES_ONLY_MODELS: set[str] = set()
+
+
 class WebSearchResult(TypedDict, total=False):
     """Result from web search built-in tool."""
 
@@ -453,7 +460,7 @@ class OpenAICompletion(BaseLLM):
                 ):
                     raise ValueError("LLM call blocked by before_llm_call hook")
 
-                if self.api == "responses":
+                if self._effective_api() == "responses":
                     return self._call_responses(
                         messages=formatted_messages,
                         tools=tools,
@@ -489,27 +496,52 @@ class OpenAICompletion(BaseLLM):
         from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
-        """Call OpenAI Chat Completions API."""
+        """Call OpenAI Chat Completions API.
+
+        Falls back to the Responses API when the model turns out not to be served
+        by chat completions, which OpenAI reports as a 404 distinct from a genuine
+        unknown model.
+        """
         completion_params = self._prepare_completion_params(
             messages=messages, tools=tools
         )
 
-        if self._effective_stream():
-            return self._handle_streaming_completion(
+        try:
+            if self._effective_stream():
+                return self._handle_streaming_completion(
+                    params=completion_params,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
+
+            return self._handle_completion(
                 params=completion_params,
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
                 response_model=response_model,
             )
-
-        return self._handle_completion(
-            params=completion_params,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
-        )
+        except Exception as e:
+            if self.custom_openai or not self._is_responses_only_error(
+                e.__cause__ or e
+            ):
+                raise
+            self._remember_responses_only_model()
+            logging.debug(
+                "Retrying %r on the Responses API: not served by "
+                '/v1/chat/completions. Set api="responses" to skip this.',
+                self.model,
+            )
+            return self._call_responses(
+                messages=messages,
+                tools=tools,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
 
     async def acall(
         self,
@@ -548,7 +580,7 @@ class OpenAICompletion(BaseLLM):
 
                 formatted_messages = self._format_messages(messages)
 
-                if self.api == "responses":
+                if self._effective_api() == "responses":
                     return await self._acall_responses(
                         messages=formatted_messages,
                         tools=tools,
@@ -584,27 +616,46 @@ class OpenAICompletion(BaseLLM):
         from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
-        """Async call to OpenAI Chat Completions API."""
+        """Async call to OpenAI Chat Completions API.
+
+        Falls back to the Responses API for models not served by chat completions,
+        mirroring :meth:`_call_completions`.
+        """
         completion_params = self._prepare_completion_params(
             messages=messages, tools=tools
         )
 
-        if self._effective_stream():
-            return await self._ahandle_streaming_completion(
+        try:
+            if self._effective_stream():
+                return await self._ahandle_streaming_completion(
+                    params=completion_params,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
+
+            return await self._ahandle_completion(
                 params=completion_params,
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
                 response_model=response_model,
             )
-
-        return await self._ahandle_completion(
-            params=completion_params,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
-        )
+        except Exception as e:
+            if self.custom_openai or not self._is_responses_only_error(
+                e.__cause__ or e
+            ):
+                raise
+            self._remember_responses_only_model()
+            return await self._acall_responses(
+                messages=messages,
+                tools=tools,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
 
     def _call_responses(
         self,
@@ -668,6 +719,52 @@ class OpenAICompletion(BaseLLM):
             response_model=response_model,
         )
 
+    @staticmethod
+    def _to_responses_input(message: LLMMessage) -> list[Any]:
+        """Translate a chat-format message into Responses ``input`` items.
+
+        Tool calling is expressed differently by the two APIs. Chat Completions
+        uses an assistant message carrying ``tool_calls`` (with ``content: None``)
+        followed by ``role: "tool"`` results; the Responses API uses flat
+        ``function_call`` / ``function_call_output`` items keyed by ``call_id``.
+
+        Passing the chat shape straight through is rejected:
+
+            Invalid type for 'input[1].content': expected one of an array of
+            objects or string, but got null instead.
+
+        Anything without tool calls is already valid and passes through unchanged.
+        """
+        role = message.get("role")
+
+        if role == "assistant" and message.get("tool_calls"):
+            items: list[Any] = []
+            content = message.get("content")
+            if content:
+                items.append({"role": "assistant", "content": content})
+            for call in message["tool_calls"]:
+                function = call.get("function", {})
+                items.append(
+                    {
+                        "type": "function_call",
+                        "call_id": call.get("id", ""),
+                        "name": function.get("name", ""),
+                        "arguments": function.get("arguments", "{}"),
+                    }
+                )
+            return items
+
+        if role == "tool":
+            return [
+                {
+                    "type": "function_call_output",
+                    "call_id": message.get("tool_call_id", ""),
+                    "output": str(message.get("content", "")),
+                }
+            ]
+
+        return [message]
+
     def _prepare_responses_params(
         self,
         messages: list[LLMMessage],
@@ -694,7 +791,7 @@ class OpenAICompletion(BaseLLM):
                 else:
                     instructions = content_str
             else:
-                input_messages.append(message)
+                input_messages.extend(self._to_responses_input(message))
 
         # Prepend reasoning items for ZDR (zero-data-retention) chaining when configured
         final_input: list[Any] = []
@@ -1557,6 +1654,65 @@ class OpenAICompletion(BaseLLM):
         """
         return [item for item in response.output if item.type == "reasoning"]
 
+    @staticmethod
+    def _is_responses_only_error(error: BaseException) -> bool:
+        """Whether a 404 means the model exists but isn't on chat completions.
+
+        OpenAI distinguishes the two 404s it returns here:
+
+            responses-only  param="model", "only supported in v1/responses"
+                            or "This is not a chat model"
+            genuine typo    code="model_not_found", "does not exist"
+
+        Matching the former lets a newly Responses-only model be recovered without
+        needing to be listed in this file.
+        """
+        if not isinstance(error, NotFoundError):
+            return False
+        body = getattr(error, "body", None)
+        inner = body.get("error") if isinstance(body, dict) else None
+        if isinstance(inner, dict) and inner.get("code") == "model_not_found":
+            return False
+        text = str(getattr(error, "message", "") or error).lower()
+        return "only supported in v1/responses" in text or "not a chat model" in text
+
+    def _remember_responses_only_model(self) -> None:
+        """Record that this model must use the Responses API."""
+        _LEARNED_RESPONSES_ONLY_MODELS.add(self.model)
+
+    def _model_not_found_message(self, error: Exception) -> str:
+        """Build a 404 message that says what to do about it.
+
+        OpenAI's own wording ("This is not a chat model") doesn't make the fix
+        obvious, so point at ``api="responses"`` when that's what it means.
+        """
+        if self._is_responses_only_error(error):
+            return (
+                f"Model {self.model} is not available on /v1/chat/completions. "
+                f'Use api="responses" (LLM(model="{self.model}", api="responses")) '
+                f"to reach it: {error}"
+            )
+        return f"Model {self.model} not found: {error}"
+
+    def _effective_api(self) -> str:
+        """Which OpenAI API to actually use for this model.
+
+        Honours an explicit ``api`` setting, but upgrades to ``"responses"`` for
+        models already known -- from a previous 404 in this process -- not to be
+        served by chat completions.
+
+        Never overrides ``custom_openai=True``: an OpenAI-compatible server may
+        serve any model name on /v1/chat/completions and most don't implement
+        /v1/responses at all, so the user's choice stands.
+        """
+        if (
+            self.api == "completions"
+            and not self.custom_openai
+            and self.model in _LEARNED_RESPONSES_ONLY_MODELS
+        ):
+            return "responses"
+        return self.api
+
     def _prepare_completion_params(
         self, messages: list[LLMMessage], tools: list[dict[str, BaseTool]] | None = None
     ) -> dict[str, Any]:
@@ -1786,7 +1942,7 @@ class OpenAICompletion(BaseLLM):
                 params["messages"], content, from_agent
             )
         except NotFoundError as e:
-            error_msg = f"Model {self.model} not found: {e}"
+            error_msg = self._model_not_found_message(e)
             logging.error(error_msg)
             self._emit_call_failed_event(
                 error=error_msg, from_task=from_task, from_agent=from_agent
@@ -2209,7 +2365,7 @@ class OpenAICompletion(BaseLLM):
             if usage.get("total_tokens", 0) > 0:
                 logging.info(f"OpenAI API usage: {usage}")
         except NotFoundError as e:
-            error_msg = f"Model {self.model} not found: {e}"
+            error_msg = self._model_not_found_message(e)
             logging.error(error_msg)
             self._emit_call_failed_event(
                 error=error_msg, from_task=from_task, from_agent=from_agent

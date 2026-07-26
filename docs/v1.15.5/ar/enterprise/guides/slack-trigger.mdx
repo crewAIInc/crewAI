@@ -1,0 +1,62 @@
+---
+title: "مشغل Slack"
+description: "تشغيل طواقم CrewAI مباشرة من Slack باستخدام أوامر الشرطة المائلة"
+icon: "slack"
+mode: "wide"
+---
+
+يشرح هذا الدليل كيفية بدء طاقم مباشرة من Slack باستخدام مشغلات CrewAI.
+
+## المتطلبات المسبقة
+
+- مشغل CrewAI لـ Slack مُثبّت ومتصل بمساحة عمل Slack
+- طاقم واحد على الأقل مُهيأ في CrewAI
+
+## خطوات الإعداد
+
+<Steps>
+    <Step title="التأكد من إعداد مشغل CrewAI لـ Slack">
+        في لوحة تحكم CrewAI، انتقل إلى قسم **Triggers**.
+
+        <Frame>
+            <img src="/images/enterprise/slack-integration.png" alt="تكامل CrewAI مع Slack" />
+        </Frame>
+
+        تحقق من أن Slack مدرج ومتصل.
+    </Step>
+    <Step title="فتح قناة Slack">
+        - انتقل إلى القناة التي تريد تشغيل الطاقم منها.
+        - اكتب أمر الشرطة المائلة "**/kickoff**" لبدء عملية تشغيل الطاقم.
+        - يجب أن ترى "**Kickoff crew**" تظهر أثناء الكتابة:
+            <Frame>
+                <img src="/images/enterprise/kickoff-slack-crew.png" alt="تشغيل الطاقم" />
+            </Frame>
+        - اضغط Enter أو اختر خيار "**Kickoff crew**". سيظهر مربع حوار بعنوان "**Kickoff an AI Crew**".
+    </Step>
+    <Step title="اختيار الطاقم الذي تريد بدءه">
+        - في القائمة المنسدلة "**Select of the crews online:**"، اختر الطاقم الذي تريد بدءه.
+        - في المثال أدناه، تم اختيار "**prep-for-meeting**":
+            <Frame>
+                <img src="/images/enterprise/kickoff-slack-crew-dropdown.png" alt="القائمة المنسدلة لتشغيل الطاقم" />
+            </Frame>
+        - إذا كان طاقمك يتطلب أي مدخلات، انقر على زر "**Add Inputs**" لتقديمها.
+            <Note>
+                زر "**Add Inputs**" معروض في المثال أعلاه لكن لم يُنقر عليه بعد.
+            </Note>
+    </Step>
+    <Step title="النقر على Kickoff والانتظار حتى يكتمل الطاقم">
+        - بمجرد اختيار الطاقم وإضافة أي مدخلات ضرورية، انقر على "**Kickoff**" لبدء الطاقم.
+            <Frame>
+                <img src="/images/enterprise/kickoff-slack-crew-kickoff.png" alt="تشغيل الطاقم" />
+            </Frame>
+        - سيبدأ الطاقم بالتنفيذ وسترى النتائج في قناة Slack.
+            <Frame>
+                <img src="/images/enterprise/kickoff-slack-crew-results.png" alt="نتائج تشغيل الطاقم" />
+            </Frame>
+    </Step>
+</Steps>
+
+## نصائح
+
+- تأكد من أن لديك الصلاحيات اللازمة لاستخدام أمر `/kickoff` في مساحة عمل Slack.
+- إذا لم تر الطاقم المطلوب في القائمة المنسدلة، تأكد من أنه مُهيأ بشكل صحيح ومتصل في CrewAI.

@@ -1,0 +1,82 @@
+---
+title: بحث RAG في المجلدات
+description: أداة `DirectorySearchTool` هي أداة RAG (الاسترجاع المعزز بالتوليد) قوية مصممة لعمليات البحث الدلالي داخل محتوى المجلد.
+icon: address-book
+mode: "wide"
+---
+
+# `DirectorySearchTool`
+
+<Note>
+    **تجريبية**: أداة DirectorySearchTool قيد التطوير المستمر. قد تُضاف ميزات أو تُزال، وقد يتغير الأداء بشكل غير متوقع أثناء تحسين الأداة.
+</Note>
+
+## الوصف
+
+تتيح DirectorySearchTool البحث الدلالي داخل محتوى المجلدات المحددة، مستفيدة من منهجية الاسترجاع المعزز بالتوليد (RAG) للتنقل الفعال بين الملفات. صُممت لتكون مرنة، حيث تسمح للمستخدمين بتحديد مجلدات البحث ديناميكياً أثناء التشغيل أو تعيين مجلد ثابت أثناء الإعداد الأولي.
+
+## التثبيت
+
+لاستخدام DirectorySearchTool، ابدأ بتثبيت حزمة crewai_tools. نفّذ الأمر التالي في الطرفية:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## التهيئة والاستخدام
+
+قم باستيراد DirectorySearchTool من حزمة `crewai_tools` للبدء. يمكنك تهيئة الأداة بدون تحديد مجلد، مما يتيح تعيين مجلد البحث أثناء التشغيل. بدلاً من ذلك، يمكن تهيئة الأداة بمجلد محدد مسبقاً.
+
+```python Code
+from crewai_tools import DirectorySearchTool
+
+# For dynamic directory specification at runtime
+tool = DirectorySearchTool()
+
+# For fixed directory searches
+tool = DirectorySearchTool(directory='/path/to/directory')
+```
+
+## المعاملات
+
+- `directory`: معامل نصي يحدد مجلد البحث. هذا اختياري أثناء التهيئة لكنه مطلوب لعمليات البحث إذا لم يتم تعيينه مبدئياً.
+
+## النموذج والتضمينات المخصصة
+
+تستخدم DirectorySearchTool افتراضياً OpenAI للتضمينات والتلخيص. تتضمن خيارات التخصيص لهذه الإعدادات تغيير مزود النموذج والتكوين، مما يعزز المرونة للمستخدمين المتقدمين.
+
+```python Code
+from chromadb.config import Settings
+
+tool = DirectorySearchTool(
+    config={
+        "embedding_model": {
+            "provider": "openai",
+            "config": {
+                "model": "text-embedding-3-small",
+                # "api_key": "sk-...",
+            },
+        },
+        "vectordb": {
+            "provider": "chromadb",  # or "qdrant"
+            "config": {
+                # "settings": Settings(persist_directory="/content/chroma", allow_reset=True, is_persistent=True),
+                # from qdrant_client.models import VectorParams, Distance
+                # "vectors_config": VectorParams(size=384, distance=Distance.COSINE),
+            }
+        },
+    }
+)
+```
+
+## الأمان
+
+### التحقق من صحة المسارات
+
+يتم التحقق من مسارات المجلدات المقدمة لهذه الأداة مقابل مجلد العمل الحالي. يتم رفض المسارات التي تحل خارج مجلد العمل وإطلاق `ValueError`.
+
+للسماح بالمسارات خارج مجلد العمل (مثلاً في الاختبارات أو خطوط الأنابيب الموثوقة)، عيّن متغير البيئة التالي:
+
+```shell
+CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true
+```
