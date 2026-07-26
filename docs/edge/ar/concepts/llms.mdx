@@ -22,7 +22,7 @@ mode: "wide"
     تحدد نافذة السياق مقدار النص الذي يمكن لـ LLM معالجته في وقت واحد. النوافذ الأكبر (مثل 128K رمز) تتيح سياقًا أكثر لكنها قد تكون أكثر تكلفة وأبطأ.
   </Card>
   <Card title="درجة الحرارة" icon="temperature-three-quarters">
-    تتحكم درجة الحرارة (0.0 إلى 1.0) في عشوائية الاستجابة. القيم المنخفضة (مثل 0.2) تنتج مخرجات أكثر تركيزًا وحتمية، بينما القيم الأعلى (مثل 0.8) تزيد الإبداع والتنوع.
+    درجة الحرارة هي أداة للتحكم في أخذ العينات تدعمها بعض النماذج. تجعل القيم المنخفضة أخذ العينات أكثر تركيزًا عمومًا، بينما تزيد القيم الأعلى التباين. تتجاهل بعض نماذج الاستدلال الأحدث هذا المعامل أو توقف دعمه أو ترفضه، لذا راجع وثائق النموذج المحدد قبل ضبطه.
   </Card>
   <Card title="اختيار المزود" icon="server">
     يقدم كل مزود LLM (مثل OpenAI و Anthropic و Google) نماذج مختلفة بقدرات وأسعار وميزات متفاوتة. اختر بناءً على احتياجاتك من الدقة والسرعة والتكلفة.
@@ -38,7 +38,7 @@ mode: "wide"
     أبسط طريقة للبدء. عيّن النموذج في بيئتك مباشرة، من خلال ملف `.env` أو في كود تطبيقك. إذا استخدمت `crewai create` لبدء مشروعك، سيكون مُعيّنًا بالفعل.
 
     ```bash .env
-    MODEL=model-id  # e.g. gpt-4o, gemini-2.0-flash, claude-3-sonnet-...
+    MODEL=provider/model-id  # e.g. openai/gpt-5.6-terra
 
     # Be sure to set your API keys here too. See the Provider
     # section below.
@@ -57,7 +57,7 @@ mode: "wide"
         goal: Conduct comprehensive research and analysis
         backstory: A dedicated research professional with years of experience
         verbose: true
-        llm: provider/model-id  # e.g. openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
+        llm: provider/model-id  # e.g. anthropic/claude-sonnet-4-6
         # (see provider configuration examples below for more)
     ```
 
@@ -76,32 +76,24 @@ mode: "wide"
     from crewai import LLM
 
     # Basic configuration
-    llm = LLM(model="model-id-here")  # gpt-4o, gemini-2.0-flash, anthropic/claude...
+    llm = LLM(model="provider/model-id")  # e.g. gemini/gemini-3.6-flash
 
     # Advanced configuration with detailed parameters
     llm = LLM(
-        model="model-id-here",  # gpt-4o, gemini-2.0-flash, anthropic/claude...
-        temperature=0.7,        # Higher for more creative outputs
-        timeout=120,            # Seconds to wait for response
-        max_tokens=4000,        # Maximum length of response
-        top_p=0.9,              # Nucleus sampling parameter
-        frequency_penalty=0.1 , # Reduce repetition
-        presence_penalty=0.1,   # Encourage topic diversity
+        model="provider/model-id",
+        timeout=120,
+        max_tokens=4000,
         response_format={"type": "json"},  # For structured outputs
-        seed=42                 # For reproducible results
     )
     ```
 
     <Info>
       شرح المعاملات:
-      - `temperature`: تتحكم في العشوائية (0.0-1.0)
       - `timeout`: أقصى وقت انتظار للاستجابة
       - `max_tokens`: تحدد طول الاستجابة
-      - `top_p`: بديل لدرجة الحرارة للعينات
-      - `frequency_penalty`: تقلل تكرار الكلمات
-      - `presence_penalty`: تشجع موضوعات جديدة
       - `response_format`: تحدد هيكل المخرجات
-      - `seed`: تضمن مخرجات متسقة
+
+      عناصر التحكم في أخذ العينات مثل `temperature` و`top_p`، ومعاملات العقوبة، وأسماء حدود الرموز، وعناصر التحكم في الاستدلال خاصة بكل نموذج. أضفها فقط عندما يدعمها المزود والنموذج المحددان. راجع أمثلة المزودين أدناه ووثائق النموذج لدى المزود.
     </Info>
   </Tab>
 </Tabs>
@@ -120,6 +112,10 @@ mode: "wide"
 يدعم CrewAI العديد من مزودي LLM، كل منهم يقدم ميزات فريدة وطرق مصادقة وقدرات نماذج.
 في هذا القسم، ستجد أمثلة مفصلة تساعدك في اختيار وإعداد وتحسين LLM الأنسب لاحتياجات مشروعك.
 
+<Warning>
+  يتغير توفر النماذج باستمرار وقد يختلف حسب الحساب والمنطقة والمنصة السحابية. تستخدم الأمثلة أدناه نماذج متاحة وقت كتابة هذا الدليل، لكنها ليست قوائم دعم شاملة. قبل النشر، تحقق من معرّف النموذج وحالة دورة حياته في كتالوج المزود المرتبط.
+</Warning>
+
 <AccordionGroup>
   <Accordion title="OpenAI">
     يوفر CrewAI تكاملًا أصليًا مع OpenAI من خلال OpenAI Python SDK.
@@ -137,10 +133,10 @@ mode: "wide"
     from crewai import LLM
 
     llm = LLM(
-        model="openai/gpt-4o",
+        model="openai/gpt-5.6-terra",
         api_key="your-api-key",  # Or set OPENAI_API_KEY
-        temperature=0.7,
-        max_tokens=4000
+        reasoning_effort="medium",
+        max_completion_tokens=4000
     )
     ```
 
@@ -149,25 +145,16 @@ mode: "wide"
     from crewai import LLM
 
     llm = LLM(
-        model="openai/gpt-4o",
+        model="openai/gpt-5.6-terra",
         api_key="your-api-key",
         base_url="https://api.openai.com/v1",  # Optional custom endpoint
         organization="org-...",  # Optional organization ID
         project="proj_...",  # Optional project ID
-        temperature=0.7,
-        max_tokens=4000,
-        max_completion_tokens=4000,  # For newer models
-        top_p=0.9,
-        frequency_penalty=0.1,
-        presence_penalty=0.1,
-        stop=["END"],
-        seed=42,  # For reproducible outputs
+        max_completion_tokens=4000,
+        reasoning_effort="medium",
         stream=True,  # Enable streaming
         timeout=60.0,  # Request timeout in seconds
-        max_retries=3,  # Maximum retry attempts
-        logprobs=True,  # Return log probabilities
-        top_logprobs=5,  # Number of most likely tokens
-        reasoning_effort="medium"  # For o1 models: low, medium, high
+        max_retries=3  # Maximum retry attempts
     )
     ```
 
@@ -182,7 +169,7 @@ mode: "wide"
         summary: str
 
     llm = LLM(
-        model="openai/gpt-4o",
+        model="openai/gpt-5.6-terra",
     )
     ```
 
@@ -191,30 +178,15 @@ mode: "wide"
     - `OPENAI_BASE_URL`: عنوان URL مخصص لـ OpenAI API (اختياري)
 
     **الميزات:**
-    - دعم استدعاء الدوال الأصلي (باستثناء نماذج o1)
+    - دعم أصلي لاستدعاء الدوال
     - مخرجات منظمة مع JSON schema
     - دعم البث للاستجابات في الوقت الفعلي
     - تتبع استخدام الرموز
-    - دعم تسلسلات التوقف (باستثناء نماذج o1)
+    - عناصر تحكم في التوليد خاصة بالمزود
     - احتمالات السجل لرؤى على مستوى الرموز
-    - التحكم في جهد الاستدلال لنماذج o1
+    - التحكم في جهد الاستدلال للنماذج المتوافقة
 
-    **النماذج المدعومة:**
-
-    | النموذج              | نافذة السياق     | الأفضل لـ                                     |
-    |---------------------|------------------|-----------------------------------------------|
-    | gpt-4.1             | 1M tokens        | أحدث نموذج بقدرات محسّنة                      |
-    | gpt-4.1-mini        | 1M tokens        | إصدار فعال بسياق كبير                         |
-    | gpt-4.1-nano        | 1M tokens        | متغير فائق الكفاءة                            |
-    | gpt-4o              | 128,000 tokens   | محسّن للسرعة والذكاء                          |
-    | gpt-4o-mini         | 200,000 tokens   | فعال من حيث التكلفة بسياق كبير                |
-    | gpt-4-turbo         | 128,000 tokens   | المحتوى الطويل، تحليل المستندات               |
-    | gpt-4               | 8,192 tokens     | مهام الدقة العالية، الاستدلال المعقد           |
-    | o1                  | 200,000 tokens   | الاستدلال المتقدم، حل المشكلات المعقدة        |
-    | o1-preview          | 128,000 tokens   | معاينة قدرات الاستدلال                        |
-    | o1-mini             | 128,000 tokens   | نموذج استدلال فعال                            |
-    | o3-mini             | 200,000 tokens   | نموذج استدلال خفيف                            |
-    | o4-mini             | 200,000 tokens   | استدلال فعال من الجيل التالي                  |
+    تضيف OpenAI نماذج جديدة وتسحب snapshots قديمة بانتظام. راجع [كتالوج نماذج OpenAI](https://developers.openai.com/api/docs/models) للحصول على معرّفات النماذج الحالية ونوافذ السياق وتوافق endpoints ومعلومات دورة الحياة.
 
     **Responses API:**
 
@@ -276,14 +248,7 @@ mode: "wide"
     )
     ```
 
-    جميع النماذج المدرجة هنا https://llama.developer.meta.com/docs/models/ مدعومة.
-
-    | معرّف النموذج | طول سياق الإدخال | طول سياق المخرجات | وسائط الإدخال | وسائط المخرجات |
-    | --- | --- | --- | --- | --- |
-    | `meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8` | 128k | 4028 | نص، صورة | نص |
-    | `meta_llama/Llama-4-Maverick-17B-128E-Instruct-FP8` | 128k | 4028 | نص، صورة | نص |
-    | `meta_llama/Llama-3.3-70B-Instruct` | 128k | 4028 | نص | نص |
-    | `meta_llama/Llama-3.3-8B-Instruct` | 128k | 4028 | نص | نص |
+    راجع [نظرة عامة على نماذج Meta Llama](https://ai.meta.com/llama/get-started/) للتعرّف على عائلات النماذج والوسائط وإرشادات حدود السياق الحالية.
 
     **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
     ```bash
@@ -353,7 +318,7 @@ mode: "wide"
     from crewai import LLM
 
     llm = LLM(
-        model="anthropic/claude-3-5-sonnet-20241022",
+        model="anthropic/claude-sonnet-4-6",
         api_key="your-api-key",  # Or set ANTHROPIC_API_KEY
         max_tokens=4096  # Required for Anthropic
     )
@@ -364,12 +329,10 @@ mode: "wide"
     from crewai import LLM
 
     llm = LLM(
-        model="anthropic/claude-3-5-sonnet-20241022",
+        model="anthropic/claude-sonnet-4-6",
         api_key="your-api-key",
         base_url="https://api.anthropic.com",  # Optional custom endpoint
-        temperature=0.7,
         max_tokens=4096,  # Required parameter
-        top_p=0.9,
         stop_sequences=["END", "STOP"],  # Anthropic uses stop_sequences
         stream=True,  # Enable streaming
         timeout=60.0,  # Request timeout in seconds
@@ -377,7 +340,7 @@ mode: "wide"
     )
     ```
 
-    **التفكير الموسّع (Claude Sonnet 4 وما بعده):**
+    **التفكير الموسّع:**
 
     يدعم CrewAI ميزة التفكير الموسّع من Anthropic، التي تتيح لـ Claude التفكير في المشكلات بطريقة أكثر شبهًا بالبشر قبل الاستجابة. مفيد بشكل خاص لمهام الاستدلال والتحليل وحل المشكلات المعقدة.
 
@@ -386,14 +349,14 @@ mode: "wide"
 
     # Enable extended thinking with default settings
     llm = LLM(
-        model="anthropic/claude-sonnet-4",
+        model="anthropic/claude-sonnet-4-6",
         thinking={"type": "enabled"},
         max_tokens=10000
     )
 
     # Configure thinking with budget control
     llm = LLM(
-        model="anthropic/claude-sonnet-4",
+        model="anthropic/claude-sonnet-4-6",
         thinking={
             "type": "enabled",
             "budget_tokens": 5000  # Limit thinking tokens
@@ -406,9 +369,7 @@ mode: "wide"
     - `type`: عيّن إلى `"enabled"` لتفعيل وضع التفكير الموسّع
     - `budget_tokens` (اختياري): أقصى رموز للتفكير (يساعد في التحكم بالتكاليف)
 
-    **النماذج التي تدعم التفكير الموسّع:**
-    - `claude-sonnet-4` والنماذج الأحدث
-    - `claude-3-7-sonnet` (مع قدرات التفكير الموسّع)
+    تختلف أوضاع التفكير والمعاملات المقبولة بين أجيال Claude. تحقق من قدرات النموذج المحدد قبل تفعيل `thinking`.
 
     **متى تستخدم التفكير الموسّع:**
     - الاستدلال المعقد وحل المشكلات متعددة الخطوات
@@ -424,7 +385,7 @@ mode: "wide"
 
     **الميزات:**
     - دعم استخدام الأدوات الأصلي لنماذج Claude 3+
-    - دعم التفكير الموسّع لـ Claude Sonnet 4+
+    - دعم التفكير الموسّع لنماذج Claude المتوافقة
     - دعم البث للاستجابات في الوقت الفعلي
     - معالجة تلقائية لرسائل النظام
     - تسلسلات التوقف للتحكم في المخرجات
@@ -438,20 +399,7 @@ mode: "wide"
     - يجب أن تكون الرسالة الأولى من المستخدم (يتم التعامل معها تلقائيًا)
     - يجب أن تتناوب الرسائل بين المستخدم والمساعد
 
-    **النماذج المدعومة:**
-
-    | النموذج                      | نافذة السياق     | الأفضل لـ                                     |
-    |------------------------------|------------------|-----------------------------------------------|
-    | claude-sonnet-4              | 200,000 tokens   | الأحدث مع قدرات التفكير الموسّع              |
-    | claude-3-7-sonnet            | 200,000 tokens   | الاستدلال المتقدم والمهام الوكيلية            |
-    | claude-3-5-sonnet-20241022   | 200,000 tokens   | أحدث Sonnet بأفضل أداء                       |
-    | claude-3-5-haiku             | 200,000 tokens   | نموذج سريع وصغير للاستجابات السريعة          |
-    | claude-3-opus                | 200,000 tokens   | الأكثر قدرة للمهام المعقدة                    |
-    | claude-3-sonnet              | 200,000 tokens   | توازن بين الذكاء والسرعة                      |
-    | claude-3-haiku               | 200,000 tokens   | الأسرع للمهام البسيطة                         |
-    | claude-2.1                   | 200,000 tokens   | سياق موسّع، هلوسات أقل                       |
-    | claude-2                     | 100,000 tokens   | نموذج متعدد الاستخدامات                       |
-    | claude-instant               | 100,000 tokens   | سريع وفعال من حيث التكلفة للمهام اليومية     |
+    راجع [نظرة عامة على نماذج Anthropic](https://platform.claude.com/docs/en/about-claude/models/overview) للحصول على معرّفات النماذج وقدراتها الحالية، وراجع [جدول إيقاف النماذج](https://platform.claude.com/docs/en/about-claude/model-deprecations) قبل تثبيت نموذج في الإنتاج.
 
     **ملاحظة:** لاستخدام Anthropic، ثبّت التبعيات المطلوبة:
     ```bash
@@ -483,9 +431,8 @@ mode: "wide"
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-2.0-flash",
+        model="gemini/gemini-3.6-flash",
         api_key="your-api-key",  # Or set GOOGLE_API_KEY/GEMINI_API_KEY
-        temperature=0.7
     )
     ```
 
@@ -494,11 +441,8 @@ mode: "wide"
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-2.5-flash",
+        model="gemini/gemini-3.6-flash",
         api_key="your-api-key",
-        temperature=0.7,
-        top_p=0.9,
-        top_k=40,  # Top-k sampling parameter
         max_output_tokens=8192,
         stop_sequences=["END", "STOP"],
         stream=True,  # Enable streaming
@@ -524,8 +468,7 @@ mode: "wide"
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-2.0-flash",
-        temperature=0.7
+        model="gemini/gemini-3.6-flash"
     )
     ```
 
@@ -542,7 +485,7 @@ mode: "wide"
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-1.5-pro",
+        model="gemini/gemini-3.6-flash",
         project="your-gcp-project-id",
         location="us-central1"  # GCP region
     )
@@ -555,7 +498,7 @@ mode: "wide"
     - `GOOGLE_CLOUD_LOCATION`: موقع GCP (الافتراضي `us-central1`)
 
     **الميزات:**
-    - دعم استدعاء الدوال الأصلي لنماذج Gemini 1.5+ و 2.x
+    - دعم أصلي لاستدعاء الدوال لنماذج Gemini المتوافقة
     - دعم البث للاستجابات في الوقت الفعلي
     - قدرات متعددة الوسائط (نص، صور، فيديو)
     - إعداد إعدادات الأمان
@@ -563,41 +506,21 @@ mode: "wide"
     - معالجة تلقائية لتعليمات النظام
     - تتبع استخدام الرموز
 
-    **نماذج Gemini:**
-
-    | النموذج                        | نافذة السياق    | الأفضل لـ                                                         |
-    |--------------------------------|-----------------|-------------------------------------------------------------------|
-    | gemini-2.5-flash               | 1M tokens       | التفكير التكيفي، كفاءة التكلفة                                   |
-    | gemini-2.5-pro                 | 1M tokens       | التفكير والاستدلال المحسّن، الفهم متعدد الوسائط                  |
-    | gemini-2.0-flash               | 1M tokens       | ميزات الجيل التالي، السرعة، التفكير                               |
-    | gemini-2.0-flash-thinking      | 32,768 tokens   | الاستدلال المتقدم مع عملية التفكير                                |
-    | gemini-2.0-flash-lite          | 1M tokens       | كفاءة التكلفة ووقت الاستجابة المنخفض                             |
-    | gemini-1.5-pro                 | 2M tokens       | الأفضل أداءً، الاستدلال المنطقي، البرمجة                         |
-    | gemini-1.5-flash               | 1M tokens       | نموذج متعدد الوسائط متوازن، جيد لمعظم المهام                     |
-    | gemini-1.5-flash-8b            | 1M tokens       | الأسرع والأكثر كفاءة من حيث التكلفة                              |
-    | gemini-1.0-pro                 | 32,768 tokens   | نموذج الجيل السابق                                               |
+    تنشر Google معرّفات Gemini الحالية وقدراتها ومراحل دورة حياتها في [كتالوج نماذج Gemini](https://ai.google.dev/gemini-api/docs/models). تحقق من [جدول الإيقاف](https://ai.google.dev/gemini-api/docs/deprecations) قبل اختيار نموذج مستقر أو preview. وتستضيف Gemini API أيضًا [نماذج Gemma](https://ai.google.dev/gemma/docs).
 
     **ملاحظة:** لاستخدام Google Gemini، ثبّت التبعيات المطلوبة:
     ```bash
     uv add "crewai[google-genai]"
     ```
 
-    القائمة الكاملة للنماذج متاحة في [وثائق نماذج Gemini](https://ai.google.dev/gemini-api/docs/models).
   </Accordion>
 
   <Accordion title="Google (Vertex AI)">
-    احصل على بيانات الاعتماد من Google Cloud Console واحفظها في ملف JSON، ثم حمّلها بالكود التالي:
-    ```python Code
-    import json
-
-    file_path = 'path/to/vertex_ai_service_account.json'
-
-    # Load the JSON file
-    with open(file_path, 'r') as file:
-        vertex_credentials = json.load(file)
-
-    # Convert the credentials to a JSON string
-    vertex_credentials_json = json.dumps(vertex_credentials)
+    صادِق باستخدام [بيانات الاعتماد التلقائية للتطبيق](https://cloud.google.com/docs/authentication/provide-credentials-adc)، ثم اضبط مزود Gemini الأصلي لاستخدام Vertex AI:
+    ```toml .env
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_CLOUD_PROJECT=<your-project-id>
+    GOOGLE_CLOUD_LOCATION=<location>
     ```
 
     مثال الاستخدام في مشروع CrewAI:
@@ -605,15 +528,15 @@ mode: "wide"
     from crewai import LLM
 
     llm = LLM(
-        model="gemini-1.5-pro-latest", # or vertex_ai/gemini-1.5-pro-latest
-        temperature=0.7,
-        vertex_credentials=vertex_credentials_json
+        model="gemini/gemini-3.6-flash"
     )
     ```
 
-    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    تختلف إتاحة Vertex AI باختلاف المنطقة. استخدم [كتالوج نماذج Vertex AI](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models) للتحقق من معرّف النموذج والمنطقة قبل النشر.
+
+    **ملاحظة:** يستخدم هذا المسار تكامل Gemini الأصلي في CrewAI. أضفه كتبعية لمشروعك:
     ```bash
-    uv add 'crewai[litellm]'
+    uv add "crewai[google-genai]"
     ```
   </Accordion>
 
@@ -664,7 +587,7 @@ mode: "wide"
     from crewai import LLM
 
     llm = LLM(
-        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        model="bedrock/us.anthropic.claude-sonnet-4-6",
         region_name="us-east-1"
     )
     ```
@@ -674,7 +597,7 @@ mode: "wide"
     from crewai import LLM
 
     llm = LLM(
-        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        model="bedrock/us.anthropic.claude-sonnet-4-6",
         aws_access_key_id="your-access-key",  # Or set AWS_ACCESS_KEY_ID
         aws_secret_access_key="your-secret-key",  # Or set AWS_SECRET_ACCESS_KEY
         aws_session_token="your-session-token",  # For temporary credentials
@@ -719,37 +642,9 @@ mode: "wide"
     - يجب أن تكون الرسالة الأولى من المستخدم (يتم التعامل معها تلقائيًا)
     - بعض النماذج (مثل Cohere) تتطلب أن تنتهي المحادثة برسالة المستخدم
 
-    [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) هو خدمة مُدارة توفر الوصول إلى نماذج أساسية متعددة من أبرز شركات الذكاء الاصطناعي عبر واجهة API موحدة.
-
-    | النموذج                   | نافذة السياق       | الأفضل لـ                                                          |
-    |-------------------------|----------------------|-------------------------------------------------------------------|
-    | Amazon Nova Pro         | حتى 300k tokens    | أداء عالٍ، نموذج يوازن بين الدقة والسرعة والفعالية من حيث التكلفة عبر مهام متنوعة. |
-    | Amazon Nova Micro       | حتى 128k tokens    | نموذج نصي فقط عالي الأداء وفعال من حيث التكلفة ومحسّن لأقل وقت استجابة. |
-    | Amazon Nova Lite        | حتى 300k tokens    | معالجة متعددة الوسائط بأسعار معقولة للصور والفيديو والنص مع قدرات في الوقت الفعلي. |
-    | Claude 3.7 Sonnet       | حتى 128k tokens    | الأفضل أداءً للاستدلال المعقد والبرمجة ووكلاء الذكاء الاصطناعي |
-    | Claude 3.5 Sonnet v2    | حتى 200k tokens    | نموذج متطور متخصص في هندسة البرمجيات والقدرات الوكيلية والتفاعل مع الحاسوب بتكلفة محسّنة. |
-    | Claude 3.5 Sonnet       | حتى 200k tokens    | نموذج عالي الأداء يقدم ذكاءً واستدلالًا فائقين عبر مهام متنوعة مع توازن مثالي بين السرعة والتكلفة. |
-    | Claude 3.5 Haiku        | حتى 200k tokens    | نموذج متعدد الوسائط سريع وصغير محسّن للاستجابات السريعة والتفاعلات الشبيهة بالبشر |
-    | Claude 3 Sonnet         | حتى 200k tokens    | نموذج متعدد الوسائط يوازن بين الذكاء والسرعة للنشر بكميات كبيرة. |
-    | Claude 3 Haiku          | حتى 200k tokens    | نموذج متعدد الوسائط صغير وسريع محسّن للاستجابات السريعة والتفاعلات المحادثية الطبيعية |
-    | Claude 3 Opus           | حتى 200k tokens    | أكثر النماذج متعددة الوسائط تقدمًا يتفوق في المهام المعقدة بالاستدلال الشبيه بالبشر والفهم السياقي الفائق. |
-    | Claude 2.1              | حتى 200k tokens    | إصدار محسّن بنافذة سياق موسّعة وموثوقية محسّنة وهلوسات أقل لتطبيقات النصوص الطويلة وRAG |
-    | Claude                  | حتى 100k tokens    | نموذج متعدد الاستخدامات يتفوق في الحوار المتقدم والمحتوى الإبداعي واتباع التعليمات الدقيقة. |
-    | Claude Instant          | حتى 100k tokens    | نموذج سريع وفعال من حيث التكلفة للمهام اليومية مثل الحوار والتحليل والتلخيص والأسئلة والأجوبة |
-    | Llama 3.1 405B Instruct | حتى 128k tokens    | نموذج LLM متقدم لتوليد البيانات الاصطناعية والتقطير والاستدلال لروبوتات المحادثة والبرمجة والمهام المتخصصة. |
-    | Llama 3.1 70B Instruct  | حتى 128k tokens    | يدعم المحادثات المعقدة مع فهم سياقي فائق واستدلال وتوليد نص. |
-    | Llama 3.1 8B Instruct   | حتى 128k tokens    | نموذج متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
-    | Llama 3 70B Instruct    | حتى 8k tokens      | يدعم المحادثات المعقدة مع فهم سياقي فائق واستدلال وتوليد نص. |
-    | Llama 3 8B Instruct     | حتى 8k tokens      | نموذج LLM متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
-    | Titan Text G1 - Lite    | حتى 4k tokens      | نموذج خفيف وفعال من حيث التكلفة محسّن لمهام اللغة الإنجليزية والضبط الدقيق مع التركيز على التلخيص وتوليد المحتوى. |
-    | Titan Text G1 - Express | حتى 8k tokens      | نموذج متعدد الاستخدامات لمهام اللغة العامة والمحادثة وتطبيقات RAG مع دعم الإنجليزية وأكثر من 100 لغة. |
-    | Cohere Command          | حتى 4k tokens      | نموذج متخصص في اتباع أوامر المستخدم وتقديم حلول عملية للمؤسسات. |
-    | Jurassic-2 Mid          | حتى 8,191 tokens   | نموذج فعال من حيث التكلفة يوازن بين الجودة والسعر لمهام اللغة المتنوعة مثل الأسئلة والأجوبة والتلخيص وتوليد المحتوى. |
-    | Jurassic-2 Ultra        | حتى 8,191 tokens   | نموذج لتوليد النص المتقدم والفهم، يتفوق في المهام المعقدة مثل التحليل وإنشاء المحتوى. |
-    | Jamba-Instruct          | حتى 256k tokens    | نموذج بنافذة سياق موسّعة محسّن لتوليد النص الفعال من حيث التكلفة والتلخيص والأسئلة والأجوبة. |
-    | Mistral 7B Instruct     | حتى 32k tokens     | نموذج LLM يتبع التعليمات ويكمل الطلبات ويولد نصًا إبداعيًا. |
-    | Mistral 8x7B Instruct   | حتى 32k tokens     | نموذج LLM بمعمارية MOE يتبع التعليمات ويكمل الطلبات ويولد نصًا إبداعيًا. |
-    | DeepSeek R1             | 32,768 tokens        | نموذج استدلال متقدم                                                       |
+    تختلف إتاحة نماذج Amazon Bedrock ومعرّفاتها باختلاف المنطقة. استخدم مرجع
+    [النماذج والمناطق المدعومة](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html)
+    لاختيار نموذج والتحقق من دعم Converse API.
 
     **ملاحظة:** لاستخدام AWS Bedrock، ثبّت التبعيات المطلوبة:
     ```bash
@@ -806,81 +701,13 @@ mode: "wide"
     مثال الاستخدام في مشروع CrewAI:
     ```python Code
     llm = LLM(
-        model="nvidia_nim/meta/llama3-70b-instruct",
+        model="nvidia_nim/nvidia/nvidia-nemotron-3-ultra-550b-a55b",
         temperature=0.7
     )
     ```
 
-    يوفر Nvidia NIM مجموعة شاملة من النماذج لحالات الاستخدام المتنوعة، من المهام ذات الأغراض العامة إلى التطبيقات المتخصصة.
+    يتغير كتالوج NVIDIA NIM المستضاف باستمرار. استخدم [كتالوج نماذج NVIDIA NIM](https://build.nvidia.com/models) لاختيار endpoint حالي والتحقق من معرّف النموذج والوسائط وحدود السياق.
 
-    | النموذج                                                                   | نافذة السياق   | الأفضل لـ                                                          |
-    |-------------------------------------------------------------------------|----------------|-------------------------------------------------------------------|
-    | nvidia/mistral-nemo-minitron-8b-8k-instruct                              | 8,192 tokens   | نموذج لغة صغير متطور يقدم دقة فائقة لروبوتات المحادثة والمساعدين الافتراضيين وتوليد المحتوى. |
-    | nvidia/nemotron-4-mini-hindi-4b-instruct                                 | 4,096 tokens   | نموذج لغة صغير ثنائي اللغة هندي-إنجليزي للاستدلال على الجهاز، مصمم خصيصًا للغة الهندية. |
-    | nvidia/llama-3.1-nemotron-70b-instruct                                  | 128k tokens    | مخصص لتعزيز فائدة الاستجابات                  |
-    | nvidia/llama3-chatqa-1.5-8b                                                | 128k tokens    | نموذج LLM متقدم لتوليد استجابات عالية الجودة ومدركة للسياق لروبوتات المحادثة ومحركات البحث. |
-    | nvidia/llama3-chatqa-1.5-70b                                               | 128k tokens    | نموذج LLM متقدم لتوليد استجابات عالية الجودة ومدركة للسياق لروبوتات المحادثة ومحركات البحث. |
-    | nvidia/vila                                                             | 128k tokens    | نموذج رؤية-لغة متعدد الوسائط يفهم النص والصور والفيديو وينشئ استجابات غنية بالمعلومات |
-    | nvidia/neva-22                                                          | 4,096 tokens   | نموذج رؤية-لغة متعدد الوسائط يفهم النص والصور ويولد استجابات غنية بالمعلومات |
-    | nvidia/nemotron-mini-4b-instruct                                         | 8,192 tokens   | مهام ذات أغراض عامة |
-    | nvidia/usdcode-llama3-70b-instruct                                       | 128k tokens    | نموذج LLM متطور يجيب على استعلامات معرفة OpenUSD ويولد كود USD-Python. |
-    | nvidia/nemotron-4-340b-instruct                                          | 4,096 tokens   | ينشئ بيانات اصطناعية متنوعة تحاكي خصائص بيانات العالم الحقيقي. |
-    | meta/codellama-70b                                                      | 100k tokens    | نموذج LLM قادر على توليد الكود من اللغة الطبيعية والعكس. |
-    | meta/llama2-70b                                                         | 4,096 tokens   | نموذج لغة كبير متطور قادر على توليد النص والكود استجابة للمطالبات. |
-    | meta/llama3-8b-instruct                                                | 8,192 tokens   | نموذج LLM متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
-    | meta/llama3-70b-instruct                                               | 8,192 tokens   | يدعم المحادثات المعقدة مع فهم سياقي فائق واستدلال وتوليد نص. |
-    | meta/llama-3.1-8b-instruct                                             | 128k tokens    | نموذج متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
-    | meta/llama-3.1-70b-instruct                                            | 128k tokens    | يدعم المحادثات المعقدة مع فهم سياقي فائق واستدلال وتوليد نص. |
-    | meta/llama-3.1-405b-instruct                                           | 128k tokens    | نموذج LLM متقدم لتوليد البيانات الاصطناعية والتقطير والاستدلال لروبوتات المحادثة والبرمجة والمهام المتخصصة. |
-    | meta/llama-3.2-1b-instruct                                             | 128k tokens    | نموذج لغة صغير متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
-    | meta/llama-3.2-3b-instruct                                             | 128k tokens    | نموذج لغة صغير متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
-    | meta/llama-3.2-11b-vision-instruct                                     | 128k tokens    | نموذج لغة صغير متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
-    | meta/llama-3.2-90b-vision-instruct                                     | 128k tokens    | نموذج لغة صغير متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
-    | google/gemma-7b                                                        | 8,192 tokens   | نموذج متطور لتوليد النص وفهمه وتحويله وتوليد الكود. |
-    | google/gemma-2b                                                        | 8,192 tokens   | نموذج متطور لتوليد النص وفهمه وتحويله وتوليد الكود. |
-    | google/codegemma-7b                                                    | 8,192 tokens   | نموذج متطور مبني على Gemma-7B من Google متخصص في توليد الكود وإكماله. |
-    | google/codegemma-1.1-7b                                               | 8,192 tokens   | نموذج برمجة متقدم لتوليد الكود وإكماله والاستدلال واتباع التعليمات. |
-    | google/recurrentgemma-2b                                              | 8,192 tokens   | نموذج لغة بمعمارية تكرارية جديدة لاستدلال أسرع عند توليد تسلسلات طويلة. |
-    | google/gemma-2-9b-it                                                  | 8,192 tokens   | نموذج متطور لتوليد النص وفهمه وتحويله وتوليد الكود. |
-    | google/gemma-2-27b-it                                                 | 8,192 tokens   | نموذج متطور لتوليد النص وفهمه وتحويله وتوليد الكود. |
-    | google/gemma-2-2b-it                                                  | 8,192 tokens   | نموذج متطور لتوليد النص وفهمه وتحويله وتوليد الكود. |
-    | google/deplot                                                         | 512 tokens     | نموذج فهم لغة بصرية بلقطة واحدة يترجم صور الرسوم البيانية إلى جداول. |
-    | google/paligemma                                                      | 8,192 tokens   | نموذج لغة بصري بارع في استيعاب مدخلات النص والصور لإنتاج استجابات غنية بالمعلومات. |
-    | mistralai/mistral-7b-instruct-v0.2                                   | 32k tokens     | نموذج LLM يتبع التعليمات ويكمل الطلبات ويولد نصًا إبداعيًا. |
-    | mistralai/mixtral-8x7b-instruct-v0.1                                 | 8,192 tokens   | نموذج LLM بمعمارية MOE يتبع التعليمات ويكمل الطلبات ويولد نصًا إبداعيًا. |
-    | mistralai/mistral-large                                              | 4,096 tokens   | ينشئ بيانات اصطناعية متنوعة تحاكي خصائص بيانات العالم الحقيقي. |
-    | mistralai/mixtral-8x22b-instruct-v0.1                               | 8,192 tokens   | ينشئ بيانات اصطناعية متنوعة تحاكي خصائص بيانات العالم الحقيقي. |
-    | mistralai/mistral-7b-instruct-v0.3                                  | 32k tokens     | نموذج LLM يتبع التعليمات ويكمل الطلبات ويولد نصًا إبداعيًا. |
-    | nv-mistralai/mistral-nemo-12b-instruct                              | 128k tokens    | أكثر نموذج لغة تقدمًا للاستدلال والبرمجة والمهام متعددة اللغات؛ يعمل على وحدة GPU واحدة. |
-    | mistralai/mamba-codestral-7b-v0.1                                   | 256k tokens    | نموذج للكتابة والتفاعل مع الكود عبر مجموعة واسعة من لغات البرمجة والمهام. |
-    | microsoft/phi-3-mini-128k-instruct                                  | 128K tokens    | نموذج LLM مفتوح خفيف ومتطور مع مهارات قوية في الرياضيات والاستدلال المنطقي. |
-    | microsoft/phi-3-mini-4k-instruct                                    | 4,096 tokens   | نموذج LLM مفتوح خفيف ومتطور مع مهارات قوية في الرياضيات والاستدلال المنطقي. |
-    | microsoft/phi-3-small-8k-instruct                                   | 8,192 tokens   | نموذج LLM مفتوح خفيف ومتطور مع مهارات قوية في الرياضيات والاستدلال المنطقي. |
-    | microsoft/phi-3-small-128k-instruct                                 | 128K tokens    | نموذج LLM مفتوح خفيف ومتطور مع مهارات قوية في الرياضيات والاستدلال المنطقي. |
-    | microsoft/phi-3-medium-4k-instruct                                  | 4,096 tokens   | نموذج LLM مفتوح خفيف ومتطور مع مهارات قوية في الرياضيات والاستدلال المنطقي. |
-    | microsoft/phi-3-medium-128k-instruct                                | 128K tokens    | نموذج LLM مفتوح خفيف ومتطور مع مهارات قوية في الرياضيات والاستدلال المنطقي. |
-    | microsoft/phi-3.5-mini-instruct                                     | 128K tokens    | نموذج LLM خفيف متعدد اللغات يدعم تطبيقات الذكاء الاصطناعي في البيئات المحدودة بالكمون والذاكرة والحوسبة |
-    | microsoft/phi-3.5-moe-instruct                                      | 128K tokens    | نموذج LLM متقدم يعتمد على معمارية خليط الخبراء لتوليد محتوى فعال حوسبيًا |
-    | microsoft/kosmos-2                                                  | 1,024 tokens   | نموذج متعدد الوسائط رائد مصمم لفهم العناصر المرئية في الصور والاستدلال عليها. |
-    | microsoft/phi-3-vision-128k-instruct                               | 128k tokens    | نموذج متعدد الوسائط مفتوح متطور يتفوق في الاستدلال عالي الجودة من الصور. |
-    | microsoft/phi-3.5-vision-instruct                                  | 128k tokens    | نموذج متعدد الوسائط مفتوح متطور يتفوق في الاستدلال عالي الجودة من الصور. |
-    | databricks/dbrx-instruct                                           | 12k tokens     | نموذج LLM للأغراض العامة بأداء متطور في فهم اللغة والبرمجة وRAG. |
-    | snowflake/arctic                                                   | 1,024 tokens   | يقدم استدلالًا عالي الكفاءة لتطبيقات المؤسسات مع التركيز على توليد SQL والبرمجة. |
-    | aisingapore/sea-lion-7b-instruct                                  | 4,096 tokens   | نموذج LLM لتمثيل وخدمة التنوع اللغوي والثقافي لجنوب شرق آسيا |
-    | ibm/granite-8b-code-instruct                                      | 4,096 tokens   | نموذج LLM لبرمجة البرمجيات لتوليد الكود وإكماله وشرحه والتحويل متعدد الأدوار. |
-    | ibm/granite-34b-code-instruct                                     | 8,192 tokens   | نموذج LLM لبرمجة البرمجيات لتوليد الكود وإكماله وشرحه والتحويل متعدد الأدوار. |
-    | ibm/granite-3.0-8b-instruct                                       | 4,096 tokens   | نموذج لغة صغير متقدم يدعم RAG والتلخيص والتصنيف والكود والذكاء الاصطناعي الوكيلي |
-    | ibm/granite-3.0-3b-a800m-instruct                                | 4,096 tokens   | نموذج خليط خبراء عالي الكفاءة لـ RAG والتلخيص واستخراج الكيانات والتصنيف |
-    | mediatek/breeze-7b-instruct                                       | 4,096 tokens   | ينشئ بيانات اصطناعية متنوعة تحاكي خصائص بيانات العالم الحقيقي. |
-    | upstage/solar-10.7b-instruct                                      | 4,096 tokens   | يتفوق في مهام NLP، خاصة في اتباع التعليمات والاستدلال والرياضيات. |
-    | writer/palmyra-med-70b-32k                                        | 32k tokens     | نموذج LLM رائد للاستجابات الدقيقة والمناسبة للسياق في المجال الطبي. |
-    | writer/palmyra-med-70b                                            | 32k tokens     | نموذج LLM رائد للاستجابات الدقيقة والمناسبة للسياق في المجال الطبي. |
-    | writer/palmyra-fin-70b-32k                                        | 32k tokens     | نموذج LLM متخصص في التحليل المالي وإعداد التقارير ومعالجة البيانات |
-    | 01-ai/yi-large                                                    | 32k tokens     | نموذج قوي مدرب على الإنجليزية والصينية لمهام متنوعة بما في ذلك روبوتات المحادثة والكتابة الإبداعية. |
-    | deepseek-ai/deepseek-coder-6.7b-instruct                         | 2k tokens      | نموذج برمجة قوي يقدم قدرات متقدمة في توليد الكود وإكماله وملء الفراغات |
-    | rakuten/rakutenai-7b-instruct                                     | 1,024 tokens   | نموذج LLM متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
-    | rakuten/rakutenai-7b-chat                                         | 1,024 tokens   | نموذج LLM متطور مع فهم اللغة واستدلال فائق وتوليد النص. |
-    | baichuan-inc/baichuan2-13b-chat                                  | 4,096 tokens   | يدعم المحادثة بالصينية والإنجليزية والبرمجة والرياضيات واتباع التعليمات وحل الألغاز |
 
     **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
     ```bash
@@ -943,15 +770,12 @@ mode: "wide"
     مثال الاستخدام في مشروع CrewAI:
     ```python Code
     llm = LLM(
-        model="groq/llama-3.2-90b-text-preview",
+        model="groq/qwen/qwen3.6-27b",
         temperature=0.7
     )
     ```
-    | النموذج           | نافذة السياق     | الأفضل لـ                                    |
-    |-------------------|------------------|--------------------------------------------|
-    | Llama 3.1 70B/8B  | 131,072 tokens   | مهام عالية الأداء بسياق كبير               |
-    | Llama 3.2 Series  | 8,192 tokens     | مهام ذات أغراض عامة                        |
-    | Mixtral 8x7B      | 32,768 tokens    | أداء متوازن وسياق جيد                      |
+
+    تميز Groq بين نماذج production وpreview وتسحب معرّفات النماذج بانتظام. تحقق من [كتالوج نماذج Groq](https://console.groq.com/docs/models) و[صفحة الإيقاف](https://console.groq.com/docs/deprecations) قبل اختيار نموذج للإنتاج.
 
     **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
     ```bash
@@ -1033,10 +857,11 @@ mode: "wide"
     مثال الاستخدام في مشروع CrewAI:
     ```python Code
     llm = LLM(
-        model="llama-3.1-sonar-large-128k-online",
-        base_url="https://api.perplexity.ai/"
+        model="perplexity/sonar-pro"
     )
     ```
+
+    راجع [كتالوج نماذج Perplexity](https://docs.perplexity.ai/getting-started/models) و[changelog](https://docs.perplexity.ai/docs/resources/changelog) للحصول على معرّفات النماذج الحالية وإشعارات الإيقاف.
 
     **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
     ```bash
@@ -1073,17 +898,12 @@ mode: "wide"
     مثال الاستخدام في مشروع CrewAI:
     ```python Code
     llm = LLM(
-        model="sambanova/Meta-Llama-3.1-8B-Instruct",
+        model="sambanova/Meta-Llama-3.3-70B-Instruct",
         temperature=0.7
     )
     ```
-    | النموذج            | نافذة السياق           | الأفضل لـ                                      |
-    |--------------------|------------------------|----------------------------------------------|
-    | Llama 3.1 70B/8B   | حتى 131,072 tokens    | مهام عالية الأداء بسياق كبير                 |
-    | Llama 3.1 405B     | 8,192 tokens           | أداء عالٍ وجودة مخرجات                       |
-    | Llama 3.2 Series   | 8,192 tokens           | مهام عامة ومتعددة الوسائط                    |
-    | Llama 3.3 70B      | حتى 131,072 tokens    | أداء عالٍ وجودة مخرجات                       |
-    | Qwen2 familly      | 8,192 tokens           | أداء عالٍ وجودة مخرجات                       |
+
+    قد تتغير النماذج المستضافة في SambaNova Cloud بصورة مستقلة عن CrewAI. استعلم من [models endpoint](https://docs.sambanova.ai/docs/api-reference/models/get-environments-available-model-list-metadata) وراجع [دليل الإيقاف](https://docs.sambanova.ai/docs/en/models/deprecations) قبل النشر.
 
     **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
     ```bash
@@ -1101,7 +921,7 @@ mode: "wide"
     مثال الاستخدام في مشروع CrewAI:
     ```python Code
     llm = LLM(
-        model="cerebras/llama3.1-70b",
+        model="cerebras/gpt-oss-120b",
         temperature=0.7,
         max_tokens=8192
     )
@@ -1114,6 +934,8 @@ mode: "wide"
       - توازن جيد بين السرعة والجودة
       - دعم نوافذ سياق طويلة
     </Info>
+
+    راجع [كتالوج نماذج Cerebras](https://inference-docs.cerebras.ai/models/overview) و[إشعارات الإيقاف](https://inference-docs.cerebras.ai/support/deprecation) للحصول على معرّفات endpoints العامة الحالية.
 
     **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
     ```bash
@@ -1189,7 +1011,7 @@ mode: "wide"
 
     # Create an LLM with streaming enabled
     llm = LLM(
-        model="openai/gpt-4o",
+        model="openai/gpt-5.6-terra",
         stream=True  # Enable streaming
     )
     ```
@@ -1239,7 +1061,7 @@ mode: "wide"
 
     my_listener = MyCustomListener()
 
-    llm = LLM(model="gpt-4o-mini", temperature=0, stream=True)
+    llm = LLM(model="openai/gpt-5.6-terra", stream=True)
 
     researcher = Agent(
         role="About User",
@@ -1319,6 +1141,8 @@ mode: "wide"
 
 يدعم CrewAI الاستجابات المهيكلة من استدعاءات LLM من خلال السماح لك بتحديد `response_format` باستخدام نموذج Pydantic. يمكّن هذا الإطار من تحليل المخرجات والتحقق منها تلقائيًا، مما يسهّل دمج الاستجابة في تطبيقك دون معالجة لاحقة يدوية.
 
+يختلف دعم المخرجات المهيكلة باختلاف المزوّد والنموذج. اختبر النموذج الذي اخترته قبل الاعتماد على الاستجابات المهيكلة في بيئة الإنتاج.
+
 ```python Code
 from crewai import LLM
 
@@ -1328,7 +1152,7 @@ class Dog(BaseModel):
     breed: str
 
 
-llm = LLM(model="gpt-4o", response_format=Dog)
+llm = LLM(model="openai/gpt-5.6-terra", response_format=Dog)
 
 response = llm.call(
     "Analyze the following messages and return the name, age, and breed. "
@@ -1357,8 +1181,8 @@ print(response)
     # 3. Task splitting for large contexts
 
     llm = LLM(
-        model="gpt-4",
-        max_tokens=4000,  # Limit response length
+        model="openai/gpt-5.6-terra",
+        max_completion_tokens=4000,  # Limit response length
     )
     ```
 
@@ -1382,15 +1206,14 @@ print(response)
         ```python
         # Configure model with appropriate settings
         llm = LLM(
-            model="openai/gpt-4-turbo-preview",
-            temperature=0.7,    # Adjust based on task
-            max_tokens=4096,    # Set based on output needs
-            timeout=300        # Longer timeout for complex tasks
+            model="openai/gpt-5.6-terra",
+            reasoning_effort="medium",
+            max_completion_tokens=4096,
+            timeout=300
         )
         ```
         <Tip>
-          - درجة حرارة منخفضة (0.1 إلى 0.3) للاستجابات الواقعية
-          - درجة حرارة عالية (0.7 إلى 0.9) للمهام الإبداعية
+          استخدم عناصر التحكم التي يدعمها النموذج المحدد. حسب المزود، قد تكون `temperature` أو مستوى reasoning أو thinking، أو تعليمات prompt تحدد الأسلوب والتباين المطلوبين.
         </Tip>
       </Step>
 
