@@ -496,7 +496,12 @@ class Agent(BaseAgent):
         skill_models = [
             skill for skill in self.skills or [] if isinstance(skill, SkillModel)
         ]
-        loader = create_skill_loader_tool(skill_models, source=self, task=task)
+        loader = create_skill_loader_tool(
+            skill_models,
+            source=self,
+            task=task,
+            reserved_names=[tool.name for tool in tools],
+        )
         if loader is None:
             return tools
         return [*tools, loader]
@@ -1071,6 +1076,8 @@ class Agent(BaseAgent):
         Returns:
             A tuple of (prompt, stop_words, rpm_limit_fn).
         """
+        from crewai.skills.tool import LoadSkillTool
+
         use_native_tool_calling = self._supports_native_tool_calling(raw_tools)
 
         prompt = Prompts(
@@ -1081,6 +1088,10 @@ class Agent(BaseAgent):
             system_template=self.system_template,
             prompt_template=self.prompt_template,
             response_template=self.response_template,
+            skill_loader_tool_name=next(
+                (tool.name for tool in raw_tools if isinstance(tool, LoadSkillTool)),
+                None,
+            ),
         ).task_execution()
 
         stop_words = [I18N_DEFAULT.slice("observation")]

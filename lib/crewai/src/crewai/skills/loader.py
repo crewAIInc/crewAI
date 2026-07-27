@@ -6,6 +6,7 @@ for agent use, and format skill context for prompt injection.
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Iterable
 import logging
 from pathlib import Path
@@ -241,6 +242,42 @@ def load_skills(
     return list(loaded.values())
 
 
+def build_skill_catalog(skills: Iterable[Skill]) -> dict[str, Skill]:
+    """Label the metadata-only skills an execution can still load.
+
+    Skills resolved from different orgs or search paths can share a frontmatter
+    name. Colliding names are qualified by their parent directory — the org for
+    registry skills — so the catalog can address each of them individually.
+
+    Args:
+        skills: Skills to catalog. Skills already at INSTRUCTIONS level are
+            skipped because their instructions are rendered on every execution.
+
+    Returns:
+        Catalog labels mapped to their skill, in first-seen order.
+    """
+    pending = [skill for skill in skills if skill.disclosure_level < INSTRUCTIONS]
+    ambiguous = {
+        name
+        for name, count in Counter(skill.name for skill in pending).items()
+        if count > 1
+    }
+
+    catalog: dict[str, Skill] = {}
+    for skill in pending:
+        label = (
+            f"{skill.path.parent.name}/{skill.name}"
+            if skill.name in ambiguous
+            else skill.name
+        )
+        qualified, attempt = label, 2
+        while label in catalog:
+            label = f"{qualified}-{attempt}"
+            attempt += 1
+        catalog[label] = skill
+    return catalog
+
+
 def load_resources(skill: Skill) -> Skill:
     """Promote a skill to RESOURCES disclosure level.
 
@@ -253,7 +290,7 @@ def load_resources(skill: Skill) -> Skill:
     return load_skill_resources(skill)
 
 
-def format_skill_context(skill: Skill) -> str:
+def format_skill_context(skill: Skill, *, label: str | None = None) -> str:
     """Format skill information for agent prompt injection.
 
     At METADATA level: returns name and description only.
@@ -264,13 +301,16 @@ def format_skill_context(skill: Skill) -> str:
 
     Args:
         skill: The skill to format.
+        label: Name to render in place of the skill's own, used when a catalog
+            has qualified skills that share a frontmatter name.
 
     Returns:
         Formatted skill context string.
     """
+    name = label or skill.name
     if skill.disclosure_level >= INSTRUCTIONS and skill.instructions:
         parts = [
-            f'<skill name="{skill.name}">',
+            f'<skill name="{name}">',
             skill.description,
             "",
             skill.instructions,
@@ -283,4 +323,4 @@ def format_skill_context(skill: Skill) -> str:
                     parts.append(f"- **{dir_name}/**: {', '.join(files)}")
         parts.append("</skill>")
         return "\n".join(parts)
-    return f'<skill name="{skill.name}">\n{skill.description}\n</skill>'
+    return f'<skill name="{name}">\n{skill.description}\n</skill>'

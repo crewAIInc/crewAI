@@ -8,11 +8,30 @@ Run this focused test file with:
 from pathlib import Path
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 from crewai import Agent, Task
 from crewai.llms.base_llm import BaseLLM
 from crewai.skills.models import METADATA
-from crewai.skills.tool import LoadSkillTool
+from crewai.skills.parser import load_skill_metadata
+from crewai.skills.tool import LoadSkillTool, create_skill_loader_tool
+from crewai.tools.base_tool import BaseTool
 from crewai.utilities.prompts import Prompts
+
+
+class _ConflictingToolSchema(BaseModel):
+    query: str = Field(default="")
+
+
+class _ConflictingTool(BaseTool):
+    """A user tool that already claims the skill loader's default name."""
+
+    name: str = "load_skill"
+    description: str = "Load something unrelated to skills."
+    args_schema: type[BaseModel] = _ConflictingToolSchema
+
+    def _run(self, query: str = "", **kwargs: Any) -> str:
+        return "user tool result"
 
 
 def _create_skill(
@@ -22,7 +41,7 @@ def _create_skill(
     instructions: str,
 ) -> None:
     skill_dir = parent / name
-    skill_dir.mkdir()
+    skill_dir.mkdir(parents=True)
     (skill_dir / "SKILL.md").write_text(
         f"---\nname: {name}\ndescription: {description}\n---\n{instructions}",
         encoding="utf-8",
@@ -206,3 +225,74 @@ def test_each_execution_can_disclose_only_its_relevant_skill(tmp_path: Path) -> 
         METADATA,
     ]
     assert [skill.instructions for skill in agent.skills] == [None, None]
+
+
+def test_loader_stays_reachable_when_a_tool_claims_its_default_name(
+    tmp_path: Path,
+) -> None:
+    """A configured tool named load_skill must not shadow the skill loader."""
+    _create_skill(
+        tmp_path,
+        "python-review",
+        "Review Python code when the user asks for a code review.",
+        "PYTHON_REVIEW_PRIVATE_INSTRUCTIONS",
+    )
+
+    agent = Agent(
+        role="Assistant",
+        goal="Help with the current request.",
+        backstory="A general-purpose assistant.",
+        skills=[tmp_path],
+        tools=[_ConflictingTool()],
+    )
+    agent.create_agent_executor(
+        task=Task(
+            description="Review this Python change.",
+            expected_output="Review findings.",
+            agent=agent,
+        )
+    )
+
+    assert agent.agent_executor is not None
+    tools = agent.agent_executor.original_tools
+    loader = next(tool for tool in tools if isinstance(tool, LoadSkillTool))
+
+    assert loader.name != "load_skill"
+    assert [tool.name for tool in tools].count(loader.name) == 1
+    assert "PYTHON_REVIEW_PRIVATE_INSTRUCTIONS" in loader.run(
+        skill_name="python-review"
+    )
+
+    prompt = agent.agent_executor.prompt
+    rendered = prompt.get("system") or prompt.get("prompt")
+    assert f"call `{loader.name}`" in rendered
+
+
+def test_same_named_skills_from_different_orgs_stay_individually_loadable(
+    tmp_path: Path,
+) -> None:
+    """Skills sharing a frontmatter name must each be addressable."""
+    _create_skill(
+        tmp_path / "acme",
+        "code-review",
+        "Review code the Acme way.",
+        "ACME_PRIVATE_INSTRUCTIONS",
+    )
+    _create_skill(
+        tmp_path / "globex",
+        "code-review",
+        "Review code the Globex way.",
+        "GLOBEX_PRIVATE_INSTRUCTIONS",
+    )
+
+    loader = create_skill_loader_tool(
+        [
+            load_skill_metadata(tmp_path / "acme" / "code-review"),
+            load_skill_metadata(tmp_path / "globex" / "code-review"),
+        ]
+    )
+
+    assert loader is not None
+    assert sorted(loader.catalog) == ["acme/code-review", "globex/code-review"]
+    assert "ACME_PRIVATE_INSTRUCTIONS" in loader.run(skill_name="acme/code-review")
+    assert "GLOBEX_PRIVATE_INSTRUCTIONS" in loader.run(skill_name="globex/code-review")
