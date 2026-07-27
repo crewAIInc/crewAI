@@ -1,0 +1,326 @@
+---
+title: Microsoft Teams 통합
+description: "CrewAI를 위한 Microsoft Teams 통합으로 팀 협업 및 커뮤니케이션."
+icon: "users"
+mode: "wide"
+---
+
+## 개요
+
+에이전트가 Teams 데이터에 액세스하고, 메시지를 보내고, 회의를 만들고, 채널을 관리할 수 있도록 합니다. AI 기반 자동화로 팀 커뮤니케이션을 자동화하고, 회의를 예약하고, 메시지를 검색하며, 협업 워크플로를 간소화합니다.
+
+## 전제 조건
+
+Microsoft Teams 통합을 사용하기 전에 다음 사항을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
+- Teams 액세스 권한이 있는 Microsoft 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Microsoft 계정 연결
+
+## Microsoft Teams 통합 설정
+
+### 1. Microsoft 계정 연결
+
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동
+2. 인증 통합 섹션에서 **Microsoft Teams** 찾기
+3. **연결**을 클릭하고 OAuth 플로우 완료
+4. Teams 액세스에 필요한 권한 부여
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token 복사
+
+### 2. 필요한 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## 사용 가능한 작업
+
+<AccordionGroup>
+  <Accordion title="microsoft_teams/get_teams">
+    **설명:** 사용자가 멤버인 모든 팀을 가져옵니다.
+
+    **매개변수:**
+    - 매개변수가 필요하지 않습니다.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/get_channels">
+    **설명:** 특정 팀의 채널을 가져옵니다.
+
+    **매개변수:**
+    - `team_id` (string, 필수): 팀의 ID.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/send_message">
+    **설명:** Teams 채널에 메시지를 보냅니다.
+
+    **매개변수:**
+    - `team_id` (string, 필수): 팀의 ID.
+    - `channel_id` (string, 필수): 채널의 ID.
+    - `message` (string, 필수): 메시지 내용.
+    - `content_type` (string, 선택사항): 콘텐츠 유형 (html 또는 text). 옵션: html, text. 기본값: text.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/get_messages">
+    **설명:** Teams 채널에서 메시지를 가져옵니다.
+
+    **매개변수:**
+    - `team_id` (string, 필수): 팀의 ID.
+    - `channel_id` (string, 필수): 채널의 ID.
+    - `top` (integer, 선택사항): 검색할 메시지 수 (최대 50). 기본값: 20.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/create_meeting">
+    **설명:** Teams 회의를 만듭니다.
+
+    **매개변수:**
+    - `subject` (string, 필수): 회의 제목/제목.
+    - `startDateTime` (string, 필수): 회의 시작 시간 (시간대가 포함된 ISO 8601 형식).
+    - `endDateTime` (string, 필수): 회의 종료 시간 (시간대가 포함된 ISO 8601 형식).
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/search_online_meetings_by_join_url">
+    **설명:** 웹 참가 URL로 온라인 회의를 검색합니다.
+
+    **매개변수:**
+    - `join_web_url` (string, 필수): 검색할 회의의 웹 참가 URL.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/search_online_meetings_by_meeting_id">
+    **설명:** 외부 Meeting ID로 온라인 회의를 검색합니다.
+
+    **매개변수:**
+    - `join_meeting_id` (string, 필수): 참석자가 참가할 때 사용하는 회의 ID(숫자 코드). 회의 초대에 표시되는 joinMeetingId이며, Graph API meeting id가 아닙니다.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/get_meeting">
+    **설명:** 특정 온라인 회의의 세부 정보를 가져옵니다.
+
+    **매개변수:**
+    - `meeting_id` (string, 필수): Graph API 회의 ID(긴 영숫자 문자열). create_meeting 또는 search_online_meetings 작업에서 얻을 수 있습니다. 숫자 joinMeetingId와 다릅니다.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/get_team_members">
+    **설명:** 특정 팀의 멤버를 가져옵니다.
+
+    **매개변수:**
+    - `team_id` (string, 필수): 팀의 고유 식별자. get_teams 작업에서 얻을 수 있습니다.
+    - `top` (integer, 선택사항): 페이지당 검색할 멤버 수 (1-999). 기본값: 100.
+    - `skip_token` (string, 선택사항): 이전 응답의 페이지네이션 토큰. 응답에 @odata.nextLink가 포함된 경우 $skiptoken 매개변수 값을 추출하여 여기에 전달하면 다음 페이지 결과를 가져올 수 있습니다.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/create_channel">
+    **설명:** 팀에 새 채널을 만듭니다.
+
+    **매개변수:**
+    - `team_id` (string, 필수): 팀의 고유 식별자. get_teams 작업에서 얻을 수 있습니다.
+    - `display_name` (string, 필수): Teams에 표시되는 채널 이름. 팀 내에서 고유해야 합니다. 최대 50자.
+    - `description` (string, 선택사항): 채널 목적을 설명하는 선택적 설명. 채널 세부 정보에 표시됩니다. 최대 1024자.
+    - `membership_type` (string, 선택사항): 채널 가시성. 옵션: standard, private. "standard" = 모든 팀 멤버에게 표시, "private" = 명시적으로 추가된 멤버에게만 표시. 기본값: standard.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/get_message_replies">
+    **설명:** 채널의 특정 메시지에 대한 회신을 가져옵니다.
+
+    **매개변수:**
+    - `team_id` (string, 필수): 팀의 고유 식별자. get_teams 작업에서 얻을 수 있습니다.
+    - `channel_id` (string, 필수): 채널의 고유 식별자. get_channels 작업에서 얻을 수 있습니다.
+    - `message_id` (string, 필수): 상위 메시지의 고유 식별자. get_messages 작업에서 얻을 수 있습니다.
+    - `top` (integer, 선택사항): 페이지당 검색할 회신 수 (1-50). 기본값: 50.
+    - `skip_token` (string, 선택사항): 이전 응답의 페이지네이션 토큰. 응답에 @odata.nextLink가 포함된 경우 $skiptoken 매개변수 값을 추출하여 여기에 전달하면 다음 페이지 결과를 가져올 수 있습니다.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/reply_to_message">
+    **설명:** Teams 채널의 메시지에 회신합니다.
+
+    **매개변수:**
+    - `team_id` (string, 필수): 팀의 고유 식별자. get_teams 작업에서 얻을 수 있습니다.
+    - `channel_id` (string, 필수): 채널의 고유 식별자. get_channels 작업에서 얻을 수 있습니다.
+    - `message_id` (string, 필수): 회신할 메시지의 고유 식별자. get_messages 작업에서 얻을 수 있습니다.
+    - `message` (string, 필수): 회신 내용. HTML의 경우 서식 태그 포함. 텍스트의 경우 일반 텍스트만.
+    - `content_type` (string, 선택사항): 콘텐츠 형식. 옵션: html, text. "text"는 일반 텍스트, "html"은 서식이 있는 리치 텍스트. 기본값: text.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/update_meeting">
+    **설명:** 기존 온라인 회의를 업데이트합니다.
+
+    **매개변수:**
+    - `meeting_id` (string, 필수): 회의의 고유 식별자. create_meeting 또는 search_online_meetings 작업에서 얻을 수 있습니다.
+    - `subject` (string, 선택사항): 새 회의 제목.
+    - `startDateTime` (string, 선택사항): 시간대가 포함된 ISO 8601 형식의 새 시작 시간. 예: "2024-01-20T10:00:00-08:00".
+    - `endDateTime` (string, 선택사항): 시간대가 포함된 ISO 8601 형식의 새 종료 시간.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/delete_meeting">
+    **설명:** 온라인 회의를 삭제합니다.
+
+    **매개변수:**
+    - `meeting_id` (string, 필수): 삭제할 회의의 고유 식별자. create_meeting 또는 search_online_meetings 작업에서 얻을 수 있습니다.
+
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예제
+
+### 기본 Microsoft Teams 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+
+# Microsoft Teams 기능을 가진 에이전트 생성
+teams_agent = Agent(
+    role="Teams 코디네이터",
+    goal="Teams 커뮤니케이션 및 회의를 효율적으로 관리",
+    backstory="Microsoft Teams 작업 및 팀 협업 전문 AI 어시스턴트.",
+    apps=['microsoft_teams']  # 모든 Teams 작업을 사용할 수 있습니다
+)
+
+# 팀 및 채널 탐색 작업
+explore_teams_task = Task(
+    description="내가 멤버인 모든 팀을 나열한 다음 첫 번째 팀의 채널을 가져오세요.",
+    agent=teams_agent,
+    expected_output="팀 및 채널 목록이 표시됨."
+)
+
+# 작업 실행
+crew = Crew(
+    agents=[teams_agent],
+    tasks=[explore_teams_task]
+)
+
+crew.kickoff()
+```
+
+### 메시징 및 커뮤니케이션
+
+```python
+from crewai import Agent, Task, Crew
+
+# 메시징에 특화된 에이전트 생성
+messenger = Agent(
+    role="Teams 메신저",
+    goal="Teams 채널에서 메시지 전송 및 검색",
+    backstory="팀 커뮤니케이션 및 메시지 관리에 능숙한 AI 어시스턴트.",
+    apps=['microsoft_teams/send_message', 'microsoft_teams/get_messages']
+)
+
+# 메시지 전송 및 최근 메시지 검색 작업
+messaging_task = Task(
+    description="'your_team_id' 팀의 General 채널에 'Hello team! This is an automated update from our AI assistant.' 메시지를 보낸 다음 해당 채널의 최근 10개 메시지를 검색하세요.",
+    agent=messenger,
+    expected_output="메시지가 성공적으로 전송되고 최근 메시지가 검색됨."
+)
+
+crew = Crew(
+    agents=[messenger],
+    tasks=[messaging_task]
+)
+
+crew.kickoff()
+```
+
+### 회의 관리
+
+```python
+from crewai import Agent, Task, Crew
+
+# 회의 관리를 위한 에이전트 생성
+meeting_scheduler = Agent(
+    role="회의 스케줄러",
+    goal="Teams 회의 생성 및 관리",
+    backstory="회의 일정 관리 및 정리를 담당하는 AI 어시스턴트.",
+    apps=['microsoft_teams/create_meeting', 'microsoft_teams/search_online_meetings_by_join_url']
+)
+
+# 회의 생성 작업
+schedule_meeting_task = Task(
+    description="내일 오전 10시에 1시간 동안 진행되는 '주간 팀 동기화' 제목의 Teams 회의를 생성하세요 (시간대가 포함된 적절한 ISO 8601 형식 사용).",
+    agent=meeting_scheduler,
+    expected_output="회의 세부 정보와 함께 Teams 회의가 성공적으로 생성됨."
+)
+
+crew = Crew(
+    agents=[meeting_scheduler],
+    tasks=[schedule_meeting_task]
+)
+
+crew.kickoff()
+```
+
+## 문제 해결
+
+### 일반적인 문제
+
+**인증 오류**
+
+- Microsoft 계정이 Teams 액세스에 필요한 권한을 가지고 있는지 확인하세요.
+- 필요한 범위: `Team.ReadBasic.All`, `Channel.ReadBasic.All`, `ChannelMessage.Send`, `ChannelMessage.Read.All`, `OnlineMeetings.ReadWrite`, `OnlineMeetings.Read`.
+- OAuth 연결에 필요한 모든 범위가 포함되어 있는지 확인하세요.
+
+**팀 및 채널 액세스**
+
+- 액세스하려는 팀의 멤버인지 확인하세요.
+- 팀 및 채널 ID가 올바른지 다시 확인하세요.
+- 팀 및 채널 ID는 `get_teams` 및 `get_channels` 작업을 사용하여 얻을 수 있습니다.
+
+**메시지 전송 문제**
+
+- `send_message`에 `team_id`, `channel_id`, `message`가 제공되는지 확인하세요.
+- 지정된 채널에 메시지를 보낼 권한이 있는지 확인하세요.
+- 메시지 형식에 따라 적절한 `content_type`(text 또는 html)을 선택하세요.
+
+**회의 생성**
+
+- `subject`, `startDateTime`, `endDateTime`이 제공되는지 확인하세요.
+- 날짜/시간 필드에 시간대가 포함된 적절한 ISO 8601 형식을 사용하세요 (예: '2024-01-20T10:00:00-08:00').
+- 회의 시간이 미래인지 확인하세요.
+
+**메시지 검색 제한**
+
+- `get_messages` 작업은 요청당 최대 50개 메시지만 검색할 수 있습니다.
+- 메시지는 역시간순(최신순)으로 반환됩니다.
+
+**회의 검색**
+
+- `search_online_meetings_by_join_url`의 경우 참가 URL이 정확하고 올바르게 형식화되어 있는지 확인하세요.
+- URL은 완전한 Teams 회의 참가 URL이어야 합니다.
+
+### 도움 받기
+
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
+  Microsoft Teams 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에
+  문의하세요.
+</Card>

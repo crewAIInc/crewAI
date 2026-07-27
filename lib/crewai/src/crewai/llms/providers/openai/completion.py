@@ -8,7 +8,14 @@ import os
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict
 
 import httpx
-from openai import APIConnectionError, AsyncOpenAI, NotFoundError, OpenAI, Stream
+from openai import (
+    APIConnectionError,
+    AsyncOpenAI,
+    BadRequestError,
+    NotFoundError,
+    OpenAI,
+    Stream,
+)
 from openai.lib.streaming.chat import ChatCompletionStream
 from openai.types.chat import (
     ChatCompletion,
@@ -49,6 +56,13 @@ if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
+
+
+# Models learned at runtime to be unavailable on /v1/chat/completions, keyed by
+# the model string as configured. Populated from the 404 by
+# `_remember_responses_only_model` so the wasted round trip is paid once per model
+# per process rather than on every call.
+_LEARNED_RESPONSES_ONLY_MODELS: set[str] = set()
 
 
 class WebSearchResult(TypedDict, total=False):
@@ -453,7 +467,7 @@ class OpenAICompletion(BaseLLM):
                 ):
                     raise ValueError("LLM call blocked by before_llm_call hook")
 
-                if self.api == "responses":
+                if self._effective_api() == "responses":
                     return self._call_responses(
                         messages=formatted_messages,
                         tools=tools,
@@ -489,27 +503,65 @@ class OpenAICompletion(BaseLLM):
         from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
-        """Call OpenAI Chat Completions API."""
+        """Call OpenAI Chat Completions API.
+
+        Falls back to the Responses API when the model turns out not to be served
+        by chat completions, which OpenAI reports as a 404 distinct from a genuine
+        unknown model.
+        """
         completion_params = self._prepare_completion_params(
             messages=messages, tools=tools
         )
 
-        if self._effective_stream():
-            return self._handle_streaming_completion(
-                params=completion_params,
+        def dispatch(params: dict[str, Any]) -> str | Any:
+            if self._effective_stream():
+                return self._handle_streaming_completion(
+                    params=params,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
+            return self._handle_completion(
+                params=params,
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
                 response_model=response_model,
             )
 
-        return self._handle_completion(
-            params=completion_params,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
-        )
+        try:
+            return dispatch(completion_params)
+        except Exception as e:
+            cause = e.__cause__ or e
+
+            if self._rejects_reasoning_effort_with_tools(cause):
+                retry_params = self._reasoning_effort_none_params(completion_params)
+                if retry_params is not None:
+                    logging.debug(
+                        'Retrying %r with reasoning_effort="none": function tools '
+                        "and reasoning effort cannot be combined on "
+                        '/v1/chat/completions. Use api="responses" to keep both.',
+                        self.model,
+                    )
+                    return dispatch(retry_params)
+
+            if self.custom_openai or not self._is_responses_only_error(cause):
+                raise
+            self._remember_responses_only_model()
+            logging.debug(
+                "Retrying %r on the Responses API: not served by "
+                '/v1/chat/completions. Set api="responses" to skip this.',
+                self.model,
+            )
+            return self._call_responses(
+                messages=messages,
+                tools=tools,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
 
     async def acall(
         self,
@@ -548,7 +600,7 @@ class OpenAICompletion(BaseLLM):
 
                 formatted_messages = self._format_messages(messages)
 
-                if self.api == "responses":
+                if self._effective_api() == "responses":
                     return await self._acall_responses(
                         messages=formatted_messages,
                         tools=tools,
@@ -584,27 +636,53 @@ class OpenAICompletion(BaseLLM):
         from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
-        """Async call to OpenAI Chat Completions API."""
+        """Async call to OpenAI Chat Completions API.
+
+        Falls back to the Responses API for models not served by chat completions,
+        mirroring :meth:`_call_completions`.
+        """
         completion_params = self._prepare_completion_params(
             messages=messages, tools=tools
         )
 
-        if self._effective_stream():
-            return await self._ahandle_streaming_completion(
-                params=completion_params,
+        async def dispatch(params: dict[str, Any]) -> str | Any:
+            if self._effective_stream():
+                return await self._ahandle_streaming_completion(
+                    params=params,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
+            return await self._ahandle_completion(
+                params=params,
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
                 response_model=response_model,
             )
 
-        return await self._ahandle_completion(
-            params=completion_params,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
-        )
+        try:
+            return await dispatch(completion_params)
+        except Exception as e:
+            cause = e.__cause__ or e
+
+            if self._rejects_reasoning_effort_with_tools(cause):
+                retry_params = self._reasoning_effort_none_params(completion_params)
+                if retry_params is not None:
+                    return await dispatch(retry_params)
+
+            if self.custom_openai or not self._is_responses_only_error(cause):
+                raise
+            self._remember_responses_only_model()
+            return await self._acall_responses(
+                messages=messages,
+                tools=tools,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
 
     def _call_responses(
         self,
@@ -668,6 +746,52 @@ class OpenAICompletion(BaseLLM):
             response_model=response_model,
         )
 
+    @staticmethod
+    def _to_responses_input(message: LLMMessage) -> list[Any]:
+        """Translate a chat-format message into Responses ``input`` items.
+
+        Tool calling is expressed differently by the two APIs. Chat Completions
+        uses an assistant message carrying ``tool_calls`` (with ``content: None``)
+        followed by ``role: "tool"`` results; the Responses API uses flat
+        ``function_call`` / ``function_call_output`` items keyed by ``call_id``.
+
+        Passing the chat shape straight through is rejected:
+
+            Invalid type for 'input[1].content': expected one of an array of
+            objects or string, but got null instead.
+
+        Anything without tool calls is already valid and passes through unchanged.
+        """
+        role = message.get("role")
+
+        if role == "assistant" and message.get("tool_calls"):
+            items: list[Any] = []
+            content = message.get("content")
+            if content:
+                items.append({"role": "assistant", "content": content})
+            for call in message["tool_calls"]:
+                function = call.get("function", {})
+                items.append(
+                    {
+                        "type": "function_call",
+                        "call_id": call.get("id", ""),
+                        "name": function.get("name", ""),
+                        "arguments": function.get("arguments", "{}"),
+                    }
+                )
+            return items
+
+        if role == "tool":
+            return [
+                {
+                    "type": "function_call_output",
+                    "call_id": message.get("tool_call_id", ""),
+                    "output": str(message.get("content", "")),
+                }
+            ]
+
+        return [message]
+
     def _prepare_responses_params(
         self,
         messages: list[LLMMessage],
@@ -694,7 +818,7 @@ class OpenAICompletion(BaseLLM):
                 else:
                     instructions = content_str
             else:
-                input_messages.append(message)
+                input_messages.extend(self._to_responses_input(message))
 
         # Prepend reasoning items for ZDR (zero-data-retention) chaining when configured
         final_input: list[Any] = []
@@ -1557,6 +1681,105 @@ class OpenAICompletion(BaseLLM):
         """
         return [item for item in response.output if item.type == "reasoning"]
 
+    @staticmethod
+    def _is_responses_only_error(error: BaseException) -> bool:
+        """Whether a 404 means the model exists but isn't on chat completions.
+
+        OpenAI distinguishes the two 404s it returns here:
+
+            responses-only  param="model", "only supported in v1/responses"
+                            or "This is not a chat model"
+            genuine typo    code="model_not_found", "does not exist"
+
+        Matching the former lets a newly Responses-only model be recovered without
+        needing to be listed in this file.
+        """
+        if not isinstance(error, NotFoundError):
+            return False
+        body = getattr(error, "body", None)
+        inner = body.get("error") if isinstance(body, dict) else None
+        if isinstance(inner, dict) and inner.get("code") == "model_not_found":
+            return False
+        text = str(getattr(error, "message", "") or error).lower()
+        return "only supported in v1/responses" in text or "not a chat model" in text
+
+    def _remember_responses_only_model(self) -> None:
+        """Record that this model must use the Responses API."""
+        _LEARNED_RESPONSES_ONLY_MODELS.add(self.model)
+
+    def _model_not_found_message(self, error: Exception) -> str:
+        """Build a 404 message that says what to do about it.
+
+        OpenAI's own wording ("This is not a chat model") doesn't make the fix
+        obvious, so point at ``api="responses"`` when that's what it means.
+        """
+        if self._is_responses_only_error(error):
+            return (
+                f"Model {self.model} is not available on /v1/chat/completions. "
+                f'Use api="responses" (LLM(model="{self.model}", api="responses")) '
+                f"to reach it: {error}"
+            )
+        return f"Model {self.model} not found: {error}"
+
+    @staticmethod
+    def _rejects_reasoning_effort_with_tools(error: BaseException) -> bool:
+        """Whether a 400 is OpenAI refusing `reasoning_effort` alongside tools.
+
+        GPT-5.6 applies a server-side `reasoning_effort` default and then rejects
+        it when function tools are present, so a payload carrying no
+        `reasoning_effort` at all still fails:
+
+            "Function tools with reasoning_effort are not supported for
+            gpt-5.6-sol in /v1/chat/completions. To use function tools, use
+            /v1/responses or set reasoning_effort to 'none'."
+
+        Matched on the structured `param` field plus the message so the unrelated
+        "Unsupported value" 400 that o1/o3 return for `reasoning_effort="none"`
+        doesn't look recoverable.
+        """
+        if not isinstance(error, BadRequestError):
+            return False
+        body = getattr(error, "body", None)
+        source = None
+        if isinstance(body, dict):
+            inner = body.get("error")
+            source = inner if isinstance(inner, dict) else body
+        if not source or source.get("param") != "reasoning_effort":
+            return False
+        message = str(source.get("message") or "").lower()
+        return "function tools" in message and "reasoning_effort" in message
+
+    def _reasoning_effort_none_params(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Params with an explicit `reasoning_effort="none"`, or None if already set.
+
+        Removing the key is not enough: absence means "use the server default",
+        which is what the request was rejected for in the first place.
+        """
+        if params.get("reasoning_effort") == "none":
+            return None
+        return {**params, "reasoning_effort": "none"}
+
+    def _effective_api(self) -> str:
+        """Which OpenAI API to actually use for this model.
+
+        Honours an explicit ``api`` setting, but upgrades to ``"responses"`` for
+        models already known -- from a previous 404 in this process -- not to be
+        served by chat completions.
+
+        Never overrides ``custom_openai=True``: an OpenAI-compatible server may
+        serve any model name on /v1/chat/completions and most don't implement
+        /v1/responses at all, so the user's choice stands.
+        """
+        if (
+            self.api == "completions"
+            and not self.custom_openai
+            and self.model in _LEARNED_RESPONSES_ONLY_MODELS
+        ):
+            return "responses"
+        return self.api
+
     def _prepare_completion_params(
         self, messages: list[LLMMessage], tools: list[dict[str, BaseTool]] | None = None
     ) -> dict[str, Any]:
@@ -1786,7 +2009,7 @@ class OpenAICompletion(BaseLLM):
                 params["messages"], content, from_agent
             )
         except NotFoundError as e:
-            error_msg = f"Model {self.model} not found: {e}"
+            error_msg = self._model_not_found_message(e)
             logging.error(error_msg)
             self._emit_call_failed_event(
                 error=error_msg, from_task=from_task, from_agent=from_agent
@@ -1803,6 +2026,11 @@ class OpenAICompletion(BaseLLM):
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
+
+            # `_call_completions` retries this one, so reporting a failed call
+            # here would surface an error the caller never experiences.
+            if self._rejects_reasoning_effort_with_tools(e):
+                raise
 
             error_msg = f"OpenAI API call failed: {e!s}"
             logging.error(error_msg)
@@ -2209,7 +2437,7 @@ class OpenAICompletion(BaseLLM):
             if usage.get("total_tokens", 0) > 0:
                 logging.info(f"OpenAI API usage: {usage}")
         except NotFoundError as e:
-            error_msg = f"Model {self.model} not found: {e}"
+            error_msg = self._model_not_found_message(e)
             logging.error(error_msg)
             self._emit_call_failed_event(
                 error=error_msg, from_task=from_task, from_agent=from_agent
@@ -2226,6 +2454,11 @@ class OpenAICompletion(BaseLLM):
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
+
+            # `_call_completions` retries this one, so reporting a failed call
+            # here would surface an error the caller never experiences.
+            if self._rejects_reasoning_effort_with_tools(e):
+                raise
 
             error_msg = f"OpenAI API call failed: {e!s}"
             logging.error(error_msg)

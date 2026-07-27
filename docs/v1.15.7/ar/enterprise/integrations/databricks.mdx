@@ -1,0 +1,123 @@
+---
+title: تكامل Databricks
+description: "اربط وكلاء CrewAI بـ Databricks Genie وSQL وUnity Catalog Functions وVector Search عبر خوادم MCP المُدارة من Databricks."
+icon: "layer-group"
+mode: "wide"
+---
+
+## نظرة عامة
+
+اربط وكلاء CrewAI مباشرةً بمساحة عمل Databricks الخاصة بك عبر [خوادم MCP المُدارة من Databricks](https://docs.databricks.com/aws/en/generative-ai/mcp/managed-mcp). يتيح تكامل Databricks لوكلائك طرح أسئلة بلغة طبيعية باستخدام **Genie**، وتنفيذ **SQL** خاضع للحوكمة، واستدعاء **Unity Catalog Functions**، واسترجاع المستندات باستخدام **Vector Search** — كل ذلك دون كتابة أو استضافة أي كود موصِّل، مع تطبيق أذونات Unity Catalog في كل استدعاء.
+
+في الخلفية، يُعدّ تكامل Databricks غلافًا مُدارًا حول دعم [خوادم MCP المخصصة](/ar/enterprise/guides/custom-mcp-server) في CrewAI. تكشف Databricks عن كل قدرة كنقطة نهاية [Model Context Protocol](https://modelcontextprotocol.io/) خاصة بها، ويتصل بها CrewAI بأمان نيابةً عنك. ولأن كل خادم يُضاف بشكل منفصل، يمكنك تفعيل القدرات التي تحتاجها فرقك (crews) بالضبط.
+
+## القدرات الرئيسية
+
+<CardGroup cols={2}>
+  <Card title="Genie" icon="comments">
+    اطرح أسئلة بلغة طبيعية واحصل على إجابات مستندة إلى بياناتك باستخدام [Genie](https://docs.databricks.com/aws/en/genie/)، الذي يستعلم من Genie Spaces وUnity Catalog ويوفّر روابط تعود إلى واجهة Databricks.
+  </Card>
+  <Card title="Databricks SQL" icon="database">
+    نفّذ SQL خاضعًا للحوكمة على مستودعات Databricks لديك للاستعلام عن البيانات وتحويلها وإنشاء خطوط أنابيب البيانات مباشرةً من وكلائك.
+  </Card>
+  <Card title="Unity Catalog Functions" icon="function">
+    استدعِ [دوال Unity Catalog](https://docs.databricks.com/aws/en/udf/unity-catalog) لتنفيذ SQL مُعرّف مسبقًا ومنطق أعمال مخصّص كأدوات قابلة لإعادة الاستخدام وخاضعة للحوكمة.
+  </Card>
+  <Card title="Vector Search" icon="magnifying-glass">
+    استرجع المستندات ذات الصلة لسير عمل RAG والمعرفة من فهارس [Mosaic AI Vector Search](https://docs.databricks.com/aws/en/generative-ai/vector-search) باستخدام التشابه الدلالي.
+  </Card>
+</CardGroup>
+
+تعمل جميع الخوادم خلف Unity AI Gateway وتطبّق ضوابط الوصول في Unity Catalog، بحيث لا يرى وكلاؤك سوى البيانات والأدوات المصرَّح لهم باستخدامها.
+
+## المتطلبات المسبقة
+
+قبل استخدام تكامل Databricks، تأكّد من توفّر ما يلي:
+
+- حساب [CrewAI AMP](https://app.crewai.com) باشتراك نشط
+- مساحة عمل Databricks تحتوي على القدرات التي تريد كشفها (Genie Spaces، مستودعات SQL، دوال Unity Catalog، أو فهارس Vector Search)
+- [امتيازات Unity Catalog](https://docs.databricks.com/aws/en/data-governance/unity-catalog) المناسبة على الكائنات الأساسية
+- اسم مضيف مساحة عمل Databricks الخاص بك (مثال: `your-workspace.cloud.databricks.com`)
+
+## خوادم MCP المُدارة من Databricks
+
+تنشر Databricks خادم MCP مُدارًا منفصلًا لكل قدرة. يكشف CrewAI عنها كاتصالات فردية، يُهيَّأ كل منها باستخدام مضيف مساحة العمل ومعرّفات Unity Catalog ذات الصلة. تتبع نقاط النهاية الأنماط التالية:
+
+| الخادم | الوظيفة | نمط عنوان MCP |
+|--------|---------|---------------|
+| **Genie** | أسئلة وأجوبة بلغة طبيعية على Genie Space | `https://<workspace-hostname>/api/2.0/mcp/genie/{genie_space_id}` |
+| **Databricks SQL** | تنفيذ SQL على مستودعاتك | `https://<workspace-hostname>/api/2.0/mcp/sql` |
+| **Unity Catalog Functions** | تشغيل دوال UC المسجّلة | `https://<workspace-hostname>/api/2.0/mcp/functions/{catalog}/{schema}` |
+| **Vector Search** | الاستعلام من فهرس Vector Search | `https://<workspace-hostname>/api/2.0/mcp/vector-search/{catalog}/{schema}` |
+
+<Note>
+لا حاجة لإنشاء عناوين URL هذه يدويًا — يُنشئ CrewAI كل نقطة نهاية من مضيف مساحة العمل والمعرّفات (Genie Space ID، أو catalog/schema) التي تقدّمها عند تهيئة الاتصال. للاطّلاع على المواصفات الكاملة وأحدث تفاصيل نقاط النهاية، راجع [وثائق MCP المُدارة من Databricks](https://docs.databricks.com/aws/en/generative-ai/mcp/managed-mcp).
+</Note>
+
+## ربط Databricks في CrewAI AMP
+
+<Frame>
+    <img src="/images/enterprise/databricks-configure.png" alt="تهيئة خادم MCP مُدار من Databricks في CrewAI AMP" />
+</Frame>
+
+تظهر كل قدرة من قدرات Databricks — **Databricks Genie** و**Databricks SQL** و**Databricks Unity Catalog Functions** و**Databricks Vector Search** — كخادم MCP خاص بها ضمن مجموعة Databricks في صفحة **Tools & Integrations**. هيّئ ما تحتاجه:
+
+<Steps>
+    <Step title="افتح Tools & Integrations">
+        انتقل إلى **Tools & Integrations** في الشريط الجانبي الأيسر في CrewAI AMP وحدِّد مجموعة **Databricks** في قائمة Connections. سترى خوادم Genie وSQL وUnity Catalog Functions وVector Search مُدرجة أسفلها.
+    </Step>
+
+    <Step title="هيّئ خادمًا">
+        انقر على **Configure** بجوار القدرة التي تريد تفعيلها وقدّم تفاصيل الاتصال الخاصة بها:
+
+        - **Workspace Host** — اسم مضيف مساحة عمل Databricks الخاص بك (مثال: `my-workspace.cloud.databricks.com`).
+        - **Genie** — **Genie Space ID** المراد الاستعلام عنه.
+        - **Unity Catalog Functions** — الـ **catalog** والـ **schema** اللذان يحتويان على دوالك.
+        - **Vector Search** — الـ **catalog** والـ **schema** اللذان يحتويان على الفهرس.
+        - **Databricks SQL** — لا توجد معرّفات إضافية؛ تُنفَّذ الاستعلامات على مستودعات SQL في مساحة عملك.
+    </Step>
+
+    <Step title="اختر طريقة المصادقة">
+        اختر كيف يصادق CrewAI على Databricks. يُوصى باستخدام **OAuth**.
+
+        - **Use OAuth** — اتصل بأمان باستخدام OAuth 2.0. يصادق كل مستخدم على حدة، وتُصدر Databricks رموزًا (tokens) محدّدة النطاق للقدرة (`genie` أو `sql` أو `unity-catalog` أو `vector-search`). يتولّى CrewAI تدفّق التفويض ويُجدّد الرموز تلقائيًا.
+        - **Use personal access token** — صادِق باستخدام [رمز وصول شخصي من Databricks](https://docs.databricks.com/aws/en/dev-tools/auth/pat). استخدم هوية بأقل الامتيازات للحدّ من التعرّض.
+    </Step>
+
+    <Step title="صادِق">
+        أكمل المصادقة. بمجرد الاتصال، تصبح أدوات الخادم متاحة لفرقك. كرّر العملية لأي قدرات Databricks أخرى تريد تفعيلها.
+    </Step>
+</Steps>
+
+<Tip>
+لأن كل قدرة هي اتصال منفصل، يمكنك المزج والمطابقة — على سبيل المثال، فعّل Genie وVector Search لفريق بحث، مع حجز SQL وUnity Catalog Functions لفريق هندسة البيانات. تتيح لك إعدادات الرؤية (Visibility) التحكّم في أعضاء الفريق الذين يمكنهم استخدام كل منها.
+</Tip>
+
+## استخدام أدوات Databricks في فرقك
+
+بمجرد الاتصال، تظهر الأدوات التي يكشفها كل خادم MCP جنبًا إلى جنب مع الاتصالات المدمجة في صفحة **Tools & Integrations**. يمكنك:
+
+- **إسناد الأدوات إلى الوكلاء** في فرقك تمامًا مثل أي أداة أخرى في CrewAI.
+- **إدارة الرؤية** للتحكّم في أعضاء الفريق الذين يمكنهم استخدام كل اتصال.
+- **تعديل أو إزالة** أي اتصال في أي وقت من قائمة Connections.
+
+يمكن لوكلائك الآن طلب إجابات مستندة من Genie، وتنفيذ SQL على مستودعاتك، واستدعاء دوال Unity Catalog، والبحث في فهارس Vector Search — مع تدفّق النتائج تلقائيًا إلى استدلالهم.
+
+<Warning>
+تطبّق Databricks الحوكمة عبر Unity Catalog وUnity AI Gateway: لا يمكن للمستخدم اكتشاف الأدوات واستدعاؤها إلا تلك المصرَّح بها لهوية مساحة عمله. إذا فشل استدعاء أداة، فتأكّد من أن المستخدم المتصل (أو هوية الرمز) يمتلك امتيازات Unity Catalog المطلوبة على Genie Space أو المستودع أو الدالة أو الفهرس. تُنفَّذ بعض استعلامات Genie وSQL بشكل غير متزامن وقد تستغرق لحظة لإرجاع النتائج.
+</Warning>
+
+## مزيد من المعلومات
+
+<CardGroup cols={2}>
+  <Card title="خوادم MCP المُدارة من Databricks" icon="layer-group" href="https://docs.databricks.com/aws/en/generative-ai/mcp/managed-mcp">
+    وثائق Databricks الرسمية لخوادم MCP المُدارة Genie وSQL وUnity Catalog Functions وVector Search.
+  </Card>
+  <Card title="خوادم MCP المخصصة في CrewAI" icon="plug" href="/ar/enterprise/guides/custom-mcp-server">
+    تعرّف على كيفية اتصال CrewAI بأي خادم MCP، وهو الأساس الذي يُبنى عليه تكامل Databricks.
+  </Card>
+</CardGroup>
+
+<Card title="بحاجة إلى مساعدة؟" icon="headset" href="mailto:support@crewai.com">
+  تواصل مع فريق الدعم للحصول على المساعدة في تهيئة تكامل Databricks أو في حل المشكلات.
+</Card>
