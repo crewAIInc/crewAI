@@ -8,7 +8,7 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
-    "appdirs~=1.4.4",
+    "platformdirs~=4.3",
     "cryptography>=42.0",
     "httpx~=0.28.1",
     "packaging>=23.0",
