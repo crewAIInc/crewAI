@@ -48,9 +48,10 @@ class K8sAgentSandboxLifecycleManager(ABC):
         In order to be acquired again by someone else, it has to be
         released first by the :meth:`release_sandbox` method.
         """
-        if self._closed:
-            raise RuntimeError("Attempt to acquire a sandbox from a closed helper.")
         self._lock.acquire()
+        if self._closed:
+            self._lock.release()
+            raise RuntimeError("Attempt to acquire a sandbox from a closed helper.")
         self._sandbox_acquired = True
         return self._acquire_sandbox()
 
