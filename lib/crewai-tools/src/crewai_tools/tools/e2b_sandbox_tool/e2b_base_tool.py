@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import atexit
+from importlib.metadata import version
 import logging
 import os
 import threading
@@ -11,6 +12,7 @@ from pydantic import ConfigDict, Field, PrivateAttr, SecretStr
 
 
 logger = logging.getLogger(__name__)
+E2B_INTEGRATION = f"crewai-tools/{version('crewai-tools')}"
 
 
 class E2BBaseTool(BaseTool):
@@ -115,7 +117,7 @@ class E2BBaseTool(BaseTool):
         if cached is not None:
             return cached
         try:
-            from e2b import Sandbox  # type: ignore[import-untyped]
+            from e2b import Sandbox
         except ImportError as exc:
             raise ImportError(
                 "The 'e2b' package is required for E2B sandbox tools. "
@@ -144,9 +146,16 @@ class E2BBaseTool(BaseTool):
             kwargs["metadata"] = self.metadata
         return kwargs
 
+    @staticmethod
+    def _set_integration() -> None:
+        from e2b import ConnectionConfig
+
+        ConnectionConfig.set_integration(E2B_INTEGRATION)
+
     def _acquire_sandbox(self) -> tuple[Any, bool]:
         """Return (sandbox, should_kill_after_use)."""
         sandbox_cls = self._import_sandbox_class()
+        self._set_integration()
 
         if self.sandbox_id:
             return (

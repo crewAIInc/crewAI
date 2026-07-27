@@ -1752,7 +1752,7 @@ requires-dist = [
     { name = "cryptography", marker = "extra == 'snowflake'", specifier = ">=43.0.3" },
     { name = "databricks-sdk", marker = "extra == 'databricks-sdk'", specifier = ">=0.46.0" },
     { name = "daytona", marker = "extra == 'daytona'", specifier = "~=0.140.0" },
-    { name = "e2b", marker = "extra == 'e2b'", specifier = "~=2.20.0" },
+    { name = "e2b", marker = "extra == 'e2b'", specifier = ">=2.32.0,<3.0.0" },
     { name = "e2b-code-interpreter", marker = "extra == 'e2b'", specifier = "~=2.6.0" },
     { name = "exa-py", marker = "extra == 'exa-py'", specifier = ">=1.8.7" },
     { name = "firecrawl-py", marker = "extra == 'firecrawl-py'", specifier = ">=1.8.0" },
@@ -2319,11 +2319,12 @@ wheels = [
 
 [[package]]
 name = "e2b"
-version = "2.20.3"
+version = "2.34.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
     { name = "dockerfile-parse" },
+    { name = "h2" },
     { name = "httpcore" },
     { name = "httpx" },
     { name = "packaging" },
@@ -2333,9 +2334,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "wcmatch" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/49/b0/a7d5347a5c2d0fe09bb5254c919b716f96217d6526235225f786f879dfbb/e2b-2.20.3.tar.gz", hash = "sha256:c6e91f71946755e1579b4ca1e175819d9f174b932b92e115cf36c2fd04674f3c", size = 157132, upload-time = "2026-04-30T15:15:21.117Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5b/22/5bcf34304b62e6984df9089eb996a4b2aa63618f901befe1f7cc73a24437/e2b-2.34.0.tar.gz", hash = "sha256:0dcc2694b3ead62e87b3d1070a05f66842dd2fa320fc1d7bd84c8fcfadeaf1b1", size = 189367, upload-time = "2026-07-17T09:59:23.844Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9c/12/326db5df4d3e79bc794b3662a454fe1f68cb02c33985e623ece6e5e21395/e2b-2.20.3-py3-none-any.whl", hash = "sha256:46c6b5ffc45c9ca6dc270dd4d29427cef6a2600c55a895565657ff2bedc06303", size = 297072, upload-time = "2026-04-30T15:15:19.46Z" },
+    { url = "https://files.pythonhosted.org/packages/6d/ec/b2f9297afc25de7c27ab5a85db4060783680e2b132285e2498fdbad484cf/e2b-2.34.0-py3-none-any.whl", hash = "sha256:873323571d18bf633be45e59fc6271410b30dfbc81e8df85e711f4f184c03fea", size = 343447, upload-time = "2026-07-17T09:59:22.553Z" },
 ]
 
 [[package]]
