@@ -56,6 +56,26 @@ def test_negative_seconds_is_rejected(tool):
         tool.run(seconds=-5)
 
 
+@patch("crewai_tools.tools.wait_tool.wait_tool.time.sleep")
+def test_negative_seconds_is_rejected_when_passed_positionally(mock_sleep, tool):
+    # BaseTool.run() skips args_schema validation for positional arguments.
+    with pytest.raises(ValueError, match="seconds must be zero or greater"):
+        tool.run(-5)
+
+    mock_sleep.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_async_negative_seconds_is_rejected_when_passed_positionally(tool):
+    with patch(
+        "crewai_tools.tools.wait_tool.wait_tool.asyncio.sleep", new_callable=AsyncMock
+    ) as mock_sleep:
+        with pytest.raises(ValueError, match="seconds must be zero or greater"):
+            await tool.arun(-5)
+
+    mock_sleep.assert_not_awaited()
+
+
 def test_invalid_max_seconds_is_rejected():
     with pytest.raises(ValidationError):
         WaitTool(max_seconds=0)
@@ -84,5 +104,7 @@ def test_description_explains_when_to_use_it(tool):
 
 def test_exported_from_package():
     from crewai_tools import WaitTool as ExportedWaitTool
+    from crewai_tools.tools import WaitTool as ToolsExportedWaitTool
 
     assert ExportedWaitTool is WaitTool
+    assert ToolsExportedWaitTool is WaitTool

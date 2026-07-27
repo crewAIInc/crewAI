@@ -80,14 +80,23 @@ class WaitTool(BaseTool):
             self.description = _build_description(self.max_seconds)
 
     def _resolve_duration(self, seconds: float) -> tuple[float, bool]:
-        """Clamp the requested duration to ``max_seconds``.
+        """Validate and clamp the requested duration to ``max_seconds``.
+
+        ``BaseTool.run`` skips ``args_schema`` validation when called with
+        positional arguments, so the non-negative bound is enforced here too
+        rather than left to ``time.sleep`` to reject.
 
         Args:
             seconds: The requested wait duration.
 
         Returns:
             A tuple of the duration to actually wait and whether it was capped.
+
+        Raises:
+            ValueError: If ``seconds`` is negative.
         """
+        if seconds < 0:
+            raise ValueError(f"seconds must be zero or greater, got {seconds:g}.")
         if seconds > self.max_seconds:
             return self.max_seconds, True
         return seconds, False

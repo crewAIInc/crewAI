@@ -23,9 +23,18 @@ No API key, no dependencies beyond the standard library.
 
 ```python
 from crewai import Agent
+from crewai.tools import tool
 from crewai_tools import WaitTool
 
 wait_tool = WaitTool()
+
+
+@tool("Check build status")
+def check_build_status_tool(build_id: str) -> str:
+    """Return the current status of a build: queued, running, passed, or failed."""
+    # Replace this with a call to your own build system.
+    return my_ci_client.get_build(build_id).status
+
 
 agent = Agent(
     role="Build Monitor",
@@ -50,5 +59,12 @@ WaitTool(max_seconds=1800).run(seconds=900)
 Async execution is supported and does not block the event loop:
 
 ```python
-await wait_tool.arun(seconds=30, reason="waiting for the sandbox build")
+import asyncio
+
+
+async def main():
+    print(await wait_tool.arun(seconds=30, reason="waiting for the sandbox build"))
+
+
+asyncio.run(main())
 ```

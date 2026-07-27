@@ -42,9 +42,18 @@ uv add crewai-tools
 
 ```python Code
 from crewai import Agent, Crew, Task
+from crewai.tools import tool
 from crewai_tools import WaitTool
 
 wait_tool = WaitTool()
+
+
+@tool("Check build status")
+def check_build_status_tool(build_id: str) -> str:
+    """Return the current status of a build: queued, running, passed, or failed."""
+    # Replace this with a call to your own build system.
+    return my_ci_client.get_build(build_id).status
+
 
 build_agent = Agent(
     role="Build Monitor",
@@ -103,5 +112,13 @@ The tool implements both sync and async execution, so it does not block the even
 awaited:
 
 ```python Code
-result = await wait_tool.arun(seconds=30, reason="waiting for the sandbox build")
+import asyncio
+
+
+async def main():
+    result = await wait_tool.arun(seconds=30, reason="waiting for the sandbox build")
+    print(result)
+
+
+asyncio.run(main())
 ```
