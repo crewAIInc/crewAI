@@ -22,5 +22,5 @@ class _MissingProvider:
         """Raises error indicating the provider is not installed."""
         raise RuntimeError(
             f"provider '{self.provider}' requested but not installed. "
-            f"Install the extra: `uv add crewai'[{self.provider}]'`."
+            f'Install the extra: `uv add "crewai[{self.provider}]"`.'
         )

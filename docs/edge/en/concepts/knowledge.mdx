@@ -34,6 +34,11 @@ Supported today:
 - Qdrant
 - Milvus
 
+<Note>
+Install the optional provider extra before importing its configuration: `uv add "crewai[qdrant]"` for Qdrant or `uv add "crewai[milvus]"` for Milvus.
+The default Milvus embedding function uses OpenAI embeddings, so set `OPENAI_API_KEY` before calling `add_documents`. Alternatively, pass a custom `embedding_function` to `MilvusConfig`.
+</Note>
+
 ```python Code
 from crewai.rag.config.utils import set_rag_config, get_rag_client, clear_rag_config
 
