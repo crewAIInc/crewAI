@@ -123,6 +123,15 @@ wheels = [
 ]
 
 [[package]]
+name = "agent-hooks-sdk"
+version = "0.1.0a3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/75/22/76c1497ba3e56d6d14bccd9c532e80e693d900d8996c8abc854fc452b779/agent_hooks_sdk-0.1.0a3.tar.gz", hash = "sha256:a527a42b23b748e298e9c6f5a80c824b04f57e52a100fd5ab7664e3b194feb62", size = 173376, upload-time = "2026-07-17T09:13:34.13Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/d1/6b862b959141fb9fb5693484b728817f9f25fdbc05c35ec2184505294ff1/agent_hooks_sdk-0.1.0a3-cp310-abi3-manylinux_2_34_x86_64.whl", hash = "sha256:882e7d109bf4c4818c68325d9199e99237ebf74475f792ed91b93f807e15ac48", size = 634755, upload-time = "2026-07-17T09:13:32.551Z" },
+]
+
+[[package]]
 name = "aiobotocore"
 version = "3.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1362,6 +1371,9 @@ a2a = [
     { name = "httpx-auth" },
     { name = "httpx-sse" },
 ]
+agent-hooks = [
+    { name = "agent-hooks-sdk", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+]
 anthropic = [
     { name = "anthropic" },
 ]
@@ -1421,6 +1433,7 @@ watson = [
 [package.metadata]
 requires-dist = [
     { name = "a2a-sdk", marker = "extra == 'a2a'", specifier = "~=0.3.10" },
+    { name = "agent-hooks-sdk", marker = "platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'agent-hooks'", specifier = ">=0.1.0a3" },
     { name = "aiobotocore", marker = "extra == 'aws'", specifier = "~=3.8.0" },
     { name = "aiobotocore", marker = "extra == 'bedrock'", specifier = "~=3.8.0" },
     { name = "aiocache", extras = ["memcached", "redis"], marker = "extra == 'a2a'", specifier = "~=0.12.3" },
@@ -1477,7 +1490,7 @@ requires-dist = [
     { name = "tomli-w", specifier = "~=1.1.0" },
     { name = "voyageai", marker = "extra == 'voyageai'", specifier = "~=0.3.5" },
 ]
-provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "qdrant", "qdrant-edge", "tools", "voyageai", "watson"]
+provides-extras = ["a2a", "agent-hooks", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "qdrant", "qdrant-edge", "tools", "voyageai", "watson"]
 
 [[package]]
 name = "crewai-cli"

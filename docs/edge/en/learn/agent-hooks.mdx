@@ -25,7 +25,16 @@ model — `PRE_STEP` / `POST_STEP`, pure observation/telemetry, and
 ## Installation
 
 agent-hooks is an **optional** dependency with a compiled native core, so crewAI
-never requires it and `import crewai` never loads it. Install it from source:
+never requires it and `import crewai` never loads it. Install it with the
+`agent-hooks` extra:
+
+```bash
+pip install "crewai[agent-hooks]"
+```
+
+A prebuilt wheel is published for Linux x86_64 (Python 3.10+), so no build
+toolchain is needed there. On macOS, Windows, or Linux arm64 there is no wheel
+yet — install from source instead, which requires a Rust toolchain:
 
 ```bash
 pip install "agent-hooks-sdk @ git+https://github.com/responsibleai/agent-hooks.git#subdirectory=sdk/python"
