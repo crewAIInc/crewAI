@@ -1,0 +1,275 @@
+---
+title: Azure Workload Identity Federation
+description: 로테이션 인식, 자격 증명 없는 시크릿 액세스를 위해 Microsoft Entra Workload Identity Federation을 통해 Azure Key Vault를 구성합니다
+sidebarTitle: Workload Identity 사용
+icon: "id-badge"
+---
+
+## 개요
+
+이 가이드는 **Microsoft Entra Workload Identity Federation**을 사용하여 Azure Key Vault를 시크릿 공급자로 구성합니다: CrewAI Platform이 단기 OIDC 토큰을 발급하고, Microsoft identity platform을 통해 이를 Entra 액세스 토큰과 교환하여 시크릿을 읽습니다 — 클라이언트 시크릿을 어디에도 저장하지 않습니다.
+
+<Note>
+**이 경로를 선택하는 이유:** 시크릿은 자동화 실행 시점에 해석되므로, **로테이션된 값이 재배포 없이 다음 kickoff에 전파됩니다**. 정적 자격 증명만 필요하다면 더 간단한 [Azure Key Vault — 클라이언트 시크릿](/ko/enterprise/features/secrets-manager/azure) 가이드를 참조하세요.
+</Note>
+
+### 런타임 동작 방식
+
+1. 배포 워커가 CrewAI Platform에서 새 OIDC JWT를 요청합니다.
+2. 워커가 `https://login.microsoftonline.com/<tenant>/oauth2/v2.0/token`에서 JWT를 `client_assertion`(`urn:ietf:params:oauth:client-assertion-type:jwt-bearer`)으로 Microsoft Entra에 제시하며, JWT의 발급자 + 주체와 일치하는 **Federated Identity Credential**을 가진 App Registration을 참조합니다.
+3. Entra가 플랫폼의 OIDC 디스커버리 문서와 JWKS에 대해 JWT를 검증한 다음, `https://vault.azure.net/.default`로 범위가 지정된 단기 액세스 토큰을 반환합니다.
+4. 워커가 Azure Key Vault를 호출하여 시크릿을 읽습니다.
+5. 가져온 값이 해당 자동화 kickoff의 환경 변수 값으로 주입됩니다.
+
+OIDC 주체 토큰은 매 kickoff마다 재발급을 피하기 위해 약 1시간 동안 캐시됩니다. 시크릿 값은 OIDC 캐시 상태와 관계없이 매 kickoff마다 새로 가져오며, 이것이 이 경로를 로테이션 인식으로 만드는 요소입니다.
+
+## 사전 준비 사항
+
+<Note>
+시작하기 전에 다음을 준비하세요:
+
+- 자동화 파드 이미지에 CrewAI 런타임 버전 `1.14.5` 이상이 포함되어야 합니다.
+- 관리할 수 있는 Azure 구독과 Microsoft Entra 테넌트.
+- App Registration을 생성하고 Federated Identity Credential을 추가할 테넌트 권한.
+- 권한 부여에 **Azure RBAC**를 사용하는 Key Vault(레거시 액세스 정책 모델이 아님).
+- 사용자가 `workload_identity_configs: manage` 및 `secret_providers: manage` 권한을 가진 CrewAI Platform 조직. [권한 (RBAC)](/ko/enterprise/features/secrets-manager/usage#permissions-rbac)을 참조하세요.
+- **CrewAI Platform 설치가 Microsoft Entra에서 HTTPS를 통해 접근 가능해야 합니다.** Entra가 토큰 검증 중 OIDC 디스커버리 문서와 JWKS를 가져올 수 있어야 합니다. 플랫폼 관리자에게 호스트가 인터넷에서 접근 가능한지 확인하세요.
+</Note>
+
+## 1단계 — CrewAI Platform OIDC 발급자 URL 찾기
+
+CrewAI Platform 설치는 `https://<your-platform-host>/.well-known/openid-configuration`에서 OpenID Connect 디스커버리 문서를 게시합니다. 여기의 `issuer` 필드는 Microsoft Entra가 신뢰할 수 있는 federation 발급자로 등록할 URL입니다.
+
+브라우저에서 URL을 엽니다:
+
+```
+https://<your-platform-host>/.well-known/openid-configuration
+```
+
+다음을 포함하는 JSON이 보일 것입니다:
+
+```json
+{
+  "issuer": "https://<your-platform-host>",
+  "jwks_uri": "https://<your-platform-host>/oauth2/jwks",
+  ...
+}
+```
+
+`issuer`의 정확한 값을 기록하세요 — 3단계에서 사용합니다.
+
+<Tip>
+URL이 404 또는 503을 반환하면 플랫폼 관리자에게 문의하세요. OIDC 발급자는 설치 시점에 개인 서명 키가 구성되어 있어야 합니다. `OIDC_PRIVATE_KEY` 및 `OIDC_ISSUER` 구성에 대한 내용은 플랫폼 설치 가이드를 참조하세요.
+</Tip>
+
+## 2단계 — App Registration 생성
+
+[Microsoft Entra 포털](https://entra.microsoft.com)에서 **App registrations**로 이동하여 **New registration**을 클릭합니다.
+
+- **Name:** `crewai-secrets-reader`
+- **Supported account types:** `Accounts in this organizational directory only (Single tenant)`.
+- **Redirect URI**는 비워둡니다.
+
+**Register**를 클릭합니다. App의 개요 블레이드에서 **Application (client) ID**와 **Directory (tenant) ID**를 기록하세요 — 6단계에서 사용합니다.
+
+{/* SCREENSHOT: Azure portal "Register an application" form with name "crewai-secrets-reader" → /images/secrets-manager/azure-wi/01-register-app.png */}
+
+## 3단계 — Federated Identity Credential 추가
+
+Federated Identity Credential은 Microsoft Entra에 다음을 알려줍니다: *이 발급자가 발급한 JWT를 신뢰하라, 이 주체로, 이 App Registration에 대한 client assertion으로 제시될 때.*
+
+App Registration에서 **Certificates & secrets** → **Federated credentials** → **Add credential**로 이동합니다.
+
+- **Federated credential scenario:** `Other issuer`.
+- **Issuer:** 1단계의 CrewAI Platform 발급자 URL(예: `https://<your-platform-host>`).
+- **Subject identifier:** `organization:<YOUR_CREWAI_ORG_UUID>` — 정확히 JWT의 `sub` 클레임 값. CrewAI Platform의 조직 설정에서 조직 UUID를 찾으세요. 이는 federation을 특정 CrewAI 조직으로 범위 지정합니다 — 해당 조직의 자동화를 위해 발급된 토큰만 수락됩니다.
+- **Name:** 설명적인 레이블(예: `crewai-org-prod`).
+- **Audience:** `api://AzureADTokenExchange`. 이는 Microsoft Entra가 federated 자격 증명에 요구하는 고정 audience이며 CrewAI Platform이 JWT의 `aud` 클레임에 설정하는 값입니다.
+
+**Add**를 클릭합니다.
+
+<Tip>
+**조직별 격리.** 주체 식별자(`organization:<UUID>`)는 federated 자격 증명을 특정 CrewAI 조직의 토큰으로 제한합니다. 여러 CrewAI 조직이 하나의 App Registration을 공유해야 하는 경우, 조직당 하나의 Federated Identity Credential을 추가하세요(각각 조직의 UUID 사용).
+</Tip>
+
+자세한 내용은 Microsoft 문서를 참조하세요: [Configure a federated identity credential on an app](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust).
+
+{/* SCREENSHOT: "Add credential" panel with scenario = "Other issuer", issuer URL, subject "organization:<uuid>", audience "api://AzureADTokenExchange" → /images/secrets-manager/azure-wi/02-add-federated-credential.png */}
+
+## 4단계 — App Registration에 Key Vault 액세스 부여
+
+대상 볼트에서 App Registration에 **Key Vault Secrets User**를 부여합니다 — 정적 자격 증명 경로에서 사용할 것과 동일한 역할입니다. 볼트 전체(더 간단함) 또는 시크릿별(최소 권한)을 사용하세요.
+
+<Tabs>
+  <Tab title="볼트 전체 (더 간단함)">
+    ```bash
+    az role assignment create \
+      --assignee <APPLICATION_CLIENT_ID> \
+      --role "Key Vault Secrets User" \
+      --scope $(az keyvault show --name <VAULT_NAME> --query id -o tsv)
+    ```
+
+    볼트 전체 범위는 CrewAI Platform의 환경 변수 폼에 있는 **Secret Name 자동 완성**이 의존하는 `secrets/list` 권한을 부여합니다. 자동 완성이 작동하길 원한다면 이 탭을 선택하세요.
+
+    {/* SCREENSHOT: Key Vault "Add role assignment" panel with "Key Vault Secrets User" and the App Registration selected → /images/secrets-manager/azure-wi/03-grant-vault-rbac.png */}
+  </Tab>
+
+  <Tab title="시크릿별 (최소 권한)">
+    ```bash
+    az role assignment create \
+      --assignee <APPLICATION_CLIENT_ID> \
+      --role "Key Vault Secrets User" \
+      --scope $(az keyvault secret show --vault-name <VAULT_NAME> --name <SECRET_NAME> --query id -o tsv)
+    ```
+
+    시크릿별 바인딩은 CrewAI Platform의 환경 변수 폼에 있는 **Secret Name 자동 완성**을 비활성화합니다(자동 완성은 볼트 범위에서만 가능한 `secrets/list`가 필요합니다). 대신 전체 시크릿 이름을 입력하세요.
+
+    {/* SCREENSHOT: Per-secret IAM panel with the App Registration assigned **Key Vault Secrets User** at the secret resource scope → /images/secrets-manager/azure-wi/04-per-secret-rbac.png */}
+  </Tab>
+
+  <Tab title="포털 (UI)">
+    **볼트 전체** 할당:
+
+    1. Azure 포털에서 Key Vault를 엽니다.
+    2. **Access control (IAM)** → **Add** → **Add role assignment**를 클릭합니다.
+    3. 역할 **Key Vault Secrets User**를 선택하고 → **Next**를 클릭합니다.
+    4. **Select members**를 클릭하고 App Registration `crewai-secrets-reader`를 검색한 다음 **Select**를 클릭합니다.
+    5. **Review + assign**을 클릭합니다.
+
+    **시크릿별** 할당의 경우 동일한 흐름을 사용하지만 **Objects** → **Secrets** → 시크릿 선택 → 자체 **Access control (IAM)** 패널에서 시작합니다. 시크릿별 바인딩은 자동 완성을 비활성화합니다(위의 시크릿별 탭 참조).
+  </Tab>
+</Tabs>
+
+## 5단계 — Key Vault에 최소 하나의 시크릿 생성
+
+테스트할 시크릿이 아직 없다면 Azure CLI를 통해 하나 만듭니다:
+
+```bash
+az keyvault secret set \
+  --vault-name <VAULT_NAME> \
+  --name openai-api-key \
+  --value "sk-your-actual-key"
+```
+
+또는 Azure 포털을 통해:
+
+1. Key Vault를 열고 **Objects** → **Secrets**로 이동합니다.
+2. **Generate/Import**를 클릭합니다.
+3. **Upload options:** `Manual`. **Name:** 시크릿 이름(예: `openai-api-key`). **Secret value:** 값을 붙여 넣습니다.
+4. **Create**를 클릭합니다.
+
+<Note>
+**시크릿 이름 규칙.** Azure Key Vault 시크릿 이름에는 밑줄을 포함할 수 없습니다. CrewAI Platform은 Azure를 호출할 때 밑줄을 하이픈으로 자동으로 변환하므로(예: `db_password`는 `db-password`로 전송됨), 밑줄 스타일 환경 변수 이름을 유지할 수 있습니다 — 그러나 Key Vault의 기본 시크릿은 하이픈을 사용해야 합니다.
+</Note>
+
+## 6단계 — CrewAI Platform에 Workload Identity 구성 추가
+
+CrewAI Platform에서 **Settings** → **Workload Identity**로 이동하여 **Add Workload Identity Config**를 클릭합니다.
+
+폼을 작성합니다:
+
+- **Name:** 설명적인 이름(예: `azure-prod`).
+- **Cloud Provider:** `Azure`.
+- **Tenant ID:** 2단계의 Microsoft Entra **Directory (tenant) ID**.
+- **Client ID:** 2단계의 App Registration **Application (client) ID**.
+- (선택) Azure 기반 시크릿 자격 증명을 생성할 때 이것이 기본 WI 구성으로 선택되길 원한다면 **Set as default for Azure**를 체크합니다.
+
+**Audience**는 `api://AzureADTokenExchange`로 고정되어 있습니다 — Microsoft Entra는 federated 자격 증명에 대해 이 정확한 audience를 요구하므로 폼에 Audience 필드가 표시되지 않습니다.
+
+**Create**를 클릭합니다.
+
+{/* SCREENSHOT: "Add Workload Identity Config" form with Azure, tenant ID, client ID populated → /images/secrets-manager/azure-wi/05-amp-add-wi-config-azure.png */}
+{/* SCREENSHOT: Workload Identity list showing AWS, GCP, and Azure rows → /images/secrets-manager/azure-wi/06-amp-wi-list-with-azure.png */}
+
+## 7단계 — WI 구성에 바인딩된 Secret Provider Credential 추가
+
+**Settings** → **Secret Provider Credentials**로 이동하여 **Add Credential**을 클릭합니다.
+
+폼을 작성합니다:
+
+- **Name:** 설명적인 이름(예: `azure-prod-wi`).
+- **Provider:** `Azure Key Vault`.
+- **Authentication Method:** `Workload Identity`.
+- **Workload Identity Configuration:** 6단계에서 만든 구성을 선택합니다.
+- **Key Vault URL:** 볼트의 DNS 호스트 이름(예: `https://my-vault.vault.azure.net`).
+- (선택) **Set as default credential for this provider**를 체크합니다.
+
+Workload Identity 아래에서는 폼이 **Key Vault URL**만 요청합니다 — 정적 자격 증명 필드(Tenant ID, Client ID, Client Secret)는 이 경로에 적용되지 않으므로 의도적으로 숨겨집니다. tenant + client는 연결된 WI 구성에서 가져옵니다.
+
+**Create**를 클릭합니다.
+
+<Tip>
+**하나의 App Registration, 여러 볼트.** Key Vault URL은 WI 구성이 아닌 자격 증명에 있습니다. 따라서 하나의 App Registration(과 하나의 WI 구성)이 여러 Key Vault를 서비스할 수 있습니다 — 동일한 WI 구성에 연결된 볼트당 하나의 Secret Provider Credential을 만드세요.
+</Tip>
+
+{/* SCREENSHOT: "Add Secret Provider Credential" form with Azure + Workload Identity + WI config dropdown + vault URL → /images/secrets-manager/azure-wi/07-amp-add-credential-azure-wi.png */}
+
+## 8단계 — 연결 테스트
+
+자격 증명을 저장한 후 **Test Connection**을 클릭합니다. Workload Identity 자격 증명의 경우 OIDC 핸드셰이크를 검증합니다: CrewAI Platform이 JWT를 발급하고, federated `client_assertion`으로 Microsoft Entra에 제시한 다음, Entra가 볼트 범위 액세스 토큰을 반환하는지 확인합니다. 녹색 결과는 federation 바인딩이 정상임을 의미합니다.
+
+성공적인 Test Connection은 Federated Identity Credential의 발급자, 주체, audience가 모두 일치하고 App Registration이 접근 가능함을 증명합니다. 시크릿별 Key Vault RBAC가 올바르다는 것을 증명하지는 **않습니다** — 특정 시크릿에 대한 `getSecret`은 환경 변수가 kickoff에 해석될 때 별도로 수행됩니다. 핸드셰이크 실패 모드는 [문제 해결](#troubleshooting)을 참조하세요.
+
+## 9단계 — 환경 변수에서 시크릿 참조
+
+다른 Secrets Manager 기반 환경 변수와 마찬가지로 자동화에서 시크릿을 참조합니다. 폼 필드와 동작은 [Secrets Manager 사용하기](/ko/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables)를 참조하세요.
+
+## 10단계 — 로테이션 확인
+
+배포가 실행 중인 상태에서 Key Vault의 시크릿을 로테이션합니다:
+
+```bash
+az keyvault secret set \
+  --vault-name <VAULT_NAME> \
+  --name openai-api-key \
+  --value "rotated value"
+```
+
+새 자동화 kickoff를 트리거합니다. kickoff의 환경은 `"rotated value"`를 볼 것입니다 — 재배포, 워커 재시작, TTL 대기 없음.
+
+워커 로그에서 확인하려면 다음을 찾으세요:
+
+```
+Workload identity config '<id>' (azure): N secret(s) resolved
+```
+
+이 줄은 모든 kickoff에 나타나며 Azure Key Vault에 대한 새로운 `getSecret` 호출을 의미합니다.
+
+엔드 투 엔드 fingerprint 기반 검증은 [로테이션 엔드 투 엔드 검증](/ko/enterprise/features/secrets-manager/verify-rotation)을 참조하세요.
+
+## 문제 해결
+
+| 증상 | 가능한 원인 |
+|---|---|
+| Test Connection이 핸드셰이크 오류로 실패함 | federated `client_assertion`이 Microsoft Entra에 의해 거부되었습니다. Federated Identity Credential의 **Issuer**가 플랫폼의 `issuer` 값과 정확히 일치하는지, **Subject**가 `organization:<your-org-uuid>`(JWT의 `sub` 클레임과 일치)인지, **Audience**가 `api://AzureADTokenExchange`인지, 플랫폼의 OIDC 디스커버리 URL이 공용 인터넷을 통해 Entra에서 접근 가능한지 확인하세요. |
+| `AADSTS70021: No matching federated identity record found for presented assertion` | Federated Identity Credential의 **Issuer** + **Subject** + **Audience**가 모두 JWT와 정확히 일치하지 않습니다. 3단계를 다시 확인하세요: 주체는 `organization:<your-org-uuid>`(JWT의 `sub` 클레임과 일치)여야 하고, audience는 `api://AzureADTokenExchange`여야 합니다. |
+| `AADSTS700024: Client assertion is not within its valid time range` | CrewAI Platform 호스트의 시계가 실제 시간과 크게 다릅니다. 호스트의 NTP를 확인하세요. |
+| `AADSTS50013: Assertion failed signature validation` | Microsoft Entra가 JWT의 서명을 확인할 수 없습니다. `https://<your-platform-host>/oauth2/jwks`가 공용 인터넷에서 접근 가능하고 유효한 JWKS를 제공하는지 확인하세요. |
+| Secret Name 자동 완성에 `Forbidden — does not have permission to perform action 'Microsoft.KeyVault/vaults/secrets/.../list'` 표시 | App Registration의 **Key Vault Secrets User** 역할이 단일 시크릿으로 범위 지정되어 있습니다. `list` 데이터 플레인 액션이 허용되도록 볼트 범위에서 역할을 부여하세요. 4단계를 참조하세요. |
+| Test Connection은 통과하지만 kickoff가 시크릿을 해석하지 못함 | WI 바인딩은 정상이지만 실패한 시크릿에 시크릿별 Key Vault RBAC가 없습니다. 해당 특정 시크릿에 대한 **Key Vault Secrets User**를 감사하거나(또는 역할 할당을 볼트 범위로 확장). |
+| `Forbidden — request was not authorized` (레거시 액세스 정책을 사용하는 볼트) | 볼트가 Azure RBAC로 전환되지 않았습니다. 볼트의 **Access configuration**에서 권한 모델을 **Azure role-based access control**로 설정하고 4단계의 역할을 다시 부여하세요. |
+| `azure_vault_url is required for Azure secret resolution` (워커 로그) | Secret Provider Credential에 **Key Vault URL**이 없습니다. 7단계를 다시 확인하세요. |
+| 다음 kickoff에서 로테이션된 값이 적용되지 않음 | 자동화의 환경 변수가 Workload Identity 기반 자격 증명을 참조하는지 확인하세요(정적 키 자격 증명이 아님). 정적 경로는 배포 이미지에 값을 박습니다. |
+
+### 참고 링크
+
+- Microsoft: [Microsoft Entra Workload Identity Federation overview](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation)
+- Microsoft: [Configure a federated identity credential on an app](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust)
+- Microsoft: [Azure Key Vault RBAC guide](https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide)
+
+## 다음 단계
+
+- [환경 변수에서 시크릿 사용 및 권한 관리](/ko/enterprise/features/secrets-manager/usage)
+- 다중 클라우드의 경우 AWS 동등 설정은 [AWS Workload Identity (OIDC Federation)](/ko/enterprise/features/secrets-manager/aws-workload-identity)에, GCP 동등 설정은 [GCP Workload Identity Federation](/ko/enterprise/features/secrets-manager/gcp-workload-identity)에 있습니다.
+
+## 스크린샷 참조
+
+위의 자리 표시자는 다음에 매핑됩니다:
+
+- `01-register-app.png` — `crewai-secrets-reader`로 채워진 Azure 포털 "Register an application" 폼.
+- `02-add-federated-credential.png` — App Registration → Certificates & secrets → Federated credentials → Add credential, **Other issuer**, 플랫폼 발급자 URL, 주체 `organization:<uuid>`, audience `api://AzureADTokenExchange`.
+- `03-grant-vault-rbac.png` — Key Vault → Access control (IAM) → Add role assignment, **Key Vault Secrets User**와 App Registration이 선택됨.
+- `04-per-secret-rbac.png` — 동일한 폼이지만 단일 시크릿의 IAM 범위에서(대체 최소 권한 경로).
+- `05-amp-add-wi-config-azure.png` — Cloud Provider = Azure, Tenant ID, Client ID가 채워진 CrewAI Platform "Add Workload Identity Config" 폼.
+- `06-amp-wi-list-with-azure.png` — 생성 후 Workload Identity 목록 페이지, AWS, GCP 및 새 Azure 구성 행 표시.
+- `07-amp-add-credential-azure-wi.png` — Provider = Azure Key Vault, Auth = Workload Identity, WI 구성 선택, Key Vault URL이 채워진 "Add Secret Provider Credential" 폼.

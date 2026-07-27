@@ -22,7 +22,10 @@ Large Language Models (LLMs) are the core intelligence behind CrewAI agents. The
     The context window determines how much text an LLM can process at once. Larger windows (e.g., 128K tokens) allow for more context but may be more expensive and slower.
   </Card>
   <Card title="Temperature" icon="temperature-three-quarters">
-    Temperature (0.0 to 1.0) controls response randomness. Lower values (e.g., 0.2) produce more focused, deterministic outputs, while higher values (e.g., 0.8) increase creativity and variability.
+    Temperature is a sampling control supported by some models. Lower values
+    generally make sampling more focused, while higher values increase
+    variability. Some newer reasoning models ignore, deprecate, or reject this
+    parameter, so check the selected model's documentation before setting it.
   </Card>
   <Card title="Provider Selection" icon="server">
     Each LLM provider (e.g., OpenAI, Anthropic, Google) offers different models with varying capabilities, pricing, and features. Choose based on your needs for accuracy, speed, and cost.
@@ -38,7 +41,7 @@ There are different places in CrewAI code where you can specify the model to use
     The simplest way to get started. Set the model in your environment directly, through an `.env` file or in your app code. If you used `crewai create` to bootstrap your project, it will be set already.
 
     ```bash .env
-    MODEL=model-id  # e.g. gpt-4o, gemini-2.0-flash, claude-3-sonnet-...
+    MODEL=provider/model-id  # e.g. openai/gpt-5.6-terra
 
     # Be sure to set your API keys here too. See the Provider
     # section below.
@@ -57,7 +60,7 @@ There are different places in CrewAI code where you can specify the model to use
         goal: Conduct comprehensive research and analysis
         backstory: A dedicated research professional with years of experience
         verbose: true
-        llm: provider/model-id  # e.g. openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
+        llm: provider/model-id  # e.g. anthropic/claude-sonnet-4-6
         # (see provider configuration examples below for more)
     ```
 
@@ -76,32 +79,27 @@ There are different places in CrewAI code where you can specify the model to use
     from crewai import LLM
 
     # Basic configuration
-    llm = LLM(model="model-id-here")  # gpt-4o, gemini-2.0-flash, anthropic/claude...
+    llm = LLM(model="provider/model-id")  # e.g. gemini/gemini-3.6-flash
 
     # Advanced configuration with detailed parameters
     llm = LLM(
-        model="model-id-here",  # gpt-4o, gemini-2.0-flash, anthropic/claude...
-        temperature=0.7,        # Higher for more creative outputs
-        timeout=120,            # Seconds to wait for response
-        max_tokens=4000,        # Maximum length of response
-        top_p=0.9,              # Nucleus sampling parameter
-        frequency_penalty=0.1 , # Reduce repetition
-        presence_penalty=0.1,   # Encourage topic diversity
+        model="provider/model-id",
+        timeout=120,
+        max_tokens=4000,
         response_format={"type": "json"},  # For structured outputs
-        seed=42                 # For reproducible results
     )
     ```
 
     <Info>
       Parameter explanations:
-      - `temperature`: Controls randomness (0.0-1.0)
       - `timeout`: Maximum wait time for response
       - `max_tokens`: Limits response length
-      - `top_p`: Alternative to temperature for sampling
-      - `frequency_penalty`: Reduces word repetition
-      - `presence_penalty`: Encourages new topics
       - `response_format`: Specifies output structure
-      - `seed`: Ensures consistent outputs
+
+      Sampling controls such as `temperature` and `top_p`, penalty parameters,
+      token-limit names, and reasoning controls are model-specific. Add them
+      only when the selected provider and model support them. See the provider
+      examples below and the provider's model documentation.
     </Info>
   </Tab>
 </Tabs>
@@ -120,6 +118,13 @@ There are different places in CrewAI code where you can specify the model to use
 CrewAI supports a multitude of LLM providers, each offering unique features, authentication methods, and model capabilities.
 In this section, you'll find detailed examples that help you select, configure, and optimize the LLM that best fits your project's needs.
 
+<Warning>
+  Model availability changes frequently and can vary by account, region, and
+  cloud platform. The examples below use models that are current at the time of
+  writing, but they are not exhaustive support lists. Before deploying, verify
+  the model ID and lifecycle status in the provider's linked model catalog.
+</Warning>
+
 <AccordionGroup>
   <Accordion title="OpenAI">
     CrewAI provides native integration with OpenAI through the OpenAI Python SDK.
@@ -137,10 +142,10 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="openai/gpt-4o",
+        model="openai/gpt-5.6-terra",
         api_key="your-api-key",  # Or set OPENAI_API_KEY
-        temperature=0.7,
-        max_tokens=4000
+        reasoning_effort="medium",
+        max_completion_tokens=4000
     )
     ```
 
@@ -161,25 +166,16 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="openai/gpt-4o",
+        model="openai/gpt-5.6-terra",
         api_key="your-api-key",
         base_url="https://api.openai.com/v1",  # Optional custom endpoint
         organization="org-...",  # Optional organization ID
         project="proj_...",  # Optional project ID
-        temperature=0.7,
-        max_tokens=4000,
-        max_completion_tokens=4000,  # For newer models
-        top_p=0.9,
-        frequency_penalty=0.1,
-        presence_penalty=0.1,
-        stop=["END"],
-        seed=42,  # For reproducible outputs
+        max_completion_tokens=4000,
+        reasoning_effort="medium",
         stream=True,  # Enable streaming
         timeout=60.0,  # Request timeout in seconds
-        max_retries=3,  # Maximum retry attempts
-        logprobs=True,  # Return log probabilities
-        top_logprobs=5,  # Number of most likely tokens
-        reasoning_effort="medium"  # For o1 models: low, medium, high
+        max_retries=3  # Maximum retry attempts
     )
     ```
 
@@ -194,7 +190,7 @@ In this section, you'll find detailed examples that help you select, configure, 
         summary: str
 
     llm = LLM(
-        model="openai/gpt-4o",
+        model="openai/gpt-5.6-terra",
     )
     ```
 
@@ -203,30 +199,18 @@ In this section, you'll find detailed examples that help you select, configure, 
     - `OPENAI_BASE_URL`: Custom base URL for OpenAI API (optional)
 
     **Features:**
-    - Native function calling support (except o1 models)
+    - Native function calling support
     - Structured outputs with JSON schema
     - Streaming support for real-time responses
     - Token usage tracking
-    - Stop sequences support (except o1 models)
+    - Provider-specific generation controls
     - Log probabilities for token-level insights
-    - Reasoning effort control for o1 models
+    - Reasoning effort control for supported models
 
-    **Supported Models:**
-
-    | Model               | Context Window   | Best For                                      |
-    |---------------------|------------------|-----------------------------------------------|
-    | gpt-4.1             | 1M tokens        | Latest model with enhanced capabilities       |
-    | gpt-4.1-mini        | 1M tokens        | Efficient version with large context          |
-    | gpt-4.1-nano        | 1M tokens        | Ultra-efficient variant                       |
-    | gpt-4o              | 128,000 tokens   | Optimized for speed and intelligence          |
-    | gpt-4o-mini         | 200,000 tokens   | Cost-effective with large context             |
-    | gpt-4-turbo         | 128,000 tokens   | Long-form content, document analysis          |
-    | gpt-4               | 8,192 tokens     | High-accuracy tasks, complex reasoning        |
-    | o1                  | 200,000 tokens   | Advanced reasoning, complex problem-solving   |
-    | o1-preview          | 128,000 tokens   | Preview of reasoning capabilities             |
-    | o1-mini             | 128,000 tokens   | Efficient reasoning model                     |
-    | o3-mini             | 200,000 tokens   | Lightweight reasoning model                   |
-    | o4-mini             | 200,000 tokens   | Next-gen efficient reasoning                  |
+    OpenAI regularly adds models and retires older snapshots. See the
+    [OpenAI model catalog](https://developers.openai.com/api/docs/models) for
+    current model IDs, context windows, endpoint compatibility, and lifecycle
+    information.
 
     **Responses API:**
 
@@ -288,14 +272,8 @@ In this section, you'll find detailed examples that help you select, configure, 
     )
     ```
 
-    All models listed here https://llama.developer.meta.com/docs/models/ are supported.
-
-    | Model ID | Input context length | Output context length | Input Modalities | Output Modalities |
-    | --- | --- | --- | --- | --- |
-    | `meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8` | 128k | 4028 | Text, Image | Text |
-    | `meta_llama/Llama-4-Maverick-17B-128E-Instruct-FP8` | 128k | 4028 | Text, Image | Text |
-    | `meta_llama/Llama-3.3-70B-Instruct` | 128k | 4028 | Text | Text |
-    | `meta_llama/Llama-3.3-8B-Instruct` | 128k | 4028 | Text | Text |
+    See the [Meta Llama model overview](https://ai.meta.com/llama/get-started/)
+    for current model families, modalities, and context guidance.
 
     **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
     ```bash
@@ -365,7 +343,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="anthropic/claude-3-5-sonnet-20241022",
+        model="anthropic/claude-sonnet-4-6",
         api_key="your-api-key",  # Or set ANTHROPIC_API_KEY
         max_tokens=4096  # Required for Anthropic
     )
@@ -376,12 +354,10 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="anthropic/claude-3-5-sonnet-20241022",
+        model="anthropic/claude-sonnet-4-6",
         api_key="your-api-key",
         base_url="https://api.anthropic.com",  # Optional custom endpoint
-        temperature=0.7,
         max_tokens=4096,  # Required parameter
-        top_p=0.9,
         stop_sequences=["END", "STOP"],  # Anthropic uses stop_sequences
         stream=True,  # Enable streaming
         timeout=60.0,  # Request timeout in seconds
@@ -389,7 +365,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     )
     ```
 
-    **Extended Thinking (Claude Sonnet 4 and Beyond):**
+    **Extended Thinking:**
 
     CrewAI supports Anthropic's Extended Thinking feature, which allows Claude to think through problems in a more human-like way before responding. This is particularly useful for complex reasoning, analysis, and problem-solving tasks.
 
@@ -398,14 +374,14 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     # Enable extended thinking with default settings
     llm = LLM(
-        model="anthropic/claude-sonnet-4",
+        model="anthropic/claude-sonnet-4-6",
         thinking={"type": "enabled"},
         max_tokens=10000
     )
 
     # Configure thinking with budget control
     llm = LLM(
-        model="anthropic/claude-sonnet-4",
+        model="anthropic/claude-sonnet-4-6",
         thinking={
             "type": "enabled",
             "budget_tokens": 5000  # Limit thinking tokens
@@ -418,9 +394,8 @@ In this section, you'll find detailed examples that help you select, configure, 
     - `type`: Set to `"enabled"` to activate extended thinking mode
     - `budget_tokens` (optional): Maximum tokens to use for thinking (helps control costs)
 
-    **Models Supporting Extended Thinking:**
-    - `claude-sonnet-4` and newer models
-    - `claude-3-7-sonnet` (with extended thinking capabilities)
+    Thinking modes and accepted parameters vary across Claude generations.
+    Check the selected model's capabilities before enabling `thinking`.
 
     **When to Use Extended Thinking:**
     - Complex reasoning and multi-step problem solving
@@ -436,7 +411,7 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     **Features:**
     - Native tool use support for Claude 3+ models
-    - Extended Thinking support for Claude Sonnet 4+
+    - Extended Thinking support for compatible Claude models
     - Streaming support for real-time responses
     - Automatic system message handling
     - Stop sequences for controlled output
@@ -450,20 +425,10 @@ In this section, you'll find detailed examples that help you select, configure, 
     - First message must be from the user (automatically handled)
     - Messages must alternate between user and assistant
 
-    **Supported Models:**
-
-    | Model                        | Context Window | Best For                                      |
-    |------------------------------|----------------|-----------------------------------------------|
-    | claude-sonnet-4              | 200,000 tokens | Latest with extended thinking capabilities    |
-    | claude-3-7-sonnet            | 200,000 tokens | Advanced reasoning and agentic tasks          |
-    | claude-3-5-sonnet-20241022   | 200,000 tokens | Latest Sonnet with best performance           |
-    | claude-3-5-haiku             | 200,000 tokens | Fast, compact model for quick responses       |
-    | claude-3-opus                | 200,000 tokens | Most capable for complex tasks                |
-    | claude-3-sonnet              | 200,000 tokens | Balanced intelligence and speed               |
-    | claude-3-haiku               | 200,000 tokens | Fastest for simple tasks                      |
-    | claude-2.1                   | 200,000 tokens | Extended context, reduced hallucinations      |
-    | claude-2                     | 100,000 tokens | Versatile model for various tasks             |
-    | claude-instant               | 100,000 tokens | Fast, cost-effective for everyday tasks       |
+    See Anthropic's [models overview](https://platform.claude.com/docs/en/about-claude/models/overview)
+    for current model IDs and capabilities, and review the
+    [model deprecation table](https://platform.claude.com/docs/en/about-claude/model-deprecations)
+    before pinning a model in production.
 
     **Note:** To use Anthropic, install the required dependencies:
     ```bash
@@ -495,9 +460,8 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-2.0-flash",
+        model="gemini/gemini-3.6-flash",
         api_key="your-api-key",  # Or set GOOGLE_API_KEY/GEMINI_API_KEY
-        temperature=0.7
     )
     ```
 
@@ -506,11 +470,8 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-2.5-flash",
+        model="gemini/gemini-3.6-flash",
         api_key="your-api-key",
-        temperature=0.7,
-        top_p=0.9,
-        top_k=40,  # Top-k sampling parameter
         max_output_tokens=8192,
         stop_sequences=["END", "STOP"],
         stream=True,  # Enable streaming
@@ -536,8 +497,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-2.0-flash",
-        temperature=0.7
+        model="gemini/gemini-3.6-flash"
     )
     ```
 
@@ -554,7 +514,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-1.5-pro",
+        model="gemini/gemini-3.6-flash",
         project="your-gcp-project-id",
         location="us-central1"  # GCP region
     )
@@ -567,7 +527,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     - `GOOGLE_CLOUD_LOCATION`: GCP location (defaults to `us-central1`)
 
     **Features:**
-    - Native function calling support for Gemini 1.5+ and 2.x models
+    - Native function calling support for compatible Gemini models
     - Streaming support for real-time responses
     - Multimodal capabilities (text, images, video)
     - Safety settings configuration
@@ -575,53 +535,24 @@ In this section, you'll find detailed examples that help you select, configure, 
     - Automatic system instruction handling
     - Token usage tracking
 
-    **Gemini Models:**
-
-    Google offers a range of powerful models optimized for different use cases.
-
-    | Model                          | Context Window | Best For                                                          |
-    |--------------------------------|----------------|-------------------------------------------------------------------|
-    | gemini-2.5-flash               | 1M tokens      | Adaptive thinking, cost efficiency                                |
-    | gemini-2.5-pro                 | 1M tokens      | Enhanced thinking and reasoning, multimodal understanding         |
-    | gemini-2.0-flash               | 1M tokens      | Next generation features, speed, thinking                         |
-    | gemini-2.0-flash-thinking      | 32,768 tokens  | Advanced reasoning with thinking process                          |
-    | gemini-2.0-flash-lite          | 1M tokens      | Cost efficiency and low latency                                   |
-    | gemini-1.5-pro                 | 2M tokens      | Best performing, logical reasoning, coding                        |
-    | gemini-1.5-flash               | 1M tokens      | Balanced multimodal model, good for most tasks                    |
-    | gemini-1.5-flash-8b            | 1M tokens      | Fastest, most cost-efficient                                      |
-    | gemini-1.0-pro                 | 32,768 tokens  | Earlier generation model                                          |
-
-    **Gemma Models:**
-
-    The Gemini API also supports [Gemma models](https://ai.google.dev/gemma/docs) hosted on Google infrastructure.
-
-    | Model          | Context Window | Best For                           |
-    |----------------|----------------|------------------------------------|
-    | gemma-3-1b     | 32,000 tokens  | Ultra-lightweight tasks            |
-    | gemma-3-4b     | 128,000 tokens | Efficient general-purpose tasks    |
-    | gemma-3-12b    | 128,000 tokens | Balanced performance and efficiency|
-    | gemma-3-27b    | 128,000 tokens | High-performance tasks             |
+    Google publishes current Gemini IDs, capabilities, and lifecycle stages in
+    the [Gemini model catalog](https://ai.google.dev/gemini-api/docs/models).
+    Check the [deprecation schedule](https://ai.google.dev/gemini-api/docs/deprecations)
+    before choosing a stable or preview model. The Gemini API also hosts
+    [Gemma models](https://ai.google.dev/gemma/docs).
 
     **Note:** To use Google Gemini, install the required dependencies:
     ```bash
     uv add "crewai[google-genai]"
     ```
 
-    The full list of models is available in the [Gemini model docs](https://ai.google.dev/gemini-api/docs/models).
   </Accordion>
   <Accordion title="Google (Vertex AI)">
-    Get credentials from your Google Cloud Console and save it to a JSON file, then load it with the following code:
-    ```python Code
-    import json
-
-    file_path = 'path/to/vertex_ai_service_account.json'
-
-    # Load the JSON file
-    with open(file_path, 'r') as file:
-        vertex_credentials = json.load(file)
-
-    # Convert the credentials to a JSON string
-    vertex_credentials_json = json.dumps(vertex_credentials)
+    Authenticate with [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc), then configure the native Gemini provider for Vertex AI:
+    ```toml .env
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_CLOUD_PROJECT=<your-project-id>
+    GOOGLE_CLOUD_LOCATION=<location>
     ```
 
     Example usage in your CrewAI project:
@@ -629,27 +560,17 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="gemini-1.5-pro-latest", # or vertex_ai/gemini-1.5-pro-latest
-        temperature=0.7,
-        vertex_credentials=vertex_credentials_json
+        model="gemini/gemini-3.6-flash"
     )
     ```
 
-    Google offers a range of powerful models optimized for different use cases:
+    Vertex AI availability varies by region. Use the
+    [Vertex AI model catalog](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models)
+    to verify the model ID and location before deployment.
 
-    | Model                          | Context Window | Best For                                                          |
-    |--------------------------------|----------------|-------------------------------------------------------------------|
-    | gemini-2.5-flash-preview-04-17 | 1M tokens      | Adaptive thinking, cost efficiency                                |
-    | gemini-2.5-pro-preview-05-06   | 1M tokens      | Enhanced thinking and reasoning, multimodal understanding, advanced coding, and more |
-    | gemini-2.0-flash               | 1M tokens      | Next generation features, speed, thinking, and realtime streaming |
-    | gemini-2.0-flash-lite          | 1M tokens      | Cost efficiency and low latency                                   |
-    | gemini-1.5-flash               | 1M tokens      | Balanced multimodal model, good for most tasks                    |
-    | gemini-1.5-flash-8B            | 1M tokens      | Fastest, most cost-efficient, good for high-frequency tasks       |
-    | gemini-1.5-pro                 | 2M tokens      | Best performing, wide variety of reasoning tasks including logical reasoning, coding, and creative collaboration |
-
-    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    **Note:** This route uses CrewAI's native Gemini integration. Add it as a dependency to your project:
     ```bash
-    uv add 'crewai[litellm]'
+    uv add "crewai[google-genai]"
     ```
   </Accordion>
 
@@ -740,7 +661,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        model="bedrock/us.anthropic.claude-sonnet-4-6",
         region_name="us-east-1"
     )
     ```
@@ -750,7 +671,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        model="bedrock/us.anthropic.claude-sonnet-4-6",
         aws_access_key_id="your-access-key",  # Or set AWS_ACCESS_KEY_ID
         aws_secret_access_key="your-secret-key",  # Or set AWS_SECRET_ACCESS_KEY
         aws_session_token="your-session-token",  # For temporary credentials
@@ -795,38 +716,9 @@ In this section, you'll find detailed examples that help you select, configure, 
     - First message must be from user (automatically handled)
     - Some models (like Cohere) require conversation to end with user message
 
-    [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) is a managed service that provides access to multiple foundation models from top AI companies through a unified API.
-
-    | Model                   | Context Window       | Best For                                                          |
-    |-------------------------|----------------------|-------------------------------------------------------------------|
-    | Amazon Nova Pro         | Up to 300k tokens    | High-performance, model balancing accuracy, speed, and cost-effectiveness across diverse tasks. |
-    | Amazon Nova Micro       | Up to 128k tokens    | High-performance, cost-effective text-only model optimized for lowest latency responses. |
-    | Amazon Nova Lite        | Up to 300k tokens    | High-performance, affordable multimodal processing for images, video, and text with real-time capabilities. |
-    | Claude 3.7 Sonnet       | Up to 128k tokens    | High-performance, best for complex reasoning, coding & AI agents |
-    | Claude 3.5 Sonnet v2    | Up to 200k tokens    | State-of-the-art model specialized in software engineering, agentic capabilities, and computer interaction at optimized cost. |
-    | Claude 3.5 Sonnet       | Up to 200k tokens    | High-performance model delivering superior intelligence and reasoning across diverse tasks with optimal speed-cost balance. |
-    | Claude 3.5 Haiku        | Up to 200k tokens    | Fast, compact multimodal model optimized for quick responses and seamless human-like interactions |
-    | Claude 3 Sonnet         | Up to 200k tokens    | Multimodal model balancing intelligence and speed for high-volume deployments. |
-    | Claude 3 Haiku          | Up to 200k tokens    | Compact, high-speed multimodal model optimized for quick responses and natural conversational interactions |
-    | Claude 3 Opus           | Up to 200k tokens    | Most advanced multimodal model exceling at complex tasks with human-like reasoning and superior contextual understanding. |
-    | Claude 2.1              | Up to 200k tokens    | Enhanced version with expanded context window, improved reliability, and reduced hallucinations for long-form and RAG applications |
-    | Claude                  | Up to 100k tokens    | Versatile model excelling in sophisticated dialogue, creative content, and precise instruction following. |
-    | Claude Instant          | Up to 100k tokens    | Fast, cost-effective model for everyday tasks like dialogue, analysis, summarization, and document Q&A |
-    | Llama 3.1 405B Instruct | Up to 128k tokens    | Advanced LLM for synthetic data generation, distillation, and inference for chatbots, coding, and domain-specific tasks. |
-    | Llama 3.1 70B Instruct  | Up to 128k tokens    | Powers complex conversations with superior contextual understanding, reasoning and text generation. |
-    | Llama 3.1 8B Instruct   | Up to 128k tokens    | Advanced state-of-the-art model with language understanding, superior reasoning, and text generation. |
-    | Llama 3 70B Instruct    | Up to 8k tokens      | Powers complex conversations with superior contextual understanding, reasoning and text generation. |
-    | Llama 3 8B Instruct     | Up to 8k tokens      | Advanced state-of-the-art LLM with language understanding, superior reasoning, and text generation. |
-    | Titan Text G1 - Lite    | Up to 4k tokens      | Lightweight, cost-effective model optimized for English tasks and fine-tuning with focus on summarization and content generation. |
-    | Titan Text G1 - Express | Up to 8k tokens      | Versatile model for general language tasks, chat, and RAG applications with support for English and 100+ languages. |
-    | Cohere Command          | Up to 4k tokens      | Model specialized in following user commands and delivering practical enterprise solutions. |
-    | Jurassic-2 Mid          | Up to 8,191 tokens   | Cost-effective model balancing quality and affordability for diverse language tasks like Q&A, summarization, and content generation. |
-    | Jurassic-2 Ultra        | Up to 8,191 tokens   | Model for advanced text generation and comprehension, excelling in complex tasks like analysis and content creation. |
-    | Jamba-Instruct          | Up to 256k tokens    | Model with extended context window optimized for cost-effective text generation, summarization, and Q&A. |
-    | Mistral 7B Instruct     | Up to 32k tokens     | This LLM follows instructions, completes requests, and generates creative text. |
-    | Mistral 8x7B Instruct   | Up to 32k tokens     | An MOE LLM that follows instructions, completes requests, and generates creative text. |
-    | DeepSeek R1             | 32,768 tokens        | Advanced reasoning model                                                       |
-
+    Amazon Bedrock model access and IDs vary by region. Use AWS's
+    [supported models and regions](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html)
+    reference to select a model and verify Converse API support.
     **Note:** To use AWS Bedrock, install the required dependencies:
     ```bash
     uv add "crewai[bedrock]"
@@ -882,81 +774,14 @@ In this section, you'll find detailed examples that help you select, configure, 
     Example usage in your CrewAI project:
     ```python Code
     llm = LLM(
-        model="nvidia_nim/meta/llama3-70b-instruct",
+        model="nvidia_nim/nvidia/nvidia-nemotron-3-ultra-550b-a55b",
         temperature=0.7
     )
     ```
 
-    Nvidia NIM provides a comprehensive suite of models for various use cases, from general-purpose tasks to specialized applications.
-
-    | Model                                                                   | Context Window | Best For                                                          |
-    |-------------------------------------------------------------------------|----------------|-------------------------------------------------------------------|
-    | nvidia/mistral-nemo-minitron-8b-8k-instruct                              | 8,192 tokens   | State-of-the-art small language model delivering superior accuracy for chatbot, virtual assistants, and content generation. |
-    | nvidia/nemotron-4-mini-hindi-4b-instruct                                 | 4,096 tokens   | A bilingual Hindi-English SLM for on-device inference, tailored specifically for Hindi Language. |
-    | nvidia/llama-3.1-nemotron-70b-instruct                                  | 128k tokens    | Customized for enhanced helpfulness in responses                  |
-    | nvidia/llama3-chatqa-1.5-8b                                                | 128k tokens    | Advanced LLM to generate high-quality, context-aware responses for chatbots and search engines. |
-    | nvidia/llama3-chatqa-1.5-70b                                               | 128k tokens    | Advanced LLM to generate high-quality, context-aware responses for chatbots and search engines. |
-    | nvidia/vila                                                             | 128k tokens    | Multi-modal vision-language model that understands text/img/video and creates informative responses |
-    | nvidia/neva-22                                                          | 4,096 tokens   | Multi-modal vision-language model that understands text/images and generates informative responses |
-    | nvidia/nemotron-mini-4b-instruct                                         | 8,192 tokens   | General-purpose tasks |
-    | nvidia/usdcode-llama3-70b-instruct                                       | 128k tokens    | State-of-the-art LLM that answers OpenUSD knowledge queries and generates USD-Python code. |
-    | nvidia/nemotron-4-340b-instruct                                          | 4,096 tokens   | Creates diverse synthetic data that mimics the characteristics of real-world data. |
-    | meta/codellama-70b                                                      | 100k tokens    | LLM capable of generating code from natural language and vice versa. |
-    | meta/llama2-70b                                                         | 4,096 tokens   | Cutting-edge large language AI model capable of generating text and code in response to prompts. |
-    | meta/llama3-8b-instruct                                                | 8,192 tokens   | Advanced state-of-the-art LLM with language understanding, superior reasoning, and text generation. |
-    | meta/llama3-70b-instruct                                               | 8,192 tokens   | Powers complex conversations with superior contextual understanding, reasoning and text generation. |
-    | meta/llama-3.1-8b-instruct                                             | 128k tokens    | Advanced state-of-the-art model with language understanding, superior reasoning, and text generation. |
-    | meta/llama-3.1-70b-instruct                                            | 128k tokens    | Powers complex conversations with superior contextual understanding, reasoning and text generation. |
-    | meta/llama-3.1-405b-instruct                                           | 128k tokens    | Advanced LLM for synthetic data generation, distillation, and inference for chatbots, coding, and domain-specific tasks. |
-    | meta/llama-3.2-1b-instruct                                             | 128k tokens    | Advanced state-of-the-art small language model with language understanding, superior reasoning, and text generation. |
-    | meta/llama-3.2-3b-instruct                                             | 128k tokens    | Advanced state-of-the-art small language model with language understanding, superior reasoning, and text generation. |
-    | meta/llama-3.2-11b-vision-instruct                                     | 128k tokens    | Advanced state-of-the-art small language model with language understanding, superior reasoning, and text generation. |
-    | meta/llama-3.2-90b-vision-instruct                                     | 128k tokens    | Advanced state-of-the-art small language model with language understanding, superior reasoning, and text generation. |
-    | google/gemma-7b                                                        | 8,192 tokens   | Cutting-edge text generation model text understanding, transformation, and code generation. |
-    | google/gemma-2b                                                        | 8,192 tokens   | Cutting-edge text generation model text understanding, transformation, and code generation. |
-    | google/codegemma-7b                                                    | 8,192 tokens   | Cutting-edge model built on Google's Gemma-7B specialized for code generation and code completion. |
-    | google/codegemma-1.1-7b                                               | 8,192 tokens   | Advanced programming model for code generation, completion, reasoning, and instruction following. |
-    | google/recurrentgemma-2b                                              | 8,192 tokens   | Novel recurrent architecture based language model for faster inference when generating long sequences. |
-    | google/gemma-2-9b-it                                                  | 8,192 tokens   | Cutting-edge text generation model text understanding, transformation, and code generation. |
-    | google/gemma-2-27b-it                                                 | 8,192 tokens   | Cutting-edge text generation model text understanding, transformation, and code generation. |
-    | google/gemma-2-2b-it                                                  | 8,192 tokens   | Cutting-edge text generation model text understanding, transformation, and code generation. |
-    | google/deplot                                                         | 512 tokens     | One-shot visual language understanding model that translates images of plots into tables. |
-    | google/paligemma                                                      | 8,192 tokens   | Vision language model adept at comprehending text and visual inputs to produce informative responses. |
-    | mistralai/mistral-7b-instruct-v0.2                                   | 32k tokens     | This LLM follows instructions, completes requests, and generates creative text. |
-    | mistralai/mixtral-8x7b-instruct-v0.1                                 | 8,192 tokens   | An MOE LLM that follows instructions, completes requests, and generates creative text. |
-    | mistralai/mistral-large                                              | 4,096 tokens   | Creates diverse synthetic data that mimics the characteristics of real-world data. |
-    | mistralai/mixtral-8x22b-instruct-v0.1                               | 8,192 tokens   | Creates diverse synthetic data that mimics the characteristics of real-world data. |
-    | mistralai/mistral-7b-instruct-v0.3                                  | 32k tokens     | This LLM follows instructions, completes requests, and generates creative text. |
-    | nv-mistralai/mistral-nemo-12b-instruct                              | 128k tokens    | Most advanced language model for reasoning, code, multilingual tasks; runs on a single GPU. |
-    | mistralai/mamba-codestral-7b-v0.1                                   | 256k tokens    | Model for writing and interacting with code across a wide range of programming languages and tasks. |
-    | microsoft/phi-3-mini-128k-instruct                                  | 128K tokens    | Lightweight, state-of-the-art open LLM with strong math and logical reasoning skills. |
-    | microsoft/phi-3-mini-4k-instruct                                    | 4,096 tokens   | Lightweight, state-of-the-art open LLM with strong math and logical reasoning skills. |
-    | microsoft/phi-3-small-8k-instruct                                   | 8,192 tokens   | Lightweight, state-of-the-art open LLM with strong math and logical reasoning skills. |
-    | microsoft/phi-3-small-128k-instruct                                 | 128K tokens    | Lightweight, state-of-the-art open LLM with strong math and logical reasoning skills. |
-    | microsoft/phi-3-medium-4k-instruct                                  | 4,096 tokens   | Lightweight, state-of-the-art open LLM with strong math and logical reasoning skills. |
-    | microsoft/phi-3-medium-128k-instruct                                | 128K tokens    | Lightweight, state-of-the-art open LLM with strong math and logical reasoning skills. |
-    | microsoft/phi-3.5-mini-instruct                                     | 128K tokens    | Lightweight multilingual LLM powering AI applications in latency bound, memory/compute constrained environments |
-    | microsoft/phi-3.5-moe-instruct                                      | 128K tokens    | Advanced LLM based on Mixture of Experts architecture to deliver compute efficient content generation |
-    | microsoft/kosmos-2                                                  | 1,024 tokens   | Groundbreaking multimodal model designed to understand and reason about visual elements in images. |
-    | microsoft/phi-3-vision-128k-instruct                               | 128k tokens    | Cutting-edge open multimodal model exceling in high-quality reasoning from images. |
-    | microsoft/phi-3.5-vision-instruct                                  | 128k tokens    | Cutting-edge open multimodal model exceling in high-quality reasoning from images. |
-    | databricks/dbrx-instruct                                           | 12k tokens     | A general-purpose LLM with state-of-the-art performance in language understanding, coding, and RAG. |
-    | snowflake/arctic                                                   | 1,024 tokens   | Delivers high efficiency inference for enterprise applications focused on SQL generation and coding. |
-    | aisingapore/sea-lion-7b-instruct                                  | 4,096 tokens   | LLM to represent and serve the linguistic and cultural diversity of Southeast Asia |
-    | ibm/granite-8b-code-instruct                                      | 4,096 tokens   | Software programming LLM for code generation, completion, explanation, and multi-turn conversion. |
-    | ibm/granite-34b-code-instruct                                     | 8,192 tokens   | Software programming LLM for code generation, completion, explanation, and multi-turn conversion. |
-    | ibm/granite-3.0-8b-instruct                                       | 4,096 tokens   | Advanced Small Language Model supporting RAG, summarization, classification, code, and agentic AI |
-    | ibm/granite-3.0-3b-a800m-instruct                                | 4,096 tokens   | Highly efficient Mixture of Experts model for RAG, summarization, entity extraction, and classification |
-    | mediatek/breeze-7b-instruct                                       | 4,096 tokens   | Creates diverse synthetic data that mimics the characteristics of real-world data. |
-    | upstage/solar-10.7b-instruct                                      | 4,096 tokens   | Excels in NLP tasks, particularly in instruction-following, reasoning, and mathematics. |
-    | writer/palmyra-med-70b-32k                                        | 32k tokens     | Leading LLM for accurate, contextually relevant responses in the medical domain. |
-    | writer/palmyra-med-70b                                            | 32k tokens     | Leading LLM for accurate, contextually relevant responses in the medical domain. |
-    | writer/palmyra-fin-70b-32k                                        | 32k tokens     | Specialized LLM for financial analysis, reporting, and data processing |
-    | 01-ai/yi-large                                                    | 32k tokens     | Powerful model trained on English and Chinese for diverse tasks including chatbot and creative writing. |
-    | deepseek-ai/deepseek-coder-6.7b-instruct                         | 2k tokens      | Powerful coding model offering advanced capabilities in code generation, completion, and infilling |
-    | rakuten/rakutenai-7b-instruct                                     | 1,024 tokens   | Advanced state-of-the-art LLM with language understanding, superior reasoning, and text generation. |
-    | rakuten/rakutenai-7b-chat                                         | 1,024 tokens   | Advanced state-of-the-art LLM with language understanding, superior reasoning, and text generation. |
-    | baichuan-inc/baichuan2-13b-chat                                  | 4,096 tokens   | Support Chinese and English chat, coding, math, instruction following, solving quizzes |
+    NVIDIA NIM's hosted catalog changes frequently. Use the
+    [NVIDIA NIM model catalog](https://build.nvidia.com/models) to select a
+    current endpoint and verify its model ID, modalities, and context limits.
 
     **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
     ```bash
@@ -1074,15 +899,15 @@ In this section, you'll find detailed examples that help you select, configure, 
     Example usage in your CrewAI project:
     ```python Code
     llm = LLM(
-        model="groq/llama-3.2-90b-text-preview",
+        model="groq/qwen/qwen3.6-27b",
         temperature=0.7
     )
     ```
-    | Model             | Context Window   | Best For                                   |
-    |-------------------|------------------|--------------------------------------------|
-    | Llama 3.1 70B/8B  | 131,072 tokens   | High-performance, large context tasks      |
-    | Llama 3.2 Series  | 8,192 tokens     | General-purpose tasks                      |
-    | Mixtral 8x7B      | 32,768 tokens    | Balanced performance and context           |
+
+    Groq distinguishes production and preview models and retires model IDs
+    regularly. Check the [Groq model catalog](https://console.groq.com/docs/models)
+    and [deprecation page](https://console.groq.com/docs/deprecations) before
+    selecting a model for production.
 
     **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
     ```bash
@@ -1164,10 +989,13 @@ In this section, you'll find detailed examples that help you select, configure, 
     Example usage in your CrewAI project:
     ```python Code
     llm = LLM(
-        model="llama-3.1-sonar-large-128k-online",
-        base_url="https://api.perplexity.ai/"
+        model="perplexity/sonar-pro"
     )
     ```
+
+    See the [Perplexity model catalog](https://docs.perplexity.ai/getting-started/models)
+    and [changelog](https://docs.perplexity.ai/docs/resources/changelog) for
+    current model IDs and deprecation notices.
 
     **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
     ```bash
@@ -1204,17 +1032,14 @@ In this section, you'll find detailed examples that help you select, configure, 
     Example usage in your CrewAI project:
     ```python Code
     llm = LLM(
-        model="sambanova/Meta-Llama-3.1-8B-Instruct",
+        model="sambanova/Meta-Llama-3.3-70B-Instruct",
         temperature=0.7
     )
     ```
-    | Model              | Context Window         | Best For                                     |
-    |--------------------|------------------------|----------------------------------------------|
-    | Llama 3.1 70B/8B   | Up to 131,072 tokens   | High-performance, large context tasks        |
-    | Llama 3.1 405B     | 8,192 tokens           | High-performance and output quality          |
-    | Llama 3.2 Series   | 8,192 tokens           | General-purpose, multimodal tasks            |
-    | Llama 3.3 70B      | Up to 131,072 tokens   | High-performance and output quality          |
-    | Qwen2 familly      | 8,192 tokens           | High-performance and output quality          |
+    SambaNova Cloud's hosted models can change independently of CrewAI. Query
+    the [models endpoint](https://docs.sambanova.ai/docs/api-reference/models/get-environments-available-model-list-metadata)
+    and check the [deprecation guide](https://docs.sambanova.ai/docs/en/models/deprecations)
+    before deployment.
 
     **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
     ```bash
@@ -1232,7 +1057,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     Example usage in your CrewAI project:
     ```python Code
     llm = LLM(
-        model="cerebras/llama3.1-70b",
+        model="cerebras/gpt-oss-120b",
         temperature=0.7,
         max_tokens=8192
     )
@@ -1245,6 +1070,10 @@ In this section, you'll find detailed examples that help you select, configure, 
       - Good balance of speed and quality
       - Support for long context windows
     </Info>
+
+    See the [Cerebras model catalog](https://inference-docs.cerebras.ai/models/overview)
+    and [deprecation notices](https://inference-docs.cerebras.ai/support/deprecation)
+    for current public endpoint IDs.
 
     **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
     ```bash
@@ -1320,7 +1149,7 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
 
     # Create an LLM with streaming enabled
     llm = LLM(
-        model="openai/gpt-4o",
+        model="openai/gpt-5.6-terra",
         stream=True  # Enable streaming
     )
     ```
@@ -1370,7 +1199,7 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
 
     my_listener = MyCustomListener()
 
-    llm = LLM(model="gpt-4o-mini", temperature=0, stream=True)
+    llm = LLM(model="openai/gpt-5.6-terra", stream=True)
 
     researcher = Agent(
         role="About User",
@@ -1450,6 +1279,8 @@ CrewAI supports asynchronous LLM calls for improved performance and concurrency 
 
 CrewAI supports structured responses from LLM calls by allowing you to define a `response_format` using a Pydantic model. This enables the framework to automatically parse and validate the output, making it easier to integrate the response into your application without manual post-processing.
 
+Structured output support varies by provider and model. Test your chosen model before relying on structured responses in production.
+
 For example, you can define a Pydantic model to represent the expected response structure and pass it as the `response_format` when instantiating the LLM. The model will then be used to convert the LLM output into a structured Python object.
 
 ```python Code
@@ -1461,7 +1292,7 @@ class Dog(BaseModel):
     breed: str
 
 
-llm = LLM(model="gpt-4o", response_format=Dog)
+llm = LLM(model="openai/gpt-5.6-terra", response_format=Dog)
 
 response = llm.call(
     "Analyze the following messages and return the name, age, and breed. "
@@ -1490,8 +1321,8 @@ Learn how to get the most out of your LLM configuration:
     # 3. Task splitting for large contexts
 
     llm = LLM(
-        model="gpt-4",
-        max_tokens=4000,  # Limit response length
+        model="openai/gpt-5.6-terra",
+        max_completion_tokens=4000,  # Limit response length
     )
     ```
 
@@ -1515,15 +1346,16 @@ Learn how to get the most out of your LLM configuration:
         ```python
         # Configure model with appropriate settings
         llm = LLM(
-            model="openai/gpt-4-turbo-preview",
-            temperature=0.7,    # Adjust based on task
-            max_tokens=4096,    # Set based on output needs
-            timeout=300        # Longer timeout for complex tasks
+            model="openai/gpt-5.6-terra",
+            reasoning_effort="medium",
+            max_completion_tokens=4096,
+            timeout=300
         )
         ```
         <Tip>
-          - Lower temperature (0.1 to 0.3) for factual responses
-          - Higher temperature (0.7 to 0.9) for creative tasks
+          Use the controls supported by your selected model. Depending on the
+          provider, this may be `temperature`, a reasoning or thinking level,
+          or prompt instructions that define the desired style and variability.
         </Tip>
       </Step>
 

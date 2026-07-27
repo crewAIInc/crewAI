@@ -1,0 +1,332 @@
+---
+title: Microsoft OneDrive 통합
+description: "CrewAI를 위한 Microsoft OneDrive 통합으로 파일 및 폴더 관리."
+icon: "cloud"
+mode: "wide"
+---
+
+## 개요
+
+에이전트가 Microsoft OneDrive에서 파일과 폴더를 업로드, 다운로드 및 관리할 수 있도록 합니다. AI 기반 자동화로 파일 작업을 자동화하고, 콘텐츠를 구성하고, 공유 링크를 생성하며, 클라우드 스토리지 워크플로를 간소화합니다.
+
+## 전제 조건
+
+Microsoft OneDrive 통합을 사용하기 전에 다음 사항을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
+- OneDrive 액세스 권한이 있는 Microsoft 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Microsoft 계정 연결
+
+## Microsoft OneDrive 통합 설정
+
+### 1. Microsoft 계정 연결
+
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동
+2. 인증 통합 섹션에서 **Microsoft OneDrive** 찾기
+3. **연결**을 클릭하고 OAuth 플로우 완료
+4. 파일 액세스에 필요한 권한 부여
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token 복사
+
+### 2. 필요한 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## 사용 가능한 작업
+
+<AccordionGroup>
+  <Accordion title="microsoft_onedrive/list_files">
+    **설명:** OneDrive의 파일과 폴더를 나열합니다.
+
+    **매개변수:**
+    - `top` (integer, 선택사항): 검색할 항목 수 (최대 1000). 기본값: 50.
+    - `orderby` (string, 선택사항): 필드별 정렬 (예: "name asc", "lastModifiedDateTime desc"). 기본값: "name asc".
+    - `filter` (string, 선택사항): OData 필터 표현식.
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/get_file_info">
+    **설명:** 특정 파일 또는 폴더에 대한 정보를 가져옵니다.
+
+    **매개변수:**
+    - `item_id` (string, 필수): 파일 또는 폴더의 ID.
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/download_file">
+    **설명:** OneDrive에서 파일을 다운로드합니다.
+
+    **매개변수:**
+    - `item_id` (string, 필수): 다운로드할 파일의 ID.
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/upload_file">
+    **설명:** OneDrive에 파일을 업로드합니다.
+
+    **매개변수:**
+    - `file_name` (string, 필수): 업로드할 파일의 이름.
+    - `content` (string, 필수): Base64로 인코딩된 파일 내용.
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/create_folder">
+    **설명:** OneDrive에 새 폴더를 만듭니다.
+
+    **매개변수:**
+    - `folder_name` (string, 필수): 만들 폴더의 이름.
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/delete_item">
+    **설명:** OneDrive에서 파일 또는 폴더를 삭제합니다.
+
+    **매개변수:**
+    - `item_id` (string, 필수): 삭제할 파일 또는 폴더의 ID.
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/copy_item">
+    **설명:** OneDrive에서 파일 또는 폴더를 복사합니다.
+
+    **매개변수:**
+    - `item_id` (string, 필수): 복사할 파일 또는 폴더의 ID.
+    - `parent_id` (string, 선택사항): 대상 폴더의 ID (선택사항, 기본값은 루트).
+    - `new_name` (string, 선택사항): 복사된 항목의 새 이름 (선택사항).
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/move_item">
+    **설명:** OneDrive에서 파일 또는 폴더를 이동합니다.
+
+    **매개변수:**
+    - `item_id` (string, 필수): 이동할 파일 또는 폴더의 ID.
+    - `parent_id` (string, 필수): 대상 폴더의 ID.
+    - `new_name` (string, 선택사항): 항목의 새 이름 (선택사항).
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/search_files">
+    **설명:** OneDrive에서 파일과 폴더를 검색합니다.
+
+    **매개변수:**
+    - `query` (string, 필수): 검색 쿼리 문자열.
+    - `top` (integer, 선택사항): 반환할 결과 수 (최대 1000). 기본값: 50.
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/share_item">
+    **설명:** 파일 또는 폴더의 공유 링크를 만듭니다.
+
+    **매개변수:**
+    - `item_id` (string, 필수): 공유할 파일 또는 폴더의 ID.
+    - `type` (string, 선택사항): 공유 링크 유형. 옵션: view, edit, embed. 기본값: view.
+    - `scope` (string, 선택사항): 공유 링크 범위. 옵션: anonymous, organization. 기본값: anonymous.
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/get_thumbnails">
+    **설명:** 파일의 썸네일을 가져옵니다.
+
+    **매개변수:**
+    - `item_id` (string, 필수): 파일의 ID.
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/list_files_by_path">
+    **설명:** 특정 OneDrive 경로의 파일과 폴더를 나열합니다.
+
+    **매개변수:**
+    - `folder_path` (string, 필수): 폴더 경로 (예: 'Documents/Reports').
+    - `top` (integer, 선택사항): 검색할 항목 수 (최대 1000). 기본값: 50.
+    - `orderby` (string, 선택사항): 필드별 정렬 (예: "name asc", "lastModifiedDateTime desc"). 기본값: "name asc".
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/get_recent_files">
+    **설명:** OneDrive에서 최근에 액세스한 파일을 가져옵니다.
+
+    **매개변수:**
+    - `top` (integer, 선택사항): 검색할 항목 수 (최대 200). 기본값: 25.
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/get_shared_with_me">
+    **설명:** 사용자와 공유된 파일과 폴더를 가져옵니다.
+
+    **매개변수:**
+    - `top` (integer, 선택사항): 검색할 항목 수 (최대 200). 기본값: 50.
+    - `orderby` (string, 선택사항): 필드별 정렬. 기본값: "name asc".
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/get_file_by_path">
+    **설명:** 경로로 특정 파일 또는 폴더에 대한 정보를 가져옵니다.
+
+    **매개변수:**
+    - `file_path` (string, 필수): 파일 또는 폴더 경로 (예: 'Documents/report.docx').
+
+  </Accordion>
+
+  <Accordion title="microsoft_onedrive/download_file_by_path">
+    **설명:** 경로로 OneDrive에서 파일을 다운로드합니다.
+
+    **매개변수:**
+    - `file_path` (string, 필수): 파일 경로 (예: 'Documents/report.docx').
+
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예제
+
+### 기본 Microsoft OneDrive 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+
+# Microsoft OneDrive 기능을 가진 에이전트 생성
+onedrive_agent = Agent(
+    role="파일 관리자",
+    goal="OneDrive에서 파일과 폴더를 효율적으로 관리",
+    backstory="Microsoft OneDrive 파일 작업 및 구성 전문 AI 어시스턴트.",
+    apps=['microsoft_onedrive']  # 모든 OneDrive 작업을 사용할 수 있습니다
+)
+
+# 파일 나열 및 폴더 생성 작업
+organize_files_task = Task(
+    description="OneDrive 루트 디렉토리의 모든 파일을 나열하고 '프로젝트 문서'라는 새 폴더를 만드세요.",
+    agent=onedrive_agent,
+    expected_output="파일 목록이 표시되고 새 폴더 '프로젝트 문서'가 생성됨."
+)
+
+# 작업 실행
+crew = Crew(
+    agents=[onedrive_agent],
+    tasks=[organize_files_task]
+)
+
+crew.kickoff()
+```
+
+### 파일 업로드 및 관리
+
+```python
+from crewai import Agent, Task, Crew
+
+# 파일 작업에 특화된 에이전트 생성
+file_operator = Agent(
+    role="파일 운영자",
+    goal="파일을 정확하게 업로드, 다운로드 및 관리",
+    backstory="파일 처리 및 콘텐츠 관리에 능숙한 AI 어시스턴트.",
+    apps=['microsoft_onedrive/upload_file', 'microsoft_onedrive/download_file', 'microsoft_onedrive/get_file_info']
+)
+
+# 파일 업로드 및 관리 작업
+file_management_task = Task(
+    description="'report.txt'라는 이름의 텍스트 파일을 'This is a sample report for the project.' 내용으로 업로드한 다음 업로드된 파일에 대한 정보를 가져오세요.",
+    agent=file_operator,
+    expected_output="파일이 성공적으로 업로드되고 파일 정보가 검색됨."
+)
+
+crew = Crew(
+    agents=[file_operator],
+    tasks=[file_management_task]
+)
+
+crew.kickoff()
+```
+
+### 파일 정리 및 공유
+
+```python
+from crewai import Agent, Task, Crew
+
+# 파일 정리 및 공유를 위한 에이전트 생성
+file_organizer = Agent(
+    role="파일 정리자",
+    goal="파일을 정리하고 협업을 위한 공유 링크 생성",
+    backstory="파일 정리 및 공유 권한 관리에 뛰어난 AI 어시스턴트.",
+    apps=['microsoft_onedrive/search_files', 'microsoft_onedrive/move_item', 'microsoft_onedrive/share_item', 'microsoft_onedrive/create_folder']
+)
+
+# 파일 정리 및 공유 작업
+organize_share_task = Task(
+    description="이름에 'presentation'이 포함된 파일을 검색하고, '프레젠테이션'이라는 폴더를 만든 다음, 찾은 파일을 이 폴더로 이동하고 폴더에 대한 읽기 전용 공유 링크를 생성하세요.",
+    agent=file_organizer,
+    expected_output="파일이 '프레젠테이션' 폴더로 정리되고 공유 링크가 생성됨."
+)
+
+crew = Crew(
+    agents=[file_organizer],
+    tasks=[organize_share_task]
+)
+
+crew.kickoff()
+```
+
+## 문제 해결
+
+### 일반적인 문제
+
+**인증 오류**
+
+- Microsoft 계정이 파일 액세스에 필요한 권한을 가지고 있는지 확인하세요 (예: `Files.Read`, `Files.ReadWrite`).
+- OAuth 연결이 필요한 모든 범위를 포함하는지 확인하세요.
+
+**파일 업로드 문제**
+
+- 파일 업로드 시 `file_name`과 `content`가 제공되는지 확인하세요.
+- 바이너리 파일의 경우 내용이 Base64로 인코딩되어야 합니다.
+- OneDrive에 대한 쓰기 권한이 있는지 확인하세요.
+
+**파일/폴더 ID 문제**
+
+- 특정 파일 또는 폴더에 액세스할 때 항목 ID가 올바른지 다시 확인하세요.
+- 항목 ID는 `list_files` 또는 `search_files`와 같은 다른 작업에서 반환됩니다.
+- 참조하는 항목이 존재하고 액세스 가능한지 확인하세요.
+
+**검색 및 필터 작업**
+
+- `search_files` 작업에 적절한 검색어를 사용하세요.
+- `filter` 매개변수의 경우 올바른 OData 문법을 사용하세요.
+
+**파일 작업 (복사/이동)**
+
+- `move_item`의 경우 `item_id`와 `parent_id`가 모두 제공되는지 확인하세요.
+- `copy_item`의 경우 `item_id`만 필요합니다. `parent_id`는 지정하지 않으면 루트로 기본 설정됩니다.
+- 대상 폴더가 존재하고 액세스 가능한지 확인하세요.
+
+**공유 링크 생성**
+
+- 공유 링크를 만들기 전에 항목이 존재하는지 확인하세요.
+- 공유 요구 사항에 따라 적절한 `type`과 `scope`를 선택하세요.
+- `anonymous` 범위는 로그인 없이 액세스를 허용합니다. `organization`은 조직 계정이 필요합니다.
+
+### 도움 받기
+
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
+  Microsoft OneDrive 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에
+  문의하세요.
+</Card>
