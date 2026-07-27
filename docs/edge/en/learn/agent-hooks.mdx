@@ -106,8 +106,8 @@ The engine maps crewAI's points onto the eight agent-hooks points:
 | `INPUT` | `input` | resolved inputs | aborts the run | ✅ |
 | `PRE_TOOL_CALL` | `pre_tool_call` | tool args | blocks the call | ✅ |
 | `POST_TOOL_CALL` | `post_tool_call` | tool result | fails the result closed | ✅ |
-| `PRE_MODEL_CALL` | `pre_model_call` | messages | blocks the call | ⚠️ direct calls only |
-| `POST_MODEL_CALL` | `post_model_call` | response | fails the response closed | ⚠️ direct calls only |
+| `PRE_MODEL_CALL` | `pre_model_call` | messages | blocks the call | ✅ |
+| `POST_MODEL_CALL` | `post_model_call` | response | fails the response closed | ✅ |
 | `OUTPUT` | `output` | final output | blocks the output | ✅ |
 | `EXECUTION_END` | `agent_shutdown` | run summary | (records the end) | ✅ |
 
@@ -116,13 +116,13 @@ A `transform` at a **pre** point rewrites the args/messages in place; at a
 cannot raise, a **deny** there **fails closed** by replacing the result with a
 `[blocked by agent-hooks: <reason>]` marker rather than letting it through.
 
-<Warning>
-**Model-call coverage is partial.** `dispatch`-routed model calls (direct
-`llm.call(...)` and native providers) are governed. Model calls made through an
-**agent executor** currently run on a per-executor hook path that bypasses
-`dispatch`, so they are not yet governed by the engine — a tracked follow-up.
-Tool calls and execution boundaries are fully governed on every path.
-</Warning>
+<Note>
+**Model calls are governed on every path.** Both `dispatch`-routed calls
+(direct `llm.call(...)` and native providers) and calls made through an
+**agent executor** (sync or async) run the engine's adapter — the executor's
+model-call seam appends the same governor that `dispatch` does. Tool calls and
+execution boundaries are likewise governed on every path.
+</Note>
 
 crewAI's `PRE_STEP` / `POST_STEP` have no agent-hooks equivalent and remain
 crewAI-native.
@@ -166,7 +166,9 @@ Every emission produces a payload-free `InterceptionRecord`. Read
 
 - **agent-hooks is the engine.** `crewai.hooks.dispatch` appends the engine's
   per-point adapter as the authoritative final hook (installed via dependency
-  injection, so `dispatch` never imports the optional package). crewAI's `@on`
+  injection, so `dispatch` never imports the optional package). Seams that keep
+  their own hook list — the agent executor's model-call seam — append the same
+  adapter, so executor model calls are governed identically. crewAI's `@on`
   decorators and `before_tool_call` hooks are ergonomic sugar that run first.
 - **Optional & lazy.** The `agent_hooks` package loads only when the engine is
   first accessed; using it without the package installed raises an actionable
