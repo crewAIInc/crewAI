@@ -1,6 +1,7 @@
 """Tool that pauses execution for a given amount of time."""
 
 import asyncio
+import math
 import time
 from typing import Any
 
@@ -25,13 +26,25 @@ _DESCRIPTION_TEMPLATE = (
     "Do not use this to pace a conversation, to pretend to work, or when the "
     "information needed is already available. Waiting only lets clock time pass, it "
     "does not advance or check the job.\n"
-    "A single call waits at most {max_seconds} seconds. If more time is needed, "
+    "A single call waits at most {cap}. If more time is needed, "
     "call this tool again."
 )
 
 # Everything before the cap figure; used to tell a generated description from one
 # the caller wrote, so only generated text is kept in sync with ``max_seconds``.
-_GENERATED_DESCRIPTION_PREFIX = _DESCRIPTION_TEMPLATE.split("{max_seconds}")[0]
+_GENERATED_DESCRIPTION_PREFIX = _DESCRIPTION_TEMPLATE.split("{cap}")[0]
+
+
+def _format_seconds(value: float) -> str:
+    """Render a duration with a correctly pluralized unit.
+
+    Args:
+        value: The duration in seconds.
+
+    Returns:
+        The duration and its unit, e.g. ``"1 second"`` or ``"300 seconds"``.
+    """
+    return f"{value:g} second" if value == 1 else f"{value:g} seconds"
 
 
 def _build_description(max_seconds: float) -> str:
@@ -43,7 +56,7 @@ def _build_description(max_seconds: float) -> str:
     Returns:
         The tool description shown to the model.
     """
-    return _DESCRIPTION_TEMPLATE.format(max_seconds=f"{max_seconds:g}")
+    return _DESCRIPTION_TEMPLATE.format(cap=_format_seconds(max_seconds))
 
 
 def _is_generated_description(description: str) -> bool:
@@ -145,8 +158,9 @@ class WaitTool(BaseTool):
         """Validate and clamp the requested duration to ``max_seconds``.
 
         ``BaseTool.run`` skips ``args_schema`` validation when called with
-        positional arguments, so the non-negative bound is enforced here too
-        rather than left to ``time.sleep`` to reject.
+        positional arguments, so the bounds are enforced here too rather than
+        left to ``time.sleep`` to reject. Infinity is a valid request: it clamps
+        to the cap like any other oversized wait.
 
         Args:
             seconds: The requested wait duration.
@@ -155,8 +169,10 @@ class WaitTool(BaseTool):
             A tuple of the duration to actually wait and whether it was capped.
 
         Raises:
-            ValueError: If ``seconds`` is negative.
+            ValueError: If ``seconds`` is negative or not a number.
         """
+        if math.isnan(seconds):
+            raise ValueError("seconds must be a number, got NaN.")
         if seconds < 0:
             raise ValueError(f"seconds must be zero or greater, got {seconds:g}.")
         if seconds > self.max_seconds:
@@ -176,10 +192,11 @@ class WaitTool(BaseTool):
         Returns:
             A summary of how long was waited and whether the request was capped.
         """
-        parts = [f"Waited {waited:g} seconds."]
+        parts = [f"Waited {_format_seconds(waited)}."]
         if waited < requested:
             parts.append(
-                f"Requested {requested:g} seconds, capped at {self.max_seconds:g} seconds per call - "
+                f"Requested {_format_seconds(requested)}, capped at "
+                f"{_format_seconds(self.max_seconds)} per call - "
                 "call this tool again if more waiting is needed."
             )
         if reason:

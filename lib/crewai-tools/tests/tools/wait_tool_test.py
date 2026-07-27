@@ -1,10 +1,6 @@
 from unittest.mock import AsyncMock, patch
 
 from crewai_tools.tools.wait_tool import WaitTool
-from crewai_tools.tools.wait_tool.wait_tool import (
-    DEFAULT_MAX_SECONDS,
-    _build_description,
-)
 from pydantic import ValidationError
 import pytest
 
@@ -80,6 +76,31 @@ async def test_async_negative_seconds_is_rejected_when_passed_positionally(tool)
     mock_sleep.assert_not_awaited()
 
 
+@patch("crewai_tools.tools.wait_tool.wait_tool.time.sleep")
+def test_nan_seconds_is_rejected_when_passed_positionally(mock_sleep, tool):
+    with pytest.raises(ValueError, match="seconds must be a number"):
+        tool.run(float("nan"))
+
+    mock_sleep.assert_not_called()
+
+
+@patch("crewai_tools.tools.wait_tool.wait_tool.time.sleep")
+def test_infinite_seconds_is_capped_like_any_other_long_wait(mock_sleep, tool):
+    result = tool.run(float("inf"))
+
+    mock_sleep.assert_called_once_with(300)
+    assert "Waited 300 seconds." in result
+
+
+@patch("crewai_tools.tools.wait_tool.wait_tool.time.sleep")
+def test_singular_second_is_not_pluralized(mock_sleep):
+    tool = WaitTool(max_seconds=1)
+
+    assert "Waited 1 second." in tool.run(seconds=1)
+    assert "capped at 1 second per call" in tool.run(seconds=5)
+    assert "at most 1 second." in tool.description
+
+
 def test_invalid_max_seconds_is_rejected():
     with pytest.raises(ValidationError):
         WaitTool(max_seconds=0)
@@ -114,7 +135,7 @@ async def test_async_wait_caps_long_waits(tool):
     ],
 )
 def test_advertised_cap_matches_enforced_cap(build):
-    tool = build(_build_description(DEFAULT_MAX_SECONDS))
+    tool = build(WaitTool().description)
 
     assert tool.max_seconds == 10
     assert "at most 10 seconds" in tool.description
@@ -139,7 +160,7 @@ def test_waits_are_never_cached():
     # turning a poll-wait-check loop into a busy loop.
     tool = WaitTool()
 
-    assert tool.cache_function("{}", "Waited 1 seconds.") is False
+    assert tool.cache_function("{}", "Waited 1 second.") is False
     assert WaitTool.model_validate(tool.model_dump()).cache_function() is False
 
 
