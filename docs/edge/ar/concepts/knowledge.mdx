@@ -34,6 +34,11 @@ mode: "wide"
 - Qdrant
 - Milvus
 
+<Note>
+ثبّت الحزمة الإضافية الاختيارية قبل استيراد إعداد المزود: استخدم `uv add "crewai[qdrant]"` مع Qdrant أو `uv add "crewai[milvus]"` مع Milvus.
+تستخدم دالة التضمين الافتراضية في Milvus تضمينات OpenAI، لذا اضبط `OPENAI_API_KEY` قبل استدعاء `add_documents`. ويمكنك بدلًا من ذلك تمرير `embedding_function` مخصصة إلى `MilvusConfig`.
+</Note>
+
 ```python Code
 from crewai.rag.config.utils import set_rag_config, get_rag_client, clear_rag_config
 

@@ -4,6 +4,7 @@ from typing import Annotated, Any, Literal, Protocol, TypeAlias
 
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
+import pymilvus as _pymilvus  # type: ignore[import-untyped]  # noqa: F401
 from typing_extensions import NotRequired, TypedDict
 
 from crewai.rag.core.base_client import BaseCollectionParams
