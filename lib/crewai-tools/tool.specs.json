@@ -8967,7 +8967,7 @@
           "default": null,
           "description": "API key for E2B sandbox service",
           "name": "E2B_API_KEY",
-          "required": false
+          "required": true
         },
         {
           "default": null,
@@ -9188,7 +9188,7 @@
           "default": null,
           "description": "API key for E2B sandbox service",
           "name": "E2B_API_KEY",
-          "required": false
+          "required": true
         },
         {
           "default": null,
@@ -9408,7 +9408,7 @@
           "default": null,
           "description": "API key for E2B sandbox service",
           "name": "E2B_API_KEY",
-          "required": false
+          "required": true
         },
         {
           "default": null,
