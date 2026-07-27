@@ -1256,3 +1256,81 @@ class TestExecuteSingleNativeToolCall:
         assert isinstance(result, NativeToolCallResult)
         assert result.result_as_answer is False
         assert "blocked by hook" in result.result
+
+
+class TestResolvePlusClient:
+    def test_builds_the_default_when_no_client_is_installed(self) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_client
+
+        default = MagicMock()
+
+        assert resolve_plus_client(lambda: default) is default
+
+    def test_prefers_an_installed_client(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A hosted runtime installs a client; the default must not be built,
+        since looking up a user credential raises when there isn't one."""
+        from crewai.utilities import agent_utils
+
+        installed = MagicMock()
+        monkeypatch.setattr(agent_utils, "_create_plus_client_hook", lambda: installed)
+        default = MagicMock(side_effect=AssertionError("must not be called"))
+
+        assert agent_utils.resolve_plus_client(default) is installed
+        default.assert_not_called()
+
+
+class TestResolvePlusResponse:
+    def test_passes_through_a_sync_response(self) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        response = MagicMock()
+
+        assert resolve_plus_response(response) is response
+
+    @pytest.mark.parametrize("inside_loop", [False, True])
+    def test_awaits_an_async_response(self, inside_loop: bool) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        response = MagicMock()
+
+        async def call() -> Any:
+            return response
+
+        if not inside_loop:
+            assert resolve_plus_response(call()) is response
+            return
+
+        async def main() -> Any:
+            return resolve_plus_response(call())
+
+        assert asyncio.run(main()) is response
+
+    def test_carries_context_vars_into_the_worker_thread(self) -> None:
+        """Inside a running loop the coroutine runs on another thread; a client
+        reading runtime state (the platform token, flow context) must still see
+        the caller's values rather than defaults."""
+        from crewai.context import get_platform_integration_token, platform_context
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        async def call() -> Any:
+            return get_platform_integration_token()
+
+        async def main() -> Any:
+            with platform_context("token-from-caller"):
+                return resolve_plus_response(call())
+
+        assert asyncio.run(main()) == "token-from-caller"
+
+    def test_rejects_an_awaitable_bound_to_a_loop(self) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        async def main() -> None:
+            future: asyncio.Future[Any] = asyncio.get_running_loop().create_future()
+            future.set_result(MagicMock())
+
+            with pytest.raises(TypeError, match="must return a coroutine"):
+                resolve_plus_response(future)
+
+        asyncio.run(main())
