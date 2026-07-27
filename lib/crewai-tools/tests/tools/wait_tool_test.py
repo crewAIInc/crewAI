@@ -1,6 +1,10 @@
 from unittest.mock import AsyncMock, patch
 
 from crewai_tools.tools.wait_tool import WaitTool
+from crewai_tools.tools.wait_tool.wait_tool import (
+    DEFAULT_MAX_SECONDS,
+    _build_description,
+)
 from pydantic import ValidationError
 import pytest
 
@@ -91,6 +95,52 @@ async def test_async_wait_caps_long_waits(tool):
     mock_sleep.assert_awaited_once_with(300)
     assert "Waited 300 seconds." in result
     assert "Reason: deployment" in result
+
+
+@pytest.mark.parametrize(
+    "build",
+    [
+        pytest.param(lambda d: WaitTool(max_seconds=10), id="init"),
+        pytest.param(lambda d: WaitTool(10), id="init_positional"),
+        pytest.param(lambda d: WaitTool(max_seconds=10, description=d), id="init_desc"),
+        pytest.param(
+            lambda d: WaitTool.model_validate({"max_seconds": 10, "description": d}),
+            id="model_validate",
+        ),
+        pytest.param(
+            lambda d: WaitTool.model_validate(WaitTool(max_seconds=10).model_dump()),
+            id="round_trip",
+        ),
+    ],
+)
+def test_advertised_cap_matches_enforced_cap(build):
+    tool = build(_build_description(DEFAULT_MAX_SECONDS))
+
+    assert tool.max_seconds == 10
+    assert "at most 10 seconds" in tool.description
+    assert "300 seconds" not in tool.description
+
+
+def test_advertised_cap_follows_assignment():
+    tool = WaitTool()
+    tool.max_seconds = 10
+
+    assert "at most 10 seconds" in tool.description
+
+
+def test_caller_supplied_description_is_left_alone():
+    tool = WaitTool(max_seconds=10, description="Hold on for a bit.")
+
+    assert tool.description == "Hold on for a bit."
+
+
+def test_waits_are_never_cached():
+    # A cache hit would hand back "Waited N seconds." without any time passing,
+    # turning a poll-wait-check loop into a busy loop.
+    tool = WaitTool()
+
+    assert tool.cache_function("{}", "Waited 1 seconds.") is False
+    assert WaitTool.model_validate(tool.model_dump()).cache_function() is False
 
 
 def test_description_explains_when_to_use_it(tool):

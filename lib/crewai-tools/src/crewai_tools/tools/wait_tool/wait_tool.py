@@ -5,10 +5,33 @@ import time
 from typing import Any
 
 from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
+from crewai.types.callback import SerializableCallable
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from typing_extensions import Self
 
 
 DEFAULT_MAX_SECONDS: float = 300.0
+
+_DESCRIPTION_TEMPLATE = (
+    "Pause and do nothing for a set number of seconds before continuing.\n"
+    "Use this when work that was already started somewhere else needs real time to "
+    "finish before its status or result can be checked again, for example: a sandbox "
+    "build, test run, or script that is still executing; a deployment or provisioning "
+    "step that is still rolling out; a batch import, export, or training job; an async "
+    "API that returned a job id to poll later; or a rate limit or backoff that has to "
+    "cool down before retrying.\n"
+    "The usual pattern is: start the job, wait, check its status, and wait again if it "
+    "is still running.\n"
+    "Do not use this to pace a conversation, to pretend to work, or when the "
+    "information needed is already available. Waiting only lets clock time pass, it "
+    "does not advance or check the job.\n"
+    "A single call waits at most {max_seconds} seconds. If more time is needed, "
+    "call this tool again."
+)
+
+# Everything before the cap figure; used to tell a generated description from one
+# the caller wrote, so only generated text is kept in sync with ``max_seconds``.
+_GENERATED_DESCRIPTION_PREFIX = _DESCRIPTION_TEMPLATE.split("{max_seconds}")[0]
 
 
 def _build_description(max_seconds: float) -> str:
@@ -20,22 +43,36 @@ def _build_description(max_seconds: float) -> str:
     Returns:
         The tool description shown to the model.
     """
-    return (
-        "Pause and do nothing for a set number of seconds before continuing.\n"
-        "Use this when work that was already started somewhere else needs real time to "
-        "finish before its status or result can be checked again, for example: a sandbox "
-        "build, test run, or script that is still executing; a deployment or provisioning "
-        "step that is still rolling out; a batch import, export, or training job; an async "
-        "API that returned a job id to poll later; or a rate limit or backoff that has to "
-        "cool down before retrying.\n"
-        "The usual pattern is: start the job, wait, check its status, and wait again if it "
-        "is still running.\n"
-        "Do not use this to pace a conversation, to pretend to work, or when the "
-        "information needed is already available. Waiting only lets clock time pass, it "
-        "does not advance or check the job.\n"
-        f"A single call waits at most {max_seconds:g} seconds. If more time is needed, "
-        "call this tool again."
-    )
+    return _DESCRIPTION_TEMPLATE.format(max_seconds=f"{max_seconds:g}")
+
+
+def _is_generated_description(description: str) -> bool:
+    """Report whether a description came from :func:`_build_description`.
+
+    Args:
+        description: The description to inspect.
+
+    Returns:
+        True if the text was generated rather than authored by the caller.
+    """
+    return description.startswith(_GENERATED_DESCRIPTION_PREFIX)
+
+
+def _never_cache(_args: Any = None, _result: Any = None) -> bool:
+    """Refuse caching of wait results.
+
+    The value of a wait is the time that passed, not the message returned. A
+    cached hit would hand back "Waited 300 seconds." without waiting, silently
+    turning a poll-wait-check loop into a busy loop.
+
+    Args:
+        _args: Unused, part of the ``cache_function`` signature.
+        _result: Unused, part of the ``cache_function`` signature.
+
+    Returns:
+        Always False.
+    """
+    return False
 
 
 class WaitToolSchema(BaseModel):
@@ -61,7 +98,12 @@ class WaitTool(BaseTool):
 
     A single call waits at most ``max_seconds``. Longer requests are clamped to that
     cap and the result says so, so the model can call again instead of failing.
+
+    The generated description advertises the cap to the model, and is kept in sync
+    with ``max_seconds``. A description supplied by the caller is left alone.
     """
+
+    model_config = ConfigDict(validate_assignment=True)
 
     name: str = "Wait"
     description: str = _build_description(DEFAULT_MAX_SECONDS)
@@ -71,13 +113,33 @@ class WaitTool(BaseTool):
         gt=0,
         description="Upper bound, in seconds, for a single wait. Longer requests are capped to this value.",
     )
+    cache_function: SerializableCallable = Field(
+        default=_never_cache,
+        description="Waits are never cached: a cache hit would return the message without any time passing.",
+    )
 
     def __init__(self, max_seconds: float | None = None, **kwargs: Any) -> None:
         if max_seconds is not None:
             kwargs["max_seconds"] = max_seconds
         super().__init__(**kwargs)
-        if "description" not in kwargs:
-            self.description = _build_description(self.max_seconds)
+
+    @model_validator(mode="after")
+    def _sync_description_with_cap(self) -> Self:
+        """Keep a generated description's advertised cap equal to ``max_seconds``.
+
+        Runs on construction, ``model_validate``, and assignment, so the cap the
+        model is told about cannot drift from the one enforced. ``model_copy``
+        skips validation, as it does for any pydantic model, so prefer
+        construction or assignment when changing the cap.
+
+        Returns:
+            The validated tool.
+        """
+        expected = _build_description(self.max_seconds)
+        if self.description != expected and _is_generated_description(self.description):
+            # Bypass the field setter: assigning here would re-enter validation.
+            self.__dict__["description"] = expected
+        return self
 
     def _resolve_duration(self, seconds: float) -> tuple[float, bool]:
         """Validate and clamp the requested duration to ``max_seconds``.

@@ -25835,7 +25835,7 @@
             "type": "object"
           }
         },
-        "description": "Pause execution so a long-running job elsewhere has time to progress.\n\nAgents that kick off out-of-band work (a sandbox build, a deployment, an async\nAPI job) have no other way to let clock time pass: without this tool they either\npoll in a tight loop or give up before the work finishes.\n\nA single call waits at most ``max_seconds``. Longer requests are clamped to that\ncap and the result says so, so the model can call again instead of failing.",
+        "description": "Pause execution so a long-running job elsewhere has time to progress.\n\nAgents that kick off out-of-band work (a sandbox build, a deployment, an async\nAPI job) have no other way to let clock time pass: without this tool they either\npoll in a tight loop or give up before the work finishes.\n\nA single call waits at most ``max_seconds``. Longer requests are clamped to that\ncap and the result says so, so the model can call again instead of failing.\n\nThe generated description advertises the cap to the model, and is kept in sync\nwith ``max_seconds``. A description supplied by the caller is left alone.",
         "properties": {
           "max_seconds": {
             "default": 300.0,
