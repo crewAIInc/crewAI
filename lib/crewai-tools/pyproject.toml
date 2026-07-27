@@ -106,6 +106,9 @@ mcp = [
     "mcp>=1.6.0",
     "mcpadapt>=0.1.9",
 ]
+mengram = [
+    "mengram-ai>=2.28.0",
+]
 stagehand = [
     "stagehand>=0.4.1",
 ]
