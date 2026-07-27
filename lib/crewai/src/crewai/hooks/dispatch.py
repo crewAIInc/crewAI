@@ -343,6 +343,53 @@ def run_hooks(
         )
 
 
+# --- agent-hooks control engine (dependency-injected; optional) -------------
+# The engine is installed via set_governor() so this module never imports the
+# optional agent-hooks package. When active, dispatch() appends the engine's
+# per-point adapter as the authoritative final hook for the eight agent-hooks
+# lifecycle points; PRE_STEP / POST_STEP stay purely crewAI-native.
+GovernorFn = Callable[[InterceptionPoint], HookFn | None]
+_governor: GovernorFn | None = None
+
+
+def set_governor(governor: GovernorFn) -> None:
+    """Install the agent-hooks control engine as crewAI's governor.
+
+    Dependency-injected so this module never imports the optional agent-hooks
+    package. Idempotent replace: a second call supersedes the first.
+    """
+    global _governor
+    _governor = governor
+
+
+def clear_governor() -> None:
+    """Remove the active agent-hooks control engine, if any."""
+    global _governor
+    _governor = None
+
+
+def get_governor() -> GovernorFn | None:
+    """Return the active governor callable, or ``None``."""
+    return _governor
+
+
+def governed_hook(point: InterceptionPoint) -> HookFn | None:
+    """Return the governor's authoritative adapter for ``point``, or ``None``.
+
+    Seams that maintain their own ordered hook list outside :func:`dispatch`
+    (e.g. the agent executor's LLM-call seam, which runs an executor-local
+    snapshot of ``before_llm_call`` / ``after_llm_call`` hooks) use this to
+    append the agent-hooks control engine's per-point adapter exactly the way
+    :func:`dispatch` does, so an injected control engine governs those seams
+    too. Returns ``None`` when no engine is installed or the engine does not
+    govern ``point``.
+    """
+    governor = _governor
+    if governor is None:
+        return None
+    return governor(point)
+
+
 def dispatch(
     point: InterceptionPoint,
     ctx: Any,
@@ -353,9 +400,16 @@ def dispatch(
     """Dispatch a context to all hooks registered for a point.
 
     Resolves global then scoped hooks and runs them through :func:`run_hooks`.
-    No-op fast path when nothing is registered.
+    When an agent-hooks control engine is installed (see :func:`set_governor`),
+    its per-point adapter is appended as the authoritative final hook. No-op
+    fast path when nothing is registered and no engine governs the point.
     """
     hooks = _resolve_hooks(point)
+    governor = _governor
+    if governor is not None:
+        governed = governor(point)
+        if governed is not None:
+            hooks = [*hooks, governed]
     if not hooks:
         return ctx
     return run_hooks(point, ctx, hooks, reducer=reducer, verbose=verbose)

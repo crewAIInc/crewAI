@@ -1,0 +1,186 @@
+---
+title: Agent Hooks (control engine)
+description: Make the framework-neutral agent-hooks contract crewAI's control engine — one governance layer you can reuse across agent frameworks
+mode: "wide"
+---
+
+The **agent-hooks control engine** makes the framework-neutral
+[agent-hooks](https://github.com/responsibleai/agent-hooks) contract crewAI's
+control layer. agent-hooks defines a fixed set of lifecycle points, the context
+supplied at each, the `Verdict` an interceptor returns, and the obligations the
+host honours. You write a policy engine, content filter, rate limiter, or egress
+guard once as an agent-hooks `Interceptor`, activate it, and crewAI's `dispatch`
+delegates its lifecycle points to the agent-hooks emitter — running your
+interceptors as the **authoritative control layer** after any crewAI-native
+hooks.
+
+<Note>
+The agent-hooks engine governs the eight lifecycle **control** points. crewAI's
+native hooks remain the mechanism for things agent-hooks intentionally does not
+model — `PRE_STEP` / `POST_STEP`, pure observation/telemetry, and
+`request_human_input()` — and continue to run *before* the engine. See
+[Execution Hooks](/learn/execution-hooks).
+</Note>
+
+## Installation
+
+agent-hooks is an **optional** dependency with a compiled native core, so crewAI
+never requires it and `import crewai` never loads it. Install it from source:
+
+```bash
+pip install "agent-hooks-sdk @ git+https://github.com/responsibleai/agent-hooks.git#subdirectory=sdk/python"
+```
+
+Check availability at runtime:
+
+```python
+from crewai.hooks import HAS_AGENT_HOOKS  # loads the engine module on first access
+```
+
+## Quick start
+
+```python
+from crewai.hooks import use_agent_hooks
+from agent_hooks import AgentContext, Decision, Verdict
+
+
+class ToolAllowlist:
+    """Deny any tool that is not on an allowlist."""
+
+    def __init__(self, allowed: set[str]) -> None:
+        self._allowed = allowed
+
+    def intercept(self, ctx: AgentContext) -> Verdict:
+        if ctx["interception_point"] == "pre_tool_call":
+            name = ctx["tool_call"]["name"]
+            if name not in self._allowed:
+                return Verdict(decision=Decision.DENY, reason=f"tool '{name}' not allowed")
+        return Verdict(decision=Decision.ALLOW)
+
+
+engine = use_agent_hooks(ToolAllowlist(allowed={"web_search"}))
+try:
+    crew.kickoff(inputs={"topic": "quantum computing"})
+finally:
+    engine.close()  # deactivate and stop the background loop
+```
+
+`use_agent_hooks` accepts any number of interceptors, installs the engine as the
+process governor, and returns an `AgentHooksEngine`. It is also usable as a
+context manager:
+
+```python
+with use_agent_hooks(ToolAllowlist(allowed={"web_search"})) as engine:
+    crew.kickoff(inputs=...)
+    print(engine.records)  # auditable InterceptionRecord list
+```
+
+## Writing an interceptor
+
+An interceptor is any object with `intercept(context) -> Verdict`. The context is
+wire-shaped JSON (a `dict`) keyed by `interception_point`; the interceptable
+value is under `target`. A `Verdict` is one of three decisions:
+
+| Decision | Constructor | Meaning |
+|----------|-------------|---------|
+| **allow** | `Verdict(decision=Decision.ALLOW)` | proceed unchanged |
+| **deny** | `Verdict.deny(reason=...)` | block the action |
+| **transform** | `Verdict(decision=Decision.TRANSFORM, transform=Transform(path="$target", value=...))` | rewrite the interceptable value |
+
+`Verdict.warn(...)` (allow plus a recorded warning) and `Verdict.escalate(...)`
+(a liftable deny for the approval seam) are shortcuts for the other shapes.
+
+<Warning>
+Treat every context field as **untrusted**: it carries model output and tool
+results. Validate before you branch on it, and never feed it straight into a
+privileged tool, shell, or SQL statement.
+</Warning>
+
+## Lifecycle points and coverage
+
+The engine maps crewAI's points onto the eight agent-hooks points:
+
+| crewAI point | agent-hooks point | `target` | Deny behavior | Governed |
+|--------------|-------------------|----------|---------------|----------|
+| `EXECUTION_START` | `agent_startup` | inputs | aborts the run | ✅ |
+| `INPUT` | `input` | resolved inputs | aborts the run | ✅ |
+| `PRE_TOOL_CALL` | `pre_tool_call` | tool args | blocks the call | ✅ |
+| `POST_TOOL_CALL` | `post_tool_call` | tool result | fails the result closed | ✅ |
+| `PRE_MODEL_CALL` | `pre_model_call` | messages | blocks the call | ⚠️ direct calls only |
+| `POST_MODEL_CALL` | `post_model_call` | response | fails the response closed | ⚠️ direct calls only |
+| `OUTPUT` | `output` | final output | blocks the output | ✅ |
+| `EXECUTION_END` | `agent_shutdown` | run summary | (records the end) | ✅ |
+
+A `transform` at a **pre** point rewrites the args/messages in place; at a
+**post** point it replaces the result string. Because crewAI's *post* seams
+cannot raise, a **deny** there **fails closed** by replacing the result with a
+`[blocked by agent-hooks: <reason>]` marker rather than letting it through.
+
+<Warning>
+**Model-call coverage is partial.** `dispatch`-routed model calls (direct
+`llm.call(...)` and native providers) are governed. Model calls made through an
+**agent executor** currently run on a per-executor hook path that bypasses
+`dispatch`, so they are not yet governed by the engine — a tracked follow-up.
+Tool calls and execution boundaries are fully governed on every path.
+</Warning>
+
+crewAI's `PRE_STEP` / `POST_STEP` have no agent-hooks equivalent and remain
+crewAI-native.
+
+## Enforcement, composition, and approvals
+
+`use_agent_hooks` forwards the emitter's configuration:
+
+```python
+from agent_hooks import CompositionConfig, EnforcementMode
+from crewai.hooks import InterceptionPoint
+
+engine = use_agent_hooks(
+    PolicyA(),
+    PolicyB(),
+    mode=EnforcementMode.EVALUATE_ONLY,          # record decisions without blocking
+    composition=CompositionConfig.run_all(),      # run every interceptor, aggregate strictest
+    timeout=5.0,                                   # per-interceptor timeout (seconds)
+    record_sink=lambda record: audit_log(record), # stream every decision to your audit sink
+    points=[InterceptionPoint.PRE_TOOL_CALL],     # optionally restrict governed points
+)
+```
+
+- **Enforcement mode** — `ENFORCE` (default) acts on verdicts; `EVALUATE_ONLY`
+  records them without blocking or transforming (shadow mode — ideal for a safe
+  rollout).
+- **Composition** — how multiple interceptors combine (default
+  `sequential/first_deny`). See the agent-hooks spec for the full profile set.
+- **Approvals** — pass a `resolver` to lift `escalate` (liftable deny) verdicts
+  through an approval workflow.
+- **Timeouts** — each interceptor is bounded (default 5 s) and **fails closed**
+  on breach.
+
+## Auditability
+
+Every emission produces a payload-free `InterceptionRecord`. Read
+`engine.records` (or `engine.take_records()` to drain), or attach a
+`record_sink` callback to stream them to your audit store as they happen.
+
+## How it works
+
+- **agent-hooks is the engine.** `crewai.hooks.dispatch` appends the engine's
+  per-point adapter as the authoritative final hook (installed via dependency
+  injection, so `dispatch` never imports the optional package). crewAI's `@on`
+  decorators and `before_tool_call` hooks are ergonomic sugar that run first.
+- **Optional & lazy.** The `agent_hooks` package loads only when the engine is
+  first accessed; using it without the package installed raises an actionable
+  `ImportError`.
+- **Sync/async.** The agent-hooks emitter is asynchronous; crewAI's hook seams
+  are synchronous. The engine drives the emitter on a single dedicated
+  background event loop, which also serializes emissions so per-session
+  `sequence` numbers and records stay consistent.
+- **Fail closed.** Interceptor errors and timeouts become denies (per the
+  agent-hooks spec), and any unexpected engine error blocks rather than silently
+  allowing.
+
+<Note>
+agent-hooks is a **cooperative control contract, not a security boundary**: the
+host is trusted and interceptors run in-process. See the agent-hooks
+`SECURITY.md` for the normative statement.
+</Note>
