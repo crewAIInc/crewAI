@@ -331,6 +331,7 @@ def test_loaded_block_and_event_keep_the_catalog_label(tmp_path: Path) -> None:
             used.append(event.skill_name)
 
         context = loader.run(skill_name="globex/code-review")
+        assert crewai_event_bus.flush(timeout=10)
 
     assert '<skill name="globex/code-review">' in context
     assert used == ["globex/code-review"]
