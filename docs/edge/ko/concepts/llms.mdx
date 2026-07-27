@@ -21,7 +21,7 @@ Large Language Models(LLM)는 CrewAI 에이전트의 핵심 지능입니다. 에
     컨텍스트 윈도우는 LLM이 한 번에 처리할 수 있는 텍스트 양을 결정합니다. 더 큰 윈도우(예: 128K 토큰)는 더 많은 문맥을 다룰 수 있지만, 비용과 속도 면에서 더 부담이 될 수 있습니다.
   </Card>
   <Card title="Temperature" icon="temperature-three-quarters">
-    Temperature(0.0에서 1.0)는 응답의 무작위성을 조절합니다. 낮은 값(예: 0.2)은 더 집중적이고 결정적인 결과를, 높은 값(예: 0.8)은 창의성과 다양성을 높입니다.
+    Temperature는 일부 모델이 지원하는 샘플링 제어 옵션입니다. 값이 낮을수록 일반적으로 샘플링이 더 집중되고, 값이 높을수록 변동성이 커집니다. 일부 최신 추론 모델은 이 파라미터를 무시하거나 더 이상 권장하지 않거나 거부하므로, 설정하기 전에 선택한 모델의 문서를 확인하세요.
   </Card>
   <Card title="제공자 선택" icon="server">
     각 LLM 제공자(예: OpenAI, Anthropic, Google)는 다양한 기능, 가격, 특성을 가진 모델을 제공합니다. 정확성, 속도, 비용 등 요구 사항에 따라 선택하세요.
@@ -37,7 +37,7 @@ CrewAI 코드 내에는 사용할 모델을 지정할 수 있는 여러 위치�
     가장 간단하게 시작할 수 있는 방법입니다. `.env` 파일이나 앱 코드에서 환경 변수로 직접 모델을 설정할 수 있습니다. `crewai create`를 사용해 프로젝트를 부트스트랩했다면 이미 설정되어 있을 수 있습니다.
 
     ```bash .env
-    MODEL=model-id  # e.g. gpt-4o, gemini-2.0-flash, claude-3-sonnet-...
+    MODEL=provider/model-id  # e.g. openai/gpt-5.6-terra
 
     # 반드시 여기에서 API 키도 설정하세요. 아래 제공자
     # 섹션을 참고하세요.
@@ -56,7 +56,7 @@ CrewAI 코드 내에는 사용할 모델을 지정할 수 있는 여러 위치�
         goal: Conduct comprehensive research and analysis
         backstory: A dedicated research professional with years of experience
         verbose: true
-        llm: provider/model-id  # e.g. openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
+        llm: provider/model-id  # e.g. anthropic/claude-sonnet-4-6
         # (아래 제공자 구성 예제 참고)
     ```
 
@@ -75,32 +75,24 @@ CrewAI 코드 내에는 사용할 모델을 지정할 수 있는 여러 위치�
     from crewai import LLM
 
     # 기본 설정
-    llm = LLM(model="model-id-here")  # gpt-4o, gemini-2.0-flash, anthropic/claude...
+    llm = LLM(model="provider/model-id")  # e.g. gemini/gemini-3.6-flash
 
     # 자세한 파라미터로 고급 설정
     llm = LLM(
-        model="model-id-here",  # gpt-4o, gemini-2.0-flash, anthropic/claude...
-        temperature=0.7,        # 더욱 창의적인 결과를 원할 때 높게 설정
-        timeout=120,            # 응답을 기다릴 최대 초
-        max_tokens=4000,        # 응답의 최대 길이
-        top_p=0.9,              # 누클리어스 샘플링 파라미터
-        frequency_penalty=0.1 , # 반복 줄이기
-        presence_penalty=0.1,   # 주제 다양성 높이기
+        model="provider/model-id",
+        timeout=120,
+        max_tokens=4000,
         response_format={"type": "json"},  # 구조화된 출력용
-        seed=42                 # 결과 재현성 확보용
     )
     ```
 
     <Info>
       파라미터 설명:
-      - `temperature`: 랜덤성 제어 (0.0-1.0)
       - `timeout`: 응답 대기 최대 시간
       - `max_tokens`: 응답 길이 제한
-      - `top_p`: 샘플링 시 temperature의 대체값
-      - `frequency_penalty`: 단어 반복 감소
-      - `presence_penalty`: 새로운 주제 생성 유도
       - `response_format`: 출력 구조 지정
-      - `seed`: 일관된 출력 보장
+
+      `temperature`, `top_p` 같은 샘플링 제어, 페널티 파라미터, 토큰 제한 파라미터 이름, 추론 제어는 모델별로 다릅니다. 선택한 제공자와 모델이 지원하는 경우에만 추가하세요. 아래 제공자 예시와 해당 제공자의 모델 문서를 참고하세요.
     </Info>
   </Tab>
 </Tabs>
@@ -118,6 +110,10 @@ CrewAI 코드 내에는 사용할 모델을 지정할 수 있는 여러 위치�
 
 CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양한 LLM 공급자를 지원합니다.
 이 섹션에서는 프로젝트의 요구에 가장 적합한 LLM을 선택, 구성, 최적화하는 데 도움이 되는 자세한 예시를 제공합니다.
+
+<Warning>
+  모델 가용성은 자주 변경되며 계정, 리전, 클라우드 플랫폼에 따라 달라질 수 있습니다. 아래 예시는 작성 시점에 제공되는 모델을 사용하지만 전체 지원 목록은 아닙니다. 배포하기 전에 연결된 제공자 모델 카탈로그에서 모델 ID와 수명 주기 상태를 확인하세요.
+</Warning>
 
 <AccordionGroup>
   <Accordion title="OpenAI">
@@ -137,28 +133,13 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     from crewai import LLM
 
     llm = LLM(
-        model="openai/gpt-4", # call model by provider/model_name
-        temperature=0.8,
-        max_tokens=150,
-        top_p=0.9,
-        frequency_penalty=0.1,
-        presence_penalty=0.1,
-        stop=["END"],
-        seed=42
+        model="openai/gpt-5.6-terra",
+        reasoning_effort="medium",
+        max_completion_tokens=4000
     )
     ```
 
-    OpenAI는 다양한 모델과 기능을 제공하는 대표적인 LLM 공급자 중 하나입니다.
-
-    | 모델              | 컨텍스트 윈도우   | 최적 용도                                    |
-    |-------------------|-------------------|-----------------------------------------------|
-    | GPT-4             | 8,192 토큰        | 고정확도 작업, 복잡한 추론                   |
-    | GPT-4 Turbo       | 128,000 토큰      | 장문 콘텐츠, 문서 분석                       |
-    | GPT-4o & GPT-4o-mini  | 128,000 토큰  | 비용 효율적인 대용량 컨텍스트 처리           |
-    | o3-mini           | 200,000 토큰      | 빠른 추론, 복잡한 추론                       |
-    | o1-mini           | 128,000 토큰      | 빠른 추론, 복잡한 추론                       |
-    | o1-preview        | 128,000 토큰      | 빠른 추론, 복잡한 추론                       |
-    | o1                | 200,000 토큰      | 빠른 추론, 복잡한 추론                       |
+    OpenAI는 정기적으로 모델을 추가하고 이전 스냅샷을 폐기합니다. 현재 모델 ID, 컨텍스트 윈도우, 엔드포인트 호환성, 수명 주기 정보는 [OpenAI 모델 카탈로그](https://developers.openai.com/api/docs/models)를 확인하세요.
 
     **Responses API:**
 
@@ -215,14 +196,7 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     )
     ```
 
-    https://llama.developer.meta.com/docs/models/ 에 기재된 모든 모델이 지원됩니다.
-
-    | 모델 ID | 입력 컨텍스트 길이 | 출력 컨텍스트 길이 | 입력 모달리티    | 출력 모달리티    |
-    | ------- | ------------------ | ------------------ | ---------------- | ---------------- |
-    | `meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8` | 128k | 4028       | 텍스트, 이미지     | 텍스트           |
-    | `meta_llama/Llama-4-Maverick-17B-128E-Instruct-FP8` | 128k | 4028 | 텍스트, 이미지     | 텍스트           |
-    | `meta_llama/Llama-3.3-70B-Instruct`               | 128k | 4028       | 텍스트            | 텍스트           |
-    | `meta_llama/Llama-3.3-8B-Instruct`                | 128k | 4028       | 텍스트            | 텍스트           |
+    현재 모델 제품군, 모달리티, 컨텍스트 지침은 [Meta Llama 모델 개요](https://ai.meta.com/llama/get-started/)를 확인하세요.
 
     **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
     ```bash
@@ -291,10 +265,12 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     CrewAI 프로젝트에서의 예시 사용법:
     ```python Code
     llm = LLM(
-        model="anthropic/claude-3-sonnet-20240229-v1:0",
-        temperature=0.7
+        model="anthropic/claude-sonnet-4-6",
+        max_tokens=4096
     )
     ```
+
+    현재 모델 ID와 기능은 Anthropic의 [모델 개요](https://platform.claude.com/docs/en/about-claude/models/overview)를 확인하고, 프로덕션에서 모델을 고정하기 전에 [모델 지원 중단 표](https://platform.claude.com/docs/en/about-claude/model-deprecations)를 검토하세요.
   </Accordion>
 
   <Accordion title="Google (Gemini API)">
@@ -319,8 +295,7 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-2.0-flash",
-        temperature=0.7,
+        model="gemini/gemini-3.6-flash",
     )
     ```
 
@@ -339,8 +314,7 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-2.0-flash",
-        temperature=0.7
+        model="gemini/gemini-3.6-flash"
     )
     ```
 
@@ -352,47 +326,15 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
       자세한 내용은 [Vertex AI Express 모드 문서](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey)를 참조하세요.
     </Info>
 
-    ### Gemini 모델
-
-    Google은 다양한 용도에 최적화된 강력한 모델을 제공합니다.
-
-    | 모델                            | 컨텍스트 윈도우 | 최적 용도                                                               |
-    |----------------------------------|-----------------|------------------------------------------------------------------------|
-    | gemini-2.5-flash-preview-04-17   | 1M 토큰         | 적응형 사고, 비용 효율성                                                |
-    | gemini-2.5-pro-preview-05-06     | 1M 토큰         | 향상된 사고 및 추론, 멀티모달 이해, 고급 코딩 등                        |
-    | gemini-2.0-flash                 | 1M 토큰         | 차세대 기능, 속도, 사고, 실시간 스트리밍                                |
-    | gemini-2.0-flash-lite            | 1M 토큰         | 비용 효율성과 낮은 대기 시간                                            |
-    | gemini-1.5-flash                 | 1M 토큰         | 밸런스 잡힌 멀티모달 모델, 대부분의 작업에 적합                         |
-    | gemini-1.5-flash-8B              | 1M 토큰         | 가장 빠르고, 비용 효율적, 고빈도 작업에 적합                            |
-    | gemini-1.5-pro                   | 2M 토큰         | 최고의 성능, 논리적 추론, 코딩, 창의적 협업 등 다양한 추론 작업에 적합   |
-
-    전체 모델 목록은 [Gemini 모델 문서](https://ai.google.dev/gemini-api/docs/models)에서 확인할 수 있습니다.
-
-    ### Gemma
-
-    Gemini API를 통해 Google 인프라에서 호스팅되는 [Gemma 모델](https://ai.google.dev/gemma/docs)도 API 키를 이용해 사용할 수 있습니다.
-
-    | 모델           | 컨텍스트 윈도우 |
-    |----------------|----------------|
-    | gemma-3-1b-it  | 32k 토큰       |
-    | gemma-3-4b-it  | 32k 토큰       |
-    | gemma-3-12b-it | 32k 토큰       |
-    | gemma-3-27b-it | 128k 토큰      |
+    Google은 현재 Gemini ID, 기능, 수명 주기 단계를 [Gemini 모델 카탈로그](https://ai.google.dev/gemini-api/docs/models)에 게시합니다. 안정 또는 preview 모델을 선택하기 전에 [지원 중단 일정](https://ai.google.dev/gemini-api/docs/deprecations)을 확인하세요. Gemini API는 [Gemma 모델](https://ai.google.dev/gemma/docs)도 호스팅합니다.
 
   </Accordion>
   <Accordion title="Google (Vertex AI)">
-    Google Cloud Console에서 자격증명을 받아 JSON 파일로 저장한 후, 다음 코드로 로드하세요:
-    ```python Code
-    import json
-
-    file_path = 'path/to/vertex_ai_service_account.json'
-
-    # Load the JSON file
-    with open(file_path, 'r') as file:
-        vertex_credentials = json.load(file)
-
-    # Convert the credentials to a JSON string
-    vertex_credentials_json = json.dumps(vertex_credentials)
+    [애플리케이션 기본 사용자 인증 정보](https://cloud.google.com/docs/authentication/provide-credentials-adc)로 인증한 다음, Vertex AI를 사용하도록 네이티브 Gemini 제공업체를 구성하세요:
+    ```toml .env
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_CLOUD_PROJECT=<your-project-id>
+    GOOGLE_CLOUD_LOCATION=<location>
     ```
 
     CrewAI 프로젝트에서의 예시 사용법:
@@ -400,27 +342,15 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     from crewai import LLM
 
     llm = LLM(
-        model="gemini-1.5-pro-latest", # or vertex_ai/gemini-1.5-pro-latest
-        temperature=0.7,
-        vertex_credentials=vertex_credentials_json
+        model="gemini/gemini-3.6-flash"
     )
     ```
 
-    Google은 다양한 용도에 최적화된 강력한 모델들을 제공합니다:
+    사용 가능한 Vertex AI 모델과 리전은 [Vertex AI 모델 정보](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models)를 확인하세요.
 
-    | 모델                            | 컨텍스트 윈도우 | 최적 용도                                                               |
-    |----------------------------------|-----------------|------------------------------------------------------------------------|
-    | gemini-2.5-flash-preview-04-17   | 1M 토큰         | 적응형 사고, 비용 효율성                                                |
-    | gemini-2.5-pro-preview-05-06     | 1M 토큰         | 향상된 사고 및 추론, 멀티모달 이해, 고급 코딩 등                        |
-    | gemini-2.0-flash                 | 1M 토큰         | 차세대 기능, 속도, 사고, 실시간 스트리밍                                |
-    | gemini-2.0-flash-lite            | 1M 토큰         | 비용 효율성과 낮은 대기 시간                                            |
-    | gemini-1.5-flash                 | 1M 토큰         | 밸런스 잡힌 멀티모달 모델, 대부분의 작업에 적합                         |
-    | gemini-1.5-flash-8B              | 1M 토큰         | 가장 빠르고, 비용 효율적, 고빈도 작업에 적합                            |
-    | gemini-1.5-pro                   | 2M 토큰         | 최고의 성능, 논리적 추론, 코딩, 창의적 협업 등 다양한 추론 작업에 적합   |
-
-    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    **참고:** 이 경로는 CrewAI의 네이티브 Gemini 통합을 사용합니다. 프로젝트에 의존성으로 추가하세요:
     ```bash
-    uv add 'crewai[litellm]'
+    uv add "crewai[google-genai]"
     ```
   </Accordion>
 
@@ -455,7 +385,7 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     CrewAI 프로젝트에서의 예시 사용법:
     ```python Code
     llm = LLM(
-        model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
+        model="bedrock/us.anthropic.claude-sonnet-4-6"
     )
     ```
 
@@ -463,34 +393,6 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
 
     [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html)은 대표적인 AI 회사들의 여러 파운데이션 모델에 통합 API를 통해 접근할 수 있는 매니지드 서비스로, 안전하고 책임감 있는 AI 응용프로그램 개발을 가능하게 해줍니다.
 
-    | 모델                        | 컨텍스트 윈도우    | 최적 용도                                                               |
-    |-----------------------------|--------------------|------------------------------------------------------------------------|
-    | Amazon Nova Pro             | 최대 300k 토큰     | 다양한 작업에서 정확성, 속도, 비용을 균형 있게 제공하는 고성능 모델        |
-    | Amazon Nova Micro           | 최대 128k 토큰     | 텍스트 전용, 최소 레이턴시 응답에 최적화된 비용 효율적 고성능 모델         |
-    | Amazon Nova Lite            | 최대 300k 토큰     | 이미지, 비디오, 텍스트를 아우르는 실시간 멀티모달 처리                   |
-    | Claude 3.7 Sonnet           | 최대 128k 토큰     | 복잡한 추론, 코딩 및 AI 에이전트에 적합한 고성능 모델                     |
-    | Claude 3.5 Sonnet v2        | 최대 200k 토큰     | 소프트웨어 공학, 에이전트 기능, 컴퓨터 상호작용에 특화된 최신 모델         |
-    | Claude 3.5 Sonnet           | 최대 200k 토큰     | 다양한 작업에 탁월한 지능 및 추론 제공, 최적의 속도·비용 모델             |
-    | Claude 3.5 Haiku            | 최대 200k 토큰     | 빠르고 컴팩트한 멀티모달 모델, 신속하고 자연스러운 대화에 최적            |
-    | Claude 3 Sonnet             | 최대 200k 토큰     | 지능과 속도의 균형 잡힌 멀티모달 모델, 대규모 배포에 적합                |
-    | Claude 3 Haiku              | 최대 200k 토큰     | 컴팩트한 고속 멀티모달 모델, 신속한 응답과 자연스러운 대화형 상호작용      |
-    | Claude 3 Opus               | 최대 200k 토큰     | 인간 같은 추론과 우수한 문맥 이해로 복잡한 작업 수행                     |
-    | Claude 2.1                  | 최대 200k 토큰     | 확장된 컨텍스트, 신뢰도 개선, 로봇화 감소, 장문 및 RAG 적용에 적합         |
-    | Claude                      | 최대 100k 토큰     | 복잡한 대화, 창의적 콘텐츠 생성, 정교한 지시 수행에 탁월                  |
-    | Claude Instant              | 최대 100k 토큰     | 일상 대화, 분석, 요약, 문서 Q&A 등 빠르고 비용 효율적인 모델               |
-    | Llama 3.1 405B Instruct     | 최대 128k 토큰     | 챗봇, 코딩, 도메인 특화 작업을 위한 합성 데이터 생성 및 추론용 첨단 LLM    |
-    | Llama 3.1 70B Instruct      | 최대 128k 토큰     | 복잡한 대화, 우수한 문맥 및 추론, 텍스트 생성 능력 강화                   |
-    | Llama 3.1 8B Instruct       | 최대 128k 토큰     | 우수한 언어 이해, 추론, 텍스트 생성 기능의 최첨단 모델                     |
-    | Llama 3 70B Instruct        | 최대 8k 토큰       | 복잡한 대화, 우수한 문맥 및 추론, 텍스트 생성 기능 강화                   |
-    | Llama 3 8B Instruct         | 최대 8k 토큰       | 첨단 언어 이해력, 추론, 텍스트 생성이 가능한 최첨단 LLM                    |
-    | Titan Text G1 - Lite        | 최대 4k 토큰       | 영어 과제 및 요약, 콘텐츠 생성에 최적화된 경량 비용 효율적 모델            |
-    | Titan Text G1 - Express     | 최대 8k 토큰       | 일반 언어, 대화, RAG 지원, 영어 및 100여 개 언어 지원                      |
-    | Cohere Command              | 최대 4k 토큰       | 사용자의 명령 수행, 실질적 기업 솔루션 제공에 특화된 모델                  |
-    | Jurassic-2 Mid              | 최대 8,191 토큰    | 다양한 언어 과제(Q&A, 요약, 생성 등)에 적합한 품질-비용 균형 모델          |
-    | Jurassic-2 Ultra            | 최대 8,191 토큰    | 고급 텍스트 생성과 이해, 분석 및 콘텐츠 제작 등 복잡한 작업 수행            |
-    | Jamba-Instruct              | 최대 256k 토큰     | 비용 효율적인 대용량 문맥 창작, 요약, Q&A에 최적화된 모델                  |
-    | Mistral 7B Instruct         | 최대 32k 토큰      | 명령을 따르고, 요청을 완성하며, 창의적 텍스트를 생성하는 LLM               |
-    | Mistral 8x7B Instruct       | 최대 32k 토큰      | 명령 및 요청 완성, 창의적 텍스트 생성이 가능한 MOE LLM                     |
 
   </Accordion>
 
@@ -543,81 +445,13 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     CrewAI 프로젝트에서의 예시 사용법:
     ```python Code
     llm = LLM(
-        model="nvidia_nim/meta/llama3-70b-instruct",
+        model="nvidia_nim/nvidia/nvidia-nemotron-3-ultra-550b-a55b",
         temperature=0.7
     )
     ```
 
-    Nvidia NIM은 일반 목적 작업부터 특수 목적 응용까지 다양한 용도를 위한 모델 제품군을 제공합니다.
+    NVIDIA NIM의 호스팅 카탈로그는 자주 변경됩니다. 현재 endpoint를 선택하고 모델 ID, 모달리티, 컨텍스트 제한을 확인하려면 [NVIDIA NIM 모델 카탈로그](https://build.nvidia.com/models)를 사용하세요.
 
-    | 모델                                                                   | 컨텍스트 윈도우 | 최적 용도                                                           |
-    |------------------------------------------------------------------------|----------------|---------------------------------------------------------------------|
-    | nvidia/mistral-nemo-minitron-8b-8k-instruct                            | 8,192 토큰     | 챗봇, 가상 비서, 콘텐츠 생성을 위한 최신형 소형 언어 모델             |
-    | nvidia/nemotron-4-mini-hindi-4b-instruct                               | 4,096 토큰     | 힌디-영어 SLM, 힌디 언어 전용 온디바이스 추론                        |
-    | nvidia/llama-3.1-nemotron-70b-instruct                                 | 128k 토큰      | 더욱 도움이 되는 답변을 위해 커스터마이즈됨                           |
-    | nvidia/llama3-chatqa-1.5-8b                                            | 128k 토큰      | 챗봇, 검색엔진용 맥락 인식 응답 생성에 탁월한 고급 LLM                |
-    | nvidia/llama3-chatqa-1.5-70b                                           | 128k 토큰      | 챗봇, 검색엔진용 맥락 인식 응답 생성에 탁월한 고급 LLM                |
-    | nvidia/vila                                                            | 128k 토큰      | 텍스트/이미지/비디오 이해 및 정보성 응답 생성을 지원하는 멀티모달 모델 |
-    | nvidia/neva-22                                                         | 4,096 토큰     | 텍스트/이미지 이해 및 정보성 응답 생성을 지원하는 멀티모달 모델        |
-    | nvidia/nemotron-mini-4b-instruct                                       | 8,192 토큰     | 일반 목적 작업                                                       |
-    | nvidia/usdcode-llama3-70b-instruct                                     | 128k 토큰      | OpenUSD 지식 질의 응답, USD-Python 코드 생성이 가능한 최신 LLM         |
-    | nvidia/nemotron-4-340b-instruct                                        | 4,096 토큰     | 실제 데이터를 모사하는 다양한 합성 데이터 생성                        |
-    | meta/codellama-70b                                                     | 100k 토큰      | 자연어 → 코드 및 코드 → 자연어 전환 가능한 LLM                       |
-    | meta/llama2-70b                                                        | 4,096 토큰     | 텍스트, 코드 생성에 최적화된 최첨단 대형 언어 모델                    |
-    | meta/llama3-8b-instruct                                                | 8,192 토큰     | 최첨단 언어 이해 및 추론, 텍스트 생성 기능 모델                       |
-    | meta/llama3-70b-instruct                                               | 8,192 토큰     | 복잡한 대화, 우수한 문맥 및 추론, 텍스트 생성                         |
-    | meta/llama-3.1-8b-instruct                                             | 128k 토큰      | 최첨단 언어 이해 및 추론, 텍스트 생성 기능의 첨단 모델                 |
-    | meta/llama-3.1-70b-instruct                                            | 128k 토큰      | 복잡한 대화, 우수한 문맥 및 추론, 텍스트 생성                         |
-    | meta/llama-3.1-405b-instruct                                           | 128k 토큰      | 챗봇, 코딩, 도메인 특화 작업 합성 데이터 생성 및 추론                  |
-    | meta/llama-3.2-1b-instruct                                             | 128k 토큰      | 최첨단 소형 언어 이해, 추론, 텍스트 생성 모델                         |
-    | meta/llama-3.2-3b-instruct                                             | 128k 토큰      | 최첨단 소형 언어 이해, 추론, 텍스트 생성                               |
-    | meta/llama-3.2-11b-vision-instruct                                     | 128k 토큰      | 최첨단 소형 언어 이해, 추론, 텍스트 생성                               |
-    | meta/llama-3.2-90b-vision-instruct                                     | 128k 토큰      | 최첨단 소형 언어 이해, 추론, 텍스트 생성                               |
-    | google/gemma-7b                                                        | 8,192 토큰     | 문자열의 이해, 변환, 코드 생성을 지원하는 최첨단 텍스트 생성 모델      |
-    | google/gemma-2b                                                        | 8,192 토큰     | 문자열의 이해, 변환, 코드 생성을 지원하는 최첨단 텍스트 생성 모델      |
-    | google/codegemma-7b                                                    | 8,192 토큰     | 코드 생성 및 보완에 특화된 Google Gemma-7B 기반 모델                  |
-    | google/codegemma-1.1-7b                                                | 8,192 토큰     | 코드 생성, 보완, 추론, 명령 수행에 강점을 가진 고급 프로그래밍 모델   |
-    | google/recurrentgemma-2b                                               | 8,192 토큰     | 긴 시퀀스 생성 시 빠른 추론을 가능케 하는 순환 아키텍처 LLM           |
-    | google/gemma-2-9b-it                                                   | 8,192 토큰     | 문자열의 이해, 변환, 코드 생성을 지원하는 최첨단 텍스트 생성 모델      |
-    | google/gemma-2-27b-it                                                  | 8,192 토큰     | 문자열의 이해, 변환, 코드 생성을 지원하는 최첨단 텍스트 생성 모델      |
-    | google/gemma-2-2b-it                                                   | 8,192 토큰     | 문자열의 이해, 변환, 코드 생성을 지원하는 최첨단 텍스트 생성 모델      |
-    | google/deplot                                                          | 512 토큰       | 플롯 이미지를 표로 변환하는 원샷 비주얼 언어 이해 모델                |
-    | google/paligemma                                                       | 8,192 토큰     | 텍스트, 이미지 입력 이해 및 정보성 응답 생성에 능한 비전 언어 모델     |
-    | mistralai/mistral-7b-instruct-v0.2                                     | 32k 토큰       | 명령을 따르고, 요청을 완성하며, 창의적 텍스트 생성이 가능한 LLM        |
-    | mistralai/mixtral-8x7b-instruct-v0.1                                   | 8,192 토큰     | 명령 및 요청 완성, 창의 텍스트 생성이 가능한 MOE LLM                  |
-    | mistralai/mistral-large                                                | 4,096 토큰     | 실제 데이터 특성을 모방하는 다양한 합성 데이터 생성                    |
-    | mistralai/mixtral-8x22b-instruct-v0.1                                  | 8,192 토큰     | 실제 데이터 특성을 모방하는 다양한 합성 데이터 생성                    |
-    | mistralai/mistral-7b-instruct-v0.3                                     | 32k 토큰       | 명령을 따르고, 요청을 완성하며, 창의적 텍스트 생성이 가능한 LLM        |
-    | nv-mistralai/mistral-nemo-12b-instruct                                 | 128k 토큰      | 추론, 코드, 다국어 작업에 적합한 최첨단 언어 모델; 단일 GPU에서 구동    |
-    | mistralai/mamba-codestral-7b-v0.1                                      | 256k 토큰      | 광범위한 프로그래밍 언어 및 작업에서 코드 작성 및 상호작용 전용 모델     |
-    | microsoft/phi-3-mini-128k-instruct                                     | 128K 토큰      | 수학·논리 추론에 강한 경량 최신 공개 LLM                               |
-    | microsoft/phi-3-mini-4k-instruct                                       | 4,096 토큰     | 수학·논리 추론에 강한 경량 최신 공개 LLM                               |
-    | microsoft/phi-3-small-8k-instruct                                      | 8,192 토큰     | 수학·논리 추론에 강한 경량 최신 공개 LLM                               |
-    | microsoft/phi-3-small-128k-instruct                                    | 128K 토큰      | 수학·논리 추론에 강한 경량 최신 공개 LLM                               |
-    | microsoft/phi-3-medium-4k-instruct                                     | 4,096 토큰     | 수학·논리 추론에 강한 경량 최신 공개 LLM                               |
-    | microsoft/phi-3-medium-128k-instruct                                   | 128K 토큰      | 수학·논리 추론에 강한 경량 최신 공개 LLM                               |
-    | microsoft/phi-3.5-mini-instruct                                        | 128K 토큰      | 지연, 메모리/컴퓨트 한계 환경에서 AI 응용프로그램 구동 가능한 다국어 LLM |
-    | microsoft/phi-3.5-moe-instruct                                         | 128K 토큰      | 연산 효율적 콘텐츠 생성을 위한 Mixture of Experts 기반 첨단 LLM         |
-    | microsoft/kosmos-2                                                     | 1,024 토큰     | 이미지의 시각적 요소 이해 및 추론을 위한 획기적 멀티모달 모델           |
-    | microsoft/phi-3-vision-128k-instruct                                   | 128k 토큰      | 이미지에서 고품질 추론이 가능한 최첨단 공개 멀티모달 모델               |
-    | microsoft/phi-3.5-vision-instruct                                      | 128k 토큰      | 이미지에서 고품질 추론이 가능한 최첨단 공개 멀티모달 모델               |
-    | databricks/dbrx-instruct                                               | 12k 토큰       | 언어 이해, 코딩, RAG에 최신 성능을 제공하는 범용 LLM                    |
-    | snowflake/arctic                                                       | 1,024 토큰     | SQL 생성 및 코딩에 집중한 기업용 고효율 추론 모델                       |
-    | aisingapore/sea-lion-7b-instruct                                       | 4,096 토큰     | 동남아 언어 및 문화 다양성을 반영하는 LLM                               |
-    | ibm/granite-8b-code-instruct                                           | 4,096 토큰     | 소프트웨어 프로그래밍 LLM, 코드 생성, 완성, 설명, 멀티턴 전환            |
-    | ibm/granite-34b-code-instruct                                          | 8,192 토큰     | 소프트웨어 프로그래밍 LLM, 코드 생성, 완성, 설명, 멀티턴 전환            |
-    | ibm/granite-3.0-8b-instruct                                            | 4,096 토큰     | RAG, 요약, 분류, 코드, 에이전틱AI 지원 첨단 소형 언어 모델               |
-    | ibm/granite-3.0-3b-a800m-instruct                                      | 4,096 토큰     | RAG, 요약, 엔터티 추출, 분류에 최적화된 고효율 Mixture of Experts 모델   |
-    | mediatek/breeze-7b-instruct                                            | 4,096 토큰     | 실제 데이터 특성을 모방하는 다양한 합성 데이터 생성                     |
-    | upstage/solar-10.7b-instruct                                           | 4,096 토큰     | 지시 따르기, 추론, 수학 등에서 뛰어난 NLP 작업 수행                      |
-    | writer/palmyra-med-70b-32k                                             | 32k 토큰       | 의료 분야에서 정확하고 문맥에 맞는 응답 생성에 선도적인 LLM              |
-    | writer/palmyra-med-70b                                                 | 32k 토큰       | 의료 분야에서 정확하고 문맥에 맞는 응답 생성에 선도적인 LLM              |
-    | writer/palmyra-fin-70b-32k                                             | 32k 토큰       | 금융 분석, 보고, 데이터 처리에 특화된 LLM                                |
-    | 01-ai/yi-large                                                         | 32k 토큰       | 영어, 중국어로 훈련, 챗봇 및 창의적 글쓰기 등 다양한 작업에 사용         |
-    | deepseek-ai/deepseek-coder-6.7b-instruct                               | 2k 토큰        | 고급 코드 생성, 완성, 인필링 등의 기능을 제공하는 강력한 코딩 모델        |
-    | rakuten/rakutenai-7b-instruct                                          | 1,024 토큰     | 언어 이해, 추론, 텍스트 생성이 탁월한 최첨단 LLM                         |
-    | rakuten/rakutenai-7b-chat                                              | 1,024 토큰     | 언어 이해, 추론, 텍스트 생성이 탁월한 최첨단 LLM                         |
-    | baichuan-inc/baichuan2-13b-chat                                        | 4,096 토큰     | 중국어 및 영어 대화, 코딩, 수학, 지시 따르기, 퀴즈 풀이 지원             |
 
     **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
     ```bash
@@ -680,15 +514,12 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     CrewAI 프로젝트에서의 예시 사용법:
     ```python Code
     llm = LLM(
-        model="groq/llama-3.2-90b-text-preview",
+        model="groq/qwen/qwen3.6-27b",
         temperature=0.7
     )
     ```
-    | 모델            | 컨텍스트 윈도우    | 최적 용도                        |
-    |-----------------|-------------------|----------------------------------|
-    | Llama 3.1 70B/8B| 131,072 토큰      | 고성능, 대용량 문맥 작업         |
-    | Llama 3.2 Series| 8,192 토큰        | 범용 작업                        |
-    | Mixtral 8x7B    | 32,768 토큰       | 성능과 문맥의 균형               |
+
+    Groq는 production 모델과 preview 모델을 구분하며 모델 ID를 정기적으로 폐기합니다. 프로덕션 모델을 선택하기 전에 [Groq 모델 카탈로그](https://console.groq.com/docs/models)와 [지원 중단 페이지](https://console.groq.com/docs/deprecations)를 확인하세요.
 
     **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
     ```bash
@@ -770,10 +601,11 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     CrewAI 프로젝트에서의 예시 사용법:
     ```python Code
     llm = LLM(
-        model="llama-3.1-sonar-large-128k-online",
-        base_url="https://api.perplexity.ai/"
+        model="perplexity/sonar-pro"
     )
     ```
+
+    현재 모델 ID와 지원 중단 공지는 [Perplexity 모델 카탈로그](https://docs.perplexity.ai/getting-started/models)와 [changelog](https://docs.perplexity.ai/docs/resources/changelog)를 확인하세요.
 
     **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
     ```bash
@@ -810,17 +642,12 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     CrewAI 프로젝트에서의 예시 사용법:
     ```python Code
     llm = LLM(
-        model="sambanova/Meta-Llama-3.1-8B-Instruct",
+        model="sambanova/Meta-Llama-3.3-70B-Instruct",
         temperature=0.7
     )
     ```
-    | 모델            | 컨텍스트 윈도우      | 최적 용도                            |
-    |-----------------|---------------------|--------------------------------------|
-    | Llama 3.1 70B/8B| 최대 131,072 토큰   | 고성능, 대용량 문맥 작업             |
-    | Llama 3.1 405B  | 8,192 토큰         | 고성능, 높은 출력 품질               |
-    | Llama 3.2 Series| 8,192 토큰         | 범용, 멀티모달 작업                  |
-    | Llama 3.3 70B   | 최대 131,072 토큰   | 고성능, 높은 출력 품질               |
-    | Qwen2 familly   | 8,192 토큰         | 고성능, 높은 출력 품질               |
+
+    SambaNova Cloud의 호스팅 모델은 CrewAI와 별도로 변경될 수 있습니다. 배포 전에 [models endpoint](https://docs.sambanova.ai/docs/api-reference/models/get-environments-available-model-list-metadata)를 조회하고 [지원 중단 가이드](https://docs.sambanova.ai/docs/en/models/deprecations)를 확인하세요.
 
     **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
     ```bash
@@ -838,7 +665,7 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     CrewAI 프로젝트에서의 예시 사용법:
     ```python Code
     llm = LLM(
-        model="cerebras/llama3.1-70b",
+        model="cerebras/gpt-oss-120b",
         temperature=0.7,
         max_tokens=8192
     )
@@ -851,6 +678,8 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
       - 속도와 품질의 우수한 밸런스
       - 긴 컨텍스트 윈도우 지원
     </Info>
+
+    현재 공개 endpoint ID는 [Cerebras 모델 카탈로그](https://inference-docs.cerebras.ai/models/overview)와 [지원 중단 공지](https://inference-docs.cerebras.ai/support/deprecation)를 확인하세요.
 
     **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
     ```bash
@@ -926,7 +755,7 @@ CrewAI는 LLM의 스트리밍 응답을 지원하여, 애플리케이션이 출�
 
     # 스트리밍이 활성화된 LLM 생성
     llm = LLM(
-        model="openai/gpt-4o",
+        model="openai/gpt-5.6-terra",
         stream=True  # 스트리밍 활성화
     )
     ```
@@ -976,7 +805,7 @@ CrewAI는 LLM의 스트리밍 응답을 지원하여, 애플리케이션이 출�
 
     my_listener = MyCustomListener()
 
-    llm = LLM(model="gpt-4o-mini", temperature=0, stream=True)
+    llm = LLM(model="openai/gpt-5.6-terra", stream=True)
 
     researcher = Agent(
         role="About User",
@@ -1012,6 +841,8 @@ CrewAI는 LLM의 스트리밍 응답을 지원하여, 애플리케이션이 출�
 
 CrewAI는 Pydantic 모델을 사용하여 `response_format`을 정의함으로써 LLM 호출에서 구조화된 응답을 지원합니다. 이를 통해 프레임워크가 출력을 자동으로 파싱하고 검증할 수 있어, 수동 후처리 없이도 응답을 애플리케이션에 쉽게 통합할 수 있습니다.
 
+구조화된 출력 지원은 제공업체와 모델에 따라 다릅니다. 프로덕션에서 구조화된 응답에 의존하기 전에 선택한 모델을 테스트하세요.
+
 예를 들어, 예상되는 응답 구조를 나타내는 Pydantic 모델을 정의하고 LLM을 인스턴스화할 때 `response_format`으로 전달할 수 있습니다. 이 모델은 LLM 출력을 구조화된 Python 객체로 변환하는 데 사용됩니다.
 
 ```python Code
@@ -1023,7 +854,7 @@ class Dog(BaseModel):
     breed: str
 
 
-llm = LLM(model="gpt-4o", response_format=Dog)
+llm = LLM(model="openai/gpt-5.6-terra", response_format=Dog)
 
 response = llm.call(
     "Analyze the following messages and return the name, age, and breed. "
@@ -1052,8 +883,8 @@ LLM 설정을 최대한 활용하는 방법을 알아보세요:
     # 3. 큰 컨텍스트에 대한 작업 분할
 
     llm = LLM(
-        model="gpt-4",
-        max_tokens=4000,  # 응답 길이 제한
+        model="openai/gpt-5.6-terra",
+        max_completion_tokens=4000,  # 응답 길이 제한
     )
     ```
 
@@ -1077,15 +908,14 @@ LLM 설정을 최대한 활용하는 방법을 알아보세요:
         ```python
         # 모델을 적절한 설정으로 구성
         llm = LLM(
-            model="openai/gpt-4-turbo-preview",
-            temperature=0.7,    # 작업에 따라 조정
-            max_tokens=4096,    # 출력 요구 사항에 맞게 설정
-            timeout=300        # 복잡한 작업을 위한 더 긴 타임아웃
+            model="openai/gpt-5.6-terra",
+            reasoning_effort="medium",
+            max_completion_tokens=4096,
+            timeout=300
         )
         ```
         <Tip>
-          - 사실 기반 응답에는 낮은 temperature(0.1~0.3)
-          - 창의적인 작업에는 높은 temperature(0.7~0.9)
+          선택한 모델이 지원하는 제어 옵션을 사용하세요. 제공자에 따라 `temperature`, reasoning 또는 thinking 수준, 혹은 원하는 스타일과 변동성을 정의하는 프롬프트 지침을 사용할 수 있습니다.
         </Tip>
       </Step>
 
