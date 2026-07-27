@@ -94,6 +94,7 @@ class TestAsyncKnowledge:
         mock_storage.asearch.assert_called_once_with(
             ["test query"],
             limit=5,
+            metadata_filter=None,
             score_threshold=0.6,
         )
 

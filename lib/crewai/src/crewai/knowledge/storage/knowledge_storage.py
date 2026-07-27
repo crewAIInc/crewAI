@@ -19,6 +19,30 @@ from crewai.rag.types import BaseRecord, SearchResult
 from crewai.utilities.logger import Logger
 
 
+def _build_rag_documents(
+    documents: list[str],
+    metadata: dict[str, Any] | list[dict[str, Any]] | None,
+) -> list[BaseRecord]:
+    """Build BaseRecord entries, optionally attaching per-document metadata.
+
+    A single ``metadata`` dict is applied to every document. A list of dicts is
+    paired positionally with ``documents`` and must match its length.
+    """
+    if metadata is None:
+        return [{"content": doc} for doc in documents]
+    if isinstance(metadata, list):
+        if len(metadata) != len(documents):
+            raise ValueError(
+                "metadata list length does not match documents length: "
+                f"got {len(metadata)} metadata entries for {len(documents)} documents."
+            )
+        return [
+            {"content": doc, "metadata": dict(meta)}
+            for doc, meta in zip(documents, metadata, strict=True)
+        ]
+    return [{"content": doc, "metadata": dict(metadata)} for doc in documents]
+
+
 class KnowledgeStorage(BaseKnowledgeStorage):
     """
     Extends Storage to handle embeddings for memory entries, improving
@@ -102,7 +126,23 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 f"Error during knowledge reset: {e!s}\n{traceback.format_exc()}"
             )
 
-    def save(self, documents: list[str]) -> None:
+    def save(
+        self,
+        documents: list[str],
+        metadata: dict[str, Any] | list[dict[str, Any]] | None = None,
+    ) -> None:
+        """Save documents to the knowledge base.
+
+        Args:
+            documents: List of document strings to save.
+            metadata: Optional metadata attached to each stored document.
+                A single dict is applied to every document; a list of dicts
+                must have the same length as ``documents``.
+
+        Raises:
+            ValueError: If a metadata list is supplied and its length does not
+                match ``documents``.
+        """
         if not documents:
             return
 
@@ -115,7 +155,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
             client.get_or_create_collection(collection_name=collection_name)
 
-            rag_documents: list[BaseRecord] = [{"content": doc} for doc in documents]
+            rag_documents: list[BaseRecord] = _build_rag_documents(documents, metadata)
 
             client.add_documents(
                 collection_name=collection_name, documents=rag_documents
@@ -178,11 +218,22 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
             return []
 
-    async def asave(self, documents: list[str]) -> None:
+    async def asave(
+        self,
+        documents: list[str],
+        metadata: dict[str, Any] | list[dict[str, Any]] | None = None,
+    ) -> None:
         """Save documents to the knowledge base asynchronously.
 
         Args:
             documents: List of document strings to save.
+            metadata: Optional metadata attached to each stored document.
+                A single dict is applied to every document; a list of dicts
+                must have the same length as ``documents``.
+
+        Raises:
+            ValueError: If a metadata list is supplied and its length does not
+                match ``documents``.
         """
         if not documents:
             return
@@ -196,7 +247,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
             await client.aget_or_create_collection(collection_name=collection_name)
 
-            rag_documents: list[BaseRecord] = [{"content": doc} for doc in documents]
+            rag_documents: list[BaseRecord] = _build_rag_documents(documents, metadata)
 
             await client.aadd_documents(
                 collection_name=collection_name, documents=rag_documents
