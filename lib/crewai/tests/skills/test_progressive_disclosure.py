@@ -11,6 +11,8 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from crewai import Agent, Task
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.skill_events import SkillUsedEvent
 from crewai.llms.base_llm import BaseLLM
 from crewai.skills.models import METADATA
 from crewai.skills.parser import load_skill_metadata
@@ -296,3 +298,39 @@ def test_same_named_skills_from_different_orgs_stay_individually_loadable(
     assert sorted(loader.catalog) == ["acme/code-review", "globex/code-review"]
     assert "ACME_PRIVATE_INSTRUCTIONS" in loader.run(skill_name="acme/code-review")
     assert "GLOBEX_PRIVATE_INSTRUCTIONS" in loader.run(skill_name="globex/code-review")
+
+
+def test_loaded_block_and_event_keep_the_catalog_label(tmp_path: Path) -> None:
+    """A disambiguated skill must report the label the model was told to load."""
+    _create_skill(
+        tmp_path / "acme",
+        "code-review",
+        "Review code the Acme way.",
+        "ACME_PRIVATE_INSTRUCTIONS",
+    )
+    _create_skill(
+        tmp_path / "globex",
+        "code-review",
+        "Review code the Globex way.",
+        "GLOBEX_PRIVATE_INSTRUCTIONS",
+    )
+
+    loader = create_skill_loader_tool(
+        [
+            load_skill_metadata(tmp_path / "acme" / "code-review"),
+            load_skill_metadata(tmp_path / "globex" / "code-review"),
+        ]
+    )
+    assert loader is not None
+
+    used: list[str] = []
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(SkillUsedEvent)
+        def _record(_source: Any, event: SkillUsedEvent) -> None:
+            used.append(event.skill_name)
+
+        context = loader.run(skill_name="globex/code-review")
+
+    assert '<skill name="globex/code-review">' in context
+    assert used == ["globex/code-review"]

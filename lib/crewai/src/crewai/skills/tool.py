@@ -61,12 +61,12 @@ class LoadSkillTool(BaseTool):
             event=SkillUsedEvent(
                 from_agent=self.source,
                 from_task=self.task,
-                skill_name=activated.name,
+                skill_name=skill_name,
                 skill_path=activated.path,
                 disclosure_level=activated.disclosure_level,
             ),
         )
-        return format_skill_context(activated)
+        return format_skill_context(activated, label=skill_name)
 
 
 def resolve_loader_tool_name(reserved_names: Collection[str] = ()) -> str:
