@@ -1891,15 +1891,21 @@ def _setup_before_llm_call_hooks(
             HookAborted,
             InterceptionPoint,
             get_scoped_hooks,
+            governed_hook,
             run_hooks,
         )
         from crewai.hooks.llm_hooks import LLMCallHookContext, before_llm_call_reducer
 
-        # Executor snapshot first, then execution-scoped hooks — the same
-        # ordering dispatch() applies to global vs scoped hooks.
+        # Executor snapshot first, then execution-scoped hooks, then the
+        # agent-hooks control engine's authoritative adapter when installed —
+        # the same ordering dispatch() applies. Without appending the governor
+        # here an injected control engine would only run on the tool seams,
+        # leaving the pre-model-call point ungoverned on the agent executor path.
+        governed = governed_hook(InterceptionPoint.PRE_MODEL_CALL)
         hooks: list[Any] = [
             *executor_context.before_llm_call_hooks,
             *get_scoped_hooks(InterceptionPoint.PRE_MODEL_CALL),
+            *([governed] if governed is not None else []),
         ]
         if not hooks:
             return True
@@ -1915,13 +1921,26 @@ def _setup_before_llm_call_hooks(
                 reducer=before_llm_call_reducer,
                 verbose=verbose,
             )
-        except HookAborted:
+        except HookAborted as aborted:
+            # Preserve the historical contract for anonymous hook blocks (a
+            # hook returning False, or a bare HookAborted): the dispatcher tags
+            # these with the hook callable as ``source``, so return False and
+            # let the caller emit its generic block message. A governance
+            # engine (e.g. an injected agent-hooks control engine) raises with
+            # a string ``source`` identifier — surface its full reason so
+            # customers see the policy decision. The sole caller
+            # (_prepare_llm_call) already documents raising ValueError on block.
+            if not isinstance(aborted.source, str):
+                if verbose:
+                    printer.print(
+                        content="LLM call blocked by before_llm_call hook",
+                        color="yellow",
+                    )
+                return False
+            reason = aborted.reason or "LLM call blocked by before_llm_call hook"
             if verbose:
-                printer.print(
-                    content="LLM call blocked by before_llm_call hook",
-                    color="yellow",
-                )
-            return False
+                printer.print(content=reason, color="yellow")
+            raise ValueError(reason) from aborted
 
         if not isinstance(executor_context.messages, list):
             if verbose:
@@ -1959,7 +1978,12 @@ def _setup_after_llm_call_hooks(
         The potentially modified response (string or Pydantic model).
     """
     if executor_context:
-        from crewai.hooks.dispatch import InterceptionPoint, get_scoped_hooks, run_hooks
+        from crewai.hooks.dispatch import (
+            InterceptionPoint,
+            get_scoped_hooks,
+            governed_hook,
+            run_hooks,
+        )
         from crewai.hooks.llm_hooks import LLMCallHookContext, after_llm_call_reducer
 
         # Don't stringify structured tool-call payloads: the executor would
@@ -1968,11 +1992,15 @@ def _setup_after_llm_call_hooks(
         if not isinstance(answer, (str, BaseModel)):
             return answer
 
-        # Executor snapshot first, then execution-scoped hooks — the same
-        # ordering dispatch() applies to global vs scoped hooks.
+        # Executor snapshot first, then execution-scoped hooks, then the
+        # agent-hooks control engine's authoritative adapter when installed —
+        # the same ordering dispatch() applies. A post-model-call deny returns a
+        # fail-closed replacement response (the engine does not raise here).
+        governed = governed_hook(InterceptionPoint.POST_MODEL_CALL)
         hooks: list[Any] = [
             *executor_context.after_llm_call_hooks,
             *get_scoped_hooks(InterceptionPoint.POST_MODEL_CALL),
+            *([governed] if governed is not None else []),
         ]
         if not hooks:
             return answer
