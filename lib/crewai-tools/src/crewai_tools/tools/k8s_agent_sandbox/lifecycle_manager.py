@@ -58,12 +58,11 @@ class K8sAgentSandboxLifecycleManager(ABC):
         """
         Releases a sandbox that is previously acquired.
         """
-        if self._closed:
-            return
         if not self._sandbox_acquired:
             return
         try:
-            self._release_sandbox()
+            if not self._closed:
+                self._release_sandbox()
         finally:
             self._sandbox_acquired = False
             self._lock.release()
