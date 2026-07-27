@@ -174,6 +174,10 @@ from crewai_tools.tools.serply_api_tool.serply_webpage_to_markdown_tool import (
     SerplyWebpageToMarkdownTool,
 )
 from crewai_tools.tools.singlestore_search_tool import SingleStoreSearchTool
+from crewai_tools.tools.slack_tool.slack_tool import (
+    SlackChannelHistoryTool,
+    SlackSendMessageTool,
+)
 from crewai_tools.tools.snowflake_search_tool import (
     SnowflakeConfig,
     SnowflakeSearchTool,
@@ -293,6 +297,8 @@ __all__ = [
     "SerplyWebSearchTool",
     "SerplyWebpageToMarkdownTool",
     "SingleStoreSearchTool",
+    "SlackChannelHistoryTool",
+    "SlackSendMessageTool",
     "SnowflakeConfig",
     "SnowflakeSearchTool",
     "SnowflakeSearchToolInput",
