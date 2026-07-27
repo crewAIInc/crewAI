@@ -30,7 +30,7 @@ dependencies = [
     "pyjwt>=2.13.0,<3",
     # Configuration and Utils
     "click>=8.1.7,<9",
-    "appdirs~=1.4.4",
+    "platformdirs~=4.3",
     "jsonref~=1.1.0",
     "json-repair~=0.60.1",
     "cel-python>=0.5.0,<0.6",

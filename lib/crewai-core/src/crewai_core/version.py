@@ -17,7 +17,7 @@ from typing import Any
 from urllib import request
 from urllib.error import URLError
 
-import appdirs
+import platformdirs
 from packaging.version import InvalidVersion, Version, parse
 
 
@@ -41,7 +41,7 @@ def get_crewai_version() -> str:
 @lru_cache(maxsize=1)
 def _get_cache_file() -> Path:
     """Return the path to the version cache file, creating the dir if needed."""
-    cache_dir = Path(appdirs.user_cache_dir("crewai"))
+    cache_dir = Path(platformdirs.user_cache_dir("crewai"))
     cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir / "version_cache.json"
 
