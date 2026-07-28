@@ -1,11 +1,11 @@
 import importlib
-from typing import Any
+import types
 
 # Global dictionary acting as the cache collection
-_MODULE_CACHE: dict[str, Any] = {}
+_MODULE_CACHE: dict[str, types.ModuleType] = {}
 
 
-def lazy_import_k8s_agent_sandbox(target: str):
+def lazy_import_k8s_agent_sandbox(target: str) -> types.ModuleType:
     """
     Lazily imports a module or attribute by string name, caches it globally,
     and returns it. Subsequent calls return the object directly from the cache.

@@ -44,7 +44,7 @@ class K8sAgentSandboxToolset:
 
         self._all_tools: dict[str, "K8sAgentSandboxBaseTool"] = {}
 
-    def add_tool(self, tool: "K8sAgentSandboxBaseTool"):
+    def add_tool(self, tool: "K8sAgentSandboxBaseTool") -> None:
         name = tool.name
         if name in self._all_tools:
             raise ValueError(f"The tool '{name}' is already in the toolset.")
@@ -55,7 +55,7 @@ class K8sAgentSandboxToolset:
     def tools(self) -> list["K8sAgentSandboxBaseTool"]:
         return list(self._all_tools.values())
 
-    def close(self):
+    def close(self) -> None:
         self.lifecycle_manager.close()
 
     @classmethod
@@ -93,6 +93,8 @@ class K8sAgentSandboxToolset:
         client_settings = client_settings or K8sAgentSandboxToolClientSettings()
 
         kwargs = {"close_timeout": close_timeout}
+
+        lifecycle_manager: K8sAgentSandboxLifecycleManager
 
         if claim_name is not None:
             lifecycle_manager = AttachModeK8sAgentSandboxLifecycleManager(

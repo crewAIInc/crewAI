@@ -1,4 +1,8 @@
-from typing import Any, Callable
+from typing import (
+    Any,
+    Callable,
+    TYPE_CHECKING
+)
 import time
 import logging
 from pydantic import (
@@ -8,9 +12,14 @@ from pydantic import (
 )
 from abc import abstractmethod
 
+if TYPE_CHECKING:
+   from k8s_agent_sandbox.sandbox import Sandbox # type: ignore[import-untyped]
+
 from crewai.tools import BaseTool
 
 from .toolset import K8sAgentSandboxToolset
+
+
 
 
 logger = logging.getLogger(__name__)
@@ -29,7 +38,7 @@ class K8sAgentSandboxBaseTool(BaseTool, arbitrary_types_allowed=True):
         self.toolset.add_tool(self)
         super().model_post_init(__context)
 
-    def _run(self, *args, **kwargs: Any) -> BaseModel:
+    def _run(self, *args: Any, **kwargs: Any) -> BaseModel:
         try:
             sandbox = self.toolset.lifecycle_manager.acquire_sandbox()
             return self._run_with_sandbox(sandbox, *args, **kwargs)
@@ -37,7 +46,7 @@ class K8sAgentSandboxBaseTool(BaseTool, arbitrary_types_allowed=True):
             self.toolset.lifecycle_manager.release_sandbox()
 
     @abstractmethod
-    def _run_with_sandbox(self, sandbox, *args, **kwargs) -> BaseModel:
+    def _run_with_sandbox(self, sandbox: "Sandbox", *args: Any, **kwargs: Any) -> BaseModel: # type: ignore[no-any-unimported]
         pass
 
 
@@ -49,7 +58,7 @@ def create_timeout_tracker(timeout: int) -> Callable[[], int]:
 
     start_time = int(time.time())
 
-    def get_remaining():
+    def get_remaining() -> int:
         remaining_time = timeout - (int(time.time()) - start_time)
         if remaining_time <= 0:
             raise TimeoutError("Timeout. Cannot continue the tool action.")

@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
-    from k8s_agent_sandbox.sandbox import Sandbox
+   from k8s_agent_sandbox.sandbox import Sandbox # type: ignore[import-untyped]
 
 from crewai_tools.tools.k8s_agent_sandbox.base_tool import (
     K8sAgentSandboxBaseTool,
@@ -38,12 +38,12 @@ class K8sAgentSandboxExecTool(K8sAgentSandboxBaseTool):
     )
     args_schema: type[BaseModel] = K8sAgentSandboxExecToolSchema
 
-    def _run_with_sandbox(
+    def _run_with_sandbox( # type: ignore[no-untyped-def,no-any-unimported]
         self, sandbox: "Sandbox", *args, **kwargs
     ) -> K8sAgentSandboxExecToolOutput:
         return self._run_command(sandbox, *args, **kwargs)
 
-    def _run_command(
+    def _run_command( # type: ignore[no-any-unimported]
         self,
         sandbox: "Sandbox",
         command: str,
