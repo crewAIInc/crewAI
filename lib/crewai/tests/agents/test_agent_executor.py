@@ -75,6 +75,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.tools.base_tool import BaseTool, Tool
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities.step_execution_context import StepExecutionContext
 from crewai.utilities.planning_types import TodoItem, TodoList
@@ -1198,6 +1199,16 @@ class TestFlowInvoke:
 class TestNativeToolExecution:
     """Test native tool execution behavior."""
 
+    def test_async_native_tool_router_is_registered_with_the_flow(
+        self, mock_dependencies
+    ):
+        """The async dispatch entry point must remain reachable from the flow."""
+        executor = _build_executor(**mock_dependencies)
+        methods = type(executor).flow_definition().methods
+
+        assert methods["execute_native_tool_async"].listen == "native_tool_calls"
+        assert methods["check_native_todo_completion"].listen == "execute_native_tool_async"
+
     @pytest.fixture
     def mock_dependencies(self):
         llm = Mock()
@@ -1275,6 +1286,116 @@ class TestNativeToolExecution:
         assert len(tool_messages) == 2
         assert tool_messages[0]["tool_call_id"] == "call_1"
         assert tool_messages[1]["tool_call_id"] == "call_2"
+
+    @pytest.mark.asyncio
+    async def test_async_native_tool_runs_on_the_caller_event_loop(
+        self, mock_dependencies
+    ):
+        """Coroutine BaseTools must not be bridged with asyncio.run in a worker."""
+        executor = _build_executor(**mock_dependencies)
+        observed_thread_ids: list[int] = []
+
+        class AsyncTool(BaseTool):
+            name: str = "async_tool"
+            description: str = "Record the event-loop thread."
+
+            async def _run(self) -> str:
+                observed_thread_ids.append(threading.get_ident())
+                await asyncio.sleep(0)
+                return "async result"
+
+        tool = AsyncTool()
+        executor.original_tools = [tool]
+        executor._available_functions = {"async_tool": tool.run}
+        executor.state.pending_tool_calls = [
+            {
+                "id": "call_async",
+                "function": {"name": "async_tool", "arguments": "{}"},
+            }
+        ]
+
+        result = await executor.execute_native_tool_async()
+
+        assert result == "native_tool_completed"
+        assert observed_thread_ids == [threading.get_ident()]
+        assert executor.state.messages[-1]["content"] == "async result"
+
+    @pytest.mark.asyncio
+    async def test_async_function_tool_runs_on_the_caller_event_loop(
+        self, mock_dependencies
+    ):
+        """Tools wrapping an async function must not create a worker event loop."""
+        executor = _build_executor(**mock_dependencies)
+        observed_thread_ids: list[int] = []
+
+        async def async_function() -> str:
+            observed_thread_ids.append(threading.get_ident())
+            await asyncio.sleep(0)
+            return "function result"
+
+        tool = Tool(
+            name="async_function_tool",
+            description="Record the event-loop thread.",
+            func=async_function,
+        )
+        executor.original_tools = [tool]
+        executor._available_functions = {tool.name: tool.run}
+        executor.state.pending_tool_calls = [
+            {
+                "id": "call_async_function",
+                "function": {"name": tool.name, "arguments": "{}"},
+            }
+        ]
+
+        result = await executor.execute_native_tool_async()
+
+        assert result == "native_tool_completed"
+        assert observed_thread_ids == [threading.get_ident()]
+        assert executor.state.messages[-1]["content"] == "function result"
+
+    @pytest.mark.asyncio
+    async def test_parallel_async_native_tools_run_on_the_caller_event_loop(
+        self, mock_dependencies
+    ):
+        """Parallel native calls keep every coroutine on the caller loop."""
+        executor = _build_executor(**mock_dependencies)
+        observed_thread_ids: list[int] = []
+
+        class AsyncTool(BaseTool):
+            name: str
+            description: str = "Record the event-loop thread."
+
+            async def _run(self) -> str:
+                observed_thread_ids.append(threading.get_ident())
+                await asyncio.sleep(0)
+                return self.name
+
+        first_tool = AsyncTool(name="first_async_tool")
+        second_tool = AsyncTool(name="second_async_tool")
+        executor.original_tools = [first_tool, second_tool]
+        executor._available_functions = {
+            first_tool.name: first_tool.run,
+            second_tool.name: second_tool.run,
+        }
+        executor.state.pending_tool_calls = [
+            {
+                "id": "call_first",
+                "function": {"name": first_tool.name, "arguments": "{}"},
+            },
+            {
+                "id": "call_second",
+                "function": {"name": second_tool.name, "arguments": "{}"},
+            },
+        ]
+
+        result = await executor.execute_native_tool_async()
+
+        assert result == "native_tool_completed"
+        assert observed_thread_ids == [threading.get_ident()] * 2
+        assert [message["content"] for message in executor.state.messages[-2:]] == [
+            "first_async_tool",
+            "second_async_tool",
+        ]
 
     def test_execute_native_tool_falls_back_to_sequential_for_result_as_answer(
         self, mock_dependencies

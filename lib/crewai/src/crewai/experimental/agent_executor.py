@@ -121,6 +121,9 @@ if TYPE_CHECKING:
     from crewai.tools.tool_types import ToolResult
 
 _RouteT = TypeVar("_RouteT", bound=str)
+_native_tool_event_loop: contextvars.ContextVar[asyncio.AbstractEventLoop | None] = (
+    contextvars.ContextVar("native_tool_event_loop", default=None)
+)
 
 
 class AgentExecutorState(BaseModel):
@@ -1675,7 +1678,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         return "tool_completed"
 
-    @router("native_tool_calls")
     def execute_native_tool(
         self,
     ) -> Literal["native_tool_completed", "tool_result_is_final"]:
@@ -1849,6 +1851,17 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         return "native_tool_completed"
 
+    @router("native_tool_calls")
+    async def execute_native_tool_async(
+        self,
+    ) -> Literal["native_tool_completed", "tool_result_is_final"]:
+        """Run native tool calls while keeping coroutine tools on this event loop."""
+        token = _native_tool_event_loop.set(asyncio.get_running_loop())
+        try:
+            return await asyncio.to_thread(self.execute_native_tool)
+        finally:
+            _native_tool_event_loop.reset(token)
+
     def _should_parallelize_native_tool_calls(self, tool_calls: list[Any]) -> bool:
         """Determine if native tool calls are safe to run in parallel."""
         if len(tool_calls) <= 1:
@@ -1991,8 +2004,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         elif not from_cache and not max_usage_reached and output_tool is not None:
             if func_name in self._available_functions:
                 try:
-                    tool_func = self._available_functions[func_name]
-                    raw_result = tool_func(**args_dict)
+                    if isinstance(original_tool, BaseTool):
+                        raw_result = self._run_native_tool(original_tool, args_dict)
+                    else:
+                        tool_func = self._available_functions[func_name]
+                        raw_result = tool_func(**args_dict)
                     raw_tool_result = raw_result
 
                     # Add to cache after successful execution (before string conversion)
@@ -2074,6 +2090,25 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             "original_tool": original_tool,
         }
 
+    def _run_native_tool(self, tool: BaseTool, args_dict: dict[str, Any]) -> Any:
+        """Run a native tool without creating an event loop for awaitable results."""
+        validated_args = tool._validate_kwargs(args_dict)
+        limit_error = tool._claim_usage()
+        if limit_error:
+            return limit_error
+
+        raw_result = tool._run(**validated_args)
+        if not inspect.isawaitable(raw_result):
+            return raw_result
+
+        async def await_result() -> Any:
+            return await raw_result
+
+        event_loop = _native_tool_event_loop.get()
+        if event_loop is None:
+            return asyncio.run(await_result())
+        return asyncio.run_coroutine_threadsafe(await_result(), event_loop).result()
+
     def _extract_tool_name(self, tool_call: Any) -> str:
         """Extract tool name from various tool call formats."""
         if hasattr(tool_call, "function"):
@@ -2089,7 +2124,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             )
         return "unknown"
 
-    @router(execute_native_tool)
+    @router(execute_native_tool_async)
     def check_native_todo_completion(
         self,
     ) -> Literal["todo_satisfied", "todo_not_satisfied"]:
