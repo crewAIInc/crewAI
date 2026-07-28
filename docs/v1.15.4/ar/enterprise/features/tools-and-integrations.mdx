@@ -1,0 +1,261 @@
+---
+title: الأدوات والتكاملات
+description: "اربط التطبيقات الخارجية وأدِر الأدوات الداخلية التي يمكن لوكلائك استخدامها."
+icon: "wrench"
+mode: "wide"
+---
+
+## نظرة عامة
+
+الأدوات والتكاملات هي المركز الرئيسي لربط تطبيقات الجهات الخارجية وإدارة الأدوات الداخلية التي يمكن لوكلائك استخدامها أثناء التشغيل.
+
+<Frame>
+  ![نظرة عامة على الأدوات والتكاملات](/images/enterprise/crew_connectors.png)
+</Frame>
+
+## استكشاف
+
+<Tabs>
+  <Tab title="التكاملات" icon="plug">
+
+## تطبيقات الوكلاء (التكاملات)
+
+اربط تطبيقات المؤسسات (مثل Gmail وGoogle Drive وHubSpot وSlack) عبر OAuth لتمكين إجراءات الوكلاء.
+
+{" "}
+<Steps>
+  <Step title="الاتصال">
+    انقر على <b>Connect</b> في أحد التطبيقات وأكمل عملية OAuth.
+  </Step>
+  <Step title="التهيئة">
+    عدّل اختيارياً النطاقات والمشغلات وتوفر الإجراءات.
+  </Step>
+  <Step title="الاستخدام في الوكلاء">
+    تصبح الخدمات المتصلة متاحة كأدوات لوكلائك.
+  </Step>
+</Steps>
+
+{" "}
+<Frame>![شبكة التكاملات](/images/enterprise/agent-apps.png)</Frame>
+
+### ربط حسابك
+
+1. انتقل إلى <Link href="https://app.crewai.com/crewai_plus/connectors">Integrations</Link>
+2. انقر على <b>Connect</b> في الخدمة المطلوبة
+3. أكمل تدفق OAuth وامنح النطاقات
+4. انسخ رمز Enterprise من <Link href="https://app.crewai.com/crewai_plus/settings/integrations">Integration Settings</Link>
+
+{" "}
+<Frame>
+  ![رمز Enterprise](/images/enterprise/enterprise_action_auth_token.png)
+</Frame>
+
+### تثبيت أدوات التكامل
+
+لاستخدام التكاملات محلياً، تحتاج إلى تثبيت أحدث حزمة `crewai-tools`.
+
+```bash
+uv add crewai-tools
+```
+
+### إعداد متغيرات البيئة
+
+{" "}
+<Note>
+  لاستخدام التكاملات مع `Agent(apps=[])` يجب تعيين متغير البيئة
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` برمز Enterprise الخاص بك.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+أو أضفه إلى ملف `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+### مثال على الاستخدام
+
+{" "}
+<Tip>
+  استخدم النهج المبسط الجديد لدمج تطبيقات المؤسسات. ما عليك سوى تحديد
+  التطبيق وإجراءاته مباشرة في تهيئة Agent.
+</Tip>
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent with Gmail capabilities
+email_agent = Agent(
+    role="Email Manager",
+    goal="Manage and organize email communications",
+    backstory="An AI assistant specialized in email management and communication.",
+    apps=['gmail', 'gmail/send_email']  # Using canonical name 'gmail'
+)
+
+# Task to send an email
+email_task = Task(
+    description="Draft and send a follow-up email to john@example.com about the project update",
+    agent=email_agent,
+    expected_output="Confirmation that email was sent successfully"
+)
+
+# Run the task
+crew = Crew(
+    agents=[email_agent],
+    tasks=[email_task]
+)
+
+# Run the crew
+crew.kickoff()
+```
+
+### تصفية الأدوات
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create agent with specific Gmail actions only
+gmail_agent = Agent(
+    role="Gmail Manager",
+    goal="Manage gmail communications and notifications",
+    backstory="An AI assistant that helps coordinate gmail communications.",
+    apps=['gmail/fetch_emails']  # Using canonical name with specific action
+)
+
+notification_task = Task(
+    description="Find the email from john@example.com",
+    agent=gmail_agent,
+    expected_output="Email found from john@example.com"
+)
+
+crew = Crew(
+    agents=[gmail_agent],
+    tasks=[notification_task]
+)
+```
+
+في الطاقم المنشور، يمكنك تحديد الإجراءات المتاحة لكل تكامل من صفحة إعدادات الخدمة.
+
+{" "}
+<Frame>
+  ![تصفية الإجراءات](/images/enterprise/filtering_enterprise_action_tools.png)
+</Frame>
+
+### عمليات النشر المحددة النطاق (مؤسسات متعددة المستخدمين)
+
+يمكنك تحديد نطاق كل تكامل لمستخدم معين. على سبيل المثال، طاقم يتصل بـ Google يمكنه استخدام حساب Gmail لمستخدم محدد.
+
+{" "}
+<Tip>مفيد عندما تحتاج فرق/مستخدمون مختلفون للحفاظ على فصل الوصول إلى البيانات.</Tip>
+
+استخدم `user_bearer_token` لتحديد نطاق المصادقة للمستخدم الطالب. إذا لم يكن المستخدم مسجل الدخول، فلن يستخدم الطاقم التكاملات المتصلة. وإلا فسيعود إلى رمز الحامل الافتراضي المهيأ لعملية النشر.
+
+{" "}
+<Frame>![رمز حامل المستخدم](/images/enterprise/user_bearer_token.png)</Frame>
+
+{" "}
+<div id="catalog"></div>
+### الكتالوج
+
+#### الاتصالات والتعاون
+
+- Gmail — إدارة الرسائل الإلكترونية والمسودات
+- Slack — إشعارات وتنبيهات مساحة العمل
+- Microsoft — تكامل Office 365 وTeams
+
+#### إدارة المشاريع
+
+- Jira — تتبع المشكلات وإدارة المشاريع
+- ClickUp — إدارة المهام والإنتاجية
+- Asana — تنسيق مهام ومشاريع الفريق
+- Notion — إدارة الصفحات وقواعد البيانات
+- Linear — تتبع مشاريع البرمجيات والأخطاء
+- GitHub — إدارة المستودعات والمشكلات
+
+#### إدارة علاقات العملاء
+
+- Salesforce — إدارة حسابات وفرص CRM
+- HubSpot — إدارة خط أنابيب المبيعات وجهات الاتصال
+- Zendesk — إدارة تذاكر دعم العملاء
+
+#### الأعمال والمالية
+
+- Stripe — معالجة المدفوعات وإدارة العملاء
+- Shopify — إدارة متجر ومنتجات التجارة الإلكترونية
+
+#### الإنتاجية والتخزين
+
+- Google Sheets — مزامنة بيانات جداول البيانات
+- Google Calendar — إدارة الأحداث والجداول
+- Box — تخزين الملفات وإدارة المستندات
+
+...والمزيد قادم!
+
+  </Tab>
+  <Tab title="الأدوات الداخلية" icon="toolbox">
+
+## الأدوات الداخلية
+
+أنشئ أدوات مخصصة محلياً، وانشرها في مستودع أدوات CrewAI AMP واستخدمها في وكلائك.
+
+{" "}
+<Tip>
+  قبل تشغيل الأوامر أدناه، تأكد من تسجيل الدخول إلى حساب CrewAI AMP
+  بتشغيل هذا الأمر: ```bash crewai login ```
+</Tip>
+
+{" "}
+<Frame>
+  ![تفاصيل الأداة الداخلية](/images/enterprise/tools-integrations-internal.png)
+</Frame>
+
+{" "}
+<Steps>
+  <Step title="الإنشاء">
+    أنشئ أداة جديدة محلياً. ```bash crewai tool create your-tool ```
+  </Step>
+  <Step title="النشر">
+    انشر الأداة في مستودع أدوات CrewAI AMP. ```bash crewai tool
+    publish ```
+  </Step>
+  <Step title="التثبيت">
+    ثبّت الأداة من مستودع أدوات CrewAI AMP. ```bash crewai tool
+    install your-tool ```
+  </Step>
+</Steps>
+
+الإدارة:
+
+- الاسم والوصف
+- الرؤية (خاص / عام)
+- متغيرات البيئة المطلوبة
+- سجل الإصدارات والتنزيلات
+- وصول الفرق والأدوار
+
+{" "}
+<Frame>![تفاصيل الأداة الداخلية](/images/enterprise/tool-configs.png)</Frame>
+
+  </Tab>
+</Tabs>
+
+## ذو صلة
+
+<CardGroup cols={2}>
+  <Card
+    title="مستودع الأدوات"
+    href="/ar/enterprise/guides/tool-repository#tool-repository"
+    icon="toolbox"
+  >
+    أنشئ وانشر وأدِر إصدارات الأدوات المخصصة لمؤسستك.
+  </Card>
+  <Card
+    title="أتمتة Webhook"
+    href="/ar/enterprise/guides/webhook-automation"
+    icon="bolt"
+  >
+    أتمت سير العمل وتكامل مع المنصات والخدمات الخارجية.
+  </Card>
+</CardGroup>

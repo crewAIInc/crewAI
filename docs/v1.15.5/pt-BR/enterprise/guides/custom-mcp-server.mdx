@@ -1,0 +1,136 @@
+---
+title: "Servidores MCP Personalizados"
+description: "Conecte seus próprios servidores MCP ao CrewAI AMP com acesso público, autenticação por token ou OAuth 2.0"
+icon: "plug"
+mode: "wide"
+---
+
+O CrewAI AMP suporta a conexão com qualquer servidor MCP que implemente o [Model Context Protocol](https://modelcontextprotocol.io/). Você pode conectar servidores públicos que não exigem autenticação, servidores protegidos por chave de API ou token bearer, e servidores que utilizam OAuth 2.0 para acesso delegado seguro.
+
+## Pré-requisitos
+
+<CardGroup cols={2}>
+  <Card title="Conta CrewAI AMP" icon="user">
+    Você precisa de uma conta ativa no [CrewAI AMP](https://app.crewai.com).
+  </Card>
+  <Card title="URL do Servidor MCP" icon="link">
+    A URL do servidor MCP que você deseja conectar. O servidor deve ser acessível pela internet e suportar transporte Streamable HTTP.
+  </Card>
+</CardGroup>
+
+## Adicionando um Servidor MCP Personalizado
+
+<Steps>
+    <Step title="Acesse Tools & Integrations">
+        Navegue até **Tools & Integrations** no menu lateral esquerdo do CrewAI AMP e selecione a aba **Connections**.
+    </Step>
+
+    <Step title="Inicie a adição de um Servidor MCP Personalizado">
+        Clique no botão **Add Custom MCP Server**. Um diálogo aparecerá com o formulário de configuração.
+    </Step>
+
+    <Step title="Preencha as informações básicas">
+        - **Name** (obrigatório): Um nome descritivo para seu servidor MCP (ex.: "Meu Servidor de Ferramentas Internas").
+        - **Description**: Um resumo opcional do que este servidor MCP fornece.
+        - **Server URL** (obrigatório): A URL completa do endpoint do seu servidor MCP (ex.: `https://my-server.example.com/mcp`).
+    </Step>
+
+    <Step title="Escolha um método de autenticação">
+        Selecione um dos três métodos de autenticação disponíveis com base em como seu servidor MCP está protegido. Veja as seções abaixo para detalhes sobre cada método.
+    </Step>
+
+    <Step title="Adicione headers personalizados (opcional)">
+        Se seu servidor MCP requer headers adicionais em cada requisição (ex.: identificadores de tenant ou headers de roteamento), clique em **+ Add Header** e forneça o nome e valor do header. Você pode adicionar múltiplos headers personalizados.
+    </Step>
+
+    <Step title="Crie a conexão">
+        Clique em **Create MCP Server** para salvar a conexão. Seu servidor MCP personalizado aparecerá na lista de Connections e suas ferramentas estarão disponíveis para uso nas suas crews.
+    </Step>
+</Steps>
+
+## Métodos de Autenticação
+
+### Sem Autenticação
+
+Escolha esta opção quando seu servidor MCP é publicamente acessível e não requer nenhuma credencial. Isso é comum para servidores open-source ou servidores internos rodando atrás de uma VPN.
+
+### Token de Autenticação
+
+Use este método quando seu servidor MCP é protegido por uma chave de API ou token bearer.
+
+<Frame>
+    <img src="/images/enterprise/custom-mcp-auth-token.png" alt="Servidor MCP Personalizado com Token de Autenticação" />
+</Frame>
+
+| Campo | Obrigatório | Descrição |
+|-------|-------------|-----------|
+| **Header Name** | Sim | O nome do header HTTP que carrega o token (ex.: `X-API-Key`, `Authorization`). |
+| **Value** | Sim | Sua chave de API ou token bearer. |
+| **Add to** | Não | Onde anexar a credencial — **Header** (padrão) ou **Query parameter**. |
+
+<Tip>
+Se seu servidor espera um token `Bearer` no header `Authorization`, defina o Header Name como `Authorization` e o Value como `Bearer <seu-token>`.
+</Tip>
+
+### OAuth 2.0
+
+Use este método para servidores MCP que requerem autorização OAuth 2.0. O CrewAI gerenciará todo o fluxo OAuth, incluindo a renovação de tokens.
+
+<Frame>
+    <img src="/images/enterprise/custom-mcp-oauth.png" alt="Servidor MCP Personalizado com OAuth 2.0" />
+</Frame>
+
+| Campo | Obrigatório | Descrição |
+|-------|-------------|-----------|
+| **Redirect URI** | — | Preenchido automaticamente e somente leitura. Copie esta URI e registre-a como URI de redirecionamento autorizada no seu provedor OAuth. |
+| **Authorization Endpoint** | Sim | A URL para onde os usuários são enviados para autorizar o acesso (ex.: `https://auth.example.com/oauth/authorize`). |
+| **Token Endpoint** | Sim | A URL usada para trocar o código de autorização por um token de acesso (ex.: `https://auth.example.com/oauth/token`). |
+| **Client ID** | Sim | O Client ID OAuth emitido pelo seu provedor. |
+| **Client Secret** | Não | O Client Secret OAuth. Não é necessário para clientes públicos usando PKCE. |
+| **Scopes** | Não | Lista de escopos separados por espaço a solicitar (ex.: `read write`). |
+| **Token Auth Method** | Não | Como as credenciais do cliente são enviadas ao trocar tokens — **Standard (POST body)** ou **Basic Auth (header)**. Padrão é Standard. |
+| **PKCE Supported** | Não | Ative se seu provedor OAuth suporta Proof Key for Code Exchange. Recomendado para maior segurança. |
+
+<Info>
+**Discover OAuth Config**: Se seu provedor OAuth suporta OpenID Connect Discovery, clique no link **Discover OAuth Config** para preencher automaticamente os endpoints de autorização e token a partir da URL `/.well-known/openid-configuration` do provedor.
+</Info>
+
+#### Configurando OAuth 2.0 Passo a Passo
+
+<Steps>
+    <Step title="Registre a URI de redirecionamento">
+        Copie a **Redirect URI** exibida no formulário e adicione-a como URI de redirecionamento autorizada nas configurações do seu provedor OAuth.
+    </Step>
+
+    <Step title="Insira os endpoints e credenciais">
+        Preencha o **Authorization Endpoint**, **Token Endpoint**, **Client ID** e, opcionalmente, o **Client Secret** e **Scopes**.
+    </Step>
+
+    <Step title="Configure o método de troca de tokens">
+        Selecione o **Token Auth Method** apropriado. A maioria dos provedores usa o padrão **Standard (POST body)**. Alguns provedores mais antigos requerem **Basic Auth (header)**.
+    </Step>
+
+    <Step title="Ative o PKCE (recomendado)">
+        Marque **PKCE Supported** se seu provedor suporta. O PKCE adiciona uma camada extra de segurança ao fluxo de código de autorização e é recomendado para todas as novas integrações.
+    </Step>
+
+    <Step title="Crie e autorize">
+        Clique em **Create MCP Server**. Você será redirecionado ao seu provedor OAuth para autorizar o acesso. Uma vez autorizado, o CrewAI armazenará os tokens e os renovará automaticamente conforme necessário.
+    </Step>
+</Steps>
+
+## Usando Seu Servidor MCP Personalizado
+
+Uma vez conectado, as ferramentas do seu servidor MCP personalizado aparecem junto com as conexões integradas na página **Tools & Integrations**. Você pode:
+
+- **Atribuir ferramentas a agentes** nas suas crews, assim como qualquer outra ferramenta CrewAI.
+- **Gerenciar visibilidade** para controlar quais membros da equipe podem usar o servidor.
+- **Editar ou remover** a conexão a qualquer momento na lista de Connections.
+
+<Warning>
+Se seu servidor MCP ficar inacessível ou as credenciais expirarem, as chamadas de ferramentas usando esse servidor falharão. Certifique-se de que a URL do servidor seja estável e as credenciais estejam atualizadas.
+</Warning>
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para assistência com configuração ou resolução de problemas de servidores MCP personalizados.
+</Card>

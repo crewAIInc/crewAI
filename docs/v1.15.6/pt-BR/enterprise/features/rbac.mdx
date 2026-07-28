@@ -1,0 +1,255 @@
+---
+title: "Controle de Acesso Baseado em Funções (RBAC)"
+description: "Controle o acesso a crews, ferramentas e dados com funções, escopos e permissões granulares."
+icon: "shield"
+mode: "wide"
+---
+
+## Visão Geral
+
+O RBAC no CrewAI AMP permite gerenciamento de acesso seguro e escalável através de duas camadas:
+
+1. **Permissões de funcionalidade** — controlam o que cada função pode fazer na plataforma (gerenciar, ler ou sem acesso)
+2. **Permissões em nível de entidade** — acesso granular em automações individuais, variáveis de ambiente, conexões LLM e repositórios Git
+
+<Frame>
+  <img src="/images/enterprise/users_and_roles.png" alt="Visão geral de RBAC no CrewAI AMP" />
+</Frame>
+
+## Usuários e Funções
+
+Cada membro da sua workspace CrewAI recebe uma função, que determina seu acesso aos diversos recursos.
+
+Você pode:
+
+- Usar funções pré-definidas (Owner, Member)
+- Criar funções personalizadas com permissões específicas
+- Atribuir funções a qualquer momento no painel de configurações
+
+A configuração de usuários e funções é feita em Settings → Roles.
+
+<Steps>
+  <Step title="Abrir Roles">
+    Vá em <b>Settings → Roles</b> no CrewAI AMP.
+  </Step>
+  <Step title="Escolher a função">
+    Use uma função pré-definida (<b>Owner</b>, <b>Member</b>) ou clique em{" "}
+    <b>Create role</b> para criar uma personalizada.
+  </Step>
+  <Step title="Atribuir aos membros">
+    Selecione os usuários e atribua a função. Você pode alterar depois.
+  </Step>
+</Steps>
+
+### Funções Pré-definidas
+
+| Função     | Descrição                                                                 |
+| :--------- | :------------------------------------------------------------------------ |
+| **Owner**  | Acesso total a todas as funcionalidades e configurações. Não pode ser restrito. |
+| **Member** | Acesso de leitura à maioria das funcionalidades, acesso de gerenciamento a variáveis de ambiente, conexões LLM e projetos Studio. Não pode modificar configurações da organização ou padrões. |
+
+### Resumo de configuração
+
+| Área                      | Onde configurar                    | Opções                                               |
+| :------------------------ | :--------------------------------- | :--------------------------------------------------- |
+| Usuários & Funções        | Settings → Roles                   | Pré-definidas: Owner, Member; Funções personalizadas |
+| Visibilidade da automação | Automation → Settings → Visibility | Private; Lista de usuários/funções                   |
+
+---
+
+## Matriz de Permissões de Funcionalidades
+
+Cada função possui um nível de permissão para cada área de funcionalidade. Os três níveis são:
+
+- **Manage** — acesso total de leitura/escrita (criar, editar, excluir)
+- **Read** — acesso somente leitura
+- **No access** — funcionalidade oculta/inacessível
+
+| Funcionalidade            | Owner   | Member (padrão)  | Níveis disponíveis        | Descrição                                                       |
+| :------------------------ | :------ | :--------------- | :------------------------ | :-------------------------------------------------------------- |
+| `usage_dashboards`        | Manage  | Read             | Manage / Read / No access | Visualizar métricas e análises de uso                           |
+| `crews_dashboards`        | Manage  | Read             | Manage / Read / No access | Visualizar dashboards de deploy, acessar detalhes de automações |
+| `invitations`             | Manage  | Read             | Manage / Read / No access | Convidar novos membros para a organização                       |
+| `training_ui`             | Manage  | Read             | Manage / Read / No access | Acessar interfaces de treinamento/fine-tuning                   |
+| `tools`                   | Manage  | Read             | Manage / Read / No access | Criar e gerenciar ferramentas                                   |
+| `agents`                  | Manage  | Read             | Manage / Read / No access | Criar e gerenciar agentes                                       |
+| `environment_variables`   | Manage  | Manage           | Manage / No access        | Criar e gerenciar variáveis de ambiente                         |
+| `llm_connections`         | Manage  | Manage           | Manage / No access        | Configurar conexões de provedores LLM                           |
+| `default_settings`        | Manage  | No access        | Manage / No access        | Modificar configurações padrão da organização                   |
+| `organization_settings`   | Manage  | No access        | Manage / No access        | Gerenciar cobrança, planos e configuração da organização        |
+| `studio_projects`         | Manage  | Manage           | Manage / No access        | Criar e editar projetos no Studio                               |
+
+<Tip>
+  Ao criar uma função personalizada, a maioria das funcionalidades pode ser definida como **Manage**, **Read** ou **No access**. No entanto, `environment_variables`, `llm_connections`, `default_settings`, `organization_settings` e `studio_projects` suportam apenas **Manage** ou **No access** — não há opção somente leitura para essas funcionalidades.
+</Tip>
+
+---
+
+## Deploy via GitHub ou Zip
+
+Uma das perguntas mais comuns sobre RBAC é: _"Quais permissões um membro da equipe precisa para fazer deploy?"_
+
+### Deploy via GitHub
+
+Para fazer deploy de uma automação a partir de um repositório GitHub, o usuário precisa de:
+
+1. **`crews_dashboards`**: pelo menos `Read` — necessário para acessar o dashboard de automações onde os deploys são criados
+2. **Acesso ao repositório Git** (se RBAC em nível de entidade para repositórios Git estiver habilitado): a função do usuário deve ter acesso ao repositório Git específico via permissões de entidade
+3. **`studio_projects`: `Manage`** — se estiver construindo o crew no Studio antes do deploy
+
+### Deploy via Zip
+
+Para fazer deploy de uma automação via upload de arquivo Zip, o usuário precisa de:
+
+1. **`crews_dashboards`**: pelo menos `Read` — necessário para acessar o dashboard de automações
+2. **Deploys via Zip habilitados**: a organização não deve ter desabilitado deploys via Zip nas configurações da organização
+
+### Referência Rápida: Permissões Mínimas para Deploy
+
+| Ação                       | Permissões de funcionalidade necessárias | Requisitos adicionais                             |
+| :------------------------- | :--------------------------------------- | :------------------------------------------------ |
+| Deploy via GitHub          | `crews_dashboards: Read`                 | Acesso à entidade do repositório Git (se habilitado) |
+| Deploy via Zip             | `crews_dashboards: Read`                 | Deploys via Zip devem estar habilitados na organização |
+| Construir no Studio        | `studio_projects: Manage`                | —                                                 |
+| Configurar chaves LLM      | `llm_connections: Manage`                | —                                                 |
+| Definir variáveis de ambiente | `environment_variables: Manage`        | Acesso em nível de entidade (se habilitado)        |
+
+---
+
+## Controle de Acesso em Nível de Automação (Permissões de Entidade)
+
+Além das funções em nível de organização, o CrewAI suporta permissões granulares em nível de entidade que restringem o acesso a recursos individuais.
+
+### Visibilidade da Automação
+
+Automações suportam configurações de visibilidade que restringem acesso por usuário ou função. Útil para:
+
+- Manter automações sensíveis ou experimentais privadas
+- Gerenciar visibilidade em equipes grandes ou colaboradores externos
+- Testar automações em contexto isolado
+
+Deploys podem ser configurados como privados, significando que apenas usuários e funções na whitelist poderão interagir com eles.
+
+Configure em Automation → Settings → aba Visibility.
+
+<Steps>
+  <Step title="Abrir a aba Visibility">
+    Acesse <b>Automation → Settings → Visibility</b>.
+  </Step>
+  <Step title="Definir visibilidade">
+    Selecione <b>Private</b> para restringir o acesso. O owner da organização
+    mantém acesso sempre.
+  </Step>
+  <Step title="Permitir acesso">
+    Adicione usuários e funções que poderão ver, executar e acessar
+    logs/métricas/configurações.
+  </Step>
+  <Step title="Salvar e verificar">
+    Salve e confirme que não listados não conseguem ver ou executar a automação.
+  </Step>
+</Steps>
+
+### Resultado de acesso no modo Private
+
+| Ação                        | Owner | Usuário/função na whitelist | Não listado |
+| :-------------------------- | :---- | :-------------------------- | :---------- |
+| Ver automação               | ✓     | ✓                           | ✗           |
+| Executar/API                | ✓     | ✓                           | ✗           |
+| Logs/métricas/configurações | ✓     | ✓                           | ✗           |
+
+<Tip>
+  O owner sempre possui acesso. Em modo privado, somente usuários/funções na
+  whitelist têm permissão.
+</Tip>
+
+<Frame>
+  <img src="/images/enterprise/visibility.png" alt="Configuração de visibilidade no CrewAI AMP" />
+</Frame>
+
+### Tipos de Permissão de Deploy
+
+Ao conceder acesso em nível de entidade a uma automação específica, você pode atribuir estes tipos de permissão:
+
+| Permissão            | O que permite                                       |
+| :------------------- | :-------------------------------------------------- |
+| `run`                | Executar a automação e usar sua API                  |
+| `traces`             | Visualizar traces de execução e logs                 |
+| `manage_settings`    | Editar, reimplantar, reverter ou excluir a automação |
+| `human_in_the_loop`  | Responder a solicitações human-in-the-loop (HITL)    |
+| `full_access`        | Todos os anteriores                                  |
+
+### RBAC em Nível de Entidade para Outros Recursos
+
+Quando o RBAC em nível de entidade está habilitado, o acesso a estes recursos também pode ser controlado por usuário ou função:
+
+| Recurso                | Controlado por                         | Descrição                                                      |
+| :--------------------- | :------------------------------------- | :------------------------------------------------------------- |
+| Variáveis de ambiente  | Flag de funcionalidade RBAC de entidade | Restringir quais funções/usuários podem ver ou gerenciar variáveis específicas |
+| Conexões LLM           | Flag de funcionalidade RBAC de entidade | Restringir acesso a configurações de provedores LLM específicos |
+| Repositórios Git       | Configuração RBAC de repositórios Git   | Restringir quais funções/usuários podem acessar repositórios conectados específicos |
+
+---
+
+## Padrões Comuns de Funções
+
+Embora o CrewAI venha com as funções Owner e Member, a maioria das equipes se beneficia da criação de funções personalizadas. Aqui estão os padrões comuns:
+
+### Função Developer
+
+Uma função para membros da equipe que constroem e fazem deploy de automações, mas não gerenciam configurações da organização.
+
+| Funcionalidade            | Permissão  |
+| :------------------------ | :--------- |
+| `usage_dashboards`        | Read       |
+| `crews_dashboards`        | Manage     |
+| `invitations`             | Read       |
+| `training_ui`             | Read       |
+| `tools`                   | Manage     |
+| `agents`                  | Manage     |
+| `environment_variables`   | Manage     |
+| `llm_connections`         | Manage     |
+| `default_settings`        | No access  |
+| `organization_settings`   | No access  |
+| `studio_projects`         | Manage     |
+
+### Função Viewer / Stakeholder
+
+Uma função para stakeholders não técnicos que precisam monitorar automações e visualizar resultados.
+
+| Funcionalidade            | Permissão  |
+| :------------------------ | :--------- |
+| `usage_dashboards`        | Read       |
+| `crews_dashboards`        | Read       |
+| `invitations`             | No access  |
+| `training_ui`             | Read       |
+| `tools`                   | Read       |
+| `agents`                  | Read       |
+| `environment_variables`   | No access  |
+| `llm_connections`         | No access  |
+| `default_settings`        | No access  |
+| `organization_settings`   | No access  |
+| `studio_projects`         | No access  |
+
+### Função Ops / Platform Admin
+
+Uma função para operadores de plataforma que gerenciam configurações de infraestrutura, mas podem não construir agentes.
+
+| Funcionalidade            | Permissão  |
+| :------------------------ | :--------- |
+| `usage_dashboards`        | Manage     |
+| `crews_dashboards`        | Manage     |
+| `invitations`             | Manage     |
+| `training_ui`             | Read       |
+| `tools`                   | Read       |
+| `agents`                  | Read       |
+| `environment_variables`   | Manage     |
+| `llm_connections`         | Manage     |
+| `default_settings`        | Manage     |
+| `organization_settings`   | Read       |
+| `studio_projects`         | No access  |
+
+---
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Fale com o nosso time para suporte em configuração de RBAC.
+</Card>

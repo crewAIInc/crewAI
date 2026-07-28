@@ -1,0 +1,242 @@
+---
+title: Integração Microsoft Teams
+description: "Colaboração em equipe e comunicação com integração Microsoft Teams para CrewAI."
+icon: "users"
+mode: "wide"
+---
+
+## Visão Geral
+
+Permita que seus agentes acessem dados do Teams, enviem mensagens, criem reuniões e gerenciem canais. Automatize a comunicação da equipe, agende reuniões, recupere mensagens e simplifique seus fluxos de trabalho de colaboração com automação alimentada por IA.
+
+## Pré-requisitos
+
+Antes de usar a integração Microsoft Teams, certifique-se de ter:
+
+- Uma conta [CrewAI AMP](https://app.crewai.com) com assinatura ativa
+- Uma conta Microsoft com acesso ao Teams
+- Conectado sua conta Microsoft através da [página de Integrações](https://app.crewai.com/crewai_plus/connectors)
+
+## Configurando a Integração Microsoft Teams
+
+### 1. Conecte sua Conta Microsoft
+
+1. Navegue para [Integrações CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
+2. Encontre **Microsoft Teams** na seção de Integrações de Autenticação
+3. Clique em **Conectar** e complete o fluxo OAuth
+4. Conceda as permissões necessárias para acesso ao Teams
+5. Copie seu Token Enterprise das [Configurações de Integração](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. Instale o Pacote Necessário
+
+```bash
+uv add crewai-tools
+```
+
+### 3. Configuração de variável de ambiente
+
+<Note>
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="seu_enterprise_token"
+```
+
+Ou adicione ao seu arquivo `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
+```
+
+## Ações Disponíveis
+
+<AccordionGroup>
+  <Accordion title="microsoft_teams/get_teams">
+    **Descrição:** Obter todas as equipes das quais o usuário é membro.
+
+    **Parâmetros:**
+    - Nenhum parâmetro necessário.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/get_channels">
+    **Descrição:** Obter canais em uma equipe específica.
+
+    **Parâmetros:**
+    - `team_id` (string, obrigatório): O ID da equipe.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/send_message">
+    **Descrição:** Enviar uma mensagem para um canal do Teams.
+
+    **Parâmetros:**
+    - `team_id` (string, obrigatório): O ID da equipe.
+    - `channel_id` (string, obrigatório): O ID do canal.
+    - `message` (string, obrigatório): O conteúdo da mensagem.
+    - `content_type` (string, opcional): Tipo de conteúdo (html ou text). Opções: html, text. Padrão: text.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/get_messages">
+    **Descrição:** Obter mensagens de um canal do Teams.
+
+    **Parâmetros:**
+    - `team_id` (string, obrigatório): O ID da equipe.
+    - `channel_id` (string, obrigatório): O ID do canal.
+    - `top` (integer, opcional): Número de mensagens a recuperar (máx 50). Padrão: 20.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/create_meeting">
+    **Descrição:** Criar uma reunião do Teams.
+
+    **Parâmetros:**
+    - `subject` (string, obrigatório): Assunto/título da reunião.
+    - `startDateTime` (string, obrigatório): Hora de início da reunião (formato ISO 8601 com fuso horário).
+    - `endDateTime` (string, obrigatório): Hora de término da reunião (formato ISO 8601 com fuso horário).
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/search_online_meetings_by_join_url">
+    **Descrição:** Pesquisar reuniões online por URL de participação na web.
+
+    **Parâmetros:**
+    - `join_web_url` (string, obrigatório): A URL de participação na web da reunião a pesquisar.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/search_online_meetings_by_meeting_id">
+    **Descrição:** Pesquisar reuniões online por ID externo da reunião.
+
+    **Parâmetros:**
+    - `join_meeting_id` (string, obrigatório): O ID da reunião (código numérico) que os participantes usam para entrar. É o joinMeetingId exibido nos convites da reunião, não o meeting id da API Graph.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/get_meeting">
+    **Descrição:** Obter detalhes de uma reunião online específica.
+
+    **Parâmetros:**
+    - `meeting_id` (string, obrigatório): O ID da reunião na API Graph (string alfanumérica longa). Obter pelas ações create_meeting ou search_online_meetings. Diferente do joinMeetingId numérico.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/get_team_members">
+    **Descrição:** Obter membros de uma equipe específica.
+
+    **Parâmetros:**
+    - `team_id` (string, obrigatório): O identificador único da equipe. Obter pela ação get_teams.
+    - `top` (integer, opcional): Número máximo de membros a recuperar por página (1-999). Padrão: 100.
+    - `skip_token` (string, opcional): Token de paginação de uma resposta anterior. Quando a resposta incluir @odata.nextLink, extraia o valor do parâmetro $skiptoken e passe aqui para obter a próxima página de resultados.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/create_channel">
+    **Descrição:** Criar um novo canal em uma equipe.
+
+    **Parâmetros:**
+    - `team_id` (string, obrigatório): O identificador único da equipe. Obter pela ação get_teams.
+    - `display_name` (string, obrigatório): Nome do canal exibido no Teams. Deve ser único na equipe. Máx 50 caracteres.
+    - `description` (string, opcional): Descrição opcional explicando o propósito do canal. Visível nos detalhes do canal. Máx 1024 caracteres.
+    - `membership_type` (string, opcional): Visibilidade do canal. Opções: standard, private. "standard" = visível para todos os membros da equipe, "private" = visível apenas para membros adicionados especificamente. Padrão: standard.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/get_message_replies">
+    **Descrição:** Obter respostas a uma mensagem específica em um canal.
+
+    **Parâmetros:**
+    - `team_id` (string, obrigatório): O identificador único da equipe. Obter pela ação get_teams.
+    - `channel_id` (string, obrigatório): O identificador único do canal. Obter pela ação get_channels.
+    - `message_id` (string, obrigatório): O identificador único da mensagem pai. Obter pela ação get_messages.
+    - `top` (integer, opcional): Número máximo de respostas a recuperar por página (1-50). Padrão: 50.
+    - `skip_token` (string, opcional): Token de paginação de uma resposta anterior. Quando a resposta incluir @odata.nextLink, extraia o valor do parâmetro $skiptoken e passe aqui para obter a próxima página de resultados.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/reply_to_message">
+    **Descrição:** Responder a uma mensagem em um canal do Teams.
+
+    **Parâmetros:**
+    - `team_id` (string, obrigatório): O identificador único da equipe. Obter pela ação get_teams.
+    - `channel_id` (string, obrigatório): O identificador único do canal. Obter pela ação get_channels.
+    - `message_id` (string, obrigatório): O identificador único da mensagem a responder. Obter pela ação get_messages.
+    - `message` (string, obrigatório): O conteúdo da resposta. Para HTML, inclua tags de formatação. Para texto, use apenas texto simples.
+    - `content_type` (string, opcional): Formato do conteúdo. Opções: html, text. "text" para texto simples, "html" para texto rico com formatação. Padrão: text.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/update_meeting">
+    **Descrição:** Atualizar uma reunião online existente.
+
+    **Parâmetros:**
+    - `meeting_id` (string, obrigatório): O identificador único da reunião. Obter pelas ações create_meeting ou search_online_meetings.
+    - `subject` (string, opcional): Novo título da reunião.
+    - `startDateTime` (string, opcional): Nova hora de início no formato ISO 8601 com fuso horário. Exemplo: "2024-01-20T10:00:00-08:00".
+    - `endDateTime` (string, opcional): Nova hora de término no formato ISO 8601 com fuso horário.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/delete_meeting">
+    **Descrição:** Excluir uma reunião online.
+
+    **Parâmetros:**
+    - `meeting_id` (string, obrigatório): O identificador único da reunião a excluir. Obter pelas ações create_meeting ou search_online_meetings.
+
+  </Accordion>
+</AccordionGroup>
+
+## Exemplos de Uso
+
+### Configuração Básica do Agente Microsoft Teams
+
+```python
+from crewai import Agent, Task, Crew
+
+# Crie um agente com capacidades do Microsoft Teams
+teams_agent = Agent(
+    role="Coordenador do Teams",
+    goal="Gerenciar comunicação e reuniões do Teams de forma eficiente",
+    backstory="Um assistente IA especializado em operações do Microsoft Teams e colaboração em equipe.",
+    apps=['microsoft_teams']  # Todas as ações do Teams estarão disponíveis
+)
+
+# Tarefa para listar equipes e canais
+explore_teams_task = Task(
+    description="Listar todas as equipes das quais sou membro e depois obter os canais da primeira equipe.",
+    agent=teams_agent,
+    expected_output="Lista de equipes e canais exibida."
+)
+
+# Execute a tarefa
+crew = Crew(
+    agents=[teams_agent],
+    tasks=[explore_teams_task]
+)
+
+crew.kickoff()
+```
+
+## Solução de Problemas
+
+### Problemas Comuns
+
+**Erros de Autenticação**
+
+- Certifique-se de que sua conta Microsoft tenha as permissões necessárias para acesso ao Teams.
+- Escopos necessários incluem: `Team.ReadBasic.All`, `Channel.ReadBasic.All`, `ChannelMessage.Send`, `ChannelMessage.Read.All`, `OnlineMeetings.ReadWrite`, `OnlineMeetings.Read`.
+
+**Acesso a Equipes e Canais**
+
+- Certifique-se de que você é membro das equipes que está tentando acessar.
+- Verifique novamente os IDs de equipe e canal para correção.
+
+### Obtendo Ajuda
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para assistência com configuração
+  ou solução de problemas da integração Microsoft Teams.
+</Card>

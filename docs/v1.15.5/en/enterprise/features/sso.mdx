@@ -1,0 +1,550 @@
+---
+title: Single Sign-On (SSO)
+icon: "key"
+description: Configure enterprise SSO authentication for CrewAI Platform — SaaS and Factory
+---
+
+## Overview
+
+CrewAI Platform supports enterprise Single Sign-On (SSO) across both **SaaS (AMP)** and **Factory (self-hosted)** deployments. SSO enables your team to authenticate using your organization's existing identity provider, enforcing centralized access control, MFA policies, and user lifecycle management.
+
+### Supported Providers
+
+| Provider | SaaS | Factory | Protocol | CLI Support |
+|---|---|---|---|---|
+| **WorkOS** | ✅ (default) | ✅ | OAuth 2.0 / OIDC | ✅ |
+| **Microsoft Entra ID** (Azure AD) | ✅ (enterprise) | ✅ | OAuth 2.0 / SAML 2.0 | ✅ |
+| **Okta** | ✅ (enterprise) | ✅ | OAuth 2.0 / OIDC | ✅ |
+| **Auth0** | ✅ (enterprise) | ✅ | OAuth 2.0 / OIDC | ✅ |
+| **Keycloak** | — | ✅ | OAuth 2.0 / OIDC | ✅ |
+
+### Key Capabilities
+
+- **SAML 2.0 and OAuth 2.0 / OIDC** protocol support
+- **Device Authorization Grant** flow for CLI authentication
+- **Role-Based Access Control (RBAC)** with custom roles and per-resource permissions
+- **MFA enforcement** delegated to your identity provider
+- **User provisioning** through IdP assignment (users/groups)
+
+---
+
+## SaaS SSO
+
+### Default Authentication
+
+CrewAI's managed SaaS platform (AMP) uses **WorkOS** as the default authentication provider. When you sign up at [app.crewai.com](https://app.crewai.com), authentication is handled through `login.crewai.com` — no additional SSO configuration is required.
+
+### Enterprise Custom SSO
+
+Enterprise SaaS customers can configure SSO with their own identity provider (Entra ID, Okta, Auth0). Contact your CrewAI account team to enable custom SSO for your organization. Once configured:
+
+1. Your team members authenticate through your organization's IdP
+2. Access control and MFA policies are enforced by your IdP
+3. The CrewAI CLI automatically detects your SSO configuration via `crewai enterprise configure`
+
+### CLI Defaults (SaaS)
+
+| Setting | Default Value |
+|---|---|
+| `enterprise_base_url` | `https://app.crewai.com` |
+| `oauth2_provider` | `workos` |
+| `oauth2_domain` | `login.crewai.com` |
+
+---
+
+## Factory SSO Setup
+
+Factory (self-hosted) deployments require you to configure SSO by setting environment variables in your Helm `values.yaml` and registering an application in your identity provider.
+
+### Microsoft Entra ID (Azure AD)
+
+<Steps>
+  <Step title="Register an Application">
+    1. Go to [portal.azure.com](https://portal.azure.com) → **Microsoft Entra ID** → **App registrations** → **New registration**
+    2. Configure:
+       - **Name:** `CrewAI` (or your preferred name)
+       - **Supported account types:** Accounts in this organizational directory only
+       - **Redirect URI:** Select **Web**, enter `https://<your-domain>/auth/entra_id/callback`
+    3. Click **Register**
+  </Step>
+
+  <Step title="Collect Credentials">
+    From the app overview page, copy:
+    - **Application (client) ID** → `ENTRA_ID_CLIENT_ID`
+    - **Directory (tenant) ID** → `ENTRA_ID_TENANT_ID`
+  </Step>
+
+  <Step title="Create Client Secret">
+    1. Navigate to **Certificates & Secrets** → **New client secret**
+    2. Add a description and select expiration period
+    3. Copy the secret value immediately (it won't be shown again) → `ENTRA_ID_CLIENT_SECRET`
+  </Step>
+
+  <Step title="Grant Admin Consent">
+    1. Go to **Enterprise applications** → select your app
+    2. Under **Security** → **Permissions**, click **Grant admin consent**
+    3. Ensure **Microsoft Graph → User.Read** is granted
+  </Step>
+
+  <Step title="Configure App Roles (Recommended)">
+    Under **App registrations** → your app → **App roles**, create:
+
+    | Display Name | Value | Allowed Member Types |
+    |---|---|---|
+    | Member | `member` | Users/Groups |
+    | Factory Admin | `factory-admin` | Users/Groups |
+
+    <Note>
+      The `member` role grants login access. The `factory-admin` role grants admin panel access. Roles are included in the JWT automatically.
+    </Note>
+  </Step>
+
+  <Step title="Assign Users">
+    1. Under **Properties**, set **Assignment required?** to **Yes**
+    2. Under **Users and groups**, assign users/groups with the appropriate role
+  </Step>
+
+  <Step title="Set Environment Variables">
+    ```yaml
+    envVars:
+      AUTH_PROVIDER: "entra_id"
+
+    secrets:
+      ENTRA_ID_CLIENT_ID: "<Application (client) ID>"
+      ENTRA_ID_CLIENT_SECRET: "<Client Secret>"
+      ENTRA_ID_TENANT_ID: "<Directory (tenant) ID>"
+    ```
+  </Step>
+
+  <Step title="Enable CLI Support (Optional)">
+    To allow `crewai login` via Device Authorization Grant:
+
+    1. Under **Authentication** → **Advanced settings**, enable **Allow public client flows**
+    2. Under **Expose an API**, add an Application ID URI (e.g., `api://crewai-cli`)
+    3. Add a scope (e.g., `read`) with **Admins and users** consent
+    4. Under **Manifest**, set `accessTokenAcceptedVersion` to `2`
+    5. Add environment variables:
+
+    ```yaml
+    secrets:
+      ENTRA_ID_DEVICE_AUTHORIZATION_CLIENT_ID: "<Application (client) ID>"
+      ENTRA_ID_CUSTOM_OPENID_SCOPE: "<scope URI, e.g. api://crewai-cli/read>"
+    ```
+  </Step>
+</Steps>
+
+---
+
+### Okta
+
+<Steps>
+  <Step title="Create App Integration">
+    1. Open Okta Admin Console → **Applications** → **Create App Integration**
+    2. Select **OIDC - OpenID Connect** → **Web Application** → **Next**
+    3. Configure:
+       - **App integration name:** `CrewAI SSO`
+       - **Sign-in redirect URI:** `https://<your-domain>/auth/okta/callback`
+       - **Sign-out redirect URI:** `https://<your-domain>`
+       - **Assignments:** Choose who can access (everyone or specific groups)
+    4. Click **Save**
+  </Step>
+
+  <Step title="Collect Credentials">
+    From the app details page:
+    - **Client ID** → `OKTA_CLIENT_ID`
+    - **Client Secret** → `OKTA_CLIENT_SECRET`
+    - **Okta URL** (top-right corner, under your username) → `OKTA_SITE`
+  </Step>
+
+  <Step title="Configure Authorization Server">
+    1. Navigate to **Security** → **API**
+    2. Select your authorization server (default: `default`)
+    3. Under **Access Policies**, add a policy and rule:
+       - In the rule, under **Scopes requested**, select **The following scopes** → **OIDC default scopes**
+    4. Note the **Name** and **Audience** of the authorization server
+
+    <Warning>
+      The authorization server name and audience must match `OKTA_AUTHORIZATION_SERVER` and `OKTA_AUDIENCE` exactly. Mismatches cause `401 Unauthorized` or `Invalid token: Signature verification failed` errors.
+    </Warning>
+  </Step>
+
+  <Step title="Set Environment Variables">
+    ```yaml
+    envVars:
+      AUTH_PROVIDER: "okta"
+
+    secrets:
+      OKTA_CLIENT_ID: "<Okta app client ID>"
+      OKTA_CLIENT_SECRET: "<Okta client secret>"
+      OKTA_SITE: "https://your-domain.okta.com"
+      OKTA_AUTHORIZATION_SERVER: "default"
+      OKTA_AUDIENCE: "api://default"
+    ```
+  </Step>
+
+  <Step title="Enable CLI Support (Optional)">
+    1. Create a **new** app integration: **OIDC** → **Native Application**
+    2. Enable **Device Authorization** and **Refresh Token** grant types
+    3. Allow everyone in your organization to access
+    4. Add environment variable:
+
+    ```yaml
+    secrets:
+      OKTA_DEVICE_AUTHORIZATION_CLIENT_ID: "<Native app client ID>"
+    ```
+
+    <Note>
+      Device Authorization requires a **Native Application** — it cannot use the Web Application created for browser-based SSO.
+    </Note>
+  </Step>
+</Steps>
+
+---
+
+### Keycloak
+
+<Steps>
+  <Step title="Create a Client">
+    1. Open Keycloak Admin Console → navigate to your realm
+    2. **Clients** → **Create client**:
+       - **Client type:** OpenID Connect
+       - **Client ID:** `crewai-factory` (suggested)
+    3. Capability config:
+       - **Client authentication:** On
+       - **Standard flow:** Checked
+    4. Login settings:
+       - **Root URL:** `https://<your-domain>`
+       - **Valid redirect URIs:** `https://<your-domain>/auth/keycloak/callback`
+       - **Valid post logout redirect URIs:** `https://<your-domain>`
+    5. Click **Save**
+  </Step>
+
+  <Step title="Collect Credentials">
+    - **Client ID** → `KEYCLOAK_CLIENT_ID`
+    - Under **Credentials** tab: **Client secret** → `KEYCLOAK_CLIENT_SECRET`
+    - **Realm name** → `KEYCLOAK_REALM`
+    - **Keycloak server URL** → `KEYCLOAK_SITE`
+  </Step>
+
+  <Step title="Set Environment Variables">
+    ```yaml
+    envVars:
+      AUTH_PROVIDER: "keycloak"
+
+    secrets:
+      KEYCLOAK_CLIENT_ID: "<client ID>"
+      KEYCLOAK_CLIENT_SECRET: "<client secret>"
+      KEYCLOAK_SITE: "https://keycloak.yourdomain.com"
+      KEYCLOAK_REALM: "<realm name>"
+      KEYCLOAK_AUDIENCE: "account"
+      # Only set if using a custom base path (pre-v17 migrations):
+      # KEYCLOAK_BASE_URL: "/auth"
+    ```
+
+    <Note>
+      Keycloak includes `account` as the default audience in access tokens. For most installations, `KEYCLOAK_AUDIENCE=account` works without additional configuration. See [Keycloak audience documentation](https://www.keycloak.org/docs/latest/authorization_services/index.html) if you need a custom audience.
+    </Note>
+  </Step>
+
+  <Step title="Enable CLI Support (Optional)">
+    1. Create a **second** client:
+       - **Client type:** OpenID Connect
+       - **Client ID:** `crewai-factory-cli` (suggested)
+       - **Client authentication:** Off (Device Authorization requires a public client)
+       - **Authentication flow:** Check **only** OAuth 2.0 Device Authorization Grant
+    2. Add environment variable:
+
+    ```yaml
+    secrets:
+      KEYCLOAK_DEVICE_AUTHORIZATION_CLIENT_ID: "<CLI client ID>"
+    ```
+  </Step>
+</Steps>
+
+---
+
+### WorkOS
+
+<Steps>
+  <Step title="Configure in WorkOS Dashboard">
+    1. Create an application in the [WorkOS Dashboard](https://dashboard.workos.com)
+    2. Configure the redirect URI: `https://<your-domain>/auth/workos/callback`
+    3. Note the **Client ID** and **AuthKit domain**
+    4. Set up organizations in the WorkOS dashboard
+  </Step>
+
+  <Step title="Set Environment Variables">
+    ```yaml
+    envVars:
+      AUTH_PROVIDER: "workos"
+
+    secrets:
+      WORKOS_CLIENT_ID: "<WorkOS client ID>"
+      WORKOS_AUTHKIT_DOMAIN: "<your-authkit-domain.authkit.com>"
+    ```
+  </Step>
+</Steps>
+
+---
+
+### Auth0
+
+<Steps>
+  <Step title="Create Application">
+    1. In the [Auth0 Dashboard](https://manage.auth0.com), create a new **Regular Web Application**
+    2. Configure:
+       - **Allowed Callback URLs:** `https://<your-domain>/auth/auth0/callback`
+       - **Allowed Logout URLs:** `https://<your-domain>`
+    3. Note the **Domain**, **Client ID**, and **Client Secret**
+  </Step>
+
+  <Step title="Set Environment Variables">
+    ```yaml
+    envVars:
+      AUTH_PROVIDER: "auth0"
+
+    secrets:
+      AUTH0_CLIENT_ID: "<Auth0 client ID>"
+      AUTH0_CLIENT_SECRET: "<Auth0 client secret>"
+      AUTH0_DOMAIN: "<your-tenant.auth0.com>"
+    ```
+  </Step>
+
+  <Step title="Enable CLI Support (Optional)">
+    1. Create a **Native** application in Auth0 for Device Authorization
+    2. Enable the **Device Authorization** grant type under application settings
+    3. Configure the CLI with the appropriate audience and client ID
+  </Step>
+</Steps>
+
+---
+
+## CLI Authentication
+
+The CrewAI CLI supports SSO authentication via the **Device Authorization Grant** flow. This allows developers to authenticate from their terminal without exposing credentials.
+
+### Quick Setup
+
+For Factory installations, the CLI can auto-configure all OAuth2 settings:
+
+```bash
+crewai enterprise configure https://your-factory-url.app
+```
+
+This command fetches the SSO configuration from your Factory instance and sets all required CLI parameters automatically.
+
+Then authenticate:
+
+```bash
+crewai login
+```
+
+<Note>
+  Requires CrewAI CLI version **1.6.0** or higher for Entra ID, **0.159.0** or higher for Okta, and **1.9.0** or higher for Keycloak.
+</Note>
+
+### Manual CLI Configuration
+
+If you need to configure the CLI manually, use `crewai config set`:
+
+```bash
+# Set the provider
+crewai config set oauth2_provider okta
+
+# Set provider-specific values
+crewai config set oauth2_domain your-domain.okta.com
+crewai config set oauth2_client_id your-client-id
+crewai config set oauth2_audience api://default
+
+# Set the enterprise base URL
+crewai config set enterprise_base_url https://your-factory-url.app
+```
+
+### CLI Configuration Reference
+
+| Setting | Description | Example |
+|---|---|---|
+| `enterprise_base_url` | Your CrewAI instance URL | `https://crewai.yourcompany.com` |
+| `oauth2_provider` | Provider name | `workos`, `okta`, `auth0`, `entra_id`, `keycloak` |
+| `oauth2_domain` | Provider domain | `your-domain.okta.com` |
+| `oauth2_client_id` | OAuth2 client ID | `0oaqnwji7pGW7VT6T697` |
+| `oauth2_audience` | API audience identifier | `api://default` |
+
+View current configuration:
+
+```bash
+crewai config list
+```
+
+### How Device Authorization Works
+
+1. Run `crewai login` — the CLI requests a device code from your IdP
+2. A verification URL and code are displayed in your terminal
+3. Your browser opens to the verification URL
+4. Enter the code and authenticate with your IdP credentials
+5. The CLI receives an access token and stores it locally
+
+---
+
+## Role-Based Access Control (RBAC)
+
+CrewAI Platform provides granular RBAC that integrates with your SSO provider.
+
+### Permission Model
+
+| Permission | Description |
+|---|---|
+| **Read** | View resources (dashboards, automations, logs) |
+| **Write** | Create and modify resources |
+| **Manage** | Full control including deletion and configuration |
+
+### Resources
+
+Permissions can be scoped to individual resources:
+
+- **Usage Dashboard** — Platform usage metrics and analytics
+- **Automations Dashboard** — Crew and flow management
+- **Environment Variables** — Secret and configuration management
+- **Individual Automations** — Per-automation access control
+
+### Roles
+
+- **Predefined roles** come out of the box with standard permission sets
+- **Custom roles** can be created with any combination of permissions
+- **Per-resource assignment** — limit specific automations to individual users or roles
+
+### Factory Admin Access
+
+For Factory deployments using Entra ID, admin access is controlled via App Roles:
+
+- Assign the `factory-admin` role to users who need admin panel access
+- Assign the `member` role for standard platform access
+- Roles are communicated via JWT claims — no additional configuration needed after IdP setup
+
+---
+
+## Troubleshooting
+
+### Invalid Redirect URI
+
+**Symptom:** Authentication fails with a redirect URI mismatch error.
+
+**Fix:** Ensure the redirect URI in your IdP exactly matches the expected callback URL:
+
+| Provider | Callback URL |
+|---|---|
+| Entra ID | `https://<domain>/auth/entra_id/callback` |
+| Okta | `https://<domain>/auth/okta/callback` |
+| Keycloak | `https://<domain>/auth/keycloak/callback` |
+| WorkOS | `https://<domain>/auth/workos/callback` |
+| Auth0 | `https://<domain>/auth/auth0/callback` |
+
+### CLI Login Fails (Device Authorization)
+
+**Symptom:** `crewai login` returns an error or times out.
+
+**Fix:**
+- Verify that Device Authorization Grant is enabled in your IdP
+- For Okta: ensure you have a **Native Application** (not Web) with Device Authorization grant
+- For Entra ID: ensure **Allow public client flows** is enabled
+- For Keycloak: ensure the CLI client has **Client authentication: Off** and only Device Authorization Grant enabled
+- Check that `*_DEVICE_AUTHORIZATION_CLIENT_ID` environment variable is set on the server
+
+### Token Validation Errors
+
+**Symptom:** `Invalid token: Signature verification failed` or `401 Unauthorized` after login.
+
+**Fix:**
+- **Okta:** Verify `OKTA_AUTHORIZATION_SERVER` and `OKTA_AUDIENCE` match the authorization server's Name and Audience exactly
+- **Entra ID:** Ensure `accessTokenAcceptedVersion` is set to `2` in the app manifest
+- **Keycloak:** Verify `KEYCLOAK_AUDIENCE` matches the audience in your access tokens (default: `account`)
+
+### Admin Consent Not Granted (Entra ID)
+
+**Symptom:** Users can't log in, see "needs admin approval" message.
+
+**Fix:** Go to **Enterprise applications** → your app → **Permissions** → **Grant admin consent**. Ensure `User.Read` is granted for Microsoft Graph.
+
+### 403 Forbidden After Login
+
+**Symptom:** User authenticates successfully but gets 403 errors.
+
+**Fix:**
+- Check that the user is assigned to the application in your IdP
+- For Entra ID with **Assignment required = Yes**: ensure the user has a role assignment (Member or Factory Admin)
+- For Okta: verify the user or their group is assigned under the app's **Assignments** tab
+
+### CLI Can't Reach Factory Instance
+
+**Symptom:** `crewai enterprise configure` fails to connect.
+
+**Fix:**
+- Verify the Factory URL is reachable from your machine
+- Check that `enterprise_base_url` is set correctly: `crewai config list`
+- Ensure TLS certificates are valid and trusted
+
+---
+
+## Environment Variables Reference
+
+### Common
+
+| Variable | Description |
+|---|---|
+| `AUTH_PROVIDER` | Authentication provider: `entra_id`, `okta`, `workos`, `auth0`, `keycloak`, `local` |
+
+### Microsoft Entra ID
+
+| Variable | Required | Description |
+|---|---|---|
+| `ENTRA_ID_CLIENT_ID` | ✅ | Application (client) ID from Azure |
+| `ENTRA_ID_CLIENT_SECRET` | ✅ | Client secret from Azure |
+| `ENTRA_ID_TENANT_ID` | ✅ | Directory (tenant) ID from Azure |
+| `ENTRA_ID_DEVICE_AUTHORIZATION_CLIENT_ID` | CLI only | Client ID for Device Authorization Grant |
+| `ENTRA_ID_CUSTOM_OPENID_SCOPE` | CLI only | Custom scope from "Expose an API" (e.g., `api://crewai-cli/read`) |
+
+### Okta
+
+| Variable | Required | Description |
+|---|---|---|
+| `OKTA_CLIENT_ID` | ✅ | Okta application client ID |
+| `OKTA_CLIENT_SECRET` | ✅ | Okta client secret |
+| `OKTA_SITE` | ✅ | Okta organization URL (e.g., `https://your-domain.okta.com`) |
+| `OKTA_AUTHORIZATION_SERVER` | ✅ | Authorization server name (e.g., `default`) |
+| `OKTA_AUDIENCE` | ✅ | Authorization server audience (e.g., `api://default`) |
+| `OKTA_DEVICE_AUTHORIZATION_CLIENT_ID` | CLI only | Native app client ID for Device Authorization |
+
+### WorkOS
+
+| Variable | Required | Description |
+|---|---|---|
+| `WORKOS_CLIENT_ID` | ✅ | WorkOS application client ID |
+| `WORKOS_AUTHKIT_DOMAIN` | ✅ | AuthKit domain (e.g., `your-domain.authkit.com`) |
+
+### Auth0
+
+| Variable | Required | Description |
+|---|---|---|
+| `AUTH0_CLIENT_ID` | ✅ | Auth0 application client ID |
+| `AUTH0_CLIENT_SECRET` | ✅ | Auth0 client secret |
+| `AUTH0_DOMAIN` | ✅ | Auth0 tenant domain (e.g., `your-tenant.auth0.com`) |
+
+### Keycloak
+
+| Variable | Required | Description |
+|---|---|---|
+| `KEYCLOAK_CLIENT_ID` | ✅ | Keycloak client ID |
+| `KEYCLOAK_CLIENT_SECRET` | ✅ | Keycloak client secret |
+| `KEYCLOAK_SITE` | ✅ | Keycloak server URL |
+| `KEYCLOAK_REALM` | ✅ | Keycloak realm name |
+| `KEYCLOAK_AUDIENCE` | ✅ | Token audience (default: `account`) |
+| `KEYCLOAK_BASE_URL` | Optional | Base URL path (e.g., `/auth` for pre-v17 migrations) |
+| `KEYCLOAK_DEVICE_AUTHORIZATION_CLIENT_ID` | CLI only | Public client ID for Device Authorization |
+
+---
+
+## Next Steps
+
+- [Installation Guide](/installation) — Get started with CrewAI
+- [Quickstart](/quickstart) — Build your first crew
+- [RBAC Setup](/enterprise/features/rbac) — Detailed role and permission management

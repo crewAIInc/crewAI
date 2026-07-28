@@ -1,0 +1,190 @@
+---
+title: "CrewAI 업그레이드"
+description: "프로젝트에서 CrewAI를 업그레이드하고 버전 간 브레이킹 체인지에 적응하는 방법."
+icon: "arrow-up-circle"
+---
+
+## 개요
+
+CrewAI 릴리스는 정기적으로 새로운 기능을 제공합니다. 이 가이드는 CLI와 프로젝트의 가상 환경을 모두 최신 상태로 유지하기 위한 실용적인 단계를 안내합니다.
+
+새로 시작한다면 [설치](/ko/installation)를 참고하세요. 다른 프레임워크에서 옮겨오는 경우라면 [LangGraph에서 마이그레이션](/ko/guides/migration/migrating-from-langgraph)을 참고하세요.
+
+---
+
+## 업그레이드할 수 있는 두 가지
+
+CrewAI는 사용자의 머신에 두 곳에 존재하며, 각각 독립적으로 업그레이드됩니다:
+
+| 무엇 | 설치 방법 | 업그레이드 방법 |
+|---|---|---|
+| **전역 `crewai` CLI** | `uv tool install crewai` | `uv tool install crewai --upgrade` |
+| **프로젝트 venv** (코드가 실행되는 곳) | `crewai install` / `uv sync` | `uv add "crewai[...]>=X.Y.Z"` 후 `crewai install` |
+
+이 둘은 — 그리고 자주 — 동기화가 어긋날 수 있습니다. `crewai --version`은 CLI 버전을 알려줍니다. 프로젝트 안에서 `uv pip show crewai`를 실행하면 venv 버전을 알려줍니다. 둘이 다른 것은 정상이며, 실행 중인 코드에 중요한 것은 venv 버전입니다.
+
+## 왜 `crewai install`만으로는 업그레이드되지 않는가
+
+`crewai install`은 `uv sync`를 감싼 얇은 래퍼입니다. 현재 `uv.lock` 파일이 지시하는 것 그대로를 설치할 뿐이며 — 어떤 버전 제약도 올리지 **않습니다**.
+
+`pyproject.toml`이 `crewai>=1.11.1`이라 적혀 있고 lock 파일이 `1.11.1`로 해소되었다면, `crewai install`을 실행해도 `1.14.4`가 사용 가능하더라도 영원히 `1.11.1`에 머무릅니다.
+
+실제로 업그레이드하려면 다음을 해야 합니다:
+
+1. `pyproject.toml`의 버전 제약 업데이트
+2. lock 파일 재해소
+3. venv 동기화
+
+`uv add`는 이 세 가지를 한 번에 처리합니다.
+
+## 프로젝트 업그레이드 방법
+
+```bash
+# 제약을 올리고 lock을 다시 만드는 한 번의 명령
+uv add "crewai[tools]>=1.14.4"
+
+# venv 동기화 (crewai install은 내부적으로 uv sync를 호출)
+crewai install
+
+# 확인
+uv pip show crewai
+# → Version: 1.14.4
+```
+
+`[tools]`를 프로젝트에서 사용하는 extras로 바꾸세요 (예: `[tools,anthropic]`). 잘 모르겠다면 `pyproject.toml`의 `dependencies` 목록을 확인하세요.
+
+<Note>
+  `uv add`는 `pyproject.toml`과 `uv.lock`을 **둘 다** 원자적으로 업데이트합니다. `pyproject.toml`을 수동으로 편집하는 경우, `crewai install`이 새 버전을 가져가도록 하기 전에 `uv lock --upgrade-package crewai`를 실행해 lock 파일을 다시 해소해야 합니다.
+</Note>
+
+## 전역 CLI 업그레이드
+
+전역 CLI는 프로젝트와 분리되어 있습니다. 다음 명령으로 업그레이드하세요:
+
+```bash
+uv tool install crewai --upgrade
+```
+
+업그레이드 후 셸이 `PATH`에 대해 경고하면 새로고침하세요:
+
+```bash
+uv tool update-shell
+```
+
+이 명령은 프로젝트의 venv를 **건드리지 않습니다** — 프로젝트 내부에서는 여전히 `uv add` + `crewai install`이 필요합니다.
+
+## 둘이 동기화되었는지 확인
+
+```bash
+# 전역 CLI 버전
+crewai --version
+
+# 프로젝트 venv 버전
+uv pip show crewai | grep Version
+```
+
+둘이 일치할 필요는 없지만 — 런타임 동작에 중요한 것은 프로젝트 venv 버전입니다.
+
+<Note>
+  CrewAI는 `Python >=3.10, <3.14`를 요구합니다. `uv`가 더 오래된 인터프리터로 설치되어 있다면, `crewai install`을 실행하기 전에 지원되는 Python으로 프로젝트 venv를 다시 만드세요.
+</Note>
+
+---
+
+## 브레이킹 체인지 및 마이그레이션 노트
+
+대부분의 업그레이드는 작은 조정만 필요합니다. 아래 항목들은 조용히 깨지거나 헷갈리는 트레이스백을 내는 영역들입니다.
+
+### Import 경로: tools와 `BaseTool`
+
+tools의 정식 import 위치는 `crewai.tools`입니다. 옛 경로들이 아직 튜토리얼에 등장하지만 업데이트해야 합니다.
+
+```python
+# 이전
+from crewai_tools import BaseTool
+from crewai.agents.tools import tool
+
+# 이후
+from crewai.tools import BaseTool, tool
+```
+
+`@tool` 데코레이터와 `BaseTool` 서브클래스는 모두 `crewai.tools`에 있습니다. `AgentFinish` 등 내부 에이전트 심볼들은 더 이상 공개 표면이 아닙니다 — import 중이었다면 event listener나 `Task` 콜백으로 전환하세요.
+
+### `Agent` 파라미터 변경
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Researcher",
+    goal="Find authoritative sources on {topic}",
+    backstory="You are a careful, source-driven researcher.",
+    llm="gpt-4o-mini",   # 모델명 문자열 또는 LLM 객체
+    verbose=True,        # 정수 레벨이 아닌 bool
+    max_iter=15,         # 버전마다 기본값이 바뀌었음 — 명시적으로 지정
+    allow_delegation=False,
+)
+```
+
+- `llm`은 문자열 모델명(설정된 provider를 통해 해소)이나 세밀한 제어를 위한 `LLM` 객체를 받습니다.
+- `verbose`는 일반 `bool`입니다. 정수를 전달해도 더 이상 로그 레벨을 토글하지 않습니다.
+- `max_iter`의 기본값은 릴리스 사이에 변경되었습니다. 첫 tool 호출 후 에이전트가 조용히 반복을 멈춘다면 `max_iter`를 명시적으로 지정하세요.
+
+### `Crew` 파라미터
+
+```python
+from crewai import Crew, Process
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,   # 또는 Process.hierarchical
+    memory=True,
+    cache=True,
+    embedder={"provider": "openai", "config": {"model": "text-embedding-3-small"}},
+)
+```
+
+- `process=Process.hierarchical`은 `manager_llm=` 또는 `manager_agent=` 중 하나가 필요합니다. 둘 다 없으면 kickoff 시 검증 단계에서 오류가 발생합니다.
+- 기본이 아닌 임베딩 provider와 함께 `memory=True`를 쓰려면 `embedder` dict가 필요합니다 — 아래의 [메모리와 embedder 설정](#memory-embedder-config)을 참고하세요.
+
+### `Task` 구조화된 출력
+
+`output_pydantic`, `output_json`, 또는 `output_file`을 사용해 task 결과를 타입이 지정된 형태로 강제할 수 있습니다:
+
+```python
+from pydantic import BaseModel
+from crewai import Task
+
+class Article(BaseModel):
+    title: str
+    body: str
+
+write = Task(
+    description="Write an article about {topic}",
+    expected_output="A short article with a title and body",
+    agent=writer,
+    output_pydantic=Article,        # 인스턴스가 아닌 클래스
+    output_file="output/article.md",
+)
+```
+
+`output_pydantic`은 **클래스** 자체를 받습니다. `Article(title="", body="")`을 전달하는 것은 흔한 실수이며 헷갈리는 검증 오류로 실패합니다.
+
+### 메모리와 embedder 설정 {#memory-embedder-config}
+
+`memory=True`이고 OpenAI의 기본 임베딩을 사용하지 않는다면, `embedder`를 반드시 전달해야 합니다:
+
+```python
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=True,
+    embedder={
+        "provider": "ollama",
+        "config": {"model": "nomic-embed-text"},
+    },
+)
+```
+
+해당 provider의 자격 증명(`OPENAI_API_KEY`, `OLLAMA_HOST` 등)을 `.env` 파일에 설정하세요. 메모리 저장 경로는 기본적으로 프로젝트-로컬입니다 — embedder를 바꾸면 차원이 호환되지 않으므로 프로젝트의 메모리 디렉터리를 삭제하세요.

@@ -1,0 +1,256 @@
+---
+title: "Role-Based Access Control (RBAC)"
+description: "Control access to crews, tools, and data with roles, scopes, and granular permissions."
+icon: "shield"
+mode: "wide"
+---
+
+## Overview
+
+RBAC in CrewAI AMP enables secure, scalable access management through two layers:
+
+1. **Feature permissions** — control what each role can do across the platform (manage, read, or no access)
+2. **Entity-level permissions** — fine-grained access on individual automations, environment variables, LLM connections, and Git repositories
+
+<Frame>
+  <img src="/images/enterprise/users_and_roles.png" alt="RBAC overview in CrewAI AMP" />
+</Frame>
+
+## Users and Roles
+
+Each member in your CrewAI workspace is assigned a role, which determines their access across various features.
+
+You can:
+
+- Use predefined roles (Owner, Member)
+- Create custom roles tailored to specific permissions
+- Assign roles at any time through the settings panel
+
+You can configure users and roles in Settings → Roles.
+
+<Steps>
+  <Step title="Open Roles settings">
+    Go to <b>Settings → Roles</b> in CrewAI AMP.
+  </Step>
+  <Step title="Choose a role type">
+    Use a predefined role (<b>Owner</b>, <b>Member</b>) or click{" "}
+    <b>Create role</b> to define a custom one.
+  </Step>
+  <Step title="Assign to members">
+    Select users and assign the role. You can change this anytime.
+  </Step>
+</Steps>
+
+### Predefined Roles
+
+| Role       | Description                                                                 |
+| :--------- | :-------------------------------------------------------------------------- |
+| **Owner**  | Full access to all features and settings. Cannot be restricted.             |
+| **Member** | Read access to most features, manage access to environment variables, LLM connections, and Studio projects. Cannot modify organization or default settings. |
+
+### Configuration summary
+
+| Area                  | Where to configure                 | Options                                 |
+| :-------------------- | :--------------------------------- | :-------------------------------------- |
+| Users & Roles         | Settings → Roles                   | Predefined: Owner, Member; Custom roles |
+| Automation visibility | Automation → Settings → Visibility | Private; Whitelist users/roles          |
+
+---
+
+## Feature Permissions Matrix
+
+Every role has a permission level for each feature area. The three levels are:
+
+- **Manage** — full read/write access (create, edit, delete)
+- **Read** — view-only access
+- **No access** — feature is hidden/inaccessible
+
+| Feature                   | Owner   | Member (default) | Available levels          | Description                                                     |
+| :------------------------ | :------ | :--------------- | :------------------------ | :-------------------------------------------------------------- |
+| `usage_dashboards`        | Manage  | Read             | Manage / Read / No access | View usage metrics and analytics                                |
+| `crews_dashboards`        | Manage  | Read             | Manage / Read / No access | View deployment dashboards, access automation details           |
+| `invitations`             | Manage  | Read             | Manage / Read / No access | Invite new members to the organization                          |
+| `training_ui`             | Manage  | Read             | Manage / Read / No access | Access training/fine-tuning interfaces                          |
+| `tools`                   | Manage  | Read             | Manage / Read / No access | Create and manage tools                                         |
+| `agents`                  | Manage  | Read             | Manage / Read / No access | Create and manage agents                                        |
+| `environment_variables`   | Manage  | Manage           | Manage / No access        | Create and manage environment variables                         |
+| `llm_connections`         | Manage  | Manage           | Manage / No access        | Configure LLM provider connections                              |
+| `default_settings`        | Manage  | No access        | Manage / No access        | Modify organization-wide default settings                       |
+| `organization_settings`   | Manage  | No access        | Manage / No access        | Manage billing, plans, and organization configuration           |
+| `studio_projects`         | Manage  | Manage           | Manage / No access        | Create and edit projects in Studio                              |
+
+<Tip>
+  When creating a custom role, most features can be set to **Manage**, **Read**, or **No access**. However, `environment_variables`, `llm_connections`, `default_settings`, `organization_settings`, and `studio_projects` only support **Manage** or **No access** — there is no read-only option for these features.
+</Tip>
+
+---
+
+## Deploying from GitHub or Zip
+
+One of the most common RBAC questions is: _"What permissions does a team member need to deploy?"_
+
+### Deploy from GitHub
+
+To deploy an automation from a GitHub repository, a user needs:
+
+1. **`crews_dashboards`**: at least `Read` — required to access the automations dashboard where deployments are created
+2. **Git repository access** (if entity-level RBAC for Git repositories is enabled): the user's role must be granted access to the specific Git repository via entity-level permissions
+3. **`studio_projects`: `Manage`** — if building the crew in Studio before deploying
+
+### Deploy from Zip
+
+To deploy an automation from a Zip file upload, a user needs:
+
+1. **`crews_dashboards`**: at least `Read` — required to access the automations dashboard
+2. **Zip deployments enabled**: the organization must not have disabled zip deployments in organization settings
+
+### Quick Reference: Minimum Permissions for Deployment
+
+| Action               | Required feature permissions          | Additional requirements                          |
+| :------------------- | :------------------------------------ | :----------------------------------------------- |
+| Deploy from GitHub   | `crews_dashboards: Read`              | Git repo entity access (if Git RBAC is enabled)  |
+| Deploy from Zip      | `crews_dashboards: Read`              | Zip deployments must be enabled at the org level |
+| Build in Studio      | `studio_projects: Manage`             | —                                                |
+| Configure LLM keys   | `llm_connections: Manage`             | —                                                |
+| Set environment vars  | `environment_variables: Manage`       | Entity-level access (if entity RBAC is enabled)  |
+
+---
+
+## Automation‑level Access Control (Entity Permissions)
+
+In addition to organization‑wide roles, CrewAI supports fine‑grained entity-level permissions that restrict access to individual resources.
+
+### Automation Visibility
+
+Automations support visibility settings that restrict access by user or role. This is useful for:
+
+- Keeping sensitive or experimental automations private
+- Managing visibility across large teams or external collaborators
+- Testing automations in isolated contexts
+
+Deployments can be configured as private, meaning only whitelisted users and roles will be able to interact with them.
+
+You can configure automation‑level access control in Automation → Settings → Visibility tab.
+
+<Steps>
+  <Step title="Open Visibility tab">
+    Navigate to <b>Automation → Settings → Visibility</b>.
+  </Step>
+  <Step title="Set visibility">
+    Choose <b>Private</b> to restrict access. The organization owner always
+    retains access.
+  </Step>
+  <Step title="Whitelist access">
+    Add specific users and roles allowed to view, run, and access
+    logs/metrics/settings.
+  </Step>
+  <Step title="Save and verify">
+    Save changes, then confirm that non‑whitelisted users cannot view or run the
+    automation.
+  </Step>
+</Steps>
+
+### Private visibility: access outcomes
+
+| Action                       | Owner | Whitelisted user/role | Not whitelisted |
+| :--------------------------- | :---- | :-------------------- | :-------------- |
+| View automation              | ✓     | ✓                     | ✗               |
+| Run automation/API           | ✓     | ✓                     | ✗               |
+| Access logs/metrics/settings | ✓     | ✓                     | ✗               |
+
+<Tip>
+  The organization owner always has access. In private mode, only whitelisted
+  users and roles can view, run, and access logs/metrics/settings.
+</Tip>
+
+<Frame>
+  <img src="/images/enterprise/visibility.png" alt="Automation Visibility settings in CrewAI AMP" />
+</Frame>
+
+### Deployment Permission Types
+
+When granting entity-level access to a specific automation, you can assign these permission types:
+
+| Permission           | What it allows                                      |
+| :------------------- | :-------------------------------------------------- |
+| `run`                | Execute the automation and use its API               |
+| `traces`             | View execution traces and logs                       |
+| `manage_settings`    | Edit, redeploy, rollback, or delete the automation   |
+| `human_in_the_loop`  | Respond to human-in-the-loop (HITL) requests         |
+| `full_access`        | All of the above                                     |
+
+### Entity-level RBAC for Other Resources
+
+When entity-level RBAC is enabled, access to these resources can also be controlled per user or role:
+
+| Resource               | Controlled by                    | Description                                           |
+| :--------------------- | :------------------------------- | :---------------------------------------------------- |
+| Environment variables  | Entity RBAC feature flag         | Restrict which roles/users can view or manage specific env vars |
+| LLM connections        | Entity RBAC feature flag         | Restrict access to specific LLM provider configurations |
+| Git repositories       | Git repositories RBAC org setting | Restrict which roles/users can access specific connected repos |
+
+---
+
+## Common Role Patterns
+
+While CrewAI ships with Owner and Member roles, most teams benefit from creating custom roles. Here are common patterns:
+
+### Developer Role
+
+A role for team members who build and deploy automations but don't manage organization settings.
+
+| Feature                   | Permission |
+| :------------------------ | :--------- |
+| `usage_dashboards`        | Read       |
+| `crews_dashboards`        | Manage     |
+| `invitations`             | Read       |
+| `training_ui`             | Read       |
+| `tools`                   | Manage     |
+| `agents`                  | Manage     |
+| `environment_variables`   | Manage     |
+| `llm_connections`         | Manage     |
+| `default_settings`        | No access  |
+| `organization_settings`   | No access  |
+| `studio_projects`         | Manage     |
+
+### Viewer / Stakeholder Role
+
+A role for non-technical stakeholders who need to monitor automations and view results.
+
+| Feature                   | Permission |
+| :------------------------ | :--------- |
+| `usage_dashboards`        | Read       |
+| `crews_dashboards`        | Read       |
+| `invitations`             | No access  |
+| `training_ui`             | Read       |
+| `tools`                   | Read       |
+| `agents`                  | Read       |
+| `environment_variables`   | No access  |
+| `llm_connections`         | No access  |
+| `default_settings`        | No access  |
+| `organization_settings`   | No access  |
+| `studio_projects`         | No access  |
+
+### Ops / Platform Admin Role
+
+A role for platform operators who manage infrastructure settings but may not build agents.
+
+| Feature                   | Permission |
+| :------------------------ | :--------- |
+| `usage_dashboards`        | Manage     |
+| `crews_dashboards`        | Manage     |
+| `invitations`             | Manage     |
+| `training_ui`             | Read       |
+| `tools`                   | Read       |
+| `agents`                  | Read       |
+| `environment_variables`   | Manage     |
+| `llm_connections`         | Manage     |
+| `default_settings`        | Manage     |
+| `organization_settings`   | Read       |
+| `studio_projects`         | No access  |
+
+---
+
+<Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
+  Contact our support team for assistance with RBAC questions.
+</Card>
