@@ -37,7 +37,7 @@ class K8sAgentSandboxLifecycleManager(ABC):
         self._lock = Lock()
         self._closed = False
 
-        self._sandbox: 'Sandbox | None' = None
+        self._sandbox: "Sandbox | None" = None
         self._sandbox_acquired: bool = False
 
         self._close_timeout = close_timeout
@@ -75,7 +75,9 @@ class K8sAgentSandboxLifecycleManager(ABC):
 
         acquired = self._lock.acquire(timeout=self._close_timeout)
         if not acquired:
-            logger.warning("Failed to acquire lock on close before the timeout. Closing anyway.")
+            logger.warning(
+                "Failed to acquire lock on close before the timeout. Closing anyway."
+            )
 
         try:
             self._close()

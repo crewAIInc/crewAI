@@ -4,6 +4,7 @@ from typing import Any
 # Global dictionary acting as the cache collection
 _MODULE_CACHE: dict[str, Any] = {}
 
+
 def lazy_import_k8s_agent_sandbox(target: str):
     """
     Lazily imports a module or attribute by string name, caches it globally,

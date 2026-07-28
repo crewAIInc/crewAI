@@ -22,21 +22,21 @@ class K8sAgentSandboxToolClientSettings:
     class.
     """
 
-    connection_config: 'SandboxConnectionConfig | None' = None
-    tracer_config: 'SandboxTracerConfig | None' = None
+    connection_config: "SandboxConnectionConfig | None" = None
+    tracer_config: "SandboxTracerConfig | None" = None
     cleanup: bool = False
 
-    _client: 'SandboxClient | None' = field(default=None, init=False, repr=False)
+    _client: "SandboxClient | None" = field(default=None, init=False, repr=False)
 
     @property
-    def client(self) -> 'SandboxClient':
+    def client(self) -> "SandboxClient":
         if self._client is not None:
             return self._client
 
         # from k8s_agent_sandbox.sandbox_client import SandboxClient
         kas_client_sandbox_module = lazy_import_k8s_agent_sandbox("sandbox_client")
 
-        client: 'SandboxClient' = kas_client_sandbox_module.SandboxClient(
+        client: "SandboxClient" = kas_client_sandbox_module.SandboxClient(
             connection_config=self.connection_config,
             tracer_config=self.tracer_config,
             cleanup=self.cleanup,

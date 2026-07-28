@@ -92,9 +92,7 @@ class K8sAgentSandboxToolset:
 
         client_settings = client_settings or K8sAgentSandboxToolClientSettings()
 
-        kwargs = {
-            "close_timeout": close_timeout
-        }
+        kwargs = {"close_timeout": close_timeout}
 
         if claim_name is not None:
             lifecycle_manager = AttachModeK8sAgentSandboxLifecycleManager(
@@ -102,7 +100,6 @@ class K8sAgentSandboxToolset:
                 sandbox_settings,
                 claim_name,
                 **kwargs,
-
             )
 
         elif persistent:

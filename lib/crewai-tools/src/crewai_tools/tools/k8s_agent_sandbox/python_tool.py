@@ -24,9 +24,16 @@ class k8sAgentSandboxPythonToolSchema(BaseModel):
 
 
 class K8sAgentSandboxPythonToolOutput(BaseModel):
-    exit_code: int | None = Field(default=None, description="The exit code of the Python script execution.")
-    stdout: str | None = Field(default=None, description="The standard output produced by the Python script.")
-    stderr: str | None = Field(default=None, description="The standard error output produced by the Python script.")
+    exit_code: int | None = Field(
+        default=None, description="The exit code of the Python script execution."
+    )
+    stdout: str | None = Field(
+        default=None, description="The standard output produced by the Python script."
+    )
+    stderr: str | None = Field(
+        default=None,
+        description="The standard error output produced by the Python script.",
+    )
 
 
 class K8sAgentSandboxPythonTool(K8sAgentSandboxBaseTool):

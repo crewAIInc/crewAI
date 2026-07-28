@@ -20,9 +20,15 @@ class K8sAgentSandboxExecToolSchema(BaseModel):
 
 
 class K8sAgentSandboxExecToolOutput(BaseModel):
-    exit_code: int | None = Field(default=None, description="The exit code of the executed command.")
-    stdout: str | None = Field(default=None, description="The standard output produced by the command.")
-    stderr: str | None = Field(default=None, description="The standard error output produced by the command.")
+    exit_code: int | None = Field(
+        default=None, description="The exit code of the executed command."
+    )
+    stdout: str | None = Field(
+        default=None, description="The standard output produced by the command."
+    )
+    stderr: str | None = Field(
+        default=None, description="The standard error output produced by the command."
+    )
 
 
 class K8sAgentSandboxExecTool(K8sAgentSandboxBaseTool):
@@ -32,7 +38,9 @@ class K8sAgentSandboxExecTool(K8sAgentSandboxBaseTool):
     )
     args_schema: type[BaseModel] = K8sAgentSandboxExecToolSchema
 
-    def _run_with_sandbox(self, sandbox: "Sandbox", *args, **kwargs) -> K8sAgentSandboxExecToolOutput:
+    def _run_with_sandbox(
+        self, sandbox: "Sandbox", *args, **kwargs
+    ) -> K8sAgentSandboxExecToolOutput:
         return self._run_command(sandbox, *args, **kwargs)
 
     def _run_command(

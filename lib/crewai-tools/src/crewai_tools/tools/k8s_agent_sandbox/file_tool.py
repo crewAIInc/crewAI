@@ -29,9 +29,7 @@ from crewai_tools.tools.k8s_agent_sandbox.base_tool import (
 
 logger = logging.getLogger(__name__)
 
-FileAction = Literal[
-    "read", "write", "append", "list", "delete", "mkdir", "exists"
-]
+FileAction = Literal["read", "write", "append", "list", "delete", "mkdir", "exists"]
 
 
 class K8sAgentSandboxFileToolSchema(BaseModel):
@@ -88,23 +86,60 @@ class K8sAgentSandboxFileToolSchema(BaseModel):
 
 
 class FileEntryModel(BaseModel):
-    name: str | None = Field(default=None, description="The name of the file or directory.")
-    type: str | None = Field(default=None, description="The type of the entry, typically 'file' or 'directory'.")
+    name: str | None = Field(
+        default=None, description="The name of the file or directory."
+    )
+    type: str | None = Field(
+        default=None,
+        description="The type of the entry, typically 'file' or 'directory'.",
+    )
     size: int | None = Field(default=None, description="The size of the file in bytes.")
-    mod_time: float | None = Field(default=None, description="The last modification time of the entry as a Unix timestamp.")
+    mod_time: float | None = Field(
+        default=None,
+        description="The last modification time of the entry as a Unix timestamp.",
+    )
 
 
 class K8sAgentSandboxFileToolOutput(BaseModel):
-    path: str | None = Field(default=None, description="The target path of the file or directory.")
-    status: str | None = Field(default=None, description="The status of the file operation, e.g., 'written', 'appended', 'created', 'deleted'.")
-    exists: bool | None = Field(default=None, description="Indicates whether the file or directory exists. Only returned for the 'exists' action.")
-    content: str | None = Field(default=None, description="The content of the file. Returned for the 'read' action.")
-    encoding: str | None = Field(default=None, description="The encoding of the content, e.g., 'utf-8' or 'base64'.")
-    note: str | None = Field(default=None, description="An optional note providing additional context about the operation (e.g., regarding non-utf8 files).")
-    bytes: int | None = Field(default=None, description="The number of bytes written. Returned for the 'write' action.")
-    appended_bytes: int | None = Field(default=None, description="The number of bytes appended to the file. Returned for the 'append' action.")
-    total_bytes: int | None = Field(default=None, description="The total size of the file in bytes after appending. Returned for the 'append' action.")
-    entries: list[FileEntryModel] | None = Field(default=None, description="A list of file and directory entries. Returned for the 'list' action.")
+    path: str | None = Field(
+        default=None, description="The target path of the file or directory."
+    )
+    status: str | None = Field(
+        default=None,
+        description="The status of the file operation, e.g., 'written', 'appended', 'created', 'deleted'.",
+    )
+    exists: bool | None = Field(
+        default=None,
+        description="Indicates whether the file or directory exists. Only returned for the 'exists' action.",
+    )
+    content: str | None = Field(
+        default=None,
+        description="The content of the file. Returned for the 'read' action.",
+    )
+    encoding: str | None = Field(
+        default=None,
+        description="The encoding of the content, e.g., 'utf-8' or 'base64'.",
+    )
+    note: str | None = Field(
+        default=None,
+        description="An optional note providing additional context about the operation (e.g., regarding non-utf8 files).",
+    )
+    bytes: int | None = Field(
+        default=None,
+        description="The number of bytes written. Returned for the 'write' action.",
+    )
+    appended_bytes: int | None = Field(
+        default=None,
+        description="The number of bytes appended to the file. Returned for the 'append' action.",
+    )
+    total_bytes: int | None = Field(
+        default=None,
+        description="The total size of the file in bytes after appending. Returned for the 'append' action.",
+    )
+    entries: list[FileEntryModel] | None = Field(
+        default=None,
+        description="A list of file and directory entries. Returned for the 'list' action.",
+    )
 
 
 class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
@@ -121,7 +156,8 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
         "Perform filesystem operations inside a K8s agent sandbox: read a file, "
         "write content to a path, append content to an existing file, list a "
         "directory, delete a path, make a directory or "
-        "check whether a path exists.")
+        "check whether a path exists."
+    )
     args_schema: type[BaseModel] = K8sAgentSandboxFileToolSchema
 
     def _run_with_sandbox(
@@ -182,7 +218,9 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
                 content=base64.b64encode(data).decode("ascii"),
             )
         try:
-            return K8sAgentSandboxFileToolOutput(path=path, encoding="utf-8", content=data.decode("utf-8"))
+            return K8sAgentSandboxFileToolOutput(
+                path=path, encoding="utf-8", content=data.decode("utf-8")
+            )
         except UnicodeDecodeError:
             return K8sAgentSandboxFileToolOutput(
                 path=path,
@@ -204,7 +242,9 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
         payload = base64.b64decode(content) if binary else content.encode("utf-8")
         self._ensure_parent_dir(sandbox, path, timeout=timeout_tracker())
         sandbox.files.write(path, payload, timeout=timeout_tracker())
-        return K8sAgentSandboxFileToolOutput(status="written", path=path, bytes=len(payload))
+        return K8sAgentSandboxFileToolOutput(
+            status="written", path=path, bytes=len(payload)
+        )
 
     def _append(
         self,
@@ -219,10 +259,14 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
         self._ensure_parent_dir(sandbox, path, timeout=timeout_tracker())
 
         tmp_file_path = f"/tmp/crewai-file-append{uuid.uuid4()}.tmp"
-        sandbox.files.write(tmp_file_path, chunk, timeout=timeout_tracker(), allow_unsafe_paths=True)
+        sandbox.files.write(
+            tmp_file_path, chunk, timeout=timeout_tracker(), allow_unsafe_paths=True
+        )
         q = shlex.quote(path)
         qt = shlex.quote(tmp_file_path)
-        result = sandbox.commands.run(f"cat {qt} >> {q}; rc=$?; rm -f {qt}; exit $rc", timeout=timeout_tracker())
+        result = sandbox.commands.run(
+            f"cat {qt} >> {q}; rc=$?; rm -f {qt}; exit $rc", timeout=timeout_tracker()
+        )
         if result.exit_code != 0:
             raise RuntimeError(f"Cannot append to {path}. Error: {result.stderr}.")
 
@@ -232,14 +276,18 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
             appended_bytes=len(chunk),
         )
 
-    def _list(self, sandbox: "Sandbox", path: str, *, timeout: int) -> K8sAgentSandboxFileToolOutput:
+    def _list(
+        self, sandbox: "Sandbox", path: str, *, timeout: int
+    ) -> K8sAgentSandboxFileToolOutput:
         entries = sandbox.files.list(path, timeout=timeout)
         return K8sAgentSandboxFileToolOutput(
             path=path,
             entries=[self._entry_to_dict(e) for e in entries],
         )
 
-    def _delete(self, sandbox: "Sandbox", path: str, *, timeout: int) -> K8sAgentSandboxFileToolOutput:
+    def _delete(
+        self, sandbox: "Sandbox", path: str, *, timeout: int
+    ) -> K8sAgentSandboxFileToolOutput:
         # TODO: Fall back to deleting with shell command.
         # Use normal file delete API when it is available in SDK.
 
