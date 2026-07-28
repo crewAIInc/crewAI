@@ -7,6 +7,7 @@ from typing import Any as AnyType, Literal, TypeAlias, TypedDict, overload
 
 from typing_extensions import NotRequired, Unpack
 
+from crewai_files.processing.exceptions import PermanentUploadError
 from crewai_files.uploaders.anthropic import AnthropicFileUploader
 from crewai_files.uploaders.bedrock import BedrockFileUploader
 from crewai_files.uploaders.gemini import GeminiFileUploader
@@ -150,7 +151,10 @@ def get_uploader(
             logger.warning(
                 "google-genai not installed. Install with: pip install google-genai"
             )
-            raise
+            raise PermanentUploadError(
+                "google-genai not installed. "
+                "Install with: pip install google-genai"
+            ) from None
 
     if "anthropic" in provider_lower or "claude" in provider_lower:
         try:
@@ -165,7 +169,10 @@ def get_uploader(
             logger.warning(
                 "anthropic not installed. Install with: pip install anthropic"
             )
-            raise
+            raise PermanentUploadError(
+                "anthropic not installed. "
+                "Install with: pip install anthropic"
+            ) from None
 
     if (
         "openai" in provider_lower
@@ -183,7 +190,10 @@ def get_uploader(
             )
         except ImportError:
             logger.warning("openai not installed. Install with: pip install openai")
-            raise
+            raise PermanentUploadError(
+                "openai not installed. "
+                "Install with: pip install openai"
+            ) from None
 
     if "bedrock" in provider_lower or "aws" in provider_lower:
         import os
@@ -196,7 +206,10 @@ def get_uploader(
                 "Bedrock S3 uploader not configured. "
                 "Set CREWAI_BEDROCK_S3_BUCKET environment variable to enable."
             )
-            raise
+            raise PermanentUploadError(
+                "Bedrock S3 uploader not configured. "
+                "Set CREWAI_BEDROCK_S3_BUCKET environment variable to enable."
+            )
         try:
             from crewai_files.uploaders.bedrock import BedrockFileUploader
 
@@ -210,7 +223,10 @@ def get_uploader(
             )
         except ImportError:
             logger.warning("boto3 not installed. Install with: pip install boto3")
-            raise
+            raise PermanentUploadError(
+                "boto3 not installed. "
+                "Install with: pip install boto3"
+            ) from None
 
     logger.debug(f"No file uploader available for provider: {provider}")
-    raise
+    raise PermanentUploadError(f"No file uploader available for provider: {provider}")
