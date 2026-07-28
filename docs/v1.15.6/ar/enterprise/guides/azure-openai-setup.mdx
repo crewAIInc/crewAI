@@ -1,0 +1,54 @@
+---
+title: "إعداد Azure OpenAI"
+description: "تهيئة Azure OpenAI مع Crew Studio لاتصالات LLM المؤسسية"
+icon: "microsoft"
+mode: "wide"
+---
+
+يرشدك هذا الدليل خلال ربط Azure OpenAI مع Crew Studio لعمليات الذكاء الاصطناعي المؤسسية السلسة.
+
+## عملية الإعداد
+
+<Steps>
+    <Step title="الوصول إلى Azure AI Foundry">
+        1. في Azure، انتقل إلى [Azure AI Foundry](https://ai.azure.com/) > اختر نشر Azure OpenAI الخاص بك.
+        2. في القائمة اليسرى، انقر على `Deployments`. إذا لم يكن لديك نشر، أنشئ واحداً بالنموذج المطلوب.
+        3. بمجرد الإنشاء، اختر النشر وحدد موقع `Target URI` و`Key` على الجانب الأيمن من الصفحة. أبقِ هذه الصفحة مفتوحة، حيث ستحتاج هذه المعلومات.
+            <Frame>
+                <img src="/images/enterprise/azure-openai-studio.png" alt="Azure AI Foundry" />
+            </Frame>
+    </Step>
+
+    <Step title="تهيئة اتصال CrewAI AMP">
+        4. في علامة تبويب أخرى، افتح `CrewAI AMP > LLM Connections`. سمِّ اتصال LLM، واختر Azure كمزود، واختر نفس النموذج الذي اخترته في Azure.
+        5. في نفس الصفحة، أضف متغيرات البيئة من الخطوة 3:
+            - واحد بالاسم `AZURE_DEPLOYMENT_TARGET_URL` (باستخدام Target URI). يجب أن يبدو الرابط هكذا: https://your-deployment.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-08-01-preview
+            - آخر بالاسم `AZURE_API_KEY` (باستخدام Key).
+        6. انقر على `Add Connection` لحفظ اتصال LLM.
+    </Step>
+
+    <Step title="ضبط التهيئة الافتراضية">
+        7. في `CrewAI AMP > Settings > Defaults > Crew Studio LLM Settings`، عيّن اتصال LLM والنموذج الجديدين كافتراضيين.
+    </Step>
+
+    <Step title="تهيئة الوصول إلى الشبكة">
+        8. تأكد من إعدادات الوصول إلى الشبكة:
+            - في Azure، انتقل إلى `Azure OpenAI > اختر النشر`.
+            - انتقل إلى `Resource Management > Networking`.
+            - تأكد من تفعيل `Allow access from all networks`. إذا كان هذا الإعداد مقيداً، فقد يُحظر وصول CrewAI إلى نقطة نهاية Azure OpenAI.
+    </Step>
+
+</Steps>
+
+## التحقق
+
+أنت جاهز! سيستخدم Crew Studio الآن اتصال Azure OpenAI الخاص بك. اختبر الاتصال بإنشاء طاقم أو مهمة بسيطة للتأكد من أن كل شيء يعمل بشكل صحيح.
+
+## استكشاف الأخطاء وإصلاحها
+
+إذا واجهت مشكلات:
+
+- تحقق من أن تنسيق Target URI يتطابق مع النمط المتوقع
+- تحقق من صحة مفتاح API وأنه يملك الصلاحيات المناسبة
+- تأكد من تهيئة الوصول إلى الشبكة للسماح باتصالات CrewAI
+- تأكد من أن نموذج النشر يتطابق مع ما هيأته في CrewAI

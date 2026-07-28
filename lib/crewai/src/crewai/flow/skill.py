@@ -11,7 +11,6 @@ from jinja2 import Environment, FileSystemLoader
 import yaml
 
 from crewai.flow.expressions import (
-    FLOW_TEMPLATE_EXPRESSION_CONTRACT,
     FLOW_TEMPLATE_EXPRESSION_EXAMPLES,
     FLOW_TEMPLATE_EXPRESSION_RULES,
 )
@@ -186,7 +185,14 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         hidden=True,
     ),
     ModelSpec("FlowScriptActionDefinition", "Action", "methods.<name>.do[call=script]"),
-    ModelSpec("FlowToolActionDefinition", "Action", "methods.<name>.do[call=tool]"),
+    ModelSpec(
+        "FlowToolActionDefinition",
+        "Action",
+        "methods.<name>.do[call=tool]",
+        descriptions={
+            "with": "Tool input arguments. Insert Flow values with `${...}`.",
+        },
+    ),
     ModelSpec(
         "FlowCrewActionDefinition",
         "Action",
@@ -194,7 +200,7 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         examples=True,
         descriptions={
             "call": "Action discriminator. Use crew to run an inline Crew definition.",
-            "inputs": f"Actual kickoff inputs passed to the Crew. {FLOW_TEMPLATE_EXPRESSION_CONTRACT} The evaluated values are available to crew agent and task interpolation as `{{name}}` placeholders; reference each input the crew needs in agent or task text.",
+            "inputs": "Runtime inputs passed to the Crew. Insert Flow values with `${...}` and reference each input as `{name}` in agent or task text.",
         },
     ),
     ModelSpec(
@@ -262,7 +268,7 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         hidden=True,
         examples=True,
         descriptions={
-            "input": f"Input passed to the individual agent kickoff outside of a crew. Use one string. {FLOW_TEMPLATE_EXPRESSION_CONTRACT} When an agent needs multiple fields, write one string with labels and separators, for example `Ticket ID: ${{state.ticket_id}}; Message: ${{state.message}}`.",
+            "input": "Agent prompt template. Insert Flow values with `${...}`, for example `Ticket: ${state.ticket_id}`.",
             "llm": "Language model that runs this agent. Use an object when setting LLM options such as `max_tokens`.",
             "planning_config": "Agent planning configuration. Set `max_attempts` to limit planning refinement attempts before task execution.",
         },

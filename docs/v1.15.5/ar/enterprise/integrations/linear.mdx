@@ -1,0 +1,261 @@
+---
+title: تكامل Linear
+description: "إدارة المشاريع البرمجية وتتبع الأخطاء مع تكامل Linear لـ CrewAI."
+icon: "list-check"
+mode: "wide"
+---
+
+## نظرة عامة
+
+مكّن وكلاءك من إدارة المشكلات والمشاريع وسير عمل التطوير عبر Linear. أنشئ المشكلات وحدّثها، وأدر جداول المشاريع الزمنية، ونظّم الفرق، وبسّط عملية تطوير البرمجيات باستخدام الأتمتة المدعومة بالذكاء الاصطناعي.
+
+## المتطلبات الأساسية
+
+قبل استخدام تكامل Linear، تأكد من توفر ما يلي:
+
+- حساب [CrewAI AMP](https://app.crewai.com) مع اشتراك فعّال
+- حساب Linear بصلاحيات مساحة العمل المناسبة
+- ربط حساب Linear الخاص بك عبر [صفحة التكاملات](https://app.crewai.com/crewai_plus/connectors)
+
+## إعداد تكامل Linear
+
+### 1. ربط حساب Linear الخاص بك
+
+1. انتقل إلى [تكاملات CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
+2. ابحث عن **Linear** في قسم تكاملات المصادقة
+3. انقر على **Connect** وأكمل عملية OAuth
+4. امنح الصلاحيات اللازمة لإدارة المشكلات والمشاريع
+5. انسخ رمز المؤسسة من [إعدادات التكامل](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. تثبيت الحزمة المطلوبة
+
+```bash
+uv add crewai-tools
+```
+
+### 3. إعداد متغير البيئة
+
+<Note>
+  لاستخدام التكاملات مع `Agent(apps=[])`, يجب تعيين متغير البيئة
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` برمز المؤسسة الخاص بك.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+أو أضفه إلى ملف `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## الإجراءات المتاحة
+
+<AccordionGroup>
+  <Accordion title="linear/create_issue">
+    **الوصف:** إنشاء مشكلة جديدة في Linear.
+
+    **المعاملات:**
+    - `teamId` (string, مطلوب): معرّف الفريق للمشكلة الجديدة.
+    - `title` (string, مطلوب): العنوان.
+    - `description` (string, اختياري): الوصف.
+    - `statusId` (string, اختياري): الحالة.
+    - `priority` (string, اختياري): الأولوية كعدد صحيح.
+    - `dueDate` (string, اختياري): تاريخ الاستحقاق بصيغة ISO 8601.
+    - `cycleId` (string, اختياري): معرّف الدورة المرتبطة.
+    - `additionalFields` (object, اختياري): حقول إضافية.
+
+  </Accordion>
+
+  <Accordion title="linear/update_issue">
+    **الوصف:** تحديث مشكلة في Linear.
+
+    **المعاملات:**
+    - `issueId` (string, مطلوب): معرّف المشكلة المراد تحديثها.
+    - `title` (string, اختياري): العنوان.
+    - `description` (string, اختياري): الوصف.
+    - `statusId` (string, اختياري): الحالة.
+    - `priority` (string, اختياري): الأولوية.
+    - `dueDate` (string, اختياري): تاريخ الاستحقاق.
+
+  </Accordion>
+
+  <Accordion title="linear/get_issue_by_id">
+    **الوصف:** الحصول على مشكلة بواسطة المعرّف في Linear.
+
+    **المعاملات:**
+    - `issueId` (string, مطلوب): معرّف المشكلة المراد جلبها.
+
+  </Accordion>
+
+  <Accordion title="linear/search_issue">
+    **الوصف:** البحث عن المشكلات في Linear.
+
+    **المعاملات:**
+    - `queryTerm` (string, مطلوب): مصطلح البحث.
+    - `issueFilterFormula` (object, اختياري): فلتر بصيغة التعبير العادي المنفصل.
+
+  </Accordion>
+
+  <Accordion title="linear/delete_issue">
+    **الوصف:** حذف مشكلة في Linear.
+
+    **المعاملات:**
+    - `issueId` (string, مطلوب): معرّف المشكلة المراد حذفها.
+
+  </Accordion>
+
+  <Accordion title="linear/archive_issue">
+    **الوصف:** أرشفة مشكلة في Linear.
+
+    **المعاملات:**
+    - `issueId` (string, مطلوب): معرّف المشكلة المراد أرشفتها.
+
+  </Accordion>
+
+  <Accordion title="linear/create_sub_issue">
+    **الوصف:** إنشاء مشكلة فرعية في Linear.
+
+    **المعاملات:**
+    - `parentId` (string, مطلوب): معرّف المشكلة الأصلية.
+    - `teamId` (string, مطلوب): معرّف الفريق.
+    - `title` (string, مطلوب): العنوان.
+    - `description` (string, اختياري): الوصف.
+
+  </Accordion>
+
+  <Accordion title="linear/create_project">
+    **الوصف:** إنشاء مشروع جديد في Linear.
+
+    **المعاملات:**
+    - `teamIds` (object, مطلوب): معرّف (معرّفات) الفريق المرتبطة بالمشروع.
+    - `projectName` (string, مطلوب): اسم المشروع.
+    - `description` (string, اختياري): وصف المشروع.
+
+  </Accordion>
+
+  <Accordion title="linear/update_project">
+    **الوصف:** تحديث مشروع في Linear.
+
+    **المعاملات:**
+    - `projectId` (string, مطلوب): معرّف المشروع المراد تحديثه.
+    - `projectName` (string, اختياري): اسم المشروع.
+    - `description` (string, اختياري): وصف المشروع.
+
+  </Accordion>
+
+  <Accordion title="linear/get_project_by_id">
+    **الوصف:** الحصول على مشروع بواسطة المعرّف في Linear.
+
+    **المعاملات:**
+    - `projectId` (string, مطلوب): معرّف المشروع المراد جلبه.
+
+  </Accordion>
+
+  <Accordion title="linear/delete_project">
+    **الوصف:** حذف مشروع في Linear.
+
+    **المعاملات:**
+    - `projectId` (string, مطلوب): معرّف المشروع المراد حذفه.
+
+  </Accordion>
+
+  <Accordion title="linear/search_teams">
+    **الوصف:** البحث عن الفرق في Linear.
+
+    **المعاملات:**
+    - `teamFilterFormula` (object, اختياري): فلتر بصيغة التعبير العادي المنفصل.
+
+  </Accordion>
+</AccordionGroup>
+
+## أمثلة الاستخدام
+
+### إعداد Agent أساسي لـ Linear
+
+```python
+from crewai import Agent, Task, Crew
+from crewai import Agent, Task, Crew
+
+# Create an agent with Linear capabilities
+linear_agent = Agent(
+    role="Development Manager",
+    goal="Manage Linear issues and track development progress efficiently",
+    backstory="An AI assistant specialized in software development project management.",
+    apps=['linear']  # All Linear actions will be available
+)
+
+# Task to create a bug report
+create_bug_task = Task(
+    description="Create a high-priority bug report for the authentication system and assign it to the backend team",
+    agent=linear_agent,
+    expected_output="Bug report created successfully with issue ID"
+)
+
+# Run the task
+crew = Crew(
+    agents=[linear_agent],
+    tasks=[create_bug_task]
+)
+
+crew.kickoff()
+```
+
+### إدارة المشاريع والفرق
+
+```python
+from crewai import Agent, Task, Crew
+
+project_coordinator = Agent(
+    role="Project Coordinator",
+    goal="Coordinate projects and teams in Linear efficiently",
+    backstory="An experienced project coordinator who manages development cycles and team workflows.",
+    apps=['linear']
+)
+
+# Task to coordinate project setup
+project_coordination = Task(
+    description="""
+    1. Search for engineering teams in Linear
+    2. Create a new project for Q2 feature development
+    3. Associate the project with relevant teams
+    4. Create initial project milestones as issues
+    """,
+    agent=project_coordinator,
+    expected_output="Q2 project created with teams assigned and initial milestones established"
+)
+
+crew = Crew(
+    agents=[project_coordinator],
+    tasks=[project_coordination]
+)
+
+crew.kickoff()
+```
+
+## استكشاف الأخطاء وإصلاحها
+
+### المشاكل الشائعة
+
+**أخطاء الصلاحيات**
+
+- تأكد من أن حساب Linear الخاص بك لديه الصلاحيات اللازمة لمساحة العمل المستهدفة
+- تحقق من أن اتصال OAuth يتضمن النطاقات المطلوبة لـ Linear API
+
+**معرّفات ومراجع غير صالحة**
+
+- تحقق جيداً من معرّفات الفرق والمشكلات والمشاريع للتأكد من صحة صيغة UUID
+- تأكد من وجود الكيانات المشار إليها وإمكانية الوصول إليها
+
+**مشاكل التاريخ والوقت**
+
+- استخدم صيغة ISO 8601 لتواريخ الاستحقاق والطوابع الزمنية
+- تأكد من معالجة المناطق الزمنية بشكل صحيح
+
+### الحصول على المساعدة
+
+<Card title="تحتاج مساعدة؟" icon="headset" href="mailto:support@crewai.com">
+  تواصل مع فريق الدعم للحصول على المساعدة في إعداد تكامل Linear أو
+  استكشاف الأخطاء وإصلاحها.
+</Card>

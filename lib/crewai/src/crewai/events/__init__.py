@@ -137,6 +137,7 @@ if TYPE_CHECKING:
         SkillEvent,
         SkillLoadFailedEvent,
         SkillLoadedEvent,
+        SkillUsedEvent,
     )
     from crewai.events.types.task_events import (
         TaskCompletedEvent,
@@ -244,6 +245,7 @@ _LAZY_EVENT_MAPPING: dict[str, str] = {
     "SkillEvent": "crewai.events.types.skill_events",
     "SkillLoadFailedEvent": "crewai.events.types.skill_events",
     "SkillLoadedEvent": "crewai.events.types.skill_events",
+    "SkillUsedEvent": "crewai.events.types.skill_events",
     "TaskCompletedEvent": "crewai.events.types.task_events",
     "TaskEvaluationEvent": "crewai.events.types.task_events",
     "TaskFailedEvent": "crewai.events.types.task_events",
@@ -376,6 +378,7 @@ __all__ = [
     "SkillEvent",
     "SkillLoadFailedEvent",
     "SkillLoadedEvent",
+    "SkillUsedEvent",
     "TaskCompletedEvent",
     "TaskEvaluationEvent",
     "TaskFailedEvent",

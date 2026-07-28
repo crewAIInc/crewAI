@@ -1,0 +1,168 @@
+---
+title: تكامل Microsoft Word
+description: "إنشاء المستندات وإدارتها مع تكامل Microsoft Word لـ CrewAI."
+icon: "file-word"
+mode: "wide"
+---
+
+## نظرة عامة
+
+مكّن وكلاءك من إنشاء وقراءة وإدارة مستندات Word والملفات النصية في OneDrive أو SharePoint. أتمت إنشاء المستندات، واسترجع المحتوى، وأدر خصائص المستندات، وبسّط سير عمل المستندات باستخدام الأتمتة المدعومة بالذكاء الاصطناعي.
+
+## المتطلبات الأساسية
+
+قبل استخدام تكامل Microsoft Word، تأكد من توفر ما يلي:
+
+- حساب [CrewAI AMP](https://app.crewai.com) مع اشتراك فعّال
+- حساب Microsoft مع إمكانية الوصول إلى Word وOneDrive/SharePoint
+- ربط حساب Microsoft الخاص بك عبر [صفحة التكاملات](https://app.crewai.com/crewai_plus/connectors)
+
+## إعداد تكامل Microsoft Word
+
+### 1. ربط حساب Microsoft الخاص بك
+
+1. انتقل إلى [تكاملات CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
+2. ابحث عن **Microsoft Word** في قسم تكاملات المصادقة
+3. انقر على **Connect** وأكمل عملية OAuth
+4. امنح الصلاحيات اللازمة للوصول إلى الملفات
+5. انسخ رمز المؤسسة من [إعدادات التكامل](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. تثبيت الحزمة المطلوبة
+
+```bash
+uv add crewai-tools
+```
+
+### 3. إعداد متغير البيئة
+
+<Note>
+  لاستخدام التكاملات مع `Agent(apps=[])`, يجب تعيين متغير البيئة
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` برمز المؤسسة الخاص بك.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+أو أضفه إلى ملف `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## الإجراءات المتاحة
+
+<AccordionGroup>
+  <Accordion title="microsoft_word/get_documents">
+    **الوصف:** الحصول على جميع مستندات Word من OneDrive أو SharePoint.
+
+    **المعاملات:**
+    - `top` (integer, اختياري): عدد العناصر المراد إرجاعها (الحد الأدنى 1، الحد الأقصى 999).
+    - `filter` (string, اختياري): تصفية النتائج باستخدام صيغة OData.
+
+  </Accordion>
+
+  <Accordion title="microsoft_word/create_text_document">
+    **الوصف:** إنشاء مستند نصي (.txt) مع محتوى. يُنصح به لإنشاء المحتوى برمجياً.
+
+    **المعاملات:**
+    - `file_name` (string, مطلوب): اسم المستند النصي (يجب أن ينتهي بـ .txt).
+    - `content` (string, اختياري): المحتوى النصي للمستند.
+
+  </Accordion>
+
+  <Accordion title="microsoft_word/get_document_content">
+    **الوصف:** الحصول على محتوى مستند (يعمل بشكل أفضل مع الملفات النصية).
+
+    **المعاملات:**
+    - `file_id` (string, مطلوب): معرّف المستند.
+
+  </Accordion>
+
+  <Accordion title="microsoft_word/get_document_properties">
+    **الوصف:** الحصول على خصائص وبيانات وصفية لمستند.
+
+    **المعاملات:**
+    - `file_id` (string, مطلوب): معرّف المستند.
+
+  </Accordion>
+
+  <Accordion title="microsoft_word/delete_document">
+    **الوصف:** حذف مستند.
+
+    **المعاملات:**
+    - `file_id` (string, مطلوب): معرّف المستند المراد حذفه.
+
+  </Accordion>
+
+  <Accordion title="microsoft_word/copy_document">
+    **الوصف:** نسخ مستند إلى موقع جديد في OneDrive.
+
+    **المعاملات:**
+    - `file_id` (string, مطلوب): معرّف المستند المراد نسخه
+    - `name` (string, اختياري): الاسم الجديد للمستند المنسوخ
+    - `parent_id` (string, اختياري): معرّف مجلد الوجهة (الافتراضي هو الجذر)
+
+  </Accordion>
+
+  <Accordion title="microsoft_word/move_document">
+    **الوصف:** نقل مستند إلى موقع جديد في OneDrive.
+
+    **المعاملات:**
+    - `file_id` (string, مطلوب): معرّف المستند المراد نقله
+    - `parent_id` (string, مطلوب): معرّف مجلد الوجهة
+    - `name` (string, اختياري): الاسم الجديد للمستند المنقول
+
+  </Accordion>
+</AccordionGroup>
+
+## أمثلة الاستخدام
+
+### إعداد Agent أساسي لـ Microsoft Word
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent with Microsoft Word capabilities
+word_agent = Agent(
+    role="Document Manager",
+    goal="Manage Word documents and text files efficiently",
+    backstory="An AI assistant specialized in Microsoft Word document operations and content management.",
+    apps=['microsoft_word']  # All Word actions will be available
+)
+
+# Task to create a new text document
+create_doc_task = Task(
+    description="Create a new text document named 'meeting_notes.txt' with content 'Meeting Notes from January 2024: Key discussion points and action items.'",
+    agent=word_agent,
+    expected_output="New text document 'meeting_notes.txt' created successfully."
+)
+
+# Run the task
+crew = Crew(
+    agents=[word_agent],
+    tasks=[create_doc_task]
+)
+
+crew.kickoff()
+```
+
+## استكشاف الأخطاء وإصلاحها
+
+### المشاكل الشائعة
+
+**أخطاء المصادقة**
+
+- تأكد من أن حساب Microsoft الخاص بك لديه الصلاحيات اللازمة للوصول إلى الملفات (`Files.Read.All`, `Files.ReadWrite.All`).
+
+**مشاكل إنشاء الملفات**
+
+- عند إنشاء مستندات نصية، تأكد من أن `file_name` ينتهي بامتداد `.txt`.
+- تحقق من أن لديك صلاحيات الكتابة للموقع المستهدف.
+
+### الحصول على المساعدة
+
+<Card title="تحتاج مساعدة؟" icon="headset" href="mailto:support@crewai.com">
+  تواصل مع فريق الدعم للحصول على المساعدة في إعداد تكامل Microsoft Word
+  أو استكشاف الأخطاء وإصلاحها.
+</Card>

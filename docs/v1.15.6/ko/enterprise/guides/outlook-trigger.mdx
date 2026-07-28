@@ -1,0 +1,69 @@
+---
+title: "Outlook Trigger"
+description: "Launch automations from Outlook emails and calendar updates"
+icon: "microsoft"
+mode: "wide"
+---
+
+## Overview
+
+Automate responses when Outlook delivers a new message or when an event is removed from the calendar. Teams commonly route escalations, file tickets, or alert attendees of cancellations.
+
+<Tip>
+  Connect Outlook in **Tools & Integrations** and ensure the trigger is enabled
+  for your deployment.
+</Tip>
+
+## Enabling the Outlook Trigger
+
+1. Open your deployment in CrewAI AMP
+2. Go to the **Triggers** tab
+3. Locate **Outlook** and switch the toggle to enable
+
+<Frame caption="Microsoft Outlook trigger connection">
+  <img
+    src="/images/enterprise/outlook-trigger.png"
+    alt="Enable or disable triggers with toggle"
+  />
+</Frame>
+
+## Example: Summarize a new email
+
+```python
+from outlook_message_crew import OutlookMessageTrigger
+
+crew = OutlookMessageTrigger().crew()
+crew.kickoff({
+    "crewai_trigger_payload": outlook_payload,
+})
+```
+
+The crew extracts sender details, subject, body preview, and attachments before generating a structured response.
+
+## 로컬에서 테스트
+
+CrewAI CLI를 사용하여 Outlook 트리거 통합을 로컬에서 테스트하세요:
+
+```bash
+# 사용 가능한 모든 트리거 보기
+crewai triggers list
+
+# 실제 payload로 Outlook 트리거 시뮬레이션
+crewai triggers run microsoft_outlook/email_received
+```
+
+`crewai triggers run` 명령은 완전한 Outlook payload로 크루를 실행하여 배포 전에 파싱 로직을 테스트할 수 있게 해줍니다.
+
+<Warning>
+  개발 중에는 `crewai triggers run microsoft_outlook/email_received`를
+  사용하세요 (`crewai run`이 아님). 배포 후에는 크루가 자동으로 트리거 payload를
+  받습니다.
+</Warning>
+
+## Troubleshooting
+
+- Verify the Outlook connector is still authorized; the subscription must be renewed periodically
+- `crewai triggers run microsoft_outlook/email_received`로 로컬 테스트하여 정확한 payload 구조를 확인하세요
+- If attachments are missing, confirm the webhook subscription includes the `includeResourceData` flag
+- Review execution logs when events fail to match—cancellation payloads lack attendee lists by design and the crew should account for that
+- 주의: 트리거 실행을 시뮬레이션하려면 `crewai triggers run`을 사용하세요 (`crewai run`이 아님)

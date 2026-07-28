@@ -1,0 +1,196 @@
+---
+title: أداة استخراج Selenium
+description: أداة `SeleniumScrapingTool` مصممة لاستخراج وقراءة محتوى موقع محدد باستخدام Selenium.
+icon: clipboard-user
+mode: "wide"
+---
+
+# `SeleniumScrapingTool`
+
+<Note>
+    هذه الأداة حالياً قيد التطوير. أثناء تحسين قدراتها، قد يواجه المستخدمون سلوكاً غير متوقع.
+    ملاحظاتكم لا تقدر بثمن لإجراء التحسينات.
+</Note>
+
+## الوصف
+
+أداة `SeleniumScrapingTool` مصنوعة لمهام استخراج البيانات من الويب عالية الكفاءة.
+تسمح بالاستخراج الدقيق للمحتوى من صفحات الويب باستخدام محددات CSS لاستهداف عناصر محددة.
+تصميمها يخدم مجموعة واسعة من احتياجات الاستخراج، مع توفير المرونة للعمل مع أي عنوان URL مقدم.
+
+## التثبيت
+
+لاستخدام هذه الأداة، تحتاج إلى تثبيت حزمة أدوات CrewAI و Selenium:
+
+```shell
+pip install 'crewai[tools]'
+uv add selenium webdriver-manager
+```
+
+ستحتاج أيضاً إلى تثبيت Chrome على نظامك، حيث تستخدم الأداة Chrome WebDriver لأتمتة المتصفح.
+
+## مثال
+
+يوضح المثال التالي كيفية استخدام `SeleniumScrapingTool` مع وكيل CrewAI:
+
+```python Code
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import SeleniumScrapingTool
+
+# Initialize the tool
+selenium_tool = SeleniumScrapingTool()
+
+# Define an agent that uses the tool
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract information from websites using Selenium",
+    backstory="An expert web scraper who can extract content from dynamic websites.",
+    tools=[selenium_tool],
+    verbose=True,
+)
+
+# Example task to scrape content from a website
+scrape_task = Task(
+    description="Extract the main content from the homepage of example.com. Use the CSS selector 'main' to target the main content area.",
+    expected_output="The main content from example.com's homepage.",
+    agent=web_scraper_agent,
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[web_scraper_agent],
+    tasks=[scrape_task],
+    verbose=True,
+    process=Process.sequential,
+)
+result = crew.kickoff()
+```
+
+يمكنك أيضاً تهيئة الأداة بمعاملات محددة مسبقاً:
+
+```python Code
+# Initialize the tool with predefined parameters
+selenium_tool = SeleniumScrapingTool(
+    website_url='https://example.com',
+    css_element='.main-content',
+    wait_time=5
+)
+
+# Define an agent that uses the tool
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract information from websites using Selenium",
+    backstory="An expert web scraper who can extract content from dynamic websites.",
+    tools=[selenium_tool],
+    verbose=True,
+)
+```
+
+## المعاملات
+
+تقبل أداة `SeleniumScrapingTool` المعاملات التالية أثناء التهيئة:
+
+- **website_url**: اختياري. عنوان URL للموقع المراد استخراجه. إذا تم تقديمه أثناء التهيئة، لن يحتاج الوكيل إلى تحديده عند استخدام الأداة.
+- **css_element**: اختياري. محدد CSS للعناصر المراد استخراجها. إذا تم تقديمه أثناء التهيئة، لن يحتاج الوكيل إلى تحديده عند استخدام الأداة.
+- **cookie**: اختياري. قاموس يحتوي على معلومات ملفات تعريف الارتباط، مفيد لمحاكاة جلسة تسجيل دخول للوصول إلى محتوى مقيد.
+- **wait_time**: اختياري. يحدد التأخير (بالثواني) قبل الاستخراج، مما يسمح للموقع وأي محتوى ديناميكي بالتحميل الكامل. الافتراضي هو `3` ثوانٍ.
+- **return_html**: اختياري. ما إذا كان يجب إرجاع محتوى HTML بدلاً من النص فقط. الافتراضي هو `False`.
+
+عند استخدام الأداة مع وكيل، سيحتاج الوكيل إلى تقديم المعاملات التالية (ما لم يتم تحديدها أثناء التهيئة):
+
+- **website_url**: مطلوب. عنوان URL للموقع المراد استخراجه.
+- **css_element**: مطلوب. محدد CSS للعناصر المراد استخراجها.
+
+## مثال على التكامل مع الوكيل
+
+إليك مثالاً أكثر تفصيلاً لكيفية دمج `SeleniumScrapingTool` مع وكيل CrewAI:
+
+```python Code
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import SeleniumScrapingTool
+
+# Initialize the tool
+selenium_tool = SeleniumScrapingTool()
+
+# Define an agent that uses the tool
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract and analyze information from dynamic websites",
+    backstory="""You are an expert web scraper who specializes in extracting
+    content from dynamic websites that require browser automation. You have
+    extensive knowledge of CSS selectors and can identify the right selectors
+    to target specific content on any website.""",
+    tools=[selenium_tool],
+    verbose=True,
+)
+
+# Create a task for the agent
+scrape_task = Task(
+    description="""
+    Extract the following information from the news website at {website_url}:
+
+    1. The headlines of all featured articles (CSS selector: '.headline')
+    2. The publication dates of these articles (CSS selector: '.pub-date')
+    3. The author names where available (CSS selector: '.author')
+
+    Compile this information into a structured format with each article's details grouped together.
+    """,
+    expected_output="A structured list of articles with their headlines, publication dates, and authors.",
+    agent=web_scraper_agent,
+)
+
+# Run the task
+crew = Crew(
+    agents=[web_scraper_agent],
+    tasks=[scrape_task],
+    verbose=True,
+    process=Process.sequential,
+)
+result = crew.kickoff(inputs={"website_url": "https://news-example.com"})
+```
+
+## تفاصيل التنفيذ
+
+تستخدم أداة `SeleniumScrapingTool` Selenium WebDriver لأتمتة تفاعلات المتصفح:
+
+```python Code
+class SeleniumScrapingTool(BaseTool):
+    name: str = "Read a website content"
+    description: str = "A tool that can be used to read a website content."
+    args_schema: Type[BaseModel] = SeleniumScrapingToolSchema
+
+    def _run(self, **kwargs: Any) -> Any:
+        website_url = kwargs.get("website_url", self.website_url)
+        css_element = kwargs.get("css_element", self.css_element)
+        return_html = kwargs.get("return_html", self.return_html)
+        driver = self._create_driver(website_url, self.cookie, self.wait_time)
+
+        content = self._get_content(driver, css_element, return_html)
+        driver.close()
+
+        return "\n".join(content)
+```
+
+تنفذ الأداة الخطوات التالية:
+1. إنشاء نسخة متصفح Chrome بدون واجهة
+2. التنقل إلى عنوان URL المحدد
+3. الانتظار للمدة المحددة للسماح بتحميل الصفحة
+4. إضافة أي ملفات تعريف ارتباط إذا تم تقديمها
+5. استخراج المحتوى بناءً على محدد CSS
+6. إرجاع المحتوى المستخرج كنص أو HTML
+7. إغلاق نسخة المتصفح
+
+## التعامل مع المحتوى الديناميكي
+
+أداة `SeleniumScrapingTool` مفيدة بشكل خاص لاستخراج المواقع ذات المحتوى الديناميكي المُحمّل عبر JavaScript. باستخدام نسخة متصفح حقيقية، يمكنها:
+
+1. تنفيذ JavaScript على الصفحة
+2. انتظار تحميل المحتوى الديناميكي
+3. التفاعل مع العناصر عند الحاجة
+4. استخراج المحتوى الذي لن يكون متاحاً مع طلبات HTTP البسيطة
+
+يمكنك ضبط معامل `wait_time` لضمان تحميل جميع المحتوى الديناميكي قبل الاستخراج.
+
+## الخلاصة
+
+توفر أداة `SeleniumScrapingTool` طريقة قوية لاستخراج المحتوى من المواقع باستخدام أتمتة المتصفح. من خلال تمكين الوكلاء من التفاعل مع المواقع كما يفعل المستخدم الحقيقي، تسهّل استخراج المحتوى الديناميكي الذي يكون صعباً أو مستحيلاً باستخدام طرق أبسط. هذه الأداة مفيدة بشكل خاص للبحث وجمع البيانات ومهام المراقبة التي تتضمن تطبيقات ويب حديثة ذات محتوى مُصيّر بـ JavaScript.

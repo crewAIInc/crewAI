@@ -55,6 +55,71 @@ if TYPE_CHECKING:
 _create_plus_client_hook: Callable[[], Any] | None = None
 
 
+def resolve_plus_client(default: Callable[[], Any]) -> Any:
+    """Return the CrewAI AMP client to use, or build ``default``.
+
+    Hosted runtimes install a client of their own through
+    ``_create_plus_client_hook``, authenticated for the environment they run in.
+    Every registry lookup resolves through here so they all share that client.
+
+    Args:
+        default: Builds the client to use when no hook is installed. A callable
+            rather than a value so credential lookups that raise when absent are
+            only evaluated when they're actually needed.
+
+    Returns:
+        A CrewAI AMP client.
+    """
+    if callable(_create_plus_client_hook):
+        return _create_plus_client_hook()
+    return default()
+
+
+def resolve_plus_response(response: Any) -> Any:
+    """Return ``response``, awaiting it first when the client is async.
+
+    Args:
+        response: A response, or an awaitable resolving to one.
+
+    Returns:
+        The resolved response.
+
+    Raises:
+        TypeError: If the awaitable is already bound to a loop (a Task or
+            Future), which can't be resolved synchronously.
+    """
+    if not inspect.isawaitable(response):
+        return response
+
+    if isinstance(response, asyncio.Future):
+        raise TypeError(
+            "CrewAI AMP clients must return a coroutine, not a Task or Future "
+            "already bound to a running loop."
+        )
+
+    # asyncio.run() takes a coroutine specifically, while isawaitable() also
+    # covers custom __await__ objects, so wrap rather than passing it through.
+    async def await_response() -> Any:
+        return await response
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    # asyncio.run() refuses to nest inside a running loop, so hand the coroutine
+    # to a worker thread with a loop of its own — carrying a copy of the caller's
+    # context, since a fresh thread would otherwise start with empty ContextVars
+    # and a client reading runtime state (the platform token, flow context) would
+    # see defaults.
+    if loop and loop.is_running():
+        ctx = contextvars.copy_context()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(ctx.run, asyncio.run, await_response()).result()
+
+    return asyncio.run(await_response())
+
+
 class SummaryContent(TypedDict):
     """Structure for summary content entries.
 
@@ -1127,15 +1192,15 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
     if from_repository:
         import importlib
 
-        if callable(_create_plus_client_hook):
-            client = _create_plus_client_hook()
-        else:
+        def build_default_client() -> Any:
             from crewai.auth.token import get_auth_token
             from crewai.plus_api import PlusAPI
 
-            client = PlusAPI(api_key=get_auth_token())
+            return PlusAPI(api_key=get_auth_token())
+
+        client = resolve_plus_client(build_default_client)
         _print_current_organization()
-        response = client.get_agent(from_repository)
+        response = resolve_plus_response(client.get_agent(from_repository))
         if response.status_code == 404:
             raise AgentRepositoryError(
                 f"Agent {from_repository} does not exist, make sure the name is correct or the agent is available on your organization."
@@ -1149,8 +1214,18 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
             )
 
         agent = response.json()
+        skill_versions = agent.get("skill_versions") or []
         for key, value in agent.items():
-            if key == "tools":
+            if value is None:
+                continue
+            if key == "skill_versions":
+                # Folded into the skill refs below, and not an Agent field.
+                continue
+            if key == "skills":
+                if not value:
+                    continue
+                attributes[key] = _pin_skill_refs(value, skill_versions)
+            elif key == "tools":
                 attributes[key] = []
                 for tool in value:
                     try:
@@ -1168,11 +1243,46 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                         raise AgentRepositoryError(
                             f"Tool {tool['name']} could not be loaded: {e}"
                         ) from e
-            elif key == "skills" and value == []:
-                continue
             else:
                 attributes[key] = value
     return attributes
+
+
+def _pin_skill_refs(refs: list[Any], skill_versions: list[dict[str, Any]]) -> list[Any]:
+    """Pin repository skill refs to the versions the repository recorded.
+
+    An agent's ``skills`` are plain ``@org/name`` refs while ``skill_versions``
+    carries the version pinned against each one. Without folding the two
+    together the runtime resolves whatever version is newest, so publishing a
+    new version of a skill would silently change every agent using it.
+
+    Args:
+        refs: Skill references as returned by the repository.
+        skill_versions: Repository version records, each with a ``registry_ref``
+            and ``version``.
+
+    Returns:
+        The refs, version-pinned where the repository recorded one.
+    """
+    pinned_versions = {
+        entry["registry_ref"]: entry["version"]
+        for entry in skill_versions
+        if isinstance(entry, dict)
+        and entry.get("registry_ref")
+        and entry.get("version")
+    }
+    if not pinned_versions:
+        return refs
+
+    pinned_refs: list[Any] = []
+    for ref in refs:
+        version = pinned_versions.get(ref) if isinstance(ref, str) else None
+        # Leave anything already pinned (a second '@') exactly as it is.
+        already_pinned = isinstance(ref, str) and "@" in ref[1:]
+        pinned_refs.append(
+            f"{ref}@{version}" if version and not already_pinned else ref
+        )
+    return pinned_refs
 
 
 DELEGATION_TOOL_NAMES: Final[frozenset[str]] = frozenset(
@@ -1232,14 +1342,22 @@ def extract_tool_call_info(
         call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
         return call_id, sanitize_tool_name(tool_call.name), tool_call.input
     if isinstance(tool_call, dict):
-        # Support OpenAI "id", Bedrock "toolUseId", or generate one
+        # Prefer the Responses API "call_id", then OpenAI "id", then Bedrock
+        # "toolUseId", else generate one. A raw Responses function_call item carries
+        # both "id" (fc_...) and "call_id" (call_...) with different values, and the
+        # matching function_call_output must reference "call_id" -- reading "id"
+        # would produce a tool result that can't be correlated to its invocation.
         call_id = (
-            tool_call.get("id") or tool_call.get("toolUseId") or f"call_{id(tool_call)}"
+            tool_call.get("call_id")
+            or tool_call.get("id")
+            or tool_call.get("toolUseId")
+            or f"call_{id(tool_call)}"
         )
         func_info = tool_call.get("function", {})
         func_name = func_info.get("name", "") or tool_call.get("name", "")
-        # OpenAI Responses API function_call items are flat dicts using
-        # "arguments" (not "input") with no nested "function" key.
+        # "arguments" is also read from the top level for the OpenAI Responses API,
+        # which emits {"id", "name", "arguments"} with no nested "function" object.
+        # Without it the args silently resolved to {} and the tool ran with no input.
         func_args = (
             func_info.get("arguments")
             or tool_call.get("arguments")
@@ -1277,9 +1395,10 @@ def is_tool_call_list(response: list[Any]) -> bool:
     # Bedrock-style
     if isinstance(first_item, dict) and "name" in first_item and "input" in first_item:
         return True
-    # OpenAI Responses API-style (flat dict, no nested "function" key). This
-    # intentionally accepts the same broad shape as the Bedrock check above;
-    # only provider paths that return lists reach this classifier.
+    # OpenAI Responses API style: {"id", "name", "arguments"}, with no nested
+    # "function" object and no "input". This intentionally accepts the same broad
+    # shape as the Bedrock check above; only provider paths that return lists reach
+    # this classifier.
     if (
         isinstance(first_item, dict)
         and "name" in first_item
@@ -1469,8 +1588,8 @@ def execute_single_native_tool_call(
     )
     from crewai.hooks.tool_hooks import (
         ToolCallHookContext,
-        get_after_tool_call_hooks,
-        get_before_tool_call_hooks,
+        run_after_tool_call_hooks,
+        run_before_tool_call_hooks,
     )
 
     info = extract_tool_call_info(tool_call)
@@ -1533,7 +1652,6 @@ def execute_single_native_tool_call(
 
     track_delegation_if_needed(func_name, args_dict, task)
 
-    hook_blocked = False
     before_hook_context = ToolCallHookContext(
         tool_name=func_name,
         tool_input=args_dict,
@@ -1542,13 +1660,7 @@ def execute_single_native_tool_call(
         task=task,
         crew=crew,
     )
-    try:
-        for hook in get_before_tool_call_hooks():
-            if hook(before_hook_context) is False:
-                hook_blocked = True
-                break
-    except Exception:  # noqa: S110
-        pass
+    hook_blocked = run_before_tool_call_hooks(before_hook_context)
 
     error_event_emitted = False
     if hook_blocked:
@@ -1603,14 +1715,9 @@ def execute_single_native_tool_call(
         tool_result=result,
         raw_tool_result=raw_tool_result,
     )
-    try:
-        for after_hook in get_after_tool_call_hooks():
-            hook_result = after_hook(after_hook_context)
-            if hook_result is not None:
-                result = hook_result
-                after_hook_context.tool_result = result
-    except Exception:  # noqa: S110
-        pass
+    modified_result = run_after_tool_call_hooks(after_hook_context)
+    if modified_result is not None:
+        result = modified_result
 
     if not error_event_emitted:
         crewai_event_bus.emit(
@@ -1706,28 +1813,42 @@ def _setup_before_llm_call_hooks(
     Returns:
         True if LLM execution should proceed, False if blocked by a hook.
     """
-    if executor_context and executor_context.before_llm_call_hooks:
-        from crewai.hooks.llm_hooks import LLMCallHookContext
+    if executor_context:
+        from crewai.hooks.dispatch import (
+            HookAborted,
+            InterceptionPoint,
+            get_scoped_hooks,
+            run_hooks,
+        )
+        from crewai.hooks.llm_hooks import LLMCallHookContext, before_llm_call_reducer
+
+        # Executor snapshot first, then execution-scoped hooks — the same
+        # ordering dispatch() applies to global vs scoped hooks.
+        hooks: list[Any] = [
+            *executor_context.before_llm_call_hooks,
+            *get_scoped_hooks(InterceptionPoint.PRE_MODEL_CALL),
+        ]
+        if not hooks:
+            return True
 
         original_messages = executor_context.messages
 
         hook_context = LLMCallHookContext(executor_context)
         try:
-            for hook in executor_context.before_llm_call_hooks:
-                result = hook(hook_context)
-                if result is False:
-                    if verbose:
-                        printer.print(
-                            content="LLM call blocked by before_llm_call hook",
-                            color="yellow",
-                        )
-                    return False
-        except Exception as e:
+            run_hooks(
+                InterceptionPoint.PRE_MODEL_CALL,
+                hook_context,
+                hooks,
+                reducer=before_llm_call_reducer,
+                verbose=verbose,
+            )
+        except HookAborted:
             if verbose:
                 printer.print(
-                    content=f"Error in before_llm_call hook: {e}",
+                    content="LLM call blocked by before_llm_call hook",
                     color="yellow",
                 )
+            return False
 
         if not isinstance(executor_context.messages, list):
             if verbose:
@@ -1764,8 +1885,24 @@ def _setup_after_llm_call_hooks(
     Returns:
         The potentially modified response (string or Pydantic model).
     """
-    if executor_context and executor_context.after_llm_call_hooks:
-        from crewai.hooks.llm_hooks import LLMCallHookContext
+    if executor_context:
+        from crewai.hooks.dispatch import InterceptionPoint, get_scoped_hooks, run_hooks
+        from crewai.hooks.llm_hooks import LLMCallHookContext, after_llm_call_reducer
+
+        # Don't stringify structured tool-call payloads: the executor would
+        # treat the result as a final answer and skip tool execution (#6529).
+        # Hooks still run on the follow-up textual response.
+        if not isinstance(answer, (str, BaseModel)):
+            return answer
+
+        # Executor snapshot first, then execution-scoped hooks — the same
+        # ordering dispatch() applies to global vs scoped hooks.
+        hooks: list[Any] = [
+            *executor_context.after_llm_call_hooks,
+            *get_scoped_hooks(InterceptionPoint.POST_MODEL_CALL),
+        ]
+        if not hooks:
+            return answer
 
         original_messages = executor_context.messages
 
@@ -1778,18 +1915,15 @@ def _setup_after_llm_call_hooks(
             hook_response = str(answer)
 
         hook_context = LLMCallHookContext(executor_context, response=hook_response)
-        try:
-            for hook in executor_context.after_llm_call_hooks:
-                modified_response = hook(hook_context)
-                if modified_response is not None and isinstance(modified_response, str):
-                    hook_response = modified_response
-
-        except Exception as e:
-            if verbose:
-                printer.print(
-                    content=f"Error in after_llm_call hook: {e}",
-                    color="yellow",
-                )
+        run_hooks(
+            InterceptionPoint.POST_MODEL_CALL,
+            hook_context,
+            hooks,
+            reducer=after_llm_call_reducer,
+            verbose=verbose,
+        )
+        if hook_context.response is not None:
+            hook_response = hook_context.response
 
         if not isinstance(executor_context.messages, list):
             if verbose:

@@ -11,9 +11,6 @@ from crewai.utilities.serialization import to_serializable
 
 
 if TYPE_CHECKING:
-    from celpy.celtypes import StringType
-    from celpy.evaluation import CELFunction
-
     from crewai.flow.runtime import Flow
 else:
     from typing_extensions import TypeAliasType
@@ -22,29 +19,6 @@ else:
 _CEL_MACROS_WITH_LOCAL_BINDINGS = frozenset(
     {"all", "exists", "exists_one", "filter", "map"}
 )
-
-
-def _handle_text_custom_expression(
-    root: Any, path: Any, default: Any = ""
-) -> StringType:
-    from celpy.celtypes import StringType
-
-    fallback = StringType("" if default is None else str(default))
-    current = root
-    for part in str(path).split("."):
-        if current is None:
-            return fallback
-        try:
-            if isinstance(current, list):
-                current = current[int(part)]
-            else:
-                current = current[StringType(part)]
-        except (KeyError, IndexError, TypeError, ValueError):
-            return fallback
-
-    if current is None:
-        return fallback
-    return StringType(_stringify_cel_value(current))
 
 
 def _stringify_cel_value(value: Any) -> str:
@@ -98,21 +72,18 @@ def _parse_template_segments(value: str) -> tuple[str | _ExpressionSegment, ...]
     return tuple(segments)
 
 
-_EXPRESSION_FUNCTIONS: dict[str, CELFunction] = {
-    "text": _handle_text_custom_expression,
-}
-
 FLOW_TEMPLATE_EXPRESSION_RULES: tuple[str, ...] = (
     "Use `${...}` inside action mapping strings to read Flow data with CEL. "
     "Example value: `Ticket: ${state.ticket_id}`.",
     "Use `state` for input data. Use `outputs.step_name` for a completed "
     "method result.",
+    "In action mapping strings, keep literal text outside `${...}` and "
+    "interpolate each Flow value directly. Write `Ticket: ${state.ticket_id}`; "
+    "do not assemble the string with CEL `+`.",
     "If a value is only one `${...}` expression, the result keeps its type. "
     "Use this for numbers, booleans, objects, and lists.",
     "If the string has other text, the final value is text. Non-text values "
     "become JSON. `null` becomes empty text.",
-    'Use `text(root, "path", "default")` for values that may be missing '
-    'or null. The default is optional and is `""`.',
 )
 FLOW_TEMPLATE_EXPRESSION_CONTRACT = " ".join(FLOW_TEMPLATE_EXPRESSION_RULES)
 FLOW_TEMPLATE_EXPRESSION_EXAMPLES: dict[str, tuple[dict[str, str], ...]] = {
@@ -125,10 +96,6 @@ FLOW_TEMPLATE_EXPRESSION_EXAMPLES: dict[str, tuple[dict[str, str], ...]] = {
             "title": "Keep a list or number type",
             "code": 'domains: "${state.domains}"\nlimit: "${state.limit}"',
         },
-        {
-            "title": "Use a default for missing text",
-            "code": 'input: "Ticket ${text(state, \\"ticket.id\\", \\"unknown\\")}"',
-        },
     ),
     "json": (
         {
@@ -139,14 +106,6 @@ FLOW_TEMPLATE_EXPRESSION_EXAMPLES: dict[str, tuple[dict[str, str], ...]] = {
             "title": "Keep a list or number type",
             "code": (
                 '{\n  "domains": "${state.domains}",\n  "limit": "${state.limit}"\n}'
-            ),
-        },
-        {
-            "title": "Use a default for missing text",
-            "code": (
-                "{\n"
-                '  "input": "Ticket ${text(state, \\"ticket.id\\", \\"unknown\\")}"\n'
-                "}"
             ),
         },
     ),
@@ -374,8 +333,7 @@ class Expression:
 
             environment = Environment()
             program = environment.program(
-                Expression._compile_cel(expression, environment=environment),
-                functions=_EXPRESSION_FUNCTIONS,
+                Expression._compile_cel(expression, environment=environment)
             )
             result = program.evaluate(cast(Context, json_to_cel(context)))
             return json.loads(json.dumps(result, cls=CELJSONEncoder))

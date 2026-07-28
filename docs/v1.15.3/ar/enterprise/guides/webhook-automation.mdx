@@ -1,0 +1,157 @@
+---
+title: "أتمتة Webhook"
+description: "أتمتة سير عمل CrewAI AMP باستخدام webhooks مع منصات مثل ActivePieces وZapier وMake.com"
+icon: "webhook"
+mode: "wide"
+---
+
+يتيح لك CrewAI AMP أتمتة سير عملك باستخدام webhooks. ستوجهك هذه المقالة خلال عملية إعداد واستخدام webhooks لبدء تنفيذ طاقمك، مع التركيز على التكامل مع ActivePieces، وهي منصة أتمتة سير العمل مشابهة لـ Zapier وMake.com.
+
+## إعداد Webhooks
+
+<Steps>
+    <Step title="الوصول إلى واجهة البدء">
+        - انتقل إلى لوحة تحكم CrewAI AMP
+        - ابحث عن قسم `/kickoff`، الذي يُستخدم لبدء تنفيذ الطاقم
+            <Frame>
+                <img src="/images/enterprise/kickoff-interface.png" alt="واجهة البدء" />
+            </Frame>
+    </Step>
+
+    <Step title="تكوين محتوى JSON">
+        في قسم محتوى JSON، ستحتاج إلى تقديم المعلومات التالية:
+
+        - **inputs**: كائن JSON يحتوي على:
+            - `company`: اسم الشركة (مثال: "tesla")
+            - `product_name`: اسم المنتج (مثال: "crewai")
+            - `form_response`: نوع الاستجابة (مثال: "financial")
+            - `icp_description`: وصف موجز لملف العميل المثالي
+            - `product_description`: وصف قصير للمنتج
+            - `taskWebhookUrl`، `stepWebhookUrl`، `crewWebhookUrl`: عناوين URL لنقاط نهاية webhook المختلفة (ActivePieces أو Zapier أو Make.com أو منصة أخرى متوافقة)
+    </Step>
+
+    <Step title="التكامل مع ActivePieces">
+        في هذا المثال سنستخدم ActivePieces. يمكنك استخدام منصات أخرى مثل Zapier وMake.com
+
+        للتكامل مع ActivePieces:
+
+        1. أنشئ تدفقًا جديدًا في ActivePieces
+        2. أضف مشغلًا (مثال: جدول `Every Day`)
+            <Frame>
+                <img src="/images/enterprise/activepieces-trigger.png" alt="مشغل ActivePieces" />
+            </Frame>
+
+        3. أضف خطوة إجراء HTTP
+            - عيّن الإجراء إلى `Send HTTP request`
+            - استخدم `POST` كطريقة
+            - عيّن عنوان URL إلى نقطة نهاية بدء CrewAI AMP
+            - أضف الترويسات اللازمة (مثال: `Bearer Token`)
+                <Frame>
+                    <img src="/images/enterprise/activepieces-headers.png" alt="ترويسات ActivePieces" />
+                </Frame>
+
+            - في النص، ضمّن محتوى JSON كما تم تكوينه في الخطوة 2
+                <Frame>
+                    <img src="/images/enterprise/activepieces-body.png" alt="نص ActivePieces" />
+                </Frame>
+
+            - سيبدأ الطاقم بعد ذلك في الوقت المحدد مسبقًا.
+    </Step>
+
+    <Step title="إعداد Webhook">
+        1. أنشئ تدفقًا جديدًا في ActivePieces وسمّه
+            <Frame>
+                <img src="/images/enterprise/activepieces-flow.png" alt="تدفق ActivePieces" />
+            </Frame>
+
+        2. أضف خطوة webhook كمشغل:
+            - اختر `Catch Webhook` كنوع المشغل
+            - سيولّد هذا عنوان URL فريدًا سيستقبل طلبات HTTP ويشغل تدفقك
+                <Frame>
+                    <img src="/images/enterprise/activepieces-webhook.png" alt="Webhook ActivePieces" />
+                </Frame>
+
+            - كوّن البريد الإلكتروني لاستخدام نص جسم webhook الخاص بالطاقم
+                <Frame>
+                    <img src="/images/enterprise/activepieces-email.png" alt="بريد ActivePieces الإلكتروني" />
+                </Frame>
+    </Step>
+
+</Steps>
+
+## أمثلة مخرجات Webhook
+
+**ملاحظة:** أي كائن `meta` مُقدم في طلب البدء الخاص بك سيتم تضمينه في جميع حمولات webhook، مما يتيح لك تتبع الطلبات والحفاظ على السياق عبر دورة حياة تنفيذ الطاقم بالكامل.
+
+<Tabs>
+    <Tab title="Step Webhook">
+        `stepWebhookUrl` - رد نداء يتم تنفيذه عند كل فكرة داخلية للوكيل
+
+        ```json
+        {
+            "prompt": "Research the financial industry for potential AI solutions",
+            "thought": "I need to conduct preliminary research on the financial industry",
+            "tool": "research_tool",
+            "tool_input": "financial industry AI solutions",
+            "result": "**Preliminary Research Report on the Financial Industry for crewai Enterprise Solution**\n1. Industry Overview and Trends\nThe financial industry in ....\nConclusion:\nThe financial industry presents a fertile ground for implementing AI solutions like crewai, particularly in areas such as digital customer engagement, risk management, and regulatory compliance. Further engagement with the lead is recommended to better tailor the crewai solution to their specific needs and scale.",
+            "kickoff_id": "97eba64f-958c-40a0-b61c-625fe635a3c0",
+            "meta": {
+                "requestId": "travel-req-123",
+                "source": "web-app"
+            }
+        }
+        ```
+    </Tab>
+    <Tab title="Task Webhook">
+        `taskWebhookUrl` - رد نداء يتم تنفيذه عند انتهاء كل مهمة
+
+        ```json
+        {
+            "description": "Using the information gathered from the lead's data, conduct preliminary research on the lead's industry, company background, and potential use cases for crewai. Focus on finding relevant data that can aid in scoring the lead and planning a strategy to pitch them crewai.",
+            "name": "Industry Research Task",
+            "expected_output": "Detailed research report on the financial industry",
+            "summary": "The financial industry presents a fertile ground for implementing AI solutions like crewai, particularly in areas such as digital customer engagement, risk management, and regulatory compliance. Further engagement with the lead is recommended to better tailor the crewai solution to their specific needs and scale.",
+            "agent": "Research Agent",
+            "output": "**Preliminary Research Report on the Financial Industry for crewai Enterprise Solution**\n1. Industry Overview and Trends\nThe financial industry in ....\nConclusion:\nThe financial industry presents a fertile ground for implementing AI solutions like crewai, particularly in areas such as digital customer engagement, risk management, and regulatory compliance.",
+            "output_json": {
+                "industry": "financial",
+                "key_opportunities": ["digital customer engagement", "risk management", "regulatory compliance"]
+            },
+            "kickoff_id": "97eba64f-958c-40a0-b61c-625fe635a3c0",
+            "meta": {
+                "requestId": "travel-req-123",
+                "source": "web-app"
+            }
+        }
+        ```
+    </Tab>
+    <Tab title="Crew Webhook">
+        `crewWebhookUrl` - رد نداء يتم تنفيذه عند انتهاء تنفيذ الطاقم
+
+        ```json
+        {
+            "kickoff_id": "97eba64f-958c-40a0-b61c-625fe635a3c0",
+            "result": "**Final Analysis Report**\n\nLead Score: Customer service enhancement and compliance are particularly relevant.\n\nTalking Points:\n- Highlight how crewai's AI solutions can transform customer service\n- Discuss crewai's potential for sustainability goals\n- Emphasize compliance capabilities\n- Stress adaptability for various operation scales",
+            "result_json": {
+                "lead_score": "Customer service enhancement, and compliance are particularly relevant.",
+                "talking_points": [
+                    "Highlight how crewai's AI solutions can transform customer service with automated, personalized experiences and 24/7 support, improving both customer satisfaction and operational efficiency.",
+                    "Discuss crewai's potential to help the institution achieve its sustainability goals through better data analysis and decision-making, contributing to responsible investing and green initiatives.",
+                    "Emphasize crewai's ability to enhance compliance with evolving regulations through efficient data processing and reporting, reducing the risk of non-compliance penalties.",
+                    "Stress the adaptability of crewai to support both extensive multinational operations and smaller, targeted projects, ensuring the solution grows with the institution's needs."
+                ]
+            },
+            "token_usage": {
+                "total_tokens": 1250,
+                "prompt_tokens": 800,
+                "completion_tokens": 450
+            },
+            "meta": {
+                "requestId": "travel-req-123",
+                "source": "web-app"
+            }
+        }
+        ```
+    </Tab>
+
+</Tabs>

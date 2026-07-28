@@ -1,0 +1,263 @@
+---
+title: "سجلات الحزم الخاصة"
+description: "تثبيت حزم Python الخاصة من سجلات PyPI المصادق عليها في CrewAI AMP"
+icon: "lock"
+mode: "wide"
+---
+
+<Note>
+  يغطي هذا الدليل كيفية تهيئة مشروع CrewAI لتثبيت حزم Python
+  من سجلات PyPI الخاصة (Azure DevOps Artifacts، GitHub Packages، GitLab، AWS CodeArtifact، إلخ.)
+  عند النشر على CrewAI AMP.
+</Note>
+
+## متى تحتاج هذا
+
+إذا كان مشروعك يعتمد على حزم Python داخلية أو خاصة مستضافة على سجل خاص
+بدلاً من PyPI العام، ستحتاج إلى:
+
+1. إخبار UV **أين** يجد الحزمة (رابط فهرس)
+2. إخبار UV **أي** حزم تأتي من ذلك الفهرس (تعيين مصدر)
+3. تقديم **بيانات اعتماد** حتى يتمكن UV من المصادقة أثناء التثبيت
+
+يستخدم CrewAI AMP [UV](https://docs.astral.sh/uv/) لحل وتثبيت الاعتماديات.
+يدعم UV السجلات الخاصة المصادق عليها عبر تهيئة `pyproject.toml` مع
+متغيرات بيئة لبيانات الاعتماد.
+
+## الخطوة 1: تهيئة pyproject.toml
+
+ثلاثة أجزاء تعمل معاً في `pyproject.toml`:
+
+### 1أ. التصريح بالاعتمادية
+
+أضف الحزمة الخاصة إلى `[project.dependencies]` كأي اعتمادية أخرى:
+
+```toml
+[project]
+dependencies = [
+    "crewai[tools]>=0.100.1,<1.0.0",
+    "my-private-package>=1.2.0",
+]
+```
+
+### 1ب. تعريف الفهرس
+
+سجّل سجلك الخاص كفهرس مسمّى تحت `[[tool.uv.index]]`:
+
+```toml
+[[tool.uv.index]]
+name = "my-private-registry"
+url = "https://pkgs.dev.azure.com/my-org/_packaging/my-feed/pypi/simple/"
+explicit = true
+```
+
+<Info>
+  حقل `name` مهم — يستخدمه UV لبناء أسماء متغيرات البيئة
+  للمصادقة (راجع [الخطوة 2](#step-2-set-authentication-credentials) أدناه).
+
+  تعيين `explicit = true` يعني أن UV لن يبحث في هذا الفهرس عن كل حزمة — فقط
+  الحزم التي تعيّنها صراحة له في `[tool.uv.sources]`. يتجنب ذلك الاستعلامات غير الضرورية
+  ضد سجلك الخاص ويحمي من هجمات ارتباك الاعتماديات.
+</Info>
+
+### 1ج. تعيين الحزمة للفهرس
+
+أخبر UV أي حزم يجب حلها من فهرسك الخاص باستخدام `[tool.uv.sources]`:
+
+```toml
+[tool.uv.sources]
+my-private-package = { index = "my-private-registry" }
+```
+
+### مثال كامل
+
+```toml
+[project]
+name = "my-crew-project"
+version = "0.1.0"
+requires-python = ">=3.10,<=3.13"
+dependencies = [
+    "crewai[tools]>=0.100.1,<1.0.0",
+    "my-private-package>=1.2.0",
+]
+
+[tool.crewai]
+type = "crew"
+
+[[tool.uv.index]]
+name = "my-private-registry"
+url = "https://pkgs.dev.azure.com/my-org/_packaging/my-feed/pypi/simple/"
+explicit = true
+
+[tool.uv.sources]
+my-private-package = { index = "my-private-registry" }
+```
+
+بعد تحديث `pyproject.toml`، أعد إنشاء ملف القفل:
+
+```bash
+uv lock
+```
+
+<Warning>
+  ارفع دائماً `uv.lock` المُحدّث مع تغييرات `pyproject.toml`.
+  ملف القفل مطلوب للنشر — راجع [التحضير للنشر](/ar/enterprise/guides/prepare-for-deployment).
+</Warning>
+
+## الخطوة 2: تعيين بيانات اعتماد المصادقة
+
+يصادق UV ضد الفهارس الخاصة باستخدام متغيرات بيئة تتبع اصطلاح تسمية
+بناءً على اسم الفهرس الذي حددته في `pyproject.toml`:
+
+```
+UV_INDEX_{UPPER_NAME}_USERNAME
+UV_INDEX_{UPPER_NAME}_PASSWORD
+```
+
+حيث `{UPPER_NAME}` هو اسم فهرسك محوّلاً إلى **أحرف كبيرة** مع **استبدال الشرطات بشرطات سفلية**.
+
+على سبيل المثال، فهرس باسم `my-private-registry` يستخدم:
+
+| المتغير | القيمة |
+|---------|--------|
+| `UV_INDEX_MY_PRIVATE_REGISTRY_USERNAME` | اسم مستخدم السجل أو اسم الرمز |
+| `UV_INDEX_MY_PRIVATE_REGISTRY_PASSWORD` | كلمة مرور السجل أو الرمز/PAT |
+
+<Warning>
+  هذه المتغيرات **يجب** إضافتها عبر إعدادات **Environment Variables** في CrewAI AMP —
+  إما عالمياً أو على مستوى النشر. لا يمكن تعيينها في ملفات `.env` أو ترميزها في مشروعك.
+
+  راجع [تعيين متغيرات البيئة في AMP](#setting-environment-variables-in-amp) أدناه.
+</Warning>
+
+## مرجع مزودي السجلات
+
+يوضح الجدول أدناه تنسيق رابط الفهرس وقيم بيانات الاعتماد لمزودي السجلات الشائعين.
+استبدل القيم المؤقتة بتفاصيل مؤسستك وخلاصتك الفعلية.
+
+| المزود | رابط الفهرس | اسم المستخدم | كلمة المرور |
+|--------|-------------|--------------|-------------|
+| **Azure DevOps Artifacts** | `https://pkgs.dev.azure.com/{org}/_packaging/{feed}/pypi/simple/` | أي نص غير فارغ (مثل `token`) | Personal Access Token (PAT) بنطاق Packaging Read |
+| **GitHub Packages** | `https://pypi.pkg.github.com/{owner}/simple/` | اسم مستخدم GitHub | Personal Access Token (classic) بنطاق `read:packages` |
+| **GitLab Package Registry** | `https://gitlab.com/api/v4/projects/{project_id}/packages/pypi/simple/` | `__token__` | Project أو Personal Access Token بنطاق `read_api` |
+| **AWS CodeArtifact** | استخدم الرابط من `aws codeartifact get-repository-endpoint` | `aws` | رمز من `aws codeartifact get-authorization-token` |
+| **Google Artifact Registry** | `https://{region}-python.pkg.dev/{project}/{repo}/simple/` | `_json_key_base64` | مفتاح حساب الخدمة بتشفير Base64 |
+| **JFrog Artifactory** | `https://{instance}.jfrog.io/artifactory/api/pypi/{repo}/simple/` | اسم المستخدم أو البريد الإلكتروني | مفتاح API أو رمز الهوية |
+| **مستضاف ذاتياً (devpi، Nexus، إلخ.)** | رابط Simple API لسجلك | اسم مستخدم السجل | كلمة مرور السجل |
+
+<Tip>
+  لـ **AWS CodeArtifact**، تنتهي صلاحية رمز التفويض دورياً.
+  ستحتاج لتحديث قيمة `UV_INDEX_*_PASSWORD` عند انتهاء صلاحيتها.
+  فكّر في أتمتة هذا في خط أنابيب CI/CD.
+</Tip>
+
+## تعيين متغيرات البيئة في AMP
+
+يجب تهيئة بيانات اعتماد السجل الخاص كمتغيرات بيئة في CrewAI AMP.
+لديك خياران:
+
+<Tabs>
+  <Tab title="واجهة الويب">
+    1. سجّل الدخول إلى [CrewAI AMP](https://app.crewai.com)
+    2. انتقل إلى أتمتتك
+    3. افتح علامة تبويب **Environment Variables**
+    4. أضف كل متغير (`UV_INDEX_*_USERNAME` و`UV_INDEX_*_PASSWORD`) مع قيمته
+
+    راجع خطوة [النشر على AMP — تعيين متغيرات البيئة](/ar/enterprise/guides/deploy-to-amp#set-environment-variables) للتفاصيل.
+  </Tab>
+  <Tab title="النشر عبر CLI">
+    أضف المتغيرات إلى ملف `.env` المحلي قبل تشغيل `crewai deploy create`.
+    سينقلها CLI بأمان إلى المنصة:
+
+    ```bash
+    # .env
+    OPENAI_API_KEY=sk-...
+    UV_INDEX_MY_PRIVATE_REGISTRY_USERNAME=token
+    UV_INDEX_MY_PRIVATE_REGISTRY_PASSWORD=your-pat-here
+    ```
+
+    ```bash
+    crewai deploy create
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  **لا ترفع** أبداً بيانات الاعتماد إلى مستودعك. استخدم متغيرات بيئة AMP لجميع الأسرار.
+  يجب إدراج ملف `.env` في `.gitignore`.
+</Warning>
+
+لتحديث بيانات الاعتماد في نشر حالي، راجع [تحديث طاقمك — متغيرات البيئة](/ar/enterprise/guides/update-crew).
+
+## كيف يعمل الكل معاً
+
+عندما يبني CrewAI AMP أتمتتك، يعمل تدفق الحل هكذا:
+
+<Steps>
+  <Step title="بدء البناء">
+    يسحب AMP مستودعك ويقرأ `pyproject.toml` و`uv.lock`.
+  </Step>
+  <Step title="UV يحل الاعتماديات">
+    يقرأ UV `[tool.uv.sources]` لتحديد أي فهرس يجب أن تأتي منه كل حزمة.
+  </Step>
+  <Step title="UV يصادق">
+    لكل فهرس خاص، يبحث UV عن `UV_INDEX_{NAME}_USERNAME` و`UV_INDEX_{NAME}_PASSWORD`
+    من متغيرات البيئة التي هيأتها في AMP.
+  </Step>
+  <Step title="تثبيت الحزم">
+    يحمّل UV ويثبّت جميع الحزم — العامة (من PyPI) والخاصة (من سجلك).
+  </Step>
+  <Step title="تشغيل الأتمتة">
+    يبدأ طاقمك أو تدفقك مع توفر جميع الاعتماديات.
+  </Step>
+</Steps>
+
+## استكشاف الأخطاء وإصلاحها
+
+### أخطاء المصادقة أثناء البناء
+
+**العرض**: فشل البناء بـ `401 Unauthorized` أو `403 Forbidden` عند حل حزمة خاصة.
+
+**تحقق من**:
+- أسماء متغيرات البيئة `UV_INDEX_*` تتطابق مع اسم فهرسك بالضبط (أحرف كبيرة، شرطات → شرطات سفلية)
+- بيانات الاعتماد معيّنة في متغيرات بيئة AMP، وليس فقط في `.env` محلي
+- الرمز/PAT لديه صلاحيات القراءة المطلوبة لخلاصة الحزم
+- الرمز لم تنتهِ صلاحيته (ذو صلة خاصة لـ AWS CodeArtifact)
+
+### الحزمة غير موجودة
+
+**العرض**: `No matching distribution found for my-private-package`.
+
+**تحقق من**:
+- رابط الفهرس في `pyproject.toml` ينتهي بـ `/simple/`
+- إدخال `[tool.uv.sources]` يعيّن اسم الحزمة الصحيح لاسم الفهرس الصحيح
+- الحزمة منشورة فعلاً في سجلك الخاص
+- شغّل `uv lock` محلياً بنفس بيانات الاعتماد للتحقق من عمل الحل
+
+### تعارضات ملف القفل
+
+**العرض**: فشل `uv lock` أو نتائج غير متوقعة بعد إضافة فهرس خاص.
+
+**الحل**: عيّن بيانات الاعتماد محلياً وأعد الإنشاء:
+
+```bash
+export UV_INDEX_MY_PRIVATE_REGISTRY_USERNAME=token
+export UV_INDEX_MY_PRIVATE_REGISTRY_PASSWORD=your-pat
+uv lock
+```
+
+ثم ارفع `uv.lock` المُحدّث.
+
+## أدلة ذات صلة
+
+<CardGroup cols={3}>
+  <Card title="التحضير للنشر" icon="clipboard-check" href="/ar/enterprise/guides/prepare-for-deployment">
+    تحقق من بنية المشروع والاعتماديات قبل النشر.
+  </Card>
+  <Card title="النشر على AMP" icon="rocket" href="/ar/enterprise/guides/deploy-to-amp">
+    انشر طاقمك أو تدفقك وهيّئ متغيرات البيئة.
+  </Card>
+  <Card title="تحديث طاقمك" icon="arrows-rotate" href="/ar/enterprise/guides/update-crew">
+    حدّث متغيرات البيئة وادفع التغييرات إلى نشر قائم.
+  </Card>
+</CardGroup>

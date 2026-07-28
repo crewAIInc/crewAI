@@ -1,0 +1,295 @@
+---
+title: AWS Secrets Manager (بيانات اعتماد ثابتة)
+description: تكوين AWS Secrets Manager كمزود أسرار لـ CrewAI Platform باستخدام مفاتيح الوصول الثابتة أو AssumeRole
+sidebarTitle: ببيانات اعتماد ثابتة
+icon: "key"
+---
+
+## نظرة عامة
+
+يأخذك هذا الدليل عبر تكوين AWS Secrets Manager كمزود أسرار لمؤسستك على CrewAI Platform، باستخدام **بيانات الاعتماد الثابتة** (مفاتيح الوصول، اختيارياً مع AssumeRole). بنهاية الدليل، ستتمكن CrewAI Platform من قراءة الأسرار المخزّنة في حساب AWS الخاص بك وحقنها كقيم متغيرات بيئة وقت التشغيل.
+
+<Note>
+يغطي هذا الدليل مسار **بيانات الاعتماد الثابتة** — تُحَلّ الأسرار وقت النشر وتُدمج في صورة النشر. تتطلب القيم المُدوَّرة إعادة نشر. إذا أردت أسراراً مراعية للتدوير تُحدَّث في كل إطلاق أتمتة (بدون إعادة نشر)، راجع [AWS Workload Identity (اتحاد OIDC)](/ar/enterprise/features/secrets-manager/aws-workload-identity).
+</Note>
+
+<Note>
+يغطي هذا الدليل التكوين من جانب AWS وإعداد بيانات الاعتماد في CrewAI Platform. للإشارة بعدها إلى سر من متغير بيئة، راجع [استخدام مدير الأسرار](/ar/enterprise/features/secrets-manager/usage).
+</Note>
+
+## المتطلبات المسبقة
+
+<Note>
+قبل البدء، تأكد من امتلاكك:
+
+- حساب AWS لديه إذن إنشاء مستخدمي IAM وسياسات يديرها العميل و(اختيارياً) أدوار IAM.
+- منطقة AWS التي تعيش (أو ستعيش) فيها أسرارك، مثلاً `us-east-1`.
+- مؤسسة على CrewAI Platform يمتلك مستخدمك فيها إذن `secret_providers: manage`. راجع [الأذونات (RBAC)](/ar/enterprise/features/secrets-manager/usage#permissions-rbac).
+</Note>
+
+## اختر طريقة المصادقة
+
+تدعم CrewAI Platform طريقتين لمصادقة المنصة مع AWS Secrets Manager. اختر واحدة قبل أن تبدأ — تختلف الخطوات أدناه بناءً على اختيارك.
+
+| الطريقة | متى تُستخدم | المقايضات |
+|---|---|---|
+| **مفاتيح الوصول الثابتة** | البداية، عمليات نشر بحساب واحد | أبسط إعداد؛ يجب تدوير مفاتيح الوصول يدوياً |
+| **AssumeRole** | عبر الحسابات، تشديد الإنتاج | بيانات اعتماد قصيرة الأمد؛ يدعم External ID؛ يتطلب دور IAM إضافي |
+
+تستخدم بقية هذا الدليل علامات تبويب في الخطوات 3–5 لتتمكن من اتباع المسار المطابق لاختيارك.
+
+## الخطوة 1 — إنشاء مستخدم IAM
+
+افتح [وحدة تحكم IAM](https://console.aws.amazon.com/iam/)، انتقل إلى **Users**، ثم انقر على **Create user**.
+
+- الاسم المقترح: `crewai-secrets-reader`.
+- اترك **Provide user access to the AWS Management Console** بدون تحديد — هذا الكيان تستخدمه CrewAI Platform برمجياً، وليس البشر.
+- انقر على **Next**.
+
+في صفحة **Set permissions**، اترك الاختيار الافتراضي. ستُرفق السياسة في الخطوة 3.
+
+انقر على **Next**، راجع، وانقر على **Create user**.
+
+للتفاصيل الكاملة، راجع وثائق AWS: [Create an IAM user in your AWS account](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html).
+
+{/* SCREENSHOT: AWS IAM "Create user" form filled with name "crewai-secrets-reader" → /images/secrets-manager/aws/01-create-iam-user.png */}
+
+## الخطوة 2 — إنشاء سياسة IAM
+
+تحتاج CrewAI Platform إلى وصول للقراءة فقط إلى AWS Secrets Manager وإذن لفك تشفير الأسرار عبر KMS. أنشئ سياسة يديرها العميل بـ JSON التالي.
+
+في وحدة تحكم IAM، انتقل إلى **Policies**، ثم انقر على **Create policy**.
+
+اختر علامة التبويب **JSON** واستبدل المحتوى بـ:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SecretsManagerRead",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:ListSecrets",
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "KMSDecrypt",
+      "Effect": "Allow",
+      "Action": [
+        "kms:DescribeKey",
+        "kms:Decrypt"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+انقر على **Next**، ثم في صفحة **Review and create**:
+
+- **Policy name:** `CrewAISecretsManagerRead`
+- **Description (optional):** `Read-only access to AWS Secrets Manager for CrewAI Platform`
+
+انقر على **Create policy**.
+
+<Tip>
+تمنح السياسة أعلاه `*` على `Resource` للبساطة. في الإنتاج، حدّد نطاق `Resource` إلى ARNs الخاصة بالأسرار التي يجب على CrewAI Platform الوصول إليها، وحدّد نطاق `kms:Decrypt` إلى ARNs مفاتيح KMS التي تُشفّر تلك الأسرار. راجع [إرشادات AWS حول أقل الامتيازات](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_create-console.html).
+</Tip>
+
+{/* SCREENSHOT: AWS IAM "Create policy" → JSON tab with the policy above pasted → /images/secrets-manager/aws/02-create-policy-json-editor.png */}
+{/* SCREENSHOT: AWS IAM "Review and create policy" page with name "CrewAISecretsManagerRead" → /images/secrets-manager/aws/03-policy-review-and-create.png */}
+
+## الخطوة 3 — إرفاق السياسة
+
+<Tabs>
+  <Tab title="مفاتيح الوصول الثابتة">
+    1. في وحدة تحكم IAM، انتقل إلى **Users** وانقر على المستخدم الذي أنشأته في الخطوة 1.
+    2. في علامة التبويب **Permissions**، انقر على **Add permissions** ← **Attach policies directly**.
+    3. ابحث عن `CrewAISecretsManagerRead`، حدّدها، وانقر على **Next**.
+    4. انقر على **Add permissions**.
+
+    {/* SCREENSHOT: "Add permissions" → "Attach policies directly" with CrewAISecretsManagerRead selected → /images/secrets-manager/aws/04a-attach-policy-to-user.png */}
+  </Tab>
+
+  <Tab title="AssumeRole">
+    مع AssumeRole، تُرفَق السياسة بـ **دور** IAM منفصل (وليس مباشرة بالمستخدم). يحتاج المستخدم من الخطوة 1 فقط إلى إذن لاستدعاء `sts:AssumeRole` على ذلك الدور.
+
+    **إنشاء الدور:**
+
+    1. في وحدة تحكم IAM، انتقل إلى **Roles** وانقر على **Create role**.
+    2. **Trusted entity type:** AWS account. اختر **This account** (أو **Another AWS account** لإعدادات عبر الحسابات، ثم أدخل معرّف حساب AWS الذي يستضيف مستخدم IAM من الخطوة 1).
+    3. (موصى به) حدّد **Require external ID** وأدخل قيمة تُولّدها بنفسك — هذا سر مشترك ستلصقه في CrewAI Platform في الخطوة 5.
+    4. انقر على **Next**.
+    5. أرفق سياسة `CrewAISecretsManagerRead`.
+    6. انقر على **Next**، سمِّ الدور `CrewAISecretsManagerRole`، وانقر على **Create role**.
+
+    **اسمح لمستخدم IAM بافتراض الدور:**
+
+    1. افتح الدور الذي أنشأته للتو وانسخ **ARN** الخاص به.
+    2. في وحدة تحكم IAM، انتقل إلى **Users**، انقر على المستخدم من الخطوة 1، وفي علامة التبويب **Permissions** انقر على **Add permissions** ← **Create inline policy**.
+    3. في علامة التبويب **JSON**، الصق ما يلي (استبدل `ROLE_ARN_FROM_ABOVE`):
+
+    ```json
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": "sts:AssumeRole",
+          "Resource": "ROLE_ARN_FROM_ABOVE"
+        }
+      ]
+    }
+    ```
+
+    4. سمِّ السياسة `CrewAIAssumeSecretsRole` وانقر على **Create policy**.
+
+    {/* SCREENSHOT: IAM "Create role" trust policy step with External ID checkbox enabled → /images/secrets-manager/aws/04b-create-role-trust-policy.png */}
+    {/* SCREENSHOT: Inline sts:AssumeRole policy attached to the IAM user → /images/secrets-manager/aws/04c-attach-assumerole-on-user.png */}
+  </Tab>
+</Tabs>
+
+## الخطوة 4 — الحصول على بيانات الاعتماد
+
+<Tabs>
+  <Tab title="مفاتيح الوصول الثابتة">
+    1. في وحدة تحكم IAM، افتح المستخدم من الخطوة 1.
+    2. انقر على علامة التبويب **Security credentials**.
+    3. تحت **Access keys**، انقر على **Create access key**.
+    4. اختر **Application running outside AWS** (أو **Other**) كحالة استخدام. انقر على **Next**.
+    5. (اختياري) أضف وسماً وصفياً. انقر على **Create access key**.
+    6. انقر على **Show** للكشف عن مفتاح الوصول السري، ثم انسخ كلاً من **Access key ID** و **Secret access key**، أو انقر على **Download .csv file**.
+
+    <Warning>
+    يظهر مفتاح الوصول السري مرة واحدة فقط. إذا أغلقت هذه الصفحة دون نسخه، فستحتاج إلى حذف المفتاح وإنشاء واحد جديد.
+    </Warning>
+
+    للتفاصيل الكاملة، راجع وثائق AWS: [Manage access keys for IAM users](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html).
+
+    {/* SCREENSHOT: Access key use-case selector ("Application running outside AWS") → /images/secrets-manager/aws/05a-create-access-key-use-case.png */}
+    {/* SCREENSHOT: "Retrieve access keys" page with Show/Download buttons → /images/secrets-manager/aws/06a-retrieve-access-keys.png */}
+  </Tab>
+
+  <Tab title="AssumeRole">
+    حتى مع AssumeRole، لا تزال CrewAI Platform تحتاج إلى مفتاح وصول لمستخدم IAM — فهي تستخدم تلك المفاتيح كهوية المتصل لتنفيذ استدعاء `sts:AssumeRole`.
+
+    1. أنشئ مفتاح وصول للمستخدم تماماً كما هو موضح في علامة التبويب **مفاتيح الوصول الثابتة** أعلاه.
+    2. افتح الدور الذي أنشأته في الخطوة 3 وانسخ:
+       - **Role ARN** (من ملخص الدور).
+       - **External ID** الذي كوّنته (إن وُجد) — قد عيّنته بنفسك في الخطوة 3، فتأكد من أنه بحوزتك.
+
+    {/* SCREENSHOT: IAM role detail page showing Role ARN → /images/secrets-manager/aws/05b-role-arn-detail.png */}
+  </Tab>
+</Tabs>
+
+## الخطوة 5 — إضافة بيانات الاعتماد في CrewAI Platform
+
+في CrewAI Platform، انتقل إلى **Settings** ← **Secret Provider Credentials** وانقر على **Add Credential**.
+
+{/* SCREENSHOT: Sidebar/nav highlighting Settings → Secret Provider Credentials → /images/secrets-manager/usage/01-amp-settings-nav.png */}
+{/* SCREENSHOT: Empty state of Secret Provider Credentials page with "Add Credential" button → /images/secrets-manager/usage/02-amp-credentials-empty-state.png */}
+
+<Tabs>
+  <Tab title="مفاتيح الوصول الثابتة">
+    املأ النموذج:
+
+    - **Name:** اسم وصفي، مثلاً `aws-prod`.
+    - **Provider:** `AWS Secrets Manager`.
+    - **Region:** منطقة AWS التي تعيش فيها أسرارك، مثلاً `us-east-1`. يجب أن تطابق منطقة الأسرار التي تريد قراءتها.
+    - **Access Key ID:** القيمة من الخطوة 4.
+    - **Secret Access Key:** القيمة من الخطوة 4.
+    - (اختياري) حدّد **Set as default credential for this provider**. تُستخدم بيانات الاعتماد الافتراضية بواسطة متغيرات البيئة التي تشير إلى أسرار AWS بدون تحديد بيانات اعتماد صراحةً.
+
+    اترك **Role ARN** و **External ID** فارغين.
+
+    انقر على **Create**.
+
+    {/* SCREENSHOT: "Add Secret Provider Credential" form with AWS + static access keys filled in → /images/secrets-manager/usage/03a-amp-add-credential-form-aws-static.png */}
+  </Tab>
+
+  <Tab title="AssumeRole">
+    املأ النموذج:
+
+    - **Name:** اسم وصفي، مثلاً `aws-prod-assumerole`.
+    - **Provider:** `AWS Secrets Manager`.
+    - **Region:** منطقة AWS التي تعيش فيها أسرارك.
+    - **Access Key ID:** مفتاح وصول مستخدم IAM من الخطوة 4 (يُستخدم لاستدعاء STS).
+    - **Secret Access Key:** مفتاح الوصول السري لمستخدم IAM من الخطوة 4.
+    - **Role ARN:** Role ARN الذي نسخته في الخطوة 4.
+    - **External ID:** External ID الذي عيّنته على سياسة الثقة الخاصة بالدور (احذفه إن لم يوجد).
+    - (اختياري) حدّد **Set as default credential for this provider**.
+
+    انقر على **Create**.
+
+    {/* SCREENSHOT: "Add Secret Provider Credential" form with AWS + AssumeRole fields filled in → /images/secrets-manager/usage/03b-amp-add-credential-form-aws-assumerole.png */}
+  </Tab>
+</Tabs>
+
+<Note>
+**كيف تتصرف الطريقتان وقت التشغيل:**
+
+- مع **مفاتيح الوصول الثابتة** فقط، تستدعي CrewAI Platform AWS Secrets Manager مباشرةً باستخدام المفاتيح التي قدّمتها.
+- عند تعيين **Role ARN**، تستدعي CrewAI Platform أولاً `sts:AssumeRole` بمفاتيح الوصول المقدَّمة (و External ID إن كان مكوَّناً)، ثم تستخدم بيانات الاعتماد قصيرة الأمد التي تُعيدها STS لقراءة أسرارك.
+</Note>
+
+{/* SCREENSHOT: Credentials list showing the new AWS row, with "(default)" badge if applicable → /images/secrets-manager/usage/04-amp-credential-created.png */}
+
+## الخطوة 6 — إنشاء سر واحد على الأقل في AWS
+
+إذا لم يكن لديك بالفعل أسرار في AWS Secrets Manager، أنشئ واحداً الآن لتتمكن من التحقق من الاتصال في الخطوة 7.
+
+في [وحدة تحكم AWS Secrets Manager](https://console.aws.amazon.com/secretsmanager/)، انقر على **Store a new secret**.
+
+- **Secret type:** اختر **Other type of secret**.
+- **Key/value pairs** — إما:
+  - إدخال زوج أو أكثر من مفتاح/قيمة (موصى به للأسرار المهيكلة)، أو
+  - استخدام علامة التبويب **Plaintext** لقيمة نصية واحدة.
+- **Encryption key:** استخدم `aws/secretsmanager` (المفتاح الذي يديره AWS) ما لم تكن لديك متطلبات محددة لمفتاح KMS.
+
+انقر على **Next**، ثم أدخل:
+
+- **Secret name:** اسم فريد، مثلاً `crewai/openai-api-key`.
+- **Description (optional):** ملاحظة قصيرة عن غرض السر.
+
+انقر على **Next** عبر خطوات التدوير والمراجعة، ثم انقر على **Store**.
+
+<Note>
+**صيغة الإشارة بمفتاح JSON.** إذا خزّنت سراً بأزواج مفتاح/قيمة متعددة (كائن JSON)، يمكن لـ CrewAI Platform استخراج حقل محدد باستخدام صيغة `secret-name#json_key` في إشارات متغيرات البيئة. على سبيل المثال، يمكن الإشارة إلى سر باسم `database-credentials` بـ `{"username": "...", "password": "..."}` باسم `database-credentials#password`. راجع [استخدام مدير الأسرار](/ar/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables) للتفاصيل.
+</Note>
+
+للتفاصيل الكاملة، راجع وثائق AWS: [Create an AWS Secrets Manager secret](https://docs.aws.amazon.com/secretsmanager/latest/userguide/create_secret.html).
+
+{/* SCREENSHOT: AWS Secrets Manager "Choose secret type" page → /images/secrets-manager/aws/07-create-secret-store-type.png */}
+{/* SCREENSHOT: AWS Secrets Manager "Configure secret" page with name and description → /images/secrets-manager/aws/08-create-secret-name.png */}
+
+## الخطوة 7 — اختبار الاتصال
+
+عُد إلى CrewAI Platform، في صفحة **Secret Provider Credentials**، اعثر على بيانات الاعتماد التي أنشأتها للتو وانقر على **Test Connection**.
+
+تؤكد رسالة نجاح أن CrewAI Platform يمكنها المصادقة مع AWS وقراءة الأسرار من حسابك.
+
+{/* SCREENSHOT: Success toast after clicking "Test Connection" → /images/secrets-manager/usage/05-amp-test-connection-success.png */}
+
+إذا فشل الاختبار، تحقق من الأسباب الأكثر شيوعاً:
+
+| العَرَض | السبب المحتمل |
+|---|---|
+| `AccessDenied` على `secretsmanager:ListSecrets` | السياسة غير مُرفقة، أو المستخدم خاطئ. تحقق من الخطوة 3 من جديد. |
+| `AccessDenied` على `kms:Decrypt` | بيان `KMSDecrypt` مفقود، أو أن أسرارك تستخدم مفتاح KMS يديره العميل لا يغطّيه `Resource: "*"`. |
+| `InvalidClientTokenId` / `SignatureDoesNotMatch` | معرّف مفتاح الوصول أو مفتاح الوصول السري خاطئ. تحقق من الخطوتين 4 و 5 من جديد. |
+| `RegionDisabledException` / لم يُعثر على أسرار | لا تطابق **Region** الخاصة ببيانات الاعتماد المكان الفعلي لأسرارك. |
+| `AccessDenied` على `sts:AssumeRole` (AssumeRole فقط) | سياسة `sts:AssumeRole` المضمنة مفقودة على مستخدم IAM، أو لا تسمح سياسة الثقة الخاصة بالدور بهذا الكيان، أو لا يتطابق External ID. |
+| ينجح الاختبار فوراً بعد إنشاء مستخدم IAM، لكنه يفشل في المرة التالية | تستغرق بيانات اعتماد IAM أحياناً دقيقة أو دقيقتين للانتشار عالمياً. أعد المحاولة. |
+
+## الخطوات التالية
+
+الآن وقد اتصلت AWS، توجّه إلى [استخدام مدير الأسرار](/ar/enterprise/features/secrets-manager/usage) من أجل:
+
+- منح أعضاء المؤسسة الأذونات الصحيحة لاستخدام (أو إدارة) مدير الأسرار.
+- الإشارة إلى أسرار AWS الخاصة بك من متغيرات بيئة CrewAI Platform.
+
+إذا كنت تريد أسراراً **مراعية للتدوير** تنتشر دون إعادة نشر، انتقل إلى [AWS Workload Identity (اتحاد OIDC)](/ar/enterprise/features/secrets-manager/aws-workload-identity) — نفس مخزن الأسرار، بدون بيانات اعتماد ثابتة، وتُجلب الأسرار في كل إطلاق.

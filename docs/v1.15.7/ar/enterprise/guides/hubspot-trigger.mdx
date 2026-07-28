@@ -1,0 +1,61 @@
+---
+title: "مشغل HubSpot"
+description: "تشغيل طواقم CrewAI مباشرة من سير عمل HubSpot"
+icon: "hubspot"
+mode: "wide"
+---
+
+يقدم هذا الدليل عملية خطوة بخطوة لإعداد مشغلات HubSpot لـ CrewAI AMP، مما يتيح لك بدء الطواقم مباشرة من سير عمل HubSpot.
+
+## المتطلبات المسبقة
+
+- حساب CrewAI AMP
+- حساب HubSpot مع ميزة [HubSpot Workflows](https://knowledge.hubspot.com/workflows/create-workflows)
+
+## خطوات الإعداد
+
+<Steps>
+  <Step title="ربط حساب HubSpot بـ CrewAI AMP">
+    - سجّل الدخول إلى `حساب CrewAI AMP > Triggers` - اختر `HubSpot` من
+    قائمة المشغلات المتاحة - اختر حساب HubSpot الذي تريد ربطه
+    بـ CrewAI AMP - اتبع التعليمات على الشاشة لتفويض وصول CrewAI AMP
+    إلى حساب HubSpot - ستظهر رسالة تأكيد بمجرد
+    ربط HubSpot بنجاح مع CrewAI AMP
+  </Step>
+  <Step title="إنشاء سير عمل HubSpot">
+    - سجّل الدخول إلى `حساب HubSpot > Automations > Workflows > New workflow`
+    - اختر نوع سير العمل المناسب لاحتياجاتك (مثل Start from scratch) -
+    في منشئ سير العمل، انقر على أيقونة Plus (+) لإضافة إجراء جديد. -
+    اختر `Integrated apps > CrewAI > Kickoff a Crew`. - اختر الطاقم الذي
+    تريد تشغيله. - انقر على `Save` لإضافة الإجراء إلى سير عملك
+    <Frame>
+      <img
+        src="/images/enterprise/hubspot-workflow-1.png"
+        alt="سير عمل HubSpot 1"
+      />
+    </Frame>
+  </Step>
+  <Step title="استخدام نتائج الطاقم مع إجراءات أخرى">
+    - بعد خطوة Kickoff a Crew، انقر على أيقونة Plus (+) لإضافة
+    إجراء جديد. - على سبيل المثال، لإرسال إشعار بريد إلكتروني داخلي، اختر
+    `Communications > Send internal email notification` - في حقل Body،
+    انقر على `Insert data`، اختر `View properties or action outputs from > Action
+    outputs > Crew Result` لتضمين بيانات الطاقم في البريد الإلكتروني
+    <Frame>
+      <img
+        src="/images/enterprise/hubspot-workflow-2.png"
+        alt="سير عمل HubSpot 2"
+      />
+  </Frame>
+  - هيّئ أي إجراءات إضافية حسب الحاجة - راجع خطوات
+    سير عملك للتأكد من إعداد كل شيء بشكل صحيح - فعّل سير العمل
+    <Frame>
+      <img
+        src="/images/enterprise/hubspot-workflow-3.png"
+        alt="سير عمل HubSpot 3"
+      />
+    </Frame>
+  </Step>
+</Steps>
+
+لمزيد من المعلومات المفصلة حول الإجراءات المتاحة وخيارات التخصيص، راجع [وثائق HubSpot Workflows](https://knowledge.hubspot.com/workflows/create-workflows).
