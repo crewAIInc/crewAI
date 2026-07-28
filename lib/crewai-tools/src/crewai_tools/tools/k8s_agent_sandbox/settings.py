@@ -5,17 +5,17 @@ from dataclasses import (
 )
 
 if TYPE_CHECKING:
-    from k8s_agent_sandbox.models import ( # type: ignore[import-untyped]
+    from k8s_agent_sandbox.models import (  # type: ignore[import-untyped]
         SandboxConnectionConfig,
         SandboxTracerConfig,
     )
-    from k8s_agent_sandbox.sandbox_client import SandboxClient # type: ignore[import-untyped]
+    from k8s_agent_sandbox.sandbox_client import SandboxClient  # type: ignore[import-untyped]
 
 from .utils import lazy_import_k8s_agent_sandbox
 
 
 @dataclass
-class K8sAgentSandboxToolClientSettings: # type: ignore[no-any-unimported]
+class K8sAgentSandboxToolClientSettings:  # type: ignore[no-any-unimported]
     """
     The dataclass that stores data required to created an Agent Sandbox Client.
     It basically has the same arguments as the `k8s_agent_sandbox.SandboxClient`
@@ -23,20 +23,20 @@ class K8sAgentSandboxToolClientSettings: # type: ignore[no-any-unimported]
     """
 
     connection_config: "SandboxConnectionConfig | None" = None  # type: ignore[no-any-unimported]
-    tracer_config: "SandboxTracerConfig | None" = None # type: ignore[no-any-unimported]
+    tracer_config: "SandboxTracerConfig | None" = None  # type: ignore[no-any-unimported]
     cleanup: bool = False
 
-    _client: "SandboxClient | None" = field(default=None, init=False, repr=False) # type: ignore[no-any-unimported]
+    _client: "SandboxClient | None" = field(default=None, init=False, repr=False)  # type: ignore[no-any-unimported]
 
     @property
-    def client(self) -> "SandboxClient": # type: ignore[no-any-unimported]
+    def client(self) -> "SandboxClient":  # type: ignore[no-any-unimported]
         if self._client is not None:
             return self._client
 
         # from k8s_agent_sandbox.sandbox_client import SandboxClient
         kas_client_sandbox_module = lazy_import_k8s_agent_sandbox("sandbox_client")
 
-        client: "SandboxClient" = kas_client_sandbox_module.SandboxClient( # type: ignore[no-any-unimported]
+        client: "SandboxClient" = kas_client_sandbox_module.SandboxClient(  # type: ignore[no-any-unimported]
             connection_config=self.connection_config,
             tracer_config=self.tracer_config,
             cleanup=self.cleanup,

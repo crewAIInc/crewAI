@@ -17,8 +17,8 @@ from pydantic import (
 )
 
 if TYPE_CHECKING:
-    from k8s_agent_sandbox.models import FileEntry # type: ignore[import-untyped]
-    from k8s_agent_sandbox.sandbox import Sandbox # type: ignore[import-untyped]
+    from k8s_agent_sandbox.models import FileEntry  # type: ignore[import-untyped]
+    from k8s_agent_sandbox.sandbox import Sandbox  # type: ignore[import-untyped]
 
 from crewai_tools.tools.k8s_agent_sandbox.base_tool import (
     DEFAULT_TOOL_TIMEOUT_SEC,
@@ -160,7 +160,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
     )
     args_schema: type[BaseModel] = K8sAgentSandboxFileToolSchema
 
-    def _run_with_sandbox( # type: ignore[no-any-unimported]
+    def _run_with_sandbox(  # type: ignore[no-any-unimported]
         self,
         sandbox: "Sandbox",
         action: FileAction,
@@ -201,7 +201,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
 
         raise ValueError(f"Unknown action: {action}")
 
-    def _read( # type: ignore[no-any-unimported]
+    def _read(  # type: ignore[no-any-unimported]
         self,
         sandbox: "Sandbox",
         path: str,
@@ -229,7 +229,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
                 note="File was not valid utf-8; returned as base64.",
             )
 
-    def _write( # type: ignore[no-any-unimported]
+    def _write(  # type: ignore[no-any-unimported]
         self,
         sandbox: "Sandbox",
         path: str,
@@ -246,7 +246,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
             status="written", path=path, bytes=len(payload)
         )
 
-    def _append( # type: ignore[no-any-unimported]
+    def _append(  # type: ignore[no-any-unimported]
         self,
         sandbox: "Sandbox",
         path: str,
@@ -276,7 +276,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
             appended_bytes=len(chunk),
         )
 
-    def _list( # type: ignore[no-any-unimported]
+    def _list(  # type: ignore[no-any-unimported]
         self, sandbox: "Sandbox", path: str, *, timeout: int
     ) -> K8sAgentSandboxFileToolOutput:
         entries = sandbox.files.list(path, timeout=timeout)
@@ -285,7 +285,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
             entries=[self._entry_to_dict(e) for e in entries],
         )
 
-    def _delete( # type: ignore[no-any-unimported]
+    def _delete(  # type: ignore[no-any-unimported]
         self, sandbox: "Sandbox", path: str, *, timeout: int
     ) -> K8sAgentSandboxFileToolOutput:
         # TODO: Fall back to deleting with shell command.
@@ -314,7 +314,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
 
         return K8sAgentSandboxFileToolOutput(status="deleted", path=path)
 
-    def _mkdir(self, sandbox: "Sandbox", path: str, *, timeout: int): # type: ignore[no-any-unimported,no-untyped-def]
+    def _mkdir(self, sandbox: "Sandbox", path: str, *, timeout: int):  # type: ignore[no-any-unimported,no-untyped-def]
         try:
             result = sandbox.commands.run(
                 f"mkdir -p {shlex.quote(path)}",
@@ -330,7 +330,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
                 f"Cannot create directory {path}. Error: {result.stderr}."
             )
 
-    def _ensure_parent_dir(self, sandbox: "Sandbox", path: str, timeout: int): # type: ignore[no-any-unimported,no-untyped-def]
+    def _ensure_parent_dir(self, sandbox: "Sandbox", path: str, timeout: int):  # type: ignore[no-any-unimported,no-untyped-def]
         parent = posixpath.dirname(path)
         if not parent or parent in ("/", "."):
             return
@@ -338,7 +338,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
         return self._mkdir(sandbox, parent, timeout=timeout)
 
     @staticmethod
-    def _entry_to_dict(entry: "FileEntry") -> FileEntryModel: # type: ignore[no-any-unimported]
+    def _entry_to_dict(entry: "FileEntry") -> FileEntryModel:  # type: ignore[no-any-unimported]
         return FileEntryModel(
             name=getattr(entry, "name", None),
             type=getattr(entry, "type", None),

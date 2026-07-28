@@ -1,8 +1,4 @@
-from typing import (
-    Any,
-    Callable,
-    TYPE_CHECKING
-)
+from typing import Any, Callable, TYPE_CHECKING
 import time
 import logging
 from pydantic import (
@@ -13,13 +9,11 @@ from pydantic import (
 from abc import abstractmethod
 
 if TYPE_CHECKING:
-   from k8s_agent_sandbox.sandbox import Sandbox # type: ignore[import-untyped]
+    from k8s_agent_sandbox.sandbox import Sandbox  # type: ignore[import-untyped]
 
 from crewai.tools import BaseTool
 
 from .toolset import K8sAgentSandboxToolset
-
-
 
 
 logger = logging.getLogger(__name__)
@@ -46,7 +40,9 @@ class K8sAgentSandboxBaseTool(BaseTool, arbitrary_types_allowed=True):
             self.toolset.lifecycle_manager.release_sandbox()
 
     @abstractmethod
-    def _run_with_sandbox(self, sandbox: "Sandbox", *args: Any, **kwargs: Any) -> BaseModel: # type: ignore[no-any-unimported]
+    def _run_with_sandbox(  # type: ignore[no-any-unimported]
+        self, sandbox: "Sandbox", *args: Any, **kwargs: Any
+    ) -> BaseModel:
         pass
 
 
