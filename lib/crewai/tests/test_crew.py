@@ -1566,6 +1566,65 @@ async def test_async_kickoff_for_each_async_empty_input():
     assert results == [], "Result should be an empty list when input is empty"
 
 
+@pytest.mark.asyncio
+async def test_kickoff_for_each_async_persists_output_for_replay():
+    """kickoff_for_each_async must not wipe every copy's replay data.
+
+    run_for_each_async backs kickoff_for_each_async and akickoff_for_each, and
+    used to unconditionally reset the shared replay store right after
+    gathering results, so every call left the store empty regardless of what
+    the copies had just persisted.
+
+    The copies execute concurrently on separate threads and share one SQLite
+    store, so which one's output ends up persisted is not deterministic (this
+    differs from the sequential kickoff_for_each, which is guaranteed to keep
+    the final input's run). This test only pins the actual regression: the
+    store must retain at least one copy's output instead of always ending up
+    empty.
+    """
+    import gc
+
+    agent = Agent(
+        role="Researcher",
+        goal="Research a topic.",
+        backstory="You are a careful researcher.",
+    )
+    task = Task(
+        description="Research {topic}.",
+        expected_output="A concise research note.",
+        agent=agent,
+    )
+    crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
+
+    def fake_execute_sync(self: Task, *args: Any, **kwargs: Any) -> TaskOutput:
+        return TaskOutput(
+            description=self.description,
+            raw=f"{self.description} result",
+            agent="Researcher",
+        )
+
+    try:
+        with patch.object(
+            Task, "execute_sync", side_effect=fake_execute_sync, autospec=True
+        ) as mock_execute_task:
+            results = await crew.kickoff_for_each_async(
+                inputs=[{"topic": "first"}, {"topic": "latest"}]
+            )
+
+            stored_outputs = crew._task_output_handler.load()
+            assert len(results) == 2
+            assert len(stored_outputs) > 0
+            for stored in stored_outputs:
+                topic = stored["inputs"]["topic"]
+                assert topic in {"first", "latest"}
+                assert stored["output"]["raw"] == f"Research {topic}. result"
+
+        assert mock_execute_task.call_count == 2
+    finally:
+        crew._task_output_handler.reset()
+        gc.collect()
+
+
 def test_set_agents_step_callback():
     researcher_agent = Agent(
         role="Researcher",
