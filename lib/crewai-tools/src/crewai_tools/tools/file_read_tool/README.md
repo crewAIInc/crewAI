@@ -37,7 +37,7 @@ partial_content = file_read_tool.run(file_path='path/to/your/file.txt', start_li
 
 The agent supplies these at runtime:
 
-- `file_path`: The path to the file you want to read. It accepts both absolute and relative paths. Ensure the file exists and you have the necessary permissions to access it.
+- `file_path`: (Optional) The path to the file you want to read. It accepts both absolute and relative paths. Ensure the file exists and you have the necessary permissions to access it. Omit it to read the default file configured at construction; if there is no default, the tool reports that no path was provided.
 - `start_line`: (Optional) The line number to start reading from (1-indexed). Defaults to 1 (the first line).
 - `line_count`: (Optional) The number of lines to read. If not provided, reads from the start_line to the end of the file.
 
@@ -52,7 +52,7 @@ You set these when constructing the tool:
 Because the file path is usually chosen by an LLM at runtime, reads are confined to a sandbox:
 
 - Paths supplied at runtime must resolve inside `base_dir` (the current working directory by default). `..` segments and symlinks are resolved before the check, so they cannot be used to escape.
-- A `file_path` passed to the constructor is developer-declared intent, so it is always readable — even outside `base_dir`. Declaring one file does not expose its siblings.
+- A `file_path` passed to the constructor is developer-declared intent, so it is always readable — even outside `base_dir`. It is pinned when the tool is built, so a later change of working directory cannot repoint it, and the agent can address it either by omitting `file_path` or by using the name shown in the tool's description. Declaring one file does not expose its siblings.
 
 To let an agent read a directory tree outside the working directory, point `base_dir` at it:
 

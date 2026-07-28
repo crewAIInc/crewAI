@@ -368,6 +368,19 @@ def test_directory_that_is_an_existing_file(tool, temp_env):
     assert "overwrite" not in result
 
 
+@pytest.mark.parametrize(
+    ("filename", "directory"),
+    [("a\x00b.txt", "./"), ("ok.txt", "d\x00ir")],
+)
+def test_null_byte_returns_error_instead_of_raising(tool, filename, directory):
+    """_run's contract is to return a descriptive string for bad input."""
+    result = tool._run(
+        filename=filename, directory=directory, content="x", overwrite=True
+    )
+
+    assert "Error" in result
+
+
 def test_writes_utf8_by_default(tool, temp_env):
     content = "café — 日本語 — 🚀"
     tool._run(filename=temp_env["test_file"], content=content, overwrite=True)

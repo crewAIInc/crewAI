@@ -9972,7 +9972,7 @@
             "type": "object"
           }
         },
-        "description": "A tool for reading file contents.\n\nThis tool inherits its schema handling from BaseTool to avoid recursive schema\ndefinition issues. The args_schema is set to FileReadToolSchema which defines\nthe required file_path parameter. The schema should not be overridden in the\nconstructor as it would break the inheritance chain and cause infinite loops.\n\nThe tool supports two ways of specifying the file path:\n1. At construction time via the file_path parameter\n2. At runtime via the file_path parameter in the tool's input\n\nPaths supplied at runtime must resolve inside ``base_dir`` (the current\nworking directory by default), since they are typically chosen by an LLM.\nA ``file_path`` given at construction time is developer-declared intent and\nis always readable, even when it lives outside ``base_dir``.\n\nArgs:\n    file_path (Optional[str]): Path to the file to be read. If provided,\n        this becomes the default file path for the tool.\n    base_dir (Optional[str]): Directory that runtime paths must stay inside.\n        Defaults to the current working directory.\n    encoding (str): Text encoding used to decode the file. Defaults to UTF-8.\n    **kwargs: Additional keyword arguments passed to BaseTool.\n\nExample:\n    >>> tool = FileReadTool(file_path=\"/path/to/file.txt\")\n    >>> content = tool.run()  # Reads /path/to/file.txt\n    >>> content = tool.run(file_path=\"/path/to/other.txt\")  # Reads other.txt\n    >>> content = tool.run(\n    ...     file_path=\"/path/to/file.txt\", start_line=100, line_count=50\n    ... )  # Reads lines 100-149\n    >>> # Widen the sandbox so the agent may read anything under /data:\n    >>> tool = FileReadTool(base_dir=\"/data\")",
+        "description": "A tool for reading file contents.\n\nThis tool inherits its schema handling from BaseTool to avoid recursive schema\ndefinition issues. The args_schema is set to FileReadToolSchema, whose\nfile_path parameter is optional so the tool's default file can be read by\nomitting it. The schema should not be overridden in the constructor as it\nwould break the inheritance chain and cause infinite loops.\n\nThe tool supports two ways of specifying the file path:\n1. At construction time via the file_path parameter\n2. At runtime via the file_path parameter in the tool's input\n\nPaths supplied at runtime must resolve inside ``base_dir`` (the current\nworking directory by default), since they are typically chosen by an LLM.\nA ``file_path`` given at construction time is developer-declared intent and\nis always readable, even when it lives outside ``base_dir``. It is pinned at\nconstruction, so a later chdir cannot repoint it, and it can be addressed\neither by omitting ``file_path`` or by the label shown in the description.\n\nArgs:\n    file_path (Optional[str]): Path to the file to be read. If provided,\n        this becomes the default file path for the tool.\n    base_dir (Optional[str]): Directory that runtime paths must stay inside.\n        Defaults to the current working directory.\n    encoding (str): Text encoding used to decode the file. Defaults to UTF-8.\n    **kwargs: Additional keyword arguments passed to BaseTool.\n\nExample:\n    >>> tool = FileReadTool(file_path=\"/path/to/file.txt\")\n    >>> content = tool.run()  # Reads /path/to/file.txt\n    >>> content = tool.run(file_path=\"/path/to/other.txt\")  # Reads other.txt\n    >>> content = tool.run(\n    ...     file_path=\"/path/to/file.txt\", start_line=100, line_count=50\n    ... )  # Reads lines 100-149\n    >>> # Widen the sandbox so the agent may read anything under /data:\n    >>> tool = FileReadTool(base_dir=\"/data\")",
         "properties": {
           "base_dir": {
             "anyOf": [
@@ -10014,9 +10014,17 @@
         "description": "Input for FileReadTool.",
         "properties": {
           "file_path": {
-            "description": "Mandatory file full path to read the file",
-            "title": "File Path",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Full path of the file to read. Omit it to read the tool's default file, which only works when one was configured.",
+            "title": "File Path"
           },
           "line_count": {
             "anyOf": [
@@ -10045,9 +10053,6 @@
             "title": "Start Line"
           }
         },
-        "required": [
-          "file_path"
-        ],
         "title": "FileReadToolSchema",
         "type": "object"
       }

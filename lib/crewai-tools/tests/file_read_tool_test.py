@@ -230,6 +230,51 @@ def test_constructor_path_outside_working_directory_is_readable(tmp_path, monkey
     assert tool._run(file_path=str(target)) == "declared content"
 
 
+def test_declared_file_is_reachable_the_way_an_agent_calls_it(tmp_path, monkeypatch):
+    """The label in the description must resolve to the declared file.
+
+    The description only shows a redacted label, so that label is all the model
+    has to work with. It has to address the declared file.
+    """
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.chdir(workspace)
+    target = tmp_path / "declared.txt"
+    target.write_text("declared content")
+
+    tool = FileReadTool(file_path=str(target))
+    label = tool._declared_label
+
+    assert label == "declared.txt"
+    assert label in tool.description
+    # Omitting file_path entirely, and passing the advertised label, both work.
+    assert tool.run() == "declared content"
+    assert tool.run(file_path=label) == "declared content"
+
+
+def test_run_without_file_path_reports_error_when_no_default(tmp_path, monkeypatch):
+    """file_path is optional in the schema, so this must not raise."""
+    monkeypatch.chdir(tmp_path)
+
+    assert "Error: No file path provided" in FileReadTool().run()
+
+
+def test_declared_relative_path_survives_chdir(tmp_path, monkeypatch):
+    """The declared file is pinned at construction, not re-resolved per call."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "rel.txt").write_text("original")
+    nested = tmp_path / "sub"
+    nested.mkdir()
+    (nested / "rel.txt").write_text("a different file")
+
+    tool = FileReadTool(file_path="rel.txt")
+    assert tool._run() == "original"
+
+    monkeypatch.chdir(nested)
+    assert tool._run() == "original"
+    assert tool._run(file_path="rel.txt") == "original"
+
+
 def test_constructor_path_does_not_widen_the_sandbox(tmp_path, monkeypatch):
     """Declaring one file must not expose its siblings to the LLM."""
     workspace = tmp_path / "workspace"
@@ -313,6 +358,14 @@ def test_encoding_is_configurable(tmp_path, monkeypatch):
     (tmp_path / "latin.txt").write_bytes("café".encode("latin-1"))
 
     assert FileReadTool(encoding="latin-1")._run(file_path="latin.txt") == "café"
+
+
+def test_null_byte_path_returns_error_instead_of_raising(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    result = FileReadTool()._run(file_path="a\x00b.txt")
+
+    assert "Error" in result
 
 
 def test_decode_error_names_the_encoding(tmp_path, monkeypatch):

@@ -3,7 +3,7 @@ import os
 from typing import Any
 
 from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 from crewai_tools.security.safe_path import (
     format_error_for_display,
@@ -15,7 +15,13 @@ from crewai_tools.security.safe_path import (
 class FileReadToolSchema(BaseModel):
     """Input for FileReadTool."""
 
-    file_path: str = Field(..., description="Mandatory file full path to read the file")
+    file_path: str | None = Field(
+        None,
+        description=(
+            "Full path of the file to read. Omit it to read the tool's default "
+            "file, which only works when one was configured."
+        ),
+    )
     start_line: int | None = Field(
         1, description="Line number to start reading from (1-indexed)"
     )
@@ -28,9 +34,10 @@ class FileReadTool(BaseTool):
     """A tool for reading file contents.
 
     This tool inherits its schema handling from BaseTool to avoid recursive schema
-    definition issues. The args_schema is set to FileReadToolSchema which defines
-    the required file_path parameter. The schema should not be overridden in the
-    constructor as it would break the inheritance chain and cause infinite loops.
+    definition issues. The args_schema is set to FileReadToolSchema, whose
+    file_path parameter is optional so the tool's default file can be read by
+    omitting it. The schema should not be overridden in the constructor as it
+    would break the inheritance chain and cause infinite loops.
 
     The tool supports two ways of specifying the file path:
     1. At construction time via the file_path parameter
@@ -39,7 +46,9 @@ class FileReadTool(BaseTool):
     Paths supplied at runtime must resolve inside ``base_dir`` (the current
     working directory by default), since they are typically chosen by an LLM.
     A ``file_path`` given at construction time is developer-declared intent and
-    is always readable, even when it lives outside ``base_dir``.
+    is always readable, even when it lives outside ``base_dir``. It is pinned at
+    construction, so a later chdir cannot repoint it, and it can be addressed
+    either by omitting ``file_path`` or by the label shown in the description.
 
     Args:
         file_path (Optional[str]): Path to the file to be read. If provided,
@@ -67,6 +76,12 @@ class FileReadTool(BaseTool):
     base_dir: str | None = None
     encoding: str = "utf-8"
 
+    # Pinned at construction so a later chdir cannot change which file the
+    # developer-declared default refers to.
+    _declared_realpath: str | None = PrivateAttr(default=None)
+    # The label the tool's description shows the LLM for the declared file.
+    _declared_label: str | None = PrivateAttr(default=None)
+
     def __init__(
         self,
         file_path: str | None = None,
@@ -84,24 +99,31 @@ class FileReadTool(BaseTool):
             encoding (str): Text encoding used to decode the file.
             **kwargs: Additional keyword arguments passed to BaseTool.
         """
+        display_path = None
         if file_path is not None:
             display_path = format_path_for_display(file_path, base_dir)
             kwargs["description"] = (
-                f"A tool that reads file content. The default file is {display_path}, but you can provide a different 'file_path' parameter to read another file. You can also specify 'start_line' and 'line_count' to read specific parts of the file."
+                f"A tool that reads file content. The default file is {display_path}, which is read when 'file_path' is omitted. You can also provide a different 'file_path' parameter to read another file, and specify 'start_line' and 'line_count' to read specific parts of the file."
             )
 
         super().__init__(**kwargs)
         self.file_path = file_path
         self.base_dir = base_dir
         self.encoding = encoding
+        self._declared_realpath = (
+            os.path.realpath(file_path) if file_path is not None else None
+        )
+        self._declared_label = display_path
 
     def _resolve_path(self, file_path: str) -> str:
         """Resolve *file_path* and confirm the tool is allowed to read it.
 
-        The path declared at construction time is always allowed: the developer
-        named that exact file, and the tool would read it anyway when called
-        with no arguments. Everything else — including any path an LLM picks at
-        runtime — must resolve inside ``base_dir``.
+        The file declared at construction time is always allowed: the developer
+        named it, and the tool reads it anyway when ``file_path`` is omitted. It
+        is addressable both by its real path and by the label the description
+        shows the LLM, since that label is all the model is given. Everything
+        else — including any path an LLM invents at runtime — must resolve
+        inside ``base_dir``.
 
         Args:
             file_path: The path to resolve.
@@ -112,9 +134,11 @@ class FileReadTool(BaseTool):
         Raises:
             ValueError: If the path resolves outside ``base_dir``.
         """
-        resolved = os.path.realpath(file_path)
-        if self.file_path is not None and resolved == os.path.realpath(self.file_path):
-            return resolved
+        declared = self._declared_realpath
+        if declared is not None and (
+            file_path == self._declared_label or os.path.realpath(file_path) == declared
+        ):
+            return declared
         return validate_file_path(file_path, self.base_dir)
 
     def _run(
@@ -123,17 +147,19 @@ class FileReadTool(BaseTool):
         start_line: int | None = 1,
         line_count: int | None = None,
     ) -> str:
-        file_path = file_path or self.file_path
+        """Read a file, or a window of its lines, as text."""
         start_line = start_line or 1
         line_count = line_count or None
 
         if file_path is None:
-            return "Error: No file path provided. Please provide a file path either in the constructor or as an argument."
-
-        try:
-            file_path = self._resolve_path(file_path)
-        except ValueError as e:
-            return f"Error: Invalid file path: {e!s}"
+            if self._declared_realpath is None:
+                return "Error: No file path provided. Please provide a file path either in the constructor or as an argument."
+            file_path = self._declared_realpath
+        else:
+            try:
+                file_path = self._resolve_path(file_path)
+            except ValueError as e:
+                return f"Error: Invalid file path: {e!s}"
 
         display_path = format_path_for_display(file_path, self.base_dir)
         try:

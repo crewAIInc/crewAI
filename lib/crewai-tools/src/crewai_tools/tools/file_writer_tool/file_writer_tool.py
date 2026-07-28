@@ -12,6 +12,17 @@ from crewai_tools.security.safe_path import (
 
 
 def strtobool(val: str | bool) -> bool:
+    """Coerce the spellings of true/false an LLM is likely to emit into a bool.
+
+    Args:
+        val: A bool, or one of y/yes/t/true/on/1 and n/no/f/false/off/0.
+
+    Returns:
+        The corresponding boolean.
+
+    Raises:
+        ValueError: If the string is not a recognized boolean spelling.
+    """
     if isinstance(val, bool):
         return val
     val = val.lower()
@@ -82,6 +93,7 @@ class FileWriterTool(BaseTool):
         directory: str | None = "./",
         overwrite: str | bool = False,
     ) -> str:
+        """Write *content* to *filename*, confined to the tool's sandbox."""
         directory = directory or "./"
 
         try:
@@ -102,7 +114,14 @@ class FileWriterTool(BaseTool):
         # components, so it is safe on case-insensitive filesystems and avoids
         # the "//" prefix edge case. A filepath that resolves to the directory
         # itself (e.g. an empty filename) is not a valid file target.
-        resolved_filepath = Path(os.path.join(resolved_directory, filename)).resolve()
+        try:
+            resolved_filepath = Path(
+                os.path.join(resolved_directory, filename)
+            ).resolve()
+        except (OSError, ValueError) as e:
+            # e.g. an embedded null byte, which trips the underlying syscall.
+            return f"Error: Invalid file path: {format_error_for_display(e)}"
+
         display_filepath = format_path_for_display(
             str(resolved_filepath), str(resolved_directory)
         )
