@@ -37,7 +37,12 @@ from pydantic import BaseModel, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
-from crewai.llms.base_llm import PROVIDERS_WITHOUT_RESPONSE_FORMAT, BaseLLM, JsonResponseFormat, llm_call_context
+from crewai.llms.base_llm import (
+    PROVIDERS_WITHOUT_RESPONSE_FORMAT,
+    BaseLLM,
+    JsonResponseFormat,
+    llm_call_context,
+)
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.llms.providers.utils.common import safe_tool_conversion
@@ -1890,7 +1895,11 @@ class OpenAICompletion(BaseLLM):
     ) -> str | Any:
         """Handle non-streaming chat completion."""
         try:
-            if response_model:
+            if (
+                response_model
+                and self._extract_provider(self.model)
+                not in PROVIDERS_WITHOUT_RESPONSE_FORMAT
+            ):
                 parse_params = {
                     k: v for k, v in params.items() if k != "response_format"
                 }
@@ -1976,10 +1985,11 @@ class OpenAICompletion(BaseLLM):
 
             content = message.content or ""
 
-            if self.response_format and isinstance(self.response_format, type):
+            format_model = response_model or self.response_format
+            if format_model and isinstance(format_model, type):
                 try:
                     structured_result = self._validate_structured_output(
-                        content, self.response_format
+                        content, format_model
                     )
                     self._emit_call_completed_event(
                         response=structured_result,
@@ -2164,7 +2174,11 @@ class OpenAICompletion(BaseLLM):
         full_response = ""
         tool_calls: dict[int, dict[str, Any]] = {}
 
-        if response_model:
+        if (
+            response_model
+            and self._extract_provider(self.model)
+            not in PROVIDERS_WITHOUT_RESPONSE_FORMAT
+        ):
             parse_params = {
                 k: v
                 for k, v in params.items()
@@ -2301,6 +2315,11 @@ class OpenAICompletion(BaseLLM):
             response_id=stream_response_id,
         )
         if isinstance(result, str):
+            if response_model:
+                try:
+                    return self._validate_structured_output(result, response_model)
+                except ValueError as e:
+                    logging.warning(f"Structured output validation failed: {e}")
             return self._invoke_after_llm_call_hooks(
                 params["messages"], result, from_agent
             )
@@ -2408,10 +2427,11 @@ class OpenAICompletion(BaseLLM):
 
             content = message.content or ""
 
-            if self.response_format and isinstance(self.response_format, type):
+            format_model = response_model or self.response_format
+            if format_model and isinstance(format_model, type):
                 try:
                     structured_result = self._validate_structured_output(
-                        content, self.response_format
+                        content, format_model
                     )
                     self._emit_call_completed_event(
                         response=structured_result,

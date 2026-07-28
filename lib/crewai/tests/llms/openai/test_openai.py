@@ -677,6 +677,39 @@ def test_openai_streaming_with_response_model():
         assert "text_format" not in call_kwargs
 
 
+def test_deepseek_response_model_uses_plain_completion_and_local_validation():
+    """Providers without response_format support must not use OpenAI parse."""
+    from pydantic import BaseModel
+
+    class TestResponse(BaseModel):
+        answer: str
+
+    llm = OpenAICompletion(
+        model="deepseek/deepseek-chat",
+        api_key="test-key",
+    )
+    client = MagicMock()
+    response = MagicMock()
+    response.choices = [MagicMock()]
+    response.choices[0].message.content = '{"answer":"test"}'
+    response.choices[0].message.tool_calls = None
+    response.choices[0].finish_reason = "stop"
+    response.id = "response-id"
+    response.usage = None
+    client.chat.completions.create.return_value = response
+
+    with patch.object(llm, "_get_sync_client", return_value=client):
+        result = llm._handle_completion(
+            {"model": llm.model, "messages": [{"role": "user", "content": "Hi"}]},
+            response_model=TestResponse,
+        )
+
+    client.beta.chat.completions.parse.assert_not_called()
+    client.chat.completions.create.assert_called_once()
+    assert "response_format" not in client.chat.completions.create.call_args.kwargs
+    assert result == TestResponse(answer="test")
+
+
 @pytest.mark.vcr()
 def test_openai_response_format_with_pydantic_model():
     """
