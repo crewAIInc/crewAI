@@ -301,6 +301,37 @@ def test_base_dir_anchors_relative_directories(temp_env):
         shutil.rmtree(outside_dir, ignore_errors=True)
 
 
+def test_relative_base_dir_is_anchored_at_construction(temp_env, monkeypatch):
+    """A relative base_dir must not follow a later chdir."""
+    allowed = os.path.join(temp_env["temp_dir"], "allowed")
+    os.makedirs(allowed)
+    nested = os.path.join(temp_env["temp_dir"], "sub")
+    os.makedirs(nested)
+
+    scoped = FileWriterTool(base_dir="allowed")
+    assert scoped.base_dir == os.path.realpath(allowed)
+
+    monkeypatch.chdir(nested)
+    result = scoped._run(filename="x.txt", content="written", overwrite=True)
+
+    assert "successfully written" in result
+    assert read_file(os.path.join(allowed, "x.txt")) == "written"
+
+
+def test_base_dir_survives_a_serialization_round_trip(temp_env):
+    outside = tempfile.mkdtemp()
+    try:
+        restored = FileWriterTool.model_validate(
+            FileWriterTool(base_dir=outside).model_dump()
+        )
+        assert restored.base_dir == os.path.realpath(outside)
+        assert "successfully written" in restored._run(
+            filename="x.txt", directory=outside, content="written", overwrite=True
+        )
+    finally:
+        shutil.rmtree(outside, ignore_errors=True)
+
+
 def test_base_dir_still_blocks_escapes(temp_env):
     """base_dir moves the sandbox; it does not remove it."""
     allowed_dir = tempfile.mkdtemp()

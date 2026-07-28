@@ -298,6 +298,48 @@ def test_relative_declared_path_anchors_to_base_dir(tmp_path, monkeypatch):
     assert tool.run(file_path="data.txt") == "sandbox file"
 
 
+def test_relative_base_dir_is_anchored_at_construction(tmp_path, monkeypatch):
+    """A relative base_dir must not follow a later chdir.
+
+    Otherwise the sandbox root moves while the declared file stays pinned, and
+    the tool applies two different roots.
+    """
+    monkeypatch.chdir(tmp_path)
+    allowed = tmp_path / "allowed"
+    allowed.mkdir()
+    (allowed / "data.txt").write_text("sandbox file")
+    nested = tmp_path / "sub"
+    nested.mkdir()
+
+    tool = FileReadTool(base_dir="allowed")
+    assert tool.base_dir == str(allowed)
+
+    monkeypatch.chdir(nested)
+    assert tool._run(file_path="data.txt") == "sandbox file"
+
+
+def test_declared_path_survives_a_serialization_round_trip(tmp_path, monkeypatch):
+    """model_dump drops private attrs, so the pin must be rebuilt on restore."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.chdir(workspace)
+    allowed = tmp_path / "allowed"
+    allowed.mkdir()
+    (allowed / "data.txt").write_text("sandbox file")
+
+    tool = FileReadTool(file_path="data.txt", base_dir=str(allowed))
+    restored = FileReadTool.model_validate(tool.model_dump())
+
+    assert restored._declared_realpath == tool._declared_realpath
+    assert restored.run() == "sandbox file"
+
+    # A chdir between dump and restore must not repoint the declared file.
+    nested = workspace / "sub"
+    nested.mkdir()
+    monkeypatch.chdir(nested)
+    assert FileReadTool.model_validate(tool.model_dump()).run() == "sandbox file"
+
+
 def test_constructor_path_does_not_widen_the_sandbox(tmp_path, monkeypatch):
     """Declaring one file must not expose its siblings to the LLM."""
     workspace = tmp_path / "workspace"

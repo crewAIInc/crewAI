@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from crewai_tools.security.safe_path import (
     format_error_for_display,
@@ -47,8 +47,9 @@ class FileWriterToolInput(BaseModel):
     directory: str | None = Field(
         "./",
         description=(
-            "Directory to write the file into. Created if it does not exist. "
-            "Defaults to the current working directory."
+            "Directory to write the file into. A relative path resolves inside "
+            "the tool's allowed directory, and defaults to its root. Created if "
+            "it does not exist."
         ),
     )
     overwrite: str | bool = Field(
@@ -85,6 +86,12 @@ class FileWriterTool(BaseTool):
     args_schema: type[BaseModel] = FileWriterToolInput
     base_dir: str | None = None
     encoding: str = "utf-8"
+
+    @field_validator("base_dir")
+    @classmethod
+    def _anchor_base_dir(cls, value: str | None) -> str | None:
+        """Resolve base_dir once so a later chdir cannot move the sandbox."""
+        return os.path.realpath(value) if value is not None else None
 
     def _run(
         self,

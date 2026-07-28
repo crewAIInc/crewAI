@@ -10143,7 +10143,7 @@
               }
             ],
             "default": "./",
-            "description": "Directory to write the file into. Created if it does not exist. Defaults to the current working directory.",
+            "description": "Directory to write the file into. A relative path resolves inside the tool's allowed directory, and defaults to its root. Created if it does not exist.",
             "title": "Directory"
           },
           "filename": {

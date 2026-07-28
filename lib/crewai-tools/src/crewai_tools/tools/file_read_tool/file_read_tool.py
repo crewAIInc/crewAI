@@ -120,6 +120,11 @@ class FileReadTool(BaseTool):
             encoding (str): Text encoding used to decode the file.
             **kwargs: Additional keyword arguments passed to BaseTool.
         """
+        # Anchor base_dir once, so the sandbox root cannot move under a later
+        # chdir while the declared file stays pinned to its original location.
+        if base_dir is not None:
+            base_dir = os.path.realpath(base_dir)
+
         display_path = None
         if file_path is not None:
             display_path = format_path_for_display(file_path, base_dir)

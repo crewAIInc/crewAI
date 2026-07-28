@@ -46,7 +46,7 @@ The agent supplies these at runtime:
 
 - `filename`: The name of the file to write, relative to `directory`. May include subdirectories, which are created if they don't exist.
 - `content`: The text content to write into the file.
-- `directory` (optional): The path to the directory where the file will be created. Defaults to the current working directory. If the directory does not exist, it will be created.
+- `directory` (optional): The path to the directory where the file will be created. A relative path resolves inside the tool's allowed directory — `base_dir` when set, the current working directory otherwise — and defaults to its root. If the directory does not exist, it will be created.
 - `overwrite` (optional): Whether to replace the file when it already exists. Accepts `true`/`false` (also `yes`/`no`, `on`/`off`, `1`/`0`). Defaults to `false`, which reports an error instead of replacing existing content.
 
 You set these when constructing the tool:
