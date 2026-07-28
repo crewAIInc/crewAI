@@ -3,6 +3,34 @@ from unittest.mock import mock_open, patch
 from crewai_tools import FileReadTool
 
 
+class CountingFile:
+    """Text-file stand-in that records how many lines were actually consumed."""
+
+    def __init__(self, lines):
+        self._lines = lines
+        self.consumed = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        return False
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.consumed >= len(self._lines):
+            raise StopIteration
+        line = self._lines[self.consumed]
+        self.consumed += 1
+        return line
+
+    def read(self):
+        self.consumed = len(self._lines)
+        return "".join(self._lines)
+
+
 def test_file_read_tool_constructor():
     """Test FileReadTool initialization with file_path."""
     test_file = "test_file.txt"
@@ -186,3 +214,113 @@ def test_file_read_tool_invalid_path_error_does_not_disclose_workspace(
     assert "outside.txt" in result
     assert str(tmp_path) not in result
     assert str(tmp_path.parent) not in result
+
+
+def test_constructor_path_outside_working_directory_is_readable(tmp_path, monkeypatch):
+    """A developer-declared file_path is trusted even outside the sandbox."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.chdir(workspace)
+    target = tmp_path / "declared.txt"
+    target.write_text("declared content")
+
+    tool = FileReadTool(file_path=str(target))
+
+    assert tool._run() == "declared content"
+    assert tool._run(file_path=str(target)) == "declared content"
+
+
+def test_constructor_path_does_not_widen_the_sandbox(tmp_path, monkeypatch):
+    """Declaring one file must not expose its siblings to the LLM."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.chdir(workspace)
+    declared = tmp_path / "declared.txt"
+    declared.write_text("declared content")
+    sibling = tmp_path / "sibling.txt"
+    sibling.write_text("secret")
+
+    result = FileReadTool(file_path=str(declared))._run(file_path=str(sibling))
+
+    assert "Invalid file path" in result
+    assert "secret" not in result
+
+
+def test_base_dir_widens_the_sandbox(tmp_path, monkeypatch):
+    """base_dir lets a developer authorize reads outside the working directory."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.chdir(workspace)
+    data = tmp_path / "data"
+    data.mkdir()
+    (data / "report.csv").write_text("a,b,c")
+
+    tool = FileReadTool(base_dir=str(data))
+
+    assert tool._run(file_path=str(data / "report.csv")) == "a,b,c"
+    assert tool._run(file_path="report.csv") == "a,b,c"
+
+
+def test_base_dir_still_blocks_escapes(tmp_path, monkeypatch):
+    """base_dir moves the sandbox; it does not remove it."""
+    monkeypatch.chdir(tmp_path)
+    data = tmp_path / "data"
+    data.mkdir()
+    outside = tmp_path / "outside.txt"
+    outside.write_text("secret")
+
+    result = FileReadTool(base_dir=str(data))._run(file_path=str(outside))
+
+    assert "Invalid file path" in result
+    assert "secret" not in result
+
+
+def test_line_window_stops_reading_early():
+    """A small window must not scan the rest of the file."""
+    handle = CountingFile([f"Line {i}\n" for i in range(1, 1001)])
+
+    with patch("builtins.open", return_value=handle):
+        result = FileReadTool()._run(
+            file_path="big.log", start_line=1, line_count=3
+        )
+
+    assert result == "Line 1\nLine 2\nLine 3\n"
+    assert handle.consumed == 3
+
+
+def test_line_window_stops_early_with_offset():
+    handle = CountingFile([f"Line {i}\n" for i in range(1, 1001)])
+
+    with patch("builtins.open", return_value=handle):
+        result = FileReadTool()._run(
+            file_path="big.log", start_line=10, line_count=2
+        )
+
+    assert result == "Line 10\nLine 11\n"
+    assert handle.consumed == 11
+
+
+def test_reads_utf8_by_default(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    content = "café — 日本語 — 🚀"
+    (tmp_path / "unicode.txt").write_bytes(content.encode("utf-8"))
+
+    assert FileReadTool()._run(file_path="unicode.txt") == content
+
+
+def test_encoding_is_configurable(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "latin.txt").write_bytes("café".encode("latin-1"))
+
+    assert FileReadTool(encoding="latin-1")._run(file_path="latin.txt") == "café"
+
+
+def test_decode_error_names_the_encoding(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "binary.bin").write_bytes(bytes(range(256)))
+
+    result = FileReadTool()._run(file_path="binary.bin")
+
+    assert "Failed to decode" in result
+    assert "utf-8" in result
+    assert str(tmp_path) not in result

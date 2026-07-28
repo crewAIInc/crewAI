@@ -1,3 +1,5 @@
+from itertools import islice
+import os
 from typing import Any
 
 from crewai.tools import BaseTool
@@ -34,9 +36,17 @@ class FileReadTool(BaseTool):
     1. At construction time via the file_path parameter
     2. At runtime via the file_path parameter in the tool's input
 
+    Paths supplied at runtime must resolve inside ``base_dir`` (the current
+    working directory by default), since they are typically chosen by an LLM.
+    A ``file_path`` given at construction time is developer-declared intent and
+    is always readable, even when it lives outside ``base_dir``.
+
     Args:
         file_path (Optional[str]): Path to the file to be read. If provided,
             this becomes the default file path for the tool.
+        base_dir (Optional[str]): Directory that runtime paths must stay inside.
+            Defaults to the current working directory.
+        encoding (str): Text encoding used to decode the file. Defaults to UTF-8.
         **kwargs: Additional keyword arguments passed to BaseTool.
 
     Example:
@@ -46,29 +56,66 @@ class FileReadTool(BaseTool):
         >>> content = tool.run(
         ...     file_path="/path/to/file.txt", start_line=100, line_count=50
         ... )  # Reads lines 100-149
+        >>> # Widen the sandbox so the agent may read anything under /data:
+        >>> tool = FileReadTool(base_dir="/data")
     """
 
     name: str = "Read a file's content"
     description: str = "A tool that reads the content of a file. To use this tool, provide a 'file_path' parameter with the path to the file you want to read. Optionally, provide 'start_line' to start reading from a specific line and 'line_count' to limit the number of lines read."
     args_schema: type[BaseModel] = FileReadToolSchema
     file_path: str | None = None
+    base_dir: str | None = None
+    encoding: str = "utf-8"
 
-    def __init__(self, file_path: str | None = None, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        file_path: str | None = None,
+        base_dir: str | None = None,
+        encoding: str = "utf-8",
+        **kwargs: Any,
+    ) -> None:
         """Initialize the FileReadTool.
 
         Args:
             file_path (Optional[str]): Path to the file to be read. If provided,
                 this becomes the default file path for the tool.
+            base_dir (Optional[str]): Directory that runtime paths must stay
+                inside. Defaults to the current working directory.
+            encoding (str): Text encoding used to decode the file.
             **kwargs: Additional keyword arguments passed to BaseTool.
         """
         if file_path is not None:
-            display_path = format_path_for_display(file_path)
+            display_path = format_path_for_display(file_path, base_dir)
             kwargs["description"] = (
                 f"A tool that reads file content. The default file is {display_path}, but you can provide a different 'file_path' parameter to read another file. You can also specify 'start_line' and 'line_count' to read specific parts of the file."
             )
 
         super().__init__(**kwargs)
         self.file_path = file_path
+        self.base_dir = base_dir
+        self.encoding = encoding
+
+    def _resolve_path(self, file_path: str) -> str:
+        """Resolve *file_path* and confirm the tool is allowed to read it.
+
+        The path declared at construction time is always allowed: the developer
+        named that exact file, and the tool would read it anyway when called
+        with no arguments. Everything else — including any path an LLM picks at
+        runtime — must resolve inside ``base_dir``.
+
+        Args:
+            file_path: The path to resolve.
+
+        Returns:
+            The resolved, allowed absolute path.
+
+        Raises:
+            ValueError: If the path resolves outside ``base_dir``.
+        """
+        resolved = os.path.realpath(file_path)
+        if self.file_path is not None and resolved == os.path.realpath(self.file_path):
+            return resolved
+        return validate_file_path(file_path, self.base_dir)
 
     def _run(
         self,
@@ -84,24 +131,22 @@ class FileReadTool(BaseTool):
             return "Error: No file path provided. Please provide a file path either in the constructor or as an argument."
 
         try:
-            file_path = validate_file_path(file_path)
+            file_path = self._resolve_path(file_path)
         except ValueError as e:
             return f"Error: Invalid file path: {e!s}"
 
-        display_path = format_path_for_display(file_path)
+        display_path = format_path_for_display(file_path, self.base_dir)
         try:
-            with open(file_path, "r") as file:
+            with open(file_path, "r", encoding=self.encoding) as file:
                 if start_line == 1 and line_count is None:
                     return file.read()
 
                 start_idx = max(start_line - 1, 0)
+                stop_idx = None if line_count is None else start_idx + line_count
 
-                selected_lines = [
-                    line
-                    for i, line in enumerate(file)
-                    if i >= start_idx
-                    and (line_count is None or i < start_idx + line_count)
-                ]
+                # islice stops pulling lines once stop_idx is reached, so a small
+                # window near the top of a huge file does not scan the whole file.
+                selected_lines = list(islice(file, start_idx, stop_idx))
 
                 if not selected_lines and start_idx > 0:
                     return f"Error: Start line {start_line} exceeds the number of lines in the file."
@@ -111,6 +156,12 @@ class FileReadTool(BaseTool):
             return f"Error: File not found at path: {display_path}"
         except PermissionError:
             return f"Error: Permission denied when trying to read file: {display_path}"
+        except UnicodeDecodeError:
+            return (
+                f"Error: Failed to decode file {display_path} as {self.encoding}. "
+                f"Pass a different 'encoding' to FileReadTool if the file uses "
+                f"another text encoding."
+            )
         except Exception as e:
             return (
                 f"Error: Failed to read file {display_path}. "
