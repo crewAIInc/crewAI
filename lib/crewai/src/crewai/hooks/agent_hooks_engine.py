@@ -55,12 +55,13 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+import functools
+import hashlib
 import json
 import logging
 import math
 import threading
 from typing import TYPE_CHECKING, Any, Final, TypeVar
-import uuid
 
 from crewai.hooks.dispatch import (
     HookAborted,
@@ -151,6 +152,12 @@ DEFAULT_POINTS: Final[tuple[InterceptionPoint, ...]] = (
     InterceptionPoint.EXECUTION_END,
 )
 
+#: Post points whose fail-closed action is a blocked *result* string rather than
+#: a raised :class:`HookAborted` (crewAI post seams cannot raise).
+_POST_POINTS: Final[frozenset[InterceptionPoint]] = frozenset(
+    {InterceptionPoint.POST_TOOL_CALL, InterceptionPoint.POST_MODEL_CALL}
+)
+
 _INSTALL_HINT: Final[str] = (
     "agent-hooks is not installed (or its native core failed to load). It is an "
     "optional dependency with a compiled core; install it from source:\n"
@@ -171,16 +178,20 @@ def _require() -> None:
         raise ImportError(_INSTALL_HINT) from _IMPORT_ERROR
 
 
-def _json_safe(value: object) -> Any:
+def _json_safe(value: object, _seen: frozenset[int] = frozenset()) -> Any:
     """Coerce ``value`` into a JSON-serializable form for an ``AgentContext``.
 
     Model output and tool results are untrusted and may contain objects the
     agent-hooks wire format cannot carry (which would fail the emission closed).
     This normalizes them at the boundary so an interceptor always sees a stable,
-    inspectable value.
+    inspectable value. Reference cycles are broken with a ``"<cycle>"``
+    placeholder so a self-referential container cannot raise ``RecursionError``
+    (which, raised before :meth:`AgentHooksEngine._decide`, would fail open).
 
     Args:
         value: Any Python value taken from a crewAI hook context.
+        _seen: Internal set of ``id()``s of containers currently being encoded,
+            used to detect cycles. Callers should not pass it.
 
     Returns:
         A value composed only of ``dict``/``list``/``str``/``int``/``float``/
@@ -191,15 +202,21 @@ def _json_safe(value: object) -> Any:
     if isinstance(value, float):
         return value if math.isfinite(value) else str(value)
     if isinstance(value, dict):
-        return {str(k): _json_safe(v) for k, v in value.items()}
+        if id(value) in _seen:
+            return "<cycle>"
+        seen = _seen | {id(value)}
+        return {str(k): _json_safe(v, seen) for k, v in value.items()}
     if isinstance(value, (list, tuple, set, frozenset)):
-        return [_json_safe(v) for v in value]
+        if id(value) in _seen:
+            return "<cycle>"
+        seen = _seen | {id(value)}
+        return [_json_safe(v, seen) for v in value]
     if isinstance(value, (bytes, bytearray)):
         return value.decode("utf-8", errors="replace")
     dump = getattr(value, "model_dump", None)
     if callable(dump):
         try:
-            return _json_safe(dump(mode="json"))
+            return _json_safe(dump(mode="json"), _seen)
         except Exception:
             logger.debug("model_dump() failed while normalizing %s", type(value))
     return str(value)
@@ -290,9 +307,60 @@ def _registered_tools(crew: Any, agent: Any = None) -> list[str]:
     return names
 
 
-def _new_call_id() -> str:
-    """Generate a correlation id for a tool-call emission."""
-    return uuid.uuid4().hex
+def _agent_envelope(agent: Any, framework: str) -> dict[str, Any]:
+    """Build the agent-hooks ``agent`` envelope for the agent that acted.
+
+    The per-session builder bakes in one agent id, but a crew/flow session
+    drives many agents; the engine stamps this envelope onto each built context
+    so an interceptor and the audit record attribute the emission to the agent
+    that actually acted, not the session's first agent.
+    """
+    agent_id, agent_name = _agent_ids(agent)
+    envelope: dict[str, Any] = {"id": agent_id, "framework": framework}
+    if agent_name:
+        envelope["name"] = agent_name
+    return envelope
+
+
+def _tool_call_id(session_id: str, name: str, args: Any) -> str:
+    """Derive a stable per-invocation tool-call id.
+
+    crewAI builds separate pre/post hook contexts for one tool invocation, so a
+    random id cannot correlate them. A digest over the session, tool name, and
+    (JSON-safe) arguments yields the same id at both seams, letting audit sinks
+    and post-call policies pair the pre and post records for one call.
+    """
+    payload = json.dumps(
+        {"session": session_id, "name": name, "args": args},
+        sort_keys=True,
+        ensure_ascii=False,
+        default=str,
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:32]
+
+
+def _model_response_parts(response: Any) -> tuple[Any, list[Any], str]:
+    """Split a model response into ``(content, tool_calls, finish_reason)``.
+
+    A model-boundary tool-use policy must see the tool calls the model
+    requested. When the response carries them (a structured mapping) they are
+    surfaced to the interceptor; a plain-string response yields no tool calls.
+    """
+    if isinstance(response, dict):
+        raw_calls = response.get("tool_calls")
+        tool_calls = (
+            [_json_safe(call) for call in raw_calls]
+            if isinstance(raw_calls, list)
+            else []
+        )
+        finish = response.get("finish_reason")
+        finish_reason = (
+            finish
+            if isinstance(finish, str)
+            else ("tool_calls" if tool_calls else "stop")
+        )
+        return _json_safe(response.get("content", "")), tool_calls, finish_reason
+    return _json_safe(response), [], "stop"
 
 
 class _EmitterLoop:
@@ -332,11 +400,34 @@ class _EmitterLoop:
         return future.result(timeout)
 
     def close(self) -> None:
-        """Stop the background loop and join its thread."""
+        """Stop the background loop, releasing any in-flight emission.
+
+        Pending emissions are cancelled first so a thread blocked in
+        :meth:`run` on ``future.result(None)`` is released (with a
+        ``CancelledError``) instead of deadlocking; only then is the loop
+        stopped and its thread joined.
+        """
+        if self._loop.is_running():
+            try:
+                asyncio.run_coroutine_threadsafe(
+                    self._cancel_pending(), self._loop
+                ).result(timeout=5.0)
+            except Exception:
+                logger.debug("agent-hooks loop drain did not complete cleanly")
         self._loop.call_soon_threadsafe(self._loop.stop)
         self._thread.join(timeout=5.0)
         if not self._loop.is_running():
             self._loop.close()
+
+    @staticmethod
+    async def _cancel_pending() -> None:
+        """Cancel every other task on the loop and await their unwinding."""
+        current = asyncio.current_task()
+        pending = [task for task in asyncio.all_tasks() if task is not current]
+        for task in pending:
+            task.cancel()
+        if pending:
+            await asyncio.gather(*pending, return_exceptions=True)
 
 
 @dataclass(frozen=True, slots=True)
@@ -425,7 +516,7 @@ class AgentHooksEngine:
         )
         self._active = False
         self._closed = False
-        self._adapters: dict[InterceptionPoint, Callable[[Any], Any]] = {
+        raw_adapters: dict[InterceptionPoint, Callable[[Any], Any]] = {
             InterceptionPoint.PRE_TOOL_CALL: self._pre_tool_call,
             InterceptionPoint.POST_TOOL_CALL: self._post_tool_call,
             InterceptionPoint.PRE_MODEL_CALL: self._pre_model_call,
@@ -434,6 +525,13 @@ class AgentHooksEngine:
             InterceptionPoint.OUTPUT: self._output,
             InterceptionPoint.EXECUTION_START: self._execution_start,
             InterceptionPoint.EXECUTION_END: self._execution_end,
+        }
+        # Every adapter builds its context outside _decide()'s fail-closed
+        # guard, so wrap each so an unexpected build error fails closed instead
+        # of escaping to dispatch._invoke_hook (which would swallow it).
+        self._adapters: dict[InterceptionPoint, Callable[[Any], Any]] = {
+            point: self._wrap_fail_closed(point, adapter)
+            for point, adapter in raw_adapters.items()
         }
 
     # -- lifecycle ------------------------------------------------------------
@@ -550,14 +648,50 @@ class AgentHooksEngine:
 
     # -- per-point adapters ---------------------------------------------------
 
+    def _wrap_fail_closed(
+        self, point: InterceptionPoint, adapter: Callable[[Any], Any]
+    ) -> Callable[[Any], Any]:
+        """Wrap an adapter so any unexpected error fails closed.
+
+        Each adapter builds its context (``_json_safe`` / ``builder.*``) outside
+        :meth:`_decide`'s guard. Without this wrapper an error there (e.g. a
+        ``RecursionError`` from a cyclic tool input) would escape to
+        :func:`crewai.hooks.dispatch._invoke_hook`, which swallows non-abort
+        exceptions and lets the guarded action proceed **ungoverned**. A
+        legitimate :class:`HookAborted` still propagates unchanged; a *post*
+        point fails the result closed with a blocked marker (its seam cannot
+        raise), every other point raises a fail-closed abort.
+        """
+        is_post = point in _POST_POINTS
+
+        @functools.wraps(adapter)
+        def guarded(ctx: Any) -> Any:
+            try:
+                return adapter(ctx)
+            except HookAborted:
+                raise
+            except Exception:
+                logger.exception(
+                    "agent-hooks adapter for %s failed; failing closed", point.value
+                )
+                if is_post:
+                    return _blocked_result(_ENGINE_FAILED)
+                raise HookAborted(reason=_ENGINE_FAILED, source=_SOURCE) from None
+
+        return guarded
+
     def _pre_tool_call(self, ctx: ToolCallHookContext) -> None:
         """Adapt ``PRE_TOOL_CALL``: deny blocks the call; transform rewrites args."""
-        builder = self._builder(crew=ctx.crew, agent=ctx.agent)
+        flow = getattr(ctx, "flow", None)
+        args = _json_safe(dict(ctx.tool_input))
+        session_id = _session_id(crew=ctx.crew, flow=flow, agent=ctx.agent)
+        builder = self._builder(crew=ctx.crew, flow=flow, agent=ctx.agent)
         agent_ctx = builder.pre_tool_call(
-            call_id=_new_call_id(),
+            call_id=_tool_call_id(session_id, ctx.tool_name, args),
             name=ctx.tool_name,
-            args=_json_safe(dict(ctx.tool_input)),
+            args=args,
         )
+        agent_ctx["agent"] = _agent_envelope(ctx.agent, self._framework)
         decision = self._decide(agent_ctx)
         if not decision.proceeds:
             raise HookAborted(reason=decision.reason, source=_SOURCE)
@@ -569,14 +703,18 @@ class AgentHooksEngine:
 
     def _post_tool_call(self, ctx: ToolCallHookContext) -> str | None:
         """Adapt ``POST_TOOL_CALL``: deny fails the result closed; transform rewrites it."""
-        builder = self._builder(crew=ctx.crew, agent=ctx.agent)
+        flow = getattr(ctx, "flow", None)
+        args = _json_safe(dict(ctx.tool_input))
+        session_id = _session_id(crew=ctx.crew, flow=flow, agent=ctx.agent)
+        builder = self._builder(crew=ctx.crew, flow=flow, agent=ctx.agent)
         agent_ctx = builder.post_tool_call(
-            call_id=_new_call_id(),
+            call_id=_tool_call_id(session_id, ctx.tool_name, args),
             name=ctx.tool_name,
-            args=_json_safe(dict(ctx.tool_input)),
+            args=args,
             value=_json_safe(ctx.tool_result),
             is_error=False,
         )
+        agent_ctx["agent"] = _agent_envelope(ctx.agent, self._framework)
         decision = self._decide(agent_ctx)
         if not decision.proceeds:
             return _blocked_result(decision.reason)
@@ -586,11 +724,13 @@ class AgentHooksEngine:
 
     def _pre_model_call(self, ctx: LLMCallHookContext) -> None:
         """Adapt ``PRE_MODEL_CALL``: deny blocks the call; transform rewrites messages."""
-        builder = self._builder(crew=ctx.crew, agent=ctx.agent)
+        flow = getattr(ctx, "flow", None)
+        builder = self._builder(crew=ctx.crew, flow=flow, agent=ctx.agent)
         agent_ctx = builder.pre_model_call(
             model_id=_model_id(getattr(ctx, "llm", None)),
             messages=_json_safe(list(ctx.messages)),
         )
+        agent_ctx["agent"] = _agent_envelope(ctx.agent, self._framework)
         decision = self._decide(agent_ctx)
         if not decision.proceeds:
             raise HookAborted(reason=decision.reason, source=_SOURCE)
@@ -602,13 +742,16 @@ class AgentHooksEngine:
 
     def _post_model_call(self, ctx: LLMCallHookContext) -> str | None:
         """Adapt ``POST_MODEL_CALL``: deny fails the response closed; transform rewrites it."""
-        builder = self._builder(crew=ctx.crew, agent=ctx.agent)
+        flow = getattr(ctx, "flow", None)
+        content, tool_calls, finish_reason = _model_response_parts(ctx.response)
+        builder = self._builder(crew=ctx.crew, flow=flow, agent=ctx.agent)
         agent_ctx = builder.post_model_call(
             model_id=_model_id(getattr(ctx, "llm", None)),
-            content=_json_safe(ctx.response),
-            tool_calls=[],
-            finish_reason="stop",
+            content=content,
+            tool_calls=tool_calls,
+            finish_reason=finish_reason,
         )
+        agent_ctx["agent"] = _agent_envelope(ctx.agent, self._framework)
         decision = self._decide(agent_ctx)
         if not decision.proceeds:
             return _blocked_result(decision.reason)
@@ -621,7 +764,7 @@ class AgentHooksEngine:
 
     def _input(self, ctx: InputContext) -> Any:
         """Adapt ``INPUT``: deny blocks execution; transform replaces the inputs."""
-        builder = self._builder(crew=ctx.crew)
+        builder = self._builder(crew=ctx.crew, flow=ctx.flow)
         agent_ctx = builder.input(content=_json_safe(ctx.payload))
         decision = self._decide(agent_ctx)
         if not decision.proceeds:
@@ -637,7 +780,7 @@ class AgentHooksEngine:
         or ``dict``; rich ``CrewOutput`` objects cannot be safely reconstructed
         from the transformed value, so only ``deny`` acts on them.
         """
-        builder = self._builder(crew=ctx.crew)
+        builder = self._builder(crew=ctx.crew, flow=ctx.flow)
         payload = ctx.payload
         content = getattr(payload, "raw", None)
         agent_ctx = builder.output(
@@ -652,7 +795,7 @@ class AgentHooksEngine:
 
     def _execution_start(self, ctx: ExecutionStartContext) -> None:
         """Adapt ``EXECUTION_START`` -> ``agent_startup``: deny aborts the run."""
-        builder = self._builder(crew=ctx.crew)
+        builder = self._builder(crew=ctx.crew, flow=ctx.flow)
         agent_ctx = builder.agent_startup(
             tools_registered=_registered_tools(ctx.crew, ctx.agent),
             inputs=_json_safe(ctx.payload),
@@ -663,7 +806,7 @@ class AgentHooksEngine:
 
     def _execution_end(self, ctx: ExecutionEndContext) -> None:
         """Adapt ``EXECUTION_END`` -> ``agent_shutdown``: records the run's end."""
-        builder = self._builder(crew=ctx.crew)
+        builder = self._builder(crew=ctx.crew, flow=ctx.flow)
         agent_ctx = builder.agent_shutdown(reason=ctx.status)
         decision = self._decide(agent_ctx)
         if not decision.proceeds:
