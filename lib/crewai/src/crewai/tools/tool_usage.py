@@ -845,12 +845,12 @@ class ToolUsage:
 
         except Exception:
             if raise_error:
-                raise
+                raise ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
             return ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
 
         if not isinstance(arguments, dict):
             if raise_error:
-                raise
+                raise ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
             return ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
 
         return ToolCalling(
