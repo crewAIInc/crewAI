@@ -12,6 +12,26 @@ from crewai_tools.security.safe_path import (
 )
 
 
+def _resolve_against_base(path: str, base_dir: str | None) -> str:
+    """Resolve *path* the way the sandbox does, anchoring relatives to *base_dir*.
+
+    ``validate_file_path`` and ``format_path_for_display`` both join a relative
+    path onto *base_dir* rather than the working directory. Resolution has to
+    agree with them, or the same relative string would mean two different files.
+
+    Args:
+        path: The path to resolve.
+        base_dir: The anchor for relative paths. Defaults to the working directory.
+
+    Returns:
+        The resolved absolute path.
+    """
+    if os.path.isabs(path):
+        return os.path.realpath(path)
+    base = os.path.realpath(base_dir) if base_dir is not None else os.getcwd()
+    return os.path.realpath(os.path.join(base, path))
+
+
 class FileReadToolSchema(BaseModel):
     """Input for FileReadTool."""
 
@@ -46,7 +66,8 @@ class FileReadTool(BaseTool):
     Paths supplied at runtime must resolve inside ``base_dir`` (the current
     working directory by default), since they are typically chosen by an LLM.
     A ``file_path`` given at construction time is developer-declared intent and
-    is always readable, even when it lives outside ``base_dir``. It is pinned at
+    is always allowed past the containment check, even when it lives outside
+    ``base_dir`` (the read itself can still fail). It is pinned at
     construction, so a later chdir cannot repoint it, and it can be addressed
     either by omitting ``file_path`` or by the label shown in the description.
 
@@ -111,7 +132,9 @@ class FileReadTool(BaseTool):
         self.base_dir = base_dir
         self.encoding = encoding
         self._declared_realpath = (
-            os.path.realpath(file_path) if file_path is not None else None
+            _resolve_against_base(file_path, base_dir)
+            if file_path is not None
+            else None
         )
         self._declared_label = display_path
 
@@ -136,7 +159,8 @@ class FileReadTool(BaseTool):
         """
         declared = self._declared_realpath
         if declared is not None and (
-            file_path == self._declared_label or os.path.realpath(file_path) == declared
+            file_path == self._declared_label
+            or _resolve_against_base(file_path, self.base_dir) == declared
         ):
             return declared
         return validate_file_path(file_path, self.base_dir)

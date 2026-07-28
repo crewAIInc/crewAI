@@ -275,6 +275,29 @@ def test_declared_relative_path_survives_chdir(tmp_path, monkeypatch):
     assert tool._run(file_path="rel.txt") == "original"
 
 
+def test_relative_declared_path_anchors_to_base_dir(tmp_path, monkeypatch):
+    """A relative declared path must resolve against base_dir, not the cwd.
+
+    The advertised label is built against base_dir, so pinning against the cwd
+    would make the same name mean two different files — and would serve a file
+    from outside base_dir under a label that looks like it is inside.
+    """
+    allowed = tmp_path / "allowed"
+    allowed.mkdir()
+    work = tmp_path / "work"
+    work.mkdir()
+    (allowed / "data.txt").write_text("sandbox file")
+    (work / "data.txt").write_text("cwd file")
+    monkeypatch.chdir(work)
+
+    tool = FileReadTool(file_path="data.txt", base_dir=str(allowed))
+
+    assert tool._declared_label == "data.txt"
+    assert tool._declared_realpath == str(allowed / "data.txt")
+    assert tool.run() == "sandbox file"
+    assert tool.run(file_path="data.txt") == "sandbox file"
+
+
 def test_constructor_path_does_not_widen_the_sandbox(tmp_path, monkeypatch):
     """Declaring one file must not expose its siblings to the LLM."""
     workspace = tmp_path / "workspace"

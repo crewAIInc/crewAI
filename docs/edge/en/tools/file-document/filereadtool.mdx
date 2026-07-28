@@ -68,7 +68,7 @@ You set these when constructing the tool:
 Because the file path is usually chosen by an LLM at runtime, reads are confined to a sandbox:
 
 - Paths supplied at runtime must resolve inside `base_dir`, which defaults to the current working directory. `..` segments and symlinks are resolved before the check, so they cannot be used to escape.
-- A `file_path` passed to the constructor is developer-declared intent, so it is always readable — even outside `base_dir`. It is pinned when the tool is built, so a later change of working directory cannot repoint it, and the agent can address it either by omitting `file_path` or by using the name shown in the tool's description. Declaring one file does not expose its siblings.
+- A `file_path` passed to the constructor is developer-declared intent, so it is always allowed past the containment check — even outside `base_dir`. The read itself can still fail if the file is missing, is a directory, or is not permitted. It is pinned when the tool is built, so a later change of working directory cannot repoint it, and the agent can address it either by omitting `file_path` or by using the name shown in the tool's description. Declaring one file does not expose its siblings.
 
 To let an agent read a directory tree outside the working directory, point `base_dir` at it:
 
