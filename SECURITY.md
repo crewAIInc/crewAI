@@ -13,7 +13,7 @@ We take security seriously. Please do NOT open public GitHub issues for vulnerab
 ### How to Report
 
 1. **Preferred**: GitHub [Private Security Advisory](https://github.com/crewAIInc/crewAI/security/advisories/new)
-2. **Alternative**: Email security@crewai.com (if available)
+2. **Alternative**: Email security@crewai.com
 
 ### What to Include
 
