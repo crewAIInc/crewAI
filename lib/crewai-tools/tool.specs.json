@@ -9931,7 +9931,7 @@
       }
     },
     {
-      "description": "A tool that reads the content of a file. To use this tool, provide a 'file_path' parameter with the path to the file you want to read. Optionally, provide 'start_line' to start reading from a specific line and 'line_count' to limit the number of lines read.",
+      "description": "A tool that reads the content of a file. To use this tool, provide a 'file_path' parameter with the path to the file you want to read. Reads are confined to the tool's allowed directory; a path that resolves outside it is rejected. Optionally, provide 'start_line' to start reading from a specific line and 'line_count' to limit the number of lines read.",
       "env_vars": [],
       "humanized_name": "Read a file's content",
       "init_params_schema": {
@@ -9972,8 +9972,25 @@
             "type": "object"
           }
         },
-        "description": "A tool for reading file contents.\n\nThis tool inherits its schema handling from BaseTool to avoid recursive schema\ndefinition issues. The args_schema is set to FileReadToolSchema which defines\nthe required file_path parameter. The schema should not be overridden in the\nconstructor as it would break the inheritance chain and cause infinite loops.\n\nThe tool supports two ways of specifying the file path:\n1. At construction time via the file_path parameter\n2. At runtime via the file_path parameter in the tool's input\n\nArgs:\n    file_path (Optional[str]): Path to the file to be read. If provided,\n        this becomes the default file path for the tool.\n    **kwargs: Additional keyword arguments passed to BaseTool.\n\nExample:\n    >>> tool = FileReadTool(file_path=\"/path/to/file.txt\")\n    >>> content = tool.run()  # Reads /path/to/file.txt\n    >>> content = tool.run(file_path=\"/path/to/other.txt\")  # Reads other.txt\n    >>> content = tool.run(\n    ...     file_path=\"/path/to/file.txt\", start_line=100, line_count=50\n    ... )  # Reads lines 100-149",
+        "description": "A tool for reading file contents.\n\nThis tool inherits its schema handling from BaseTool to avoid recursive schema\ndefinition issues. The args_schema is set to FileReadToolSchema, whose\nfile_path parameter is optional so the tool's default file can be read by\nomitting it. The schema should not be overridden in the constructor as it\nwould break the inheritance chain and cause infinite loops.\n\nThe tool supports two ways of specifying the file path:\n1. At construction time via the file_path parameter\n2. At runtime via the file_path parameter in the tool's input\n\nPaths supplied at runtime must resolve inside ``base_dir`` (the current\nworking directory by default), since they are typically chosen by an LLM.\nA ``file_path`` given at construction time is developer-declared intent and\nis always allowed past the containment check, even when it lives outside\n``base_dir`` (the read itself can still fail). It is pinned at\nconstruction, so a later chdir cannot repoint it, and it can be addressed\neither by omitting ``file_path`` or by the label shown in the description.\n\nArgs:\n    file_path (Optional[str]): Path to the file to be read. If provided,\n        this becomes the default file path for the tool.\n    base_dir (Optional[str]): Directory that runtime paths must stay inside.\n        Defaults to the current working directory.\n    encoding (str): Text encoding used to decode the file. Defaults to UTF-8.\n    **kwargs: Additional keyword arguments passed to BaseTool.\n\nExample:\n    >>> tool = FileReadTool(file_path=\"/path/to/file.txt\")\n    >>> content = tool.run()  # Reads /path/to/file.txt\n    >>> content = tool.run(file_path=\"/path/to/other.txt\")  # Reads other.txt\n    >>> content = tool.run(\n    ...     file_path=\"/path/to/file.txt\", start_line=100, line_count=50\n    ... )  # Reads lines 100-149\n    >>> # Widen the sandbox so the agent may read anything under /data:\n    >>> tool = FileReadTool(base_dir=\"/data\")",
         "properties": {
+          "base_dir": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Base Dir"
+          },
+          "encoding": {
+            "default": "utf-8",
+            "title": "Encoding",
+            "type": "string"
+          },
           "file_path": {
             "anyOf": [
               {
@@ -9997,9 +10014,17 @@
         "description": "Input for FileReadTool.",
         "properties": {
           "file_path": {
-            "description": "Mandatory file full path to read the file",
-            "title": "File Path",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Full path of the file to read. Omit it to read the tool's default file, which only works when one was configured.",
+            "title": "File Path"
           },
           "line_count": {
             "anyOf": [
@@ -10028,15 +10053,12 @@
             "title": "Start Line"
           }
         },
-        "required": [
-          "file_path"
-        ],
         "title": "FileReadToolSchema",
         "type": "object"
       }
     },
     {
-      "description": "A tool to write content to a specified file. Accepts filename, content, and optionally a directory path and overwrite flag as input.",
+      "description": "A tool to write content to a specified file. Accepts filename, content, and optionally a directory path and overwrite flag as input. Writes are confined to the tool's allowed directory; a filename or directory that resolves outside it is rejected.",
       "env_vars": [],
       "humanized_name": "File Writer Tool",
       "init_params_schema": {
@@ -10077,7 +10099,26 @@
             "type": "object"
           }
         },
-        "properties": {},
+        "description": "A tool for writing text content to a file.\n\nWrites are confined to ``base_dir`` (the current working directory by\ndefault), because the target directory and filename are typically chosen by\nan LLM at runtime. Set ``base_dir`` to widen that sandbox deliberately.\n\nArgs:\n    base_dir (Optional[str]): Directory that writes must stay inside.\n        Defaults to the current working directory.\n    encoding (str): Text encoding used to write the file. Defaults to UTF-8.\n\nExample:\n    >>> tool = FileWriterTool()\n    >>> tool.run(filename=\"report.md\", content=\"# Report\", overwrite=True)\n    >>> # Allow the agent to write anywhere under /var/output:\n    >>> tool = FileWriterTool(base_dir=\"/var/output\")",
+        "properties": {
+          "base_dir": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Base Dir"
+          },
+          "encoding": {
+            "default": "utf-8",
+            "title": "Encoding",
+            "type": "string"
+          }
+        },
         "required": [],
         "title": "FileWriterTool",
         "type": "object"
@@ -10085,8 +10126,10 @@
       "name": "FileWriterTool",
       "package_dependencies": [],
       "run_params_schema": {
+        "description": "Input for FileWriterTool.",
         "properties": {
           "content": {
+            "description": "The text content to write to the file.",
             "title": "Content",
             "type": "string"
           },
@@ -10100,9 +10143,11 @@
               }
             ],
             "default": "./",
+            "description": "Directory to write the file into. A relative path resolves inside the tool's allowed directory, and defaults to its root. Created if it does not exist.",
             "title": "Directory"
           },
           "filename": {
+            "description": "Name of the file to write, relative to 'directory'. May include subdirectories, which are created if they do not exist.",
             "title": "Filename",
             "type": "string"
           },
@@ -10116,6 +10161,7 @@
               }
             ],
             "default": false,
+            "description": "Whether to replace the file when it already exists. Accepts true/false (also yes/no, on/off, 1/0). Defaults to false, which reports an error instead of replacing existing content.",
             "title": "Overwrite"
           }
         },
