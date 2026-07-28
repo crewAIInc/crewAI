@@ -2335,7 +2335,11 @@ class OpenAICompletion(BaseLLM):
     ) -> str | Any:
         """Handle non-streaming async chat completion."""
         try:
-            if response_model:
+            if (
+                response_model
+                and self._extract_provider(self.model)
+                not in PROVIDERS_WITHOUT_RESPONSE_FORMAT
+            ):
                 parse_params = {
                     k: v for k, v in params.items() if k != "response_format"
                 }
