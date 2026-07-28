@@ -123,7 +123,7 @@ class TaskPlannerFlow(Flow[AgentState]):
             await do_work(step)
 ```
 
-`copilotkit_emit_state` is re-exported from `ag_ui_crewai.sdk` (it wraps `copilotkit.crewai`, so `pip install "copilotkit[crewai]"` must be present). Reach for it only when a step is long enough that waiting for its boundary snapshot would feel unresponsive.
+Import `copilotkit_emit_state` from `ag_ui_crewai.sdk`. It requires the CopilotKit SDK (`pip install "copilotkit[crewai]"`). Reach for it only when a step is long enough that waiting for its boundary snapshot would feel unresponsive.
 
 </Step>
 
