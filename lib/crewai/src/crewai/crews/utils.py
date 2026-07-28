@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 from collections.abc import Callable, Coroutine, Iterable, Mapping
 from typing import TYPE_CHECKING, Any
 
@@ -303,6 +304,142 @@ def prepare_kickoff(
         if normalized is None:
             normalized = {}
         normalized = before_callback(normalized)
+
+    input_ctx = InputContext(
+        crew=crew,
+        inputs=normalized if normalized is not None else {},
+        payload=normalized,
+    )
+    dispatch(InterceptionPoint.INPUT, input_ctx)
+    normalized = input_ctx.payload
+
+    if resuming and crew._kickoff_event_id:
+        if crew.verbose:
+            from crewai.events.utils.console_formatter import ConsoleFormatter
+
+            fmt = ConsoleFormatter(verbose=True)
+            content = fmt.create_status_content(
+                "Resuming from Checkpoint",
+                crew.name or "Crew",
+                "bright_magenta",
+                ID=str(crew.id),
+            )
+            fmt.print_panel(
+                content, "\U0001f504 Resuming from Checkpoint", "bright_magenta"
+            )
+    else:
+        started_event = CrewKickoffStartedEvent(crew_name=crew.name, inputs=normalized)
+        crew._kickoff_event_id = started_event.event_id
+        future = crewai_event_bus.emit(crew, started_event)
+        if future is not None:
+            try:
+                future.result()
+            except Exception:  # noqa: S110
+                pass
+
+    crew._task_output_handler.reset()
+    crew._logging_color = "bold_purple"
+
+    _flow_files = baggage.get_baggage("flow_input_files")
+    flow_files: dict[str, Any] = _flow_files if isinstance(_flow_files, dict) else {}
+
+    if normalized is not None:
+        unpacked_files = _extract_files_from_inputs(normalized)
+
+        all_files = {**flow_files, **(input_files or {}), **unpacked_files}
+        if all_files:
+            store_files(crew.id, all_files)
+
+        crew._inputs = normalized
+        crew._interpolate_inputs(normalized)
+    else:
+        all_files = {**flow_files, **(input_files or {})}
+        if all_files:
+            store_files(crew.id, all_files)
+    crew._set_tasks_callbacks()
+    crew._set_allow_crewai_trigger_context_for_first_task()
+
+    agents_to_setup: list[BaseAgent] = list(crew.agents)
+    seen_agent_ids: set[int] = {id(agent) for agent in agents_to_setup}
+    for task in crew.tasks:
+        if task.agent is not None and id(task.agent) not in seen_agent_ids:
+            agents_to_setup.append(task.agent)
+            seen_agent_ids.add(id(task.agent))
+
+    setup_agents(
+        crew,
+        agents_to_setup,
+        crew.embedder,
+        crew.function_calling_llm,
+        crew.step_callback,
+    )
+
+    if crew.planning:
+        crew._handle_crew_planning()
+
+    return normalized
+
+
+async def aprepare_kickoff(
+    crew: "Crew",
+    inputs: dict[str, Any] | None,
+    input_files: dict[str, FileInput] | None = None,
+) -> dict[str, Any] | None:
+    """Async version of prepare_kickoff for native async kickoff (akickoff).
+
+    Handles before callbacks, event emission, task handler reset, input
+    interpolation, task callbacks, agent setup, and planning. Supports
+    async awaitable callbacks.
+    """
+    from crewai.events.base_events import reset_emission_counter
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.event_context import (
+        get_current_parent_id,
+        reset_last_event_id,
+    )
+    from crewai.events.types.crew_events import CrewKickoffStartedEvent
+
+    resuming = crew.checkpoint_kickoff_event_id is not None
+
+    if not resuming and get_current_parent_id() is None:
+        reset_emission_counter()
+        reset_last_event_id()
+
+    from crewai.hooks.contexts import ExecutionStartContext, InputContext
+    from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
+    normalized: dict[str, Any] | None = None
+    if inputs is not None:
+        if not isinstance(inputs, Mapping):
+            raise TypeError(
+                f"inputs must be a dict or Mapping, got {type(inputs).__name__}"
+            )
+        normalized = dict(inputs)
+
+    # ``inputs`` aliases the same object as ``payload`` (not a fresh ``{}`` from
+    # ``or``) so in-place edits to either survive read-back, per the context
+    # contract. ``None`` inputs are preserved rather than coerced to ``{}``.
+    start_ctx = ExecutionStartContext(
+        crew=crew,
+        inputs=normalized if normalized is not None else {},
+        payload=normalized,
+    )
+    # Pairing flags: EXECUTION_END fires (once) only for executions whose
+    # EXECUTION_START actually dispatched, including on the failure path.
+    crew._execution_start_dispatched = False
+    crew._execution_end_dispatched = False
+    dispatch(InterceptionPoint.EXECUTION_START, start_ctx)
+    crew._execution_start_dispatched = True
+    normalized = start_ctx.payload
+
+    for before_callback in crew.before_kickoff_callbacks:
+        if normalized is None:
+            normalized = {}
+        cb_result = before_callback(normalized)
+        if inspect.isawaitable(cb_result):
+            normalized = await cb_result
+        else:
+            normalized = cb_result
 
     input_ctx = InputContext(
         crew=crew,
