@@ -214,6 +214,9 @@ def test_file_read_tool_invalid_path_error_does_not_disclose_workspace(
     assert "outside.txt" in result
     assert str(tmp_path) not in result
     assert str(tmp_path.parent) not in result
+    # Point users at base_dir, not the process-wide escape hatch.
+    assert "base_dir" in result
+    assert "CREWAI_TOOLS_ALLOW_UNSAFE_PATHS" not in result
 
 
 def test_constructor_path_outside_working_directory_is_readable(tmp_path, monkeypatch):

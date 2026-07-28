@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, PrivateAttr
 from crewai_tools.security.safe_path import (
     format_error_for_display,
     format_path_for_display,
+    format_sandbox_error,
     validate_file_path,
 )
 
@@ -188,7 +189,11 @@ class FileReadTool(BaseTool):
             try:
                 file_path = self._resolve_path(file_path)
             except ValueError as e:
-                return f"Error: Invalid file path: {e!s}"
+                return "Error: Invalid file path: " + format_sandbox_error(
+                    e,
+                    "Pass base_dir to FileReadTool to allow reading another "
+                    "directory tree.",
+                )
 
         display_path = format_path_for_display(file_path, self.base_dir)
         try:

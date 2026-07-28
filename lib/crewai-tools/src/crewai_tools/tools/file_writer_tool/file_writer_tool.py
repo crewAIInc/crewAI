@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 from crewai_tools.security.safe_path import (
     format_error_for_display,
     format_path_for_display,
+    format_sandbox_error,
     validate_file_path,
 )
 
@@ -114,7 +115,11 @@ class FileWriterTool(BaseTool):
         try:
             resolved_directory = Path(validate_file_path(directory, self.base_dir))
         except ValueError as e:
-            return f"Error: Invalid directory: {e!s}"
+            return "Error: Invalid directory: " + format_sandbox_error(
+                e,
+                "Pass base_dir to FileWriterTool to allow writing to another "
+                "directory tree.",
+            )
 
         # Keep filename inside the target directory, blocking "..", absolute
         # paths and symlink escapes. is_relative_to() compares whole path

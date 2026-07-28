@@ -241,6 +241,10 @@ def test_blocks_directory_outside_working_directory(tool, temp_env):
         assert "Error" in result
         assert not os.path.exists(outside_file)
         assert outside_dir not in result
+        # Point users at base_dir, not the process-wide escape hatch, which
+        # would also disable the SSRF checks on URL-fetching tools.
+        assert "base_dir" in result
+        assert "CREWAI_TOOLS_ALLOW_UNSAFE_PATHS" not in result
     finally:
         shutil.rmtree(outside_dir, ignore_errors=True)
 
