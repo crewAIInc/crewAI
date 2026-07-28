@@ -1796,7 +1796,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             raise ValueError("Stored state must have an 'id' field")
 
         if isinstance(self._state, dict):
-            self._state.clear()
+            # Merge rather than replace: a field added to `initial_state` after
+            # `stored_state` was saved should keep its fresh default instead of
+            # disappearing, matching the BaseModel branch below (model_validate
+            # fills unset fields from the model's own defaults).
             self._state.update(stored_state)
         elif isinstance(self._state, BaseModel):
             model = self._state
