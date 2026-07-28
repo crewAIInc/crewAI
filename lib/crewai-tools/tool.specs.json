@@ -8967,7 +8967,7 @@
           "default": null,
           "description": "API key for E2B sandbox service",
           "name": "E2B_API_KEY",
-          "required": false
+          "required": true
         },
         {
           "default": null,
@@ -9188,7 +9188,7 @@
           "default": null,
           "description": "API key for E2B sandbox service",
           "name": "E2B_API_KEY",
-          "required": false
+          "required": true
         },
         {
           "default": null,
@@ -9408,7 +9408,7 @@
           "default": null,
           "description": "API key for E2B sandbox service",
           "name": "E2B_API_KEY",
-          "required": false
+          "required": true
         },
         {
           "default": null,
@@ -25790,6 +25790,94 @@
           }
         },
         "title": "ImagePromptSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Pause and do nothing for a set number of seconds before continuing.\nUse this when work that was already started somewhere else needs real time to finish before its status or result can be checked again, for example: a sandbox build, test run, or script that is still executing; a deployment or provisioning step that is still rolling out; a batch import, export, or training job; an async API that returned a job id to poll later; or a rate limit or backoff that has to cool down before retrying.\nThe usual pattern is: start the job, wait, check its status, and wait again if it is still running.\nDo not use this to pace a conversation, to pretend to work, or when the information needed is already available. Waiting only lets clock time pass, it does not advance or check the job.\nA single call waits at most 300 seconds. If more time is needed, call this tool again.",
+      "env_vars": [],
+      "humanized_name": "Wait",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Pause execution so a long-running job elsewhere has time to progress.\n\nAgents that kick off out-of-band work (a sandbox build, a deployment, an async\nAPI job) have no other way to let clock time pass: without this tool they either\npoll in a tight loop or give up before the work finishes.\n\nA single call waits at most ``max_seconds``. Longer requests are clamped to that\ncap and the result says so, so the model can call again instead of failing.\n\nThe generated description advertises the cap to the model, and is kept in sync\nwith ``max_seconds``. A description supplied by the caller is left alone.",
+        "properties": {
+          "max_seconds": {
+            "default": 300.0,
+            "description": "Upper bound, in seconds, for a single wait. Longer requests are capped to this value.",
+            "exclusiveMinimum": 0,
+            "title": "Max Seconds",
+            "type": "number"
+          }
+        },
+        "required": [],
+        "title": "WaitTool",
+        "type": "object"
+      },
+      "name": "WaitTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for WaitTool.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional short note on what is being waited for, echoed back in the result.",
+            "title": "Reason"
+          },
+          "seconds": {
+            "description": "How many seconds to wait before continuing.",
+            "minimum": 0,
+            "title": "Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "seconds"
+        ],
+        "title": "WaitToolSchema",
         "type": "object"
       }
     },

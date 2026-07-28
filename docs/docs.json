@@ -318,6 +318,7 @@
                           "edge/en/tools/automation/apifyactorstool",
                           "edge/en/tools/automation/composiotool",
                           "edge/en/tools/automation/multiontool",
+                          "edge/en/tools/automation/waittool",
                           "edge/en/tools/automation/zapieractionstool"
                         ]
                       }
