@@ -812,8 +812,105 @@ class TestStepExecutorCriticalFixes:
                 result = step_executor.execute(todo, context)
 
         assert result.success is False
+        assert result.outcome == "failed"
         assert result.error is not None
         assert "Expected tool 'count_words' was not called" in result.error
+
+    def test_step_executor_marks_text_iteration_exhaustion_as_failure(
+        self, step_executor
+    ):
+        """A tool result at the iteration limit is partial, not successful."""
+        todo = TodoItem(
+            step_number=1,
+            description="Count words in input text.",
+            tool_to_use="count_words",
+        )
+        context = StepExecutionContext(task_description="task", task_goal="goal")
+        action = AgentAction(
+            thought="Need a tool",
+            tool="count_words",
+            tool_input='{"text":"hello world"}',
+            text="Action: count_words",
+        )
+
+        with (
+            patch(
+                "crewai.agents.step_executor.process_llm_response",
+                return_value=action,
+            ),
+            patch.object(
+                step_executor,
+                "_execute_text_tool_with_events",
+                return_value="2",
+            ),
+        ):
+            step_executor.llm.call.return_value = action.text
+            result = step_executor.execute(
+                todo,
+                context,
+                max_step_iterations=1,
+            )
+
+        assert result.success is False
+        assert result.outcome == "iteration_exhausted"
+        assert result.result == "2"
+        assert result.termination_reason is not None
+        assert "max_step_iterations (1)" in result.termination_reason
+
+    def test_step_executor_marks_native_iteration_exhaustion_as_failure(
+        self, step_executor
+    ):
+        """Native tool output at the iteration limit remains a partial result."""
+        step_executor._use_native_tools = True
+        step_executor._openai_tools = [
+            {"type": "function", "function": {"name": "count_words"}}
+        ]
+        todo = TodoItem(step_number=1, description="Count words")
+        context = StepExecutionContext(task_description="task", task_goal="goal")
+        tool_calls = [object()]
+        step_executor.llm.call.return_value = tool_calls
+
+        with (
+            patch("crewai.agents.step_executor.is_tool_call_list", return_value=True),
+            patch.object(
+                step_executor,
+                "_execute_native_tool_calls",
+                return_value="2",
+            ),
+        ):
+            result = step_executor.execute(
+                todo,
+                context,
+                max_step_iterations=1,
+            )
+
+        assert result.success is False
+        assert result.outcome == "iteration_exhausted"
+        assert result.result == "2"
+        assert result.termination_reason is not None
+        assert "max_step_iterations (1)" in result.termination_reason
+
+    def test_step_executor_marks_timeout_as_failure(self, step_executor):
+        """Reaching the wall-clock limit returns an explicit timeout outcome."""
+        step_executor._use_native_tools = False
+        todo = TodoItem(step_number=1, description="Count words")
+        context = StepExecutionContext(task_description="task", task_goal="goal")
+
+        with patch(
+            "crewai.agents.step_executor.time.monotonic",
+            side_effect=[0.5, 2.0, 2.0],
+        ):
+            result = step_executor.execute(
+                todo,
+                context,
+                step_timeout=1,
+            )
+
+        assert result.success is False
+        assert result.outcome == "timed_out"
+        assert result.result == ""
+        assert result.termination_reason == "Step timed out after 2s (limit: 1s)."
+        step_executor.llm.call.assert_not_called()
 
     def test_step_executor_text_tool_emits_usage_events(self, step_executor):
         """Text-parsed tool execution should emit started and finished events."""
@@ -929,6 +1026,8 @@ class TestStepExecutorCriticalFixes:
         assert started_events[0].tool_to_use == "search"
         assert len(completed_events) == 1
         assert completed_events[0].success is True
+        assert completed_events[0].outcome == "completed"
+        assert completed_events[0].termination_reason is None
         assert completed_events[0].step_number == 1
         assert completed_events[0].result == "Found release"
 
@@ -953,15 +1052,43 @@ class TestStepExecutorCriticalFixes:
                 1,
                 result="Error: no result",
                 error="No result",
+                outcome="timed_out",
+                termination_reason="Step timed out after 30s.",
             )
             crewai_event_bus.flush()
 
         assert todo.status == "failed"
         assert len(completed_events) == 1
         assert completed_events[0].success is False
+        assert completed_events[0].outcome == "timed_out"
+        assert completed_events[0].termination_reason == "Step timed out after 30s."
         assert completed_events[0].step_number == 1
         assert completed_events[0].result == "Error: no result"
         assert completed_events[0].error == "No result"
+
+    def test_lite_agent_output_includes_step_termination_details(self):
+        """Standalone agent output exposes how each planned step terminated."""
+        from crewai.lite_agent_output import LiteAgentOutput
+
+        todos = LiteAgentOutput.from_todo_items(
+            [
+                TodoItem(
+                    step_number=1,
+                    description="Run bounded work",
+                    status="failed",
+                    result="partial result",
+                    outcome="iteration_exhausted",
+                    termination_reason=(
+                        "Step reached max_step_iterations (1) before producing "
+                        "a final answer."
+                    ),
+                )
+            ]
+        )
+
+        assert todos[0].outcome == "iteration_exhausted"
+        assert todos[0].termination_reason is not None
+        assert "max_step_iterations (1)" in todos[0].termination_reason
 
     @patch("crewai.experimental.agent_executor.handle_output_parser_exception")
     def test_recover_from_parser_error(
@@ -1848,6 +1975,40 @@ class TestReasoningEffort:
 
         executor._ensure_planner_observer.assert_not_called()
         assert observation.step_completed_successfully is True
+
+    def test_observer_cannot_override_failed_step_execution(self):
+        """An optimistic observer cannot turn an execution failure into success."""
+        from crewai.agent.planning_config import PlanningConfig
+        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.utilities.planning_types import StepObservation, TodoItem
+
+        executor = Mock(spec=AgentExecutor)
+        executor.agent = Mock()
+        executor.agent.planning_config = PlanningConfig(reasoning_effort="medium")
+        executor._should_observe_steps = (
+            AgentExecutor._should_observe_steps.__get__(executor)
+        )
+        executor._observe_completed_step = (
+            AgentExecutor._observe_completed_step.__get__(executor)
+        )
+        executor._ensure_planner_observer.return_value.observe.return_value = (
+            StepObservation(
+                step_completed_successfully=True,
+                key_information_learned="Partial data is usable",
+                remaining_plan_still_valid=True,
+            )
+        )
+        todo = TodoItem(step_number=1, description="Run bounded work")
+
+        observation = executor._observe_completed_step(
+            completed_step=todo,
+            result="partial result",
+            all_completed=[],
+            remaining_todos=[],
+            step_success=False,
+        )
+
+        assert observation.step_completed_successfully is False
 
     @pytest.mark.vcr()
     def test_reasoning_effort_low_skips_decide_and_replan(self):

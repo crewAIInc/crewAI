@@ -43,7 +43,7 @@ from crewai.utilities.agent_utils import (
     setup_native_tools,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.planning_types import TodoItem
+from crewai.utilities.planning_types import StepOutcome, TodoItem
 from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
@@ -58,6 +58,21 @@ if TYPE_CHECKING:
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.tools.structured_tool import CrewStructuredTool
+
+
+class _StepExecutionTerminatedError(Exception):
+    """Signal a bounded step termination while preserving partial results."""
+
+    def __init__(
+        self,
+        outcome: StepOutcome,
+        result: str,
+        reason: str,
+    ) -> None:
+        super().__init__(reason)
+        self.outcome = outcome
+        self.result = result
+        self.reason = reason
 
 
 class StepExecutor:
@@ -175,8 +190,17 @@ class StepExecutor:
 
             elapsed = time.monotonic() - start_time
             return StepResult(
-                success=True,
+                outcome="completed",
                 result=result_text,
+                tool_calls_made=tool_calls_made,
+                execution_time=elapsed,
+            )
+        except _StepExecutionTerminatedError as termination:
+            elapsed = time.monotonic() - start_time
+            return StepResult(
+                outcome=termination.outcome,
+                result=termination.result,
+                termination_reason=termination.reason,
                 tool_calls_made=tool_calls_made,
                 execution_time=elapsed,
             )
@@ -213,8 +237,17 @@ class StepExecutor:
                     self._validate_expected_tool_usage(todo, tool_calls_made)
                     elapsed = time.monotonic() - start_time
                     return StepResult(
-                        success=True,
+                        outcome="completed",
                         result=result_text,
+                        tool_calls_made=tool_calls_made,
+                        execution_time=elapsed,
+                    )
+                except _StepExecutionTerminatedError as termination:
+                    elapsed = time.monotonic() - start_time
+                    return StepResult(
+                        outcome=termination.outcome,
+                        result=termination.result,
+                        termination_reason=termination.reason,
                         tool_calls_made=tool_calls_made,
                         execution_time=elapsed,
                     )
@@ -223,9 +256,9 @@ class StepExecutor:
 
             elapsed = time.monotonic() - start_time
             return StepResult(
-                success=False,
+                outcome="failed",
                 result="",
-                error=str(e),
+                termination_reason=str(e),
                 tool_calls_made=tool_calls_made,
                 execution_time=elapsed,
             )
@@ -337,7 +370,14 @@ class StepExecutor:
             if step_timeout and start_time:
                 elapsed = time.monotonic() - start_time
                 if elapsed >= step_timeout:
-                    return last_tool_result or f"Step timed out after {elapsed:.0f}s"
+                    reason = (
+                        f"Step timed out after {elapsed:.0f}s (limit: {step_timeout}s)."
+                    )
+                    raise _StepExecutionTerminatedError(
+                        "timed_out",
+                        last_tool_result,
+                        reason,
+                    )
             answer = self.llm.call(
                 messages,
                 callbacks=self.callbacks,
@@ -364,7 +404,12 @@ class StepExecutor:
 
             return answer_str
 
-        return last_tool_result
+        raise _StepExecutionTerminatedError(
+            "iteration_exhausted",
+            last_tool_result,
+            f"Step reached max_step_iterations ({max_step_iterations}) "
+            "before producing a final answer.",
+        )
 
     def _execute_text_tool_with_events(
         self, formatted: AgentAction, todo: TodoItem
@@ -547,10 +592,13 @@ class StepExecutor:
             if step_timeout and start_time:
                 elapsed = time.monotonic() - start_time
                 if elapsed >= step_timeout:
-                    return (
-                        "\n\n".join(accumulated_results)
-                        if accumulated_results
-                        else f"Step timed out after {elapsed:.0f}s"
+                    reason = (
+                        f"Step timed out after {elapsed:.0f}s (limit: {step_timeout}s)."
+                    )
+                    raise _StepExecutionTerminatedError(
+                        "timed_out",
+                        "\n\n".join(accumulated_results),
+                        reason,
                     )
             answer = self.llm.call(
                 messages,
@@ -575,7 +623,12 @@ class StepExecutor:
 
             return str(answer)
 
-        return "\n".join(filter(None, accumulated_results))
+        raise _StepExecutionTerminatedError(
+            "iteration_exhausted",
+            "\n".join(filter(None, accumulated_results)),
+            f"Step reached max_step_iterations ({max_step_iterations}) "
+            "before producing a final answer.",
+        )
 
     def _execute_native_tool_calls(
         self,

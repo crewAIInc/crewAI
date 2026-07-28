@@ -103,6 +103,7 @@ from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.planning_types import (
     PlanStep,
     StepObservation,
+    StepOutcome,
     TodoItem,
     TodoList,
 )
@@ -417,6 +418,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         todo: TodoItem,
         *,
         success: bool,
+        outcome: StepOutcome,
+        termination_reason: str | None = None,
         result: str | None = None,
         error: str | None = None,
     ) -> None:
@@ -429,6 +432,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     step_description=todo.description,
                     tool_to_use=todo.tool_to_use,
                     success=success,
+                    outcome=outcome,
+                    termination_reason=termination_reason,
                     result=result,
                     error=error,
                     from_task=self.task,
@@ -454,22 +459,44 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         self.state.todos.mark_completed(step_number, result=result)
         todo = self.state.todos.get_by_step_number(step_number)
         if todo and previous_status != "completed":
-            self._emit_plan_step_completed(todo, success=True, result=result)
+            self._emit_plan_step_completed(
+                todo,
+                success=True,
+                outcome="completed",
+                result=result,
+            )
 
     def _mark_todo_failed(
         self,
         step_number: int,
         result: str | None = None,
         error: str | None = None,
+        outcome: StepOutcome | None = None,
+        termination_reason: str | None = None,
     ) -> None:
         todo = self.state.todos.get_by_step_number(step_number)
         previous_status = todo.status if todo else None
-        self.state.todos.mark_failed(step_number, result=result)
+        final_outcome = outcome or (
+            todo.outcome
+            if todo and todo.outcome not in (None, "completed")
+            else "failed"
+        )
+        final_reason = (
+            termination_reason or error or (todo.termination_reason if todo else None)
+        )
+        self.state.todos.mark_failed(
+            step_number,
+            result=result,
+            outcome=final_outcome,
+            termination_reason=final_reason,
+        )
         todo = self.state.todos.get_by_step_number(step_number)
         if todo and previous_status != "failed":
             self._emit_plan_step_completed(
                 todo,
                 success=False,
+                outcome=final_outcome,
+                termination_reason=final_reason,
                 result=result,
                 error=error,
             )
@@ -578,17 +605,23 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         """Observe a completed step via LLM or a lightweight heuristic."""
         from crewai.agents.planner_observer import PlannerObserver
 
+        if step_success is None:
+            step_success = self._step_success_from_log(completed_step.step_number)
+
         if self._should_observe_steps():
             observer = self._ensure_planner_observer()
-            return observer.observe(
+            observation = observer.observe(
                 completed_step=completed_step,
                 result=result,
                 all_completed=all_completed,
                 remaining_todos=remaining_todos,
             )
+            if step_success is False and observation.step_completed_successfully:
+                return observation.model_copy(
+                    update={"step_completed_successfully": False}
+                )
+            return observation
 
-        if step_success is None:
-            step_success = self._step_success_from_log(completed_step.step_number)
         if step_success is None:
             step_success = True
 
@@ -1129,12 +1162,16 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             # Do NOT mark completed here — observation logic decides
             current.result = result.result
+            current.outcome = result.outcome
+            current.termination_reason = result.termination_reason
 
             self.state.execution_log.append(
                 {
                     "type": "step_execution",
                     "step_number": current.step_number,
                     "success": result.success,
+                    "outcome": result.outcome,
+                    "termination_reason": result.termination_reason,
                     "result_preview": result.result[:200] if result.result else "",
                     "error": result.error,
                     "tool_calls": result.tool_calls_made,
@@ -1251,10 +1288,14 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             if isinstance(item, BaseException):
                 error_msg = f"Error: {item!s}"
                 todo.result = error_msg
+                todo.outcome = "failed"
+                todo.termination_reason = error_msg
                 self._mark_todo_failed(
                     todo.step_number,
                     result=error_msg,
                     error=error_msg,
+                    outcome="failed",
+                    termination_reason=error_msg,
                 )
                 if self.agent.verbose:
                     PRINTER.print(
@@ -1265,12 +1306,16 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 _returned_todo, result = item
                 step_result = cast(StepResult, result)
                 todo.result = step_result.result
+                todo.outcome = step_result.outcome
+                todo.termination_reason = step_result.termination_reason
 
                 self.state.execution_log.append(
                     {
                         "type": "step_execution",
                         "step_number": todo.step_number,
                         "success": step_result.success,
+                        "outcome": step_result.outcome,
+                        "termination_reason": step_result.termination_reason,
                         "result_preview": step_result.result[:200]
                         if step_result.result
                         else "",
