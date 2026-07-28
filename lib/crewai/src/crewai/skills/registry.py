@@ -114,6 +114,8 @@ def parse_registry_ref(ref: str) -> tuple[str, str]:
 def resolve_registry_ref(
     ref: str,
     source: Any = None,
+    *,
+    activate: bool = True,
 ) -> Skill:  # type: ignore[name-defined]  # noqa: F821
     """Resolve a registry reference to a Skill object.
 
@@ -129,9 +131,11 @@ def resolve_registry_ref(
     Args:
         ref: A registry reference, e.g. '@acme/my-skill' or '@acme/my-skill@1.2.0'.
         source: Optional source object passed through to skill loaders (for events).
+        activate: Whether to load the full SKILL.md instructions.
 
     Returns:
-        A Skill loaded at INSTRUCTIONS disclosure level.
+        A Skill loaded at INSTRUCTIONS level by default, or METADATA level
+        when ``activate`` is false.
     """
     from crewai.skills.loader import activate_skill
 
@@ -143,7 +147,7 @@ def resolve_registry_ref(
         # is the only thing a pin can be checked against.
         skill = _load_matching_skill(local_path, version)
         if skill is not None:
-            return activate_skill(skill, source=source)
+            return activate_skill(skill, source=source) if activate else skill
 
     cache = SkillCacheManager()
     cached_path = cache.get_cached_path(org, name, version=version)
@@ -154,9 +158,15 @@ def resolve_registry_ref(
         # metadata.version and re-download it on each resolution.
         skill = _load_skill(cached_path)
         if skill is not None:
-            return activate_skill(skill, source=source)
+            return activate_skill(skill, source=source) if activate else skill
 
-    return download_skill(org, name, source=source, version=version)
+    return download_skill(
+        org,
+        name,
+        source=source,
+        version=version,
+        activate=activate,
+    )
 
 
 def _load_skill(path: Path) -> Skill | None:  # type: ignore[name-defined]  # noqa: F821
@@ -268,6 +278,7 @@ def download_skill(
     source: Any = None,
     *,
     version: str | None = None,
+    activate: bool = True,
 ) -> Skill:  # type: ignore[name-defined]  # noqa: F821
     """Download a skill from the registry and store it in the cache.
 
@@ -276,9 +287,11 @@ def download_skill(
         name: Skill name.
         source: Optional source for event emission.
         version: Optional pinned version; the latest is fetched when omitted.
+        activate: Whether to load the full SKILL.md instructions.
 
     Returns:
-        The downloaded Skill at INSTRUCTIONS level.
+        The downloaded Skill at INSTRUCTIONS level by default, or METADATA
+        level when ``activate`` is false.
 
     Raises:
         ValueError: If *version* is given but blank.
@@ -376,4 +389,4 @@ def download_skill(
             f"Skill archive for {ref!r} downloaded but no SKILL.md found in {skill_dir}"
         )
     skill = load_skill_metadata(skill_dir)
-    return activate_skill(skill, source=source)
+    return activate_skill(skill, source=source) if activate else skill

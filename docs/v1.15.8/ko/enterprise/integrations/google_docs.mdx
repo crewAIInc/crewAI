@@ -1,0 +1,481 @@
+---
+title: Google Docs 통합
+description: "CrewAI를 위한 Google Docs 통합으로 문서 생성 및 편집."
+icon: "file-lines"
+mode: "wide"
+---
+
+## 개요
+
+에이전트가 텍스트 조작 및 서식을 사용하여 Google Docs 문서를 생성, 편집 및 관리할 수 있도록 합니다. AI 기반 자동화로 문서 생성을 자동화하고, 텍스트를 삽입 및 교체하고, 콘텐츠 범위를 관리하며, 문서 워크플로를 간소화합니다.
+
+## 전제 조건
+
+Google Docs 통합을 사용하기 전에 다음 사항을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
+- Google Docs 액세스 권한이 있는 Google 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Google 계정 연결
+
+## Google Docs 통합 설정
+
+### 1. Google 계정 연결
+
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동
+2. 인증 통합 섹션에서 **Google Docs** 찾기
+3. **연결**을 클릭하고 OAuth 플로우 완료
+4. 문서 액세스에 필요한 권한 부여
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token 복사
+
+### 2. 필요한 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## 사용 가능한 작업
+
+<AccordionGroup>
+  <Accordion title="google_docs/create_document">
+    **설명:** 새 Google 문서를 만듭니다.
+
+    **매개변수:**
+    - `title` (string, 선택사항): 새 문서의 제목.
+
+  </Accordion>
+
+  <Accordion title="google_docs/get_document">
+    **설명:** Google 문서의 내용과 메타데이터를 가져옵니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 검색할 문서의 ID.
+    - `includeTabsContent` (boolean, 선택사항): 탭 내용을 포함할지 여부. 기본값: false
+    - `suggestionsViewMode` (string, 선택사항): 문서에 적용할 제안 보기 모드. 옵션: DEFAULT_FOR_CURRENT_ACCESS, PREVIEW_SUGGESTIONS_ACCEPTED, PREVIEW_WITHOUT_SUGGESTIONS. 기본값: DEFAULT_FOR_CURRENT_ACCESS
+
+  </Accordion>
+
+  <Accordion title="google_docs/batch_update">
+    **설명:** Google 문서에 하나 이상의 업데이트를 적용합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 업데이트할 문서의 ID.
+    - `requests` (array, 필수): 문서에 적용할 업데이트 목록. 각 항목은 요청을 나타내는 객체.
+    - `writeControl` (object, 선택사항): 쓰기 요청이 실행되는 방식을 제어합니다. `requiredRevisionId` (string)와 `targetRevisionId` (string)를 포함.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_text">
+    **설명:** Google 문서의 특정 위치에 텍스트를 삽입합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 업데이트할 문서의 ID.
+    - `text` (string, 필수): 삽입할 텍스트.
+    - `index` (integer, 선택사항): 텍스트를 삽입할 0 기반 인덱스. 기본값: 1
+
+  </Accordion>
+
+  <Accordion title="google_docs/replace_text">
+    **설명:** Google 문서에서 텍스트의 모든 인스턴스를 교체합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 업데이트할 문서의 ID.
+    - `containsText` (string, 필수): 찾아서 교체할 텍스트.
+    - `replaceText` (string, 필수): 교체할 텍스트.
+    - `matchCase` (boolean, 선택사항): 검색이 대소문자를 구분할지 여부. 기본값: false
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_content_range">
+    **설명:** Google 문서의 특정 범위에서 내용을 삭제합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 업데이트할 문서의 ID.
+    - `startIndex` (integer, 필수): 삭제할 범위의 시작 인덱스.
+    - `endIndex` (integer, 필수): 삭제할 범위의 끝 인덱스.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_page_break">
+    **설명:** Google 문서의 특정 위치에 페이지 나누기를 삽입합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 업데이트할 문서의 ID.
+    - `index` (integer, 선택사항): 페이지 나누기를 삽입할 0 기반 인덱스. 기본값: 1
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_named_range">
+    **설명:** Google 문서에 명명된 범위를 만듭니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 업데이트할 문서의 ID.
+    - `name` (string, 필수): 명명된 범위의 이름.
+    - `startIndex` (integer, 필수): 범위의 시작 인덱스.
+    - `endIndex` (integer, 필수): 범위의 끝 인덱스.
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_document_with_content">
+    **설명:** 내용이 포함된 새 Google 문서를 한 번에 만듭니다.
+
+    **매개변수:**
+    - `title` (string, 필수): 새 문서의 제목. 문서 상단과 Google Drive에 표시됩니다.
+    - `content` (string, 선택사항): 문서에 삽입할 텍스트 내용. 새 단락에는 `\n`을 사용하세요.
+
+  </Accordion>
+
+  <Accordion title="google_docs/append_text">
+    **설명:** Google 문서의 끝에 텍스트를 추가합니다. 인덱스를 지정할 필요 없이 자동으로 문서 끝에 삽입됩니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): create_document 응답 또는 URL에서 가져온 문서 ID.
+    - `text` (string, 필수): 문서 끝에 추가할 텍스트. 새 단락에는 `\n`을 사용하세요.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_bold">
+    **설명:** Google 문서에서 텍스트를 굵게 만들거나 굵게 서식을 제거합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `startIndex` (integer, 필수): 서식을 지정할 텍스트의 시작 위치.
+    - `endIndex` (integer, 필수): 서식을 지정할 텍스트의 끝 위치 (배타적).
+    - `bold` (boolean, 필수): 굵게 만들려면 `true`, 굵게를 제거하려면 `false`로 설정.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_italic">
+    **설명:** Google 문서에서 텍스트를 기울임꼴로 만들거나 기울임꼴 서식을 제거합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `startIndex` (integer, 필수): 서식을 지정할 텍스트의 시작 위치.
+    - `endIndex` (integer, 필수): 서식을 지정할 텍스트의 끝 위치 (배타적).
+    - `italic` (boolean, 필수): 기울임꼴로 만들려면 `true`, 기울임꼴을 제거하려면 `false`로 설정.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_underline">
+    **설명:** Google 문서에서 텍스트에 밑줄 서식을 추가하거나 제거합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `startIndex` (integer, 필수): 서식을 지정할 텍스트의 시작 위치.
+    - `endIndex` (integer, 필수): 서식을 지정할 텍스트의 끝 위치 (배타적).
+    - `underline` (boolean, 필수): 밑줄을 추가하려면 `true`, 밑줄을 제거하려면 `false`로 설정.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_strikethrough">
+    **설명:** Google 문서에서 텍스트에 취소선 서식을 추가하거나 제거합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `startIndex` (integer, 필수): 서식을 지정할 텍스트의 시작 위치.
+    - `endIndex` (integer, 필수): 서식을 지정할 텍스트의 끝 위치 (배타적).
+    - `strikethrough` (boolean, 필수): 취소선을 추가하려면 `true`, 제거하려면 `false`로 설정.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_font_size">
+    **설명:** Google 문서에서 텍스트의 글꼴 크기를 변경합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `startIndex` (integer, 필수): 서식을 지정할 텍스트의 시작 위치.
+    - `endIndex` (integer, 필수): 서식을 지정할 텍스트의 끝 위치 (배타적).
+    - `fontSize` (number, 필수): 포인트 단위의 글꼴 크기. 일반적인 크기: 10, 11, 12, 14, 16, 18, 24, 36.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_color">
+    **설명:** Google 문서에서 RGB 값(0-1 스케일)을 사용하여 텍스트 색상을 변경합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `startIndex` (integer, 필수): 서식을 지정할 텍스트의 시작 위치.
+    - `endIndex` (integer, 필수): 서식을 지정할 텍스트의 끝 위치 (배타적).
+    - `red` (number, 필수): 빨강 구성 요소 (0-1). 예: `1`은 완전한 빨강.
+    - `green` (number, 필수): 초록 구성 요소 (0-1). 예: `0.5`는 절반 초록.
+    - `blue` (number, 필수): 파랑 구성 요소 (0-1). 예: `0`은 파랑 없음.
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_hyperlink">
+    **설명:** Google 문서에서 기존 텍스트를 클릭 가능한 하이퍼링크로 변환합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `startIndex` (integer, 필수): 링크로 만들 텍스트의 시작 위치.
+    - `endIndex` (integer, 필수): 링크로 만들 텍스트의 끝 위치 (배타적).
+    - `url` (string, 필수): 링크가 가리킬 URL. 예: `"https://example.com"`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/apply_heading_style">
+    **설명:** Google 문서에서 텍스트 범위에 제목 또는 단락 스타일을 적용합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `startIndex` (integer, 필수): 스타일을 적용할 단락의 시작 위치.
+    - `endIndex` (integer, 필수): 스타일을 적용할 단락의 끝 위치.
+    - `style` (string, 필수): 적용할 스타일. 옵션: `NORMAL_TEXT`, `TITLE`, `SUBTITLE`, `HEADING_1`, `HEADING_2`, `HEADING_3`, `HEADING_4`, `HEADING_5`, `HEADING_6`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_paragraph_alignment">
+    **설명:** Google 문서에서 단락의 텍스트 정렬을 설정합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `startIndex` (integer, 필수): 정렬할 단락의 시작 위치.
+    - `endIndex` (integer, 필수): 정렬할 단락의 끝 위치.
+    - `alignment` (string, 필수): 텍스트 정렬. 옵션: `START` (왼쪽), `CENTER`, `END` (오른쪽), `JUSTIFIED`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_line_spacing">
+    **설명:** Google 문서에서 단락의 줄 간격을 설정합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `startIndex` (integer, 필수): 단락의 시작 위치.
+    - `endIndex` (integer, 필수): 단락의 끝 위치.
+    - `lineSpacing` (number, 필수): 백분율로 나타낸 줄 간격. `100` = 단일, `115` = 1.15배, `150` = 1.5배, `200` = 이중.
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_paragraph_bullets">
+    **설명:** Google 문서에서 단락을 글머리 기호 또는 번호 매기기 목록으로 변환합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `startIndex` (integer, 필수): 목록으로 변환할 단락의 시작 위치.
+    - `endIndex` (integer, 필수): 목록으로 변환할 단락의 끝 위치.
+    - `bulletPreset` (string, 필수): 글머리 기호/번호 매기기 스타일. 옵션: `BULLET_DISC_CIRCLE_SQUARE`, `BULLET_DIAMONDX_ARROW3D_SQUARE`, `BULLET_CHECKBOX`, `BULLET_ARROW_DIAMOND_DISC`, `BULLET_STAR_CIRCLE_SQUARE`, `NUMBERED_DECIMAL_ALPHA_ROMAN`, `NUMBERED_DECIMAL_ALPHA_ROMAN_PARENS`, `NUMBERED_DECIMAL_NESTED`, `NUMBERED_UPPERALPHA_ALPHA_ROMAN`, `NUMBERED_UPPERROMAN_UPPERALPHA_DECIMAL`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_paragraph_bullets">
+    **설명:** Google 문서에서 단락의 글머리 기호 또는 번호 매기기를 제거합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `startIndex` (integer, 필수): 목록 단락의 시작 위치.
+    - `endIndex` (integer, 필수): 목록 단락의 끝 위치.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_table_with_content">
+    **설명:** Google 문서에 내용이 포함된 표를 한 번에 삽입합니다. 내용은 2D 배열로 제공하세요.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `rows` (integer, 필수): 표의 행 수.
+    - `columns` (integer, 필수): 표의 열 수.
+    - `index` (integer, 선택사항): 표를 삽입할 위치. 제공하지 않으면 문서 끝에 삽입됩니다.
+    - `content` (array, 필수): 2D 배열로 된 표 내용. 각 내부 배열은 행입니다. 예: `[["Year", "Revenue"], ["2023", "$43B"], ["2024", "$45B"]]`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_table_row">
+    **설명:** 기존 표의 참조 셀 위 또는 아래에 새 행을 삽입합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `tableStartIndex` (integer, 필수): 표의 시작 인덱스. get_document에서 가져오세요.
+    - `rowIndex` (integer, 필수): 참조 셀의 행 인덱스 (0 기반).
+    - `columnIndex` (integer, 선택사항): 참조 셀의 열 인덱스 (0 기반). 기본값: `0`.
+    - `insertBelow` (boolean, 선택사항): `true`이면 참조 행 아래에, `false`이면 위에 삽입. 기본값: `true`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_table_column">
+    **설명:** 기존 표의 참조 셀 왼쪽 또는 오른쪽에 새 열을 삽입합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `tableStartIndex` (integer, 필수): 표의 시작 인덱스.
+    - `rowIndex` (integer, 선택사항): 참조 셀의 행 인덱스 (0 기반). 기본값: `0`.
+    - `columnIndex` (integer, 필수): 참조 셀의 열 인덱스 (0 기반).
+    - `insertRight` (boolean, 선택사항): `true`이면 오른쪽에, `false`이면 왼쪽에 삽입. 기본값: `true`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_table_row">
+    **설명:** Google 문서의 기존 표에서 행을 삭제합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `tableStartIndex` (integer, 필수): 표의 시작 인덱스.
+    - `rowIndex` (integer, 필수): 삭제할 행 인덱스 (0 기반).
+    - `columnIndex` (integer, 선택사항): 행의 아무 셀의 열 인덱스 (0 기반). 기본값: `0`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_table_column">
+    **설명:** Google 문서의 기존 표에서 열을 삭제합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `tableStartIndex` (integer, 필수): 표의 시작 인덱스.
+    - `rowIndex` (integer, 선택사항): 열의 아무 셀의 행 인덱스 (0 기반). 기본값: `0`.
+    - `columnIndex` (integer, 필수): 삭제할 열 인덱스 (0 기반).
+
+  </Accordion>
+
+  <Accordion title="google_docs/merge_table_cells">
+    **설명:** 표 셀 범위를 단일 셀로 병합합니다. 모든 셀의 내용이 보존됩니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `tableStartIndex` (integer, 필수): 표의 시작 인덱스.
+    - `rowIndex` (integer, 필수): 병합의 시작 행 인덱스 (0 기반).
+    - `columnIndex` (integer, 필수): 병합의 시작 열 인덱스 (0 기반).
+    - `rowSpan` (integer, 필수): 병합할 행 수.
+    - `columnSpan` (integer, 필수): 병합할 열 수.
+
+  </Accordion>
+
+  <Accordion title="google_docs/unmerge_table_cells">
+    **설명:** 이전에 병합된 표 셀을 개별 셀로 분리합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `tableStartIndex` (integer, 필수): 표의 시작 인덱스.
+    - `rowIndex` (integer, 필수): 병합된 셀의 행 인덱스 (0 기반).
+    - `columnIndex` (integer, 필수): 병합된 셀의 열 인덱스 (0 기반).
+    - `rowSpan` (integer, 필수): 병합된 셀이 차지하는 행 수.
+    - `columnSpan` (integer, 필수): 병합된 셀이 차지하는 열 수.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_inline_image">
+    **설명:** 공개 URL에서 Google 문서에 이미지를 삽입합니다. 이미지는 공개적으로 접근 가능해야 하고, 50MB 미만이며, PNG/JPEG/GIF 형식이어야 합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `uri` (string, 필수): 이미지의 공개 URL. 인증 없이 접근 가능해야 합니다.
+    - `index` (integer, 선택사항): 이미지를 삽입할 위치. 제공하지 않으면 문서 끝에 삽입됩니다. 기본값: `1`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_section_break">
+    **설명:** 서로 다른 서식을 가진 문서 섹션을 만들기 위해 섹션 나누기를 삽입합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `index` (integer, 필수): 섹션 나누기를 삽입할 위치.
+    - `sectionType` (string, 필수): 섹션 나누기의 유형. 옵션: `CONTINUOUS` (같은 페이지에 유지), `NEXT_PAGE` (새 페이지 시작).
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_header">
+    **설명:** 문서의 머리글을 만듭니다. insert_text를 사용하여 머리글 내용을 추가할 수 있는 headerId를 반환합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `type` (string, 선택사항): 머리글 유형. 옵션: `DEFAULT`. 기본값: `DEFAULT`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_footer">
+    **설명:** 문서의 바닥글을 만듭니다. insert_text를 사용하여 바닥글 내용을 추가할 수 있는 footerId를 반환합니다.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `type` (string, 선택사항): 바닥글 유형. 옵션: `DEFAULT`. 기본값: `DEFAULT`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_header">
+    **설명:** 문서에서 머리글을 삭제합니다. headerId를 찾으려면 get_document를 사용하세요.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `headerId` (string, 필수): 삭제할 머리글 ID. get_document 응답에서 가져오세요.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_footer">
+    **설명:** 문서에서 바닥글을 삭제합니다. footerId를 찾으려면 get_document를 사용하세요.
+
+    **매개변수:**
+    - `documentId` (string, 필수): 문서 ID.
+    - `footerId` (string, 필수): 삭제할 바닥글 ID. get_document 응답에서 가져오세요.
+
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예제
+
+### 기본 Google Docs 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+
+# Google Docs 기능을 가진 에이전트 생성
+docs_agent = Agent(
+    role="문서 작성자",
+    goal="Google Docs 문서를 효율적으로 생성하고 관리",
+    backstory="Google Docs 문서 생성 및 편집 전문 AI 어시스턴트.",
+    apps=['google_docs']  # 모든 Google Docs 작업을 사용할 수 있습니다
+)
+
+# 새 문서 생성 작업
+create_doc_task = Task(
+    description="'프로젝트 상태 보고서'라는 제목으로 새 Google 문서를 만드세요",
+    agent=docs_agent,
+    expected_output="새 Google 문서 '프로젝트 상태 보고서'가 성공적으로 생성됨"
+)
+
+# 작업 실행
+crew = Crew(
+    agents=[docs_agent],
+    tasks=[create_doc_task]
+)
+
+crew.kickoff()
+```
+
+## 문제 해결
+
+### 일반적인 문제
+
+**인증 오류**
+
+- Google 계정이 Google Docs 액세스에 필요한 권한을 가지고 있는지 확인하세요.
+- OAuth 연결이 필요한 모든 범위(`https://www.googleapis.com/auth/documents`)를 포함하는지 확인하세요.
+
+**문서 ID 문제**
+
+- 문서 ID가 올바른지 다시 확인하세요.
+- 문서가 존재하고 계정에서 액세스할 수 있는지 확인하세요.
+
+### 도움 받기
+
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
+  Google Docs 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에
+  문의하세요.
+</Card>

@@ -1,0 +1,172 @@
+---
+title: بث Webhook
+description: "استخدام بث Webhook لإرسال الأحداث إلى webhook الخاص بك"
+icon: "webhook"
+mode: "wide"
+---
+
+## نظرة عامة
+
+يتيح لك بث أحداث Enterprise تلقي تحديثات webhook في الوقت الفعلي حول طواقمك وتدفقاتك المنشورة على CrewAI AMP، مثل استدعاءات النماذج واستخدام الأدوات وخطوات التدفق.
+
+## الاستخدام
+
+عند استخدام Kickoff API، أضف كائن `webhooks` إلى طلبك، على سبيل المثال:
+
+```json
+{
+  "inputs": { "foo": "bar" },
+  "webhooks": {
+    "events": ["crew_kickoff_started", "llm_call_started"],
+    "url": "https://your.endpoint/webhook",
+    "realtime": false,
+    "authentication": {
+      "strategy": "bearer",
+      "token": "my-secret-token"
+    }
+  }
+}
+```
+
+إذا تم تعيين `realtime` إلى `true`، يتم تسليم كل حدث بشكل فردي وفوري، على حساب أداء الطاقم/التدفق.
+
+## تنسيق Webhook
+
+يرسل كل webhook قائمة بالأحداث:
+
+```json
+{
+  "events": [
+    {
+      "id": "event-id",
+      "execution_id": "crew-run-id",
+      "timestamp": "2025-02-16T10:58:44.965Z",
+      "type": "llm_call_started",
+      "data": {
+        "model": "gpt-4",
+        "messages": [
+          { "role": "system", "content": "You are an assistant." },
+          { "role": "user", "content": "Summarize this article." }
+        ]
+      }
+    }
+  ]
+}
+```
+
+يختلف هيكل كائن `data` حسب نوع الحدث. راجع [قائمة الأحداث](https://github.com/crewAIInc/crewAI/tree/main/lib/crewai/src/crewai/events/types) على GitHub.
+
+نظراً لأن الطلبات تُرسل عبر HTTP، لا يمكن ضمان ترتيب الأحداث. إذا كنت تحتاج الترتيب، استخدم حقل `timestamp`.
+
+## الأحداث المدعومة
+
+يدعم CrewAI كلاً من أحداث النظام والأحداث المخصصة في بث أحداث Enterprise. تُرسل هذه الأحداث إلى نقطة نهاية webhook المُهيأة أثناء تنفيذ الطاقم والتدفق.
+
+### أحداث التدفق:
+
+- `flow_created`
+- `flow_started`
+- `flow_finished`
+- `flow_plot`
+- `method_execution_started`
+- `method_execution_finished`
+- `method_execution_failed`
+
+### أحداث الوكيل:
+
+- `agent_execution_started`
+- `agent_execution_completed`
+- `agent_execution_error`
+- `lite_agent_execution_started`
+- `lite_agent_execution_completed`
+- `lite_agent_execution_error`
+- `agent_logs_started`
+- `agent_logs_execution`
+- `agent_evaluation_started`
+- `agent_evaluation_completed`
+- `agent_evaluation_failed`
+
+### أحداث الطاقم:
+
+- `crew_kickoff_started`
+- `crew_kickoff_completed`
+- `crew_kickoff_failed`
+- `crew_train_started`
+- `crew_train_completed`
+- `crew_train_failed`
+- `crew_test_started`
+- `crew_test_completed`
+- `crew_test_failed`
+- `crew_test_result`
+
+### أحداث المهام:
+
+- `task_started`
+- `task_completed`
+- `task_failed`
+- `task_evaluation`
+
+### أحداث استخدام الأدوات:
+
+- `tool_usage_started`
+- `tool_usage_finished`
+- `tool_usage_error`
+- `tool_validate_input_error`
+- `tool_selection_error`
+- `tool_execution_error`
+
+### أحداث LLM:
+
+- `llm_call_started`
+- `llm_call_completed`
+- `llm_call_failed`
+- `llm_stream_chunk`
+
+### أحداث حواجز LLM:
+
+- `llm_guardrail_started`
+- `llm_guardrail_completed`
+
+### أحداث الذاكرة:
+
+- `memory_query_started`
+- `memory_query_completed`
+- `memory_query_failed`
+- `memory_save_started`
+- `memory_save_completed`
+- `memory_save_failed`
+- `memory_retrieval_started`
+- `memory_retrieval_completed`
+
+### أحداث المعرفة:
+
+- `knowledge_search_query_started`
+- `knowledge_search_query_completed`
+- `knowledge_search_query_failed`
+- `knowledge_query_started`
+- `knowledge_query_completed`
+- `knowledge_query_failed`
+
+### أحداث الاستدلال:
+
+- `agent_reasoning_started`
+- `agent_reasoning_completed`
+- `agent_reasoning_failed`
+
+تتطابق أسماء الأحداث مع ناقل الأحداث الداخلي. راجع GitHub للقائمة الكاملة للأحداث.
+
+يمكنك إصدار أحداثك المخصصة الخاصة، وسيتم تسليمها عبر تدفق webhook جنباً إلى جنب مع أحداث النظام.
+
+<CardGroup>
+  <Card
+    title="GitHub"
+    icon="github"
+    href="https://github.com/crewAIInc/crewAI/tree/main/src/crewai/utilities/events"
+  >
+    القائمة الكاملة للأحداث
+  </Card>
+  <Card title="تحتاج مساعدة؟" icon="headset" href="mailto:support@crewai.com">
+    تواصل مع فريق الدعم للمساعدة في تكامل webhook أو
+    استكشاف الأخطاء.
+  </Card>
+</CardGroup>
