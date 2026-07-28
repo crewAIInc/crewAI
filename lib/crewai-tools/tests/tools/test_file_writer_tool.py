@@ -110,7 +110,7 @@ def test_missing_required_fields(tool, temp_env):
 
 
 def test_missing_required_fields_via_run(tool, temp_env):
-    """The public entry point reports schema violations instead of raising."""
+    """The public entry point fails schema validation before reaching _run."""
     with pytest.raises(ValueError, match="validation failed"):
         tool.run(
             directory=temp_env["temp_dir"],

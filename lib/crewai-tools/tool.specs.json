@@ -9931,7 +9931,7 @@
       }
     },
     {
-      "description": "A tool that reads the content of a file. To use this tool, provide a 'file_path' parameter with the path to the file you want to read. Optionally, provide 'start_line' to start reading from a specific line and 'line_count' to limit the number of lines read.",
+      "description": "A tool that reads the content of a file. To use this tool, provide a 'file_path' parameter with the path to the file you want to read. Reads are confined to the tool's allowed directory; a path that resolves outside it is rejected. Optionally, provide 'start_line' to start reading from a specific line and 'line_count' to limit the number of lines read.",
       "env_vars": [],
       "humanized_name": "Read a file's content",
       "init_params_schema": {
@@ -10058,7 +10058,7 @@
       }
     },
     {
-      "description": "A tool to write content to a specified file. Accepts filename, content, and optionally a directory path and overwrite flag as input.",
+      "description": "A tool to write content to a specified file. Accepts filename, content, and optionally a directory path and overwrite flag as input. Writes are confined to the tool's allowed directory; a filename or directory that resolves outside it is rejected.",
       "env_vars": [],
       "humanized_name": "File Writer Tool",
       "init_params_schema": {

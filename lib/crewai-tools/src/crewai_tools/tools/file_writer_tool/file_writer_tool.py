@@ -81,7 +81,7 @@ class FileWriterTool(BaseTool):
     """
 
     name: str = "File Writer Tool"
-    description: str = "A tool to write content to a specified file. Accepts filename, content, and optionally a directory path and overwrite flag as input."
+    description: str = "A tool to write content to a specified file. Accepts filename, content, and optionally a directory path and overwrite flag as input. Writes are confined to the tool's allowed directory; a filename or directory that resolves outside it is rejected."
     args_schema: type[BaseModel] = FileWriterToolInput
     base_dir: str | None = None
     encoding: str = "utf-8"

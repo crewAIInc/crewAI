@@ -91,7 +91,7 @@ class FileReadTool(BaseTool):
     """
 
     name: str = "Read a file's content"
-    description: str = "A tool that reads the content of a file. To use this tool, provide a 'file_path' parameter with the path to the file you want to read. Optionally, provide 'start_line' to start reading from a specific line and 'line_count' to limit the number of lines read."
+    description: str = "A tool that reads the content of a file. To use this tool, provide a 'file_path' parameter with the path to the file you want to read. Reads are confined to the tool's allowed directory; a path that resolves outside it is rejected. Optionally, provide 'start_line' to start reading from a specific line and 'line_count' to limit the number of lines read."
     args_schema: type[BaseModel] = FileReadToolSchema
     file_path: str | None = None
     base_dir: str | None = None
@@ -124,7 +124,7 @@ class FileReadTool(BaseTool):
         if file_path is not None:
             display_path = format_path_for_display(file_path, base_dir)
             kwargs["description"] = (
-                f"A tool that reads file content. The default file is {display_path}, which is read when 'file_path' is omitted. You can also provide a different 'file_path' parameter to read another file, and specify 'start_line' and 'line_count' to read specific parts of the file."
+                f"A tool that reads file content. The default file is {display_path}, which is read when 'file_path' is omitted. You can also provide a different 'file_path' parameter to read another file, though reads are confined to the tool's allowed directory and a path that resolves outside it is rejected. Specify 'start_line' and 'line_count' to read specific parts of the file."
             )
 
         super().__init__(**kwargs)
