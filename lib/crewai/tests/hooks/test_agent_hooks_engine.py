@@ -8,11 +8,15 @@ unavailable.
 
 from __future__ import annotations
 
+import asyncio
+import json
+import threading
 import types
 from typing import Any
 
 from crewai.hooks.agent_hooks_engine import (
     HAS_AGENT_HOOKS,
+    _EmitterLoop,
     _agent_ids,
     _blocked_result,
     _json_safe,
@@ -75,6 +79,10 @@ def _agent(aid: str = "agent-1", role: str = "tester") -> Any:
     return types.SimpleNamespace(id=aid, role=role)
 
 
+def _flow(fid: str = "flow-1") -> Any:
+    return types.SimpleNamespace(id=fid)
+
+
 def _llm(model: str = "gpt-test") -> Any:
     return types.SimpleNamespace(model=model)
 
@@ -87,13 +95,15 @@ def _tool_ctx(
     name: str = "web_search",
     tool_input: dict[str, Any] | None = None,
     tool_result: str | None = None,
+    agent: Any = None,
+    crew: Any = None,
 ) -> ToolCallHookContext:
     return ToolCallHookContext(
         tool_name=name,
         tool_input=tool_input if tool_input is not None else {"q": "x"},
         tool=_tool(name),
-        agent=_agent(),
-        crew=_crew(),
+        agent=agent if agent is not None else _agent(),
+        crew=crew if crew is not None else _crew(),
         tool_result=tool_result,
     )
 
@@ -148,6 +158,27 @@ class _TransformAt:
                 transform=Transform(path=self.path, value=self.value),
             )
         return Verdict(decision=Decision.ALLOW)
+
+
+def _plain(ctx: Any) -> dict[str, Any]:
+    """Render an agent-hooks ``AgentContext`` as a plain nested ``dict``."""
+    return json.loads(json.dumps(dict(ctx), default=str))
+
+
+class _Capture:
+    """Records the exact ``AgentContext`` each interceptor call receives, then allows."""
+
+    def __init__(self) -> None:
+        self.seen: list[dict[str, Any]] = []
+
+    def intercept(self, ctx: Any) -> Any:
+        from agent_hooks import Decision, Verdict
+
+        self.seen.append(_plain(ctx))
+        return Verdict(decision=Decision.ALLOW)
+
+    def at(self, point: str) -> list[dict[str, Any]]:
+        return [c for c in self.seen if c.get("interception_point") == point]
 
 
 # --- helper units (no agent-hooks needed) -----------------------------------
@@ -230,6 +261,34 @@ class TestHelpers:
         assert _registered_tools(crew) == ["a", "b"]
 
 
+# --- emitter loop internals -------------------------------------------------
+
+
+class TestEmitterLoop:
+    def test_close_releases_pending_emission(self):
+        """``close()`` unblocks a thread waiting on a never-resolving emission."""
+        loop = _EmitterLoop()
+        started = threading.Event()
+
+        async def hang() -> None:
+            started.set()
+            await asyncio.Event().wait()  # never resolves
+
+        def worker() -> None:
+            try:
+                loop.run(hang(), None)  # emit_timeout=None -> blocks until close
+            except BaseException:
+                pass
+
+        t = threading.Thread(target=worker, name="pending-emit", daemon=True)
+        t.start()
+        assert started.wait(timeout=5.0), "emission never started"
+
+        loop.close()  # must release the blocked emission
+        t.join(timeout=2.0)
+        assert not t.is_alive()
+
+
 # --- tool-call governance (through the real seam) ---------------------------
 
 
@@ -294,6 +353,46 @@ class TestToolGovernance:
         finally:
             engine.close()
 
+    def test_cyclic_tool_input_fails_closed(self):
+        """A cyclic ``tool_input`` is normalized, not passed through ungoverned.
+
+        A self-referential arg would raise ``RecursionError`` while the context
+        is built; the engine must still let the policy block the call (fail
+        closed) instead of proceeding ungoverned.
+        """
+        engine = use_agent_hooks(_DenyAt("pre_tool_call", "policy: tool blocked"))
+        try:
+            assert run_before_tool_call_hooks(_tool_ctx()) is True  # control deny
+            cyclic: dict[str, Any] = {}
+            cyclic["self"] = cyclic
+            assert run_before_tool_call_hooks(_tool_ctx(tool_input=cyclic)) is True
+        finally:
+            engine.close()
+
+    def test_pre_and_post_tool_call_ids_correlate(self):
+        """The separate pre/post contexts for one invocation share a call id."""
+        cap = _Capture()
+        engine = use_agent_hooks(cap)
+        crew = _crew("crew-1")
+        agent = _agent("agent-A")
+        try:
+            run_before_tool_call_hooks(
+                _tool_ctx(tool_input={"q": "x"}, agent=agent, crew=crew)
+            )
+            run_after_tool_call_hooks(
+                _tool_ctx(
+                    tool_input={"q": "x"},
+                    tool_result="done",
+                    agent=agent,
+                    crew=crew,
+                )
+            )
+            pre_id = cap.at("pre_tool_call")[0]["tool_call"]["id"]
+            post_id = cap.at("post_tool_call")[0]["tool_call"]["id"]
+            assert pre_id == post_id
+        finally:
+            engine.close()
+
 
 # --- model-call governance (direct-call seam via dispatch) ------------------
 
@@ -338,6 +437,26 @@ class TestModelGovernance:
         finally:
             engine.close()
 
+    def test_post_model_call_exposes_requested_tool_calls(self):
+        """An interceptor at ``post_model_call`` sees the model's tool calls."""
+        cap = _Capture()
+        engine = use_agent_hooks(cap)
+        try:
+            requested = [{"id": "tc-1", "name": "shell", "args": {"cmd": "rm -rf /"}}]
+            ctx = types.SimpleNamespace(
+                messages=[{"role": "user", "content": "hi"}],
+                llm=_llm(),
+                agent=_agent(),
+                crew=_crew(),
+                response={"content": "", "tool_calls": requested},
+            )
+            dispatch(InterceptionPoint.POST_MODEL_CALL, ctx)
+            seen = cap.at("post_model_call")
+            assert seen, "post_model_call was not emitted"
+            assert seen[0]["response"]["tool_calls"] == requested
+        finally:
+            engine.close()
+
 
 # --- execution-boundary governance ------------------------------------------
 
@@ -370,6 +489,56 @@ class TestBoundaryGovernance:
             ctx = ExecutionStartContext(crew=_crew(), inputs={}, payload={})
             with pytest.raises(HookAborted):
                 dispatch(InterceptionPoint.EXECUTION_START, ctx)
+        finally:
+            engine.close()
+
+
+# --- session & identity scoping ---------------------------------------------
+
+
+@requires_ah
+class TestSessionScoping:
+    def test_builder_preserves_per_agent_identity(self):
+        """Different agents in one crew keep their own id in the record.
+
+        The first (agent-less) ``EXECUTION_START`` creates the cached session
+        builder; every later emission must still be attributed to the agent
+        that acted, not the session's first agent.
+        """
+        cap = _Capture()
+        engine = use_agent_hooks(cap)
+        crew = _crew("crew-1")
+        try:
+            dispatch(
+                InterceptionPoint.EXECUTION_START,
+                ExecutionStartContext(crew=crew, inputs={}, payload={}),
+            )
+            run_before_tool_call_hooks(_tool_ctx(agent=_agent("agent-A"), crew=crew))
+            run_before_tool_call_hooks(_tool_ctx(agent=_agent("agent-B"), crew=crew))
+            ids = [c["agent"]["id"] for c in cap.at("pre_tool_call")]
+            assert ids == ["agent-A", "agent-B"]
+        finally:
+            engine.close()
+
+    def test_distinct_flows_get_distinct_sessions(self):
+        """Each flow run maps to its own agent-hooks session."""
+        cap = _Capture()
+        engine = use_agent_hooks(cap)
+        try:
+            dispatch(
+                InterceptionPoint.INPUT,
+                InputContext(
+                    flow=_flow("flow-1"), inputs={"t": "1"}, payload={"t": "1"}
+                ),
+            )
+            dispatch(
+                InterceptionPoint.INPUT,
+                InputContext(
+                    flow=_flow("flow-2"), inputs={"t": "2"}, payload={"t": "2"}
+                ),
+            )
+            sessions = [c["session"]["id"] for c in cap.at("input")]
+            assert sessions == ["flow-1", "flow-2"]
         finally:
             engine.close()
 
