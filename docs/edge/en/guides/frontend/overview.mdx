@@ -44,10 +44,6 @@ React app  ──►  CopilotKit runtime (/api/copilotkit)  ──►  CrewAI se
 This guide covers the **self-hosted** path: you run the CrewAI agent server yourself with `ag-ui-crewai`, and it works locally with no managed service. CopilotKit also offers a **managed** path (CopilotKit Cloud / Enterprise Intelligence) with hosted threads and an inspector — see the [CopilotKit CrewAI quickstart](https://docs.copilotkit.ai/crewai-crews/quickstart) if you want that instead. The frontend code in this section is the same either way; only how the agent is hosted and registered differs.
 </Note>
 
-<Note>
-**Versions.** These guides use `ag-ui-crewai` (the AG-UI-native CrewAI package, imported as `ag_ui_crewai`), `@ag-ui/crewai`, and `@copilotkit/*` at **1.61.2+** (the `@copilotkit/react-core/v2` API). CopilotKit's own CrewAI docs may show the older `copilotkit` / `copilotkit.crewai` Python package and the pre-v2 hooks; the two are different generations, so pin the versions above when following this section.
-</Note>
-
 ## Integration guide
 
 <Steps>
