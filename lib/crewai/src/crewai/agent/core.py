@@ -83,7 +83,7 @@ from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
 from crewai.skills.loader import load_skills
-from crewai.skills.models import Skill as SkillModel
+from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.state.checkpoint_config import CheckpointConfig, apply_checkpoint
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.types.callback import SerializableCallable
@@ -480,8 +480,31 @@ class Agent(BaseAgent):
 
         self.skills = cast(
             list[Path | SkillModel | str] | None,
-            load_skills(items, source=self) or None,
+            load_skills(items, source=self, activate=False) or None,
         )
+
+    def _add_skill_loader_tool(
+        self,
+        tools: list[BaseTool],
+        task: Task | None = None,
+    ) -> list[BaseTool]:
+        """Add the internal loader used for request-scoped skill disclosure."""
+        from crewai.skills.tool import LoadSkillTool, create_skill_loader_tool
+
+        tools = [tool for tool in tools if not isinstance(tool, LoadSkillTool)]
+
+        skill_models = [
+            skill for skill in self.skills or [] if isinstance(skill, SkillModel)
+        ]
+        loader = create_skill_loader_tool(
+            skill_models,
+            source=self,
+            task=task,
+            reserved_names=[tool.name for tool in tools],
+        )
+        if loader is None:
+            return tools
+        return [*tools, loader]
 
     def _is_any_available_memory(self) -> bool:
         """Check if unified memory is available (agent or crew)."""
@@ -557,11 +580,11 @@ class Agent(BaseAgent):
         return apply_training_data(self, task_prompt)
 
     def _emit_skill_usage(self, task: Task) -> None:
-        """Emit one SkillUsedEvent per skill injected into this task's prompt.
+        """Emit usage for always-on skills injected into this task's prompt.
 
-        Skills are agent-scoped and rendered into the prompt on every execution,
-        so this is the runtime usage signal traces need — attributing each skill
-        to the agent and task that used it.
+        Metadata-only skills emit from ``LoadSkillTool`` if the model selects
+        them. This method covers explicitly activated and inline skills, whose
+        instructions are rendered on every execution.
 
         Args:
             task: The task whose prompt the skills are being applied to.
@@ -570,7 +593,10 @@ class Agent(BaseAgent):
             return
 
         for skill in self.skills:
-            if not isinstance(skill, SkillModel):
+            if (
+                not isinstance(skill, SkillModel)
+                or skill.disclosure_level < INSTRUCTIONS
+            ):
                 continue
             crewai_event_bus.emit(
                 self,
@@ -1050,6 +1076,8 @@ class Agent(BaseAgent):
         Returns:
             A tuple of (prompt, stop_words, rpm_limit_fn).
         """
+        from crewai.skills.tool import LoadSkillTool
+
         use_native_tool_calling = self._supports_native_tool_calling(raw_tools)
 
         prompt = Prompts(
@@ -1060,6 +1088,10 @@ class Agent(BaseAgent):
             system_template=self.system_template,
             prompt_template=self.prompt_template,
             response_template=self.response_template,
+            skill_loader_tool_name=next(
+                (tool.name for tool in raw_tools if isinstance(tool, LoadSkillTool)),
+                None,
+            ),
         ).task_execution()
 
         stop_words = [I18N_DEFAULT.slice("observation")]
@@ -1082,7 +1114,8 @@ class Agent(BaseAgent):
         Returns:
             An instance of the CrewAgentExecutor class.
         """
-        raw_tools: list[BaseTool] = tools or self.tools or []
+        configured_tools = tools if tools is not None else self.tools or []
+        raw_tools = self._add_skill_loader_tool(list(configured_tools), task=task)
         parsed_tools = parse_tools(raw_tools)
 
         prompt, stop_words, rpm_limit_fn = self._build_execution_prompt(raw_tools)
@@ -1421,6 +1454,9 @@ class Agent(BaseAgent):
         Returns:
             Tuple of (executor, inputs, agent_info, parsed_tools) ready for execution.
         """
+        if self.tools_handler:
+            self.tools_handler.last_used_tool = None
+
         if self.apps:
             platform_tools = self.get_platform_tools(self.apps)
             if platform_tools:
@@ -1434,7 +1470,7 @@ class Agent(BaseAgent):
                     self.tools = []
                 self.tools.extend(mcps)
 
-        raw_tools: list[BaseTool] = self.tools or []
+        raw_tools = list(self.tools or [])
 
         agent_memory = getattr(self, "memory", None)
         if agent_memory is not None:
@@ -1447,6 +1483,7 @@ class Agent(BaseAgent):
                 if sanitize_tool_name(mt.name) not in existing_names
             )
 
+        raw_tools = self._add_skill_loader_tool(raw_tools)
         parsed_tools = parse_tools(raw_tools)
 
         agent_info = {
