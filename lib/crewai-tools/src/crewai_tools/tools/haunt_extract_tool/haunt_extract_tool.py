@@ -23,6 +23,8 @@ class HauntExtractToolInput(BaseModel):
 
 
 class HauntExtractTool(BaseTool):
+    """Extract requested data from a public web page through the Haunt API."""
+
     name: str = "HauntExtractTool"
     description: str = (
         "Extract structured data or clean text from a public web page using the "
@@ -43,6 +45,16 @@ class HauntExtractTool(BaseTool):
         self._api_key = api_key or os.environ.get("HAUNT_API_KEY")
 
     def _run(self, url: str, prompt: str) -> str:
+        """Return extracted content or a structured terminal failure.
+
+        Args:
+            url: Public HTTP(S) page to read.
+            prompt: Plain-language description of the requested data.
+
+        Returns:
+            Extracted JSON or text on success, or a JSON failure object when
+            Haunt reports that the page could not be read safely.
+        """
         if not self._api_key:
             raise ValueError(
                 "Haunt API key missing. Pass api_key or set the HAUNT_API_KEY "
@@ -57,16 +69,23 @@ class HauntExtractTool(BaseTool):
             headers={"X-API-Key": self._api_key, "Content-Type": "application/json"},
             json=body,
             timeout=self.timeout,
+            allow_redirects=False,
         )
         try:
             data = response.json()
         except ValueError:
-            data = {}
-        if not response.ok:
+            data = None
+        if not 200 <= response.status_code < 300:
+            detail = None
+            if isinstance(data, dict):
+                detail = data.get("message") or data.get("error")
+            message = f"Haunt API error {response.status_code}"
+            if detail:
+                message += f": {detail}"
+            raise ValueError(message)
+        if not isinstance(data, dict):
             raise ValueError(
-                data.get("message")
-                or data.get("error")
-                or f"Haunt API error {response.status_code}"
+                f"Haunt API returned invalid JSON for status {response.status_code}"
             )
         if not data.get("success"):
             # Honest failure: give the agent a reason code, never invented content.

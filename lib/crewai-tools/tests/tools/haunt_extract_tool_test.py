@@ -29,6 +29,8 @@ def test_haunt_extract_success_returns_json():
     assert json.loads(result) == {"title": "Example Domain"}
     body = mock_post.call_args.kwargs["json"]
     assert body == {"url": "https://example.com", "prompt": "the page title"}
+    assert mock_post.call_args.kwargs["headers"]["X-API-Key"] == "haunt_test_key"
+    assert mock_post.call_args.kwargs["allow_redirects"] is False
 
 
 def test_haunt_extract_markdown_unwrapped():
@@ -100,3 +102,35 @@ def test_non_json_error_response_raises_cleanly():
     ):
         with pytest.raises(ValueError, match="502"):
             tool.run(url="https://example.com", prompt="the page title")
+
+
+def test_redirect_response_is_rejected():
+    tool = HauntExtractTool(api_key="haunt_test_key")
+    with patch(
+        "crewai_tools.tools.haunt_extract_tool.haunt_extract_tool.requests.post",
+        return_value=_response(302, {"success": True, "data": {"title": "Wrong host"}}),
+    ):
+        with pytest.raises(ValueError, match="Haunt API error 302"):
+            tool.run(url="https://example.com", prompt="the page title")
+
+
+@pytest.mark.parametrize("payload", [["unexpected"], "unexpected", 42, None])
+def test_non_object_json_response_is_rejected(payload):
+    tool = HauntExtractTool(api_key="haunt_test_key")
+    with patch(
+        "crewai_tools.tools.haunt_extract_tool.haunt_extract_tool.requests.post",
+        return_value=_response(200, payload),
+    ):
+        with pytest.raises(ValueError, match="invalid JSON for status 200"):
+            tool.run(url="https://example.com", prompt="the page title")
+
+
+def test_invalid_url_is_rejected_before_request():
+    tool = HauntExtractTool(api_key="haunt_test_key")
+    with patch(
+        "crewai_tools.tools.haunt_extract_tool.haunt_extract_tool.requests.post"
+    ) as mock_post:
+        with pytest.raises(ValueError):
+            tool.run(url="file:///etc/passwd", prompt="the page title")
+
+    mock_post.assert_not_called()
