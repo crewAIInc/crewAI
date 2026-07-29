@@ -1817,6 +1817,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     original_tool
                     and hasattr(original_tool, "result_as_answer")
                     and original_tool.result_as_answer
+                    # A failed tool must not become the final answer.
+                    and execution_result.get("tool_failure") is None
                 ):
                     self.state.current_answer = AgentFinish(
                         thought="Tool result is the final answer",
@@ -1855,6 +1857,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 original_tool
                 and hasattr(original_tool, "result_as_answer")
                 and original_tool.result_as_answer
+                # A failed tool must not become the final answer.
+                and execution_result.get("tool_failure") is None
             ):
                 # Set the result as the final answer
                 self.state.current_answer = AgentFinish(
@@ -2124,6 +2128,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             "result": result,
             "from_cache": from_cache,
             "original_tool": original_tool,
+            "tool_failure": tool_failure,
         }
 
     @staticmethod

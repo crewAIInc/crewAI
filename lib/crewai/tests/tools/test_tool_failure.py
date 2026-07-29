@@ -1079,6 +1079,119 @@ class TestHookBlockDoesNotInheritCachedFailure:
         assert agent.last_tool_failures == []
 
 
+class TestCrewScopeReachesTheFinishedEvent:
+    """`ToolUsage` needs the crew, or crew-level ignore only half applies."""
+
+    def test_crew_ignore_suppresses_the_finished_event_flag(self) -> None:
+        agent = Agent(
+            role="Slack Messenger",
+            goal="post a message",
+            backstory="b",
+            llm=ScriptedLLM(_slack_steps()),
+            tools=[SlackTool()],
+        )
+        task = Task(description="post to slack", expected_output="c", agent=agent)
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            tool_failure_policy=ToolFailurePolicy.IGNORE,
+        )
+
+        finished: list[ToolUsageFinishedEvent] = []
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(ToolUsageFinishedEvent)
+            def _(source: Any, event: ToolUsageFinishedEvent) -> None:
+                finished.append(event)
+
+            crew.kickoff()
+            crewai_event_bus.flush(timeout=10.0)
+
+        slack = [e for e in finished if e.tool_name == "slackbot_send_message"]
+        assert slack
+        assert all(e.failure is None for e in slack)
+
+    def test_tool_usage_accepts_and_stores_crew(self) -> None:
+        from crewai.tools.tool_usage import ToolUsage
+
+        agent = Agent(role="r", goal="g", backstory="b")
+        crew = Crew(agents=[agent], tasks=[])
+        usage = ToolUsage(
+            tools_handler=None,
+            tools=[],
+            task=None,
+            function_calling_llm=None,  # type: ignore[arg-type]
+            agent=agent,
+            crew=crew,
+        )
+        assert usage.crew is crew
+
+
+class TestFailedToolIsNotTheFinalAnswer:
+    """result_as_answer must not turn an error into the task's output."""
+
+    @staticmethod
+    def _agent(policy: ToolFailurePolicy) -> Agent:
+        class AnswerSlack(SlackTool):
+            result_as_answer: bool = True
+
+        return Agent(
+            role="Slack Messenger",
+            goal="post a message",
+            backstory="b",
+            llm=ScriptedLLM(_slack_steps()),
+            tools=[AnswerSlack()],
+            tool_failure_policy=policy,
+        )
+
+    def test_failure_does_not_short_circuit_under_warn(self) -> None:
+        agent = self._agent(ToolFailurePolicy.WARN)
+        task = Task(description="post to slack", expected_output="c", agent=agent)
+        result = Crew(agents=[agent], tasks=[task]).kickoff()
+
+        assert "Slack rejected the message" not in result.raw
+        assert result.raw == "I could not post the message."
+        assert result.has_tool_failures
+
+    def test_successful_result_as_answer_still_short_circuits(self) -> None:
+        class AnswerEcho(WorkingTool):
+            result_as_answer: bool = True
+
+        agent = Agent(
+            role="Echoer",
+            goal="echo",
+            backstory="b",
+            llm=ScriptedLLM(
+                [
+                    'Thought: go\nAction: echo\nAction Input: {"text": "hi"}',
+                    "Thought: done\nFinal Answer: unused.",
+                ]
+            ),
+            tools=[AnswerEcho()],
+        )
+        task = Task(description="echo", expected_output="c", agent=agent)
+        result = Crew(agents=[agent], tasks=[task]).kickoff()
+
+        assert result.raw == "echoed: hi"
+        assert not result.has_tool_failures
+
+
+class TestDeliberateStopIsNotAnUnknownError:
+    def test_executor_loops_do_not_route_it_to_handle_unknown_error(self) -> None:
+        """Verbose runs must not print 'An unknown error occurred' for a stop."""
+        import inspect
+
+        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+
+        for func in (CrewAgentExecutor.invoke, CrewAgentExecutor.ainvoke):
+            source = inspect.getsource(func)
+            if "handle_unknown_error" not in source:
+                continue
+            assert "ToolExecutionFailedError" in source, (
+                f"{func.__qualname__} would report a deliberate stop as unknown"
+            )
+
+
 class TestMCPIsErrorPlumbing:
     """An MCP server flags a failed tool with isError on a 200 response."""
 

@@ -1802,6 +1802,9 @@ def execute_single_native_tool_call(
         and original_tool.result_as_answer
         and not error_event_emitted
         and not hook_blocked
+        # A declared failure is excluded for the same reason a raised one is:
+        # an error must not silently become the task's answer.
+        and tool_failure is None
     )
 
     return NativeToolCallResult(

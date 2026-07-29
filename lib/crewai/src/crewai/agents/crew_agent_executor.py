@@ -245,6 +245,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         color="red",
                     )
                 raise
+            except ToolExecutionFailedError:
+                # A deliberate stop, not an unknown error.
+                raise
             except Exception as e:
                 handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
                 raise
@@ -1097,6 +1100,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             "result": result,
             "from_cache": from_cache,
             "original_tool": original_tool,
+            "tool_failure": tool_failure,
         }
 
     def _append_tool_result_and_check_finality(
@@ -1127,6 +1131,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
             original_tool
             and hasattr(original_tool, "result_as_answer")
             and original_tool.result_as_answer
+            # A failed tool must not become the final answer.
+            and execution_result.get("tool_failure") is None
         ):
             return AgentFinish(
                 thought="Tool result is the final answer",
@@ -1165,6 +1171,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         content="Agent failed to reach a final answer. This is likely a bug - please report it.",
                         color="red",
                     )
+                raise
+            except ToolExecutionFailedError:
+                # A deliberate stop, not an unknown error.
                 raise
             except Exception as e:
                 handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)

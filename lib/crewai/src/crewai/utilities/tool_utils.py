@@ -86,6 +86,7 @@ async def aexecute_tool_and_check_finality(
         task=task,
         agent=agent,
         action=agent_action,
+        crew=crew,
     )
 
     tool_calling = tool_usage.parse_tool_calling(agent_action.text)
@@ -159,7 +160,9 @@ async def aexecute_tool_and_check_finality(
 
         return ToolResult(
             modified_result if modified_result is not None else tool_result,
-            tool.result_as_answer,
+            # A failed tool must not become the final answer -- the same
+            # exclusion the native paths already apply to raised errors.
+            tool.result_as_answer and tool_usage.last_failure is None,
         )
 
     tool_result = I18N_DEFAULT.errors("wrong_tool_name").format(
@@ -233,6 +236,7 @@ def execute_tool_and_check_finality(
         task=task,
         agent=agent,
         action=agent_action,
+        crew=crew,
     )
 
     tool_calling = tool_usage.parse_tool_calling(agent_action.text)
@@ -306,7 +310,9 @@ def execute_tool_and_check_finality(
 
         return ToolResult(
             modified_result if modified_result is not None else tool_result,
-            tool.result_as_answer,
+            # A failed tool must not become the final answer -- the same
+            # exclusion the native paths already apply to raised errors.
+            tool.result_as_answer and tool_usage.last_failure is None,
         )
 
     tool_result = I18N_DEFAULT.errors("wrong_tool_name").format(

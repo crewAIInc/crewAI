@@ -43,6 +43,7 @@ from crewai.utilities.string_utils import sanitize_tool_name
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.agents.tools_handler import ToolsHandler
+    from crewai.crew import Crew
     from crewai.lite_agent import LiteAgent
     from crewai.llm import LLM
     from crewai.task import Task
@@ -102,6 +103,7 @@ class ToolUsage:
         agent: BaseAgent | LiteAgent | None = None,
         action: Any = None,
         fingerprint_context: dict[str, str] | None = None,
+        crew: Crew | None = None,
     ) -> None:
         self._telemetry: Telemetry = Telemetry()
         self._run_attempts: int = 1
@@ -113,6 +115,7 @@ class ToolUsage:
         self.tools_handler = tools_handler
         self.tools = tools
         self.task = task
+        self.crew = crew
         self.action = action
         self.function_calling_llm = function_calling_llm
         self.fingerprint_context = fingerprint_context or {}
@@ -403,6 +406,9 @@ class ToolUsage:
                     if (
                         hasattr(available_tool, "result_as_answer")
                         and available_tool.result_as_answer
+                        # A failed tool must not become the final answer;
+                        # process_tool_results() reads this back independently.
+                        and self.last_failure is None
                     ):
                         result_as_answer = available_tool.result_as_answer
                         data["result_as_answer"] = result_as_answer
@@ -651,6 +657,9 @@ class ToolUsage:
                     if (
                         hasattr(available_tool, "result_as_answer")
                         and available_tool.result_as_answer
+                        # A failed tool must not become the final answer;
+                        # process_tool_results() reads this back independently.
+                        and self.last_failure is None
                     ):
                         result_as_answer = available_tool.result_as_answer
                         data["result_as_answer"] = result_as_answer
@@ -1023,6 +1032,7 @@ class ToolUsage:
                     tool=tool,
                     agent=self.agent,
                     task=self.task,
+                    crew=self.crew,
                 ),
             }
         )
