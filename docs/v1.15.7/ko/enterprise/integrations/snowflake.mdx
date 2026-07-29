@@ -1,0 +1,134 @@
+---
+title: Snowflake 연동
+description: "Snowflake 관리형 MCP 서버를 통해 CrewAI 에이전트를 Snowflake Cortex Analyst, Cortex Search 및 SQL 실행에 연결합니다."
+icon: "snowflake"
+mode: "wide"
+---
+
+## 개요
+
+[Snowflake 관리형 MCP 서버](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp)를 통해 CrewAI 에이전트를 Snowflake 데이터에 직접 연결하세요. Snowflake 연동을 사용하면 에이전트가 **Cortex Analyst**로 구조화된 데이터를 쿼리하고, **Cortex Search**로 비구조화된 데이터를 검색하며, 커넥터 코드를 작성하거나 호스팅할 필요 없이 웨어하우스에 대해 관리되는 SQL을 실행할 수 있습니다.
+
+내부적으로 Snowflake 연동은 CrewAI의 [Custom MCP Server](/ko/enterprise/guides/custom-mcp-server) 지원을 기반으로 하는 관리형 래퍼입니다. Snowflake는 [Model Context Protocol](https://modelcontextprotocol.io/) 엔드포인트를 통해 Cortex AI 기능을 노출하며, CrewAI가 이를 안전하게 연결합니다. Snowflake 측에서 노출하는 모든 도구 — Cortex Analyst, Cortex Search, SQL 실행, Cortex Agents 또는 사용자 정의 도구 — 가 크루에서 사용할 수 있게 됩니다.
+
+## 주요 기능
+
+<CardGroup cols={3}>
+  <Card title="Cortex Analyst" icon="chart-bar">
+    자연어로 질문하고 [Cortex Analyst](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-analyst)가 풍부한 시맨틱 모델을 사용하여 **구조화된** 데이터에 대해 SQL을 생성하고 실행하도록 합니다.
+  </Card>
+  <Card title="Cortex Search" icon="magnifying-glass">
+    Snowflake의 완전 관리형 검색 서비스인 [Cortex Search](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-search/cortex-search-overview)를 사용하여 RAG 및 지식 워크플로우를 위한 관련 **비구조화된** 데이터를 검색합니다.
+  </Card>
+  <Card title="SQL 실행" icon="database">
+    구성 가능한 읽기 전용 모드, 타임아웃 및 웨어하우스 선택을 통해 Snowflake 웨어하우스에 대해 관리되는 SQL 쿼리를 직접 실행합니다.
+  </Card>
+</CardGroup>
+
+연동이 MCP 서버가 게시하는 도구를 노출하므로, **Cortex Agents** 및 **사용자 정의 도구**(사용자 정의 함수 및 저장 프로시저)도 CrewAI 에이전트에 노출할 수 있습니다.
+
+## 사전 준비 사항
+
+Snowflake 연동을 사용하기 전에 다음을 확인하십시오:
+
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
+- Cortex AI 기능에 액세스할 수 있는 Snowflake 계정
+- 노출하려는 도구가 구성된 [Snowflake 관리형 MCP 서버](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp)
+- MCP 서버 및 기본 객체에 대한 적절한 Snowflake 권한(USAGE/SELECT)
+
+## Snowflake MCP 서버 설정
+
+Snowflake 관리형 MCP 서버는 Snowflake 계정 내에서 실행되며 CrewAI와 같은 외부 클라이언트에서 사용할 수 있는 도구를 정의합니다. [`CREATE MCP SERVER`](https://docs.snowflake.com/en/sql-reference/sql/create-mcp-server) 명령을 사용하여 노출하려는 Cortex Search 서비스, Cortex Analyst 시맨틱 뷰 및 SQL 도구를 나열하여 생성합니다.
+
+```sql
+CREATE MCP SERVER my_mcp_server
+  FROM SPECIFICATION $$
+    tools:
+      - name: "sales_analyst"
+        type: "CORTEX_ANALYST"
+        identifier: "MY_DATABASE.MY_SCHEMA.sales_semantic_view"
+        description: "Answer questions about sales metrics"
+      - name: "docs_search"
+        type: "CORTEX_SEARCH_SERVICE_QUERY"
+        identifier: "MY_DATABASE.MY_SCHEMA.support_docs_search"
+        description: "Search internal support documentation"
+      - name: "run_sql"
+        type: "SQL_EXECUTION"
+        description: "Execute read-only SQL queries"
+  $$;
+```
+
+<Note>
+MCP 엔드포인트는 `https://<account_URL>/api/v2/databases/{database}/schemas/{schema}/mcp-servers/{name}` 형식을 따릅니다. CrewAI는 연동 구성 시 제공하는 **계정 URL**, **데이터베이스**, **스키마** 및 **MCP 서버 이름**을 사용하여 이 URL을 자동으로 구성합니다.
+</Note>
+
+Cortex Agents, 사용자 정의 도구, 응답 크기 제한 및 거버넌스 옵션을 포함한 전체 사양은 [Snowflake 관리형 MCP 서버 문서](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp)를 참조하세요.
+
+## CrewAI AMP에서 Snowflake 연결
+
+<Frame>
+    <img src="/images/enterprise/snowflake-configure.png" alt="CrewAI AMP에서 Snowflake 연동 구성" />
+</Frame>
+
+<Steps>
+    <Step title="도구 및 연동 열기">
+        CrewAI AMP 왼쪽 사이드바에서 **도구 및 연동**으로 이동하고, 애플리케이션 목록에서 **Snowflake**를 찾아 구성 패널을 엽니다.
+    </Step>
+
+    <Step title="연결 세부 정보 제공">
+        CrewAI가 Snowflake MCP 서버에 연결하는 데 사용하는 연결 필드를 채웁니다:
+
+        | 필드 | 필수 | 설명 |
+        |------|------|------|
+        | **이름** | 예 | 이 연결의 설명적 이름(기본값: `Snowflake`). |
+        | **설명** | 아니오 | 이 연결이 제공하는 내용에 대한 선택적 요약. |
+        | **계정 URL** | 예 | Snowflake 계정 URL, 예: `xy12345.us-east-1.snowflakecomputing.com`. |
+        | **데이터베이스** | 예 | MCP 서버가 포함된 데이터베이스(예: `MY_DATABASE`). |
+        | **스키마** | 예 | MCP 서버가 포함된 스키마(예: `MY_SCHEMA`). |
+        | **MCP 서버 이름** | 예 | Snowflake에서 생성한 MCP 서버 객체의 이름(예: `MY_MCP_SERVER`). |
+    </Step>
+
+    <Step title="인증 방법 선택">
+        CrewAI가 Snowflake에 인증하는 방법을 선택합니다. **OAuth**가 권장됩니다.
+
+        - **OAuth 사용** — 자격 증명을 공유하지 않고 토큰 기반 인증을 위해 OAuth 2.0을 사용하여 안전하게 연결합니다. CrewAI가 전체 인증 흐름을 처리하고 자동으로 토큰을 갱신합니다. 양식에 표시된 **리디렉트 URI**(`https://oauth.crewai.com/oauth/add`)를 복사하여 Snowflake [OAuth 보안 연동](https://docs.snowflake.com/en/user-guide/oauth-custom)에 인증된 리디렉트 URI로 등록하세요.
+        - **개인 액세스 토큰 사용** — Snowflake 계정 설정에서 생성한 [프로그래밍 방식 액세스 토큰](https://docs.snowflake.com/en/user-guide/programmatic-access-tokens)을 사용하여 인증합니다. 노출을 제한하기 위해 토큰에 최소 권한 역할을 할당하세요.
+    </Step>
+
+    <Step title="인증">
+        **인증**을 클릭합니다. OAuth의 경우 Snowflake로 리디렉션되어 액세스를 승인합니다. 인증되면 Snowflake 서버가 연결 목록에 나타나고 해당 도구를 크루에서 사용할 수 있게 됩니다.
+    </Step>
+</Steps>
+
+<Tip>
+OAuth를 사용하면 각 사용자가 개별적으로 인증하며 쿼리는 해당 Snowflake `DEFAULT_ROLE`로 실행됩니다. 연결하는 사용자에게 기본 역할과 웨어하우스가 설정되어 있는지 확인하세요(`ALTER USER <username> SET DEFAULT_ROLE = '<role>' DEFAULT_WAREHOUSE = '<warehouse>'`). 그래야 Cortex Analyst 및 SQL 도구에 실행할 컴퓨팅이 있습니다.
+</Tip>
+
+## 크루에서 Snowflake 도구 사용
+
+연결되면 MCP 서버가 노출하는 도구가 **도구 및 연동** 페이지에서 기본 연결과 함께 표시됩니다. 다음을 수행할 수 있습니다:
+
+- 다른 CrewAI 도구처럼 크루의 **에이전트에 도구를 할당**합니다.
+- **가시성을 관리**하여 어떤 팀원이 연결을 사용할 수 있는지 제어합니다.
+- 연결 목록에서 언제든지 연결을 **편집하거나 제거**합니다.
+
+이제 에이전트가 Cortex Analyst에 메트릭을 요청하고, 문서에 대해 Cortex Search를 실행하고, SQL을 실행할 수 있으며 — 결과가 자동으로 추론에 반영됩니다.
+
+<Warning>
+Snowflake는 MCP 서버에 거버넌스를 적용합니다: 역할 기반 액세스 제어가 사용자가 발견하고 호출할 수 있는 도구를 결정하며, 응답 크기, 도구 수(서버당 최대 50개) 및 재귀 깊이에 제한이 적용됩니다. 도구 호출이 실패하면 연결하는 사용자의 역할에 MCP 서버 및 기본 객체에 대한 필수 권한이 있는지 확인하세요.
+</Warning>
+
+## 자세히 알아보기
+
+<CardGroup cols={2}>
+  <Card title="Snowflake 관리형 MCP 서버" icon="snowflake" href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp">
+    MCP 서버를 생성하고 관리하기 위한 공식 Snowflake 문서.
+  </Card>
+  <Card title="CrewAI의 Custom MCP 서버" icon="plug" href="/ko/enterprise/guides/custom-mcp-server">
+    CrewAI가 모든 MCP 서버에 연결하는 방법을 알아보세요. Snowflake 연동이 기반으로 하는 기초입니다.
+  </Card>
+</CardGroup>
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Snowflake 연동 또는 문제 해결에 대해 지원팀에 문의하세요.
+</Card>

@@ -55,6 +55,71 @@ if TYPE_CHECKING:
 _create_plus_client_hook: Callable[[], Any] | None = None
 
 
+def resolve_plus_client(default: Callable[[], Any]) -> Any:
+    """Return the CrewAI AMP client to use, or build ``default``.
+
+    Hosted runtimes install a client of their own through
+    ``_create_plus_client_hook``, authenticated for the environment they run in.
+    Every registry lookup resolves through here so they all share that client.
+
+    Args:
+        default: Builds the client to use when no hook is installed. A callable
+            rather than a value so credential lookups that raise when absent are
+            only evaluated when they're actually needed.
+
+    Returns:
+        A CrewAI AMP client.
+    """
+    if callable(_create_plus_client_hook):
+        return _create_plus_client_hook()
+    return default()
+
+
+def resolve_plus_response(response: Any) -> Any:
+    """Return ``response``, awaiting it first when the client is async.
+
+    Args:
+        response: A response, or an awaitable resolving to one.
+
+    Returns:
+        The resolved response.
+
+    Raises:
+        TypeError: If the awaitable is already bound to a loop (a Task or
+            Future), which can't be resolved synchronously.
+    """
+    if not inspect.isawaitable(response):
+        return response
+
+    if isinstance(response, asyncio.Future):
+        raise TypeError(
+            "CrewAI AMP clients must return a coroutine, not a Task or Future "
+            "already bound to a running loop."
+        )
+
+    # asyncio.run() takes a coroutine specifically, while isawaitable() also
+    # covers custom __await__ objects, so wrap rather than passing it through.
+    async def await_response() -> Any:
+        return await response
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    # asyncio.run() refuses to nest inside a running loop, so hand the coroutine
+    # to a worker thread with a loop of its own — carrying a copy of the caller's
+    # context, since a fresh thread would otherwise start with empty ContextVars
+    # and a client reading runtime state (the platform token, flow context) would
+    # see defaults.
+    if loop and loop.is_running():
+        ctx = contextvars.copy_context()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(ctx.run, asyncio.run, await_response()).result()
+
+    return asyncio.run(await_response())
+
+
 class SummaryContent(TypedDict):
     """Structure for summary content entries.
 
@@ -1127,27 +1192,15 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
     if from_repository:
         import importlib
 
-        if callable(_create_plus_client_hook):
-            client = _create_plus_client_hook()
-        else:
+        def build_default_client() -> Any:
             from crewai.auth.token import get_auth_token
             from crewai.plus_api import PlusAPI
 
-            client = PlusAPI(api_key=get_auth_token())
-        _print_current_organization()
-        response = client.get_agent(from_repository)
-        if inspect.isawaitable(response):
-            coro = response
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = None
+            return PlusAPI(api_key=get_auth_token())
 
-            if loop and loop.is_running():
-                with concurrent.futures.ThreadPoolExecutor() as pool:
-                    response = pool.submit(asyncio.run, coro).result()  # type: ignore[arg-type]
-            else:
-                response = asyncio.run(coro)  # type: ignore[arg-type]
+        client = resolve_plus_client(build_default_client)
+        _print_current_organization()
+        response = resolve_plus_response(client.get_agent(from_repository))
         if response.status_code == 404:
             raise AgentRepositoryError(
                 f"Agent {from_repository} does not exist, make sure the name is correct or the agent is available on your organization."
@@ -1161,10 +1214,18 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
             )
 
         agent = response.json()
+        skill_versions = agent.get("skill_versions") or []
         for key, value in agent.items():
             if value is None:
                 continue
-            if key == "tools":
+            if key == "skill_versions":
+                # Folded into the skill refs below, and not an Agent field.
+                continue
+            if key == "skills":
+                if not value:
+                    continue
+                attributes[key] = _pin_skill_refs(value, skill_versions)
+            elif key == "tools":
                 attributes[key] = []
                 for tool in value:
                     try:
@@ -1182,11 +1243,46 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                         raise AgentRepositoryError(
                             f"Tool {tool['name']} could not be loaded: {e}"
                         ) from e
-            elif key == "skills" and value == []:
-                continue
             else:
                 attributes[key] = value
     return attributes
+
+
+def _pin_skill_refs(refs: list[Any], skill_versions: list[dict[str, Any]]) -> list[Any]:
+    """Pin repository skill refs to the versions the repository recorded.
+
+    An agent's ``skills`` are plain ``@org/name`` refs while ``skill_versions``
+    carries the version pinned against each one. Without folding the two
+    together the runtime resolves whatever version is newest, so publishing a
+    new version of a skill would silently change every agent using it.
+
+    Args:
+        refs: Skill references as returned by the repository.
+        skill_versions: Repository version records, each with a ``registry_ref``
+            and ``version``.
+
+    Returns:
+        The refs, version-pinned where the repository recorded one.
+    """
+    pinned_versions = {
+        entry["registry_ref"]: entry["version"]
+        for entry in skill_versions
+        if isinstance(entry, dict)
+        and entry.get("registry_ref")
+        and entry.get("version")
+    }
+    if not pinned_versions:
+        return refs
+
+    pinned_refs: list[Any] = []
+    for ref in refs:
+        version = pinned_versions.get(ref) if isinstance(ref, str) else None
+        # Leave anything already pinned (a second '@') exactly as it is.
+        already_pinned = isinstance(ref, str) and "@" in ref[1:]
+        pinned_refs.append(
+            f"{ref}@{version}" if version and not already_pinned else ref
+        )
+    return pinned_refs
 
 
 DELEGATION_TOOL_NAMES: Final[frozenset[str]] = frozenset(
@@ -1246,13 +1342,28 @@ def extract_tool_call_info(
         call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
         return call_id, sanitize_tool_name(tool_call.name), tool_call.input
     if isinstance(tool_call, dict):
-        # Support OpenAI "id", Bedrock "toolUseId", or generate one
+        # Prefer the Responses API "call_id", then OpenAI "id", then Bedrock
+        # "toolUseId", else generate one. A raw Responses function_call item carries
+        # both "id" (fc_...) and "call_id" (call_...) with different values, and the
+        # matching function_call_output must reference "call_id" -- reading "id"
+        # would produce a tool result that can't be correlated to its invocation.
         call_id = (
-            tool_call.get("id") or tool_call.get("toolUseId") or f"call_{id(tool_call)}"
+            tool_call.get("call_id")
+            or tool_call.get("id")
+            or tool_call.get("toolUseId")
+            or f"call_{id(tool_call)}"
         )
         func_info = tool_call.get("function", {})
         func_name = func_info.get("name", "") or tool_call.get("name", "")
-        func_args = func_info.get("arguments") or tool_call.get("input") or {}
+        # "arguments" is also read from the top level for the OpenAI Responses API,
+        # which emits {"id", "name", "arguments"} with no nested "function" object.
+        # Without it the args silently resolved to {} and the tool ran with no input.
+        func_args = (
+            func_info.get("arguments")
+            or tool_call.get("arguments")
+            or tool_call.get("input")
+            or {}
+        )
         return call_id, sanitize_tool_name(func_name), func_args
     return None
 
@@ -1283,6 +1394,16 @@ def is_tool_call_list(response: list[Any]) -> bool:
         return True
     # Bedrock-style
     if isinstance(first_item, dict) and "name" in first_item and "input" in first_item:
+        return True
+    # OpenAI Responses API style: {"id", "name", "arguments"}, with no nested
+    # "function" object and no "input". Without this the list isn't recognized as
+    # tool calls, so the executor hands it back verbatim and the agent returns raw
+    # tool-call JSON instead of running the tool and producing a final answer.
+    if (
+        isinstance(first_item, dict)
+        and "name" in first_item
+        and "arguments" in first_item
+    ):
         return True
     # Gemini-style
     if hasattr(first_item, "function_call") and first_item.function_call:

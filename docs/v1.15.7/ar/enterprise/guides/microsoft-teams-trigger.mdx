@@ -1,0 +1,70 @@
+---
+title: "مشغل Microsoft Teams"
+description: "تشغيل الطواقم من نشاط محادثات Microsoft Teams"
+icon: "microsoft"
+mode: "wide"
+---
+
+## نظرة عامة
+
+استخدم مشغل Microsoft Teams لبدء الأتمتات كلما أُنشئت محادثة جديدة. تشمل الأنماط الشائعة تلخيص الطلبات الواردة وتوجيه الرسائل العاجلة لفرق الدعم أو إنشاء مهام متابعة في أنظمة أخرى.
+
+<Tip>
+  تأكد من ربط Microsoft Teams تحت **Tools & Integrations** و
+  تفعيله في علامة تبويب **Triggers** لعملية النشر.
+</Tip>
+
+## تفعيل مشغل Microsoft Teams
+
+1. افتح عملية النشر في CrewAI AMP
+2. انتقل إلى علامة تبويب **Triggers**
+3. حدد موقع **Microsoft Teams** وبدّل مفتاح التبديل للتفعيل
+
+<Frame caption="اتصال مشغل Microsoft Teams">
+  <img
+    src="/images/enterprise/msteams-trigger.png"
+    alt="تفعيل أو تعطيل المشغلات بالتبديل"
+  />
+</Frame>
+
+## مثال: تلخيص سلسلة محادثة جديدة
+
+```python
+from teams_chat_created_crew import MicrosoftTeamsChatTrigger
+
+crew = MicrosoftTeamsChatTrigger().crew()
+result = crew.kickoff({
+    "crewai_trigger_payload": teams_payload,
+})
+print(result.raw)
+```
+
+يحلل الطاقم بيانات المحادثة الوصفية (الموضوع، وقت الإنشاء، قائمة الأعضاء) وينشئ خطة عمل للفريق المستقبل.
+
+## الاختبار المحلي
+
+اختبر تكامل مشغل Microsoft Teams محلياً باستخدام CrewAI CLI:
+
+```bash
+# عرض جميع المشغلات المتاحة
+crewai triggers list
+
+# محاكاة مشغل Microsoft Teams بحمولة واقعية
+crewai triggers run microsoft_teams/teams_message_created
+```
+
+سينفذ أمر `crewai triggers run` طاقمك بحمولة Teams كاملة، مما يتيح لك اختبار منطق التحليل قبل النشر.
+
+<Warning>
+  استخدم `crewai triggers run microsoft_teams/teams_message_created` (وليس `crewai
+  run`) لمحاكاة تنفيذ المشغل أثناء التطوير. بعد النشر، سيتلقى
+  طاقمك حمولة المشغل تلقائياً.
+</Warning>
+
+## استكشاف الأخطاء وإصلاحها
+
+- تأكد من أن اتصال Teams نشط؛ يجب تحديثه إذا سحب المستأجر الصلاحيات
+- اختبر محلياً بـ `crewai triggers run microsoft_teams/teams_message_created` لرؤية هيكل الحمولة بالضبط
+- تأكد من أن اشتراك webhook في Microsoft 365 لا يزال صالحاً إذا توقفت الحمولات عن الوصول
+- راجع سجلات التنفيذ لعدم تطابق شكل الحمولة — قد تحذف إشعارات Graph حقولاً عندما تكون المحادثة خاصة أو مقيدة
+- تذكر: استخدم `crewai triggers run` (وليس `crewai run`) لمحاكاة تنفيذ المشغل
