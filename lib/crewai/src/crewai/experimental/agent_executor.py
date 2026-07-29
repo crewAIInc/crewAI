@@ -1769,7 +1769,12 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                         ordered_results[idx] = future.result()
                     except ToolExecutionFailedError:
                         # A deliberate stop: folding it into a tool result would
-                        # let the remaining parallel calls carry on.
+                        # let the remaining parallel calls carry on. Cancel the
+                        # siblings that have not started so they never run.
+                        # Ones already in flight cannot be interrupted -- Python
+                        # threads are not cancellable -- so a concurrent tool may
+                        # still complete before the abort surfaces.
+                        pool.shutdown(wait=False, cancel_futures=True)
                         raise
                     except Exception as e:
                         tool_call = runnable_tool_calls[idx]

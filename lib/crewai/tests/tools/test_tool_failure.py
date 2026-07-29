@@ -1588,12 +1588,54 @@ class TestBlockedCallsAreNotFailures:
         )
         # TOOL_REPORTED is the field default, so it is produced without ever
         # being named; every other member has to be referenced somewhere.
-        for member in ToolFailureReason:
+        for member in list(ToolFailureReason):
             if member is ToolFailureReason.TOOL_REPORTED:
                 continue
             assert f"ToolFailureReason.{member.name}" in sources, (
                 f"{member.name} is declared but never produced"
             )
+
+
+class TestKickoffGuardrailRetries:
+    def test_blocked_attempt_failures_survive_the_retry(self) -> None:
+        """The retry opens its own collector, so earlier records must be merged."""
+        attempts: list[int] = []
+
+        def guardrail(output: Any) -> tuple[bool, Any]:
+            attempts.append(1)
+            if len(attempts) == 1:
+                return (False, "try again")
+            return (True, output.raw)
+
+        agent = Agent(
+            role="Slack Messenger",
+            goal="post",
+            backstory="b",
+            llm=StatelessToolLLM("slackbot_send_message", {"channel": "#c"}),
+            tools=[SlackTool()],
+            guardrail=guardrail,
+        )
+        result = agent.kickoff("post it")
+
+        assert len(attempts) == 2, "guardrail should have blocked once"
+        assert result.has_tool_failures
+        codes = [f.failure.code for f in result.tool_failures]
+        assert codes and all(c == "channel_not_found" for c in codes), codes
+
+
+class TestParallelAbortCancelsPendingSiblings:
+    def test_pool_is_shut_down_with_cancel_futures(self) -> None:
+        """A pending sibling must never start once an abort is requested.
+
+        In-flight threads cannot be interrupted in Python, so this covers the
+        not-yet-started ones -- the only ones that can still be prevented.
+        """
+        import inspect
+
+        from crewai.experimental.agent_executor import AgentExecutor
+
+        source = inspect.getsource(AgentExecutor.execute_native_tool)
+        assert "cancel_futures=True" in source
 
 
 class TestKickoffResetsTheAccessor:

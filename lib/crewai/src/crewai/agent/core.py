@@ -89,6 +89,7 @@ from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.tool_failure import (
     ToolExecutionFailedError,
     ToolFailureRecord,
+    merge_tool_failures,
     tool_failure_collector,
 )
 from crewai.types.callback import SerializableCallable
@@ -1971,9 +1972,15 @@ class Agent(BaseAgent):
                 role="user",
             )
 
-            output = self._execute_and_build_output(
+            retried = self._execute_and_build_output(
                 executor, inputs, response_format, usage_baseline
             )
+            # The retry opens its own collector, so carry the blocked attempt's
+            # failures forward or they vanish from the final output.
+            retried.tool_failures = merge_tool_failures(
+                output.tool_failures, retried.tool_failures
+            )
+            output = retried
 
             return self._process_kickoff_guardrail(
                 output=output,
