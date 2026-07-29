@@ -21,7 +21,11 @@ from crewai import Agent, Crew, Task
 from crewai.agents.parser import AgentFinish
 from crewai.events import crewai_event_bus
 from crewai.hooks import register_after_tool_call_hook, register_before_tool_call_hook
-from crewai.hooks.tool_hooks import ToolCallHookContext, clear_after_tool_call_hooks
+from crewai.hooks.tool_hooks import (
+    ToolCallHookContext,
+    clear_after_tool_call_hooks,
+    clear_before_tool_call_hooks,
+)
 from crewai.llm import LLM
 from crewai.tools.base_tool import BaseTool
 
@@ -1197,6 +1201,36 @@ class TestNativeToolCallingJsonParseError:
         )
 
         assert result["result"] == "ran: print(1)"
+
+    def test_empty_args_transform_reaches_execution(self) -> None:
+        class CodeTool(BaseTool):
+            name: str = "execute_code"
+            description: str = "Run code"
+
+            def _run(self, code: str) -> str:
+                return f"ran: {code}"
+
+        def supply_code(context: ToolCallHookContext) -> None:
+            context.tool_input["code"] = "safe"
+
+        tool = CodeTool()
+        executor = self._make_executor([tool])
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
+        clear_before_tool_call_hooks()
+        register_before_tool_call_hook(supply_code)
+        try:
+            result = executor._execute_single_native_tool_call(
+                call_id="provider-call-1",
+                func_name="execute_code",
+                func_args={},
+                available_functions=available_functions,
+            )
+        finally:
+            clear_before_tool_call_hooks()
+
+        assert result["result"] == "ran: safe"
 
     def test_typed_output_is_json_agent_text(self) -> None:
         class SearchOutput(BaseModel):

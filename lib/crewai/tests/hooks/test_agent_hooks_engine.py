@@ -9,6 +9,7 @@ unavailable.
 from __future__ import annotations
 
 import asyncio
+from importlib.resources import files
 import json
 import threading
 import types
@@ -25,6 +26,7 @@ from crewai.hooks.agent_hooks_engine import (
     _session_id,
     _to_text,
     _transformed_payload,
+    active_engine,
     disable_agent_hooks,
     use_agent_hooks,
 )
@@ -50,6 +52,7 @@ from crewai.hooks.tool_hooks import (
     run_after_tool_call_hooks,
     run_before_tool_call_hooks,
 )
+import jsonschema
 import pytest
 
 
@@ -97,6 +100,8 @@ def _tool_ctx(
     tool_result: str | None = None,
     agent: Any = None,
     crew: Any = None,
+    call_id: str | None = None,
+    was_blocked: bool = False,
 ) -> ToolCallHookContext:
     return ToolCallHookContext(
         tool_name=name,
@@ -105,6 +110,8 @@ def _tool_ctx(
         agent=agent if agent is not None else _agent(),
         crew=crew if crew is not None else _crew(),
         tool_result=tool_result,
+        call_id=call_id,
+        was_blocked=was_blocked,
     )
 
 
@@ -139,7 +146,7 @@ class _DenyAt:
         from agent_hooks import Decision, Verdict
 
         if ctx["interception_point"] == self.point:
-            return Verdict.deny(reason=self.reason)
+            return Verdict(decision=Decision.DENY, reason=self.reason)
         return Verdict(decision=Decision.ALLOW)
 
 
@@ -260,6 +267,15 @@ class TestHelpers:
         crew = _crew(tools=[_tool("a"), _tool("b")])
         assert _registered_tools(crew) == ["a", "b"]
 
+    def test_registered_tools_include_all_crew_agents(self):
+        crew = types.SimpleNamespace(
+            agents=[
+                types.SimpleNamespace(tools=[_tool("search"), _tool("shared")]),
+                types.SimpleNamespace(tools=[_tool("shell"), _tool("shared")]),
+            ]
+        )
+        assert _registered_tools(crew) == ["search", "shared", "shell"]
+
 
 # --- emitter loop internals -------------------------------------------------
 
@@ -294,6 +310,114 @@ class TestEmitterLoop:
 
 @requires_ah
 class TestToolGovernance:
+    def test_litellm_tool_execution_is_governed(self):
+        """A LiteLLM tool request cannot bypass a pre-tool deny."""
+        from crewai.llm import LLM
+
+        invoked = False
+
+        def dangerous_tool() -> str:
+            nonlocal invoked
+            invoked = True
+            return "executed"
+
+        tool_call = types.SimpleNamespace(
+            id="call-1",
+            function=types.SimpleNamespace(name="dangerous_tool", arguments="{}"),
+        )
+        engine = use_agent_hooks(_DenyAt("pre_tool_call", "blocked"))
+        try:
+            llm = LLM(model="gpt-4o-mini", is_litellm=True)
+            llm._handle_tool_call(
+                [tool_call], {"dangerous_tool": dangerous_tool}
+            )
+            assert invoked is False
+        finally:
+            engine.close()
+
+    def test_base_llm_native_tool_execution_is_governed(self):
+        """A provider-native tool cannot bypass a pre-tool deny."""
+        from crewai.llms.base_llm import BaseLLM
+
+        class TestLLM(BaseLLM):
+            def call(
+                self,
+                messages: Any,
+                tools: Any = None,
+                callbacks: Any = None,
+                available_functions: Any = None,
+                from_task: Any = None,
+                from_agent: Any = None,
+                response_model: Any = None,
+            ) -> str:
+                return "unused"
+
+            def execute_native_tool(
+                self,
+                function_name: str,
+                function_args: dict[str, Any],
+                available_functions: dict[str, Any],
+            ) -> str | None:
+                return self._handle_tool_execution(
+                    function_name=function_name,
+                    function_args=function_args,
+                    available_functions=available_functions,
+                )
+
+        invoked = False
+
+        def dangerous_tool() -> str:
+            nonlocal invoked
+            invoked = True
+            return "executed"
+
+        engine = use_agent_hooks(_DenyAt("pre_tool_call", "blocked"))
+        try:
+            llm = TestLLM(model="test")
+            llm.execute_native_tool(
+                function_name="dangerous_tool",
+                function_args={},
+                available_functions={"dangerous_tool": dangerous_tool},
+            )
+            assert invoked is False
+        finally:
+            engine.close()
+
+    def test_base_llm_native_tool_failure_emits_error_context(self):
+        """A failed native tool still emits a correlated error result."""
+        from crewai.llms.base_llm import BaseLLM
+
+        class TestLLM(BaseLLM):
+            def call(
+                self,
+                messages: Any,
+                tools: Any = None,
+                callbacks: Any = None,
+                available_functions: Any = None,
+                from_task: Any = None,
+                from_agent: Any = None,
+                response_model: Any = None,
+            ) -> str:
+                return "unused"
+
+            def execute_native_tool(self, function: Any) -> str | None:
+                return self._handle_tool_execution(
+                    "dangerous_tool", {}, {"dangerous_tool": function}
+                )
+
+        def failing_tool() -> str:
+            raise RuntimeError("failed")
+
+        cap = _Capture()
+        engine = use_agent_hooks(cap)
+        try:
+            assert TestLLM(model="test").execute_native_tool(failing_tool) is None
+            post = cap.at("post_tool_call")[0]
+            assert post["tool_result"]["is_error"] is True
+            assert post["tool_call"]["id"]
+        finally:
+            engine.close()
+
     def test_allow_proceeds_unchanged(self):
         engine = use_agent_hooks(_Allow())
         try:
@@ -321,6 +445,49 @@ class TestToolGovernance:
         finally:
             engine.close()
 
+    def test_invalid_tool_transform_shape_blocks_call(self):
+        engine = use_agent_hooks(_TransformAt("pre_tool_call", "invalid"))
+        try:
+            assert run_before_tool_call_hooks(_tool_ctx()) is True
+        finally:
+            engine.close()
+
+    def test_approved_escalation_preserves_prior_transform(self):
+        """An approval must not discard a transform already enforced by the SDK."""
+        from agent_hooks import (
+            ApprovalOutcome,
+            ApprovalResolution,
+            CompositionConfig,
+            Decision,
+            OnApproval,
+            Verdict,
+        )
+
+        class Escalate:
+            def intercept(self, ctx: Any) -> Any:
+                return Verdict.escalate(reason="review transformed call")
+
+        class Approver:
+            def resolve(self, request: Any) -> Any:
+                return ApprovalResolution(
+                    outcome=ApprovalOutcome.APPROVE,
+                    context_identity=request.context_identity,
+                    verdict=Verdict(decision=Decision.ALLOW),
+                )
+
+        engine = use_agent_hooks(
+            _TransformAt("pre_tool_call", {"url": "https://safe"}),
+            Escalate(),
+            resolver=Approver(),
+            composition=CompositionConfig.first_deny(OnApproval.STOP),
+        )
+        try:
+            ctx = _tool_ctx(tool_input={"url": "http://evil"})
+            assert run_before_tool_call_hooks(ctx) is False
+            assert ctx.tool_input == {"url": "https://safe"}
+        finally:
+            engine.close()
+
     def test_post_transform_rewrites_result(self):
         engine = use_agent_hooks(_TransformAt("post_tool_call", "REDACTED"))
         try:
@@ -334,6 +501,24 @@ class TestToolGovernance:
         try:
             ctx = _tool_ctx(tool_result="secret data")
             assert run_after_tool_call_hooks(ctx) == "[blocked by agent-hooks: bad]"
+        finally:
+            engine.close()
+
+    def test_pre_block_does_not_emit_post_tool_record(self):
+        """A blocked pre-tool action has no corresponding agent-hooks post."""
+        engine = use_agent_hooks(_DenyAt("pre_tool_call", "blocked"))
+        try:
+            call_id = "call-1"
+            assert run_before_tool_call_hooks(_tool_ctx(call_id=call_id)) is True
+            run_after_tool_call_hooks(
+                _tool_ctx(
+                    call_id=call_id,
+                    tool_result="blocked",
+                    was_blocked=True,
+                )
+            )
+            points = [record.interception_point.value for record in engine.records]
+            assert points == ["pre_tool_call"]
         finally:
             engine.close()
 
@@ -377,7 +562,12 @@ class TestToolGovernance:
         agent = _agent("agent-A")
         try:
             run_before_tool_call_hooks(
-                _tool_ctx(tool_input={"q": "x"}, agent=agent, crew=crew)
+                _tool_ctx(
+                    tool_input={"q": "x"},
+                    agent=agent,
+                    crew=crew,
+                    call_id="call-1",
+                )
             )
             run_after_tool_call_hooks(
                 _tool_ctx(
@@ -385,11 +575,45 @@ class TestToolGovernance:
                     tool_result="done",
                     agent=agent,
                     crew=crew,
+                    call_id="call-1",
                 )
             )
             pre_id = cap.at("pre_tool_call")[0]["tool_call"]["id"]
             post_id = cap.at("post_tool_call")[0]["tool_call"]["id"]
             assert pre_id == post_id
+        finally:
+            engine.close()
+
+    def test_identical_tool_invocations_get_distinct_correlated_ids(self):
+        """Repeated calls with equal arguments remain distinct audit events."""
+        cap = _Capture()
+        engine = use_agent_hooks(cap)
+        crew = _crew("crew-1")
+        agent = _agent("agent-A")
+        try:
+            for call_id, result in (("call-1", "first"), ("call-2", "second")):
+                run_before_tool_call_hooks(
+                    _tool_ctx(
+                        tool_input={"q": "x"},
+                        agent=agent,
+                        crew=crew,
+                        call_id=call_id,
+                    )
+                )
+                run_after_tool_call_hooks(
+                    _tool_ctx(
+                        tool_input={"q": "x"},
+                        tool_result=result,
+                        agent=agent,
+                        crew=crew,
+                        call_id=call_id,
+                    )
+                )
+
+            pre_ids = [ctx["tool_call"]["id"] for ctx in cap.at("pre_tool_call")]
+            post_ids = [ctx["tool_call"]["id"] for ctx in cap.at("post_tool_call")]
+            assert pre_ids == post_ids
+            assert len(set(pre_ids)) == 2
         finally:
             engine.close()
 
@@ -399,6 +623,132 @@ class TestToolGovernance:
 
 @requires_ah
 class TestModelGovernance:
+    def test_invalid_pydantic_transform_fails_closed(self):
+        """An invalid transformed model response never restores the original."""
+        from pydantic import BaseModel
+
+        from crewai_core.printer import Printer
+
+        from crewai.utilities.agent_utils import _setup_after_llm_call_hooks
+
+        class Response(BaseModel):
+            value: int
+
+        executor = types.SimpleNamespace(
+            messages=[{"role": "user", "content": "hello"}],
+            llm=_llm(),
+            iterations=0,
+            agent=_agent(),
+            task=None,
+            crew=_crew(),
+            before_llm_call_hooks=[],
+            after_llm_call_hooks=[],
+        )
+        engine = use_agent_hooks(_TransformAt("post_model_call", "not-json"))
+        try:
+            with pytest.raises(ValueError, match="failed to reparse"):
+                _setup_after_llm_call_hooks(
+                    executor,
+                    Response(value=7),
+                    Printer(),
+                    request_id="request-1",
+                    verbose=False,
+                )
+        finally:
+            engine.close()
+
+    def test_executor_model_call_ids_correlate(self):
+        """Executor pre/post model records share one request identifier."""
+        from crewai_core.printer import Printer
+
+        from crewai.utilities.agent_utils import (
+            _setup_after_llm_call_hooks,
+            _setup_before_llm_call_hooks,
+        )
+
+        executor = types.SimpleNamespace(
+            messages=[{"role": "user", "content": "hello"}],
+            llm=_llm(),
+            iterations=0,
+            agent=_agent(),
+            task=None,
+            crew=_crew(),
+            before_llm_call_hooks=[],
+            after_llm_call_hooks=[],
+        )
+        cap = _Capture()
+        engine = use_agent_hooks(cap)
+        try:
+            request_id = "request-1"
+            assert _setup_before_llm_call_hooks(
+                executor, Printer(), request_id=request_id, verbose=False
+            )
+            assert (
+                _setup_after_llm_call_hooks(
+                    executor,
+                    "model response",
+                    Printer(),
+                    request_id=request_id,
+                    verbose=False,
+                )
+                == "model response"
+            )
+            pre = cap.at("pre_model_call")[0]
+            post = cap.at("post_model_call")[0]
+            assert pre["request_id"] == post["request_id"] == request_id
+        finally:
+            engine.close()
+
+    @pytest.mark.asyncio
+    async def test_async_pre_deny_prevents_file_processing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A pre-model deny occurs before async file resolution or upload."""
+        from crewai.llm import LLM
+
+        processed = False
+
+        async def fake_process(messages: Any) -> Any:
+            nonlocal processed
+            processed = True
+            return messages
+
+        llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=False)
+        monkeypatch.setattr(llm, "_aprocess_message_files", fake_process)
+        engine = use_agent_hooks(_DenyAt("pre_model_call", "blocked"))
+        try:
+            with pytest.raises(ValueError, match="blocked"):
+                await llm.acall("hello")
+            assert processed is False
+        finally:
+            engine.close()
+
+    @pytest.mark.asyncio
+    async def test_direct_async_llm_call_is_governed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Direct ``LLM.acall`` emits both model-call control points."""
+        from crewai.llm import LLM
+
+        async def fake_response(**kwargs: Any) -> str:
+            return "model response"
+
+        llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=False)
+        monkeypatch.setattr(llm, "_ahandle_non_streaming_response", fake_response)
+        cap = _Capture()
+        engine = use_agent_hooks(cap)
+        try:
+            result = await llm.acall("hello")
+            assert result == "model response"
+            assert len(cap.at("pre_model_call")) == 1
+            assert len(cap.at("post_model_call")) == 1
+            pre = cap.at("pre_model_call")[0]
+            post = cap.at("post_model_call")[0]
+            assert pre["request_id"] == post["request_id"]
+            assert pre["request_id"]
+        finally:
+            engine.close()
+
     def test_pre_deny_raises(self):
         engine = use_agent_hooks(_DenyAt("pre_model_call"))
         try:
@@ -422,6 +772,18 @@ class TestModelGovernance:
             )
             assert ctx.messages == replacement
             assert ctx.messages is original
+        finally:
+            engine.close()
+
+    def test_invalid_model_transform_shape_blocks_call(self):
+        engine = use_agent_hooks(_TransformAt("pre_model_call", {"invalid": True}))
+        try:
+            with pytest.raises(HookAborted):
+                dispatch(
+                    InterceptionPoint.PRE_MODEL_CALL,
+                    _llm_ctx(),
+                    reducer=before_llm_call_reducer,
+                )
         finally:
             engine.close()
 
@@ -457,6 +819,83 @@ class TestModelGovernance:
         finally:
             engine.close()
 
+    def test_executor_structured_tool_calls_reach_governor(self):
+        from crewai_core.printer import Printer
+
+        from crewai.utilities.agent_utils import _setup_after_llm_call_hooks
+
+        requested = types.SimpleNamespace(
+            id="provider-call-1",
+            function=types.SimpleNamespace(
+                name="shell", arguments='{"cmd": "rm -rf /"}'
+            ),
+        )
+        executor = types.SimpleNamespace(
+            messages=[{"role": "user", "content": "hi"}],
+            llm=_llm(),
+            iterations=0,
+            agent=_agent(),
+            task=None,
+            crew=_crew(),
+            before_llm_call_hooks=[],
+            after_llm_call_hooks=[],
+        )
+        cap = _Capture()
+        engine = use_agent_hooks(cap)
+        try:
+            answer = [requested]
+            result = _setup_after_llm_call_hooks(
+                executor,
+                answer,
+                Printer(),
+                request_id="request-1",
+                verbose=False,
+            )
+            assert result is answer
+            seen = cap.at("post_model_call")
+            assert seen[0]["response"]["tool_calls"] == [
+                {
+                    "id": "provider-call-1",
+                    "name": "shell",
+                    "args": {"cmd": "rm -rf /"},
+                }
+            ]
+            assert seen[0]["request_id"] == "request-1"
+        finally:
+            engine.close()
+
+    def test_executor_structured_tool_call_deny_prevents_execution(self):
+        from crewai_core.printer import Printer
+
+        from crewai.utilities.agent_utils import _setup_after_llm_call_hooks
+
+        requested = types.SimpleNamespace(
+            id="provider-call-1",
+            function=types.SimpleNamespace(name="shell", arguments="{}"),
+        )
+        executor = types.SimpleNamespace(
+            messages=[{"role": "user", "content": "hi"}],
+            llm=_llm(),
+            iterations=0,
+            agent=_agent(),
+            task=None,
+            crew=_crew(),
+            before_llm_call_hooks=[],
+            after_llm_call_hooks=[],
+        )
+        engine = use_agent_hooks(_DenyAt("post_model_call", "tool denied"))
+        try:
+            result = _setup_after_llm_call_hooks(
+                executor,
+                [requested],
+                Printer(),
+                request_id="request-1",
+                verbose=False,
+            )
+            assert result == "[blocked by agent-hooks: tool denied]"
+        finally:
+            engine.close()
+
 
 # --- execution-boundary governance ------------------------------------------
 
@@ -483,12 +922,109 @@ class TestBoundaryGovernance:
         finally:
             engine.close()
 
+    def test_output_transform_replaces_rich_crew_output(self):
+        from crewai.crews.crew_output import CrewOutput
+        from crewai.hooks.contexts import OutputContext
+        from crewai.tasks.task_output import TaskOutput
+
+        engine = use_agent_hooks(
+            _TransformAt("output", "redacted", path="$target.content")
+        )
+        try:
+            original = CrewOutput(
+                raw="secret",
+                json_dict={"secret": True},
+                tasks_output=[
+                    TaskOutput(
+                        description="Return sensitive output",
+                        raw="secret",
+                        json_dict={"secret": True},
+                        agent="tester",
+                    )
+                ],
+            )
+            ctx = OutputContext(crew=_crew(), output=original, payload=original)
+            dispatch(InterceptionPoint.OUTPUT, ctx)
+            assert isinstance(ctx.payload, CrewOutput)
+            assert ctx.payload.raw == "redacted"
+            assert ctx.payload.pydantic is None
+            assert ctx.payload.json_dict is None
+            assert ctx.payload.tasks_output[-1].raw == "redacted"
+            assert ctx.payload.tasks_output[-1].pydantic is None
+            assert ctx.payload.tasks_output[-1].json_dict is None
+            assert original.tasks_output[-1].raw == "secret"
+        finally:
+            engine.close()
+
     def test_execution_start_deny_raises(self):
         engine = use_agent_hooks(_DenyAt("agent_startup"))
         try:
             ctx = ExecutionStartContext(crew=_crew(), inputs={}, payload={})
             with pytest.raises(HookAborted):
                 dispatch(InterceptionPoint.EXECUTION_START, ctx)
+            points = [record.interception_point.value for record in engine.records]
+            assert points == ["agent_startup", "agent_shutdown"]
+        finally:
+            engine.close()
+
+    def test_execution_end_failure_uses_schema_reason_and_does_not_raise(self):
+        from crewai.hooks.contexts import ExecutionEndContext
+
+        cap = _Capture()
+        engine = use_agent_hooks(cap, _DenyAt("agent_shutdown"))
+        crew = _crew()
+        try:
+            dispatch(
+                InterceptionPoint.EXECUTION_START,
+                ExecutionStartContext(crew=crew, inputs={}, payload={}),
+            )
+            dispatch(
+                InterceptionPoint.EXECUTION_END,
+                ExecutionEndContext(crew=crew, status="failed"),
+            )
+            shutdown = cap.at("agent_shutdown")[0]
+            assert shutdown["summary"]["reason"] == "error"
+        finally:
+            engine.close()
+
+    def test_repeated_runs_get_distinct_sessions(self):
+        from crewai.hooks.contexts import ExecutionEndContext
+
+        cap = _Capture()
+        engine = use_agent_hooks(cap)
+        crew = _crew("crew-1")
+        try:
+            for _ in range(2):
+                dispatch(
+                    InterceptionPoint.EXECUTION_START,
+                    ExecutionStartContext(crew=crew, inputs={}, payload={}),
+                )
+                dispatch(
+                    InterceptionPoint.EXECUTION_END,
+                    ExecutionEndContext(crew=crew),
+                )
+            sessions = [ctx["session"]["id"] for ctx in cap.at("agent_startup")]
+            assert len(set(sessions)) == 2
+        finally:
+            engine.close()
+
+    def test_execution_start_matches_published_schema(self):
+        """The emitted startup context conforms to the SDK's closed schema."""
+        cap = _Capture()
+        engine = use_agent_hooks(cap)
+        try:
+            dispatch(
+                InterceptionPoint.EXECUTION_START,
+                ExecutionStartContext(
+                    crew=_crew(), inputs={"topic": "safe"}, payload={"topic": "safe"}
+                ),
+            )
+            context = cap.at("agent_startup")[0]
+            schema_path = files("agent_hooks").joinpath(
+                "schema/agent-context/agent_startup.schema.json"
+            )
+            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+            jsonschema.validate(context, schema)
         finally:
             engine.close()
 
@@ -587,6 +1123,7 @@ class TestEngineLifecycle:
         assert get_governor() is not None
         engine.close()
         assert get_governor() is None
+        assert active_engine() is None
 
     def test_points_subset_limits_governance(self):
         engine = use_agent_hooks(_Allow(), points=[InterceptionPoint.PRE_TOOL_CALL])

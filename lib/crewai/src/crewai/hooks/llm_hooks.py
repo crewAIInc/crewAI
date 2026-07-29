@@ -49,8 +49,9 @@ class LLMCallHookContext:
         crew: Reference to the crew instance (None for direct LLM calls or LiteAgent)
         llm: Reference to the LLM instance
         iterations: Current iteration count (0 for direct LLM calls)
-        response: LLM response string (only set for after_llm_call hooks).
-            Can be modified by returning a new string from after_llm_call hook.
+        request_id: Stable identifier shared by one model call's pre/post hooks.
+        response: LLM response value (only set for after_llm_call hooks).
+            Text responses can be modified by returning a new string.
     """
 
     executor: CrewAgentExecutor | AgentExecutor | LiteAgent | None
@@ -60,28 +61,31 @@ class LLMCallHookContext:
     crew: Any
     llm: BaseLLM | None | str | Any
     iterations: int
-    response: str | None
+    request_id: str | None
+    response: Any
 
     def __init__(
         self,
         executor: CrewAgentExecutor | AgentExecutor | LiteAgent | None = None,
-        response: str | None = None,
+        response: Any = None,
         messages: list[LLMMessage] | None = None,
         llm: BaseLLM | str | Any | None = None,  # TODO: look into
         agent: Any | None = None,
         task: Any | None = None,
         crew: Any | None = None,
+        request_id: str | None = None,
     ) -> None:
         """Initialize hook context with executor reference or direct parameters.
 
         Args:
             executor: The CrewAgentExecutor or LiteAgent instance (None for direct LLM calls)
-            response: Optional response string (for after_llm_call hooks)
+            response: Optional response value (for after_llm_call hooks)
             messages: Optional messages list (for direct LLM calls when executor is None)
             llm: Optional LLM instance (for direct LLM calls when executor is None)
             agent: Optional agent reference (for direct LLM calls when executor is None)
             task: Optional task reference (for direct LLM calls when executor is None)
             crew: Optional crew reference (for direct LLM calls when executor is None)
+            request_id: Optional model-call correlation identifier
         """
         if executor is not None:
             self.executor = executor
@@ -109,6 +113,7 @@ class LLMCallHookContext:
             self.crew = crew
             self.iterations = 0
 
+        self.request_id = request_id
         self.response = response
 
     def request_human_input(

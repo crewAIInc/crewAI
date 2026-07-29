@@ -34,10 +34,10 @@ pip install "crewai[agent-hooks]"
 
 A prebuilt wheel is published for Linux x86_64 (Python 3.10+), so no build
 toolchain is needed there. On macOS, Windows, or Linux arm64 there is no wheel
-yet — install from source instead, which requires a Rust toolchain:
+yet — the published source distribution requires a Rust toolchain:
 
 ```bash
-pip install "agent-hooks-sdk @ git+https://github.com/responsibleai/agent-hooks.git#subdirectory=sdk/python"
+pip install "agent-hooks-sdk==0.1.0a3"
 ```
 
 Check availability at runtime:
@@ -93,7 +93,7 @@ value is under `target`. A `Verdict` is one of three decisions:
 | Decision | Constructor | Meaning |
 |----------|-------------|---------|
 | **allow** | `Verdict(decision=Decision.ALLOW)` | proceed unchanged |
-| **deny** | `Verdict.deny(reason=...)` | block the action |
+| **deny** | `Verdict(decision=Decision.DENY, reason=...)` | block the action |
 | **transform** | `Verdict(decision=Decision.TRANSFORM, transform=Transform(path="$target", value=...))` | rewrite the interceptable value |
 
 `Verdict.warn(...)` (allow plus a recorded warning) and `Verdict.escalate(...)`
@@ -111,7 +111,7 @@ The engine maps crewAI's points onto the eight agent-hooks points:
 
 | crewAI point | agent-hooks point | `target` | Deny behavior | Governed |
 |--------------|-------------------|----------|---------------|----------|
-| `EXECUTION_START` | `agent_startup` | inputs | aborts the run | ✅ |
+| `EXECUTION_START` | `agent_startup` | registered tools | aborts the run | ✅ |
 | `INPUT` | `input` | resolved inputs | aborts the run | ✅ |
 | `PRE_TOOL_CALL` | `pre_tool_call` | tool args | blocks the call | ✅ |
 | `POST_TOOL_CALL` | `post_tool_call` | tool result | fails the result closed | ✅ |
@@ -126,11 +126,14 @@ cannot raise, a **deny** there **fails closed** by replacing the result with a
 `[blocked by agent-hooks: <reason>]` marker rather than letting it through.
 
 <Note>
-**Model calls are governed on every path.** Both `dispatch`-routed calls
-(direct `llm.call(...)` and native providers) and calls made through an
-**agent executor** (sync or async) run the engine's adapter — the executor's
-model-call seam appends the same governor that `dispatch` does. Tool calls and
-execution boundaries are likewise governed on every path.
+Model calls made through an **agent executor** (sync or async), direct generic
+`LLM.call(...)` / `LLM.acall(...)`, and textual direct synchronous
+native-provider calls run the engine's adapter. Direct calls to provider-specific
+`acall()` methods and direct native-provider Pydantic responses are not yet
+uniformly governed. Tool execution through crewAI's tool runners and
+native-provider execution helpers is governed. Executor post-model governance
+runs for textual, Pydantic, and structured tool-call responses; structured calls
+are normalized for policy inspection and retain their provider objects on allow.
 </Note>
 
 crewAI's `PRE_STEP` / `POST_STEP` have no agent-hooks equivalent and remain
