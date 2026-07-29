@@ -300,8 +300,8 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     max_iter: int = Field(
         default=25, description="Maximum iterations for an agent to execute a task"
     )
-    tool_failure_policy: ToolFailurePolicy = Field(
-        default=ToolFailurePolicy.WARN,
+    tool_failure_policy: ToolFailurePolicy | None = Field(
+        default=None,
         description=(
             "How to react when a tool runs to completion but reports that it "
             "failed (an upstream API rejecting the request, an MCP server "
@@ -309,7 +309,8 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             "'ignore' restores pre-1.16 behavior and records nothing; 'warn' "
             "records the failure, emits ToolFailureDetectedEvent and keeps "
             "going; 'raise' additionally aborts with ToolExecutionFailedError. "
-            "A Task or a tool may override this for a narrower scope."
+            "None inherits from the crew, falling back to 'warn'. A task or a "
+            "tool may override this for a narrower scope."
         ),
     )
     agent_executor: Annotated[

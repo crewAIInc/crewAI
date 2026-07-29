@@ -388,7 +388,7 @@ tool's `max_usage_count` is spent, or when the agent calls a tool that does not 
 | `raise` | Records and emits, then aborts with `ToolExecutionFailedError`. |
 
 ```python Code
-from crewai import Agent, Task
+from crewai import Agent, Crew, Task
 from crewai.tools.tool_failure import ToolFailurePolicy
 
 agent = Agent(
@@ -406,10 +406,18 @@ task = Task(
     agent=agent,
     tool_failure_policy=ToolFailurePolicy.RAISE,
 )
+
+# Or set a baseline once for every agent in the crew.
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    tool_failure_policy=ToolFailurePolicy.WARN,
+)
 ```
 
-The most specific setting wins: tool, then task, then agent, then crew, then the
-`warn` default.
+The most specific setting wins: **tool → task → agent → crew → `warn`**. Every
+level defaults to `None`, meaning "inherit from the next one out", so the
+effective default with nothing configured anywhere is `warn`.
 
 ### Inspecting Failures
 

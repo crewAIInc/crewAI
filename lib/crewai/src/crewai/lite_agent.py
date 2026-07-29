@@ -228,11 +228,12 @@ class LiteAgent(FlowTrackable, BaseModel):
     max_iterations: int = Field(
         default=15, description="Maximum number of iterations for tool usage"
     )
-    tool_failure_policy: ToolFailurePolicy = Field(
-        default=ToolFailurePolicy.WARN,
+    tool_failure_policy: ToolFailurePolicy | None = Field(
+        default=None,
         description=(
             "How to react when a tool runs to completion but reports that it "
-            "failed. See BaseAgent.tool_failure_policy."
+            "failed. None falls back to 'warn'. See "
+            "BaseAgent.tool_failure_policy."
         ),
     )
     max_execution_time: int | None = Field(

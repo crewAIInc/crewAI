@@ -224,6 +224,12 @@ class StepExecutor:
                         tool_calls_made=tool_calls_made,
                         execution_time=elapsed,
                     )
+                except ToolExecutionFailedError:
+                    # Same reason as the outer handler: a deliberate stop must
+                    # not be downgraded into StepResult(success=False), even
+                    # when reached through the text-tooling fallback.
+                    raise
+
                 except Exception as fallback_error:
                     e = fallback_error
 

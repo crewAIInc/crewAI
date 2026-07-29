@@ -173,6 +173,62 @@ class TestPolicyResolution:
         resolved = resolve_tool_failure_policy(agent=agent, task=task)
         assert resolved is ToolFailurePolicy.IGNORE
 
+    def test_crew_policy_used_when_agent_inherits(self) -> None:
+        from crewai import Crew
+
+        agent = Agent(role="r", goal="g", backstory="b")
+        crew = Crew(
+            agents=[agent], tasks=[], tool_failure_policy=ToolFailurePolicy.RAISE
+        )
+        resolved = resolve_tool_failure_policy(agent=agent, crew=crew)
+        assert resolved is ToolFailurePolicy.RAISE
+
+    def test_agent_overrides_crew(self) -> None:
+        from crewai import Crew
+
+        agent = Agent(
+            role="r",
+            goal="g",
+            backstory="b",
+            tool_failure_policy=ToolFailurePolicy.IGNORE,
+        )
+        crew = Crew(
+            agents=[agent], tasks=[], tool_failure_policy=ToolFailurePolicy.RAISE
+        )
+        resolved = resolve_tool_failure_policy(agent=agent, crew=crew)
+        assert resolved is ToolFailurePolicy.IGNORE
+
+    def test_full_precedence_chain(self) -> None:
+        """tool > task > agent > crew > warn."""
+        from crewai import Crew
+
+        class ScopedTool(SlackTool):
+            tool_failure_policy: ToolFailurePolicy | None = None
+
+        tool = ScopedTool()
+        agent = Agent(role="r", goal="g", backstory="b")
+        task = Task(description="d", expected_output="e")
+        crew = Crew(agents=[agent], tasks=[])
+
+        def resolved() -> ToolFailurePolicy:
+            return resolve_tool_failure_policy(
+                tool=tool, agent=agent, task=task, crew=crew
+            )
+
+        assert resolved() is ToolFailurePolicy.WARN
+
+        crew.tool_failure_policy = ToolFailurePolicy.IGNORE
+        assert resolved() is ToolFailurePolicy.IGNORE
+
+        agent.tool_failure_policy = ToolFailurePolicy.WARN
+        assert resolved() is ToolFailurePolicy.WARN
+
+        task.tool_failure_policy = ToolFailurePolicy.RAISE
+        assert resolved() is ToolFailurePolicy.RAISE
+
+        tool.tool_failure_policy = ToolFailurePolicy.IGNORE
+        assert resolved() is ToolFailurePolicy.IGNORE
+
     def test_invalid_policy_is_ignored_rather_than_raising(self) -> None:
         """A bad policy value must never take down a tool call."""
 
@@ -208,13 +264,27 @@ class TestPolicyResolution:
         assert resolved is ToolFailurePolicy.RAISE
 
 
-class TestAgentDefault:
-    def test_agent_defaults_to_warn(self) -> None:
-        agent = Agent(role="r", goal="g", backstory="b")
-        assert agent.tool_failure_policy is ToolFailurePolicy.WARN
+class TestDefaults:
+    """Every scope defaults to None ('inherit'); the resolver owns 'warn'."""
 
-    def test_task_policy_defaults_to_none_so_it_inherits(self) -> None:
+    def test_agent_defaults_to_inherit(self) -> None:
+        assert Agent(role="r", goal="g", backstory="b").tool_failure_policy is None
+
+    def test_task_defaults_to_inherit(self) -> None:
         assert Task(description="d", expected_output="e").tool_failure_policy is None
+
+    def test_crew_defaults_to_inherit(self) -> None:
+        from crewai import Crew
+
+        agent = Agent(role="r", goal="g", backstory="b")
+        assert Crew(agents=[agent], tasks=[]).tool_failure_policy is None
+
+    def test_tool_defaults_to_inherit(self) -> None:
+        assert SlackTool().tool_failure_policy is None
+
+    def test_effective_default_is_warn(self) -> None:
+        agent = Agent(role="r", goal="g", backstory="b")
+        assert resolve_tool_failure_policy(agent=agent) is ToolFailurePolicy.WARN
 
 
 class TestEndToEndPolicies:
@@ -597,6 +667,41 @@ class TestRaisePolicySurvivesEveryWrapper:
         with pytest.raises(ToolExecutionFailedError):
             Crew(agents=[agent], tasks=[task]).kickoff()
         assert agent._times_executed == 0, "the abort must not trigger retries"
+
+    def test_crew_policy_aborts_end_to_end(self) -> None:
+        """Crew scope must actually reach the executor, not just the resolver."""
+        agent = Agent(
+            role="Slack Messenger",
+            goal="post a message",
+            backstory="b",
+            llm=ScriptedLLM(_slack_steps()),
+            tools=[SlackTool()],
+        )
+        task = Task(description="post to slack", expected_output="c", agent=agent)
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            tool_failure_policy=ToolFailurePolicy.RAISE,
+        )
+
+        with pytest.raises(ToolExecutionFailedError):
+            crew.kickoff()
+
+    def test_crew_ignore_suppresses_recording_end_to_end(self) -> None:
+        agent = Agent(
+            role="Slack Messenger",
+            goal="post a message",
+            backstory="b",
+            llm=ScriptedLLM(_slack_steps()),
+            tools=[SlackTool()],
+        )
+        task = Task(description="post to slack", expected_output="c", agent=agent)
+        result = Crew(
+            agents=[agent],
+            tasks=[task],
+            tool_failure_policy=ToolFailurePolicy.IGNORE,
+        ).kickoff()
+        assert not result.has_tool_failures
 
     def test_passthrough_tuple_includes_the_error(self) -> None:
         from crewai.agent.core import _passthrough_exceptions
