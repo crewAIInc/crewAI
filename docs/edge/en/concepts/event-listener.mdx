@@ -256,6 +256,7 @@ CrewAI provides a wide range of events that you can listen for:
 - **FlowCreatedEvent**: Emitted when a Flow is created
 - **FlowStartedEvent**: Emitted when a Flow starts execution
 - **FlowFinishedEvent**: Emitted when a Flow completes execution
+- **FlowFailedEvent**: Emitted when a Flow execution fails. Contains the flow name and the exception that ended the execution.
 - **FlowPausedEvent**: Emitted when a Flow is paused waiting for human feedback. Contains the flow name, flow ID, method name, current state, message shown when requesting feedback, and optional list of possible outcomes for routing.
 - **FlowPlotEvent**: Emitted when a Flow is plotted
 - **MethodExecutionStartedEvent**: Emitted when a Flow method starts execution

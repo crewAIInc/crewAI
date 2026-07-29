@@ -67,6 +67,7 @@ from crewai.events.listeners.tracing.utils import (
 )
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
+    FlowFailedEvent,
     FlowFinishedEvent,
     FlowPausedEvent,
     FlowPlotEvent,
@@ -1341,6 +1342,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         except Exception as e:
             if not hook_state["end_dispatched"]:
                 self._dispatch_execution_end_failure(e)
+            await self._emit_flow_failed(e, respect_suppression=True)
             raise
         finally:
             # Match kickoff_async: drain pending handlers so the resumed
@@ -1382,35 +1384,68 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
         emit = context.emit
 
-        # The serialized context carries the full LLM config (a dict, or a
-        # legacy model string) — the single source for cross- and same-process
-        # resume.
-        result = await self._finalize_human_feedback(
-            method_name=context.method_name,
-            method_output=context.method_output,
-            raw_feedback=feedback,
-            emit=emit,
-            default_outcome=context.default_outcome,
-            llm=context.llm,
-            metadata=context.metadata,
-        )
-        collapsed_outcome = result.outcome
-        resumed_method_output = (
-            result.output
-            if emit and isinstance(result, HumanFeedbackResult)
-            else result
-        )
+        if not self.suppress_flow_events:
+            # Opens the scope the finished event below closes; without it that
+            # event pops the enclosing ``flow_started`` instead.
+            future = crewai_event_bus.emit(
+                self,
+                MethodExecutionStartedEvent(
+                    type="method_execution_started",
+                    flow_name=self._definition.name,
+                    method_name=context.method_name,
+                    state=self._copy_and_serialize_state(),
+                ),
+            )
+            if future and isinstance(future, Future):
+                try:
+                    await asyncio.wrap_future(future)
+                except Exception:
+                    logger.warning(
+                        "MethodExecutionStartedEvent handler failed", exc_info=True
+                    )
 
-        self._completed_methods.add(FlowMethodName(context.method_name))
+        try:
+            # The serialized context carries the full LLM config (a dict, or a
+            # legacy model string) — the single source for cross- and
+            # same-process resume.
+            result = await self._finalize_human_feedback(
+                method_name=context.method_name,
+                method_output=context.method_output,
+                raw_feedback=feedback,
+                emit=emit,
+                default_outcome=context.default_outcome,
+                llm=context.llm,
+                metadata=context.metadata,
+            )
+            collapsed_outcome = result.outcome
+            resumed_method_output = (
+                result.output
+                if emit and isinstance(result, HumanFeedbackResult)
+                else result
+            )
 
-        await asyncio.to_thread(
-            self._persist_method_completion, FlowMethodName(context.method_name)
-        )
+            self._completed_methods.add(FlowMethodName(context.method_name))
 
-        self._pending_feedback_context = None
+            await asyncio.to_thread(
+                self._persist_method_completion, FlowMethodName(context.method_name)
+            )
 
-        if self.persistence is not None:
-            self.persistence.clear_pending_feedback(context.flow_id)
+            self._pending_feedback_context = None
+
+            if self.persistence is not None:
+                self.persistence.clear_pending_feedback(context.flow_id)
+        except Exception as e:
+            if not self.suppress_flow_events:
+                crewai_event_bus.emit(
+                    self,
+                    MethodExecutionFailedEvent(
+                        type="method_execution_failed",
+                        flow_name=self._definition.name,
+                        method_name=context.method_name,
+                        error=e,
+                    ),
+                )
+            raise
 
         if not self.suppress_flow_events:
             crewai_event_bus.emit(
@@ -2096,6 +2131,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         # EXECUTION_START/EXECUTION_END dispatch independently.
         execution_start_dispatched = False
         execution_end_dispatched = False
+        # Guards the failure event: everything between here and the
+        # ``flow_started`` emission below (hooks, input handling, state
+        # restore) can raise, and a ``flow_failed`` with no opener would pop
+        # an unrelated scope.
+        flow_scope_open = False
 
         try:
             from crewai.hooks.contexts import (
@@ -2235,6 +2275,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 and get_current_parent_id() is None
             ):
                 restore_event_scope(((deferred_started_event_id, "flow_started"),))
+                flow_scope_open = True
             elif get_current_parent_id() is None:
                 reset_emission_counter()
                 reset_last_event_id()
@@ -2249,6 +2290,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     inputs=inputs,
                 )
                 future = crewai_event_bus.emit(self, started_event)
+                flow_scope_open = True
                 if future:
                     try:
                         await asyncio.wrap_future(future)
@@ -2440,6 +2482,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # not (exactly-once per invocation).
             if execution_start_dispatched and not execution_end_dispatched:
                 self._dispatch_execution_end_failure(e)
+            if flow_scope_open:
+                await self._emit_flow_failed(e)
             raise
         finally:
             # Safety net for the exception path; the success path already
@@ -2486,6 +2530,67 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
         except Exception:  # noqa: S110 - aborting an already-failed execution is meaningless
             pass
+
+    async def _emit_flow_failed(
+        self, error: Exception, *, respect_suppression: bool = False
+    ) -> None:
+        """Emit ``FlowFailedEvent`` and close out the trace batch for a failed run.
+
+        Mirrors the terminal block of the success path: drain pending event
+        handlers and background memory saves so their spans close before the
+        flow span does, then emit and finalize the trace batch. Never raises,
+        so the original exception propagates unchanged.
+
+        Args:
+            error: The exception that ended the execution.
+            respect_suppression: Skip the emission for suppressed flows. Only
+                the resume path gates its lifecycle events on
+                ``suppress_flow_events``; ``kickoff_async`` emits them either
+                way and lets listeners filter.
+        """
+        if self._should_defer_trace_finalization():
+            return
+        if respect_suppression and self.suppress_flow_events:
+            return
+
+        try:
+            if self._event_futures:
+                await asyncio.gather(
+                    *[asyncio.wrap_future(f) for f in self._event_futures],
+                    return_exceptions=True,
+                )
+                self._event_futures.clear()
+
+            await asyncio.to_thread(self._drain_memory_writes)
+            await asyncio.to_thread(crewai_event_bus.flush)
+            future = crewai_event_bus.emit(
+                self,
+                FlowFailedEvent(
+                    type="flow_failed",
+                    flow_name=self._definition.name,
+                    error=error,
+                ),
+            )
+            if future and isinstance(future, Future):
+                try:
+                    await asyncio.wrap_future(future)
+                except Exception:
+                    logger.warning("FlowFailedEvent handler failed", exc_info=True)
+
+            trace_listener = TraceCollectionListener()
+            if (
+                trace_listener.batch_manager.batch_owner_type == "flow"
+                and current_flow_id.get() == self.flow_id
+                and not trace_listener.batch_manager.defer_session_finalization
+                and not current_flow_defer_trace_finalization.get()
+            ):
+                if trace_listener.first_time_handler.is_first_time:
+                    trace_listener.first_time_handler.mark_events_collected()
+                    trace_listener.first_time_handler.handle_execution_completion()
+                else:
+                    trace_listener.batch_manager.finalize_batch()
+        except Exception:
+            logger.warning("Failed to signal flow failure", exc_info=True)
 
     async def akickoff(
         self,
