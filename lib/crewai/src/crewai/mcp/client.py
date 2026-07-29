@@ -4,6 +4,8 @@ import asyncio
 from collections.abc import Callable, Coroutine
 from contextlib import AsyncExitStack
 from datetime import datetime
+import hashlib
+import json
 import logging
 import sys
 import time
@@ -713,6 +715,19 @@ class MCPClient:
 
         raise ConnectionError(f"Operation failed: {last_error}")
 
+    @staticmethod
+    def _fingerprint(values: dict[str, str]) -> str:
+        """Hash credential-bearing values for use in a cache key.
+
+        The values are headers and environment variables, so they hold tokens. A
+        digest keeps them out of the key itself, which callers may log, while
+        still distinguishing one set of credentials from another.
+        """
+        if not values:
+            return "-"
+        canonical = json.dumps(values, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+
     def _get_cache_key(self, resource_type: str) -> str:
         """Generate cache key for resource.
 
@@ -722,13 +737,25 @@ class MCPClient:
         Returns:
             Cache key string.
         """
-        # Use transport type and URL/command as cache key
+        # The cache is module-level and shared by every client in the process, so
+        # the key must cover everything that can change the server's answer -- not
+        # just where we connect but as whom. Two clients on the same URL with
+        # different Authorization headers see different tool lists, and the same
+        # goes for a stdio server launched with a different API key in its env.
         if isinstance(self.transport, StdioTransport):
-            key = f"stdio:{self.transport.command}:{':'.join(self.transport.args)}"
+            key = (
+                f"stdio:{self.transport.command}:{':'.join(self.transport.args)}"
+                f":{self._fingerprint(self.transport.env)}"
+            )
         elif isinstance(self.transport, HTTPTransport):
-            key = f"http:{self.transport.url}"
+            key = (
+                f"http:{self.transport.url}:{self.transport.streamable}"
+                f":{self._fingerprint(self.transport.headers)}"
+            )
         elif isinstance(self.transport, SSETransport):
-            key = f"sse:{self.transport.url}"
+            key = (
+                f"sse:{self.transport.url}:{self._fingerprint(self.transport.headers)}"
+            )
         else:
             key = f"{self.transport.transport_type}:unknown"
 
