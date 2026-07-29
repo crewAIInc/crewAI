@@ -12,6 +12,7 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.text import Text
 
+from crewai.tools.tool_failure import ToolFailureReason
 from crewai.version import is_current_version_yanked, is_newer_version_available
 
 
@@ -491,6 +492,26 @@ To enable tracing, do any one of these:
         self.print_panel(
             content, f"✅ Tool Execution Completed (#{iteration})", "green"
         )
+
+    @staticmethod
+    def should_render_success_panel(failure: Any) -> bool:
+        """Whether a finished tool call should print the green panel.
+
+        A call that reported failure must not read as successful, so the
+        green panel is suppressed and the red one takes its place.
+        """
+        return failure is None
+
+    @staticmethod
+    def should_render_failure_panel(failure: Any) -> bool:
+        """Whether a reported failure should print its own red panel.
+
+        A tool that *raised* already produced a ``ToolUsageErrorEvent`` and
+        its own red panel, so printing a second one for the same exception is
+        pure noise. The event itself is still emitted -- only the duplicate
+        console output is skipped.
+        """
+        return getattr(failure, "reason", None) is not ToolFailureReason.EXCEPTION
 
     def handle_tool_failure_detected(
         self,

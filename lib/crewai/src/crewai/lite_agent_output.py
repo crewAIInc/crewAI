@@ -59,6 +59,15 @@ class LiteAgentOutput(BaseModel):
         ),
     )
 
+    @property
+    def has_tool_failures(self) -> bool:
+        """Whether any tool reported a failure while producing this output.
+
+        Same name and meaning as on ``TaskOutput`` and ``CrewOutput``, so a
+        check written for one result type works on all three.
+        """
+        return bool(self.tool_failures)
+
     plan: str | None = Field(
         default=None, description="The execution plan that was generated, if any"
     )

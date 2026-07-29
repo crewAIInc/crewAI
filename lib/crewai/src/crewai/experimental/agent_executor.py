@@ -2046,6 +2046,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                         ),
                     )
                     error_event_emitted = True
+            else:
+                tool_failure = self._unknown_tool_failure(func_name, result)
         elif max_usage_reached:
             # Return error message when max usage limit is reached
             if original_tool:
@@ -2056,6 +2058,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             tool_failure = ToolFailure(
                 message=result, reason=ToolFailureReason.USAGE_LIMIT
             )
+        elif not from_cache:
+            tool_failure = self._unknown_tool_failure(func_name, result)
 
         # Execute after_tool_call hooks (even if blocked, to allow logging/monitoring)
         after_hook_context = ToolCallHookContext(
@@ -2108,6 +2112,19 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             "from_cache": from_cache,
             "original_tool": original_tool,
         }
+
+    @staticmethod
+    def _unknown_tool_failure(func_name: str, result: str) -> ToolFailure:
+        """Build the failure for a tool the model asked for but we do not have.
+
+        The ReAct path reports this as a failure, so the native path must too,
+        or the same miss is silent on one and loud on the other.
+        """
+        return ToolFailure(
+            message=result,
+            reason=ToolFailureReason.UNKNOWN_TOOL,
+            code=func_name,
+        )
 
     def _extract_tool_name(self, tool_call: Any) -> str:
         """Extract tool name from various tool call formats."""

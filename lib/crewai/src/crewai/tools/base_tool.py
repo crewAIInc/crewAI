@@ -38,6 +38,7 @@ from crewai.tools.structured_tool import (
     build_schema_hint,
     format_description_for_llm,
 )
+from crewai.tools.tool_failure import ToolFailurePolicy
 from crewai.types.callback import SerializableCallable, _resolve_dotted_path
 from crewai.utilities.string_utils import sanitize_tool_name
 
@@ -183,6 +184,14 @@ class BaseTool(BaseModel, ABC):
     max_usage_count: int | None = Field(
         default=None,
         description="Maximum number of times this tool can be used. None means unlimited usage.",
+    )
+    tool_failure_policy: ToolFailurePolicy | None = Field(
+        default=None,
+        description=(
+            "Overrides the agent's and task's tool_failure_policy for this tool "
+            "only. Leave None to inherit. Use to tighten a single destructive "
+            "tool to 'raise', or to exempt a chatty one with 'ignore'."
+        ),
     )
     current_usage_count: int = Field(
         default=0,
@@ -402,6 +411,7 @@ class BaseTool(BaseModel, ABC):
             max_usage_count=self.max_usage_count,
             current_usage_count=self.current_usage_count,
             cache_function=self.cache_function,
+            tool_failure_policy=self.tool_failure_policy,
         )
         structured_tool._original_tool = self
         return structured_tool

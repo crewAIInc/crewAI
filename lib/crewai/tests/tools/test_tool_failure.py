@@ -1,5 +1,7 @@
 """Tests for structured tool-failure signalling and the per-agent policy."""
 
+from datetime import datetime
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -66,10 +68,13 @@ class ScriptedLLM(LLM):
 
 
 def _slack_steps() -> list[str]:
-    return [
+    call_step = (
         "Thought: posting\n"
-        "Action: slackbot_send_message\n"
-        'Action Input: {"channel": "#joao-message"}',
+        + "Action: slackbot_send_message\n"
+        + 'Action Input: {"channel": "#joao-message"}'
+    )
+    return [
+        call_step,
         "Thought: it failed\nFinal Answer: I could not post the message.",
     ]
 
@@ -320,6 +325,243 @@ class TestEndToEndPolicies:
         assert tool_messages
 
 
+class TestToolScopedPolicyReachesTheExecutor:
+    """A tool-scoped policy must survive the CrewStructuredTool wrapper.
+
+    The executors hand ``handle_tool_failure`` the wrapper, not the authored
+    BaseTool, so a policy set on the tool used to be silently dropped.
+    """
+
+    def test_policy_survives_to_structured_tool(self) -> None:
+        class StrictSlack(SlackTool):
+            tool_failure_policy: ToolFailurePolicy | None = ToolFailurePolicy.RAISE
+
+        wrapper = StrictSlack().to_structured_tool()
+        assert wrapper.tool_failure_policy is ToolFailurePolicy.RAISE
+        assert resolve_tool_failure_policy(tool=wrapper) is ToolFailurePolicy.RAISE
+
+    def test_policy_resolves_through_original_tool_reference(self) -> None:
+        """Even a wrapper that never copied the field resolves via _original_tool."""
+
+        class StrictSlack(SlackTool):
+            tool_failure_policy: ToolFailurePolicy | None = ToolFailurePolicy.RAISE
+
+        wrapper = StrictSlack().to_structured_tool()
+        wrapper.tool_failure_policy = None
+        assert resolve_tool_failure_policy(tool=wrapper) is ToolFailurePolicy.RAISE
+
+    def test_tool_policy_aborts_a_warn_agent_end_to_end(self) -> None:
+        class StrictSlack(SlackTool):
+            tool_failure_policy: ToolFailurePolicy | None = ToolFailurePolicy.RAISE
+
+        agent = Agent(
+            role="Slack Messenger",
+            goal="post a message",
+            backstory="b",
+            llm=ScriptedLLM(_slack_steps()),
+            tools=[StrictSlack()],
+            tool_failure_policy=ToolFailurePolicy.WARN,
+        )
+        task = Task(description="post to slack", expected_output="c", agent=agent)
+        with pytest.raises(ToolExecutionFailedError):
+            Crew(agents=[agent], tasks=[task]).kickoff()
+
+    def test_tool_policy_can_exempt_a_raising_agent(self) -> None:
+        class ChattySlack(SlackTool):
+            tool_failure_policy: ToolFailurePolicy | None = ToolFailurePolicy.IGNORE
+
+        agent = Agent(
+            role="Slack Messenger",
+            goal="post a message",
+            backstory="b",
+            llm=ScriptedLLM(_slack_steps()),
+            tools=[ChattySlack()],
+            tool_failure_policy=ToolFailurePolicy.RAISE,
+        )
+        task = Task(description="post to slack", expected_output="c", agent=agent)
+        result = Crew(agents=[agent], tasks=[task]).kickoff()
+        assert not result.has_tool_failures
+
+    def test_plain_tools_default_to_inheriting(self) -> None:
+        assert SlackTool().tool_failure_policy is None
+
+
+class TestConsolePanels:
+    """Exactly one panel per failed call, and never a green one.
+
+    A failed call used to print the green "Tool Execution Completed" panel --
+    the terminal equivalent of the green checkmarks in the bug report.
+    """
+
+    @staticmethod
+    def _formatter():
+        from crewai.events.utils.console_formatter import ConsoleFormatter
+
+        return ConsoleFormatter(verbose=True)
+
+    def test_success_panel_suppressed_when_the_call_failed(self) -> None:
+        failure = ToolFailure(message="nope", code="channel_not_found")
+        assert self._formatter().should_render_success_panel(failure) is False
+
+    def test_success_panel_still_shown_for_a_working_call(self) -> None:
+        assert self._formatter().should_render_success_panel(None) is True
+
+    def test_exception_failures_do_not_double_print(self) -> None:
+        """ToolUsageErrorEvent already prints; the failure panel must not repeat it."""
+        failure = failure_from_exception(ValueError("kaboom"))
+        assert self._formatter().should_render_failure_panel(failure) is False
+
+    def test_tool_reported_failures_do_print(self) -> None:
+        failure = ToolFailure(message="nope", code="channel_not_found")
+        assert self._formatter().should_render_failure_panel(failure) is True
+
+    def test_mcp_failures_do_print(self) -> None:
+        failure = ToolFailure(message="nope", reason=ToolFailureReason.MCP_ERROR)
+        assert self._formatter().should_render_failure_panel(failure) is True
+
+    def test_failure_panel_renders_without_raising(self) -> None:
+        """The real formatter must handle the payload it is given."""
+        self._formatter().handle_tool_failure_detected(
+            "slackbot_send_message",
+            ToolFailure(message="nope", code="channel_not_found"),
+            ToolFailurePolicy.WARN,
+        )
+
+    def test_listener_consults_the_predicates(self) -> None:
+        """The listener must route through the predicates, not its own logic."""
+        import inspect
+
+        from crewai.events.event_listener import EventListener
+
+        source = inspect.getsource(EventListener.setup_listeners)
+        assert "should_render_success_panel" in source
+        assert "should_render_failure_panel" in source
+
+
+class TestUnknownToolOnNativePaths:
+    """The ReAct path reported unknown tools; the native paths did not."""
+
+    def test_native_path_records_unknown_tool(self) -> None:
+        from crewai.utilities.agent_utils import execute_single_native_tool_call
+
+        agent = Agent(role="r", goal="g", backstory="b")
+        recorded: list[ToolFailureDetectedEvent] = []
+
+        tool_call = SimpleNamespace(
+            id="call_1",
+            function=SimpleNamespace(name="does_not_exist", arguments="{}"),
+        )
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(ToolFailureDetectedEvent)
+            def _(source: Any, event: ToolFailureDetectedEvent) -> None:
+                recorded.append(event)
+
+            execute_single_native_tool_call(
+                tool_call,
+                available_functions={},
+                original_tools=[],
+                structured_tools=[],
+                tools_handler=None,
+                agent=agent,
+                task=None,
+                crew=None,
+                event_source=agent,
+                printer=None,
+                verbose=False,
+            )
+            # emit() dispatches sync handlers on a thread pool, so drain
+            # before asserting on what subscribers saw.
+            crewai_event_bus.flush(timeout=10.0)
+
+        # The record is written synchronously, before the event is emitted.
+        assert len(agent.last_tool_failures) == 1
+        record = agent.last_tool_failures[0]
+        assert record.tool_name == "does_not_exist"
+        assert record.failure.reason is ToolFailureReason.UNKNOWN_TOOL
+        assert record.failure.code == "does_not_exist"
+
+        assert len(recorded) == 1
+        assert recorded[0].failure.reason is ToolFailureReason.UNKNOWN_TOOL
+
+    def test_unknown_tool_can_abort_under_raise(self) -> None:
+        from crewai.utilities.agent_utils import execute_single_native_tool_call
+
+        agent = Agent(
+            role="r",
+            goal="g",
+            backstory="b",
+            tool_failure_policy=ToolFailurePolicy.RAISE,
+        )
+        tool_call = SimpleNamespace(
+            id="call_1",
+            function=SimpleNamespace(name="does_not_exist", arguments="{}"),
+        )
+
+        with pytest.raises(ToolExecutionFailedError):
+            execute_single_native_tool_call(
+                tool_call,
+                available_functions={},
+                original_tools=[],
+                structured_tools=[],
+                tools_handler=None,
+                agent=agent,
+                task=None,
+                crew=None,
+                event_source=agent,
+                printer=None,
+                verbose=False,
+            )
+
+
+class TestExceptionFailuresStillRecorded:
+    def test_raised_tool_produces_a_failure_record(self) -> None:
+        class BoomTool(BaseTool):
+            name: str = "boom"
+            description: str = "Always explodes."
+
+            def _run(self, x: str) -> Any:
+                raise ValueError("kaboom")
+
+        agent = Agent(
+            role="Breaker",
+            goal="break",
+            backstory="b",
+            llm=ScriptedLLM(
+                [
+                    'Thought: go\nAction: boom\nAction Input: {"x": "1"}',
+                    "Thought: it broke\nFinal Answer: it broke.",
+                ]
+            ),
+            tools=[BoomTool()],
+        )
+        task = Task(description="break it", expected_output="e", agent=agent)
+        result = Crew(agents=[agent], tasks=[task]).kickoff()
+
+        assert result.has_tool_failures
+        reasons = {f.failure.reason for f in result.tool_failures}
+        assert ToolFailureReason.EXCEPTION in reasons
+
+
+class TestLiteAgentOutputParity:
+    def test_has_tool_failures_exists_on_all_output_types(self) -> None:
+        from crewai.crews.crew_output import CrewOutput
+        from crewai.lite_agent_output import LiteAgentOutput
+        from crewai.tasks.task_output import TaskOutput
+
+        record = ToolFailureRecord(
+            tool_name="t", failure=ToolFailure(message="nope")
+        )
+        assert LiteAgentOutput(agent_role="r").has_tool_failures is False
+        assert (
+            LiteAgentOutput(agent_role="r", tool_failures=[record]).has_tool_failures
+            is True
+        )
+        assert TaskOutput(description="d", agent="a").has_tool_failures is False
+        assert CrewOutput().has_tool_failures is False
+
+
 class TestMCPIsErrorPlumbing:
     """An MCP server flags a failed tool with isError on a 200 response."""
 
@@ -359,11 +601,9 @@ class TestPlatformActionTool:
 
     @staticmethod
     def _tool() -> Any:
-        from crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool import (  # noqa: E501
-            CrewAIPlatformActionTool,
-        )
+        import crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool as mod
 
-        return CrewAIPlatformActionTool(
+        return mod.CrewAIPlatformActionTool(
             description="Send a Slack message",
             action_name="slackbot_send_message",
             action_schema={

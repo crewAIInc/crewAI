@@ -204,8 +204,15 @@ def resolve_tool_failure_policy(
 
     Most specific wins: tool, then task, then agent, then crew, then
     :attr:`ToolFailurePolicy.WARN`.
+
+    Execution paths hand over either a :class:`~crewai.tools.base_tool.BaseTool`
+    or the ``CrewStructuredTool`` that wraps it, so the tool scope is read
+    through the wrapper as well -- otherwise a tool-scoped policy would be
+    silently ignored on every native function-calling path.
     """
-    for source in (tool, task, agent, crew):
+    original_tool = getattr(tool, "_original_tool", None) if tool is not None else None
+
+    for source in (tool, original_tool, task, agent, crew):
         if source is None:
             continue
         policy = getattr(source, "tool_failure_policy", None)

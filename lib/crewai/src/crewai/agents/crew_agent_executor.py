@@ -1030,6 +1030,16 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     ),
                 )
                 error_event_emitted = True
+        elif not from_cache:
+            # Not cached and not executable: the model asked for a tool that
+            # does not exist. The ReAct path reports this as a failure, so the
+            # native paths must too, or the same miss is silent on one and
+            # loud on the other.
+            tool_failure = ToolFailure(
+                message=result,
+                reason=ToolFailureReason.UNKNOWN_TOOL,
+                code=func_name,
+            )
 
         after_hook_context = ToolCallHookContext(
             tool_name=func_name,

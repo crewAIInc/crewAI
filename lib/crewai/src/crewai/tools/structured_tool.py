@@ -21,7 +21,7 @@ from pydantic import (
 )
 from typing_extensions import Self
 
-from crewai.tools.tool_failure import ToolFailure
+from crewai.tools.tool_failure import ToolFailure, ToolFailurePolicy
 from crewai.utilities.logger import Logger
 from crewai.utilities.pydantic_schema_utils import (
     create_model_from_schema,
@@ -212,6 +212,7 @@ class CrewStructuredTool(BaseModel):
     result_as_answer: bool = Field(default=False)
     max_usage_count: int | None = Field(default=None)
     current_usage_count: int = Field(default=0)
+    tool_failure_policy: ToolFailurePolicy | None = Field(default=None)
     cache_function: Any = Field(default=None, exclude=True)
     _logger: Logger = PrivateAttr(default_factory=Logger)
     _original_tool: Any = PrivateAttr(default=None)

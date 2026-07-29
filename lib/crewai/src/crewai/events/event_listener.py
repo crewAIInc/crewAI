@@ -415,6 +415,8 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(ToolUsageFinishedEvent)
         def on_tool_usage_finished(source: Any, event: ToolUsageFinishedEvent) -> None:
+            if not self.formatter.should_render_success_panel(event.failure):
+                return
             if isinstance(source, LLM):
                 self.formatter.handle_llm_tool_usage_finished(
                     event.tool_name,
@@ -444,6 +446,8 @@ class EventListener(BaseEventListener):
         def on_tool_failure_detected(
             source: Any, event: ToolFailureDetectedEvent
         ) -> None:
+            if not self.formatter.should_render_failure_panel(event.failure):
+                return
             self.formatter.handle_tool_failure_detected(
                 event.tool_name,
                 event.failure,

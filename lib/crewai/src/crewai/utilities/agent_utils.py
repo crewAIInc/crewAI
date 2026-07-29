@@ -33,6 +33,7 @@ from crewai.tools.structured_tool import (
 )
 from crewai.tools.tool_failure import (
     ToolFailure,
+    ToolFailureReason,
     detect_tool_failure,
     failure_from_exception,
     handle_tool_failure,
@@ -1717,6 +1718,16 @@ def execute_single_native_tool_call(
                     ),
                 )
                 error_event_emitted = True
+        else:
+            # Not cached and not executable: the model asked for a tool that
+            # does not exist. The ReAct path reports this as a failure, so the
+            # native paths must too, or the same miss is silent on one and
+            # loud on the other.
+            tool_failure = ToolFailure(
+                message=result,
+                reason=ToolFailureReason.UNKNOWN_TOOL,
+                code=func_name,
+            )
 
     after_hook_context = ToolCallHookContext(
         tool_name=func_name,
