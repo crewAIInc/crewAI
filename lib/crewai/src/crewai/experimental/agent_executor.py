@@ -1767,6 +1767,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     idx = future_to_idx[future]
                     try:
                         ordered_results[idx] = future.result()
+                    except ToolExecutionFailedError:
+                        # A deliberate stop: folding it into a tool result would
+                        # let the remaining parallel calls carry on.
+                        raise
                     except Exception as e:
                         tool_call = runnable_tool_calls[idx]
                         info = extract_tool_call_info(tool_call)

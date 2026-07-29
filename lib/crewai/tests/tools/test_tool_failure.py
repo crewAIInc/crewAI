@@ -700,6 +700,32 @@ class TestRaisePolicySurvivesEveryWrapper:
         ).kickoff()
         assert not result.has_tool_failures
 
+    def test_every_broad_handler_around_tool_execution_lets_it_through(self) -> None:
+        """Guard against a new `except Exception` quietly downgrading an abort.
+
+        Five separate handlers have swallowed this exception during review of
+        this PR, so assert the passthrough at each site rather than trusting
+        that the next one will be spotted.
+        """
+        import inspect
+
+        from crewai.agent.core import Agent as AgentCls
+        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+        from crewai.agents.step_executor import StepExecutor
+        from crewai.experimental.agent_executor import AgentExecutor
+
+        sites = [
+            (AgentCls._execute_with_timeout, "_passthrough_exceptions"),
+            (StepExecutor.execute, "ToolExecutionFailedError"),
+            (AgentExecutor.execute_tool_action, "ToolExecutionFailedError"),
+            (AgentExecutor.execute_native_tool, "ToolExecutionFailedError"),
+            (CrewAgentExecutor._invoke_loop_react, "ToolExecutionFailedError"),
+            (CrewAgentExecutor._ainvoke_loop_react, "ToolExecutionFailedError"),
+        ]
+        for func, expected in sites:
+            source = inspect.getsource(func)
+            assert expected in source, f"{func.__qualname__} lost its passthrough"
+
     def test_passthrough_tuple_includes_the_error(self) -> None:
         from crewai.agent.core import _passthrough_exceptions
 
