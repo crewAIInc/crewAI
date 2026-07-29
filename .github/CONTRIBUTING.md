@@ -29,7 +29,7 @@ uv run pre-commit install
 
 ## Repository Structure
 
-This is a uv workspace with four packages under `lib/`:
+This is a uv workspace with six packages under `lib/`:
 
 | Package | Path | Description |
 |---------|------|-------------|
