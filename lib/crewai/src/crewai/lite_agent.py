@@ -72,6 +72,11 @@ from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.tools.tool_failure import (
+    ToolExecutionFailedError,
+    ToolFailurePolicy,
+    ToolFailureRecord,
+)
 from crewai.utilities.agent_utils import (
     enforce_rpm_limit,
     format_message_for_llm,
@@ -222,6 +227,13 @@ class LiteAgent(FlowTrackable, BaseModel):
     max_iterations: int = Field(
         default=15, description="Maximum number of iterations for tool usage"
     )
+    tool_failure_policy: ToolFailurePolicy = Field(
+        default=ToolFailurePolicy.WARN,
+        description=(
+            "How to react when a tool runs to completion but reports that it "
+            "failed. See BaseAgent.tool_failure_policy."
+        ),
+    )
     max_execution_time: int | None = Field(
         default=None, description=". Maximum execution time in seconds"
     )
@@ -289,6 +301,7 @@ class LiteAgent(FlowTrackable, BaseModel):
     _key: str = PrivateAttr(default_factory=lambda: str(uuid.uuid4()))
     _messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     _iterations: int = PrivateAttr(default=0)
+    _tool_failures: list[ToolFailureRecord] = PrivateAttr(default_factory=list)
     _guardrail: GuardrailCallable | None = PrivateAttr(default=None)
     _guardrail_retry_count: int = PrivateAttr(default=0)
     _callbacks: list[TokenCalcHandler] = PrivateAttr(default_factory=list)
@@ -519,6 +532,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         try:
             self._iterations = 0
             self.tools_results = []
+            self._tool_failures = []
 
             self._messages = self._format_messages(
                 messages, response_format=response_format, input_files=input_files
@@ -691,6 +705,7 @@ class LiteAgent(FlowTrackable, BaseModel):
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
             messages=self._messages,
+            tool_failures=list(self._tool_failures),
         )
 
         if self._guardrail is not None:
@@ -916,7 +931,10 @@ class LiteAgent(FlowTrackable, BaseModel):
                             tools=self._parsed_tools,
                             agent_key=self.key,
                             agent_role=self.role,
-                            agent=self.original_agent,
+                            # Fall back to self so a standalone LiteAgent
+                            # still resolves a tool_failure_policy and
+                            # accumulates records for its output.
+                            agent=self.original_agent or self,
                             crew=None,
                         )
                     except Exception as e:
@@ -929,6 +947,10 @@ class LiteAgent(FlowTrackable, BaseModel):
                     )
 
                 self._append_message(formatted_answer.text, role="assistant")
+            except ToolExecutionFailedError:
+                # tool_failure_policy="raise" asked for the run to stop.
+                raise
+
             except OutputParserError as e:
                 if self.verbose:
                     PRINTER.print(

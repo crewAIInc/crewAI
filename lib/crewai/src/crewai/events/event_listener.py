@@ -113,6 +113,7 @@ from crewai.events.types.task_events import (
     TaskStartedEvent,
 )
 from crewai.events.types.tool_usage_events import (
+    ToolFailureDetectedEvent,
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
@@ -438,6 +439,16 @@ class EventListener(BaseEventListener):
                     event.error,
                     event.run_attempts,
                 )
+
+        @crewai_event_bus.on(ToolFailureDetectedEvent)
+        def on_tool_failure_detected(
+            source: Any, event: ToolFailureDetectedEvent
+        ) -> None:
+            self.formatter.handle_tool_failure_detected(
+                event.tool_name,
+                event.failure,
+                event.policy,
+            )
 
         @crewai_event_bus.on(LLMCallStartedEvent)
         def on_llm_call_started(_: Any, event: LLMCallStartedEvent) -> None:

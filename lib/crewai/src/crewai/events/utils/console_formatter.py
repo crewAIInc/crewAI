@@ -492,6 +492,40 @@ To enable tracing, do any one of these:
             content, f"✅ Tool Execution Completed (#{iteration})", "green"
         )
 
+    def handle_tool_failure_detected(
+        self,
+        tool_name: str,
+        failure: Any,
+        policy: Any,
+    ) -> None:
+        """Render a tool that ran to completion but reported it did not succeed.
+
+        Distinct from :meth:`handle_tool_usage_error`, which covers a tool
+        raising. This is the quieter case that used to print as a green
+        "Tool Execution Completed" panel.
+        """
+        if not self.verbose:
+            return
+
+        with self._tool_counts_lock:
+            iteration = self.tool_usage_counts.get(tool_name, 1)
+
+        content = Text()
+        content.append("Tool Reported Failure\n", style="red bold")
+        content.append("Tool: ", style="white")
+        content.append(f"{tool_name}\n", style="red bold")
+        content.append("Reason: ", style="white")
+        content.append(f"{getattr(failure, 'reason', 'unknown')}\n", style="red")
+        if getattr(failure, "code", None):
+            content.append("Code: ", style="white")
+            content.append(f"{failure.code}\n", style="red")
+        content.append("Message: ", style="white")
+        content.append(f"{getattr(failure, 'message', failure)}\n", style="red")
+        content.append("Policy: ", style="white")
+        content.append(f"{getattr(policy, 'value', policy)}\n", style="red")
+
+        self.print_panel(content, f"⚠️ Tool Failure (#{iteration})", "red")
+
     def handle_tool_usage_error(
         self,
         tool_name: str,

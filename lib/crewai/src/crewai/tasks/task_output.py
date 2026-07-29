@@ -8,6 +8,7 @@ from typing import Any
 from pydantic import BaseModel, Field, model_validator
 
 from crewai.tasks.output_format import OutputFormat
+from crewai.tools.tool_failure import ToolFailureRecord
 from crewai.utilities.types import LLMMessage
 
 
@@ -46,6 +47,20 @@ class TaskOutput(BaseModel):
     messages: list[LLMMessage] = Field(
         description="Messages of the task", default_factory=list
     )
+    tool_failures: list[ToolFailureRecord] = Field(
+        default_factory=list,
+        description=(
+            "Tools that ran during this task but reported they did not "
+            "succeed. Non-empty here means the task produced output despite "
+            "at least one step failing -- check it before trusting 'raw'. "
+            "Always empty when the agent's tool_failure_policy is 'ignore'."
+        ),
+    )
+
+    @property
+    def has_tool_failures(self) -> bool:
+        """Whether any tool reported a failure while producing this output."""
+        return bool(self.tool_failures)
 
     @model_validator(mode="after")
     def set_summary(self) -> TaskOutput:

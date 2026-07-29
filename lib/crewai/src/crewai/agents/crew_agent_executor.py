@@ -49,6 +49,14 @@ from crewai.hooks.tool_hooks import (
     run_after_tool_call_hooks,
     run_before_tool_call_hooks,
 )
+from crewai.tools.tool_failure import (
+    ToolExecutionFailedError,
+    ToolFailure,
+    ToolFailureReason,
+    detect_tool_failure,
+    failure_from_exception,
+    handle_tool_failure,
+)
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
     _llm_stop_words_applied,
@@ -430,6 +438,12 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
                 self._invoke_step_callback(formatted_answer)
                 self._append_message(formatted_answer.text)
+
+            except ToolExecutionFailedError:
+                # tool_failure_policy="raise" asked for the run to stop; the
+                # generic handler below would otherwise feed it back to the
+                # LLM as a recoverable observation.
+                raise
 
             except OutputParserError as e:
                 formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]
@@ -925,6 +939,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         from_cache = False
         result: str = "Tool not found"
         raw_tool_result: Any = result
+        tool_failure: ToolFailure | None = None
         input_str = json.dumps(args_dict) if args_dict else ""
         if self.tools_handler and self.tools_handler.cache and output_tool is not None:
             cached_result = self.tools_handler.cache.read(
@@ -933,6 +948,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             if cached_result is not None:
                 raw_tool_result = cached_result
                 result = format_native_tool_output_for_agent(output_tool, cached_result)
+                tool_failure = detect_tool_failure(cached_result)
                 from_cache = True
 
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
@@ -967,6 +983,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
         elif max_usage_reached and original_tool:
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
             raw_tool_result = result
+            tool_failure = ToolFailure(
+                message=result, reason=ToolFailureReason.USAGE_LIMIT
+            )
         elif (
             not from_cache
             and func_name in available_functions
@@ -992,9 +1011,11 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         )
 
                 result = format_native_tool_output_for_agent(output_tool, raw_result)
+                tool_failure = detect_tool_failure(raw_result)
             except Exception as e:
                 result = f"Error executing tool: {e}"
                 raw_tool_result = result
+                tool_failure = failure_from_exception(e)
                 if self.task:
                     self.task.increment_tools_errors()
                 crewai_event_bus.emit(
@@ -1036,7 +1057,21 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     agent_key=agent_key,
                     started_at=started_at,
                     finished_at=datetime.now(),
+                    failure=tool_failure,
                 ),
+            )
+
+        # After the hooks and the finished event, so subscribers see the full
+        # lifecycle even when the policy is about to abort the run.
+        if tool_failure is not None:
+            handle_tool_failure(
+                tool_failure,
+                tool_name=func_name,
+                tool_args=args_dict,
+                tool=structured_tool,
+                agent=self.agent,
+                task=self.task,
+                crew=self.crew,
             )
 
         return {
@@ -1245,6 +1280,12 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
                 await self._ainvoke_step_callback(formatted_answer)
                 self._append_message(formatted_answer.text)
+
+            except ToolExecutionFailedError:
+                # tool_failure_policy="raise" asked for the run to stop; the
+                # generic handler below would otherwise feed it back to the
+                # LLM as a recoverable observation.
+                raise
 
             except OutputParserError as e:
                 formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]

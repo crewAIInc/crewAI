@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from crewai.tools.tool_failure import ToolFailureRecord
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.planning_types import TodoItem
 from crewai.utilities.types import LLMMessage
@@ -49,6 +50,13 @@ class LiteAgentOutput(BaseModel):
     )
     messages: list[LLMMessage] = Field(
         description="Messages of the agent", default_factory=list
+    )
+    tool_failures: list[ToolFailureRecord] = Field(
+        default_factory=list,
+        description=(
+            "Tools that ran during this execution but reported they did not "
+            "succeed. Always empty when tool_failure_policy is 'ignore'."
+        ),
     )
 
     plan: str | None = Field(

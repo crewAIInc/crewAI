@@ -126,6 +126,7 @@ from crewai.events.types.task_events import (
     TaskStartedEvent,
 )
 from crewai.events.types.tool_usage_events import (
+    ToolFailureDetectedEvent,
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
@@ -409,6 +410,12 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(ToolUsageErrorEvent)
         def on_tool_error(source: Any, event: ToolUsageErrorEvent) -> None:
             self._handle_action_event("tool_usage_error", source, event)
+
+        @event_bus.on(ToolFailureDetectedEvent)
+        def on_tool_failure_detected(
+            source: Any, event: ToolFailureDetectedEvent
+        ) -> None:
+            self._handle_action_event("tool_failure_detected", source, event)
 
         @event_bus.on(MemoryQueryStartedEvent)
         def on_memory_query_started(

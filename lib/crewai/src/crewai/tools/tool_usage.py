@@ -24,6 +24,12 @@ from crewai.events.types.tool_usage_events import (
 from crewai.telemetry.telemetry import Telemetry
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
+from crewai.tools.tool_failure import (
+    ToolFailure,
+    ToolFailureReason,
+    detect_tool_failure,
+    failure_from_exception,
+)
 from crewai.utilities.agent_utils import (
     get_tool_names,
     render_text_description_and_args,
@@ -110,6 +116,13 @@ class ToolUsage:
         self.function_calling_llm = function_calling_llm
         self.fingerprint_context = fingerprint_context or {}
         self.last_raw_result: Any = _RAW_RESULT_UNSET
+        self.last_failure: ToolFailure | None = None
+        """Failure reported by the most recent call, if it reported one.
+
+        Set both for tools that return a :class:`ToolFailure` and for the
+        framework-generated failures (a raised exception that got stringified,
+        a spent usage limit) so callers do not have to re-derive them.
+        """
 
         if (
             self.function_calling_llm
@@ -265,8 +278,11 @@ class ToolUsage:
                 "run_attempts": self._run_attempts,
             }
 
-            if self.agent.fingerprint:  # type: ignore
-                event_data.update(self.agent.fingerprint)  # type: ignore
+            # Not every agent type carries a fingerprint (LiteAgent does not),
+            # so read it defensively rather than assuming the attribute exists.
+            agent_fingerprint = getattr(self.agent, "fingerprint", None)
+            if agent_fingerprint:
+                event_data.update(agent_fingerprint)
             if self.task:
                 event_data["task_name"] = self.task.name or self.task.description
                 event_data["task_id"] = str(self.task.id)
@@ -309,6 +325,10 @@ class ToolUsage:
             if usage_limit_error:
                 result = usage_limit_error
                 self.last_raw_result = result
+                self.last_failure = ToolFailure(
+                    message=usage_limit_error,
+                    reason=ToolFailureReason.USAGE_LIMIT,
+                )
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
                 result = self._format_result(result=result)
             elif result is None:
@@ -371,6 +391,7 @@ class ToolUsage:
                         attempts=self._run_attempts,
                     )
                     self.last_raw_result = result
+                    self.last_failure = detect_tool_failure(result)
                     result = self._format_result(
                         result=tool.format_output_for_agent(result)
                     )
@@ -436,6 +457,7 @@ class ToolUsage:
                             f"\n{error_message}.\nMoving on then. {I18N_DEFAULT.slice('format').format(tool_names=self.tools_names)}"
                         ).message
                         self.last_raw_result = result
+                        self.last_failure = failure_from_exception(e)
                         if self.task:
                             self.task.increment_tools_errors()
                         if self.agent and self.agent.verbose:
@@ -446,6 +468,7 @@ class ToolUsage:
                         should_retry = True
             else:
                 self.last_raw_result = result
+                self.last_failure = detect_tool_failure(result)
                 result = self._format_result(
                     result=tool.format_output_for_agent(result)
                 )
@@ -504,9 +527,11 @@ class ToolUsage:
                 "run_attempts": self._run_attempts,
             }
 
-            # TODO: Investigate fingerprint attribute availability on BaseAgent/LiteAgent
-            if self.agent.fingerprint:  # type: ignore
-                event_data.update(self.agent.fingerprint)  # type: ignore
+            # Not every agent type carries a fingerprint (LiteAgent does not),
+            # so read it defensively rather than assuming the attribute exists.
+            agent_fingerprint = getattr(self.agent, "fingerprint", None)
+            if agent_fingerprint:
+                event_data.update(agent_fingerprint)
             if self.task:
                 event_data["task_name"] = self.task.name or self.task.description
                 event_data["task_id"] = str(self.task.id)
@@ -549,6 +574,10 @@ class ToolUsage:
             if usage_limit_error:
                 result = usage_limit_error
                 self.last_raw_result = result
+                self.last_failure = ToolFailure(
+                    message=usage_limit_error,
+                    reason=ToolFailureReason.USAGE_LIMIT,
+                )
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
                 result = self._format_result(result=result)
             elif result is None:
@@ -611,6 +640,7 @@ class ToolUsage:
                         attempts=self._run_attempts,
                     )
                     self.last_raw_result = result
+                    self.last_failure = detect_tool_failure(result)
                     result = self._format_result(
                         result=tool.format_output_for_agent(result)
                     )
@@ -676,6 +706,7 @@ class ToolUsage:
                             f"\n{error_message}.\nMoving on then. {I18N_DEFAULT.slice('format').format(tool_names=self.tools_names)}"
                         ).message
                         self.last_raw_result = result
+                        self.last_failure = failure_from_exception(e)
                         if self.task:
                             self.task.increment_tools_errors()
                         if self.agent and self.agent.verbose:
@@ -686,6 +717,7 @@ class ToolUsage:
                         should_retry = True
             else:
                 self.last_raw_result = result
+                self.last_failure = detect_tool_failure(result)
                 result = self._format_result(
                     result=tool.format_output_for_agent(result)
                 )
@@ -988,6 +1020,7 @@ class ToolUsage:
                 "finished_at": datetime.datetime.fromtimestamp(finished_at),
                 "from_cache": from_cache,
                 "output": result,
+                "failure": self.last_failure,
             }
         )
         if self.task:

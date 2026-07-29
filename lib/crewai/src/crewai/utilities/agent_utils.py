@@ -31,6 +31,12 @@ from crewai.tools.structured_tool import (
     CrewStructuredTool,
     strip_composite_description_prefix,
 )
+from crewai.tools.tool_failure import (
+    ToolFailure,
+    detect_tool_failure,
+    failure_from_exception,
+    handle_tool_failure,
+)
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -1532,6 +1538,9 @@ class NativeToolCallResult:
 
 def format_native_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
     """Format native tool output when a tool explicitly defines a formatter."""
+    if isinstance(raw_result, ToolFailure):
+        return raw_result.as_agent_message()
+
     formatter = inspect.getattr_static(tool, "format_output_for_agent", None)
     if formatter is None:
         return str(raw_result)
@@ -1628,12 +1637,14 @@ def execute_single_native_tool_call(
     input_str = json.dumps(args_dict) if args_dict else ""
     result = "Tool not found"
     raw_tool_result: Any = result
+    tool_failure: ToolFailure | None = None
 
     if tools_handler and tools_handler.cache and output_tool is not None:
         cached_result = tools_handler.cache.read(tool=func_name, input=input_str)
         if cached_result is not None:
             raw_tool_result = cached_result
             result = format_native_tool_output_for_agent(output_tool, cached_result)
+            tool_failure = detect_tool_failure(cached_result)
             from_cache = True
 
     started_at = datetime.now()
@@ -1685,9 +1696,11 @@ def execute_single_native_tool_call(
                         )
 
                 result = format_native_tool_output_for_agent(output_tool, raw_result)
+                tool_failure = detect_tool_failure(raw_result)
             except Exception as e:
                 result = f"Error executing tool: {e}"
                 raw_tool_result = result
+                tool_failure = failure_from_exception(e)
                 if task:
                     task.increment_tools_errors()
                 crewai_event_bus.emit(
@@ -1733,7 +1746,21 @@ def execute_single_native_tool_call(
                 plan_step_description=plan_step_description,
                 started_at=started_at,
                 finished_at=datetime.now(),
+                failure=tool_failure,
             ),
+        )
+
+    # After the hooks and the finished event, so subscribers see the full
+    # lifecycle even when the policy is about to abort the run.
+    if tool_failure is not None:
+        handle_tool_failure(
+            tool_failure,
+            tool_name=func_name,
+            tool_args=args_dict,
+            tool=structured_tool,
+            agent=agent,
+            task=task,
+            crew=crew,
         )
 
     tool_message: LLMMessage = {

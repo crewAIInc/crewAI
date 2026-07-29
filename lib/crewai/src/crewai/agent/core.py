@@ -86,6 +86,7 @@ from crewai.skills.loader import load_skills
 from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.state.checkpoint_config import CheckpointConfig, apply_checkpoint
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools.tool_failure import ToolExecutionFailedError
 from crewai.types.callback import SerializableCallable
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.agent_utils import (
@@ -131,7 +132,10 @@ if TYPE_CHECKING:
     from crewai.utilities.types import LLMMessage
 
 
-_passthrough_exceptions: tuple[type[Exception], ...] = ()
+# Exceptions that must not be swallowed into the max_retry_limit loop.
+# A tool_failure_policy="raise" abort is a deliberate stop, not a transient
+# error worth re-running the whole task for.
+_passthrough_exceptions: tuple[type[Exception], ...] = (ToolExecutionFailedError,)
 
 _EXECUTOR_CLASS_MAP: dict[str, type] = {
     "CrewAgentExecutor": CrewAgentExecutor,
@@ -549,6 +553,8 @@ class Agent(BaseAgent):
         get_env_context()
 
         self._inject_date_to_task(task)
+
+        self.reset_tool_failures()
 
         if self.tools_handler:
             self.tools_handler.last_used_tool = None

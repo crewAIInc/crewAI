@@ -21,6 +21,7 @@ from pydantic import (
 )
 from typing_extensions import Self
 
+from crewai.tools.tool_failure import ToolFailure
 from crewai.utilities.logger import Logger
 from crewai.utilities.pydantic_schema_utils import (
     create_model_from_schema,
@@ -56,6 +57,12 @@ def _infer_result_schema_from_callable(
 
 
 def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
+    # A declared failure is rendered as its message so the agent sees the
+    # same prose it would have seen from an error string. The structured
+    # object is consumed separately, by the failure-policy machinery.
+    if isinstance(raw_result, ToolFailure):
+        return raw_result.as_agent_message()
+
     original_tool = getattr(tool, "_original_tool", None)
     if original_tool is not None:
         return cast(str, original_tool.format_output_for_agent(raw_result))

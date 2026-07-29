@@ -334,6 +334,118 @@ writer1 = Agent(
     #...
 ```
 
+## Reporting Tool Failures
+
+A tool can finish without raising and still fail to do what it was asked. Slack
+answers `HTTP 200` with `{"ok": false, "error": "channel_not_found"}`; an MCP
+server sets `isError`; a platform action returns an error payload. The tool call
+"worked", so the error text reaches the agent as an ordinary result — the agent
+narrates the problem in its final answer and the run is recorded as a success.
+
+Return a `ToolFailure` instead of an error string and the framework can tell the
+difference:
+
+```python Code
+from typing import Any
+
+from crewai.tools import BaseTool
+from crewai.tools.tool_failure import ToolFailure
+
+
+class SendSlackMessage(BaseTool):
+    name: str = "send_slack_message"
+    description: str = "Post a message to a Slack channel."
+
+    def _run(self, channel: str, text: str) -> Any:
+        payload = slack.post(channel=channel, text=text)
+        if not payload["ok"]:
+            return ToolFailure(
+                message=f"Slack rejected the message: {payload['error']}",
+                code=payload["error"],
+                retryable=payload["error"] == "rate_limited",
+            )
+        return payload
+```
+
+The agent still reads plain prose — `ToolFailure.as_agent_message()` renders the
+message — so model behavior is unchanged. What changes is that the failure is now
+visible to everything downstream.
+
+Detection is strictly declarative. CrewAI never guesses whether a string "looks
+like" an error, so a tool that legitimately returns text about an error is never
+misread as having failed. Failures are recorded when a tool returns a
+`ToolFailure`, when a tool raises, when an MCP server sets `isError`, when a
+tool's `max_usage_count` is spent, or when the agent calls a tool that does not exist.
+
+### Choosing a Failure Policy
+
+`tool_failure_policy` controls what happens next:
+
+| Policy | Behavior |
+| :-- | :-- |
+| `ignore` | Nothing is recorded, emitted, or acted on. |
+| `warn` *(default)* | Records the failure, emits `ToolFailureDetectedEvent`, and continues. |
+| `raise` | Records and emits, then aborts with `ToolExecutionFailedError`. |
+
+```python Code
+from crewai import Agent, Task
+from crewai.tools.tool_failure import ToolFailurePolicy
+
+agent = Agent(
+    role="Slack Messenger",
+    goal="Post the report to Slack",
+    backstory="...",
+    tools=[SendSlackMessage()],
+    tool_failure_policy=ToolFailurePolicy.WARN,
+)
+
+# Tighten a single high-stakes task without changing the agent.
+task = Task(
+    description="Post the final report to #engineering",
+    expected_output="Confirmation the message was posted",
+    agent=agent,
+    tool_failure_policy=ToolFailurePolicy.RAISE,
+)
+```
+
+The most specific setting wins: tool, then task, then agent, then crew, then the
+`warn` default.
+
+### Inspecting Failures
+
+Recorded failures are structured, so nothing downstream has to parse a string:
+
+```python Code
+result = crew.kickoff()
+
+if result.has_tool_failures:
+    for record in result.tool_failures:
+        print(record.tool_name)          # "send_slack_message"
+        print(record.failure.code)       # "channel_not_found"
+        print(record.failure.reason)     # ToolFailureReason.TOOL_REPORTED
+        print(record.summary())
+```
+
+`tool_failures` is available on `TaskOutput`, `CrewOutput`, and
+`LiteAgentOutput`. A crew can finish successfully with a non-empty list — check
+it before treating `raw` as complete.
+
+To react as failures happen, subscribe to the event:
+
+```python Code
+from crewai.events import ToolFailureDetectedEvent
+from crewai.events.event_bus import crewai_event_bus
+
+
+@crewai_event_bus.on(ToolFailureDetectedEvent)
+def on_tool_failure(source, event):
+    print(f"{event.tool_name} failed: {event.failure.message} ({event.policy})")
+```
+
+The event is emitted before the `raise` policy aborts, so subscribers always
+observe the failure. `ToolUsageFinishedEvent` also carries a `failure` field, letting
+a trace UI mark the call as failed without correlating two events.
+
 ## Conclusion
 
 Tools are pivotal in extending the capabilities of CrewAI agents, enabling them to undertake a broad spectrum of tasks and collaborate effectively.

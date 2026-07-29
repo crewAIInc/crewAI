@@ -147,6 +147,7 @@ if TYPE_CHECKING:
     )
     from crewai.events.types.tool_usage_events import (
         ToolExecutionErrorEvent,
+        ToolFailureDetectedEvent,
         ToolSelectionErrorEvent,
         ToolUsageErrorEvent,
         ToolUsageEvent,
@@ -251,6 +252,7 @@ _LAZY_EVENT_MAPPING: dict[str, str] = {
     "TaskFailedEvent": "crewai.events.types.task_events",
     "TaskStartedEvent": "crewai.events.types.task_events",
     "ToolExecutionErrorEvent": "crewai.events.types.tool_usage_events",
+    "ToolFailureDetectedEvent": "crewai.events.types.tool_usage_events",
     "ToolSelectionErrorEvent": "crewai.events.types.tool_usage_events",
     "ToolUsageErrorEvent": "crewai.events.types.tool_usage_events",
     "ToolUsageEvent": "crewai.events.types.tool_usage_events",
@@ -384,6 +386,7 @@ __all__ = [
     "TaskFailedEvent",
     "TaskStartedEvent",
     "ToolExecutionErrorEvent",
+    "ToolFailureDetectedEvent",
     "ToolSelectionErrorEvent",
     "ToolUsageErrorEvent",
     "ToolUsageEvent",

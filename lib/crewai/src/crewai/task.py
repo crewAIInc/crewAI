@@ -52,6 +52,7 @@ from crewai.security import Fingerprint, SecurityConfig
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.tool_failure import ToolFailurePolicy, collect_tool_failures
 from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
 from crewai.utilities.converter import (
@@ -274,6 +275,14 @@ class Task(BaseModel):
         default=3, description="Maximum number of retries when guardrail fails"
     )
     retry_count: int = Field(default=0, description="Current number of retries")
+    tool_failure_policy: ToolFailurePolicy | None = Field(
+        default=None,
+        description=(
+            "Overrides the executing agent's tool_failure_policy for this task "
+            "only. Leave None to inherit from the agent. Useful for tightening "
+            "a single high-stakes task to 'raise' without changing the agent."
+        ),
+    )
     start_time: datetime.datetime | None = Field(
         default=None, description="Start time of the task execution"
     )
@@ -713,6 +722,7 @@ class Task(BaseModel):
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
+                tool_failures=collect_tool_failures(agent),
             )
 
             if self._guardrails:
@@ -867,6 +877,7 @@ class Task(BaseModel):
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
+                tool_failures=collect_tool_failures(agent),
             )
 
             if self._guardrails:
@@ -1405,6 +1416,7 @@ Follow these guidelines:
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
+                tool_failures=collect_tool_failures(agent),
             )
 
         return task_output
@@ -1514,6 +1526,7 @@ Follow these guidelines:
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
+                tool_failures=collect_tool_failures(agent),
             )
 
         return task_output

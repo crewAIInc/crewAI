@@ -11,6 +11,11 @@ from crewai.hooks.tool_hooks import (
 )
 from crewai.security.fingerprint import Fingerprint
 from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.tools.tool_failure import (
+    ToolFailure,
+    ToolFailureReason,
+    handle_tool_failure,
+)
 from crewai.tools.tool_types import ToolResult
 from crewai.tools.tool_usage import ToolUsage, ToolUsageError
 from crewai.utilities.i18n import I18N_DEFAULT
@@ -138,6 +143,19 @@ async def aexecute_tool_and_check_finality(
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
 
+        # After the hooks, so a post_tool_call hook still gets to inspect or
+        # rewrite the result before the policy can abort the run.
+        if tool_usage.last_failure is not None:
+            handle_tool_failure(
+                tool_usage.last_failure,
+                tool_name=sanitized_tool_name,
+                tool_args=tool_input,
+                tool=tool,
+                agent=agent,
+                task=task,
+                crew=crew,
+            )
+
         return ToolResult(
             modified_result if modified_result is not None else tool_result,
             tool.result_as_answer,
@@ -146,6 +164,18 @@ async def aexecute_tool_and_check_finality(
     tool_result = I18N_DEFAULT.errors("wrong_tool_name").format(
         tool=sanitized_tool_name,
         tools=", ".join(tool_name_to_tool_map.keys()),
+    )
+    handle_tool_failure(
+        ToolFailure(
+            message=tool_result,
+            reason=ToolFailureReason.UNKNOWN_TOOL,
+            code=sanitized_tool_name,
+        ),
+        tool_name=sanitized_tool_name,
+        tool_args=tool_calling.arguments,
+        agent=agent,
+        task=task,
+        crew=crew,
     )
     return ToolResult(result=tool_result, result_as_answer=False)
 
@@ -260,6 +290,19 @@ def execute_tool_and_check_finality(
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
 
+        # After the hooks, so a post_tool_call hook still gets to inspect or
+        # rewrite the result before the policy can abort the run.
+        if tool_usage.last_failure is not None:
+            handle_tool_failure(
+                tool_usage.last_failure,
+                tool_name=sanitized_tool_name,
+                tool_args=tool_input,
+                tool=tool,
+                agent=agent,
+                task=task,
+                crew=crew,
+            )
+
         return ToolResult(
             modified_result if modified_result is not None else tool_result,
             tool.result_as_answer,
@@ -268,5 +311,17 @@ def execute_tool_and_check_finality(
     tool_result = I18N_DEFAULT.errors("wrong_tool_name").format(
         tool=sanitized_tool_name,
         tools=", ".join(tool_name_to_tool_map.keys()),
+    )
+    handle_tool_failure(
+        ToolFailure(
+            message=tool_result,
+            reason=ToolFailureReason.UNKNOWN_TOOL,
+            code=sanitized_tool_name,
+        ),
+        tool_name=sanitized_tool_name,
+        tool_args=tool_calling.arguments,
+        agent=agent,
+        task=task,
+        crew=crew,
     )
     return ToolResult(result=tool_result, result_as_answer=False)
