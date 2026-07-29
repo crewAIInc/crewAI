@@ -144,8 +144,8 @@ async def aexecute_tool_and_check_finality(
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
 
-        # After the hooks, so a post_tool_call hook still gets to inspect or
-        # rewrite the result before the policy can abort the run.
+        # After the hooks, so post_tool_call can still inspect or rewrite the
+        # result before the policy aborts.
         if tool_usage.last_failure is not None:
             handle_tool_failure(
                 tool_usage.last_failure,
@@ -291,8 +291,8 @@ def execute_tool_and_check_finality(
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
 
-        # After the hooks, so a post_tool_call hook still gets to inspect or
-        # rewrite the result before the policy can abort the run.
+        # After the hooks, so post_tool_call can still inspect or rewrite the
+        # result before the policy aborts.
         if tool_usage.last_failure is not None:
             handle_tool_failure(
                 tool_usage.last_failure,

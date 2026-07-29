@@ -1719,10 +1719,8 @@ def execute_single_native_tool_call(
                 )
                 error_event_emitted = True
         else:
-            # Not cached and not executable: the model asked for a tool that
-            # does not exist. The ReAct path reports this as a failure, so the
-            # native paths must too, or the same miss is silent on one and
-            # loud on the other.
+            # Not cached and not executable: the model asked for a tool we do
+            # not have. The ReAct path reports this, so this one must too.
             tool_failure = ToolFailure(
                 message=result,
                 reason=ToolFailureReason.UNKNOWN_TOOL,
@@ -1761,8 +1759,8 @@ def execute_single_native_tool_call(
             ),
         )
 
-    # After the hooks and the finished event, so subscribers see the full
-    # lifecycle even when the policy is about to abort the run.
+    # After the finished event, so subscribers see the full lifecycle even
+    # when the policy aborts.
     if tool_failure is not None:
         handle_tool_failure(
             tool_failure,

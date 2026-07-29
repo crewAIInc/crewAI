@@ -440,9 +440,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 self._append_message(formatted_answer.text)
 
             except ToolExecutionFailedError:
-                # tool_failure_policy="raise" asked for the run to stop; the
-                # generic handler below would otherwise feed it back to the
-                # LLM as a recoverable observation.
+                # A deliberate stop: the generic handler below would feed it
+                # back to the LLM as a recoverable observation.
                 raise
 
             except OutputParserError as e:
@@ -1031,10 +1030,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 )
                 error_event_emitted = True
         elif not from_cache:
-            # Not cached and not executable: the model asked for a tool that
-            # does not exist. The ReAct path reports this as a failure, so the
-            # native paths must too, or the same miss is silent on one and
-            # loud on the other.
+            # Not cached and not executable: the model asked for a tool we
+            # do not have. The ReAct path reports this, so this one must too.
             tool_failure = ToolFailure(
                 message=result,
                 reason=ToolFailureReason.UNKNOWN_TOOL,
@@ -1071,8 +1068,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 ),
             )
 
-        # After the hooks and the finished event, so subscribers see the full
-        # lifecycle even when the policy is about to abort the run.
+        # After the finished event, so subscribers see the full lifecycle even
+        # when the policy aborts.
         if tool_failure is not None:
             handle_tool_failure(
                 tool_failure,
@@ -1292,9 +1289,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 self._append_message(formatted_answer.text)
 
             except ToolExecutionFailedError:
-                # tool_failure_policy="raise" asked for the run to stop; the
-                # generic handler below would otherwise feed it back to the
-                # LLM as a recoverable observation.
+                # A deliberate stop: the generic handler below would feed it
+                # back to the LLM as a recoverable observation.
                 raise
 
             except OutputParserError as e:

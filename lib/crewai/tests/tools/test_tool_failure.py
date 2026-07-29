@@ -398,8 +398,8 @@ class TestEndToEndPolicies:
 class TestToolScopedPolicyReachesTheExecutor:
     """A tool-scoped policy must survive the CrewStructuredTool wrapper.
 
-    The executors hand ``handle_tool_failure`` the wrapper, not the authored
-    BaseTool, so a policy set on the tool used to be silently dropped.
+    Executors pass the wrapper, not the authored BaseTool, so a tool-scoped
+    policy used to be silently dropped.
     """
 
     def test_policy_survives_to_structured_tool(self) -> None:
@@ -459,8 +459,7 @@ class TestToolScopedPolicyReachesTheExecutor:
 class TestConsolePanels:
     """Exactly one panel per failed call, and never a green one.
 
-    A failed call used to print the green "Tool Execution Completed" panel --
-    the terminal equivalent of the green checkmarks in the bug report.
+    A failed call used to print the green "Completed" panel.
     """
 
     @staticmethod
@@ -541,8 +540,7 @@ class TestUnknownToolOnNativePaths:
                 printer=None,
                 verbose=False,
             )
-            # emit() dispatches sync handlers on a thread pool, so drain
-            # before asserting on what subscribers saw.
+            # emit() dispatches on a thread pool; drain before asserting.
             crewai_event_bus.flush(timeout=10.0)
 
         # The record is written synchronously, before the event is emitted.
@@ -752,9 +750,8 @@ class TestFailureRecordsResetAndAccumulate:
     def test_guardrail_retry_preserves_earlier_failures(self) -> None:
         """A blocked attempt's failures must survive into the final output.
 
-        The retry calls ``agent.execute_task`` again, which resets the agent's
-        record. Without accumulation this output would report zero failures
-        even though a tool demonstrably failed on the first attempt.
+        The retry resets the agent's record, so without accumulation this would
+        report zero failures despite one demonstrably happening.
         """
         attempts: list[int] = []
 
@@ -780,8 +777,8 @@ class TestFailureRecordsResetAndAccumulate:
         result = Crew(agents=[agent], tasks=[task]).kickoff()
 
         assert len(attempts) == 2, "guardrail should have blocked once"
-        # The scripted LLM answers directly on the retry, so the single
-        # surviving record is the one from the blocked first attempt.
+        # The scripted LLM answers directly on the retry, so the survivor is
+        # the blocked first attempt's record.
         assert len(result.tool_failures) == 1
         assert result.tool_failures[0].failure.code == "channel_not_found"
 

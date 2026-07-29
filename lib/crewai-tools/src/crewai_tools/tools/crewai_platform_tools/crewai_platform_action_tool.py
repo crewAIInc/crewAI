@@ -86,10 +86,8 @@ class CrewAIPlatformActionTool(BaseTool):
                         error_message = str(error_info)
                 else:
                     error_message = str(data)
-                # The platform returns a non-2xx when the upstream app rejects
-                # the action -- e.g. Slack answering channel_not_found. That is
-                # the single most common way an agent "succeeds" at doing
-                # nothing, so report it as a failure rather than as prose.
+                # A non-2xx here means the upstream app rejected the action
+                # (e.g. Slack's channel_not_found) -- report it, not prose.
                 return ToolFailure(
                     message=f"API request failed: {error_message}",
                     code=str(response.status_code),

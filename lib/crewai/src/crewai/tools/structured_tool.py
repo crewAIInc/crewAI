@@ -57,9 +57,8 @@ def _infer_result_schema_from_callable(
 
 
 def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
-    # A declared failure is rendered as its message so the agent sees the
-    # same prose it would have seen from an error string. The structured
-    # object is consumed separately, by the failure-policy machinery.
+    # Rendered as prose so the agent sees what an error string would have
+    # given it; the structured object is consumed by the policy machinery.
     if isinstance(raw_result, ToolFailure):
         return raw_result.as_agent_message()
 

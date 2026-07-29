@@ -36,9 +36,8 @@ class CrewOutput(BaseModel):
     def tool_failures(self) -> list[ToolFailureRecord]:
         """Every tool failure recorded across all tasks, in task order.
 
-        A crew can finish with a non-empty list: agents routinely narrate a
-        failed step in prose and carry on, which used to make the run look
-        entirely successful. Check this before treating ``raw`` as complete.
+        A crew can finish successfully with a non-empty list -- agents narrate a
+        failed step and carry on. Check it before treating ``raw`` as complete.
         """
         return [failure for task in self.tasks_output for failure in task.tool_failures]
 

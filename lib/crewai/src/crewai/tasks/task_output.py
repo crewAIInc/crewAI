@@ -51,9 +51,7 @@ class TaskOutput(BaseModel):
         default_factory=list,
         description=(
             "Tools that ran during this task but reported they did not "
-            "succeed. Non-empty here means the task produced output despite "
-            "at least one step failing -- check it before trusting 'raw'. "
-            "Always empty when the agent's tool_failure_policy is 'ignore'."
+            "succeed, so 'raw' may be incomplete. Empty under 'ignore'."
         ),
     )
 

@@ -188,9 +188,8 @@ class BaseTool(BaseModel, ABC):
     tool_failure_policy: ToolFailurePolicy | None = Field(
         default=None,
         description=(
-            "Overrides the agent's and task's tool_failure_policy for this tool "
-            "only. Leave None to inherit. Use to tighten a single destructive "
-            "tool to 'raise', or to exempt a chatty one with 'ignore'."
+            "Overrides the agent's and task's tool_failure_policy for this "
+            "tool only. None inherits."
         ),
     )
     current_usage_count: int = Field(

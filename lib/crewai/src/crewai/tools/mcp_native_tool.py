@@ -124,9 +124,8 @@ class MCPNativeTool(BaseTool):
         content = self._extract_content(tool_result.content)
 
         if tool_result.is_error:
-            # An MCP server signals a failed tool with isError on an otherwise
-            # successful response. Preserve that instead of handing the agent
-            # a plain string it cannot distinguish from a real result.
+            # isError rides on an otherwise successful response; without this
+            # the agent cannot tell it apart from a real result.
             return ToolFailure(
                 message=content,
                 reason=ToolFailureReason.MCP_ERROR,

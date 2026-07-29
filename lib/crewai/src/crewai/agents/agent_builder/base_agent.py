@@ -303,14 +303,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     tool_failure_policy: ToolFailurePolicy | None = Field(
         default=None,
         description=(
-            "How to react when a tool runs to completion but reports that it "
-            "failed (an upstream API rejecting the request, an MCP server "
-            "setting isError, a platform action returning an error payload). "
-            "'ignore' restores pre-1.16 behavior and records nothing; 'warn' "
-            "records the failure, emits ToolFailureDetectedEvent and keeps "
-            "going; 'raise' additionally aborts with ToolExecutionFailedError. "
-            "None inherits from the crew, falling back to 'warn'. A task or a "
-            "tool may override this for a narrower scope."
+            "How to react when a tool completes but reports that it failed. "
+            "'ignore' records nothing; 'warn' records and emits "
+            "ToolFailureDetectedEvent; 'raise' also aborts with "
+            "ToolExecutionFailedError. None inherits from the crew, then 'warn'."
         ),
     )
     agent_executor: Annotated[
@@ -671,12 +667,8 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     def last_tool_failures(self) -> list[ToolFailureRecord]:
         """Tool failures recorded during the most recent execution.
 
-        Empty when nothing failed, or when ``tool_failure_policy`` is
-        ``ignore``. Reset at the start of each task execution or kickoff,
-        mirroring ``last_messages``.
-
-        Returns a copy, so a caller holding the list cannot mutate the
-        agent's record or watch it change under them mid-run.
+        Empty when nothing failed or the policy is ``ignore``. Reset per
+        execution, like ``last_messages``. Returns a copy.
         """
         return list(self._tool_failures)
 

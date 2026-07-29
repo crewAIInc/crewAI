@@ -235,10 +235,8 @@ class Crew(FlowTrackable, BaseModel):
     tool_failure_policy: ToolFailurePolicy | None = Field(
         default=None,
         description=(
-            "Baseline reaction for every agent in this crew when a tool runs "
-            "to completion but reports that it failed. Leave None for the "
-            "'warn' default. An agent, task, or tool may override it for a "
-            "narrower scope."
+            "Baseline tool_failure_policy for every agent in this crew. None "
+            "means 'warn'. Agents, tasks and tools may override it."
         ),
     )
     tasks: list[Task] = Field(default_factory=list)

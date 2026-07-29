@@ -182,8 +182,8 @@ class StepExecutor:
                 execution_time=elapsed,
             )
         except ToolExecutionFailedError:
-            # tool_failure_policy="raise" asked for the run to stop; turning it
-            # into StepResult(success=False) would let the plan carry on.
+            # A deliberate stop: StepResult(success=False) would let the plan
+            # carry on.
             raise
 
         except Exception as e:
@@ -225,9 +225,8 @@ class StepExecutor:
                         execution_time=elapsed,
                     )
                 except ToolExecutionFailedError:
-                    # Same reason as the outer handler: a deliberate stop must
-                    # not be downgraded into StepResult(success=False), even
-                    # when reached through the text-tooling fallback.
+                    # Same as the outer handler, reached via the text-tooling
+                    # fallback.
                     raise
 
                 except Exception as fallback_error:

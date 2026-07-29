@@ -282,9 +282,8 @@ class Task(BaseModel):
     tool_failure_policy: ToolFailurePolicy | None = Field(
         default=None,
         description=(
-            "Overrides the executing agent's tool_failure_policy for this task "
-            "only. Leave None to inherit from the agent. Useful for tightening "
-            "a single high-stakes task to 'raise' without changing the agent."
+            "Overrides the agent's tool_failure_policy for this task only. "
+            "None inherits."
         ),
     )
     start_time: datetime.datetime | None = Field(
@@ -1334,9 +1333,8 @@ Follow these guidelines:
 
         max_attempts = self.guardrail_max_retries + 1
 
-        # Each retry calls agent.execute_task again, which resets the agent's
-        # per-execution failure list. Accumulate across attempts so a tool that
-        # failed on a blocked attempt is still reported on the final output.
+        # Each retry resets the agent's failure list, so accumulate to keep
+        # failures from blocked attempts on the final output.
         accumulated_failures: list[ToolFailureRecord] = list(task_output.tool_failures)
 
         for attempt in range(max_attempts):
@@ -1450,9 +1448,8 @@ Follow these guidelines:
 
         max_attempts = self.guardrail_max_retries + 1
 
-        # Each retry calls agent.execute_task again, which resets the agent's
-        # per-execution failure list. Accumulate across attempts so a tool that
-        # failed on a blocked attempt is still reported on the final output.
+        # Each retry resets the agent's failure list, so accumulate to keep
+        # failures from blocked attempts on the final output.
         accumulated_failures: list[ToolFailureRecord] = list(task_output.tool_failures)
 
         for attempt in range(max_attempts):

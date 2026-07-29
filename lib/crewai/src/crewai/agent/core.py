@@ -132,9 +132,8 @@ if TYPE_CHECKING:
     from crewai.utilities.types import LLMMessage
 
 
-# Exceptions that must not be swallowed into the max_retry_limit loop.
-# A tool_failure_policy="raise" abort is a deliberate stop, not a transient
-# error worth re-running the whole task for.
+# Deliberate stops, not transient errors: never swallowed into the
+# max_retry_limit loop.
 _passthrough_exceptions: tuple[type[Exception], ...] = (ToolExecutionFailedError,)
 
 _EXECUTOR_CLASS_MAP: dict[str, type] = {
@@ -921,10 +920,8 @@ class Agent(BaseAgent):
                     f"Task '{task.description}' execution timed out after {timeout} seconds. Consider increasing max_execution_time or optimizing the task."
                 ) from e
             except _passthrough_exceptions:
-                # A deliberate stop (e.g. tool_failure_policy="raise") must
-                # keep its type: wrapping it in RuntimeError would hide it from
-                # _check_execution_error and send the task through the retry
-                # loop instead of aborting.
+                # Wrapping a deliberate stop in RuntimeError would hide it from
+                # _check_execution_error and trigger the retry loop instead.
                 future.cancel()
                 raise
             except Exception as e:

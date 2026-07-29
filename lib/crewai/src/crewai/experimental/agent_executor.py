@@ -1643,9 +1643,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 crew=self.crew,
             )
         except ToolExecutionFailedError:
-            # tool_failure_policy="raise" asked for the run to stop; the
-            # generic handler below would otherwise feed it back to the LLM
-            # as a recoverable observation.
+            # A deliberate stop: the generic handler below would feed it back
+            # to the LLM as a recoverable observation.
             raise
 
         except Exception as e:
@@ -2092,8 +2091,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 ),
             )
 
-        # After the hooks and the finished event, so subscribers see the full
-        # lifecycle even when the policy is about to abort the run.
+        # After the finished event, so subscribers see the full lifecycle even
+        # when the policy aborts.
         if tool_failure is not None:
             handle_tool_failure(
                 tool_failure,
@@ -2115,10 +2114,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
     @staticmethod
     def _unknown_tool_failure(func_name: str, result: str) -> ToolFailure:
-        """Build the failure for a tool the model asked for but we do not have.
+        """Build the failure for a tool the model asked for but we lack.
 
-        The ReAct path reports this as a failure, so the native path must too,
-        or the same miss is silent on one and loud on the other.
+        The ReAct path reports this, so the native path must too.
         """
         return ToolFailure(
             message=result,

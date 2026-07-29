@@ -497,8 +497,7 @@ To enable tracing, do any one of these:
     def should_render_success_panel(failure: Any) -> bool:
         """Whether a finished tool call should print the green panel.
 
-        A call that reported failure must not read as successful, so the
-        green panel is suppressed and the red one takes its place.
+        A failed call must not read as successful, so the red panel replaces it.
         """
         return failure is None
 
@@ -506,10 +505,8 @@ To enable tracing, do any one of these:
     def should_render_failure_panel(failure: Any) -> bool:
         """Whether a reported failure should print its own red panel.
 
-        A tool that *raised* already produced a ``ToolUsageErrorEvent`` and
-        its own red panel, so printing a second one for the same exception is
-        pure noise. The event itself is still emitted -- only the duplicate
-        console output is skipped.
+        A tool that *raised* already printed one via ``ToolUsageErrorEvent``,
+        so only the duplicate console output is skipped -- not the event.
         """
         return getattr(failure, "reason", None) is not ToolFailureReason.EXCEPTION
 
@@ -519,11 +516,9 @@ To enable tracing, do any one of these:
         failure: Any,
         policy: Any,
     ) -> None:
-        """Render a tool that ran to completion but reported it did not succeed.
+        """Render a tool that ran but reported it did not succeed.
 
-        Distinct from :meth:`handle_tool_usage_error`, which covers a tool
-        raising. This is the quieter case that used to print as a green
-        "Tool Execution Completed" panel.
+        The case that used to print as a green "Completed" panel.
         """
         if not self.verbose:
             return

@@ -469,8 +469,7 @@ class LiteAgent(FlowTrackable, BaseModel):
     def last_tool_failures(self) -> list[ToolFailureRecord]:
         """Tool failures recorded during the most recent kickoff.
 
-        Same name and meaning as ``BaseAgent.last_tool_failures``, so the
-        shared collection helper works for a standalone LiteAgent too.
+        Mirrors ``BaseAgent.last_tool_failures`` so the shared helper works here.
         """
         return list(self._tool_failures)
 
@@ -555,8 +554,7 @@ class LiteAgent(FlowTrackable, BaseModel):
             )
 
         except ToolExecutionFailedError as e:
-            # A deliberate stop, not a defect: do not tell the user to file a
-            # bug, and do not run it through handle_unknown_error.
+            # A deliberate stop, not a defect: no bug-report prompt.
             if self.verbose:
                 PRINTER.print(
                     content=f"Agent stopped: {e}",
@@ -733,10 +731,8 @@ class LiteAgent(FlowTrackable, BaseModel):
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
             messages=self._messages,
-            # Failures are recorded against whichever agent the executor was
-            # given, which is ``original_agent`` on the Agent.kickoff() path
-            # and ``self`` for a standalone LiteAgent. Read from the same one
-            # or the records go missing from the output.
+            # Read from whichever agent the executor was given, or the records
+            # go missing: original_agent under kickoff, self when standalone.
             tool_failures=collect_tool_failures(self.original_agent or self),
         )
 
@@ -963,9 +959,8 @@ class LiteAgent(FlowTrackable, BaseModel):
                             tools=self._parsed_tools,
                             agent_key=self.key,
                             agent_role=self.role,
-                            # Fall back to self so a standalone LiteAgent
-                            # still resolves a tool_failure_policy and
-                            # accumulates records for its output.
+                            # Fall back to self so a standalone LiteAgent still
+                            # resolves a policy and records failures.
                             agent=self.original_agent or self,
                             crew=None,
                         )

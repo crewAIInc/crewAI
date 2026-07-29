@@ -117,11 +117,10 @@ class ToolUsage:
         self.fingerprint_context = fingerprint_context or {}
         self.last_raw_result: Any = _RAW_RESULT_UNSET
         self.last_failure: ToolFailure | None = None
-        """Failure reported by the most recent call, if it reported one.
+        """Failure reported by the most recent call, if any.
 
-        Set both for tools that return a :class:`ToolFailure` and for the
-        framework-generated failures (a raised exception that got stringified,
-        a spent usage limit) so callers do not have to re-derive them.
+        Covers both tool-returned failures and framework-generated ones (a
+        stringified exception, a spent usage limit).
         """
 
         if (
@@ -278,8 +277,7 @@ class ToolUsage:
                 "run_attempts": self._run_attempts,
             }
 
-            # Not every agent type carries a fingerprint (LiteAgent does not),
-            # so read it defensively rather than assuming the attribute exists.
+            # Not every agent type carries a fingerprint (LiteAgent does not).
             agent_fingerprint = getattr(self.agent, "fingerprint", None)
             if agent_fingerprint:
                 event_data.update(agent_fingerprint)
@@ -527,8 +525,7 @@ class ToolUsage:
                 "run_attempts": self._run_attempts,
             }
 
-            # Not every agent type carries a fingerprint (LiteAgent does not),
-            # so read it defensively rather than assuming the attribute exists.
+            # Not every agent type carries a fingerprint (LiteAgent does not).
             agent_fingerprint = getattr(self.agent, "fingerprint", None)
             if agent_fingerprint:
                 event_data.update(agent_fingerprint)
