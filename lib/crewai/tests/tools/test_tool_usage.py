@@ -21,12 +21,18 @@ from crewai.events.types.tool_usage_events import (
 from crewai.hooks.tool_hooks import (
     ToolCallHookContext,
     clear_after_tool_call_hooks,
+    clear_before_tool_call_hooks,
     register_after_tool_call_hook,
+    register_before_tool_call_hook,
 )
 from crewai.tools import BaseTool
 from crewai.tools.tool_calling import ToolCalling
+from crewai.tools.tool_failure import ToolFailure
 from crewai.tools.tool_usage import ToolUsage
-from crewai.utilities.tool_utils import execute_tool_and_check_finality
+from crewai.utilities.tool_utils import (
+    aexecute_tool_and_check_finality,
+    execute_tool_and_check_finality,
+)
 from pydantic import BaseModel, Field
 import pytest
 
@@ -242,6 +248,144 @@ def test_react_tool_hooks_receive_agent_text_and_raw_cached_typed_output():
         ('{"query":"crew","score":0.7}', SearchOutput(query="crew", score=0.7)),
         ('{"query":"crew","score":0.7}', SearchOutput(query="crew", score=0.7)),
     ]
+
+
+@pytest.mark.parametrize("use_async", [False, True])
+@pytest.mark.asyncio
+async def test_react_empty_args_transform_reaches_cache_and_execution(
+    use_async: bool,
+):
+    class RequiredArgTool(BaseTool):
+        name: str = "required_arg"
+        description: str = "Requires an argument"
+
+        def _run(self, value: str) -> str:
+            return f"executed:{value}"
+
+    tool = RequiredArgTool().to_structured_tool()
+    tools_handler = MagicMock()
+    tools_handler.cache.read.return_value = None
+    tools_handler.last_used_tool = None
+
+    def transform(context: ToolCallHookContext) -> None:
+        context.tool_input["value"] = "safe"
+
+    action = AgentAction(
+        thought="",
+        tool="required_arg",
+        tool_input="{}",
+        text="Action: required_arg\nAction Input: {}",
+    )
+    clear_before_tool_call_hooks()
+    register_before_tool_call_hook(transform)
+    try:
+        if use_async:
+            result = await aexecute_tool_and_check_finality(
+                agent_action=action,
+                tools=[tool],
+                tools_handler=tools_handler,
+            )
+        else:
+            result = execute_tool_and_check_finality(
+                agent_action=action,
+                tools=[tool],
+                tools_handler=tools_handler,
+            )
+    finally:
+        clear_before_tool_call_hooks()
+
+    assert result.result == "executed:safe"
+    tools_handler.cache.read.assert_called_once_with(
+        tool="required_arg", input='{"value": "safe"}'
+    )
+
+
+@pytest.mark.parametrize("use_async", [False, True])
+@pytest.mark.asyncio
+async def test_react_usage_limit_sets_post_error_status(use_async: bool):
+    class LimitedTool(BaseTool):
+        name: str = "limited"
+        description: str = "Already exhausted"
+        max_usage_count: int | None = 0
+        result_as_answer: bool = True
+
+        def _run(self) -> str:
+            return "must not run"
+
+    tool = LimitedTool().to_structured_tool()
+    seen_errors: list[bool] = []
+
+    def capture(context: ToolCallHookContext) -> None:
+        seen_errors.append(context.is_error)
+
+    action = AgentAction(
+        thought="",
+        tool="limited",
+        tool_input="{}",
+        text="Action: limited\nAction Input: {}",
+    )
+    clear_after_tool_call_hooks()
+    register_after_tool_call_hook(capture)
+    try:
+        if use_async:
+            result = await aexecute_tool_and_check_finality(
+                agent_action=action,
+                tools=[tool],
+            )
+        else:
+            result = execute_tool_and_check_finality(
+                agent_action=action,
+                tools=[tool],
+            )
+    finally:
+        clear_after_tool_call_hooks()
+
+    assert "usage limit" in result.result
+    assert result.result_as_answer is False
+    assert seen_errors == [True]
+
+
+@pytest.mark.parametrize("use_async", [False, True])
+@pytest.mark.asyncio
+async def test_react_tool_failure_sets_post_error_status(use_async: bool):
+    class ReportingTool(BaseTool):
+        name: str = "reporting"
+        description: str = "Returns a typed failure"
+        result_as_answer: bool = True
+
+        def _run(self) -> ToolFailure:
+            return ToolFailure(message="policy denied", code="policy_denied")
+
+    tool = ReportingTool().to_structured_tool()
+    seen_errors: list[bool] = []
+
+    def capture(context: ToolCallHookContext) -> None:
+        seen_errors.append(context.is_error)
+
+    action = AgentAction(
+        thought="",
+        tool="reporting",
+        tool_input="{}",
+        text="Action: reporting\nAction Input: {}",
+    )
+    clear_after_tool_call_hooks()
+    register_after_tool_call_hook(capture)
+    try:
+        if use_async:
+            result = await aexecute_tool_and_check_finality(
+                agent_action=action,
+                tools=[tool],
+            )
+        else:
+            result = execute_tool_and_check_finality(
+                agent_action=action,
+                tools=[tool],
+            )
+    finally:
+        clear_after_tool_call_hooks()
+
+    assert result.result_as_answer is False
+    assert seen_errors == [True]
 
 
 def test_last_raw_result_falls_back_only_until_recorded():

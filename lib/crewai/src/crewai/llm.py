@@ -14,6 +14,7 @@ from typing import (
     TypedDict,
     cast,
 )
+import uuid
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, model_validator
@@ -1757,9 +1758,17 @@ class LLM(BaseLLM):
         function_args = {}
 
         if function_name in available_functions:
+            from crewai.hooks.tool_hooks import (
+                ToolCallHookContext,
+                run_after_tool_call_hooks,
+                run_before_tool_call_hooks,
+            )
+
+            call_id = str(uuid.uuid4())
             try:
                 function_args = json.loads(tool_call.function.arguments)
-                fn = available_functions[function_name]
+                if not isinstance(function_args, dict):
+                    raise ValueError("Tool arguments must be a JSON object")
 
                 started_at = datetime.now()
                 crewai_event_bus.emit(
@@ -1772,7 +1781,40 @@ class LLM(BaseLLM):
                     ),
                 )
 
-                result = fn(**function_args)
+                before_context = ToolCallHookContext(
+                    tool_name=function_name,
+                    tool_input=function_args,
+                    tool=None,
+                    agent=from_agent,
+                    task=from_task,
+                    call_id=call_id,
+                )
+                blocked = run_before_tool_call_hooks(before_context)
+                if blocked:
+                    result: Any = (
+                        f"Tool execution blocked by hook. Tool: {function_name}"
+                    )
+                else:
+                    fn = available_functions[function_name]
+                    result = fn(**function_args)
+
+                result_text = result if isinstance(result, str) else str(result)
+                after_context = ToolCallHookContext(
+                    tool_name=function_name,
+                    tool_input=function_args,
+                    tool=None,
+                    agent=from_agent,
+                    task=from_task,
+                    tool_result=result_text,
+                    raw_tool_result=result,
+                    call_id=call_id,
+                    is_error=blocked,
+                    was_blocked=blocked,
+                )
+                modified_result = run_after_tool_call_hooks(after_context)
+                if modified_result is not None and modified_result != result_text:
+                    result = modified_result
+
                 crewai_event_bus.emit(
                     self,
                     event=ToolUsageFinishedEvent(
@@ -1794,12 +1836,24 @@ class LLM(BaseLLM):
                 )
                 return result
             except Exception as e:
-                fn = available_functions.get(function_name, lambda: None)
+                error_msg = f"Tool execution error: {e!s}"
                 logging.error(f"Error executing function '{function_name}': {e}")
+                after_context = ToolCallHookContext(
+                    tool_name=function_name,
+                    tool_input=function_args,
+                    tool=None,
+                    agent=from_agent,
+                    task=from_task,
+                    tool_result=error_msg,
+                    raw_tool_result=e,
+                    call_id=call_id,
+                    is_error=True,
+                )
+                governed_result = run_after_tool_call_hooks(after_context)
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(
-                        error=f"Tool execution error: {e!s}",
+                        error=error_msg,
                         from_task=from_task,
                         from_agent=from_agent,
                         call_id=get_current_call_id(),
@@ -1810,11 +1864,12 @@ class LLM(BaseLLM):
                     event=ToolUsageErrorEvent(
                         tool_name=function_name,
                         tool_args=function_args,
-                        error=f"Tool execution error: {e!s}",
+                        error=error_msg,
                         from_task=from_task,
                         from_agent=from_agent,
                     ),
                 )
+                return governed_result if governed_result != error_msg else None
         return None
 
     def call(
@@ -2007,13 +2062,16 @@ class LLM(BaseLLM):
             if isinstance(messages, str):
                 messages = [{"role": "user", "content": messages}]
 
-            messages = await self._aprocess_message_files(messages)
-
             if "o1" in self.model.lower():
                 for message in messages:
                     if message.get("role") == "system":
                         msg_role: Literal["assistant"] = "assistant"
                         message["role"] = msg_role
+
+            if not self._invoke_before_llm_call_hooks(messages, from_agent):
+                raise ValueError("LLM call blocked by before_llm_call hook")
+
+            messages = await self._aprocess_message_files(messages)
 
             with suppress_warnings():
                 if callbacks and len(callbacks) > 0:
@@ -2024,7 +2082,16 @@ class LLM(BaseLLM):
                     )
 
                     if self._effective_stream():
-                        return await self._ahandle_streaming_response(
+                        result = await self._ahandle_streaming_response(
+                            params=params,
+                            callbacks=callbacks,
+                            available_functions=available_functions,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            response_model=response_model,
+                        )
+                    else:
+                        result = await self._ahandle_non_streaming_response(
                             params=params,
                             callbacks=callbacks,
                             available_functions=available_functions,
@@ -2033,14 +2100,12 @@ class LLM(BaseLLM):
                             response_model=response_model,
                         )
 
-                    return await self._ahandle_non_streaming_response(
-                        params=params,
-                        callbacks=callbacks,
-                        available_functions=available_functions,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        response_model=response_model,
-                    )
+                    if isinstance(result, str):
+                        result = self._invoke_after_llm_call_hooks(
+                            messages, result, from_agent
+                        )
+
+                    return result
                 except LLMContextLengthExceededError:
                     raise
                 except Exception as e:

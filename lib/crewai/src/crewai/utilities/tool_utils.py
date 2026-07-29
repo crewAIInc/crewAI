@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 from crewai.agents.parser import AgentAction
 from crewai.agents.tools_handler import ToolsHandler
@@ -110,7 +111,11 @@ async def aexecute_tool_and_check_finality(
     sanitized_tool_name = sanitize_tool_name(tool_calling.tool_name)
     tool = tool_name_to_tool_map.get(sanitized_tool_name)
     if tool:
-        tool_input = tool_calling.arguments if tool_calling.arguments else {}
+        call_id = str(uuid4())
+        tool_input = (
+            tool_calling.arguments if tool_calling.arguments is not None else {}
+        )
+        tool_calling.arguments = tool_input
         hook_context = ToolCallHookContext(
             tool_name=sanitized_tool_name,
             tool_input=tool_input,
@@ -118,6 +123,7 @@ async def aexecute_tool_and_check_finality(
             agent=agent,
             task=task,
             crew=crew,
+            call_id=call_id,
         )
 
         if run_before_tool_call_hooks(hook_context):
@@ -135,6 +141,9 @@ async def aexecute_tool_and_check_finality(
                 crew=crew,
                 tool_result=blocked_message,
                 raw_tool_result=blocked_message,
+                call_id=call_id,
+                is_error=True,
+                was_blocked=True,
             )
             modified_result = run_after_tool_call_hooks(blocked_hook_context)
             return ToolResult(
@@ -154,6 +163,10 @@ async def aexecute_tool_and_check_finality(
             crew=crew,
             tool_result=tool_result,
             raw_tool_result=raw_tool_result,
+            call_id=call_id,
+            is_error=(
+                tool_usage.last_call_failed or tool_usage.last_failure is not None
+            ),
         )
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
@@ -175,7 +188,9 @@ async def aexecute_tool_and_check_finality(
             modified_result if modified_result is not None else tool_result,
             # A failed tool must not become the final answer -- the same
             # exclusion the native paths already apply to raised errors.
-            tool.result_as_answer and tool_usage.last_failure is None,
+            tool.result_as_answer
+            and tool_usage.last_failure is None
+            and not tool_usage.last_call_failed,
         )
 
     tool_result = I18N_DEFAULT.errors("wrong_tool_name").format(
@@ -273,7 +288,11 @@ def execute_tool_and_check_finality(
     sanitized_tool_name = sanitize_tool_name(tool_calling.tool_name)
     tool = tool_name_to_tool_map.get(sanitized_tool_name)
     if tool:
-        tool_input = tool_calling.arguments if tool_calling.arguments else {}
+        call_id = str(uuid4())
+        tool_input = (
+            tool_calling.arguments if tool_calling.arguments is not None else {}
+        )
+        tool_calling.arguments = tool_input
         hook_context = ToolCallHookContext(
             tool_name=sanitized_tool_name,
             tool_input=tool_input,
@@ -281,6 +300,7 @@ def execute_tool_and_check_finality(
             agent=agent,
             task=task,
             crew=crew,
+            call_id=call_id,
         )
 
         if run_before_tool_call_hooks(hook_context):
@@ -298,6 +318,9 @@ def execute_tool_and_check_finality(
                 crew=crew,
                 tool_result=blocked_message,
                 raw_tool_result=blocked_message,
+                call_id=call_id,
+                is_error=True,
+                was_blocked=True,
             )
             modified_result = run_after_tool_call_hooks(blocked_hook_context)
             return ToolResult(
@@ -317,6 +340,10 @@ def execute_tool_and_check_finality(
             crew=crew,
             tool_result=tool_result,
             raw_tool_result=raw_tool_result,
+            call_id=call_id,
+            is_error=(
+                tool_usage.last_call_failed or tool_usage.last_failure is not None
+            ),
         )
 
         modified_result = run_after_tool_call_hooks(after_hook_context)
@@ -338,7 +365,9 @@ def execute_tool_and_check_finality(
             modified_result if modified_result is not None else tool_result,
             # A failed tool must not become the final answer -- the same
             # exclusion the native paths already apply to raised errors.
-            tool.result_as_answer and tool_usage.last_failure is None,
+            tool.result_as_answer
+            and tool_usage.last_failure is None
+            and not tool_usage.last_call_failed,
         )
 
     tool_result = I18N_DEFAULT.errors("wrong_tool_name").format(

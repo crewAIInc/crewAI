@@ -14,6 +14,7 @@ import contextvars
 import inspect
 import logging
 from typing import TYPE_CHECKING, Annotated, Any, Literal, cast
+import uuid
 import warnings
 
 from crewai_core.printer import PRINTER
@@ -889,6 +890,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
         )
         if parse_error is not None:
             return parse_error
+        args_dict = args_dict or {}
+        governance_call_id = str(uuid.uuid4())
 
         if original_tool is None:
             for tool in self.original_tools or []:
@@ -925,15 +928,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
         from_cache = False
         result: str = "Tool not found"
         raw_tool_result: Any = result
-        input_str = json.dumps(args_dict) if args_dict else ""
-        if self.tools_handler and self.tools_handler.cache and output_tool is not None:
-            cached_result = self.tools_handler.cache.read(
-                tool=func_name, input=input_str
-            )
-            if cached_result is not None:
-                raw_tool_result = cached_result
-                result = format_native_tool_output_for_agent(output_tool, cached_result)
-                from_cache = True
 
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
         started_at = datetime.now()
@@ -953,13 +947,29 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         before_hook_context = ToolCallHookContext(
             tool_name=func_name,
-            tool_input=args_dict or {},
+            tool_input=args_dict,
             tool=structured_tool,
             agent=self.agent,
             task=self.task,
             crew=self.crew,
+            call_id=governance_call_id,
         )
         hook_blocked = run_before_tool_call_hooks(before_hook_context)
+
+        input_str = json.dumps(args_dict) if args_dict else ""
+        if (
+            not hook_blocked
+            and self.tools_handler
+            and self.tools_handler.cache
+            and output_tool is not None
+        ):
+            cached_result = self.tools_handler.cache.read(
+                tool=func_name, input=input_str
+            )
+            if cached_result is not None:
+                raw_tool_result = cached_result
+                result = format_native_tool_output_for_agent(output_tool, cached_result)
+                from_cache = True
 
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
@@ -973,7 +983,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             and output_tool is not None
         ):
             try:
-                raw_result = available_functions[func_name](**(args_dict or {}))
+                raw_result = available_functions[func_name](**args_dict)
                 raw_tool_result = raw_result
 
                 if self.tools_handler and self.tools_handler.cache:
@@ -984,7 +994,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         and callable(original_tool.cache_function)
                     ):
                         should_cache = original_tool.cache_function(
-                            args_dict or {}, raw_result
+                            args_dict, raw_result
                         )
                     if should_cache:
                         self.tools_handler.cache.add(
@@ -1012,13 +1022,16 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         after_hook_context = ToolCallHookContext(
             tool_name=func_name,
-            tool_input=args_dict or {},
+            tool_input=args_dict,
             tool=structured_tool,
             agent=self.agent,
             task=self.task,
             crew=self.crew,
             tool_result=result,
             raw_tool_result=raw_tool_result,
+            call_id=governance_call_id,
+            is_error=hook_blocked or max_usage_reached or error_event_emitted,
+            was_blocked=hook_blocked,
         )
         modified_result = run_after_tool_call_hooks(after_hook_context)
         if modified_result is not None:

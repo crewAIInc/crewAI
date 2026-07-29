@@ -123,7 +123,7 @@ agent-hooks = [
     # CI runs on ubuntu-latest, so `uv sync --all-extras` installs it there and the
     # governance tests run instead of skipping. The exact version is pinned in the
     # committed uv.lock.
-    "agent-hooks-sdk>=0.1.0a3; platform_system == 'Linux' and platform_machine == 'x86_64'",
+    "agent-hooks-sdk==0.1.0a3; platform_system == 'Linux' and platform_machine == 'x86_64'",
 ]
 
 

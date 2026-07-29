@@ -737,6 +737,13 @@ class BaseLLM(BaseModel, ABC):
             )
             return None
 
+        from crewai.hooks.tool_hooks import (
+            ToolCallHookContext,
+            run_after_tool_call_hooks,
+            run_before_tool_call_hooks,
+        )
+
+        call_id = str(uuid.uuid4())
         try:
             started_at = datetime.now()
 
@@ -750,8 +757,39 @@ class BaseLLM(BaseModel, ABC):
                 ),
             )
 
-            fn = available_functions[function_name]
-            result = fn(**function_args)
+            before_context = ToolCallHookContext(
+                tool_name=function_name,
+                tool_input=function_args,
+                tool=None,
+                agent=from_agent,
+                task=from_task,
+                call_id=call_id,
+            )
+            blocked = run_before_tool_call_hooks(before_context)
+            if blocked:
+                raw_result: Any = (
+                    f"Tool execution blocked by hook. Tool: {function_name}"
+                )
+            else:
+                fn = available_functions[function_name]
+                raw_result = fn(**function_args)
+
+            result = raw_result if isinstance(raw_result, str) else str(raw_result)
+            after_context = ToolCallHookContext(
+                tool_name=function_name,
+                tool_input=function_args,
+                tool=None,
+                agent=from_agent,
+                task=from_task,
+                tool_result=result,
+                raw_tool_result=raw_result,
+                call_id=call_id,
+                is_error=blocked,
+                was_blocked=blocked,
+            )
+            modified_result = run_after_tool_call_hooks(after_context)
+            if modified_result is not None:
+                result = modified_result
 
             crewai_event_bus.emit(
                 self,
@@ -773,11 +811,24 @@ class BaseLLM(BaseModel, ABC):
                 from_agent=from_agent,
             )
 
-            return str(result) if not isinstance(result, str) else result
+            return result
 
         except Exception as e:
             error_msg = f"Error executing function '{function_name}': {e!s}"
             logging.error(error_msg)
+
+            after_context = ToolCallHookContext(
+                tool_name=function_name,
+                tool_input=function_args,
+                tool=None,
+                agent=from_agent,
+                task=from_task,
+                tool_result=error_msg,
+                raw_tool_result=e,
+                call_id=call_id,
+                is_error=True,
+            )
+            governed_result = run_after_tool_call_hooks(after_context)
 
             if not hasattr(crewai_event_bus, "emit"):
                 raise ValueError(
@@ -801,7 +852,7 @@ class BaseLLM(BaseModel, ABC):
                 from_agent=from_agent,
             )
 
-            return None
+            return governed_result if governed_result != error_msg else None
 
     def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
         """Convert messages to standard format.
@@ -1022,6 +1073,7 @@ class BaseLLM(BaseModel, ABC):
             agent=None,
             task=None,
             crew=None,
+            request_id=get_current_call_id(),
         )
 
         try:
@@ -1084,6 +1136,7 @@ class BaseLLM(BaseModel, ABC):
             task=None,
             crew=None,
             response=response,
+            request_id=get_current_call_id(),
         )
 
         dispatch(

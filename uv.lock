@@ -1433,7 +1433,7 @@ watson = [
 [package.metadata]
 requires-dist = [
     { name = "a2a-sdk", marker = "extra == 'a2a'", specifier = "~=0.3.10" },
-    { name = "agent-hooks-sdk", marker = "platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'agent-hooks'", specifier = ">=0.1.0a3" },
+    { name = "agent-hooks-sdk", marker = "platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'agent-hooks'", specifier = "==0.1.0a3" },
     { name = "aiobotocore", marker = "extra == 'aws'", specifier = "~=3.8.0" },
     { name = "aiobotocore", marker = "extra == 'bedrock'", specifier = "~=3.8.0" },
     { name = "aiocache", extras = ["memcached", "redis"], marker = "extra == 'a2a'", specifier = "~=0.12.3" },

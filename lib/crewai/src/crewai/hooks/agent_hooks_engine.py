@@ -54,14 +54,16 @@ remain crewAI-native (they are not governed by the engine).
 from __future__ import annotations
 
 import asyncio
+import copy
 from dataclasses import dataclass
 import functools
-import hashlib
+import importlib
 import json
 import logging
 import math
 import threading
 from typing import TYPE_CHECKING, Any, Final, TypeVar
+import uuid
 
 from crewai.hooks.dispatch import (
     HookAborted,
@@ -110,7 +112,7 @@ def _probe_agent_hooks() -> tuple[bool, Exception | None]:
         when the package (or its compiled core) could not be loaded.
     """
     try:
-        import agent_hooks  # type: ignore[import-not-found]  # noqa: F401  # pyright: ignore[reportUnusedImport]
+        importlib.import_module("agent_hooks")
     except Exception as exc:  # ImportError, or a native-core load failure
         return False, exc
     return True, None
@@ -140,6 +142,8 @@ _SOURCE: Final[str] = "agent-hooks"
 #: Reserved reason used when the engine itself fails and must fail closed.
 _ENGINE_FAILED: Final[str] = "host_error:engine_failed"
 
+_TRANSFORM_INVALID: Final[str] = "host_error:transform_invalid"
+
 #: The eight agent-hooks lifecycle points the engine governs, in order.
 DEFAULT_POINTS: Final[tuple[InterceptionPoint, ...]] = (
     InterceptionPoint.EXECUTION_START,
@@ -160,9 +164,8 @@ _POST_POINTS: Final[frozenset[InterceptionPoint]] = frozenset(
 
 _INSTALL_HINT: Final[str] = (
     "agent-hooks is not installed (or its native core failed to load). It is an "
-    "optional dependency with a compiled core; install it from source:\n"
-    '    pip install "agent-hooks-sdk @ '
-    'git+https://github.com/responsibleai/agent-hooks.git#subdirectory=sdk/python"\n'
+    "optional dependency with a compiled core; install the pinned release:\n"
+    '    pip install "agent-hooks-sdk==0.1.0a3"\n'
     "See https://github.com/responsibleai/agent-hooks for details."
 )
 
@@ -298,11 +301,12 @@ def _model_id(llm: Any) -> str:
 def _registered_tools(crew: Any, agent: Any = None) -> list[str]:
     """Collect declared tool names for the ``agent_startup`` context."""
     names: list[str] = []
-    for source in (agent, crew):
+    crew_agents = getattr(crew, "agents", None) or []
+    for source in (agent, crew, *crew_agents):
         tools = getattr(source, "tools", None) or []
         for tool in tools:
             name = getattr(tool, "name", None)
-            if name:
+            if name and str(name) not in names:
                 names.append(str(name))
     return names
 
@@ -320,23 +324,6 @@ def _agent_envelope(agent: Any, framework: str) -> dict[str, Any]:
     if agent_name:
         envelope["name"] = agent_name
     return envelope
-
-
-def _tool_call_id(session_id: str, name: str, args: Any) -> str:
-    """Derive a stable per-invocation tool-call id.
-
-    crewAI builds separate pre/post hook contexts for one tool invocation, so a
-    random id cannot correlate them. A digest over the session, tool name, and
-    (JSON-safe) arguments yields the same id at both seams, letting audit sinks
-    and post-call policies pair the pre and post records for one call.
-    """
-    payload = json.dumps(
-        {"session": session_id, "name": name, "args": args},
-        sort_keys=True,
-        ensure_ascii=False,
-        default=str,
-    )
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:32]
 
 
 def _model_response_parts(response: Any) -> tuple[Any, list[Any], str]:
@@ -488,13 +475,10 @@ class AgentHooksEngine:
             ImportError: If agent-hooks is not installed.
         """
         _require()
-        from agent_hooks import (
-            EnforcementMode as _EnforcementMode,
-            InterceptionEmitter as _InterceptionEmitter,
-        )
+        agent_hooks = importlib.import_module("agent_hooks")
 
-        emitter: Any = _InterceptionEmitter(
-            mode=mode if mode is not None else _EnforcementMode.ENFORCE,
+        emitter: Any = agent_hooks.InterceptionEmitter(
+            mode=mode if mode is not None else agent_hooks.EnforcementMode.ENFORCE,
             resolver=resolver,
             timeout=timeout,
             composition=composition,
@@ -510,6 +494,7 @@ class AgentHooksEngine:
         self._emit_timeout = emit_timeout
         self._loop = _EmitterLoop()
         self._builders: dict[str, AgentContextBuilder] = {}
+        self._active_sessions: dict[int, list[str]] = {}
         self._builders_lock = threading.Lock()
         self._points: frozenset[InterceptionPoint] = frozenset(
             points if points is not None else DEFAULT_POINTS
@@ -583,11 +568,17 @@ class AgentHooksEngine:
 
     def close(self) -> None:
         """Deactivate the engine and stop the background emitter loop (idempotent)."""
+        global _active_engine
         if self._closed:
             return
         self._closed = True
         self.deactivate()
         self._loop.close()
+        with self._builders_lock:
+            self._builders.clear()
+            self._active_sessions.clear()
+        if _active_engine is self:
+            _active_engine = None
 
     def __enter__(self) -> AgentHooksEngine:
         return self.activate()
@@ -601,14 +592,13 @@ class AgentHooksEngine:
         self, *, crew: Any = None, flow: Any = None, agent: Any = None
     ) -> AgentContextBuilder:
         """Return the per-session context builder, creating it on first use."""
-        session_id = _session_id(crew=crew, flow=flow, agent=agent)
+        session_id = self._current_session_id(crew=crew, flow=flow, agent=agent)
         with self._builders_lock:
             builder = self._builders.get(session_id)
             if builder is None:
-                from agent_hooks import AgentContextBuilder
-
                 agent_id, agent_name = _agent_ids(agent)
-                builder = AgentContextBuilder(
+                agent_hooks = importlib.import_module("agent_hooks")
+                builder = agent_hooks.AgentContextBuilder(
                     agent_id=agent_id,
                     framework=self._framework,
                     session_id=session_id,
@@ -616,6 +606,39 @@ class AgentHooksEngine:
                 )
                 self._builders[session_id] = builder
             return builder
+
+    def _current_session_id(
+        self, *, crew: Any = None, flow: Any = None, agent: Any = None
+    ) -> str:
+        owner = crew if crew is not None else flow
+        if owner is not None:
+            with self._builders_lock:
+                sessions = self._active_sessions.get(id(owner))
+                if sessions:
+                    return sessions[-1]
+        return _session_id(crew=crew, flow=flow, agent=agent)
+
+    def _begin_session(self, *, crew: Any = None, flow: Any = None) -> str:
+        base_id = _session_id(crew=crew, flow=flow)
+        session_id = f"{base_id}:{uuid.uuid4()}"
+        owner = crew if crew is not None else flow
+        if owner is not None:
+            with self._builders_lock:
+                self._active_sessions.setdefault(id(owner), []).append(session_id)
+        return session_id
+
+    def _finish_session(self, *, crew: Any = None, flow: Any = None) -> None:
+        owner = crew if crew is not None else flow
+        if owner is None:
+            return
+        with self._builders_lock:
+            sessions = self._active_sessions.get(id(owner))
+            if not sessions:
+                return
+            session_id = sessions.pop()
+            self._builders.pop(session_id, None)
+            if not sessions:
+                self._active_sessions.pop(id(owner), None)
 
     def _decide(self, ctx: AgentContext) -> _Decision:
         """Run one emission and normalize the outcome, failing closed on error.
@@ -628,6 +651,7 @@ class AgentHooksEngine:
             A :class:`_Decision` describing whether the action proceeds and
             whether a transform was applied.
         """
+        original_target = copy.deepcopy(ctx.get("target"))
         try:
             record = self._loop.run(
                 self._emitter.emit_unchecked(ctx), self._emit_timeout
@@ -642,7 +666,7 @@ class AgentHooksEngine:
         reason = _compose_reason(verdict.reason, verdict.message)
         return _Decision(
             proceeds=record.proceeds,
-            is_transform=record.proceeds and verdict.decision.value == "transform",
+            is_transform=record.proceeds and ctx.get("target") != original_target,
             reason=reason,
         )
 
@@ -684,10 +708,9 @@ class AgentHooksEngine:
         """Adapt ``PRE_TOOL_CALL``: deny blocks the call; transform rewrites args."""
         flow = getattr(ctx, "flow", None)
         args = _json_safe(dict(ctx.tool_input))
-        session_id = _session_id(crew=ctx.crew, flow=flow, agent=ctx.agent)
         builder = self._builder(crew=ctx.crew, flow=flow, agent=ctx.agent)
         agent_ctx = builder.pre_tool_call(
-            call_id=_tool_call_id(session_id, ctx.tool_name, args),
+            call_id=ctx.call_id,
             name=ctx.tool_name,
             args=args,
         )
@@ -697,22 +720,24 @@ class AgentHooksEngine:
             raise HookAborted(reason=decision.reason, source=_SOURCE)
         if decision.is_transform:
             new_args = agent_ctx.get("target")
-            if isinstance(new_args, dict):
-                ctx.tool_input.clear()
-                ctx.tool_input.update(new_args)
+            if not isinstance(new_args, dict):
+                raise HookAborted(reason=_TRANSFORM_INVALID, source=_SOURCE)
+            ctx.tool_input.clear()
+            ctx.tool_input.update(new_args)
 
     def _post_tool_call(self, ctx: ToolCallHookContext) -> str | None:
         """Adapt ``POST_TOOL_CALL``: deny fails the result closed; transform rewrites it."""
+        if getattr(ctx, "was_blocked", False):
+            return None
         flow = getattr(ctx, "flow", None)
         args = _json_safe(dict(ctx.tool_input))
-        session_id = _session_id(crew=ctx.crew, flow=flow, agent=ctx.agent)
         builder = self._builder(crew=ctx.crew, flow=flow, agent=ctx.agent)
         agent_ctx = builder.post_tool_call(
-            call_id=_tool_call_id(session_id, ctx.tool_name, args),
+            call_id=ctx.call_id,
             name=ctx.tool_name,
             args=args,
             value=_json_safe(ctx.tool_result),
-            is_error=False,
+            is_error=getattr(ctx, "is_error", False),
         )
         agent_ctx["agent"] = _agent_envelope(ctx.agent, self._framework)
         decision = self._decide(agent_ctx)
@@ -729,6 +754,7 @@ class AgentHooksEngine:
         agent_ctx = builder.pre_model_call(
             model_id=_model_id(getattr(ctx, "llm", None)),
             messages=_json_safe(list(ctx.messages)),
+            request_id=getattr(ctx, "request_id", None),
         )
         agent_ctx["agent"] = _agent_envelope(ctx.agent, self._framework)
         decision = self._decide(agent_ctx)
@@ -736,9 +762,10 @@ class AgentHooksEngine:
             raise HookAborted(reason=decision.reason, source=_SOURCE)
         if decision.is_transform:
             new_messages = agent_ctx.get("target")
-            if isinstance(new_messages, list):
-                ctx.messages.clear()
-                ctx.messages.extend(new_messages)
+            if not isinstance(new_messages, list):
+                raise HookAborted(reason=_TRANSFORM_INVALID, source=_SOURCE)
+            ctx.messages.clear()
+            ctx.messages.extend(new_messages)
 
     def _post_model_call(self, ctx: LLMCallHookContext) -> str | None:
         """Adapt ``POST_MODEL_CALL``: deny fails the response closed; transform rewrites it."""
@@ -750,6 +777,7 @@ class AgentHooksEngine:
             content=content,
             tool_calls=tool_calls,
             finish_reason=finish_reason,
+            request_id=getattr(ctx, "request_id", None),
         )
         agent_ctx["agent"] = _agent_envelope(ctx.agent, self._framework)
         decision = self._decide(agent_ctx)
@@ -774,12 +802,7 @@ class AgentHooksEngine:
         return None
 
     def _output(self, ctx: OutputContext) -> Any:
-        """Adapt ``OUTPUT``: deny blocks the final output; transform replaces plain payloads.
-
-        A transform is only applied when the crewAI payload is a plain ``str``
-        or ``dict``; rich ``CrewOutput`` objects cannot be safely reconstructed
-        from the transformed value, so only ``deny`` acts on them.
-        """
+        """Adapt ``OUTPUT``: deny blocks the final output; transform replaces it."""
         builder = self._builder(crew=ctx.crew, flow=ctx.flow)
         payload = ctx.payload
         content = getattr(payload, "raw", None)
@@ -789,28 +812,62 @@ class AgentHooksEngine:
         decision = self._decide(agent_ctx)
         if not decision.proceeds:
             raise HookAborted(reason=decision.reason, source=_SOURCE)
-        if decision.is_transform and isinstance(payload, (str, dict)):
-            return _transformed_payload(agent_ctx.get("target"))
+        if decision.is_transform:
+            transformed = _transformed_payload(agent_ctx.get("target"))
+            from crewai.crews.crew_output import CrewOutput
+
+            if isinstance(payload, CrewOutput):
+                tasks_output = [
+                    task.model_copy(deep=True) for task in payload.tasks_output
+                ]
+                if tasks_output:
+                    tasks_output[-1] = tasks_output[-1].model_copy(
+                        update={
+                            "raw": _to_text(transformed),
+                            "pydantic": None,
+                            "json_dict": None,
+                        }
+                    )
+                return payload.model_copy(
+                    update={
+                        "raw": _to_text(transformed),
+                        "pydantic": None,
+                        "json_dict": None,
+                        "tasks_output": tasks_output,
+                    }
+                )
+            if isinstance(payload, (str, dict)):
+                return transformed
+            raise HookAborted(reason=_ENGINE_FAILED, source=_SOURCE)
         return None
 
     def _execution_start(self, ctx: ExecutionStartContext) -> None:
         """Adapt ``EXECUTION_START`` -> ``agent_startup``: deny aborts the run."""
-        builder = self._builder(crew=ctx.crew, flow=ctx.flow)
-        agent_ctx = builder.agent_startup(
-            tools_registered=_registered_tools(ctx.crew, ctx.agent),
-            inputs=_json_safe(ctx.payload),
-        )
-        decision = self._decide(agent_ctx)
+        self._begin_session(crew=ctx.crew, flow=ctx.flow)
+        try:
+            builder = self._builder(crew=ctx.crew, flow=ctx.flow)
+            agent_ctx = builder.agent_startup(
+                tools_registered=_registered_tools(ctx.crew, ctx.agent),
+            )
+            decision = self._decide(agent_ctx)
+        except Exception:
+            self._finish_session(crew=ctx.crew, flow=ctx.flow)
+            raise
         if not decision.proceeds:
+            try:
+                self._decide(builder.agent_shutdown(reason="error"))
+            finally:
+                self._finish_session(crew=ctx.crew, flow=ctx.flow)
             raise HookAborted(reason=decision.reason, source=_SOURCE)
 
     def _execution_end(self, ctx: ExecutionEndContext) -> None:
         """Adapt ``EXECUTION_END`` -> ``agent_shutdown``: records the run's end."""
         builder = self._builder(crew=ctx.crew, flow=ctx.flow)
-        agent_ctx = builder.agent_shutdown(reason=ctx.status)
-        decision = self._decide(agent_ctx)
-        if not decision.proceeds:
-            raise HookAborted(reason=decision.reason, source=_SOURCE)
+        reason = "completed" if ctx.status == "completed" else "error"
+        try:
+            self._decide(builder.agent_shutdown(reason=reason))
+        finally:
+            self._finish_session(crew=ctx.crew, flow=ctx.flow)
 
 
 _active_engine: AgentHooksEngine | None = None
