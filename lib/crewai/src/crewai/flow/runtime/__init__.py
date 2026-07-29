@@ -2541,6 +2541,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         flow span does, then emit and finalize the trace batch. Never raises,
         so the original exception propagates unchanged.
 
+        Deferred sessions still get the event — unlike the success path, whose
+        terminal event is owed to a later ``finalize_session_traces()``, a
+        failure ends the session there and then — but the batch finalization
+        stays with whoever owns the session.
+
         Args:
             error: The exception that ended the execution.
             respect_suppression: Skip the emission for suppressed flows. Only
@@ -2548,8 +2553,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 ``suppress_flow_events``; ``kickoff_async`` emits them either
                 way and lets listeners filter.
         """
-        if self._should_defer_trace_finalization():
-            return
         if respect_suppression and self.suppress_flow_events:
             return
 
@@ -2576,6 +2579,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     await asyncio.wrap_future(future)
                 except Exception:
                     logger.warning("FlowFailedEvent handler failed", exc_info=True)
+
+            # The session scope is closed now, so a later
+            # ``finalize_session_traces()`` must not emit a second terminal
+            # event against it.
+            object.__setattr__(self, "_deferred_flow_started_event_id", None)
 
             trace_listener = TraceCollectionListener()
             if (

@@ -47,6 +47,10 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
 )
+from crewai.experimental.conversational import (
+    ConversationConfig,
+    ConversationState,
+)
 from crewai.flow.async_feedback.types import PendingFeedbackContext
 from crewai.flow.flow import Flow, listen, start
 from crewai.flow.human_feedback import human_feedback
@@ -626,6 +630,52 @@ def test_suppressed_flow_failure_matches_finished_event_emission():
 
     assert len(finished) == 1
     assert len(failed) == 1
+
+
+def test_deferred_session_failure_emits_a_single_terminal_event():
+    started: list[FlowStartedEvent] = []
+    failed: list[FlowFailedEvent] = []
+    finished: list[FlowFinishedEvent] = []
+
+    @ConversationConfig(defer_trace_finalization=True)
+    class ConvoFlow(Flow[ConversationState]):
+        conversational = True
+
+        @start()
+        def load(self) -> None:
+            return None
+
+        def route_turn(self, context):
+            return "BOOM"
+
+        @listen("BOOM")
+        def boom(self) -> str:
+            raise ConnectionError("backend unreachable")
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(FlowStartedEvent)
+        def handle_flow_started(source, event):
+            started.append(event)
+
+        @crewai_event_bus.on(FlowFailedEvent)
+        def handle_flow_failed(source, event):
+            failed.append(event)
+
+        @crewai_event_bus.on(FlowFinishedEvent)
+        def handle_flow_finished(source, event):
+            finished.append(event)
+
+        flow = ConvoFlow()
+        with pytest.raises(ConnectionError, match="backend unreachable"):
+            flow.handle_turn("go", session_id="session-1")
+        flow.finalize_session_traces()
+        wait_for_event_handlers()
+
+    assert len(started) == 1
+    assert len(failed) == 1
+    assert failed[0].started_event_id == started[0].event_id
+    assert finished == []
 
 
 def test_abort_before_flow_started_emits_no_failed_event():
