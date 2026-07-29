@@ -47,9 +47,6 @@ class ToolFailureReason(str, Enum):
     USAGE_LIMIT = "usage_limit"
     """The tool's ``max_usage_count`` was already spent."""
 
-    BLOCKED_BY_HOOK = "blocked_by_hook"
-    """A ``before_tool_call`` hook refused the call."""
-
     UNKNOWN_TOOL = "unknown_tool"
     """The agent asked for a tool that does not exist."""
 

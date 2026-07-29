@@ -1468,6 +1468,8 @@ class Agent(BaseAgent):
         Returns:
             Tuple of (executor, inputs, agent_info, parsed_tools) ready for execution.
         """
+        self.reset_tool_failures()
+
         if self.tools_handler:
             self.tools_handler.last_used_tool = None
 

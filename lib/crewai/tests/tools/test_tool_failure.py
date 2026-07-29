@@ -1298,14 +1298,14 @@ class TestDeprecatedExecutorIsNotIntegrated:
     """CrewAgentExecutor is deprecated; the feature must not extend into it."""
 
     def test_no_tool_failure_integration(self) -> None:
+        from importlib import import_module
         from pathlib import Path
-
-        import crewai
 
         # Read the file directly: importing this module by name resolves to a
         # different one in this package, so inspect would read the wrong source.
+        package = import_module(Agent.__module__.split(".")[0])
         source = (
-            Path(crewai.__file__).parent / "agents" / "crew_agent_executor.py"
+            Path(package.__file__).parent / "agents" / "crew_agent_executor.py"
         ).read_text()
         assert "tool_failure" not in source
         assert "ToolExecutionFailedError" not in source
@@ -1457,6 +1457,160 @@ class TestConcurrentExecutionsAreIsolated:
         for (code, _), result in zip(crews, outputs, strict=True):
             codes = [f.failure.code for f in result.tool_failures]
             assert codes == [code], f"{code} saw {codes}"
+
+
+class TestMalformedArgsOnEveryPath:
+    """A malformed tool call is reported the same way everywhere."""
+
+    def test_shared_native_helper_reports_instead_of_emptying_args(self) -> None:
+        """It used to swallow the decode error and run the tool with no input."""
+        from crewai.utilities.agent_utils import execute_single_native_tool_call
+
+        agent = Agent(role="r", goal="g", backstory="b")
+        tool = WorkingTool()
+        recorded: list[ToolFailureDetectedEvent] = []
+        calls: list[str] = []
+
+        def tracked(**kwargs: Any) -> str:
+            calls.append("ran")
+            return "should not happen"
+
+        tool_call = SimpleNamespace(
+            id="c1", function=SimpleNamespace(name="echo", arguments="{not json")
+        )
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(ToolFailureDetectedEvent)
+            def _(source: Any, event: ToolFailureDetectedEvent) -> None:
+                recorded.append(event)
+
+            result = execute_single_native_tool_call(
+                tool_call,
+                available_functions={"echo": tracked},
+                original_tools=[tool],
+                structured_tools=[tool.to_structured_tool()],
+                tools_handler=None,
+                agent=agent,
+                task=None,
+                crew=None,
+                event_source=agent,
+                printer=None,
+                verbose=False,
+            )
+            crewai_event_bus.flush(timeout=10.0)
+
+        assert calls == [], "the tool must not run with silently emptied args"
+        assert "Failed to parse tool arguments" in str(result.result)
+        assert len(recorded) == 1
+        assert recorded[0].failure.reason is ToolFailureReason.INVALID_INPUT
+
+    def test_react_path_reports_a_malformed_call(self) -> None:
+        from crewai.agents.parser import AgentAction
+        from crewai.utilities.tool_utils import execute_tool_and_check_finality
+
+        agent = Agent(role="r", goal="g", backstory="b")
+        tool = WorkingTool().to_structured_tool()
+        recorded: list[ToolFailureDetectedEvent] = []
+
+        action = AgentAction(
+            thought="t",
+            tool="echo",
+            tool_input="{not a dict",
+            text="Action: echo\nAction Input: {not a dict",
+        )
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(ToolFailureDetectedEvent)
+            def _(source: Any, event: ToolFailureDetectedEvent) -> None:
+                recorded.append(event)
+
+            execute_tool_and_check_finality(
+                agent_action=action,
+                tools=[tool],
+                agent=agent,
+                task=None,
+                crew=None,
+            )
+            crewai_event_bus.flush(timeout=10.0)
+
+        assert len(recorded) == 1
+        assert recorded[0].failure.reason is ToolFailureReason.INVALID_INPUT
+
+    def test_malformed_call_aborts_under_raise(self) -> None:
+        from crewai.utilities.agent_utils import execute_single_native_tool_call
+
+        agent = Agent(
+            role="r",
+            goal="g",
+            backstory="b",
+            tool_failure_policy=ToolFailurePolicy.RAISE,
+        )
+        tool = WorkingTool()
+        tool_call = SimpleNamespace(
+            id="c1", function=SimpleNamespace(name="echo", arguments="{not json")
+        )
+
+        with pytest.raises(ToolExecutionFailedError):
+            execute_single_native_tool_call(
+                tool_call,
+                available_functions={"echo": tool.run},
+                original_tools=[tool],
+                structured_tools=[tool.to_structured_tool()],
+                tools_handler=None,
+                agent=agent,
+                task=None,
+                crew=None,
+                event_source=agent,
+                printer=None,
+                verbose=False,
+            )
+
+
+class TestBlockedCallsAreNotFailures:
+    """A hook block is a deliberate decision, so it is not reported as one."""
+
+    def test_no_blocked_by_hook_reason_exists(self) -> None:
+        assert not hasattr(ToolFailureReason, "BLOCKED_BY_HOOK")
+
+    def test_every_reason_is_actually_produced(self) -> None:
+        """Guard against another declared-but-unused reason."""
+        from pathlib import Path
+
+        from importlib import import_module
+
+        package = Path(import_module(Agent.__module__.split(".")[0]).__file__).parent
+        sources = "\n".join(
+            path.read_text()
+            for path in package.rglob("*.py")
+            if "tool_failure.py" not in path.name
+        )
+        # TOOL_REPORTED is the field default, so it is produced without ever
+        # being named; every other member has to be referenced somewhere.
+        for member in ToolFailureReason:
+            if member is ToolFailureReason.TOOL_REPORTED:
+                continue
+            assert f"ToolFailureReason.{member.name}" in sources, (
+                f"{member.name} is declared but never produced"
+            )
+
+
+class TestKickoffResetsTheAccessor:
+    def test_last_tool_failures_does_not_grow_across_kickoffs(self) -> None:
+        agent = Agent(
+            role="Slack Messenger",
+            goal="post",
+            backstory="b",
+            llm=StatelessToolLLM("slackbot_send_message", {"channel": "#c"}),
+            tools=[SlackTool()],
+        )
+
+        agent.kickoff("post once")
+        assert len(agent.last_tool_failures) == 1
+
+        agent.kickoff("post again")
+        assert len(agent.last_tool_failures) == 1, "records must not accumulate"
 
 
 class TestMCPIsErrorPlumbing:

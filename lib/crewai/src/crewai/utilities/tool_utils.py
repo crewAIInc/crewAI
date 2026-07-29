@@ -92,6 +92,19 @@ async def aexecute_tool_and_check_finality(
     tool_calling = tool_usage.parse_tool_calling(agent_action.text)
 
     if isinstance(tool_calling, ToolUsageError):
+        # Mirrors the native paths, which report a malformed call as
+        # INVALID_INPUT rather than passing the message along silently.
+        handle_tool_failure(
+            ToolFailure(
+                message=tool_calling.message,
+                reason=ToolFailureReason.INVALID_INPUT,
+            ),
+            tool_name=getattr(agent_action, "tool", "") or "unknown",
+            tool_args=getattr(agent_action, "tool_input", None),
+            agent=agent,
+            task=task,
+            crew=crew,
+        )
         return ToolResult(tool_calling.message, False)
 
     sanitized_tool_name = sanitize_tool_name(tool_calling.tool_name)
@@ -242,6 +255,19 @@ def execute_tool_and_check_finality(
     tool_calling = tool_usage.parse_tool_calling(agent_action.text)
 
     if isinstance(tool_calling, ToolUsageError):
+        # Mirrors the native paths, which report a malformed call as
+        # INVALID_INPUT rather than passing the message along silently.
+        handle_tool_failure(
+            ToolFailure(
+                message=tool_calling.message,
+                reason=ToolFailureReason.INVALID_INPUT,
+            ),
+            tool_name=getattr(agent_action, "tool", "") or "unknown",
+            tool_args=getattr(agent_action, "tool_input", None),
+            agent=agent,
+            task=task,
+            crew=crew,
+        )
         return ToolResult(tool_calling.message, False)
 
     sanitized_tool_name = sanitize_tool_name(tool_calling.tool_name)

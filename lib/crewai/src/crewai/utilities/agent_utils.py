@@ -1611,13 +1611,30 @@ def execute_single_native_tool_call(
 
     call_id, func_name, func_args = info
 
-    if isinstance(func_args, str):
-        try:
-            args_dict = json.loads(func_args)
-        except json.JSONDecodeError:
-            args_dict = {}
-    else:
-        args_dict = func_args
+    parsed_args, parse_error = parse_tool_call_args(func_args, func_name, call_id)
+    if parse_error is not None:
+        # Previously the decode error was swallowed into empty args and the tool
+        # ran with no input at all.
+        handle_tool_failure(
+            parse_error["tool_failure"],
+            tool_name=func_name,
+            tool_args=func_args,
+            agent=agent,
+            task=task,
+            crew=crew,
+        )
+        return NativeToolCallResult(
+            call_id=call_id,
+            func_name=func_name,
+            result=parse_error["result"],
+            tool_message={
+                "role": "tool",
+                "tool_call_id": call_id,
+                "name": func_name,
+                "content": parse_error["result"],
+            },
+        )
+    args_dict = parsed_args if parsed_args is not None else {}
 
     agent_key = getattr(agent, "key", "unknown") if agent else "unknown"
 
