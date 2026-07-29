@@ -216,5 +216,3 @@ def get_uploader(
         f"No file uploader available for provider: {provider}"
     )
 
-    logger.debug(f"No file uploader available for provider: {provider}")
-    raise
