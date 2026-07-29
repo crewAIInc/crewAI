@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from logging import getLogger
-from threading import Condition, Lock
+from threading import Condition, Lock, RLock
 import time
 from typing import Any
 import uuid
@@ -63,7 +63,7 @@ class TraceBatchManager:
         self._pending_events_lock = Lock()
         self._pending_events_cv = Condition(self._pending_events_lock)
         self._pending_events_count = 0
-        self._finalize_lock = Lock()
+        self._finalize_lock = RLock()
 
         self.is_current_batch_ephemeral = False
         self.trace_batch_id: str | None = None
@@ -319,6 +319,11 @@ class TraceBatchManager:
 
     def finalize_batch(self) -> TraceBatch | None:
         """Finalize batch and return it for sending"""
+        with self._finalize_lock:
+            return self._finalize_batch()
+
+    def _finalize_batch(self) -> TraceBatch | None:
+        """Finalize the current batch while holding ``_finalize_lock``."""
 
         if self._batch_finalized:
             return None

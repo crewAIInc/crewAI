@@ -1,5 +1,5 @@
 import os
-from threading import Thread
+from threading import Barrier, Event, Lock, Thread
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -984,6 +984,83 @@ class TestTraceListenerSetup:
 
         assert results == [True, True]
         mock_finalize.assert_called_once()
+
+    def test_finalize_batch_sends_events_once_when_called_concurrently(self) -> None:
+        """Concurrent public finalizers must not resend an acknowledged event."""
+        batch_manager = TraceBatchManager()
+        batch_manager.current_batch = TraceBatch(
+            user_context={"privacy_level": "standard"},
+            execution_metadata={"execution_type": "crew", "crew_name": "test"},
+        )
+        batch_manager.trace_batch_id = "concurrent-finalize-batch"
+        batch_manager.backend_initialized = True
+        batch_manager.event_buffer = [
+            TraceEvent(
+                type="llm_call_started",
+                timestamp="2026-01-01T00:00:00",
+                event_id="concurrent-event",
+                emission_sequence=1,
+            )
+        ]
+        start = Barrier(2)
+        second_send_started = Event()
+        send_lock = Lock()
+        errors: list[BaseException] = []
+        send_count = 0
+
+        def send_events(*_args: object, **_kwargs: object) -> MagicMock:
+            nonlocal send_count
+            with send_lock:
+                send_count += 1
+                is_first_send = send_count == 1
+            if is_first_send:
+                # Bounded overlap window, not a synchronisation point: once the
+                # finalizers are serialized the second send never starts, so this
+                # times out and the call-count assertions decide the result.
+                second_send_started.wait(timeout=0.25)
+            else:
+                second_send_started.set()
+            return MagicMock(status_code=200)
+
+        def finalize() -> None:
+            try:
+                start.wait(timeout=5)
+                batch_manager.finalize_batch()
+            except BaseException as error:
+                errors.append(error)
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.should_auto_collect_first_time_traces",
+                return_value=True,
+            ),
+            patch.object(
+                batch_manager.plus_api,
+                "send_trace_events",
+                side_effect=send_events,
+            ) as send,
+            patch.object(
+                batch_manager.plus_api,
+                "finalize_trace_batch",
+                return_value=MagicMock(
+                    status_code=200, json=MagicMock(return_value={})
+                ),
+            ) as finalize_backend,
+        ):
+            threads = [Thread(target=finalize), Thread(target=finalize)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join(timeout=5)
+
+        assert not errors
+        assert all(not thread.is_alive() for thread in threads)
+        send.assert_called_once()
+        finalize_backend.assert_called_once()
 
     def test_ephemeral_batch_includes_anon_id(self):
         """Test that ephemeral batch initialization sends anon_id from get_user_id()"""
