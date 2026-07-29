@@ -6,11 +6,13 @@ silently ignored, leaving agents on the built-in prompts.
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 import warnings
 
 from crewai import Agent, Crew, Task
+from crewai.agent.utils import build_task_prompt_with_schema, format_task_with_context
 from crewai.utilities.i18n import I18N, I18N_DEFAULT, resolve_i18n
+from pydantic import BaseModel
 import pytest
 
 
@@ -129,6 +131,60 @@ def test_resolution_tolerates_serialized_crew_reference() -> None:
     agent.crew = "some-crew-id"
 
     assert resolve_i18n(agent) is I18N_DEFAULT
+
+
+class _Schema(BaseModel):
+    """Minimal output schema for the schema-instruction path."""
+
+    answer: str
+
+
+class _FakeMatch:
+    """Stand-in for a recalled memory entry."""
+
+    def format(self) -> str:
+        return "a remembered thing"
+
+
+class _FakeMemory:
+    """Stand-in for a unified memory backend."""
+
+    def recall(self, query: str, limit: int = 5) -> list[_FakeMatch]:
+        return [_FakeMatch()]
+
+
+def test_schema_instructions_use_custom_prompt_file(tmp_path: Path) -> None:
+    """Output-schema instructions render from the resolved prompts."""
+    i18n = I18N(prompt_file=_write_prompt_file(tmp_path))
+    task = Task(description="d", expected_output="e", output_pydantic=_Schema)
+
+    result = build_task_prompt_with_schema(task, "base prompt", i18n)
+
+    assert "CUSTOM" in result
+    assert result != "base prompt"
+
+
+def test_task_context_uses_custom_prompt_file(tmp_path: Path) -> None:
+    """Task-with-context rendering uses the resolved prompts."""
+    i18n = I18N(prompt_file=_write_prompt_file(tmp_path))
+
+    result = format_task_with_context("the task", "the context", i18n)
+
+    assert result == "CUSTOM the task context the context"
+
+
+def test_task_memory_uses_custom_prompt_file(tmp_path: Path) -> None:
+    """Memory recalled during task execution renders from the crew's file."""
+    prompt_file = _write_prompt_file(tmp_path)
+    agent = _agent()
+    crew = _crew_with(agent, prompt_file)
+    crew._memory = cast(Any, _FakeMemory())
+
+    task = Task(description="d", expected_output="e", agent=agent)
+    result = agent._retrieve_memory_context(task, "base prompt")
+
+    assert "CUSTOM memory" in result
+    assert "a remembered thing" in result
 
 
 @pytest.mark.parametrize("missing", ["role_playing", "observation"])
