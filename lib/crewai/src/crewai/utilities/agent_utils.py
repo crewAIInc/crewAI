@@ -37,6 +37,7 @@ from crewai.tools.tool_failure import (
     detect_tool_failure,
     failure_from_exception,
     handle_tool_failure,
+    reportable_failure,
 )
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities.errors import AgentRepositoryError
@@ -1678,6 +1679,9 @@ def execute_single_native_tool_call(
     if hook_blocked:
         result = f"Tool execution blocked by hook. Tool: {func_name}"
         raw_tool_result = result
+        # The blocked message replaces any cached result, so a cached failure
+        # must not be attributed to this call.
+        tool_failure = None
     elif not from_cache:
         if func_name in available_functions and output_tool is not None:
             try:
@@ -1755,7 +1759,13 @@ def execute_single_native_tool_call(
                 plan_step_description=plan_step_description,
                 started_at=started_at,
                 finished_at=datetime.now(),
-                failure=tool_failure,
+                failure=reportable_failure(
+                    tool_failure,
+                    tool=structured_tool,
+                    agent=agent,
+                    task=task,
+                    crew=crew,
+                ),
             ),
         )
 

@@ -208,6 +208,32 @@ def resolve_tool_failure_policy(
     return ToolFailurePolicy.WARN
 
 
+def merge_tool_failures(
+    *groups: list[ToolFailureRecord],
+) -> list[ToolFailureRecord]:
+    """Concatenate failure lists, dropping records already present.
+
+    Guardrail retries rebuild the output from overlapping sources, so identity
+    is not enough to avoid duplicates.
+    """
+    merged: list[ToolFailureRecord] = []
+    seen: set[tuple[Any, ...]] = set()
+    for group in groups:
+        for record in group:
+            key = (
+                record.tool_name,
+                record.failure.message,
+                record.failure.code,
+                record.task_id,
+                str(record.tool_args),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append(record)
+    return merged
+
+
 def collect_tool_failures(agent: Any) -> list[ToolFailureRecord]:
     """Return the failures recorded on an agent, tolerating custom agents.
 
@@ -225,6 +251,26 @@ def _record_on_agent(agent: Any, record: ToolFailureRecord) -> None:
     failures = getattr(agent, "_tool_failures", None)
     if isinstance(failures, list):
         failures.append(record)
+
+
+def reportable_failure(
+    failure: ToolFailure | None,
+    *,
+    tool: Any = None,
+    agent: BaseAgent | LiteAgent | None = None,
+    task: Task | None = None,
+    crew: Crew | None = None,
+) -> ToolFailure | None:
+    """Return the failure to attach to ``ToolUsageFinishedEvent``.
+
+    ``None`` under :attr:`ToolFailurePolicy.IGNORE`, so that policy really does
+    surface nothing -- neither a record, nor an event, nor a flag on the
+    finished event that a trace UI would render as a failure.
+    """
+    if failure is None:
+        return None
+    policy = resolve_tool_failure_policy(tool=tool, agent=agent, task=task, crew=crew)
+    return None if policy is ToolFailurePolicy.IGNORE else failure
 
 
 def handle_tool_failure(

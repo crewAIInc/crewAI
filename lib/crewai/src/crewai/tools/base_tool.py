@@ -38,7 +38,7 @@ from crewai.tools.structured_tool import (
     build_schema_hint,
     format_description_for_llm,
 )
-from crewai.tools.tool_failure import ToolFailurePolicy
+from crewai.tools.tool_failure import ToolFailure, ToolFailurePolicy, ToolFailureReason
 from crewai.types.callback import SerializableCallable, _resolve_dotted_path
 from crewai.utilities.string_utils import sanitize_tool_name
 
@@ -299,21 +299,26 @@ class BaseTool(BaseModel, ABC):
                 ) from e
         return kwargs
 
-    def _claim_usage(self) -> str | None:
+    def _claim_usage(self) -> ToolFailure | None:
         """Atomically check max usage and increment the counter.
 
         Returns:
-            None if usage was claimed successfully, or an error message
-            string if the tool has reached its usage limit.
+            None if usage was claimed, otherwise a :class:`ToolFailure`. A
+            structured result rather than a bare string so every execution
+            path records a spent limit, instead of only the ones that
+            recognise the message.
         """
         with self._usage_lock:
             if (
                 self.max_usage_count is not None
                 and self.current_usage_count >= self.max_usage_count
             ):
-                return (
-                    f"Tool '{self.name}' has reached its usage limit of "
-                    f"{self.max_usage_count} times and cannot be used anymore."
+                return ToolFailure(
+                    message=(
+                        f"Tool '{self.name}' has reached its usage limit of "
+                        f"{self.max_usage_count} times and cannot be used anymore."
+                    ),
+                    reason=ToolFailureReason.USAGE_LIMIT,
                 )
             self.current_usage_count += 1
             return None

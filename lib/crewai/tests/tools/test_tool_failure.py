@@ -1,6 +1,5 @@
 """Tests for structured tool-failure signalling and the per-agent policy."""
 
-from datetime import datetime
 from types import SimpleNamespace
 from typing import Any
 
@@ -781,6 +780,277 @@ class TestFailureRecordsResetAndAccumulate:
         # the blocked first attempt's record.
         assert len(result.tool_failures) == 1
         assert result.tool_failures[0].failure.code == "channel_not_found"
+
+
+class TestIgnoreSurfacesNothing:
+    """`ignore` must suppress the flag on the finished event too.
+
+    Leaving `failure` set made traces treat the call as failed and left the
+    console with no panel at all: green suppressed, red skipped.
+    """
+
+    def test_finished_event_carries_no_failure_under_ignore(self) -> None:
+        crew, _ = _build_crew(ToolFailurePolicy.IGNORE)
+        finished: list[ToolUsageFinishedEvent] = []
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(ToolUsageFinishedEvent)
+            def _(source: Any, event: ToolUsageFinishedEvent) -> None:
+                finished.append(event)
+
+            crew.kickoff()
+            crewai_event_bus.flush(timeout=10.0)
+
+        slack = [e for e in finished if e.tool_name == "slackbot_send_message"]
+        assert slack, "the tool call should still report as finished"
+        assert all(e.failure is None for e in slack)
+
+    def test_finished_event_carries_failure_under_warn(self) -> None:
+        crew, _ = _build_crew(ToolFailurePolicy.WARN)
+        finished: list[ToolUsageFinishedEvent] = []
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(ToolUsageFinishedEvent)
+            def _(source: Any, event: ToolUsageFinishedEvent) -> None:
+                finished.append(event)
+
+            crew.kickoff()
+            crewai_event_bus.flush(timeout=10.0)
+
+        slack = [e for e in finished if e.tool_name == "slackbot_send_message"]
+        assert any(e.failure is not None for e in slack)
+
+    def test_reportable_failure_helper(self) -> None:
+        from crewai.tools.tool_failure import reportable_failure
+
+        failure = ToolFailure(message="nope")
+        ignoring = Agent(
+            role="r",
+            goal="g",
+            backstory="b",
+            tool_failure_policy=ToolFailurePolicy.IGNORE,
+        )
+        warning = Agent(
+            role="r",
+            goal="g",
+            backstory="b",
+            tool_failure_policy=ToolFailurePolicy.WARN,
+        )
+        assert reportable_failure(failure, agent=ignoring) is None
+        assert reportable_failure(failure, agent=warning) is failure
+        assert reportable_failure(None, agent=warning) is None
+
+    def test_ignore_still_shows_a_console_panel(self) -> None:
+        """With no failure flag, the ordinary green panel is restored."""
+        from crewai.events.utils.console_formatter import ConsoleFormatter
+
+        formatter = ConsoleFormatter(verbose=True)
+        assert formatter.should_render_success_panel(None) is True
+
+
+class TestFailuresAreNotCached:
+    """A cached failure would make a transient error permanent."""
+
+    def test_cache_handler_refuses_to_store_a_failure(self) -> None:
+        from crewai.agents.cache.cache_handler import CacheHandler
+
+        cache = CacheHandler()
+        cache.add(tool="t", input="{}", output=ToolFailure(message="nope"))
+        assert cache.read(tool="t", input="{}") is None
+
+    def test_cache_handler_still_stores_successes(self) -> None:
+        from crewai.agents.cache.cache_handler import CacheHandler
+
+        cache = CacheHandler()
+        cache.add(tool="t", input="{}", output="fine")
+        assert cache.read(tool="t", input="{}") == "fine"
+
+    def test_repeated_failures_are_recorded_once_each(self) -> None:
+        """Two failing calls give two records, not a replayed cache hit."""
+        agent = Agent(
+            role="Slack Messenger",
+            goal="post a message",
+            backstory="b",
+            llm=ScriptedLLM(
+                [
+                    'Thought: a\nAction: slackbot_send_message\nAction Input: {"channel": "#c"}',
+                    'Thought: b\nAction: slackbot_send_message\nAction Input: {"channel": "#c"}',
+                    "Thought: done\nFinal Answer: could not post.",
+                ]
+            ),
+            tools=[SlackTool()],
+            cache=True,
+        )
+        task = Task(description="post twice", expected_output="c", agent=agent)
+        result = Crew(agents=[agent], tasks=[task], cache=True).kickoff()
+        assert len(result.tool_failures) >= 1
+        assert all(
+            f.failure.code == "channel_not_found" for f in result.tool_failures
+        )
+
+
+class TestUsageLimitIsStructured:
+    """A spent max_usage_count must be a ToolFailure, not a bare string."""
+
+    def test_claim_usage_returns_a_failure(self) -> None:
+        tool = WorkingTool(max_usage_count=1)
+        assert tool.run(text="first") == "echoed: first"
+
+        second = tool.run(text="second")
+        assert isinstance(second, ToolFailure)
+        assert second.reason is ToolFailureReason.USAGE_LIMIT
+        assert "usage limit" in second.message
+
+    def test_spent_limit_is_recorded_on_every_path(self) -> None:
+        agent = Agent(
+            role="Echoer",
+            goal="echo",
+            backstory="b",
+            llm=ScriptedLLM(
+                [
+                    'Thought: a\nAction: echo\nAction Input: {"text": "one"}',
+                    'Thought: b\nAction: echo\nAction Input: {"text": "two"}',
+                    "Thought: done\nFinal Answer: done.",
+                ]
+            ),
+            tools=[WorkingTool(max_usage_count=1)],
+        )
+        task = Task(description="echo twice", expected_output="c", agent=agent)
+        result = Crew(agents=[agent], tasks=[task]).kickoff()
+
+        reasons = {f.failure.reason for f in result.tool_failures}
+        assert ToolFailureReason.USAGE_LIMIT in reasons
+
+
+class TestGuardrailReturningTaskOutput:
+    def test_replacement_output_keeps_earlier_failures(self) -> None:
+        """A guardrail may return a whole new TaskOutput; failures must survive."""
+        from crewai.tasks.task_output import TaskOutput
+
+        attempts: list[int] = []
+
+        def guardrail(output: TaskOutput) -> tuple[bool, Any]:
+            attempts.append(1)
+            replacement = TaskOutput(
+                description=output.description,
+                raw="rewritten by guardrail",
+                agent=output.agent,
+            )
+            return (True, replacement)
+
+        agent = Agent(
+            role="Slack Messenger",
+            goal="post a message",
+            backstory="b",
+            llm=ScriptedLLM(_slack_steps()),
+            tools=[SlackTool()],
+        )
+        task = Task(
+            description="post to slack",
+            expected_output="c",
+            agent=agent,
+            guardrail=guardrail,
+        )
+        result = Crew(agents=[agent], tasks=[task]).kickoff()
+
+        assert attempts, "guardrail should have run"
+        assert result.raw == "rewritten by guardrail"
+        assert len(result.tool_failures) == 1
+        assert result.tool_failures[0].failure.code == "channel_not_found"
+
+
+class TestMergeToolFailures:
+    def test_deduplicates_equivalent_records(self) -> None:
+        from crewai.tools.tool_failure import merge_tool_failures
+
+        record = ToolFailureRecord(
+            tool_name="t", failure=ToolFailure(message="nope", code="c")
+        )
+        same = ToolFailureRecord(
+            tool_name="t", failure=ToolFailure(message="nope", code="c")
+        )
+        other = ToolFailureRecord(tool_name="t2", failure=ToolFailure(message="nope"))
+
+        merged = merge_tool_failures([record], [same, other])
+        assert len(merged) == 2
+        assert merged[0] is record
+
+    def test_preserves_order(self) -> None:
+        from crewai.tools.tool_failure import merge_tool_failures
+
+        first = ToolFailureRecord(tool_name="a", failure=ToolFailure(message="1"))
+        second = ToolFailureRecord(tool_name="b", failure=ToolFailure(message="2"))
+        assert merge_tool_failures([first], [second]) == [first, second]
+
+
+class TestHookBlockDoesNotInheritCachedFailure:
+    """A blocked call must not be attributed a failure it did not produce.
+
+    CacheHandler no longer stores failures, so this is unreachable through the
+    built-in cache -- the guard covers a custom cache handler that does.
+    """
+
+    def test_blocked_call_reports_no_failure(self) -> None:
+        from crewai.agents.tools_handler import ToolsHandler
+        from crewai.hooks import (
+            clear_before_tool_call_hooks,
+            register_before_tool_call_hook,
+        )
+        from crewai.utilities.agent_utils import execute_single_native_tool_call
+
+        class FailureReplayingCache:
+            """Stands in for a custom cache that does retain failures."""
+
+            def read(self, tool: str, input: str) -> Any:
+                return ToolFailure(message="stale cached failure", code="cached")
+
+            def add(self, tool: str, input: str, output: Any) -> None:
+                pass
+
+        agent = Agent(role="r", goal="g", backstory="b")
+        recorded: list[ToolFailureDetectedEvent] = []
+        tool = SlackTool()
+        structured = tool.to_structured_tool()
+        handler = ToolsHandler()
+        handler.cache = FailureReplayingCache()  # type: ignore[assignment]
+
+        tool_call = SimpleNamespace(
+            id="c1",
+            function=SimpleNamespace(
+                name="slackbot_send_message", arguments='{"channel": "#c"}'
+            ),
+        )
+
+        register_before_tool_call_hook(lambda ctx: False)
+        try:
+            with crewai_event_bus.scoped_handlers():
+
+                @crewai_event_bus.on(ToolFailureDetectedEvent)
+                def _(source: Any, event: ToolFailureDetectedEvent) -> None:
+                    recorded.append(event)
+
+                result = execute_single_native_tool_call(
+                    tool_call,
+                    available_functions={"slackbot_send_message": tool.run},
+                    original_tools=[tool],
+                    structured_tools=[structured],
+                    tools_handler=handler,
+                    agent=agent,
+                    task=None,
+                    crew=None,
+                    event_source=agent,
+                    printer=None,
+                    verbose=False,
+                )
+                crewai_event_bus.flush(timeout=10.0)
+        finally:
+            clear_before_tool_call_hooks()
+
+        assert "blocked by hook" in str(result.result)
+        assert recorded == [], "a blocked call must not report a tool failure"
+        assert agent.last_tool_failures == []
 
 
 class TestMCPIsErrorPlumbing:

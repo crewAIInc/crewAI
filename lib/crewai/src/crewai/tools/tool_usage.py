@@ -29,6 +29,7 @@ from crewai.tools.tool_failure import (
     ToolFailureReason,
     detect_tool_failure,
     failure_from_exception,
+    reportable_failure,
 )
 from crewai.utilities.agent_utils import (
     get_tool_names,
@@ -1017,7 +1018,12 @@ class ToolUsage:
                 "finished_at": datetime.datetime.fromtimestamp(finished_at),
                 "from_cache": from_cache,
                 "output": result,
-                "failure": self.last_failure,
+                "failure": reportable_failure(
+                    self.last_failure,
+                    tool=tool,
+                    agent=self.agent,
+                    task=self.task,
+                ),
             }
         )
         if self.task:

@@ -56,6 +56,7 @@ from crewai.tools.tool_failure import (
     ToolFailurePolicy,
     ToolFailureRecord,
     collect_tool_failures,
+    merge_tool_failures,
 )
 from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
@@ -1361,7 +1362,12 @@ Follow these guidelines:
                     task_output.pydantic = pydantic_output
                     task_output.json_dict = json_output
                 elif isinstance(guardrail_result.result, TaskOutput):
+                    # A guardrail may return a whole new output; carry the
+                    # accumulated failures over or earlier attempts vanish.
                     task_output = guardrail_result.result
+                    task_output.tool_failures = merge_tool_failures(
+                        accumulated_failures, task_output.tool_failures
+                    )
 
                 return task_output
 
@@ -1423,7 +1429,9 @@ Follow these guidelines:
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
-                tool_failures=accumulated_failures + collect_tool_failures(agent),
+                tool_failures=merge_tool_failures(
+                    accumulated_failures, collect_tool_failures(agent)
+                ),
             )
             accumulated_failures = list(task_output.tool_failures)
 
@@ -1476,7 +1484,12 @@ Follow these guidelines:
                     task_output.pydantic = pydantic_output
                     task_output.json_dict = json_output
                 elif isinstance(guardrail_result.result, TaskOutput):
+                    # A guardrail may return a whole new output; carry the
+                    # accumulated failures over or earlier attempts vanish.
                     task_output = guardrail_result.result
+                    task_output.tool_failures = merge_tool_failures(
+                        accumulated_failures, task_output.tool_failures
+                    )
 
                 return task_output
 
@@ -1538,7 +1551,9 @@ Follow these guidelines:
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
-                tool_failures=accumulated_failures + collect_tool_failures(agent),
+                tool_failures=merge_tool_failures(
+                    accumulated_failures, collect_tool_failures(agent)
+                ),
             )
             accumulated_failures = list(task_output.tool_failures)
 

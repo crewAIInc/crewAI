@@ -56,6 +56,7 @@ from crewai.tools.tool_failure import (
     detect_tool_failure,
     failure_from_exception,
     handle_tool_failure,
+    reportable_failure,
 )
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
@@ -979,6 +980,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
             raw_tool_result = result
+            # The blocked message replaces any cached result, so a cached
+            # failure must not be attributed to this call.
+            tool_failure = None
         elif max_usage_reached and original_tool:
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
             raw_tool_result = result
@@ -1064,7 +1068,13 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     agent_key=agent_key,
                     started_at=started_at,
                     finished_at=datetime.now(),
-                    failure=tool_failure,
+                    failure=reportable_failure(
+                        tool_failure,
+                        tool=structured_tool,
+                        agent=self.agent,
+                        task=self.task,
+                        crew=self.crew,
+                    ),
                 ),
             )
 

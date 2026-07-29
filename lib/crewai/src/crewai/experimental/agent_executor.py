@@ -80,6 +80,7 @@ from crewai.tools.tool_failure import (
     detect_tool_failure,
     failure_from_exception,
     handle_tool_failure,
+    reportable_failure,
 )
 from crewai.utilities.agent_utils import (
     _llm_stop_words_applied,
@@ -2003,6 +2004,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
             raw_tool_result = result
+            # The blocked message replaces any cached result, so a cached
+            # failure must not be attributed to this call.
+            tool_failure = None
         elif not from_cache and not max_usage_reached and output_tool is not None:
             if func_name in self._available_functions:
                 try:
@@ -2087,7 +2091,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     agent_key=agent_key,
                     started_at=started_at,
                     finished_at=datetime.now(),
-                    failure=tool_failure,
+                    failure=reportable_failure(
+                        tool_failure,
+                        tool=structured_tool,
+                        agent=self.agent,
+                        task=self.task,
+                        crew=self.crew,
+                    ),
                 ),
             )
 
