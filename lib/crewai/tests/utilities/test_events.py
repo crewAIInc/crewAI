@@ -51,6 +51,7 @@ from crewai.flow.async_feedback.types import PendingFeedbackContext
 from crewai.flow.flow import Flow, listen, start
 from crewai.flow.human_feedback import human_feedback
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+from crewai.hooks.dispatch import HookAborted, InterceptionPoint, clear_all, on
 from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
@@ -625,6 +626,42 @@ def test_suppressed_flow_failure_matches_finished_event_emission():
 
     assert len(finished) == 1
     assert len(failed) == 1
+
+
+def test_abort_before_flow_started_emits_no_failed_event():
+    started: list[FlowStartedEvent] = []
+    failed: list[FlowFailedEvent] = []
+
+    class BlockedFlow(Flow):
+        @start()
+        def begin(self) -> str:
+            return "never runs"
+
+    clear_all()
+    try:
+
+        @on(InterceptionPoint.EXECUTION_START)
+        def block(_ctx):
+            raise HookAborted(reason="blocked by policy")
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(FlowStartedEvent)
+            def handle_flow_started(source, event):
+                started.append(event)
+
+            @crewai_event_bus.on(FlowFailedEvent)
+            def handle_flow_failed(source, event):
+                failed.append(event)
+
+            with pytest.raises(HookAborted):
+                BlockedFlow().kickoff()
+            wait_for_event_handlers()
+    finally:
+        clear_all()
+
+    assert started == []
+    assert failed == []
 
 
 def test_resume_emits_failed_event_paired_with_resume_started_event(tmp_path):

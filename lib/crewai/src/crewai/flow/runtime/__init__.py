@@ -2131,6 +2131,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         # EXECUTION_START/EXECUTION_END dispatch independently.
         execution_start_dispatched = False
         execution_end_dispatched = False
+        # Guards the failure event: everything between here and the
+        # ``flow_started`` emission below (hooks, input handling, state
+        # restore) can raise, and a ``flow_failed`` with no opener would pop
+        # an unrelated scope.
+        flow_scope_open = False
 
         try:
             from crewai.hooks.contexts import (
@@ -2270,6 +2275,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 and get_current_parent_id() is None
             ):
                 restore_event_scope(((deferred_started_event_id, "flow_started"),))
+                flow_scope_open = True
             elif get_current_parent_id() is None:
                 reset_emission_counter()
                 reset_last_event_id()
@@ -2284,6 +2290,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     inputs=inputs,
                 )
                 future = crewai_event_bus.emit(self, started_event)
+                flow_scope_open = True
                 if future:
                     try:
                         await asyncio.wrap_future(future)
@@ -2475,7 +2482,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # not (exactly-once per invocation).
             if execution_start_dispatched and not execution_end_dispatched:
                 self._dispatch_execution_end_failure(e)
-            await self._emit_flow_failed(e)
+            if flow_scope_open:
+                await self._emit_flow_failed(e)
             raise
         finally:
             # Safety net for the exception path; the success path already
