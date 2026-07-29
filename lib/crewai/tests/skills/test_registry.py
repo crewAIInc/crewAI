@@ -10,6 +10,7 @@ from zipfile import ZipFile
 
 from crewai.context import platform_context
 from crewai.skills.cache import SkillCacheManager
+from crewai.skills.models import METADATA
 from crewai.skills.registry import (
     SkillRef,
     download_skill,
@@ -181,6 +182,17 @@ class TestParseSkillRef:
 
 
 class TestResolveRegistryRef:
+    def test_can_resolve_metadata_without_loading_instructions(
+        self, tmp_path: Path
+    ) -> None:
+        _write_local_skill(tmp_path, "my-skill")
+
+        with patch.object(Path, "cwd", return_value=tmp_path):
+            skill = resolve_registry_ref("@acme/my-skill", activate=False)
+
+        assert skill.disclosure_level == METADATA
+        assert skill.instructions is None
+
     def test_prefers_project_local_skill_over_cached_skill(
         self, tmp_path: Path
     ) -> None:

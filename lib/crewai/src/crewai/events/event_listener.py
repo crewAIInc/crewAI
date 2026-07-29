@@ -43,6 +43,7 @@ from crewai.events.types.env_events import (
 from crewai.events.types.flow_events import (
     ConversationTurnCompletedEvent,
     FlowCreatedEvent,
+    FlowFailedEvent,
     FlowFinishedEvent,
     FlowPausedEvent,
     FlowStartedEvent,
@@ -316,6 +317,15 @@ class EventListener(BaseEventListener):
                 self.formatter.handle_flow_status(
                     event.flow_name,
                     source.flow_id,
+                )
+
+        @crewai_event_bus.on(FlowFailedEvent)
+        def on_flow_failed(source: Any, event: FlowFailedEvent) -> None:
+            if not getattr(source, "suppress_flow_events", False):
+                self.formatter.handle_flow_status(
+                    event.flow_name,
+                    source.flow_id,
+                    "failed",
                 )
 
         @crewai_event_bus.on(ConversationTurnCompletedEvent)

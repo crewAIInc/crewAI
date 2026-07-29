@@ -66,6 +66,7 @@ from crewai.events.types.flow_events import (
     ConversationMessageAddedEvent,
     ConversationRouteSelectedEvent,
     FlowCreatedEvent,
+    FlowFailedEvent,
     FlowFinishedEvent,
     FlowPlotEvent,
     FlowStartedEvent,
@@ -273,6 +274,10 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
             self._handle_trace_event("flow_finished", source, event)
+
+        @event_bus.on(FlowFailedEvent)
+        def on_flow_failed(source: Any, event: FlowFailedEvent) -> None:
+            self._handle_trace_event("flow_failed", source, event)
 
         @event_bus.on(FlowPlotEvent)
         def on_flow_plot(source: Any, event: FlowPlotEvent) -> None:
