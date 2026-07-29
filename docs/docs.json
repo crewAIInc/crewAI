@@ -343,6 +343,7 @@
                       "edge/en/observability/opik",
                       "edge/en/observability/patronus-evaluation",
                       "edge/en/observability/portkey",
+                      "edge/en/observability/telemetry-dev",
                       "edge/en/observability/weave",
                       "edge/en/observability/truefoundry"
                     ]
