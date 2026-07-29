@@ -246,6 +246,12 @@ def collect_tool_failures(agent: Any) -> list[ToolFailureRecord]:
     return [record for record in records if isinstance(record, ToolFailureRecord)]
 
 
+def _agent_id(agent: Any) -> str | None:
+    """Stringified agent id, for correlating events with the call."""
+    agent_id = getattr(agent, "id", None)
+    return str(agent_id) if agent_id is not None else None
+
+
 def _record_on_agent(agent: Any, record: ToolFailureRecord) -> None:
     """Append to the agent's per-execution failure list when it has one."""
     failures = getattr(agent, "_tool_failures", None)
@@ -320,6 +326,10 @@ def handle_tool_failure(
             policy=policy,
             agent_role=record.agent_role,
             agent_key=getattr(agent, "key", None),
+            # Set explicitly rather than via from_agent, which would also
+            # overwrite agent_role and lose the _original_role preference that
+            # the paired ToolUsage events use.
+            agent_id=_agent_id(agent),
             agent=agent,
             task_name=record.task_name,
             task_id=record.task_id,

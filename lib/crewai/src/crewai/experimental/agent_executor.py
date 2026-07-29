@@ -1926,6 +1926,14 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         # Parse arguments
         parsed_args, parse_error = parse_tool_call_args(func_args, func_name, call_id)
         if parse_error is not None:
+            handle_tool_failure(
+                parse_error["tool_failure"],
+                tool_name=func_name,
+                tool_args=func_args,
+                agent=self.agent,
+                task=self.task,
+                crew=self.crew,
+            )
             return parse_error
         args_dict: dict[str, Any] = parsed_args or {}
 

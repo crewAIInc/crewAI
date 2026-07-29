@@ -1828,21 +1828,28 @@ def parse_tool_call_args(
     Returns:
         ``(args_dict, None)`` on success, or ``(None, error_result)`` on
         JSON parse failure where ``error_result`` is a ready-to-return dict
-        with the same shape as ``_execute_single_native_tool_call`` return values.
+        with the same shape as ``_execute_single_native_tool_call`` return
+        values, carrying an ``INVALID_INPUT`` failure for the caller to report.
     """
     if isinstance(func_args, str):
         try:
             return json.loads(func_args), None
         except json.JSONDecodeError as e:
+            message = (
+                f"Error: Failed to parse tool arguments as JSON: {e}. "
+                f"Please provide valid JSON arguments for the '{func_name}' tool."
+            )
             return None, {
                 "call_id": call_id,
                 "func_name": func_name,
-                "result": (
-                    f"Error: Failed to parse tool arguments as JSON: {e}. "
-                    f"Please provide valid JSON arguments for the '{func_name}' tool."
-                ),
+                "result": message,
                 "from_cache": False,
                 "original_tool": original_tool,
+                "tool_failure": ToolFailure(
+                    message=message,
+                    reason=ToolFailureReason.INVALID_INPUT,
+                    code="json_decode_error",
+                ),
             }
     return func_args, None
 

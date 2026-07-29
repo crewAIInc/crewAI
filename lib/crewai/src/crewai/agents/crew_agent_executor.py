@@ -905,6 +905,14 @@ class CrewAgentExecutor(BaseAgentExecutor):
             func_args, func_name, call_id, original_tool
         )
         if parse_error is not None:
+            handle_tool_failure(
+                parse_error["tool_failure"],
+                tool_name=func_name,
+                tool_args=func_args,
+                agent=self.agent,
+                task=self.task,
+                crew=self.crew,
+            )
             return parse_error
 
         if original_tool is None:

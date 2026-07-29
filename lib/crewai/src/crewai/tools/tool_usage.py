@@ -1044,9 +1044,13 @@ class ToolUsage:
     def _prepare_event_data(
         self, tool: Any, tool_calling: ToolCalling | InstructorToolCalling
     ) -> dict[str, Any]:
+        agent_id = getattr(self.agent, "id", None) if self.agent else None
         event_data = {
             "run_attempts": self._run_attempts,
             "delegations": self.task.delegations if self.task else 0,
+            # agent_key alone cannot correlate an event with a specific agent
+            # instance; the native paths already carry agent_id via from_agent.
+            "agent_id": str(agent_id) if agent_id is not None else None,
             "tool_name": sanitize_tool_name(tool.name),
             "tool_args": tool_calling.arguments,
             "tool_class": tool.__class__.__name__,

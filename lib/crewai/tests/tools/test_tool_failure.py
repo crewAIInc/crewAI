@@ -1192,6 +1192,88 @@ class TestDeliberateStopIsNotAnUnknownError:
             )
 
 
+class TestEventCarriesCorrelationIds:
+    """The failure event must be correlatable with the call it describes."""
+
+    def test_agent_and_task_ids_are_populated(self) -> None:
+        crew, agent = _build_crew(ToolFailurePolicy.WARN)
+        events: list[ToolFailureDetectedEvent] = []
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(ToolFailureDetectedEvent)
+            def _(source: Any, event: ToolFailureDetectedEvent) -> None:
+                events.append(event)
+
+            crew.kickoff()
+            crewai_event_bus.flush(timeout=10.0)
+
+        assert events
+        event = events[0]
+        assert event.agent_id == str(agent.id)
+        assert event.agent_role == agent.role
+        assert event.task_id is not None
+        assert event.task_name == "post to slack"
+
+    def test_ids_match_the_paired_finished_event(self) -> None:
+        crew, _ = _build_crew(ToolFailurePolicy.WARN)
+        failures: list[ToolFailureDetectedEvent] = []
+        finished: list[ToolUsageFinishedEvent] = []
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(ToolFailureDetectedEvent)
+            def _f(source: Any, event: ToolFailureDetectedEvent) -> None:
+                failures.append(event)
+
+            @crewai_event_bus.on(ToolUsageFinishedEvent)
+            def _d(source: Any, event: ToolUsageFinishedEvent) -> None:
+                if event.tool_name == "slackbot_send_message":
+                    finished.append(event)
+
+            crew.kickoff()
+            crewai_event_bus.flush(timeout=10.0)
+
+        assert failures and finished
+        assert failures[0].agent_id == finished[0].agent_id
+        assert failures[0].task_id == finished[0].task_id
+
+
+class TestMalformedArgumentsAreReported:
+    """A tool call with unparseable JSON args is a failure, not a silent skip."""
+
+    @staticmethod
+    def _parse_error() -> dict[str, Any]:
+        from crewai.utilities.agent_utils import parse_tool_call_args
+
+        args, error = parse_tool_call_args("{not json", "echo", "call_1")
+        assert args is None
+        assert error is not None
+        return error
+
+    def test_parse_error_carries_an_invalid_input_failure(self) -> None:
+        error = self._parse_error()
+        failure = error["tool_failure"]
+        assert isinstance(failure, ToolFailure)
+        assert failure.reason is ToolFailureReason.INVALID_INPUT
+        assert failure.code == "json_decode_error"
+
+    def test_valid_args_carry_no_failure(self) -> None:
+        from crewai.utilities.agent_utils import parse_tool_call_args
+
+        args, error = parse_tool_call_args('{"text": "hi"}', "echo", "call_1")
+        assert args == {"text": "hi"}
+        assert error is None
+
+    def test_reason_enum_member_is_used(self) -> None:
+        """INVALID_INPUT was declared but unreferenced before this."""
+        import inspect
+
+        from crewai.utilities import agent_utils
+
+        assert "INVALID_INPUT" in inspect.getsource(agent_utils.parse_tool_call_args)
+
+
 class TestMCPIsErrorPlumbing:
     """An MCP server flags a failed tool with isError on a 200 response."""
 
