@@ -12,6 +12,8 @@ import pytest
 from crewai import Agent, Task
 from crewai.events import crewai_event_bus
 from crewai.events.types.skill_events import SkillUsedEvent
+from crewai.skills.loader import activate_skill, discover_skills
+from crewai.skills.tool import LoadSkillTool
 
 
 # Handlers run on the event bus thread pool, so tests must flush before
@@ -29,12 +31,13 @@ def _create_skill_dir(parent: Path, name: str, body: str = "Body.") -> Path:
 
 
 def _agent_with_skills(search_path: Path) -> Agent:
-    # discover_skills scans the SUBdirectories of the given path.
+    """Create an agent with explicitly activated, always-on skills."""
+    skills = [activate_skill(skill) for skill in discover_skills(search_path)]
     return Agent(
         role="Analyst",
         goal="Analyze things",
         backstory="Experienced",
-        skills=[str(search_path)],
+        skills=skills,
         llm="gpt-4o-mini",
     )
 
@@ -44,6 +47,43 @@ def _task_for(agent: Agent) -> Task:
 
 
 class TestSkillUsedEvent:
+    def test_metadata_skill_emits_only_after_runtime_selection(
+        self, tmp_path: Path
+    ) -> None:
+        _create_skill_dir(tmp_path, "alpha")
+        agent = Agent(
+            role="Analyst",
+            goal="Analyze things",
+            backstory="Experienced",
+            skills=[tmp_path],
+            llm="gpt-4o-mini",
+        )
+        task = _task_for(agent)
+        agent.create_agent_executor(task=task)
+        assert agent.agent_executor is not None
+        loader = next(
+            tool
+            for tool in agent.agent_executor.original_tools
+            if isinstance(tool, LoadSkillTool)
+        )
+
+        received: list[SkillUsedEvent] = []
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(SkillUsedEvent)
+            def _handler(source, event: SkillUsedEvent) -> None:  # noqa: ARG001
+                received.append(event)
+
+            agent._emit_skill_usage(task)
+            assert crewai_event_bus.flush(timeout=10)
+            assert received == []
+
+            loader.run(skill_name="alpha")
+            assert crewai_event_bus.flush(timeout=10)
+
+        assert [event.skill_name for event in received] == ["alpha"]
+        assert received[0].task_id == str(task.id)
+
     def test_emits_one_event_per_skill_with_agent_and_task_attribution(
         self, tmp_path: Path
     ) -> None:
@@ -109,7 +149,7 @@ class TestSkillUsedEvent:
         assert len(received) == 2
 
     def test_reports_disclosure_level(self, tmp_path: Path) -> None:
-        """Path-loaded skills are activated, so they report INSTRUCTIONS level."""
+        """Explicitly activated skills report INSTRUCTIONS level."""
         _create_skill_dir(tmp_path, "alpha")
         agent = _agent_with_skills(tmp_path)
         task = _task_for(agent)

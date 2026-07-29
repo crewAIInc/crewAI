@@ -9,7 +9,10 @@ mode: "wide"
 
 Skills are self-contained directories that provide agents with **domain-specific instructions, guidelines, and reference material**. Each skill is defined by a `SKILL.md` file with YAML frontmatter and a markdown body.
 
-When activated, a skill's instructions are injected directly into the agent's task prompt — giving the agent expertise without requiring any code changes.
+Agents first receive each configured skill's name and description. When a
+description applies to the current request, the agent loads that skill's full
+instructions for that execution. This keeps unrelated instructions out of the
+context while giving the agent the relevant expertise without code changes.
 
 <Note type="info" title="Skills vs Tools — The Key Distinction">
 **Skills are NOT tools.** This is the most common point of confusion.
@@ -79,12 +82,13 @@ reviewer = Agent(
     role="Senior Code Reviewer",
     goal="Review pull requests for quality and security issues",
     backstory="Staff engineer with expertise in secure coding practices.",
-    skills=["./skills"],                          # Injects review guidelines
+    skills=["./skills"],                          # Discovers review skills
     tools=[GithubSearchTool(), FileReadTool()],   # Lets agent read code
 )
 ```
 
-The agent now has both **expertise** (from the skill) and **capabilities** (from the tools).
+The agent now has both **expertise** (loaded from the relevant skill when
+needed) and **capabilities** (from the tools).
 
 ---
 
@@ -324,7 +328,8 @@ The directory name must match the `name` field in `SKILL.md`. The `scripts/`, `r
 
 ## Pre-loading Skills
 
-For more control, you can discover and activate skills programmatically:
+For more control, you can discover and activate skills programmatically.
+Passing an activated skill makes its instructions always-on:
 
 ```python
 from pathlib import Path
@@ -351,12 +356,21 @@ agent = Agent(
 
 Skills use **progressive disclosure** — only loading what's needed at each stage:
 
-| Stage      | What's loaded                         | When                |
-| :--------- | :------------------------------------ | :------------------ |
-| Discovery  | Name, description, frontmatter fields | `discover_skills()` |
-| Activation | Full SKILL.md body text               | `activate_skill()`  |
+| Stage      | What's loaded                         | When                                      |
+| :--------- | :------------------------------------ | :---------------------------------------- |
+| Discovery  | Name, description, frontmatter fields | Agent setup or `discover_skills()`        |
+| Activation | Full SKILL.md body text               | Relevant runtime request or `activate_skill()` |
+| Resources  | Resource directory catalog            | Explicit `load_resources()` call          |
 
-During normal agent execution (passing directory paths via `skills=["./skills"]`), skills are automatically discovered and activated. The progressive loading only matters when using the programmatic API.
+With `skills=["./skills"]`, the directory is discovered at setup but the full
+instructions are not placed in every prompt. The agent reviews the metadata on
+each execution and loads only a skill that applies. The loaded instructions are
+scoped to that execution, so skills selected for earlier calls do not accumulate
+on the agent.
+
+Inline skill strings and `Skill` objects already activated with
+`activate_skill()` remain always-on. This provides an explicit opt-in when the
+instructions should apply to every request.
 
 ---
 

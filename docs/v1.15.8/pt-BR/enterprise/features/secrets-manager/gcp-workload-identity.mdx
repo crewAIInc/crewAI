@@ -1,0 +1,273 @@
+---
+title: GCP Workload Identity Federation
+description: Configure o Google Cloud Secret Manager via Workload Identity Federation para acesso a segredos consciente de rotação e sem credenciais
+sidebarTitle: Com Workload Identity
+icon: "id-badge"
+---
+
+## Visão Geral
+
+Este guia configura o Google Cloud Secret Manager como provedor de segredos usando **Workload Identity Federation**: a CrewAI Platform emite tokens OIDC de curta duração, os troca por credenciais Google Cloud via Security Token Service e lê seus segredos — sem que uma chave de service account de longa duração seja armazenada em lugar algum.
+
+<Note>
+**Por que este caminho:** os segredos são resolvidos no momento de execução da automação, então **valores rotacionados se propagam para o próximo kickoff sem novo deploy**. Se você só precisa de credenciais estáticas, veja o guia mais simples [GCP — chave de service account](/pt-BR/enterprise/features/secrets-manager/gcp).
+</Note>
+
+### Como funciona em runtime
+
+1. O worker do deployment solicita um JWT OIDC fresco à CrewAI Platform.
+2. O worker troca o JWT por uma credencial Google federada via [Security Token Service](https://cloud.google.com/iam/docs/reference/sts/rest), referenciando o Workload Identity Pool Provider que você configurou abaixo.
+3. O worker chama `secretmanager.googleapis.com:accessSecretVersion` para ler o segredo, usando a credencial federada diretamente (o principal federado detém `roles/secretmanager.secretAccessor` — veja Passo 4).
+4. O valor obtido é injetado como valor da variável de ambiente para aquele kickoff de automação.
+
+Tokens OIDC subject são cacheados por ~1 hora para evitar reemissão a cada kickoff. Valores de segredos são buscados frescos a cada kickoff independentemente do estado do cache OIDC, e é isso que torna este caminho consciente de rotação.
+
+## Pré-requisitos
+
+<Note>
+Antes de começar, certifique-se de que você tem:
+
+- A imagem do pod de automação deve incluir o runtime da CrewAI versão `1.14.5` ou superior.
+- Um projeto Google Cloud com as APIs **Secret Manager**, **Security Token Service** e **IAM Credentials** habilitadas. Habilite-as via console ou:
+
+  ```bash
+  gcloud services enable secretmanager.googleapis.com sts.googleapis.com iamcredentials.googleapis.com \
+    --project=<YOUR_PROJECT_ID>
+  ```
+
+- Permissão no projeto para criar Workload Identity Pools, papéis IAM, service accounts e (se necessário) segredos.
+- Uma organização na CrewAI Platform onde seu usuário tem as permissões `workload_identity_configs: manage` e `secret_providers: manage`. Veja [Permissões (RBAC)](/pt-BR/enterprise/features/secrets-manager/usage#permissions-rbac).
+- **Sua instalação da CrewAI Platform deve ser acessível a partir do Google Cloud via HTTPS** para que o GCP STS possa buscar o documento de discovery OIDC e o JWKS durante a validação do token. Confirme com o administrador da sua plataforma que o host é acessível pela internet.
+</Note>
+
+## Passo 1 — Encontre a URL do Issuer OIDC da Sua CrewAI Platform
+
+Sua instalação da CrewAI Platform publica um documento de discovery OpenID Connect em `https://<your-platform-host>/.well-known/openid-configuration`. O campo `issuer` ali é a URL que o Google registrará como provedor OIDC confiável.
+
+Abra a URL em um navegador:
+
+```
+https://<your-platform-host>/.well-known/openid-configuration
+```
+
+Você deverá ver um JSON contendo:
+
+```json
+{
+  "issuer": "https://<your-platform-host>",
+  "jwks_uri": "https://<your-platform-host>/oauth2/jwks",
+  ...
+}
+```
+
+Anote o valor exato de `issuer` — você o usará no Passo 3.
+
+<Tip>
+Se a URL retornar 404 ou 503, contate o administrador da sua plataforma. O issuer OIDC requer uma chave de assinatura privada configurada no momento da instalação. Veja o guia de instalação da plataforma para as configurações `OIDC_PRIVATE_KEY` e `OIDC_ISSUER`.
+</Tip>
+
+## Passo 2 — Criar um Workload Identity Pool
+
+Um Workload Identity Pool é um container do lado Google Cloud para identidades externas confiáveis. Você registrará a CrewAI Platform como um provedor dentro desse pool.
+
+```bash
+gcloud iam workload-identity-pools create crewai-pool \
+  --project=<YOUR_PROJECT_ID> \
+  --location=global \
+  --display-name="CrewAI Platform"
+```
+
+Ou no [console Workload Identity Pools](https://console.cloud.google.com/iam-admin/workload-identity-pools), clique em **Create Pool**.
+
+{/* SCREENSHOT: GCP "Create Workload Identity Pool" form with name "crewai-pool" → /images/secrets-manager/gcp-wi/01-create-pool.png */}
+
+## Passo 3 — Adicionar a CrewAI Platform como um Provedor OIDC no Pool
+
+```bash
+gcloud iam workload-identity-pools providers create-oidc crewai-provider \
+  --project=<YOUR_PROJECT_ID> \
+  --location=global \
+  --workload-identity-pool=crewai-pool \
+  --display-name="CrewAI Platform OIDC" \
+  --issuer-uri="https://<your-platform-host>" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.organization=assertion.organization_id" \
+  --attribute-condition="assertion.organization_id != ''"
+```
+
+O `--attribute-mapping` diz ao Google como mapear claims do JWT para atributos do Google:
+- `google.subject` é o identificador do principal — mapeamos para a claim `sub` do JWT, que a CrewAI Platform define como `organization:<uuid>`.
+- `attribute.organization` é um atributo customizado — mapeamos para a claim `organization_id` do JWT para que você possa referenciá-la em vínculos IAM mais tarde.
+
+O `--attribute-condition` é uma verificação de defesa em profundidade que rejeita tokens sem uma claim `organization_id`.
+
+Obtenha o **nome do recurso do provedor** (você precisará dele para a audience e vínculos IAM):
+
+```bash
+gcloud iam workload-identity-pools providers describe crewai-provider \
+  --project=<YOUR_PROJECT_ID> \
+  --location=global \
+  --workload-identity-pool=crewai-pool \
+  --format="value(name)"
+```
+
+A saída se parece com:
+
+```
+projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/crewai-pool/providers/crewai-provider
+```
+
+Este é seu valor de **Workload Identity Provider** para a CrewAI Platform no Passo 6. A CrewAI Platform automaticamente computa a audience OIDC como `//iam.googleapis.com/<this-resource-name>` ao emitir tokens.
+
+{/* SCREENSHOT: "Add provider to pool" form with OIDC selected, issuer URI, audience defaults, attribute mapping → /images/secrets-manager/gcp-wi/02-add-oidc-provider.png */}
+
+## Passo 4 — Conceder Acesso ao Secret Manager ao Principal Federado
+
+Vincule ambos os papéis do Secret Manager no escopo do projeto ao principal federado — um papel habilita o autocomplete de Secret Name no formulário de env-var, o outro permite ler valores de segredos no kickoff da automação. Ambos são necessários para que o recurso funcione de ponta a ponta.
+
+```bash
+PRINCIPAL_SET="principalSet://iam.googleapis.com/projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/crewai-pool/attribute.organization/<YOUR_CREWAI_ORG_UUID>"
+
+# Necessário para o autocomplete de Secret Name (chama secretmanager.secrets.list)
+gcloud projects add-iam-policy-binding <YOUR_PROJECT_ID> \
+  --member="$PRINCIPAL_SET" \
+  --role="roles/secretmanager.viewer"
+
+# Necessário para ler valores de segredos no kickoff
+gcloud projects add-iam-policy-binding <YOUR_PROJECT_ID> \
+  --member="$PRINCIPAL_SET" \
+  --role="roles/secretmanager.secretAccessor"
+```
+
+Substitua `<PROJECT_NUMBER>` pelo número numérico do projeto (`gcloud projects describe <YOUR_PROJECT_ID> --format='value(projectNumber)'`) e `<YOUR_CREWAI_ORG_UUID>` pelo UUID da organização CrewAI Platform que deve ter permissão para ler seus segredos. Você pode encontrar o UUID da org na UI da plataforma na página de configurações da organização, ou via API. Isso escopa a federação a uma organização CrewAI específica — apenas tokens emitidos para as automações dessa org são aceitos.
+
+Ou via console Google Cloud:
+
+1. Abra **IAM & Admin** → **IAM** do seu projeto.
+2. Clique em **GRANT ACCESS**.
+3. **New principals:** cole a string completa `principalSet://...attribute.organization/<YOUR_CREWAI_ORG_UUID>`.
+4. Atribua o papel **Secret Manager Viewer** (`roles/secretmanager.viewer`).
+5. Clique em **SAVE**.
+6. Clique em **GRANT ACCESS** novamente e repita com o papel **Secret Manager Secret Accessor** (`roles/secretmanager.secretAccessor`).
+
+<Tip>
+**Isolamento por organização.** O padrão `principalSet://...attribute.organization/<UUID>` restringe o acesso aos tokens de uma organização específica. Se você tiver várias organizações CrewAI compartilhando um projeto Google Cloud, repita ambos os vínculos por organização com o UUID correto — ou use uma condição de atributo menos restritiva se o isolamento não for necessário.
+</Tip>
+
+<Tip>
+**Escopando `secretAccessor` por segredo (opcional).** Se você preferir não conceder `roles/secretmanager.secretAccessor` em nível de projeto, omita o segundo vínculo acima e vincule por segredo:
+
+```bash
+gcloud secrets add-iam-policy-binding <SECRET_NAME> \
+  --member="$PRINCIPAL_SET" \
+  --role="roles/secretmanager.secretAccessor" \
+  --project=<YOUR_PROJECT_ID>
+```
+
+Mantenha `roles/secretmanager.viewer` no escopo de projeto de qualquer forma — `secretmanager.secrets.list` (do qual o autocomplete depende) não pode ser concedido por segredo.
+</Tip>
+
+## Passo 5 — Criar Pelo Menos Um Segredo no GCP
+
+Se você ainda não tem um segredo para testar, crie um via CLI `gcloud`:
+
+```bash
+echo -n "hello from gcp" | gcloud secrets create crewai-test-keyword \
+  --data-file=- \
+  --project=<YOUR_PROJECT_ID> \
+  --replication-policy=automatic
+```
+
+Ou via [console Secret Manager](https://console.cloud.google.com/security/secret-manager):
+
+1. Abra **Secret Manager** no seu projeto GCP.
+2. Clique em **+ CREATE SECRET**.
+3. **Name:** `crewai-test-keyword`. **Secret value:** cole seu valor.
+4. Clique em **CREATE SECRET**.
+
+## Passo 6 — Adicionar uma Configuração de Workload Identity na CrewAI Platform
+
+Na CrewAI Platform, navegue até **Settings** → **Workload Identity** e clique em **Add Workload Identity Config**.
+
+Preencha o formulário:
+
+- **Name:** Um nome descritivo, ex. `gcp-prod`.
+- **Cloud Provider:** `GCP`.
+- **Workload Identity Provider:** o nome do recurso do provedor do Passo 3, ex. `projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/crewai-pool/providers/crewai-provider`.
+- (Opcional) Alterne **Default Configuration** se você quiser que esta seja a config WI padrão selecionada ao criar uma credencial de segredo baseada em GCP.
+
+Clique em **Create**.
+
+{/* SCREENSHOT: "Add Workload Identity Config" form with GCP and provider resource name → /images/secrets-manager/gcp-wi/03-amp-add-wi-config-gcp.png */}
+{/* SCREENSHOT: Workload Identity list showing both AWS and GCP rows → /images/secrets-manager/gcp-wi/04-amp-wi-list-with-gcp.png */}
+
+## Passo 7 — Adicionar uma Credencial de Provedor de Segredos Vinculada à Config WI
+
+Navegue até **Settings** → **Secret Provider Credentials** e clique em **Add Credential**.
+
+Preencha o formulário:
+
+- **Name:** Um nome descritivo, ex. `gcp-prod-wi`.
+- **Provider:** `Google Cloud Secret Manager`.
+- **Authentication Method:** `Workload Identity`.
+- **Workload Identity Configuration:** selecione a config que você criou no Passo 6.
+- **Project ID:** o ID do seu projeto GCP (o mesmo projeto dono dos segredos).
+- (Opcional) Marque **Set as default credential for this provider**.
+
+O formulário pedirá apenas o **Project ID** sob Workload Identity — o campo **Service Account JSON** está intencionalmente oculto porque não se aplica a este caminho; a identidade federada vem da config WI vinculada.
+
+Clique em **Create**.
+
+{/* SCREENSHOT: "Add Secret Provider Credential" form with GCP + Workload Identity + WI config dropdown → /images/secrets-manager/gcp-wi/05-amp-add-credential-gcp-wi.png */}
+
+## Passo 8 — Testar a Conexão
+
+Depois de salvar a credencial, clique em **Test Connection**. Para credenciais workload-identity isso verifica o handshake OIDC: a CrewAI Platform emite um JWT e o troca via Security Token Service por um token de acesso Google federado. Um resultado verde significa que o vínculo de federação está saudável.
+
+Um Test Connection bem-sucedido prova que o Workload Identity Pool, provedor OIDC, mapeamento de atributos e condição de atributo estão todos conectados corretamente. Ele **não** prova que o IAM do Secret Manager está correto — `secretmanager.secrets.list` e `secretmanager.versions.access` são exercitados separadamente quando o autocomplete de Secret Name carrega ou quando uma variável de ambiente é resolvida no kickoff. Veja [Solução de Problemas](#troubleshooting) para modos de falha de handshake.
+
+## Passo 9 — Referenciar o Segredo em uma Variável de Ambiente
+
+Referencie o segredo em uma automação, exatamente como você faria para qualquer outra env var apoiada pelo Secrets Manager. Veja [Usando o Secrets Manager](/pt-BR/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables) para os campos do formulário e o comportamento.
+
+## Passo 10 — Verificar a Rotação
+
+Após o deployment estar rodando, rotacione o segredo no GCP adicionando uma nova versão (o Secret Manager sempre lê a versão habilitada mais recente por padrão):
+
+```bash
+echo -n "rotated value" | gcloud secrets versions add crewai-test-keyword \
+  --data-file=- \
+  --project=<YOUR_PROJECT_ID>
+```
+
+Dispare um novo kickoff de automação. O ambiente do kickoff verá `"rotated value"` — sem novo deploy, sem reinício de worker, sem espera de TTL.
+
+Para confirmar nos logs do worker, procure por:
+
+```
+Workload identity config '<id>' (gcp): N secret(s) resolved
+```
+
+Esta linha aparece para cada kickoff e indica uma chamada `accessSecretVersion` fresca contra o GCP.
+
+## Solução de Problemas
+
+| Sintoma | Causa provável |
+|---|---|
+| Test Connection falha com erro de handshake | A troca de tokens STS foi rejeitada. Verifique se o Workload Identity Pool existe, se o issuer do provedor OIDC corresponde ao valor `issuer` da plataforma e se a condição de atributo aceita as claims do JWT. Confirme que a URL de discovery OIDC da plataforma é acessível a partir do GCP pela internet pública. |
+| `Could not refresh access token: invalid_target` | A claim de audience não corresponde à audience esperada do Workload Identity Provider. A CrewAI Platform define a audience automaticamente; se você a customizou, certifique-se de que corresponde a `//iam.googleapis.com/<provider-resource-name>`. |
+| `Failed to fetch JWKS from issuer` | O GCP STS não consegue acessar o host da sua CrewAI Platform. Confirme que o host é acessível pela internet e que `/.well-known/openid-configuration` retorna 200. |
+| `Attribute condition rejected token` | A condição de atributo do provedor OIDC (Passo 3) requer `organization_id`. A CrewAI Platform sempre define essa claim, então isso geralmente significa um pool/provedor mal configurado. Reconfira a condição de atributo do provedor. |
+| Autocomplete de Secret Name mostra `PERMISSION_DENIED: secretmanager.secrets.list` | O principal federado está sem `roles/secretmanager.viewer` no escopo de projeto. A permissão `secretmanager.secrets.list` é escopada apenas por projeto e não pode ser concedida por segredo. Veja o Passo 4. |
+| Kickoff falha ao resolver um segredo mesmo que o Test Connection passe | O vínculo WI está saudável, mas `secretmanager.versions.access` está ausente no segredo que falha. Audite `roles/secretmanager.secretAccessor` (escopado por projeto, ou por segredo se você escopou dessa forma no Passo 4). |
+| Valor rotacionado não é pego no próximo kickoff | Confirme que a env var na automação está referenciando uma credencial baseada em Workload Identity (não uma credencial de chaves estáticas). O caminho estático incorpora valores à imagem do deploy. |
+
+### Links de Referência
+
+- GCP: [Workload Identity Federation overview](https://cloud.google.com/iam/docs/workload-identity-federation)
+- GCP: [Configure Workload Identity Federation with OIDC](https://cloud.google.com/iam/docs/workload-identity-federation-with-other-providers)
+- GCP: [Secret Manager IAM roles](https://cloud.google.com/secret-manager/docs/access-control)
+
+## Próximos Passos
+
+- [Use segredos em variáveis de ambiente e gerencie permissões](/pt-BR/enterprise/features/secrets-manager/usage)
+- Para multi-cloud, veja também [AWS Workload Identity (Federação OIDC)](/pt-BR/enterprise/features/secrets-manager/aws-workload-identity) e [Azure Workload Identity Federation](/pt-BR/enterprise/features/secrets-manager/azure-workload-identity).

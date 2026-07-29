@@ -1,0 +1,134 @@
+---
+title: Integração com Snowflake
+description: "Conecte agentes CrewAI ao Snowflake Cortex Analyst, Cortex Search e execução SQL através do servidor MCP gerenciado pelo Snowflake."
+icon: "snowflake"
+mode: "wide"
+---
+
+## Visão Geral
+
+Conecte seus agentes CrewAI diretamente aos seus dados no Snowflake através do [servidor MCP gerenciado pelo Snowflake](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp). A integração com o Snowflake permite que seus agentes consultem dados estruturados com **Cortex Analyst**, pesquisem dados não estruturados com **Cortex Search** e executem SQL governado nos seus warehouses — tudo sem escrever ou hospedar nenhum código de conector.
+
+Internamente, a integração com o Snowflake é um wrapper gerenciado em torno do suporte a [Custom MCP Server](/pt-BR/enterprise/guides/custom-mcp-server) do CrewAI. O Snowflake expõe suas capacidades de Cortex AI através de um endpoint [Model Context Protocol](https://modelcontextprotocol.io/), e o CrewAI se conecta a ele de forma segura em seu nome. Qualquer ferramenta que você exponha no lado do Snowflake — Cortex Analyst, Cortex Search, execução SQL, Cortex Agents ou suas próprias ferramentas personalizadas — fica disponível para suas crews.
+
+## Capacidades Principais
+
+<CardGroup cols={3}>
+  <Card title="Cortex Analyst" icon="chart-bar">
+    Faça perguntas em linguagem natural e deixe o [Cortex Analyst](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-analyst) gerar e executar SQL nos seus dados **estruturados** usando modelos semânticos ricos.
+  </Card>
+  <Card title="Cortex Search" icon="magnifying-glass">
+    Recupere dados **não estruturados** relevantes para fluxos de trabalho de RAG e conhecimento com o [Cortex Search](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-search/cortex-search-overview), o serviço de busca totalmente gerenciado do Snowflake.
+  </Card>
+  <Card title="Execução SQL" icon="database">
+    Execute consultas SQL governadas diretamente nos seus warehouses Snowflake, com modo somente leitura configurável, timeouts e seleção de warehouse.
+  </Card>
+</CardGroup>
+
+Como a integração expõe quaisquer ferramentas que seu servidor MCP publica, você também pode expor **Cortex Agents** e **ferramentas personalizadas** (funções definidas pelo usuário e stored procedures) para seus agentes CrewAI.
+
+## Pré-requisitos
+
+Antes de usar a integração com o Snowflake, certifique-se de que você tenha:
+
+- Uma conta [CrewAI AMP](https://app.crewai.com) com assinatura ativa
+- Uma conta Snowflake com acesso aos recursos de Cortex AI
+- Um [servidor MCP gerenciado pelo Snowflake](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp) configurado com as ferramentas que você deseja expor
+- Privilégios Snowflake apropriados (USAGE/SELECT) no servidor MCP e seus objetos subjacentes
+
+## Configurando o Servidor Snowflake MCP
+
+O servidor MCP gerenciado pelo Snowflake é executado dentro da sua conta Snowflake e define quais ferramentas estão disponíveis para clientes externos como o CrewAI. Crie um com o comando [`CREATE MCP SERVER`](https://docs.snowflake.com/en/sql-reference/sql/create-mcp-server), listando os serviços Cortex Search, visualizações semânticas do Cortex Analyst e ferramentas SQL que você deseja expor.
+
+```sql
+CREATE MCP SERVER my_mcp_server
+  FROM SPECIFICATION $$
+    tools:
+      - name: "sales_analyst"
+        type: "CORTEX_ANALYST"
+        identifier: "MY_DATABASE.MY_SCHEMA.sales_semantic_view"
+        description: "Answer questions about sales metrics"
+      - name: "docs_search"
+        type: "CORTEX_SEARCH_SERVICE_QUERY"
+        identifier: "MY_DATABASE.MY_SCHEMA.support_docs_search"
+        description: "Search internal support documentation"
+      - name: "run_sql"
+        type: "SQL_EXECUTION"
+        description: "Execute read-only SQL queries"
+  $$;
+```
+
+<Note>
+O endpoint MCP segue o formato `https://<account_URL>/api/v2/databases/{database}/schemas/{schema}/mcp-servers/{name}`. O CrewAI constrói esta URL automaticamente a partir do **URL da Conta**, **Banco de Dados**, **Schema** e **Nome do Servidor MCP** que você fornece ao configurar a integração.
+</Note>
+
+Para a especificação completa — incluindo Cortex Agents, ferramentas personalizadas, limites de tamanho de resposta e opções de governança — consulte a [documentação do servidor MCP gerenciado pelo Snowflake](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp).
+
+## Conectando o Snowflake no CrewAI AMP
+
+<Frame>
+    <img src="/images/enterprise/snowflake-configure.png" alt="Configurar integração Snowflake no CrewAI AMP" />
+</Frame>
+
+<Steps>
+    <Step title="Abrir Ferramentas e Integrações">
+        Navegue até **Ferramentas e Integrações** na barra lateral esquerda do CrewAI AMP, encontre **Snowflake** na lista de aplicações e abra seu painel de configuração.
+    </Step>
+
+    <Step title="Fornecer detalhes da conexão">
+        Preencha os campos de conexão que o CrewAI usa para acessar seu servidor Snowflake MCP:
+
+        | Campo | Obrigatório | Descrição |
+        |-------|-------------|-----------|
+        | **Nome** | Sim | Um nome descritivo para esta conexão (padrão: `Snowflake`). |
+        | **Descrição** | Não | Um resumo opcional do que esta conexão fornece. |
+        | **URL da Conta** | Sim | A URL da sua conta Snowflake, ex.: `xy12345.us-east-1.snowflakecomputing.com`. |
+        | **Banco de Dados** | Sim | O banco de dados que contém seu servidor MCP (ex.: `MY_DATABASE`). |
+        | **Schema** | Sim | O schema que contém seu servidor MCP (ex.: `MY_SCHEMA`). |
+        | **Nome do Servidor MCP** | Sim | O nome do objeto de servidor MCP que você criou no Snowflake (ex.: `MY_MCP_SERVER`). |
+    </Step>
+
+    <Step title="Escolher um método de autenticação">
+        Selecione como o CrewAI se autentica no Snowflake. **OAuth** é recomendado.
+
+        - **Usar OAuth** — Conecte-se de forma segura usando OAuth 2.0 para autenticação baseada em tokens sem compartilhar suas credenciais. O CrewAI gerencia todo o fluxo de autorização e renova os tokens automaticamente. Copie o **URI de Redirecionamento** mostrado no formulário (`https://oauth.crewai.com/oauth/add`) e registre-o como um URI de redirecionamento autorizado na sua [integração de segurança OAuth](https://docs.snowflake.com/en/user-guide/oauth-custom) do Snowflake.
+        - **Usar token de acesso pessoal** — Autentique usando um [token de acesso programático](https://docs.snowflake.com/en/user-guide/programmatic-access-tokens) gerado nas configurações da sua conta Snowflake. Atribua uma role com privilégios mínimos ao token para limitar a exposição.
+    </Step>
+
+    <Step title="Autenticar">
+        Clique em **Autenticar**. Para OAuth, você será redirecionado ao Snowflake para autorizar o acesso. Após autenticado, o servidor Snowflake aparece na sua lista de Conexões e suas ferramentas ficam disponíveis para suas crews.
+    </Step>
+</Steps>
+
+<Tip>
+Com OAuth, cada usuário se autentica individualmente e as consultas são executadas com seu `DEFAULT_ROLE` do Snowflake. Certifique-se de que os usuários que se conectam tenham uma role e warehouse padrão definidos (`ALTER USER <username> SET DEFAULT_ROLE = '<role>' DEFAULT_WAREHOUSE = '<warehouse>'`) para que as ferramentas Cortex Analyst e SQL tenham capacidade de computação para execução.
+</Tip>
+
+## Usando Ferramentas Snowflake nas Suas Crews
+
+Uma vez conectado, as ferramentas que seu servidor MCP expõe aparecem junto com as conexões integradas na página **Ferramentas e Integrações**. Você pode:
+
+- **Atribuir ferramentas a agentes** nas suas crews como qualquer outra ferramenta CrewAI.
+- **Gerenciar visibilidade** para controlar quais membros do time podem usar a conexão.
+- **Editar ou remover** a conexão a qualquer momento na lista de Conexões.
+
+Seus agentes agora podem solicitar métricas ao Cortex Analyst, executar Cortex Search nos seus documentos e executar SQL — com os resultados fluindo automaticamente para o raciocínio deles.
+
+<Warning>
+O Snowflake impõe governança no servidor MCP: o controle de acesso baseado em roles determina quais ferramentas um usuário pode descobrir e invocar, e limites se aplicam ao tamanho da resposta, contagem de ferramentas (máximo de 50 por servidor) e profundidade de recursão. Se uma chamada de ferramenta falhar, confirme que a role do usuário conectado possui os privilégios necessários no servidor MCP e seus objetos subjacentes.
+</Warning>
+
+## Saiba Mais
+
+<CardGroup cols={2}>
+  <Card title="Servidor MCP Gerenciado pelo Snowflake" icon="snowflake" href="https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp">
+    Documentação oficial do Snowflake para criar e governar o servidor MCP.
+  </Card>
+  <Card title="Servidores Custom MCP no CrewAI" icon="plug" href="/pt-BR/enterprise/guides/custom-mcp-server">
+    Saiba como o CrewAI se conecta a qualquer servidor MCP, a base sobre a qual a integração Snowflake é construída.
+  </Card>
+</CardGroup>
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para obter ajuda com a integração Snowflake ou solução de problemas.
+</Card>
