@@ -10,6 +10,8 @@
 ## Installation
 ```shell
 pip install 'crewai[tools]'
+pip install 'crewai-tools[slack-sdk]'
+# or, with uv:
 uv add crewai-tools --extra slack-sdk
 ```
 

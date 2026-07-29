@@ -1,6 +1,10 @@
+"""Slack tools for posting messages and reading channel history."""
+
+import asyncio
 import logging
 import os
 from typing import Any
+import uuid
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
@@ -10,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def _require_slack_sdk() -> Any:
+    """Import and return `slack_sdk.WebClient`, raising a clear error if missing."""
     try:
         from slack_sdk import WebClient
 
@@ -24,6 +29,7 @@ def _require_slack_sdk() -> Any:
 
 
 def _require_slack_bot_token() -> str:
+    """Return the `SLACK_BOT_TOKEN` env var, raising a clear error if unset."""
     token = os.environ.get("SLACK_BOT_TOKEN")
     if not token:
         raise ValueError(
@@ -52,6 +58,8 @@ class SlackSendMessageToolSchema(BaseModel):
 
 
 class SlackSendMessageTool(BaseTool):
+    """Post a message to a Slack channel, optionally as a threaded reply."""
+
     name: str = "Send Slack Message"
     description: str = (
         "Posts a message to a Slack channel. Use this to notify a channel or "
@@ -71,6 +79,7 @@ class SlackSendMessageTool(BaseTool):
     package_dependencies: list[str] = Field(default_factory=lambda: ["slack-sdk"])
 
     def __init__(self, **kwargs: Any) -> None:
+        """Validate that `slack-sdk` is installed and `SLACK_BOT_TOKEN` is set."""
         super().__init__(**kwargs)
         _require_slack_sdk()
         _require_slack_bot_token()
@@ -78,14 +87,23 @@ class SlackSendMessageTool(BaseTool):
     def _run(
         self, channel: str, message: str, thread_ts: str | None = None, **_: Any
     ) -> str:
+        """Post `message` to `channel`, returning a status string.
+
+        Passes a per-call `client_msg_id` so that a retried request (e.g. after
+        a network error) is deduplicated by Slack instead of posting twice.
+        """
         web_client_cls = _require_slack_sdk()
         client = web_client_cls(token=_require_slack_bot_token())
+        client_msg_id = str(uuid.uuid4())
 
         try:
             from slack_sdk.errors import SlackApiError
 
             response = client.chat_postMessage(
-                channel=channel, text=message, thread_ts=thread_ts
+                channel=channel,
+                text=message,
+                thread_ts=thread_ts,
+                client_msg_id=client_msg_id,
             )
             return (
                 f"Message posted to {channel} "
@@ -100,8 +118,11 @@ class SlackSendMessageTool(BaseTool):
     async def _arun(
         self, channel: str, message: str, thread_ts: str | None = None, **kwargs: Any
     ) -> str:
-        return self._run(
-            channel=channel, message=message, thread_ts=thread_ts, **kwargs
+        """Async counterpart to `_run`, offloaded to a thread so the blocking
+        Slack HTTP call doesn't stall the event loop.
+        """
+        return await asyncio.to_thread(
+            self._run, channel=channel, message=message, thread_ts=thread_ts, **kwargs
         )
 
 
@@ -122,6 +143,8 @@ class SlackChannelHistoryToolSchema(BaseModel):
 
 
 class SlackChannelHistoryTool(BaseTool):
+    """Fetch recent messages from a Slack channel."""
+
     name: str = "Read Slack Channel History"
     description: str = (
         "Fetches recent messages from a Slack channel. Use this to give an agent "
@@ -143,11 +166,13 @@ class SlackChannelHistoryTool(BaseTool):
     package_dependencies: list[str] = Field(default_factory=lambda: ["slack-sdk"])
 
     def __init__(self, **kwargs: Any) -> None:
+        """Validate that `slack-sdk` is installed and `SLACK_BOT_TOKEN` is set."""
         super().__init__(**kwargs)
         _require_slack_sdk()
         _require_slack_bot_token()
 
     def _run(self, channel: str, limit: int = 20, **_: Any) -> str:
+        """Return up to `limit` recent messages from `channel` as readable lines."""
         web_client_cls = _require_slack_sdk()
         client = web_client_cls(token=_require_slack_bot_token())
 
@@ -173,4 +198,9 @@ class SlackChannelHistoryTool(BaseTool):
             return f"Unexpected error reading Slack channel history for {channel}: {e}"
 
     async def _arun(self, channel: str, limit: int = 20, **kwargs: Any) -> str:
-        return self._run(channel=channel, limit=limit, **kwargs)
+        """Async counterpart to `_run`, offloaded to a thread so the blocking
+        Slack HTTP call doesn't stall the event loop.
+        """
+        return await asyncio.to_thread(
+            self._run, channel=channel, limit=limit, **kwargs
+        )
