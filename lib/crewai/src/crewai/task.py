@@ -52,7 +52,11 @@ from crewai.security import Fingerprint, SecurityConfig
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.base_tool import BaseTool
-from crewai.tools.tool_failure import ToolFailurePolicy, collect_tool_failures
+from crewai.tools.tool_failure import (
+    ToolFailurePolicy,
+    ToolFailureRecord,
+    collect_tool_failures,
+)
 from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
 from crewai.utilities.converter import (
@@ -1330,6 +1334,11 @@ Follow these guidelines:
 
         max_attempts = self.guardrail_max_retries + 1
 
+        # Each retry calls agent.execute_task again, which resets the agent's
+        # per-execution failure list. Accumulate across attempts so a tool that
+        # failed on a blocked attempt is still reported on the final output.
+        accumulated_failures: list[ToolFailureRecord] = list(task_output.tool_failures)
+
         for attempt in range(max_attempts):
             guardrail_result = process_guardrail(
                 output=task_output,
@@ -1416,8 +1425,9 @@ Follow these guidelines:
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
-                tool_failures=collect_tool_failures(agent),
+                tool_failures=accumulated_failures + collect_tool_failures(agent),
             )
+            accumulated_failures = list(task_output.tool_failures)
 
         return task_output
 
@@ -1439,6 +1449,11 @@ Follow these guidelines:
             current_retry_count = self.retry_count
 
         max_attempts = self.guardrail_max_retries + 1
+
+        # Each retry calls agent.execute_task again, which resets the agent's
+        # per-execution failure list. Accumulate across attempts so a tool that
+        # failed on a blocked attempt is still reported on the final output.
+        accumulated_failures: list[ToolFailureRecord] = list(task_output.tool_failures)
 
         for attempt in range(max_attempts):
             guardrail_result = process_guardrail(
@@ -1526,7 +1541,8 @@ Follow these guidelines:
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
-                tool_failures=collect_tool_failures(agent),
+                tool_failures=accumulated_failures + collect_tool_failures(agent),
             )
+            accumulated_failures = list(task_output.tool_failures)
 
         return task_output

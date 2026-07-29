@@ -562,6 +562,125 @@ class TestLiteAgentOutputParity:
         assert CrewOutput().has_tool_failures is False
 
 
+class TestRaisePolicySurvivesEveryWrapper:
+    """`raise` must abort, not get downgraded by an enclosing handler."""
+
+    def test_timeout_wrapper_preserves_the_error_type(self) -> None:
+        """max_execution_time wraps failures in RuntimeError; not this one."""
+        agent = Agent(
+            role="Slack Messenger",
+            goal="post a message",
+            backstory="b",
+            llm=ScriptedLLM(_slack_steps()),
+            tools=[SlackTool()],
+            tool_failure_policy=ToolFailurePolicy.RAISE,
+            max_execution_time=30,
+        )
+        task = Task(description="post to slack", expected_output="c", agent=agent)
+
+        with pytest.raises(ToolExecutionFailedError):
+            Crew(agents=[agent], tasks=[task]).kickoff()
+
+    def test_retry_limit_does_not_swallow_the_abort(self) -> None:
+        """A deliberate stop must not be retried as a transient error."""
+        agent = Agent(
+            role="Slack Messenger",
+            goal="post a message",
+            backstory="b",
+            llm=ScriptedLLM(_slack_steps()),
+            tools=[SlackTool()],
+            tool_failure_policy=ToolFailurePolicy.RAISE,
+            max_retry_limit=3,
+        )
+        task = Task(description="post to slack", expected_output="c", agent=agent)
+
+        with pytest.raises(ToolExecutionFailedError):
+            Crew(agents=[agent], tasks=[task]).kickoff()
+        assert agent._times_executed == 0, "the abort must not trigger retries"
+
+    def test_passthrough_tuple_includes_the_error(self) -> None:
+        from crewai.agent.core import _passthrough_exceptions
+
+        assert ToolExecutionFailedError in _passthrough_exceptions
+
+
+class TestFailureRecordsResetAndAccumulate:
+    def test_kickoff_resets_between_runs(self) -> None:
+        """Agent.kickoff() goes through _prepare_kickoff, not task execution."""
+        agent = Agent(
+            role="Slack Messenger",
+            goal="post a message",
+            backstory="b",
+            llm=ScriptedLLM(_slack_steps()),
+            tools=[SlackTool()],
+        )
+
+        first = agent.kickoff("post it")
+        assert len(first.tool_failures) == 1
+        assert first.has_tool_failures
+
+        agent.llm = ScriptedLLM(_slack_steps())
+        second = agent.kickoff("post it again")
+        assert len(second.tool_failures) == 1, "records must not accumulate"
+
+    def test_kickoff_output_sees_failures_recorded_on_the_agent(self) -> None:
+        """The LiteAgent under kickoff records against the owning Agent."""
+        agent = Agent(
+            role="Slack Messenger",
+            goal="post a message",
+            backstory="b",
+            llm=ScriptedLLM(_slack_steps()),
+            tools=[SlackTool()],
+        )
+        result = agent.kickoff("post it")
+        assert [f.failure.code for f in result.tool_failures] == ["channel_not_found"]
+
+    def test_last_tool_failures_returns_a_copy(self) -> None:
+        agent = Agent(role="r", goal="g", backstory="b")
+        agent._tool_failures.append(
+            ToolFailureRecord(tool_name="t", failure=ToolFailure(message="nope"))
+        )
+        snapshot = agent.last_tool_failures
+        snapshot.clear()
+        assert len(agent.last_tool_failures) == 1
+
+    def test_guardrail_retry_preserves_earlier_failures(self) -> None:
+        """A blocked attempt's failures must survive into the final output.
+
+        The retry calls ``agent.execute_task`` again, which resets the agent's
+        record. Without accumulation this output would report zero failures
+        even though a tool demonstrably failed on the first attempt.
+        """
+        attempts: list[int] = []
+
+        def guardrail(output: Any) -> tuple[bool, Any]:
+            attempts.append(1)
+            if len(attempts) == 1:
+                return (False, "needs another pass")
+            return (True, output.raw)
+
+        agent = Agent(
+            role="Slack Messenger",
+            goal="post a message",
+            backstory="b",
+            llm=ScriptedLLM(_slack_steps()),
+            tools=[SlackTool()],
+        )
+        task = Task(
+            description="post to slack",
+            expected_output="c",
+            agent=agent,
+            guardrail=guardrail,
+        )
+        result = Crew(agents=[agent], tasks=[task]).kickoff()
+
+        assert len(attempts) == 2, "guardrail should have blocked once"
+        # The scripted LLM answers directly on the retry, so the single
+        # surviving record is the one from the blocked first attempt.
+        assert len(result.tool_failures) == 1
+        assert result.tool_failures[0].failure.code == "channel_not_found"
+
+
 class TestMCPIsErrorPlumbing:
     """An MCP server flags a failed tool with isError on a 200 response."""
 

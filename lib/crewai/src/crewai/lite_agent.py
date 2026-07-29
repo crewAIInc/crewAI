@@ -76,6 +76,7 @@ from crewai.tools.tool_failure import (
     ToolExecutionFailedError,
     ToolFailurePolicy,
     ToolFailureRecord,
+    collect_tool_failures,
 )
 from crewai.utilities.agent_utils import (
     enforce_rpm_limit,
@@ -464,6 +465,15 @@ class LiteAgent(FlowTrackable, BaseModel):
         return self.role
 
     @property
+    def last_tool_failures(self) -> list[ToolFailureRecord]:
+        """Tool failures recorded during the most recent kickoff.
+
+        Same name and meaning as ``BaseAgent.last_tool_failures``, so the
+        shared collection helper works for a standalone LiteAgent too.
+        """
+        return list(self._tool_failures)
+
+    @property
     def before_llm_call_hooks(
         self,
     ) -> list[BeforeLLMCallHookType | BeforeLLMCallHookCallable]:
@@ -542,6 +552,23 @@ class LiteAgent(FlowTrackable, BaseModel):
             return self._execute_core(
                 agent_info=agent_info, response_format=response_format
             )
+
+        except ToolExecutionFailedError as e:
+            # A deliberate stop, not a defect: do not tell the user to file a
+            # bug, and do not run it through handle_unknown_error.
+            if self.verbose:
+                PRINTER.print(
+                    content=f"Agent stopped: {e}",
+                    color="red",
+                )
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionErrorEvent(
+                    agent_info=agent_info,
+                    error=str(e),
+                ),
+            )
+            raise
 
         except Exception as e:
             if self.verbose:
@@ -705,7 +732,11 @@ class LiteAgent(FlowTrackable, BaseModel):
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
             messages=self._messages,
-            tool_failures=list(self._tool_failures),
+            # Failures are recorded against whichever agent the executor was
+            # given, which is ``original_agent`` on the Agent.kickoff() path
+            # and ``self`` for a standalone LiteAgent. Read from the same one
+            # or the records go missing from the output.
+            tool_failures=collect_tool_failures(self.original_agent or self),
         )
 
         if self._guardrail is not None:

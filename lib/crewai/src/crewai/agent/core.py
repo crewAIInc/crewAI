@@ -920,6 +920,13 @@ class Agent(BaseAgent):
                 raise TimeoutError(
                     f"Task '{task.description}' execution timed out after {timeout} seconds. Consider increasing max_execution_time or optimizing the task."
                 ) from e
+            except _passthrough_exceptions:
+                # A deliberate stop (e.g. tool_failure_policy="raise") must
+                # keep its type: wrapping it in RuntimeError would hide it from
+                # _check_execution_error and send the task through the retry
+                # loop instead of aborting.
+                future.cancel()
+                raise
             except Exception as e:
                 future.cancel()
                 raise RuntimeError(f"Task execution failed: {e!s}") from e
@@ -1460,6 +1467,8 @@ class Agent(BaseAgent):
         Returns:
             Tuple of (executor, inputs, agent_info, parsed_tools) ready for execution.
         """
+        self.reset_tool_failures()
+
         if self.tools_handler:
             self.tools_handler.last_used_tool = None
 
@@ -1872,6 +1881,7 @@ class Agent(BaseAgent):
             todos=todo_results,
             replan_count=executor.state.replan_count,
             last_replan_reason=executor.state.last_replan_reason,
+            tool_failures=self.last_tool_failures,
         )
 
     def _execute_and_build_output(

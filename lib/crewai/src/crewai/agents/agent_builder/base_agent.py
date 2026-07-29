@@ -671,10 +671,13 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         """Tool failures recorded during the most recent execution.
 
         Empty when nothing failed, or when ``tool_failure_policy`` is
-        ``ignore``. Reset at the start of each task execution, mirroring
-        ``last_messages``.
+        ``ignore``. Reset at the start of each task execution or kickoff,
+        mirroring ``last_messages``.
+
+        Returns a copy, so a caller holding the list cannot mutate the
+        agent's record or watch it change under them mid-run.
         """
-        return self._tool_failures
+        return list(self._tool_failures)
 
     def reset_tool_failures(self) -> None:
         """Clear recorded tool failures before a new execution begins."""
