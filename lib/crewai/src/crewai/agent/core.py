@@ -104,7 +104,7 @@ from crewai.utilities.converter import Converter, ConverterError
 from crewai.utilities.env import get_env_context
 from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_for_json
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
-from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.i18n import resolve_i18n
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
@@ -553,9 +553,10 @@ class Agent(BaseAgent):
         if self.tools_handler:
             self.tools_handler.last_used_tool = None
 
+        i18n = resolve_i18n(self)
         task_prompt = task.prompt()
-        task_prompt = build_task_prompt_with_schema(task, task_prompt)
-        task_prompt = format_task_with_context(task_prompt, context)
+        task_prompt = build_task_prompt_with_schema(task, task_prompt, i18n)
+        task_prompt = format_task_with_context(task_prompt, context, i18n)
         return self._retrieve_memory_context(task, task_prompt)
 
     def _finalize_task_prompt(
@@ -647,7 +648,7 @@ class Agent(BaseAgent):
                         m.format() for m in matches
                     )
             if memory.strip() != "":
-                task_prompt += I18N_DEFAULT.slice("memory").format(memory=memory)
+                task_prompt += resolve_i18n(self).slice("memory").format(memory=memory)
 
             crewai_event_bus.emit(
                 self,
@@ -1079,9 +1080,11 @@ class Agent(BaseAgent):
         from crewai.skills.tool import LoadSkillTool
 
         use_native_tool_calling = self._supports_native_tool_calling(raw_tools)
+        i18n = resolve_i18n(self)
 
         prompt = Prompts(
             agent=self,
+            i18n=i18n,
             has_tools=len(raw_tools) > 0,
             use_native_tool_calling=use_native_tool_calling,
             use_system_prompt=self.use_system_prompt,
@@ -1094,7 +1097,7 @@ class Agent(BaseAgent):
             ),
         ).task_execution()
 
-        stop_words = [I18N_DEFAULT.slice("observation")]
+        stop_words = [i18n.slice("observation")]
         if self.response_template:
             stop_words.append(
                 self.response_template.split("{{ .Response }}")[1].strip()
@@ -1389,10 +1392,9 @@ class Agent(BaseAgent):
                 from_agent=self,
             ),
         )
-        query = I18N_DEFAULT.slice("knowledge_search_query").format(
-            task_prompt=task_prompt
-        )
-        rewriter_prompt = I18N_DEFAULT.slice("knowledge_search_query_system_prompt")
+        i18n = resolve_i18n(self)
+        query = i18n.slice("knowledge_search_query").format(task_prompt=task_prompt)
+        rewriter_prompt = i18n.slice("knowledge_search_query_system_prompt")
         if not isinstance(self.llm, BaseLLM):
             self._logger.log(
                 "warning",
@@ -1571,9 +1573,9 @@ class Agent(BaseAgent):
                         m.format() for m in matches
                     )
                 if memory_block:
-                    formatted_messages += "\n\n" + I18N_DEFAULT.slice("memory").format(
-                        memory=memory_block
-                    )
+                    formatted_messages += "\n\n" + resolve_i18n(self).slice(
+                        "memory"
+                    ).format(memory=memory_block)
                 crewai_event_bus.emit(
                     self,
                     event=MemoryRetrievalCompletedEvent(
@@ -1822,9 +1824,11 @@ class Agent(BaseAgent):
                 try:
                     model_schema = generate_model_description(response_format)
                     schema = json.dumps(model_schema, indent=2)
-                    instructions = I18N_DEFAULT.slice(
-                        "formatted_task_instructions"
-                    ).format(output_format=schema)
+                    instructions = (
+                        resolve_i18n(self)
+                        .slice("formatted_task_instructions")
+                        .format(output_format=schema)
+                    )
 
                     converter = Converter(
                         llm=cast(BaseLLM, self.llm),
