@@ -1,14 +1,10 @@
-import os
-from pathlib import Path
-
 from crewai.tools import BaseTool
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, PrivateAttr
 
+from crewai_tools.file_storage import FileStore, resolve_file_store
 from crewai_tools.security.safe_path import (
     format_error_for_display,
-    format_path_for_display,
     format_sandbox_error,
-    validate_file_path,
 )
 
 
@@ -88,11 +84,24 @@ class FileWriterTool(BaseTool):
     base_dir: str | None = None
     encoding: str = "utf-8"
 
-    @field_validator("base_dir")
-    @classmethod
-    def _anchor_base_dir(cls, value: str | None) -> str | None:
-        """Resolve base_dir once so a later chdir cannot move the sandbox."""
-        return os.path.realpath(value) if value is not None else None
+    # Resolved once per tool: a deployment installs its store before the crew
+    # is built, and swapping mid-run would change where a path points.
+    _store: FileStore = PrivateAttr(default=None)  # type: ignore[assignment]
+
+    def model_post_init(self, context: object) -> None:
+        """Bind the store, then anchor base_dir with the store's own grammar.
+
+        Anchoring cannot be a field validator: validators run before
+        ``model_post_init``, so ``_store`` is not bound yet and the only option
+        there is ``os.path.realpath`` — local-filesystem semantics applied to a
+        path a remote store may not interpret that way at all. Doing it here
+        keeps every path decision inside the seam, and still resolves once so a
+        later chdir cannot move the sandbox.
+        """
+        super().model_post_init(context)
+        self._store = resolve_file_store()
+        if self.base_dir is not None:
+            self.base_dir = self._store.normalize(self.base_dir)
 
     def _run(
         self,
@@ -109,11 +118,13 @@ class FileWriterTool(BaseTool):
         except ValueError as e:
             return f"An error occurred while writing to the file: {e!s}"
 
+        store = self._store
+
         # Confine the target directory to base_dir so an LLM-chosen directory
-        # cannot reach outside the sandbox. validate_file_path also resolves
-        # symlinks and ".." components.
+        # cannot reach outside the sandbox. The store also resolves symlinks
+        # and ".." components before checking.
         try:
-            resolved_directory = Path(validate_file_path(directory, self.base_dir))
+            resolved_directory = store.resolve(directory, self.base_dir)
         except ValueError as e:
             return "Error: Invalid directory: " + format_sandbox_error(
                 e,
@@ -121,31 +132,17 @@ class FileWriterTool(BaseTool):
                 "directory tree.",
             )
 
-        # Keep filename inside the target directory, blocking "..", absolute
-        # paths and symlink escapes. is_relative_to() compares whole path
-        # components, so it is safe on case-insensitive filesystems and avoids
-        # the "//" prefix edge case. A filepath that resolves to the directory
-        # itself (e.g. an empty filename) is not a valid file target.
+        # Then keep filename inside that directory.
         try:
-            resolved_filepath = Path(
-                os.path.join(resolved_directory, filename)
-            ).resolve()
-        except (OSError, ValueError) as e:
-            # e.g. an embedded null byte, which trips the underlying syscall.
-            return f"Error: Invalid file path: {format_error_for_display(e)}"
+            resolved_filepath = store.resolve_within(resolved_directory, filename)
+        except ValueError as e:
+            return f"Error: Invalid file path — {e!s}"
 
-        display_filepath = format_path_for_display(
-            str(resolved_filepath), str(resolved_directory)
-        )
-        if (
-            not resolved_filepath.is_relative_to(resolved_directory)
-            or resolved_filepath == resolved_directory
-        ):
-            return "Error: Invalid file path — the filename must not escape the target directory."
+        display_filepath = store.display(resolved_filepath, resolved_directory)
 
         # Covers both a missing 'directory' and subdirectories inside 'filename'.
         try:
-            os.makedirs(resolved_filepath.parent, exist_ok=True)
+            store.ensure_parent(resolved_filepath)
         except FileExistsError:
             return (
                 f"Error: Cannot write to {display_filepath} because a file already "
@@ -157,13 +154,16 @@ class FileWriterTool(BaseTool):
                 f"{format_error_for_display(e)}"
             )
 
-        if resolved_filepath.exists() and not overwrite_file:
+        if store.exists(resolved_filepath) and not overwrite_file:
             return f"File {display_filepath} already exists and overwrite option was not passed."
 
-        mode = "w" if overwrite_file else "x"
         try:
-            with open(resolved_filepath, mode, encoding=self.encoding) as file:
-                file.write(content)
+            store.write_text(
+                resolved_filepath,
+                content,
+                self.encoding,
+                overwrite=overwrite_file,
+            )
         except FileExistsError:
             return f"File {display_filepath} already exists and overwrite option was not passed."
         except Exception as e:
