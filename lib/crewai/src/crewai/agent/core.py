@@ -86,7 +86,11 @@ from crewai.skills.loader import load_skills
 from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.state.checkpoint_config import CheckpointConfig, apply_checkpoint
 from crewai.tools.agent_tools.agent_tools import AgentTools
-from crewai.tools.tool_failure import ToolExecutionFailedError
+from crewai.tools.tool_failure import (
+    ToolExecutionFailedError,
+    ToolFailureRecord,
+    tool_failure_collector,
+)
 from crewai.types.callback import SerializableCallable
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.agent_utils import (
@@ -1464,8 +1468,6 @@ class Agent(BaseAgent):
         Returns:
             Tuple of (executor, inputs, agent_info, parsed_tools) ready for execution.
         """
-        self.reset_tool_failures()
-
         if self.tools_handler:
             self.tools_handler.last_used_tool = None
 
@@ -1798,6 +1800,7 @@ class Agent(BaseAgent):
         executor: AgentExecutor,
         response_format: type[Any] | None = None,
         usage_baseline: UsageMetrics | None = None,
+        kickoff_failures: list[ToolFailureRecord] | None = None,
     ) -> LiteAgentOutput:
         """Build a LiteAgentOutput from an executor result dict.
 
@@ -1878,7 +1881,7 @@ class Agent(BaseAgent):
             todos=todo_results,
             replan_count=executor.state.replan_count,
             last_replan_reason=executor.state.last_replan_reason,
-            tool_failures=self.last_tool_failures,
+            tool_failures=list(kickoff_failures or []),
         )
 
     def _execute_and_build_output(
@@ -1889,9 +1892,10 @@ class Agent(BaseAgent):
         usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Execute the agent synchronously and build the output object."""
-        result = cast(dict[str, Any], executor.invoke(inputs))
+        with tool_failure_collector() as kickoff_failures:
+            result = cast(dict[str, Any], executor.invoke(inputs))
         return self._build_output_from_result(
-            result, executor, response_format, usage_baseline
+            result, executor, response_format, usage_baseline, kickoff_failures
         )
 
     async def _execute_and_build_output_async(
@@ -1902,9 +1906,10 @@ class Agent(BaseAgent):
         usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Execute the agent asynchronously and build the output object."""
-        result = await executor.invoke_async(inputs)
+        with tool_failure_collector() as kickoff_failures:
+            result = await executor.invoke_async(inputs)
         return self._build_output_from_result(
-            result, executor, response_format, usage_baseline
+            result, executor, response_format, usage_baseline, kickoff_failures
         )
 
     def _process_kickoff_guardrail(

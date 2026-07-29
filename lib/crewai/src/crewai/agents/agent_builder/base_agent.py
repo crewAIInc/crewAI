@@ -44,7 +44,11 @@ from crewai.security.security_config import SecurityConfig
 from crewai.skills.models import Skill
 from crewai.state.checkpoint_config import CheckpointConfig, _coerce_checkpoint
 from crewai.tools.base_tool import BaseTool, Tool
-from crewai.tools.tool_failure import ToolFailurePolicy, ToolFailureRecord
+from crewai.tools.tool_failure import (
+    ToolFailurePolicy,
+    ToolFailureRecord,
+    collect_tool_failures,
+)
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.config import process_config
 from crewai.utilities.i18n import I18N, get_i18n
@@ -667,10 +671,13 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     def last_tool_failures(self) -> list[ToolFailureRecord]:
         """Tool failures recorded during the most recent execution.
 
-        Empty when nothing failed or the policy is ``ignore``. Reset per
-        execution, like ``last_messages``. Returns a copy.
+        Inside an execution this reports that execution's records, so a
+        shared agent running concurrent tasks does not leak between them.
+        Outside one it reports the most recent execution, like
+        ``last_messages``. Empty when nothing failed or the policy is
+        ``ignore``. Returns a copy.
         """
-        return list(self._tool_failures)
+        return collect_tool_failures(self)
 
     def reset_tool_failures(self) -> None:
         """Clear recorded tool failures before a new execution begins."""

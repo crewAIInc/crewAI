@@ -12,6 +12,9 @@ declarative -- nothing here guesses whether a string "looks like" an error.
 
 from __future__ import annotations
 
+from collections.abc import Generator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from enum import Enum
 import logging
 from typing import TYPE_CHECKING, Any
@@ -235,12 +238,17 @@ def merge_tool_failures(
 
 
 def collect_tool_failures(agent: Any) -> list[ToolFailureRecord]:
-    """Return the failures recorded on an agent, tolerating custom agents.
+    """Failures for the execution in progress, else the agent's last ones.
 
-    Third-party agents and test doubles may not expose ``last_tool_failures``
-    as a list, and building a task's output must never fail over telemetry.
+    Prefers the active collector so a shared agent running concurrent tasks
+    reports only the caller's own records. Tolerates agents that do not expose
+    the attribute at all, since reading telemetry must never raise.
     """
-    records = getattr(agent, "last_tool_failures", None)
+    active = active_tool_failures()
+    if active is not None:
+        return list(active)
+
+    records = getattr(agent, "_tool_failures", None)
     if not isinstance(records, list):
         return []
     return [record for record in records if isinstance(record, ToolFailureRecord)]
@@ -252,8 +260,45 @@ def _agent_id(agent: Any) -> str | None:
     return str(agent_id) if agent_id is not None else None
 
 
-def _record_on_agent(agent: Any, record: ToolFailureRecord) -> None:
-    """Append to the agent's per-execution failure list when it has one."""
+_active_failures: ContextVar[list[ToolFailureRecord] | None] = ContextVar(
+    "crewai_tool_failures", default=None
+)
+
+
+@contextmanager
+def tool_failure_collector() -> Generator[list[ToolFailureRecord], None, None]:
+    """Collect the failures of one execution, isolated from concurrent ones.
+
+    An agent may be shared by tasks running concurrently, so accumulating on
+    the agent lets one execution erase or inherit another's records. The
+    collector is a ContextVar, which asyncio tasks and threads copy, so each
+    execution sees only its own. Nesting is safe: a guardrail retry can open
+    its own scope inside the outer one.
+    """
+    records: list[ToolFailureRecord] = []
+    token = _active_failures.set(records)
+    try:
+        yield records
+    finally:
+        _active_failures.reset(token)
+
+
+def active_tool_failures() -> list[ToolFailureRecord] | None:
+    """Records for the execution in progress, or None outside a collector."""
+    return _active_failures.get()
+
+
+def _record_failure(agent: Any, record: ToolFailureRecord) -> None:
+    """Store a record on the active collector and on the agent.
+
+    The collector is what outputs read, so it is authoritative. The agent copy
+    only backs ``last_tool_failures``, which reports the most recent execution
+    in the same best-effort way ``last_messages`` does.
+    """
+    records = _active_failures.get()
+    if records is not None:
+        records.append(record)
+
     failures = getattr(agent, "_tool_failures", None)
     if isinstance(failures, list):
         failures.append(record)
@@ -310,7 +355,7 @@ def handle_tool_failure(
         task_id=str(task.id) if task else None,
     )
 
-    _record_on_agent(agent, record)
+    _record_failure(agent, record)
 
     # Local import: crewai.events imports tool types back, so a module-level
     # import would cycle.

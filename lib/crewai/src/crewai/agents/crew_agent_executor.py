@@ -49,15 +49,6 @@ from crewai.hooks.tool_hooks import (
     run_after_tool_call_hooks,
     run_before_tool_call_hooks,
 )
-from crewai.tools.tool_failure import (
-    ToolExecutionFailedError,
-    ToolFailure,
-    ToolFailureReason,
-    detect_tool_failure,
-    failure_from_exception,
-    handle_tool_failure,
-    reportable_failure,
-)
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
     _llm_stop_words_applied,
@@ -244,9 +235,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         content="Agent failed to reach a final answer. This is likely a bug - please report it.",
                         color="red",
                     )
-                raise
-            except ToolExecutionFailedError:
-                # A deliberate stop, not an unknown error.
                 raise
             except Exception as e:
                 handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
@@ -442,11 +430,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
                 self._invoke_step_callback(formatted_answer)
                 self._append_message(formatted_answer.text)
-
-            except ToolExecutionFailedError:
-                # A deliberate stop: the generic handler below would feed it
-                # back to the LLM as a recoverable observation.
-                raise
 
             except OutputParserError as e:
                 formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]
@@ -905,14 +888,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
             func_args, func_name, call_id, original_tool
         )
         if parse_error is not None:
-            handle_tool_failure(
-                parse_error["tool_failure"],
-                tool_name=func_name,
-                tool_args=func_args,
-                agent=self.agent,
-                task=self.task,
-                crew=self.crew,
-            )
             return parse_error
 
         if original_tool is None:
@@ -950,7 +925,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
         from_cache = False
         result: str = "Tool not found"
         raw_tool_result: Any = result
-        tool_failure: ToolFailure | None = None
         input_str = json.dumps(args_dict) if args_dict else ""
         if self.tools_handler and self.tools_handler.cache and output_tool is not None:
             cached_result = self.tools_handler.cache.read(
@@ -959,7 +933,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
             if cached_result is not None:
                 raw_tool_result = cached_result
                 result = format_native_tool_output_for_agent(output_tool, cached_result)
-                tool_failure = detect_tool_failure(cached_result)
                 from_cache = True
 
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
@@ -991,15 +964,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
             raw_tool_result = result
-            # The blocked message replaces any cached result, so a cached
-            # failure must not be attributed to this call.
-            tool_failure = None
         elif max_usage_reached and original_tool:
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
             raw_tool_result = result
-            tool_failure = ToolFailure(
-                message=result, reason=ToolFailureReason.USAGE_LIMIT
-            )
         elif (
             not from_cache
             and func_name in available_functions
@@ -1025,11 +992,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         )
 
                 result = format_native_tool_output_for_agent(output_tool, raw_result)
-                tool_failure = detect_tool_failure(raw_result)
             except Exception as e:
                 result = f"Error executing tool: {e}"
                 raw_tool_result = result
-                tool_failure = failure_from_exception(e)
                 if self.task:
                     self.task.increment_tools_errors()
                 crewai_event_bus.emit(
@@ -1044,14 +1009,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     ),
                 )
                 error_event_emitted = True
-        elif not from_cache:
-            # Not cached and not executable: the model asked for a tool we
-            # do not have. The ReAct path reports this, so this one must too.
-            tool_failure = ToolFailure(
-                message=result,
-                reason=ToolFailureReason.UNKNOWN_TOOL,
-                code=func_name,
-            )
 
         after_hook_context = ToolCallHookContext(
             tool_name=func_name,
@@ -1079,27 +1036,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     agent_key=agent_key,
                     started_at=started_at,
                     finished_at=datetime.now(),
-                    failure=reportable_failure(
-                        tool_failure,
-                        tool=structured_tool,
-                        agent=self.agent,
-                        task=self.task,
-                        crew=self.crew,
-                    ),
                 ),
-            )
-
-        # After the finished event, so subscribers see the full lifecycle even
-        # when the policy aborts.
-        if tool_failure is not None:
-            handle_tool_failure(
-                tool_failure,
-                tool_name=func_name,
-                tool_args=args_dict,
-                tool=structured_tool,
-                agent=self.agent,
-                task=self.task,
-                crew=self.crew,
             )
 
         return {
@@ -1108,7 +1045,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
             "result": result,
             "from_cache": from_cache,
             "original_tool": original_tool,
-            "tool_failure": tool_failure,
         }
 
     def _append_tool_result_and_check_finality(
@@ -1139,8 +1075,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
             original_tool
             and hasattr(original_tool, "result_as_answer")
             and original_tool.result_as_answer
-            # A failed tool must not become the final answer.
-            and execution_result.get("tool_failure") is None
         ):
             return AgentFinish(
                 thought="Tool result is the final answer",
@@ -1179,9 +1113,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         content="Agent failed to reach a final answer. This is likely a bug - please report it.",
                         color="red",
                     )
-                raise
-            except ToolExecutionFailedError:
-                # A deliberate stop, not an unknown error.
                 raise
             except Exception as e:
                 handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
@@ -1314,11 +1245,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
                 await self._ainvoke_step_callback(formatted_answer)
                 self._append_message(formatted_answer.text)
-
-            except ToolExecutionFailedError:
-                # A deliberate stop: the generic handler below would feed it
-                # back to the LLM as a recoverable observation.
-                raise
 
             except OutputParserError as e:
                 formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]

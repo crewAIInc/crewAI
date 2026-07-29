@@ -1,5 +1,6 @@
 """Tests for structured tool-failure signalling and the per-agent policy."""
 
+import json
 from types import SimpleNamespace
 from typing import Any
 
@@ -61,6 +62,43 @@ class ScriptedLLM(LLM):
         step = self._steps[min(self._index, len(self._steps) - 1)]
         self._index += 1
         return step
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+
+class StatelessToolLLM(LLM):
+    """Calls one tool, then answers -- decided from the messages, not a counter.
+
+    Stateless so concurrent executions sharing one agent cannot interleave into
+    each other's script.
+    """
+
+    def __new__(cls, *args: Any, **kwargs: Any) -> "StatelessToolLLM":
+        return object.__new__(cls)
+
+    def __init__(
+        self,
+        tool_name: str,
+        tool_args: dict[str, Any],
+        done_marker: str = "rejected the message",
+    ) -> None:
+        super().__init__(model="gpt-4o")
+        self._tool_name = tool_name
+        self._tool_args = tool_args
+        # A sentinel from the tool's own output. Not "Observation" -- the ReAct
+        # prompt itself contains that word, so the stub would answer before
+        # ever calling the tool.
+        self._done_marker = done_marker
+
+    def call(self, messages, tools=None, callbacks=None, available_functions=None, **kw):  # noqa: ANN001, ANN003
+        if self._done_marker in str(messages):
+            return "Thought: it failed\nFinal Answer: could not post."
+        return (
+            "Thought: posting\n"
+            + f"Action: {self._tool_name}\n"
+            + f"Action Input: {json.dumps(self._tool_args)}"
+        )
 
     def supports_function_calling(self) -> bool:
         return False
@@ -710,17 +748,15 @@ class TestRaisePolicySurvivesEveryWrapper:
         import inspect
 
         from crewai.agent.core import Agent as AgentCls
-        from crewai.agents.crew_agent_executor import CrewAgentExecutor
         from crewai.agents.step_executor import StepExecutor
         from crewai.experimental.agent_executor import AgentExecutor
 
+        # CrewAgentExecutor is deprecated and deliberately excluded.
         sites = [
             (AgentCls._execute_with_timeout, "_passthrough_exceptions"),
             (StepExecutor.execute, "ToolExecutionFailedError"),
             (AgentExecutor.execute_tool_action, "ToolExecutionFailedError"),
             (AgentExecutor.execute_native_tool, "ToolExecutionFailedError"),
-            (CrewAgentExecutor._invoke_loop_react, "ToolExecutionFailedError"),
-            (CrewAgentExecutor._ainvoke_loop_react, "ToolExecutionFailedError"),
         ]
         for func, expected in sites:
             source = inspect.getsource(func)
@@ -1176,22 +1212,6 @@ class TestFailedToolIsNotTheFinalAnswer:
         assert not result.has_tool_failures
 
 
-class TestDeliberateStopIsNotAnUnknownError:
-    def test_executor_loops_do_not_route_it_to_handle_unknown_error(self) -> None:
-        """Verbose runs must not print 'An unknown error occurred' for a stop."""
-        import inspect
-
-        from crewai.agents.crew_agent_executor import CrewAgentExecutor
-
-        for func in (CrewAgentExecutor.invoke, CrewAgentExecutor.ainvoke):
-            source = inspect.getsource(func)
-            if "handle_unknown_error" not in source:
-                continue
-            assert "ToolExecutionFailedError" in source, (
-                f"{func.__qualname__} would report a deliberate stop as unknown"
-            )
-
-
 class TestEventCarriesCorrelationIds:
     """The failure event must be correlatable with the call it describes."""
 
@@ -1272,6 +1292,171 @@ class TestMalformedArgumentsAreReported:
         from crewai.utilities import agent_utils
 
         assert "INVALID_INPUT" in inspect.getsource(agent_utils.parse_tool_call_args)
+
+
+class TestDeprecatedExecutorIsNotIntegrated:
+    """CrewAgentExecutor is deprecated; the feature must not extend into it."""
+
+    def test_no_tool_failure_integration(self) -> None:
+        from pathlib import Path
+
+        import crewai
+
+        # Read the file directly: importing this module by name resolves to a
+        # different one in this package, so inspect would read the wrong source.
+        source = (
+            Path(crewai.__file__).parent / "agents" / "crew_agent_executor.py"
+        ).read_text()
+        assert "tool_failure" not in source
+        assert "ToolExecutionFailedError" not in source
+
+
+class TestConcurrentExecutionsAreIsolated:
+    """A shared agent must not leak failures between concurrent executions.
+
+    Accumulating on the agent let one execution reset another's list and both
+    outputs end up with both records.
+    """
+
+    @staticmethod
+    def _tool(channel_code: str) -> BaseTool:
+        class NamedSlack(BaseTool):
+            name: str = f"slack_{channel_code}"
+            description: str = "Post a message."
+
+            def _run(self, text: str) -> Any:
+                return ToolFailure(message=f"failed {channel_code}", code=channel_code)
+
+        return NamedSlack()
+
+    def _agent_and_task(self, code: str) -> tuple[Agent, Task]:
+        agent = Agent(
+            role=f"Poster {code}",
+            goal="post",
+            backstory="b",
+            llm=ScriptedLLM(
+                [
+                    f'Thought: go\nAction: slack_{code}\nAction Input: {{"text": "x"}}',
+                    "Thought: done\nFinal Answer: could not post.",
+                ]
+            ),
+            tools=[self._tool(code)],
+        )
+        task = Task(
+            description=f"post {code}", expected_output="c", agent=agent
+        )
+        return agent, task
+
+    def test_threads_do_not_cross_contaminate(self) -> None:
+        import concurrent.futures
+
+        crews = []
+        for code in ("aaa", "bbb", "ccc"):
+            agent, task = self._agent_and_task(code)
+            crews.append((code, Crew(agents=[agent], tasks=[task])))
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+            futures = {
+                pool.submit(crew.kickoff): code for code, crew in crews
+            }
+            results = {
+                futures[f]: f.result()
+                for f in concurrent.futures.as_completed(futures)
+            }
+
+        for code, result in results.items():
+            codes = [f.failure.code for f in result.tool_failures]
+            assert codes == [code], f"{code} saw {codes}"
+
+    def test_concurrent_kickoffs_on_a_shared_agent(self) -> None:
+        """The reported repro, made deterministic with a barrier.
+
+        Both kickoffs are held inside their tool call at the same time, so the
+        old agent-level accumulation had each reset the other's list and both
+        outputs came back holding two records instead of one.
+
+        Crew tasks cannot hit this -- AgentExecutor refuses concurrent reuse of
+        one instance -- but ``agent.kickoff()`` has no such guard.
+        """
+        import concurrent.futures
+        import threading
+
+        barrier = threading.Barrier(2, timeout=30)
+
+        class BlockingFailingTool(BaseTool):
+            name: str = "poster"
+            description: str = "Post a message."
+
+            def _run(self, channel: str) -> Any:
+                barrier.wait()
+                # Phrasing the LLM stub recognises as "tool already ran".
+                return ToolFailure(message=f"TOOLRAN {channel}", code=channel)
+
+        agent = Agent(
+            role="Poster",
+            goal="post",
+            backstory="b",
+            llm=StatelessToolLLM("poster", {"channel": "c1"}, "TOOLRAN"),
+            tools=[BlockingFailingTool()],
+        )
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(agent.kickoff, f"do {n}") for n in ("A", "B")]
+            outputs = [f.result() for f in futures]
+
+        counts = [len(o.tool_failures) for o in outputs]
+        assert counts == [1, 1], f"each kickoff should hold only its own: {counts}"
+
+    def test_shared_agent_across_sequential_tasks(self) -> None:
+        """One agent, two tasks: each output carries only its own record."""
+        agent = Agent(
+            role="Poster",
+            goal="post",
+            backstory="b",
+            llm=ScriptedLLM(_slack_steps() * 4),
+            tools=[SlackTool()],
+        )
+        task_a = Task(description="post A", expected_output="c", agent=agent)
+        task_b = Task(description="post B", expected_output="c", agent=agent)
+        result = Crew(agents=[agent], tasks=[task_a, task_b]).kickoff()
+
+        for task_output in result.tasks_output:
+            assert len(task_output.tool_failures) == 1, (
+                f"{task_output.name} carried {len(task_output.tool_failures)}"
+            )
+        assert len(result.tool_failures) == 2
+
+    def test_collector_is_execution_scoped(self) -> None:
+        from crewai.tools.tool_failure import (
+            active_tool_failures,
+            tool_failure_collector,
+        )
+
+        assert active_tool_failures() is None
+        with tool_failure_collector() as outer:
+            assert active_tool_failures() is outer
+            with tool_failure_collector() as inner:
+                assert active_tool_failures() is inner
+                assert inner is not outer
+            assert active_tool_failures() is outer
+        assert active_tool_failures() is None
+
+    @pytest.mark.asyncio
+    async def test_async_tasks_do_not_cross_contaminate(self) -> None:
+        import asyncio
+
+        crews = []
+        for code in ("ddd", "eee"):
+            agent, task = self._agent_and_task(code)
+            crews.append((code, Crew(agents=[agent], tasks=[task])))
+
+        outputs = await asyncio.gather(
+            *(crew.kickoff_async() for _, crew in crews)
+        )
+
+        for (code, _), result in zip(crews, outputs, strict=True):
+            codes = [f.failure.code for f in result.tool_failures]
+            assert codes == [code], f"{code} saw {codes}"
 
 
 class TestMCPIsErrorPlumbing:
