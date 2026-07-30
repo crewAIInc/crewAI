@@ -7,7 +7,10 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 
-from crewai_tools.security.safe_path import validate_url
+from crewai_tools.security.safe_path import (
+    ValidatedURL,
+    validate_url_and_resolve,
+)
 
 
 _REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
@@ -48,16 +51,50 @@ def _strip_cross_origin_credentials(request_kwargs: dict[str, Any]) -> dict[str,
     return sanitized
 
 
+def _build_pinned_session(validated: ValidatedURL) -> requests.Session:
+    """Build a requests.Session that pins TCP connections to the resolved IP.
+
+    This eliminates the DNS-rebinding TOCTOU window: the IP is validated
+    once during ``validate_url_and_resolve``, and the session's adapter
+    connects directly to that IP while preserving the original hostname
+    for ``Host`` header and TLS SNI.
+    """
+    session = requests.Session()
+    if not validated.resolved_ip:
+        return session
+
+    from crewai_tools.security.safe_path import PinnedIPAdapter
+
+    prefix = "https://" if urlparse(validated.url).scheme == "https" else "http://"
+    adapter = PinnedIPAdapter(resolved_ip=validated.resolved_ip)
+    session.mount(prefix, adapter)
+    return session
+
+
 def safe_get(url: str, *, max_redirects: int = 10, **kwargs: Any) -> requests.Response:
-    """GET a URL while validating each redirect target before following it."""
-    current_url = validate_url(url)
+    """GET a URL while validating each redirect target before following it.
+
+    Uses IP pinning to prevent DNS-rebinding TOCTOU attacks: the DNS is
+    resolved once during validation, and the actual connection is made
+    directly to the resolved IP.
+    """
+    validated = validate_url_and_resolve(url)
+    current_url = validated.url
+    current_ip = validated.resolved_ip
     request_kwargs = {**kwargs, "allow_redirects": False}
     timeout = request_kwargs.pop("timeout", 30)
     history: list[requests.Response] = []
     redirects_followed = 0
 
     while True:
-        response = requests.get(current_url, timeout=timeout, **request_kwargs)
+        session = _build_pinned_session(
+            ValidatedURL(url=current_url, resolved_ip=current_ip)
+        )
+        try:
+            response = session.get(current_url, timeout=timeout, **request_kwargs)
+        finally:
+            session.close()
+
         if (
             response.status_code not in _REDIRECT_STATUS_CODES
             or "Location" not in response.headers
@@ -75,14 +112,17 @@ def safe_get(url: str, *, max_redirects: int = 10, **kwargs: Any) -> requests.Re
             return response
 
         try:
-            redirect_url = validate_url(urljoin(response.url, location))
+            redirect_validated = validate_url_and_resolve(
+                urljoin(response.url, location)
+            )
         except ValueError:
             response.close()
             raise
 
-        if not _same_origin(current_url, redirect_url):
+        if not _same_origin(current_url, redirect_validated.url):
             request_kwargs = _strip_cross_origin_credentials(request_kwargs)
 
         history.append(response)
-        current_url = redirect_url
+        current_url = redirect_validated.url
+        current_ip = redirect_validated.resolved_ip
         redirects_followed += 1

@@ -11,6 +11,7 @@ import contextvars
 from typing import Any
 
 from crewai.tools import BaseTool
+from crewai.tools.mcp_security import validate_mcp_tool_args_for_urls
 
 
 class MCPNativeTool(BaseTool):
@@ -80,6 +81,8 @@ class MCPNativeTool(BaseTool):
             Result from the MCP tool execution.
         """
         try:
+            validate_mcp_tool_args_for_urls(kwargs)
+
             try:
                 asyncio.get_running_loop()
 
@@ -93,6 +96,8 @@ class MCPNativeTool(BaseTool):
             except RuntimeError:
                 return asyncio.run(self._run_async(**kwargs))
 
+        except ValueError as e:
+            return f"SSRF protection blocked MCP tool execution: {e}"
         except Exception as e:
             raise RuntimeError(
                 f"Error executing MCP tool {self.original_tool_name}: {e!s}"
