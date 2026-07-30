@@ -448,6 +448,11 @@ class AnthropicCompletion(BaseLLM):
                 formatted_messages, system_message = (
                     self._format_messages_for_anthropic(messages)
                 )
+                
+                if not self._invoke_before_llm_call_hooks(
+                    formatted_messages, from_agent
+                ):
+                    raise ValueError("LLM call blocked by before_llm_call hook")
 
                 completion_params = self._prepare_completion_params(
                     formatted_messages, system_message, tools, available_functions
