@@ -1269,9 +1269,9 @@ class AgentHooksEngine:
 
     def _execution_end(self, ctx: ExecutionEndContext) -> None:
         """Adapt ``EXECUTION_END`` -> ``agent_shutdown``: records the run's end."""
-        builder = self._builder(crew=ctx.crew, flow=ctx.flow)
         reason = "completed" if ctx.status == "completed" else "error"
         try:
+            builder = self._builder(crew=ctx.crew, flow=ctx.flow)
             self._decide(builder.agent_shutdown(reason=reason))
         finally:
             self._finish_session(crew=ctx.crew, flow=ctx.flow)

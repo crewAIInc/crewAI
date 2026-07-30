@@ -313,6 +313,10 @@ def run_hooks(
             :func:`_default_reducer` (payload replacement). May raise
             :class:`HookAborted`.
         verbose: Whether to print swallowed-hook-error warnings.
+        final_hook: Optional hook run after ``hooks``, even when ``hooks`` is
+            empty or an earlier hook aborts. A regular hook's ``HookAborted`` is
+            deferred until ``final_hook`` runs and then re-raised, unless
+            ``final_hook`` itself aborts first.
 
     Returns:
         The (possibly mutated) context.

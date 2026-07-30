@@ -1646,6 +1646,36 @@ class TestBoundaryGovernance:
         finally:
             engine.close()
 
+    def test_execution_end_finalizes_session_when_builder_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A builder failure in the end hook must still finish the session."""
+        from crewai.hooks.contexts import ExecutionEndContext
+
+        engine = use_agent_hooks(_Allow())
+        crew = _crew()
+        try:
+            dispatch(
+                InterceptionPoint.EXECUTION_START,
+                ExecutionStartContext(crew=crew, inputs={}, payload={}),
+            )
+            assert engine._active_sessions and engine._builders
+
+            def boom(**_kwargs: Any) -> Any:
+                raise RuntimeError("builder construction failed")
+
+            monkeypatch.setattr(engine, "_builder", boom)
+            with pytest.raises(HookAborted):
+                dispatch(
+                    InterceptionPoint.EXECUTION_END,
+                    ExecutionEndContext(crew=crew),
+                )
+
+            assert engine._active_sessions == {}
+            assert engine._builders == {}
+        finally:
+            engine.close()
+
     def test_input_deny_raises(self):
         engine = use_agent_hooks(_DenyAt("input"))
         try:
@@ -2022,6 +2052,9 @@ class TestEngineLifecycle:
 
             assert len(engine.records) == 2
             assert engine.records_dropped == 1
+            # Oldest-first eviction: the first emission (sequence 0) is dropped,
+            # leaving the later two in ascending sequence order.
+            assert [record.sequence for record in engine.records] == [1, 2]
             assert DEFAULT_MAX_RECORDS > 2
         finally:
             engine.close()
