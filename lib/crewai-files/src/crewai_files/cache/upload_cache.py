@@ -6,11 +6,12 @@ import asyncio
 import atexit
 import builtins
 from collections.abc import Iterator
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
 import logging
+import threading
 from typing import TYPE_CHECKING, Any
 
 from aiocache import Cache  # type: ignore[import-untyped]
@@ -24,6 +25,31 @@ if TYPE_CHECKING:
     from crewai_files.core.types import FileInput
 
 logger = logging.getLogger(__name__)
+
+# How long a sync wrapper waits for its coroutine when it had to hand the work
+# to a worker loop. These are cache reads and writes, so the bound exists to
+# turn a hang into an error rather than to police a plausible duration.
+_RUN_SYNC_TIMEOUT_SECONDS = 30
+# How long to wait for the worker loop to stop after the task is done or
+# cancelled. Reached only if the coroutine ignores cancellation.
+_RUN_SYNC_JOIN_TIMEOUT_SECONDS = 5
+
+
+async def _settling(coro: Any, done: threading.Event) -> Any:
+    """Run ``coro``, signalling ``done`` once it has fully unwound.
+
+    The concurrent future that :func:`asyncio.run_coroutine_threadsafe` returns
+    is not a reliable "the coroutine has stopped" signal after a cancellation:
+    it is completed when the cancellation is *chained* to it, while the task may
+    still be running its own ``finally`` blocks. Stopping the loop on that signal
+    destroys the task mid-unwind ("Task was destroyed but it is pending").
+    Setting the flag from inside the coroutine's own ``finally`` cannot be early
+    by construction.
+    """
+    try:
+        return await coro
+    finally:
+        done.set()
 
 
 @dataclass
@@ -409,23 +435,70 @@ class UploadCache:
         loop runs on, so the loop could never advance the coroutine and the
         wait would time out. The coroutine is driven on a worker thread with
         its own loop instead.
+
+        The loop is owned here rather than handed to ``asyncio.run`` on a
+        pooled thread, because the timeout has to be able to *stop* the work.
+        ``asyncio.run`` is opaque from the outside: the only handle on it is
+        the thread, and threads cannot be interrupted, so a coroutine that
+        overran the bound would keep running -- and, being a non-daemon pool
+        thread, hold up interpreter exit until it finished. Scheduling through
+        :func:`asyncio.run_coroutine_threadsafe` keeps a handle on the task
+        itself, so a timeout cancels it and the loop shuts down for real.
         """
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             loop = None
 
-        if loop is not None and loop.is_running():
-            executor = ThreadPoolExecutor(max_workers=1)
+        if loop is None or not loop.is_running():
+            return asyncio.run(coro)
+
+        worker_loop = asyncio.new_event_loop()
+        # Daemon so that a worker wedged in uncancellable work (a blocking
+        # call inside the coroutine) cannot keep the process alive; the
+        # cancellation below is what handles the ordinary case.
+        thread = threading.Thread(
+            target=worker_loop.run_forever,
+            name="crewai-files-upload-cache",
+            daemon=True,
+        )
+        thread.start()
+        unwound = threading.Event()
+        try:
+            future = asyncio.run_coroutine_threadsafe(
+                _settling(coro, unwound), worker_loop
+            )
             try:
-                return executor.submit(asyncio.run, coro).result(timeout=30)
-            finally:
-                # ``shutdown(wait=True)`` -- what the context-manager form
-                # does -- would block until the worker finishes, so a
-                # coroutine that overran the timeout would still hang the
-                # caller and make the bound meaningless.
-                executor.shutdown(wait=False)
-        return asyncio.run(coro)
+                return future.result(timeout=_RUN_SYNC_TIMEOUT_SECONDS)
+            except FuturesTimeoutError:
+                # Cancelling the task, not just abandoning the thread: the
+                # coroutine touches the shared cache, so letting it run on
+                # after the caller gave up would mutate state nobody is
+                # waiting for.
+                future.cancel()
+                # ``cancel()`` only *requests* it -- the exception is thrown in
+                # on the worker loop's next pass. Stopping the loop right away
+                # would race that, leaving the coroutine suspended with its
+                # cleanup never run. The bound keeps a coroutine that swallows
+                # cancellation from turning this into a second hang.
+                unwound.wait(timeout=_RUN_SYNC_JOIN_TIMEOUT_SECONDS)
+                raise
+        finally:
+            worker_loop.call_soon_threadsafe(worker_loop.stop)
+            thread.join(timeout=_RUN_SYNC_JOIN_TIMEOUT_SECONDS)
+            if thread.is_alive():
+                # Closing a loop whose thread is still in ``run_forever``
+                # would raise, and would leave the loop's internals being
+                # torn down underneath it. The join timeout is only reached
+                # when the coroutine ignores cancellation, so the loop is
+                # leaked deliberately in preference to that.
+                logger.warning(
+                    "Upload cache worker did not stop within "
+                    f"{_RUN_SYNC_JOIN_TIMEOUT_SECONDS}s; its event loop is "
+                    "left open because closing a running loop is unsafe."
+                )
+            else:
+                worker_loop.close()
 
     def get(self, file: FileInput, provider: ProviderType) -> CachedUpload | None:
         """Sync wrapper for aget."""

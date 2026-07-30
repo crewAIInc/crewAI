@@ -1,10 +1,13 @@
 """Tests for upload cache."""
 
 import asyncio
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from datetime import datetime, timedelta, timezone
+import threading
 import time
 
 from crewai_files import FileBytes, ImageFile
+import crewai_files.cache.upload_cache as upload_cache_mod
 from crewai_files.cache.upload_cache import (
     CachedUpload,
     UploadCache,
@@ -293,7 +296,14 @@ class TestRunSyncFromInsideAnEventLoop:
         other = self._make_file(suffix=b"x")
 
         cache.set(file=file, provider="gemini", file_id="file-1")
-        cache.set(file=other, provider="gemini", file_id="file-2")
+        # set_by_hash rather than a second set(): it is a wrapper in its own
+        # right, and calling set twice would leave it uncovered.
+        cache.set_by_hash(
+            file_hash=_compute_file_hash(other),
+            content_type=other.content_type,
+            provider="gemini",
+            file_id="file-2",
+        )
 
         assert len(cache.get_all_for_provider("gemini")) == 2
         assert cache.get_by_hash(_compute_file_hash(file), "gemini") is not None
@@ -311,3 +321,88 @@ class TestRunSyncFromInsideAnEventLoop:
 
         with pytest.raises(RuntimeError, match="coroutine failed"):
             UploadCache._run_sync(boom())
+
+    @pytest.mark.asyncio
+    async def test_timeout_cancels_the_coroutine_instead_of_abandoning_it(
+        self, monkeypatch
+    ):
+        """A coroutine that overruns the bound must be stopped, not left running.
+
+        The timeout unblocks the caller either way, so waiting on the caller
+        proves nothing: the question is what happens to the work afterwards.
+        These coroutines mutate the shared cache, so one that runs on past the
+        point where its caller gave up writes to state nobody is waiting for.
+        """
+        # Long enough that the coroutine is certainly running when the bound
+        # expires. With a very short one the future can be cancelled before the
+        # worker loop has picked it up -- also a correct outcome, but it would
+        # leave this test passing without a running task ever being interrupted,
+        # which is the thing under test. ``started`` pins that premise.
+        monkeypatch.setattr(upload_cache_mod, "_RUN_SYNC_TIMEOUT_SECONDS", 2.0)
+        outcome: list[str] = []
+        started = threading.Event()
+        finished = threading.Event()
+
+        async def overruns() -> None:
+            started.set()
+            try:
+                await asyncio.sleep(30)
+                outcome.append("completed")
+            except asyncio.CancelledError:
+                outcome.append("cancelled")
+                raise
+            finally:
+                finished.set()
+
+        with pytest.raises(FuturesTimeoutError):
+            UploadCache._run_sync(overruns())
+
+        assert started.is_set(), "coroutine never ran; nothing was interrupted"
+        assert finished.wait(timeout=5), "coroutine neither finished nor was stopped"
+        assert outcome == ["cancelled"]
+
+    @pytest.mark.asyncio
+    async def test_timed_out_worker_is_cleaned_up_before_returning(self, monkeypatch):
+        """The worker thread and its loop must be gone by the time we return.
+
+        Otherwise the leak is only moved: a non-daemon pool thread still
+        running at exit delays interpreter shutdown until its coroutine ends,
+        so a 30s upload check would add 30s to the exit of a process that had
+        already given up on it.
+        """
+        monkeypatch.setattr(upload_cache_mod, "_RUN_SYNC_TIMEOUT_SECONDS", 2.0)
+        before = set(threading.enumerate())
+        started = threading.Event()
+
+        async def overruns() -> None:
+            started.set()
+            await asyncio.sleep(30)
+
+        with pytest.raises(FuturesTimeoutError):
+            UploadCache._run_sync(overruns())
+
+        assert started.is_set(), "coroutine never ran; nothing was left behind"
+        # Compared by identity over every thread rather than by a name prefix:
+        # a name filter would only ever catch the threads this implementation
+        # happens to create, so an implementation that leaked a differently
+        # named one would pass.
+        leaked = [t for t in threading.enumerate() if t not in before and t.is_alive()]
+        assert leaked == [], f"worker thread outlived the call: {leaked}"
+
+    @pytest.mark.asyncio
+    async def test_successful_call_leaves_no_worker_thread_behind(self):
+        """The ordinary path must not accumulate a thread per wrapper call.
+
+        Every sync wrapper called from async code goes through here, so a
+        thread that outlives its call would leak once per cache lookup rather
+        than once per timeout.
+        """
+        before = set(threading.enumerate())
+        cache = UploadCache()
+        file = self._make_file()
+
+        cache.set(file=file, provider="gemini", file_id="file-123")
+        assert cache.get(file=file, provider="gemini") is not None
+
+        leaked = [t for t in threading.enumerate() if t not in before and t.is_alive()]
+        assert leaked == [], f"worker threads outlived their calls: {leaked}"
