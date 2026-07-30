@@ -2557,7 +2557,12 @@ class OpenAICompletion(BaseLLM):
                     finish_reason=parsed_stream_finish_reason,
                     response_id=parsed_stream_response_id,
                 )
-                return accumulated_content
+                # Validation failed, so this returns raw model text rather than a
+                # parsed object -- the same kind of value every other path here
+                # hands to the hooks, and already reported as an LLM_CALL above.
+                return self._invoke_after_llm_call_hooks(
+                    params["messages"], accumulated_content, from_agent
+                )
 
         stream: AsyncIterator[
             ChatCompletionChunk

@@ -16,6 +16,7 @@ from crewai.hooks.llm_hooks import (
     register_after_llm_call_hook,
     register_before_llm_call_hook,
 )
+from pydantic import BaseModel
 import pytest
 
 
@@ -817,6 +818,84 @@ class TestAfterLLMCallHooksOnAsyncPaths:
         result = await llm.acall([{"role": "user", "content": "hi"}])
 
         assert seen == ["the model said SECRET"]
+        assert result == "the model said SECRET"
+
+
+class TestAfterLLMCallHooksOnStructuredOutputFallback:
+    """A structured-output stream that fails to parse still runs the hooks.
+
+    ``_ahandle_streaming_completion`` returns the accumulated text when
+    ``response_model.model_validate_json`` raises. That is raw model text, and
+    the method reports it as an ``LLM_CALL`` before returning it, so a hook
+    registered to redact or audit responses has to see it — but the return
+    happened inside the ``response_model`` branch, upstream of the hook call at
+    the end of the method, so it did not.
+
+    Only the async path is affected: the sync handler's ``response_model``
+    branch has no equivalent raw-text fallback.
+    """
+
+    @staticmethod
+    def _stub_streaming_llm():
+        from types import SimpleNamespace
+
+        from crewai.llms.providers.openai.completion import OpenAICompletion
+
+        def _chunk(content: str) -> object:
+            delta = SimpleNamespace(content=content, tool_calls=None)
+            choice = SimpleNamespace(delta=delta, finish_reason="stop", index=0)
+            return SimpleNamespace(choices=[choice], usage=None, id="cmpl_stub")
+
+        class _AsyncCompletions:
+            async def create(self, **kwargs: object) -> object:
+                async def _stream():
+                    # Not valid JSON for the model below, so validation raises
+                    # and the handler falls back to returning this text.
+                    yield _chunk("the model said SECRET")
+
+                return _stream()
+
+        llm = OpenAICompletion(model="gpt-4o", api_key="stub", stream=True)
+        llm._async_client = SimpleNamespace(
+            chat=SimpleNamespace(completions=_AsyncCompletions())
+        )
+        return llm
+
+    @pytest.mark.asyncio
+    async def test_unparseable_structured_output_still_runs_the_hook(self):
+        """The regression: this returned the unredacted text with nothing logged."""
+
+        class Schema(BaseModel):
+            answer: str
+
+        seen: list[str] = []
+
+        def redact(context: LLMCallHookContext) -> str:
+            seen.append(context.response)
+            return context.response.replace("SECRET", "[REDACTED]")
+
+        register_after_llm_call_hook(redact)
+
+        result = await self._stub_streaming_llm().acall(
+            [{"role": "user", "content": "hi"}],
+            response_model=Schema,
+        )
+
+        assert seen == ["the model said SECRET"], "hook did not see the fallback text"
+        assert result == "the model said [REDACTED]"
+
+    @pytest.mark.asyncio
+    async def test_unparseable_structured_output_is_unchanged_without_hooks(self):
+        """With no hook the fallback text must pass through untouched."""
+
+        class Schema(BaseModel):
+            answer: str
+
+        result = await self._stub_streaming_llm().acall(
+            [{"role": "user", "content": "hi"}],
+            response_model=Schema,
+        )
+
         assert result == "the model said SECRET"
 
 
