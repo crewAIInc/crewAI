@@ -1692,6 +1692,27 @@ class LLM(BaseLLM):
                 stream_finish_reason,
                 stream_response_id,
             )
+
+            if response_model and self.is_litellm:
+                instructor_instance = InternalInstructor(
+                    content=full_response,
+                    model=response_model,
+                    llm=self,
+                )
+                result = instructor_instance.to_pydantic()
+                structured_response = result.model_dump_json()
+                self._handle_emit_call_events(
+                    response=structured_response,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params.get("messages"),
+                    usage=usage_dict,
+                    finish_reason=finish_reason,
+                    response_id=response_id_last,
+                )
+                return structured_response
+
             self._handle_emit_call_events(
                 response=full_response,
                 call_type=LLMCallType.LLM_CALL,
