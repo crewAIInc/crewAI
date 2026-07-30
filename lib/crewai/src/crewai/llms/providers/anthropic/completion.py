@@ -1618,10 +1618,19 @@ class AnthropicCompletion(BaseLLM):
                     return result
 
         content = ""
+        thinking_blocks: list[ThinkingBlock] = []
+
         if response.content:
             for content_block in response.content:
                 if hasattr(content_block, "text"):
                     content += content_block.text
+                else:
+                    thinking_block = self._extract_thinking_block(content_block)
+                    if thinking_block:
+                        thinking_blocks.append(cast(ThinkingBlock, thinking_block))
+
+        if thinking_blocks:
+            self._previous_thinking_blocks = thinking_blocks
 
         content = self._apply_stop_words(content)
 
@@ -1639,7 +1648,9 @@ class AnthropicCompletion(BaseLLM):
         if usage.get("total_tokens", 0) > 0:
             logging.info(f"Anthropic API usage: {usage}")
 
-        return content
+        return self._invoke_after_llm_call_hooks(
+            params["messages"], content, from_agent
+        )
 
     async def _ahandle_streaming_completion(
         self,
@@ -1761,6 +1772,16 @@ class AnthropicCompletion(BaseLLM):
 
             final_message = await stream.get_final_message()
 
+        thinking_blocks: list[ThinkingBlock] = []
+        if final_message.content:
+            for content_block in final_message.content:
+                thinking_block = self._extract_thinking_block(content_block)
+                if thinking_block:
+                    thinking_blocks.append(cast(ThinkingBlock, thinking_block))
+
+        if thinking_blocks:
+            self._previous_thinking_blocks = thinking_blocks
+
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
 
@@ -1828,7 +1849,9 @@ class AnthropicCompletion(BaseLLM):
             response_id=final_response_id,
         )
 
-        return full_response
+        return self._invoke_after_llm_call_hooks(
+            params["messages"], full_response, from_agent
+        )
 
     async def _ahandle_tool_use_conversation(
         self,

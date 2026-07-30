@@ -1212,6 +1212,10 @@ class OpenAICompletion(BaseLLM):
                 response_id=response_id,
             )
 
+            content = self._invoke_after_llm_call_hooks(
+                params.get("input", []), content, from_agent
+            )
+
         except NotFoundError as e:
             error_msg = f"Model {self.model} not found: {e}"
             logging.error(error_msg)
@@ -1510,7 +1514,9 @@ class OpenAICompletion(BaseLLM):
             response_id=response_id,
         )
 
-        return full_response
+        return self._invoke_after_llm_call_hooks(
+            params.get("input", []), full_response, from_agent
+        )
 
     def _extract_function_calls_from_response(
         self, response: Response
@@ -2436,6 +2442,10 @@ class OpenAICompletion(BaseLLM):
 
             if usage.get("total_tokens", 0) > 0:
                 logging.info(f"OpenAI API usage: {usage}")
+
+            content = self._invoke_after_llm_call_hooks(
+                params["messages"], content, from_agent
+            )
         except NotFoundError as e:
             error_msg = self._model_not_found_message(e)
             logging.error(error_msg)
@@ -2623,7 +2633,7 @@ class OpenAICompletion(BaseLLM):
                         response_id=response_id_stream,
                     )
 
-        return self._finalize_streaming_response(
+        result = self._finalize_streaming_response(
             full_response=full_response,
             tool_calls=tool_calls,
             usage_data=usage_data,
@@ -2634,6 +2644,11 @@ class OpenAICompletion(BaseLLM):
             finish_reason=stream_finish_reason,
             response_id=stream_response_id,
         )
+        if isinstance(result, str):
+            return self._invoke_after_llm_call_hooks(
+                params["messages"], result, from_agent
+            )
+        return result
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""

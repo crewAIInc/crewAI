@@ -670,3 +670,217 @@ class TestDirectLLMScopedHooks:
             )
 
         assert result == "contains [REDACTED]"
+
+
+def _openai_response(content: str) -> object:
+    """A minimal chat-completions response shaped like the OpenAI SDK's."""
+    from types import SimpleNamespace
+
+    message = SimpleNamespace(content=content, tool_calls=None, refusal=None)
+    return SimpleNamespace(
+        choices=[SimpleNamespace(message=message, finish_reason="stop", index=0)],
+        usage=SimpleNamespace(prompt_tokens=5, completion_tokens=7, total_tokens=12),
+        id="cmpl_stub",
+        model="gpt-4o",
+    )
+
+
+def _anthropic_response(content: str) -> object:
+    """A minimal messages response with one thinking block and one text block."""
+    from types import SimpleNamespace
+
+    thinking = SimpleNamespace(
+        type="thinking", thinking="internal reasoning", signature="sig-stub"
+    )
+    text = SimpleNamespace(type="text", text=content)
+    return SimpleNamespace(
+        content=[thinking, text],
+        usage=SimpleNamespace(input_tokens=5, output_tokens=7),
+        stop_reason="end_turn",
+        id="msg_stub",
+    )
+
+
+def _stub_openai_llm():
+    from types import SimpleNamespace
+
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+
+    class _Completions:
+        def create(self, **kwargs: object) -> object:
+            return _openai_response("the model said SECRET")
+
+    class _AsyncCompletions:
+        async def create(self, **kwargs: object) -> object:
+            return _openai_response("the model said SECRET")
+
+    llm = OpenAICompletion(model="gpt-4o", api_key="stub", stream=False)
+    llm._client = SimpleNamespace(chat=SimpleNamespace(completions=_Completions()))
+    llm._async_client = SimpleNamespace(
+        chat=SimpleNamespace(completions=_AsyncCompletions())
+    )
+    return llm
+
+
+def _stub_anthropic_llm():
+    from types import SimpleNamespace
+
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    class _Messages:
+        def create(self, **kwargs: object) -> object:
+            return _anthropic_response("the model said SECRET")
+
+    class _AsyncMessages:
+        async def create(self, **kwargs: object) -> object:
+            return _anthropic_response("the model said SECRET")
+
+    llm = AnthropicCompletion(
+        model="claude-sonnet-4-5",
+        api_key="stub",
+        thinking={"type": "enabled", "budget_tokens": 1024},
+        max_tokens=2048,
+        stream=False,
+    )
+    llm._client = SimpleNamespace(messages=_Messages())
+    llm._async_client = SimpleNamespace(messages=_AsyncMessages())
+    return llm
+
+
+class TestAfterLLMCallHooksOnAsyncPaths:
+    """``acall()`` must run after_llm_call hooks exactly as ``call()`` does.
+
+    Regression: the native providers invoked ``_invoke_after_llm_call_hooks``
+    only from their sync handlers, so a hook registered to redact or rewrite a
+    response was silently skipped for every async direct call — the response
+    reached the caller unmodified with nothing logged.
+    """
+
+    @pytest.fixture(params=["openai", "anthropic"])
+    def llm(self, request):
+        return {
+            "openai": _stub_openai_llm,
+            "anthropic": _stub_anthropic_llm,
+        }[request.param]()
+
+    @staticmethod
+    def _register_redactor(seen: list[str]):
+        def redact(context: LLMCallHookContext) -> str:
+            seen.append(context.response)
+            return context.response.replace("SECRET", "[REDACTED]")
+
+        register_after_llm_call_hook(redact)
+        return redact
+
+    def test_sync_call_runs_after_hook(self, llm):
+        """The baseline the async path is compared against."""
+        seen: list[str] = []
+        self._register_redactor(seen)
+
+        result = llm.call([{"role": "user", "content": "hi"}])
+
+        assert len(seen) == 1, "after_llm_call hook did not run on call()"
+        assert result == "the model said [REDACTED]"
+
+    @pytest.mark.asyncio
+    async def test_async_call_runs_after_hook(self, llm):
+        """The regression: this used to return the unredacted response."""
+        seen: list[str] = []
+        self._register_redactor(seen)
+
+        result = await llm.acall([{"role": "user", "content": "hi"}])
+
+        assert len(seen) == 1, "after_llm_call hook did not run on acall()"
+        assert result == "the model said [REDACTED]"
+
+    @pytest.mark.asyncio
+    async def test_async_call_without_hooks_is_unchanged(self, llm):
+        """With no hook registered the response must pass through untouched.
+
+        Without this, a fix that unconditionally rewrote the response would pass.
+        """
+        result = await llm.acall([{"role": "user", "content": "hi"}])
+
+        assert result == "the model said SECRET"
+
+    @pytest.mark.asyncio
+    async def test_async_call_hook_returning_none_keeps_response(self, llm):
+        """A hook that returns ``None`` observes without replacing."""
+        seen: list[str] = []
+
+        def observe(context: LLMCallHookContext) -> None:
+            seen.append(context.response)
+            return None
+
+        register_after_llm_call_hook(observe)
+
+        result = await llm.acall([{"role": "user", "content": "hi"}])
+
+        assert seen == ["the model said SECRET"]
+        assert result == "the model said SECRET"
+
+
+class TestAnthropicThinkingBlocksOnAsyncPath:
+    """``acall()`` must retain thinking blocks the way ``call()`` does.
+
+    Regression: ``_ahandle_completion`` never called ``_extract_thinking_block``,
+    so ``_previous_thinking_blocks`` stayed empty on the async path. With
+    extended thinking enabled, the next turn then omitted the signed thinking
+    block from the assistant message that ``_format_messages_for_anthropic``
+    rebuilds — losing the reasoning context the sync path preserves.
+    """
+
+    def test_sync_call_stores_thinking_blocks(self):
+        """The baseline the async path is compared against."""
+        llm = _stub_anthropic_llm()
+
+        llm.call([{"role": "user", "content": "hi"}])
+
+        assert llm._previous_thinking_blocks == [
+            {
+                "type": "thinking",
+                "thinking": "internal reasoning",
+                "signature": "sig-stub",
+            }
+        ]
+
+    @pytest.mark.asyncio
+    async def test_async_call_stores_thinking_blocks(self):
+        """The regression: this used to leave ``_previous_thinking_blocks`` empty."""
+        llm = _stub_anthropic_llm()
+
+        await llm.acall([{"role": "user", "content": "hi"}])
+
+        assert llm._previous_thinking_blocks == [
+            {
+                "type": "thinking",
+                "thinking": "internal reasoning",
+                "signature": "sig-stub",
+            }
+        ], "async path discarded the thinking blocks"
+
+    @pytest.mark.asyncio
+    async def test_async_thinking_blocks_are_replayed_on_the_next_turn(self):
+        """The stored blocks must reach the follow-up request, signature intact."""
+        llm = _stub_anthropic_llm()
+
+        await llm.acall([{"role": "user", "content": "What is 2+2?"}])
+
+        formatted, _ = llm._format_messages_for_anthropic(
+            [
+                {"role": "user", "content": "What is 2+2?"},
+                {"role": "assistant", "content": "4"},
+                {"role": "user", "content": "Now what is 3+3?"},
+            ]
+        )
+
+        assistant = next(
+            message
+            for message in formatted
+            if message["role"] == "assistant" and isinstance(message["content"], list)
+        )
+        assert assistant["content"][0] == {
+            "type": "thinking",
+            "thinking": "internal reasoning",
+            "signature": "sig-stub",
+        }
