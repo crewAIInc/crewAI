@@ -66,23 +66,22 @@ class TestSkillUsedIsCollected:
 
     def test_the_event_itself_is_forwarded_intact(self, registered_listener):
         """The type alone is not enough -- the collector serializes the event,
-        so dropping or replacing it would lose every attribution field."""
-        bus, handled = registered_listener
+        so dropping or replacing it would lose every attribution field.
 
-        bus.emit(
-            None,
-            SkillUsedEvent(
-                skill_name="pdf-processing",
-                skill_path=Path("/skills/pdf-processing"),
-                from_agent=None,
-            ),
+        Asserted by identity: comparing field values would still pass if a
+        handler forwarded a reconstructed copy.
+        """
+        bus, handled = registered_listener
+        event = SkillUsedEvent(
+            skill_name="pdf-processing",
+            skill_path=Path("/skills/pdf-processing"),
         )
+
+        bus.emit(None, event)
         bus.flush()
 
         [forwarded] = _events_of_type(handled, "skill_used")
-        assert forwarded.skill_name == "pdf-processing"
-        assert forwarded.skill_path == Path("/skills/pdf-processing")
-        assert forwarded.type == "skill_used"
+        assert forwarded is event
 
     def test_every_use_is_collected(self, registered_listener):
         """Activation is idempotent; usage is not. One event per use."""
