@@ -116,6 +116,7 @@ from crewai.tasks.task_output import TaskOutput
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.agent_tools.read_file_tool import ReadFileTool
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.tool_failure import ToolFailurePolicy
 from crewai.types.callback import SerializableCallable
 from crewai.types.streaming import CrewStreamingOutput
 from crewai.types.usage_metrics import UsageMetrics
@@ -229,6 +230,13 @@ class Crew(FlowTrackable, BaseModel):
             "arguments return the first result without re-executing the "
             "tool — do not enable for live-data or state-mutating tools "
             "unless they set a cache_function that prevents caching."
+        ),
+    )
+    tool_failure_policy: ToolFailurePolicy | None = Field(
+        default=None,
+        description=(
+            "Baseline tool_failure_policy for every agent in this crew. None "
+            "means 'warn'. Agents, tasks and tools may override it."
         ),
     )
     tasks: list[Task] = Field(default_factory=list)
