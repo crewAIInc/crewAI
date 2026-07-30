@@ -2008,6 +2008,9 @@ def _setup_after_llm_call_hooks(
         executor_context: The executor context to setup the hooks for.
         answer: The LLM response (string or Pydantic model).
         printer: Printer instance for error logging.
+        request_id: Optional host-owned correlation identifier for the model
+            call, threaded onto the hook context so the pre/post model hooks
+            share one id.
         verbose: Whether to print output.
 
     Returns:
