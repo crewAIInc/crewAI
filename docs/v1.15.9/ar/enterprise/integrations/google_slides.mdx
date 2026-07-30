@@ -1,0 +1,382 @@
+---
+title: تكامل Google Slides
+description: "إنشاء العروض التقديمية وإدارتها مع تكامل Google Slides لـ CrewAI."
+icon: "chart-bar"
+mode: "wide"
+---
+
+## نظرة عامة
+
+مكّن وكلاءك من إنشاء وتحرير وإدارة عروض Google Slides التقديمية. أنشئ العروض التقديمية، وحدّث المحتوى، واستورد البيانات من Google Sheets، وأدر الصفحات والصور المصغرة، وبسّط سير عمل العروض التقديمية باستخدام الأتمتة المدعومة بالذكاء الاصطناعي.
+
+## المتطلبات الأساسية
+
+قبل استخدام تكامل Google Slides، تأكد من توفر ما يلي:
+
+- حساب [CrewAI AMP](https://app.crewai.com) مع اشتراك فعّال
+- حساب Google مع إمكانية الوصول إلى Google Slides
+- ربط حساب Google الخاص بك عبر [صفحة التكاملات](https://app.crewai.com/crewai_plus/connectors)
+
+## إعداد تكامل Google Slides
+
+### 1. ربط حساب Google الخاص بك
+
+1. انتقل إلى [تكاملات CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
+2. ابحث عن **Google Slides** في قسم تكاملات المصادقة
+3. انقر على **Connect** وأكمل عملية OAuth
+4. امنح الصلاحيات اللازمة للوصول إلى العروض التقديمية وجداول البيانات وDrive
+5. انسخ رمز المؤسسة من [إعدادات التكامل](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. تثبيت الحزمة المطلوبة
+
+```bash
+uv add crewai-tools
+```
+
+### 3. إعداد متغير البيئة
+
+<Note>
+  لاستخدام التكاملات مع `Agent(apps=[])`, يجب تعيين متغير البيئة
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` برمز المؤسسة الخاص بك.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+أو أضفه إلى ملف `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## الإجراءات المتاحة
+
+<AccordionGroup>
+  <Accordion title="google_slides/create_blank_presentation">
+    **الوصف:** إنشاء عرض تقديمي فارغ بدون محتوى.
+
+    **المعاملات:**
+    - `title` (string, مطلوب): عنوان العرض التقديمي.
+
+  </Accordion>
+
+  <Accordion title="google_slides/get_presentation_metadata">
+    **الوصف:** الحصول على بيانات وصفية خفيفة حول العرض التقديمي (العنوان، عدد الشرائح، معرّفات الشرائح).
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي المراد استرجاعه.
+
+  </Accordion>
+
+  <Accordion title="google_slides/get_presentation_text">
+    **الوصف:** استخراج جميع المحتوى النصي من العرض التقديمي.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي.
+
+  </Accordion>
+
+  <Accordion title="google_slides/get_presentation">
+    **الوصف:** استرجاع عرض تقديمي بواسطة المعرّف.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي المراد استرجاعه.
+    - `fields` (string, اختياري): الحقول المراد تضمينها في الاستجابة.
+
+  </Accordion>
+
+  <Accordion title="google_slides/batch_update_presentation">
+    **الوصف:** تطبيق التحديثات أو إضافة المحتوى أو إزالته من العرض التقديمي.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي المراد تحديثه.
+    - `requests` (array, مطلوب): قائمة بالتحديثات المراد تطبيقها.
+      ```json
+      [
+        {
+          "insertText": {
+            "objectId": "slide_id",
+            "text": "Your text content here"
+          }
+        }
+      ]
+      ```
+    - `writeControl` (object, اختياري): يوفر التحكم في كيفية تنفيذ طلبات الكتابة.
+
+  </Accordion>
+
+  <Accordion title="google_slides/get_slide_text">
+    **الوصف:** استخراج المحتوى النصي من شريحة واحدة.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي.
+    - `pageObjectId` (string, مطلوب): معرّف الشريحة/الصفحة.
+
+  </Accordion>
+
+  <Accordion title="google_slides/get_page">
+    **الوصف:** استرجاع صفحة محددة بواسطة معرّفها.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي.
+    - `pageObjectId` (string, مطلوب): معرّف الصفحة المراد استرجاعها.
+
+  </Accordion>
+
+  <Accordion title="google_slides/get_thumbnail">
+    **الوصف:** إنشاء صورة مصغرة للصفحة.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي.
+    - `pageObjectId` (string, مطلوب): معرّف الصفحة لإنشاء الصورة المصغرة.
+
+  </Accordion>
+
+  <Accordion title="google_slides/create_slide">
+    **الوصف:** إضافة شريحة فارغة إضافية للعرض التقديمي.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي.
+    - `insertionIndex` (integer, اختياري): مكان إدراج الشريحة (قائم على الصفر). إذا حُذف، تُضاف في النهاية.
+
+  </Accordion>
+
+  <Accordion title="google_slides/create_slide_with_layout">
+    **الوصف:** إنشاء شريحة بتخطيط محدد مسبقاً يحتوي على مناطق عناصر نائبة للعنوان والمحتوى وغيرها.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي.
+    - `layout` (string, مطلوب): نوع التخطيط. أحد: `BLANK`, `TITLE`, `TITLE_AND_BODY`, `TITLE_AND_TWO_COLUMNS`, `TITLE_ONLY`, `SECTION_HEADER`, `ONE_COLUMN_TEXT`, `MAIN_POINT`, `BIG_NUMBER`.
+    - `insertionIndex` (integer, اختياري): مكان الإدراج (قائم على الصفر). حُذف للإضافة في النهاية.
+
+  </Accordion>
+
+  <Accordion title="google_slides/create_text_box">
+    **الوصف:** إنشاء مربع نص على شريحة مع محتوى.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي.
+    - `slideId` (string, مطلوب): معرّف الشريحة لإضافة مربع النص إليها.
+    - `text` (string, مطلوب): المحتوى النصي لمربع النص.
+    - `x` (integer, اختياري): موضع X بوحدة EMU (914400 = 1 بوصة). الافتراضي: 914400.
+    - `y` (integer, اختياري): موضع Y بوحدة EMU. الافتراضي: 914400.
+    - `width` (integer, اختياري): العرض بوحدة EMU. الافتراضي: 7315200.
+    - `height` (integer, اختياري): الارتفاع بوحدة EMU. الافتراضي: 914400.
+
+  </Accordion>
+
+  <Accordion title="google_slides/delete_slide">
+    **الوصف:** إزالة شريحة من العرض التقديمي.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي.
+    - `slideId` (string, مطلوب): معرّف الشريحة المراد حذفها.
+
+  </Accordion>
+
+  <Accordion title="google_slides/duplicate_slide">
+    **الوصف:** إنشاء نسخة من شريحة موجودة.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي.
+    - `slideId` (string, مطلوب): معرّف الشريحة المراد تكرارها.
+
+  </Accordion>
+
+  <Accordion title="google_slides/move_slides">
+    **الوصف:** إعادة ترتيب الشرائح بنقلها إلى موضع جديد.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي.
+    - `slideIds` (array of strings, مطلوب): مصفوفة من معرّفات الشرائح المراد نقلها.
+    - `insertionIndex` (integer, مطلوب): الموضع المستهدف (قائم على الصفر).
+
+  </Accordion>
+
+  <Accordion title="google_slides/insert_youtube_video">
+    **الوصف:** تضمين فيديو YouTube على شريحة.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي.
+    - `slideId` (string, مطلوب): معرّف الشريحة لإضافة الفيديو إليها.
+    - `videoId` (string, مطلوب): معرّف فيديو YouTube (القيمة بعد v= في عنوان URL).
+
+  </Accordion>
+
+  <Accordion title="google_slides/insert_drive_video">
+    **الوصف:** تضمين فيديو من Google Drive على شريحة.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي.
+    - `slideId` (string, مطلوب): معرّف الشريحة لإضافة الفيديو إليها.
+    - `fileId` (string, مطلوب): معرّف ملف Google Drive للفيديو.
+
+  </Accordion>
+
+  <Accordion title="google_slides/set_slide_background_image">
+    **الوصف:** تعيين صورة خلفية لشريحة.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي.
+    - `slideId` (string, مطلوب): معرّف الشريحة لتعيين الخلفية لها.
+    - `imageUrl` (string, مطلوب): عنوان URL المتاح للعموم للصورة المراد استخدامها كخلفية.
+
+  </Accordion>
+
+  <Accordion title="google_slides/create_table">
+    **الوصف:** إنشاء جدول فارغ على شريحة.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي.
+    - `slideId` (string, مطلوب): معرّف الشريحة لإضافة الجدول إليها.
+    - `rows` (integer, مطلوب): عدد الصفوف في الجدول.
+    - `columns` (integer, مطلوب): عدد الأعمدة في الجدول.
+
+  </Accordion>
+
+  <Accordion title="google_slides/create_table_with_content">
+    **الوصف:** إنشاء جدول مع محتوى في إجراء واحد.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي.
+    - `slideId` (string, مطلوب): معرّف الشريحة لإضافة الجدول إليها.
+    - `rows` (integer, مطلوب): عدد الصفوف في الجدول.
+    - `columns` (integer, مطلوب): عدد الأعمدة في الجدول.
+    - `content` (array, مطلوب): محتوى الجدول كمصفوفة ثنائية الأبعاد. مثال: [["Year", "Revenue"], ["2023", "$10M"]].
+
+  </Accordion>
+
+  <Accordion title="google_slides/import_data_from_sheet">
+    **الوصف:** استيراد البيانات من Google Sheet إلى العرض التقديمي.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي.
+    - `sheetId` (string, مطلوب): معرّف Google Sheet المراد الاستيراد منه.
+    - `dataRange` (string, مطلوب): نطاق البيانات المراد استيرادها من الورقة.
+
+  </Accordion>
+
+  <Accordion title="google_slides/upload_file_to_drive">
+    **الوصف:** رفع ملف إلى Google Drive المرتبط بالعرض التقديمي.
+
+    **المعاملات:**
+    - `file` (string, مطلوب): بيانات الملف المراد رفعها.
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي لربط الملف المرفوع.
+
+  </Accordion>
+
+  <Accordion title="google_slides/link_file_to_presentation">
+    **الوصف:** ربط ملف في Google Drive بالعرض التقديمي.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي.
+    - `fileId` (string, مطلوب): معرّف الملف المراد ربطه.
+
+  </Accordion>
+
+  <Accordion title="google_slides/get_all_presentations">
+    **الوصف:** عرض قائمة بجميع العروض التقديمية المتاحة للمستخدم.
+
+    **المعاملات:**
+    - `pageSize` (integer, اختياري): عدد العروض التقديمية المراد إرجاعها لكل صفحة.
+    - `pageToken` (string, اختياري): رمز للترقيم.
+
+  </Accordion>
+
+  <Accordion title="google_slides/delete_presentation">
+    **الوصف:** حذف عرض تقديمي بواسطة المعرّف.
+
+    **المعاملات:**
+    - `presentationId` (string, مطلوب): معرّف العرض التقديمي المراد حذفه.
+
+  </Accordion>
+</AccordionGroup>
+
+## أمثلة الاستخدام
+
+### إعداد Agent أساسي لـ Google Slides
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent with Google Slides capabilities
+slides_agent = Agent(
+    role="Presentation Manager",
+    goal="Create and manage presentations efficiently",
+    backstory="An AI assistant specialized in presentation creation and content management.",
+    apps=['google_slides']  # All Google Slides actions will be available
+)
+
+# Task to create a presentation
+create_presentation_task = Task(
+    description="Create a new presentation for the quarterly business review with key slides",
+    agent=slides_agent,
+    expected_output="Quarterly business review presentation created with structured content"
+)
+
+# Run the task
+crew = Crew(
+    agents=[slides_agent],
+    tasks=[create_presentation_task]
+)
+
+crew.kickoff()
+```
+
+### إدارة محتوى العروض التقديمية
+
+```python
+from crewai import Agent, Task, Crew
+
+content_manager = Agent(
+    role="Content Manager",
+    goal="Manage presentation content and updates",
+    backstory="An AI assistant that focuses on content creation and presentation updates.",
+    apps=[
+        'google_slides/create_blank_presentation',
+        'google_slides/batch_update_presentation',
+        'google_slides/get_presentation'
+    ]
+)
+
+# Task to create and update presentations
+content_task = Task(
+    description="Create a new presentation and add content slides with charts and text",
+    agent=content_manager,
+    expected_output="Presentation created with updated content and visual elements"
+)
+
+crew = Crew(
+    agents=[content_manager],
+    tasks=[content_task]
+)
+
+crew.kickoff()
+```
+
+## استكشاف الأخطاء وإصلاحها
+
+### المشاكل الشائعة
+
+**أخطاء الصلاحيات**
+
+- تأكد من أن حساب Google الخاص بك لديه الصلاحيات المناسبة لـ Google Slides
+- تحقق من أن اتصال OAuth يتضمن النطاقات المطلوبة للعروض التقديمية وجداول البيانات وDrive
+
+**مشاكل معرّف العرض التقديمي**
+
+- تحقق من صحة معرّفات العروض التقديمية ووجودها
+- تأكد من أن لديك صلاحيات الوصول للعروض التقديمية التي تحاول تعديلها
+
+**مشاكل تحديث المحتوى**
+
+- تأكد من صحة تنسيق طلبات التحديث الدفعي وفقاً لمواصفات Google Slides API
+- تحقق من وجود معرّفات الكائنات للشرائح والعناصر في العرض التقديمي
+
+### الحصول على المساعدة
+
+<Card title="تحتاج مساعدة؟" icon="headset" href="mailto:support@crewai.com">
+  تواصل مع فريق الدعم للحصول على المساعدة في إعداد تكامل Google Slides
+  أو استكشاف الأخطاء وإصلاحها.
+</Card>

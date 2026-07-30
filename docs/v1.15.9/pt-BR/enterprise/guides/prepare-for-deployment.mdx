@@ -1,0 +1,345 @@
+---
+title: "Preparar para Implantação"
+description: "Certifique-se de que seu Crew ou Flow está pronto para implantação no CrewAI AMP"
+icon: "clipboard-check"
+mode: "wide"
+---
+
+<Note>
+  Antes de implantar no CrewAI AMP, é crucial verificar se seu projeto está estruturado corretamente.
+  Tanto Crews quanto Flows podem ser implantados como "automações", mas eles têm estruturas de projeto
+  e requisitos diferentes que devem ser atendidos para uma implantação bem-sucedida.
+</Note>
+
+## Entendendo Automações
+
+No CrewAI AMP, **automações** é o termo geral para projetos de IA Agêntica implantáveis. Uma automação pode ser:
+
+- **Um Crew**: Uma equipe independente de agentes de IA trabalhando juntos em tarefas
+- **Um Flow**: Um workflow orquestrado que pode combinar múltiplos crews, chamadas diretas de LLM e lógica procedural
+
+Entender qual tipo você está implantando é essencial porque eles têm estruturas de projeto e pontos de entrada diferentes.
+
+## Crews vs Flows: Principais Diferenças
+
+<CardGroup cols={2}>
+  <Card title="Projetos Crew" icon="users">
+    Equipes independentes de agentes de IA. Novas crews são JSON-first com `crew.jsonc` e `agents/`; crews clássicas ainda podem usar `crew.py`.
+  </Card>
+  <Card title="Projetos Flow" icon="diagram-project">
+    Workflows orquestrados com crews embutidos em uma pasta `crews/`. Ideal para processos complexos de múltiplas etapas.
+  </Card>
+</CardGroup>
+
+| Aspecto | Crew | Flow |
+|---------|------|------|
+| **Estrutura do projeto** | Raiz do projeto com `crew.jsonc` e `agents/` | `src/project_name/` com pasta `crews/` |
+| **Localização da lógica principal** | `crew.jsonc` (clássico: `src/project_name/crew.py`) | `src/project_name/main.py` (classe Flow) |
+| **Função de ponto de entrada** | Carregada a partir de `crew.jsonc` (clássico: `run()` em `main.py`) | `kickoff()` em `main.py` |
+| **Tipo no pyproject.toml** | `type = "crew"` | `type = "flow"` |
+| **Comando CLI de criação** | `crewai create crew name` | `crewai create flow name` |
+| **Localização da configuração** | `crew.jsonc`, `agents/`, `tools/` opcional | `src/project_name/crews/crew_name/config/` ou pastas de crew JSON embutidas |
+| **Pode conter outros crews** | Não | Sim (na pasta `crews/`) |
+
+## Referência de Estrutura de Projeto
+
+### Estrutura de Projeto Crew
+
+Quando você executa `crewai create crew my_crew`, recebe a estrutura JSON-first:
+
+```
+my_crew/
+├── .gitignore
+├── pyproject.toml          # Deve ter type = "crew"
+├── README.md
+├── .env
+├── uv.lock                  # OBRIGATÓRIO para implantação
+├── crew.jsonc               # Configurações, tarefas, processo e inputs
+├── agents/
+│   └── researcher.jsonc     # Definições de agentes
+├── tools/                   # Ferramentas custom:<name> opcionais
+├── knowledge/
+└── skills/
+```
+
+<Warning>
+  Para crews JSON-first, mantenha `crew.jsonc`, `agents/`, `tools/`, `knowledge/` e `skills/`
+  na raiz do projeto. Colocá-los dentro de `src/` impede que `crewai run` e a validação de
+  implantação encontrem a definição da crew.
+</Warning>
+
+<Info>
+  Projetos clássicos criados com `crewai create crew my_crew --classic` usam a estrutura antiga
+  `src/project_name/crew.py`, `src/project_name/config/agents.yaml` e
+  `src/project_name/config/tasks.yaml`. Essa estrutura continua suportada para crews Python com decorators.
+</Info>
+
+### Estrutura de Projeto Flow
+
+Quando você executa `crewai create flow my_flow`, você obtém esta estrutura:
+
+```
+my_flow/
+├── .gitignore
+├── pyproject.toml          # Deve ter type = "flow"
+├── README.md
+├── .env
+├── uv.lock                  # OBRIGATÓRIO para implantação
+└── src/
+    └── my_flow/
+        ├── __init__.py
+        ├── main.py          # Ponto de entrada com função kickoff() + classe Flow
+        ├── crews/           # Pasta de crews embutidos
+        │   └── poem_crew/
+        │       ├── __init__.py
+        │       ├── poem_crew.py  # Crew com decorador @CrewBase
+        │       └── config/
+        │           ├── agents.yaml
+        │           └── tasks.yaml
+        └── tools/
+            ├── __init__.py
+            └── custom_tool.py
+```
+
+<Info>
+  Crews independentes JSON-first usam arquivos JSON na raiz do projeto. Flows ainda usam
+  `src/project_name/` e podem conter crews embutidas clássicas ou pastas de crew JSON carregadas com
+  `crewai.project.load_crew`.
+</Info>
+
+## Checklist Pré-Implantação
+
+Use este checklist para verificar se seu projeto está pronto para implantação.
+
+### 1. Verificar Configuração do pyproject.toml
+
+Seu `pyproject.toml` deve incluir a seção `[tool.crewai]` correta:
+
+<Tabs>
+  <Tab title="Para Crews">
+    ```toml
+    [tool.crewai]
+    type = "crew"
+    ```
+  </Tab>
+  <Tab title="Para Flows">
+    ```toml
+    [tool.crewai]
+    type = "flow"
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  Se o `type` não corresponder à estrutura do seu projeto, o build falhará ou
+  a automação não funcionará corretamente.
+</Warning>
+
+### 2. Garantir que o Arquivo uv.lock Existe
+
+CrewAI usa `uv` para gerenciamento de dependências. O arquivo `uv.lock` garante builds reproduzíveis e é **obrigatório** para implantação.
+
+```bash
+# Gerar ou atualizar o arquivo lock
+uv lock
+
+# Verificar se existe
+ls -la uv.lock
+```
+
+Se o arquivo não existir, execute `uv lock` e faça commit no seu repositório:
+
+```bash
+uv lock
+git add uv.lock
+git commit -m "Add uv.lock for deployment"
+git push
+```
+
+### 3. Validar a Definição da Crew
+
+<Tabs>
+  <Tab title="Crews JSON-first">
+    Crews JSON-first precisam ter `crew.jsonc` ou `crew.json` na raiz do projeto.
+    O array `agents` deve apontar para arquivos em `agents/`, e cada task deve referenciar
+    um nome de agent válido.
+
+    ```jsonc crew.jsonc
+    {
+      "name": "Research Crew",
+      "agents": ["researcher"],
+      "tasks": [
+        {
+          "name": "research_task",
+          "description": "Research {topic}.",
+          "expected_output": "A concise report.",
+          "agent": "researcher"
+        }
+      ],
+      "inputs": {
+        "topic": "AI Agents"
+      }
+    }
+    ```
+
+    Ferramentas customizadas são referenciadas como `"custom:<name>"` e devem existir em
+    `tools/<name>.py` com uma subclasse de `BaseTool`.
+  </Tab>
+  <Tab title="Crews Python/YAML Clássicas">
+    Crews clássicas e crews Python embutidas em Flows devem usar o decorador `@CrewBase`.
+
+    ```python
+    from crewai import Agent, Crew, Process, Task
+    from crewai.project import CrewBase, agent, crew, task
+    from crewai.agents.agent_builder.base_agent import BaseAgent
+    from typing import List
+
+    @CrewBase
+    class MyCrew():
+        """Descrição do meu crew"""
+
+        agents: List[BaseAgent]
+        tasks: List[Task]
+
+        @agent
+        def my_agent(self) -> Agent:
+            return Agent(
+                config=self.agents_config['my_agent'],  # type: ignore[index]
+                verbose=True
+            )
+
+        @task
+        def my_task(self) -> Task:
+            return Task(
+                config=self.tasks_config['my_task']  # type: ignore[index]
+            )
+
+        @crew
+        def crew(self) -> Crew:
+            return Crew(
+                agents=self.agents,
+                tasks=self.tasks,
+                process=Process.sequential,
+                verbose=True,
+            )
+    ```
+  </Tab>
+</Tabs>
+
+### 4. Verificar Pontos de Entrada do Projeto
+
+Crews JSON-first independentes não precisam de um `src/project_name/main.py` escrito manualmente;
+`crewai run` e o empacotamento de implantação carregam `crew.jsonc` diretamente. Crews clássicas e Flows usam pontos de entrada Python:
+
+<Tabs>
+  <Tab title="Crews JSON-first">
+    Execute localmente a partir da raiz do projeto:
+
+    ```bash
+    crewai run
+    ```
+  </Tab>
+  <Tab title="Crews Clássicas">
+    O ponto de entrada usa uma função `run()`:
+
+    ```python
+    # src/my_crew/main.py
+    from my_crew.crew import MyCrew
+
+    def run():
+        """Executa o crew."""
+        inputs = {'topic': 'AI in Healthcare'}
+        result = MyCrew().crew().kickoff(inputs=inputs)
+        return result
+
+    if __name__ == "__main__":
+        run()
+    ```
+  </Tab>
+  <Tab title="Para Flows">
+    O ponto de entrada usa uma função `kickoff()` com uma classe Flow:
+
+    ```python
+    # src/my_flow/main.py
+    from crewai.flow import Flow, listen, start
+    from my_flow.crews.poem_crew.poem_crew import PoemCrew
+
+    class MyFlow(Flow):
+        @start()
+        def begin(self):
+            # Lógica do Flow aqui
+            result = PoemCrew().crew().kickoff(inputs={...})
+            return result
+
+    def kickoff():
+        """Executa o flow."""
+        MyFlow().kickoff()
+
+    if __name__ == "__main__":
+        kickoff()
+    ```
+  </Tab>
+</Tabs>
+
+### 5. Preparar Variáveis de Ambiente
+
+Antes da implantação, certifique-se de ter:
+
+1. **Chaves de API de LLM** prontas (OpenAI, Anthropic, Google, etc.)
+2. **Chaves de API de ferramentas** se estiver usando ferramentas externas (Serper, etc.)
+
+<Info>
+  Se seu projeto depende de pacotes de um **registro PyPI privado**, você também precisará configurar
+  credenciais de autenticação do registro como variáveis de ambiente. Consulte o guia
+  [Registros de Pacotes Privados](/pt-BR/enterprise/guides/private-package-registry) para mais detalhes.
+</Info>
+
+<Tip>
+  Teste seu projeto localmente com as mesmas variáveis de ambiente antes de implantar
+  para detectar problemas de configuração antecipadamente.
+</Tip>
+
+## Comandos de Validação Rápida
+
+Execute estes comandos a partir da raiz do seu projeto para verificar rapidamente sua configuração:
+
+```bash
+# 1. Verificar tipo do projeto no pyproject.toml
+grep -A2 "\[tool.crewai\]" pyproject.toml
+
+# 2. Verificar se uv.lock existe
+ls -la uv.lock || echo "ERRO: uv.lock ausente! Execute 'uv lock'"
+
+# 3. Para crews JSON-first, verificar crew.jsonc e agents/
+([ -f crew.jsonc ] || [ -f crew.json ]) || echo "Nenhum crew.jsonc ou crew.json encontrado"
+test -d agents || echo "Nenhum diretório agents/ encontrado"
+
+# 4. Para Crews clássicas - verificar se crew.py existe
+ls -la src/*/crew.py 2>/dev/null || echo "Nenhum crew.py (esperado para Crews)"
+
+# 5. Para Flows - verificar se pasta crews/ existe
+ls -la src/*/crews/ 2>/dev/null || echo "Nenhuma pasta crews/ (esperado para Flows)"
+
+# 6. Para crews Python clássicas - verificar uso do CrewBase
+grep -r "@CrewBase" . --include="*.py"
+```
+
+## Erros Comuns de Configuração
+
+| Erro | Sintoma | Correção |
+|------|---------|----------|
+| `uv.lock` ausente | Build falha durante resolução de dependências | Execute `uv lock` e faça commit |
+| `type` errado no pyproject.toml | Build bem-sucedido mas falha em runtime | Altere para o tipo correto |
+| `crew.jsonc` ou `agents/` ausente em uma crew JSON-first | Definição da crew não encontrada | Mantenha `crew.jsonc` e `agents/` na raiz do projeto |
+| Decorador `@CrewBase` ausente em uma crew clássica | Erros "Config not found" | Adicione o decorador a todas as classes crew clássicas |
+| Arquivos clássicos na raiz ao invés de `src/` | Ponto de entrada não encontrado | Mova arquivos Python clássicos para `src/project_name/` |
+| `run()` ou `kickoff()` ausente | Não é possível iniciar automação | Adicione a função de entrada correta |
+
+## Próximos Passos
+
+Uma vez que seu projeto passar por todos os itens do checklist, você está pronto para implantar:
+
+<Card title="Deploy para AMP" icon="rocket" href="/pt-BR/enterprise/guides/deploy-to-amp">
+  Siga o guia de implantação para implantar seu Crew ou Flow no CrewAI AMP usando
+  a CLI, interface web ou integração CI/CD.
+</Card>
