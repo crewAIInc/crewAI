@@ -737,6 +737,7 @@ class BaseLLM(BaseModel, ABC):
             )
             return None
 
+        from crewai.hooks.dispatch import HookAborted
         from crewai.hooks.tool_hooks import (
             ToolCallHookContext,
             run_after_tool_call_hooks,
@@ -744,6 +745,8 @@ class BaseLLM(BaseModel, ABC):
         )
 
         call_id = str(uuid.uuid4())
+        before_hook_started = False
+        post_hook_attempted = False
         try:
             started_at = datetime.now()
 
@@ -765,6 +768,7 @@ class BaseLLM(BaseModel, ABC):
                 task=from_task,
                 call_id=call_id,
             )
+            before_hook_started = True
             blocked = run_before_tool_call_hooks(before_context)
             if blocked:
                 raw_result: Any = (
@@ -787,6 +791,7 @@ class BaseLLM(BaseModel, ABC):
                 is_error=blocked,
                 was_blocked=blocked,
             )
+            post_hook_attempted = True
             modified_result = run_after_tool_call_hooks(after_context)
             if modified_result is not None:
                 result = modified_result
@@ -813,22 +818,26 @@ class BaseLLM(BaseModel, ABC):
 
             return result
 
+        except HookAborted:
+            raise
         except Exception as e:
             error_msg = f"Error executing function '{function_name}': {e!s}"
             logging.error(error_msg)
 
-            after_context = ToolCallHookContext(
-                tool_name=function_name,
-                tool_input=function_args,
-                tool=None,
-                agent=from_agent,
-                task=from_task,
-                tool_result=error_msg,
-                raw_tool_result=e,
-                call_id=call_id,
-                is_error=True,
-            )
-            governed_result = run_after_tool_call_hooks(after_context)
+            governed_result: str | None = None
+            if before_hook_started and not post_hook_attempted:
+                after_context = ToolCallHookContext(
+                    tool_name=function_name,
+                    tool_input=function_args,
+                    tool=None,
+                    agent=from_agent,
+                    task=from_task,
+                    tool_result=error_msg,
+                    raw_tool_result=e,
+                    call_id=call_id,
+                    is_error=True,
+                )
+                governed_result = run_after_tool_call_hooks(after_context)
 
             if not hasattr(crewai_event_bus, "emit"):
                 raise ValueError(
@@ -852,7 +861,11 @@ class BaseLLM(BaseModel, ABC):
                 from_agent=from_agent,
             )
 
-            return governed_result if governed_result != error_msg else None
+            return (
+                governed_result
+                if governed_result is not None and governed_result != error_msg
+                else None
+            )
 
     def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
         """Convert messages to standard format.
@@ -1094,9 +1107,9 @@ class BaseLLM(BaseModel, ABC):
     def _invoke_after_llm_call_hooks(
         self,
         messages: list[LLMMessage],
-        response: str,
+        response: Any,
         from_agent: BaseAgent | None = None,
-    ) -> str:
+    ) -> Any:
         """Invoke after_llm_call hooks for direct LLM calls (no agent context).
 
         This method should be called by native provider implementations after
@@ -1108,7 +1121,7 @@ class BaseLLM(BaseModel, ABC):
             from_agent: The agent that made the call (None for direct calls)
 
         Returns:
-            The potentially modified response string
+            The potentially modified response
 
         Example:
             >>> # In a native provider's call() method:
@@ -1117,13 +1130,14 @@ class BaseLLM(BaseModel, ABC):
             ...         messages, result, from_agent
             ...     )
         """
-        if from_agent is not None or not isinstance(response, str):
+        if from_agent is not None:
             return response
 
         from crewai.hooks.dispatch import InterceptionPoint, dispatch
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
             after_llm_call_reducer,
+            raise_if_post_model_blocked,
         )
 
         # No early global-list guard: dispatch resolves global + execution-scoped
@@ -1144,5 +1158,6 @@ class BaseLLM(BaseModel, ABC):
             hook_context,
             reducer=after_llm_call_reducer,
         )
+        raise_if_post_model_blocked(hook_context)
 
         return hook_context.response if hook_context.response is not None else response

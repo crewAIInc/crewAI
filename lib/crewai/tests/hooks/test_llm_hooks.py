@@ -436,6 +436,28 @@ class TestLLMHooksIntegration:
         assert ran == ["blocking"]
         assert proceed is False
 
+    @pytest.mark.parametrize("source", ["my-policy", "agent-hooks"])
+    def test_custom_string_abort_source_preserves_legacy_contract(
+        self, mock_executor, source: str
+    ) -> None:
+        """A custom string source is not an agent-hooks ownership marker."""
+        from crewai.hooks.dispatch import HookAborted
+        from crewai.utilities.agent_utils import _setup_before_llm_call_hooks
+
+        def blocking_hook(context):
+            raise HookAborted(reason="custom policy denied", source=source)
+
+        mock_executor.before_llm_call_hooks = [blocking_hook]
+
+        assert (
+            _setup_before_llm_call_hooks(
+                mock_executor,
+                printer=Mock(),
+                verbose=False,
+            )
+            is False
+        )
+
     @pytest.mark.vcr()
     def test_lite_agent_hooks_integration_with_real_llm(self):
         """Test that LiteAgent executes before/after LLM call hooks and prints messages correctly."""

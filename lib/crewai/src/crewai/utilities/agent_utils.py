@@ -802,6 +802,10 @@ def is_context_length_exceeded(exception: Exception) -> bool:
     Returns:
         bool: True if the exception is due to context length exceeding
     """
+    from crewai.hooks.llm_hooks import PostModelCallBlockedError
+
+    if isinstance(exception, PostModelCallBlockedError):
+        return False
     return LLMContextLengthExceededError(str(exception))._is_context_limit_error(
         str(exception)
     )
@@ -1454,6 +1458,10 @@ def check_native_tool_support(llm: Any, original_tools: list[BaseTool] | None) -
 
 def is_native_tool_calling_unsupported_error(error: BaseException) -> bool:
     """Return whether an error means native tool calling is unavailable."""
+    from crewai.hooks.llm_hooks import PostModelCallBlockedError
+
+    if isinstance(error, PostModelCallBlockedError):
+        return False
     message = str(error).lower()
     return any(pattern in message for pattern in _NATIVE_TOOL_UNSUPPORTED_PATTERNS)
 
@@ -1914,6 +1922,7 @@ def _setup_before_llm_call_hooks(
     """
     if executor_context:
         from crewai.hooks.dispatch import (
+            AGENT_HOOKS_ABORT_SOURCE,
             HookAborted,
             InterceptionPoint,
             get_scoped_hooks,
@@ -1956,7 +1965,7 @@ def _setup_before_llm_call_hooks(
             # a string ``source`` identifier — surface its full reason so
             # customers see the policy decision. The sole caller
             # (_prepare_llm_call) already documents raising ValueError on block.
-            if not isinstance(aborted.source, str):
+            if aborted.source is not AGENT_HOOKS_ABORT_SOURCE:
                 if verbose:
                     printer.print(
                         content="LLM call blocked by before_llm_call hook",
@@ -2011,36 +2020,45 @@ def _setup_after_llm_call_hooks(
             governed_hook,
             run_hooks,
         )
-        from crewai.hooks.llm_hooks import LLMCallHookContext, after_llm_call_reducer
+        from crewai.hooks.llm_hooks import (
+            LLMCallHookContext,
+            after_llm_call_reducer,
+            raise_if_post_model_blocked,
+        )
 
-        if isinstance(answer, list) and is_tool_call_list(answer):
+        if isinstance(answer, dict) or (
+            isinstance(answer, list) and is_tool_call_list(answer)
+        ):
             governed = governed_hook(InterceptionPoint.POST_MODEL_CALL)
             if governed is None:
                 return answer
 
-            tool_calls: list[dict[str, Any]] = []
-            for tool_call in answer:
-                info = extract_tool_call_info(tool_call)
-                if info is None:
-                    continue
-                call_id, name, args = info
-                if isinstance(args, str):
-                    try:
-                        parsed_args = json.loads(args)
-                    except json.JSONDecodeError:
-                        parsed_args = {"raw": args}
-                    args = (
-                        parsed_args
-                        if isinstance(parsed_args, dict)
-                        else {"value": parsed_args}
-                    )
-                tool_calls.append({"id": call_id, "name": name, "args": args})
+            if isinstance(answer, dict):
+                structured_response = answer
+            else:
+                tool_calls: list[dict[str, Any]] = []
+                for tool_call in answer:
+                    info = extract_tool_call_info(tool_call)
+                    if info is None:
+                        continue
+                    call_id, name, args = info
+                    if isinstance(args, str):
+                        try:
+                            parsed_args = json.loads(args)
+                        except json.JSONDecodeError:
+                            parsed_args = {"raw": args}
+                        args = (
+                            parsed_args
+                            if isinstance(parsed_args, dict)
+                            else {"value": parsed_args}
+                        )
+                    tool_calls.append({"id": call_id, "name": name, "args": args})
 
-            structured_response: dict[str, Any] = {
-                "content": "",
-                "tool_calls": tool_calls,
-                "finish_reason": "tool_calls",
-            }
+                structured_response = {
+                    "content": "",
+                    "tool_calls": tool_calls,
+                    "finish_reason": "tool_calls",
+                }
             hook_context = LLMCallHookContext(
                 executor_context,
                 response=structured_response,
@@ -2053,9 +2071,10 @@ def _setup_after_llm_call_hooks(
                 reducer=after_llm_call_reducer,
                 verbose=verbose,
             )
+            raise_if_post_model_blocked(hook_context)
             return (
                 answer
-                if hook_context.response == structured_response
+                if hook_context.response is structured_response
                 else hook_context.response
             )
 
@@ -2079,6 +2098,7 @@ def _setup_after_llm_call_hooks(
 
         original_messages = executor_context.messages
 
+        pydantic_answer: BaseModel | None
         if isinstance(answer, BaseModel):
             pydantic_answer = answer
             hook_response: str = pydantic_answer.model_dump_json()
@@ -2114,6 +2134,8 @@ def _setup_after_llm_call_hooks(
                 executor_context.messages = original_messages
             else:
                 executor_context.messages = []
+
+        raise_if_post_model_blocked(hook_context)
 
         if pydantic_answer is not None:
             if hook_response != original_json:

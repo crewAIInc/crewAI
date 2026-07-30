@@ -1030,7 +1030,15 @@ class CrewAgentExecutor(BaseAgentExecutor):
             tool_result=result,
             raw_tool_result=raw_tool_result,
             call_id=governance_call_id,
-            is_error=hook_blocked or max_usage_reached or error_event_emitted,
+            is_error=(
+                hook_blocked
+                or max_usage_reached
+                or error_event_emitted
+                or (
+                    not from_cache
+                    and (output_tool is None or func_name not in available_functions)
+                )
+            ),
             was_blocked=hook_blocked,
         )
         modified_result = run_after_tool_call_hooks(after_hook_context)
