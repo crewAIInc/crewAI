@@ -674,6 +674,36 @@ class TestDirectLLMScopedHooks:
         assert result == "contains [REDACTED]"
 
 
+class _Recorder:
+    """Records what each provider client was actually asked to send.
+
+    ``issued`` answers whether a request went out at all (and on which path),
+    which is what the blocking tests need. ``payloads`` keeps the request kwargs
+    so a test can assert on the data the provider received rather than on the
+    in-memory list the hook mutated -- the two are only the same object if the
+    guard passes the real payload through, which is the property under test.
+    """
+
+    def __init__(self) -> None:
+        self.issued: list[str] = []
+        self.payloads: list[dict[str, Any]] = []
+
+    def record(self, path: str, kwargs: dict[str, Any]) -> None:
+        self.issued.append(path)
+        self.payloads.append(kwargs)
+
+    @property
+    def payload_text(self) -> str:
+        """Every recorded payload flattened to text.
+
+        Providers disagree on payload shape (plain dicts, Anthropic content
+        blocks, Gemini ``Content`` objects), and these tests only ask whether a
+        hook's addition is in there, so the repr is searched instead of a
+        per-provider structure being walked.
+        """
+        return repr(self.payloads)
+
+
 def _usage_stub() -> Any:
     """Token-usage payload accepted by every provider's usage extractor."""
     return SimpleNamespace(
@@ -709,18 +739,18 @@ def _openai_response() -> Any:
     )
 
 
-def _stub_anthropic_llm(issued: list[str], monkeypatch: pytest.MonkeyPatch) -> Any:
+def _stub_anthropic_llm(rec: _Recorder, monkeypatch: pytest.MonkeyPatch) -> Any:
     """A real AnthropicCompletion whose SDK client records every request."""
     from crewai.llms.providers.anthropic.completion import AnthropicCompletion
 
     llm = AnthropicCompletion(model="claude-sonnet-4-5", api_key="stub", stream=False)
 
-    def create(**_kwargs: Any) -> Any:
-        issued.append("sync")
+    def create(**kwargs: Any) -> Any:
+        rec.record("sync", kwargs)
         return _anthropic_response()
 
-    async def acreate(**_kwargs: Any) -> Any:
-        issued.append("async")
+    async def acreate(**kwargs: Any) -> Any:
+        rec.record("async", kwargs)
         return _anthropic_response()
 
     llm._client = SimpleNamespace(messages=SimpleNamespace(create=create))
@@ -728,18 +758,18 @@ def _stub_anthropic_llm(issued: list[str], monkeypatch: pytest.MonkeyPatch) -> A
     return llm
 
 
-def _stub_openai_llm(issued: list[str], monkeypatch: pytest.MonkeyPatch) -> Any:
+def _stub_openai_llm(rec: _Recorder, monkeypatch: pytest.MonkeyPatch) -> Any:
     """A real OpenAICompletion whose SDK client records every request."""
     from crewai.llms.providers.openai.completion import OpenAICompletion
 
     llm = OpenAICompletion(model="gpt-4o", api_key="stub", stream=False)
 
-    def create(**_kwargs: Any) -> Any:
-        issued.append("sync")
+    def create(**kwargs: Any) -> Any:
+        rec.record("sync", kwargs)
         return _openai_response()
 
-    async def acreate(**_kwargs: Any) -> Any:
-        issued.append("async")
+    async def acreate(**kwargs: Any) -> Any:
+        rec.record("async", kwargs)
         return _openai_response()
 
     llm._client = SimpleNamespace(
@@ -764,7 +794,7 @@ def _bedrock_response() -> dict[str, Any]:
     }
 
 
-def _stub_bedrock_llm(issued: list[str], monkeypatch: pytest.MonkeyPatch) -> Any:
+def _stub_bedrock_llm(rec: _Recorder, monkeypatch: pytest.MonkeyPatch) -> Any:
     """A real BedrockCompletion whose Converse client records every request."""
     from crewai.llms.providers.bedrock import completion as bedrock_completion
     from crewai.llms.providers.bedrock.completion import BedrockCompletion
@@ -782,12 +812,12 @@ def _stub_bedrock_llm(issued: list[str], monkeypatch: pytest.MonkeyPatch) -> Any
         stream=False,
     )
 
-    def converse(**_kwargs: Any) -> dict[str, Any]:
-        issued.append("sync")
+    def converse(**kwargs: Any) -> dict[str, Any]:
+        rec.record("sync", kwargs)
         return _bedrock_response()
 
-    async def aconverse(**_kwargs: Any) -> dict[str, Any]:
-        issued.append("async")
+    async def aconverse(**kwargs: Any) -> dict[str, Any]:
+        rec.record("async", kwargs)
         return _bedrock_response()
 
     llm._client = SimpleNamespace(converse=converse)
@@ -818,7 +848,7 @@ def _gemini_response() -> Any:
     )
 
 
-def _stub_gemini_llm(issued: list[str], monkeypatch: pytest.MonkeyPatch) -> Any:
+def _stub_gemini_llm(rec: _Recorder, monkeypatch: pytest.MonkeyPatch) -> Any:
     """A real GeminiCompletion whose genai client records every request.
 
     Gemini exposes one client for both paths (``_get_async_client`` returns
@@ -828,12 +858,12 @@ def _stub_gemini_llm(issued: list[str], monkeypatch: pytest.MonkeyPatch) -> Any:
 
     llm = GeminiCompletion(model="gemini-2.0-flash", api_key="stub", stream=False)
 
-    def generate_content(**_kwargs: Any) -> Any:
-        issued.append("sync")
+    def generate_content(**kwargs: Any) -> Any:
+        rec.record("sync", kwargs)
         return _gemini_response()
 
-    async def agenerate_content(**_kwargs: Any) -> Any:
-        issued.append("async")
+    async def agenerate_content(**kwargs: Any) -> Any:
+        rec.record("async", kwargs)
         return _gemini_response()
 
     llm._client = SimpleNamespace(
@@ -859,7 +889,7 @@ def _azure_response() -> Any:
     )
 
 
-def _stub_azure_llm(issued: list[str], monkeypatch: pytest.MonkeyPatch) -> Any:
+def _stub_azure_llm(rec: _Recorder, monkeypatch: pytest.MonkeyPatch) -> Any:
     """A real AzureCompletion whose inference client records every request."""
     from crewai.llms.providers.azure.completion import AzureCompletion
 
@@ -870,12 +900,12 @@ def _stub_azure_llm(issued: list[str], monkeypatch: pytest.MonkeyPatch) -> Any:
         stream=False,
     )
 
-    def complete(**_kwargs: Any) -> Any:
-        issued.append("sync")
+    def complete(**kwargs: Any) -> Any:
+        rec.record("sync", kwargs)
         return _azure_response()
 
-    async def acomplete(**_kwargs: Any) -> Any:
-        issued.append("async")
+    async def acomplete(**kwargs: Any) -> Any:
+        rec.record("async", kwargs)
         return _azure_response()
 
     llm._client = SimpleNamespace(complete=complete)
@@ -903,14 +933,14 @@ class TestBeforeLLMCallHooksOnAsyncPaths:
     @pytest.fixture(params=sorted(_PROVIDER_STUBS))
     def provider(
         self, request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
-    ) -> tuple[Any, list[str]]:
-        issued: list[str] = []
-        return _PROVIDER_STUBS[request.param](issued, monkeypatch), issued
+    ) -> tuple[Any, _Recorder]:
+        rec = _Recorder()
+        return _PROVIDER_STUBS[request.param](rec, monkeypatch), rec
 
     def test_sync_call_is_blocked_by_before_hook(
-        self, provider: tuple[Any, list[str]]
+        self, provider: tuple[Any, _Recorder]
     ) -> None:
-        llm, issued = provider
+        llm, rec = provider
         seen: list[int] = []
         register_before_llm_call_hook(lambda ctx: seen.append(len(ctx.messages)) or False)
 
@@ -918,14 +948,14 @@ class TestBeforeLLMCallHooksOnAsyncPaths:
             llm.call("hi")
 
         assert len(seen) == 1
-        assert issued == []
+        assert rec.issued == []
 
     @pytest.mark.asyncio
     async def test_async_call_is_blocked_by_before_hook(
-        self, provider: tuple[Any, list[str]]
+        self, provider: tuple[Any, _Recorder]
     ) -> None:
         """The regression: acall() used to issue the request and return the response."""
-        llm, issued = provider
+        llm, rec = provider
         seen: list[int] = []
         register_before_llm_call_hook(lambda ctx: seen.append(len(ctx.messages)) or False)
 
@@ -933,14 +963,14 @@ class TestBeforeLLMCallHooksOnAsyncPaths:
             await llm.acall("hi")
 
         assert len(seen) == 1
-        assert issued == []
+        assert rec.issued == []
 
     @pytest.mark.asyncio
     async def test_async_call_runs_before_hook_that_allows(
-        self, provider: tuple[Any, list[str]]
+        self, provider: tuple[Any, _Recorder]
     ) -> None:
         """A hook that does not abort observes the messages and the call proceeds."""
-        llm, issued = provider
+        llm, rec = provider
         seen: list[list[dict[str, Any]]] = []
 
         def observe(ctx: LLMCallHookContext) -> None:
@@ -951,39 +981,90 @@ class TestBeforeLLMCallHooksOnAsyncPaths:
         result = await llm.acall("hi")
 
         assert result == "the model answered"
-        assert issued == ["async"]
+        assert rec.issued == ["async"]
         # The content shape differs per provider (a plain string, a list of
         # content blocks, a Gemini part dict), so the prompt is located inside
         # the last message rather than compared to one provider's layout.
         assert seen and "hi" in str(seen[0][-1])
+        # The hook must see the prompt the provider is actually about to be sent,
+        # not a placeholder assembled for the hook's benefit.
+        assert "hi" in rec.payload_text
 
     @pytest.mark.asyncio
     async def test_async_call_without_hooks_is_unchanged(
-        self, provider: tuple[Any, list[str]]
+        self, provider: tuple[Any, _Recorder]
     ) -> None:
         """Negative control: no hook registered, nothing blocked or altered."""
-        llm, issued = provider
+        llm, rec = provider
 
         result = await llm.acall("hi")
 
         assert result == "the model answered"
-        assert issued == ["async"]
+        assert rec.issued == ["async"]
 
     @pytest.mark.asyncio
-    async def test_async_call_before_hook_can_mutate_messages(
-        self, provider: tuple[Any, list[str]]
+    async def test_async_before_hook_mutation_reaches_the_provider_as_on_sync(
+        self, provider: tuple[Any, _Recorder]
     ) -> None:
-        """The hook's messages list is the one handed to the provider."""
-        llm, issued = provider
-        captured: list[list[dict[str, Any]]] = []
+        """A mutation must land in the request, and to the same extent as on sync.
 
-        def add_guard_rail(ctx: LLMCallHookContext) -> None:
-            ctx.messages.append({"role": "user", "content": "and be brief"})
-            captured.append(ctx.messages)
+        Asserting only that ``ctx.messages`` gained an entry would pass even if
+        the guard were handed a copy and ``acall()`` dropped the mutation on the
+        floor, so the check is against the kwargs the stubbed client received.
 
-        register_before_llm_call_hook(add_guard_rail)
+        The comparison is against the *sync* path rather than a hard-coded
+        expectation because whether a mutation propagates at all is a
+        pre-existing per-provider property, not something this change decides:
+        four providers pass the payload list straight to the hook, while Gemini
+        converts its ``Content`` objects to dicts first and so hands over a copy
+        on both paths. Pinning ``async == sync`` states the invariant this PR is
+        responsible for -- acall() gates and forwards exactly as call() does --
+        and would fail if the async guard were ever wired to a different list
+        than its sync twin, without asserting that Gemini's copy is correct.
+        """
+        llm, rec = provider
+        guard_rail = {"role": "user", "content": "and be brief"}
+
+        register_before_llm_call_hook(
+            lambda ctx: ctx.messages.append(guard_rail),  # type: ignore[func-returns-value]
+        )
+
+        llm.call("hi")
+        sync_propagated = "and be brief" in rec.payload_text
+        assert rec.issued == ["sync"]
+
+        rec.issued.clear()
+        rec.payloads.clear()
+
+        await llm.acall("hi")
+        async_propagated = "and be brief" in rec.payload_text
+
+        assert rec.issued == ["async"]
+        assert async_propagated == sync_propagated
+
+    @pytest.mark.asyncio
+    async def test_async_before_hook_mutation_reaches_the_provider(
+        self, provider: tuple[Any, _Recorder]
+    ) -> None:
+        """The four providers that forward the payload list really do forward it.
+
+        The symmetry test above cannot tell "both paths propagate" from "neither
+        does", so it would still pass if a future refactor made every provider
+        hand the guard a copy. This pins the propagating providers by name.
+        Gemini is excluded because its own sync path does not propagate either;
+        that asymmetry is upstream of this change and is left alone.
+        """
+        llm, rec = provider
+        if llm.__class__.__name__ == "GeminiCompletion":
+            pytest.skip("Gemini hands the guard a converted copy on both paths")
+
+        register_before_llm_call_hook(
+            lambda ctx: ctx.messages.append(  # type: ignore[func-returns-value]
+                {"role": "user", "content": "and be brief"}
+            ),
+        )
 
         await llm.acall("hi")
 
-        assert issued == ["async"]
-        assert captured[0][-1] == {"role": "user", "content": "and be brief"}
+        assert rec.issued == ["async"]
+        assert "and be brief" in rec.payload_text
