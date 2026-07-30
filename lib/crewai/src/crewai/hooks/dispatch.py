@@ -297,6 +297,7 @@ def run_hooks(
     *,
     reducer: Reducer | None = None,
     verbose: bool = True,
+    final_hook: HookFn | None = None,
 ) -> Any:
     """Execute an explicit list of hooks against a context.
 
@@ -320,7 +321,7 @@ def run_hooks(
         HookAborted: If a hook or the reducer aborts the operation. Telemetry is
             still emitted before propagating.
     """
-    if not hooks:
+    if not hooks and final_hook is None:
         return ctx
 
     active_reducer = reducer if reducer is not None else _default_reducer
@@ -329,11 +330,25 @@ def run_hooks(
     abort_reason: str | None = None
     abort_source: str | None = None
     modified = False
+    pending_abort: HookAborted | None = None
 
     try:
         for hook in list(hooks):
-            if _invoke_hook(point, hook, ctx, active_reducer, verbose):
-                modified = True
+            try:
+                if _invoke_hook(point, hook, ctx, active_reducer, verbose):
+                    modified = True
+            except HookAborted as aborted:  # noqa: PERF203 - abort stops this queue
+                pending_abort = aborted
+                break
+        if final_hook is not None:
+            try:
+                if _invoke_hook(point, final_hook, ctx, active_reducer, verbose):
+                    modified = True
+            except HookAborted as aborted:
+                if pending_abort is None:
+                    pending_abort = aborted
+        if pending_abort is not None:
+            raise pending_abort
         outcome = "modified" if modified else "proceeded"
         return ctx
     except HookAborted as aborted:
@@ -345,7 +360,7 @@ def run_hooks(
         _emit_telemetry(
             point,
             outcome,
-            len(hooks),
+            len(hooks) + (1 if final_hook is not None else 0),
             (time.perf_counter() - start) * 1000.0,
             abort_reason,
             abort_source,
@@ -415,13 +430,21 @@ def dispatch(
     """
     hooks = _resolve_hooks(point)
     governor = _governor
+    governed: HookFn | None = None
     if governor is not None:
         governed = governor(point)
-        if governed is not None:
+        if governed is not None and point is not InterceptionPoint.EXECUTION_END:
             hooks = [*hooks, governed]
-    if not hooks:
+    if not hooks and governed is None:
         return ctx
-    return run_hooks(point, ctx, hooks, reducer=reducer, verbose=verbose)
+    return run_hooks(
+        point,
+        ctx,
+        hooks,
+        reducer=reducer,
+        verbose=verbose,
+        final_hook=(governed if point is InterceptionPoint.EXECUTION_END else None),
+    )
 
 
 def _wrap_with_filters(

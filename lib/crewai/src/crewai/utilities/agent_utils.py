@@ -2143,6 +2143,17 @@ def _setup_after_llm_call_hooks(
                     model_class: type[BaseModel] = type(pydantic_answer)
                     answer = model_class.model_validate_json(hook_response)
                 except Exception as e:
+                    if governed is None:
+                        if verbose:
+                            printer.print(
+                                content=(
+                                    "Warning: Hook modified response but failed to "
+                                    f"reparse as {type(pydantic_answer).__name__}: "
+                                    f"{e}. Using original model."
+                                ),
+                                color="yellow",
+                            )
+                        return pydantic_answer
                     raise ValueError(
                         f"Hook-modified response failed to reparse as "
                         f"{type(pydantic_answer).__name__}: {e}"
