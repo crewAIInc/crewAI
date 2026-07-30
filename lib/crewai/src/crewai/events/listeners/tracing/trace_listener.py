@@ -66,6 +66,7 @@ from crewai.events.types.flow_events import (
     ConversationMessageAddedEvent,
     ConversationRouteSelectedEvent,
     FlowCreatedEvent,
+    FlowFailedEvent,
     FlowFinishedEvent,
     FlowPlotEvent,
     FlowStartedEvent,
@@ -126,6 +127,7 @@ from crewai.events.types.task_events import (
     TaskStartedEvent,
 )
 from crewai.events.types.tool_usage_events import (
+    ToolFailureDetectedEvent,
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
@@ -274,6 +276,10 @@ class TraceCollectionListener(BaseEventListener):
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
             self._handle_trace_event("flow_finished", source, event)
 
+        @event_bus.on(FlowFailedEvent)
+        def on_flow_failed(source: Any, event: FlowFailedEvent) -> None:
+            self._handle_trace_event("flow_failed", source, event)
+
         @event_bus.on(FlowPlotEvent)
         def on_flow_plot(source: Any, event: FlowPlotEvent) -> None:
             self._handle_action_event("flow_plot", source, event)
@@ -409,6 +415,12 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(ToolUsageErrorEvent)
         def on_tool_error(source: Any, event: ToolUsageErrorEvent) -> None:
             self._handle_action_event("tool_usage_error", source, event)
+
+        @event_bus.on(ToolFailureDetectedEvent)
+        def on_tool_failure_detected(
+            source: Any, event: ToolFailureDetectedEvent
+        ) -> None:
+            self._handle_action_event("tool_failure_detected", source, event)
 
         @event_bus.on(MemoryQueryStartedEvent)
         def on_memory_query_started(

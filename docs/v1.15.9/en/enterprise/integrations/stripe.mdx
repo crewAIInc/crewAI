@@ -1,0 +1,329 @@
+---
+title: Stripe Integration
+description: "Payment processing and subscription management with Stripe integration for CrewAI."
+icon: "stripe"
+mode: "wide"
+---
+
+## Overview
+
+Enable your agents to manage payments, subscriptions, and customer billing through Stripe. Handle customer data, process subscriptions, manage products, and track financial transactions to streamline your payment workflows with AI-powered automation.
+
+## Prerequisites
+
+Before using the Stripe integration, ensure you have:
+
+- A [CrewAI AMP](https://app.crewai.com) account with an active subscription
+- A Stripe account with appropriate API permissions
+- Connected your Stripe account through the [Integrations page](https://app.crewai.com/integrations)
+
+## Setting Up Stripe Integration
+
+### 1. Connect Your Stripe Account
+
+1. Navigate to [CrewAI AMP Integrations](https://app.crewai.com/crewai_plus/connectors)
+2. Find **Stripe** in the Authentication Integrations section
+3. Click **Connect** and complete the OAuth flow
+4. Grant the necessary permissions for payment processing
+5. Copy your Enterprise Token from [Integration Settings](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. Install Required Package
+
+```bash
+uv add crewai-tools
+```
+
+### 3. Environment Variable Setup
+
+<Note>
+  To use integrations with `Agent(apps=[])`, you must set the
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise
+  Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+Or add it to your `.env` file:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## Available Tools
+
+### **Customer Management**
+
+<AccordionGroup>
+  <Accordion title="stripe/create_customer">
+    **Description:** Create a new customer in your Stripe account.
+
+    **Parameters:**
+    - `emailCreateCustomer` (string, required): Customer's email address
+    - `name` (string, optional): Customer's full name
+    - `description` (string, optional): Customer description for internal reference
+    - `metadataCreateCustomer` (object, optional): Additional metadata as key-value pairs (e.g., `{"field1": 1, "field2": 2}`)
+
+  </Accordion>
+
+  <Accordion title="stripe/get_customer_by_id">
+    **Description:** Retrieve a specific customer by their Stripe customer ID.
+
+    **Parameters:**
+    - `idGetCustomer` (string, required): The Stripe customer ID to retrieve
+
+  </Accordion>
+
+  <Accordion title="stripe/get_customers">
+    **Description:** Retrieve a list of customers with optional filtering.
+
+    **Parameters:**
+    - `emailGetCustomers` (string, optional): Filter customers by email address
+    - `createdAfter` (string, optional): Filter customers created after this date (Unix timestamp)
+    - `createdBefore` (string, optional): Filter customers created before this date (Unix timestamp)
+    - `limitGetCustomers` (string, optional): Maximum number of customers to return (defaults to 10)
+
+  </Accordion>
+
+  <Accordion title="stripe/update_customer">
+    **Description:** Update an existing customer's information.
+
+    **Parameters:**
+    - `customerId` (string, required): The ID of the customer to update
+    - `emailUpdateCustomer` (string, optional): Updated email address
+    - `name` (string, optional): Updated customer name
+    - `description` (string, optional): Updated customer description
+    - `metadataUpdateCustomer` (object, optional): Updated metadata as key-value pairs
+
+  </Accordion>
+</AccordionGroup>
+
+### **Subscription Management**
+
+<AccordionGroup>
+  <Accordion title="stripe/create_subscription">
+    **Description:** Create a new subscription for a customer.
+
+    **Parameters:**
+    - `customerIdCreateSubscription` (string, required): The customer ID for whom the subscription will be created
+    - `plan` (string, required): The plan ID for the subscription - Use Connect Portal Workflow Settings to allow users to select a plan
+    - `metadataCreateSubscription` (object, optional): Additional metadata for the subscription
+
+  </Accordion>
+
+  <Accordion title="stripe/get_subscriptions">
+    **Description:** Retrieve subscriptions with optional filtering.
+
+    **Parameters:**
+    - `customerIdGetSubscriptions` (string, optional): Filter subscriptions by customer ID
+    - `subscriptionStatus` (string, optional): Filter by subscription status - Options: incomplete, incomplete_expired, trialing, active, past_due, canceled, unpaid
+    - `limitGetSubscriptions` (string, optional): Maximum number of subscriptions to return (defaults to 10)
+
+  </Accordion>
+</AccordionGroup>
+
+### **Product Management**
+
+<AccordionGroup>
+  <Accordion title="stripe/create_product">
+    **Description:** Create a new product in your Stripe catalog.
+
+    **Parameters:**
+    - `productName` (string, required): The product name
+    - `description` (string, optional): Product description
+    - `metadataProduct` (object, optional): Additional product metadata as key-value pairs
+
+  </Accordion>
+
+  <Accordion title="stripe/get_product_by_id">
+    **Description:** Retrieve a specific product by its Stripe product ID.
+
+    **Parameters:**
+    - `productId` (string, required): The Stripe product ID to retrieve
+
+  </Accordion>
+
+  <Accordion title="stripe/get_products">
+    **Description:** Retrieve a list of products with optional filtering.
+
+    **Parameters:**
+    - `createdAfter` (string, optional): Filter products created after this date (Unix timestamp)
+    - `createdBefore` (string, optional): Filter products created before this date (Unix timestamp)
+    - `limitGetProducts` (string, optional): Maximum number of products to return (defaults to 10)
+
+  </Accordion>
+</AccordionGroup>
+
+### **Financial Operations**
+
+<AccordionGroup>
+  <Accordion title="stripe/get_balance_transactions">
+    **Description:** Retrieve balance transactions from your Stripe account.
+
+    **Parameters:**
+    - `balanceTransactionType` (string, optional): Filter by transaction type - Options: charge, refund, payment, payment_refund
+    - `paginationParameters` (object, optional): Pagination settings
+      - `pageCursor` (string, optional): Page cursor for pagination
+
+  </Accordion>
+
+  <Accordion title="stripe/get_plans">
+    **Description:** Retrieve subscription plans from your Stripe account.
+
+    **Parameters:**
+    - `isPlanActive` (boolean, optional): Filter by plan status - true for active plans, false for inactive plans
+    - `paginationParameters` (object, optional): Pagination settings
+      - `pageCursor` (string, optional): Page cursor for pagination
+
+  </Accordion>
+</AccordionGroup>
+
+## Usage Examples
+
+### Basic Stripe Agent Setup
+
+```python
+from crewai import Agent, Task, Crew
+from crewai import Agent, Task, Crew
+
+# Create an agent with Stripe capabilities
+stripe_agent = Agent(
+    role="Payment Manager",
+    goal="Manage customer payments, subscriptions, and billing operations efficiently",
+    backstory="An AI assistant specialized in payment processing and subscription management.",
+    apps=['stripe']  # All Stripe actions will be available
+)
+
+# Task to create a new customer
+create_customer_task = Task(
+    description="Create a new premium customer John Doe with email john.doe@example.com",
+    agent=stripe_agent,
+    expected_output="Customer created successfully with customer ID"
+)
+
+# Run the task
+crew = Crew(
+    agents=[stripe_agent],
+    tasks=[create_customer_task]
+)
+
+crew.kickoff()
+```
+
+### Filtering Specific Stripe Tools
+
+```python
+
+billing_manager = Agent(
+    role="Billing Manager",
+    goal="Handle customer billing, subscriptions, and payment processing",
+    backstory="An experienced billing manager who handles subscription lifecycle and payment operations.",
+    apps=['stripe']
+)
+
+# Task to manage billing operations
+billing_task = Task(
+    description="Create a new customer and set up their premium subscription plan",
+    agent=billing_manager,
+    expected_output="Customer created and subscription activated successfully"
+)
+
+crew = Crew(
+    agents=[billing_manager],
+    tasks=[billing_task]
+)
+
+crew.kickoff()
+```
+
+### Subscription Management
+
+```python
+from crewai import Agent, Task, Crew
+
+subscription_manager = Agent(
+    role="Subscription Manager",
+    goal="Manage customer subscriptions and optimize recurring revenue",
+    backstory="An AI assistant that specializes in subscription lifecycle management and customer retention.",
+    apps=['stripe']
+)
+
+# Task to manage subscription operations
+subscription_task = Task(
+    description="""
+    1. Create a new product "Premium Service Plan" with advanced features
+    2. Set up subscription plans with different tiers
+    3. Create customers and assign them to appropriate plans
+    4. Monitor subscription status and handle billing issues
+    """,
+    agent=subscription_manager,
+    expected_output="Subscription management system configured with customers and active plans"
+)
+
+crew = Crew(
+    agents=[subscription_manager],
+    tasks=[subscription_task]
+)
+
+crew.kickoff()
+```
+
+### Financial Analytics and Reporting
+
+```python
+from crewai import Agent, Task, Crew
+
+financial_analyst = Agent(
+    role="Financial Analyst",
+    goal="Analyze payment data and generate financial insights",
+    backstory="An analytical AI that excels at extracting insights from payment and subscription data.",
+    apps=['stripe']
+)
+
+# Complex task involving financial analysis
+analytics_task = Task(
+    description="""
+    1. Retrieve balance transactions for the current month
+    2. Analyze customer payment patterns and subscription trends
+    3. Identify high-value customers and subscription performance
+    4. Generate monthly financial performance report
+    """,
+    agent=financial_analyst,
+    expected_output="Comprehensive financial analysis with payment insights and recommendations"
+)
+
+crew = Crew(
+    agents=[financial_analyst],
+    tasks=[analytics_task]
+)
+
+crew.kickoff()
+```
+
+## Subscription Status Reference
+
+Understanding subscription statuses:
+
+- **incomplete** - Subscription requires payment method or payment confirmation
+- **incomplete_expired** - Subscription expired before payment was confirmed
+- **trialing** - Subscription is in trial period
+- **active** - Subscription is active and current
+- **past_due** - Payment failed but subscription is still active
+- **canceled** - Subscription has been canceled
+- **unpaid** - Payment failed and subscription is no longer active
+
+## Metadata Usage
+
+Metadata allows you to store additional information about customers, subscriptions, and products:
+
+```json
+{
+  "customer_segment": "enterprise",
+  "acquisition_source": "google_ads",
+  "lifetime_value": "high",
+  "custom_field_1": "value1"
+}
+```
+
+This integration enables comprehensive payment and subscription management automation, allowing your AI agents to handle billing operations seamlessly within your Stripe ecosystem.
