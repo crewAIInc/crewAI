@@ -54,6 +54,8 @@ remain crewAI-native (they are not governed by the engine).
 from __future__ import annotations
 
 import asyncio
+from concurrent.futures import Future, TimeoutError as FutureTimeoutError
+import contextvars
 import copy
 from dataclasses import dataclass
 import functools
@@ -62,10 +64,13 @@ import json
 import logging
 import math
 import threading
-from typing import TYPE_CHECKING, Any, Final, TypeVar
+import time
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar
 import uuid
+import weakref
 
 from crewai.hooks.dispatch import (
+    AGENT_HOOKS_ABORT_SOURCE,
     HookAborted,
     InterceptionPoint,
 )
@@ -130,6 +135,9 @@ _IMPORT_ERROR: Final[Exception | None] = _availability[1]
 #: RECOMMENDED per-interceptor timeout in seconds (agent-hooks spec Section 7).
 DEFAULT_TIMEOUT: Final[float] = 5.0
 
+#: Default maximum records retained in memory before oldest-first eviction.
+DEFAULT_MAX_RECORDS: Final[int] = 10_000
+
 #: Framework identifier stamped on every emitted ``AgentContext``.
 _FRAMEWORK: Final[str] = "crewai"
 
@@ -137,12 +145,18 @@ _FRAMEWORK: Final[str] = "crewai"
 _DEFAULT_IDENTITY: Final[str] = "jcs-sha256"
 
 #: ``source`` attached to a :class:`HookAborted` raised by the engine.
-_SOURCE: Final[str] = "agent-hooks"
+_SOURCE: Final[object] = AGENT_HOOKS_ABORT_SOURCE
 
 #: Reserved reason used when the engine itself fails and must fail closed.
 _ENGINE_FAILED: Final[str] = "host_error:engine_failed"
 
 _TRANSFORM_INVALID: Final[str] = "host_error:transform_invalid"
+
+# Maximum callers allowed to wait behind the single active emission.
+_MAX_EMITTER_WAITERS: Final[int] = 64
+
+# Admission polling interval so close/failure wakes waiters promptly.
+_ADMISSION_POLL_SECONDS: Final[float] = 0.05
 
 #: The eight agent-hooks lifecycle points the engine governs, in order.
 DEFAULT_POINTS: Final[tuple[InterceptionPoint, ...]] = (
@@ -250,6 +264,39 @@ def _blocked_result(reason: str) -> str:
     return f"[blocked by agent-hooks: {reason}]"
 
 
+def _log_identifier(value: Any) -> str | None:
+    """Normalize a correlation identifier without allowing log injection."""
+    if value is None or isinstance(value, (dict, list, tuple, set, frozenset)):
+        return None
+    text = str(value).replace("\r", "\\r").replace("\n", "\\n")
+    return text[:128] or None
+
+
+def _correlation_ids(ctx: Any) -> tuple[str | None, str | None, str | None]:
+    """Extract payload-free session, request, and tool-call identifiers."""
+    session_id: Any = None
+    request_id: Any = None
+    call_id: Any = None
+    if isinstance(ctx, dict):
+        session = ctx.get("session")
+        if isinstance(session, dict):
+            session_id = session.get("id")
+        request_id = ctx.get("request_id")
+        tool_call = ctx.get("tool_call")
+        if isinstance(tool_call, dict):
+            call_id = tool_call.get("id")
+    else:
+        request_id = getattr(ctx, "request_id", None)
+        call_id = getattr(ctx, "call_id", None)
+        owner = getattr(ctx, "crew", None) or getattr(ctx, "flow", None)
+        session_id = getattr(owner, "id", None)
+    return (
+        _log_identifier(session_id),
+        _log_identifier(request_id),
+        _log_identifier(call_id),
+    )
+
+
 def _compose_reason(reason: str | None, message: str | None) -> str:
     """Combine an interceptor verdict's ``reason`` and ``message``.
 
@@ -347,6 +394,37 @@ def _model_response_parts(response: Any) -> tuple[Any, list[Any], str]:
             else ("tool_calls" if tool_calls else "stop")
         )
         return _json_safe(response.get("content", "")), tool_calls, finish_reason
+    if isinstance(response, list):
+        from crewai.utilities.agent_utils import (
+            extract_tool_call_info,
+            is_tool_call_list,
+        )
+
+        if is_tool_call_list(response):
+            tool_calls = []
+            for tool_call in response:
+                info = extract_tool_call_info(tool_call)
+                if info is None:
+                    continue
+                call_id, name, args = info
+                if isinstance(args, str):
+                    try:
+                        parsed_args = json.loads(args)
+                    except json.JSONDecodeError:
+                        parsed_args = {"raw": args}
+                    args = (
+                        parsed_args
+                        if isinstance(parsed_args, dict)
+                        else {"value": parsed_args}
+                    )
+                tool_calls.append(
+                    {
+                        "id": call_id,
+                        "name": name,
+                        "args": _json_safe(args),
+                    }
+                )
+            return "", tool_calls, "tool_calls"
     return _json_safe(response), [], "stop"
 
 
@@ -359,10 +437,25 @@ class _EmitterLoop:
     ``sequence`` and record buffer stay consistent.
     """
 
-    __slots__ = ("_loop", "_thread")
+    __slots__ = (
+        "_active_future",
+        "_admission",
+        "_loop",
+        "_state",
+        "_state_lock",
+        "_thread",
+        "_waiter_slots",
+    )
 
-    def __init__(self) -> None:
+    def __init__(self, max_waiters: int = _MAX_EMITTER_WAITERS) -> None:
+        if max_waiters < 1:
+            raise ValueError("max_waiters must be at least 1")
         self._loop = asyncio.new_event_loop()
+        self._admission = threading.BoundedSemaphore(1)
+        self._waiter_slots = threading.BoundedSemaphore(max_waiters)
+        self._state_lock = threading.Lock()
+        self._state: Literal["open", "closing", "failed", "closed"] = "open"
+        self._active_future: Future[Any] | None = None
         self._thread = threading.Thread(
             target=self._run, name="agent-hooks-emitter", daemon=True
         )
@@ -382,11 +475,130 @@ class _EmitterLoop:
 
         Returns:
             The coroutine's result.
-        """
-        future = asyncio.run_coroutine_threadsafe(coro, self._loop)
-        return future.result(timeout)
 
-    def close(self) -> None:
+        Raises:
+            TimeoutError: If admission or execution exceeds ``timeout``.
+            RuntimeError: If the loop has been closed.
+        """
+        if timeout is not None and timeout < 0:
+            coro.close()
+            raise ValueError("timeout must be non-negative or None")
+
+        with self._state_lock:
+            if self._state != "open":
+                coro.close()
+                raise RuntimeError("agent-hooks emitter loop is not open")
+
+        deadline = None if timeout is None else time.monotonic() + timeout
+        if not self._waiter_slots.acquire(blocking=False):
+            coro.close()
+            raise RuntimeError("agent-hooks emitter admission queue is full")
+        try:
+            try:
+                admitted = self._acquire_admission(deadline)
+            except Exception:
+                coro.close()
+                raise
+        finally:
+            self._waiter_slots.release()
+        if not admitted:
+            coro.close()
+            raise FutureTimeoutError("agent-hooks emitter admission timed out")
+
+        started = threading.Event()
+        cancel_requested = threading.Event()
+        release_lock = threading.Lock()
+        released = False
+
+        def release_admission() -> None:
+            nonlocal released
+            with release_lock:
+                if not released:
+                    released = True
+                    self._admission.release()
+
+        async def execute() -> _T:
+            started.set()
+            try:
+                if cancel_requested.is_set():
+                    coro.close()
+                    raise asyncio.CancelledError
+                return await coro
+            finally:
+                release_admission()
+
+        execution = execute()
+        try:
+            with self._state_lock:
+                if self._state != "open":
+                    raise RuntimeError("agent-hooks emitter loop is not open")
+                future = asyncio.run_coroutine_threadsafe(execution, self._loop)
+                self._active_future = future
+        except Exception:
+            execution.close()
+            release_admission()
+            coro.close()
+            raise
+
+        def on_done(completed: Future[_T]) -> None:
+            with self._state_lock:
+                if self._active_future is completed:
+                    self._active_future = None
+            if not started.is_set():
+                cancel_requested.set()
+                coro.close()
+                release_admission()
+                started.set()
+
+        future.add_done_callback(on_done)
+        remaining = None if deadline is None else max(0.0, deadline - time.monotonic())
+        if not started.wait(timeout=remaining):
+            cancel_requested.set()
+            future.cancel()
+            raise FutureTimeoutError("agent-hooks emitter scheduling timed out")
+
+        remaining = None if deadline is None else max(0.0, deadline - time.monotonic())
+        try:
+            return future.result(timeout=remaining)
+        except FutureTimeoutError:
+            if not future.done():
+                future.cancel()
+            raise
+
+    def _acquire_admission(self, deadline: float | None) -> bool:
+        """Acquire the emission slot while observing lifecycle state."""
+        while True:
+            with self._state_lock:
+                if self._state != "open":
+                    raise RuntimeError("agent-hooks emitter loop is not open")
+
+            if deadline is None:
+                wait_seconds = _ADMISSION_POLL_SECONDS
+                blocking = True
+            else:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    wait_seconds = None
+                    blocking = False
+                else:
+                    wait_seconds = min(_ADMISSION_POLL_SECONDS, remaining)
+                    blocking = True
+
+            admitted = (
+                self._admission.acquire(timeout=wait_seconds)
+                if blocking
+                else self._admission.acquire(blocking=False)
+            )
+            if admitted:
+                with self._state_lock:
+                    if self._state == "open":
+                        return True
+                self._admission.release()
+                raise RuntimeError("agent-hooks emitter loop is not open")
+            if not blocking:
+                return False
+
+    def close(self, timeout: float = 5.0) -> None:
         """Stop the background loop, releasing any in-flight emission.
 
         Pending emissions are cancelled first so a thread blocked in
@@ -394,17 +606,39 @@ class _EmitterLoop:
         ``CancelledError``) instead of deadlocking; only then is the loop
         stopped and its thread joined.
         """
+        with self._state_lock:
+            if self._state == "closed":
+                return
+            if self._state == "closing":
+                raise RuntimeError("agent-hooks emitter loop is already closing")
+            self._state = "closing"
+            active_future = self._active_future
+
+        if active_future is not None and not active_future.done():
+            active_future.cancel()
+
         if self._loop.is_running():
             try:
                 asyncio.run_coroutine_threadsafe(
                     self._cancel_pending(), self._loop
-                ).result(timeout=5.0)
-            except Exception:
-                logger.debug("agent-hooks loop drain did not complete cleanly")
+                ).result(timeout=timeout)
+            except Exception as error:
+                with self._state_lock:
+                    self._state = "failed"
+                raise RuntimeError(
+                    "agent-hooks emitter loop did not drain cleanly"
+                ) from error
         self._loop.call_soon_threadsafe(self._loop.stop)
-        self._thread.join(timeout=5.0)
+        self._thread.join(timeout=timeout)
+        if self._thread.is_alive():
+            with self._state_lock:
+                self._state = "failed"
+            raise RuntimeError("agent-hooks emitter loop did not stop")
         if not self._loop.is_running():
             self._loop.close()
+        with self._state_lock:
+            self._active_future = None
+            self._state = "closed"
 
     @staticmethod
     async def _cancel_pending() -> None:
@@ -423,7 +657,16 @@ class _Decision:
 
     proceeds: bool
     is_transform: bool
+    is_policy_denial: bool
     reason: str
+
+
+@dataclass(slots=True)
+class _OwnerSessions:
+    """Active governance sessions retained for one live execution owner."""
+
+    owner_ref: Callable[[], Any | None]
+    session_ids: list[str]
 
 
 class AgentHooksEngine:
@@ -433,8 +676,9 @@ class AgentHooksEngine:
     that :mod:`crewai.hooks.dispatch` runs as the authoritative final hook for
     the eight lifecycle points. Construct with one or more ``Interceptor``
     objects (or use :func:`use_agent_hooks`), then :meth:`activate` to install it
-    as the process governor. Every emission is recorded; inspect :attr:`records`
-    or supply a ``record_sink`` for audit.
+    as the process governor. Completed emitter decisions are recorded; inspect
+    :attr:`records` or supply a ``record_sink`` for audit. Host-side emission
+    failures are logged and fail closed before an SDK record can be returned.
 
     Safe to use as a context manager; exiting calls :meth:`close`, which
     deactivates the engine and stops the background loop.
@@ -449,6 +693,7 @@ class AgentHooksEngine:
         timeout: float | None = DEFAULT_TIMEOUT,
         identity_provider: str | IdentityProvider | None = _DEFAULT_IDENTITY,
         record_sink: Callable[[InterceptionRecord], None] | None = None,
+        max_records: int = DEFAULT_MAX_RECORDS,
         points: Sequence[InterceptionPoint] | None = None,
         framework: str = _FRAMEWORK,
         emit_timeout: float | None = None,
@@ -466,6 +711,8 @@ class AgentHooksEngine:
             identity_provider: Identity provider name, custom provider, or
                 ``None`` for identity-unbound records.
             record_sink: Optional callback invoked with every record.
+            max_records: Maximum records retained in memory before oldest-first
+                eviction. Evictions are counted by :attr:`records_dropped`.
             points: Lifecycle points to govern; defaults to :data:`DEFAULT_POINTS`.
             framework: Framework id stamped on every context.
             emit_timeout: Optional wall-clock bound per emission; ``None``
@@ -488,19 +735,27 @@ class AgentHooksEngine:
             emitter.register(interceptor)
         if record_sink is not None:
             emitter.set_record_sink(record_sink)
+        emitter.set_max_records(max_records)
 
         self._emitter: InterceptionEmitter = emitter
         self._framework = framework
         self._emit_timeout = emit_timeout
         self._loop = _EmitterLoop()
         self._builders: dict[str, AgentContextBuilder] = {}
-        self._active_sessions: dict[int, list[str]] = {}
+        self._active_sessions: dict[int, _OwnerSessions] = {}
+        self._session_context: contextvars.ContextVar[
+            dict[int, tuple[str, ...]] | None
+        ] = contextvars.ContextVar(
+            f"agent_hooks_sessions_{id(self)}",
+            default=None,
+        )
         self._builders_lock = threading.Lock()
         self._points: frozenset[InterceptionPoint] = frozenset(
             points if points is not None else DEFAULT_POINTS
         )
         self._active = False
         self._closed = False
+        self._close_failed = False
         raw_adapters: dict[InterceptionPoint, Callable[[Any], Any]] = {
             InterceptionPoint.PRE_TOOL_CALL: self._pre_tool_call,
             InterceptionPoint.POST_TOOL_CALL: self._post_tool_call,
@@ -531,6 +786,11 @@ class AgentHooksEngine:
         """All interception records emitted so far, in order."""
         return list(self._emitter.results)
 
+    @property
+    def records_dropped(self) -> int:
+        """Records evicted from the bounded in-memory audit buffer."""
+        return int(self._emitter.records_dropped)
+
     def take_records(self) -> list[InterceptionRecord]:
         """Drain and return the buffered interception records."""
         return list(self._emitter.take_records())
@@ -547,6 +807,8 @@ class AgentHooksEngine:
 
     def activate(self) -> AgentHooksEngine:
         """Install this engine as crewAI's control governor (idempotent)."""
+        if self._closed or self._close_failed:
+            raise RuntimeError("a closed or failed agent-hooks engine cannot activate")
         if not self._active:
             from crewai.hooks.dispatch import set_governor
 
@@ -571,14 +833,19 @@ class AgentHooksEngine:
         global _active_engine
         if self._closed:
             return
-        self._closed = True
         self.deactivate()
-        self._loop.close()
+        try:
+            self._loop.close()
+        except Exception:
+            self._close_failed = True
+            raise
         with self._builders_lock:
             self._builders.clear()
             self._active_sessions.clear()
         if _active_engine is self:
             _active_engine = None
+        self._close_failed = False
+        self._closed = True
 
     def __enter__(self) -> AgentHooksEngine:
         return self.activate()
@@ -612,10 +879,29 @@ class AgentHooksEngine:
     ) -> str:
         owner = crew if crew is not None else flow
         if owner is not None:
+            owner_id = id(owner)
             with self._builders_lock:
-                sessions = self._active_sessions.get(id(owner))
-                if sessions:
-                    return sessions[-1]
+                owner_sessions = self._active_sessions.get(owner_id)
+                if (
+                    owner_sessions is not None
+                    and owner_sessions.owner_ref() is not owner
+                ):
+                    self._discard_owner_sessions_locked(owner_id, owner_sessions)
+                    owner_sessions = None
+                if owner_sessions is not None:
+                    context_sessions = (self._session_context.get() or {}).get(
+                        owner_id, ()
+                    )
+                    for session_id in reversed(context_sessions):
+                        if session_id in owner_sessions.session_ids:
+                            return session_id
+                    if len(owner_sessions.session_ids) == 1:
+                        return owner_sessions.session_ids[0]
+                    if owner_sessions.session_ids:
+                        raise RuntimeError(
+                            "multiple active agent-hooks sessions lack an "
+                            "execution-local session identifier"
+                        )
         return _session_id(crew=crew, flow=flow, agent=agent)
 
     def _begin_session(self, *, crew: Any = None, flow: Any = None) -> str:
@@ -623,22 +909,98 @@ class AgentHooksEngine:
         session_id = f"{base_id}:{uuid.uuid4()}"
         owner = crew if crew is not None else flow
         if owner is not None:
+            owner_id = id(owner)
             with self._builders_lock:
-                self._active_sessions.setdefault(id(owner), []).append(session_id)
+                owner_sessions = self._active_sessions.get(owner_id)
+                if (
+                    owner_sessions is not None
+                    and owner_sessions.owner_ref() is not owner
+                ):
+                    self._discard_owner_sessions_locked(owner_id, owner_sessions)
+                    owner_sessions = None
+                if owner_sessions is None:
+                    owner_sessions = _OwnerSessions(
+                        owner_ref=self._owner_reference(owner, owner_id),
+                        session_ids=[],
+                    )
+                    self._active_sessions[owner_id] = owner_sessions
+                owner_sessions.session_ids.append(session_id)
+            context_sessions = dict(self._session_context.get() or {})
+            context_sessions[owner_id] = (
+                *context_sessions.get(owner_id, ()),
+                session_id,
+            )
+            self._session_context.set(context_sessions)
         return session_id
 
     def _finish_session(self, *, crew: Any = None, flow: Any = None) -> None:
         owner = crew if crew is not None else flow
         if owner is None:
             return
+        owner_id = id(owner)
         with self._builders_lock:
-            sessions = self._active_sessions.get(id(owner))
-            if not sessions:
+            owner_sessions = self._active_sessions.get(owner_id)
+            if owner_sessions is None:
                 return
-            session_id = sessions.pop()
+            if owner_sessions.owner_ref() is not owner:
+                self._discard_owner_sessions_locked(owner_id, owner_sessions)
+                return
+            context_sessions = dict(self._session_context.get() or {})
+            context_stack = list(context_sessions.get(owner_id, ()))
+            if context_stack:
+                session_id = context_stack.pop()
+                if context_stack:
+                    context_sessions[owner_id] = tuple(context_stack)
+                else:
+                    context_sessions.pop(owner_id, None)
+                self._session_context.set(context_sessions)
+            elif len(owner_sessions.session_ids) == 1:
+                session_id = owner_sessions.session_ids[0]
+            elif owner_sessions.session_ids:
+                raise RuntimeError(
+                    "cannot finish an ambiguous agent-hooks execution session"
+                )
+            else:
+                return
+            if session_id not in owner_sessions.session_ids:
+                return
+            owner_sessions.session_ids.remove(session_id)
             self._builders.pop(session_id, None)
-            if not sessions:
-                self._active_sessions.pop(id(owner), None)
+            if not owner_sessions.session_ids:
+                self._active_sessions.pop(owner_id, None)
+
+    def _owner_reference(self, owner: Any, owner_id: int) -> Callable[[], Any | None]:
+        """Create an owner reference that removes abandoned session state."""
+        engine_ref = weakref.ref(self)
+
+        def discard(reference: weakref.ReferenceType[Any]) -> None:
+            engine = engine_ref()
+            if engine is not None:
+                engine._discard_owner_sessions(owner_id, reference)
+
+        try:
+            return weakref.ref(owner, discard)
+        except TypeError:
+            return lambda: owner
+
+    def _discard_owner_sessions(
+        self,
+        owner_id: int,
+        expected_ref: Callable[[], Any | None],
+    ) -> None:
+        """Remove abandoned state when the matching owner is collected."""
+        with self._builders_lock:
+            owner_sessions = self._active_sessions.get(owner_id)
+            if owner_sessions is not None and owner_sessions.owner_ref is expected_ref:
+                self._discard_owner_sessions_locked(owner_id, owner_sessions)
+
+    def _discard_owner_sessions_locked(
+        self, owner_id: int, owner_sessions: _OwnerSessions
+    ) -> None:
+        """Remove one owner's sessions while ``_builders_lock`` is held."""
+        self._active_sessions.pop(owner_id, None)
+        for session_id in owner_sessions.session_ids:
+            self._builders.pop(session_id, None)
 
     def _decide(self, ctx: AgentContext) -> _Decision:
         """Run one emission and normalize the outcome, failing closed on error.
@@ -657,16 +1019,27 @@ class AgentHooksEngine:
                 self._emitter.emit_unchecked(ctx), self._emit_timeout
             )
         except Exception:
+            session_id, request_id, call_id = _correlation_ids(ctx)
             logger.exception(
-                "agent-hooks emission failed at %s; failing closed",
+                "agent-hooks emission failed at %s; failing closed "
+                "failure_kind=emission_error session_id=%s request_id=%s call_id=%s",
                 ctx.get("interception_point"),
+                session_id,
+                request_id,
+                call_id,
             )
-            return _Decision(proceeds=False, is_transform=False, reason=_ENGINE_FAILED)
+            return _Decision(
+                proceeds=False,
+                is_transform=False,
+                is_policy_denial=False,
+                reason=_ENGINE_FAILED,
+            )
         verdict = record.verdict
         reason = _compose_reason(verdict.reason, verdict.message)
         return _Decision(
             proceeds=record.proceeds,
             is_transform=record.proceeds and ctx.get("target") != original_target,
+            is_policy_denial=not record.proceeds and record.decided_by is not None,
             reason=reason,
         )
 
@@ -695,10 +1068,24 @@ class AgentHooksEngine:
             except HookAborted:
                 raise
             except Exception:
+                session_id, request_id, call_id = _correlation_ids(ctx)
                 logger.exception(
-                    "agent-hooks adapter for %s failed; failing closed", point.value
+                    "agent-hooks adapter for %s failed; failing closed "
+                    "failure_kind=adapter_error session_id=%s request_id=%s call_id=%s",
+                    point.value,
+                    session_id,
+                    request_id,
+                    call_id,
                 )
                 if is_post:
+                    if point is InterceptionPoint.POST_MODEL_CALL:
+                        from crewai.hooks.llm_hooks import mark_post_model_blocked
+
+                        mark_post_model_blocked(
+                            ctx,
+                            reason=_ENGINE_FAILED,
+                            failure_kind="adapter_error",
+                        )
                     return _blocked_result(_ENGINE_FAILED)
                 raise HookAborted(reason=_ENGINE_FAILED, source=_SOURCE) from None
 
@@ -782,6 +1169,15 @@ class AgentHooksEngine:
         agent_ctx["agent"] = _agent_envelope(ctx.agent, self._framework)
         decision = self._decide(agent_ctx)
         if not decision.proceeds:
+            from crewai.hooks.llm_hooks import mark_post_model_blocked
+
+            mark_post_model_blocked(
+                ctx,
+                reason=decision.reason,
+                failure_kind=(
+                    "policy_denial" if decision.is_policy_denial else "host_error"
+                ),
+            )
             return _blocked_result(decision.reason)
         if decision.is_transform:
             target = agent_ctx.get("target")
@@ -881,6 +1277,7 @@ def use_agent_hooks(
     timeout: float | None = DEFAULT_TIMEOUT,
     identity_provider: str | IdentityProvider | None = _DEFAULT_IDENTITY,
     record_sink: Callable[[InterceptionRecord], None] | None = None,
+    max_records: int = DEFAULT_MAX_RECORDS,
     points: Sequence[InterceptionPoint] | None = None,
     framework: str = _FRAMEWORK,
     emit_timeout: float | None = None,
@@ -910,6 +1307,8 @@ def use_agent_hooks(
         timeout: Per-interceptor timeout in seconds (``None`` disables it).
         identity_provider: Identity provider name, custom provider, or ``None``.
         record_sink: Optional callback invoked with every record.
+        max_records: Maximum records retained in memory before oldest-first
+            eviction.
         points: Lifecycle points to govern (default :data:`DEFAULT_POINTS`).
         framework: Framework id stamped on every context.
         emit_timeout: Optional wall-clock bound per emission.
@@ -932,6 +1331,7 @@ def use_agent_hooks(
         timeout=timeout,
         identity_provider=identity_provider,
         record_sink=record_sink,
+        max_records=max_records,
         points=points,
         framework=framework,
         emit_timeout=emit_timeout,
@@ -955,6 +1355,7 @@ def active_engine() -> AgentHooksEngine | None:
 
 
 __all__ = [
+    "DEFAULT_MAX_RECORDS",
     "DEFAULT_POINTS",
     "DEFAULT_TIMEOUT",
     "HAS_AGENT_HOOKS",

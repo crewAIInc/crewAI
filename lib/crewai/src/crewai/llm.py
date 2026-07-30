@@ -1759,6 +1759,7 @@ class LLM(BaseLLM):
         function_args = {}
 
         if function_name in available_functions:
+            from crewai.hooks.dispatch import HookAborted
             from crewai.hooks.tool_hooks import (
                 ToolCallHookContext,
                 run_after_tool_call_hooks,
@@ -1766,6 +1767,8 @@ class LLM(BaseLLM):
             )
 
             call_id = str(uuid.uuid4())
+            before_hook_started = False
+            post_hook_attempted = False
             try:
                 function_args = json.loads(tool_call.function.arguments)
                 if not isinstance(function_args, dict):
@@ -1790,6 +1793,7 @@ class LLM(BaseLLM):
                     task=from_task,
                     call_id=call_id,
                 )
+                before_hook_started = True
                 blocked = run_before_tool_call_hooks(before_context)
                 if blocked:
                     result: Any = (
@@ -1812,6 +1816,7 @@ class LLM(BaseLLM):
                     is_error=blocked,
                     was_blocked=blocked,
                 )
+                post_hook_attempted = True
                 modified_result = run_after_tool_call_hooks(after_context)
                 if modified_result is not None and modified_result != result_text:
                     result = modified_result
@@ -1836,21 +1841,25 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                 )
                 return result
+            except HookAborted:
+                raise
             except Exception as e:
                 error_msg = f"Tool execution error: {e!s}"
                 logging.error(f"Error executing function '{function_name}': {e}")
-                after_context = ToolCallHookContext(
-                    tool_name=function_name,
-                    tool_input=function_args,
-                    tool=None,
-                    agent=from_agent,
-                    task=from_task,
-                    tool_result=error_msg,
-                    raw_tool_result=e,
-                    call_id=call_id,
-                    is_error=True,
-                )
-                governed_result = run_after_tool_call_hooks(after_context)
+                governed_result: str | None = None
+                if before_hook_started and not post_hook_attempted:
+                    after_context = ToolCallHookContext(
+                        tool_name=function_name,
+                        tool_input=function_args,
+                        tool=None,
+                        agent=from_agent,
+                        task=from_task,
+                        tool_result=error_msg,
+                        raw_tool_result=e,
+                        call_id=call_id,
+                        is_error=True,
+                    )
+                    governed_result = run_after_tool_call_hooks(after_context)
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(
@@ -1870,7 +1879,11 @@ class LLM(BaseLLM):
                         from_agent=from_agent,
                     ),
                 )
-                return governed_result if governed_result != error_msg else None
+                return (
+                    governed_result
+                    if governed_result is not None and governed_result != error_msg
+                    else None
+                )
         return None
 
     def call(
@@ -1956,18 +1969,19 @@ class LLM(BaseLLM):
                             response_model=response_model,
                         )
 
-                    if isinstance(result, str):
-                        result = self._invoke_after_llm_call_hooks(
-                            messages, result, from_agent
-                        )
-
-                    return result
+                    return self._invoke_after_llm_call_hooks(
+                        messages, result, from_agent
+                    )
                 except LLMContextLengthExceededError:
                     # Re-raise LLMContextLengthExceededError as it should be handled
                     # by the CrewAgentExecutor._invoke_loop method, which can then decide
                     # whether to summarize the content or abort based on the respect_context_window flag
                     raise
                 except Exception as e:
+                    from crewai.hooks.llm_hooks import PostModelCallBlockedError
+
+                    if isinstance(e, PostModelCallBlockedError):
+                        raise
                     error_str = str(e)
                     unsupported_stop = "'stop'" in error_str and (
                         "Unsupported parameter" in error_str
@@ -2101,15 +2115,16 @@ class LLM(BaseLLM):
                             response_model=response_model,
                         )
 
-                    if isinstance(result, str):
-                        result = self._invoke_after_llm_call_hooks(
-                            messages, result, from_agent
-                        )
-
-                    return result
+                    return self._invoke_after_llm_call_hooks(
+                        messages, result, from_agent
+                    )
                 except LLMContextLengthExceededError:
                     raise
                 except Exception as e:
+                    from crewai.hooks.llm_hooks import PostModelCallBlockedError
+
+                    if isinstance(e, PostModelCallBlockedError):
+                        raise
                     error_str = str(e)
                     unsupported_stop = "'stop'" in error_str and (
                         "Unsupported parameter" in error_str

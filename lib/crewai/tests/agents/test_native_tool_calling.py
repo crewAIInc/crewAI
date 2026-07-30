@@ -12,7 +12,7 @@ import os
 import threading
 import time
 from collections import Counter
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from pydantic import BaseModel, Field
@@ -1147,6 +1147,41 @@ class TestNativeToolCallingJsonParseError:
         executor.task = mock_task
         return executor
 
+    @pytest.mark.parametrize("tool_is_registered", [False, True])
+    def test_unresolved_tool_sets_post_hook_error_status(
+        self, tool_is_registered: bool
+    ) -> None:
+        """Missing metadata or callable is an error in the post-hook record."""
+
+        class SearchTool(BaseTool):
+            name: str = "search"
+            description: str = "Search"
+
+            def _run(self) -> str:
+                return "result"
+
+        tools = [SearchTool()] if tool_is_registered else []
+        executor = self._make_executor(tools)
+        seen_errors: list[bool] = []
+
+        def capture(context: ToolCallHookContext) -> None:
+            seen_errors.append(context.is_error)
+
+        clear_after_tool_call_hooks()
+        register_after_tool_call_hook(capture)
+        try:
+            result = executor._execute_single_native_tool_call(
+                call_id="call-missing",
+                func_name="search" if tool_is_registered else "missing",
+                func_args={},
+                available_functions={},
+            )
+        finally:
+            clear_after_tool_call_hooks()
+
+        assert result["result"] == "Tool not found"
+        assert seen_errors == [True]
+
     def test_malformed_json_returns_parse_error(self) -> None:
         """Malformed JSON args must return a descriptive error, not silently become {}."""
 
@@ -1345,6 +1380,61 @@ class TestNativeToolCallingJsonParseError:
         react_loop.assert_called_once()
         assert "Native tool calling is unavailable" in executor.messages[-1]["content"]
         assert "Action Input" in executor.messages[-1]["content"]
+
+    @pytest.mark.parametrize("use_async", [False, True])
+    @pytest.mark.asyncio
+    async def test_governance_block_does_not_trigger_native_fallback(
+        self, use_async: bool
+    ) -> None:
+        """A terminal policy block cannot downgrade into text tool calling."""
+        from crewai.hooks.llm_hooks import PostModelCallBlockedError
+
+        class SearchTool(BaseTool):
+            name: str = "search"
+            description: str = "Search for information"
+
+            def _run(self, query: str) -> str:
+                return f"result for {query}"
+
+        executor = self._make_executor([SearchTool()])
+        executor.llm = Mock()
+        executor.messages = [{"role": "user", "content": "Search for CrewAI"}]
+        executor.callbacks = []
+        executor.iterations = 0
+        executor.max_iter = 3
+        executor.request_within_rpm_limit = None
+        executor.respect_context_window = False
+        blocked = PostModelCallBlockedError(
+            "[blocked by agent-hooks: tool calling is not supported]",
+            reason="tool calling is not supported",
+            request_id="request-1",
+            failure_kind="policy_denial",
+        )
+
+        with (
+            patch(
+                "crewai.agents.crew_agent_executor.get_llm_response",
+                side_effect=blocked,
+            ),
+            patch(
+                "crewai.agents.crew_agent_executor.aget_llm_response",
+                new=AsyncMock(side_effect=blocked),
+            ),
+            patch.object(executor, "_invoke_loop_react") as react_loop,
+            patch.object(
+                executor,
+                "_ainvoke_loop_react",
+                new=AsyncMock(),
+            ) as async_react_loop,
+        ):
+            with pytest.raises(PostModelCallBlockedError):
+                if use_async:
+                    await executor._ainvoke_loop_native_tools()
+                else:
+                    executor._invoke_loop_native_tools()
+
+        react_loop.assert_not_called()
+        async_react_loop.assert_not_awaited()
 
     def test_dict_args_bypass_json_parsing(self) -> None:
         """When func_args is already a dict, no JSON parsing occurs."""

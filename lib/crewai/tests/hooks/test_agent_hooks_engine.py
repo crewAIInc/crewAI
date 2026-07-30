@@ -9,6 +9,7 @@ unavailable.
 from __future__ import annotations
 
 import asyncio
+import gc
 from importlib.resources import files
 import json
 import threading
@@ -16,11 +17,14 @@ import types
 from typing import Any
 
 from crewai.hooks.agent_hooks_engine import (
+    DEFAULT_MAX_RECORDS,
     HAS_AGENT_HOOKS,
     _EmitterLoop,
     _agent_ids,
     _blocked_result,
+    _correlation_ids,
     _json_safe,
+    _log_identifier,
     _model_id,
     _registered_tools,
     _session_id,
@@ -167,6 +171,20 @@ class _TransformAt:
         return Verdict(decision=Decision.ALLOW)
 
 
+class _DenyToolNameAtPostModel:
+    def __init__(self, tool_name: str) -> None:
+        self.tool_name = tool_name
+
+    def intercept(self, ctx: Any) -> Any:
+        from agent_hooks import Decision, Verdict
+
+        if ctx["interception_point"] == "post_model_call":
+            tool_calls = ctx["response"]["tool_calls"]
+            if any(call.get("name") == self.tool_name for call in tool_calls):
+                return Verdict(decision=Decision.DENY, reason="tool denied")
+        return Verdict(decision=Decision.ALLOW)
+
+
 def _plain(ctx: Any) -> dict[str, Any]:
     """Render an agent-hooks ``AgentContext`` as a plain nested ``dict``."""
     return json.loads(json.dumps(dict(ctx), default=str))
@@ -263,6 +281,21 @@ class TestHelpers:
         assert _transformed_payload({"x": 1}) == {"x": 1}
         assert _transformed_payload("z") == "z"
 
+    def test_correlation_ids_are_payload_free_and_log_safe(self) -> None:
+        ctx = {
+            "session": {"id": "session\nforged"},
+            "request_id": "request-1",
+            "tool_call": {"id": "call-1", "args": {"secret": "ignored"}},
+        }
+
+        assert _correlation_ids(ctx) == (
+            "session\\nforged",
+            "request-1",
+            "call-1",
+        )
+        assert _log_identifier("x" * 200) == "x" * 128
+        assert _log_identifier({"secret": "ignored"}) is None
+
     def test_registered_tools(self):
         crew = _crew(tools=[_tool("a"), _tool("b")])
         assert _registered_tools(crew) == ["a", "b"]
@@ -281,6 +314,70 @@ class TestHelpers:
 
 
 class TestEmitterLoop:
+    def test_admission_waiter_budget_is_bounded(self) -> None:
+        """Excess submissions fail closed instead of joining an unbounded queue."""
+        loop = _EmitterLoop(max_waiters=1)
+
+        async def complete() -> str:
+            return "done"
+
+        assert loop._waiter_slots.acquire(blocking=False)
+        try:
+            with pytest.raises(RuntimeError, match="admission queue is full"):
+                loop.run(complete(), None)
+        finally:
+            loop._waiter_slots.release()
+            loop.close()
+
+    def test_close_wakes_submission_waiting_for_admission(self) -> None:
+        """A caller cannot remain blocked on admission after shutdown."""
+
+        class BlockingAdmission:
+            def __init__(self) -> None:
+                self.waiting = threading.Event()
+                self.allowed = threading.Event()
+
+            def acquire(
+                self,
+                blocking: bool = True,
+                timeout: float | None = None,
+            ) -> bool:
+                self.waiting.set()
+                if not blocking:
+                    return self.allowed.is_set()
+                return self.allowed.wait(timeout)
+
+            def release(self) -> None:
+                self.allowed.set()
+
+        loop = _EmitterLoop()
+        admission = BlockingAdmission()
+        loop._admission = admission
+        runner_done = threading.Event()
+
+        async def complete() -> str:
+            return "done"
+
+        def run() -> None:
+            try:
+                loop.run(complete(), None)
+            except BaseException:
+                pass
+            finally:
+                runner_done.set()
+
+        runner = threading.Thread(target=run)
+        try:
+            runner.start()
+            assert admission.waiting.wait(timeout=2.0)
+            loop.close()
+            assert runner_done.wait(timeout=2.0)
+        finally:
+            admission.allowed.set()
+            runner.join(timeout=2.0)
+            if loop._thread.is_alive():
+                loop.close()
+
     def test_close_releases_pending_emission(self):
         """``close()`` unblocks a thread waiting on a never-resolving emission."""
         loop = _EmitterLoop()
@@ -304,12 +401,224 @@ class TestEmitterLoop:
         t.join(timeout=2.0)
         assert not t.is_alive()
 
+    def test_timeout_cancels_and_releases_admission(self) -> None:
+        """A timed-out cancellable emission exits before another is admitted."""
+        loop = _EmitterLoop()
+        started = threading.Event()
+        exited = threading.Event()
+
+        async def hang() -> None:
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            finally:
+                exited.set()
+
+        async def complete() -> str:
+            return "done"
+
+        try:
+            with pytest.raises(TimeoutError):
+                loop.run(hang(), 0.1)
+            assert started.is_set()
+            assert exited.wait(timeout=2.0), "timed-out emission did not unwind"
+            assert loop.run(complete(), 1.0) == "done"
+        finally:
+            loop.close()
+
+    def test_cancellation_resistant_timeout_keeps_admission_bounded(self) -> None:
+        """Timed-out work retains the sole slot until it actually exits."""
+        loop = _EmitterLoop()
+        started = threading.Event()
+        cancellation_seen = threading.Event()
+        exited = threading.Event()
+        release_future: list[asyncio.Future[None]] = []
+
+        async def resist_cancellation() -> None:
+            release = asyncio.get_running_loop().create_future()
+            release_future.append(release)
+            started.set()
+            try:
+                await asyncio.shield(release)
+            except asyncio.CancelledError:
+                cancellation_seen.set()
+                await release
+            finally:
+                exited.set()
+
+        async def complete() -> str:
+            return "done"
+
+        try:
+            with pytest.raises(TimeoutError):
+                loop.run(resist_cancellation(), 0.1)
+            assert started.is_set()
+            assert cancellation_seen.wait(timeout=2.0)
+
+            with pytest.raises(TimeoutError, match="admission"):
+                loop.run(complete(), 0.1)
+
+            loop._loop.call_soon_threadsafe(release_future[0].set_result, None)
+            assert exited.wait(timeout=2.0), "resistant emission never exited"
+            assert loop.run(complete(), 1.0) == "done"
+        finally:
+            loop.close()
+
+    def test_close_cannot_race_past_submission(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Close waits for atomic submission and leaves no blocked caller."""
+        original_submit = asyncio.run_coroutine_threadsafe
+        submitting = threading.Event()
+        release_submission = threading.Event()
+        first_submission = True
+
+        def submit(coro: Any, loop: asyncio.AbstractEventLoop) -> Any:
+            nonlocal first_submission
+            if first_submission:
+                first_submission = False
+                submitting.set()
+                assert release_submission.wait(timeout=2.0)
+            return original_submit(coro, loop)
+
+        monkeypatch.setattr(asyncio, "run_coroutine_threadsafe", submit)
+        loop = _EmitterLoop()
+        runner_done = threading.Event()
+        close_done = threading.Event()
+        close_errors: list[BaseException] = []
+
+        async def complete() -> str:
+            return "done"
+
+        def run() -> None:
+            try:
+                loop.run(complete(), None)
+            except BaseException:
+                pass
+            finally:
+                runner_done.set()
+
+        def close() -> None:
+            try:
+                loop.close(timeout=2.0)
+            except BaseException as error:
+                close_errors.append(error)
+            finally:
+                close_done.set()
+
+        runner = threading.Thread(target=run)
+        closer = threading.Thread(target=close)
+        runner.start()
+        assert submitting.wait(timeout=2.0)
+        closer.start()
+        release_submission.set()
+
+        assert runner_done.wait(timeout=2.0)
+        assert close_done.wait(timeout=2.0)
+        runner.join()
+        closer.join()
+        assert close_errors == []
+
+    def test_failed_close_is_observable_and_retryable(self) -> None:
+        """Cancellation-resistant work prevents false successful shutdown."""
+        loop = _EmitterLoop()
+        started = threading.Event()
+        cancelled = threading.Event()
+        exited = threading.Event()
+        release_event: list[asyncio.Event] = []
+
+        async def resist_cancellation() -> None:
+            release = asyncio.Event()
+            release_event.append(release)
+            started.set()
+            try:
+                while not release.is_set():
+                    try:
+                        await release.wait()
+                    except asyncio.CancelledError:
+                        cancelled.set()
+            finally:
+                exited.set()
+
+        def run() -> None:
+            try:
+                loop.run(resist_cancellation(), None)
+            except BaseException:
+                pass
+
+        runner = threading.Thread(target=run)
+        runner.start()
+        assert started.wait(timeout=2.0)
+
+        with pytest.raises(RuntimeError, match="did not drain"):
+            loop.close(timeout=0.1)
+        assert cancelled.is_set()
+
+        loop._loop.call_soon_threadsafe(release_event[0].set)
+        assert exited.wait(timeout=2.0)
+        loop.close(timeout=2.0)
+        runner.join(timeout=2.0)
+        assert not runner.is_alive()
+
 
 # --- tool-call governance (through the real seam) ---------------------------
 
 
 @requires_ah
 class TestToolGovernance:
+    def test_direct_tool_post_hook_is_attempted_once_on_abort(self) -> None:
+        """A post-hook abort cannot trigger a duplicate post dispatch."""
+        from crewai.hooks import register_after_tool_call_hook
+        from crewai.llm import LLM
+
+        calls = 0
+
+        def abort_post(context: ToolCallHookContext) -> None:
+            nonlocal calls
+            calls += 1
+            raise HookAborted(reason="stop")
+
+        tool_call = types.SimpleNamespace(
+            id="call-1",
+            function=types.SimpleNamespace(name="tool", arguments="{}"),
+        )
+        register_after_tool_call_hook(abort_post)
+
+        with pytest.raises(HookAborted):
+            LLM._handle_tool_call(
+                types.SimpleNamespace(),
+                [tool_call],
+                {"tool": lambda: "result"},
+            )
+
+        assert calls == 1
+
+    def test_invalid_direct_llm_tool_args_do_not_emit_orphan_post(self) -> None:
+        """A parse failure before the pre hook cannot produce a post record."""
+        from crewai.llm import LLM
+
+        tool_call = types.SimpleNamespace(
+            id="call-1",
+            function=types.SimpleNamespace(
+                name="dangerous_tool",
+                arguments="{invalid-json",
+            ),
+        )
+        cap = _Capture()
+        engine = use_agent_hooks(cap)
+        try:
+            result = LLM._handle_tool_call(
+                types.SimpleNamespace(),
+                [tool_call],
+                {"dangerous_tool": lambda: "executed"},
+            )
+
+            assert result is None
+            assert cap.at("pre_tool_call") == []
+            assert cap.at("post_tool_call") == []
+        finally:
+            engine.close()
+
     def test_litellm_tool_execution_is_governed(self):
         """A LiteLLM tool request cannot bypass a pre-tool deny."""
         from crewai.llm import LLM
@@ -382,6 +691,39 @@ class TestToolGovernance:
             assert invoked is False
         finally:
             engine.close()
+
+    def test_base_llm_post_hook_is_attempted_once_on_abort(self) -> None:
+        """A provider-native post-hook abort cannot trigger a second dispatch."""
+        from crewai.hooks import register_after_tool_call_hook
+        from crewai.llms.base_llm import BaseLLM
+
+        class TestLLM(BaseLLM):
+            def call(
+                self,
+                messages: Any,
+                tools: Any = None,
+                callbacks: Any = None,
+                available_functions: Any = None,
+                from_task: Any = None,
+                from_agent: Any = None,
+                response_model: Any = None,
+            ) -> str:
+                return "unused"
+
+        calls = 0
+
+        def abort_post(context: ToolCallHookContext) -> None:
+            nonlocal calls
+            calls += 1
+            raise HookAborted(reason="stop")
+
+        register_after_tool_call_hook(abort_post)
+        llm = TestLLM(model="test")
+
+        with pytest.raises(HookAborted):
+            llm._handle_tool_execution("tool", {}, {"tool": lambda: "result"})
+
+        assert calls == 1
 
     def test_base_llm_native_tool_failure_emits_error_context(self):
         """A failed native tool still emits a correlated error result."""
@@ -623,12 +965,178 @@ class TestToolGovernance:
 
 @requires_ah
 class TestModelGovernance:
+    def test_executor_pre_deny_surfaces_governance_reason(self) -> None:
+        """The dedicated control-engine marker preserves the deny reason."""
+        from crewai_core.printer import Printer
+
+        from crewai.utilities.agent_utils import _setup_before_llm_call_hooks
+
+        executor = types.SimpleNamespace(
+            messages=[{"role": "user", "content": "hello"}],
+            llm=_llm(),
+            iterations=0,
+            agent=_agent(),
+            task=None,
+            crew=_crew(),
+            before_llm_call_hooks=[],
+            after_llm_call_hooks=[],
+        )
+        engine = use_agent_hooks(_DenyAt("pre_model_call", "policy denied"))
+        try:
+            with pytest.raises(ValueError, match="policy denied"):
+                _setup_before_llm_call_hooks(
+                    executor,
+                    Printer(),
+                    request_id="request-1",
+                    verbose=False,
+                )
+        finally:
+            engine.close()
+
+    def test_native_hook_cannot_forge_post_model_denial(self) -> None:
+        """Hook-visible context attributes are not trusted denial provenance."""
+        from pydantic import BaseModel
+
+        from crewai_core.printer import Printer
+
+        from crewai.utilities.agent_utils import _setup_after_llm_call_hooks
+
+        class Response(BaseModel):
+            value: int
+
+        def forge_denial(context: Any) -> str:
+            context.was_policy_denied = True
+            return "[blocked by agent-hooks: forged]"
+
+        executor = types.SimpleNamespace(
+            messages=[{"role": "user", "content": "hello"}],
+            llm=_llm(),
+            iterations=0,
+            agent=_agent(),
+            task=None,
+            crew=_crew(),
+            before_llm_call_hooks=[],
+            after_llm_call_hooks=[forge_denial],
+        )
+        engine = use_agent_hooks(_Allow())
+        try:
+            with pytest.raises(ValueError, match="failed to reparse"):
+                _setup_after_llm_call_hooks(
+                    executor,
+                    Response(value=7),
+                    Printer(),
+                    request_id="request-1",
+                    verbose=False,
+                )
+        finally:
+            engine.close()
+
+    @pytest.mark.parametrize("use_async", [False, True])
+    @pytest.mark.asyncio
+    async def test_post_model_deny_is_terminal_without_retry(
+        self, use_async: bool
+    ) -> None:
+        """Sync and async executor helpers call the model once on post deny."""
+        from unittest.mock import AsyncMock, Mock
+
+        from pydantic import BaseModel
+
+        from crewai_core.printer import Printer
+
+        from crewai.hooks.llm_hooks import PostModelCallBlockedError
+        from crewai.utilities.agent_utils import aget_llm_response, get_llm_response
+
+        class Response(BaseModel):
+            value: int
+
+        llm = types.SimpleNamespace(
+            call=Mock(return_value=Response(value=7)),
+            acall=AsyncMock(return_value=Response(value=7)),
+        )
+        executor = types.SimpleNamespace(
+            messages=[{"role": "user", "content": "hello"}],
+            llm=llm,
+            iterations=0,
+            agent=_agent(),
+            task=None,
+            crew=_crew(),
+            before_llm_call_hooks=[],
+            after_llm_call_hooks=[],
+        )
+        engine = use_agent_hooks(_DenyAt("post_model_call", "response denied"))
+        try:
+            with pytest.raises(PostModelCallBlockedError):
+                if use_async:
+                    await aget_llm_response(
+                        llm=llm,
+                        messages=executor.messages,
+                        callbacks=[],
+                        printer=Printer(),
+                        response_model=Response,
+                        executor_context=executor,
+                        verbose=False,
+                    )
+                else:
+                    get_llm_response(
+                        llm=llm,
+                        messages=executor.messages,
+                        callbacks=[],
+                        printer=Printer(),
+                        response_model=Response,
+                        executor_context=executor,
+                        verbose=False,
+                    )
+        finally:
+            engine.close()
+
+        assert llm.call.call_count == (0 if use_async else 1)
+        assert llm.acall.await_count == (1 if use_async else 0)
+
+    def test_pydantic_post_deny_returns_blocked_result(self) -> None:
+        """A post-model deny is terminal and never enters model parsing."""
+        from pydantic import BaseModel
+
+        from crewai_core.printer import Printer
+
+        from crewai.hooks.llm_hooks import PostModelCallBlockedError
+        from crewai.utilities.agent_utils import _setup_after_llm_call_hooks
+
+        class Response(BaseModel):
+            value: int
+
+        executor = types.SimpleNamespace(
+            messages=[{"role": "user", "content": "hello"}],
+            llm=_llm(),
+            iterations=0,
+            agent=_agent(),
+            task=None,
+            crew=_crew(),
+            before_llm_call_hooks=[],
+            after_llm_call_hooks=[],
+        )
+        engine = use_agent_hooks(_DenyAt("post_model_call", "response denied"))
+        try:
+            with pytest.raises(PostModelCallBlockedError) as exc:
+                _setup_after_llm_call_hooks(
+                    executor,
+                    Response(value=7),
+                    Printer(),
+                    request_id="request-1",
+                    verbose=False,
+                )
+            assert exc.value.blocked_response == (
+                "[blocked by agent-hooks: response denied]"
+            )
+        finally:
+            engine.close()
+
     def test_invalid_pydantic_transform_fails_closed(self):
         """An invalid transformed model response never restores the original."""
         from pydantic import BaseModel
 
         from crewai_core.printer import Printer
 
+        from crewai.hooks.llm_hooks import PostModelCallBlockedError
         from crewai.utilities.agent_utils import _setup_after_llm_call_hooks
 
         class Response(BaseModel):
@@ -646,7 +1154,7 @@ class TestModelGovernance:
         )
         engine = use_agent_hooks(_TransformAt("post_model_call", "not-json"))
         try:
-            with pytest.raises(ValueError, match="failed to reparse"):
+            with pytest.raises(PostModelCallBlockedError) as exc:
                 _setup_after_llm_call_hooks(
                     executor,
                     Response(value=7),
@@ -654,6 +1162,9 @@ class TestModelGovernance:
                     request_id="request-1",
                     verbose=False,
                 )
+            assert exc.value.failure_kind == "host_error"
+            assert exc.value.request_id == "request-1"
+            assert exc.value.reason.startswith("host_error:")
         finally:
             engine.close()
 
@@ -748,6 +1259,203 @@ class TestModelGovernance:
             assert pre["request_id"]
         finally:
             engine.close()
+
+    @pytest.mark.parametrize("use_async", [False, True])
+    @pytest.mark.parametrize(
+        "response",
+        [
+            "model response",
+            {"content": "model response", "tool_calls": [], "finish_reason": "stop"},
+            [
+                types.SimpleNamespace(
+                    id="call-1",
+                    function=types.SimpleNamespace(name="shell", arguments="{}"),
+                )
+            ],
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_direct_post_model_deny_is_terminal(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        use_async: bool,
+        response: Any,
+    ) -> None:
+        """Direct responses cannot turn a governed block into ordinary output."""
+        from unittest.mock import AsyncMock, Mock
+
+        from crewai.hooks.llm_hooks import PostModelCallBlockedError
+        from crewai.llm import LLM
+
+        sync_response = Mock(return_value=response)
+        async_response = AsyncMock(return_value=response)
+        llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=False)
+        monkeypatch.setattr(llm, "_handle_non_streaming_response", sync_response)
+        monkeypatch.setattr(llm, "_ahandle_non_streaming_response", async_response)
+        engine = use_agent_hooks(
+            _DenyAt("post_model_call", "input is too long for policy")
+        )
+        try:
+            with pytest.raises(PostModelCallBlockedError):
+                if use_async:
+                    await llm.acall("hello")
+                else:
+                    llm.call("hello")
+        finally:
+            engine.close()
+
+        assert sync_response.call_count == (0 if use_async else 1)
+        assert async_response.await_count == (1 if use_async else 0)
+
+    @pytest.mark.parametrize("use_async", [False, True])
+    @pytest.mark.asyncio
+    async def test_executor_dictionary_post_model_deny_is_terminal(
+        self, use_async: bool
+    ) -> None:
+        """Executor dictionary responses cannot bypass post-model governance."""
+        from unittest.mock import AsyncMock, Mock
+
+        from crewai_core.printer import Printer
+
+        from crewai.hooks.llm_hooks import PostModelCallBlockedError
+        from crewai.utilities.agent_utils import aget_llm_response, get_llm_response
+
+        response = {
+            "content": "model response",
+            "tool_calls": [],
+            "finish_reason": "stop",
+        }
+        llm = types.SimpleNamespace(
+            call=Mock(return_value=response),
+            acall=AsyncMock(return_value=response),
+        )
+        executor = types.SimpleNamespace(
+            messages=[{"role": "user", "content": "hello"}],
+            llm=llm,
+            iterations=0,
+            agent=_agent(),
+            task=None,
+            crew=_crew(),
+            before_llm_call_hooks=[],
+            after_llm_call_hooks=[],
+        )
+        engine = use_agent_hooks(_DenyAt("post_model_call", "response denied"))
+        try:
+            with pytest.raises(PostModelCallBlockedError):
+                if use_async:
+                    await aget_llm_response(
+                        llm=llm,
+                        messages=executor.messages,
+                        callbacks=[],
+                        printer=Printer(),
+                        executor_context=executor,
+                        verbose=False,
+                    )
+                else:
+                    get_llm_response(
+                        llm=llm,
+                        messages=executor.messages,
+                        callbacks=[],
+                        printer=Printer(),
+                        executor_context=executor,
+                        verbose=False,
+                    )
+        finally:
+            engine.close()
+
+        assert llm.call.call_count == (0 if use_async else 1)
+        assert llm.acall.await_count == (1 if use_async else 0)
+
+    @pytest.mark.parametrize("use_async", [False, True])
+    @pytest.mark.asyncio
+    async def test_direct_tool_call_metadata_can_drive_post_model_deny(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        use_async: bool,
+    ) -> None:
+        """Direct tool-call lists expose canonical names to model policy."""
+        from unittest.mock import AsyncMock, Mock
+
+        from crewai.hooks.llm_hooks import PostModelCallBlockedError
+        from crewai.llm import LLM
+
+        response = [
+            types.SimpleNamespace(
+                id="call-1",
+                function=types.SimpleNamespace(
+                    name="shell",
+                    arguments='{"cmd": "echo safe"}',
+                ),
+            )
+        ]
+        sync_response = Mock(return_value=response)
+        async_response = AsyncMock(return_value=response)
+        llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=False)
+        monkeypatch.setattr(llm, "_handle_non_streaming_response", sync_response)
+        monkeypatch.setattr(llm, "_ahandle_non_streaming_response", async_response)
+        engine = use_agent_hooks(_DenyToolNameAtPostModel("shell"))
+        try:
+            with pytest.raises(PostModelCallBlockedError):
+                if use_async:
+                    await llm.acall("hello")
+                else:
+                    llm.call("hello")
+        finally:
+            engine.close()
+
+        assert sync_response.call_count == (0 if use_async else 1)
+        assert async_response.await_count == (1 if use_async else 0)
+
+    @pytest.mark.parametrize("use_async", [False, True])
+    @pytest.mark.asyncio
+    async def test_direct_post_model_deny_does_not_retry_unsupported_stop(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        use_async: bool,
+    ) -> None:
+        """A policy reason cannot enter LiteLLM's unsupported-stop retry."""
+        from unittest.mock import AsyncMock, Mock
+
+        from crewai.hooks.llm_hooks import PostModelCallBlockedError
+        from crewai.llm import LLM
+
+        sync_response = Mock(
+            side_effect=["model response", AssertionError("model retried")]
+        )
+        async_response = AsyncMock(
+            side_effect=["model response", AssertionError("model retried")]
+        )
+        llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=False)
+        monkeypatch.setattr(llm, "_handle_non_streaming_response", sync_response)
+        monkeypatch.setattr(llm, "_ahandle_non_streaming_response", async_response)
+        engine = use_agent_hooks(
+            _DenyAt("post_model_call", "Unsupported parameter 'stop'")
+        )
+        try:
+            with pytest.raises(PostModelCallBlockedError):
+                if use_async:
+                    await llm.acall("hello")
+                else:
+                    llm.call("hello")
+        finally:
+            engine.close()
+
+        assert sync_response.call_count == (0 if use_async else 1)
+        assert async_response.await_count == (1 if use_async else 0)
+
+    def test_post_model_block_is_not_a_context_length_error(self) -> None:
+        """Policy text cannot route a terminal block into summarization/retry."""
+        from crewai.hooks.llm_hooks import PostModelCallBlockedError
+        from crewai.utilities.agent_utils import is_context_length_exceeded
+
+        error = PostModelCallBlockedError(
+            "[blocked by agent-hooks: input is too long]",
+            reason="input is too long",
+            request_id="request-1",
+            failure_kind="policy_denial",
+        )
+
+        assert is_context_length_exceeded(error) is False
 
     def test_pre_deny_raises(self):
         engine = use_agent_hooks(_DenyAt("pre_model_call"))
@@ -867,6 +1575,7 @@ class TestModelGovernance:
     def test_executor_structured_tool_call_deny_prevents_execution(self):
         from crewai_core.printer import Printer
 
+        from crewai.hooks.llm_hooks import PostModelCallBlockedError
         from crewai.utilities.agent_utils import _setup_after_llm_call_hooks
 
         requested = types.SimpleNamespace(
@@ -885,14 +1594,17 @@ class TestModelGovernance:
         )
         engine = use_agent_hooks(_DenyAt("post_model_call", "tool denied"))
         try:
-            result = _setup_after_llm_call_hooks(
-                executor,
-                [requested],
-                Printer(),
-                request_id="request-1",
-                verbose=False,
+            with pytest.raises(PostModelCallBlockedError) as exc:
+                _setup_after_llm_call_hooks(
+                    executor,
+                    [requested],
+                    Printer(),
+                    request_id="request-1",
+                    verbose=False,
+                )
+            assert exc.value.blocked_response == (
+                "[blocked by agent-hooks: tool denied]"
             )
-            assert result == "[blocked by agent-hooks: tool denied]"
         finally:
             engine.close()
 
@@ -1034,6 +1746,90 @@ class TestBoundaryGovernance:
 
 @requires_ah
 class TestSessionScoping:
+    def test_concurrent_runs_of_one_owner_keep_distinct_sessions(self) -> None:
+        """Each execution context resolves the session it started."""
+
+        class Owner:
+            id = "shared-owner"
+
+        owner = Owner()
+        engine = use_agent_hooks(_Allow())
+        sessions_started = threading.Barrier(2)
+        sessions_observed = threading.Barrier(2)
+        observed: dict[str, tuple[str, str]] = {}
+
+        def run(label: str) -> None:
+            session_id = engine._begin_session(crew=owner)
+            sessions_started.wait()
+            observed[label] = (
+                session_id,
+                engine._current_session_id(crew=owner),
+            )
+            sessions_observed.wait()
+            engine._finish_session(crew=owner)
+
+        first = threading.Thread(target=run, args=("first",))
+        second = threading.Thread(target=run, args=("second",))
+        try:
+            first.start()
+            second.start()
+            first.join(timeout=2.0)
+            second.join(timeout=2.0)
+
+            assert not first.is_alive()
+            assert not second.is_alive()
+            assert observed["first"][0] == observed["first"][1]
+            assert observed["second"][0] == observed["second"][1]
+            assert observed["first"][0] != observed["second"][0]
+        finally:
+            engine.close()
+
+    def test_recycled_owner_address_does_not_reuse_stale_session(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A new owner cannot inherit a missing-end session at a reused address."""
+        from crewai.hooks import agent_hooks_engine
+
+        engine = use_agent_hooks(_Allow())
+        stale_owner = _crew("stale-owner")
+        current_owner = _crew("current-owner")
+        recycled_address = 42
+        monkeypatch.setattr(
+            agent_hooks_engine,
+            "id",
+            lambda _owner: recycled_address,
+            raising=False,
+        )
+        try:
+            stale_session_id = engine._begin_session(crew=stale_owner)
+            engine._builders[stale_session_id] = object()
+
+            assert engine._current_session_id(crew=current_owner) == "current-owner"
+            assert stale_session_id not in engine._builders
+        finally:
+            engine.close()
+
+    def test_collected_owner_discards_missing_end_session(self) -> None:
+        """Owner collection cleans session state when execution end is missing."""
+
+        class Owner:
+            id = "abandoned-owner"
+
+        engine = use_agent_hooks(_Allow())
+        owner = Owner()
+        owner_id = id(owner)
+        try:
+            session_id = engine._begin_session(crew=owner)
+            engine._builders[session_id] = object()
+
+            del owner
+            gc.collect()
+
+            assert owner_id not in engine._active_sessions
+            assert session_id not in engine._builders
+        finally:
+            engine.close()
+
     def test_builder_preserves_per_agent_identity(self):
         """Different agents in one crew keep their own id in the record.
 
@@ -1098,6 +1894,18 @@ class TestEngineLifecycle:
             assert len(engine.records) == 1
             assert len(engine.take_records()) == 1
             assert engine.records == []
+        finally:
+            engine.close()
+
+    def test_record_buffer_evicts_oldest_and_counts_drops(self) -> None:
+        engine = use_agent_hooks(_Allow(), max_records=2)
+        try:
+            for call_id in ("call-1", "call-2", "call-3"):
+                run_before_tool_call_hooks(_tool_ctx(call_id=call_id))
+
+            assert len(engine.records) == 2
+            assert engine.records_dropped == 1
+            assert DEFAULT_MAX_RECORDS > 2
         finally:
             engine.close()
 

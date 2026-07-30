@@ -32,7 +32,7 @@ from enum import Enum
 from functools import wraps
 import inspect
 import time
-from typing import Any
+from typing import Any, Final
 
 from crewai.utilities.string_utils import sanitize_tool_name
 
@@ -74,6 +74,15 @@ class HookAborted(Exception):  # noqa: N818 - public contract name from OSS-86
         super().__init__(reason)
         self.reason = reason
         self.source = source
+
+
+class _AgentHooksAbortSource:
+    """Identity marker for aborts raised by the optional control engine."""
+
+    __name__ = "agent-hooks"
+
+
+AGENT_HOOKS_ABORT_SOURCE: Final = _AgentHooksAbortSource()
 
 
 HookFn = Callable[[Any], Any]

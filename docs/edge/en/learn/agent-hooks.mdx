@@ -154,6 +154,7 @@ engine = use_agent_hooks(
     composition=CompositionConfig.run_all(),      # run every interceptor, aggregate strictest
     timeout=5.0,                                   # per-interceptor timeout (seconds)
     record_sink=lambda record: audit_log(record), # stream every decision to your audit sink
+    max_records=10_000,                            # bounded in-memory audit buffer
     points=[InterceptionPoint.PRE_TOOL_CALL],     # optionally restrict governed points
 )
 ```
@@ -170,9 +171,16 @@ engine = use_agent_hooks(
 
 ## Auditability
 
-Every emission produces a payload-free `InterceptionRecord`. Read
+Every completed agent-hooks emission produces a payload-free
+`InterceptionRecord`. Read
 `engine.records` (or `engine.take_records()` to drain), or attach a
-`record_sink` callback to stream them to your audit store as they happen.
+`record_sink` callback to stream them to your audit store as they happen. The
+in-memory buffer retains 10,000 records by default with oldest-first eviction;
+inspect `engine.records_dropped` to monitor evictions or set `max_records` when
+activating the engine. If crewAI cannot complete an emission, it fails the
+guarded action closed and logs the host error; no SDK record exists because the
+emitter did not return one. Host-error logs include only bounded correlation
+identifiers (session, request, and tool call), never intercepted payloads.
 
 ## How it works
 

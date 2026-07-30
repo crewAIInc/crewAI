@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
+from weakref import WeakKeyDictionary
 
 from crewai_core.printer import PRINTER
 
@@ -158,6 +160,65 @@ class LLMCallHookContext:
             return response
         finally:
             event_listener.formatter.resume_live_updates()
+
+
+class PostModelCallBlockedError(RuntimeError):
+    """Terminal executor result for a governed post-model block."""
+
+    def __init__(
+        self,
+        blocked_response: str,
+        *,
+        reason: str,
+        request_id: str | None,
+        failure_kind: str,
+    ) -> None:
+        super().__init__(blocked_response)
+        self.blocked_response = blocked_response
+        self.reason = reason
+        self.request_id = request_id
+        self.failure_kind = failure_kind
+
+
+@dataclass(frozen=True, slots=True)
+class _PostModelBlock:
+    """Host-owned provenance for one governed post-model block."""
+
+    reason: str
+    failure_kind: str
+
+
+_post_model_blocks: WeakKeyDictionary[LLMCallHookContext, _PostModelBlock] = (
+    WeakKeyDictionary()
+)
+
+
+def mark_post_model_blocked(
+    context: LLMCallHookContext, *, reason: str, failure_kind: str
+) -> None:
+    """Record host-owned block provenance for the agent-hooks adapter."""
+    _post_model_blocks[context] = _PostModelBlock(
+        reason=reason,
+        failure_kind=failure_kind,
+    )
+
+
+def _consume_post_model_block(context: LLMCallHookContext) -> _PostModelBlock | None:
+    """Return and clear trusted governance block provenance for this response."""
+    return _post_model_blocks.pop(context, None)
+
+
+def raise_if_post_model_blocked(context: LLMCallHookContext) -> None:
+    """Raise the terminal result for a host-recorded post-model block."""
+    blocked = _consume_post_model_block(context)
+    if blocked is None:
+        return
+    raise PostModelCallBlockedError(
+        str(context.response),
+        reason=blocked.reason,
+        request_id=context.request_id,
+        failure_kind=blocked.failure_kind,
+    )
 
 
 # The legacy registries are aliased to the generic dispatcher's global hook
