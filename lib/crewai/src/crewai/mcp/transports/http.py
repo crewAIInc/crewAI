@@ -12,6 +12,7 @@ if sys.version_info >= (3, 11):
 else:
     from exceptiongroup import BaseExceptionGroup
 
+from crewai.mcp._utils import async_timeout
 from crewai.mcp.transports.base import BaseTransport, TransportType
 
 
@@ -81,13 +82,15 @@ class HTTPTransport(BaseTransport):
             )
 
             try:
-                read, write, _ = await asyncio.wait_for(
-                    self._transport_context.__aenter__(), timeout=30.0
-                )
-            except asyncio.TimeoutError as e:
+                # Enter and exit the SDK's anyio cancel scope in the same task.
+                # asyncio.wait_for() runs __aenter__ in a child task and can
+                # later trigger "cancel scope in a different task" failures.
+                async with async_timeout(self.connect_timeout):
+                    read, write, _ = await self._transport_context.__aenter__()
+            except TimeoutError as e:
                 self._transport_context = None
                 raise ConnectionError(
-                    "Transport context entry timed out after 30 seconds. "
+                    f"Transport context entry timed out after {self.connect_timeout} seconds. "
                     "Server may be slow or unreachable."
                 ) from e
             except Exception as e:

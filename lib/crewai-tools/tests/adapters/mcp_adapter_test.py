@@ -1,3 +1,4 @@
+import sys
 from textwrap import dedent
 from unittest.mock import MagicMock, patch
 
@@ -60,7 +61,7 @@ def echo_sse_server(echo_server_sse_script):
 
     # Start the SSE server process with its own process group
     process = subprocess.Popen(
-        ["python", "-c", echo_server_sse_script],
+        [sys.executable, "-c", echo_server_sse_script],
     )
 
     # Give the server a moment to start up
@@ -76,7 +77,7 @@ def echo_sse_server(echo_server_sse_script):
 
 def test_context_manager_syntax(echo_server_script):
     serverparams = StdioServerParameters(
-        command="uv", args=["run", "python", "-c", echo_server_script]
+        command=sys.executable, args=["-c", echo_server_script]
     )
     with MCPServerAdapter(serverparams) as tools:
         assert isinstance(tools, ToolCollection)
@@ -99,7 +100,7 @@ def test_context_manager_syntax_sse(echo_sse_server):
 
 def test_try_finally_syntax(echo_server_script):
     serverparams = StdioServerParameters(
-        command="uv", args=["run", "python", "-c", echo_server_script]
+        command=sys.executable, args=["-c", echo_server_script]
     )
     try:
         mcp_server_adapter = MCPServerAdapter(serverparams)
@@ -129,7 +130,7 @@ def test_try_finally_syntax_sse(echo_sse_server):
 
 def test_context_manager_with_filtered_tools(echo_server_script):
     serverparams = StdioServerParameters(
-        command="uv", args=["run", "python", "-c", echo_server_script]
+        command=sys.executable, args=["-c", echo_server_script]
     )
     # Only select the echo_tool
     with MCPServerAdapter(serverparams, "echo_tool") as tools:
@@ -159,7 +160,7 @@ def test_context_manager_sse_with_filtered_tools(echo_sse_server):
 
 def test_try_finally_with_filtered_tools(echo_server_script):
     serverparams = StdioServerParameters(
-        command="uv", args=["run", "python", "-c", echo_server_script]
+        command=sys.executable, args=["-c", echo_server_script]
     )
     try:
         # Select both tools but in reverse order
@@ -176,7 +177,7 @@ def test_try_finally_with_filtered_tools(echo_server_script):
 
 def test_filter_with_nonexistent_tool(echo_server_script):
     serverparams = StdioServerParameters(
-        command="uv", args=["run", "python", "-c", echo_server_script]
+        command=sys.executable, args=["-c", echo_server_script]
     )
     # Include a tool that doesn't exist
     with MCPServerAdapter(serverparams, "echo_tool", "nonexistent_tool") as tools:
@@ -187,7 +188,7 @@ def test_filter_with_nonexistent_tool(echo_server_script):
 
 def test_filter_with_only_nonexistent_tools(echo_server_script):
     serverparams = StdioServerParameters(
-        command="uv", args=["run", "python", "-c", echo_server_script]
+        command=sys.executable, args=["-c", echo_server_script]
     )
     # All requested tools don't exist
     with MCPServerAdapter(serverparams, "nonexistent1", "nonexistent2") as tools:
@@ -198,7 +199,7 @@ def test_filter_with_only_nonexistent_tools(echo_server_script):
 
 def test_connect_timeout_parameter(echo_server_script):
     serverparams = StdioServerParameters(
-        command="uv", args=["run", "python", "-c", echo_server_script]
+        command=sys.executable, args=["-c", echo_server_script]
     )
     with MCPServerAdapter(serverparams, connect_timeout=60) as tools:
         assert isinstance(tools, ToolCollection)
@@ -210,7 +211,7 @@ def test_connect_timeout_parameter(echo_server_script):
 
 def test_connect_timeout_with_filtered_tools(echo_server_script):
     serverparams = StdioServerParameters(
-        command="uv", args=["run", "python", "-c", echo_server_script]
+        command=sys.executable, args=["-c", echo_server_script]
     )
     with MCPServerAdapter(serverparams, "echo_tool", connect_timeout=45) as tools:
         assert isinstance(tools, ToolCollection)

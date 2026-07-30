@@ -4,6 +4,7 @@ from typing import Any
 
 from typing_extensions import Self
 
+from crewai.mcp._utils import async_timeout
 from crewai.mcp.transports.base import BaseTransport, TransportType
 
 
@@ -68,7 +69,8 @@ class SSETransport(BaseTransport):
                 headers=self.headers if self.headers else None,
             )
 
-            read, write = await self._transport_context.__aenter__()
+            async with async_timeout(self.connect_timeout):
+                read, write = await self._transport_context.__aenter__()
 
             self._set_streams(read=read, write=write)
 

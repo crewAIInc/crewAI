@@ -26,6 +26,7 @@ from crewai.events.types.mcp_events import (
     MCPToolExecutionFailedEvent,
     MCPToolExecutionStartedEvent,
 )
+from crewai.mcp._utils import async_timeout
 from crewai.mcp.transports.base import BaseTransport
 from crewai.mcp.transports.http import HTTPTransport
 from crewai.mcp.transports.sse import SSETransport
@@ -76,6 +77,7 @@ class MCPClient:
         max_retries: int = MCP_MAX_RETRIES,
         cache_tools_list: bool = False,
         logger: logging.Logger | None = None,
+        retry_tool_calls: bool = False,
     ) -> None:
         """Initialize MCP client.
 
@@ -87,13 +89,20 @@ class MCPClient:
             max_retries: Maximum retry attempts for operations.
             cache_tools_list: Whether to cache tool list results.
             logger: Optional logger instance.
+            retry_tool_calls: Whether to retry failed tool calls. Disabled by
+                default because replaying a tool can duplicate external side
+                effects when the server committed work before the response was
+                lost.
         """
         self.transport = transport
         self.connect_timeout = connect_timeout
+        self.transport.connect_timeout = connect_timeout
         self.execution_timeout = execution_timeout
         self.discovery_timeout = discovery_timeout
         self.max_retries = max_retries
         self.cache_tools_list = cache_tools_list
+        self.retry_tool_calls = retry_tool_calls
+        self._logger = logger or logging.getLogger(__name__)
         self._session: Any = None
         self._initialized = False
         self._exit_stack = AsyncExitStack()
@@ -167,24 +176,26 @@ class MCPClient:
         try:
             from mcp import ClientSession
 
-            # Use AsyncExitStack to manage transport and session contexts together
-            # This ensures they're in the same async scope and prevents cancel scope errors
-            # Always enter transport context via exit stack (it handles already-connected state)
-            await self._exit_stack.enter_async_context(self.transport)
-
-            self._session = ClientSession(
-                self.transport.read_stream,
-                self.transport.write_stream,
-            )
-
-            await self._exit_stack.enter_async_context(self._session)
-
-            # MCP protocol requires session.initialize() before any other request
             try:
-                await asyncio.wait_for(
-                    self._session.initialize(),
-                    timeout=self.connect_timeout,
-                )
+                # Each transport bounds its own context entry so a timeout can
+                # unwind partially-created SDK resources before returning.
+                connect_started = asyncio.get_running_loop().time()
+                await self._exit_stack.enter_async_context(self.transport)
+                elapsed = asyncio.get_running_loop().time() - connect_started
+                remaining_timeout = max(self.connect_timeout - elapsed, 0)
+
+                # Keep session startup in this task. anyio cancel scopes must
+                # be exited by the task that entered them.
+                async with async_timeout(remaining_timeout):
+                    self._session = ClientSession(
+                        self.transport.read_stream,
+                        self.transport.write_stream,
+                    )
+
+                    await self._exit_stack.enter_async_context(self._session)
+
+                    # MCP requires initialize() before any other request.
+                    await self._session.initialize()
             except asyncio.CancelledError:
                 # If initialization was cancelled (e.g., event loop closing),
                 # cleanup and re-raise - don't suppress cancellation
@@ -350,8 +361,9 @@ class MCPClient:
             await self._exit_stack.aclose()
 
         except Exception as e:
-            # Best effort cleanup - ignore all other errors
-            raise RuntimeError(f"Error during MCP client cleanup: {e}") from e
+            # Do not replace the connection failure with a secondary cleanup
+            # failure. Preserve the root cause and leave cleanup observable.
+            self._logger.warning("Error during MCP client cleanup: %s", e)
         finally:
             self._session = None
             self._initialized = False
@@ -453,10 +465,13 @@ class MCPClient:
         )
 
         try:
-            tool_result: _MCPToolResult = await self._retry_operation(
-                lambda: self._call_tool_impl(tool_name, cleaned_arguments),
-                timeout=self.execution_timeout,
-            )
+            if self.retry_tool_calls:
+                tool_result: _MCPToolResult = await self._retry_operation(
+                    lambda: self._call_tool_impl(tool_name, cleaned_arguments),
+                    timeout=self.execution_timeout,
+                )
+            else:
+                tool_result = await self._call_tool_impl(tool_name, cleaned_arguments)
 
             finished_at = datetime.now()
             execution_duration_ms = (finished_at - started_at).total_seconds() * 1000

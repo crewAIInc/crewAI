@@ -93,7 +93,11 @@ class TestResolveNativeRuntimeError:
     def test_unmatched_runtime_error_is_wrapped_not_swallowed(
         self, mock_asyncio_run, resolver, http_config
     ):
-        mock_asyncio_run.side_effect = RuntimeError("some other failure")
+        def fail_after_closing(coroutine):
+            coroutine.close()
+            raise RuntimeError("some other failure")
+
+        mock_asyncio_run.side_effect = fail_after_closing
 
         with pytest.raises(RuntimeError, match="Failed to get native MCP tools"):
             resolver._resolve_native(http_config)

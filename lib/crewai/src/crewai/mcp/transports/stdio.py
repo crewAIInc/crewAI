@@ -7,6 +7,7 @@ from typing import Any
 
 from typing_extensions import Self
 
+from crewai.mcp._utils import async_timeout
 from crewai.mcp.transports.base import BaseTransport, TransportType
 
 
@@ -97,7 +98,8 @@ class StdioTransport(BaseTransport):
             self._transport_context = stdio_client(server_params)
 
             try:
-                read, write = await self._transport_context.__aenter__()
+                async with async_timeout(self.connect_timeout):
+                    read, write = await self._transport_context.__aenter__()
             except Exception as e:
                 import traceback
 
