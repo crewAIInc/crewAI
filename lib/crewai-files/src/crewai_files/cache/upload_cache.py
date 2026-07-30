@@ -6,6 +6,7 @@ import asyncio
 import atexit
 import builtins
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
@@ -401,15 +402,29 @@ class UploadCache:
 
     @staticmethod
     def _run_sync(coro: Any) -> Any:
-        """Run an async coroutine from sync context without blocking event loop."""
+        """Run an async coroutine from a synchronous caller.
+
+        When there is already a running loop in this thread, the coroutine
+        cannot be scheduled on it: this function blocks the very thread that
+        loop runs on, so the loop could never advance the coroutine and the
+        wait would time out. The coroutine is driven on a worker thread with
+        its own loop instead.
+        """
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             loop = None
 
         if loop is not None and loop.is_running():
-            future = asyncio.run_coroutine_threadsafe(coro, loop)
-            return future.result(timeout=30)
+            executor = ThreadPoolExecutor(max_workers=1)
+            try:
+                return executor.submit(asyncio.run, coro).result(timeout=30)
+            finally:
+                # ``shutdown(wait=True)`` -- what the context-manager form
+                # does -- would block until the worker finishes, so a
+                # coroutine that overran the timeout would still hang the
+                # caller and make the bound meaningless.
+                executor.shutdown(wait=False)
         return asyncio.run(coro)
 
     def get(self, file: FileInput, provider: ProviderType) -> CachedUpload | None:

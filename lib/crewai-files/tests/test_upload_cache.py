@@ -1,9 +1,16 @@
 """Tests for upload cache."""
 
+import asyncio
 from datetime import datetime, timedelta, timezone
+import time
 
 from crewai_files import FileBytes, ImageFile
-from crewai_files.cache.upload_cache import CachedUpload, UploadCache
+from crewai_files.cache.upload_cache import (
+    CachedUpload,
+    UploadCache,
+    _compute_file_hash,
+)
+import pytest
 
 
 # Minimal valid PNG
@@ -207,3 +214,100 @@ class TestUploadCache:
 
         assert len(gemini_uploads) == 2
         assert len(anthropic_uploads) == 1
+
+
+class TestRunSyncFromInsideAnEventLoop:
+    """The sync wrappers must work when a loop is already running.
+
+    ``UploadCache`` exposes ten synchronous wrappers that all funnel through
+    ``_run_sync``. Its in-loop branch used to schedule the coroutine on the
+    caller's own running loop and then block waiting for it, which the loop
+    could never satisfy because ``_run_sync`` occupies its thread. Every such
+    call stalled for the full 30s timeout and then raised ``TimeoutError``.
+    """
+
+    @staticmethod
+    def _make_file(suffix: bytes = b"") -> ImageFile:
+        return ImageFile(
+            source=FileBytes(data=MINIMAL_PNG + suffix, filename="test.png")
+        )
+
+    def test_set_and_get_outside_event_loop(self):
+        """Baseline: with no running loop the wrappers already worked."""
+        cache = UploadCache()
+        file = self._make_file()
+
+        cache.set(file=file, provider="gemini", file_id="file-123")
+
+        cached = cache.get(file=file, provider="gemini")
+        assert cached is not None
+        assert cached.file_id == "file-123"
+
+    @pytest.mark.asyncio
+    async def test_set_and_get_inside_running_event_loop(self):
+        """The regression: sync wrappers called from async code.
+
+        A stalled call would fail this by timing out rather than by
+        returning a wrong value, so the assertion is preceded by a wall
+        clock bound: the whole exchange must finish well inside the 30s
+        timeout the old code always spent.
+        """
+        cache = UploadCache()
+        file = self._make_file()
+
+        started = time.monotonic()
+        cache.set(file=file, provider="gemini", file_id="file-123")
+        cached = cache.get(file=file, provider="gemini")
+        elapsed = time.monotonic() - started
+
+        assert cached is not None
+        assert cached.file_id == "file-123"
+        assert elapsed < 10, (
+            f"took {elapsed:.1f}s -- the coroutine is being scheduled on the "
+            "caller's own loop, which _run_sync blocks while waiting"
+        )
+
+    @pytest.mark.asyncio
+    async def test_sync_wrappers_do_not_use_the_callers_loop(self):
+        """The coroutine must not be driven by the loop ``_run_sync`` blocks.
+
+        Scheduling it there is the cause of the stall, so the property is
+        asserted directly rather than inferred from the absence of a
+        timeout.
+        """
+        caller_loop = asyncio.get_running_loop()
+        seen: list[asyncio.AbstractEventLoop] = []
+
+        async def probe() -> str:
+            seen.append(asyncio.get_running_loop())
+            return "done"
+
+        assert UploadCache._run_sync(probe()) == "done"
+        assert seen and seen[0] is not caller_loop
+
+    @pytest.mark.asyncio
+    async def test_remaining_sync_wrappers_inside_running_event_loop(self):
+        """The other wrappers share ``_run_sync``, so they are covered too."""
+        cache = UploadCache()
+        file = self._make_file()
+        other = self._make_file(suffix=b"x")
+
+        cache.set(file=file, provider="gemini", file_id="file-1")
+        cache.set(file=other, provider="gemini", file_id="file-2")
+
+        assert len(cache.get_all_for_provider("gemini")) == 2
+        assert cache.get_by_hash(_compute_file_hash(file), "gemini") is not None
+        assert cache.remove(file=file, provider="gemini") is True
+        assert cache.remove_by_file_id("file-2", "gemini") is True
+        assert cache.clear_expired() == 0
+        assert cache.clear() == 0
+
+    @pytest.mark.asyncio
+    async def test_exceptions_propagate_from_inside_running_event_loop(self):
+        """A failure inside the coroutine must reach the sync caller."""
+
+        async def boom() -> None:
+            raise RuntimeError("coroutine failed")
+
+        with pytest.raises(RuntimeError, match="coroutine failed"):
+            UploadCache._run_sync(boom())
