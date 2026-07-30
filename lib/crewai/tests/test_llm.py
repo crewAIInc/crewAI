@@ -11,8 +11,13 @@ from crewai.events.event_types import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
+from crewai.llm import (
+    CONTEXT_WINDOW_USAGE_RATIO,
+    LLM,
+    StructuredOutputConversionError,
+)
 from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+from crewai.utilities import InternalInstructor
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from pydantic import BaseModel
 import pytest
@@ -1177,3 +1182,47 @@ async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0].function.name == "search"
+
+
+def test_streaming_response_model_conversion_failure_raises():
+    """A completed stream whose text fails response_model conversion must raise
+    instead of being salvaged as a raw partial response (#6735).
+
+    The salvage branch in ``_handle_streaming_response`` exists to return
+    whatever text arrived before a stream broke mid-flight. A response_model
+    conversion failure is not a broken stream, so it must not be routed there.
+    """
+    llm = LLM(model="gpt-4o-mini", stream=True, is_litellm=True)
+
+    class _Answer(BaseModel):
+        answer: str
+
+    def _prose_stream(**kwargs):
+        return iter(
+            [
+                {
+                    "id": "chunk-1",
+                    "choices": [
+                        {"delta": {"content": "plain prose"}, "finish_reason": None}
+                    ],
+                },
+                {
+                    "id": "chunk-1",
+                    "choices": [{"delta": {"content": ""}, "finish_reason": "stop"}],
+                },
+            ]
+        )
+
+    with (
+        patch("crewai.llm.litellm.completion", side_effect=_prose_stream),
+        patch.object(
+            InternalInstructor,
+            "to_pydantic",
+            side_effect=ValueError("schema mismatch"),
+        ),
+    ):
+        with pytest.raises(StructuredOutputConversionError):
+            llm._handle_streaming_response(
+                {"messages": [{"role": "user", "content": "hi"}]},
+                response_model=_Answer,
+            )
