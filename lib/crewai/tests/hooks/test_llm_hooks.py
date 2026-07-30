@@ -709,7 +709,7 @@ def _openai_response() -> Any:
     )
 
 
-def _stub_anthropic_llm(issued: list[str]) -> Any:
+def _stub_anthropic_llm(issued: list[str], monkeypatch: pytest.MonkeyPatch) -> Any:
     """A real AnthropicCompletion whose SDK client records every request."""
     from crewai.llms.providers.anthropic.completion import AnthropicCompletion
 
@@ -728,7 +728,7 @@ def _stub_anthropic_llm(issued: list[str]) -> Any:
     return llm
 
 
-def _stub_openai_llm(issued: list[str]) -> Any:
+def _stub_openai_llm(issued: list[str], monkeypatch: pytest.MonkeyPatch) -> Any:
     """A real OpenAICompletion whose SDK client records every request."""
     from crewai.llms.providers.openai.completion import OpenAICompletion
 
@@ -751,6 +751,147 @@ def _stub_openai_llm(issued: list[str]) -> Any:
     return llm
 
 
+def _bedrock_response() -> dict[str, Any]:
+    return {
+        "output": {
+            "message": {
+                "role": "assistant",
+                "content": [{"text": "the model answered"}],
+            }
+        },
+        "stopReason": "end_turn",
+        "usage": {"inputTokens": 1, "outputTokens": 1, "totalTokens": 2},
+    }
+
+
+def _stub_bedrock_llm(issued: list[str], monkeypatch: pytest.MonkeyPatch) -> Any:
+    """A real BedrockCompletion whose Converse client records every request."""
+    from crewai.llms.providers.bedrock import completion as bedrock_completion
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+
+    # ``acall`` refuses to run at all without aiobotocore, which is an optional
+    # extra. The hook gating under test is upstream of any AWS I/O and the client
+    # below is a stub, so the dependency check is patched rather than installed.
+    monkeypatch.setattr(bedrock_completion, "AIOBOTOCORE_AVAILABLE", True)
+
+    llm = BedrockCompletion(
+        model="anthropic.claude-3-5-sonnet-20241022-v2:0",
+        aws_access_key_id="stub",
+        aws_secret_access_key="stub",
+        region_name="us-east-1",
+        stream=False,
+    )
+
+    def converse(**_kwargs: Any) -> dict[str, Any]:
+        issued.append("sync")
+        return _bedrock_response()
+
+    async def aconverse(**_kwargs: Any) -> dict[str, Any]:
+        issued.append("async")
+        return _bedrock_response()
+
+    llm._client = SimpleNamespace(converse=converse)
+    # ``_ensure_async_client`` builds the aiobotocore client inside an exit stack;
+    # marking it initialized makes it return this stub instead.
+    llm._async_client = SimpleNamespace(converse=aconverse)
+    llm._async_client_initialized = True
+    return llm
+
+
+def _gemini_response() -> Any:
+    part = SimpleNamespace(text="the model answered", function_call=None, thought=None)
+    return SimpleNamespace(
+        candidates=[
+            SimpleNamespace(
+                content=SimpleNamespace(parts=[part], role="model"),
+                finish_reason=None,
+            )
+        ],
+        text="the model answered",
+        usage_metadata=SimpleNamespace(
+            prompt_token_count=1,
+            candidates_token_count=1,
+            total_token_count=2,
+            cached_content_token_count=0,
+        ),
+        function_calls=None,
+    )
+
+
+def _stub_gemini_llm(issued: list[str], monkeypatch: pytest.MonkeyPatch) -> Any:
+    """A real GeminiCompletion whose genai client records every request.
+
+    Gemini exposes one client for both paths (``_get_async_client`` returns
+    ``_get_sync_client``), with the async surface under ``.aio``.
+    """
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    llm = GeminiCompletion(model="gemini-2.0-flash", api_key="stub", stream=False)
+
+    def generate_content(**_kwargs: Any) -> Any:
+        issued.append("sync")
+        return _gemini_response()
+
+    async def agenerate_content(**_kwargs: Any) -> Any:
+        issued.append("async")
+        return _gemini_response()
+
+    llm._client = SimpleNamespace(
+        models=SimpleNamespace(generate_content=generate_content),
+        aio=SimpleNamespace(
+            models=SimpleNamespace(generate_content=agenerate_content)
+        ),
+        vertexai=False,
+    )
+    return llm
+
+
+def _azure_response() -> Any:
+    return SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(content="the model answered", tool_calls=None),
+                finish_reason="stop",
+            )
+        ],
+        usage=_usage_stub(),
+        id="azure_stub",
+    )
+
+
+def _stub_azure_llm(issued: list[str], monkeypatch: pytest.MonkeyPatch) -> Any:
+    """A real AzureCompletion whose inference client records every request."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api_key="stub",
+        endpoint="https://stub.services.ai.azure.com/models",
+        stream=False,
+    )
+
+    def complete(**_kwargs: Any) -> Any:
+        issued.append("sync")
+        return _azure_response()
+
+    async def acomplete(**_kwargs: Any) -> Any:
+        issued.append("async")
+        return _azure_response()
+
+    llm._client = SimpleNamespace(complete=complete)
+    llm._async_client = SimpleNamespace(complete=acomplete)
+    return llm
+
+
+_PROVIDER_STUBS = {
+    "openai": _stub_openai_llm,
+    "anthropic": _stub_anthropic_llm,
+    "bedrock": _stub_bedrock_llm,
+    "gemini": _stub_gemini_llm,
+    "azure": _stub_azure_llm,
+}
+
+
 class TestBeforeLLMCallHooksOnAsyncPaths:
     """before_llm_call must gate acall() exactly as it gates call().
 
@@ -759,12 +900,12 @@ class TestBeforeLLMCallHooksOnAsyncPaths:
     stopped blocking anything once the caller switched to async.
     """
 
-    @pytest.fixture(params=["openai", "anthropic"])
-    def provider(self, request: pytest.FixtureRequest) -> tuple[Any, list[str]]:
+    @pytest.fixture(params=sorted(_PROVIDER_STUBS))
+    def provider(
+        self, request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+    ) -> tuple[Any, list[str]]:
         issued: list[str] = []
-        if request.param == "openai":
-            return _stub_openai_llm(issued), issued
-        return _stub_anthropic_llm(issued), issued
+        return _PROVIDER_STUBS[request.param](issued, monkeypatch), issued
 
     def test_sync_call_is_blocked_by_before_hook(
         self, provider: tuple[Any, list[str]]
@@ -811,7 +952,10 @@ class TestBeforeLLMCallHooksOnAsyncPaths:
 
         assert result == "the model answered"
         assert issued == ["async"]
-        assert seen and seen[0][-1]["content"] == "hi"
+        # The content shape differs per provider (a plain string, a list of
+        # content blocks, a Gemini part dict), so the prompt is located inside
+        # the last message rather than compared to one provider's layout.
+        assert seen and "hi" in str(seen[0][-1])
 
     @pytest.mark.asyncio
     async def test_async_call_without_hooks_is_unchanged(
