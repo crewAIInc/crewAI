@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+from typing import Any
 from unittest.mock import Mock
 
 from crewai.hooks import (
@@ -670,3 +672,174 @@ class TestDirectLLMScopedHooks:
             )
 
         assert result == "contains [REDACTED]"
+
+
+def _usage_stub() -> Any:
+    """Token-usage payload accepted by every provider's usage extractor."""
+    return SimpleNamespace(
+        input_tokens=1,
+        output_tokens=1,
+        cache_read_input_tokens=0,
+        cache_creation_input_tokens=0,
+        prompt_tokens=1,
+        completion_tokens=1,
+        total_tokens=2,
+    )
+
+
+def _anthropic_response() -> Any:
+    return SimpleNamespace(
+        content=[SimpleNamespace(type="text", text="the model answered")],
+        usage=_usage_stub(),
+        stop_reason="end_turn",
+        id="msg_stub",
+    )
+
+
+def _openai_response() -> Any:
+    return SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(content="the model answered", tool_calls=None),
+                finish_reason="stop",
+            )
+        ],
+        usage=_usage_stub(),
+        id="cmpl_stub",
+    )
+
+
+def _stub_anthropic_llm(issued: list[str]) -> Any:
+    """A real AnthropicCompletion whose SDK client records every request."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-sonnet-4-5", api_key="stub", stream=False)
+
+    def create(**_kwargs: Any) -> Any:
+        issued.append("sync")
+        return _anthropic_response()
+
+    async def acreate(**_kwargs: Any) -> Any:
+        issued.append("async")
+        return _anthropic_response()
+
+    llm._client = SimpleNamespace(messages=SimpleNamespace(create=create))
+    llm._async_client = SimpleNamespace(messages=SimpleNamespace(create=acreate))
+    return llm
+
+
+def _stub_openai_llm(issued: list[str]) -> Any:
+    """A real OpenAICompletion whose SDK client records every request."""
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+
+    llm = OpenAICompletion(model="gpt-4o", api_key="stub", stream=False)
+
+    def create(**_kwargs: Any) -> Any:
+        issued.append("sync")
+        return _openai_response()
+
+    async def acreate(**_kwargs: Any) -> Any:
+        issued.append("async")
+        return _openai_response()
+
+    llm._client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=create))
+    )
+    llm._async_client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=acreate))
+    )
+    return llm
+
+
+class TestBeforeLLMCallHooksOnAsyncPaths:
+    """before_llm_call must gate acall() exactly as it gates call().
+
+    A hook returning False aborts the call. When acall() skipped the hook the
+    request still went out, so a policy check that worked synchronously silently
+    stopped blocking anything once the caller switched to async.
+    """
+
+    @pytest.fixture(params=["openai", "anthropic"])
+    def provider(self, request: pytest.FixtureRequest) -> tuple[Any, list[str]]:
+        issued: list[str] = []
+        if request.param == "openai":
+            return _stub_openai_llm(issued), issued
+        return _stub_anthropic_llm(issued), issued
+
+    def test_sync_call_is_blocked_by_before_hook(
+        self, provider: tuple[Any, list[str]]
+    ) -> None:
+        llm, issued = provider
+        seen: list[int] = []
+        register_before_llm_call_hook(lambda ctx: seen.append(len(ctx.messages)) or False)
+
+        with pytest.raises(ValueError, match="blocked by before_llm_call hook"):
+            llm.call("hi")
+
+        assert len(seen) == 1
+        assert issued == []
+
+    @pytest.mark.asyncio
+    async def test_async_call_is_blocked_by_before_hook(
+        self, provider: tuple[Any, list[str]]
+    ) -> None:
+        """The regression: acall() used to issue the request and return the response."""
+        llm, issued = provider
+        seen: list[int] = []
+        register_before_llm_call_hook(lambda ctx: seen.append(len(ctx.messages)) or False)
+
+        with pytest.raises(ValueError, match="blocked by before_llm_call hook"):
+            await llm.acall("hi")
+
+        assert len(seen) == 1
+        assert issued == []
+
+    @pytest.mark.asyncio
+    async def test_async_call_runs_before_hook_that_allows(
+        self, provider: tuple[Any, list[str]]
+    ) -> None:
+        """A hook that does not abort observes the messages and the call proceeds."""
+        llm, issued = provider
+        seen: list[list[dict[str, Any]]] = []
+
+        def observe(ctx: LLMCallHookContext) -> None:
+            seen.append(list(ctx.messages))
+
+        register_before_llm_call_hook(observe)
+
+        result = await llm.acall("hi")
+
+        assert result == "the model answered"
+        assert issued == ["async"]
+        assert seen and seen[0][-1]["content"] == "hi"
+
+    @pytest.mark.asyncio
+    async def test_async_call_without_hooks_is_unchanged(
+        self, provider: tuple[Any, list[str]]
+    ) -> None:
+        """Negative control: no hook registered, nothing blocked or altered."""
+        llm, issued = provider
+
+        result = await llm.acall("hi")
+
+        assert result == "the model answered"
+        assert issued == ["async"]
+
+    @pytest.mark.asyncio
+    async def test_async_call_before_hook_can_mutate_messages(
+        self, provider: tuple[Any, list[str]]
+    ) -> None:
+        """The hook's messages list is the one handed to the provider."""
+        llm, issued = provider
+        captured: list[list[dict[str, Any]]] = []
+
+        def add_guard_rail(ctx: LLMCallHookContext) -> None:
+            ctx.messages.append({"role": "user", "content": "and be brief"})
+            captured.append(ctx.messages)
+
+        register_before_llm_call_hook(add_guard_rail)
+
+        await llm.acall("hi")
+
+        assert issued == ["async"]
+        assert captured[0][-1] == {"role": "user", "content": "and be brief"}
