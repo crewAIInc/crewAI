@@ -140,7 +140,11 @@ def fetch_agent_card(
         ttl_hash = int(time.time() // cache_ttl)
         return _fetch_agent_card_cached(endpoint, auth_hash, timeout, ttl_hash)
 
-    coro = afetch_agent_card(endpoint=endpoint, auth=auth, timeout=timeout)
+    # afetch_agent_card defaults use_cache=True, so it has to be forwarded: without
+    # it this uncached request is served from the async cache.
+    coro = afetch_agent_card(
+        endpoint=endpoint, auth=auth, timeout=timeout, use_cache=False
+    )
     try:
         asyncio.get_running_loop()
         has_running_loop = True
