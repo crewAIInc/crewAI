@@ -1659,6 +1659,7 @@ class LLM(BaseLLM):
             if usage_info:
                 self._track_token_usage_internal(usage_info)
 
+            tool_calls_unhandled = False
             if accumulated_tool_args:
                 tool_calls_list: list[ChatCompletionDeltaToolCall] = [
                     ChatCompletionDeltaToolCall(
@@ -1684,6 +1685,7 @@ class LLM(BaseLLM):
                         )
                         if result is not None:
                             return result
+                        tool_calls_unhandled = True
                     else:
                         return tool_calls_list
 
@@ -1693,7 +1695,12 @@ class LLM(BaseLLM):
                 stream_response_id,
             )
 
-            if response_model and self.is_litellm:
+            # A tool call the helper declined to handle — an unknown tool, or
+            # arguments it could not parse — leaves the accumulated content as
+            # whatever preceded it, which is usually nothing. Converting that would
+            # invent a structured answer the model never gave, so the tool-call path
+            # keeps precedence here exactly as it does in _handle_streaming_response.
+            if response_model and self.is_litellm and not tool_calls_unhandled:
                 instructor_instance = InternalInstructor(
                     content=full_response,
                     model=response_model,
