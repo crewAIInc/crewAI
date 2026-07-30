@@ -121,6 +121,11 @@ def log_request(context):
     print(f"Agent {context.agent.role} is calling the LLM...")
 ```
 
+### 4. Sandboxed Code Execution
+If a crew needs to run generated code, keep that execution outside the host process. Use a dedicated sandbox, pass in only the files and environment variables the task needs, set timeouts, and validate every artifact before it changes production state.
+
+See the [Production Code Execution](/en/guides/tools/production-code-execution) guide for the recommended sandbox strategy, E2B example crew, and production safety checklist.
+
 ## Deployment Patterns
 
 When deploying your Flow, consider the following:
@@ -128,7 +133,7 @@ When deploying your Flow, consider the following:
 ### CrewAI Enterprise
 The easiest way to deploy your Flow is using CrewAI Enterprise. It handles the infrastructure, authentication, and monitoring for you.
 
-Check out the [Deployment Guide](/en/enterprise/guides/deploy-crew) to get started.
+Check out the [Deployment Guide](/en/enterprise/guides/deploy-to-amp) to get started.
 
 ```bash
 crewai deploy create

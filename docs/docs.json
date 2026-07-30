@@ -122,7 +122,8 @@
                         "group": "Tools",
                         "icon": "wrench",
                         "pages": [
-                          "edge/en/guides/tools/publish-custom-tools"
+                          "edge/en/guides/tools/publish-custom-tools",
+                          "edge/en/guides/tools/production-code-execution"
                         ]
                       },
                       {
