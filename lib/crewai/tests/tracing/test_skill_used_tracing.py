@@ -9,7 +9,7 @@ which skills an agent actually used, on which task, or how often.
 from pathlib import Path
 from unittest.mock import patch
 
-from crewai.events.event_bus import CrewAIEventsBus
+from crewai.events.event_bus import crewai_event_bus
 from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
 from crewai.events.types.skill_events import (
     SkillActivatedEvent,
@@ -20,17 +20,31 @@ import pytest
 
 @pytest.fixture
 def registered_listener():
-    """A listener wired to an isolated bus, with event handling captured."""
-    bus = CrewAIEventsBus()
+    """A listener wired to the bus, with event handling captured.
+
+    ``scoped_handlers`` is required, not tidiness: ``CrewAIEventsBus`` is a
+    singleton, so registering on a locally constructed one still mutates the
+    process-wide bus. Without the scope these handlers outlive the test and
+    fire against a listener built with ``__new__`` -- no ``batch_manager`` --
+    in whatever runs next.
+    """
     listener = TraceCollectionListener.__new__(TraceCollectionListener)
 
-    with patch.object(TraceCollectionListener, "_handle_action_event") as handled:
-        listener._register_action_event_handlers(bus)
-        yield bus, handled
+    with (
+        crewai_event_bus.scoped_handlers(),
+        patch.object(TraceCollectionListener, "_handle_action_event") as handled,
+    ):
+        listener._register_action_event_handlers(crewai_event_bus)
+        yield crewai_event_bus, handled
 
 
 def _event_types(handled) -> list[str]:
     return [call.args[0] for call in handled.call_args_list]
+
+
+def _events_of_type(handled, event_type: str) -> list:
+    """The event objects forwarded for one collected type."""
+    return [call.args[2] for call in handled.call_args_list if call.args[0] == event_type]
 
 
 class TestSkillUsedIsCollected:
@@ -49,6 +63,26 @@ class TestSkillUsedIsCollected:
         assert "skill_used" in _event_types(handled), (
             "SkillUsedEvent was emitted but the trace listener ignored it"
         )
+
+    def test_the_event_itself_is_forwarded_intact(self, registered_listener):
+        """The type alone is not enough -- the collector serializes the event,
+        so dropping or replacing it would lose every attribution field."""
+        bus, handled = registered_listener
+
+        bus.emit(
+            None,
+            SkillUsedEvent(
+                skill_name="pdf-processing",
+                skill_path=Path("/skills/pdf-processing"),
+                from_agent=None,
+            ),
+        )
+        bus.flush()
+
+        [forwarded] = _events_of_type(handled, "skill_used")
+        assert forwarded.skill_name == "pdf-processing"
+        assert forwarded.skill_path == Path("/skills/pdf-processing")
+        assert forwarded.type == "skill_used"
 
     def test_every_use_is_collected(self, registered_listener):
         """Activation is idempotent; usage is not. One event per use."""
