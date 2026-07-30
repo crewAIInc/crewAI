@@ -396,7 +396,7 @@ class GeminiCompletion(BaseLLM):
                 formatted_content, system_instruction = (
                     self._format_messages_for_gemini(messages)
                 )
-                
+
                 messages_for_hooks = self._convert_contents_to_dict(formatted_content)
 
                 if not self._invoke_before_llm_call_hooks(
