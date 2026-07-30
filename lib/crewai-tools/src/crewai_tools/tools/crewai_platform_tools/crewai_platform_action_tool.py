@@ -5,6 +5,7 @@ import os
 from typing import Any
 
 from crewai.tools import BaseTool
+from crewai.tools.tool_failure import ToolFailure
 from crewai.utilities.pydantic_schema_utils import create_model_from_schema
 from pydantic import Field, create_model
 import requests
@@ -49,7 +50,7 @@ class CrewAIPlatformActionTool(BaseTool):
         self.action_name = action_name
         self.action_schema = action_schema
 
-    def _run(self, **kwargs: Any) -> str:
+    def _run(self, **kwargs: Any) -> Any:
         try:
             cleaned_kwargs = {
                 key: value for key, value in kwargs.items() if value is not None
@@ -85,9 +86,20 @@ class CrewAIPlatformActionTool(BaseTool):
                         error_message = str(error_info)
                 else:
                     error_message = str(data)
-                return f"API request failed: {error_message}"
+                # A non-2xx here means the upstream app rejected the action
+                # (e.g. Slack's channel_not_found) -- report it, not prose.
+                return ToolFailure(
+                    message=f"API request failed: {error_message}",
+                    code=str(response.status_code),
+                    retryable=response.status_code >= 500,
+                    details={"action": self.action_name},
+                )
 
             return json.dumps(data, indent=2)
 
         except Exception as e:
-            return f"Error executing action {self.action_name}: {e!s}"
+            return ToolFailure(
+                message=f"Error executing action {self.action_name}: {e!s}",
+                code=e.__class__.__name__,
+                details={"action": self.action_name},
+            )

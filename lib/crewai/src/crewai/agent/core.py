@@ -86,6 +86,12 @@ from crewai.skills.loader import load_skills
 from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.state.checkpoint_config import CheckpointConfig, apply_checkpoint
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools.tool_failure import (
+    ToolExecutionFailedError,
+    ToolFailureRecord,
+    merge_tool_failures,
+    tool_failure_collector,
+)
 from crewai.types.callback import SerializableCallable
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.agent_utils import (
@@ -131,7 +137,9 @@ if TYPE_CHECKING:
     from crewai.utilities.types import LLMMessage
 
 
-_passthrough_exceptions: tuple[type[Exception], ...] = ()
+# Deliberate stops, not transient errors: never swallowed into the
+# max_retry_limit loop.
+_passthrough_exceptions: tuple[type[Exception], ...] = (ToolExecutionFailedError,)
 
 _EXECUTOR_CLASS_MAP: dict[str, type] = {
     "CrewAgentExecutor": CrewAgentExecutor,
@@ -550,6 +558,8 @@ class Agent(BaseAgent):
 
         self._inject_date_to_task(task)
 
+        self.reset_tool_failures()
+
         if self.tools_handler:
             self.tools_handler.last_used_tool = None
 
@@ -914,6 +924,11 @@ class Agent(BaseAgent):
                 raise TimeoutError(
                     f"Task '{task.description}' execution timed out after {timeout} seconds. Consider increasing max_execution_time or optimizing the task."
                 ) from e
+            except _passthrough_exceptions:
+                # Wrapping a deliberate stop in RuntimeError would hide it from
+                # _check_execution_error and trigger the retry loop instead.
+                future.cancel()
+                raise
             except Exception as e:
                 future.cancel()
                 raise RuntimeError(f"Task execution failed: {e!s}") from e
@@ -1454,6 +1469,8 @@ class Agent(BaseAgent):
         Returns:
             Tuple of (executor, inputs, agent_info, parsed_tools) ready for execution.
         """
+        self.reset_tool_failures()
+
         if self.tools_handler:
             self.tools_handler.last_used_tool = None
 
@@ -1786,6 +1803,7 @@ class Agent(BaseAgent):
         executor: AgentExecutor,
         response_format: type[Any] | None = None,
         usage_baseline: UsageMetrics | None = None,
+        kickoff_failures: list[ToolFailureRecord] | None = None,
     ) -> LiteAgentOutput:
         """Build a LiteAgentOutput from an executor result dict.
 
@@ -1866,6 +1884,7 @@ class Agent(BaseAgent):
             todos=todo_results,
             replan_count=executor.state.replan_count,
             last_replan_reason=executor.state.last_replan_reason,
+            tool_failures=list(kickoff_failures or []),
         )
 
     def _execute_and_build_output(
@@ -1876,9 +1895,10 @@ class Agent(BaseAgent):
         usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Execute the agent synchronously and build the output object."""
-        result = cast(dict[str, Any], executor.invoke(inputs))
+        with tool_failure_collector() as kickoff_failures:
+            result = cast(dict[str, Any], executor.invoke(inputs))
         return self._build_output_from_result(
-            result, executor, response_format, usage_baseline
+            result, executor, response_format, usage_baseline, kickoff_failures
         )
 
     async def _execute_and_build_output_async(
@@ -1889,9 +1909,10 @@ class Agent(BaseAgent):
         usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Execute the agent asynchronously and build the output object."""
-        result = await executor.invoke_async(inputs)
+        with tool_failure_collector() as kickoff_failures:
+            result = await executor.invoke_async(inputs)
         return self._build_output_from_result(
-            result, executor, response_format, usage_baseline
+            result, executor, response_format, usage_baseline, kickoff_failures
         )
 
     def _process_kickoff_guardrail(
@@ -1951,9 +1972,15 @@ class Agent(BaseAgent):
                 role="user",
             )
 
-            output = self._execute_and_build_output(
+            retried = self._execute_and_build_output(
                 executor, inputs, response_format, usage_baseline
             )
+            # The retry opens its own collector, so carry the blocked attempt's
+            # failures forward or they vanish from the final output.
+            retried.tool_failures = merge_tool_failures(
+                output.tool_failures, retried.tool_failures
+            )
+            output = retried
 
             return self._process_kickoff_guardrail(
                 output=output,
