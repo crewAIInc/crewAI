@@ -306,6 +306,29 @@ class TestLLMHooksIntegration:
         assert text == "final answer"
         assert observed == ["final answer"]
 
+    def test_invalid_pydantic_rewrite_without_governor_restores_original(
+        self, mock_executor
+    ) -> None:
+        """Legacy hooks keep compatibility when no control engine is active."""
+        from pydantic import BaseModel
+
+        from crewai.utilities.agent_utils import _setup_after_llm_call_hooks
+
+        class Response(BaseModel):
+            value: int
+
+        mock_executor.after_llm_call_hooks = [lambda _context: "not-json"]
+        response = Response(value=7)
+
+        result = _setup_after_llm_call_hooks(
+            mock_executor,
+            response,
+            printer=Mock(),
+            verbose=False,
+        )
+
+        assert result is response
+
     def test_unregister_before_hook(self):
         """Test that before hooks can be unregistered."""
         def test_hook(context):

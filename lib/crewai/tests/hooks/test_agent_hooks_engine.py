@@ -9,6 +9,7 @@ unavailable.
 from __future__ import annotations
 
 import asyncio
+from concurrent.futures import TimeoutError as FutureTimeoutError
 import gc
 from importlib.resources import files
 import json
@@ -45,6 +46,7 @@ from crewai.hooks.dispatch import (
     clear_governor,
     dispatch,
     get_governor,
+    register,
 )
 from crewai.hooks.llm_hooks import (
     LLMCallHookContext,
@@ -418,7 +420,7 @@ class TestEmitterLoop:
             return "done"
 
         try:
-            with pytest.raises(TimeoutError):
+            with pytest.raises(FutureTimeoutError):
                 loop.run(hang(), 0.1)
             assert started.is_set()
             assert exited.wait(timeout=2.0), "timed-out emission did not unwind"
@@ -450,12 +452,12 @@ class TestEmitterLoop:
             return "done"
 
         try:
-            with pytest.raises(TimeoutError):
+            with pytest.raises(FutureTimeoutError):
                 loop.run(resist_cancellation(), 0.1)
             assert started.is_set()
             assert cancellation_seen.wait(timeout=2.0)
 
-            with pytest.raises(TimeoutError, match="admission"):
+            with pytest.raises(FutureTimeoutError, match="admission"):
                 loop.run(complete(), 0.1)
 
             loop._loop.call_soon_threadsafe(release_future[0].set_result, None)
@@ -1614,6 +1616,36 @@ class TestModelGovernance:
 
 @requires_ah
 class TestBoundaryGovernance:
+    def test_execution_end_abort_still_finalizes_governor(self) -> None:
+        """Native end-hook aborts cannot skip shutdown or retain sessions."""
+        from crewai.hooks.contexts import ExecutionEndContext
+
+        def abort_end(context: Any) -> None:
+            raise HookAborted(reason="native end denied")
+
+        register(InterceptionPoint.EXECUTION_END, abort_end)
+        engine = use_agent_hooks(_Allow())
+        crew = _crew()
+        try:
+            for _ in range(3):
+                dispatch(
+                    InterceptionPoint.EXECUTION_START,
+                    ExecutionStartContext(crew=crew, inputs={}, payload={}),
+                )
+                with pytest.raises(HookAborted, match="native end denied"):
+                    dispatch(
+                        InterceptionPoint.EXECUTION_END,
+                        ExecutionEndContext(crew=crew),
+                    )
+
+            points = [record.interception_point.value for record in engine.records]
+            assert points.count("agent_startup") == 3
+            assert points.count("agent_shutdown") == 3
+            assert engine._active_sessions == {}
+            assert engine._builders == {}
+        finally:
+            engine.close()
+
     def test_input_deny_raises(self):
         engine = use_agent_hooks(_DenyAt("input"))
         try:
@@ -1880,6 +1912,91 @@ class TestSessionScoping:
 
 @requires_ah
 class TestEngineLifecycle:
+    def test_host_failure_logs_exclude_exception_payloads(
+        self,
+        caplog: pytest.LogCaptureFixture,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Host failures log safe correlation only, never exception payloads."""
+        import logging
+
+        engine = use_agent_hooks(_Allow())
+        ctx = _tool_ctx(
+            crew=_crew("crew\nforged"),
+            call_id="call\nforged",
+        )
+        try:
+            def fail_run(
+                _loop: Any,
+                coro: Any,
+                *_args: Any,
+                **_kwargs: Any,
+            ) -> Any:
+                coro.close()
+                raise RuntimeError("SECRET_MODEL_OUTPUT\nforged")
+
+            monkeypatch.setattr(_EmitterLoop, "run", fail_run)
+            with caplog.at_level(
+                logging.ERROR,
+                logger="crewai.hooks.agent_hooks_engine",
+            ):
+                assert run_before_tool_call_hooks(ctx) is True
+
+            assert "SECRET_MODEL_OUTPUT" not in caplog.text
+            assert "crew\\nforged" in caplog.text
+            assert "call\\nforged" in caplog.text
+        finally:
+            engine.close()
+
+    def test_adapter_failure_logs_exclude_exception_payloads(
+        self,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Adapter failures also avoid exception text and traceback payloads."""
+        import logging
+
+        engine = use_agent_hooks(_Allow())
+
+        def fail(context: Any) -> None:
+            raise RuntimeError("SECRET_TOOL_INPUT\nforged")
+
+        guarded = engine._wrap_fail_closed(InterceptionPoint.PRE_TOOL_CALL, fail)
+        try:
+            with caplog.at_level(
+                logging.ERROR,
+                logger="crewai.hooks.agent_hooks_engine",
+            ):
+                with pytest.raises(HookAborted):
+                    guarded(_tool_ctx(call_id="call\nforged"))
+
+            assert "SECRET_TOOL_INPUT" not in caplog.text
+            assert "call\\nforged" in caplog.text
+        finally:
+            engine.close()
+
+    def test_post_model_adapter_failure_survives_unmarkable_context(self) -> None:
+        """A provenance storage failure cannot escape the blocked-result path."""
+
+        class UnmarkableContext:
+            __slots__ = ("response",)
+            __hash__ = None
+
+            def __init__(self) -> None:
+                self.response = "model output"
+
+        engine = use_agent_hooks(_Allow())
+
+        def fail(context: Any) -> None:
+            raise RuntimeError("adapter failed")
+
+        guarded = engine._wrap_fail_closed(InterceptionPoint.POST_MODEL_CALL, fail)
+        try:
+            assert guarded(UnmarkableContext()) == (
+                "[blocked by agent-hooks: host_error:engine_failed]"
+            )
+        finally:
+            engine.close()
+
     def test_use_agent_hooks_installs_governor(self):
         engine = use_agent_hooks(_Allow())
         try:

@@ -1020,7 +1020,7 @@ class AgentHooksEngine:
             )
         except Exception:
             session_id, request_id, call_id = _correlation_ids(ctx)
-            logger.exception(
+            logger.error(
                 "agent-hooks emission failed at %s; failing closed "
                 "failure_kind=emission_error session_id=%s request_id=%s call_id=%s",
                 ctx.get("interception_point"),
@@ -1069,7 +1069,7 @@ class AgentHooksEngine:
                 raise
             except Exception:
                 session_id, request_id, call_id = _correlation_ids(ctx)
-                logger.exception(
+                logger.error(
                     "agent-hooks adapter for %s failed; failing closed "
                     "failure_kind=adapter_error session_id=%s request_id=%s call_id=%s",
                     point.value,
@@ -1081,11 +1081,22 @@ class AgentHooksEngine:
                     if point is InterceptionPoint.POST_MODEL_CALL:
                         from crewai.hooks.llm_hooks import mark_post_model_blocked
 
-                        mark_post_model_blocked(
-                            ctx,
-                            reason=_ENGINE_FAILED,
-                            failure_kind="adapter_error",
-                        )
+                        try:
+                            mark_post_model_blocked(
+                                ctx,
+                                reason=_ENGINE_FAILED,
+                                failure_kind="adapter_error",
+                            )
+                        except Exception:
+                            logger.error(
+                                "agent-hooks post-model block provenance could not "
+                                "be retained; returning blocked result "
+                                "failure_kind=provenance_error session_id=%s "
+                                "request_id=%s call_id=%s",
+                                session_id,
+                                request_id,
+                                call_id,
+                            )
                     return _blocked_result(_ENGINE_FAILED)
                 raise HookAborted(reason=_ENGINE_FAILED, source=_SOURCE) from None
 
