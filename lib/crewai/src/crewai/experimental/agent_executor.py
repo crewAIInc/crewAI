@@ -3,8 +3,6 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Coroutine
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import contextvars
 from datetime import datetime
 import inspect
 import json
@@ -1690,13 +1688,17 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         return "tool_completed"
 
     @router("native_tool_calls")
-    def execute_native_tool(
+    async def execute_native_tool(
         self,
     ) -> Literal["native_tool_completed", "tool_result_is_final"]:
         """Execute native tool calls in a batch.
 
         Processes all tools from pending_tool_calls, executes them,
         and appends results to the conversation history.
+
+        Async-aware: async tools are awaited natively on the caller's event
+        loop (via ``CrewStructuredTool.ainvoke``) instead of being bridged
+        through ``asyncio.run`` inside a worker thread (#6611).
 
         Returns:
             "native_tool_completed" normally, or "tool_result_is_final" if
@@ -1750,52 +1752,49 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         execution_results: list[dict[str, Any]] = []
         if should_parallelize:
-            max_workers = min(8, len(runnable_tool_calls))
-            with ThreadPoolExecutor(max_workers=max_workers) as pool:
-                future_to_idx = {
-                    pool.submit(
-                        contextvars.copy_context().run,
-                        self._execute_single_native_tool_call,
-                        tool_call,
-                    ): idx
-                    for idx, tool_call in enumerate(runnable_tool_calls)
-                }
-                ordered_results: list[dict[str, Any] | None] = [None] * len(
-                    runnable_tool_calls
-                )
-                for future in as_completed(future_to_idx):
-                    idx = future_to_idx[future]
-                    try:
-                        ordered_results[idx] = future.result()
-                    except ToolExecutionFailedError:
+            tasks = [
+                self._execute_single_native_tool_call_async(tool_call)
+                for tool_call in runnable_tool_calls
+            ]
+            gathered = await asyncio.gather(
+                *tasks,
+                return_exceptions=True,
+            )
+            execution_results = []
+            for idx, result in enumerate(gathered):
+                if isinstance(result, BaseException):
+                    if isinstance(result, ToolExecutionFailedError):
                         # A deliberate stop: folding it into a tool result would
                         # let the remaining parallel calls carry on. Cancel the
                         # siblings that have not started so they never run.
-                        # Ones already in flight cannot be interrupted -- Python
-                        # threads are not cancellable -- so a concurrent tool may
-                        # still complete before the abort surfaces.
-                        pool.shutdown(wait=False, cancel_futures=True)
-                        raise
-                    except Exception as e:
-                        tool_call = runnable_tool_calls[idx]
-                        info = extract_tool_call_info(tool_call)
-                        call_id = info[0] if info else "unknown"
-                        func_name = info[1] if info else "unknown"
-                        ordered_results[idx] = {
+                        # Ones already in flight cannot be interrupted -- but
+                        # unlike threads, tasks can be cancelled cooperatively.
+                        for task in asyncio.all_tasks():
+                            if task is not asyncio.current_task() and task in tasks:
+                                task.cancel()
+                        raise result
+                    tool_call = runnable_tool_calls[idx]
+                    info = extract_tool_call_info(tool_call)
+                    call_id = info[0] if info else "unknown"
+                    func_name = info[1] if info else "unknown"
+                    execution_results.append(
+                        {
                             "call_id": call_id,
                             "func_name": func_name,
-                            "result": f"Error executing tool: {e}",
+                            "result": f"Error executing tool: {result}",
                             "from_cache": False,
                             "original_tool": None,
                         }
-                execution_results = [
-                    result for result in ordered_results if result is not None
-                ]
+                    )
+                else:
+                    execution_results.append(result)
         else:
             # Execute sequentially so result_as_answer tools can short-circuit
             # immediately without running remaining calls.
             for tool_call in runnable_tool_calls:
-                execution_result = self._execute_single_native_tool_call(tool_call)
+                execution_result = await self._execute_single_native_tool_call_async(
+                    tool_call
+                )
                 call_id = cast(str, execution_result["call_id"])
                 func_name = cast(str, execution_result["func_name"])
                 result = cast(str, execution_result["result"])
@@ -1909,8 +1908,299 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         return True
 
+    async def _execute_single_native_tool_call_async(
+        self, tool_call: Any
+    ) -> dict[str, Any]:
+        """Execute a single native tool call asynchronously.
+
+        Mirrors ``_execute_single_native_tool_call`` but awaits async tools
+        natively on the current event loop via ``CrewStructuredTool.ainvoke``
+        instead of bridging coroutines with ``asyncio.run`` inside a worker
+        thread (#6611). Sync tools without a structured wrapper are dispatched
+        through ``asyncio.to_thread`` so the event loop is never blocked.
+        """
+        info = extract_tool_call_info(tool_call)
+        if not info:
+            call_id = (
+                getattr(tool_call, "id", None)
+                or (tool_call.get("id") if isinstance(tool_call, dict) else None)
+                or "unknown"
+            )
+            return {
+                "call_id": call_id,
+                "func_name": "unknown",
+                "result": "Error: Invalid native tool call format",
+                "from_cache": False,
+                "original_tool": None,
+            }
+
+        call_id, func_name, func_args = info
+
+        # Parse arguments
+        parsed_args, parse_error = parse_tool_call_args(func_args, func_name, call_id)
+        if parse_error is not None:
+            handle_tool_failure(
+                parse_error["tool_failure"],
+                tool_name=func_name,
+                tool_args=func_args,
+                agent=self.agent,
+                task=self.task,
+                crew=self.crew,
+            )
+            return parse_error
+        args_dict: dict[str, Any] = parsed_args or {}
+
+        # Get agent_key for event tracking
+        agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
+
+        original_tool: BaseTool | None = None
+        mapping = getattr(self, "_tool_name_mapping", None)
+        if mapping and func_name in mapping:
+            mapped = mapping[func_name]
+            if isinstance(mapped, BaseTool):
+                original_tool = mapped
+        if original_tool is None:
+            for tool in self.original_tools or []:
+                if sanitize_tool_name(tool.name) == func_name:
+                    original_tool = tool
+                    break
+
+        # Check if tool has reached max usage count
+        max_usage_reached = False
+        if (
+            original_tool
+            and original_tool.max_usage_count is not None
+            and original_tool.current_usage_count >= original_tool.max_usage_count
+        ):
+            max_usage_reached = True
+
+        structured_tool: CrewStructuredTool | None = None
+        if original_tool is not None:
+            for structured in self.tools or []:
+                if getattr(structured, "_original_tool", None) is original_tool:
+                    structured_tool = structured
+                    break
+        if structured_tool is None:
+            for structured in self.tools or []:
+                if sanitize_tool_name(structured.name) == func_name:
+                    structured_tool = structured
+                    break
+
+        output_tool = original_tool or structured_tool
+
+        # Check cache before executing
+        from_cache = False
+        result = "Tool not found"
+        raw_tool_result: Any = result
+        tool_failure: ToolFailure | None = None
+        input_str = json.dumps(args_dict) if args_dict else ""
+        if self.tools_handler and self.tools_handler.cache and output_tool is not None:
+            cached_result = self.tools_handler.cache.read(
+                tool=func_name, input=input_str
+            )
+            if cached_result is not None:
+                raw_tool_result = cached_result
+                result = format_native_tool_output_for_agent(output_tool, cached_result)
+                tool_failure = detect_tool_failure(cached_result)
+                from_cache = True
+
+        # Emit tool usage started event
+        started_at = datetime.now()
+        crewai_event_bus.emit(
+            self,
+            event=ToolUsageStartedEvent(
+                tool_name=func_name,
+                tool_args=args_dict,
+                from_agent=self.agent,
+                from_task=self.task,
+                agent_key=agent_key,
+            ),
+        )
+        error_event_emitted = False
+
+        track_delegation_if_needed(func_name, args_dict, self.task)
+
+        before_hook_context = ToolCallHookContext(
+            tool_name=func_name,
+            tool_input=args_dict,
+            tool=structured_tool,
+            agent=self.agent,
+            task=self.task,
+            crew=self.crew,
+        )
+        hook_blocked = run_before_tool_call_hooks(before_hook_context)
+
+        if hook_blocked:
+            result = f"Tool execution blocked by hook. Tool: {func_name}"
+            raw_tool_result = result
+            # The blocked message replaces any cached result, so a cached
+            # failure must not be attributed to this call.
+            tool_failure = None
+        elif not from_cache and not max_usage_reached and output_tool is not None:
+            if structured_tool is not None:
+                try:
+                    raw_result = await structured_tool.ainvoke(args_dict)
+                    raw_tool_result = raw_result
+
+                    # Add to cache after successful execution (before string conversion)
+                    if self.tools_handler and self.tools_handler.cache:
+                        should_cache = True
+                        if original_tool:
+                            should_cache = original_tool.cache_function(
+                                args_dict, raw_result
+                            )
+                        if should_cache:
+                            self.tools_handler.cache.add(
+                                tool=func_name, input=input_str, output=raw_result
+                            )
+
+                    result = format_native_tool_output_for_agent(
+                        output_tool, raw_result
+                    )
+                    tool_failure = detect_tool_failure(raw_result)
+                except Exception as e:
+                    result = f"Error executing tool: {e}"
+                    raw_tool_result = result
+                    tool_failure = failure_from_exception(e)
+                    if self.task:
+                        self.task.increment_tools_errors()
+                    # Emit tool usage error event
+                    crewai_event_bus.emit(
+                        self,
+                        event=ToolUsageErrorEvent(
+                            tool_name=func_name,
+                            tool_args=args_dict,
+                            from_agent=self.agent,
+                            from_task=self.task,
+                            agent_key=agent_key,
+                            error=e,
+                        ),
+                    )
+                    error_event_emitted = True
+            elif func_name in self._available_functions:
+                try:
+                    tool_func = self._available_functions[func_name]
+                    # Run sync functions off the event loop so blocking tools
+                    # never stall native execution (#6611).
+                    raw_result = await asyncio.to_thread(tool_func, **args_dict)
+                    raw_tool_result = raw_result
+
+                    # Add to cache after successful execution (before string conversion)
+                    if self.tools_handler and self.tools_handler.cache:
+                        should_cache = True
+                        if original_tool:
+                            should_cache = original_tool.cache_function(
+                                args_dict, raw_result
+                            )
+                        if should_cache:
+                            self.tools_handler.cache.add(
+                                tool=func_name, input=input_str, output=raw_result
+                            )
+
+                    result = format_native_tool_output_for_agent(
+                        output_tool, raw_result
+                    )
+                    tool_failure = detect_tool_failure(raw_result)
+                except Exception as e:
+                    result = f"Error executing tool: {e}"
+                    raw_tool_result = result
+                    tool_failure = failure_from_exception(e)
+                    if self.task:
+                        self.task.increment_tools_errors()
+                    # Emit tool usage error event
+                    crewai_event_bus.emit(
+                        self,
+                        event=ToolUsageErrorEvent(
+                            tool_name=func_name,
+                            tool_args=args_dict,
+                            from_agent=self.agent,
+                            from_task=self.task,
+                            agent_key=agent_key,
+                            error=e,
+                        ),
+                    )
+                    error_event_emitted = True
+            else:
+                tool_failure = self._unknown_tool_failure(func_name, result)
+        elif max_usage_reached:
+            # Return error message when max usage limit is reached
+            if original_tool:
+                result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
+            else:
+                result = f"Tool '{func_name}' has reached its maximum usage limit and cannot be used anymore."
+            raw_tool_result = result
+            tool_failure = ToolFailure(
+                message=result, reason=ToolFailureReason.USAGE_LIMIT
+            )
+        elif not from_cache:
+            tool_failure = self._unknown_tool_failure(func_name, result)
+
+        # Execute after_tool_call hooks (even if blocked, to allow logging/monitoring)
+        after_hook_context = ToolCallHookContext(
+            tool_name=func_name,
+            tool_input=args_dict,
+            tool=structured_tool,
+            agent=self.agent,
+            task=self.task,
+            crew=self.crew,
+            tool_result=result,
+            raw_tool_result=raw_tool_result,
+        )
+        modified_result = run_after_tool_call_hooks(after_hook_context)
+        if modified_result is not None:
+            result = modified_result
+
+        if not error_event_emitted:
+            crewai_event_bus.emit(
+                self,
+                event=ToolUsageFinishedEvent(
+                    output=result,
+                    tool_name=func_name,
+                    tool_args=args_dict,
+                    from_agent=self.agent,
+                    from_task=self.task,
+                    agent_key=agent_key,
+                    started_at=started_at,
+                    finished_at=datetime.now(),
+                    failure=reportable_failure(
+                        tool_failure,
+                        tool=structured_tool,
+                        agent=self.agent,
+                        task=self.task,
+                        crew=self.crew,
+                    ),
+                ),
+            )
+
+        # After the finished event, so subscribers see the full lifecycle even
+        # when the policy aborts.
+        if tool_failure is not None:
+            handle_tool_failure(
+                tool_failure,
+                tool_name=func_name,
+                tool_args=args_dict,
+                tool=structured_tool,
+                agent=self.agent,
+                task=self.task,
+                crew=self.crew,
+            )
+
+        return {
+            "call_id": call_id,
+            "func_name": func_name,
+            "result": result,
+            "from_cache": from_cache,
+            "original_tool": original_tool,
+            "tool_failure": tool_failure,
+        }
+
     def _execute_single_native_tool_call(self, tool_call: Any) -> dict[str, Any]:
-        """Execute a single native tool call and return metadata/result."""
+        """Execute a single native tool call and return metadata/result.
+
+        Legacy synchronous entry point used by tests and external callers.
+        Production dispatch goes through ``_execute_single_native_tool_call_async``
+        so async tools are awaited natively on the caller's event loop (#6611).
+        """
         info = extract_tool_call_info(tool_call)
         if not info:
             call_id = (
