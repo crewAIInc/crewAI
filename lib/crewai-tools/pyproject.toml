@@ -148,6 +148,10 @@ e2b = [
     "e2b-code-interpreter~=2.6.0",
 ]
 
+slack-sdk = [
+    "slack-sdk>=3.33.0",
+]
+
 
 [tool.uv]
 exclude-newer = "3 days"
