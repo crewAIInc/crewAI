@@ -598,3 +598,190 @@ class TestCTEUnknownCommand:
         tool = _make_tool(allow_dml=False)
         with pytest.raises(ValueError, match="unrecognised"):
             tool._validate_query("WITH cte AS (SELECT 1) FOOBAR")
+
+
+# Regression: read-only bypasses via CTE modifiers, comments and SELECT-level sinks
+
+
+class TestMaterializedCTE:
+    """`AS MATERIALIZED (` must be recognised as a CTE body.
+
+    The original `\\bAS\\s*\\(` pattern never matched PostgreSQL's materialisation
+    modifier, so the statement parsed as having no CTE at all and skipped
+    validation entirely.
+    """
+
+    @pytest.mark.parametrize(
+        "stmt",
+        [
+            "WITH d AS MATERIALIZED (DELETE FROM users RETURNING *) SELECT * FROM d",
+            "WITH d AS NOT MATERIALIZED (DELETE FROM users RETURNING *) SELECT * FROM d",
+            "WITH d AS  materialized  (DROP TABLE users) SELECT 1",
+            "WITH d AS\nMATERIALIZED\n(UPDATE users SET a=1 RETURNING *) SELECT * FROM d",
+        ],
+    )
+    def test_writable_materialized_cte_blocked(self, stmt: str):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query(stmt)
+
+    def test_read_only_materialized_cte_allowed(self):
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query(
+            "WITH d AS MATERIALIZED (SELECT 1 AS x) SELECT * FROM d"
+        )
+
+    def test_writable_materialized_cte_allowed_when_dml_enabled(self):
+        tool = _make_tool(allow_dml=True)
+        tool._validate_query(
+            "WITH d AS MATERIALIZED (DELETE FROM users RETURNING *) SELECT * FROM d"
+        )
+
+
+class TestCTEFailsClosed:
+    """A WITH statement that cannot be parsed must be rejected, not passed through."""
+
+    def test_with_and_no_parsable_cte_body_blocked(self):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="could not be parsed"):
+            tool._validate_query("WITH d AS DELETE FROM users")
+
+    def test_with_and_no_main_query_blocked(self):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="no query after"):
+            tool._validate_query("WITH d AS (SELECT 1)")
+
+    def test_unrecognised_cte_lead_blocked(self):
+        """An unenumerated keyword opening a CTE body is treated as a write."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query("WITH d AS (GRANT ALL ON t TO x) SELECT * FROM d")
+
+
+class TestCommentEvasion:
+    """Comments must not hide a write command from the validator."""
+
+    @pytest.mark.parametrize(
+        "stmt",
+        [
+            "EXPLAIN /*x*/ ANALYZE DELETE FROM users",
+            "EXPLAIN /* multi\nline */ ANALYZE DROP TABLE users",
+            "EXPLAIN --skip\nANALYZE DELETE FROM users",
+        ],
+    )
+    def test_comment_before_analyze_still_blocked(self, stmt: str):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query(stmt)
+
+    def test_comment_inside_cte_still_blocked(self):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query(
+                "WITH d AS (/* note */ DELETE FROM users RETURNING *) SELECT * FROM d"
+            )
+
+    def test_mysql_executable_comment_is_not_masked(self):
+        """MySQL runs /*! … */ bodies, so a semicolon inside one is a real split."""
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="multi-statement"):
+            tool._validate_query("SELECT 1 /*! ; DROP TABLE users */")
+
+    def test_plain_comment_with_semicolon_is_single_statement(self):
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query("SELECT 1 /* ; not a split */ FROM t")
+
+
+class TestSemicolonInLiteral:
+    """Splitting must ignore semicolons inside strings rather than over-reject."""
+
+    def test_semicolon_in_string_literal_is_single_statement(self):
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query("SELECT ';' AS punctuation")
+
+    def test_semicolon_in_dollar_quoted_string_is_single_statement(self):
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query("SELECT $$a;b$$ AS x")
+
+    def test_write_keyword_inside_literal_is_not_a_write(self):
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query("SELECT 'DROP TABLE users' AS harmless_text")
+
+
+class TestSelectLevelSideEffects:
+    """Writes reachable from a SELECT survive rollback, so they need blocking."""
+
+    @pytest.mark.parametrize(
+        "stmt",
+        [
+            "SELECT * FROM users INTO OUTFILE '/var/www/html/shell.php'",
+            "SELECT a FROM t INTO DUMPFILE '/tmp/x'",
+        ],
+    )
+    def test_file_sink_blocked_in_read_only(self, stmt: str):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="filesystem"):
+            tool._validate_query(stmt)
+
+    @pytest.mark.parametrize(
+        "stmt",
+        [
+            "SELECT pg_read_file('/etc/passwd')",
+            "SELECT pg_ls_dir('/')",
+            "SELECT lo_import('/etc/shadow')",
+            "SELECT load_file('/etc/passwd')",
+            "SELECT dblink_exec('dbname=x', 'DELETE FROM users')",
+        ],
+    )
+    def test_server_file_functions_blocked_in_read_only(self, stmt: str):
+        tool = _make_tool(allow_dml=False)
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._validate_query(stmt)
+
+    def test_file_sink_allowed_when_dml_enabled(self):
+        tool = _make_tool(allow_dml=True)
+        tool._validate_query("SELECT * FROM t INTO OUTFILE '/tmp/x'")
+
+    def test_similar_column_name_is_not_a_false_positive(self):
+        """`load_files` / a column called `dblink` must not trip the check."""
+        tool = _make_tool(allow_dml=False)
+        tool._validate_query("SELECT dblink FROM connections")
+        tool._validate_query("SELECT into_outfile_count FROM stats")
+
+
+class TestReadOnlyTransactionBackstop:
+    """Read-only mode asks the backend to enforce read-only too."""
+
+    def test_read_only_mode_attempts_set_transaction_read_only(self):
+        tool = _make_tool(allow_dml=False)
+        original = NL2SQLTool._enforce_read_only_transaction
+        seen: list[bool] = []
+
+        def _spy(session):
+            seen.append(True)
+            return original(session)
+
+        with patch.object(
+            NL2SQLTool, "_enforce_read_only_transaction", staticmethod(_spy)
+        ):
+            tool.execute_sql("SELECT 1 AS val")
+
+        assert seen, "read-only mode must mark the transaction read-only"
+
+    def test_unsupported_backend_falls_back_without_raising(self):
+        """SQLite rejects SET TRANSACTION READ ONLY; the query must still run."""
+        tool = _make_tool(allow_dml=False)
+        result = tool.execute_sql("SELECT 1 AS val")
+        assert result == [{"val": 1}]
+
+    def test_dml_mode_does_not_mark_transaction_read_only(self):
+        tool = _make_tool(allow_dml=True)
+        seen: list[bool] = []
+
+        def _spy(session):
+            seen.append(True)
+
+        with patch.object(NL2SQLTool, "_enforce_read_only_transaction", staticmethod(_spy)):
+            tool.execute_sql("SELECT 1 AS val")
+
+        assert not seen

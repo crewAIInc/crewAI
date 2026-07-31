@@ -60,64 +60,54 @@ _WRITE_COMMANDS = {
 }
 
 
-# Subset of write commands that can realistically appear *inside* a CTE body.
-# Narrower than _WRITE_COMMANDS to avoid false positives on identifiers like
-# ``comment``, ``set``, or ``reset`` which are common column/table names.
-_CTE_WRITE_INDICATORS = {
-    "INSERT",
-    "UPDATE",
-    "DELETE",
-    "DROP",
-    "ALTER",
-    "CREATE",
-    "TRUNCATE",
-    "MERGE",
+# Keywords that may legitimately open a CTE body in read-only mode. This is an
+# allowlist rather than a write-command denylist: anything unrecognised at the
+# head of a CTE body is treated as a write and blocked, so a dialect keyword we
+# have not enumerated cannot slip through (see _validate_cte_statement).
+_CTE_READ_ONLY_LEADS = _READ_ONLY_COMMANDS | {
+    "VALUES",
+    "TABLE",
+    "WITH",
+    "SEARCH",
+    "CYCLE",
 }
 
 
-_AS_PAREN_RE = re.compile(r"\bAS\s*\(", re.IGNORECASE)
+# ``AS (`` optionally preceded by PostgreSQL's [NOT] MATERIALIZED modifier.
+# Without the modifier branch, ``WITH d AS MATERIALIZED (DELETE …)`` parses as
+# having no CTE body at all and skips validation entirely.
+_AS_PAREN_RE = re.compile(
+    r"\bAS\s+(?:NOT\s+)?MATERIALIZED\s*\(|\bAS\s*\(", re.IGNORECASE
+)
+
+# MySQL runs the body of a version-gated comment (``/*!40001 … */``) as real
+# SQL, so those must not be masked away as inert comment text.
+_MYSQL_EXEC_COMMENT_PREFIX = "/*!"
+
+# PostgreSQL dollar-quoted string delimiters: $$ … $$ or $tag$ … $tag$.
+_DOLLAR_QUOTE_RE = re.compile(r"\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$")
+
+# Server-side file writes reachable from a plain SELECT, which no amount of
+# transaction-level read-only enforcement prevents.
+_FILE_SINK_RE = re.compile(r"\bINTO\s+(?:OUTFILE|DUMPFILE)\b", re.IGNORECASE)
+
+# Functions that read or write the database server's filesystem, or open a new
+# connection that escapes the current (read-only) transaction. Callable from a
+# SELECT, so the first-keyword check never sees them.
+_SERVER_FILE_FUNC_RE = re.compile(
+    r"\b(?:pg_read_file|pg_read_binary_file|pg_ls_dir|pg_stat_file|pg_logdir_ls"
+    r"|lo_import|lo_export|load_file|dblink|dblink_exec|dblink_send_query)\s*\(",
+    re.IGNORECASE,
+)
 
 
-def _iter_as_paren_matches(stmt: str) -> Iterator[re.Match[str]]:
-    """Yield regex matches for ``AS\\s*(`` outside of string literals."""
-    in_string: set[int] = set()
-    i = 0
-    while i < len(stmt):
-        if stmt[i] == "'":
-            start = i
-            end = _skip_string_literal(stmt, i)
-            in_string.update(range(start, end))
-            i = end
-        else:
-            i += 1
+def _skip_quoted(stmt: str, pos: int) -> int:
+    """Skip past the quoted run starting at *pos*.
 
-    for m in _AS_PAREN_RE.finditer(stmt):
-        if m.start() not in in_string:
-            yield m
-
-
-def _detect_writable_cte(stmt: str) -> str | None:
-    """Return the first write command inside a CTE body, or None.
-
-    Instead of tokenizing the whole statement (which falsely matches column
-    names like ``comment``), this walks through parenthesized CTE bodies and
-    checks only the *first keyword after* an opening ``AS (`` for a write
-    command.  Uses a regex to handle any whitespace (spaces, tabs, newlines)
-    between ``AS`` and ``(``.  Skips matches inside string literals.
-    """
-    for m in _iter_as_paren_matches(stmt):
-        body = stmt[m.end() :].lstrip()
-        first_word = body.split()[0].upper().strip("()") if body.split() else ""
-        if first_word in _CTE_WRITE_INDICATORS:
-            return first_word
-    return None
-
-
-def _skip_string_literal(stmt: str, pos: int) -> int:
-    """Skip past a string literal starting at pos (single-quoted).
-
-    Handles escaped quotes ('') inside the literal.
-    Returns the index after the closing quote.
+    Handles single-quoted literals, double-quoted identifiers (or strings under
+    ANSI_QUOTES) and MySQL backtick identifiers, including the doubled-delimiter
+    escape (``''``). Returns the index just past the closing delimiter, or the
+    end of the string when the run is unterminated.
     """
     quote_char = stmt[pos]
     i = pos + 1
@@ -131,15 +121,142 @@ def _skip_string_literal(stmt: str, pos: int) -> int:
     return i  # Unterminated literal — return end
 
 
-def _find_matching_close_paren(stmt: str, start: int) -> int:
-    """Find the matching close paren, skipping string literals."""
+# Kept as an alias because the single-quote case is the one callers reason about.
+_skip_string_literal = _skip_quoted
+
+
+def _mask_inert_spans(stmt: str) -> str:
+    """Blank out quoted runs and comments, preserving every character offset.
+
+    Analysis runs over the mask so that keywords hidden inside strings are not
+    matched, and keywords hidden *behind* comments are. Offsets are preserved so
+    a match found in the mask can be sliced out of the original statement.
+
+    MySQL executable comments (``/*! … */``) are deliberately left visible: the
+    server executes their contents, so the validator must see them too.
+
+    Args:
+        stmt: The SQL statement to mask.
+
+    Returns:
+        A same-length copy of *stmt* with inert spans replaced by spaces.
+    """
+    out = list(stmt)
+    n = len(stmt)
+    i = 0
+
+    def blank(start: int, end: int) -> None:
+        for k in range(start, min(end, n)):
+            if out[k] != "\n":  # keep line structure for "--" comment scanning
+                out[k] = " "
+
+    while i < n:
+        ch = stmt[i]
+        if stmt.startswith("--", i):
+            end = stmt.find("\n", i)
+            end = n if end == -1 else end
+            blank(i, end)
+            i = end
+        elif stmt.startswith("/*", i) and not stmt.startswith(
+            _MYSQL_EXEC_COMMENT_PREFIX, i
+        ):
+            depth = 1
+            j = i + 2
+            while j < n and depth > 0:
+                if stmt.startswith("/*", j):
+                    depth += 1
+                    j += 2
+                elif stmt.startswith("*/", j):
+                    depth -= 1
+                    j += 2
+                else:
+                    j += 1
+            blank(i, j)
+            i = j
+        elif ch in ("'", '"', "`"):
+            end = _skip_quoted(stmt, i)
+            blank(i, end)
+            i = end
+        elif ch == "$" and (m := _DOLLAR_QUOTE_RE.match(stmt, i)):
+            tag = m.group(0)
+            close = stmt.find(tag, m.end())
+            end = n if close == -1 else close + len(tag)
+            blank(i, end)
+            i = end
+        else:
+            i += 1
+
+    return "".join(out)
+
+
+def _split_statements(sql_query: str) -> list[str]:
+    """Split *sql_query* on semicolons that are not inside a string or comment.
+
+    A naive ``str.split(";")`` both rejects legitimate queries containing a
+    semicolon in a literal and miscounts statements when one is hidden in a
+    comment.
+    """
+    masked = _mask_inert_spans(sql_query)
+    statements: list[str] = []
+    start = 0
+    for i, ch in enumerate(masked):
+        if ch == ";":
+            chunk = sql_query[start:i].strip()
+            if chunk:
+                statements.append(chunk)
+            start = i + 1
+    tail = sql_query[start:].strip()
+    if tail:
+        statements.append(tail)
+    return statements
+
+
+def _iter_as_paren_matches(masked: str) -> Iterator[re.Match[str]]:
+    """Yield ``AS (`` matches over an already-masked statement."""
+    return _AS_PAREN_RE.finditer(masked)
+
+
+def _first_keyword(text_: str) -> str:
+    """Return the leading SQL keyword of *text_*, uppercased."""
+    tokens = text_.split()
+    if not tokens:
+        return ""
+    return tokens[0].upper().strip("()").rstrip(";")
+
+
+def _iter_cte_bodies(masked: str) -> Iterator[str]:
+    """Yield the leading keyword of each top-level CTE body in *masked*.
+
+    Matches nested inside a body already consumed are skipped, so a subquery
+    that itself contains ``AS (`` does not shift the outer parse.
+    """
+    consumed_until = 0
+    for m in _iter_as_paren_matches(masked):
+        if m.start() < consumed_until:
+            continue
+        consumed_until = _find_matching_close_paren(masked, m.end())
+        yield _first_keyword(masked[m.end() :])
+
+
+def _detect_writable_cte(stmt: str) -> str | None:
+    """Return the first non-read-only keyword opening a CTE body, or None.
+
+    Kept for backwards compatibility with callers that only need a yes/no
+    answer; :func:`_validate_cte_statement` is the enforcing path.
+    """
+    masked = _mask_inert_spans(stmt)
+    for lead in _iter_cte_bodies(masked):
+        if lead and lead not in _CTE_READ_ONLY_LEADS:
+            return lead
+    return None
+
+
+def _find_matching_close_paren(masked: str, start: int) -> int:
+    """Find the matching close paren in an already-masked statement."""
     depth = 1
     i = start
-    while i < len(stmt) and depth > 0:
-        ch = stmt[i]
-        if ch == "'":
-            i = _skip_string_literal(stmt, i)
-            continue
+    while i < len(masked) and depth > 0:
+        ch = masked[i]
         if ch == "(":
             depth += 1
         elif ch == ")":
@@ -153,14 +270,21 @@ def _extract_main_query_after_cte(stmt: str) -> str | None:
 
     For ``WITH cte AS (SELECT 1) DELETE FROM users``, returns ``DELETE FROM users``.
     Returns None if no main query is found after the last CTE body.
-    Handles parentheses inside string literals (e.g., ``SELECT '(' FROM t``).
     """
+    masked = _mask_inert_spans(stmt)
+    return _extract_main_query_from_masked(masked)
+
+
+def _extract_main_query_from_masked(masked: str) -> str | None:
+    """Same as :func:`_extract_main_query_after_cte` for pre-masked input."""
     last_cte_end = 0
-    for m in _iter_as_paren_matches(stmt):
-        last_cte_end = _find_matching_close_paren(stmt, m.end())
+    for m in _iter_as_paren_matches(masked):
+        if m.start() < last_cte_end:
+            continue
+        last_cte_end = _find_matching_close_paren(masked, m.end())
 
     if last_cte_end > 0:
-        remainder = stmt[last_cte_end:].strip().lstrip(",").strip()
+        remainder = masked[last_cte_end:].strip().lstrip(",").strip()
         if remainder:
             return remainder
     return None
@@ -170,9 +294,14 @@ def _resolve_explain_command(stmt: str) -> str | None:
     """Resolve the underlying command from an EXPLAIN [ANALYZE] [VERBOSE] statement.
 
     Returns the real command (e.g., 'DELETE') if ANALYZE is present, else None.
-    Handles both space-separated and parenthesized syntax.
+    Handles both space-separated and parenthesized syntax. Comments are masked
+    first, so ``EXPLAIN /*x*/ ANALYZE DELETE …`` resolves to ``DELETE`` rather
+    than stalling on the comment token.
     """
-    rest = stmt.strip()[len("EXPLAIN") :].strip()
+    masked = _mask_inert_spans(stmt).strip()
+    if not masked.upper().startswith("EXPLAIN"):
+        return None
+    rest = masked[len("EXPLAIN") :].strip()
     if not rest:
         return None
 
@@ -188,16 +317,21 @@ def _resolve_explain_command(stmt: str) -> str | None:
             )
             rest = rest[close + 1 :].strip()
     else:
-        while rest:
-            first_opt = rest.split()[0].upper().rstrip(";") if rest.split() else ""
-            if first_opt in ("ANALYZE", "ANALYSE"):
+        # Consume option tokens one at a time. Slicing by token *length* would
+        # desynchronise whenever the raw token differs from its normalised form.
+        tokens = rest.split()
+        consumed = 0
+        for token in tokens:
+            normalised = token.upper().rstrip(";")
+            if normalised in ("ANALYZE", "ANALYSE"):
                 analyze_found = True
-            if first_opt not in explain_opts:
+            if normalised not in explain_opts:
                 break
-            rest = rest[len(first_opt) :].strip()
+            consumed += 1
+        rest = " ".join(tokens[consumed:])
 
     if analyze_found and rest:
-        return rest.split()[0].upper().rstrip(";")
+        return _first_keyword(rest)
     return None
 
 
@@ -217,9 +351,25 @@ class NL2SQLTool(BaseTool):
     blocked unless ``allow_dml=True`` is set explicitly or the environment
     variable ``CREWAI_NL2SQL_ALLOW_DML=true`` is present.
 
-    Writable CTEs (``WITH d AS (DELETE …) SELECT …``) and
-    ``EXPLAIN ANALYZE <write-stmt>`` are treated as write operations and are
-    blocked in read-only mode.
+    Writable CTEs (``WITH d AS (DELETE …) SELECT …``, including the
+    ``AS [NOT] MATERIALIZED`` spelling) and ``EXPLAIN ANALYZE <write-stmt>`` are
+    treated as write operations and are blocked in read-only mode. Statements
+    are analysed with strings and comments masked out, so neither a keyword
+    hidden in a literal nor a comment inserted between keywords changes the
+    verdict, and a ``WITH`` statement that cannot be parsed is rejected rather
+    than allowed.
+
+    In read-only mode the transaction is additionally marked
+    ``SET TRANSACTION READ ONLY`` where the backend supports it, so enforcement
+    does not rest on statement parsing alone.
+
+    .. warning::
+       Keyword validation cannot fully express "read-only": a SELECT can still
+       reach the database server's filesystem (``INTO OUTFILE``,
+       ``pg_read_file``) or invoke a side-effecting function. The known sinks
+       are blocked explicitly, but the only complete control is to point
+       ``db_uri`` at a **least-privileged, read-only database role**. Treat the
+       checks in this class as defence in depth, not as a substitute.
 
     The ``_fetch_all_available_columns`` helper uses parameterised queries so
     that table names coming from the database catalogue cannot be used as an
@@ -299,7 +449,7 @@ class NL2SQLTool(BaseTool):
         style bypasses.  When ``allow_dml=True`` every statement is checked and
         a warning is emitted for write operations.
         """
-        statements = [s.strip() for s in sql_query.split(";") if s.strip()]
+        statements = _split_statements(sql_query)
 
         if not statements:
             raise ValueError("NL2SQLTool received an empty SQL query.")
@@ -315,13 +465,18 @@ class NL2SQLTool(BaseTool):
 
     def _validate_statement(self, stmt: str) -> None:
         """Validate a single SQL statement (no semicolons)."""
+        masked = _mask_inert_spans(stmt)
         command = self._extract_command(stmt)
 
+        # Some writes are reachable from a statement whose first keyword is
+        # SELECT, so they are invisible to the command check below and survive a
+        # transaction-level rollback. Check them before anything else.
+        self._reject_select_level_side_effects(masked)
+
         # EXPLAIN ANALYZE / EXPLAIN ANALYSE actually *executes* the underlying
-        # query.  Resolve the real command so write operations are caught.
-        # parenthesized ("EXPLAIN (ANALYZE) DELETE …", "EXPLAIN (ANALYZE, VERBOSE) DELETE …").
-        # EXPLAIN ANALYZE actually executes the underlying query — resolve the
-        # real command so write operations are caught.
+        # query, in both the space-separated and parenthesized spellings
+        # ("EXPLAIN (ANALYZE) DELETE …"). Resolve the real command so write
+        # operations are caught.
         if command == "EXPLAIN":
             resolved = _resolve_explain_command(stmt)
             if resolved:
@@ -329,44 +484,7 @@ class NL2SQLTool(BaseTool):
 
         # (e.g. WITH d AS (DELETE …) SELECT …) must be blocked in read-only mode.
         if command == "WITH":
-            write_found = _detect_writable_cte(stmt)
-            if write_found:
-                found = write_found
-                if not self.allow_dml:
-                    raise ValueError(
-                        f"NL2SQLTool is configured in read-only mode and blocked a "
-                        f"writable CTE containing a '{found}' statement. To allow "
-                        f"write operations set allow_dml=True or "
-                        f"CREWAI_NL2SQL_ALLOW_DML=true."
-                    )
-                logger.warning(
-                    "NL2SQLTool: executing writable CTE with '%s' because allow_dml=True.",
-                    found,
-                )
-                return
-
-            main_query = _extract_main_query_after_cte(stmt)
-            if main_query:
-                main_cmd = main_query.split()[0].upper().rstrip(";")
-                if main_cmd in _WRITE_COMMANDS:
-                    if not self.allow_dml:
-                        raise ValueError(
-                            f"NL2SQLTool is configured in read-only mode and blocked a "
-                            f"'{main_cmd}' statement after a CTE. To allow write "
-                            f"operations set allow_dml=True or "
-                            f"CREWAI_NL2SQL_ALLOW_DML=true."
-                        )
-                    logger.warning(
-                        "NL2SQLTool: executing '%s' after CTE because allow_dml=True.",
-                        main_cmd,
-                    )
-                elif main_cmd not in _READ_ONLY_COMMANDS:
-                    if not self.allow_dml:
-                        raise ValueError(
-                            f"NL2SQLTool blocked an unrecognised SQL command '{main_cmd}' "
-                            f"after a CTE. Only {sorted(_READ_ONLY_COMMANDS)} are allowed "
-                            f"in read-only mode."
-                        )
+            self._validate_cte_statement(masked)
             return
 
         if command in _WRITE_COMMANDS:
@@ -389,12 +507,121 @@ class NL2SQLTool(BaseTool):
                     f"mode."
                 )
 
+    def _reject_select_level_side_effects(self, masked: str) -> None:
+        """Block writes and server-file access that a SELECT can reach.
+
+        ``SELECT … INTO OUTFILE`` writes a file on the database server, and
+        functions like ``pg_read_file`` or ``dblink_exec`` read the server's
+        filesystem or open a connection outside the current transaction. None of
+        these are undone by a rollback, and all of them present as a read-only
+        first keyword, so they need an explicit check.
+
+        These checks are a backstop, not the primary control: only a
+        least-privileged database role can properly bound what the tool reaches.
+
+        Args:
+            masked: The statement with strings and comments already masked.
+
+        Raises:
+            ValueError: If a file sink or server-file function is present and
+                ``allow_dml`` is False.
+        """
+        if self.allow_dml:
+            return
+
+        if _FILE_SINK_RE.search(masked):
+            raise ValueError(
+                "NL2SQLTool is configured in read-only mode and blocked a query "
+                "writing to the database server's filesystem (INTO OUTFILE / "
+                "INTO DUMPFILE). Grant the tool a read-only database role rather "
+                "than enabling allow_dml."
+            )
+
+        if match := _SERVER_FILE_FUNC_RE.search(masked):
+            raise ValueError(
+                f"NL2SQLTool is configured in read-only mode and blocked a call to "
+                f"'{match.group(0).rstrip('( ')}', which reaches the database "
+                f"server's filesystem or opens a connection outside the current "
+                f"transaction. Grant the tool a read-only database role rather "
+                f"than enabling allow_dml."
+            )
+
+    def _validate_cte_statement(self, masked: str) -> None:
+        """Validate a statement whose first keyword is ``WITH``.
+
+        Fails closed: a ``WITH`` statement whose CTE bodies cannot be located, or
+        which has no query after them, is rejected in read-only mode rather than
+        passed through unchecked.
+
+        Args:
+            masked: The statement with strings and comments already masked.
+
+        Raises:
+            ValueError: If the statement writes, or cannot be parsed, while
+                ``allow_dml`` is False.
+        """
+        leads = list(_iter_cte_bodies(masked))
+
+        if not leads:
+            if not self.allow_dml:
+                raise ValueError(
+                    "NL2SQLTool blocked a WITH statement whose CTE definitions "
+                    "could not be parsed, so it cannot be confirmed read-only. "
+                    "To allow write operations set allow_dml=True or "
+                    "CREWAI_NL2SQL_ALLOW_DML=true."
+                )
+            return
+
+        for lead in leads:
+            if lead and lead not in _CTE_READ_ONLY_LEADS:
+                if not self.allow_dml:
+                    raise ValueError(
+                        f"NL2SQLTool is configured in read-only mode and blocked a "
+                        f"writable CTE containing a '{lead}' statement. To allow "
+                        f"write operations set allow_dml=True or "
+                        f"CREWAI_NL2SQL_ALLOW_DML=true."
+                    )
+                logger.warning(
+                    "NL2SQLTool: executing writable CTE with '%s' because allow_dml=True.",
+                    lead,
+                )
+                return
+
+        main_query = _extract_main_query_from_masked(masked)
+        if main_query is None:
+            if not self.allow_dml:
+                raise ValueError(
+                    "NL2SQLTool blocked a WITH statement with no query after its "
+                    "CTE definitions, so it cannot be confirmed read-only. To "
+                    "allow write operations set allow_dml=True or "
+                    "CREWAI_NL2SQL_ALLOW_DML=true."
+                )
+            return
+
+        main_cmd = _first_keyword(main_query)
+        if main_cmd in _WRITE_COMMANDS:
+            if not self.allow_dml:
+                raise ValueError(
+                    f"NL2SQLTool is configured in read-only mode and blocked a "
+                    f"'{main_cmd}' statement after a CTE. To allow write "
+                    f"operations set allow_dml=True or "
+                    f"CREWAI_NL2SQL_ALLOW_DML=true."
+                )
+            logger.warning(
+                "NL2SQLTool: executing '%s' after CTE because allow_dml=True.",
+                main_cmd,
+            )
+        elif main_cmd not in _READ_ONLY_COMMANDS and not self.allow_dml:
+            raise ValueError(
+                f"NL2SQLTool blocked an unrecognised SQL command '{main_cmd}' "
+                f"after a CTE. Only {sorted(_READ_ONLY_COMMANDS)} are allowed "
+                f"in read-only mode."
+            )
+
     @staticmethod
     def _extract_command(sql_query: str) -> str:
         """Return the uppercased first keyword of *sql_query*."""
-        stripped = sql_query.strip().lstrip("(")
-        first_token = stripped.split()[0] if stripped.split() else ""
-        return first_token.upper().rstrip(";")
+        return _first_keyword(_mask_inert_spans(sql_query).strip())
 
     # Schema introspection helpers
 
@@ -458,7 +685,7 @@ class NL2SQLTool(BaseTool):
 
         # Check ALL statements so that e.g. "SELECT 1; DROP TABLE t" triggers a
         # commit when allow_dml=True, regardless of statement order.
-        _stmts = [s.strip() for s in sql_query.split(";") if s.strip()]
+        _stmts = _split_statements(sql_query)
 
         def _is_write_stmt(s: str) -> bool:
             cmd = self._extract_command(s)
@@ -474,7 +701,7 @@ class NL2SQLTool(BaseTool):
                     return True
                 main_q = _extract_main_query_after_cte(s)
                 if main_q:
-                    return main_q.split()[0].upper().rstrip(";") in _WRITE_COMMANDS
+                    return _first_keyword(main_q) in _WRITE_COMMANDS
             return False
 
         is_write = any(_is_write_stmt(s) for s in _stmts)
@@ -483,6 +710,9 @@ class NL2SQLTool(BaseTool):
         Session = sessionmaker(bind=engine)  # noqa: N806
         session = Session()
         try:
+            if not self.allow_dml:
+                self._enforce_read_only_transaction(session)
+
             result = session.execute(text(sql_query), params or {})
 
             if self.allow_dml and is_write:
@@ -501,3 +731,32 @@ class NL2SQLTool(BaseTool):
 
         finally:
             session.close()
+
+    @staticmethod
+    def _enforce_read_only_transaction(session: Any) -> None:
+        """Ask the backend to enforce read-only for this transaction.
+
+        Statement inspection alone cannot guarantee a query is read-only — SQL
+        is dialect-specific and the parser here is deliberately simple. Marking
+        the transaction read-only moves enforcement into the database, where
+        PostgreSQL and MySQL reject writes outright regardless of how the
+        statement was spelled.
+
+        Backends without the syntax (SQLite, SQL Server, Snowflake) raise, in
+        which case the transaction is rolled back to clear the error state and
+        keyword validation remains the only control. That is logged rather than
+        raised so those backends keep working.
+
+        Args:
+            session: The active SQLAlchemy session.
+        """
+        try:
+            session.execute(text("SET TRANSACTION READ ONLY"))
+        except Exception as exc:
+            session.rollback()
+            logger.debug(
+                "NL2SQLTool: backend rejected 'SET TRANSACTION READ ONLY' (%s); "
+                "falling back to statement validation only. A read-only "
+                "database role is strongly recommended.",
+                exc,
+            )
