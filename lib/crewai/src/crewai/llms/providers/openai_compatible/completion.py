@@ -90,7 +90,7 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         api_key_required=True,
     ),
     "monet": ProviderConfig(
-        base_url="https://beta.monet.gg/api/v1",
+        base_url="https://monet.gg/api/v1",
         api_key_env="MONET_ACCESS_TOKEN",
         base_url_env="MONET_BASE_URL",
         api_key_required=True,
