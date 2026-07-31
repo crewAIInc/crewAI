@@ -89,7 +89,7 @@ class TestFileToolWriteAction:
         )
 
         mock_sandbox.commands.run.assert_called_once_with(
-            "mkdir -p parent", timeout=120
+            "mkdir -p -- parent", timeout=120
         )
 
         assert mock_sandbox.files.write.call_args.args == (
@@ -243,35 +243,46 @@ class TestFileToolDeleteAction:
         mock_sandbox.commands.run.assert_called_once()
         assert (
             mock_sandbox.commands.run.call_args.args[0]
-            == f"rm -r {shlex.quote(file_path)}"
+            == f"rm -r -- {shlex.quote(file_path)}"
         )
 
     @pytest.mark.parametrize(
-        "path,expect_error",
+        "path",
         [
-            ("/", True),
-            ("/usr", True),
-            ("/etc", True),
-            ("/app", True),
-            ("/app/some-path", False),
-        ]
+            "/",
+            "/usr",
+            "/etc",
+            "/app",
+            "/app/some-path",
+            "..",
+            "../outside",
+            "parent/../../outside",
+        ],
     )
-    def test_delete_root_error(
+    def test_delete_outside_working_dir_error(
         self,
         k8s_file_tool,
         mock_sandbox,
         path,
-        expect_error,
     ):
         mock_sandbox.commands.run.return_value = ExecutionResult(
             exit_code=0, stdout="", stderr=""
         )
 
-        if expect_error:
-          with pytest.raises(RuntimeError, match="cannot be deleted"):
-              k8s_file_tool.run(action="delete", path=path)
-        else:
-              k8s_file_tool.run(action="delete", path=path)
+        with pytest.raises(ValueError, match="working directory"):
+            k8s_file_tool.run(action="delete", path=path)
+
+        mock_sandbox.commands.run.assert_not_called()
+
+    def test_delete_working_dir_itself_error(self, k8s_file_tool, mock_sandbox):
+        mock_sandbox.commands.run.return_value = ExecutionResult(
+            exit_code=0, stdout="", stderr=""
+        )
+
+        with pytest.raises(RuntimeError, match="Invalid path"):
+            k8s_file_tool.run(action="delete", path=".")
+
+        mock_sandbox.commands.run.assert_not_called()
 
 
 class TestFileToolMkdirAction:
@@ -288,9 +299,38 @@ class TestFileToolMkdirAction:
         )
 
         mock_sandbox.commands.run.assert_called_once_with(
-            f"mkdir -p {shlex.quote('parent/subfolder')}",
+            f"mkdir -p -- {shlex.quote('parent/subfolder')}",
             timeout=120,
         )
+
+
+class TestFileToolPathValidation:
+    @pytest.mark.parametrize(
+        "action", ["read", "write", "append", "list", "delete", "mkdir", "exists"]
+    )
+    @pytest.mark.parametrize("path", ["/etc/passwd", "../outside.txt", ""])
+    def test_path_must_stay_in_working_dir(
+        self, k8s_file_tool, mock_sandbox, action, path
+    ):
+        with pytest.raises(ValueError, match="working directory|cannot be empty"):
+            k8s_file_tool.run(action=action, path=path, content="some content")
+
+        mock_sandbox.commands.run.assert_not_called()
+        mock_sandbox.files.write.assert_not_called()
+        mock_sandbox.files.read.assert_not_called()
+
+    @pytest.mark.parametrize("action", ["delete", "mkdir"])
+    def test_dash_prefixed_path_is_not_parsed_as_option(
+        self, k8s_file_tool, mock_sandbox, action
+    ):
+        mock_sandbox.commands.run.return_value = ExecutionResult(
+            exit_code=0, stdout="", stderr=""
+        )
+
+        k8s_file_tool.run(action=action, path="-rf")
+
+        command = mock_sandbox.commands.run.call_args.args[0]
+        assert command.endswith("-- -rf")
 
 
 class TestFileToolExistsAction:

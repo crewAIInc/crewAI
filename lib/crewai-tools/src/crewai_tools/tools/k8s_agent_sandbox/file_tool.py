@@ -13,6 +13,7 @@ import uuid
 from pydantic import (
     Field,
     BaseModel,
+    field_validator,
     model_validator,
 )
 
@@ -74,6 +75,29 @@ class K8sAgentSandboxFileToolSchema(BaseModel):
         default=DEFAULT_TOOL_TIMEOUT_SEC,
         description="Maximum seconds to wait for the action to finish.",
     )
+
+    @field_validator("path")
+    @classmethod
+    def _validate_path(cls, path: str) -> str:
+        """Keep every action confined to the sandbox's working directory.
+
+        ``sandbox.files`` sanitizes paths on its own, but the shell-backed
+        actions ('delete', 'mkdir', and the redirect used by 'append') would
+        otherwise honour absolute paths and ``..`` segments.
+        """
+        if not path.strip():
+            raise ValueError("path cannot be empty.")
+
+        if posixpath.isabs(path):
+            raise ValueError(
+                f"path '{path}' must be relative to the sandbox's working directory."
+            )
+
+        normalized = posixpath.normpath(path)
+        if normalized == ".." or normalized.startswith("../"):
+            raise ValueError(f"path '{path}' escapes the sandbox's working directory.")
+
+        return path
 
     @model_validator(mode="after")
     def _validate_action_args(self) -> "K8sAgentSandboxFileToolSchema":
@@ -299,7 +323,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
         if posixpath.dirname(path) == "/":
             raise RuntimeError(f"The path {path} cannot be deleted.")
 
-        command = f"rm -r {shlex.quote(path)}"
+        command = f"rm -r -- {shlex.quote(path)}"
         try:
             result = sandbox.commands.run(command, timeout=timeout)
         except Exception as e:
@@ -317,7 +341,7 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
     def _mkdir(self, sandbox: "Sandbox", path: str, *, timeout: int):  # type: ignore[no-any-unimported,no-untyped-def]
         try:
             result = sandbox.commands.run(
-                f"mkdir -p {shlex.quote(path)}",
+                f"mkdir -p -- {shlex.quote(path)}",
                 timeout=timeout,
             )
         except Exception as e:
