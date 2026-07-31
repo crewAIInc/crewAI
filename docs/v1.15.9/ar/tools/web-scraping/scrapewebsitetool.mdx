@@ -1,0 +1,48 @@
+---
+title: استخراج الموقع
+description: أداة `ScrapeWebsiteTool` مصممة لاستخراج وقراءة محتوى موقع محدد.
+icon: magnifying-glass-location
+mode: "wide"
+---
+
+# `ScrapeWebsiteTool`
+
+<Note>
+    لا نزال نعمل على تحسين الأدوات، لذا قد يحدث سلوك غير متوقع أو تغييرات في المستقبل.
+</Note>
+
+## الوصف
+
+أداة مصممة لاستخراج وقراءة محتوى موقع محدد. قادرة على التعامل مع أنواع مختلفة من صفحات الويب عن طريق إجراء طلبات HTTP وتحليل محتوى HTML المستلم.
+يمكن أن تكون هذه الأداة مفيدة بشكل خاص لمهام استخراج البيانات من الويب وجمع البيانات أو استخراج معلومات محددة من المواقع.
+
+## التثبيت
+
+ثبّت حزمة crewai_tools
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## مثال
+
+```python
+from crewai_tools import ScrapeWebsiteTool
+
+# To enable scrapping any website it finds during it's execution
+tool = ScrapeWebsiteTool()
+
+# Initialize the tool with the website URL,
+# so the agent can only scrap the content of the specified website
+tool = ScrapeWebsiteTool(website_url='https://www.example.com')
+
+# Extract the text from the site
+text = tool.run()
+print(text)
+```
+
+## المعاملات
+
+| المعامل       | النوع     | الوصف                                                                                                                         |
+|:---------------|:---------|:-------------------------------------------------------------------------------------------------------------------------------------|
+| **website_url**  | `string`   | **إلزامي** عنوان URL للموقع لقراءة الملف. هذا هو المدخل الأساسي للأداة، يحدد محتوى أي موقع يجب استخراجه وقراءته.                                                |
