@@ -131,8 +131,8 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - hosted_vllm: vLLM server (https://github.com/vllm-project/vllm)
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
-        - monet: Monet (https://monet.gg) — routes inference through an end
-          user's own ChatGPT or Claude subscription instead of an API key
+        - monet: Monet (https://monet.gg) — routes inference through an end-user's
+          own ChatGPT or Claude subscription instead of an API key
 
     Example:
         # Using provider prefix
