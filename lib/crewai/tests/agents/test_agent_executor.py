@@ -1266,7 +1266,7 @@ class TestNativeToolExecution:
         ]
 
         started = time.perf_counter()
-        result = executor.execute_native_tool()
+        result = asyncio.run(executor.execute_native_tool())
         elapsed = time.perf_counter() - started
 
         assert result == "native_tool_completed"
@@ -1309,7 +1309,7 @@ class TestNativeToolExecution:
         ]
 
         started = time.perf_counter()
-        result = executor.execute_native_tool()
+        result = asyncio.run(executor.execute_native_tool())
         elapsed = time.perf_counter() - started
 
         assert result == "tool_result_is_final"
@@ -1354,7 +1354,7 @@ class TestNativeToolExecution:
         ]
 
         started = time.perf_counter()
-        result = executor.execute_native_tool()
+        result = asyncio.run(executor.execute_native_tool())
         elapsed = time.perf_counter() - started
 
         assert result == "tool_result_is_final"
