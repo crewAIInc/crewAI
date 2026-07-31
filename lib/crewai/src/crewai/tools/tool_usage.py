@@ -23,6 +23,13 @@ from crewai.events.types.tool_usage_events import (
 )
 from crewai.telemetry.telemetry import Telemetry
 from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.tools.tool_failure import (
+    ToolFailure,
+    ToolFailureReason,
+    detect_tool_failure,
+    failure_from_exception,
+    reportable_failure,
+)
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities.agent_utils import (
     get_tool_names,
@@ -36,6 +43,7 @@ from crewai.utilities.string_utils import sanitize_tool_name
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.agents.tools_handler import ToolsHandler
+    from crewai.crew import Crew
     from crewai.lite_agent import LiteAgent
     from crewai.llm import LLM
     from crewai.task import Task
@@ -95,6 +103,7 @@ class ToolUsage:
         agent: BaseAgent | LiteAgent | None = None,
         action: Any = None,
         fingerprint_context: dict[str, str] | None = None,
+        crew: Crew | None = None,
     ) -> None:
         self._telemetry: Telemetry = Telemetry()
         self._run_attempts: int = 1
@@ -109,7 +118,14 @@ class ToolUsage:
         self.action = action
         self.function_calling_llm = function_calling_llm
         self.fingerprint_context = fingerprint_context or {}
+        self.crew = crew
         self.last_raw_result: Any = _RAW_RESULT_UNSET
+        self.last_failure: ToolFailure | None = None
+        """Failure reported by the most recent call, if any.
+
+        Covers both tool-returned failures and framework-generated ones (a
+        stringified exception, a spent usage limit).
+        """
 
         if (
             self.function_calling_llm
