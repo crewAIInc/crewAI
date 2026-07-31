@@ -98,7 +98,7 @@ class TestProviderRegistry:
     def test_monet_config(self):
         """Test Monet provider configuration."""
         config = OPENAI_COMPATIBLE_PROVIDERS["monet"]
-        assert config.base_url == "https://beta.monet.gg/api/v1"
+        assert config.base_url == "https://monet.gg/api/v1"
         assert config.api_key_env == "MONET_ACCESS_TOKEN"
         assert config.base_url_env == "MONET_BASE_URL"
         assert config.api_key_required is True
@@ -291,7 +291,11 @@ class TestLLMIntegration:
             llm = LLM(model="monet/gpt-5.2")
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "monet"
-            assert llm.base_url == "https://beta.monet.gg/api/v1"
+            assert llm.base_url == "https://monet.gg/api/v1"
+            dynamic_llm = LLM(model="monet/future-model")
+            assert isinstance(dynamic_llm, OpenAICompatibleCompletion)
+            assert dynamic_llm.provider == "monet"
+            assert dynamic_llm.model == "future-model"
 
     def test_monet_base_url_override(self):
         """Test Monet honors MONET_BASE_URL for self-hosted deployments."""
