@@ -24,7 +24,25 @@ O `NL2SQLTool` opera em **modo somente leitura por padrão**. Apenas os seguinte
 
 Qualquer tentativa de executar uma operação de escrita (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `CREATE`, `ALTER`, `TRUNCATE`, etc.) resultará em erro, a menos que o DML seja habilitado explicitamente.
 
-Consultas com múltiplas instruções contendo ponto e vírgula (ex.: `SELECT 1; DROP TABLE users`) também são bloqueadas no modo somente leitura para prevenir ataques de injeção.
+O modo somente leitura também bloqueia os caminhos indiretos para uma escrita:
+
+| Bloqueado no modo somente leitura | Exemplo |
+| --- | --- |
+| Consultas com múltiplas instruções | `SELECT 1; DROP TABLE users` |
+| CTEs de escrita, incluindo a forma `MATERIALIZED` | `WITH d AS MATERIALIZED (DELETE FROM users RETURNING *) SELECT * FROM d` |
+| Uma escrita após uma CTE | `WITH d AS (SELECT 1) DELETE FROM users` |
+| `EXPLAIN ANALYZE`, que executa seu argumento | `EXPLAIN ANALYZE DELETE FROM users` |
+| Escrita no sistema de arquivos do servidor de banco de dados | `SELECT * FROM users INTO OUTFILE '/var/www/shell.php'` |
+| Funções que alcançam o sistema de arquivos do servidor ou abrem uma nova conexão | `SELECT pg_read_file('/etc/passwd')`, `dblink_exec(...)` |
+| Uma instrução `WITH` que não pode ser confirmada como somente leitura | `WITH d AS DELETE FROM users` |
+
+As instruções são analisadas com literais de texto e comentários mascarados, de modo que uma palavra-chave escondida em um literal não é confundida com um comando (`SELECT 'DROP TABLE users'` é permitido) e um comentário colocado entre palavras-chave não esconde nenhum (`EXPLAIN /*x*/ ANALYZE DELETE ...` é bloqueado). Um ponto e vírgula dentro de um literal não conta como separador de instruções, portanto `SELECT ';'` é uma única instrução válida.
+
+No modo somente leitura, a ferramenta também marca a transação como `SET TRANSACTION READ ONLY`, de forma que PostgreSQL e MySQL rejeitam escritas no próprio banco de dados, independentemente de como a instrução foi escrita. Backends sem essa sintaxe (SQLite, SQL Server, Snowflake) registram uma mensagem de depuração e voltam a depender apenas da validação de instruções — mais um motivo para confiar em um papel somente leitura em vez da análise textual.
+
+<Warning>
+As verificações internas de somente leitura são defesa em profundidade, não uma fronteira completa. Elas inspecionam o texto da instrução, e SQL é específico de cada banco: uma instrução que começa com `SELECT` ainda pode alcançar o sistema de arquivos do servidor (`SELECT ... INTO OUTFILE`, `pg_read_file()`) ou chamar uma função com efeitos colaterais. Os caminhos conhecidos são bloqueados explicitamente, mas o único controle completo são os privilégios concedidos em `db_uri`. **Aponte a ferramenta para um papel de banco de dados somente leitura e com privilégio mínimo.**
+</Warning>
 
 ### Habilitando Operações de Escrita
 

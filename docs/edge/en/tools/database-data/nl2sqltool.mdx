@@ -29,6 +29,10 @@ If you route untrusted input to agents using this tool, treat it as a high-risk 
 
 ## Hardening Recommendations
 
+<Warning>
+The built-in read-only checks are defence in depth, not a complete boundary. They inspect the statement text, and SQL is dialect-specific: a statement beginning with `SELECT` can still reach the database server's filesystem (`SELECT ... INTO OUTFILE`, `pg_read_file()`) or call a side-effecting function. The known sinks are blocked explicitly, but the only complete control is the privileges you grant in `db_uri`. **Point the tool at a least-privileged, read-only database role.**
+</Warning>
+
 Use all of the following in production:
 
 - Use a read-only database user whenever possible
@@ -49,7 +53,21 @@ Use all of the following in production:
 
 Any attempt to execute a write operation (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `CREATE`, `ALTER`, `TRUNCATE`, etc.) will raise an error unless DML is explicitly enabled.
 
-Multi-statement queries containing semicolons (e.g. `SELECT 1; DROP TABLE users`) are also blocked in read-only mode to prevent injection attacks.
+Read-only mode also blocks the indirect routes to a write:
+
+| Blocked in read-only mode | Example |
+| --- | --- |
+| Multi-statement queries | `SELECT 1; DROP TABLE users` |
+| Writable CTEs, including the materialised spelling | `WITH d AS MATERIALIZED (DELETE FROM users RETURNING *) SELECT * FROM d` |
+| A write following a CTE | `WITH d AS (SELECT 1) DELETE FROM users` |
+| `EXPLAIN ANALYZE`, which executes its argument | `EXPLAIN ANALYZE DELETE FROM users` |
+| Writes to the database server's filesystem | `SELECT * FROM users INTO OUTFILE '/var/www/shell.php'` |
+| Functions reaching the server's filesystem or opening a new connection | `SELECT pg_read_file('/etc/passwd')`, `dblink_exec(...)` |
+| A `WITH` statement that cannot be parsed as read-only | `WITH d AS DELETE FROM users` |
+
+Statements are analysed with string literals and comments masked out, so a keyword hidden in a literal is not mistaken for a command (`SELECT 'DROP TABLE users'` is allowed) and a comment placed between keywords does not hide one (`EXPLAIN /*x*/ ANALYZE DELETE ...` is blocked). A semicolon inside a string literal does not count as a statement separator, so `SELECT ';'` is a single valid statement.
+
+In read-only mode the tool additionally marks the transaction `SET TRANSACTION READ ONLY`, so PostgreSQL and MySQL reject writes at the database regardless of how the statement was spelled. Backends without that syntax (SQLite, SQL Server, Snowflake) log a debug message and fall back to statement validation alone — one more reason to rely on a read-only role rather than on parsing.
 
 ### Enabling Write Operations
 

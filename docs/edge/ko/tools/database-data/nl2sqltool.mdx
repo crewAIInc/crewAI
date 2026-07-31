@@ -24,7 +24,25 @@ mode: "wide"
 
 DML을 명시적으로 활성화하지 않으면 쓰기 작업(`INSERT`, `UPDATE`, `DELETE`, `DROP`, `CREATE`, `ALTER`, `TRUNCATE` 등)을 실행하려고 할 때 오류가 발생합니다.
 
-읽기 전용 모드에서는 세미콜론이 포함된 다중 구문 쿼리(예: `SELECT 1; DROP TABLE users`)도 인젝션 공격을 방지하기 위해 차단됩니다.
+읽기 전용 모드는 우회 경로를 통한 쓰기도 차단합니다:
+
+| 읽기 전용 모드에서 차단됨 | 예시 |
+| --- | --- |
+| 다중 구문 쿼리 | `SELECT 1; DROP TABLE users` |
+| 쓰기 CTE(`MATERIALIZED` 표기 포함) | `WITH d AS MATERIALIZED (DELETE FROM users RETURNING *) SELECT * FROM d` |
+| CTE 뒤에 오는 쓰기 작업 | `WITH d AS (SELECT 1) DELETE FROM users` |
+| 인자를 실제로 실행하는 `EXPLAIN ANALYZE` | `EXPLAIN ANALYZE DELETE FROM users` |
+| 데이터베이스 서버 파일시스템에 대한 쓰기 | `SELECT * FROM users INTO OUTFILE '/var/www/shell.php'` |
+| 서버 파일시스템에 접근하거나 새 연결을 여는 함수 | `SELECT pg_read_file('/etc/passwd')`, `dblink_exec(...)` |
+| 읽기 전용임을 확인할 수 없는 `WITH` 구문 | `WITH d AS DELETE FROM users` |
+
+구문은 문자열 리터럴과 주석을 가린 상태에서 분석됩니다. 따라서 리터럴 안에 숨은 키워드는 명령으로 오인되지 않고(`SELECT 'DROP TABLE users'`는 허용), 키워드 사이에 삽입된 주석이 명령을 숨기지도 못합니다(`EXPLAIN /*x*/ ANALYZE DELETE ...`는 차단). 문자열 리터럴 안의 세미콜론은 구문 구분자로 세지 않으므로 `SELECT ';'`는 유효한 단일 구문입니다.
+
+읽기 전용 모드에서는 트랜잭션에 `SET TRANSACTION READ ONLY`도 적용하므로, PostgreSQL과 MySQL은 구문 표기 방식과 무관하게 데이터베이스 차원에서 쓰기를 거부합니다. 해당 구문을 지원하지 않는 백엔드(SQLite, SQL Server, Snowflake)는 디버그 로그를 남기고 구문 검증에만 의존합니다. 파싱이 아니라 읽기 전용 역할에 의존해야 하는 이유가 하나 더 있는 셈입니다.
+
+<Warning>
+내장된 읽기 전용 검사는 완전한 경계가 아니라 심층 방어 수단입니다. 이 검사는 구문 텍스트를 검사하며 SQL은 데이터베이스마다 다릅니다. `SELECT`로 시작하는 구문도 데이터베이스 서버의 파일시스템에 접근하거나(`SELECT ... INTO OUTFILE`, `pg_read_file()`) 부수 효과가 있는 함수를 호출할 수 있습니다. 알려진 경로는 명시적으로 차단하지만, 완전한 통제 수단은 `db_uri`에 부여하는 권한뿐입니다. **최소 권한의 읽기 전용 데이터베이스 역할을 사용하십시오.**
+</Warning>
 
 ### 쓰기 작업 활성화
 
