@@ -185,7 +185,7 @@ ApprovalDecision = Literal["allow", "require_approval", "deny"]
 
 
 def stable_digest(action: dict[str, Any]) -> str:
-    payload = json.dumps(action, sort_keys=True, separators=(",", ":"))
+    payload = json.dumps(action, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
@@ -216,7 +216,7 @@ def approve_side_effect(ctx: ToolCallHookContext) -> None:
         prompt=f"Approve {ctx.tool_name} action?",
         default_message=(
             f"Action digest: {digest}\n"
-            f"Action: {json.dumps(action, indent=2, sort_keys=True)}\n"
+            f"Action: {json.dumps(action, indent=2, sort_keys=True, default=str)}\n"
             "Type 'yes' to approve:"
         ),
     )
