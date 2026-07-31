@@ -112,6 +112,33 @@ class TestFileToolWriteAction:
 
         assert mock_sandbox.files.write.call_args.args == ("parent/file.txt", b"")
 
+    def test_invalid_base64_content(self, k8s_file_tool, mock_sandbox):
+        with pytest.raises(ValueError, match="valid base64"):
+            k8s_file_tool.run(
+                action="write",
+                path="parent/file.txt",
+                content="not-valid-base64!@#",
+                binary=True,
+            )
+
+        mock_sandbox.files.write.assert_not_called()
+        mock_sandbox.commands.run.assert_not_called()
+
+    def test_line_wrapped_base64_content(self, k8s_file_tool, mock_sandbox):
+        mock_sandbox.commands.run.return_value = ExecutionResult(
+            exit_code=0, stdout="", stderr=""
+        )
+        payload = b"x" * 100
+
+        k8s_file_tool.run(
+            action="write",
+            path="parent/file.txt",
+            content=base64.encodebytes(payload).decode("ascii"),
+            binary=True,
+        )
+
+        assert mock_sandbox.files.write.call_args.args == ("parent/file.txt", payload)
+
     def test_mkdir_parent_error(self, k8s_file_tool, mock_sandbox):
         mock_sandbox.commands.run.return_value = ExecutionResult(
             exit_code=1,
@@ -192,6 +219,19 @@ class TestFileToolAppendAction:
                 binary=binary,
                 timeout=120,
             )
+
+
+    def test_invalid_base64_content(self, k8s_file_tool, mock_sandbox):
+        with pytest.raises(ValueError, match="valid base64"):
+            k8s_file_tool.run(
+                action="append",
+                path="parent/file.txt",
+                content="not-valid-base64!@#",
+                binary=True,
+            )
+
+        mock_sandbox.files.write.assert_not_called()
+        mock_sandbox.commands.run.assert_not_called()
 
 
 class TestFileToolListAction:

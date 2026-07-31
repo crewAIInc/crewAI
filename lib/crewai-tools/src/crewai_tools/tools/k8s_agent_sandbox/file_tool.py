@@ -106,6 +106,20 @@ class K8sAgentSandboxFileToolSchema(BaseModel):
                 "action='append' requires 'content'. Pass the chunk to append "
                 "in the 'content' field."
             )
+
+        if self.binary and self.action in ("write", "append") and self.content:
+            # ``b64decode`` silently drops characters outside the base64
+            # alphabet, so a corrupted payload would otherwise be written as
+            # truncated bytes. Whitespace is stripped first because the write
+            # path accepts line-wrapped payloads.
+            try:
+                base64.b64decode("".join(self.content.split()), validate=True)
+            except ValueError as e:
+                raise ValueError(
+                    f"action='{self.action}' with binary=True requires 'content' "
+                    f"to be valid base64: {e}."
+                ) from e
+
         return self
 
 
