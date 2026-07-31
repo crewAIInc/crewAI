@@ -271,7 +271,8 @@
                           "edge/en/tools/database-data/qdrantvectorsearchtool",
                           "edge/en/tools/database-data/weaviatevectorsearchtool",
                           "edge/en/tools/database-data/mongodbvectorsearchtool",
-                          "edge/en/tools/database-data/singlestoresearchtool"
+                          "edge/en/tools/database-data/singlestoresearchtool",
+                          "edge/en/tools/database-data/db2searchtool"
                         ]
                       },
                       {
