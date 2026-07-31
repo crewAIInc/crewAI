@@ -584,8 +584,7 @@ class LLM(BaseLLM):
         if provider == "monet":
             # Monet proxies whichever models the end user's ChatGPT or Claude
             # subscription exposes, so the set is not known at build time.
-            return True
-
+            return bool(model_lower.strip())
         return False
 
     @classmethod
