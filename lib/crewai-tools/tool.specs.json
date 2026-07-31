@@ -26660,6 +26660,260 @@
       }
     },
     {
+      "description": "Free lookup, no key: list the monitored object ids (entities) that are valid for a given signal line or industry, with their human-readable names. signal_id and entity must be used as a pair, so call this to get a valid entity before requesting a record. One of signal_id or industry is required.",
+      "env_vars": [],
+      "humanized_name": "Truth Bear GAUGE catalog lookup",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Free: which entity ids are valid for a signal line.",
+        "properties": {},
+        "required": [],
+        "title": "TruthBearCatalogTool",
+        "type": "object"
+      },
+      "name": "TruthBearCatalogTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "properties": {
+          "industry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter to one industry, e.g. 'hydrology', 'airquality', 'macro'.",
+            "title": "Industry"
+          },
+          "signal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter to one signal line, e.g. 'hydrology.river-level'.",
+            "title": "Signal Id"
+          }
+        },
+        "title": "TruthBearCatalogInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Free check, no key: for a signal line, report whether it exists, how many monitored objects it covers, how many of those readings are fresh / recent / stale, whether the source agency is on schedule or overdue, and the latest observation time. Use this before paying for a record, to confirm the line is covered and current. Sources are official government records and named registries (USGS, NOAA, NWS, EPA, SEC EDGAR, openFDA, EIA, BLS and others). An unknown signal id comes back with an empty signals list rather than an error.",
+      "env_vars": [],
+      "humanized_name": "Truth Bear GAUGE coverage check",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Free: does this signal exist, how many objects, how fresh, is it on schedule.",
+        "properties": {},
+        "required": [],
+        "title": "TruthBearCoverageTool",
+        "type": "object"
+      },
+      "name": "TruthBearCoverageTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "properties": {
+          "signal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional. A signal id in genus.species ASCII form, e.g. 'hydrology.river-level', 'airquality.aqi', 'macro.unemployment'. Omit to get the summary across all 185 signal lines.",
+            "title": "Signal Id"
+          }
+        },
+        "title": "TruthBearCoverageInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Request one official-source record for a signal_id and entity pair: the current reading, the official threshold band published by the source agency, a same-season percentile, and a canonical sha256 record_hash that can be recomputed offline so the answer does not have to be taken on trust. This endpoint is paid: it answers HTTP 402 with an x402 payment challenge stating network, asset, amount and recipient. THIS TOOL DOES NOT PAY. It returns the challenge unchanged so an x402-capable wallet in your own stack can settle it and retry. Charging is bound to HTTP 200 - if there is no data you are not billed.",
+      "env_vars": [],
+      "humanized_name": "Truth Bear GAUGE official record (paid, x402)",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Paid record - returns the x402 payment challenge, never settles it.",
+        "properties": {},
+        "required": [],
+        "title": "TruthBearRecordTool",
+        "type": "object"
+      },
+      "name": "TruthBearRecordTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "properties": {
+          "entity": {
+            "description": "Monitored object id PAIRED WITH signal_id, e.g. '06893000'. Get valid pairs from the Truth Bear GAUGE catalog tool.",
+            "title": "Entity",
+            "type": "string"
+          },
+          "signal_id": {
+            "description": "Signal id, e.g. 'hydrology.river-level'.",
+            "title": "Signal Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "signal_id",
+          "entity"
+        ],
+        "title": "TruthBearRecordInput",
+        "type": "object"
+      }
+    },
+    {
       "description": "This tool uses OpenAI's Vision API to describe the contents of an image.",
       "env_vars": [
         {
