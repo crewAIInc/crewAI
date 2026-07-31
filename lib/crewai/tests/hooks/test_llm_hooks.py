@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import Mock
 
 from crewai.hooks import (
@@ -670,3 +671,121 @@ class TestDirectLLMScopedHooks:
             )
 
         assert result == "contains [REDACTED]"
+
+
+def _litellm_response(text: str = "the model answered") -> Any:
+    """A litellm ModelResponse, which uses attribute access rather than a dict."""
+    from litellm.types.utils import ModelResponse
+
+    return ModelResponse(
+        **{
+            "choices": [
+                {
+                    "message": {"content": text, "role": "assistant"},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+        }
+    )
+
+
+class TestLLMHooksOnTheLiteLLMFallbackAsyncPath:
+    """``crewai.llm.LLM`` -- the fallback -- must gate ``acall()`` as it gates ``call()``.
+
+    The fallback is reached whenever no native provider matches the model, and by
+    ``is_litellm=True``. Its ``call()`` ran both hook families; ``acall()`` ran
+    neither, so a policy hook that blocked synchronously let the request out once
+    the caller switched to async, and a redaction hook stopped rewriting.
+
+    ``base_llm.BaseLLM`` only defines the two ``_invoke_*`` helpers -- its own
+    ``acall`` raises ``NotImplementedError`` -- so this class is the only place
+    the fallback's async seam can be covered.
+    """
+
+    @pytest.fixture
+    def stub_litellm(self, monkeypatch: pytest.MonkeyPatch) -> list[str]:
+        """Replace both litellm entry points, recording which one was reached."""
+        import litellm
+
+        issued: list[str] = []
+
+        def completion(*_args: Any, **_kwargs: Any) -> Any:
+            issued.append("sync")
+            return _litellm_response()
+
+        async def acompletion(*_args: Any, **_kwargs: Any) -> Any:
+            issued.append("async")
+            return _litellm_response()
+
+        monkeypatch.setattr(litellm, "completion", completion)
+        monkeypatch.setattr(litellm, "acompletion", acompletion)
+        return issued
+
+    @staticmethod
+    def _fallback_llm() -> Any:
+        """``is_litellm=True`` is required: without it the constructor returns a
+        native provider, and the fallback's own seam is never exercised."""
+        from crewai.llm import LLM
+
+        llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=False)
+        assert type(llm) is LLM, f"expected the fallback, got {type(llm).__name__}"
+        return llm
+
+    def test_sync_call_is_blocked_by_before_hook(self, stub_litellm: list[str]) -> None:
+        register_before_llm_call_hook(lambda ctx: False)
+
+        with pytest.raises(ValueError, match="blocked by before_llm_call hook"):
+            self._fallback_llm().call("hi")
+
+        assert stub_litellm == []
+
+    @pytest.mark.asyncio
+    async def test_async_call_is_blocked_by_before_hook(
+        self, stub_litellm: list[str]
+    ) -> None:
+        """The regression, and the reason it matters: the request went out.
+
+        ``issued == []`` is the load-bearing assertion. Asserting only that the
+        call raised would also pass on an implementation that ran the hook after
+        the provider had already been paid.
+        """
+        register_before_llm_call_hook(lambda ctx: False)
+
+        with pytest.raises(ValueError, match="blocked by before_llm_call hook"):
+            await self._fallback_llm().acall("hi")
+
+        assert stub_litellm == []
+
+    @pytest.mark.asyncio
+    async def test_async_call_runs_after_hook(self, stub_litellm: list[str]) -> None:
+        """A response-rewriting hook applies on the async path too."""
+        register_after_llm_call_hook(lambda ctx: "REDACTED BY HOOK")
+
+        result = await self._fallback_llm().acall("hi")
+
+        assert result == "REDACTED BY HOOK"
+        assert stub_litellm == ["async"]
+
+    @pytest.mark.asyncio
+    async def test_async_call_before_hook_sees_the_messages(
+        self, stub_litellm: list[str]
+    ) -> None:
+        seen: list[list[dict[str, Any]]] = []
+        register_before_llm_call_hook(lambda ctx: seen.append(list(ctx.messages)))
+
+        result = await self._fallback_llm().acall("hi")
+
+        assert result == "the model answered"
+        assert stub_litellm == ["async"]
+        assert seen and seen[0][-1]["content"] == "hi"
+
+    @pytest.mark.asyncio
+    async def test_async_call_without_hooks_is_unchanged(
+        self, stub_litellm: list[str]
+    ) -> None:
+        """Negative control: the seam is inert when nothing is registered."""
+        result = await self._fallback_llm().acall("hi")
+
+        assert result == "the model answered"
+        assert stub_litellm == ["async"]
