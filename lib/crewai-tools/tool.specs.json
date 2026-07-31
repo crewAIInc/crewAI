@@ -7960,7 +7960,7 @@
         ],
         "properties": {
           "action": {
-            "description": "The filesystem action to perform: 'read' (returns file contents); 'write' (create or replace a file with content); 'append' (append content to an existing file \u2014 use this for writing large files in chunks to avoid hitting tool-call size limits); 'list' (lists a directory); 'delete' (removes a file/dir); 'mkdir' (creates a directory); 'info' (returns file metadata); 'exists' (returns whether a path exists); 'move' (rename or relocate a file/dir; requires 'destination'); 'find' (grep file CONTENTS recursively; requires 'pattern'); 'search' (find files by NAME pattern; requires 'pattern'); 'chmod' (change permissions/owner/group; pass at least one of 'mode', 'owner', 'group'); 'replace' (find-and-replace text across files; requires 'paths', 'pattern', and 'replacement').",
+            "description": "The filesystem action to perform: 'read' (returns file contents); 'write' (create or replace a file with content); 'append' (append content to an existing file — use this for writing large files in chunks to avoid hitting tool-call size limits); 'list' (lists a directory); 'delete' (removes a file/dir); 'mkdir' (creates a directory); 'info' (returns file metadata); 'exists' (returns whether a path exists); 'move' (rename or relocate a file/dir; requires 'destination'); 'find' (grep file CONTENTS recursively; requires 'pattern'); 'search' (find files by NAME pattern; requires 'pattern'); 'chmod' (change permissions/owner/group; pass at least one of 'mode', 'owner', 'group'); 'replace' (find-and-replace text across files; requires 'paths', 'pattern', and 'replacement').",
             "enum": [
               "read",
               "write",
@@ -9894,7 +9894,7 @@
       "run_params_schema": {
         "properties": {
           "action": {
-            "description": "The filesystem action to perform: 'read' (returns file contents), 'write' (create or replace a file with content), 'append' (append content to an existing file \u2014 use this for writing large files in chunks to avoid hitting tool-call size limits), 'list' (lists a directory), 'delete' (removes a file/dir), 'mkdir' (creates a directory), 'info' (returns file metadata), 'exists' (returns a boolean for whether the path exists).",
+            "description": "The filesystem action to perform: 'read' (returns file contents), 'write' (create or replace a file with content), 'append' (append content to an existing file — use this for writing large files in chunks to avoid hitting tool-call size limits), 'list' (lists a directory), 'delete' (removes a file/dir), 'mkdir' (creates a directory), 'info' (returns file metadata), 'exists' (returns a boolean for whether the path exists).",
             "enum": [
               "read",
               "write",
@@ -16381,7 +16381,7 @@
       }
     },
     {
-      "description": "Converts natural language to SQL queries and executes them against a database. Read-only by default \u2014 only SELECT/SHOW/DESCRIBE/EXPLAIN queries (and read-only CTEs) are allowed unless configured with allow_dml=True.",
+      "description": "Converts natural language to SQL queries and executes them against a database. Read-only by default — only SELECT/SHOW/DESCRIBE/EXPLAIN queries (and read-only CTEs) are allowed unless configured with allow_dml=True.",
       "env_vars": [],
       "humanized_name": "NL2SQLTool",
       "init_params_schema": {
@@ -16432,7 +16432,7 @@
             "type": "string"
           }
         },
-        "description": "Tool that converts natural language to SQL and executes it against a database.\n\nBy default the tool operates in **read-only mode**: only SELECT, SHOW,\nDESCRIBE, EXPLAIN, and read-only CTEs (WITH \u2026 SELECT) are permitted.  Write\noperations (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, \u2026) are\nblocked unless ``allow_dml=True`` is set explicitly or the environment\nvariable ``CREWAI_NL2SQL_ALLOW_DML=true`` is present.\n\nWritable CTEs (``WITH d AS (DELETE \u2026) SELECT \u2026``) and\n``EXPLAIN ANALYZE <write-stmt>`` are treated as write operations and are\nblocked in read-only mode.\n\nThe ``_fetch_all_available_columns`` helper uses parameterised queries so\nthat table names coming from the database catalogue cannot be used as an\ninjection vector.",
+        "description": "Tool that converts natural language to SQL and executes it against a database.\n\nBy default the tool operates in **read-only mode**: only SELECT, SHOW,\nDESCRIBE, EXPLAIN, and read-only CTEs (WITH … SELECT) are permitted.  Write\noperations (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, …) are\nblocked unless ``allow_dml=True`` is set explicitly or the environment\nvariable ``CREWAI_NL2SQL_ALLOW_DML=true`` is present.\n\nWritable CTEs (``WITH d AS (DELETE …) SELECT …``) and\n``EXPLAIN ANALYZE <write-stmt>`` are treated as write operations and are\nblocked in read-only mode.\n\nThe ``_fetch_all_available_columns`` helper uses parameterised queries so\nthat table names coming from the database catalogue cannot be used as an\ninjection vector.",
         "properties": {
           "allow_dml": {
             "default": false,
@@ -26882,6 +26882,260 @@
           "query"
         ],
         "title": "TavilySearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Free lookup, no key: list the monitored object ids (entities) that are valid for a given signal line or industry, with their human-readable names. signal_id and entity must be used as a pair, so call this to get a valid entity before requesting a record. One of signal_id or industry is required.",
+      "env_vars": [],
+      "humanized_name": "Truth Bear GAUGE catalog lookup",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Free: which entity ids are valid for a signal line.",
+        "properties": {},
+        "required": [],
+        "title": "TruthBearCatalogTool",
+        "type": "object"
+      },
+      "name": "TruthBearCatalogTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "properties": {
+          "industry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter to one industry, e.g. 'hydrology', 'airquality', 'macro'.",
+            "title": "Industry"
+          },
+          "signal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter to one signal line, e.g. 'hydrology.river-level'.",
+            "title": "Signal Id"
+          }
+        },
+        "title": "TruthBearCatalogInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Free check, no key: for a signal line, report whether it exists, how many monitored objects it covers, how many of those readings are fresh / recent / stale, whether the source agency is on schedule or overdue, and the latest observation time. Use this before paying for a record, to confirm the line is covered and current. Sources are official government records and named registries (USGS, NOAA, NWS, EPA, SEC EDGAR, openFDA, EIA, BLS and others). An unknown signal id comes back with an empty signals list rather than an error.",
+      "env_vars": [],
+      "humanized_name": "Truth Bear GAUGE coverage check",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Free: does this signal exist, how many objects, how fresh, is it on schedule.",
+        "properties": {},
+        "required": [],
+        "title": "TruthBearCoverageTool",
+        "type": "object"
+      },
+      "name": "TruthBearCoverageTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "properties": {
+          "signal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional. A signal id in genus.species ASCII form, e.g. 'hydrology.river-level', 'airquality.aqi', 'macro.unemployment'. Omit to get the summary across all 185 signal lines.",
+            "title": "Signal Id"
+          }
+        },
+        "title": "TruthBearCoverageInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Request one official-source record for a signal_id and entity pair: the current reading, the official threshold band published by the source agency, a same-season percentile, and a canonical sha256 record_hash that can be recomputed offline so the answer does not have to be taken on trust. This endpoint is paid: it answers HTTP 402 with an x402 payment challenge stating network, asset, amount and recipient. THIS TOOL DOES NOT PAY. It returns the challenge unchanged so an x402-capable wallet in your own stack can settle it and retry. Charging is bound to HTTP 200 - if there is no data you are not billed.",
+      "env_vars": [],
+      "humanized_name": "Truth Bear GAUGE official record (paid, x402)",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Paid record - returns the x402 payment challenge, never settles it.",
+        "properties": {},
+        "required": [],
+        "title": "TruthBearRecordTool",
+        "type": "object"
+      },
+      "name": "TruthBearRecordTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "properties": {
+          "entity": {
+            "description": "Monitored object id PAIRED WITH signal_id, e.g. '06893000'. Get valid pairs from the Truth Bear GAUGE catalog tool.",
+            "title": "Entity",
+            "type": "string"
+          },
+          "signal_id": {
+            "description": "Signal id, e.g. 'hydrology.river-level'.",
+            "title": "Signal Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "signal_id",
+          "entity"
+        ],
+        "title": "TruthBearRecordInput",
         "type": "object"
       }
     },
