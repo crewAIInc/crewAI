@@ -281,7 +281,13 @@ class TestLLMIntegration:
 
     def test_llm_creates_openai_compatible_for_monet(self):
         """Test LLM factory creates OpenAICompatibleCompletion for Monet."""
-        with patch.dict(os.environ, {"MONET_ACCESS_TOKEN": "mat_test-token"}):
+        with patch.dict(
+            os.environ,
+            {
+                "MONET_ACCESS_TOKEN": "mat_test-token",
+                "MONET_BASE_URL": "",
+            },
+        ):
             llm = LLM(model="monet/gpt-5.2")
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "monet"
