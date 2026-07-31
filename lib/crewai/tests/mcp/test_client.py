@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import AbstractAsyncContextManager
+from contextlib import AbstractAsyncContextManager, ExitStack
 import logging
 import sys
 from typing import Any
@@ -16,6 +16,8 @@ from crewai.events.types.mcp_events import MCPConnectionFailedEvent
 from crewai.mcp.client import MCPClient
 from crewai.mcp.transports.base import BaseTransport, TransportType
 from crewai.mcp.transports.http import HTTPTransport
+from crewai.mcp.transports.sse import SSETransport
+from crewai.mcp.transports.stdio import StdioTransport
 
 
 if sys.version_info >= (3, 11):
@@ -53,6 +55,13 @@ class LifecycleTransport(ConnectedTransport):
         return self
 
 
+class WrappedTimeoutTransport(ConnectedTransport):
+    """Transport that exposes a timeout through a generic connection error."""
+
+    async def connect(self) -> WrappedTimeoutTransport:
+        raise ConnectionError("Transport context entry timed out after 1 seconds")
+
+
 class FailingSession:
     """Session that models a lost response after a side effect committed."""
 
@@ -75,6 +84,7 @@ async def test_connect_timeout_bounds_transport_startup():
         async def __aexit__(self, *_args: Any):
             return None
 
+    emitted_events = []
     client = MCPClient(
         HTTPTransport("https://mcp.example.com"),
         connect_timeout=1,
@@ -85,10 +95,118 @@ async def test_connect_timeout_bounds_transport_startup():
             "mcp.client.streamable_http.streamablehttp_client",
             return_value=HangingContext(),
         ),
-        patch.object(crewai_event_bus, "emit"),
+        patch.object(
+            crewai_event_bus,
+            "emit",
+            side_effect=lambda _source, event: emitted_events.append(event),
+        ),
         pytest.raises(ConnectionError, match="timed out after 1 seconds"),
     ):
         await asyncio.wait_for(client.connect(), timeout=1.25)
+
+    failed_event = next(
+        event for event in emitted_events if isinstance(event, MCPConnectionFailedEvent)
+    )
+    assert failed_event.error_type == "timeout"
+
+
+@pytest.mark.asyncio
+async def test_wrapped_transport_timeout_event_is_classified_as_timeout():
+    """Timeout text preserved in ConnectionError must remain observable."""
+    emitted_events = []
+    client = MCPClient(WrappedTimeoutTransport())
+
+    with (
+        patch.object(
+            crewai_event_bus,
+            "emit",
+            side_effect=lambda _source, event: emitted_events.append(event),
+        ),
+        pytest.raises(ConnectionError, match="timed out after 1 seconds"),
+    ):
+        await client.connect()
+
+    failed_event = next(
+        event for event in emitted_events if isinstance(event, MCPConnectionFailedEvent)
+    )
+    assert failed_event.error_type == "timeout"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("transport", "client_path"),
+    [
+        (
+            SSETransport("https://mcp.example.com/sse", connect_timeout=0.01),
+            "mcp.client.sse.sse_client",
+        ),
+        (
+            StdioTransport("python", connect_timeout=0.01),
+            "mcp.client.stdio.stdio_client",
+        ),
+    ],
+)
+async def test_transport_startup_timeout_is_preserved(
+    transport: BaseTransport,
+    client_path: str,
+):
+    """SSE and stdio startup timeouts must remain timeout exceptions."""
+
+    class HangingContext(AbstractAsyncContextManager):
+        def __init__(self) -> None:
+            self.cancelled = False
+
+        async def __aenter__(self):
+            try:
+                await asyncio.Event().wait()
+            finally:
+                self.cancelled = True
+
+        async def __aexit__(self, *_args: Any):
+            return None
+
+    context = HangingContext()
+    patches = [patch(client_path, return_value=context)]
+    if isinstance(transport, StdioTransport):
+        patches.extend(
+            [
+                patch("mcp.StdioServerParameters"),
+                patch("mcp.client.stdio.get_default_environment", return_value={}),
+            ]
+        )
+
+    with ExitStack() as stack:
+        for context_patch in patches:
+            stack.enter_context(context_patch)
+        with pytest.raises(asyncio.TimeoutError, match="timed out"):
+            await transport.connect()
+
+    assert transport.connected is False
+    assert transport._transport_context is None
+    assert context.cancelled is True
+
+
+@pytest.mark.asyncio
+async def test_http_disconnect_failure_is_best_effort(caplog: pytest.LogCaptureFixture):
+    """Normal HTTP cleanup failures must not replace a successful result."""
+
+    class FailingExitContext(AbstractAsyncContextManager):
+        async def __aenter__(self):
+            return MagicMock(), MagicMock(), None
+
+        async def __aexit__(self, *_args: Any):
+            raise RuntimeError("cleanup failed")
+
+    transport = HTTPTransport("https://mcp.example.com")
+    with patch(
+        "mcp.client.streamable_http.streamablehttp_client",
+        return_value=FailingExitContext(),
+    ):
+        await transport.connect()
+        await transport.disconnect()
+
+    assert transport.connected is False
+    assert "Error during HTTP transport disconnect: cleanup failed" in caplog.text
 
 
 @pytest.mark.asyncio

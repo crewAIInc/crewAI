@@ -77,6 +77,10 @@ def _find_meaningful_exception(error: BaseException | None) -> Exception | None:
 def _connection_error_type(error: BaseException) -> str:
     """Classify an MCP connection error for emitted events."""
     message = str(error).lower()
+    if isinstance(error, (TimeoutError, asyncio.TimeoutError)) or any(
+        marker in message for marker in ("timed out", "timeout")
+    ):
+        return "timeout"
     if "401" in message or "unauthorized" in message:
         return "authentication"
     if "certificate verify failed" in message or "ssl" in message:

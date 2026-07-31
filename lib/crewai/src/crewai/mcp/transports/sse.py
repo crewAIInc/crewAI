@@ -1,5 +1,6 @@
 """Server-Sent Events (SSE) transport for MCP servers."""
 
+import asyncio
 from typing import Any
 
 from typing_extensions import Self
@@ -80,8 +81,16 @@ class SSETransport(BaseTransport):
             raise ImportError(
                 "MCP library not available. Please install with: pip install mcp"
             ) from e
+        except (TimeoutError, asyncio.TimeoutError) as e:
+            self._clear_streams()
+            self._transport_context = None
+            raise asyncio.TimeoutError(
+                f"SSE transport context entry timed out after {self.connect_timeout} seconds. "
+                "Server may be slow or unreachable."
+            ) from e
         except Exception as e:
             self._clear_streams()
+            self._transport_context = None
             raise ConnectionError(f"Failed to connect to SSE MCP server: {e}") from e
 
     async def disconnect(self) -> None:
@@ -91,8 +100,10 @@ class SSETransport(BaseTransport):
 
         try:
             self._clear_streams()
-            if self._transport_context is not None:
-                await self._transport_context.__aexit__(None, None, None)
+            transport_context = self._transport_context
+            self._transport_context = None
+            if transport_context is not None:
+                await transport_context.__aexit__(None, None, None)
 
         except Exception as e:
             import logging

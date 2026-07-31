@@ -100,10 +100,13 @@ class StdioTransport(BaseTransport):
             try:
                 async with async_timeout(self.connect_timeout):
                     read, write = await self._transport_context.__aenter__()
+            except (TimeoutError, asyncio.TimeoutError) as e:
+                self._transport_context = None
+                raise asyncio.TimeoutError(
+                    f"Stdio transport context entry timed out after {self.connect_timeout} seconds. "
+                    "Server may be slow or unreachable."
+                ) from e
             except Exception as e:
-                import traceback
-
-                traceback.print_exc()
                 self._transport_context = None
                 raise ConnectionError(
                     f"Failed to enter stdio transport context: {e}"
@@ -117,6 +120,10 @@ class StdioTransport(BaseTransport):
             raise ImportError(
                 "MCP library not available. Please install with: pip install mcp"
             ) from e
+        except (TimeoutError, asyncio.TimeoutError):
+            self._clear_streams()
+            self._transport_context = None
+            raise
         except Exception as e:
             self._clear_streams()
             if self._transport_context is not None:
