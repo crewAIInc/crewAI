@@ -17,18 +17,25 @@ from datetime import datetime
 
 import pytest
 
+from crewai.memory import types as types_module
 from crewai.memory.recall_flow import RecallFlow, RecallState
 from crewai.memory.types import MemoryConfig, MemoryRecord
 
 
 _FIXED_CREATED_AT = datetime(2026, 1, 1, 12, 0, 0)
+"""When every record under test was created."""
+
+_SCORED_AT = datetime(2026, 1, 2, 12, 0, 0)
+"""When the frozen clock scores them — a day later, so the decay is exercised."""
 
 
 def _record(record_id: str) -> MemoryRecord:
     """A record with everything but ``id`` held constant.
 
     ``compute_composite_score`` also reads ``created_at`` and ``importance``, so
-    pinning both keeps the composite a function of the semantic score alone.
+    pinning both is necessary — but not sufficient — for the composite to be a
+    function of the semantic score alone. It also reads the wall clock; see
+    ``_frozen_clock``.
     """
     return MemoryRecord(
         id=record_id,
@@ -36,6 +43,32 @@ def _record(record_id: str) -> MemoryRecord:
         created_at=_FIXED_CREATED_AT,
         importance=0.5,
     )
+
+
+@pytest.fixture
+def _frozen_clock(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hold ``compute_composite_score``'s recency clock still.
+
+    It computes the recency decay from ``datetime.utcnow()`` per call, so two
+    records created at the same instant do not score identically: whichever is
+    scored first is read a few hundred nanoseconds younger and gets a larger
+    decay. The gap is around 1e-11, far below any weight, but it is enough to
+    order two otherwise-equal composites — so it decides a tie the ``record.id``
+    tiebreaker is supposed to decide.
+
+    Measured on the unfrozen clock, the tie test below fails on 200 of 20000
+    runs (1.0%), always on the reversed ordering — there the record that must
+    sort second is scored first and so wins the drift. Frozen, the difference
+    between the two composites is exactly ``0.0`` over 50000 pairs. Only ties
+    are affected; every other assertion here separates records by far more than
+    the drift.
+    """
+    class _FrozenDatetime(datetime):
+        @classmethod
+        def utcnow(cls) -> datetime:
+            return _SCORED_AT
+
+    monkeypatch.setattr(types_module, "datetime", _FrozenDatetime)
 
 
 def _flow_with_findings(findings: list[dict]) -> RecallFlow:
@@ -85,8 +118,14 @@ def test_record_reachable_from_several_scopes_appears_once() -> None:
     assert [m.record.id for m in matches] == ["R"]
 
 
+@pytest.mark.usefixtures("_frozen_clock")
 def test_equal_scores_rank_by_record_id_rather_than_arrival() -> None:
-    """Ties must not fall back to whichever task finished first."""
+    """Ties must not fall back to whichever task finished first.
+
+    The clock is frozen because the drift between two ``utcnow()`` reads is
+    itself an arrival-order signal, and an unfrozen one lets the assertion pass
+    for the wrong reason in the forward case and fail in the reverse.
+    """
     a, b = _record("aaa"), _record("bbb")
     forward = [
         {"scope": "/x", "results": [(a, 0.5)], "top_score": 0.5},
