@@ -5,15 +5,23 @@ from __future__ import annotations
 import asyncio
 from contextlib import AbstractAsyncContextManager
 import logging
+import sys
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.mcp_events import MCPConnectionFailedEvent
 from crewai.mcp.client import MCPClient
 from crewai.mcp.transports.base import BaseTransport, TransportType
 from crewai.mcp.transports.http import HTTPTransport
+
+
+if sys.version_info >= (3, 11):
+    from builtins import BaseExceptionGroup
+else:
+    from exceptiongroup import BaseExceptionGroup
 
 
 class ConnectedTransport(BaseTransport):
@@ -35,6 +43,14 @@ class ConnectedTransport(BaseTransport):
 
     async def __aexit__(self, *_args: Any) -> None:
         await self.disconnect()
+
+
+class LifecycleTransport(ConnectedTransport):
+    """Connected transport with placeholder streams for session startup tests."""
+
+    async def connect(self) -> LifecycleTransport:
+        self._set_streams(MagicMock(), MagicMock())
+        return self
 
 
 class FailingSession:
@@ -161,3 +177,92 @@ async def test_cleanup_failure_is_logged_without_masking_connection_error():
     log_template, log_error = logger.warning.call_args.args
     assert log_template == "Error during MCP client cleanup: %s"
     assert str(log_error) == "cleanup failed"
+
+
+@pytest.mark.asyncio
+async def test_cancelled_startup_reports_nested_tls_error():
+    """A transport task failure must beat the cancellation used to signal it."""
+
+    class TLSFailingTransportContext(AbstractAsyncContextManager):
+        async def __aenter__(self):
+            return MagicMock(), MagicMock(), None
+
+        async def __aexit__(self, exc_type, _exc, _tb):
+            assert exc_type is asyncio.CancelledError
+            raise BaseExceptionGroup(
+                "transport failed",
+                [
+                    ConnectionError(
+                        "[SSL: CERTIFICATE_VERIFY_FAILED] unable to get local issuer"
+                    ),
+                    GeneratorExit(),
+                ],
+            )
+
+    class TLSFailingSession:
+        async def __aenter__(self):
+            return self
+
+        async def initialize(self) -> None:
+            raise asyncio.CancelledError
+
+        async def __aexit__(self, *_args):
+            return None
+
+    emitted_events = []
+    client = MCPClient(HTTPTransport("https://mcp.example.com"))
+
+    with (
+        patch(
+            "mcp.client.streamable_http.streamablehttp_client",
+            return_value=TLSFailingTransportContext(),
+        ),
+        patch("mcp.ClientSession", return_value=TLSFailingSession()),
+        patch.object(
+            crewai_event_bus,
+            "emit",
+            side_effect=lambda _source, event: emitted_events.append(event),
+        ),
+        pytest.raises(ConnectionError, match="CERTIFICATE_VERIFY_FAILED"),
+    ):
+        await client.connect()
+
+    failed_event = next(
+        event for event in emitted_events if isinstance(event, MCPConnectionFailedEvent)
+    )
+    assert failed_event.error_type == "tls"
+    assert "CERTIFICATE_VERIFY_FAILED" in failed_event.error
+
+
+@pytest.mark.asyncio
+async def test_external_startup_cancellation_remains_cancelled():
+    """Cancellation without an underlying transport error must propagate."""
+
+    class CancelledSession:
+        async def __aenter__(self):
+            return self
+
+        async def initialize(self) -> None:
+            raise asyncio.CancelledError
+
+        async def __aexit__(self, *_args):
+            return None
+
+    emitted_events = []
+    client = MCPClient(LifecycleTransport())
+
+    with (
+        patch("mcp.ClientSession", return_value=CancelledSession()),
+        patch.object(
+            crewai_event_bus,
+            "emit",
+            side_effect=lambda _source, event: emitted_events.append(event),
+        ),
+        pytest.raises(asyncio.CancelledError),
+    ):
+        await client.connect()
+
+    failed_event = next(
+        event for event in emitted_events if isinstance(event, MCPConnectionFailedEvent)
+    )
+    assert failed_event.error_type == "cancelled"
