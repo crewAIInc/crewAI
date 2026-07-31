@@ -162,7 +162,73 @@ def require_approval(ctx: ToolCallHookContext) -> None:
         raise HookAborted(reason="denied by operator", source="approval-gate")
 ```
 
-### 3. Input Validation and Sanitization
+### 3. Approval-Bound Side Effects
+
+For tools that create side effects, build a stable action object before the
+tool runs and send it to an external checkpoint. The checkpoint can return one
+of three decisions:
+
+| Decision | Hook behavior | Result |
+|----------|---------------|--------|
+| `allow` | Return normally | Tool executes |
+| `require_approval` | Ask a reviewer before returning | Tool executes only after approval |
+| `deny` | Raise `HookAborted` | Tool is blocked |
+
+```python
+import hashlib
+import json
+from typing import Any, Literal
+
+from crewai.hooks import HookAborted, InterceptionPoint, ToolCallHookContext, on
+
+ApprovalDecision = Literal["allow", "require_approval", "deny"]
+
+
+def stable_digest(action: dict[str, Any]) -> str:
+    payload = json.dumps(action, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def external_checkpoint(action: dict[str, Any], digest: str) -> ApprovalDecision:
+    """Call your policy service, ticketing system, or audit log here."""
+    return "require_approval"
+
+
+@on(InterceptionPoint.PRE_TOOL_CALL, tools=["send_email", "make_purchase", "delete_file"])
+def approve_side_effect(ctx: ToolCallHookContext) -> None:
+    action = {
+        "type": "tool_call",
+        "tool": ctx.tool_name,
+        "input": ctx.tool_input,
+        "agent_role": getattr(ctx.agent, "role", None),
+        "task": getattr(ctx.task, "description", None),
+    }
+    digest = stable_digest(action)
+    decision = external_checkpoint(action, digest)
+
+    if decision == "allow":
+        return
+
+    if decision == "deny":
+        raise HookAborted(reason=f"denied action {digest}", source="approval-gate")
+
+    response = ctx.request_human_input(
+        prompt=f"Approve {ctx.tool_name} action?",
+        default_message=(
+            f"Action digest: {digest}\n"
+            f"Action: {json.dumps(action, indent=2, sort_keys=True)}\n"
+            "Type 'yes' to approve:"
+        ),
+    )
+    if response.lower() != "yes":
+        raise HookAborted(reason=f"reviewer rejected action {digest}", source="approval-gate")
+```
+
+Use only deterministic fields in the action object. Exclude timestamps,
+temporary IDs, and other volatile values so the same intended side effect
+produces the same digest for policy checks, reviewer prompts, and audit logs.
+
+### 4. Input Validation and Sanitization
 
 ```python
 @on(InterceptionPoint.PRE_TOOL_CALL, tools=["web_search"])
@@ -179,7 +245,7 @@ def validate_path(ctx: ToolCallHookContext) -> None:
         raise HookAborted(reason="invalid file path", source="input-validation")
 ```
 
-### 4. Result Sanitization
+### 5. Result Sanitization
 
 ```python
 import re
@@ -201,7 +267,7 @@ def sanitize_sensitive_data(ctx: ToolCallHookContext) -> str | None:
     )
 ```
 
-### 5. Tool Usage Analytics
+### 6. Tool Usage Analytics
 
 ```python
 import time
@@ -220,7 +286,7 @@ def track_tool_usage(ctx: ToolCallHookContext) -> None:
     tool_stats[ctx.tool_name]['total_time'] += time.time() - start_time
 ```
 
-### 6. Rate Limiting
+### 7. Rate Limiting
 
 ```python
 from collections import defaultdict
