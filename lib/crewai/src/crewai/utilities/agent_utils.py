@@ -31,6 +31,14 @@ from crewai.tools.structured_tool import (
     CrewStructuredTool,
     strip_composite_description_prefix,
 )
+from crewai.tools.tool_failure import (
+    ToolFailure,
+    ToolFailureReason,
+    detect_tool_failure,
+    failure_from_exception,
+    handle_tool_failure,
+    reportable_failure,
+)
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -53,6 +61,71 @@ if TYPE_CHECKING:
     from crewai.task import Task
 
 _create_plus_client_hook: Callable[[], Any] | None = None
+
+
+def resolve_plus_client(default: Callable[[], Any]) -> Any:
+    """Return the CrewAI AMP client to use, or build ``default``.
+
+    Hosted runtimes install a client of their own through
+    ``_create_plus_client_hook``, authenticated for the environment they run in.
+    Every registry lookup resolves through here so they all share that client.
+
+    Args:
+        default: Builds the client to use when no hook is installed. A callable
+            rather than a value so credential lookups that raise when absent are
+            only evaluated when they're actually needed.
+
+    Returns:
+        A CrewAI AMP client.
+    """
+    if callable(_create_plus_client_hook):
+        return _create_plus_client_hook()
+    return default()
+
+
+def resolve_plus_response(response: Any) -> Any:
+    """Return ``response``, awaiting it first when the client is async.
+
+    Args:
+        response: A response, or an awaitable resolving to one.
+
+    Returns:
+        The resolved response.
+
+    Raises:
+        TypeError: If the awaitable is already bound to a loop (a Task or
+            Future), which can't be resolved synchronously.
+    """
+    if not inspect.isawaitable(response):
+        return response
+
+    if isinstance(response, asyncio.Future):
+        raise TypeError(
+            "CrewAI AMP clients must return a coroutine, not a Task or Future "
+            "already bound to a running loop."
+        )
+
+    # asyncio.run() takes a coroutine specifically, while isawaitable() also
+    # covers custom __await__ objects, so wrap rather than passing it through.
+    async def await_response() -> Any:
+        return await response
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    # asyncio.run() refuses to nest inside a running loop, so hand the coroutine
+    # to a worker thread with a loop of its own — carrying a copy of the caller's
+    # context, since a fresh thread would otherwise start with empty ContextVars
+    # and a client reading runtime state (the platform token, flow context) would
+    # see defaults.
+    if loop and loop.is_running():
+        ctx = contextvars.copy_context()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(ctx.run, asyncio.run, await_response()).result()
+
+    return asyncio.run(await_response())
 
 
 class SummaryContent(TypedDict):
@@ -1127,27 +1200,15 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
     if from_repository:
         import importlib
 
-        if callable(_create_plus_client_hook):
-            client = _create_plus_client_hook()
-        else:
+        def build_default_client() -> Any:
             from crewai.auth.token import get_auth_token
             from crewai.plus_api import PlusAPI
 
-            client = PlusAPI(api_key=get_auth_token())
-        _print_current_organization()
-        response = client.get_agent(from_repository)
-        if inspect.isawaitable(response):
-            coro = response
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = None
+            return PlusAPI(api_key=get_auth_token())
 
-            if loop and loop.is_running():
-                with concurrent.futures.ThreadPoolExecutor() as pool:
-                    response = pool.submit(asyncio.run, coro).result()  # type: ignore[arg-type]
-            else:
-                response = asyncio.run(coro)  # type: ignore[arg-type]
+        client = resolve_plus_client(build_default_client)
+        _print_current_organization()
+        response = resolve_plus_response(client.get_agent(from_repository))
         if response.status_code == 404:
             raise AgentRepositoryError(
                 f"Agent {from_repository} does not exist, make sure the name is correct or the agent is available on your organization."
@@ -1161,10 +1222,18 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
             )
 
         agent = response.json()
+        skill_versions = agent.get("skill_versions") or []
         for key, value in agent.items():
             if value is None:
                 continue
-            if key == "tools":
+            if key == "skill_versions":
+                # Folded into the skill refs below, and not an Agent field.
+                continue
+            if key == "skills":
+                if not value:
+                    continue
+                attributes[key] = _pin_skill_refs(value, skill_versions)
+            elif key == "tools":
                 attributes[key] = []
                 for tool in value:
                     try:
@@ -1182,11 +1251,46 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                         raise AgentRepositoryError(
                             f"Tool {tool['name']} could not be loaded: {e}"
                         ) from e
-            elif key == "skills" and value == []:
-                continue
             else:
                 attributes[key] = value
     return attributes
+
+
+def _pin_skill_refs(refs: list[Any], skill_versions: list[dict[str, Any]]) -> list[Any]:
+    """Pin repository skill refs to the versions the repository recorded.
+
+    An agent's ``skills`` are plain ``@org/name`` refs while ``skill_versions``
+    carries the version pinned against each one. Without folding the two
+    together the runtime resolves whatever version is newest, so publishing a
+    new version of a skill would silently change every agent using it.
+
+    Args:
+        refs: Skill references as returned by the repository.
+        skill_versions: Repository version records, each with a ``registry_ref``
+            and ``version``.
+
+    Returns:
+        The refs, version-pinned where the repository recorded one.
+    """
+    pinned_versions = {
+        entry["registry_ref"]: entry["version"]
+        for entry in skill_versions
+        if isinstance(entry, dict)
+        and entry.get("registry_ref")
+        and entry.get("version")
+    }
+    if not pinned_versions:
+        return refs
+
+    pinned_refs: list[Any] = []
+    for ref in refs:
+        version = pinned_versions.get(ref) if isinstance(ref, str) else None
+        # Leave anything already pinned (a second '@') exactly as it is.
+        already_pinned = isinstance(ref, str) and "@" in ref[1:]
+        pinned_refs.append(
+            f"{ref}@{version}" if version and not already_pinned else ref
+        )
+    return pinned_refs
 
 
 DELEGATION_TOOL_NAMES: Final[frozenset[str]] = frozenset(
@@ -1436,6 +1540,9 @@ class NativeToolCallResult:
 
 def format_native_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
     """Format native tool output when a tool explicitly defines a formatter."""
+    if isinstance(raw_result, ToolFailure):
+        return raw_result.as_agent_message()
+
     formatter = inspect.getattr_static(tool, "format_output_for_agent", None)
     if formatter is None:
         return str(raw_result)
@@ -1504,13 +1611,30 @@ def execute_single_native_tool_call(
 
     call_id, func_name, func_args = info
 
-    if isinstance(func_args, str):
-        try:
-            args_dict = json.loads(func_args)
-        except json.JSONDecodeError:
-            args_dict = {}
-    else:
-        args_dict = func_args
+    parsed_args, parse_error = parse_tool_call_args(func_args, func_name, call_id)
+    if parse_error is not None:
+        # Previously the decode error was swallowed into empty args and the tool
+        # ran with no input at all.
+        handle_tool_failure(
+            parse_error["tool_failure"],
+            tool_name=func_name,
+            tool_args=func_args,
+            agent=agent,
+            task=task,
+            crew=crew,
+        )
+        return NativeToolCallResult(
+            call_id=call_id,
+            func_name=func_name,
+            result=parse_error["result"],
+            tool_message={
+                "role": "tool",
+                "tool_call_id": call_id,
+                "name": func_name,
+                "content": parse_error["result"],
+            },
+        )
+    args_dict = parsed_args if parsed_args is not None else {}
 
     agent_key = getattr(agent, "key", "unknown") if agent else "unknown"
 
@@ -1532,12 +1656,14 @@ def execute_single_native_tool_call(
     input_str = json.dumps(args_dict) if args_dict else ""
     result = "Tool not found"
     raw_tool_result: Any = result
+    tool_failure: ToolFailure | None = None
 
     if tools_handler and tools_handler.cache and output_tool is not None:
         cached_result = tools_handler.cache.read(tool=func_name, input=input_str)
         if cached_result is not None:
             raw_tool_result = cached_result
             result = format_native_tool_output_for_agent(output_tool, cached_result)
+            tool_failure = detect_tool_failure(cached_result)
             from_cache = True
 
     started_at = datetime.now()
@@ -1570,6 +1696,9 @@ def execute_single_native_tool_call(
     if hook_blocked:
         result = f"Tool execution blocked by hook. Tool: {func_name}"
         raw_tool_result = result
+        # The blocked message replaces any cached result, so a cached failure
+        # must not be attributed to this call.
+        tool_failure = None
     elif not from_cache:
         if func_name in available_functions and output_tool is not None:
             try:
@@ -1589,9 +1718,11 @@ def execute_single_native_tool_call(
                         )
 
                 result = format_native_tool_output_for_agent(output_tool, raw_result)
+                tool_failure = detect_tool_failure(raw_result)
             except Exception as e:
                 result = f"Error executing tool: {e}"
                 raw_tool_result = result
+                tool_failure = failure_from_exception(e)
                 if task:
                     task.increment_tools_errors()
                 crewai_event_bus.emit(
@@ -1608,6 +1739,14 @@ def execute_single_native_tool_call(
                     ),
                 )
                 error_event_emitted = True
+        else:
+            # Not cached and not executable: the model asked for a tool we do
+            # not have. The ReAct path reports this, so this one must too.
+            tool_failure = ToolFailure(
+                message=result,
+                reason=ToolFailureReason.UNKNOWN_TOOL,
+                code=func_name,
+            )
 
     after_hook_context = ToolCallHookContext(
         tool_name=func_name,
@@ -1637,7 +1776,27 @@ def execute_single_native_tool_call(
                 plan_step_description=plan_step_description,
                 started_at=started_at,
                 finished_at=datetime.now(),
+                failure=reportable_failure(
+                    tool_failure,
+                    tool=structured_tool,
+                    agent=agent,
+                    task=task,
+                    crew=crew,
+                ),
             ),
+        )
+
+    # After the finished event, so subscribers see the full lifecycle even
+    # when the policy aborts.
+    if tool_failure is not None:
+        handle_tool_failure(
+            tool_failure,
+            tool_name=func_name,
+            tool_args=args_dict,
+            tool=structured_tool,
+            agent=agent,
+            task=task,
+            crew=crew,
         )
 
     tool_message: LLMMessage = {
@@ -1660,6 +1819,9 @@ def execute_single_native_tool_call(
         and original_tool.result_as_answer
         and not error_event_emitted
         and not hook_blocked
+        # A declared failure is excluded for the same reason a raised one is:
+        # an error must not silently become the task's answer.
+        and tool_failure is None
     )
 
     return NativeToolCallResult(
@@ -1683,21 +1845,28 @@ def parse_tool_call_args(
     Returns:
         ``(args_dict, None)`` on success, or ``(None, error_result)`` on
         JSON parse failure where ``error_result`` is a ready-to-return dict
-        with the same shape as ``_execute_single_native_tool_call`` return values.
+        with the same shape as ``_execute_single_native_tool_call`` return
+        values, carrying an ``INVALID_INPUT`` failure for the caller to report.
     """
     if isinstance(func_args, str):
         try:
             return json.loads(func_args), None
         except json.JSONDecodeError as e:
+            message = (
+                f"Error: Failed to parse tool arguments as JSON: {e}. "
+                f"Please provide valid JSON arguments for the '{func_name}' tool."
+            )
             return None, {
                 "call_id": call_id,
                 "func_name": func_name,
-                "result": (
-                    f"Error: Failed to parse tool arguments as JSON: {e}. "
-                    f"Please provide valid JSON arguments for the '{func_name}' tool."
-                ),
+                "result": message,
                 "from_cache": False,
                 "original_tool": original_tool,
+                "tool_failure": ToolFailure(
+                    message=message,
+                    reason=ToolFailureReason.INVALID_INPUT,
+                    code="json_decode_error",
+                ),
             }
     return func_args, None
 
