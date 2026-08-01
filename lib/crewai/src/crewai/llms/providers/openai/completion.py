@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 import json
 import logging
 import os
+import ssl
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict
 
 import httpx
@@ -12,6 +13,8 @@ from openai import (
     APIConnectionError,
     AsyncOpenAI,
     BadRequestError,
+    DefaultAsyncHttpxClient,
+    DefaultHttpxClient,
     NotFoundError,
     OpenAI,
     Stream,
@@ -63,6 +66,22 @@ if TYPE_CHECKING:
 # `_remember_responses_only_model` so the wasted round trip is paid once per model
 # per process rather than on every call.
 _LEARNED_RESPONSES_ONLY_MODELS: set[str] = set()
+
+
+_SHARED_SSL_CONTEXT: ssl.SSLContext | None = None
+
+
+def _shared_ssl_context() -> ssl.SSLContext:
+    """Return one process-wide TLS context for OpenAI clients.
+
+    ``httpx`` builds a fresh context per client, and each one loads the system
+    CA bundle from disk. Every completion builds two clients, so agent creation
+    paid that load twice. An ``ssl.SSLContext`` is safe to share across clients.
+    """
+    global _SHARED_SSL_CONTEXT
+    if _SHARED_SSL_CONTEXT is None:
+        _SHARED_SSL_CONTEXT = httpx.create_ssl_context()
+    return _SHARED_SSL_CONTEXT
 
 
 class WebSearchResult(TypedDict, total=False):
@@ -302,6 +321,10 @@ class OpenAICompletion(BaseLLM):
         if self.interceptor:
             transport = HTTPTransport(interceptor=self.interceptor)
             client_config["http_client"] = httpx.Client(transport=transport)
+        elif "http_client" not in client_config:
+            client_config["http_client"] = DefaultHttpxClient(
+                verify=_shared_ssl_context()
+            )
         return OpenAI(**client_config)
 
     def _build_async_client(self) -> Any:
@@ -309,6 +332,10 @@ class OpenAICompletion(BaseLLM):
         if self.interceptor:
             transport = AsyncHTTPTransport(interceptor=self.interceptor)
             client_config["http_client"] = httpx.AsyncClient(transport=transport)
+        elif "http_client" not in client_config:
+            client_config["http_client"] = DefaultAsyncHttpxClient(
+                verify=_shared_ssl_context()
+            )
         return AsyncOpenAI(**client_config)
 
     def _get_sync_client(self) -> Any:
