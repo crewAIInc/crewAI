@@ -1753,7 +1753,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         execution_results: list[dict[str, Any]] = []
         if should_parallelize:
             tasks = [
-                self._execute_single_native_tool_call_async(tool_call)
+                asyncio.create_task(self._execute_single_native_tool_call_async(tool_call))
                 for tool_call in runnable_tool_calls
             ]
             gathered = await asyncio.gather(
@@ -1769,9 +1769,19 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                         # siblings that have not started so they never run.
                         # Ones already in flight cannot be interrupted -- but
                         # unlike threads, tasks can be cancelled cooperatively.
-                        for task in asyncio.all_tasks():
-                            if task is not asyncio.current_task() and task in tasks:
+                        for task in tasks:
+                            if not task.done():
                                 task.cancel()
+                        # Settle the cancelled siblings so we don't leak
+                        # unfinished tasks or emit "Task was destroyed" warnings.
+                        await asyncio.gather(
+                            *(
+                                t
+                                for t in tasks
+                                if not t.done() and not t.cancelled()
+                            ),
+                            return_exceptions=True,
+                        )
                         raise result
                     tool_call = runnable_tool_calls[idx]
                     info = extract_tool_call_info(tool_call)
