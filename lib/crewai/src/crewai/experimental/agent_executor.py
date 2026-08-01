@@ -1794,6 +1794,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                             "result": f"Error executing tool: {result}",
                             "from_cache": False,
                             "original_tool": None,
+                            "tool_failure": ToolFailure(
+                                message=str(result), code="execution_error"
+                            ),
                         }
                     )
                 else:
