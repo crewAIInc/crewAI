@@ -472,12 +472,19 @@ class TestToolOutputSchema:
             expected_agent_payload
         )
 
-    def test_base_tool_does_not_infer_non_pydantic_return_annotation(self) -> None:
+    def test_base_tool_serializes_non_pydantic_dict_output_as_json(self) -> None:
         t = DictAnnotatedSearchTool()
 
         raw_result = t.run(query="crew")
 
         assert raw_result == {"query": "crew", "score": 0.5}
+        assert json.loads(t.format_output_for_agent(raw_result)) == raw_result
+
+    def test_base_tool_falls_back_for_unserializable_dict_output(self) -> None:
+        t = DictAnnotatedSearchTool()
+        raw_result: dict[str, object] = {}
+        raw_result["self"] = raw_result
+
         assert t.format_output_for_agent(raw_result) == str(raw_result)
 
     @pytest.mark.parametrize(
@@ -529,9 +536,21 @@ class TestToolOutputSchema:
         raw_result = search.run(query="crew")
 
         assert raw_result == {"query": "crew", "score": 0.5}
-        assert search.format_output_for_agent(raw_result) == str(raw_result)
+        assert json.loads(search.format_output_for_agent(raw_result)) == raw_result
 
-    def test_explicit_result_schema_wins_over_return_annotation(self) -> None:
+    def test_decorator_tool_serializes_nested_dict_output_as_json(self) -> None:
+        @tool("search")
+        def search(query: str) -> dict[str, object]:
+            """Search for a query."""
+            return {"query": query, "data": {"items": [True, None]}}
+
+        raw_result = search.run(query="crew")
+
+        assert json.loads(search.format_output_for_agent(raw_result)) == {
+            "query": "crew",
+            "data": {"items": [True, None]},
+        }
+
         class AlternateOutput(BaseModel):
             value: str
 
@@ -562,7 +581,7 @@ class TestToolOutputSchema:
             agent_text = search.format_output_for_agent(raw_result)
 
         assert raw_result == {"query": "crew", "score": "not-a-float"}
-        assert agent_text == str(raw_result)
+        assert json.loads(agent_text) == raw_result
 
     def test_unserializable_typed_output_warns_and_uses_string_agent_text(
         self,
