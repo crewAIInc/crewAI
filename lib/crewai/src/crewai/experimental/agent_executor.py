@@ -1756,33 +1756,32 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 asyncio.create_task(self._execute_single_native_tool_call_async(tool_call))
                 for tool_call in runnable_tool_calls
             ]
-            gathered = await asyncio.gather(
-                *tasks,
-                return_exceptions=True,
-            )
+            # Use asyncio.wait with FIRST_EXCEPTION so a ToolExecutionFailedError
+            # surfaces immediately and we can cancel still-running siblings before
+            # they finish, rather than waiting for all tasks to complete first.
+            pending = set(tasks)
+            fatal_exc: ToolExecutionFailedError | None = None
+            while pending and fatal_exc is None:
+                done, pending = await asyncio.wait(
+                    pending, return_when=asyncio.FIRST_EXCEPTION
+                )
+                for t in done:
+                    exc = t.exception() if not t.cancelled() else None
+                    if isinstance(exc, ToolExecutionFailedError):
+                        fatal_exc = exc
+                        break
+            if fatal_exc is not None:
+                for t in pending:
+                    t.cancel()
+                await asyncio.gather(*pending, return_exceptions=True)
+                raise fatal_exc
             execution_results = []
-            for idx, result in enumerate(gathered):
+            for idx, task in enumerate(tasks):
+                if task.cancelled():
+                    result: Any = asyncio.CancelledError()
+                else:
+                    result = task.exception() or task.result()
                 if isinstance(result, BaseException):
-                    if isinstance(result, ToolExecutionFailedError):
-                        # A deliberate stop: folding it into a tool result would
-                        # let the remaining parallel calls carry on. Cancel the
-                        # siblings that have not started so they never run.
-                        # Ones already in flight cannot be interrupted -- but
-                        # unlike threads, tasks can be cancelled cooperatively.
-                        for task in tasks:
-                            if not task.done():
-                                task.cancel()
-                        # Settle the cancelled siblings so we don't leak
-                        # unfinished tasks or emit "Task was destroyed" warnings.
-                        await asyncio.gather(
-                            *(
-                                t
-                                for t in tasks
-                                if not t.done() and not t.cancelled()
-                            ),
-                            return_exceptions=True,
-                        )
-                        raise result
                     tool_call = runnable_tool_calls[idx]
                     info = extract_tool_call_info(tool_call)
                     call_id = info[0] if info else "unknown"
