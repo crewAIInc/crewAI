@@ -29,12 +29,12 @@ print(results)
 
 ## Configuration
 
-- `KEENABLE_API_KEY` (env, optional): lifts rate limits and enables `realtime` mode.
+- `KEENABLE_API_KEY` (env, optional): lifts rate limits. Not required.
 - `KEENABLE_API_URL` (env, optional): base-URL override (HTTPS). Defaults to
   `https://api.keenable.ai`.
 
 Tool arguments:
 
-- `mode` (`"pro"` default, or `"realtime"` — requires a key)
+- `mode` (default `"pro"`)
 - `n_results` (default `10`)
 - `timeout` (default `30`)

@@ -1,11 +1,12 @@
 import json
 import os
-from typing import Any, List, Optional, Type
+from typing import Any
 from urllib.parse import urlsplit
 
-import requests
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
+import requests
+
 
 DEFAULT_BASE_URL = "https://api.keenable.ai"
 
@@ -38,8 +39,8 @@ class KeenableSearchTool(BaseTool):
         "A tool that searches the internet with a search query, powered by "
         "Keenable. Returns a JSON list of results (title, url, description)."
     )
-    args_schema: Type[BaseModel] = KeenableSearchToolSchema
-    api_key: Optional[str] = Field(
+    args_schema: type[BaseModel] = KeenableSearchToolSchema
+    api_key: str | None = Field(
         default_factory=lambda: os.getenv("KEENABLE_API_KEY"),
         description="Keenable API key. Optional — without it the keyless free tier is used.",
     )
@@ -49,26 +50,23 @@ class KeenableSearchTool(BaseTool):
     )
     mode: str = Field(
         default="pro",
-        description="Search mode: 'pro' (default) or 'realtime' (requires an API key).",
+        description="Search mode. 'pro' is the default and the only mode needed here.",
     )
-    n_results: int = Field(default=10, description="Maximum number of results to return.")
+    n_results: int = Field(
+        default=10, description="Maximum number of results to return."
+    )
     timeout: int = Field(default=30, description="Request timeout in seconds.")
-    env_vars: List[EnvVar] = [
-        EnvVar(
-            name="KEENABLE_API_KEY",
-            description="API key for Keenable search (optional; keyless free tier by default)",
-            required=False,
-        ),
-    ]
-
-    def __init__(self, **kwargs: Any):
-        super().__init__(**kwargs)
-        # 'realtime' is not available on the keyless public endpoint, so reject
-        # the invalid combination at construction time for deterministic behavior.
-        if self.mode == "realtime" and not (self.api_key or "").strip():
-            raise ValueError(
-                "Keenable 'realtime' mode requires an API key (set KEENABLE_API_KEY)."
-            )
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="KEENABLE_API_KEY",
+                description=(
+                    "API key for Keenable search (optional; keyless free tier by default)"
+                ),
+                required=False,
+            ),
+        ]
+    )
 
     def _resolved_base_url(self) -> str:
         base = (self.base_url or DEFAULT_BASE_URL).rstrip("/")
@@ -76,7 +74,11 @@ class KeenableSearchTool(BaseTool):
         if parsed.hostname:
             if parsed.scheme == "https":
                 return base
-            if parsed.scheme == "http" and parsed.hostname in {"localhost", "127.0.0.1", "::1"}:
+            if parsed.scheme == "http" and parsed.hostname in {
+                "localhost",
+                "127.0.0.1",
+                "::1",
+            }:
                 return base
         raise ValueError(
             f"KEENABLE_API_URL must be an https:// URL with a host, got {base!r}"
@@ -110,7 +112,7 @@ class KeenableSearchTool(BaseTool):
             # response.json() raises ValueError on a non-JSON body.
             data = response.json()
         except (requests.RequestException, ValueError) as e:
-            return f"Error performing search: {str(e)}"
+            return f"Error performing search: {e!s}"
 
         # Guard against a malformed response shape (not a dict / results not a list).
         results = data.get("results") if isinstance(data, dict) else None
