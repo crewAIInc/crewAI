@@ -1765,11 +1765,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 done, pending = await asyncio.wait(
                     pending, return_when=asyncio.FIRST_EXCEPTION
                 )
+                # Drain all exceptions from done tasks to prevent "exception never retrieved" warnings
                 for t in done:
                     exc = t.exception() if not t.cancelled() else None
-                    if isinstance(exc, ToolExecutionFailedError):
+                    if isinstance(exc, ToolExecutionFailedError) and fatal_exc is None:
                         fatal_exc = exc
-                        break
             if fatal_exc is not None:
                 for t in pending:
                     t.cancel()

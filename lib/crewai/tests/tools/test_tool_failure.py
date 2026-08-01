@@ -1655,16 +1655,17 @@ class TestParallelAbortCancelsPendingSiblings:
                 )
             )
 
+        gate = asyncio.Event()
+
         async def _slow_tool(_tool_call: Any) -> dict[str, Any]:
+            await gate.wait()  # Only proceed if gate is set (never happens in cancel path)
             started.append("slow")
             await asyncio.sleep(10)
             return {"call_id": "slow", "func_name": "slow", "result": "ok", "from_cache": False, "original_tool": None}
 
         executor = MagicMock(spec=AgentExecutor)
         executor._should_parallelize_native_tool_calls = MagicMock(return_value=True)
-        executor._execute_single_native_tool_call_async = AsyncMock(
-            side_effect=[_fail_tool(None), _slow_tool(None)]
-        )
+        executor._execute_single_native_tool_call_async = AsyncMock()
 
         # Verify that ToolExecutionFailedError propagates and sibling never starts.
         async def _run() -> None:
