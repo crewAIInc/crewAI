@@ -38,6 +38,11 @@ def test_generated_project_dependency_uses_next_major_upper_bound() -> None:
     assert get_crewai_tools_dependency("1.15.0") == "crewai[tools]>=1.15.0,<2.0.0"
 
 
+def test_generated_project_dependency_uses_minor_baseline_for_patch_versions() -> None:
+    assert get_crewai_dependency_range("1.15.6") == ">=1.15.0,<2.0.0"
+    assert get_crewai_tools_dependency("1.15.6") == "crewai[tools]>=1.15.0,<2.0.0"
+
+
 class TestVersionChecking:
     """Test version checking utilities."""
 
