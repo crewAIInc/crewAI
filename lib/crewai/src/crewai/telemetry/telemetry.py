@@ -123,8 +123,15 @@ class Telemetry:
             return
 
         try:
+            # coding_agent is set on the Resource so it is attached to *every*
+            # span this provider emits, without per-method duplication. The value
+            # is one of a fixed set of literals from detect_coding_agent() and
+            # never contains environment values or any user data.
             self.resource = Resource(
-                attributes={SERVICE_NAME: CREWAI_TELEMETRY_SERVICE_NAME},
+                attributes={
+                    SERVICE_NAME: CREWAI_TELEMETRY_SERVICE_NAME,
+                    "coding_agent": detect_coding_agent(),
+                },
             )
             with suppress_warnings():
                 self.provider = TracerProvider(resource=self.resource)

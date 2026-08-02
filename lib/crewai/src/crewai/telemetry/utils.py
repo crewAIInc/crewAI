@@ -46,6 +46,18 @@ _EDITOR_TERM_MARKERS: Final[tuple[tuple[str, str, str], ...]] = (
     ("TERMINAL_EMULATOR", "JetBrains-JediTerm", "jetbrains_terminal"),
 )
 
+_FALLBACK_AGENT_NAMES: Final[tuple[str, ...]] = ("non_interactive", "unknown")
+
+# The complete set of values detect_coding_agent() can ever return. Every value
+# is a literal defined in this module, which is what makes the function
+# structurally incapable of emitting PII: no environment value, path, hostname,
+# or user-supplied string can reach the return value.
+KNOWN_CODING_AGENTS: Final[frozenset[str]] = frozenset(
+    [name for _, name in _CODING_AGENT_ENV_MARKERS]
+    + [name for _, _, name in _EDITOR_TERM_MARKERS]
+    + list(_FALLBACK_AGENT_NAMES)
+)
+
 
 def detect_coding_agent() -> str:
     """Best-effort detection of the AI coding assistant running this process.
@@ -62,6 +74,7 @@ def detect_coding_agent() -> str:
         A normalized assistant name (e.g. "claude_code", "cursor", "codex"),
         an editor terminal hint (e.g. "vscode_terminal"), "non_interactive"
         when no marker is found and there is no TTY, or "unknown" otherwise.
+        The result is always a member of KNOWN_CODING_AGENTS.
     """
     for env_var, agent_name in _CODING_AGENT_ENV_MARKERS:
         if os.environ.get(env_var):

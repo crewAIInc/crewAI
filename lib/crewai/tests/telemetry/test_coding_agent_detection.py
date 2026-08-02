@@ -2,7 +2,7 @@
 
 import pytest
 
-from crewai.telemetry.utils import detect_coding_agent
+from crewai.telemetry.utils import KNOWN_CODING_AGENTS, detect_coding_agent
 
 
 ALL_MARKERS = (
@@ -102,6 +102,56 @@ def test_handles_broken_stdout(clean_env, monkeypatch):
 
     monkeypatch.setattr("sys.stdout", BrokenStdout())
     assert detect_coding_agent() == "unknown"
+
+
+def test_result_is_always_a_known_literal(clean_env):
+    """PII guarantee: the return value can only ever be a known literal.
+
+    Every marker is set to a value that would be catastrophic to emit, and the
+    result must still come from the fixed vocabulary.
+    """
+    sensitive = "/Users/jane.doe/secrets/api-key-sk-live-1234"
+
+    for var in ALL_MARKERS:
+        clean_env.setenv(var, sensitive)
+        result = detect_coding_agent()
+        assert result in KNOWN_CODING_AGENTS
+        assert sensitive not in result
+        clean_env.delenv(var, raising=False)
+
+
+def test_known_agents_contains_no_pii_shaped_values():
+    """Every possible emitted value is a short, opaque identifier."""
+    for name in KNOWN_CODING_AGENTS:
+        assert name.replace("_", "").isalnum(), name
+        assert len(name) <= 32, name
+
+
+def test_coding_agent_attached_to_telemetry_resource(clean_env, monkeypatch):
+    """The attribute must land on the Resource, so it reaches every span."""
+    import os
+    from unittest.mock import patch
+
+    from crewai.telemetry.telemetry import Telemetry
+
+    clean_env.setenv("CLAUDECODE", "1")
+
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "CREWAI_DISABLE_TELEMETRY": "false",
+                "CREWAI_DISABLE_TRACKING": "false",
+                "OTEL_SDK_DISABLED": "false",
+            },
+        ),
+        patch("crewai.telemetry.telemetry.TracerProvider"),
+    ):
+        telemetry = Telemetry()
+        telemetry._initialized = False
+        telemetry.__init__()
+
+    assert telemetry.resource.attributes["coding_agent"] == "claude_code"
 
 
 def test_coding_agent_span_emits_once(clean_env, monkeypatch):
