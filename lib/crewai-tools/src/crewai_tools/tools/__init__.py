@@ -40,6 +40,9 @@ from crewai_tools.tools.contextualai_rerank_tool.contextual_rerank_tool import (
 from crewai_tools.tools.couchbase_tool.couchbase_tool import (
     CouchbaseFTSVectorSearchTool,
 )
+from crewai_tools.tools.creduent_verification_tool.creduent_verification_tool import (
+    CreduentVerificationTool,
+)
 from crewai_tools.tools.crewai_platform_tools.crewai_platform_tools import (
     CrewaiPlatformTools,
 )
@@ -234,6 +237,7 @@ __all__ = [
     "ContextualAIQueryTool",
     "ContextualAIRerankTool",
     "CouchbaseFTSVectorSearchTool",
+    "CreduentVerificationTool",
     "CrewaiPlatformTools",
     "DOCXSearchTool",
     "DallETool",
