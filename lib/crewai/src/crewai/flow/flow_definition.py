@@ -775,7 +775,10 @@ class FlowDefinition(BaseModel):
         for method_name, method in self.methods.items():
             if _condition_references(method.listen, method_name):
                 raise ValueError(
-                    f"methods.{method_name}.listen must not reference itself"
+                    f"methods.{method_name}.listen must not reference itself. "
+                    + _self_reference_hint(
+                        method_name, conversational=self.conversational is not None
+                    )
                 )
         return self
 
@@ -874,6 +877,21 @@ def _validate_step_list(steps: list[FlowEachStepDefinition], *, field: str) -> N
         if name in seen:
             raise ValueError(f"{field} step names must be unique: {name!r}")
         seen.add(name)
+
+
+def _self_reference_hint(name: str, *, conversational: bool) -> str:
+    """Explain why a listen label matching the method's own name is rejected."""
+    if conversational:
+        return (
+            f"In a conversational flow {name!r} is both a router route label and a "
+            "method name, and the two share one trigger namespace, so the method "
+            "would re-trigger itself once it finishes. Rename the handler and keep "
+            f'@listen("{name}") as the route label.'
+        )
+    return (
+        "A method's completion is itself a trigger, so listening for its own name "
+        "would re-trigger it forever. Listen for the method that should precede it."
+    )
 
 
 def _condition_references(condition: FlowDefinitionCondition | None, name: str) -> bool:

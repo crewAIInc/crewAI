@@ -437,6 +437,46 @@ def test_flow_definition_serializes_conversational_config():
     assert conversational.router.fallback_intent == "end"
 
 
+def test_self_referential_listen_explains_the_collision():
+    class SelfListeningFlow(Flow):
+        @start()
+        def begin(self):
+            return "begin"
+
+        @listen("step")
+        def step(self):
+            return "step"
+
+    with pytest.raises(ValidationError) as excinfo:
+        SelfListeningFlow()
+
+    message = str(excinfo.value)
+    assert "methods.step.listen must not reference itself" in message
+    assert "re-trigger it forever" in message
+
+
+def test_conversational_self_referential_listen_names_the_route_collision():
+    @ConversationConfig(
+        router=RouterConfig(
+            route_descriptions={"create_video": "User wants a new video."}
+        )
+    )
+    class ChatFlow(Flow):
+        conversational = True
+
+        @listen("create_video")
+        def create_video(self):
+            return "made a video"
+
+    with pytest.raises(ValidationError) as excinfo:
+        ChatFlow()
+
+    message = str(excinfo.value)
+    assert "methods.create_video.listen must not reference itself" in message
+    assert "both a router route label and a method name" in message
+    assert "Rename the handler" in message
+
+
 def test_flow_definition_uses_collapsed_conversational_router_start():
     class ChatFlow(Flow):
         conversational = True
