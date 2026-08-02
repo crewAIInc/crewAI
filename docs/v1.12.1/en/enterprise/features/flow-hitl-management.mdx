@@ -387,27 +387,26 @@ All webhooks receive a JSON payload with this structure:
 
 ```json
 {
-  "event": "new_request",
-  "request": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "flow_id": "flow_abc123",
-    "method_name": "review_article",
-    "message": "Please review this article for publication.",
-    "emit_options": ["approved", "rejected", "request_changes"],
-    "state": {
-      "article_id": 12345,
-      "author": "john@example.com",
-      "category": "technology"
-    },
-    "metadata": {},
-    "created_at": "2026-01-14T12:00:00Z"
+  "event_type": "new_request",
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "pending",
+  "flow_id": "flow_abc123",
+  "method_name": "review_article",
+  "message": "Please review this article for publication.",
+  "output": "Content to review...",
+  "emit": ["approved", "rejected", "request_changes"],
+  "state": {
+    "article_id": 12345,
+    "author": "john@example.com",
+    "category": "technology"
   },
-  "deployment": {
-    "id": 456,
-    "name": "Content Review Flow",
-    "organization_id": 789
-  },
-  "callback_url": "https://api.crewai.com/...",
+  "metadata": {},
+  "created_at": "2026-01-14T12:00:00Z",
+  "callback_url": "https://app.crewai.com/crewai_plus/api/v1/human_feedback_requests/{id}/respond?token={response_token}",
+  "response_token": "secure-token-string",
+  "deployment_id": 456,
+  "deployment_name": "Content Review Flow",
+  "organization_id": 789,
   "assigned_to_email": "reviewer@company.com"
 }
 ```
@@ -445,8 +444,8 @@ Each webhook request includes these headers:
 
 | Header | Description |
 |--------|-------------|
-| `X-Signature` | HMAC-SHA256 signature: `sha256=<hex_digest>` |
-| `X-Timestamp` | Unix timestamp when the request was signed |
+| `X-CrewAI-Signature` | HMAC-SHA256 signature: `sha256=<hex_digest>` |
+| `X-CrewAI-Timestamp` | Unix timestamp when the request was signed |
 
 #### Verification
 
