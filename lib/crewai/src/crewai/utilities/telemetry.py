@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import logging
 import os
+import threading
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # Optional OpenTelemetry imports (lazy / optional dependency)
 try:
@@ -30,6 +34,7 @@ except Exception:  # pragma: no cover - opentelemetry not installed
 
 
 _PROVIDER_READY = False
+_PROVIDER_LOCK = threading.Lock()
 
 
 def _enabled() -> bool:
@@ -38,22 +43,46 @@ def _enabled() -> bool:
 
 def _ensure_provider() -> None:
     global _PROVIDER_READY
+
+    # Fast path without the lock: once setup has been attempted (whether it
+    # succeeded or degraded gracefully below), avoid lock contention on
+    # every get_tracer() call from concurrently instantiated agents.
     if _PROVIDER_READY or not _OTEL_AVAILABLE or not _enabled():
         return
 
-    service_name = os.getenv("SERVICE_NAME", "crewai")
-    otlp_endpoint = os.getenv("OTLP_ENDPOINT")  # e.g., http://localhost:4318/v1/traces
+    with _PROVIDER_LOCK:
+        # Re-check inside the lock: another thread may have already
+        # finished initialization while we were waiting on it.
+        if _PROVIDER_READY:
+            return
 
-    resource = Resource.create({"service.name": service_name}) if Resource else None
-    provider = TracerProvider(resource=resource) if TracerProvider else None
+        try:
+            service_name = os.getenv("SERVICE_NAME", "crewai")
+            otlp_endpoint = os.getenv("OTLP_ENDPOINT")  # e.g., http://localhost:4318/v1/traces
 
-    if provider and BatchSpanProcessor and OTLPSpanExporter and otlp_endpoint:
-        exporter = OTLPSpanExporter(endpoint=otlp_endpoint)
-        provider.add_span_processor(BatchSpanProcessor(exporter))
+            resource = Resource.create({"service.name": service_name}) if Resource else None
+            provider = TracerProvider(resource=resource) if TracerProvider else None
 
-    if provider and trace:
-        trace.set_tracer_provider(provider)
-        _PROVIDER_READY = True
+            if provider and BatchSpanProcessor and OTLPSpanExporter and otlp_endpoint:
+                exporter = OTLPSpanExporter(endpoint=otlp_endpoint)
+                provider.add_span_processor(BatchSpanProcessor(exporter))
+
+            if provider and trace:
+                trace.set_tracer_provider(provider)
+        except Exception as exc:
+            # An unreachable OTLP collector, a malformed endpoint, or an
+            # incompatible OTel version must never crash the user's
+            # workflow just because tracing setup failed.
+            logger.warning(
+                "crewai telemetry: failed to initialize OpenTelemetry tracer "
+                "provider; continuing without tracing: %s",
+                exc,
+            )
+        finally:
+            # Mark as attempted on both success and failure so we don't
+            # retry (and potentially re-raise) setup on every subsequent
+            # get_tracer() call.
+            _PROVIDER_READY = True
 
 
 class _NoopSpanCtx:
