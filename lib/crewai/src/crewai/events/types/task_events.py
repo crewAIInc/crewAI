@@ -49,6 +49,13 @@ class TaskFailedEvent(BaseEvent):
     """Event emitted when a task fails"""
 
     error: str
+    error_type: str | None = None
+    """Exception class name (e.g. "ValidationError").
+
+    Kept separate from ``error`` so telemetry can record what kind of failure
+    occurred without ever touching the message, which routinely contains
+    prompts, model output, or credentials.
+    """
     type: Literal["task_failed"] = "task_failed"
     task: Any | None = None
 
