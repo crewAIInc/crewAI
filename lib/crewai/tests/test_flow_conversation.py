@@ -1620,6 +1620,86 @@ class TestHandleTurnReplyFallback:
         assert assistant_messages == ["computed reply"]
 
 
+class TestPersistedReplyFromCustomRoute:
+    """Regression tests for #6766: ``@persist`` snapshots state per method
+    *inside* ``kickoff()``, so ``handle_turn``'s fallback append — the only
+    thing that records the reply of a custom ``@listen`` route that just
+    returns a string — landed after the last snapshot and never reached the
+    backend. Built-in routes were unaffected because they append inside the
+    method body. Run each turn on a fresh instance (the web-server pattern)
+    and the assistant side of the conversation silently disappeared.
+    """
+
+    @staticmethod
+    def _greet_flow(persistence: Any) -> type[ConversationalFlow]:
+        from crewai.flow.persistence import persist
+
+        @persist(persistence)
+        class GreetFlow(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "GREET"
+
+            @listen("GREET")
+            def greet(self) -> str:
+                return "hello from the custom route"  # returns without appending
+
+        return GreetFlow
+
+    def test_custom_route_reply_survives_a_fresh_instance(self, tmp_path) -> None:
+        from crewai.flow.persistence import SQLiteFlowPersistence
+
+        persistence = SQLiteFlowPersistence(str(tmp_path / "conversation.db"))
+        greet_flow = self._greet_flow(persistence)
+
+        session_id = str(uuid4())
+        greet_flow().handle_turn("hi", session_id=session_id)
+        second_turn = greet_flow()
+        second_turn.handle_turn("hi again", session_id=session_id)
+
+        # Turn 1's reply must come back from disk, not just from memory.
+        assert [message.role for message in second_turn.state.messages] == [
+            "user",
+            "assistant",
+            "user",
+            "assistant",
+        ]
+
+        restored = persistence.load_state(session_id)
+        assert restored is not None
+        assert [message["role"] for message in restored["messages"]] == [
+            "user",
+            "assistant",
+            "user",
+            "assistant",
+        ]
+
+    def test_no_duplicate_reply_when_handler_appends_itself(self, tmp_path) -> None:
+        from crewai.flow.persistence import SQLiteFlowPersistence, persist
+
+        persistence = SQLiteFlowPersistence(str(tmp_path / "conversation.db"))
+
+        @persist(persistence)
+        class EchoFlow(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "ECHO"
+
+            @listen("ECHO")
+            def echo(self) -> str:
+                reply = "echo"
+                self.append_assistant_message(reply)  # handler DOES append
+                return reply
+
+        session_id = str(uuid4())
+        EchoFlow().handle_turn("hi", session_id=session_id)
+
+        restored = persistence.load_state(session_id)
+        assert restored is not None
+        assert [message["role"] for message in restored["messages"]] == [
+            "user",
+            "assistant",
+        ]
+
+
 class TestFalsyRouteTurnFallback:
     """A falsy ``route_turn()`` must never replay a previous turn's intent.
 

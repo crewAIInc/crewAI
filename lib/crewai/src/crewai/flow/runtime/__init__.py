@@ -2932,6 +2932,22 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if method_definition.persist is not None
             else self._definition.persist
         )
+        self._persist_state_snapshot(str(method_name), persist_definition)
+
+    def _persist_state_snapshot(
+        self,
+        label: str,
+        persist_definition: FlowPersistenceDefinition | None = None,
+    ) -> None:
+        """Save the current state under ``label`` when persistence is enabled.
+
+        ``persist_definition`` defaults to the flow-level ``@persist`` config,
+        which is what callers outside method execution need, e.g. a
+        conversational turn that appends its assistant reply after
+        ``kickoff()`` has already taken the last per-method snapshot.
+        """
+        if persist_definition is None:
+            persist_definition = self._definition.persist
         if persist_definition is None or not persist_definition.enabled:
             return
 
@@ -2946,7 +2962,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             else self._persist_backend_for(persist_definition)
         )
         PersistenceDecorator.persist_state(
-            self, method_name, backend, verbose=persist_definition.verbose
+            self, label, backend, verbose=persist_definition.verbose
         )
 
     def _persist_backend_for(
