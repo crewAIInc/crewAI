@@ -51,6 +51,7 @@ from crewai.telemetry.utils import (
     add_crew_and_task_attributes,
     add_crew_attributes,
     close_span,
+    detect_coding_agent,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.logger_utils import suppress_warnings
@@ -115,6 +116,8 @@ class Telemetry:
         self.ready: bool = False
         self.trace_set: bool = False
         self._initialized: bool = True
+        self._coding_agent_reported: bool = False
+        self._coding_agent_lock = threading.Lock()
 
         if self._is_telemetry_disabled():
             return
@@ -283,6 +286,7 @@ class Telemetry:
                 version("crewai"),
             )
             self._add_attribute(span, "python_version", platform.python_version())
+            self._add_attribute(span, "coding_agent", detect_coding_agent())
             add_crew_attributes(span, crew, self._add_attribute)
             self._add_attribute(span, "crew_process", crew.process)
             self._add_attribute(span, "crew_memory", crew.memory)
@@ -474,6 +478,7 @@ class Telemetry:
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
+        self.coding_agent_span()
 
     def task_started(self, crew: Crew, task: Task) -> Span | None:
         """Records task started in a crew.
@@ -951,9 +956,11 @@ class Telemetry:
             span = tracer.start_span("Flow Creation")
             self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "flow_name", flow_name)
+            self._add_attribute(span, "coding_agent", detect_coding_agent())
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
+        self.coding_agent_span()
 
     def flow_plotting_span(self, flow_name: str, node_names: list[str]) -> None:
         """Records flow visualization/plotting activity.
@@ -1058,6 +1065,20 @@ class Telemetry:
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
+
+    def coding_agent_span(self) -> None:
+        """Records which AI coding assistant (if any) is running this process.
+
+        Emitted at most once per process as a feature usage event, so it lands
+        in the existing feature-usage aggregation as "coding_agent:<name>".
+        Only the assistant's name is recorded - never any environment values.
+        """
+        with self._coding_agent_lock:
+            if self._coding_agent_reported:
+                return
+            self._coding_agent_reported = True
+
+        self.feature_usage_span(f"coding_agent:{detect_coding_agent()}")
 
     def template_installed_span(self, template_name: str) -> None:
         """Records when a template is downloaded and installed.

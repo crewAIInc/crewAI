@@ -115,6 +115,8 @@ def test_flow_creation_span_records_crewai_version():
         patch("crewai.telemetry.telemetry.version", return_value="9.9.9"),
     ):
         telemetry = Telemetry()
+        # Flow creation also emits a once-per-process coding_agent feature span.
+        telemetry._coding_agent_reported = True
         telemetry.flow_creation_span("ResearchFlow")
 
     tracer.start_span.assert_called_once_with("Flow Creation")

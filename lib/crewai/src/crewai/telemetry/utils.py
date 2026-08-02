@@ -6,7 +6,9 @@ This module provides utility functions for telemetry operations.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+import os
+import sys
+from typing import TYPE_CHECKING, Any, Final
 
 from opentelemetry.trace import Span, Status, StatusCode
 
@@ -14,6 +16,68 @@ from opentelemetry.trace import Span, Status, StatusCode
 if TYPE_CHECKING:
     from crewai.crew import Crew
     from crewai.task import Task
+
+
+# Environment variables set by AI coding assistants, checked in order.
+# Only the assistant's name is ever recorded - never the variable's value.
+_CODING_AGENT_ENV_MARKERS: Final[tuple[tuple[str, str], ...]] = (
+    ("CLAUDECODE", "claude_code"),
+    ("CLAUDE_CODE_ENTRYPOINT", "claude_code"),
+    ("CURSOR_TRACE_ID", "cursor"),
+    ("CURSOR_AGENT", "cursor"),
+    ("CODEX_SANDBOX", "codex"),
+    ("CODEX_SANDBOX_NETWORK_DISABLED", "codex"),
+    ("GEMINI_CLI", "gemini_cli"),
+    ("AIDER_MODEL", "aider"),
+    ("WINDSURF_SESSION_ID", "windsurf"),
+    ("DEVIN_SESSION_ID", "devin"),
+    ("REPLIT_AGENT", "replit_agent"),
+    ("COPILOT_AGENT_ID", "copilot"),
+    ("GITHUB_COPILOT_CLI", "copilot"),
+    ("OPENHANDS_SESSION_ID", "openhands"),
+    ("CLINE_ACTIVE", "cline"),
+    ("AMP_AGENT", "amp_code"),
+)
+
+# Editors whose integrated terminal implies a human is likely present. Used only
+# as a weaker fallback when no explicit coding-agent marker is found.
+_EDITOR_TERM_MARKERS: Final[tuple[tuple[str, str, str], ...]] = (
+    ("TERM_PROGRAM", "vscode", "vscode_terminal"),
+    ("TERMINAL_EMULATOR", "JetBrains-JediTerm", "jetbrains_terminal"),
+)
+
+
+def detect_coding_agent() -> str:
+    """Best-effort detection of the AI coding assistant running this process.
+
+    Detection is based on environment variables that coding assistants set in
+    the shells they spawn. Only the assistant's normalized name is returned -
+    environment variable values are never read into the return value or
+    recorded anywhere.
+
+    This is intentionally heuristic: markers change as tools evolve, so a
+    result of "unknown" means "no known marker present", not "no agent".
+
+    Returns:
+        A normalized assistant name (e.g. "claude_code", "cursor", "codex"),
+        an editor terminal hint (e.g. "vscode_terminal"), "non_interactive"
+        when no marker is found and there is no TTY, or "unknown" otherwise.
+    """
+    for env_var, agent_name in _CODING_AGENT_ENV_MARKERS:
+        if os.environ.get(env_var):
+            return agent_name
+
+    for env_var, expected, agent_name in _EDITOR_TERM_MARKERS:
+        if os.environ.get(env_var) == expected:
+            return agent_name
+
+    try:
+        if not sys.stdout.isatty():
+            return "non_interactive"
+    except (AttributeError, ValueError, OSError):
+        return "unknown"
+
+    return "unknown"
 
 
 def add_agent_fingerprint_to_span(
