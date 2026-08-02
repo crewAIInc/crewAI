@@ -1971,10 +1971,19 @@ class AnthropicCompletion(BaseLLM):
             cache_creation_tokens = (
                 getattr(usage, "cache_creation_input_tokens", 0) or 0
             )
+            # Anthropic reports cache reads/writes as counters *separate* from
+            # ``input_tokens``, and bills both (writes at 1.25x, reads at 0.1x).
+            # Other providers (OpenAI, Gemini) already fold cached tokens into
+            # their prompt count and expose the cached figure as a breakdown, so
+            # report the billed input here to match. Leaving them out made
+            # ``total_tokens`` undercount every prompt-cached request.
+            billed_input_tokens = (
+                input_tokens + cache_read_tokens + cache_creation_tokens
+            )
             result: dict[str, Any] = {
-                "input_tokens": input_tokens,
+                "input_tokens": billed_input_tokens,
                 "output_tokens": output_tokens,
-                "total_tokens": input_tokens + output_tokens,
+                "total_tokens": billed_input_tokens + output_tokens,
                 "cached_prompt_tokens": cache_read_tokens,
                 "cache_creation_tokens": cache_creation_tokens,
             }

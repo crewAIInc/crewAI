@@ -1653,11 +1653,68 @@ def test_anthropic_cache_creation_tokens_extraction():
     mock_response.model = None
 
     usage = llm._extract_anthropic_token_usage(mock_response)
-    assert usage["input_tokens"] == 100
+    # Anthropic keeps cache reads/writes out of ``input_tokens``; both are
+    # billed, so the reported prompt count is the billed input (100 + 30 + 20)
+    # and the total covers every billed token.
+    assert usage["input_tokens"] == 150
     assert usage["output_tokens"] == 50
-    assert usage["total_tokens"] == 150
+    assert usage["total_tokens"] == 200
     assert usage["cached_prompt_tokens"] == 30
     assert usage["cache_creation_tokens"] == 20
+
+
+def test_anthropic_total_tokens_includes_cache_tokens():
+    """Cache reads/writes are billed, so they must reach total_tokens.
+
+    Regression test for the undercount reported in #6768: ``total_tokens`` was
+    ``input_tokens + output_tokens``, which omitted both Anthropic cache
+    counters and made the field unusable for cost estimation on any cached
+    workload.
+    """
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text="test response")]
+    mock_response.usage = MagicMock(
+        input_tokens=100,
+        output_tokens=50,
+        cache_read_input_tokens=30,
+        cache_creation_input_tokens=20,
+    )
+    mock_response.stop_reason = None
+    mock_response.model = None
+
+    usage = llm._extract_anthropic_token_usage(mock_response)
+    llm._track_token_usage_internal(usage)
+    summary = llm.get_token_usage_summary()
+
+    # The shared normalizer recomputes the total as prompt + completion, so the
+    # billed input has to be in ``input_tokens`` for the total to survive it.
+    assert summary.total_tokens == 200
+    assert summary.prompt_tokens == 150
+    assert summary.completion_tokens == 50
+    assert summary.cached_prompt_tokens == 30
+    assert summary.cache_creation_tokens == 20
+
+
+def test_anthropic_total_tokens_unchanged_without_cache():
+    """A request that touches no cache keeps input + output as the total."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text="test response")]
+    mock_response.usage = MagicMock(
+        input_tokens=40,
+        output_tokens=20,
+        cache_read_input_tokens=0,
+        cache_creation_input_tokens=0,
+    )
+    mock_response.stop_reason = None
+    mock_response.model = None
+
+    usage = llm._extract_anthropic_token_usage(mock_response)
+    assert usage["input_tokens"] == 40
+    assert usage["total_tokens"] == 60
 
 
 def test_anthropic_missing_cache_fields_default_to_zero():
