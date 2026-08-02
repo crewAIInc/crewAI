@@ -162,6 +162,23 @@ class TestUsageDictToMetrics:
                     successful_requests=1,
                 ),
             ),
+            # Anthropic cache counters are separate from input_tokens and are billed.
+            (
+                {
+                    "input_tokens": 12,
+                    "output_tokens": 8,
+                    "cached_prompt_tokens": 30,
+                    "cache_creation_tokens": 20,
+                },
+                UsageMetrics(
+                    prompt_tokens=12,
+                    completion_tokens=8,
+                    total_tokens=70,
+                    cached_prompt_tokens=30,
+                    cache_creation_tokens=20,
+                    successful_requests=1,
+                ),
+            ),
             # Native Gemini provider emits prompt_token_count/candidates_token_count
             (
                 {
@@ -201,6 +218,7 @@ class TestUsageDictToMetrics:
             "extended_keys",
             "garbage",
             "anthropic_aliases",
+            "anthropic_cache_tokens",
             "gemini_aliases",
             "openai_nested_cached",
         ],

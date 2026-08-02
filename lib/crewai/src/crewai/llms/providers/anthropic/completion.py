@@ -1974,7 +1974,12 @@ class AnthropicCompletion(BaseLLM):
             result: dict[str, Any] = {
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
-                "total_tokens": input_tokens + output_tokens,
+                "total_tokens": (
+                    input_tokens
+                    + output_tokens
+                    + cache_read_tokens
+                    + cache_creation_tokens
+                ),
                 "cached_prompt_tokens": cache_read_tokens,
                 "cache_creation_tokens": cache_creation_tokens,
             }

@@ -549,7 +549,12 @@ def test_anthropic_token_usage_tracking():
     with patch.object(llm._client.messages, 'create') as mock_create:
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="test response")]
-        mock_response.usage = MagicMock(input_tokens=50, output_tokens=25)
+        mock_response.usage = MagicMock(
+            input_tokens=50,
+            output_tokens=25,
+            cache_read_input_tokens=0,
+            cache_creation_input_tokens=0,
+        )
         mock_create.return_value = mock_response
 
         result = llm.call("Hello")
@@ -1368,7 +1373,12 @@ def _dict_tool_use_response():
             "input": {"query": "CrewAI"},
         }
     ]
-    mock_response.usage = MagicMock(input_tokens=10, output_tokens=2)
+    mock_response.usage = MagicMock(
+        input_tokens=10,
+        output_tokens=2,
+        cache_read_input_tokens=0,
+        cache_creation_input_tokens=0,
+    )
     mock_response.stop_reason = "tool_use"
     mock_response.id = "msg_123"
     return mock_response
@@ -1486,7 +1496,12 @@ def test_anthropic_object_tool_use_blocks_require_id():
             input={"query": "CrewAI"},
         )
     ]
-    mock_response.usage = MagicMock(input_tokens=10, output_tokens=2)
+    mock_response.usage = MagicMock(
+        input_tokens=10,
+        output_tokens=2,
+        cache_read_input_tokens=0,
+        cache_creation_input_tokens=0,
+    )
     mock_response.stop_reason = "tool_use"
     mock_response.id = "msg_123"
 
@@ -1583,7 +1598,12 @@ def test_anthropic_dict_tool_use_blocks_work_in_follow_up_conversation():
     initial_response = _dict_tool_use_response()
     final_response = MagicMock()
     final_response.content = [types.SimpleNamespace(text="Final answer")]
-    final_response.usage = MagicMock(input_tokens=4, output_tokens=3)
+    final_response.usage = MagicMock(
+        input_tokens=4,
+        output_tokens=3,
+        cache_read_input_tokens=0,
+        cache_creation_input_tokens=0,
+    )
     final_response.stop_reason = "end_turn"
     final_response.id = "msg_final"
     mock_client = MagicMock()
@@ -1638,7 +1658,7 @@ def test_tool_search_saves_input_tokens():
 
 
 def test_anthropic_cache_creation_tokens_extraction():
-    """Test that cache_creation_input_tokens are extracted from Anthropic responses."""
+    """Test that Anthropic cache tokens are extracted and included in the total."""
     llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
 
     mock_response = MagicMock()
@@ -1655,9 +1675,15 @@ def test_anthropic_cache_creation_tokens_extraction():
     usage = llm._extract_anthropic_token_usage(mock_response)
     assert usage["input_tokens"] == 100
     assert usage["output_tokens"] == 50
-    assert usage["total_tokens"] == 150
+    assert usage["total_tokens"] == 200
     assert usage["cached_prompt_tokens"] == 30
     assert usage["cache_creation_tokens"] == 20
+
+    llm._track_token_usage_internal(usage)
+    summary = llm.get_token_usage_summary()
+    assert summary.total_tokens == 200
+    assert summary.cached_prompt_tokens == 30
+    assert summary.cache_creation_tokens == 20
 
 
 def test_anthropic_missing_cache_fields_default_to_zero():
