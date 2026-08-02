@@ -1,5 +1,4 @@
 import logging
-from typing import Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -8,7 +7,11 @@ logger = logging.getLogger(__name__)
 
 
 class CreduentVerificationSchema(BaseModel):
-    """Input schema for Creduent verification tool."""
+    """Input schema for Creduent verification tool.
+
+    Attributes:
+        agent_uri: Target agent URI to verify, formatted as agent://<namespace>/<name>.
+    """
 
     agent_uri: str = Field(
         ...,
@@ -32,7 +35,17 @@ class CreduentVerificationTool(BaseTool):
     strict: bool = True
 
     def _run(self, agent_uri: str) -> str:
-        """Execute verification of the target agent URI."""
+        """Execute verification of the target agent URI.
+
+        Args:
+            agent_uri: Target agent URI formatted as agent://<namespace>/<name>.
+
+        Returns:
+            String containing verification status message or error details.
+
+        Raises:
+            ValueError: If strict mode is enabled and verification fails.
+        """
         try:
             from creduent.verify import verify
         except ImportError:

@@ -1,25 +1,28 @@
 from unittest.mock import MagicMock, patch
-import pytest
 
+import pytest
 from crewai_tools.tools.creduent_verification_tool.creduent_verification_tool import (
     CreduentVerificationSchema,
     CreduentVerificationTool,
 )
 
 
-def test_schema_validation():
+def test_schema_validation() -> None:
+    """Test schema validation for agent URI parameter."""
     schema = CreduentVerificationSchema(agent_uri="agent://assistant.dev/planner")
     assert schema.agent_uri == "agent://assistant.dev/planner"
 
 
-def test_verification_tool_initialization():
+def test_verification_tool_initialization() -> None:
+    """Test tool attributes and default strict configuration."""
     tool = CreduentVerificationTool()
     assert tool.name == "Creduent Agent Identity Verification"
     assert tool.strict is True
 
 
 @patch("creduent.verify.verify")
-def test_successful_verification(mock_verify):
+def test_successful_verification(mock_verify: MagicMock) -> None:
+    """Test successful verification flow when protocol returns valid result."""
     mock_result = MagicMock()
     mock_result.valid = True
     mock_verify.return_value = mock_result
@@ -32,7 +35,8 @@ def test_successful_verification(mock_verify):
 
 
 @patch("creduent.verify.verify")
-def test_failed_verification_strict(mock_verify):
+def test_failed_verification_strict(mock_verify: MagicMock) -> None:
+    """Test verification failure when strict mode is active."""
     mock_result = MagicMock()
     mock_result.valid = False
     mock_result.error = "Invalid signature"
