@@ -127,31 +127,54 @@ def test_known_agents_contains_no_pii_shaped_values():
         assert len(name) <= 32, name
 
 
-def test_coding_agent_attached_to_telemetry_resource(clean_env, monkeypatch):
-    """The attribute must land on the Resource, so it reaches every span."""
-    import os
-    from unittest.mock import patch
+def test_coding_agent_lands_on_every_exported_span(clean_env):
+    """End-to-end: the attribute must appear as a *span attribute* on any span.
 
-    from crewai.telemetry.telemetry import Telemetry
+    It cannot be a Resource attribute - the ingestion pipeline preserves only
+    serviceName from the resource, so anything else set there is dropped before
+    it reaches storage. This test exports through a real TracerProvider and
+    asserts the attribute survives on arbitrary spans.
+    """
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
 
-    clean_env.setenv("CLAUDECODE", "1")
+    from crewai.telemetry.telemetry import CommonAttributesSpanProcessor
 
-    with (
-        patch.dict(
-            os.environ,
-            {
-                "CREWAI_DISABLE_TELEMETRY": "false",
-                "CREWAI_DISABLE_TRACKING": "false",
-                "OTEL_SDK_DISABLED": "false",
-            },
-        ),
-        patch("crewai.telemetry.telemetry.TracerProvider"),
-    ):
-        telemetry = Telemetry()
-        telemetry._initialized = False
-        telemetry.__init__()
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(
+        CommonAttributesSpanProcessor({"coding_agent": "claude_code"})
+    )
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
 
-    assert telemetry.resource.attributes["coding_agent"] == "claude_code"
+    tracer = provider.get_tracer("crewai.telemetry")
+    for name in ("Crew Created", "Task Execution", "Tool Usage", "Feature Usage"):
+        span = tracer.start_span(name)
+        span.end()
+
+    exported = exporter.get_finished_spans()
+    assert len(exported) == 4
+    for span in exported:
+        assert span.attributes["coding_agent"] == "claude_code", span.name
+
+    # It must be a span attribute, not a resource attribute, or ingestion drops it.
+    assert "coding_agent" not in exported[0].resource.attributes
+
+
+def test_common_attributes_processor_never_breaks_span_creation(clean_env):
+    """A failure applying attributes must not propagate into user execution."""
+    from crewai.telemetry.telemetry import CommonAttributesSpanProcessor
+
+    class ExplodingSpan:
+        def set_attributes(self, _):
+            raise RuntimeError("boom")
+
+    CommonAttributesSpanProcessor({"coding_agent": "cursor"}).on_start(
+        ExplodingSpan()  # type: ignore[arg-type]
+    )
 
 
 def test_coding_agent_span_emits_once(clean_env, monkeypatch):

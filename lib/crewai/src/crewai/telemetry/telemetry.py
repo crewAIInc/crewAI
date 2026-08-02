@@ -21,11 +21,12 @@ import threading
 from typing import TYPE_CHECKING, Any
 
 from opentelemetry import trace
+from opentelemetry.context import Context
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
     OTLPSpanExporter,
 )
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
     SpanExportResult,
@@ -88,6 +89,57 @@ class SafeOTLPSpanExporter(OTLPSpanExporter):
             return SpanExportResult.FAILURE
 
 
+class CommonAttributesSpanProcessor(SpanProcessor):
+    """Applies a fixed set of attributes to every span at start.
+
+    Used for process-wide context that should appear on all spans (e.g. which
+    AI coding assistant is running the process) without each span-emitting
+    method having to set it. Attributes are applied as span attributes rather
+    than Resource attributes because the ingestion pipeline preserves only
+    serviceName from the resource.
+    """
+
+    def __init__(self, attributes: dict[str, str]) -> None:
+        """Initialize the processor.
+
+        Args:
+            attributes: Attributes applied to every span. Values must not
+                contain user data - this is process-wide context only.
+        """
+        self._attributes = attributes
+
+    def on_start(
+        self, span: Span, parent_context: Context | None = None
+    ) -> None:
+        """Apply the common attributes to a span as it starts.
+
+        Args:
+            span: The span being started.
+            parent_context: Parent context, unused.
+        """
+        try:
+            span.set_attributes(self._attributes)
+        except Exception:  # noqa: S110 - telemetry must never break execution
+            pass
+
+    def on_end(self, span: Any) -> None:
+        """No-op; export is handled by the batch processor."""
+
+    def shutdown(self) -> None:
+        """No-op; this processor holds no resources."""
+
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        """No-op flush.
+
+        Args:
+            timeout_millis: Unused.
+
+        Returns:
+            Always True.
+        """
+        return True
+
+
 class Telemetry:
     """Handle anonymous telemetry for the CrewAI package.
 
@@ -123,18 +175,19 @@ class Telemetry:
             return
 
         try:
-            # coding_agent is set on the Resource so it is attached to *every*
-            # span this provider emits, without per-method duplication. The value
-            # is one of a fixed set of literals from detect_coding_agent() and
-            # never contains environment values or any user data.
             self.resource = Resource(
-                attributes={
-                    SERVICE_NAME: CREWAI_TELEMETRY_SERVICE_NAME,
-                    "coding_agent": detect_coding_agent(),
-                },
+                attributes={SERVICE_NAME: CREWAI_TELEMETRY_SERVICE_NAME},
             )
             with suppress_warnings():
                 self.provider = TracerProvider(resource=self.resource)
+
+            # coding_agent is applied as a *span attribute* via on_start, not as
+            # a Resource attribute: the ingestion pipeline only preserves
+            # serviceName from the resource, so anything else set there is
+            # dropped before it reaches storage. Span attributes are preserved.
+            self.provider.add_span_processor(
+                CommonAttributesSpanProcessor({"coding_agent": detect_coding_agent()})
+            )
 
             processor = BatchSpanProcessor(
                 SafeOTLPSpanExporter(
@@ -293,7 +346,6 @@ class Telemetry:
                 version("crewai"),
             )
             self._add_attribute(span, "python_version", platform.python_version())
-            self._add_attribute(span, "coding_agent", detect_coding_agent())
             add_crew_attributes(span, crew, self._add_attribute)
             self._add_attribute(span, "crew_process", crew.process)
             self._add_attribute(span, "crew_memory", crew.memory)
@@ -963,7 +1015,6 @@ class Telemetry:
             span = tracer.start_span("Flow Creation")
             self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "flow_name", flow_name)
-            self._add_attribute(span, "coding_agent", detect_coding_agent())
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
