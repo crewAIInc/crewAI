@@ -111,3 +111,23 @@ def close_span(span: Span) -> None:
     """
     span.set_status(Status(StatusCode.OK))
     span.end()
+
+
+def close_span_with_error(span: Span, error_type: str | None = None) -> None:
+    """Set span status to ERROR and end it.
+
+    Used for spans representing work that failed, so failures are
+    distinguishable from successes downstream. Only the exception's *type* is
+    recorded - never the message, which routinely contains prompts, model
+    output, or credentials.
+
+    Args:
+        span: The span to close.
+        error_type: Exception class name (e.g. "ValidationError"). Anything
+            that is not a plain identifier is discarded rather than recorded,
+            so a message can never be passed in by mistake.
+    """
+    span.set_status(Status(StatusCode.ERROR))
+    if error_type and error_type.isidentifier():
+        span.set_attribute("error_type", error_type)
+    span.end()

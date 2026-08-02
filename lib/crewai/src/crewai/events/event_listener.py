@@ -198,6 +198,11 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(CrewKickoffFailedEvent)
         def on_crew_failed(source: Any, event: CrewKickoffFailedEvent) -> None:
+            # Previously this handler never touched telemetry, so a crew that
+            # raised left its execution span open: never ended, never exported,
+            # and the failure invisible downstream.
+            self._telemetry.crew_failed(source, event.error_type)
+
             self.formatter.handle_crew_status(
                 event.crew_name or "Crew",
                 source.id,
@@ -261,8 +266,10 @@ class EventListener(BaseEventListener):
         def on_task_failed(source: Any, event: TaskFailedEvent) -> None:
             span = self.execution_spans.pop(source, None)
             if span:
-                if source.agent and source.agent.crew:
-                    self._telemetry.task_ended(span, source, source.agent.crew)
+                # Closed unconditionally: previously the span was only ended
+                # when source.agent.crew was present, so any task that failed
+                # without one leaked its span and was never exported.
+                self._telemetry.task_failed(span, source, event.error_type)
 
             task_name = get_task_name(source)
             self.formatter.handle_task_status(

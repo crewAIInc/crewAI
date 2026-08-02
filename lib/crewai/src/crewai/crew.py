@@ -1065,6 +1065,7 @@ class Crew(FlowTrackable, BaseModel):
                 self,
                 CrewKickoffFailedEvent(
                     error=str(e),
+                    error_type=type(e).__name__,
                     crew_name=self.name,
                     started_event_id=self._kickoff_event_id,
                 ),
@@ -1279,6 +1280,7 @@ class Crew(FlowTrackable, BaseModel):
                 self,
                 CrewKickoffFailedEvent(
                     error=str(e),
+                    error_type=type(e).__name__,
                     crew_name=self.name,
                     started_event_id=self._kickoff_event_id,
                 ),

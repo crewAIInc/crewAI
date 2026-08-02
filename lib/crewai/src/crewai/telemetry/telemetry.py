@@ -51,6 +51,7 @@ from crewai.telemetry.utils import (
     add_crew_and_task_attributes,
     add_crew_attributes,
     close_span,
+    close_span_with_error,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.logger_utils import suppress_warnings
@@ -571,6 +572,30 @@ class Telemetry:
 
         self._safe_telemetry_operation(_operation)
 
+    def task_failed(
+        self, span: Span, task: Task, error_type: str | None = None
+    ) -> None:
+        """Records that a task execution failed and closes its span with ERROR.
+
+        Previously failures were routed through task_ended, which closes every
+        span as OK - making failed and successful tasks indistinguishable
+        downstream and leaving error counts permanently at zero.
+
+        Args:
+            span: The OpenTelemetry span tracking the task execution.
+            task: The task that failed.
+            error_type: Exception class name. The error message is never
+                recorded - it routinely contains prompts and model output.
+        """
+
+        def _operation() -> None:
+            if hasattr(task, "fingerprint") and task.fingerprint:
+                self._add_attribute(span, "task_fingerprint", task.fingerprint.uuid_str)
+
+            close_span_with_error(span, error_type)
+
+        self._safe_telemetry_operation(_operation)
+
     def tool_repeated_usage(self, llm: Any, tool_name: str, attempts: int) -> None:
         """Records when a tool is used repeatedly, which might indicate an issue.
 
@@ -921,6 +946,28 @@ class Telemetry:
 
         if crew.share_crew:
             self._safe_telemetry_operation(_operation)
+
+    def crew_failed(self, crew: Any, error_type: str | None = None) -> None:
+        """Records that a crew execution failed and closes its span.
+
+        Without this, a crew that raises leaves its execution span open: it is
+        never ended, never exported, and the failure is invisible downstream.
+
+        Args:
+            crew: The crew whose execution failed.
+            error_type: Exception class name. The error message is never
+                recorded - it routinely contains prompts and model output.
+        """
+
+        def _operation() -> None:
+            span = getattr(crew, "_execution_span", None)
+            if span is None:
+                return
+            self._add_attribute(span, "crewai_version", version("crewai"))
+            close_span_with_error(span, error_type)
+            crew._execution_span = None
+
+        self._safe_telemetry_operation(_operation)
 
     def _add_attribute(self, span: Span, key: str, value: Any) -> None:
         """Add an attribute to a span.
