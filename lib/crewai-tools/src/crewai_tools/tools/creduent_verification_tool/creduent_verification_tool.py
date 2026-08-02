@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Type
+from typing import Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -28,7 +28,7 @@ class CreduentVerificationTool(BaseTool):
         "Verifies the cryptographic identity, signature, and attestations of a target AI agent "
         "using the Creduent open protocol before delegating tasks."
     )
-    args_schema: Type[BaseModel] = CreduentVerificationSchema
+    args_schema: type[BaseModel] = CreduentVerificationSchema
     strict: bool = True
 
     def _run(self, agent_uri: str) -> str:
