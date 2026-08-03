@@ -9,6 +9,7 @@ import socket
 import threading
 from typing import Any
 from urllib.parse import urljoin, urlparse
+import uuid
 
 import requests
 
@@ -141,6 +142,12 @@ def safe_get(url: str, *, max_redirects: int = 10, **kwargs: Any) -> requests.Re
         if not _same_origin(current_url, redirect_url):
             request_kwargs = _strip_cross_origin_credentials(request_kwargs)
 
+        # A redirect response's status/headers/url are already fully received
+        # at this point (only a body -- never read for a redirect -- would be
+        # affected by closing early). Closing here releases the connection
+        # back to the pool immediately instead of holding it until GC, which
+        # otherwise accumulates across a multi-hop redirect chain.
+        response.close()
         history.append(response)
         current_url, pinned_ip = redirect_url, redirect_ip
         redirects_followed += 1
@@ -172,7 +179,11 @@ def safe_download(
         requests.HTTPError: If the final response has an error status code.
     """
     dest = Path(dest_path)
-    tmp_path = dest.with_name(f"{dest.name}.part")
+    # A name derived only from `dest` would let two concurrent downloads to
+    # the same destination race on the same temp file, corrupting both --
+    # the uuid makes each call's temp file unique regardless of thread,
+    # process, or how many callers target the same dest_path at once.
+    tmp_path = dest.with_name(f"{dest.name}.{uuid.uuid4().hex}.part")
     kwargs["stream"] = True
     response = safe_get(url, max_redirects=max_redirects, **kwargs)
     try:

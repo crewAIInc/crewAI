@@ -79,6 +79,26 @@ class ArxivPaperTool(BaseTool):
     def fetch_arxiv_data(
         self, search_query: str, max_results: int
     ) -> list[dict[str, Any]]:
+        """Query the Arxiv API and parse the resulting Atom feed into a list
+        of paper records.
+
+        Args:
+            search_query: Free-text Arxiv search query.
+            max_results: Maximum number of entries to request from the API.
+
+        Returns:
+            A list of dicts with keys `arxiv_id`, `title`, `summary`,
+            `authors`, `published_date`, `pdf_url` (the last is `None` if no
+            PDF link was found in the entry).
+
+        Raises:
+            requests.RequestException: If the request to Arxiv fails (network
+                error, timeout, or a non-2xx response).
+            ValueError: If `api_url` (or a redirect it follows) fails
+                `safe_get`'s SSRF validation.
+            xml.etree.ElementTree.ParseError: If the response body isn't
+                valid XML.
+        """
         api_url = f"{self.BASE_API_URL}?search_query={urllib.parse.quote(search_query)}&start=0&max_results={max_results}"
         logger.info(f"Fetching data from Arxiv API: {api_url}")
 
@@ -157,6 +177,22 @@ class ArxivPaperTool(BaseTool):
         return save_path
 
     def download_pdf(self, pdf_url: str, save_path: str | Path) -> None:
+        """Download a single PDF to `save_path` via `safe_download`.
+
+        Args:
+            pdf_url: The PDF URL, as extracted from an Arxiv API entry.
+            save_path: Destination file path. `safe_download` writes to a
+                temp file alongside it and renames into place on success, so
+                a failed download never leaves a truncated file here.
+
+        Raises:
+            requests.RequestException: If the request fails (network error,
+                timeout, or a non-2xx response).
+            ValueError: If `pdf_url` (or a redirect it follows) fails
+                `safe_download`'s SSRF validation.
+            OSError: If `save_path` can't be written (permissions, missing
+                parent directory, etc.).
+        """
         try:
             logger.info(f"Downloading PDF from {pdf_url} to {save_path}")
             # pdf_url comes from the Arxiv API's XML response, not directly from

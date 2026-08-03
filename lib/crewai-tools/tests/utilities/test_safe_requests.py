@@ -382,3 +382,43 @@ def test_safe_get_dns_pin_is_thread_safe(monkeypatch: pytest.MonkeyPatch) -> Non
 
     assert not errors
     assert seen_ips == hosts_to_ips
+
+
+def test_safe_download_concurrent_calls_to_same_dest_dont_corrupt(
+    monkeypatch: pytest.MonkeyPatch, public_dns: None, tmp_path: Any
+) -> None:
+    """Two concurrent safe_download calls targeting the same dest_path must
+    not corrupt each other's output. Each call's temp file name includes a
+    uuid, so concurrent writers can't interleave writes into the same temp
+    file -- whichever call finishes last simply wins the final rename, but
+    the result is always one complete, uncorrupted payload, never a mix of
+    both.
+    """
+    payloads = {"a": b"AAAA-payload-one", "b": b"BBBB-payload-two"}
+
+    def fake_get(url: str, **kwargs: Any) -> requests.Response:
+        which = "a" if "/a.pdf" in url else "b"
+        response = _response(url, 200)
+        response.iter_content = lambda chunk_size=1, _which=which: [payloads[_which]]
+        return response
+
+    _mock_get(monkeypatch, fake_get)
+
+    dest = tmp_path / "paper.pdf"
+    errors: list[BaseException] = []
+
+    def run(which: str) -> None:
+        try:
+            safe_download(f"http://public.example/{which}.pdf", dest, timeout=15)
+        except BaseException as exc:  # noqa: BLE001 -- surface it to the main thread
+            errors.append(exc)
+
+    threads = [threading.Thread(target=run, args=(which,)) for which in payloads]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=10)
+
+    assert not errors
+    assert dest.read_bytes() in payloads.values()
+    assert list(tmp_path.glob("*.part")) == []
