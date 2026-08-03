@@ -14,6 +14,7 @@ from pydantic_core import CoreSchema
 __all__ = [
     "CC_ENV_VAR",
     "CODEX_ENV_VARS",
+    "CODING_AGENT_ENV_MARKERS",
     "CREWAI_TRAINED_AGENTS_FILE_ENV",
     "CURSOR_ENV_VARS",
     "EMITTER_COLOR",
@@ -40,6 +41,28 @@ CURSOR_ENV_VARS: Final[tuple[str, ...]] = (
     "CURSOR_SANDBOX",
     "CURSOR_TRACE_ID",
     "CURSOR_WORKSPACE_LABEL",
+)
+
+# Ordered (name, env vars) pairs for identifying the AI coding assistant a
+# process is running under. The first three entries reuse the sets above and
+# keep the same precedence as ``get_env_context()``, so the env-context events
+# and telemetry never disagree about which assistant is present.
+#
+# Entries must be *session*-scoped variables that the assistant sets for the
+# processes it spawns. Persistent user configuration (an ``AIDER_MODEL`` in a
+# committed ``.env``, say) is not usable: crewai loads dotenv files on normal
+# runs, so a leftover config value would mislabel ordinary human executions.
+CODING_AGENT_ENV_MARKERS: Final[tuple[tuple[str, tuple[str, ...]], ...]] = (
+    ("claude_code", (CC_ENV_VAR, "CLAUDE_CODE_ENTRYPOINT")),
+    ("codex", CODEX_ENV_VARS),
+    ("cursor", CURSOR_ENV_VARS),
+    ("gemini_cli", ("GEMINI_CLI",)),
+    ("windsurf", ("WINDSURF_SESSION_ID",)),
+    ("devin", ("DEVIN_SESSION_ID",)),
+    ("replit_agent", ("REPLIT_AGENT",)),
+    ("copilot", ("COPILOT_AGENT_ID",)),
+    ("openhands", ("OPENHANDS_SESSION_ID",)),
+    ("cline", ("CLINE_ACTIVE",)),
 )
 
 

@@ -12,32 +12,13 @@ from typing import TYPE_CHECKING, Any, Final
 
 from opentelemetry.trace import Span, Status, StatusCode
 
+from crewai.utilities.constants import CODING_AGENT_ENV_MARKERS
+
 
 if TYPE_CHECKING:
     from crewai.crew import Crew
     from crewai.task import Task
 
-
-# Environment variables set by AI coding assistants, checked in order.
-# Only the assistant's name is ever recorded - never the variable's value.
-_CODING_AGENT_ENV_MARKERS: Final[tuple[tuple[str, str], ...]] = (
-    ("CLAUDECODE", "claude_code"),
-    ("CLAUDE_CODE_ENTRYPOINT", "claude_code"),
-    ("CURSOR_TRACE_ID", "cursor"),
-    ("CURSOR_AGENT", "cursor"),
-    ("CODEX_SANDBOX", "codex"),
-    ("CODEX_SANDBOX_NETWORK_DISABLED", "codex"),
-    ("GEMINI_CLI", "gemini_cli"),
-    ("AIDER_MODEL", "aider"),
-    ("WINDSURF_SESSION_ID", "windsurf"),
-    ("DEVIN_SESSION_ID", "devin"),
-    ("REPLIT_AGENT", "replit_agent"),
-    ("COPILOT_AGENT_ID", "copilot"),
-    ("GITHUB_COPILOT_CLI", "copilot"),
-    ("OPENHANDS_SESSION_ID", "openhands"),
-    ("CLINE_ACTIVE", "cline"),
-    ("AMP_AGENT", "amp_code"),
-)
 
 # Editors whose integrated terminal implies a human is likely present. Used only
 # as a weaker fallback when no explicit coding-agent marker is found.
@@ -49,11 +30,11 @@ _EDITOR_TERM_MARKERS: Final[tuple[tuple[str, str, str], ...]] = (
 _FALLBACK_AGENT_NAMES: Final[tuple[str, ...]] = ("non_interactive", "unknown")
 
 # The complete set of values detect_coding_agent() can ever return. Every value
-# is a literal defined in this module, which is what makes the function
-# structurally incapable of emitting PII: no environment value, path, hostname,
-# or user-supplied string can reach the return value.
+# is a literal from CODING_AGENT_ENV_MARKERS or this module, which is what makes
+# the function structurally incapable of emitting PII: no environment value,
+# path, hostname, or user-supplied string can reach the return value.
 KNOWN_CODING_AGENTS: Final[frozenset[str]] = frozenset(
-    [name for _, name in _CODING_AGENT_ENV_MARKERS]
+    [name for name, _ in CODING_AGENT_ENV_MARKERS]
     + [name for _, _, name in _EDITOR_TERM_MARKERS]
     + list(_FALLBACK_AGENT_NAMES)
 )
@@ -62,13 +43,19 @@ KNOWN_CODING_AGENTS: Final[frozenset[str]] = frozenset(
 def detect_coding_agent() -> str:
     """Best-effort detection of the AI coding assistant running this process.
 
-    Detection is based on environment variables that coding assistants set in
-    the shells they spawn. Only the assistant's normalized name is returned -
-    environment variable values are never read into the return value or
-    recorded anywhere.
+    Uses the shared ``CODING_AGENT_ENV_MARKERS`` table, so this agrees with the
+    env-context events emitted by ``get_env_context()`` rather than maintaining
+    a second, narrower set of markers. Precedence follows that table: Claude
+    Code, then Codex, then Cursor, then the remaining assistants.
 
-    This is intentionally heuristic: markers change as tools evolve, so a
-    result of "unknown" means "no known marker present", not "no agent".
+    Only the assistant's normalized name is returned - environment variable
+    values are never read into the return value or recorded anywhere.
+
+    Two limits worth knowing. This is heuristic: markers change as tools
+    evolve, so "unknown" means "no known marker present", not "no agent". And
+    some markers (the Cursor set in particular) are set by the editor for any
+    integrated terminal, so a result names the environment the process is
+    running *under*, not proof that an agent authored the code.
 
     Returns:
         A normalized assistant name (e.g. "claude_code", "cursor", "codex"),
@@ -76,8 +63,8 @@ def detect_coding_agent() -> str:
         when no marker is found and there is no TTY, or "unknown" otherwise.
         The result is always a member of KNOWN_CODING_AGENTS.
     """
-    for env_var, agent_name in _CODING_AGENT_ENV_MARKERS:
-        if os.environ.get(env_var):
+    for agent_name, env_vars in CODING_AGENT_ENV_MARKERS:
+        if any(os.environ.get(env_var) for env_var in env_vars):
             return agent_name
 
     for env_var, expected, agent_name in _EDITOR_TERM_MARKERS:

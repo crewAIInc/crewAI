@@ -19,6 +19,7 @@ import platform
 import signal
 import threading
 from typing import TYPE_CHECKING, Any
+import weakref
 
 from opentelemetry import trace
 from opentelemetry.context import Context
@@ -108,9 +109,7 @@ class CommonAttributesSpanProcessor(SpanProcessor):
         """
         self._attributes = attributes
 
-    def on_start(
-        self, span: Span, parent_context: Context | None = None
-    ) -> None:
+    def on_start(self, span: Span, parent_context: Context | None = None) -> None:
         """Apply the common attributes to a span as it starts.
 
         Args:
@@ -170,6 +169,8 @@ class Telemetry:
         self._initialized: bool = True
         self._coding_agent_reported: bool = False
         self._coding_agent_lock = threading.Lock()
+        # Weak so instrumented apps' providers are not kept alive by telemetry.
+        self._common_attributes_providers: weakref.WeakSet[Any] = weakref.WeakSet()
 
         if self._is_telemetry_disabled():
             return
@@ -181,13 +182,7 @@ class Telemetry:
             with suppress_warnings():
                 self.provider = TracerProvider(resource=self.resource)
 
-            # coding_agent is applied as a *span attribute* via on_start, not as
-            # a Resource attribute: the ingestion pipeline only preserves
-            # serviceName from the resource, so anything else set there is
-            # dropped before it reaches storage. Span attributes are preserved.
-            self.provider.add_span_processor(
-                CommonAttributesSpanProcessor({"coding_agent": detect_coding_agent()})
-            )
+            self._attach_common_attributes(self.provider)
 
             processor = BatchSpanProcessor(
                 SafeOTLPSpanExporter(
@@ -206,6 +201,35 @@ class Telemetry:
             ):
                 raise
             self.ready = False
+
+    def _attach_common_attributes(self, provider: Any) -> None:
+        """Attach process-wide attributes to every span a provider emits.
+
+        Applied as *span* attributes rather than Resource attributes: the
+        ingestion pipeline preserves only serviceName from the resource, so
+        anything else set there is dropped before it reaches storage.
+
+        Tracked per provider rather than once globally: our own provider and an
+        application's pre-installed provider both need the processor, but
+        neither should receive it twice.
+
+        Args:
+            provider: Tracer provider to attach the processor to. Ignored if it
+                does not accept span processors (e.g. a NoOp provider).
+        """
+        add_span_processor = getattr(provider, "add_span_processor", None)
+        if add_span_processor is None:
+            return
+
+        try:
+            if provider in self._common_attributes_providers:
+                return
+            add_span_processor(
+                CommonAttributesSpanProcessor({"coding_agent": detect_coding_agent()})
+            )
+            self._common_attributes_providers.add(provider)
+        except Exception as e:  # Telemetry must never break execution.
+            logger.debug(f"Failed to attach common span attributes: {e}")
 
     @classmethod
     def _is_telemetry_disabled(cls) -> bool:
@@ -227,6 +251,11 @@ class Telemetry:
                 with suppress_warnings():
                     existing_provider = trace.get_tracer_provider()
                     if not isinstance(existing_provider, ProxyTracerProvider):
+                        # An application installed its own provider, so our
+                        # spans are created by theirs. Attach the common
+                        # attributes there too, otherwise every span emitted in
+                        # an instrumented app would silently lose coding_agent.
+                        self._attach_common_attributes(existing_provider)
                         self.trace_set = True
                         return
                     trace.set_tracer_provider(self.provider)
