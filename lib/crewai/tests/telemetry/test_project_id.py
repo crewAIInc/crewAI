@@ -159,6 +159,143 @@ def test_blank_id_is_treated_as_absent(tmp_path):
     assert get_project_id(path) is None
 
 
+def test_malformed_toml_is_never_written_to(tmp_path):
+    """Appending to a file we cannot parse would corrupt it further."""
+    path = tmp_path / "pyproject.toml"
+    original = 'this is not [valid toml\nproject_id = "x'
+    path.write_text(original)
+
+    assert get_or_create_project_id(path) is None
+    assert path.read_text() == original, "malformed file must be left untouched"
+
+
+@pytest.mark.parametrize("blank", ['""', "''", '"   "'])
+def test_blank_existing_id_is_replaced_not_duplicated(tmp_path, blank):
+    """A blank id reads as absent; appending would make a duplicate key."""
+    path = tmp_path / "pyproject.toml"
+    path.write_text(f'[tool.crewai]\ntype = "crew"\nproject_id = {blank}\n')
+
+    project_id = get_or_create_project_id(path)
+
+    content = path.read_text()
+    assert content.count("project_id") == 1, f"duplicate key: {content!r}"
+    data = parse_toml(content)  # would raise on a duplicate key
+    assert data["tool"]["crewai"]["project_id"] == project_id
+    assert data["tool"]["crewai"]["type"] == "crew"
+
+
+def test_non_string_existing_id_is_replaced(tmp_path):
+    path = tmp_path / "pyproject.toml"
+    path.write_text("[tool.crewai]\nproject_id = 42\n")
+
+    project_id = get_or_create_project_id(path)
+
+    data = parse_toml(path.read_text())
+    assert data["tool"]["crewai"]["project_id"] == project_id
+    assert isinstance(project_id, str)
+
+
+@pytest.mark.parametrize(
+    "header",
+    [
+        "[tool.crewai]  # crewai config",
+        "[tool.crewai]# no space",
+        "[tool.crewai]\t# tab then comment",
+    ],
+)
+def test_table_header_with_trailing_comment_is_found(tmp_path, header):
+    """A commented header is valid TOML; missing it appends a duplicate table."""
+    path = tmp_path / "pyproject.toml"
+    path.write_text(f'{header}\ntype = "crew"\n')
+
+    project_id = get_or_create_project_id(path)
+
+    content = path.read_text()
+    assert content.count("[tool.crewai]") == 1, f"duplicate table: {content!r}"
+    data = parse_toml(content)  # would raise on a redefined table
+    assert data["tool"]["crewai"]["project_id"] == project_id
+    assert data["tool"]["crewai"]["type"] == "crew"
+
+
+def test_similar_table_names_are_not_matched(tmp_path):
+    """[tool.crewai-extra] must not be mistaken for [tool.crewai]."""
+    path = tmp_path / "pyproject.toml"
+    path.write_text('[tool.crewai-extra]\nfoo = 1\n\n[tool.crewai]\ntype = "crew"\n')
+
+    project_id = get_or_create_project_id(path)
+
+    data = parse_toml(path.read_text())
+    assert data["tool"]["crewai"]["project_id"] == project_id
+    assert "project_id" not in data["tool"]["crewai-extra"]
+
+
+def test_crlf_line_endings_are_preserved(tmp_path):
+    """read_text/write_text would silently rewrite the whole file as LF."""
+    path = tmp_path / "pyproject.toml"
+    path.write_bytes(b'[project]\r\nname = "x"\r\n\r\n[tool.crewai]\r\ntype = "crew"\r\n')
+
+    project_id = get_or_create_project_id(path)
+
+    raw = path.read_bytes()
+    assert b"\r\n" in raw
+    assert raw.count(b"\n") == raw.count(b"\r\n"), "mixed line endings introduced"
+    assert parse_toml(raw.decode())["tool"]["crewai"]["project_id"] == project_id
+
+
+def test_lf_file_stays_lf(tmp_path):
+    path = tmp_path / "pyproject.toml"
+    path.write_bytes(b'[tool.crewai]\ntype = "crew"\n')
+
+    get_or_create_project_id(path)
+
+    assert b"\r\n" not in path.read_bytes()
+
+
+def test_concurrent_minting_converges_on_one_id(tmp_path):
+    """Two processes minting at once must agree on the persisted id."""
+    import threading
+
+    path = tmp_path / "pyproject.toml"
+    path.write_text(CREW_PYPROJECT)
+
+    returned: list[str | None] = []
+    start = threading.Barrier(8)
+
+    def mint() -> None:
+        start.wait()
+        returned.append(get_or_create_project_id(path))
+
+    threads = [threading.Thread(target=mint) for _ in range(8)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    persisted = parse_toml(path.read_text())["tool"]["crewai"]["project_id"]
+    assert len(set(returned)) == 1, f"callers disagreed: {set(returned)}"
+    assert returned[0] == persisted, "returned an id that is not on disk"
+
+
+def test_file_mode_is_preserved(tmp_path):
+    """The atomic replace must not widen permissions on pyproject.toml."""
+    path = tmp_path / "pyproject.toml"
+    path.write_text(CREW_PYPROJECT)
+    path.chmod(0o600)
+
+    get_or_create_project_id(path)
+
+    assert path.stat().st_mode & 0o777 == 0o600
+
+
+def test_no_temp_files_left_behind(tmp_path):
+    path = tmp_path / "pyproject.toml"
+    path.write_text(CREW_PYPROJECT)
+
+    get_or_create_project_id(path)
+
+    assert [p.name for p in tmp_path.iterdir()] == ["pyproject.toml"]
+
+
 def test_ids_are_unique_across_projects(tmp_path):
     ids = set()
     for name in ("a", "b", "c"):

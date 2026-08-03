@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 from functools import reduce
+import os
 from pathlib import Path, PureWindowsPath
+import shutil
 import sys
+import tempfile
 from typing import Any
 import uuid
 
 from rich.console import Console
 import tomli
+
+from crewai_core.lock_store import lock as store_lock
 
 
 if sys.version_info >= (3, 11):
@@ -270,26 +275,68 @@ def get_or_create_project_id(
         The project id, or None when ``pyproject.toml`` is missing, malformed,
         or not writable. Best-effort - never raises.
     """
-    existing = get_project_id(pyproject_path)
-    if existing:
-        return existing
-
     path = Path(pyproject_path)
     if not path.is_file():
         return None
 
+    # Cross-process lock: two CLI invocations could otherwise both see no id,
+    # mint different uuids, and clobber each other - leaving one caller holding
+    # an id that is not the one on disk.
     try:
-        content = path.read_text(encoding="utf-8")
+        with store_lock(_project_id_lock_name(path)):
+            return _get_or_create_project_id_locked(path)
+    except Exception:
+        # Lock backend unavailable; a torn write is worse than no id.
+        return get_project_id(path)
+
+
+def _project_id_lock_name(path: Path) -> str:
+    """Return a stable lock name for a project's ``pyproject.toml``."""
+    return f"file:{os.path.realpath(path)}"
+
+
+def _get_or_create_project_id_locked(path: Path) -> str | None:
+    """Read-modify-write the project id while holding the lock.
+
+    Re-reads under the lock so a concurrent minter's id is returned rather than
+    overwritten.
+    """
+    try:
+        content = _read_preserving_newlines(path)
     except OSError:
         return None
 
+    # Parse here rather than relying on get_project_id, which reports malformed
+    # files and absent ids identically. Appending to a file we cannot parse
+    # would corrupt it further, so bail instead.
+    try:
+        pyproject_data = parse_toml(content)
+    except (tomli.TOMLDecodeError, ValueError):
+        return None
+
+    existing = get_crewai_project_config(pyproject_data).get(_PROJECT_ID_KEY)
+    if isinstance(existing, str) and existing:
+        return existing
+
     project_id = str(uuid.uuid4())
-    updated = _insert_project_id(content, project_id)
+    updated = _set_project_id(content, project_id)
     if updated is None:
         return None
 
+    # Verify before writing: never leave a project with unparsable TOML because
+    # of this feature.
     try:
-        path.write_text(updated, encoding="utf-8")
+        parse_toml(updated)
+    except (tomli.TOMLDecodeError, ValueError):
+        return None
+
+    # Checked explicitly: os.replace only needs a writable *directory*, so an
+    # atomic write would happily overwrite a file the user marked read-only.
+    if not os.access(path, os.W_OK):
+        return None
+
+    try:
+        _write_atomically(path, updated)
     except OSError:
         # Read-only checkout, permissions, container FS - not worth failing over.
         return None
@@ -297,44 +344,130 @@ def get_or_create_project_id(
     return project_id
 
 
-def _insert_project_id(content: str, project_id: str) -> str | None:
-    """Add ``project_id`` to the ``[tool.crewai]`` table in TOML source text.
+def _read_preserving_newlines(path: Path) -> str:
+    """Read text without translating line endings.
+
+    ``Path.read_text`` normalizes CRLF to LF, so a later write would silently
+    convert a CRLF-committed file to LF and show up as a whole-file diff.
+    """
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        return handle.read()
+
+
+def _write_atomically(path: Path, content: str) -> None:
+    """Replace ``path`` with ``content`` via a temp file in the same directory.
+
+    An interrupted or concurrent write must never leave a truncated
+    ``pyproject.toml`` behind.
+    """
+    directory = path.parent
+    handle = tempfile.NamedTemporaryFile(
+        "w",
+        encoding="utf-8",
+        newline="",
+        dir=directory,
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        delete=False,
+    )
+    tmp_path = Path(handle.name)
+    try:
+        with handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        shutil.copymode(path, tmp_path)
+        os.replace(tmp_path, path)
+    except BaseException:
+        tmp_path.unlink(missing_ok=True)
+        raise
+
+
+def _is_table_header(line: str, table: str) -> bool:
+    """True if ``line`` opens ``table``, tolerating a trailing inline comment.
+
+    ``[tool.crewai]  # config`` is valid TOML. Comparing the stripped line to
+    the header verbatim would miss it, and the caller would then append a second
+    ``[tool.crewai]`` header - a duplicate table definition, which is invalid
+    TOML.
+    """
+    stripped = line.strip()
+    if not stripped.startswith("["):
+        return False
+    closing = stripped.find("]")
+    if closing == -1:
+        return False
+    if stripped[: closing + 1] != table:
+        return False
+    remainder = stripped[closing + 1 :].strip()
+    return remainder == "" or remainder.startswith("#")
+
+
+def _is_any_table_header(line: str) -> bool:
+    """True if ``line`` opens any TOML table or array-of-tables."""
+    return line.lstrip().startswith("[")
+
+
+def _project_id_key_index(lines: list[str], start: int, end: int) -> int | None:
+    """Return the index of an existing ``project_id`` assignment in a range."""
+    for index in range(start, end):
+        candidate = lines[index].strip()
+        if not candidate or candidate.startswith("#"):
+            continue
+        key, separator, _ = candidate.partition("=")
+        if separator and key.strip().strip("\"'") == _PROJECT_ID_KEY:
+            return index
+    return None
+
+
+def _set_project_id(content: str, project_id: str) -> str | None:
+    """Set ``project_id`` in the ``[tool.crewai]`` table of TOML source text.
+
+    Replaces an existing ``project_id`` assignment rather than adding a second
+    one: a blank or non-string value reads as "absent", and appending in that
+    case would produce a duplicate key and therefore invalid TOML.
 
     Edits the raw text rather than round-tripping through a TOML writer so
     formatting, ordering, and comments in the rest of the file are preserved.
 
     Args:
         content: Full contents of a ``pyproject.toml``.
-        project_id: The id to insert.
+        project_id: The id to set.
 
     Returns:
         Updated file contents, or None if the edit could not be made safely.
     """
     lines = content.splitlines(keepends=True)
-    entry = f'{_PROJECT_ID_KEY} = "{project_id}"\n'
+    newline = "\r\n" if "\r\n" in content else "\n"
+    entry = f'{_PROJECT_ID_KEY} = "{project_id}"{newline}'
 
     for index, line in enumerate(lines):
-        if line.strip() != "[tool.crewai]":
+        if not _is_table_header(line, "[tool.crewai]"):
             continue
 
-        # Insert at the end of the table, before the next table header, so the
-        # key cannot land inside a different section.
-        insert_at = len(lines)
+        # Bound the table: everything up to the next table header.
+        table_end = len(lines)
         for offset in range(index + 1, len(lines)):
-            if lines[offset].lstrip().startswith("["):
-                insert_at = offset
+            if _is_any_table_header(lines[offset]):
+                table_end = offset
                 break
 
+        existing = _project_id_key_index(lines, index + 1, table_end)
+        if existing is not None:
+            lines[existing] = entry
+            return "".join(lines)
+
         # Step back over trailing blank lines so the key stays in the table.
+        insert_at = table_end
         while insert_at > index + 1 and not lines[insert_at - 1].strip():
             insert_at -= 1
 
-        if insert_at > 0 and not lines[insert_at - 1].endswith("\n"):
-            lines[insert_at - 1] += "\n"
+        if insert_at > 0 and not lines[insert_at - 1].endswith(("\n", "\r")):
+            lines[insert_at - 1] += newline
 
         lines.insert(insert_at, entry)
         return "".join(lines)
 
     # No [tool.crewai] table: append one rather than guessing where it belongs.
-    suffix = "" if content.endswith("\n") or not content else "\n"
-    return f"{content}{suffix}\n[tool.crewai]\n{entry}"
+    suffix = "" if content.endswith(("\n", "\r")) or not content else newline
+    return f"{content}{suffix}{newline}[tool.crewai]{newline}{entry}"
