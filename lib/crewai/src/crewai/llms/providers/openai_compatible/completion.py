@@ -89,6 +89,13 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DASHSCOPE_BASE_URL",
         api_key_required=True,
     ),
+    "a3m": ProviderConfig(
+        base_url="http://localhost:8787/v1",
+        api_key_env="A3M_API_KEY",
+        base_url_env="A3M_BASE_URL",
+        api_key_required=False,
+        default_api_key="not-needed",
+    ),
 }
 
 
