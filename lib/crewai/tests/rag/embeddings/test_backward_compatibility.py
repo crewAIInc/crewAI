@@ -1,5 +1,7 @@
 """Tests for backward compatibility of embedding provider configurations."""
 
+import pytest
+
 from crewai.rag.embeddings.factory import build_embedder, PROVIDER_PATHS
 from crewai.rag.embeddings.providers.openai.openai_provider import OpenAIProvider
 from crewai.rag.embeddings.providers.cohere.cohere_provider import CohereProvider
@@ -337,15 +339,19 @@ class TestDocumentationCodeSnippets:
         )
         assert provider.model_name == "jina-embeddings-v3"
 
-    def test_ragtool_sentence_transformer_config(self):
-        """Test RagTool SentenceTransformer config from ragtool.mdx."""
+    @pytest.mark.parametrize("device", ["cuda", "mps", "xpu"])
+    def test_ragtool_sentence_transformer_config(self, device: str):
+        """Test RagTool SentenceTransformer config from ragtool.mdx.
+
+        Parametrized over documented device strings to confirm each
+        value is preserved."""
         provider = SentenceTransformerProvider(
             model_name="all-mpnet-base-v2",
-            device="cuda",
+            device=device,
             normalize_embeddings=True,
         )
         assert provider.model_name == "all-mpnet-base-v2"
-        assert provider.device == "cuda"
+        assert provider.device == device
         assert provider.normalize_embeddings is True
 
 
