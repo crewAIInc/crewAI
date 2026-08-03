@@ -107,7 +107,9 @@ stagehand = [
     "stagehand>=0.4.1",
 ]
 github = [
-    "gitpython>=3.1.55,<4",
+    # <3.1.57 has GHSA-p538-c434-8v24 (arbitrary file truncation) and
+    # GHSA-3f7w-8rr8-f37f (unguarded git option forwarding).
+    "gitpython>=3.1.57,<4",
     "PyGithub==1.59.1",
 ]
 rag = [
