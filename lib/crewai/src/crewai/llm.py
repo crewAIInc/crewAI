@@ -2326,6 +2326,23 @@ class LLM(BaseLLM):
                     "Invalid message format. Each message must be a dict with 'role' and 'content' keys"
                 )
 
+        # Drop the provider-agnostic cache-breakpoint marker before it reaches
+        # litellm. The litellm path has no consumer for it, and providers with
+        # strict message schemas (e.g. Mistral) reject the unknown field with a
+        # validation error. Native providers strip it in BaseLLM._format_messages;
+        # the litellm path does not go through that method, so strip it here.
+        # Copy each carrying message so the caller's reused buffer (the agent
+        # ReAct loop) keeps its markers for later iterations.
+        from crewai.llms.cache import CACHE_BREAKPOINT_KEY
+
+        if any(CACHE_BREAKPOINT_KEY in msg for msg in messages):
+            messages = [
+                {k: v for k, v in msg.items() if k != CACHE_BREAKPOINT_KEY}
+                if CACHE_BREAKPOINT_KEY in msg
+                else msg
+                for msg in messages
+            ]
+
         if "o1" in self.model.lower():
             formatted_messages = []
             for msg in messages:
