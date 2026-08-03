@@ -175,6 +175,12 @@ normal CrewAI hook chain. In production, resolve `tenant_id` and `session_id`
 from your authenticated request or job context, not from model-supplied tool
 arguments.
 
+Install Pramagent before running this example:
+
+```bash
+pip install pramagent
+```
+
 ```python
 from dataclasses import dataclass
 
@@ -234,12 +240,19 @@ def enforce_pramagent_policy(ctx: ToolCallHookContext) -> None:
     if decision.verdict == Verdict.ALLOW:
         return
 
+    if decision.verdict == Verdict.ESCALATE:
+        raise HookAborted(
+            reason=f"Approval required before running {ctx.tool_name}: {decision.reason}",
+            source="pramagent",
+        )
+
     raise HookAborted(reason=decision.reason, source="pramagent")
 ```
 
-For approval workflows, route `Verdict.ESCALATE` to your human approval path
-and re-run the tool only after approval is recorded. The hook remains the
-pre-execution boundary.
+The example treats `Verdict.ESCALATE` as a stop signal so the side effect does
+not run automatically. For approval workflows, route that verdict to your human
+approval path and re-run the tool only after approval is recorded. The hook
+remains the pre-execution boundary.
 
 ### 4. Input Validation and Sanitization
 
