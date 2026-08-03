@@ -404,6 +404,71 @@ def test_reader_round_trips_through_model_dump(store, tmp_path, monkeypatch):
     assert rebuilt._run() == "dumped\n"
 
 
+# --- what the declared-path pin means across a rebuild -----------------------
+#
+# The pin is derived from what was *declared*, so whether it survives a rebuild
+# in a different working directory depends on whether the declaration named
+# somewhere absolute. These three cases are the whole story; they are pinned
+# here so the behavior is a decision rather than an accident. Note the local
+# store is the one that makes this observable, since its `normalize` is the one
+# that consults the process cwd.
+
+
+def test_an_absolute_declared_path_survives_a_rebuild_elsewhere(tmp_path, monkeypatch):
+    """The strongest case: an absolute declaration is cwd-independent."""
+    here, there = tmp_path / "here", tmp_path / "there"
+    here.mkdir(), there.mkdir()
+    (here / "notes.txt").write_text("from here\n")
+    (there / "notes.txt").write_text("from there\n")
+
+    monkeypatch.chdir(here)
+    dumped = FileReadTool(file_path=str(here / "notes.txt")).model_dump()
+    monkeypatch.chdir(there)
+    rebuilt = FileReadTool.model_validate(dumped)
+
+    assert rebuilt._run() == "from here\n"
+
+
+def test_a_declared_base_dir_pins_a_relative_path_across_a_rebuild(tmp_path, monkeypatch):
+    """base_dir is anchored at construction, so it carries the pin with it."""
+    here, there = tmp_path / "here", tmp_path / "there"
+    here.mkdir(), there.mkdir()
+    (here / "notes.txt").write_text("from here\n")
+    (there / "notes.txt").write_text("from there\n")
+
+    monkeypatch.chdir(here)
+    dumped = FileReadTool(file_path="notes.txt", base_dir=str(here)).model_dump()
+    monkeypatch.chdir(there)
+    rebuilt = FileReadTool.model_validate(dumped)
+
+    assert rebuilt._run() == "from here\n"
+
+
+def test_a_bare_relative_declared_path_reanchors_on_rebuild(tmp_path, monkeypatch):
+    """A relative path with no base_dir names nothing absolute to preserve.
+
+    It re-anchors to the rebuilding process's working directory — the same file
+    the same arguments would name there. Documented rather than "fixed": the
+    alternative is pinning a path from a working directory that, for a rebuild
+    in a fresh container, no longer exists. Callers needing the pin to survive
+    pass `base_dir`, which the test above covers.
+    """
+    here, there = tmp_path / "here", tmp_path / "there"
+    here.mkdir(), there.mkdir()
+    (here / "notes.txt").write_text("from here\n")
+    (there / "notes.txt").write_text("from there\n")
+
+    monkeypatch.chdir(here)
+    dumped = FileReadTool(file_path="notes.txt").model_dump()
+    monkeypatch.chdir(there)
+    rebuilt = FileReadTool.model_validate(dumped)
+
+    assert rebuilt._run() == "from there\n"
+    # And it is a real re-anchor, not a stale absolute path that happens to read.
+    # resolve() because the store canonicalizes, and /tmp is a symlink on macOS.
+    assert rebuilt._declared_realpath == str((there / "notes.txt").resolve())
+
+
 # --- a store that fails ------------------------------------------------------
 #
 # A store may fail where the local filesystem never could. Every exit from

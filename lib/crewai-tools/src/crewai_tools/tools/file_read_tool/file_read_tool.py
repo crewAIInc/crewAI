@@ -50,6 +50,15 @@ class FileReadTool(BaseTool):
     construction, so a later chdir cannot repoint it, and it can be addressed
     either by omitting ``file_path`` or by the label shown in the description.
 
+    That pin is anchored from what was declared, which matters when a tool is
+    rebuilt from a serialized crew in a different working directory. An
+    absolute ``file_path``, or a relative one with ``base_dir`` set, names the
+    same file after the rebuild as before it. A *relative* ``file_path`` with
+    no ``base_dir`` names nothing absolute, so it re-anchors to the working
+    directory of the process doing the rebuilding — the same file the same
+    arguments would have named there. Pass ``base_dir`` when a declared
+    relative path must survive a move.
+
     Args:
         file_path (Optional[str]): Path to the file to be read. If provided,
             this becomes the default file path for the tool.
