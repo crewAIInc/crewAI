@@ -1,0 +1,344 @@
+---
+title: 'أداة البحث المتجهي Qdrant'
+description: 'إمكانيات البحث الدلالي لوكلاء CrewAI باستخدام قاعدة بيانات Qdrant المتجهية'
+icon: vector-square
+mode: "wide"
+---
+
+## نظرة عامة
+
+تتيح أداة البحث المتجهي Qdrant إمكانيات البحث الدلالي في وكلاء CrewAI من خلال الاستفادة من [Qdrant](https://qdrant.tech/)، محرك بحث التشابه المتجهي. تسمح هذه الأداة لوكلائك بالبحث في المستندات المخزنة في مجموعة Qdrant باستخدام التشابه الدلالي.
+
+## التثبيت
+
+قم بتثبيت الحزم المطلوبة:
+
+```bash
+uv add qdrant-client
+```
+
+## الاستخدام الأساسي
+
+إليك مثال بسيط لكيفية استخدام الأداة:
+
+```python
+from crewai import Agent
+from crewai_tools import QdrantVectorSearchTool, QdrantConfig
+
+# Initialize the tool with QdrantConfig
+qdrant_tool = QdrantVectorSearchTool(
+    qdrant_config=QdrantConfig(
+        qdrant_url="your_qdrant_url",
+        qdrant_api_key="your_qdrant_api_key",
+        collection_name="your_collection"
+    )
+)
+
+# Create an agent that uses the tool
+agent = Agent(
+    role="Research Assistant",
+    goal="Find relevant information in documents",
+    tools=[qdrant_tool]
+)
+
+# The tool will automatically use OpenAI embeddings
+# and return the 3 most relevant results with scores > 0.35
+```
+
+## مثال عملي كامل
+
+إليك مثالاً كاملاً يوضح كيفية:
+1. استخراج النص من ملف PDF
+2. توليد التضمينات باستخدام OpenAI
+3. التخزين في Qdrant
+4. إنشاء سير عمل RAG وكيلي باستخدام CrewAI للبحث الدلالي
+
+```python
+import os
+import uuid
+import pdfplumber
+from openai import OpenAI
+from dotenv import load_dotenv
+from crewai import Agent, Task, Crew, Process, LLM
+from crewai_tools import QdrantVectorSearchTool
+from qdrant_client import QdrantClient
+from qdrant_client.models import PointStruct, Distance, VectorParams
+
+# Load environment variables
+load_dotenv()
+
+# Initialize OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Extract text from PDF
+def extract_text_from_pdf(pdf_path):
+    text = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text.append(page_text.strip())
+    return text
+
+# Generate OpenAI embeddings
+def get_openai_embedding(text):
+    response = client.embeddings.create(
+        input=text,
+        model="text-embedding-3-large"
+    )
+    return response.data[0].embedding
+
+# Store text and embeddings in Qdrant
+def load_pdf_to_qdrant(pdf_path, qdrant, collection_name):
+    # Extract text from PDF
+    text_chunks = extract_text_from_pdf(pdf_path)
+
+    # Create Qdrant collection
+    if qdrant.collection_exists(collection_name):
+        qdrant.delete_collection(collection_name)
+    qdrant.create_collection(
+        collection_name=collection_name,
+        vectors_config=VectorParams(size=3072, distance=Distance.COSINE)
+    )
+
+    # Store embeddings
+    points = []
+    for chunk in text_chunks:
+        embedding = get_openai_embedding(chunk)
+        points.append(PointStruct(
+            id=str(uuid.uuid4()),
+            vector=embedding,
+            payload={"text": chunk}
+        ))
+    qdrant.upsert(collection_name=collection_name, points=points)
+
+# Initialize Qdrant client and load data
+qdrant = QdrantClient(
+    url=os.getenv("QDRANT_URL"),
+    api_key=os.getenv("QDRANT_API_KEY")
+)
+collection_name = "example_collection"
+pdf_path = "path/to/your/document.pdf"
+load_pdf_to_qdrant(pdf_path, qdrant, collection_name)
+
+# Initialize Qdrant search tool
+from crewai_tools import QdrantConfig
+
+qdrant_tool = QdrantVectorSearchTool(
+    qdrant_config=QdrantConfig(
+        qdrant_url=os.getenv("QDRANT_URL"),
+        qdrant_api_key=os.getenv("QDRANT_API_KEY"),
+        collection_name=collection_name,
+        limit=3,
+        score_threshold=0.35
+    )
+)
+
+# Create CrewAI agents
+search_agent = Agent(
+    role="Senior Semantic Search Agent",
+    goal="Find and analyze documents based on semantic search",
+    backstory="""You are an expert research assistant who can find relevant
+    information using semantic search in a Qdrant database.""",
+    tools=[qdrant_tool],
+    verbose=True
+)
+
+answer_agent = Agent(
+    role="Senior Answer Assistant",
+    goal="Generate answers to questions based on the context provided",
+    backstory="""You are an expert answer assistant who can generate
+    answers to questions based on the context provided.""",
+    tools=[qdrant_tool],
+    verbose=True
+)
+
+# Define tasks
+search_task = Task(
+    description="""Search for relevant documents about the {query}.
+    Your final answer should include:
+    - The relevant information found
+    - The similarity scores of the results
+    - The metadata of the relevant documents""",
+    agent=search_agent
+)
+
+answer_task = Task(
+    description="""Given the context and metadata of relevant documents,
+    generate a final answer based on the context.""",
+    agent=answer_agent
+)
+
+# Run CrewAI workflow
+crew = Crew(
+    agents=[search_agent, answer_agent],
+    tasks=[search_task, answer_task],
+    process=Process.sequential,
+    verbose=True
+)
+
+result = crew.kickoff(
+    inputs={"query": "What is the role of X in the document?"}
+)
+print(result)
+```
+
+## معاملات الأداة
+
+### المعاملات المطلوبة
+- `qdrant_config` (QdrantConfig): كائن التكوين الذي يحتوي على جميع إعدادات Qdrant
+
+### معاملات QdrantConfig
+- `qdrant_url` (str): عنوان URL لخادم Qdrant الخاص بك
+- `qdrant_api_key` (str, اختياري): مفتاح API للمصادقة مع Qdrant
+- `collection_name` (str): اسم مجموعة Qdrant المراد البحث فيها
+- `limit` (int): الحد الأقصى لعدد النتائج المُرجعة (الافتراضي: 3)
+- `score_threshold` (float): الحد الأدنى لدرجة التشابه (الافتراضي: 0.35)
+- `filter` (Any, اختياري): نسخة Filter من Qdrant للتصفية المتقدمة (الافتراضي: None)
+
+### المعاملات الاختيارية للأداة
+- `custom_embedding_fn` (Callable[[str], list[float]]): دالة مخصصة لتحويل النص إلى متجهات
+- `qdrant_package` (str): مسار الحزمة الأساسية لـ Qdrant (الافتراضي: "qdrant_client")
+- `client` (Any): عميل Qdrant مُهيأ مسبقاً (اختياري)
+
+## التصفية المتقدمة
+
+تدعم أداة QdrantVectorSearchTool إمكانيات تصفية قوية لتحسين نتائج البحث:
+
+### التصفية الديناميكية
+استخدم معاملات `filter_by` و `filter_value` في بحثك لتصفية النتائج أثناء التنفيذ:
+
+```python
+# Agent will use these parameters when calling the tool
+# The tool schema accepts filter_by and filter_value
+# Example: search with category filter
+# Results will be filtered where category == "technology"
+```
+
+### المرشحات المسبقة مع QdrantConfig
+للتصفية المعقدة، استخدم نسخ Filter من Qdrant في تكوينك:
+
+```python
+from qdrant_client.http import models as qmodels
+from crewai_tools import QdrantVectorSearchTool, QdrantConfig
+
+# Create a filter for specific conditions
+preset_filter = qmodels.Filter(
+    must=[
+        qmodels.FieldCondition(
+            key="category",
+            match=qmodels.MatchValue(value="research")
+        ),
+        qmodels.FieldCondition(
+            key="year",
+            match=qmodels.MatchValue(value=2024)
+        )
+    ]
+)
+
+# Initialize tool with preset filter
+qdrant_tool = QdrantVectorSearchTool(
+    qdrant_config=QdrantConfig(
+        qdrant_url="your_url",
+        qdrant_api_key="your_key",
+        collection_name="your_collection",
+        filter=preset_filter  # Preset filter applied to all searches
+    )
+)
+```
+
+### دمج المرشحات
+تقوم الأداة تلقائياً بدمج المرشحات المسبقة من `QdrantConfig` مع المرشحات الديناميكية من `filter_by` و `filter_value`:
+
+```python
+# If QdrantConfig has a preset filter for category="research"
+# And the search uses filter_by="year", filter_value=2024
+# Both filters will be combined (AND logic)
+```
+
+## معاملات البحث
+
+تقبل الأداة هذه المعاملات في مخططها:
+- `query` (str): استعلام البحث للعثور على مستندات مشابهة
+- `filter_by` (str, اختياري): حقل البيانات الوصفية للتصفية عليه
+- `filter_value` (Any, اختياري): القيمة المراد التصفية بها
+
+## صيغة الإرجاع
+
+تُرجع الأداة النتائج بصيغة JSON:
+
+```json
+[
+  {
+    "metadata": {
+      // Any metadata stored with the document
+    },
+    "context": "The actual text content of the document",
+    "distance": 0.95  // Similarity score
+  }
+]
+```
+
+## التضمين الافتراضي
+
+بشكل افتراضي، تستخدم الأداة نموذج `text-embedding-3-large` من OpenAI للتحويل إلى متجهات. يتطلب ذلك:
+- تعيين مفتاح OpenAI API في البيئة: `OPENAI_API_KEY`
+
+## التضمينات المخصصة
+
+بدلاً من استخدام نموذج التضمين الافتراضي، قد ترغب في استخدام دالة تضمين خاصة بك في الحالات التالية:
+
+1. تريد استخدام نموذج تضمين مختلف (مثل Cohere أو HuggingFace أو نماذج Ollama)
+2. تحتاج إلى تقليل التكاليف باستخدام نماذج تضمين مفتوحة المصدر
+3. لديك متطلبات محددة لأبعاد المتجهات أو جودة التضمين
+4. تريد استخدام تضمينات خاصة بمجال معين (مثل النصوص الطبية أو القانونية)
+
+إليك مثال باستخدام نموذج HuggingFace:
+
+```python
+from transformers import AutoTokenizer, AutoModel
+import torch
+
+# Load model and tokenizer
+tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
+model = AutoModel.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
+
+def custom_embeddings(text: str) -> list[float]:
+    # Tokenize and get model outputs
+    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+    outputs = model(**inputs)
+
+    # Use mean pooling to get text embedding
+    embeddings = outputs.last_hidden_state.mean(dim=1)
+
+    # Convert to list of floats and return
+    return embeddings[0].tolist()
+
+# Use custom embeddings with the tool
+from crewai_tools import QdrantConfig
+
+tool = QdrantVectorSearchTool(
+    qdrant_config=QdrantConfig(
+        qdrant_url="your_url",
+        qdrant_api_key="your_key",
+        collection_name="your_collection"
+    ),
+    custom_embedding_fn=custom_embeddings  # Pass your custom function
+)
+```
+
+## معالجة الأخطاء
+
+تتعامل الأداة مع هذه الأخطاء المحددة:
+- تُثير ImportError إذا لم يكن `qdrant-client` مثبتاً (مع خيار التثبيت التلقائي)
+- تُثير ValueError إذا لم يتم تعيين `QDRANT_URL`
+- تطلب تثبيت `qdrant-client` إذا كان مفقوداً باستخدام `uv add qdrant-client`
+
+## متغيرات البيئة
+
+متغيرات البيئة المطلوبة:
+```bash
+export QDRANT_URL="your_qdrant_url"  # If not provided in constructor
+export QDRANT_API_KEY="your_api_key"  # If not provided in constructor
+export OPENAI_API_KEY="your_openai_key"  # If using default embeddings
+```

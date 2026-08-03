@@ -1,0 +1,140 @@
+---
+title: ابنِ أول Crew
+description: دليل خطوة بخطوة لإنشاء فريق AI تعاوني باستخدام تهيئة JSON-first.
+icon: users-gear
+mode: "wide"
+---
+
+## بناء Crew للبحث
+
+في هذا الدليل ستنشئ crew من Agentين: واحد للبحث وآخر لكتابة تقرير markdown. مشاريع الـ crew الجديدة هي JSON-first: تُعرّف الـ Agents في `agents/*.jsonc`، وتُعرّف المهام وإعدادات الـ crew في `crew.jsonc`، ويحمّل `crewai run` هذا التعريف مباشرة.
+
+### المتطلبات
+
+1. تثبيت CrewAI من [دليل التثبيت](/ar/installation)
+2. إعداد مفتاح LLM من [دليل LLMs](/ar/concepts/llms#setting-up-your-llm)
+3. مفتاح [Serper.dev](https://serper.dev/) إذا أردت استخدام البحث على الويب
+
+## الخطوة 1: إنشاء Crew جديدة
+
+```bash
+crewai create crew research_crew
+cd research_crew
+```
+
+البنية الناتجة:
+
+```text
+research_crew/
+├── .gitignore
+├── .env
+├── agents/
+│   └── researcher.jsonc
+├── crew.jsonc
+├── knowledge/
+├── pyproject.toml
+├── README.md
+├── skills/
+└── tools/
+```
+
+<Tip>
+إذا احتجت إلى البنية القديمة التي تحتوي على `crew.py` و `config/agents.yaml` و `config/tasks.yaml`، استخدم `crewai create crew research_crew --classic`.
+</Tip>
+
+## الخطوة 2: تعريف الـ Agents
+
+عدّل ملف `agents/researcher.jsonc` الذي أنشأه القالب، ثم أضف `agents/analyst.jsonc`. يجب أن تطابق أسماء الملفات الأسماء المشار إليها في `crew.jsonc`.
+
+```jsonc agents/researcher.jsonc
+{
+  "role": "Senior Research Specialist for {topic}",
+  "goal": "Find comprehensive and accurate information about {topic}, with a focus on recent developments and key insights.",
+  "backstory": "You are an experienced research specialist who organizes complex information into clear, useful notes.",
+  // استبدله بالنموذج الذي تستخدمه، مثل "openai/gpt-4o".
+  "llm": "provider/model-id",
+  "tools": ["SerperDevTool"],
+  "settings": {
+    "verbose": true,
+    "allow_delegation": false
+  }
+}
+```
+
+```jsonc agents/analyst.jsonc
+{
+  "role": "Report Analyst for {topic}",
+  "goal": "Turn research findings into a clear, well-structured report.",
+  "backstory": "You are a careful analyst with strong technical writing skills and a talent for extracting useful insights.",
+  // استبدله بالنموذج الذي تستخدمه، مثل "openai/gpt-4o".
+  "llm": "provider/model-id",
+  "settings": {
+    "verbose": true,
+    "allow_delegation": false
+  }
+}
+```
+
+استبدل `provider/model-id` بالنموذج الذي تستخدمه، مثل `openai/gpt-4o` أو `anthropic/claude-sonnet-4-6` أو `gemini/gemini-2.0-flash-001`.
+
+## الخطوة 3: تعريف المهام وإعدادات الـ Crew
+
+استبدل `crew.jsonc` بما يلي:
+
+```jsonc crew.jsonc
+{
+  "name": "Research Crew",
+  "agents": ["researcher", "analyst"],
+  "tasks": [
+    {
+      "name": "research_task",
+      "description": "Conduct thorough research on {topic}. Focus on key concepts, recent developments, major challenges, notable applications, and future outlook.",
+      "expected_output": "A comprehensive research document with organized sections, specific facts, and useful examples about {topic}.",
+      "agent": "researcher"
+    },
+    {
+      "name": "analysis_task",
+      "description": "Analyze the research findings and create a polished report on {topic}. Include an executive summary, key insights, trend analysis, and recommendations.",
+      "expected_output": "A professional markdown report with clear headings, a concise summary, main findings, and recommendations.",
+      "agent": "analyst",
+      "context": ["research_task"],
+      "output_file": "output/report.md",
+      "markdown": true
+    }
+  ],
+  "process": "sequential",
+  "verbose": true,
+  "memory": true,
+  "inputs": {
+    "topic": "Artificial Intelligence in Healthcare"
+  }
+}
+```
+
+يشير `context` إلى أسماء مهام سابقة، لذلك يحصل analyst على مخرجات مهمة البحث. يوفر `inputs` قيمة افتراضية لـ `{topic}`. إذا حذفت القيمة الافتراضية، سيطلبها `crewai run`.
+
+## الخطوة 4: متغيرات البيئة
+
+عدّل `.env`:
+
+```sh
+SERPER_API_KEY=your_serper_api_key
+# أضف مفتاح مزود النموذج أيضًا.
+```
+
+## الخطوة 5: التثبيت والتشغيل
+
+```bash
+crewai install
+crewai run
+```
+
+بعد انتهاء التشغيل، افتح `output/report.md`.
+
+<Warning>
+شغّل مشاريع JSON crew من مصادر تثق بها فقط. أدوات `custom:<name>` ومراجع `{"python": "module.attribute"}` تنفذ Python محليًا عند تحميل الـ crew.
+</Warning>
+
+<Check>
+أصبحت لديك crew تعمل بأسلوب JSON-first تبحث في موضوع وتكتب تقريرًا.
+</Check>

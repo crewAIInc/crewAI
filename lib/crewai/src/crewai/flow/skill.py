@@ -10,6 +10,10 @@ from typing import Any, Literal
 from jinja2 import Environment, FileSystemLoader
 import yaml
 
+from crewai.flow.expressions import (
+    FLOW_TEMPLATE_EXPRESSION_EXAMPLES,
+    FLOW_TEMPLATE_EXPRESSION_RULES,
+)
 from crewai.flow.flow_definition import FlowDefinition
 
 
@@ -29,6 +33,8 @@ FIELD_TYPE_OVERRIDES: dict[tuple[str, str], str] = {
     ("FlowDefinition", "methods"): "map of string to [Method](#method-methods)",
     ("FlowMethodDefinition", "do"): "[Action](#action)",
     ("FlowCrewActionDefinition", "with"): "inline crew definition",
+    ("CrewAgentDefinition", "llm"): "string or inline LLM config",
+    ("AgentDefinition", "llm"): "string or inline LLM config",
 }
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -71,6 +77,10 @@ def template_context(
         "include_expression_action": "expression_action" not in skips,
         "include_script_action": "script_action" not in skips,
         "include_tool_action": "tool_action" not in skips,
+        "expression_contract_examples": FLOW_TEMPLATE_EXPRESSION_EXAMPLES[
+            examples_format
+        ],
+        "expression_contract_rules": FLOW_TEMPLATE_EXPRESSION_RULES,
         "sections": FlowSkillReferenceExtractor(skips=skips).extract(),
     }
 
@@ -124,6 +134,7 @@ MODEL_TITLES = {
     "CrewAgentDefinition": "Crew Agent Definition",
     "CrewTaskDefinition": "Crew Task Definition",
     "AgentDefinition": "Agent Definition",
+    "LLMDefinition": "LLM Definition",
     "FlowConfigDefinition": "Config",
     "FlowPersistenceDefinition": "Persistence",
     "FlowHumanFeedbackDefinition": "Human Feedback",
@@ -174,7 +185,14 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         hidden=True,
     ),
     ModelSpec("FlowScriptActionDefinition", "Action", "methods.<name>.do[call=script]"),
-    ModelSpec("FlowToolActionDefinition", "Action", "methods.<name>.do[call=tool]"),
+    ModelSpec(
+        "FlowToolActionDefinition",
+        "Action",
+        "methods.<name>.do[call=tool]",
+        descriptions={
+            "with": "Tool input arguments. Insert Flow values with `${...}`.",
+        },
+    ),
     ModelSpec(
         "FlowCrewActionDefinition",
         "Action",
@@ -182,7 +200,7 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         examples=True,
         descriptions={
             "call": "Action discriminator. Use crew to run an inline Crew definition.",
-            "inputs": "Actual kickoff inputs passed to the Crew. Use CEL-wrapped values here, for example `${state.topic}` or `${outputs.research_brief}`. The evaluated values are available to crew agent and task interpolation as `{name}` placeholders; reference each input the crew needs in agent or task text.",
+            "inputs": "Runtime inputs passed to the Crew. Insert Flow values with `${...}` and reference each input as `{name}` in agent or task text.",
         },
     ),
     ModelSpec(
@@ -222,6 +240,16 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         "methods.<name>.do[call=crew].with.agents.<name>",
         hidden=True,
         examples=True,
+        descriptions={
+            "llm": "Language model that runs this crew agent. Use an object when setting LLM options such as `max_tokens`.",
+            "planning_config": "Agent planning configuration. Set `max_attempts` to limit planning refinement attempts before task execution.",
+        },
+    ),
+    ModelSpec(
+        "LLMDefinition",
+        "LLM Definition",
+        hidden=True,
+        examples=True,
     ),
     ModelSpec(
         "CrewTaskDefinition",
@@ -240,7 +268,9 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         hidden=True,
         examples=True,
         descriptions={
-            "input": "Input passed to the individual agent kickoff outside of a crew. Use a single string value, often a dynamic `${...}` expression. When an agent needs multiple fields, build one single-line CEL string with labels and separators, using `text(root, 'path')` for values that may be missing or null, for example `${'Ticket ID: ' + text(state, 'ticket_id') + '; Message: ' + text(state, 'message')}`. In YAML, avoid `\\n` escapes inside `${...}` strings.",
+            "input": "Agent prompt template. Insert Flow values with `${...}`, for example `Ticket: ${state.ticket_id}`.",
+            "llm": "Language model that runs this agent. Use an object when setting LLM options such as `max_tokens`.",
+            "planning_config": "Agent planning configuration. Set `max_attempts` to limit planning refinement attempts before task execution.",
         },
     ),
     ModelSpec("FlowConfigDefinition", "Config", "config"),
@@ -342,7 +372,9 @@ class FlowSkillReferenceExtractor:
                 "CrewAgentDefinition",
                 "CrewTaskDefinition",
             ),
+            "CrewAgentDefinition": ("LLMDefinition",),
             "FlowAgentActionDefinition": ("AgentDefinition",),
+            "AgentDefinition": ("LLMDefinition",),
         }
         return [
             self.extract_model(_SPECS_BY_NAME[name])

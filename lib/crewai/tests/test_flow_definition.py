@@ -14,6 +14,10 @@ import crewai.flow.dsl as flow_dsl
 import crewai.flow.flow_definition as flow_definition
 import crewai.flow.visualization.builder as visualization_builder
 from crewai.experimental import ConversationConfig, RouterConfig
+from crewai.flow.expressions import (
+    FLOW_TEMPLATE_EXPRESSION_EXAMPLES,
+    FLOW_TEMPLATE_EXPRESSION_RULES,
+)
 from crewai.flow import Flow, and_, human_feedback, listen, or_, persist, router, start
 
 
@@ -85,6 +89,14 @@ def test_flow_definition_json_schema_carries_reference_descriptions():
     assert "Individual Agent definition" in agent_properties["with"]["description"]
     assert "outside of a crew" in agent_properties["with"]["description"]
     assert "individual inline Agent" in agent_properties["call"]["description"]
+
+    expression_rule = FLOW_TEMPLATE_EXPRESSION_RULES[0]
+    code_properties = defs["FlowCodeActionDefinition"]["properties"]
+    tool_properties = defs["FlowToolActionDefinition"]["properties"]
+    crew_properties = defs["FlowCrewActionDefinition"]["properties"]
+    assert expression_rule in code_properties["with"]["description"]
+    assert expression_rule in tool_properties["with"]["description"]
+    assert expression_rule in crew_properties["inputs"]["description"]
 
     state_schema = next(
         branch
@@ -162,7 +174,9 @@ def test_flow_definition_json_schema_carries_field_examples_only():
     assert action_properties["ref"]["examples"] == [
         "my_project.flows:normalize_topic"
     ]
-    assert action_properties["with"]["examples"] == [{"topic": "${state.topic}"}]
+    assert action_properties["with"]["examples"] == [
+        {"topic": "${state.topic}", "query": "News about ${state.topic}"}
+    ]
 
     agent_properties = defs["FlowAgentActionDefinition"]["properties"]
     assert agent_properties["call"]["examples"] == ["agent"]
@@ -1333,8 +1347,32 @@ def test_skill_documents_flow_wiring():
     assert isinstance(skill, str)
     assert "```yaml" in skill
     assert "[Method](#method-methods)" in skill
-    assert "input: \"${'Reviewed research: ' + text(outputs, 'research_brief.raw')}\"" in skill
-    assert 'text(root, "path", "default")' in skill
+    assert 'input: "Reviewed research: ${outputs.research_brief.raw}"' in skill
+    assert "do not assemble the string with CEL `+`" in skill
+    assert "Do not use CEL `+` to build text in action mappings" in skill
+    assert "Agent prompt template. Insert Flow values with `${...}`" in skill
+    assert (
+        "Repository-backed agents may set `from_repository` and omit inline "
+        "`role`, `goal`, and `backstory`" in skill
+    )
+    assert "Runtime inputs passed to the Crew" in skill
+    assert "Tool input arguments. Insert Flow values with `${...}`" in skill
+    assert "trust CrewAI defaults and omit them" in skill
+    assert "#### LLM Definition" in skill
+    assert "`max_tokens` (optional): integer | null; default `null`" in skill
+    assert "CrewAI does not set an explicit output token cap" in skill
+    assert "`planning_config` (optional): object | null; default `null`" in skill
+    assert "Set `max_attempts` to limit planning refinement attempts" in skill
+    assert "`allow_delegation` (optional): boolean | null; default `null`" in skill
+    assert "`max_iter` (optional): integer | null; default `null`" in skill
+    assert "`max_rpm` (optional): integer | null; default `null`" in skill
+    assert "`max_execution_time` (optional): integer | null; default `null`" in skill
+    assert "Maximum execution time in seconds for an agent" in skill
+    for rule in FLOW_TEMPLATE_EXPRESSION_RULES:
+        assert rule in skill
+    for example in FLOW_TEMPLATE_EXPRESSION_EXAMPLES["yaml"]:
+        assert example["title"] in skill
+        assert example["code"] in skill
 
 
 def test_skill_can_render_json_examples():
@@ -1342,6 +1380,10 @@ def test_skill_can_render_json_examples():
 
     assert "```json" in skill
     assert '"schema": "crewai.flow/v1"' in skill
+    for example in FLOW_TEMPLATE_EXPRESSION_EXAMPLES["json"]:
+        assert example["title"] in skill
+        assert example["code"] in skill
+    assert FLOW_TEMPLATE_EXPRESSION_EXAMPLES["yaml"][0]["code"] not in skill
     assert "```yaml" not in skill
 
 

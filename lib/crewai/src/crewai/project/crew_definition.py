@@ -6,12 +6,15 @@ from typing import Any, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from crewai.agent.planning_config import PlanningConfig
+
 
 __all__ = [
     "AgentDefinition",
     "CrewAgentDefinition",
     "CrewDefinition",
     "CrewTaskDefinition",
+    "LLMDefinition",
     "PythonReferenceDefinition",
 ]
 
@@ -38,26 +41,49 @@ class PythonReferenceDefinition(BaseModel):
         return path
 
 
+class LLMDefinition(BaseModel):
+    """LLM configuration used by inline agent definitions."""
+
+    model_config = ConfigDict(extra="allow")
+
+    model: str = Field(
+        description="Model identifier used to instantiate the LLM.",
+        examples=["openai/gpt-4o-mini"],
+    )
+    max_tokens: int | None = Field(
+        default=None,
+        description=(
+            "Maximum number of tokens the LLM can generate. If null, CrewAI "
+            "does not set an explicit output token cap and the provider's "
+            "default applies."
+        ),
+        examples=[4096],
+    )
+
+
 class CrewAgentDefinition(BaseModel):
     """Inline agent definition used by a crew definition."""
 
     model_config = ConfigDict(extra="allow")
 
-    role: str = Field(
+    role: str | None = Field(
+        default=None,
         description=(
             "Crew agent role. Crew inputs are interpolated with `{name}` "
             "placeholders such as `{topic}`; this is not CEL."
         ),
         examples=["Research analyst"],
     )
-    goal: str = Field(
+    goal: str | None = Field(
+        default=None,
         description=(
             "Crew agent goal. Crew inputs are interpolated with `{name}` "
             "placeholders such as `{topic}`; this is not CEL."
         ),
         examples=["Research {topic}"],
     )
-    backstory: str = Field(
+    backstory: str | None = Field(
+        default=None,
         description=(
             "Crew agent backstory. Crew inputs are interpolated with `{name}` "
             "placeholders such as `{topic}`; this is not CEL."
@@ -69,10 +95,55 @@ class CrewAgentDefinition(BaseModel):
         description="Optional built-in type or Python reference used to load the agent.",
         examples=["agent", {"python": "my_project.agents.ResearchAgent"}],
     )
+    from_repository: str | None = Field(
+        default=None,
+        description=(
+            "Agent repository name to load. Repository values supply missing "
+            "agent configuration; explicitly provided local fields override the "
+            "repository values."
+        ),
+        examples=["researcher"],
+    )
     settings: dict[str, Any] = Field(
         default_factory=dict,
         description="Additional agent settings passed to the loader.",
         examples=[{"llm": "openai/gpt-4o-mini"}],
+    )
+    llm: str | LLMDefinition | None = Field(
+        default=None,
+        description=(
+            "Language model that runs the agent. Use a string model name or an "
+            "object with model settings such as max_tokens."
+        ),
+        examples=[{"model": "openai/gpt-4o-mini", "max_tokens": 4096}],
+    )
+    planning_config: PlanningConfig | None = Field(
+        default=None,
+        description="Configuration for agent planning before task execution.",
+        examples=[{"max_attempts": 3}],
+    )
+    allow_delegation: bool | None = Field(
+        default=None,
+        description="Enable agent to delegate and ask questions among each other.",
+        examples=[False],
+    )
+    max_iter: int | None = Field(
+        default=None,
+        description="Maximum iterations for an agent to execute a task",
+        examples=[25],
+    )
+    max_rpm: int | None = Field(
+        default=None,
+        description=(
+            "Maximum number of requests per minute for the agent execution to be "
+            "respected."
+        ),
+        examples=[10],
+    )
+    max_execution_time: int | None = Field(
+        default=None,
+        description="Maximum execution time in seconds for an agent to execute a task",
+        examples=[300],
     )
     tools: list[str | dict[str, Any]] | None = Field(
         default=None,
@@ -124,15 +195,18 @@ class CrewAgentDefinition(BaseModel):
 class AgentDefinition(CrewAgentDefinition):
     """Inline individual agent definition used outside of a crew."""
 
-    role: str = Field(
+    role: str | None = Field(
+        default=None,
         description="Individual agent role used by a Flow agent action outside of a crew.",
         examples=["Support specialist"],
     )
-    goal: str = Field(
+    goal: str | None = Field(
+        default=None,
         description="Individual agent goal for the Flow agent action outside of a crew.",
         examples=["Draft a concise customer reply"],
     )
-    backstory: str = Field(
+    backstory: str | None = Field(
+        default=None,
         description=(
             "Individual agent backstory used to shape behavior outside of a crew."
         ),

@@ -96,6 +96,32 @@ def test_flow_execution_span_records_crewai_version():
     span.set_attribute.assert_any_call("flow_name", "ResearchFlow")
 
 
+def test_flow_creation_span_records_crewai_version():
+    tracer = Mock()
+    span = Mock()
+    tracer.start_span.return_value = span
+
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "CREWAI_DISABLE_TELEMETRY": "false",
+                "CREWAI_DISABLE_TRACKING": "false",
+                "OTEL_SDK_DISABLED": "false",
+            },
+        ),
+        patch("crewai.telemetry.telemetry.TracerProvider"),
+        patch("crewai.telemetry.telemetry.trace.get_tracer", return_value=tracer),
+        patch("crewai.telemetry.telemetry.version", return_value="9.9.9"),
+    ):
+        telemetry = Telemetry()
+        telemetry.flow_creation_span("ResearchFlow")
+
+    tracer.start_span.assert_called_once_with("Flow Creation")
+    span.set_attribute.assert_any_call("crewai_version", "9.9.9")
+    span.set_attribute.assert_any_call("flow_name", "ResearchFlow")
+
+
 @patch("crewai.telemetry.telemetry.logger.error")
 @patch(
     "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter.export",

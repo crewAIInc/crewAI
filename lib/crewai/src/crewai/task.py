@@ -52,6 +52,12 @@ from crewai.security import Fingerprint, SecurityConfig
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.tool_failure import (
+    ToolFailurePolicy,
+    ToolFailureRecord,
+    merge_tool_failures,
+    tool_failure_collector,
+)
 from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
 from crewai.utilities.converter import (
@@ -274,6 +280,13 @@ class Task(BaseModel):
         default=3, description="Maximum number of retries when guardrail fails"
     )
     retry_count: int = Field(default=0, description="Current number of retries")
+    tool_failure_policy: ToolFailurePolicy | None = Field(
+        default=None,
+        description=(
+            "Overrides the agent's tool_failure_policy for this task only. "
+            "None inherits."
+        ),
+    )
     start_time: datetime.datetime | None = Field(
         default=None, description="Start time of the task execution"
     )
@@ -662,11 +675,27 @@ class Task(BaseModel):
                 crewai_event_bus.emit(
                     self, TaskStartedEvent(context=context, task=self)
                 )
-            result = await agent.aexecute_task(
+
+            from crewai.hooks.contexts import StepContext
+            from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
+            pre_step_ctx = StepContext(
+                kind="task",
+                step_name=self.name or self.description,
+                agent=agent,
+                agent_role=getattr(agent, "role", None),
                 task=self,
-                context=context,
-                tools=tools,
+                payload=context,
             )
+            dispatch(InterceptionPoint.PRE_STEP, pre_step_ctx)
+            context = pre_step_ctx.payload
+
+            with tool_failure_collector() as execution_failures:
+                result = await agent.aexecute_task(
+                    task=self,
+                    context=context,
+                    tools=tools,
+                )
 
             self._post_agent_execution(agent)
 
@@ -698,6 +727,7 @@ class Task(BaseModel):
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
+                tool_failures=list(execution_failures),
             )
 
             if self._guardrails:
@@ -717,6 +747,18 @@ class Task(BaseModel):
                     tools=tools,
                     guardrail=self._guardrail,
                 )
+
+            post_step_ctx = StepContext(
+                kind="task",
+                step_name=self.name or self.description,
+                agent=agent,
+                agent_role=getattr(agent, "role", None),
+                task=self,
+                output=task_output,
+                payload=task_output,
+            )
+            dispatch(InterceptionPoint.POST_STEP, post_step_ctx)
+            task_output = cast(TaskOutput, post_step_ctx.payload)
 
             self.output = task_output
             self.end_time = datetime.datetime.now()
@@ -739,10 +781,12 @@ class Task(BaseModel):
 
             if self.output_file:
                 content = (
-                    json_output
-                    if json_output
+                    task_output.json_dict
+                    if task_output.json_dict
                     else (
-                        pydantic_output.model_dump_json() if pydantic_output else result
+                        task_output.pydantic.model_dump_json()
+                        if task_output.pydantic
+                        else task_output.raw
                     )
                 )
                 self._save_file(content)
@@ -787,11 +831,27 @@ class Task(BaseModel):
                 crewai_event_bus.emit(
                     self, TaskStartedEvent(context=context, task=self)
                 )
-            result = agent.execute_task(
+
+            from crewai.hooks.contexts import StepContext
+            from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
+            pre_step_ctx = StepContext(
+                kind="task",
+                step_name=self.name or self.description,
+                agent=agent,
+                agent_role=getattr(agent, "role", None),
                 task=self,
-                context=context,
-                tools=tools,
+                payload=context,
             )
+            dispatch(InterceptionPoint.PRE_STEP, pre_step_ctx)
+            context = pre_step_ctx.payload
+
+            with tool_failure_collector() as execution_failures:
+                result = agent.execute_task(
+                    task=self,
+                    context=context,
+                    tools=tools,
+                )
 
             self._post_agent_execution(agent)
 
@@ -823,6 +883,7 @@ class Task(BaseModel):
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
+                tool_failures=list(execution_failures),
             )
 
             if self._guardrails:
@@ -842,6 +903,18 @@ class Task(BaseModel):
                     tools=tools,
                     guardrail=self._guardrail,
                 )
+
+            post_step_ctx = StepContext(
+                kind="task",
+                step_name=self.name or self.description,
+                agent=agent,
+                agent_role=getattr(agent, "role", None),
+                task=self,
+                output=task_output,
+                payload=task_output,
+            )
+            dispatch(InterceptionPoint.POST_STEP, post_step_ctx)
+            task_output = cast(TaskOutput, post_step_ctx.payload)
 
             self.output = task_output
             self.end_time = datetime.datetime.now()
@@ -864,10 +937,12 @@ class Task(BaseModel):
 
             if self.output_file:
                 content = (
-                    json_output
-                    if json_output
+                    task_output.json_dict
+                    if task_output.json_dict
                     else (
-                        pydantic_output.model_dump_json() if pydantic_output else result
+                        task_output.pydantic.model_dump_json()
+                        if task_output.pydantic
+                        else task_output.raw
                     )
                 )
                 self._save_file(content)
@@ -1261,6 +1336,10 @@ Follow these guidelines:
 
         max_attempts = self.guardrail_max_retries + 1
 
+        # Each retry resets the agent's failure list, so accumulate to keep
+        # failures from blocked attempts on the final output.
+        accumulated_failures: list[ToolFailureRecord] = list(task_output.tool_failures)
+
         for attempt in range(max_attempts):
             guardrail_result = process_guardrail(
                 output=task_output,
@@ -1285,7 +1364,12 @@ Follow these guidelines:
                     task_output.pydantic = pydantic_output
                     task_output.json_dict = json_output
                 elif isinstance(guardrail_result.result, TaskOutput):
+                    # A guardrail may return a whole new output; carry the
+                    # accumulated failures over or earlier attempts vanish.
                     task_output = guardrail_result.result
+                    task_output.tool_failures = merge_tool_failures(
+                        accumulated_failures, task_output.tool_failures
+                    )
 
                 return task_output
 
@@ -1316,12 +1400,12 @@ Follow these guidelines:
                     content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
                     color="yellow",
                 )
-
-            result = agent.execute_task(
-                task=self,
-                context=context,
-                tools=tools,
-            )
+            with tool_failure_collector() as retry_failures:
+                result = agent.execute_task(
+                    task=self,
+                    context=context,
+                    tools=tools,
+                )
 
             if isinstance(result, BaseModel):
                 raw = result.model_dump_json()
@@ -1348,7 +1432,9 @@ Follow these guidelines:
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
+                tool_failures=merge_tool_failures(accumulated_failures, retry_failures),
             )
+            accumulated_failures = list(task_output.tool_failures)
 
         return task_output
 
@@ -1370,6 +1456,10 @@ Follow these guidelines:
             current_retry_count = self.retry_count
 
         max_attempts = self.guardrail_max_retries + 1
+
+        # Each retry resets the agent's failure list, so accumulate to keep
+        # failures from blocked attempts on the final output.
+        accumulated_failures: list[ToolFailureRecord] = list(task_output.tool_failures)
 
         for attempt in range(max_attempts):
             guardrail_result = process_guardrail(
@@ -1395,7 +1485,12 @@ Follow these guidelines:
                     task_output.pydantic = pydantic_output
                     task_output.json_dict = json_output
                 elif isinstance(guardrail_result.result, TaskOutput):
+                    # A guardrail may return a whole new output; carry the
+                    # accumulated failures over or earlier attempts vanish.
                     task_output = guardrail_result.result
+                    task_output.tool_failures = merge_tool_failures(
+                        accumulated_failures, task_output.tool_failures
+                    )
 
                 return task_output
 
@@ -1426,12 +1521,12 @@ Follow these guidelines:
                     content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
                     color="yellow",
                 )
-
-            result = await agent.aexecute_task(
-                task=self,
-                context=context,
-                tools=tools,
-            )
+            with tool_failure_collector() as retry_failures:
+                result = await agent.aexecute_task(
+                    task=self,
+                    context=context,
+                    tools=tools,
+                )
 
             if isinstance(result, BaseModel):
                 raw = result.model_dump_json()
@@ -1458,6 +1553,8 @@ Follow these guidelines:
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
+                tool_failures=merge_tool_failures(accumulated_failures, retry_failures),
             )
+            accumulated_failures = list(task_output.tool_failures)
 
         return task_output

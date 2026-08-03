@@ -492,7 +492,7 @@ class BedrockCompletion(BaseLLM):
         if not AIOBOTOCORE_AVAILABLE:
             raise NotImplementedError(
                 "Async support for AWS Bedrock requires aiobotocore. "
-                'Install with: uv add "crewai[bedrock-async]"'
+                'Install with: uv add "crewai[bedrock]"'
             )
 
         with llm_call_context():

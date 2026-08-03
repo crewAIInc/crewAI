@@ -5,7 +5,6 @@ import asyncio
 from collections.abc import Awaitable, Callable
 import importlib
 from inspect import Parameter, signature
-import json
 import threading
 from typing import (
     Any,
@@ -37,9 +36,10 @@ from crewai.tools.structured_tool import (
     _infer_result_schema_from_callable,
     _serialize_schema,
     build_schema_hint,
+    format_description_for_llm,
 )
+from crewai.tools.tool_failure import ToolFailure, ToolFailurePolicy, ToolFailureReason
 from crewai.types.callback import SerializableCallable, _resolve_dotted_path
-from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -185,6 +185,13 @@ class BaseTool(BaseModel, ABC):
         default=None,
         description="Maximum number of times this tool can be used. None means unlimited usage.",
     )
+    tool_failure_policy: ToolFailurePolicy | None = Field(
+        default=None,
+        description=(
+            "Overrides the agent's and task's tool_failure_policy for this "
+            "tool only. None inherits."
+        ),
+    )
     current_usage_count: int = Field(
         default=0,
         description="Current number of times this tool has been used.",
@@ -292,21 +299,26 @@ class BaseTool(BaseModel, ABC):
                 ) from e
         return kwargs
 
-    def _claim_usage(self) -> str | None:
+    def _claim_usage(self) -> ToolFailure | None:
         """Atomically check max usage and increment the counter.
 
         Returns:
-            None if usage was claimed successfully, or an error message
-            string if the tool has reached its usage limit.
+            None if usage was claimed, otherwise a :class:`ToolFailure`. A
+            structured result rather than a bare string so every execution
+            path records a spent limit, instead of only the ones that
+            recognise the message.
         """
         with self._usage_lock:
             if (
                 self.max_usage_count is not None
                 and self.current_usage_count >= self.max_usage_count
             ):
-                return (
-                    f"Tool '{self.name}' has reached its usage limit of "
-                    f"{self.max_usage_count} times and cannot be used anymore."
+                return ToolFailure(
+                    message=(
+                        f"Tool '{self.name}' has reached its usage limit of "
+                        f"{self.max_usage_count} times and cannot be used anymore."
+                    ),
+                    reason=ToolFailureReason.USAGE_LIMIT,
                 )
             self.current_usage_count += 1
             return None
@@ -403,6 +415,7 @@ class BaseTool(BaseModel, ABC):
             max_usage_count=self.max_usage_count,
             current_usage_count=self.current_usage_count,
             cache_function=self.cache_function,
+            tool_failure_policy=self.tool_failure_policy,
         )
         structured_tool._original_tool = self
         return structured_tool
@@ -479,15 +492,27 @@ class BaseTool(BaseModel, ABC):
                 f"{self.__class__.__name__}Schema", **fields
             )
 
+    @property
+    def formatted_description(self) -> str:
+        """LLM-facing composite of name, argument schema, and description.
+
+        Use this when rendering the tool into a prompt; ``description``
+        holds only the authored text.
+        """
+        return format_description_for_llm(self.name, self.args_schema, self.description)
+
     def _generate_description(self) -> None:
-        """Generate the tool description with a JSON schema for arguments."""
-        schema = generate_model_description(self.args_schema)
-        args_json = json.dumps(schema["json_schema"]["schema"], indent=2)
-        self.description = (
-            f"Tool Name: {sanitize_tool_name(self.name)}\n"
-            f"Tool Arguments: {args_json}\n"
-            f"Tool Description: {self.description}"
-        )
+        """Deprecated hook kept for backward compatibility; does nothing.
+
+        Historically this rewrote the public ``description`` field at
+        construction time into the LLM-facing composite (``Tool Name: …\\n
+        Tool Arguments: …\\nTool Description: <authored>``). The authored
+        ``description`` is now preserved as written and the composite is
+        exposed separately via :attr:`formatted_description`.
+
+        ``model_post_init`` still calls this so subclasses that override it
+        (e.g. adapters that customize the composite) keep working.
+        """
 
 
 _BASE_TOOL_CLS = BaseTool
