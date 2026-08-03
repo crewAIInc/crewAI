@@ -18,6 +18,7 @@ def test_verification_tool_initialization() -> None:
     tool = CreduentVerificationTool()
     assert tool.name == "Creduent Agent Identity Verification"
     assert tool.strict is True
+    assert tool.package_dependencies == ["creduent"]
 
 
 @patch("creduent.verify.verify")
@@ -47,4 +48,18 @@ def test_failed_verification_strict(mock_verify: MagicMock) -> None:
     with pytest.raises(ValueError) as exc_info:
         tool._run(agent_uri="agent://untrusted.dev/hacker")
 
-    assert "Invalid signature" in str(exc_info.value)
+    assert str(exc_info.value) == "Verification FAILED for agent://untrusted.dev/hacker: Invalid signature"
+
+
+@patch("creduent.verify.verify")
+def test_unexpected_exception_handling(mock_verify: MagicMock) -> None:
+    """Test handling of unexpected exceptions raised during verification."""
+    mock_verify.side_effect = RuntimeError("Network timeout")
+
+    tool = CreduentVerificationTool(strict=True)
+
+    with pytest.raises(ValueError) as exc_info:
+        tool._run(agent_uri="agent://untrusted.dev/hacker")
+
+    assert "Verification failure for agent://untrusted.dev/hacker: Network timeout" in str(exc_info.value)
+
