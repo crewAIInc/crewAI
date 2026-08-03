@@ -180,18 +180,31 @@ def _is_private_or_reserved(ip_str: str) -> bool:
         return True  # If we can't parse, block it
 
 
-def validate_url(url: str) -> str:
-    """Validate that a URL is safe to fetch.
+def validate_and_resolve(url: str) -> tuple[str, str | None]:
+    """Validate that a URL is safe to fetch, and return the specific IP address
+    checked so a caller can pin its actual connection to it.
 
-    Blocks ``file://`` scheme entirely. For ``http``/``https``, resolves
-    DNS and checks that the target IP is not private or reserved (prevents
-    SSRF to internal services and cloud metadata endpoints).
+    Blocks ``file://`` scheme entirely. For ``http``/``https``, resolves DNS
+    and checks that every returned address is not private or reserved
+    (prevents SSRF to internal services and cloud metadata endpoints).
+
+    Returning the checked IP alongside the URL matters: validating a hostname
+    and then letting the HTTP client re-resolve it later at connection time
+    leaves a DNS-rebinding gap -- an attacker with control over DNS (or a
+    short-TTL record) can present a safe IP for validation and a private one
+    for the real connection moments later. Callers that make the actual
+    request should connect to the returned IP directly (see
+    ``safe_requests.safe_get``'s use of this) rather than handing the
+    hostname back to their HTTP client and trusting it to resolve the same
+    way twice.
 
     Args:
         url: The URL to validate.
 
     Returns:
-        The validated URL string.
+        A ``(validated_url, ip)`` tuple. ``ip`` is the first address checked,
+        or ``None`` when validation is bypassed via the escape hatch (nothing
+        was resolved, so there is nothing to pin).
 
     Raises:
         ValueError: If the URL uses a blocked scheme or resolves to a
@@ -203,7 +216,7 @@ def validate_url(url: str) -> str:
             _UNSAFE_PATHS_ENV,
             url,
         )
-        return url
+        return url, None
 
     parsed = urlparse(url)
 
@@ -230,6 +243,7 @@ def validate_url(url: str) -> str:
     except socket.gaierror as exc:
         raise ValueError(f"Could not resolve hostname: '{parsed.hostname}'") from exc
 
+    first_ip: str | None = None
     for _family, _, _, _, sockaddr in addrinfos:
         ip_str = str(sockaddr[0])
         if _is_private_or_reserved(ip_str):
@@ -238,5 +252,38 @@ def validate_url(url: str) -> str:
                 f"Access to internal networks is not allowed. "
                 f"Set {_UNSAFE_PATHS_ENV}=true to bypass."
             )
+        if first_ip is None:
+            first_ip = ip_str
 
-    return url
+    return url, first_ip
+
+
+def validate_url(url: str) -> str:
+    """Validate that a URL is safe to fetch.
+
+    Blocks ``file://`` scheme entirely. For ``http``/``https``, resolves
+    DNS and checks that the target IP is not private or reserved (prevents
+    SSRF to internal services and cloud metadata endpoints).
+
+    Args:
+        url: The URL to validate.
+
+    Returns:
+        The validated URL string.
+
+    Raises:
+        ValueError: If the URL uses a blocked scheme or resolves to a
+            private/reserved IP address.
+    """
+    validated_url, _ip = validate_and_resolve(url)
+    return validated_url
+
+
+def resolve_validated_ip(url: str) -> str | None:
+    """Validate `url` (same checks as :func:`validate_url`) and return the
+    specific IP address that was checked, for pinning an actual connection to
+    it. See :func:`validate_and_resolve` for why this matters. Returns
+    ``None`` when validation is bypassed via the escape hatch.
+    """
+    _url, ip = validate_and_resolve(url)
+    return ip

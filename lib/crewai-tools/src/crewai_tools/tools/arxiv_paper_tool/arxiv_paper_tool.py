@@ -3,13 +3,14 @@ from pathlib import Path
 import re
 import time
 from typing import Any, ClassVar
-import urllib.error
 import urllib.parse
-import urllib.request
 import xml.etree.ElementTree as ET
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field
+import requests
+
+from crewai_tools.security.safe_requests import safe_download, safe_get
 
 
 logger = logging.getLogger(__file__)
@@ -25,7 +26,7 @@ class ArxivToolInput(BaseModel):
 
 
 class ArxivPaperTool(BaseTool):
-    BASE_API_URL: ClassVar[str] = "http://export.arxiv.org/api/query"
+    BASE_API_URL: ClassVar[str] = "https://export.arxiv.org/api/query"
     SLEEP_DURATION: ClassVar[int] = 1
     SUMMARY_TRUNCATE_LENGTH: ClassVar[int] = 300
     ATOM_NAMESPACE: ClassVar[str] = "{http://www.w3.org/2005/Atom}"
@@ -82,13 +83,10 @@ class ArxivPaperTool(BaseTool):
         logger.info(f"Fetching data from Arxiv API: {api_url}")
 
         try:
-            with urllib.request.urlopen(  # noqa: S310
-                api_url, timeout=self.REQUEST_TIMEOUT
-            ) as response:
-                if response.status != 200:
-                    raise Exception(f"HTTP {response.status}: {response.reason}")
-                data = response.read().decode("utf-8")
-        except urllib.error.URLError as e:
+            response = safe_get(api_url, timeout=self.REQUEST_TIMEOUT)
+            response.raise_for_status()
+            data = response.text
+        except (requests.RequestException, ValueError) as e:
             logger.error(f"Error fetching data from Arxiv: {e}")
             raise
 
@@ -161,9 +159,16 @@ class ArxivPaperTool(BaseTool):
     def download_pdf(self, pdf_url: str, save_path: str) -> None:
         try:
             logger.info(f"Downloading PDF from {pdf_url} to {save_path}")
-            urllib.request.urlretrieve(pdf_url, str(save_path))  # noqa: S310
+            # pdf_url comes from the Arxiv API's XML response, not directly from
+            # tool input -- but it's still an untrusted, remotely-supplied URL
+            # (e.g. a network MITM tampering with the plain-HTTP-era API response,
+            # or a malformed/malicious link ever indexed upstream). safe_download
+            # validates the URL and every redirect target, and pins each
+            # connection's DNS resolution to the address that was actually
+            # validated, closing the SSRF exposure a raw urlretrieve() call has.
+            safe_download(pdf_url, str(save_path), timeout=self.REQUEST_TIMEOUT)
             logger.info(f"PDF saved: {save_path}")
-        except urllib.error.URLError as e:
+        except (requests.RequestException, ValueError) as e:
             logger.error(f"Network error occurred while downloading {pdf_url}: {e}")
             raise
         except OSError as e:
