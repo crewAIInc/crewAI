@@ -180,6 +180,13 @@ def _is_private_or_reserved(ip_str: str) -> bool:
         return True  # If we can't parse, block it
 
 
+def _is_ipv4(ip_str: str) -> bool:
+    try:
+        return ipaddress.ip_address(ip_str).version == 4
+    except ValueError:
+        return False
+
+
 def validate_and_resolve(url: str) -> tuple[str, str | None]:
     """Validate that a URL is safe to fetch, and return the specific IP address
     checked so a caller can pin its actual connection to it.
@@ -202,8 +209,16 @@ def validate_and_resolve(url: str) -> tuple[str, str | None]:
         url: The URL to validate.
 
     Returns:
-        A ``(validated_url, ip)`` tuple. ``ip`` is the first address checked,
-        or ``None`` when validation is bypassed via the escape hatch (nothing
+        A ``(validated_url, ip)`` tuple. Every resolved address is checked,
+        but ``ip`` prefers an IPv4 address if one was returned (falling back
+        to the first address otherwise) -- ``getaddrinfo`` on a dual-stack
+        host often returns IPv6 first, and pinning the connection to a single
+        address (see ``safe_requests.safe_get``) forgoes the normal
+        multi-address fallback an unpinned connection attempt would get, so
+        picking the address most likely to actually be reachable (many CI
+        runners, containers, and networks have working IPv4 but broken or
+        absent IPv6 routes) matters more here than it would otherwise.
+        ``None`` when validation is bypassed via the escape hatch (nothing
         was resolved, so there is nothing to pin).
 
     Raises:
@@ -243,7 +258,7 @@ def validate_and_resolve(url: str) -> tuple[str, str | None]:
     except socket.gaierror as exc:
         raise ValueError(f"Could not resolve hostname: '{parsed.hostname}'") from exc
 
-    first_ip: str | None = None
+    checked_ips: list[str] = []
     for _family, _, _, _, sockaddr in addrinfos:
         ip_str = str(sockaddr[0])
         if _is_private_or_reserved(ip_str):
@@ -252,10 +267,12 @@ def validate_and_resolve(url: str) -> tuple[str, str | None]:
                 f"Access to internal networks is not allowed. "
                 f"Set {_UNSAFE_PATHS_ENV}=true to bypass."
             )
-        if first_ip is None:
-            first_ip = ip_str
+        checked_ips.append(ip_str)
 
-    return url, first_ip
+    pinned_ip = next((ip for ip in checked_ips if _is_ipv4(ip)), None) or (
+        checked_ips[0] if checked_ips else None
+    )
+    return url, pinned_ip
 
 
 def validate_url(url: str) -> str:

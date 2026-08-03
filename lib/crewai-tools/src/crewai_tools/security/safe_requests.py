@@ -82,9 +82,16 @@ def _pin_dns(hostname: str, ip: str) -> Iterator[None]:
         family = socket.AF_INET6 if ":" in ip else socket.AF_INET
 
         def pinned_getaddrinfo(
-            host: str, port: int, *args: Any, **kwargs: Any
+            host: str, port: int | str | None, *args: Any, **kwargs: Any
         ) -> list[tuple[Any, ...]]:
-            if host == hostname:
+            # socket.getaddrinfo's real signature allows a service name or
+            # None for `port`, not just an int -- match it so this doesn't
+            # lie to type checkers, and fall through to the real resolver
+            # for a non-int port instead of building a malformed sockaddr
+            # (requests/urllib3 always pass an int port for our own pinned
+            # request; this only matters if something else calls
+            # getaddrinfo for the same hostname during the pin window).
+            if host == hostname and isinstance(port, int):
                 sockaddr = (ip, port, 0, 0) if family == socket.AF_INET6 else (ip, port)
                 return [(family, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", sockaddr)]
             return original_getaddrinfo(host, port, *args, **kwargs)

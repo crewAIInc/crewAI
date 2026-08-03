@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import os
+import socket
+from typing import Any
 
 import pytest
 
 from crewai_tools.security.safe_path import (
     format_path_for_display,
     format_sandbox_error,
+    validate_and_resolve,
     validate_directory_path,
     validate_file_path,
     validate_url,
@@ -192,6 +195,64 @@ class TestValidateUrl:
         # file:// would normally be blocked
         result = validate_url("file:///etc/passwd")
         assert result == "file:///etc/passwd"
+
+
+class TestValidateAndResolve:
+    """Tests for validate_and_resolve's IP-pinning-specific behavior (the
+    parts validate_url's own tests don't cover, since validate_url discards
+    the IP)."""
+
+    def test_prefers_ipv4_on_dual_stack_host(self, monkeypatch):
+        """getaddrinfo on a dual-stack host commonly returns IPv6 first --
+        the pinned IP should prefer IPv4 regardless of result order, since
+        pinning forgoes the normal multi-address connection fallback and
+        many real environments have working IPv4 but broken/absent IPv6.
+        """
+
+        def dual_stack_getaddrinfo(
+            host: str, port: int, *args: Any, **kwargs: Any
+        ) -> list[tuple[Any, ...]]:
+            return [
+                (socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("2606:2800:220:1::1", port, 0, 0)),
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port)),
+            ]
+
+        monkeypatch.setattr(socket, "getaddrinfo", dual_stack_getaddrinfo)
+
+        _url, ip = validate_and_resolve("https://dual-stack.example/")
+
+        assert ip == "93.184.216.34"
+
+    def test_falls_back_to_ipv6_when_thats_all_thats_offered(self, monkeypatch):
+        def ipv6_only_getaddrinfo(
+            host: str, port: int, *args: Any, **kwargs: Any
+        ) -> list[tuple[Any, ...]]:
+            return [
+                (socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("2606:2800:220:1::1", port, 0, 0)),
+            ]
+
+        monkeypatch.setattr(socket, "getaddrinfo", ipv6_only_getaddrinfo)
+
+        _url, ip = validate_and_resolve("https://ipv6-only.example/")
+
+        assert ip == "2606:2800:220:1::1"
+
+    def test_still_validates_every_address_even_when_preferring_ipv4(self, monkeypatch):
+        """A private IPv6 address among the results must still block the
+        request, even though it wouldn't have been the preferred pin."""
+
+        def mixed_getaddrinfo(
+            host: str, port: int, *args: Any, **kwargs: Any
+        ) -> list[tuple[Any, ...]]:
+            return [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port)),
+                (socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("::1", port, 0, 0)),
+            ]
+
+        monkeypatch.setattr(socket, "getaddrinfo", mixed_getaddrinfo)
+
+        with pytest.raises(ValueError, match="private/reserved IP"):
+            validate_and_resolve("https://mixed.example/")
 
 
 class TestFormatSandboxError:

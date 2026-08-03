@@ -245,6 +245,32 @@ def test_safe_get_restores_real_resolver_after_pinning(
     assert socket.getaddrinfo is original_getaddrinfo
 
 
+def test_pinned_resolver_falls_through_for_non_int_port(
+    monkeypatch: pytest.MonkeyPatch, public_dns: None
+) -> None:
+    """socket.getaddrinfo's real signature allows a service name or None for
+    `port`, not just an int. A lookup for the pinned hostname with a non-int
+    port during the pin window (e.g. some unrelated code running
+    concurrently, or a future caller) must fall through to the real resolver
+    instead of building a malformed sockaddr from an unusable port value.
+    """
+    real_calls: list[tuple[str, Any]] = []
+
+    def fake_get(url: str, **kwargs: Any) -> requests.Response:
+        # A non-int port for the *same* pinned hostname: must delegate to
+        # the real (fixture-provided) resolver rather than being pinned.
+        result = socket.getaddrinfo("public.example", "http")
+        real_calls.append(("public.example", "http"))
+        assert result[0][4][0] == "93.184.216.34"  # from the public_dns fixture
+        return _response(url, 200)
+
+    _mock_get(monkeypatch, fake_get)
+
+    safe_get("http://public.example/", timeout=15)
+
+    assert real_calls == [("public.example", "http")]
+
+
 def test_safe_download_writes_content_to_disk(
     monkeypatch: pytest.MonkeyPatch, public_dns: None, tmp_path: Any
 ) -> None:
