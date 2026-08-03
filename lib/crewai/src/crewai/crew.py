@@ -116,6 +116,7 @@ from crewai.tasks.task_output import TaskOutput
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.agent_tools.read_file_tool import ReadFileTool
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.tool_failure import ToolFailurePolicy
 from crewai.types.callback import SerializableCallable
 from crewai.types.streaming import CrewStreamingOutput
 from crewai.types.usage_metrics import UsageMetrics
@@ -217,6 +218,8 @@ class Crew(FlowTrackable, BaseModel):
         default_factory=TaskOutputStorageHandler
     )
     _kickoff_event_id: str | None = PrivateAttr(default=None)
+    _execution_start_dispatched: bool = PrivateAttr(default=False)
+    _execution_end_dispatched: bool = PrivateAttr(default=False)
 
     name: str | None = Field(default="crew")
     cache: bool = Field(
@@ -227,6 +230,13 @@ class Crew(FlowTrackable, BaseModel):
             "arguments return the first result without re-executing the "
             "tool — do not enable for live-data or state-mutating tools "
             "unless they set a cache_function that prevents caching."
+        ),
+    )
+    tool_failure_policy: ToolFailurePolicy | None = Field(
+        default=None,
+        description=(
+            "Baseline tool_failure_policy for every agent in this crew. None "
+            "means 'warn'. Agents, tasks and tools may override it."
         ),
     )
     tasks: list[Task] = Field(default_factory=list)
@@ -1050,6 +1060,7 @@ class Crew(FlowTrackable, BaseModel):
 
             return result
         except Exception as e:
+            self._dispatch_execution_end_failure(e)
             crewai_event_bus.emit(
                 self,
                 CrewKickoffFailedEvent(
@@ -1263,6 +1274,7 @@ class Crew(FlowTrackable, BaseModel):
 
             return result
         except Exception as e:
+            self._dispatch_execution_end_failure(e)
             crewai_event_bus.emit(
                 self,
                 CrewKickoffFailedEvent(
@@ -1906,6 +1918,34 @@ class Crew(FlowTrackable, BaseModel):
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
         self.token_usage = self.calculate_usage_metrics()
+
+        from crewai.hooks.contexts import ExecutionEndContext, OutputContext
+        from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
+        crew_output = CrewOutput(
+            raw=final_task_output.raw,
+            pydantic=final_task_output.pydantic,
+            json_dict=final_task_output.json_dict,
+            tasks_output=task_outputs,
+            token_usage=self.token_usage,
+        )
+
+        output_ctx = OutputContext(crew=self, output=crew_output, payload=crew_output)
+        dispatch(InterceptionPoint.OUTPUT, output_ctx)
+        crew_output = cast(CrewOutput, output_ctx.payload)
+
+        end_ctx = ExecutionEndContext(
+            crew=self, output=crew_output, payload=crew_output
+        )
+        # Flag set before dispatching so an EXECUTION_END hook that raises
+        # HookAborted does not trigger a second (failure) dispatch upstream.
+        self._execution_end_dispatched = True
+        dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
+        crew_output = cast(CrewOutput, end_ctx.payload)
+
+        if isinstance(crew_output, CrewOutput):
+            final_task_output.raw = crew_output.raw
+
         # Ensure background memory saves finish (and emit their
         # completed/failed events) before the kickoff-completed event below
         # triggers listener teardown/finalization.
@@ -1924,13 +1964,33 @@ class Crew(FlowTrackable, BaseModel):
         # Finalization is handled by trace listener (always initialized)
         # The batch manager checks contextvar to determine if tracing is enabled
 
-        return CrewOutput(
-            raw=final_task_output.raw,
-            pydantic=final_task_output.pydantic,
-            json_dict=final_task_output.json_dict,
-            tasks_output=task_outputs,
-            token_usage=self.token_usage,
-        )
+        return crew_output
+
+    def _dispatch_execution_end_failure(self, error: BaseException) -> None:
+        """Dispatch EXECUTION_END with status="failed" for a kickoff that raised.
+
+        No-op when EXECUTION_START never dispatched (pairing invariant) or when
+        EXECUTION_END already fired for this execution (exactly-once). Never
+        raises, so the original kickoff exception propagates unchanged.
+
+        Instance-level flags are sufficient here because crew kickoffs are not
+        reentrant on the same instance (``kickoff_for_each`` copies the crew;
+        unlike Flow, nothing in the crew runtime supports nested kickoffs).
+        """
+        if not self._execution_start_dispatched or self._execution_end_dispatched:
+            return
+        self._execution_end_dispatched = True
+
+        from crewai.hooks.contexts import ExecutionEndContext
+        from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
+        try:
+            dispatch(
+                InterceptionPoint.EXECUTION_END,
+                ExecutionEndContext(crew=self, status="failed", error=error),
+            )
+        except Exception:  # noqa: S110 - aborting an already-failed execution is meaningless
+            pass
 
     def _process_async_tasks(
         self,

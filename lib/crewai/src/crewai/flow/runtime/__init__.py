@@ -67,6 +67,7 @@ from crewai.events.listeners.tracing.utils import (
 )
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
+    FlowFailedEvent,
     FlowFinishedEvent,
     FlowPausedEvent,
     FlowPlotEvent,
@@ -1332,8 +1333,17 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if self._flow_match_id is not None:
             flow_id_token = current_flow_id.set(self._flow_match_id)
         self._attach_usage_aggregation_listener()
+        # Per-invocation pairing state: a resumed execution's EXECUTION_START
+        # fired in the original kickoff, so a failure here still owes the
+        # paired EXECUTION_END (unless the body already dispatched it).
+        hook_state = {"end_dispatched": False}
         try:
-            return await self._resume_async_body(feedback)
+            return await self._resume_async_body(feedback, hook_state)
+        except Exception as e:
+            if not hook_state["end_dispatched"]:
+                self._dispatch_execution_end_failure(e)
+            await self._emit_flow_failed(e, respect_suppression=True)
+            raise
         finally:
             # Match kickoff_async: drain pending handlers so the resumed
             # phase's LLM events all hit `_aggregated_usage_metrics`
@@ -1343,7 +1353,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if flow_id_token is not None:
                 current_flow_id.reset(flow_id_token)
 
-    async def _resume_async_body(self, feedback: str = "") -> Any:
+    async def _resume_async_body(
+        self, feedback: str = "", hook_state: dict[str, bool] | None = None
+    ) -> Any:
         if get_current_parent_id() is None:
             reset_emission_counter()
             reset_last_event_id()
@@ -1372,35 +1384,68 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
         emit = context.emit
 
-        # The serialized context carries the full LLM config (a dict, or a
-        # legacy model string) — the single source for cross- and same-process
-        # resume.
-        result = await self._finalize_human_feedback(
-            method_name=context.method_name,
-            method_output=context.method_output,
-            raw_feedback=feedback,
-            emit=emit,
-            default_outcome=context.default_outcome,
-            llm=context.llm,
-            metadata=context.metadata,
-        )
-        collapsed_outcome = result.outcome
-        resumed_method_output = (
-            result.output
-            if emit and isinstance(result, HumanFeedbackResult)
-            else result
-        )
+        if not self.suppress_flow_events:
+            # Opens the scope the finished event below closes; without it that
+            # event pops the enclosing ``flow_started`` instead.
+            future = crewai_event_bus.emit(
+                self,
+                MethodExecutionStartedEvent(
+                    type="method_execution_started",
+                    flow_name=self._definition.name,
+                    method_name=context.method_name,
+                    state=self._copy_and_serialize_state(),
+                ),
+            )
+            if future and isinstance(future, Future):
+                try:
+                    await asyncio.wrap_future(future)
+                except Exception:
+                    logger.warning(
+                        "MethodExecutionStartedEvent handler failed", exc_info=True
+                    )
 
-        self._completed_methods.add(FlowMethodName(context.method_name))
+        try:
+            # The serialized context carries the full LLM config (a dict, or a
+            # legacy model string) — the single source for cross- and
+            # same-process resume.
+            result = await self._finalize_human_feedback(
+                method_name=context.method_name,
+                method_output=context.method_output,
+                raw_feedback=feedback,
+                emit=emit,
+                default_outcome=context.default_outcome,
+                llm=context.llm,
+                metadata=context.metadata,
+            )
+            collapsed_outcome = result.outcome
+            resumed_method_output = (
+                result.output
+                if emit and isinstance(result, HumanFeedbackResult)
+                else result
+            )
 
-        await asyncio.to_thread(
-            self._persist_method_completion, FlowMethodName(context.method_name)
-        )
+            self._completed_methods.add(FlowMethodName(context.method_name))
 
-        self._pending_feedback_context = None
+            await asyncio.to_thread(
+                self._persist_method_completion, FlowMethodName(context.method_name)
+            )
 
-        if self.persistence is not None:
-            self.persistence.clear_pending_feedback(context.flow_id)
+            self._pending_feedback_context = None
+
+            if self.persistence is not None:
+                self.persistence.clear_pending_feedback(context.flow_id)
+        except Exception as e:
+            if not self.suppress_flow_events:
+                crewai_event_bus.emit(
+                    self,
+                    MethodExecutionFailedEvent(
+                        type="method_execution_failed",
+                        flow_name=self._definition.name,
+                        method_name=context.method_name,
+                        error=e,
+                    ),
+                )
+            raise
 
         if not self.suppress_flow_events:
             crewai_event_bus.emit(
@@ -1475,6 +1520,23 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if method_outputs
             else (resumed_method_output if emit else result)
         )
+
+        from crewai.hooks.contexts import ExecutionEndContext, OutputContext
+        from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
+        output_ctx = OutputContext(flow=self, output=final_result, payload=final_result)
+        dispatch(InterceptionPoint.OUTPUT, output_ctx)
+        final_result = output_ctx.payload
+
+        end_ctx = ExecutionEndContext(
+            flow=self, output=final_result, payload=final_result
+        )
+        # Flag set before dispatching so an EXECUTION_END hook that raises
+        # HookAborted does not trigger a second (failure) dispatch upstream.
+        if hook_state is not None:
+            hook_state["end_dispatched"] = True
+        dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
+        final_result = end_ctx.payload
 
         if self._event_futures:
             await asyncio.gather(
@@ -2037,6 +2099,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         flow_name_token = None
         flow_defer_trace_finalization_token = None
         request_id_token = None
+        # Re-published after the INPUT hook so trigger-payload injection reads
+        # the hook-rewritten inputs rather than the pre-hook baggage above.
+        flow_inputs_token = None
         if current_flow_id.get() is None:
             flow_id_token = current_flow_id.set(self.flow_id)
             flow_name_token = current_flow_name.set(
@@ -2061,7 +2126,50 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._aggregated_usage_metrics = UsageMetrics()
             self._attach_usage_aggregation_listener()
 
+        # Pairing state is local (per invocation) so reentrant kickoffs on the
+        # same instance (see usage aggregation above) each track their own
+        # EXECUTION_START/EXECUTION_END dispatch independently.
+        execution_start_dispatched = False
+        execution_end_dispatched = False
+        # Guards the failure event: everything between here and the
+        # ``flow_started`` emission below (hooks, input handling, state
+        # restore) can raise, and a ``flow_failed`` with no opener would pop
+        # an unrelated scope.
+        flow_scope_open = False
+
         try:
+            from crewai.hooks.contexts import (
+                ExecutionEndContext,
+                ExecutionStartContext,
+                InputContext,
+                OutputContext,
+            )
+            from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
+            # ``inputs`` aliases the same object as ``payload`` (not a fresh
+            # ``{}`` from ``or``) so in-place edits survive read-back.
+            start_ctx = ExecutionStartContext(
+                flow=self,
+                inputs=inputs if inputs is not None else {},
+                payload=inputs,
+            )
+            dispatch(InterceptionPoint.EXECUTION_START, start_ctx)
+            execution_start_dispatched = True
+            inputs = start_ctx.payload
+
+            input_ctx = InputContext(
+                flow=self,
+                inputs=inputs if inputs is not None else {},
+                payload=inputs,
+            )
+            dispatch(InterceptionPoint.INPUT, input_ctx)
+            inputs = input_ctx.payload
+
+            # Publish the resolved inputs so trigger-payload injection and other
+            # baggage readers observe hook rewrites (the baggage set before the
+            # hooks carried the pre-hook inputs).
+            flow_inputs_token = attach(baggage.set_baggage("flow_inputs", inputs or {}))
+
             # Reset flow state for fresh execution unless restoring from persistence
             is_restoring = (
                 inputs and "id" in inputs and self.persistence is not None
@@ -2167,6 +2275,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 and get_current_parent_id() is None
             ):
                 restore_event_scope(((deferred_started_event_id, "flow_started"),))
+                flow_scope_open = True
             elif get_current_parent_id() is None:
                 reset_emission_counter()
                 reset_last_event_id()
@@ -2181,6 +2290,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     inputs=inputs,
                 )
                 future = crewai_event_bus.emit(self, started_event)
+                flow_scope_open = True
                 if future:
                     try:
                         await asyncio.wrap_future(future)
@@ -2297,6 +2407,24 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             method_outputs = self.method_outputs
             final_output = method_outputs[-1] if method_outputs else None
 
+            output_ctx = OutputContext(
+                flow=self, output=final_output, payload=final_output
+            )
+            dispatch(InterceptionPoint.OUTPUT, output_ctx)
+            final_output = output_ctx.payload
+
+            # EXECUTION_END runs before FlowFinishedEvent so a HookAborted
+            # prevents a spurious finished signal and payload replacement is
+            # honored on the emitted result and the returned value.
+            end_ctx = ExecutionEndContext(
+                flow=self, output=final_output, payload=final_output
+            )
+            # Flag set before dispatching so an EXECUTION_END hook that raises
+            # HookAborted does not trigger a second (failure) dispatch below.
+            execution_end_dispatched = True
+            dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
+            final_output = end_ctx.payload
+
             if self._event_futures:
                 await asyncio.gather(
                     *[asyncio.wrap_future(f) for f in self._event_futures]
@@ -2348,6 +2476,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         trace_listener.batch_manager.finalize_batch()
 
             return final_output
+        except Exception as e:
+            # Pairing invariant: only fire the failure EXECUTION_END when this
+            # invocation's EXECUTION_START dispatched and its EXECUTION_END has
+            # not (exactly-once per invocation).
+            if execution_start_dispatched and not execution_end_dispatched:
+                self._dispatch_execution_end_failure(e)
+            if flow_scope_open:
+                await self._emit_flow_failed(e)
+            raise
         finally:
             # Safety net for the exception path; the success path already
             # drained before emitting FlowFinishedEvent.
@@ -2370,8 +2507,90 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 current_flow_name.reset(flow_name_token)
             if flow_id_token is not None:
                 current_flow_id.reset(flow_id_token)
+            if flow_inputs_token is not None:
+                detach(flow_inputs_token)
             detach(flow_token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
+
+    def _dispatch_execution_end_failure(self, error: BaseException) -> None:
+        """Dispatch EXECUTION_END with status="failed" for an execution that raised.
+
+        Callers enforce the pairing invariant (EXECUTION_START dispatched,
+        EXECUTION_END not yet) with per-invocation state, so reentrant kickoffs
+        on the same instance stay exactly-once. Never raises, so the original
+        exception propagates unchanged.
+        """
+        from crewai.hooks.contexts import ExecutionEndContext
+        from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
+        try:
+            dispatch(
+                InterceptionPoint.EXECUTION_END,
+                ExecutionEndContext(flow=self, status="failed", error=error),
+            )
+        except Exception:  # noqa: S110 - aborting an already-failed execution is meaningless
+            pass
+
+    async def _emit_flow_failed(
+        self, error: Exception, *, respect_suppression: bool = False
+    ) -> None:
+        """Emit ``FlowFailedEvent`` and close out the trace batch for a failed run.
+
+        Mirrors the terminal block of the success path: drain pending event
+        handlers and background memory saves so their spans close before the
+        flow span does, then emit and finalize the trace batch. Never raises,
+        so the original exception propagates unchanged.
+
+        Args:
+            error: The exception that ended the execution.
+            respect_suppression: Skip the emission for suppressed flows. Only
+                the resume path gates its lifecycle events on
+                ``suppress_flow_events``; ``kickoff_async`` emits them either
+                way and lets listeners filter.
+        """
+        if self._should_defer_trace_finalization():
+            return
+        if respect_suppression and self.suppress_flow_events:
+            return
+
+        try:
+            if self._event_futures:
+                await asyncio.gather(
+                    *[asyncio.wrap_future(f) for f in self._event_futures],
+                    return_exceptions=True,
+                )
+                self._event_futures.clear()
+
+            await asyncio.to_thread(self._drain_memory_writes)
+            await asyncio.to_thread(crewai_event_bus.flush)
+            future = crewai_event_bus.emit(
+                self,
+                FlowFailedEvent(
+                    type="flow_failed",
+                    flow_name=self._definition.name,
+                    error=error,
+                ),
+            )
+            if future and isinstance(future, Future):
+                try:
+                    await asyncio.wrap_future(future)
+                except Exception:
+                    logger.warning("FlowFailedEvent handler failed", exc_info=True)
+
+            trace_listener = TraceCollectionListener()
+            if (
+                trace_listener.batch_manager.batch_owner_type == "flow"
+                and current_flow_id.get() == self.flow_id
+                and not trace_listener.batch_manager.defer_session_finalization
+                and not current_flow_defer_trace_finalization.get()
+            ):
+                if trace_listener.first_time_handler.is_first_time:
+                    trace_listener.first_time_handler.mark_events_collected()
+                    trace_listener.first_time_handler.handle_execution_completion()
+                else:
+                    trace_listener.batch_manager.finalize_batch()
+        except Exception:
+            logger.warning("Failed to signal flow failure", exc_info=True)
 
     async def akickoff(
         self,
@@ -2562,6 +2781,37 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if future:
                     self._event_futures.append(future)
 
+            from crewai.hooks.contexts import StepContext
+            from crewai.hooks.dispatch import InterceptionPoint, dispatch
+
+            pre_step_ctx = StepContext(
+                kind="flow_method",
+                step_name=str(method_name),
+                flow=self,
+                payload=dumped_params,
+            )
+            dispatch(InterceptionPoint.PRE_STEP, pre_step_ctx)
+
+            # Apply hook edits/replacement of the step params back onto the
+            # call. ``dumped_params`` maps positional args to ``_0, _1, ...``
+            # keys and keeps kwargs by name, so reverse that mapping here.
+            updated_params = pre_step_ctx.payload
+            if isinstance(updated_params, dict):
+                positional = sorted(
+                    (
+                        k
+                        for k in updated_params
+                        if k.startswith("_") and k[1:].isdigit()
+                    ),
+                    key=lambda k: int(k[1:]),
+                )
+                args = tuple(updated_params[k] for k in positional)
+                kwargs = {
+                    k: v
+                    for k, v in updated_params.items()
+                    if not (k.startswith("_") and k[1:].isdigit())
+                }
+
             # Set method name in context so ask() can read it without
             # stack inspection.  Must happen before copy_context() so the
             # value propagates into the thread pool for sync methods.
@@ -2588,6 +2838,16 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 result = await self._run_human_feedback_step(
                     method_name, method_definition.human_feedback, result
                 )
+
+            post_step_ctx = StepContext(
+                kind="flow_method",
+                step_name=str(method_name),
+                flow=self,
+                output=result,
+                payload=result,
+            )
+            dispatch(InterceptionPoint.POST_STEP, post_step_ctx)
+            result = post_step_ctx.payload
 
             self._method_outputs.append({"method": str(method_name), "output": result})
 

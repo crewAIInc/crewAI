@@ -7,7 +7,7 @@ AgentAction or AgentFinish objects.
 
 from dataclasses import dataclass
 
-from json_repair import repair_json  # type: ignore[import-untyped]
+from json_repair import repair_json
 from pydantic import BaseModel
 
 from crewai.agents.constants import (
@@ -173,7 +173,12 @@ def _safe_repair_json(tool_input: str) -> str:
     tool_input = tool_input.replace('"""', '"')
 
     result = repair_json(tool_input)
-    if result in UNABLE_TO_REPAIR_JSON_RESULTS:
+    if not result or result in UNABLE_TO_REPAIR_JSON_RESULTS:
+        return tool_input
+
+    # json-repair >= 0.60 wraps non-JSON input in a single-element list;
+    # treat that as unrepairable and return the original.
+    if result.startswith("[") and not tool_input.lstrip().startswith("["):
         return tool_input
 
     return str(result)

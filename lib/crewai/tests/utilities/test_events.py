@@ -23,6 +23,7 @@ from crewai.events.types.crew_events import (
 )
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
+    FlowFailedEvent,
     FlowFinishedEvent,
     FlowStartedEvent,
     HumanFeedbackReceivedEvent,
@@ -46,8 +47,11 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
 )
+from crewai.flow.async_feedback.types import PendingFeedbackContext
 from crewai.flow.flow import Flow, listen, start
 from crewai.flow.human_feedback import human_feedback
+from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+from crewai.hooks.dispatch import HookAborted, InterceptionPoint, clear_all, on
 from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
@@ -554,6 +558,274 @@ def test_flow_emits_finish_event():
     assert received_events[0].type == "flow_finished"
     assert received_events[0].result == "completed"
     assert result == "completed"
+
+
+def test_flow_emits_failed_event_paired_with_started_event():
+    started: list[FlowStartedEvent] = []
+    failed: list[FlowFailedEvent] = []
+
+    class BoomFlow(Flow[dict]):
+        @start()
+        def begin(self):
+            raise RuntimeError("boom")
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(FlowStartedEvent)
+        def handle_flow_started(source, event):
+            started.append(event)
+
+        @crewai_event_bus.on(FlowFailedEvent)
+        def handle_flow_failed(source, event):
+            failed.append(event)
+
+        with pytest.raises(RuntimeError, match="boom"):
+            BoomFlow().kickoff()
+        wait_for_event_handlers()
+
+    assert len(failed) == 1
+    assert failed[0].type == "flow_failed"
+    assert failed[0].flow_name == "BoomFlow"
+    assert isinstance(failed[0].error, RuntimeError)
+    assert str(failed[0].error) == "boom"
+    assert failed[0].started_event_id == started[0].event_id
+
+
+def test_suppressed_flow_failure_matches_finished_event_emission():
+    finished: list[FlowFinishedEvent] = []
+    failed: list[FlowFailedEvent] = []
+
+    class SuppressedFlow(Flow):
+        suppress_flow_events: bool = True
+
+        @start()
+        def begin(self):
+            return "ok"
+
+    class SuppressedBoomFlow(Flow):
+        suppress_flow_events: bool = True
+
+        @start()
+        def begin(self):
+            raise RuntimeError("boom")
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(FlowFinishedEvent)
+        def handle_flow_finished(source, event):
+            finished.append(event)
+
+        @crewai_event_bus.on(FlowFailedEvent)
+        def handle_flow_failed(source, event):
+            failed.append(event)
+
+        SuppressedFlow().kickoff()
+        with pytest.raises(RuntimeError, match="boom"):
+            SuppressedBoomFlow().kickoff()
+        wait_for_event_handlers()
+
+    assert len(finished) == 1
+    assert len(failed) == 1
+
+
+def test_abort_before_flow_started_emits_no_failed_event():
+    started: list[FlowStartedEvent] = []
+    failed: list[FlowFailedEvent] = []
+
+    class BlockedFlow(Flow):
+        @start()
+        def begin(self) -> str:
+            return "never runs"
+
+    clear_all()
+    try:
+
+        @on(InterceptionPoint.EXECUTION_START)
+        def block(_ctx):
+            raise HookAborted(reason="blocked by policy")
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(FlowStartedEvent)
+            def handle_flow_started(source, event):
+                started.append(event)
+
+            @crewai_event_bus.on(FlowFailedEvent)
+            def handle_flow_failed(source, event):
+                failed.append(event)
+
+            with pytest.raises(HookAborted):
+                BlockedFlow().kickoff()
+            wait_for_event_handlers()
+    finally:
+        clear_all()
+
+    assert started == []
+    assert failed == []
+
+
+def test_resume_emits_failed_event_paired_with_resume_started_event(tmp_path):
+    started: list[FlowStartedEvent] = []
+    failed: list[FlowFailedEvent] = []
+
+    class ResumeBoomFlow(Flow):
+        @start()
+        def begin(self) -> str:
+            return "content"
+
+        @listen(begin)
+        def after_feedback(self, _feedback):
+            raise RuntimeError("boom on resume")
+
+    persistence = SQLiteFlowPersistence(str(tmp_path / "flow.db"))
+    flow_id = "resume-failure-test"
+    persistence.save_pending_feedback(
+        flow_uuid=flow_id,
+        context=PendingFeedbackContext(
+            flow_id=flow_id,
+            flow_class="ResumeBoomFlow",
+            method_name="begin",
+            method_output="content",
+            message="Review:",
+        ),
+        state_data={"id": flow_id},
+    )
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(FlowStartedEvent)
+        def handle_flow_started(source, event):
+            started.append(event)
+
+        @crewai_event_bus.on(FlowFailedEvent)
+        def handle_flow_failed(source, event):
+            failed.append(event)
+
+        flow = ResumeBoomFlow.from_pending(flow_id, persistence)
+        with pytest.raises(RuntimeError, match="boom on resume"):
+            flow.resume("ok")
+        wait_for_event_handlers()
+
+    assert len(started) == 1
+    assert len(failed) == 1
+    assert failed[0].flow_name == "ResumeBoomFlow"
+    assert str(failed[0].error) == "boom on resume"
+    assert failed[0].started_event_id == started[0].event_id
+
+
+def test_resume_pairs_resumed_method_events_with_their_own_scope(tmp_path):
+    started: list[FlowStartedEvent] = []
+    finished: list[FlowFinishedEvent] = []
+    method_started: list[MethodExecutionStartedEvent] = []
+    method_finished: list[MethodExecutionFinishedEvent] = []
+
+    class ResumeFlow(Flow):
+        @start()
+        def begin(self) -> str:
+            return "content"
+
+        @listen(begin)
+        def after_feedback(self, _feedback):
+            return "done"
+
+    persistence = SQLiteFlowPersistence(str(tmp_path / "flow.db"))
+    flow_id = "resume-pairing-test"
+    persistence.save_pending_feedback(
+        flow_uuid=flow_id,
+        context=PendingFeedbackContext(
+            flow_id=flow_id,
+            flow_class="ResumeFlow",
+            method_name="begin",
+            method_output="content",
+            message="Review:",
+        ),
+        state_data={"id": flow_id},
+    )
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(FlowStartedEvent)
+        def handle_flow_started(source, event):
+            started.append(event)
+
+        @crewai_event_bus.on(FlowFinishedEvent)
+        def handle_flow_finished(source, event):
+            finished.append(event)
+
+        @crewai_event_bus.on(MethodExecutionStartedEvent)
+        def handle_method_started(source, event):
+            method_started.append(event)
+
+        @crewai_event_bus.on(MethodExecutionFinishedEvent)
+        def handle_method_finished(source, event):
+            method_finished.append(event)
+
+        ResumeFlow.from_pending(flow_id, persistence).resume("ok")
+        wait_for_event_handlers()
+
+    resumed_started = next(e for e in method_started if e.method_name == "begin")
+    resumed_finished = next(e for e in method_finished if e.method_name == "begin")
+
+    assert resumed_finished.started_event_id == resumed_started.event_id
+    assert finished[0].started_event_id == started[0].event_id
+
+
+def test_resume_failing_before_method_finishes_keeps_flow_pairing(tmp_path):
+    started: list[FlowStartedEvent] = []
+    failed: list[FlowFailedEvent] = []
+    method_failed: list[MethodExecutionFailedEvent] = []
+
+    class ResumeFlow(Flow):
+        @start()
+        def begin(self) -> str:
+            return "content"
+
+        @listen(begin)
+        def after_feedback(self, _feedback):
+            return "done"
+
+    persistence = SQLiteFlowPersistence(str(tmp_path / "flow.db"))
+    flow_id = "resume-finalize-failure-test"
+    persistence.save_pending_feedback(
+        flow_uuid=flow_id,
+        context=PendingFeedbackContext(
+            flow_id=flow_id,
+            flow_class="ResumeFlow",
+            method_name="begin",
+            method_output="content",
+            message="Review:",
+        ),
+        state_data={"id": flow_id},
+    )
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(FlowStartedEvent)
+        def handle_flow_started(source, event):
+            started.append(event)
+
+        @crewai_event_bus.on(FlowFailedEvent)
+        def handle_flow_failed(source, event):
+            failed.append(event)
+
+        @crewai_event_bus.on(MethodExecutionFailedEvent)
+        def handle_method_failed(source, event):
+            method_failed.append(event)
+
+        flow = ResumeFlow.from_pending(flow_id, persistence)
+        with patch.object(
+            Flow,
+            "_finalize_human_feedback",
+            side_effect=RuntimeError("feedback collapse failed"),
+        ):
+            with pytest.raises(RuntimeError, match="feedback collapse failed"):
+                flow.resume("ok")
+        wait_for_event_handlers()
+
+    assert len(method_failed) == 1
+    assert method_failed[0].method_name == "begin"
+    assert len(failed) == 1
+    assert failed[0].started_event_id == started[0].event_id
 
 
 def test_flow_emits_method_execution_started_event():
