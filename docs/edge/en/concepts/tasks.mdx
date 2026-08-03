@@ -302,11 +302,13 @@ Task guardrails provide a way to validate and transform task outputs before they
 are passed to the next task. This feature helps ensure data quality and provides
 feedback to agents when their output doesn't meet specific criteria.
 
-CrewAI supports two types of guardrails:
+CrewAI supports three types of guardrails:
 
 1. **Function-based guardrails**: Python functions with custom validation logic, giving you complete control over the validation process and ensuring reliable, deterministic results.
 
-2. **LLM-based guardrails**: String descriptions that use the agent's LLM to validate outputs based on natural language criteria. These are ideal for complex or subjective validation requirements.
+2. **Deterministic arbitration guardrails**: Pydantic contracts (plus optional CEL rules and deadlines) that approve or dispute deliverables without an LLM judge — useful for agent-to-agent trust and escrow-style release gates.
+
+3. **LLM-based guardrails**: String descriptions that use the agent's LLM to validate outputs based on natural language criteria. These are ideal for complex or subjective validation requirements.
 
 ### Function-Based Guardrails
 
@@ -336,6 +338,43 @@ blog_task = Task(
     guardrail=validate_blog_content  # Add the guardrail function
 )
 ```
+
+### Deterministic Arbitration Guardrails
+
+For agent-to-agent handoffs where you need machine-speed, auditable decisions
+(schema shape, numeric bounds, deadlines) without LLM hallucination risk, use
+`ArbitrationGuardrail`. It evaluates the task output against a Pydantic contract
+and optional CEL boolean rules, then returns either an approved payload or
+precise dispute feedback the agent can retry against.
+
+```python Code
+from datetime import datetime, timedelta, timezone
+from pydantic import BaseModel, Field
+from crewai import Task, ArbitrationGuardrail
+
+class HotelBooking(BaseModel):
+    price_per_night: float = Field(le=180)
+    room_type: str
+    confirmation_code: str = Field(min_length=6)
+
+escrow_guardrail = ArbitrationGuardrail(
+    HotelBooking,
+    rules=["output.price_per_night <= 180.0"],
+    deadline=datetime.now(timezone.utc) + timedelta(hours=1),
+)
+
+booking_task = Task(
+    description="Book a non-smoking hotel room under $180/night",
+    expected_output="JSON booking confirmation matching HotelBooking",
+    agent=booking_agent,
+    guardrail=escrow_guardrail,
+)
+```
+
+Outcomes are deterministic: `APPROVED` when every hard constraint passes, or
+`DISPUTED` with field-level violations (invalid JSON, missing fields, failed
+rules, missed deadline). Use this as the release gate before marking a
+delegated task resolved or releasing funds on an external payment rail.
 
 ### LLM-Based Guardrails (String Descriptions)
 
