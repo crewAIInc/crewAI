@@ -38,24 +38,22 @@ def test_returns_none_when_no_id_configured(pyproject):
 
 
 def test_mints_and_persists_an_id(pyproject):
-    project_id, created = get_or_create_project_id(pyproject)
+    project_id = get_or_create_project_id(pyproject)
 
-    assert created is True
     assert uuid.UUID(project_id)
     assert get_project_id(pyproject) == project_id
 
 
 def test_id_is_stable_across_calls(pyproject):
-    first, created_first = get_or_create_project_id(pyproject)
-    second, created_second = get_or_create_project_id(pyproject)
+    first = get_or_create_project_id(pyproject)
+    second = get_or_create_project_id(pyproject)
 
-    assert created_first is True
-    assert created_second is False, "must not mint a second id"
-    assert first == second
+    assert first == second, "must not mint a second id"
+    assert uuid.UUID(first)
 
 
 def test_id_lands_in_the_tool_crewai_table(pyproject):
-    project_id, _ = get_or_create_project_id(pyproject)
+    project_id = get_or_create_project_id(pyproject)
 
     data = parse_toml(pyproject.read_text())
     assert data["tool"]["crewai"]["project_id"] == project_id
@@ -102,9 +100,9 @@ def test_produces_valid_toml_for_varied_layouts(tmp_path, source, label):
     path = tmp_path / "pyproject.toml"
     path.write_text(source)
 
-    project_id, created = get_or_create_project_id(path)
+    project_id = get_or_create_project_id(path)
 
-    assert created is True, label
+    assert project_id is not None, label
     data = parse_toml(path.read_text())
     assert data["tool"]["crewai"]["project_id"] == project_id, label
 
@@ -124,10 +122,7 @@ def test_id_does_not_leak_into_a_neighbouring_table(tmp_path):
 
 
 def test_missing_file_is_not_an_error(tmp_path):
-    project_id, created = get_or_create_project_id(tmp_path / "nope.toml")
-
-    assert project_id is None
-    assert created is False
+    assert get_or_create_project_id(tmp_path / "nope.toml") is None
 
 
 def test_malformed_toml_is_not_an_error(tmp_path):
@@ -141,12 +136,11 @@ def test_read_only_file_is_not_an_error(pyproject):
     """A read-only checkout must not break the command that called this."""
     pyproject.chmod(0o444)
     try:
-        project_id, created = get_or_create_project_id(pyproject)
+        project_id = get_or_create_project_id(pyproject)
     finally:
         pyproject.chmod(0o644)
 
     assert project_id is None
-    assert created is False
 
 
 def test_get_project_id_never_creates_anything(pyproject):
@@ -171,7 +165,7 @@ def test_ids_are_unique_across_projects(tmp_path):
         path = tmp_path / name / "pyproject.toml"
         path.parent.mkdir()
         path.write_text(CREW_PYPROJECT)
-        project_id, _ = get_or_create_project_id(path)
+        project_id = get_or_create_project_id(path)
         ids.add(project_id)
 
     assert len(ids) == 3

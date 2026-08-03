@@ -252,7 +252,7 @@ def get_project_id(pyproject_path: str | Path = "pyproject.toml") -> str | None:
 
 def get_or_create_project_id(
     pyproject_path: str | Path = "pyproject.toml",
-) -> tuple[str | None, bool]:
+) -> str | None:
     """Return the project's id, minting and persisting one if absent.
 
     Writes ``project_id`` into the ``[tool.crewai]`` table so it is committed
@@ -267,36 +267,34 @@ def get_or_create_project_id(
         pyproject_path: Path to the project's ``pyproject.toml``.
 
     Returns:
-        A ``(project_id, created)`` tuple. ``created`` is True only when an id
-        was minted and written on this call, so callers can tell the user. Both
-        values are ``(None, False)`` when the file is missing or not writable -
-        this is best-effort and never raises.
+        The project id, or None when ``pyproject.toml`` is missing, malformed,
+        or not writable. Best-effort - never raises.
     """
     existing = get_project_id(pyproject_path)
     if existing:
-        return existing, False
+        return existing
 
     path = Path(pyproject_path)
     if not path.is_file():
-        return None, False
+        return None
 
     try:
         content = path.read_text(encoding="utf-8")
     except OSError:
-        return None, False
+        return None
 
     project_id = str(uuid.uuid4())
     updated = _insert_project_id(content, project_id)
     if updated is None:
-        return None, False
+        return None
 
     try:
         path.write_text(updated, encoding="utf-8")
     except OSError:
         # Read-only checkout, permissions, container FS - not worth failing over.
-        return None, False
+        return None
 
-    return project_id, True
+    return project_id
 
 
 def _insert_project_id(content: str, project_id: str) -> str | None:

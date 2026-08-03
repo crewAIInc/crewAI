@@ -16,7 +16,7 @@ from crewai_cli.config import Settings
 from crewai_cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai_cli.utils import (
     build_env_with_tool_repository_credentials,
-    ensure_project_id,
+    get_or_create_project_id,
     get_project_description,
     get_project_name,
     get_project_version,
@@ -231,7 +231,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         get_user_id = _require_get_user_id()
         login_response = self.plus_api_client.login_to_tool_repository(
             user_identifier=get_user_id(),
-            project_id=ensure_project_id(),
+            project_id=get_or_create_project_id(),
         )
 
         if login_response.status_code != 200:
