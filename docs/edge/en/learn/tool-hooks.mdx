@@ -170,8 +170,14 @@ tool policy outside the model and outside individual tool implementations.
 The example below uses [Pramagent](https://github.com/sriram7737/pramagent) to
 validate the proposed tool name and arguments before CrewAI executes the tool.
 Raising `HookAborted` from the hook prevents the side effect from running.
+The hook is scoped to `charge_payment`, so unrelated tools continue through the
+normal CrewAI hook chain. In production, resolve `tenant_id` and `session_id`
+from your authenticated request or job context, not from model-supplied tool
+arguments.
 
 ```python
+from dataclasses import dataclass
+
 from crewai.hooks import HookAborted, InterceptionPoint, ToolCallHookContext, on
 from pramagent import Pramagent, Verdict
 from pramagent.layers import ToolGuardLayer, ToolPolicy
@@ -204,13 +210,26 @@ tool_guard = ToolGuardLayer(
 armor = Pramagent(tool_guard=tool_guard)
 
 
-@on(InterceptionPoint.PRE_TOOL_CALL)
+@dataclass(frozen=True)
+class PolicyContext:
+    tenant_id: str
+    session_id: str
+
+
+# Populate this from your app's authenticated request or job context.
+policy_context = PolicyContext(
+    tenant_id=authenticated_request.tenant_id,
+    session_id=authenticated_request.session_id,
+)
+
+
+@on(InterceptionPoint.PRE_TOOL_CALL, tools=["charge_payment"])
 def enforce_pramagent_policy(ctx: ToolCallHookContext) -> None:
     decision = armor.validate_tool(
         ctx.tool_name,
         ctx.tool_input,
-        tenant_id="finance_team",
-        session_id=str(getattr(ctx.crew, "id", "crew-run")),
+        tenant_id=policy_context.tenant_id,
+        session_id=policy_context.session_id,
         action_label=ctx.tool_name,
     )
 
