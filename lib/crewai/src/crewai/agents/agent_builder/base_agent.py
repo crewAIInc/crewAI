@@ -44,6 +44,11 @@ from crewai.security.security_config import SecurityConfig
 from crewai.skills.models import Skill
 from crewai.state.checkpoint_config import CheckpointConfig, _coerce_checkpoint
 from crewai.tools.base_tool import BaseTool, Tool
+from crewai.tools.tool_failure import (
+    ToolFailurePolicy,
+    ToolFailureRecord,
+    collect_tool_failures,
+)
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.config import process_config
 from crewai.utilities.i18n import I18N, get_i18n
@@ -205,7 +210,11 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         role (str): Role of the agent.
         goal (str): Objective of the agent.
         backstory (str): Backstory of the agent.
-        cache (bool): Whether the agent should use a cache for tool usage.
+        cache (bool): Whether the agent participates in tool-result caching
+            when a cache is enabled. The default (True) only permits
+            participation — caching activates when the crew sets cache=True
+            or the agent explicitly opts in with cache=True or a
+            cache_handler; cache=False excludes the agent entirely.
         config (dict[str, Any] | None): Configuration for the agent.
         verbose (bool): Verbose mode for the Agent Execution.
         max_rpm (int | None): Maximum number of requests per minute for the agent execution.
@@ -254,11 +263,13 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     _logger: Logger = PrivateAttr(default_factory=lambda: Logger(verbose=False))
     _rpm_controller: RPMController | None = PrivateAttr(default=None)
     _request_within_rpm_limit: SerializableCallable | None = PrivateAttr(default=None)
+    _constructor_cache_opt_in: bool = PrivateAttr(default=False)
     _original_role: str | None = PrivateAttr(default=None)
     _original_goal: str | None = PrivateAttr(default=None)
     _original_backstory: str | None = PrivateAttr(default=None)
     _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
     _kickoff_event_id: str | None = PrivateAttr(default=None)
+    _tool_failures: list[ToolFailureRecord] = PrivateAttr(default_factory=list)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
@@ -267,7 +278,14 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         description="Configuration for the agent", default=None, exclude=True
     )
     cache: bool = Field(
-        default=True, description="Whether the agent should use a cache for tool usage."
+        default=True,
+        description=(
+            "Whether the agent participates in tool-result caching when a "
+            "cache is enabled. Caching itself is opt-in: it activates only "
+            "when the crew sets cache=True or the agent explicitly opts in "
+            "(cache=True or a cache_handler at construction). Set False to "
+            "exclude this agent even when the crew enables caching."
+        ),
     )
     verbose: bool = Field(
         default=False, description="Verbose mode for the Agent Execution"
@@ -285,6 +303,15 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     )
     max_iter: int = Field(
         default=25, description="Maximum iterations for an agent to execute a task"
+    )
+    tool_failure_policy: ToolFailurePolicy | None = Field(
+        default=None,
+        description=(
+            "How to react when a tool completes but reports that it failed. "
+            "'ignore' records nothing; 'warn' records and emits "
+            "ToolFailureDetectedEvent; 'raise' also aborts with "
+            "ToolExecutionFailedError. None inherits from the crew, then 'warn'."
+        ),
     )
     agent_executor: Annotated[
         SerializeAsAny[BaseAgentExecutor] | None,
@@ -640,6 +667,22 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         ]
         return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
 
+    @property
+    def last_tool_failures(self) -> list[ToolFailureRecord]:
+        """Tool failures recorded during the most recent execution.
+
+        Inside an execution this reports that execution's records, so a
+        shared agent running concurrent tasks does not leak between them.
+        Outside one it reports the most recent execution, like
+        ``last_messages``. Empty when nothing failed or the policy is
+        ``ignore``. Returns a copy.
+        """
+        return collect_tool_failures(self)
+
+    def reset_tool_failures(self) -> None:
+        """Clear recorded tool failures before a new execution begins."""
+        self._tool_failures = []
+
     @abstractmethod
     def execute_task(
         self,
@@ -716,6 +759,19 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
 
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
+        # Tool-result caching distinguishes "explicitly enabled" from the
+        # field default via model_fields_set; don't let the dump turn the
+        # default into an explicit opt-in on the copy. An agent that opted
+        # in at construction via an explicit cache_handler (excluded from
+        # the dump) must stay opted in — carry the consent as cache=True so
+        # the copy wires its own fresh handler. A handler merely offered by
+        # a crew at kickoff is runtime wiring, not consent, and must not
+        # opt the copy in; _constructor_cache_opt_in is recorded before any
+        # crew wiring can happen.
+        if "cache" not in self.model_fields_set:
+            copied_data.pop("cache", None)
+            if self._constructor_cache_opt_in:
+                copied_data["cache"] = True
         return type(self)(
             **copied_data,
             llm=existing_llm,

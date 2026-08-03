@@ -394,19 +394,35 @@ class LLM(BaseLLM):
         """Factory method that routes to native SDK or falls back to LiteLLM.
 
         Routing priority:
-            1. If 'provider' kwarg is present, use that provider with constants
-            2. If only 'model' kwarg, use constants to infer provider
-            3. If "/" in model name:
+            1. If ``custom_openai=True``, force the native OpenAI provider,
+               overriding any explicit provider. A custom endpoint is required.
+            2. If ``provider`` is present, use that provider.
+            3. If "/" is in the model name:
                - Check if prefix is a native provider (openai/anthropic/azure/bedrock/gemini)
                - If yes, validate model against constants
                - If valid, route to native SDK; otherwise route to LiteLLM
+            4. Otherwise, infer the provider from the model name.
         """
         if not model or not isinstance(model, str):
             raise ValueError("Model must be a non-empty string")
 
+        custom_openai = bool(kwargs.pop("custom_openai", False))
+        custom_openai_route = custom_openai
         explicit_provider = kwargs.get("provider")
 
-        if explicit_provider:
+        if custom_openai:
+            if not cls._has_custom_openai_endpoint(kwargs):
+                raise ValueError(
+                    "custom_openai=True requires base_url, api_base, "
+                    "OPENAI_BASE_URL, or OPENAI_API_BASE"
+                )
+            provider = "openai"
+            use_native = True
+            prefix, separator, model_part = model.partition("/")
+            model_string = (
+                model_part if separator and prefix.lower() == "openai" else model
+            )
+        elif explicit_provider:
             provider = explicit_provider
             use_native = True
             model_string = model
@@ -435,9 +451,17 @@ class LLM(BaseLLM):
 
             canonical_provider = provider_mapping.get(prefix.lower())
 
-            if canonical_provider and cls._validate_model_in_constants(
-                model_part, canonical_provider
-            ):
+            valid_native_model = bool(
+                canonical_provider
+                and cls._validate_model_in_constants(model_part, canonical_provider)
+            )
+            custom_openai_route = bool(
+                canonical_provider == "openai"
+                and not valid_native_model
+                and cls._has_custom_openai_base_url(kwargs)
+            )
+
+            if canonical_provider and (valid_native_model or custom_openai_route):
                 provider = canonical_provider
                 use_native = True
                 model_string = model_part
@@ -455,6 +479,8 @@ class LLM(BaseLLM):
             try:
                 # Remove 'provider' from kwargs if it exists to avoid duplicate keyword argument
                 kwargs_copy = {k: v for k, v in kwargs.items() if k != "provider"}
+                if custom_openai_route:
+                    kwargs_copy["custom_openai"] = True
                 return cast(
                     Self,
                     native_class(model=model_string, provider=provider, **kwargs_copy),
@@ -589,6 +615,20 @@ class LLM(BaseLLM):
             return True
 
         return cls._matches_provider_pattern(model, provider)
+
+    @staticmethod
+    def _has_custom_openai_base_url(kwargs: dict[str, Any]) -> bool:
+        """Return whether this call explicitly configures a custom endpoint."""
+        return bool(kwargs.get("base_url") or kwargs.get("api_base"))
+
+    @classmethod
+    def _has_custom_openai_endpoint(cls, kwargs: dict[str, Any]) -> bool:
+        """Return whether a custom endpoint is configured explicitly or by env."""
+        return bool(
+            cls._has_custom_openai_base_url(kwargs)
+            or os.getenv("OPENAI_BASE_URL")
+            or os.getenv("OPENAI_API_BASE")
+        )
 
     @classmethod
     def _infer_provider_from_model(cls, model: str) -> str:
