@@ -254,13 +254,28 @@ def test_pinned_resolver_falls_through_for_non_int_port(
     concurrently, or a future caller) must fall through to the real resolver
     instead of building a malformed sockaddr from an unusable port value.
     """
-    real_calls: list[tuple[str, Any]] = []
+    # The public_dns fixture resolves "public.example" to the same IP the
+    # pinned request itself resolves to, so asserting only on the *returned*
+    # IP wouldn't actually prove delegation happened -- a broken
+    # pinned_getaddrinfo that incorrectly intercepted a non-int port would
+    # return that same IP too. Instead, track calls reaching the resolver
+    # underneath the pin (the one public_dns installed) directly, and assert
+    # the non-int-port lookup actually reached it.
+    resolver_calls: list[tuple[str, Any]] = []
+    fixture_resolver = socket.getaddrinfo
+
+    def tracking_getaddrinfo(
+        host: str, port: Any, *args: Any, **kwargs: Any
+    ) -> list[tuple[Any, ...]]:
+        resolver_calls.append((host, port))
+        return fixture_resolver(host, port, *args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", tracking_getaddrinfo)
 
     def fake_get(url: str, **kwargs: Any) -> requests.Response:
         # A non-int port for the *same* pinned hostname: must delegate to
         # the real (fixture-provided) resolver rather than being pinned.
         result = socket.getaddrinfo("public.example", "http")
-        real_calls.append(("public.example", "http"))
         assert result[0][4][0] == "93.184.216.34"  # from the public_dns fixture
         return _response(url, 200)
 
@@ -268,7 +283,7 @@ def test_pinned_resolver_falls_through_for_non_int_port(
 
     safe_get("http://public.example/", timeout=15)
 
-    assert real_calls == [("public.example", "http")]
+    assert ("public.example", "http") in resolver_calls
 
 
 def test_safe_download_writes_content_to_disk(
