@@ -154,6 +154,66 @@ def test_config_style_variables_are_not_used_as_markers():
     assert "AIDER_MODEL" not in all_vars
 
 
+def test_every_marker_comes_from_a_verified_set():
+    """Guard against reintroducing guessed variable names.
+
+    A wrong name never matches, so the assistant is silently counted as
+    "unknown" while the table implies it is covered - worse than omitting it.
+    Adding an assistant means extending the canonical sets, which keeps both
+    detection paths in sync.
+    """
+    verified = {CC_ENV_VAR, *CODEX_ENV_VARS, *CURSOR_ENV_VARS}
+    declared = {var for _, env_vars in CODING_AGENT_ENV_MARKERS for var in env_vars}
+
+    assert declared == verified, (
+        "markers must come from CC_ENV_VAR / CODEX_ENV_VARS / CURSOR_ENV_VARS; "
+        f"unverified names present: {sorted(declared - verified)}"
+    )
+
+
+def test_concurrent_attach_registers_the_processor_once(isolated_telemetry, clean_env):
+    """Check-then-act on the provider set must be locked.
+
+    Crews and flows created from different threads can both reach set_tracer()
+    before trace_set flips, and without a lock each would attach its own
+    processor to the same provider for the life of the process.
+    """
+    import threading
+    import time
+
+    telemetry = isolated_telemetry()
+    threads_count = 8
+
+    class SlowProvider:
+        """Widens the check-then-act window so the race is deterministic.
+
+        Sleeping inside add_span_processor guarantees every unlocked thread gets
+        past the membership check before any of them records the provider.
+        """
+
+        def __init__(self) -> None:
+            self.processors: list[object] = []
+
+        def add_span_processor(self, processor: object) -> None:
+            time.sleep(0.05)
+            self.processors.append(processor)
+
+    provider = SlowProvider()
+    start = threading.Barrier(threads_count)
+
+    def attach() -> None:
+        start.wait()
+        telemetry._attach_common_attributes(provider)
+
+    threads = [threading.Thread(target=attach) for _ in range(threads_count)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert len(provider.processors) == 1
+
+
 def test_editor_terminal_requires_exact_value(clean_env):
     clean_env.setenv("TERM_PROGRAM", "vscode")
     assert detect_coding_agent() == "vscode_terminal"

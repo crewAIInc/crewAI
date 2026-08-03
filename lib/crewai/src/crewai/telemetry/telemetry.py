@@ -171,6 +171,7 @@ class Telemetry:
         self._coding_agent_lock = threading.Lock()
         # Weak so instrumented apps' providers are not kept alive by telemetry.
         self._common_attributes_providers: weakref.WeakSet[Any] = weakref.WeakSet()
+        self._common_attributes_lock = threading.Lock()
 
         if self._is_telemetry_disabled():
             return
@@ -222,12 +223,18 @@ class Telemetry:
             return
 
         try:
-            if provider in self._common_attributes_providers:
-                return
-            add_span_processor(
-                CommonAttributesSpanProcessor({"coding_agent": detect_coding_agent()})
-            )
-            self._common_attributes_providers.add(provider)
+            # Locked: check-then-act. Crews and flows created from different
+            # threads can both reach set_tracer() before trace_set flips, and
+            # would otherwise each attach a processor to the same provider.
+            with self._common_attributes_lock:
+                if provider in self._common_attributes_providers:
+                    return
+                add_span_processor(
+                    CommonAttributesSpanProcessor(
+                        {"coding_agent": detect_coding_agent()}
+                    )
+                )
+                self._common_attributes_providers.add(provider)
         except Exception as e:  # Telemetry must never break execution.
             logger.debug(f"Failed to attach common span attributes: {e}")
 

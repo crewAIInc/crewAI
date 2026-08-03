@@ -164,7 +164,7 @@ crewai replay -t <task_id>            # Replay from specific task
 # Traces / observability (free, no account required)
 crewai traces enable                  # Enable trace collection for future runs
 crewai traces status                  # Show current trace collection status
-crewai traces disable                 # Opt out
+crewai traces disable                 # Turn trace collection back off
 
 # Interactive
 crewai chat                           # Interactive session (requires chat_llm in crew.py)
@@ -969,7 +969,7 @@ Instead of adding `print()` statements or guessing why an agent misbehaved, trac
 crewai traces enable     # Persist consent for future runs
 crewai run               # Trace link printed when the run completes
 crewai traces status     # Check whether tracing is currently on
-crewai traces disable    # Opt out
+crewai traces disable    # Turn trace collection back off
 ```
 
 Or per-run, without persisting anything:
@@ -978,18 +978,7 @@ Or per-run, without persisting anything:
 CREWAI_TRACING_ENABLED=true crewai run
 ```
 
-`CREWAI_TRACING_ENABLED=true` overrides a stored trace opt-out, which makes it the right choice in CI or any non-interactive environment.
-
-### Traces and anonymous telemetry are separate systems
-
-Don't conflate the two — they have independent controls:
-
-| | Controls | What it sends |
-|---|---|---|
-| **Traces** | `crewai traces enable/disable`, `CREWAI_TRACING_ENABLED` | Execution detail to AMP, for the user to read |
-| **Anonymous telemetry** | `CREWAI_DISABLE_TELEMETRY`, `CREWAI_DISABLE_TRACKING`, `OTEL_SDK_DISABLED` | Aggregate usage counts, no prompts or outputs |
-
-`CREWAI_TRACING_ENABLED=true` turns on **tracing** only; it does not re-enable telemetry for a user who disabled it. Equally, disabling telemetry does not disable tracing. If a user wants everything off, they need both.
+`CREWAI_TRACING_ENABLED=true` enables tracing for the run, which makes it the right choice in CI or any non-interactive environment.
 
 ### No account required
 
