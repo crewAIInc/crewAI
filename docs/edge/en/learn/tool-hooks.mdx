@@ -216,15 +216,14 @@ class PolicyContext:
     session_id: str
 
 
-# Populate this from your app's authenticated request or job context.
-policy_context = PolicyContext(
-    tenant_id=authenticated_request.tenant_id,
-    session_id=authenticated_request.session_id,
-)
+def resolve_policy_context(ctx: ToolCallHookContext) -> PolicyContext:
+    """Replace this with your authenticated request or job-context lookup."""
+    return PolicyContext(tenant_id="finance_team", session_id="crew-run-demo")
 
 
 @on(InterceptionPoint.PRE_TOOL_CALL, tools=["charge_payment"])
 def enforce_pramagent_policy(ctx: ToolCallHookContext) -> None:
+    policy_context = resolve_policy_context(ctx)
     decision = armor.validate_tool(
         ctx.tool_name,
         ctx.tool_input,
