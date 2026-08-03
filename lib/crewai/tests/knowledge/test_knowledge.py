@@ -636,3 +636,16 @@ def test_hash_based_id_generation_with_doc_id_in_metadata(mock_vector_db):
     for doc_id in result_without_doc_id.ids:
         assert len(doc_id) == 64, "ID should be 64 characters"
         assert all(c in "0123456789abcdef" for c in doc_id), "ID should be hex"
+
+
+def test_knowledge_source_rejects_overlap_not_smaller_than_size():
+    """chunk_overlap >= chunk_size must fail fast, not silently drop the
+    document (empty range) or crash inside _chunk_text."""
+    with pytest.raises(ValueError, match="chunk_overlap"):
+        StringKnowledgeSource(content="x", chunk_size=100, chunk_overlap=150)
+    with pytest.raises(ValueError, match="chunk_overlap"):
+        StringKnowledgeSource(content="x", chunk_size=200, chunk_overlap=200)
+
+    # A valid configuration is unaffected.
+    source = StringKnowledgeSource(content="x", chunk_size=100, chunk_overlap=20)
+    assert source.chunk_overlap == 20
