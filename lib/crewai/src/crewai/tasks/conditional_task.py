@@ -65,4 +65,5 @@ class ConditionalTask(Task):
             raw="",
             agent=self.agent.role if self.agent else "",
             output_format=OutputFormat.RAW,
+            skipped=True,
         )

@@ -3696,6 +3696,50 @@ def test_conditional_task_last_task_when_conditional_is_false(researcher, writer
     assert result.raw == "Hi"
 
 
+def test_create_crew_output_keeps_empty_final_task_output(researcher):
+    """A final task that legitimately produces an empty output must be returned
+    as the crew output, not silently replaced by an earlier task's output."""
+    crew = Crew(
+        agents=[researcher],
+        tasks=[Task(description="d", expected_output="e", agent=researcher)],
+    )
+
+    def ran(raw: str) -> TaskOutput:
+        return TaskOutput(
+            description="d", raw=raw, agent="r", output_format=OutputFormat.RAW
+        )
+
+    # Final task's empty output is selected, not the earlier non-empty one.
+    result = crew._create_crew_output([ran("FIRST"), ran("")])
+    assert result.raw == ""
+
+    # A single task returning an empty output does not raise.
+    result = crew._create_crew_output([ran("")])
+    assert result.raw == ""
+
+
+def test_create_crew_output_skips_skipped_conditional_task(researcher, writer):
+    """A skipped conditional task (skipped=True) must be excluded from output
+    selection, so the last executed task's output is used."""
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[Task(description="d", expected_output="e", agent=researcher)],
+    )
+    ran = TaskOutput(
+        description="d", raw="REAL", agent="r", output_format=OutputFormat.RAW
+    )
+    skipped = ConditionalTask(
+        description="c",
+        expected_output="e",
+        condition=lambda _: False,
+        agent=writer,
+    ).get_skipped_task_output()
+    assert skipped.skipped is True
+
+    result = crew._create_crew_output([ran, skipped])
+    assert result.raw == "REAL"
+
+
 def test_conditional_task_requirement_breaks_when_task_async(researcher, writer):
     def my_condition(context):
         return context.get("some_value") > 10
