@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.crew import Crew
+    from crewai.lite_agent import LiteAgent
     from crewai.task import Task
     from crewai.tools.structured_tool import CrewStructuredTool
 
@@ -55,7 +56,7 @@ class ToolCallHookContext:
         tool_name: str,
         tool_input: dict[str, Any],
         tool: CrewStructuredTool,
-        agent: Agent | BaseAgent | None = None,
+        agent: Agent | BaseAgent | LiteAgent | None = None,
         task: Task | None = None,
         crew: Crew | None = None,
         tool_result: str | None = None,
