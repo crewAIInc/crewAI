@@ -70,6 +70,10 @@ class Prompts(BaseModel):
         description="Whether to use the system prompt when no custom templates are provided",
     )
     agent: Any = Field(description="Reference to the agent using these prompts")
+    skill_loader_tool_name: str | None = Field(
+        default=None,
+        description="Name the runtime skill loader tool is registered under",
+    )
 
     def task_execution(self) -> SystemPromptResult | StandardPromptResult:
         """Generate a standard prompt for task execution.
@@ -115,22 +119,50 @@ class Prompts(BaseModel):
         )
 
     def _build_skill_block(self) -> str:
-        """Render the agent's activated skills as a stable XML block.
+        """Render always-on instructions and the available skill catalog.
 
-        Skills are agent-scoped (do not change per task), so they live in the
-        system prompt where prompt-cache prefixes can survive across calls.
+        Metadata-only skills remain a stable prompt-cache anchor. Their full
+        instructions are disclosed through the runtime loader tool only when the
+        model determines that a skill applies to the current request.
         """
         skills = getattr(self.agent, "skills", None)
         if not skills:
             return ""
 
-        from crewai.skills.loader import format_skill_context
-        from crewai.skills.models import Skill
+        from crewai.skills.loader import build_skill_catalog, format_skill_context
+        from crewai.skills.models import INSTRUCTIONS, Skill
+        from crewai.skills.tool import LOAD_SKILL_TOOL_NAME
 
-        sections = [format_skill_context(s) for s in skills if isinstance(s, Skill)]
-        if not sections:
+        loaded = [skill for skill in skills if isinstance(skill, Skill)]
+        active = [
+            format_skill_context(skill)
+            for skill in loaded
+            if skill.disclosure_level >= INSTRUCTIONS
+        ]
+        catalog = build_skill_catalog(loaded)
+
+        blocks: list[str] = []
+        if active:
+            blocks.append("<skills>\n" + "\n\n".join(active) + "\n</skills>")
+        if catalog:
+            loader = self.skill_loader_tool_name or LOAD_SKILL_TOOL_NAME
+            entries = "\n\n".join(
+                format_skill_context(skill, label=label)
+                for label, skill in catalog.items()
+            )
+            blocks.append(
+                "<available_skills>\n"
+                "These skills are not loaded. Most requests need none of them, "
+                "so answer directly unless one clearly applies to this request. "
+                f"When one does, call `{loader}` with its exact name to load its "
+                "full instructions, and do not follow a skill's instructions "
+                "without loading it first.\n\n"
+                f"{entries}\n"
+                "</available_skills>"
+            )
+        if not blocks:
             return ""
-        return "\n\n<skills>\n" + "\n\n".join(sections) + "\n</skills>"
+        return "\n\n" + "\n\n".join(blocks)
 
     def _build_prompt(
         self,

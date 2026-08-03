@@ -31,6 +31,14 @@ from crewai.tools.structured_tool import (
     CrewStructuredTool,
     strip_composite_description_prefix,
 )
+from crewai.tools.tool_failure import (
+    ToolFailure,
+    ToolFailureReason,
+    detect_tool_failure,
+    failure_from_exception,
+    handle_tool_failure,
+    reportable_failure,
+)
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -1532,6 +1540,9 @@ class NativeToolCallResult:
 
 def format_native_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
     """Format native tool output when a tool explicitly defines a formatter."""
+    if isinstance(raw_result, ToolFailure):
+        return raw_result.as_agent_message()
+
     formatter = inspect.getattr_static(tool, "format_output_for_agent", None)
     if formatter is None:
         return str(raw_result)
@@ -1600,13 +1611,30 @@ def execute_single_native_tool_call(
 
     call_id, func_name, func_args = info
 
-    if isinstance(func_args, str):
-        try:
-            args_dict = json.loads(func_args)
-        except json.JSONDecodeError:
-            args_dict = {}
-    else:
-        args_dict = func_args
+    parsed_args, parse_error = parse_tool_call_args(func_args, func_name, call_id)
+    if parse_error is not None:
+        # Previously the decode error was swallowed into empty args and the tool
+        # ran with no input at all.
+        handle_tool_failure(
+            parse_error["tool_failure"],
+            tool_name=func_name,
+            tool_args=func_args,
+            agent=agent,
+            task=task,
+            crew=crew,
+        )
+        return NativeToolCallResult(
+            call_id=call_id,
+            func_name=func_name,
+            result=parse_error["result"],
+            tool_message={
+                "role": "tool",
+                "tool_call_id": call_id,
+                "name": func_name,
+                "content": parse_error["result"],
+            },
+        )
+    args_dict = parsed_args if parsed_args is not None else {}
 
     agent_key = getattr(agent, "key", "unknown") if agent else "unknown"
 
@@ -1628,12 +1656,14 @@ def execute_single_native_tool_call(
     input_str = json.dumps(args_dict) if args_dict else ""
     result = "Tool not found"
     raw_tool_result: Any = result
+    tool_failure: ToolFailure | None = None
 
     if tools_handler and tools_handler.cache and output_tool is not None:
         cached_result = tools_handler.cache.read(tool=func_name, input=input_str)
         if cached_result is not None:
             raw_tool_result = cached_result
             result = format_native_tool_output_for_agent(output_tool, cached_result)
+            tool_failure = detect_tool_failure(cached_result)
             from_cache = True
 
     started_at = datetime.now()
@@ -1666,6 +1696,9 @@ def execute_single_native_tool_call(
     if hook_blocked:
         result = f"Tool execution blocked by hook. Tool: {func_name}"
         raw_tool_result = result
+        # The blocked message replaces any cached result, so a cached failure
+        # must not be attributed to this call.
+        tool_failure = None
     elif not from_cache:
         if func_name in available_functions and output_tool is not None:
             try:
@@ -1685,9 +1718,11 @@ def execute_single_native_tool_call(
                         )
 
                 result = format_native_tool_output_for_agent(output_tool, raw_result)
+                tool_failure = detect_tool_failure(raw_result)
             except Exception as e:
                 result = f"Error executing tool: {e}"
                 raw_tool_result = result
+                tool_failure = failure_from_exception(e)
                 if task:
                     task.increment_tools_errors()
                 crewai_event_bus.emit(
@@ -1704,6 +1739,14 @@ def execute_single_native_tool_call(
                     ),
                 )
                 error_event_emitted = True
+        else:
+            # Not cached and not executable: the model asked for a tool we do
+            # not have. The ReAct path reports this, so this one must too.
+            tool_failure = ToolFailure(
+                message=result,
+                reason=ToolFailureReason.UNKNOWN_TOOL,
+                code=func_name,
+            )
 
     after_hook_context = ToolCallHookContext(
         tool_name=func_name,
@@ -1733,7 +1776,27 @@ def execute_single_native_tool_call(
                 plan_step_description=plan_step_description,
                 started_at=started_at,
                 finished_at=datetime.now(),
+                failure=reportable_failure(
+                    tool_failure,
+                    tool=structured_tool,
+                    agent=agent,
+                    task=task,
+                    crew=crew,
+                ),
             ),
+        )
+
+    # After the finished event, so subscribers see the full lifecycle even
+    # when the policy aborts.
+    if tool_failure is not None:
+        handle_tool_failure(
+            tool_failure,
+            tool_name=func_name,
+            tool_args=args_dict,
+            tool=structured_tool,
+            agent=agent,
+            task=task,
+            crew=crew,
         )
 
     tool_message: LLMMessage = {
@@ -1756,6 +1819,9 @@ def execute_single_native_tool_call(
         and original_tool.result_as_answer
         and not error_event_emitted
         and not hook_blocked
+        # A declared failure is excluded for the same reason a raised one is:
+        # an error must not silently become the task's answer.
+        and tool_failure is None
     )
 
     return NativeToolCallResult(
@@ -1779,21 +1845,28 @@ def parse_tool_call_args(
     Returns:
         ``(args_dict, None)`` on success, or ``(None, error_result)`` on
         JSON parse failure where ``error_result`` is a ready-to-return dict
-        with the same shape as ``_execute_single_native_tool_call`` return values.
+        with the same shape as ``_execute_single_native_tool_call`` return
+        values, carrying an ``INVALID_INPUT`` failure for the caller to report.
     """
     if isinstance(func_args, str):
         try:
             return json.loads(func_args), None
         except json.JSONDecodeError as e:
+            message = (
+                f"Error: Failed to parse tool arguments as JSON: {e}. "
+                f"Please provide valid JSON arguments for the '{func_name}' tool."
+            )
             return None, {
                 "call_id": call_id,
                 "func_name": func_name,
-                "result": (
-                    f"Error: Failed to parse tool arguments as JSON: {e}. "
-                    f"Please provide valid JSON arguments for the '{func_name}' tool."
-                ),
+                "result": message,
                 "from_cache": False,
                 "original_tool": original_tool,
+                "tool_failure": ToolFailure(
+                    message=message,
+                    reason=ToolFailureReason.INVALID_INPUT,
+                    code="json_decode_error",
+                ),
             }
     return func_args, None
 
