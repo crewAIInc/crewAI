@@ -230,7 +230,6 @@ def enforce_pramagent_policy(ctx: ToolCallHookContext) -> None:
         ctx.tool_input,
         tenant_id=policy_context.tenant_id,
         session_id=policy_context.session_id,
-        action_label=ctx.tool_name,
     )
 
     if decision.verdict == Verdict.ALLOW:
