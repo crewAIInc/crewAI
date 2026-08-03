@@ -66,7 +66,7 @@ class ArxivPaperTool(BaseTool):
                         filename = f"{filename_base[:500]}.pdf"
                         save_path = Path(save_dir) / filename
 
-                        self.download_pdf(paper["pdf_url"], save_path)  # type: ignore[arg-type]
+                        self.download_pdf(paper["pdf_url"], save_path)
                         time.sleep(self.SLEEP_DURATION)
 
             results = [self._format_paper_result(p) for p in papers]
@@ -156,7 +156,7 @@ class ArxivPaperTool(BaseTool):
         save_path.mkdir(parents=True, exist_ok=True)
         return save_path
 
-    def download_pdf(self, pdf_url: str, save_path: str) -> None:
+    def download_pdf(self, pdf_url: str, save_path: str | Path) -> None:
         try:
             logger.info(f"Downloading PDF from {pdf_url} to {save_path}")
             # pdf_url comes from the Arxiv API's XML response, not directly from

@@ -50,7 +50,11 @@ def test_fetch_arxiv_data_network_error(mock_safe_get, tool):
 def test_download_pdf_success(mock_safe_download):
     tool = ArxivPaperTool()
     tool.download_pdf("http://arxiv.org/pdf/1234.5678.pdf", Path("test.pdf"))
-    mock_safe_download.assert_called_once()
+    mock_safe_download.assert_called_once_with(
+        "http://arxiv.org/pdf/1234.5678.pdf",
+        "test.pdf",
+        timeout=ArxivPaperTool.REQUEST_TIMEOUT,
+    )
 
 
 @patch(
@@ -65,20 +69,27 @@ def test_download_pdf_oserror(mock_safe_download):
         )
 
 
-def test_download_pdf_blocks_private_ip():
+def test_download_pdf_blocks_private_ip(monkeypatch):
     """Regression test for the SSRF fix (#6694): download_pdf must reject a
     URL that resolves to a private/reserved IP before making any request,
     end to end through the real safe_download/safe_get/validate_and_resolve
     chain -- not mocked out, so this exercises the actual protection.
+
+    Clears CREWAI_TOOLS_ALLOW_UNSAFE_PATHS so this stays hermetic regardless
+    of the environment: if that variable were set, validation would be
+    skipped and this test would instead attempt a real request to a private
+    address.
     """
+    monkeypatch.delenv("CREWAI_TOOLS_ALLOW_UNSAFE_PATHS", raising=False)
     tool = ArxivPaperTool()
     with pytest.raises(ValueError, match="private/reserved IP"):
         tool.download_pdf("http://127.0.0.1/malicious.pdf", Path("test.pdf"))
 
 
-def test_download_pdf_blocks_cloud_metadata_endpoint():
+def test_download_pdf_blocks_cloud_metadata_endpoint(monkeypatch):
     """Same as above, for the AWS/GCP/Azure metadata endpoint specifically --
     the concrete credential-theft scenario named in #6694."""
+    monkeypatch.delenv("CREWAI_TOOLS_ALLOW_UNSAFE_PATHS", raising=False)
     tool = ArxivPaperTool()
     with pytest.raises(ValueError, match="private/reserved IP"):
         tool.download_pdf(

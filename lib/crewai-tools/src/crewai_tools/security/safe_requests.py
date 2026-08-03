@@ -6,6 +6,7 @@ from collections.abc import Iterator
 import contextlib
 from pathlib import Path
 import socket
+import threading
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
@@ -15,6 +16,9 @@ from crewai_tools.security.safe_path import validate_and_resolve
 
 
 _REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
+# socket.getaddrinfo is process-global, so _pin_dns's patch/use/restore window
+# must be serialized across threads -- see _pin_dns's docstring.
+_dns_pin_lock = threading.Lock()
 _SENSITIVE_HEADER_NAMES = {
     "authorization",
     "cookie",
@@ -61,28 +65,34 @@ def _pin_dns(hostname: str, ip: str) -> Iterator[None]:
 
     This patches ``socket.getaddrinfo`` process-wide rather than through a
     custom transport adapter, to stay compatible with plain ``requests``
-    without extra dependencies. The window is only as long as the single
-    request this wraps, and the original resolver is always restored in
-    ``finally``. A concurrent request to a *different* host on another thread
-    during that window is unaffected: the pinned resolver only intercepts
-    lookups for `hostname` and delegates everything else to the real one.
+    without extra dependencies. Because the patch target is process-global,
+    the whole patch/use/restore window is serialized with ``_dns_pin_lock``:
+    without it, two concurrent calls (even to different hosts) can overwrite
+    each other's pin and restore the wrong resolver from their own
+    ``finally``, silently dropping DNS-rebinding protection for whichever
+    request loses the race -- not just "unaffected," as an earlier version of
+    this docstring incorrectly claimed. The lock trades some concurrency
+    (calls that reach this point serialize on the network round-trip, not
+    just the lookup) for the guarantee that at most one pin is ever installed
+    at a time.
     """
-    original_getaddrinfo = socket.getaddrinfo
-    family = socket.AF_INET6 if ":" in ip else socket.AF_INET
+    with _dns_pin_lock:
+        original_getaddrinfo = socket.getaddrinfo
+        family = socket.AF_INET6 if ":" in ip else socket.AF_INET
 
-    def pinned_getaddrinfo(
-        host: str, port: int, *args: Any, **kwargs: Any
-    ) -> list[tuple[Any, ...]]:
-        if host == hostname:
-            sockaddr = (ip, port, 0, 0) if family == socket.AF_INET6 else (ip, port)
-            return [(family, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", sockaddr)]
-        return original_getaddrinfo(host, port, *args, **kwargs)
+        def pinned_getaddrinfo(
+            host: str, port: int, *args: Any, **kwargs: Any
+        ) -> list[tuple[Any, ...]]:
+            if host == hostname:
+                sockaddr = (ip, port, 0, 0) if family == socket.AF_INET6 else (ip, port)
+                return [(family, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", sockaddr)]
+            return original_getaddrinfo(host, port, *args, **kwargs)
 
-    socket.getaddrinfo = pinned_getaddrinfo
-    try:
-        yield
-    finally:
-        socket.getaddrinfo = original_getaddrinfo
+        socket.getaddrinfo = pinned_getaddrinfo
+        try:
+            yield
+        finally:
+            socket.getaddrinfo = original_getaddrinfo
 
 
 def safe_get(url: str, *, max_redirects: int = 10, **kwargs: Any) -> requests.Response:
@@ -148,16 +158,32 @@ def safe_download(
     redirect-chain revalidation, and DNS pinning as :func:`safe_get`, but
     streaming the response to disk instead of buffering it in memory.
 
+    Writes to a temporary file alongside `dest_path` and renames it into
+    place only after the transfer completes successfully, so a failed or
+    interrupted download never leaves a truncated file at `dest_path` for a
+    caller to mistake for a complete one.
+
+    Streaming is required for this function to work, so a `stream` keyword in
+    `kwargs` is always overridden to `True` rather than raising or silently
+    conflicting with the explicit one below.
+
     Raises:
         ValueError: If the URL (or any redirect target) fails validation.
         requests.HTTPError: If the final response has an error status code.
     """
-    response = safe_get(url, max_redirects=max_redirects, stream=True, **kwargs)
+    dest = Path(dest_path)
+    tmp_path = dest.with_name(f"{dest.name}.part")
+    kwargs["stream"] = True
+    response = safe_get(url, max_redirects=max_redirects, **kwargs)
     try:
         response.raise_for_status()
-        with open(dest_path, "wb") as fh:
+        with open(tmp_path, "wb") as fh:
             for chunk in response.iter_content(chunk_size=chunk_size):
                 if chunk:
                     fh.write(chunk)
+        tmp_path.replace(dest)
+    except BaseException:
+        tmp_path.unlink(missing_ok=True)
+        raise
     finally:
         response.close()

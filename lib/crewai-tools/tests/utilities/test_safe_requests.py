@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import socket
+import threading
+import time
 from io import BytesIO
 from typing import Any
+from urllib.parse import urlparse
 
 import pytest
 import requests
@@ -261,6 +264,28 @@ def test_safe_download_writes_content_to_disk(
     assert dest.read_bytes() == b"pdf-bytes-here"
 
 
+def test_safe_download_ignores_conflicting_stream_kwarg(
+    monkeypatch: pytest.MonkeyPatch, public_dns: None, tmp_path: Any
+) -> None:
+    """safe_download always streams -- a caller-supplied stream=False must not
+    raise a "multiple values for keyword argument" TypeError, and must not
+    actually disable streaming.
+    """
+
+    def fake_get(url: str, **kwargs: Any) -> requests.Response:
+        assert kwargs.get("stream") is True
+        response = _response(url, 200)
+        response.iter_content = lambda chunk_size=1: [b"pdf-bytes-here"]
+        return response
+
+    _mock_get(monkeypatch, fake_get)
+
+    dest = tmp_path / "paper.pdf"
+    safe_download("http://public.example/paper.pdf", dest, timeout=15, stream=False)
+
+    assert dest.read_bytes() == b"pdf-bytes-here"
+
+
 def test_safe_download_blocks_private_ip() -> None:
     with pytest.raises(ValueError, match="private/reserved IP"):
         safe_download("http://127.0.0.1/malicious.pdf", "/tmp/out.pdf", timeout=15)
@@ -276,3 +301,84 @@ def test_safe_download_blocks_redirect_to_internal_url(
 
     with pytest.raises(ValueError, match="private/reserved IP"):
         safe_download("http://public.example/start", tmp_path / "out.pdf", timeout=15)
+
+
+def test_safe_download_leaves_no_partial_file_on_failure(
+    monkeypatch: pytest.MonkeyPatch, public_dns: None, tmp_path: Any
+) -> None:
+    """A download that fails partway through must not leave a truncated file
+    at dest_path -- writes go to a temp file that's only renamed into place
+    after the transfer completes.
+    """
+
+    def fake_get(url: str, **kwargs: Any) -> requests.Response:
+        assert kwargs.get("stream") is True
+        response = _response(url, 200)
+
+        def broken_iter_content(chunk_size: int = 1) -> Any:
+            yield b"partial-bytes"
+            raise requests.exceptions.ChunkedEncodingError("connection dropped")
+
+        response.iter_content = broken_iter_content
+        return response
+
+    _mock_get(monkeypatch, fake_get)
+
+    dest = tmp_path / "paper.pdf"
+    with pytest.raises(requests.exceptions.ChunkedEncodingError):
+        safe_download("http://public.example/paper.pdf", dest, timeout=15)
+
+    assert not dest.exists()
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_safe_get_dns_pin_is_thread_safe(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Two concurrent safe_get calls to different hosts must each connect to
+    their own validated IP -- one request's pin/restore cycle must not
+    overwrite or clobber another's while both are in flight.
+
+    Without the lock in _pin_dns, patching socket.getaddrinfo from two
+    threads at once can leave the wrong resolver installed when one thread's
+    `finally` restores over the other's still-active pin -- this widens that
+    race window with a small sleep between the two threads' patch and their
+    actual connection-time lookup, so a missing lock would show up as a
+    mismatched or crashing lookup instead of passing by luck of the
+    scheduler.
+    """
+    hosts_to_ips = {"host-a.example": "1.1.1.1", "host-b.example": "2.2.2.2"}
+
+    def fake_getaddrinfo(
+        host: str, port: int, *args: Any, **kwargs: Any
+    ) -> list[tuple[Any, ...]]:
+        if host not in hosts_to_ips:
+            raise socket.gaierror(f"unexpected host in test: {host}")
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (hosts_to_ips[host], port))]
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+
+    seen_ips: dict[str, str] = {}
+    errors: list[BaseException] = []
+
+    def fake_get(url: str, **kwargs: Any) -> requests.Response:
+        host = urlparse(url).hostname
+        time.sleep(0.05)  # widen the window between patch and connect
+        resolved = socket.getaddrinfo(host, 80)
+        seen_ips[host] = resolved[0][4][0]
+        return _response(url, 200)
+
+    _mock_get(monkeypatch, fake_get)
+
+    def run(host: str) -> None:
+        try:
+            safe_get(f"http://{host}/", timeout=15)
+        except BaseException as exc:  # noqa: BLE001 -- surface it to the main thread
+            errors.append(exc)
+
+    threads = [threading.Thread(target=run, args=(host,)) for host in hosts_to_ips]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=10)
+
+    assert not errors
+    assert seen_ips == hosts_to_ips
