@@ -202,6 +202,12 @@ exclude-newer-package = { pypdf = "2026-06-24T00:00:00Z", msgpack = "2026-06-20T
 # paramiko <5.0.0 has GHSA-r374-rxx8-8654 (SHA-1 in rsakey.py); OSV considers 5.0.0 unaffected. Transitive via composio-core.
 # starlette <1.3.1 has PYSEC-2026-161, GHSA-jp82-jpqv-5vv3, and GHSA-82w8-qh3p-5jfq. Transitive via fastapi.
 # msgpack <1.2.1 has GHSA-6v7p-g79w-8964; transitive via pip-audit[filecache].
+# nltk <3.10.0 has GHSA-qvv7-cg9c-w4x3 (DNS-rebinding SSRF bypass in
+# nltk.pathsec.urlopen), GHSA-fg7f-2386-8897 (ReDoS in ReviewsCorpusReader), and
+# GHSA-xh95-f55m-82fw (path traversal in FramenetCorpusReader.frame); all fixed
+# in 3.10.0. 3.10.0 also clears PYSEC-2026-597, whose last affected version is
+# 3.9.4, so that ignore is no longer needed. Transitive via
+# crewai-tools[xml] -> unstructured.
 # pydantic-settings <2.14.2 has GHSA-4xgf-cpjx-pc3j.
 # Keep OpenAI on the SDK range required by CrewAI when transitive dependencies
 # loosen or pin their own lower versions.
@@ -232,6 +238,7 @@ override-dependencies = [
     "msgpack>=1.2.1",
     "pydantic-settings>=2.14.2",
     "setuptools>=83.0.0", # PYSEC-2026-3447
+    "nltk>=3.10.0",
 ]
 
 [tool.uv.workspace]
