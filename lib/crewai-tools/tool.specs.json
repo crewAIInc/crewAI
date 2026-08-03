@@ -5850,6 +5850,232 @@
       }
     },
     {
+      "description": "Search IBM DB2 vector database for relevant documents. Uses a custom embedding function if supplied, otherwise OpenAI embeddings.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "OpenAI API key for embeddings.",
+          "name": "OPENAI_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "IBM DB2 connection string (e.g. 'DATABASE=mydb;HOSTNAME=localhost;PORT=50000;PROTOCOL=TCPIP;UID=user;PWD=pass;').",
+          "name": "DB2_CONNECTION_STRING",
+          "required": false
+        }
+      ],
+      "humanized_name": "DB2VectorSearchTool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Fortified IBM DB2 Vector Search Tool.\nIncludes SQL injection protection, dynamic relational support, and type-safe serialization.",
+        "properties": {
+          "connection": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Connection"
+          },
+          "connection_string": {
+            "description": "IBM DB2 connection string. Format: 'DATABASE=mydb;HOSTNAME=localhost;PORT=50000;PROTOCOL=TCPIP;UID=user;PWD=pass;' or just the database name for a local connection.",
+            "title": "Connection String",
+            "type": "string"
+          },
+          "cursor": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "custom_embedding_fn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional custom embedding function.",
+            "title": "Custom Embedding Fn"
+          },
+          "db2_dbi_package": {
+            "default": null,
+            "description": "IBM DB2 DBI package.",
+            "title": "Db2 Dbi Package"
+          },
+          "db2_package": {
+            "default": null,
+            "description": "IBM DB2 base package.",
+            "title": "Db2 Package"
+          },
+          "dbi_connection": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Dbi Connection"
+          },
+          "distance_metric": {
+            "default": "COSINE",
+            "title": "Distance Metric",
+            "type": "string"
+          },
+          "embedding_model": {
+            "default": "text-embedding-3-large",
+            "title": "Embedding Model",
+            "type": "string"
+          },
+          "limit": {
+            "default": 3,
+            "description": "Number of documents to return. Must be between 1 and 100.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "max_distance": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum allowed distance for results. Cannot be negative.",
+            "title": "Max Distance"
+          },
+          "return_columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Return Columns",
+            "type": "array"
+          },
+          "table_name": {
+            "default": "documents",
+            "title": "Table Name",
+            "type": "string"
+          },
+          "vector_column": {
+            "default": "embedding",
+            "title": "Vector Column",
+            "type": "string"
+          }
+        },
+        "required": [
+          "connection_string"
+        ],
+        "title": "DB2VectorSearchTool",
+        "type": "object"
+      },
+      "name": "DB2VectorSearchTool",
+      "package_dependencies": [
+        "ibm_db",
+        "openai"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for DB2 vector search.",
+        "properties": {
+          "filter_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Column name used for metadata filtering. Must be used together with filter_value.",
+            "title": "Filter By"
+          },
+          "filter_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Value used for metadata filtering. Must be used together with filter_by.",
+            "title": "Filter Value"
+          },
+          "query": {
+            "description": "Query to search in IBM DB2 vector database - always required.",
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "DB2ToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to semantic search a query from a DOCX's content.",
       "env_vars": [],
       "humanized_name": "Search a DOCX's content",
