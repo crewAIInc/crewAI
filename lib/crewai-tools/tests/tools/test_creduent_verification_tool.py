@@ -63,3 +63,25 @@ def test_unexpected_exception_handling(mock_verify: MagicMock) -> None:
 
     assert "Verification failure for agent://untrusted.dev/hacker: Network timeout" in str(exc_info.value)
 
+
+def test_missing_package_import_error_strict() -> None:
+    """Test missing creduent package handling when strict mode is active."""
+    tool = CreduentVerificationTool(strict=True)
+
+    with patch.dict("sys.modules", {"creduent": None, "creduent.verify": None}):
+        with pytest.raises(ValueError) as exc_info:
+            tool._run(agent_uri="agent://assistant.dev/planner")
+
+    assert "Error: creduent package is not installed." in str(exc_info.value)
+
+
+def test_missing_package_import_error_non_strict() -> None:
+    """Test missing creduent package handling when strict mode is disabled."""
+    tool = CreduentVerificationTool(strict=False)
+
+    with patch.dict("sys.modules", {"creduent": None, "creduent.verify": None}):
+        output = tool._run(agent_uri="agent://assistant.dev/planner")
+
+    assert "Error: creduent package is not installed." in output
+
+

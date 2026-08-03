@@ -50,10 +50,13 @@ class CreduentVerificationTool(BaseTool):
         try:
             from creduent.verify import verify
         except ImportError:
-            return (
+            missing_msg = (
                 "Error: creduent package is not installed. "
                 "Install it using: pip install creduent"
             )
+            if self.strict:
+                raise ValueError(missing_msg)
+            return missing_msg
 
         logger.info(f"Verifying target agent identity: {agent_uri}")
         try:
