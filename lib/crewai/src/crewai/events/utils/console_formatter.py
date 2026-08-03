@@ -12,6 +12,7 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.text import Text
 
+from crewai.tools.tool_failure import ToolFailureReason
 from crewai.version import is_current_version_yanked, is_newer_version_available
 
 
@@ -491,6 +492,55 @@ To enable tracing, do any one of these:
         self.print_panel(
             content, f"✅ Tool Execution Completed (#{iteration})", "green"
         )
+
+    @staticmethod
+    def should_render_success_panel(failure: Any) -> bool:
+        """Whether a finished tool call should print the green panel.
+
+        A failed call must not read as successful, so the red panel replaces it.
+        """
+        return failure is None
+
+    @staticmethod
+    def should_render_failure_panel(failure: Any) -> bool:
+        """Whether a reported failure should print its own red panel.
+
+        A tool that *raised* already printed one via ``ToolUsageErrorEvent``,
+        so only the duplicate console output is skipped -- not the event.
+        """
+        return getattr(failure, "reason", None) is not ToolFailureReason.EXCEPTION
+
+    def handle_tool_failure_detected(
+        self,
+        tool_name: str,
+        failure: Any,
+        policy: Any,
+    ) -> None:
+        """Render a tool that ran but reported it did not succeed.
+
+        The case that used to print as a green "Completed" panel.
+        """
+        if not self.verbose:
+            return
+
+        with self._tool_counts_lock:
+            iteration = self.tool_usage_counts.get(tool_name, 1)
+
+        content = Text()
+        content.append("Tool Reported Failure\n", style="red bold")
+        content.append("Tool: ", style="white")
+        content.append(f"{tool_name}\n", style="red bold")
+        content.append("Reason: ", style="white")
+        content.append(f"{getattr(failure, 'reason', 'unknown')}\n", style="red")
+        if getattr(failure, "code", None):
+            content.append("Code: ", style="white")
+            content.append(f"{failure.code}\n", style="red")
+        content.append("Message: ", style="white")
+        content.append(f"{getattr(failure, 'message', failure)}\n", style="red")
+        content.append("Policy: ", style="white")
+        content.append(f"{getattr(policy, 'value', policy)}\n", style="red")
+
+        self.print_panel(content, f"⚠️ Tool Failure (#{iteration})", "red")
 
     def handle_tool_usage_error(
         self,

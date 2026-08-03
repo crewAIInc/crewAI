@@ -47,6 +47,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -147,6 +157,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "additionalProperties": true,
@@ -245,6 +265,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "A tool that performs image searches using the Brave Search API.",
@@ -429,6 +459,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "A tool that retrieves context for LLM usage from the Brave Search API.",
@@ -709,6 +749,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "A tool that retrieves AI-generated descriptions for local POIs using the Brave Search API.",
@@ -823,6 +873,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "A tool that retrieves local POIs using the Brave Search API.",
@@ -982,6 +1042,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "A tool that performs news searches using the Brave Search API.",
@@ -1277,6 +1347,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "A tool that performs web searches using the Brave Search API.",
@@ -1635,6 +1715,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "A tool that performs video searches using the Brave Search API.",
@@ -1898,6 +1988,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "A tool that performs web searches using the Brave Search API.",
@@ -2276,6 +2376,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "CrewAI-compatible tool for scraping structured data using Bright Data Datasets.\n\nAttributes:\n    name (str): Tool name displayed in the CrewAI environment.\n    description (str): Tool description shown to agents or users.\n    args_schema (Type[BaseModel]): Pydantic schema for validating input arguments.",
@@ -2450,6 +2560,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "A web search tool that utilizes Bright Data's SERP API to perform queries and return either structured results\nor raw page content from search engines like Google or Bing.\n\nAttributes:\n    name (str): Tool name used by the agent.\n    description (str): A brief explanation of what the tool does.\n    args_schema (Type[BaseModel]): Schema class for validating tool arguments.\n    base_url (str): The Bright Data API endpoint used for making the POST request.\n    api_key (str): Bright Data API key loaded from the environment variable 'BRIGHT_DATA_API_KEY'.\n    zone (str): Zone identifier from Bright Data, loaded from the environment variable 'BRIGHT_DATA_ZONE'.\n\nRaises:\n    ValueError: If API key or zone environment variables are not set.",
@@ -2666,6 +2786,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "A tool for performing web scraping using the Bright Data Web Unlocker API.\n\nThis tool allows automated and programmatic access to web pages by routing requests\nthrough Bright Data's unlocking and proxy infrastructure, which can bypass bot\nprotection mechanisms like CAPTCHA, geo-restrictions, and anti-bot detection.\n\nAttributes:\n    name (str): Name of the tool.\n    description (str): Description of what the tool does.\n    args_schema (Type[BaseModel]): Pydantic model schema for expected input arguments.\n    base_url (str): Base URL of the Bright Data Web Unlocker API.\n    api_key (str): Bright Data API key (must be set in the BRIGHT_DATA_API_KEY environment variable).\n    zone (str): Bright Data zone identifier (must be set in the BRIGHT_DATA_ZONE environment variable).\n\nMethods:\n    _run(**kwargs: Any) -> Any:\n        Sends a scraping request to Bright Data's Web Unlocker API and returns the result.",
@@ -2809,6 +2939,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -3590,6 +3730,16 @@
             ],
             "title": "Text2VecProviderSpec",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           },
           "VectorDbConfig": {
             "description": "Configuration for vector database provider.\n\nAttributes:\n    provider: RAG provider literal.\n    config: RAG configuration options.",
@@ -4640,6 +4790,16 @@
             "title": "Text2VecProviderSpec",
             "type": "object"
           },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          },
           "VectorDbConfig": {
             "description": "Configuration for vector database provider.\n\nAttributes:\n    provider: RAG provider literal.\n    config: RAG configuration options.",
             "properties": {
@@ -5051,6 +5211,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Wrapper for composio tools.",
@@ -5107,6 +5277,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool to create Contextual AI RAG agents with documents.",
@@ -5207,6 +5387,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool to parse documents using Contextual AI's parser.",
@@ -5324,6 +5514,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool to query Contextual AI RAG agents.",
@@ -5422,6 +5622,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool to rerank documents using Contextual AI's instruction-following reranker.",
@@ -5541,6 +5751,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool to search the Couchbase database.",
@@ -6314,6 +6534,16 @@
             "title": "Text2VecProviderSpec",
             "type": "object"
           },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          },
           "VectorDbConfig": {
             "description": "Configuration for vector database provider.\n\nAttributes:\n    provider: RAG provider literal.\n    config: RAG configuration options.",
             "properties": {
@@ -6732,6 +6962,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -6869,6 +7109,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "A tool for querying Databricks workspace tables using SQL.\n\nThis tool executes SQL queries against Databricks tables and returns the results.\nIt requires Databricks authentication credentials to be set as environment variables.\n\nAuthentication can be provided via:\n- Databricks CLI profile: Set DATABRICKS_CONFIG_PROFILE environment variable\n- Direct credentials: Set DATABRICKS_HOST and DATABRICKS_TOKEN environment variables\n\nExample:\n    >>> tool = DatabricksQueryTool()\n    >>> results = tool.run(query=\"SELECT * FROM my_table LIMIT 10\")",
@@ -7045,6 +7295,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Run a shell command inside a Daytona sandbox.",
@@ -7252,6 +7512,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Read, write, and manage files inside a Daytona sandbox.\n\nNotes:\n  - Most useful with `persistent=True` or an explicit `sandbox_id`. With the\n    default ephemeral mode, files disappear when this tool call finishes.",
@@ -7682,6 +7952,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Run Python source inside a Daytona sandbox.",
@@ -7873,6 +8153,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -8596,6 +8886,16 @@
             "title": "Text2VecProviderSpec",
             "type": "object"
           },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          },
           "VectorDbConfig": {
             "description": "Configuration for vector database provider.\n\nAttributes:\n    provider: RAG provider literal.\n    config: RAG configuration options.",
             "properties": {
@@ -8967,7 +9267,7 @@
           "default": null,
           "description": "API key for E2B sandbox service",
           "name": "E2B_API_KEY",
-          "required": false
+          "required": true
         },
         {
           "default": null,
@@ -9013,6 +9313,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Run a shell command inside an E2B sandbox.",
@@ -9188,7 +9498,7 @@
           "default": null,
           "description": "API key for E2B sandbox service",
           "name": "E2B_API_KEY",
-          "required": false
+          "required": true
         },
         {
           "default": null,
@@ -9234,6 +9544,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Read, write, and manage files inside an E2B sandbox.\n\nNotes:\n  - Most useful with `persistent=True` or an explicit `sandbox_id`. With\n    the default ephemeral mode, files disappear when this tool call\n    finishes.",
@@ -9408,7 +9728,7 @@
           "default": null,
           "description": "API key for E2B sandbox service",
           "name": "E2B_API_KEY",
-          "required": false
+          "required": true
         },
         {
           "default": null,
@@ -9454,6 +9774,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Run Python code inside an E2B code interpreter sandbox.\n\nUses `e2b_code_interpreter`, which runs cells in a persistent Jupyter-style\nkernel so state (imports, variables) carries across calls when\n`persistent=True`.",
@@ -9675,6 +10005,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -9880,6 +10220,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {},
@@ -9931,7 +10281,7 @@
       }
     },
     {
-      "description": "A tool that reads the content of a file. To use this tool, provide a 'file_path' parameter with the path to the file you want to read. Optionally, provide 'start_line' to start reading from a specific line and 'line_count' to limit the number of lines read.",
+      "description": "A tool that reads the content of a file. To use this tool, provide a 'file_path' parameter with the path to the file you want to read. Reads are confined to the tool's allowed directory; a path that resolves outside it is rejected. Optionally, provide 'start_line' to start reading from a specific line and 'line_count' to limit the number of lines read.",
       "env_vars": [],
       "humanized_name": "Read a file's content",
       "init_params_schema": {
@@ -9970,10 +10320,37 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
-        "description": "A tool for reading file contents.\n\nThis tool inherits its schema handling from BaseTool to avoid recursive schema\ndefinition issues. The args_schema is set to FileReadToolSchema which defines\nthe required file_path parameter. The schema should not be overridden in the\nconstructor as it would break the inheritance chain and cause infinite loops.\n\nThe tool supports two ways of specifying the file path:\n1. At construction time via the file_path parameter\n2. At runtime via the file_path parameter in the tool's input\n\nArgs:\n    file_path (Optional[str]): Path to the file to be read. If provided,\n        this becomes the default file path for the tool.\n    **kwargs: Additional keyword arguments passed to BaseTool.\n\nExample:\n    >>> tool = FileReadTool(file_path=\"/path/to/file.txt\")\n    >>> content = tool.run()  # Reads /path/to/file.txt\n    >>> content = tool.run(file_path=\"/path/to/other.txt\")  # Reads other.txt\n    >>> content = tool.run(\n    ...     file_path=\"/path/to/file.txt\", start_line=100, line_count=50\n    ... )  # Reads lines 100-149",
+        "description": "A tool for reading file contents.\n\nThis tool inherits its schema handling from BaseTool to avoid recursive schema\ndefinition issues. The args_schema is set to FileReadToolSchema, whose\nfile_path parameter is optional so the tool's default file can be read by\nomitting it. The schema should not be overridden in the constructor as it\nwould break the inheritance chain and cause infinite loops.\n\nThe tool supports two ways of specifying the file path:\n1. At construction time via the file_path parameter\n2. At runtime via the file_path parameter in the tool's input\n\nPaths supplied at runtime must resolve inside ``base_dir`` (the current\nworking directory by default), since they are typically chosen by an LLM.\nA ``file_path`` given at construction time is developer-declared intent and\nis always allowed past the containment check, even when it lives outside\n``base_dir`` (the read itself can still fail). It is pinned at\nconstruction, so a later chdir cannot repoint it, and it can be addressed\neither by omitting ``file_path`` or by the label shown in the description.\n\nArgs:\n    file_path (Optional[str]): Path to the file to be read. If provided,\n        this becomes the default file path for the tool.\n    base_dir (Optional[str]): Directory that runtime paths must stay inside.\n        Defaults to the current working directory.\n    encoding (str): Text encoding used to decode the file. Defaults to UTF-8.\n    **kwargs: Additional keyword arguments passed to BaseTool.\n\nExample:\n    >>> tool = FileReadTool(file_path=\"/path/to/file.txt\")\n    >>> content = tool.run()  # Reads /path/to/file.txt\n    >>> content = tool.run(file_path=\"/path/to/other.txt\")  # Reads other.txt\n    >>> content = tool.run(\n    ...     file_path=\"/path/to/file.txt\", start_line=100, line_count=50\n    ... )  # Reads lines 100-149\n    >>> # Widen the sandbox so the agent may read anything under /data:\n    >>> tool = FileReadTool(base_dir=\"/data\")",
         "properties": {
+          "base_dir": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Base Dir"
+          },
+          "encoding": {
+            "default": "utf-8",
+            "title": "Encoding",
+            "type": "string"
+          },
           "file_path": {
             "anyOf": [
               {
@@ -9997,9 +10374,17 @@
         "description": "Input for FileReadTool.",
         "properties": {
           "file_path": {
-            "description": "Mandatory file full path to read the file",
-            "title": "File Path",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Full path of the file to read. Omit it to read the tool's default file, which only works when one was configured.",
+            "title": "File Path"
           },
           "line_count": {
             "anyOf": [
@@ -10028,15 +10413,12 @@
             "title": "Start Line"
           }
         },
-        "required": [
-          "file_path"
-        ],
         "title": "FileReadToolSchema",
         "type": "object"
       }
     },
     {
-      "description": "A tool to write content to a specified file. Accepts filename, content, and optionally a directory path and overwrite flag as input.",
+      "description": "A tool to write content to a specified file. Accepts filename, content, and optionally a directory path and overwrite flag as input. Writes are confined to the tool's allowed directory; a filename or directory that resolves outside it is rejected.",
       "env_vars": [],
       "humanized_name": "File Writer Tool",
       "init_params_schema": {
@@ -10075,9 +10457,38 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
-        "properties": {},
+        "description": "A tool for writing text content to a file.\n\nWrites are confined to ``base_dir`` (the current working directory by\ndefault), because the target directory and filename are typically chosen by\nan LLM at runtime. Set ``base_dir`` to widen that sandbox deliberately.\n\nArgs:\n    base_dir (Optional[str]): Directory that writes must stay inside.\n        Defaults to the current working directory.\n    encoding (str): Text encoding used to write the file. Defaults to UTF-8.\n\nExample:\n    >>> tool = FileWriterTool()\n    >>> tool.run(filename=\"report.md\", content=\"# Report\", overwrite=True)\n    >>> # Allow the agent to write anywhere under /var/output:\n    >>> tool = FileWriterTool(base_dir=\"/var/output\")",
+        "properties": {
+          "base_dir": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Base Dir"
+          },
+          "encoding": {
+            "default": "utf-8",
+            "title": "Encoding",
+            "type": "string"
+          }
+        },
         "required": [],
         "title": "FileWriterTool",
         "type": "object"
@@ -10085,8 +10496,10 @@
       "name": "FileWriterTool",
       "package_dependencies": [],
       "run_params_schema": {
+        "description": "Input for FileWriterTool.",
         "properties": {
           "content": {
+            "description": "The text content to write to the file.",
             "title": "Content",
             "type": "string"
           },
@@ -10100,9 +10513,11 @@
               }
             ],
             "default": "./",
+            "description": "Directory to write the file into. A relative path resolves inside the tool's allowed directory, and defaults to its root. Created if it does not exist.",
             "title": "Directory"
           },
           "filename": {
+            "description": "Name of the file to write, relative to 'directory'. May include subdirectories, which are created if they do not exist.",
             "title": "Filename",
             "type": "string"
           },
@@ -10116,6 +10531,7 @@
               }
             ],
             "default": false,
+            "description": "Whether to replace the file when it already exists. Accepts true/false (also yes/no, on/off, 1/0). Defaults to false, which reports an error instead of replacing existing content.",
             "title": "Overwrite"
           }
         },
@@ -10174,6 +10590,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool for crawling websites using Firecrawl v2 API. To run this tool, you need to have a Firecrawl API key.\n\nArgs:\n    api_key (str): Your Firecrawl API key.\n    config (dict): Optional. It contains Firecrawl v2 API parameters.\n\nDefault configuration options (Firecrawl v2 API):\n    max_discovery_depth (int): Maximum depth for discovering pages. Default: 2\n    ignore_sitemap (bool): Whether to ignore sitemap. Default: True\n    limit (int): Maximum number of pages to crawl. Default: 10\n    allow_external_links (bool): Allow crawling external links. Default: False\n    allow_subdomains (bool): Allow crawling subdomains. Default: False\n    delay (int): Delay between requests in milliseconds. Default: None\n    scrape_options (dict): Options for scraping content\n        - formats (list[str]): Content formats to return. Default: [\"markdown\"]\n        - only_main_content (bool): Only return main content. Default: True\n        - timeout (int): Timeout in milliseconds. Default: 10000",
@@ -10273,6 +10699,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool for scraping webpages using Firecrawl v2 API. To run this tool, you need to have a Firecrawl API key.\n\nArgs:\n    api_key (str): Your Firecrawl API key.\n    config (dict): Optional. It contains Firecrawl v2 API parameters.\n\nDefault configuration options (Firecrawl v2 API):\n    formats (list[str]): Content formats to return. Default: [\"markdown\"]\n    only_main_content (bool): Only return main content excluding headers, navs, footers, etc. Default: True\n    include_tags (list[str]): Tags to include in the output. Default: []\n    exclude_tags (list[str]): Tags to exclude from the output. Default: []\n    max_age (int): Returns cached version if younger than this age in milliseconds. Default: 172800000 (2 days)\n    headers (dict): Headers to send with the request (e.g., cookies, user-agent). Default: {}\n    wait_for (int): Delay in milliseconds before fetching content. Default: 0\n    mobile (bool): Emulate scraping from a mobile device. Default: False\n    skip_tls_verification (bool): Skip TLS certificate verification. Default: True\n    timeout (int): Request timeout in milliseconds. Default: None\n    remove_base64_images (bool): Remove base64 images from output. Default: True\n    block_ads (bool): Enable ad-blocking and cookie popup blocking. Default: True\n    proxy (str): Proxy type (\"basic\", \"stealth\", \"auto\"). Default: \"auto\"\n    store_in_cache (bool): Store page in Firecrawl index and cache. Default: True",
@@ -10365,6 +10801,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool for searching webpages using Firecrawl v2 API. To run this tool, you need to have a Firecrawl API key.\n\nArgs:\n    api_key (str): Your Firecrawl API key.\n    config (dict): Optional. It contains Firecrawl v2 API parameters.\n\nDefault configuration options (Firecrawl v2 API):\n    limit (int): Maximum number of search results to return. Default: 5\n    tbs (str): Time-based search filter (e.g., \"qdr:d\" for past day). Default: None\n    location (str): Location for search results. Default: None\n    timeout (int): Request timeout in milliseconds. Default: None\n    scrape_options (dict): Options for scraping the search results. Default: {\"formats\": [\"markdown\"]}\n        - formats (list[str]): Content formats to return. Default: [\"markdown\"]\n        - only_main_content (bool): Only return main content. Default: True\n        - include_tags (list[str]): Tags to include. Default: []\n        - exclude_tags (list[str]): Tags to exclude. Default: []\n        - wait_for (int): Delay before fetching content in ms. Default: 0\n        - timeout (int): Request timeout in milliseconds. Default: None",
@@ -10470,6 +10916,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -11210,6 +11666,16 @@
             "title": "Text2VecProviderSpec",
             "type": "object"
           },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          },
           "VectorDbConfig": {
             "description": "Configuration for vector database provider.\n\nAttributes:\n    provider: RAG provider literal.\n    config: RAG configuration options.",
             "properties": {
@@ -11644,6 +12110,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "HyperbrowserLoadTool.\n\nScrape or crawl web pages and load the contents with optional parameters for configuring content extraction.\nRequires the `hyperbrowser` package.\nGet your API Key from https://app.hyperbrowser.ai/\n\nArgs:\n    api_key: The Hyperbrowser API key, can be set as an environment variable `HYPERBROWSER_API_KEY` or passed directly",
@@ -11758,6 +12234,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "A CrewAI tool for invoking external crew/flows APIs.\n\nThis tool provides CrewAI Platform API integration with external crew services, supporting:\n- Dynamic input schema configuration\n- Automatic polling for task completion\n- Bearer token authentication\n- Comprehensive error handling\n\nExample:\n    Basic usage:\n    >>> tool = InvokeCrewAIAutomationTool(\n    ...     crew_api_url=\"https://api.example.com\",\n    ...     crew_bearer_token=\"your_token\",\n    ...     crew_name=\"My Crew\",\n    ...     crew_description=\"Description of what the crew does\",\n    ... )\n\n    With custom inputs:\n    >>> custom_inputs = {\n    ...     \"param1\": Field(..., description=\"Description of param1\"),\n    ...     \"param2\": Field(\n    ...         default=\"default_value\", description=\"Description of param2\"\n    ...     ),\n    ... }\n    >>> tool = InvokeCrewAIAutomationTool(\n    ...     crew_api_url=\"https://api.example.com\",\n    ...     crew_bearer_token=\"your_token\",\n    ...     crew_name=\"My Crew\",\n    ...     crew_description=\"Description of what the crew does\",\n    ...     crew_inputs=custom_inputs,\n    ... )\n\nExample:\n    >>> tools = [\n    ...     InvokeCrewAIAutomationTool(\n    ...         crew_api_url=\"https://canary-crew-[...].crewai.com\",\n    ...         crew_bearer_token=\"[Your token: abcdef012345]\",\n    ...         crew_name=\"State of AI Report\",\n    ...         crew_description=\"Retrieves a report on state of AI for a given year.\",\n    ...         crew_inputs={\n    ...             \"year\": Field(\n    ...                 ..., description=\"Year to retrieve the report for (integer)\"\n    ...             )\n    ...         },\n    ...     )\n    ... ]",
@@ -12486,6 +12972,16 @@
             "title": "Text2VecProviderSpec",
             "type": "object"
           },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          },
           "VectorDbConfig": {
             "description": "Configuration for vector database provider.\n\nAttributes:\n    provider: RAG provider literal.\n    config: RAG configuration options.",
             "properties": {
@@ -12890,6 +13386,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -12994,6 +13500,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {},
@@ -13051,6 +13567,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool to wrap LlamaIndex tools/query engines.",
@@ -13758,6 +14284,16 @@
             "title": "Text2VecProviderSpec",
             "type": "object"
           },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          },
           "VectorDbConfig": {
             "description": "Configuration for vector database provider.\n\nAttributes:\n    provider: RAG provider literal.\n    config: RAG configuration options.",
             "properties": {
@@ -14169,6 +14705,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Wrapper for Merge Agent Handler tools.\n\nThis tool allows CrewAI agents to execute tools from Merge Agent Handler,\nwhich provides secure access to third-party integrations via the Model Context Protocol (MCP).\n\nAgent Handler manages authentication, permissions, and monitoring of all tool interactions.",
@@ -14340,6 +14886,16 @@
             },
             "title": "MongoDBVectorSearchConfig",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool to perfrom a vector search the MongoDB database.",
@@ -14477,6 +15033,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool to wrap MultiOn Browse Capabilities.",
@@ -15213,6 +15779,16 @@
             "title": "Text2VecProviderSpec",
             "type": "object"
           },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          },
           "VectorDbConfig": {
             "description": "Configuration for vector database provider.\n\nAttributes:\n    provider: RAG provider literal.\n    config: RAG configuration options.",
             "properties": {
@@ -15618,6 +16194,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool that converts natural language to SQL and executes it against a database.\n\nBy default the tool operates in **read-only mode**: only SELECT, SHOW,\nDESCRIBE, EXPLAIN, and read-only CTEs (WITH \u2026 SELECT) are permitted.  Write\noperations (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, \u2026) are\nblocked unless ``allow_dml=True`` is set explicitly or the environment\nvariable ``CREWAI_NL2SQL_ALLOW_DML=true`` is present.\n\nWritable CTEs (``WITH d AS (DELETE \u2026) SELECT \u2026``) and\n``EXPLAIN ANALYZE <write-stmt>`` are treated as write operations and are\nblocked in read-only mode.\n\nThe ``_fetch_all_available_columns`` helper uses parameterised queries so\nthat table names coming from the database catalogue cannot be used as an\ninjection vector.",
@@ -16039,6 +16625,16 @@
             ],
             "title": "LLM",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "A tool for performing Optical Character Recognition on images.\n\nThis tool leverages LLMs to extract text from images. It can process\nboth local image files and images available via URLs.\n\nAttributes:\n    name (str): Name of the tool.\n    description (str): Description of the tool's functionality.\n    args_schema (Type[BaseModel]): Pydantic schema for input validation.\n\nPrivate Attributes:\n    _llm (Optional[LLM]): Language model instance for making API calls.",
@@ -16235,6 +16831,16 @@
             },
             "title": "OxylabsAmazonProductScraperConfig",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Scrape Amazon product pages with OxylabsAmazonProductScraperTool.\n\nGet Oxylabs account:\nhttps://dashboard.oxylabs.io/en\n\nArgs:\n    username (str): Oxylabs username.\n    password (str): Oxylabs password.\n    config: Configuration options. See ``OxylabsAmazonProductScraperConfig``",
@@ -16464,6 +17070,16 @@
             },
             "title": "OxylabsAmazonSearchScraperConfig",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Scrape Amazon search results with OxylabsAmazonSearchScraperTool.\n\nGet Oxylabs account:\nhttps://dashboard.oxylabs.io/en\n\nArgs:\n    username (str): Oxylabs username.\n    password (str): Oxylabs password.\n    config: Configuration options. See ``OxylabsAmazonSearchScraperConfig``",
@@ -16706,6 +17322,16 @@
             },
             "title": "OxylabsGoogleSearchScraperConfig",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Scrape Google Search results with OxylabsGoogleSearchScraperTool.\n\nGet Oxylabs account:\nhttps://dashboard.oxylabs.io/en\n\nArgs:\n    username (str): Oxylabs username.\n    password (str): Oxylabs password.\n    config: Configuration options. See ``OxylabsGoogleSearchScraperConfig``",
@@ -16896,6 +17522,16 @@
             },
             "title": "OxylabsUniversalScraperConfig",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Scrape any website with OxylabsUniversalScraperTool.\n\nGet Oxylabs account:\nhttps://dashboard.oxylabs.io/en\n\nArgs:\n    username (str): Oxylabs username.\n    password (str): Oxylabs password.\n    config: Configuration options. See ``OxylabsUniversalScraperConfig``",
@@ -17618,6 +18254,16 @@
             "title": "Text2VecProviderSpec",
             "type": "object"
           },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          },
           "VectorDbConfig": {
             "description": "Configuration for vector database provider.\n\nAttributes:\n    provider: RAG provider literal.\n    config: RAG configuration options.",
             "properties": {
@@ -18041,6 +18687,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -18182,6 +18838,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -18263,6 +18929,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -18369,6 +19045,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "PatronusEvalTool is a tool to automatically evaluate and score agent interactions.\n\nResults are logged to the Patronus platform at app.patronus.ai",
@@ -18543,6 +19229,16 @@
             ],
             "title": "QdrantConfig",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Vector search tool for Qdrant.",
@@ -19314,6 +20010,16 @@
             "title": "Text2VecProviderSpec",
             "type": "object"
           },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          },
           "VectorDbConfig": {
             "description": "Configuration for vector database provider.\n\nAttributes:\n    provider: RAG provider literal.\n    config: RAG configuration options.",
             "properties": {
@@ -19702,6 +20408,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -19827,6 +20543,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -19941,6 +20667,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "A tool that uses Scrapegraph AI to intelligently scrape website content.\n\nRaises:\n    ValueError: If API key is missing or URL format is invalid\n    RateLimitError: If API rate limits are exceeded\n    RuntimeError: If scraping operation fails",
@@ -20064,6 +20800,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -20198,6 +20944,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -20351,6 +21107,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -20449,6 +21215,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -20547,6 +21323,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -20676,6 +21462,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {},
@@ -21399,6 +22195,16 @@
             "title": "Text2VecProviderSpec",
             "type": "object"
           },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          },
           "VectorDbConfig": {
             "description": "Configuration for vector database provider.\n\nAttributes:\n    provider: RAG provider literal.\n    config: RAG configuration options.",
             "properties": {
@@ -21835,6 +22641,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -21951,6 +22767,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -22067,6 +22893,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -22864,6 +23700,16 @@
             "title": "Text2VecProviderSpec",
             "type": "object"
           },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          },
           "VectorDbConfig": {
             "description": "Configuration for vector database provider.\n\nAttributes:\n    provider: RAG provider literal.\n    config: RAG configuration options.",
             "properties": {
@@ -23353,6 +24199,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "A tool for performing semantic searches on SingleStore database tables.\n\nThis tool provides a safe interface for executing SELECT and SHOW queries\nagainst a SingleStore database with connection pooling for optimal performance.",
@@ -23553,6 +24409,16 @@
             ],
             "title": "SnowflakeConfig",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool for executing queries and semantic search on Snowflake.",
@@ -23727,6 +24593,16 @@
             },
             "title": "SpiderToolConfig",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool for scraping and crawling websites.\nThis tool provides functionality to either scrape a single webpage or crawl multiple\npages, returning content in a format suitable for LLM processing.",
@@ -23874,6 +24750,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "A tool that uses Stagehand to automate web browser interactions using natural language with atomic action handling.\n\nStagehand allows AI agents to interact with websites through a browser,\nperforming actions like clicking buttons, filling forms, and extracting data.\n\nThe tool supports four main command types:\n1. act - Perform actions like clicking, typing, scrolling, or navigating\n2. navigate - Specifically navigate to a URL (shorthand for act with navigation)\n3. extract - Extract structured data from web pages\n4. observe - Identify and analyze elements on a page\n\nUsage examples:\n- Navigate to a website: instruction=\"Go to the homepage\", url=\"https://example.com\"\n- Click a button: instruction=\"Click the login button\"\n- Fill a form: instruction=\"Fill the login form with username 'user' and password 'pass'\"\n- Extract data: instruction=\"Extract all product prices and names\", command_type=\"extract\"\n- Observe elements: instruction=\"Find all navigation menu items\", command_type=\"observe\"\n- Complex tasks: instruction=\"Step 1: Navigate to https://example.com; Step 2: Scroll down to the 'Features' section; Step 3: Click 'Learn More'\", command_type=\"act\"\n\nExample of breaking down \"Search for OpenAI\" into multiple steps:\n1. First navigation: instruction=\"Go to Google\", url=\"https://google.com\", command_type=\"navigate\"\n2. Enter search term: instruction=\"Type 'OpenAI' in the search box\", command_type=\"act\"\n3. Submit search: instruction=\"Press the Enter key or click the search button\", command_type=\"act\"\n4. Click on result: instruction=\"Click on the OpenAI website link in the search results\", command_type=\"act\"",
@@ -24706,6 +25592,16 @@
             "title": "Text2VecProviderSpec",
             "type": "object"
           },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          },
           "VectorDbConfig": {
             "description": "Configuration for vector database provider.\n\nAttributes:\n    provider: RAG provider literal.\n    config: RAG configuration options.",
             "properties": {
@@ -25129,6 +26025,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "properties": {
@@ -25284,6 +26190,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool that uses the Tavily Research status endpoint to retrieve results.",
@@ -25359,6 +26275,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool that uses the Tavily Research API to create research tasks.",
@@ -25521,6 +26447,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool that uses the Tavily Search API to perform web searches.\n\nAttributes:\n    client: An instance of TavilyClient.\n    async_client: An instance of AsyncTavilyClient.\n    name: The name of the tool.\n    description: A description of the tool's purpose.\n    args_schema: The schema for the tool's arguments.\n    api_key: The Tavily API key.\n    proxies: Optional proxies for the API requests.\n    search_depth: The depth of the search.\n    topic: The topic to focus the search on.\n    time_range: The time range for the search.\n    days: The number of days to search back.\n    max_results: The maximum number of results to return.\n    include_domains: A list of domains to include in the search.\n    exclude_domains: A list of domains to exclude from the search.\n    include_answer: Whether to include a direct answer to the query.\n    include_raw_content: Whether to include the raw content of the search results.\n    include_images: Whether to include images in the search results.\n    timeout: The timeout for the search request in seconds.\n    max_content_length_per_result: Maximum length for the 'content' of each search result.",
@@ -25770,6 +26706,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool for analyzing images using vision models.\n\nArgs:\n    llm: Optional LLM instance to use\n    model: Model identifier to use if no LLM is provided",
@@ -25790,6 +26736,104 @@
           }
         },
         "title": "ImagePromptSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Pause and do nothing for a set number of seconds before continuing.\nUse this when work that was already started somewhere else needs real time to finish before its status or result can be checked again, for example: a sandbox build, test run, or script that is still executing; a deployment or provisioning step that is still rolling out; a batch import, export, or training job; an async API that returned a job id to poll later; or a rate limit or backoff that has to cool down before retrying.\nThe usual pattern is: start the job, wait, check its status, and wait again if it is still running.\nDo not use this to pace a conversation, to pretend to work, or when the information needed is already available. Waiting only lets clock time pass, it does not advance or check the job.\nA single call waits at most 300 seconds. If more time is needed, call this tool again.",
+      "env_vars": [],
+      "humanized_name": "Wait",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Pause execution so a long-running job elsewhere has time to progress.\n\nAgents that kick off out-of-band work (a sandbox build, a deployment, an async\nAPI job) have no other way to let clock time pass: without this tool they either\npoll in a tight loop or give up before the work finishes.\n\nA single call waits at most ``max_seconds``. Longer requests are clamped to that\ncap and the result says so, so the model can call again instead of failing.\n\nThe generated description advertises the cap to the model, and is kept in sync\nwith ``max_seconds``. A description supplied by the caller is left alone.",
+        "properties": {
+          "max_seconds": {
+            "default": 300.0,
+            "description": "Upper bound, in seconds, for a single wait. Longer requests are capped to this value.",
+            "exclusiveMinimum": 0,
+            "title": "Max Seconds",
+            "type": "number"
+          }
+        },
+        "required": [],
+        "title": "WaitTool",
+        "type": "object"
+      },
+      "name": "WaitTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for WaitTool.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional short note on what is being waited for, echoed back in the result.",
+            "title": "Reason"
+          },
+          "seconds": {
+            "description": "How many seconds to wait before continuing.",
+            "minimum": 0,
+            "title": "Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "seconds"
+        ],
+        "title": "WaitToolSchema",
         "type": "object"
       }
     },
@@ -25840,6 +26884,16 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           }
         },
         "description": "Tool to search the Weaviate database.",
@@ -26622,6 +27676,16 @@
             ],
             "title": "Text2VecProviderSpec",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           },
           "VectorDbConfig": {
             "description": "Configuration for vector database provider.\n\nAttributes:\n    provider: RAG provider literal.\n    config: RAG configuration options.",
@@ -27672,6 +28736,16 @@
             "title": "Text2VecProviderSpec",
             "type": "object"
           },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          },
           "VectorDbConfig": {
             "description": "Configuration for vector database provider.\n\nAttributes:\n    provider: RAG provider literal.\n    config: RAG configuration options.",
             "properties": {
@@ -28721,6 +29795,16 @@
             "title": "Text2VecProviderSpec",
             "type": "object"
           },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          },
           "VectorDbConfig": {
             "description": "Configuration for vector database provider.\n\nAttributes:\n    provider: RAG provider literal.\n    config: RAG configuration options.",
             "properties": {
@@ -29769,6 +30853,16 @@
             ],
             "title": "Text2VecProviderSpec",
             "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
           },
           "VectorDbConfig": {
             "description": "Configuration for vector database provider.\n\nAttributes:\n    provider: RAG provider literal.\n    config: RAG configuration options.",

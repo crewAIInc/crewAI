@@ -5,6 +5,7 @@ from typing import Any, Literal
 from pydantic import ConfigDict
 
 from crewai.events.base_events import BaseEvent
+from crewai.tools.tool_failure import ToolFailure, ToolFailurePolicy
 
 
 class ToolUsageEvent(BaseEvent):
@@ -66,6 +67,11 @@ class ToolUsageFinishedEvent(ToolUsageEvent):
     finished_at: datetime
     from_cache: bool = False
     output: Any
+    failure: ToolFailure | None = None
+    """Set when the tool ran but reported it did not succeed.
+
+    Lets a trace UI mark the call failed without correlating a second event.
+    """
     type: Literal["tool_usage_finished"] = "tool_usage_finished"
 
 
@@ -74,6 +80,20 @@ class ToolUsageErrorEvent(ToolUsageEvent):
 
     error: Any
     type: Literal["tool_usage_error"] = "tool_usage_error"
+
+
+class ToolFailureDetectedEvent(ToolUsageEvent):
+    """Event emitted when a tool completed but reported that it failed.
+
+    Distinct from :class:`ToolUsageErrorEvent`, which covers a tool *raising*.
+    This is the quieter case: the call returned normally and says the work was
+    not done. Emitted for every policy except ``IGNORE``, and before a
+    ``RAISE`` aborts, so subscribers see it even on an aborting run.
+    """
+
+    failure: ToolFailure
+    policy: ToolFailurePolicy
+    type: Literal["tool_failure_detected"] = "tool_failure_detected"
 
 
 class ToolValidateInputErrorEvent(ToolUsageEvent):
