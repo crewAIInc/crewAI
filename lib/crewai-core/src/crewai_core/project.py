@@ -251,8 +251,31 @@ def get_project_id(pyproject_path: str | Path = "pyproject.toml") -> str | None:
     except (OSError, tomli.TOMLDecodeError):
         return None
 
-    project_id = get_crewai_project_config(pyproject_data).get(_PROJECT_ID_KEY)
-    return project_id if isinstance(project_id, str) and project_id else None
+    return _usable_project_id(get_crewai_project_config(pyproject_data))
+
+
+def _has_crewai_table(pyproject_data: dict[str, Any]) -> bool:
+    """True if ``[tool.crewai]`` exists, even when empty.
+
+    Distinguishes "declared but empty" from "absent", which
+    :func:`get_crewai_project_config` cannot: it returns ``{}`` for both.
+    """
+    tool_config = pyproject_data.get("tool")
+    return isinstance(tool_config, dict) and isinstance(tool_config.get("crewai"), dict)
+
+
+def _usable_project_id(crewai_config: dict[str, Any]) -> str | None:
+    """Return the configured id if it is usable as an identifier.
+
+    Whitespace-only values are treated as absent: they are truthy in Python but
+    are not an identity, and would otherwise propagate into login payloads and
+    tracing context.
+    """
+    project_id = crewai_config.get(_PROJECT_ID_KEY)
+    if not isinstance(project_id, str):
+        return None
+    stripped = project_id.strip()
+    return stripped or None
 
 
 def get_or_create_project_id(
@@ -314,9 +337,20 @@ def _get_or_create_project_id_locked(path: Path) -> str | None:
     except (tomli.TOMLDecodeError, ValueError):
         return None
 
-    existing = get_crewai_project_config(pyproject_data).get(_PROJECT_ID_KEY)
-    if isinstance(existing, str) and existing:
+    crewai_config = get_crewai_project_config(pyproject_data)
+    existing = _usable_project_id(crewai_config)
+    if existing:
         return existing
+
+    # Only ever add a key to an existing [tool.crewai] table. Creating the table
+    # would rewrite the pyproject.toml of any directory that merely happens to
+    # have one, which `crewai run` could otherwise do before it has established
+    # that the cwd is a CrewAI project at all.
+    #
+    # Presence, not truthiness: an empty `[tool.crewai]` table is still a CrewAI
+    # marker, and get_crewai_project_config returns {} for both cases.
+    if not _has_crewai_table(pyproject_data):
+        return None
 
     project_id = str(uuid.uuid4())
     updated = _set_project_id(content, project_id)
@@ -468,6 +502,6 @@ def _set_project_id(content: str, project_id: str) -> str | None:
         lines.insert(insert_at, entry)
         return "".join(lines)
 
-    # No [tool.crewai] table: append one rather than guessing where it belongs.
-    suffix = "" if content.endswith(("\n", "\r")) or not content else newline
-    return f"{content}{suffix}{newline}[tool.crewai]{newline}{entry}"
+    # No [tool.crewai] table. Never create one: that would let this feature
+    # rewrite the pyproject.toml of a directory that is not a CrewAI project.
+    return None

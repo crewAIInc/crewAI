@@ -618,10 +618,6 @@ def run_crew(
             or declarative (JSON) crew. Layered over the definition's own
             defaults; missing required values are prompted for interactively.
     """
-    # Backfills projects created before project_id existed. Only here, in a
-    # command the user explicitly invoked - never from the SDK during kickoff.
-    get_or_create_project_id()
-
     # --definition is a pure override: run that flow directly.
     if definition is not None:
         _run_explicit_declarative_flow(
@@ -632,6 +628,15 @@ def run_crew(
         return
 
     pyproject_data = read_toml()
+
+    # Backfills projects created before project_id existed. Only here, in a
+    # command the user explicitly invoked - never from the SDK during kickoff.
+    # Placed after the --definition early return so an explicit-flow run does
+    # not touch the cwd; get_or_create_project_id itself refuses to act unless
+    # [tool.crewai] is already present, so an unrelated project is never
+    # rewritten.
+    get_or_create_project_id()
+
     if json_crew_definition := configured_project_json_crew(pyproject_data):
         # Declarative (JSON) crews resolve inputs the same way flows do: --inputs
         # layers over the crew's declared defaults, missing {placeholder}s are

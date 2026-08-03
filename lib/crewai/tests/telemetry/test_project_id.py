@@ -88,7 +88,6 @@ def test_comments_and_formatting_are_preserved(tmp_path):
     [
         ('[project]\nname = "x"\n\n[tool.crewai]\ntype = "crew"\n', "table then EOF"),
         ('[tool.crewai]\ntype = "crew"', "no trailing newline"),
-        ('[project]\nname = "x"\n', "no tool.crewai table"),
         ('[project]\nname = "x"\n[tool.crewai]\n[other]\na = 1\n', "empty table"),
         (
             '[tool.crewai]\ntype = "crew"\n\n\n[build-system]\nrequires = []\n',
@@ -119,6 +118,20 @@ def test_id_does_not_leak_into_a_neighbouring_table(tmp_path):
     data = parse_toml(path.read_text())
     assert "project_id" in data["tool"]["crewai"]
     assert "project_id" not in data["build-system"]
+
+
+def test_absent_tool_crewai_table_is_never_created(tmp_path):
+    """Refuse to mint rather than rewrite a non-CrewAI project's pyproject.toml.
+
+    `crewai run` in any directory that merely happens to have a pyproject.toml
+    must not gain a [tool.crewai] table as a side effect.
+    """
+    path = tmp_path / "pyproject.toml"
+    original = '[project]\nname = "unrelated"\n'
+    path.write_text(original)
+
+    assert get_or_create_project_id(path) is None
+    assert path.read_text() == original, "unrelated project was modified"
 
 
 def test_missing_file_is_not_an_error(tmp_path):
@@ -152,9 +165,15 @@ def test_get_project_id_never_creates_anything(pyproject):
     assert pyproject.read_text() == before
 
 
-def test_blank_id_is_treated_as_absent(tmp_path):
+@pytest.mark.parametrize("blank", ['""', "'   '", '"\\t"'])
+def test_blank_or_whitespace_id_is_treated_as_absent(tmp_path, blank):
+    """Whitespace is truthy in Python but is not an identity.
+
+    Accepting it would propagate a useless value into login payloads and
+    tracing context.
+    """
     path = tmp_path / "pyproject.toml"
-    path.write_text('[tool.crewai]\ntype = "crew"\nproject_id = ""\n')
+    path.write_text(f'[tool.crewai]\ntype = "crew"\nproject_id = {blank}\n')
 
     assert get_project_id(path) is None
 
@@ -169,7 +188,7 @@ def test_malformed_toml_is_never_written_to(tmp_path):
     assert path.read_text() == original, "malformed file must be left untouched"
 
 
-@pytest.mark.parametrize("blank", ['""', "''", '"   "'])
+@pytest.mark.parametrize("blank", ['""', "''", '"   "', '"\\t\\t"'])
 def test_blank_existing_id_is_replaced_not_duplicated(tmp_path, blank):
     """A blank id reads as absent; appending would make a duplicate key."""
     path = tmp_path / "pyproject.toml"
@@ -182,6 +201,7 @@ def test_blank_existing_id_is_replaced_not_duplicated(tmp_path, blank):
     data = parse_toml(content)  # would raise on a duplicate key
     assert data["tool"]["crewai"]["project_id"] == project_id
     assert data["tool"]["crewai"]["type"] == "crew"
+    assert uuid.UUID(project_id), "must mint a real id, not keep the blank one"
 
 
 def test_non_string_existing_id_is_replaced(tmp_path):
@@ -252,28 +272,42 @@ def test_lf_file_stays_lf(tmp_path):
 
 
 def test_concurrent_minting_converges_on_one_id(tmp_path):
-    """Two processes minting at once must agree on the persisted id."""
+    """Concurrent minters must all return the id that ends up on disk.
+
+    Uses threads in one process, so it covers the read-modify-write race rather
+    than the cross-process lock backend itself.
+    """
     import threading
 
+    workers = 8
     path = tmp_path / "pyproject.toml"
     path.write_text(CREW_PYPROJECT)
 
     returned: list[str | None] = []
-    start = threading.Barrier(8)
+    results_lock = threading.Lock()
+    # Timed out rather than unbounded: a thread dying before the barrier, or
+    # blocking on the lock, would otherwise hang CI instead of failing.
+    start = threading.Barrier(workers, timeout=30)
 
     def mint() -> None:
         start.wait()
-        returned.append(get_or_create_project_id(path))
+        project_id = get_or_create_project_id(path)
+        with results_lock:
+            returned.append(project_id)
 
-    threads = [threading.Thread(target=mint) for _ in range(8)]
+    threads = [threading.Thread(target=mint) for _ in range(workers)]
     for thread in threads:
         thread.start()
     for thread in threads:
-        thread.join()
+        thread.join(timeout=30)
+
+    assert not [t for t in threads if t.is_alive()], "thread did not finish in time"
+    assert len(returned) == workers, f"only {len(returned)}/{workers} threads returned"
 
     persisted = parse_toml(path.read_text())["tool"]["crewai"]["project_id"]
-    assert len(set(returned)) == 1, f"callers disagreed: {set(returned)}"
-    assert returned[0] == persisted, "returned an id that is not on disk"
+    assert set(returned) == {persisted}, (
+        f"callers disagreed with disk: returned={set(returned)} persisted={persisted}"
+    )
 
 
 def test_file_mode_is_preserved(tmp_path):
