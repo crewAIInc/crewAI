@@ -14,6 +14,7 @@ import posixpath
 from crewai_tools import FileReadTool, FileWriterTool
 from crewai_tools.file_storage import (
     FileStore,
+    FileStoreError,
     register_file_store_factory,
     reset_file_store_factory,
     resolve_file_store,
@@ -91,11 +92,78 @@ class MemoryFileStore:
         self.files[resolved] = content
 
 
+class FailingFileStore(MemoryFileStore):
+    """A store where one named operation fails, the way a remote one can.
+
+    The local filesystem cannot produce most of these — an unreachable
+    endpoint has no local equivalent — so a store that only ever fails the
+    way `open()` does would not exercise the tools' error paths at all.
+    """
+
+    def __init__(self, failing: str, exc: Exception | None = None) -> None:
+        super().__init__()
+        self.failing = failing
+        self.exc = exc or FileStoreError("workspace endpoint unreachable")
+
+    def _maybe_fail(self, name: str) -> None:
+        if name == self.failing:
+            raise self.exc
+
+    def normalize(self, path: str, base_dir: str | None = None) -> str:
+        self._maybe_fail("normalize")
+        return super().normalize(path, base_dir)
+
+    def resolve(self, path: str, base_dir: str | None = None) -> str:
+        self._maybe_fail("resolve")
+        return super().resolve(path, base_dir)
+
+    def resolve_within(self, directory: str, filename: str) -> str:
+        self._maybe_fail("resolve_within")
+        return super().resolve_within(directory, filename)
+
+    def display(self, resolved: str, base: str | None = None) -> str:
+        self._maybe_fail("display")
+        return super().display(resolved, base)
+
+    def exists(self, resolved: str) -> bool:
+        self._maybe_fail("exists")
+        return super().exists(resolved)
+
+    def ensure_parent(self, resolved: str) -> None:
+        self._maybe_fail("ensure_parent")
+        super().ensure_parent(resolved)
+
+    def open_text(self, resolved: str, encoding: str):
+        self._maybe_fail("open_text")
+        return super().open_text(resolved, encoding)
+
+    def write_text(
+        self, resolved: str, content: str, encoding: str, *, overwrite: bool
+    ) -> None:
+        self._maybe_fail("write_text")
+        super().write_text(resolved, content, encoding, overwrite=overwrite)
+
+
 @pytest.fixture
 def store():
     memory = MemoryFileStore()
     register_file_store_factory(lambda: memory)
     yield memory
+    reset_file_store_factory()
+
+
+@pytest.fixture
+def failing_store():
+    """Register a store whose *named* operation fails; the test picks which."""
+    created: list[FailingFileStore] = []
+
+    def _register(failing: str, exc: Exception | None = None) -> FailingFileStore:
+        broken = FailingFileStore(failing, exc)
+        register_file_store_factory(lambda: broken)
+        created.append(broken)
+        return broken
+
+    yield _register
     reset_file_store_factory()
 
 
@@ -276,4 +344,179 @@ def test_os_error_message_does_not_leak_an_absolute_path(tmp_path, monkeypatch):
     )
 
     assert "Error" in result
+    assert str(tmp_path) not in result
+
+
+# --- reconstruction through pydantic -----------------------------------------
+#
+# BaseTool rebuilds a serialized tool with `model_validate` (see
+# `_resolve_tool_dict`), which skips `__init__` entirely. Anything derived only
+# in `__init__` comes back missing, and for the store that means every read
+# raising AttributeError on a None.
+
+
+def test_reconstructed_reader_reads_through_the_store(store, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    store.files["/ws/notes.txt"] = "reconstructed\n"
+
+    tool = FileReadTool.model_validate({"file_path": "notes.txt"})
+
+    assert tool._store is store
+    assert tool._run() == "reconstructed\n"
+
+
+def test_reconstructed_writer_writes_through_the_store(store, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    tool = FileWriterTool.model_validate({"base_dir": "scoped"})
+
+    assert tool._store is store
+    assert tool.base_dir == "/ws/scoped"
+    assert "successfully written" in tool._run(
+        filename="a.txt", content="x", overwrite=True
+    )
+    assert store.files == {"/ws/scoped/a.txt": "x"}
+
+
+def test_reconstructed_reader_keeps_its_declared_file(store, tmp_path, monkeypatch):
+    """The declared path is pinned in the hook, so a rebuild pins it too."""
+    monkeypatch.chdir(tmp_path)
+    store.files["/ws/sub/pinned.txt"] = "kept\n"
+
+    fresh = FileReadTool(file_path="sub/pinned.txt")
+    rebuilt = FileReadTool.model_validate({"file_path": "sub/pinned.txt"})
+
+    assert rebuilt._declared_realpath == fresh._declared_realpath == "/ws/sub/pinned.txt"
+    assert rebuilt._declared_label == fresh._declared_label
+    assert rebuilt.description == fresh.description
+    # Addressable by the label the description shows, same as a fresh tool.
+    assert rebuilt._run(file_path=rebuilt._declared_label) == "kept\n"
+
+
+def test_reader_round_trips_through_model_dump(store, tmp_path, monkeypatch):
+    """The full serialize/deserialize cycle, not just a hand-built dict."""
+    monkeypatch.chdir(tmp_path)
+    store.files["/ws/notes.txt"] = "dumped\n"
+
+    original = FileReadTool(file_path="notes.txt")
+    rebuilt = FileReadTool.model_validate(original.model_dump())
+
+    assert rebuilt._run() == "dumped\n"
+
+
+# --- a store that fails ------------------------------------------------------
+#
+# A store may fail where the local filesystem never could. Every exit from
+# these tools is an agent-visible string, so a store failure has to become one
+# too rather than raising into the agent's step.
+
+
+@pytest.mark.parametrize(
+    "failing", ["resolve", "resolve_within", "display", "exists", "ensure_parent"]
+)
+def test_writer_reports_a_store_failure_instead_of_raising(
+    failing, failing_store, tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    failing_store(failing)
+
+    result = FileWriterTool()._run(filename="a.txt", content="x", overwrite=True)
+
+    assert "error occurred while writing" in result
+    assert "memory" in result
+    assert "workspace endpoint unreachable" in result
+
+
+def test_writer_reports_a_failing_write(failing_store, tmp_path, monkeypatch):
+    """write_text already had a handler; it must keep its own wording."""
+    monkeypatch.chdir(tmp_path)
+    failing_store("write_text")
+
+    result = FileWriterTool()._run(filename="a.txt", content="x", overwrite=True)
+
+    assert "An error occurred while writing to the file" in result
+    assert "workspace endpoint unreachable" in result
+
+
+@pytest.mark.parametrize("failing", ["resolve", "display"])
+def test_reader_reports_a_store_failure_instead_of_raising(
+    failing, failing_store, tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    failing_store(failing)
+
+    result = FileReadTool()._run(file_path="notes.txt")
+
+    assert "Error" in result
+    assert "memory" in result
+    assert "workspace endpoint unreachable" in result
+
+
+def test_reader_reports_a_failing_open(failing_store, tmp_path, monkeypatch):
+    """open_text already had a handler; it must keep its own wording."""
+    monkeypatch.chdir(tmp_path)
+    failing_store("open_text")
+
+    result = FileReadTool()._run(file_path="notes.txt")
+
+    assert "Failed to read file" in result
+    assert "workspace endpoint unreachable" in result
+
+
+def _run_either(tool_cls, tool):
+    """Drive whichever tool this is with its minimal arguments."""
+    if tool_cls is FileReadTool:
+        return tool._run(file_path="notes.txt")
+    return tool._run(filename="a.txt", content="x", overwrite=True)
+
+
+@pytest.mark.parametrize("tool_cls", [FileReadTool, FileWriterTool])
+def test_an_os_error_from_the_store_is_reported_too(
+    tool_cls, failing_store, tmp_path, monkeypatch
+):
+    """Not every store failure arrives as FileStoreError.
+
+    A store wrapping a socket or a subprocess can raise OSError from resolve,
+    which is neither a ValueError nor something the read/write handlers see.
+    ``strerror`` is what survives redaction, so that is what an agent gets.
+    """
+    monkeypatch.chdir(tmp_path)
+    failing_store("resolve", OSError(104, "Connection reset by peer"))
+
+    result = _run_either(tool_cls, tool_cls())
+
+    assert "Connection reset by peer" in result
+
+
+@pytest.mark.parametrize("tool_cls", [FileReadTool, FileWriterTool])
+def test_a_bare_os_error_degrades_to_its_type_without_raising(
+    tool_cls, failing_store, tmp_path, monkeypatch
+):
+    """A single-arg OSError has no strerror, so only its type survives.
+
+    That is `format_error_for_display` holding the line it was given in #6692:
+    an OS-populated OSError renders its absolute filename into `str()`, so the
+    message is never passed through wholesale. The cost is a thin report for a
+    hand-raised `OSError("...")`; stores wanting a legible message should raise
+    `FileStoreError`, whose text is preserved. What matters here is that the
+    tool still returns rather than raising.
+    """
+    monkeypatch.chdir(tmp_path)
+    failing_store("resolve", OSError("connection reset by peer"))
+
+    result = _run_either(tool_cls, tool_cls())
+
+    assert "OSError" in result
+    assert "store failed" in result
+
+
+def test_a_store_failure_does_not_leak_an_absolute_path(
+    failing_store, tmp_path, monkeypatch
+):
+    """The store-failure path is agent-visible, so it gets the same redaction."""
+    monkeypatch.chdir(tmp_path)
+    failing_store("resolve", OSError(2, "No such file", str(tmp_path / "secret.txt")))
+
+    result = FileWriterTool()._run(filename="a.txt", content="x", overwrite=True)
+
     assert str(tmp_path) not in result

@@ -1,7 +1,7 @@
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field, PrivateAttr
 
-from crewai_tools.file_storage import FileStore, resolve_file_store
+from crewai_tools.file_storage import FileStore, FileStoreError, resolve_file_store
 from crewai_tools.security.safe_path import (
     format_error_for_display,
     format_sandbox_error,
@@ -111,6 +111,28 @@ class FileWriterTool(BaseTool):
         overwrite: str | bool = False,
     ) -> str:
         """Write *content* to *filename*, confined to the tool's sandbox."""
+        try:
+            return self._write(filename, content, directory, overwrite)
+        except (FileStoreError, OSError) as e:
+            # A store can fail for reasons the local filesystem never had: an
+            # unreachable endpoint, a size ceiling. Every other exit from this
+            # tool is an agent-visible string, and raising here would kill the
+            # agent's step rather than let it react, so this one is too. It
+            # also covers the calls with no handler of their own — exists() and
+            # the store's own path labelling — which is why it carries no path.
+            return (
+                f"An error occurred while writing to the file: the "
+                f"{self._store.label} store failed. {format_error_for_display(e)}"
+            )
+
+    def _write(
+        self,
+        filename: str,
+        content: str,
+        directory: str | None,
+        overwrite: str | bool,
+    ) -> str:
+        """Do the write. Wrapped by :meth:`_run`, which reports store failures."""
         directory = directory or "./"
 
         try:
