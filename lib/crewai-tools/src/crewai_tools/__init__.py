@@ -80,6 +80,10 @@ from crewai_tools.tools.e2b_sandbox_tool import (
     E2BFileTool,
     E2BPythonTool,
 )
+from crewai_tools.tools.llm_sandbox_tool import (
+    DEFAULT_RUNTIME_CONFIGS,
+    LLMSandboxTool,
+)
 from crewai_tools.tools.exa_tools.exa_search_tool import EXASearchTool, ExaSearchTool
 from crewai_tools.tools.file_read_tool.file_read_tool import FileReadTool
 from crewai_tools.tools.file_writer_tool.file_writer_tool import FileWriterTool
@@ -262,8 +266,10 @@ __all__ = [
     "DirectorySearchTool",
     "E2BExecTool",
     "E2BFileTool",
+    "DEFAULT_RUNTIME_CONFIGS",
     "E2BPythonTool",
     "EXASearchTool",
+    "LLMSandboxTool",
     "EnterpriseActionTool",
     "ExaSearchTool",
     "FileCompressorTool",

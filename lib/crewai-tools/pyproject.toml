@@ -26,6 +26,9 @@ Documentation = "https://docs.crewai.com"
 
 
 [project.optional-dependencies]
+llm-sandbox = [
+    "llm-sandbox[docker]>=0.3.43",
+]
 scrapfly-sdk = [
     "scrapfly-sdk>=0.8.19",
 ]
