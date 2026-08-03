@@ -118,6 +118,7 @@ from crewai.events.types.task_events import (
     TaskStartedEvent,
 )
 from crewai.events.types.tool_usage_events import (
+    ToolFailureDetectedEvent,
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
@@ -178,6 +179,7 @@ EventTypes = (
     | AgentExecutionErrorEvent
     | ToolUsageFinishedEvent
     | ToolUsageErrorEvent
+    | ToolFailureDetectedEvent
     | ToolUsageStartedEvent
     | LLMCallStartedEvent
     | LLMCallCompletedEvent
