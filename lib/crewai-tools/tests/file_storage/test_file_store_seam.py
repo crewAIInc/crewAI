@@ -404,6 +404,55 @@ def test_reader_round_trips_through_model_dump(store, tmp_path, monkeypatch):
     assert rebuilt._run() == "dumped\n"
 
 
+# --- a store that fails while a tool is being built --------------------------
+#
+# `normalize` and `display` are specified as pure and non-raising, precisely
+# because the tools call them during construction — including when pydantic
+# rebuilds a serialized crew. A store that breaks that contract anyway must not
+# take a whole crew down with it, but the two derivations are not equal: the
+# declared default file is a convenience, `base_dir` is a containment
+# guarantee. So one degrades and one does not.
+
+
+def test_a_store_failing_on_the_declared_file_still_builds_the_tool(
+    failing_store, tmp_path, monkeypatch, caplog
+):
+    """Convenience: no default file rather than no crew."""
+    monkeypatch.chdir(tmp_path)
+    store = failing_store("display")
+
+    tool = FileReadTool(file_path="notes.txt")
+
+    assert tool._declared_realpath is None
+    assert tool._declared_label is None
+    assert "no default file" in caplog.text
+    # Still a working tool — explicit paths go through the store as usual.
+    store.failing = ""
+    store.files["/ws/other.txt"] = "still working\n"
+    assert tool._run(file_path="other.txt") == "still working\n"
+    # And omitting the path reports the missing default rather than raising.
+    assert "No file path provided" in tool._run()
+
+
+def test_a_store_failing_on_base_dir_is_not_swallowed(
+    failing_store, tmp_path, monkeypatch
+):
+    """Containment: a sandbox root that cannot be anchored must not be faked.
+
+    Degrading here would leave `base_dir` relative, so a later chdir could move
+    the sandbox — a weaker guarantee than the caller asked for, arrived at
+    silently. Failing loudly is the point.
+    """
+    monkeypatch.chdir(tmp_path)
+    failing_store("normalize")
+
+    with pytest.raises((FileStoreError, OSError)):
+        FileReadTool(base_dir="scoped")
+
+    with pytest.raises((FileStoreError, OSError)):
+        FileWriterTool(base_dir="scoped")
+
+
 # --- what the declared-path pin means across a rebuild -----------------------
 #
 # The pin is derived from what was *declared*, so whether it survives a rebuild

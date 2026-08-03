@@ -53,6 +53,14 @@ class FileStore(Protocol):
         construction, so it can recognize that path again later even if the
         working directory has since moved. Unlike :meth:`resolve` it never
         rejects: a path outside the sandbox still has a canonical form.
+
+        Must be a pure computation on the string: no I/O, no network, and no
+        raising. The tools call it while a tool is being constructed —
+        including when pydantic rebuilds a serialized crew — so a store that
+        reaches its backing service here turns a transient outage into a crew
+        that cannot load at all. Defer anything that can fail to
+        :meth:`resolve`, :meth:`open_text` or :meth:`write_text`, where the
+        tools report failures instead of propagating them.
         """
 
     def resolve_within(self, directory: str, filename: str) -> str:
@@ -71,7 +79,9 @@ class FileStore(Protocol):
         """Return a label for *resolved* that is safe to show an LLM.
 
         Must not leak absolute directory prefixes; the tools put the result
-        straight into agent-visible output.
+        straight into agent-visible output. Pure and non-raising for the same
+        reason as :meth:`normalize` — the reader labels its declared file at
+        construction time.
         """
 
     def exists(self, resolved: str) -> bool:

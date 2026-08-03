@@ -1,4 +1,5 @@
 from itertools import islice
+import logging
 from typing import Any
 
 from crewai.tools import BaseTool
@@ -9,6 +10,9 @@ from crewai_tools.security.safe_path import (
     format_error_for_display,
     format_sandbox_error,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class FileReadToolSchema(BaseModel):
@@ -141,13 +145,36 @@ class FileReadTool(BaseTool):
 
         # Anchor base_dir once, so the sandbox root cannot move under a later
         # chdir while the declared file stays pinned to its original location.
+        # Deliberately not guarded: anchoring is a containment guarantee, and
+        # quietly leaving the root relative would let a later chdir move the
+        # sandbox. A store that cannot normalize should fail loudly here rather
+        # than hand back a weaker sandbox than the caller asked for.
         if self.base_dir is not None:
             self.base_dir = store.normalize(self.base_dir)
 
         if self.file_path is not None:
-            self._declared_realpath = store.normalize(self.file_path, self.base_dir)
-            self._declared_label = store.display(self._declared_realpath, self.base_dir)
-            self.description = f"A tool that reads file content. The default file is {self._declared_label}, which is read when 'file_path' is omitted. You can also provide a different 'file_path' parameter to read another file, though reads are confined to the tool's allowed directory and a path that resolves outside it is rejected. Specify 'start_line' and 'line_count' to read specific parts of the file."
+            # Guarded, unlike base_dir above: the declared default is a
+            # convenience, so a store hiccuping while canonicalizing a filename
+            # should not stop a serialized crew from loading. The reader simply
+            # comes back without a default file, and any real problem resurfaces
+            # on the first read, where _run reports it instead of raising.
+            try:
+                self._declared_realpath = store.normalize(self.file_path, self.base_dir)
+                self._declared_label = store.display(
+                    self._declared_realpath, self.base_dir
+                )
+            except (FileStoreError, OSError):
+                logger.warning(
+                    "the %s store could not resolve the declared file %r; the "
+                    "tool will have no default file",
+                    getattr(store, "label", "configured"),
+                    self.file_path,
+                    exc_info=True,
+                )
+                self._declared_realpath = None
+                self._declared_label = None
+            else:
+                self.description = f"A tool that reads file content. The default file is {self._declared_label}, which is read when 'file_path' is omitted. You can also provide a different 'file_path' parameter to read another file, though reads are confined to the tool's allowed directory and a path that resolves outside it is rejected. Specify 'start_line' and 'line_count' to read specific parts of the file."
 
     def _resolve_path(self, file_path: str) -> str:
         """Resolve *file_path* and confirm the tool is allowed to read it.
