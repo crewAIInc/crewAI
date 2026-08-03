@@ -21,6 +21,25 @@ _CEL_MACROS_WITH_LOCAL_BINDINGS = frozenset(
 )
 
 
+def _find_cel_eval_error(value: Any) -> Exception | None:
+    from celpy.evaluation import CELEvalError
+
+    if isinstance(value, CELEvalError):
+        return value
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if (error := _find_cel_eval_error(key)) is not None:
+                return error
+            if (error := _find_cel_eval_error(item)) is not None:
+                return error
+        return None
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            if (error := _find_cel_eval_error(item)) is not None:
+                return error
+    return None
+
+
 def _stringify_cel_value(value: Any) -> str:
     from celpy.adapter import CELJSONEncoder
 
@@ -336,6 +355,8 @@ class Expression:
                 Expression._compile_cel(expression, environment=environment)
             )
             result = program.evaluate(cast(Context, json_to_cel(context)))
+            if (eval_error := _find_cel_eval_error(result)) is not None:
+                raise eval_error
             return json.loads(json.dumps(result, cls=CELJSONEncoder))
         except Exception as e:
             raise ExpressionError(
