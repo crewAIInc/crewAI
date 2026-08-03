@@ -20,6 +20,7 @@ from crewai_cli.input_prompt import (
 )
 from crewai_cli.utils import (
     build_env_with_all_tool_credentials,
+    ensure_project_id,
     is_dmn_mode_enabled,
 )
 from crewai_cli.version import get_crewai_tools_dependency, get_crewai_version
@@ -617,6 +618,10 @@ def run_crew(
             or declarative (JSON) crew. Layered over the definition's own
             defaults; missing required values are prompted for interactively.
     """
+    # Backfills projects created before project_id existed. Only here, in a
+    # command the user explicitly invoked - never from the SDK during kickoff.
+    ensure_project_id()
+
     # --definition is a pure override: run that flow directly.
     if definition is not None:
         _run_explicit_declarative_flow(

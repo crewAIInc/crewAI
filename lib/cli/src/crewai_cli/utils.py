@@ -9,7 +9,9 @@ from typing import Any
 
 import click
 from crewai_core.project import (
+    get_or_create_project_id as get_or_create_project_id,
     get_project_description as get_project_description,
+    get_project_id as get_project_id,
     get_project_name as get_project_name,
     get_project_version as get_project_version,
     parse_toml as parse_toml,
@@ -29,8 +31,11 @@ __all__ = [
     "build_env_with_tool_repository_credentials",
     "copy_template",
     "enable_prompt_line_editing",
+    "ensure_project_id",
     "fetch_and_json_env_file",
+    "get_or_create_project_id",
     "get_project_description",
+    "get_project_id",
     "get_project_name",
     "get_project_version",
     "is_dmn_mode_enabled",
@@ -46,6 +51,32 @@ __all__ = [
 
 console = Console()
 _TEMPLATE_TOKEN_RE = re.compile(r"{{([a-zA-Z_][a-zA-Z0-9_]*)}}")
+
+
+def ensure_project_id(pyproject_path: str | Path = "pyproject.toml") -> str | None:
+    """Return the project's id, minting one and telling the user if it was added.
+
+    Safe to call from any CLI command: returns None rather than raising when
+    there is no project, or when ``pyproject.toml`` is not writable.
+
+    Args:
+        pyproject_path: Path to the project's ``pyproject.toml``.
+
+    Returns:
+        The project id, or None if one could not be read or created.
+    """
+    project_id, created = get_or_create_project_id(pyproject_path)
+
+    if created:
+        console.print(
+            f"Added [bold]project_id[/bold] to {pyproject_path} under "
+            # Escaped: Rich would otherwise parse [tool.crewai] as a style tag.
+            r"[bold]\[tool.crewai][/bold] so this project's runs and traces stay "
+            "linked. Commit it to share that link with your team.",
+            style="dim",
+        )
+
+    return project_id
 
 
 def is_dmn_mode_enabled() -> bool:

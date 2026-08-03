@@ -6,6 +6,7 @@ from functools import reduce
 from pathlib import Path, PureWindowsPath
 import sys
 from typing import Any
+import uuid
 
 from rich.console import Console
 import tomli
@@ -221,3 +222,121 @@ def get_project_description(
     return _get_project_attribute(
         pyproject_path, ["project", "description"], require=require
     )
+
+
+_PROJECT_ID_KEY = "project_id"
+
+
+def get_project_id(pyproject_path: str | Path = "pyproject.toml") -> str | None:
+    """Return ``[tool.crewai].project_id`` if the project has one.
+
+    Read-only and safe to call from library code: it never creates or modifies
+    anything. Use this everywhere except the CLI commands that are allowed to
+    mint an id (see :func:`get_or_create_project_id`).
+
+    Args:
+        pyproject_path: Path to the project's ``pyproject.toml``.
+
+    Returns:
+        The project id, or None when the file is missing, unreadable, or has
+        no id configured.
+    """
+    try:
+        pyproject_data = read_toml(pyproject_path)
+    except (OSError, tomli.TOMLDecodeError):
+        return None
+
+    project_id = get_crewai_project_config(pyproject_data).get(_PROJECT_ID_KEY)
+    return project_id if isinstance(project_id, str) and project_id else None
+
+
+def get_or_create_project_id(
+    pyproject_path: str | Path = "pyproject.toml",
+) -> tuple[str | None, bool]:
+    """Return the project's id, minting and persisting one if absent.
+
+    Writes ``project_id`` into the ``[tool.crewai]`` table so it is committed
+    with the repository. That makes it stable across machines, teammates, CI,
+    and containers - unlike a machine- or user-derived identifier.
+
+    Only CLI commands the user explicitly invoked should call this. Library
+    code must use :func:`get_project_id` instead; silently rewriting a user's
+    ``pyproject.toml`` during ``Crew.kickoff()`` would be surprising.
+
+    Args:
+        pyproject_path: Path to the project's ``pyproject.toml``.
+
+    Returns:
+        A ``(project_id, created)`` tuple. ``created`` is True only when an id
+        was minted and written on this call, so callers can tell the user. Both
+        values are ``(None, False)`` when the file is missing or not writable -
+        this is best-effort and never raises.
+    """
+    existing = get_project_id(pyproject_path)
+    if existing:
+        return existing, False
+
+    path = Path(pyproject_path)
+    if not path.is_file():
+        return None, False
+
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError:
+        return None, False
+
+    project_id = str(uuid.uuid4())
+    updated = _insert_project_id(content, project_id)
+    if updated is None:
+        return None, False
+
+    try:
+        path.write_text(updated, encoding="utf-8")
+    except OSError:
+        # Read-only checkout, permissions, container FS - not worth failing over.
+        return None, False
+
+    return project_id, True
+
+
+def _insert_project_id(content: str, project_id: str) -> str | None:
+    """Add ``project_id`` to the ``[tool.crewai]`` table in TOML source text.
+
+    Edits the raw text rather than round-tripping through a TOML writer so
+    formatting, ordering, and comments in the rest of the file are preserved.
+
+    Args:
+        content: Full contents of a ``pyproject.toml``.
+        project_id: The id to insert.
+
+    Returns:
+        Updated file contents, or None if the edit could not be made safely.
+    """
+    lines = content.splitlines(keepends=True)
+    entry = f'{_PROJECT_ID_KEY} = "{project_id}"\n'
+
+    for index, line in enumerate(lines):
+        if line.strip() != "[tool.crewai]":
+            continue
+
+        # Insert at the end of the table, before the next table header, so the
+        # key cannot land inside a different section.
+        insert_at = len(lines)
+        for offset in range(index + 1, len(lines)):
+            if lines[offset].lstrip().startswith("["):
+                insert_at = offset
+                break
+
+        # Step back over trailing blank lines so the key stays in the table.
+        while insert_at > index + 1 and not lines[insert_at - 1].strip():
+            insert_at -= 1
+
+        if insert_at > 0 and not lines[insert_at - 1].endswith("\n"):
+            lines[insert_at - 1] += "\n"
+
+        lines.insert(insert_at, entry)
+        return "".join(lines)
+
+    # No [tool.crewai] table: append one rather than guessing where it belongs.
+    suffix = "" if content.endswith("\n") or not content else "\n"
+    return f"{content}{suffix}\n[tool.crewai]\n{entry}"
