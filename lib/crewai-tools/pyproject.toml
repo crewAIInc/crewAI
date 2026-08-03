@@ -115,7 +115,12 @@ rag = [
     "lxml>=6.1.0,<7",  # 6.1.0+ required for GHSA-vfmq-68hx-4jfw (XXE in iterparse)
 ]
 xml = [
-    "unstructured[local-inference, all-docs]>=0.17.2"
+    "unstructured[local-inference, all-docs]>=0.17.2",
+    # unstructured allows nltk>=3.9.2, but <3.10.0 has GHSA-qvv7-cg9c-w4x3
+    # (DNS-rebinding SSRF bypass), GHSA-fg7f-2386-8897 (ReDoS) and
+    # GHSA-xh95-f55m-82fw (path traversal). Declared here, not only as a uv
+    # override, so consumers installing crewai-tools[xml] get the fixed version.
+    "nltk>=3.10.0",
 ]
 oxylabs = [
     "oxylabs==2.0.0"
