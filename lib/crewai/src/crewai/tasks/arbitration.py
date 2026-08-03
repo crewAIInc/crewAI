@@ -254,9 +254,20 @@ class ArbitrationEngine:
         """Evaluate CEL boolean rules against the validated payload."""
         from typing import cast
 
-        from celpy import Environment
-        from celpy.adapter import CELJSONEncoder, json_to_cel
-        from celpy.evaluation import Context
+        try:
+            from celpy import Environment
+            from celpy.adapter import CELJSONEncoder, json_to_cel
+            from celpy.evaluation import Context
+        except Exception as exc:
+            return [
+                Violation(
+                    field="<rule>",
+                    constraint="rule_evaluation_error",
+                    message=f"Failed to import CEL runtime for rule evaluation: {exc}",
+                    expected="cel-python to be installed.",
+                    received=None,
+                )
+            ]
 
         violations: list[Violation] = []
         environment = Environment()
@@ -304,11 +315,11 @@ class ArbitrationGuardrail:
     Examples:
         >>> from pydantic import BaseModel, Field
         >>> class Deliverable(BaseModel):
-        ...     price: float = Field(le=180)
+        ...     price: float = Field(ge=0, le=180)
         ...     room_type: str
         >>> guardrail = ArbitrationGuardrail(
         ...     Deliverable,
-        ...     rules=["output.price <= 180.0"],
+        ...     rules=["output.price >= 0.0 && output.price <= 180.0"],
         ... )
         >>> task = Task(..., guardrail=guardrail)
     """
@@ -344,7 +355,7 @@ class ArbitrationGuardrail:
             parts.append(f"deadline={self.deadline.isoformat()}")
         return " ".join(parts)
 
-    def __call__(self, task_output: TaskOutput):
+    def __call__(self, task_output: TaskOutput) -> tuple[bool, Any]:
         """Arbitrate a task output against the configured hard constraints.
 
         Args:

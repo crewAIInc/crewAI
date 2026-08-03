@@ -353,18 +353,22 @@ from pydantic import BaseModel, Field
 from crewai import Task, ArbitrationGuardrail
 
 class HotelBooking(BaseModel):
-    price_per_night: float = Field(le=180)
+    price_per_night: float = Field(ge=0, le=180)
     room_type: str
     confirmation_code: str = Field(min_length=6)
+    non_smoking: bool = True
 
 escrow_guardrail = ArbitrationGuardrail(
     HotelBooking,
-    rules=["output.price_per_night <= 180.0"],
+    rules=[
+        "output.price_per_night >= 0.0 && output.price_per_night <= 180.0",
+        "output.non_smoking == true",
+    ],
     deadline=datetime.now(timezone.utc) + timedelta(hours=1),
 )
 
 booking_task = Task(
-    description="Book a non-smoking hotel room under $180/night",
+    description="Book a non-smoking hotel room at most $180/night",
     expected_output="JSON booking confirmation matching HotelBooking",
     agent=booking_agent,
     guardrail=escrow_guardrail,
@@ -372,7 +376,7 @@ booking_task = Task(
 ```
 
 Outcomes are deterministic: `APPROVED` when every hard constraint passes, or
-`DISPUTED` with field-level violations (invalid JSON, missing fields, failed
+`DISPUTED` with structured violations (invalid JSON, missing fields, failed
 rules, missed deadline). Use this as the release gate before marking a
 delegated task resolved or releasing funds on an external payment rail.
 
