@@ -463,6 +463,7 @@ def test_anthropic_message_formatting(anthropic_llm, system_message, user_messag
         anthropic_llm._format_messages_for_anthropic([{"invalid": "message"}])
 
 
+@pytest.mark.vcr()
 def test_deepseek_r1_with_open_router():
     if not os.getenv("OPEN_ROUTER_API_KEY"):
         pytest.skip("OPEN_ROUTER_API_KEY not set; skipping test.")

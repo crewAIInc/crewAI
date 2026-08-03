@@ -47,7 +47,7 @@ class PendingFeedbackContext:
             method_output={"title": "Draft", "body": "..."},
             message="Please review and approve or reject:",
             emit=["approved", "rejected"],
-            llm="gpt-4o-mini",
+            llm="gpt-5.4-mini",
         )
         ```
     """

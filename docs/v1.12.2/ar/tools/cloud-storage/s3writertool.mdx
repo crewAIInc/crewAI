@@ -1,0 +1,151 @@
+---
+title: أداة كتابة S3
+description: تمكّن `S3WriterTool` وكلاء CrewAI من كتابة المحتوى إلى ملفات في حاويات Amazon S3.
+icon: aws
+mode: "wide"
+---
+
+# `S3WriterTool`
+
+## الوصف
+
+صُممت `S3WriterTool` لكتابة المحتوى إلى ملفات في حاويات Amazon S3. تتيح هذه الأداة لوكلاء CrewAI إنشاء أو تحديث الملفات في S3، مما يجعلها مثالية لسير العمل الذي يتطلب تخزين البيانات أو حفظ ملفات الإعداد أو حفظ أي محتوى آخر في تخزين AWS S3.
+
+## التثبيت
+
+لاستخدام هذه الأداة، تحتاج إلى تثبيت التبعيات المطلوبة:
+
+```shell
+uv add boto3
+```
+
+## خطوات البدء
+
+لاستخدام `S3WriterTool` بفعالية، اتبع الخطوات التالية:
+
+1. **تثبيت التبعيات**: ثبّت الحزم المطلوبة باستخدام الأمر أعلاه.
+2. **إعداد بيانات اعتماد AWS**: عيّن بيانات اعتماد AWS كمتغيرات بيئة.
+3. **تهيئة الأداة**: أنشئ مثيلاً من الأداة.
+4. **تحديد مسار S3 والمحتوى**: قدّم مسار S3 حيث تريد كتابة الملف والمحتوى المراد كتابته.
+
+## مثال
+
+يوضح المثال التالي كيفية استخدام `S3WriterTool` لكتابة محتوى إلى ملف في حاوية S3:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.s3 import S3WriterTool
+
+# Initialize the tool
+s3_writer_tool = S3WriterTool()
+
+# Define an agent that uses the tool
+file_writer_agent = Agent(
+    role="File Writer",
+    goal="Write content to files in S3 buckets",
+    backstory="An expert in storing and managing files in cloud storage.",
+    tools=[s3_writer_tool],
+    verbose=True,
+)
+
+# Example task to write a report
+write_task = Task(
+    description="Generate a summary report of the quarterly sales data and save it to {my_bucket}.",
+    expected_output="Confirmation that the report was successfully saved to S3.",
+    agent=file_writer_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[file_writer_agent], tasks=[write_task])
+result = crew.kickoff(inputs={"my_bucket": "s3://my-bucket/reports/quarterly-summary.txt"})
+```
+
+## المعاملات
+
+تقبل `S3WriterTool` المعاملات التالية عند استخدامها من قبل وكيل:
+
+- **file_path**: مطلوب. مسار ملف S3 بتنسيق `s3://bucket-name/file-name`.
+- **content**: مطلوب. المحتوى المراد كتابته في الملف.
+
+## بيانات اعتماد AWS
+
+تتطلب الأداة بيانات اعتماد AWS للوصول إلى حاويات S3. يمكنك إعداد هذه البيانات باستخدام متغيرات البيئة:
+
+- **CREW_AWS_REGION**: منطقة AWS حيث تقع حاوية S3. القيمة الافتراضية `us-east-1`.
+- **CREW_AWS_ACCESS_KEY_ID**: معرّف مفتاح الوصول لـ AWS.
+- **CREW_AWS_SEC_ACCESS_KEY**: مفتاح الوصول السري لـ AWS.
+
+## الاستخدام
+
+عند استخدام `S3WriterTool` مع وكيل، سيحتاج الوكيل لتقديم كل من مسار ملف S3 والمحتوى المراد كتابته:
+
+```python Code
+# Example of using the tool with an agent
+file_writer_agent = Agent(
+    role="File Writer",
+    goal="Write content to files in S3 buckets",
+    backstory="An expert in storing and managing files in cloud storage.",
+    tools=[s3_writer_tool],
+    verbose=True,
+)
+
+# Create a task for the agent to write a specific file
+write_config_task = Task(
+    description="""
+    Create a configuration file with the following database settings:
+    - host: db.example.com
+    - port: 5432
+    - username: app_user
+    - password: secure_password
+
+    Save this configuration as JSON to {my_bucket}.
+    """,
+    expected_output="Confirmation that the configuration file was successfully saved to S3.",
+    agent=file_writer_agent,
+)
+
+# Run the task
+crew = Crew(agents=[file_writer_agent], tasks=[write_config_task])
+result = crew.kickoff(inputs={"my_bucket": "s3://my-bucket/config/db-config.json"})
+```
+
+## معالجة الأخطاء
+
+تتضمن `S3WriterTool` معالجة أخطاء لمشكلات S3 الشائعة:
+
+- تنسيق مسار S3 غير صالح
+- مشكلات الأذونات (مثل عدم وجود صلاحية كتابة للحاوية)
+- مشكلات بيانات اعتماد AWS
+- الحاوية غير موجودة
+
+عند حدوث خطأ، ستعيد الأداة رسالة خطأ تتضمن تفاصيل حول المشكلة.
+
+## تفاصيل التنفيذ
+
+تستخدم `S3WriterTool` حزمة AWS SDK لـ Python (boto3) للتفاعل مع S3:
+
+```python Code
+class S3WriterTool(BaseTool):
+    name: str = "S3 Writer Tool"
+    description: str = "Writes content to a file in Amazon S3 given an S3 file path"
+
+    def _run(self, file_path: str, content: str) -> str:
+        try:
+            bucket_name, object_key = self._parse_s3_path(file_path)
+
+            s3 = boto3.client(
+                's3',
+                region_name=os.getenv('CREW_AWS_REGION', 'us-east-1'),
+                aws_access_key_id=os.getenv('CREW_AWS_ACCESS_KEY_ID'),
+                aws_secret_access_key=os.getenv('CREW_AWS_SEC_ACCESS_KEY')
+            )
+
+            s3.put_object(Bucket=bucket_name, Key=object_key, Body=content.encode('utf-8'))
+            return f"Successfully wrote content to {file_path}"
+        except ClientError as e:
+            return f"Error writing file to S3: {str(e)}"
+```
+
+## الخلاصة
+
+توفر `S3WriterTool` طريقة مباشرة لكتابة المحتوى إلى ملفات في حاويات Amazon S3. من خلال تمكين الوكلاء من إنشاء وتحديث الملفات في S3، تسهّل سير العمل الذي يتطلب تخزين ملفات سحابي. هذه الأداة مفيدة بشكل خاص لحفظ البيانات وإدارة الإعدادات وتوليد التقارير وأي مهمة تتضمن تخزين المعلومات في تخزين AWS S3.

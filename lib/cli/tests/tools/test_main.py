@@ -54,6 +54,10 @@ def test_create_success(mock_subprocess, capsys, tool_command):
         )
         assert os.path.isfile(os.path.join("test_tool", "src", "test_tool", "tool.py"))
 
+        with open(os.path.join("test_tool", "pyproject.toml"), "r") as f:
+            content = f.read()
+            assert '"crewai[tools]>=1.15.0,<2.0.0"' in content
+
         with open(os.path.join("test_tool", "src", "test_tool", "tool.py"), "r") as f:
             content = f.read()
             assert "class TestTool" in content
@@ -157,14 +161,16 @@ def test_install_api_error(mock_get, capsys, tool_command):
     mock_get.assert_called_once_with("error-tool")
 
 
-@patch("crewai_cli.tools.main.git.Repository.fetch")
-@patch("crewai_cli.tools.main.git.Repository.is_synced", return_value=False)
-def test_publish_when_not_in_sync(mock_is_synced, mock_fetch, capsys, tool_command):
+@patch("crewai_cli.tools.main.git.Repository")
+def test_publish_when_not_in_sync(mock_repository, capsys, tool_command):
+    mock_repository.return_value.is_synced.return_value = False
+
     with raises(SystemExit):
         tool_command.publish(is_public=True)
 
     output = capsys.readouterr().out
     assert "Local changes need to be resolved before publishing" in output
+    mock_repository.return_value.is_synced.assert_called_once_with()
 
 
 @patch("crewai_cli.tools.main.get_project_name", return_value="sample-tool")

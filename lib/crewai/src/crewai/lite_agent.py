@@ -72,6 +72,12 @@ from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.tools.tool_failure import (
+    ToolExecutionFailedError,
+    ToolFailurePolicy,
+    ToolFailureRecord,
+    tool_failure_collector,
+)
 from crewai.utilities.agent_utils import (
     enforce_rpm_limit,
     format_message_for_llm,
@@ -222,6 +228,14 @@ class LiteAgent(FlowTrackable, BaseModel):
     max_iterations: int = Field(
         default=15, description="Maximum number of iterations for tool usage"
     )
+    tool_failure_policy: ToolFailurePolicy | None = Field(
+        default=None,
+        description=(
+            "How to react when a tool runs to completion but reports that it "
+            "failed. None falls back to 'warn'. See "
+            "BaseAgent.tool_failure_policy."
+        ),
+    )
     max_execution_time: int | None = Field(
         default=None, description=". Maximum execution time in seconds"
     )
@@ -289,6 +303,8 @@ class LiteAgent(FlowTrackable, BaseModel):
     _key: str = PrivateAttr(default_factory=lambda: str(uuid.uuid4()))
     _messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     _iterations: int = PrivateAttr(default=0)
+    _tool_failures: list[ToolFailureRecord] = PrivateAttr(default_factory=list)
+    _kickoff_failures: list[ToolFailureRecord] = PrivateAttr(default_factory=list)
     _guardrail: GuardrailCallable | None = PrivateAttr(default=None)
     _guardrail_retry_count: int = PrivateAttr(default=0)
     _callbacks: list[TokenCalcHandler] = PrivateAttr(default_factory=list)
@@ -390,7 +406,10 @@ class LiteAgent(FlowTrackable, BaseModel):
         if self.memory is True:
             from crewai.memory.unified_memory import Memory
 
-            object.__setattr__(self, "_memory", Memory())
+            memory_kwargs: dict[str, Any] = {}
+            if self.llm is not None:
+                memory_kwargs["llm"] = self.llm
+            object.__setattr__(self, "_memory", Memory(**memory_kwargs))
         elif self.memory is not None and self.memory is not False:
             object.__setattr__(self, "_memory", self.memory)
         else:
@@ -446,6 +465,14 @@ class LiteAgent(FlowTrackable, BaseModel):
     def _original_role(self) -> str:
         """Return the original role for compatibility with tool interfaces."""
         return self.role
+
+    @property
+    def last_tool_failures(self) -> list[ToolFailureRecord]:
+        """Tool failures recorded during the most recent kickoff.
+
+        Mirrors ``BaseAgent.last_tool_failures`` so the shared helper works here.
+        """
+        return list(self._tool_failures)
 
     @property
     def before_llm_call_hooks(
@@ -516,15 +543,34 @@ class LiteAgent(FlowTrackable, BaseModel):
         try:
             self._iterations = 0
             self.tools_results = []
+            self._tool_failures = []
 
             self._messages = self._format_messages(
                 messages, response_format=response_format, input_files=input_files
             )
             self._inject_memory_context()
 
-            return self._execute_core(
-                agent_info=agent_info, response_format=response_format
+            with tool_failure_collector() as kickoff_failures:
+                self._kickoff_failures = kickoff_failures
+                return self._execute_core(
+                    agent_info=agent_info, response_format=response_format
+                )
+
+        except ToolExecutionFailedError as e:
+            # A deliberate stop, not a defect: no bug-report prompt.
+            if self.verbose:
+                PRINTER.print(
+                    content=f"Agent stopped: {e}",
+                    color="red",
+                )
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionErrorEvent(
+                    agent_info=agent_info,
+                    error=str(e),
+                ),
             )
+            raise
 
         except Exception as e:
             if self.verbose:
@@ -688,6 +734,9 @@ class LiteAgent(FlowTrackable, BaseModel):
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
             messages=self._messages,
+            # Read from whichever agent the executor was given, or the records
+            # go missing: original_agent under kickoff, self when standalone.
+            tool_failures=list(self._kickoff_failures),
         )
 
         if self._guardrail is not None:
@@ -913,7 +962,9 @@ class LiteAgent(FlowTrackable, BaseModel):
                             tools=self._parsed_tools,
                             agent_key=self.key,
                             agent_role=self.role,
-                            agent=self.original_agent,
+                            # Fall back to self so a standalone LiteAgent still
+                            # resolves a policy and records failures.
+                            agent=self.original_agent or self,
                             crew=None,
                         )
                     except Exception as e:
@@ -926,6 +977,10 @@ class LiteAgent(FlowTrackable, BaseModel):
                     )
 
                 self._append_message(formatted_answer.text, role="assistant")
+            except ToolExecutionFailedError:
+                # tool_failure_policy="raise" asked for the run to stop.
+                raise
+
             except OutputParserError as e:
                 if self.verbose:
                     PRINTER.print(

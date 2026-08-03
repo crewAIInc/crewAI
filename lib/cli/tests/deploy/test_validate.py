@@ -110,6 +110,50 @@ def _run_without_import_check(root: Path) -> DeployValidator:
     return v
 
 
+def _scaffold_json_crew(root: Path, *, task_agent: str = "researcher") -> None:
+    (root / "pyproject.toml").write_text(
+        _make_pyproject(
+            name="json_crew",
+            extra='[tool.crewai]\ntype = "crew"\ndefinition = "crew.jsonc"',
+        )
+    )
+    (root / "uv.lock").write_text("# dummy uv lockfile\n")
+    agents_dir = root / "agents"
+    agents_dir.mkdir()
+    (agents_dir / "researcher.jsonc").write_text(
+        dedent(
+            """
+            {
+              "role": "Researcher",
+              "goal": "Research things",
+              "backstory": "Experienced researcher",
+              "llm": "openai/gpt-4o-mini"
+            }
+            """
+        ).strip()
+        + "\n"
+    )
+    (root / "crew.jsonc").write_text(
+        dedent(
+            f"""
+            {{
+              "name": "json_crew",
+              "agents": ["researcher"],
+              "tasks": [
+                {{
+                  "name": "research",
+                  "description": "Research https://example.com/a//b",
+                  "expected_output": "Findings",
+                  "agent": "{task_agent}"
+                }}
+              ]
+            }}
+            """
+        ).strip()
+        + "\n"
+    )
+
+
 @pytest.mark.parametrize(
     "project_name, expected",
     [
@@ -127,6 +171,71 @@ def test_valid_standard_crew_project_passes(tmp_path: Path) -> None:
     _scaffold_standard_crew(tmp_path)
     v = _run_without_import_check(tmp_path)
     assert v.ok, f"expected clean run, got {v.results}"
+
+
+def test_valid_json_crew_project_passes(tmp_path: Path) -> None:
+    _scaffold_json_crew(tmp_path)
+    v = DeployValidator(project_root=tmp_path)
+    v.run()
+    assert "invalid_crew_json" not in _codes(v)
+
+
+def test_json_task_agent_mismatch_is_error(tmp_path: Path) -> None:
+    _scaffold_json_crew(tmp_path, task_agent="missing_agent")
+    v = DeployValidator(project_root=tmp_path)
+    v.run()
+    finding = next(r for r in v.results if r.code == "invalid_crew_json")
+    assert finding.severity is Severity.ERROR
+    assert "missing_agent" in finding.detail
+
+
+def test_json_runtime_fields_are_deploy_errors(tmp_path: Path) -> None:
+    _scaffold_json_crew(tmp_path)
+    crew_path = tmp_path / "crew.jsonc"
+    crew_path.write_text(
+        crew_path.read_text().replace(
+            '"name": "json_crew",',
+            '"name": "json_crew",\n  "id": "00000000-0000-4000-8000-000000000000",',
+        )
+    )
+    v = DeployValidator(project_root=tmp_path)
+    v.run()
+    finding = next(r for r in v.results if r.code == "invalid_crew_json")
+    assert finding.severity is Severity.ERROR
+    assert "runtime-only" in finding.detail
+
+
+def test_json_crew_requires_agents_dir_without_classic_errors(tmp_path: Path) -> None:
+    _scaffold_json_crew(tmp_path)
+    for path in (tmp_path / "agents").iterdir():
+        path.unlink()
+    (tmp_path / "agents").rmdir()
+
+    v = DeployValidator(project_root=tmp_path)
+    v.run()
+
+    codes = _codes(v)
+    assert "missing_agents_dir" in codes
+    assert "missing_src_dir" not in codes
+    assert "missing_crew_py" not in codes
+    assert "missing_agents_yaml" not in codes
+    assert "missing_tasks_yaml" not in codes
+
+
+def test_json_crew_reports_project_metadata_before_invalid_json(
+    tmp_path: Path,
+) -> None:
+    _scaffold_json_crew(tmp_path)
+    (tmp_path / "uv.lock").unlink()
+    (tmp_path / "crew.jsonc").write_text('{"agents": ["researcher"], "tasks": []}\n')
+
+    v = DeployValidator(project_root=tmp_path)
+    v.run()
+
+    codes = _codes(v)
+    assert "missing_lockfile" in codes
+    assert "invalid_crew_json" in codes
+    assert "missing_src_dir" not in codes
 
 
 def test_missing_pyproject_errors(tmp_path: Path) -> None:
@@ -410,7 +519,7 @@ def test_modern_crewai_pin_does_not_warn(tmp_path: Path) -> None:
 
 def test_create_crew_aborts_on_validation_error(tmp_path: Path) -> None:
     """`crewai deploy create` must not contact the API when validation fails."""
-    from unittest.mock import MagicMock, patch as mock_patch
+    from unittest.mock import patch as mock_patch
 
     from crewai_cli.deploy.main import DeployCommand
 
@@ -419,11 +528,64 @@ def test_create_crew_aborts_on_validation_error(tmp_path: Path) -> None:
         mock_patch("crewai_cli.deploy.main.get_project_name", return_value="p"),
         mock_patch("crewai_cli.command.PlusAPI") as mock_api,
         mock_patch(
-            "crewai_cli.deploy.main.validate_project"
-        ) as mock_validate,
+            "crewai_cli.deploy.main._prepare_project_for_deploy",
+            return_value=False,
+        ),
     ):
-        mock_validate.return_value = MagicMock(ok=False)
         cmd = DeployCommand()
         cmd.create_crew()
         assert not cmd.plus_api_client.create_crew.called
         del mock_api  # silence unused-var lint
+
+
+def test_is_json_crew_defers_to_declared_flow_type(tmp_path):
+    """A flow project with a stray crew.jsonc must validate as a flow."""
+    (tmp_path / "crew.jsonc").write_text("{}")
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "demo"\nversion = "0.1.0"\n\n'
+        '[tool.crewai]\ntype = "flow"\n'
+    )
+
+    assert DeployValidator(project_root=tmp_path)._is_json_crew is False
+
+
+def test_is_json_crew_true_for_declared_crew_definition(tmp_path):
+    (tmp_path / "crew.jsonc").write_text("{}")
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "demo"\nversion = "0.1.0"\n\n'
+        '[tool.crewai]\ntype = "crew"\ndefinition = "crew.jsonc"\n'
+    )
+
+    assert DeployValidator(project_root=tmp_path)._is_json_crew is True
+
+
+def test_is_json_crew_false_for_declared_crew_without_definition(tmp_path):
+    (tmp_path / "crew.jsonc").write_text("{}")
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "demo"\nversion = "0.1.0"\n\n'
+        '[tool.crewai]\ntype = "crew"\n'
+    )
+
+    assert DeployValidator(project_root=tmp_path)._is_json_crew is False
+
+
+def test_json_crew_non_string_definition_reports_invalid_definition(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "demo"\nversion = "0.1.0"\n\n'
+        '[tool.crewai]\ntype = "crew"\ndefinition = ["crew.jsonc"]\n'
+    )
+
+    v = DeployValidator(project_root=tmp_path)
+    v.run()
+
+    finding = next(r for r in v.results if r.code == "invalid_crew_definition")
+    assert finding.severity is Severity.ERROR
+    assert "must be a string" in finding.detail
+
+
+def test_is_json_crew_false_without_pyproject(tmp_path):
+    (tmp_path / "crew.jsonc").write_text("{}")
+
+    assert DeployValidator(project_root=tmp_path)._is_json_crew is False

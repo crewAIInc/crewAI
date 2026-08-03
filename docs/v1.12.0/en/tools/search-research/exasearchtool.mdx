@@ -1,0 +1,110 @@
+---
+title: "Exa Search Tool"
+description: "Search the web using the Exa Search API to find the most relevant results for any query, with options for full page content, highlights, and summaries."
+icon: "magnifying-glass"
+mode: "wide"
+---
+
+The `EXASearchTool` lets CrewAI agents search the web using the [Exa](https://exa.ai/) search API. It returns the most relevant results for any query, with options for full page content and AI-generated summaries.
+
+## Installation
+
+Install the CrewAI tools package:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Environment Variables
+
+Set your Exa API key as an environment variable:
+
+```bash
+export EXA_API_KEY='your_exa_api_key'
+```
+
+Get an API key from the [Exa dashboard](https://dashboard.exa.ai/api-keys).
+
+## Example Usage
+
+Here's how to use the `EXASearchTool` within a CrewAI agent:
+
+```python
+import os
+from crewai import Agent, Task, Crew
+from crewai_tools import EXASearchTool
+
+# Initialize the tool
+exa_tool = EXASearchTool()
+
+# Create an agent that uses the tool
+researcher = Agent(
+    role='Research Analyst',
+    goal='Find the latest information on any topic',
+    backstory='An expert researcher who finds the most relevant and up-to-date information.',
+    tools=[exa_tool],
+    verbose=True
+)
+
+# Create a task for the agent
+research_task = Task(
+    description='Find the top 3 recent breakthroughs in quantum computing.',
+    expected_output='A summary of the top 3 breakthroughs with source URLs.',
+    agent=researcher
+)
+
+# Form the crew and kick it off
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    verbose=True
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+## Configuration Options
+
+The `EXASearchTool` accepts the following parameters during initialization:
+
+- `type` (str, optional): The search type to use. Defaults to `"auto"`. Options: `"auto"`, `"instant"`, `"fast"`, `"deep"`.
+- `content` (bool, optional): Whether to include full page content in results. Defaults to `False`.
+- `summary` (bool, optional): Whether to include AI-generated summaries of each result. Requires `content=True`. Defaults to `False`.
+- `api_key` (str, optional): Your Exa API key. Falls back to the `EXA_API_KEY` environment variable if not provided.
+- `base_url` (str, optional): Custom API server URL. Falls back to the `EXA_BASE_URL` environment variable if not provided.
+
+When calling the tool (or when an agent invokes it), the following search parameters are available:
+
+- `search_query` (str): **Required**. The search query string.
+- `start_published_date` (str, optional): Filter results published after this date (ISO 8601 format, e.g. `"2024-01-01"`).
+- `end_published_date` (str, optional): Filter results published before this date (ISO 8601 format).
+- `include_domains` (list[str], optional): A list of domains to restrict the search to.
+
+## Advanced Usage
+
+You can configure the tool with custom parameters for richer results:
+
+```python
+# Get full page content with AI summaries
+exa_tool = EXASearchTool(
+    content=True,
+    summary=True,
+    type="deep"
+)
+
+# Use it in an agent
+agent = Agent(
+    role="Deep Researcher",
+    goal="Conduct thorough research with full content and summaries",
+    tools=[exa_tool]
+)
+```
+
+## Features
+
+- **Semantic Search**: Find results based on meaning, not just keywords
+- **Full Content Retrieval**: Get the full text of web pages alongside search results
+- **AI Summaries**: Get concise, AI-generated summaries of each result
+- **Date Filtering**: Limit results to specific time periods with published date filters
+- **Domain Filtering**: Restrict searches to specific domains

@@ -1,5 +1,8 @@
 import json
+import os
 import shutil
+import stat
+import sys
 import tempfile
 import unittest
 from datetime import datetime, timedelta
@@ -146,3 +149,55 @@ class TestSettings(unittest.TestCase):
 
         settings = Settings(config_path=self.config_path)
         self.assertIsNone(settings.tool_repository_username)
+
+
+class TestSettingsFilePermissions(unittest.TestCase):
+    """Regression tests: credentials in settings.json must not be world-readable."""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp())
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    @unittest.skipIf(sys.platform == "win32", "POSIX permission semantics")
+    def test_dump_writes_owner_only_file(self):
+        config_path = self.test_dir / "settings.json"
+        old_umask = os.umask(0o022)
+        try:
+            settings = Settings(
+                config_path=config_path, tool_repository_password="hunter2"
+            )
+            settings.dump()
+        finally:
+            os.umask(old_umask)
+
+        mode = stat.S_IMODE(config_path.stat().st_mode)
+        self.assertEqual(mode, 0o600, f"expected 0o600, got {oct(mode)}")
+
+    @unittest.skipIf(sys.platform == "win32", "POSIX permission semantics")
+    def test_dedicated_config_dir_is_owner_only(self):
+        config_path = self.test_dir / "crewai" / "settings.json"
+        old_umask = os.umask(0o022)
+        try:
+            Settings(config_path=config_path, tool_repository_username="u")
+        finally:
+            os.umask(old_umask)
+
+        mode = stat.S_IMODE(config_path.parent.stat().st_mode)
+        self.assertEqual(mode, 0o700, f"expected 0o700, got {oct(mode)}")
+
+    @unittest.skipIf(sys.platform == "win32", "POSIX permission semantics")
+    def test_shared_fallback_dir_is_not_chmodded(self):
+        """The system temp dir (a fallback parent) must never be globally chmod'd."""
+        from crewai_core.settings import _ensure_dir_mode
+
+        tmp_root = Path(tempfile.gettempdir())
+        before = stat.S_IMODE(tmp_root.stat().st_mode)
+        _ensure_dir_mode(tmp_root)
+        after = stat.S_IMODE(tmp_root.stat().st_mode)
+        self.assertEqual(before, after)
+
+
+if __name__ == "__main__":
+    unittest.main()

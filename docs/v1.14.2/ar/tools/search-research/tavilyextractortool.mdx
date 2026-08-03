@@ -1,0 +1,140 @@
+---
+title: "أداة استخراج Tavily"
+description: "استخراج محتوى منظم من صفحات الويب باستخدام Tavily API"
+icon: square-poll-horizontal
+mode: "wide"
+---
+
+تتيح أداة `TavilyExtractorTool` لوكلاء CrewAI استخراج محتوى منظم من صفحات الويب باستخدام Tavily API. يمكنها معالجة عناوين URL مفردة أو قوائم من عناوين URL وتوفر خيارات للتحكم في عمق الاستخراج وتضمين الصور.
+
+## التثبيت
+
+لاستخدام `TavilyExtractorTool`، تحتاج إلى تثبيت مكتبة `tavily-python`:
+
+```shell
+pip install 'crewai[tools]' tavily-python
+```
+
+تحتاج أيضاً إلى تعيين مفتاح Tavily API كمتغير بيئة:
+
+```bash
+export TAVILY_API_KEY='your-tavily-api-key'
+```
+
+## مثال على الاستخدام
+
+إليك كيفية تهيئة واستخدام `TavilyExtractorTool` مع وكيل CrewAI:
+
+```python
+import os
+from crewai import Agent, Task, Crew
+from crewai_tools import TavilyExtractorTool
+
+# Ensure TAVILY_API_KEY is set in your environment
+# os.environ["TAVILY_API_KEY"] = "YOUR_API_KEY"
+
+# Initialize the tool
+tavily_tool = TavilyExtractorTool()
+
+# Create an agent that uses the tool
+extractor_agent = Agent(
+    role='Web Content Extractor',
+    goal='Extract key information from specified web pages',
+    backstory='You are an expert at extracting relevant content from websites using the Tavily API.',
+    tools=[tavily_tool],
+    verbose=True
+)
+
+# Define a task for the agent
+extract_task = Task(
+    description='Extract the main content from the URL https://example.com using basic extraction depth.',
+    expected_output='A JSON string containing the extracted content from the URL.',
+    agent=extractor_agent
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[extractor_agent],
+    tasks=[extract_task],
+    verbose=2
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+## خيارات التكوين
+
+تقبل أداة `TavilyExtractorTool` المعاملات التالية:
+
+- `urls` (Union[List[str], str]): **مطلوب**. سلسلة URL واحدة أو قائمة من سلاسل URL لاستخراج البيانات منها.
+- `include_images` (Optional[bool]): ما إذا كان يجب تضمين الصور في نتائج الاستخراج. الافتراضي هو `False`.
+- `extract_depth` (Literal["basic", "advanced"]): عمق الاستخراج. استخدم `"basic"` للاستخراج السريع السطحي أو `"advanced"` للاستخراج الأكثر شمولاً. الافتراضي هو `"basic"`.
+- `timeout` (int): الحد الأقصى للوقت بالثواني لانتظار إكمال طلب الاستخراج. الافتراضي هو `60`.
+
+## الاستخدام المتقدم
+
+### عناوين URL متعددة مع استخراج متقدم
+
+```python
+# Example with multiple URLs and advanced extraction
+multi_extract_task = Task(
+    description='Extract content from https://example.com and https://anotherexample.org using advanced extraction.',
+    expected_output='A JSON string containing the extracted content from both URLs.',
+    agent=extractor_agent
+)
+
+# Configure the tool with custom parameters
+custom_extractor = TavilyExtractorTool(
+    extract_depth='advanced',
+    include_images=True,
+    timeout=120
+)
+
+agent_with_custom_tool = Agent(
+    role="Advanced Content Extractor",
+    goal="Extract comprehensive content with images",
+    tools=[custom_extractor]
+)
+```
+
+### معاملات الأداة
+
+يمكنك تخصيص سلوك الأداة عن طريق تعيين المعاملات أثناء التهيئة:
+
+```python
+# Initialize with custom configuration
+extractor_tool = TavilyExtractorTool(
+    extract_depth='advanced',  # More comprehensive extraction
+    include_images=True,       # Include image results
+    timeout=90                 # Custom timeout
+)
+```
+
+## الميزات
+
+- **عنوان URL واحد أو متعدد**: استخراج المحتوى من عنوان URL واحد أو معالجة عناوين URL متعددة في طلب واحد
+- **عمق قابل للتكوين**: الاختيار بين أوضاع الاستخراج الأساسي (السريع) والمتقدم (الشامل)
+- **دعم الصور**: تضمين الصور اختيارياً في نتائج الاستخراج
+- **مخرجات منظمة**: إرجاع JSON منسّق يحتوي على المحتوى المستخرج
+- **معالجة الأخطاء**: معالجة قوية لمهلات الشبكة وأخطاء الاستخراج
+
+## تنسيق الاستجابة
+
+تُرجع الأداة سلسلة JSON تمثل البيانات المنظمة المستخرجة من عنوان (عناوين) URL المقدمة. يعتمد الهيكل الدقيق على محتوى الصفحات و `extract_depth` المستخدم.
+
+تشمل عناصر الاستجابة الشائعة:
+- **Title**: عنوان الصفحة
+- **Content**: المحتوى النصي الرئيسي للصفحة
+- **Images**: عناوين URL للصور والبيانات الوصفية (عند `include_images=True`)
+- **Metadata**: معلومات إضافية عن الصفحة مثل المؤلف والوصف وغيرها
+
+## حالات الاستخدام
+
+- **تحليل المحتوى**: استخراج وتحليل المحتوى من مواقع المنافسين
+- **البحث**: جمع بيانات منظمة من مصادر متعددة للتحليل
+- **ترحيل المحتوى**: استخراج المحتوى من المواقع الحالية للترحيل
+- **المراقبة**: الاستخراج المنتظم للمحتوى لاكتشاف التغييرات
+- **جمع البيانات**: الاستخراج المنهجي للمعلومات من مصادر الويب
+
+راجع [توثيق Tavily API](https://docs.tavily.com/docs/tavily-api/python-sdk#extract) للحصول على معلومات مفصلة حول هيكل الاستجابة والخيارات المتاحة.

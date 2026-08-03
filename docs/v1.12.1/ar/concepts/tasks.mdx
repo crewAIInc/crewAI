@@ -1,0 +1,1085 @@
+---
+title: المهام
+description: دليل مفصل حول إدارة وإنشاء المهام ضمن إطار عمل CrewAI.
+icon: list-check
+mode: "wide"
+---
+
+## نظرة عامة
+
+في إطار عمل CrewAI، المهمة (`Task`) هي تكليف محدد يُنجزه وكيل (`Agent`).
+
+توفر المهام جميع التفاصيل اللازمة للتنفيذ، مثل الوصف والوكيل المسؤول والأدوات المطلوبة والمزيد، مما يسهّل مجموعة واسعة من تعقيدات الإجراءات.
+
+يمكن أن تكون المهام في CrewAI تعاونية، تتطلب عمل وكلاء متعددين معًا. تتم إدارة ذلك من خلال خصائص المهمة ويتم تنسيقه بواسطة عملية Crew، مما يعزز العمل الجماعي والكفاءة.
+
+<Note type="info" title="تحسين المؤسسات: منشئ المهام المرئي">
+يتضمن CrewAI AMP منشئ مهام مرئي في Crew Studio يبسّط إنشاء المهام المعقدة وربطها. صمم تدفقات مهامك بصريًا واختبرها في الوقت الفعلي دون كتابة كود.
+
+![Task Builder Screenshot](/images/enterprise/crew-studio-interface.png)
+
+يتيح منشئ المهام المرئي:
+
+- إنشاء المهام بالسحب والإفلات
+- تبعيات المهام المرئية والتدفق
+- الاختبار والتحقق في الوقت الفعلي
+- المشاركة والتعاون بسهولة
+</Note>
+
+### تدفق تنفيذ المهام
+
+يمكن تنفيذ المهام بطريقتين:
+
+- **تسلسلي**: تُنفَّذ المهام بالترتيب الذي تم تعريفها به
+- **هرمي**: تُعيَّن المهام للوكلاء بناءً على أدوارهم وخبراتهم
+
+يتم تحديد تدفق التنفيذ عند إنشاء الفريق:
+
+```python Code
+crew = Crew(
+    agents=[agent1, agent2],
+    tasks=[task1, task2],
+    process=Process.sequential  # or Process.hierarchical
+)
+```
+
+## خصائص المهمة
+
+| الخاصية                               | المعاملات               | النوع                       | الوصف                                                                                                           |
+| :------------------------------------- | :---------------------- | :-------------------------- | :-------------------------------------------------------------------------------------------------------------- |
+| **الوصف**                              | `description`           | `str`                       | بيان واضح وموجز لما تستلزمه المهمة.                                                                             |
+| **المخرجات المتوقعة**                  | `expected_output`       | `str`                       | وصف مفصل لما يبدو عليه إتمام المهمة.                                                                           |
+| **الاسم** _(اختياري)_                  | `name`                  | `Optional[str]`             | معرّف اسمي للمهمة.                                                                                              |
+| **الوكيل** _(اختياري)_                 | `agent`                 | `Optional[BaseAgent]`       | الوكيل المسؤول عن تنفيذ المهمة.                                                                                 |
+| **الأدوات** _(اختياري)_                | `tools`                 | `List[BaseTool]`            | الأدوات/الموارد التي يقتصر الوكيل على استخدامها لهذه المهمة.                                                    |
+| **السياق** _(اختياري)_                 | `context`               | `Optional[List["Task"]]`    | مهام أخرى ستُستخدم مخرجاتها كسياق لهذه المهمة.                                                                 |
+| **التنفيذ غير المتزامن** _(اختياري)_   | `async_execution`       | `Optional[bool]`            | ما إذا كان يجب تنفيذ المهمة بشكل غير متزامن. الافتراضي False.                                                   |
+| **المدخلات البشرية** _(اختياري)_       | `human_input`           | `Optional[bool]`            | ما إذا كان يجب أن يراجع إنسان الإجابة النهائية للوكيل. الافتراضي False.                                          |
+| **Markdown** _(اختياري)_               | `markdown`              | `Optional[bool]`            | ما إذا كان يجب أن توجّه المهمة الوكيل لإعادة الإجابة النهائية بتنسيق Markdown. الافتراضي False.                  |
+| **الإعداد** _(اختياري)_                | `config`                | `Optional[Dict[str, Any]]`  | معاملات إعداد خاصة بالمهمة.                                                                                     |
+| **ملف المخرجات** _(اختياري)_           | `output_file`           | `Optional[str]`             | مسار الملف لتخزين مخرجات المهمة.                                                                                |
+| **إنشاء المجلد** _(اختياري)_           | `create_directory`      | `Optional[bool]`            | ما إذا كان يجب إنشاء المجلد لـ output_file إذا لم يكن موجودًا. الافتراضي True.                                   |
+| **مخرجات JSON** _(اختياري)_            | `output_json`           | `Optional[Type[BaseModel]]` | نموذج Pydantic لهيكلة مخرجات JSON.                                                                              |
+| **مخرجات Pydantic** _(اختياري)_        | `output_pydantic`       | `Optional[Type[BaseModel]]` | نموذج Pydantic لمخرجات المهمة.                                                                                  |
+| **دالة الاسترجاع** _(اختياري)_         | `callback`              | `Optional[Any]`             | دالة/كائن يُنفَّذ بعد اكتمال المهمة.                                                                           |
+| **حارس** _(اختياري)_                   | `guardrail`             | `Optional[Callable]`        | دالة للتحقق من مخرجات المهمة قبل الانتقال إلى المهمة التالية.                                                   |
+| **حراس** _(اختياري)_                   | `guardrails`            | `Optional[List[Callable]]`  | قائمة حراس للتحقق من مخرجات المهمة قبل الانتقال إلى المهمة التالية.                                             |
+| **أقصى محاولات الحارس** _(اختياري)_    | `guardrail_max_retries` | `Optional[int]`             | الحد الأقصى لعدد المحاولات عند فشل التحقق من الحارس. الافتراضي 3.                                               |
+
+<Note type="warning" title="مهمل: max_retries">
+  خاصية المهمة `max_retries` مهملة وستتم إزالتها في v1.0.0.
+  استخدم `guardrail_max_retries` بدلاً منها للتحكم في محاولات الإعادة عند فشل الحارس.
+</Note>
+
+## إنشاء المهام
+
+هناك طريقتان لإنشاء المهام في CrewAI: باستخدام **إعداد YAML (موصى به)** أو تعريفها **مباشرة في الكود**.
+
+### إعداد YAML (موصى به)
+
+يوفر استخدام إعداد YAML طريقة أنظف وأكثر قابلية للصيانة لتعريف المهام. نوصي بشدة باستخدام هذا النهج لتعريف المهام في مشاريع CrewAI.
+
+بعد إنشاء مشروع CrewAI كما هو موضح في قسم [التثبيت](/ar/installation)، انتقل إلى ملف `src/latest_ai_development/config/tasks.yaml` وعدّل القالب ليتوافق مع متطلبات مهامك المحددة.
+
+<Note>
+المتغيرات في ملفات YAML (مثل `{topic}`) سيتم استبدالها بالقيم من مدخلاتك عند تشغيل الفريق:
+```python Code
+crew.kickoff(inputs={'topic': 'AI Agents'})
+```
+</Note>
+
+إليك مثال على كيفية إعداد المهام باستخدام YAML:
+
+````yaml tasks.yaml
+research_task:
+  description: >
+    Conduct a thorough research about {topic}
+    Make sure you find any interesting and relevant information given
+    the current year is 2025.
+  expected_output: >
+    A list with 10 bullet points of the most relevant information about {topic}
+  agent: researcher
+
+reporting_task:
+  description: >
+    Review the context you got and expand each topic into a full section for a report.
+    Make sure the report is detailed and contains any and all relevant information.
+  expected_output: >
+    A fully fledge reports with the mains topics, each with a full section of information.
+    Formatted as markdown without '```'
+  agent: reporting_analyst
+  markdown: true
+  output_file: report.md
+````
+
+لاستخدام إعداد YAML هذا في كودك، أنشئ فئة فريق ترث من `CrewBase`:
+
+```python crew.py
+# src/latest_ai_development/crew.py
+
+from crewai import Agent, Crew, Process, Task
+from crewai.project import CrewBase, agent, crew, task
+from crewai_tools import SerperDevTool
+
+@CrewBase
+class LatestAiDevelopmentCrew():
+  """LatestAiDevelopment crew"""
+
+  @agent
+  def researcher(self) -> Agent:
+    return Agent(
+      config=self.agents_config['researcher'], # type: ignore[index]
+      verbose=True,
+      tools=[SerperDevTool()]
+    )
+
+  @agent
+  def reporting_analyst(self) -> Agent:
+    return Agent(
+      config=self.agents_config['reporting_analyst'], # type: ignore[index]
+      verbose=True
+    )
+
+  @task
+  def research_task(self) -> Task:
+    return Task(
+      config=self.tasks_config['research_task'] # type: ignore[index]
+    )
+
+  @task
+  def reporting_task(self) -> Task:
+    return Task(
+      config=self.tasks_config['reporting_task'] # type: ignore[index]
+    )
+
+  @crew
+  def crew(self) -> Crew:
+    return Crew(
+      agents=[
+        self.researcher(),
+        self.reporting_analyst()
+      ],
+      tasks=[
+        self.research_task(),
+        self.reporting_task()
+      ],
+      process=Process.sequential
+    )
+```
+
+<Note>
+  يجب أن تتطابق الأسماء المستخدمة في ملفات YAML (`agents.yaml` و `tasks.yaml`)
+  مع أسماء الدوال في كود Python الخاص بك.
+</Note>
+
+### تعريف مباشر في الكود (بديل)
+
+بدلاً من ذلك، يمكنك تعريف المهام مباشرة في كودك دون استخدام إعداد YAML:
+
+```python task.py
+from crewai import Task
+
+research_task = Task(
+    description="""
+        Conduct a thorough research about AI Agents.
+        Make sure you find any interesting and relevant information given
+        the current year is 2025.
+    """,
+    expected_output="""
+        A list with 10 bullet points of the most relevant information about AI Agents
+    """,
+    agent=researcher
+)
+
+reporting_task = Task(
+    description="""
+        Review the context you got and expand each topic into a full section for a report.
+        Make sure the report is detailed and contains any and all relevant information.
+    """,
+    expected_output="""
+        A fully fledge reports with the mains topics, each with a full section of information.
+    """,
+    agent=reporting_analyst,
+    markdown=True,  # Enable markdown formatting for the final output
+    output_file="report.md"
+)
+```
+
+<Tip>
+  حدد وكيلًا (`agent`) مباشرة للتعيين أو دع عملية CrewAI `hierarchical`
+  تقرر بناءً على الأدوار والتوفر وغيرها.
+</Tip>
+
+## مخرجات المهمة
+
+فهم مخرجات المهام أمر بالغ الأهمية لبناء سير عمل ذكاء اصطناعي فعال. يوفر CrewAI طريقة منظمة للتعامل مع نتائج المهام من خلال فئة `TaskOutput`، التي تدعم تنسيقات مخرجات متعددة ويمكن تمريرها بسهولة بين المهام.
+
+يتم تغليف مخرجات المهمة في إطار عمل CrewAI داخل فئة `TaskOutput`. توفر هذه الفئة طريقة منظمة للوصول إلى نتائج المهمة، بما في ذلك تنسيقات متنوعة مثل المخرجات الخام و JSON ونماذج Pydantic.
+
+بشكل افتراضي، سيتضمن `TaskOutput` المخرجات `raw` فقط. سيتضمن `TaskOutput` مخرجات `pydantic` أو `json_dict` فقط إذا تم إعداد كائن `Task` الأصلي مع `output_pydantic` أو `output_json` على التوالي.
+
+### خصائص مخرجات المهمة
+
+| الخاصية           | المعاملات       | النوع                      | الوصف                                                                                          |
+| :---------------- | :-------------- | :------------------------- | :------------------------------------------------------------------------------------------------- |
+| **الوصف**         | `description`   | `str`                      | وصف المهمة.                                                                                     |
+| **الملخص**        | `summary`       | `Optional[str]`            | ملخص المهمة، يُنشأ تلقائيًا من أول 10 كلمات من الوصف.                                           |
+| **الخام**         | `raw`           | `str`                      | المخرجات الخام للمهمة. هذا هو التنسيق الافتراضي للمخرجات.                                       |
+| **Pydantic**      | `pydantic`      | `Optional[BaseModel]`      | كائن نموذج Pydantic يمثل المخرجات المنظمة للمهمة.                                               |
+| **قاموس JSON**    | `json_dict`     | `Optional[Dict[str, Any]]` | قاموس يمثل مخرجات JSON للمهمة.                                                                  |
+| **الوكيل**        | `agent`         | `str`                      | الوكيل الذي نفذ المهمة.                                                                          |
+| **تنسيق المخرجات**| `output_format` | `OutputFormat`             | تنسيق مخرجات المهمة، مع خيارات تشمل RAW و JSON و Pydantic. الافتراضي هو RAW.                    |
+| **الرسائل**       | `messages`      | `list[LLMMessage]`         | الرسائل من آخر تنفيذ للمهمة.                                                                     |
+
+### دوال وخصائص المهمة
+
+| الدالة/الخاصية   | الوصف                                                                                         |
+| :-------------- | :------------------------------------------------------------------------------------------------ |
+| **json**        | تُعيد تمثيل سلسلة JSON لمخرجات المهمة إذا كان تنسيق المخرجات JSON.                              |
+| **to_dict**     | تحوّل مخرجات JSON و Pydantic إلى قاموس.                                                         |
+| **str**         | تُعيد التمثيل النصي لمخرجات المهمة، مع أولوية Pydantic ثم JSON ثم الخام.                         |
+
+### الوصول إلى مخرجات المهمة
+
+بمجرد تنفيذ المهمة، يمكن الوصول إلى مخرجاتها من خلال خاصية `output` لكائن `Task`. توفر فئة `TaskOutput` طرقًا متنوعة للتفاعل مع هذه المخرجات وعرضها.
+
+#### مثال
+
+```python Code
+# Example task
+task = Task(
+    description='Find and summarize the latest AI news',
+    expected_output='A bullet list summary of the top 5 most important AI news',
+    agent=research_agent,
+    tools=[search_tool]
+)
+
+# Execute the crew
+crew = Crew(
+    agents=[research_agent],
+    tasks=[task],
+    verbose=True
+)
+
+result = crew.kickoff()
+
+# Accessing the task output
+task_output = task.output
+
+print(f"Task Description: {task_output.description}")
+print(f"Task Summary: {task_output.summary}")
+print(f"Raw Output: {task_output.raw}")
+if task_output.json_dict:
+    print(f"JSON Output: {json.dumps(task_output.json_dict, indent=2)}")
+if task_output.pydantic:
+    print(f"Pydantic Output: {task_output.pydantic}")
+```
+
+## تنسيق مخرجات Markdown
+
+يتيح معامل `markdown` تنسيق Markdown تلقائي لمخرجات المهام. عند تعيينه إلى `True`، ستوجّه المهمة الوكيل لتنسيق الإجابة النهائية باستخدام صيغة Markdown الصحيحة.
+
+### استخدام تنسيق Markdown
+
+```python Code
+# Example task with markdown formatting enabled
+formatted_task = Task(
+    description="Create a comprehensive report on AI trends",
+    expected_output="A well-structured report with headers, sections, and bullet points",
+    agent=reporter_agent,
+    markdown=True  # Enable automatic markdown formatting
+)
+```
+
+عند تعيين `markdown=True`، سيتلقى الوكيل تعليمات إضافية لتنسيق المخرجات باستخدام:
+
+- `#` للعناوين
+- `**text**` للنص العريض
+- `*text*` للنص المائل
+- `-` أو `*` للقوائم النقطية
+- `` `code` `` للكود المضمّن
+- ` `language ``` لكتل الكود
+
+### إعداد YAML مع Markdown
+
+```yaml tasks.yaml
+analysis_task:
+  description: >
+    Analyze the market data and create a detailed report
+  expected_output: >
+    A comprehensive analysis with charts and key findings
+  agent: analyst
+  markdown: true # Enable markdown formatting
+  output_file: analysis.md
+```
+
+### فوائد مخرجات Markdown
+
+- **تنسيق متسق**: يضمن اتباع جميع المخرجات لاتفاقيات Markdown الصحيحة
+- **قابلية قراءة أفضل**: محتوى منظم مع عناوين وقوائم وتأكيد
+- **جاهز للتوثيق**: يمكن استخدام المخرجات مباشرة في أنظمة التوثيق
+- **توافق عبر المنصات**: Markdown مدعوم عالميًا
+
+<Note>
+  يتم إضافة تعليمات تنسيق Markdown تلقائيًا إلى موجّه المهمة
+  عند تعيين `markdown=True`، لذا لا تحتاج إلى تحديد متطلبات التنسيق
+  في وصف المهمة.
+</Note>
+
+## تبعيات المهام والسياق
+
+يمكن للمهام الاعتماد على مخرجات مهام أخرى باستخدام خاصية `context`. على سبيل المثال:
+
+```python Code
+research_task = Task(
+    description="Research the latest developments in AI",
+    expected_output="A list of recent AI developments",
+    agent=researcher
+)
+
+analysis_task = Task(
+    description="Analyze the research findings and identify key trends",
+    expected_output="Analysis report of AI trends",
+    agent=analyst,
+    context=[research_task]  # This task will wait for research_task to complete
+)
+```
+
+## حراس المهام
+
+توفر حراس المهام طريقة للتحقق من مخرجات المهام وتحويلها قبل
+تمريرها إلى المهمة التالية. تساعد هذه الميزة في ضمان جودة البيانات وتوفر
+تغذية راجعة للوكلاء عندما لا تستوفي مخرجاتهم معايير محددة.
+
+يدعم CrewAI نوعين من الحراس:
+
+1. **حراس قائمون على الدوال**: دوال Python مع منطق تحقق مخصص، تمنحك تحكمًا كاملاً في عملية التحقق وتضمن نتائج موثوقة وحتمية.
+
+2. **حراس قائمون على LLM**: أوصاف نصية تستخدم LLM الخاص بالوكيل للتحقق من المخرجات بناءً على معايير لغة طبيعية. مثالية لمتطلبات التحقق المعقدة أو الذاتية.
+
+### الحراس القائمون على الدوال
+
+لإضافة حارس قائم على الدوال إلى مهمة، قدم دالة تحقق من خلال معامل `guardrail`:
+
+```python Code
+from typing import Tuple, Union, Dict, Any
+from crewai import TaskOutput
+
+def validate_blog_content(result: TaskOutput) -> Tuple[bool, Any]:
+    """Validate blog content meets requirements."""
+    try:
+        # Check word count
+        word_count = len(result.raw.split())
+        if word_count > 200:
+            return (False, "Blog content exceeds 200 words")
+
+        # Additional validation logic here
+        return (True, result.raw.strip())
+    except Exception as e:
+        return (False, "Unexpected error during validation")
+
+blog_task = Task(
+    description="Write a blog post about AI",
+    expected_output="A blog post under 200 words",
+    agent=blog_agent,
+    guardrail=validate_blog_content  # Add the guardrail function
+)
+```
+
+### الحراس القائمون على LLM (أوصاف نصية)
+
+بدلاً من كتابة دوال تحقق مخصصة، يمكنك استخدام أوصاف نصية تستفيد من التحقق القائم على LLM. عندما تقدم سلسلة نصية لمعامل `guardrail` أو `guardrails`، ينشئ CrewAI تلقائيًا `LLMGuardrail` يستخدم LLM الخاص بالوكيل للتحقق من المخرجات بناءً على وصفك.
+
+**المتطلبات**:
+
+- يجب أن يكون للمهمة وكيل (`agent`) مُعيّن (يستخدم الحارس LLM الخاص بالوكيل)
+- قدم سلسلة نصية واضحة ووصفية تشرح معايير التحقق
+
+```python Code
+from crewai import Task
+
+# Single LLM-based guardrail
+blog_task = Task(
+    description="Write a blog post about AI",
+    expected_output="A blog post under 200 words",
+    agent=blog_agent,
+    guardrail="The blog post must be under 200 words and contain no technical jargon"
+)
+```
+
+الحراس القائمون على LLM مفيدون بشكل خاص لـ:
+
+- **منطق التحقق المعقد** الذي يصعب التعبير عنه برمجيًا
+- **المعايير الذاتية** مثل النبرة والأسلوب أو تقييمات الجودة
+- **متطلبات اللغة الطبيعية** التي يسهل وصفها أكثر من برمجتها
+
+سيقوم حارس LLM بما يلي:
+
+1. تحليل مخرجات المهمة مقابل وصفك
+2. إعادة `(True, output)` إذا امتثلت المخرجات للمعايير
+3. إعادة `(False, feedback)` مع تغذية راجعة محددة إذا فشل التحقق
+
+**مثال مع معايير تحقق مفصلة**:
+
+```python Code
+research_task = Task(
+    description="Research the latest developments in quantum computing",
+    expected_output="A comprehensive research report",
+    agent=researcher_agent,
+    guardrail="""
+    The research report must:
+    - Be at least 1000 words long
+    - Include at least 5 credible sources
+    - Cover both technical and practical applications
+    - Be written in a professional, academic tone
+    - Avoid speculation or unverified claims
+    """
+)
+```
+
+### حراس متعددون
+
+يمكنك تطبيق حراس متعددين على مهمة باستخدام معامل `guardrails`. تُنفَّذ الحراس المتعددون بالتسلسل، حيث يتلقى كل حارس المخرجات من السابق. يتيح لك هذا سلسلة خطوات التحقق والتحويل.
+
+يقبل معامل `guardrails`:
+
+- قائمة من دوال الحراس أو أوصاف نصية
+- حارس واحد (دالة أو سلسلة نصية) (مثل `guardrail`)
+
+**ملاحظة**: إذا تم تقديم `guardrails`، فإنه يأخذ الأولوية على `guardrail`. سيتم تجاهل معامل `guardrail` عند تعيين `guardrails`.
+
+```python Code
+from typing import Tuple, Any
+from crewai import TaskOutput, Task
+
+def validate_word_count(result: TaskOutput) -> Tuple[bool, Any]:
+    """Validate word count is within limits."""
+    word_count = len(result.raw.split())
+    if word_count < 100:
+        return (False, f"Content too short: {word_count} words. Need at least 100 words.")
+    if word_count > 500:
+        return (False, f"Content too long: {word_count} words. Maximum is 500 words.")
+    return (True, result.raw)
+
+def validate_no_profanity(result: TaskOutput) -> Tuple[bool, Any]:
+    """Check for inappropriate language."""
+    profanity_words = ["badword1", "badword2"]  # Example list
+    content_lower = result.raw.lower()
+    for word in profanity_words:
+        if word in content_lower:
+            return (False, f"Inappropriate language detected: {word}")
+    return (True, result.raw)
+
+def format_output(result: TaskOutput) -> Tuple[bool, Any]:
+    """Format and clean the output."""
+    formatted = result.raw.strip()
+    # Capitalize first letter
+    formatted = formatted[0].upper() + formatted[1:] if formatted else formatted
+    return (True, formatted)
+
+# Apply multiple guardrails sequentially
+blog_task = Task(
+    description="Write a blog post about AI",
+    expected_output="A well-formatted blog post between 100-500 words",
+    agent=blog_agent,
+    guardrails=[
+        validate_word_count,      # First: validate length
+        validate_no_profanity,    # Second: check content
+        format_output             # Third: format the result
+    ],
+    guardrail_max_retries=3
+)
+```
+
+في هذا المثال، تُنفَّذ الحراس بالترتيب:
+
+1. `validate_word_count` يتحقق من عدد الكلمات
+2. `validate_no_profanity` يتحقق من اللغة غير الملائمة (باستخدام المخرجات من الخطوة 1)
+3. `format_output` ينسّق النتيجة النهائية (باستخدام المخرجات من الخطوة 2)
+
+إذا فشل أي حارس، يتم إرسال الخطأ إلى الوكيل، وتُعاد المهمة حتى `guardrail_max_retries` مرة.
+
+**مزج الحراس القائمين على الدوال و LLM**:
+
+يمكنك الجمع بين الحراس القائمين على الدوال والنصية في نفس القائمة:
+
+```python Code
+from typing import Tuple, Any
+from crewai import TaskOutput, Task
+
+def validate_word_count(result: TaskOutput) -> Tuple[bool, Any]:
+    """Validate word count is within limits."""
+    word_count = len(result.raw.split())
+    if word_count < 100:
+        return (False, f"Content too short: {word_count} words. Need at least 100 words.")
+    if word_count > 500:
+        return (False, f"Content too long: {word_count} words. Maximum is 500 words.")
+    return (True, result.raw)
+
+# Mix function-based and LLM-based guardrails
+blog_task = Task(
+    description="Write a blog post about AI",
+    expected_output="A well-formatted blog post between 100-500 words",
+    agent=blog_agent,
+    guardrails=[
+        validate_word_count,  # Function-based: precise word count check
+        "The content must be engaging and suitable for a general audience",  # LLM-based: subjective quality check
+        "The writing style should be clear, concise, and free of technical jargon"  # LLM-based: style validation
+    ],
+    guardrail_max_retries=3
+)
+```
+
+يجمع هذا النهج بين دقة التحقق البرمجي ومرونة التقييم القائم على LLM للمعايير الذاتية.
+
+### متطلبات دالة الحارس
+
+1. **توقيع الدالة**:
+
+   - يجب أن تقبل معاملًا واحدًا بالضبط (مخرجات المهمة)
+   - يجب أن تُعيد tuple من `(bool, Any)`
+   - يُوصى بتلميحات الأنواع لكنها اختيارية
+
+2. **قيم الإعادة**:
+   - عند النجاح: تُعيد tuple من `(bool, Any)`. مثال: `(True, validated_result)`
+   - عند الفشل: تُعيد tuple من `(bool, str)`. مثال: `(False, "Error message explain the failure")`
+
+### أفضل ممارسات معالجة الأخطاء
+
+1. **استجابات أخطاء منظمة**:
+
+```python Code
+from crewai import TaskOutput, LLMGuardrail
+
+def validate_with_context(result: TaskOutput) -> Tuple[bool, Any]:
+    try:
+        # Main validation logic
+        validated_data = perform_validation(result)
+        return (True, validated_data)
+    except ValidationError as e:
+        return (False, f"VALIDATION_ERROR: {str(e)}")
+    except Exception as e:
+        return (False, str(e))
+```
+
+2. **فئات الأخطاء**:
+
+   - استخدم رموز خطأ محددة
+   - ضمّن السياق ذا الصلة
+   - قدم تغذية راجعة قابلة للتنفيذ
+
+3. **سلسلة التحقق**:
+
+```python Code
+from typing import Any, Dict, List, Tuple, Union
+from crewai import TaskOutput
+
+def complex_validation(result: TaskOutput) -> Tuple[bool, Any]:
+    """Chain multiple validation steps."""
+    # Step 1: Basic validation
+    if not result:
+        return (False, "Empty result")
+
+    # Step 2: Content validation
+    try:
+        validated = validate_content(result)
+        if not validated:
+            return (False, "Invalid content")
+
+        # Step 3: Format validation
+        formatted = format_output(validated)
+        return (True, formatted)
+    except Exception as e:
+        return (False, str(e))
+```
+
+### التعامل مع نتائج الحارس
+
+عندما يُعيد حارس `(False, error)`:
+
+1. يتم إرسال الخطأ إلى الوكيل
+2. يحاول الوكيل إصلاح المشكلة
+3. تتكرر العملية حتى:
+   - يُعيد الحارس `(True, result)`
+   - يتم الوصول إلى الحد الأقصى للمحاولات (`guardrail_max_retries`)
+
+مثال مع معالجة إعادة المحاولة:
+
+```python Code
+from typing import Optional, Tuple, Union
+from crewai import TaskOutput, Task
+
+def validate_json_output(result: TaskOutput) -> Tuple[bool, Any]:
+    """Validate and parse JSON output."""
+    try:
+        # Try to parse as JSON
+        data = json.loads(result)
+        return (True, data)
+    except json.JSONDecodeError as e:
+        return (False, "Invalid JSON format")
+
+task = Task(
+    description="Generate a JSON report",
+    expected_output="A valid JSON object",
+    agent=analyst,
+    guardrail=validate_json_output,
+    guardrail_max_retries=3  # Limit retry attempts
+)
+```
+
+## الحصول على مخرجات منظمة ومتسقة من المهام
+
+<Note>
+  من المهم أيضًا ملاحظة أن مخرجات المهمة الأخيرة في الفريق
+  تصبح المخرجات النهائية للفريق نفسه.
+</Note>
+
+### استخدام `output_pydantic`
+
+تتيح لك خاصية `output_pydantic` تحديد نموذج Pydantic يجب أن تتوافق معه مخرجات المهمة. هذا يضمن أن المخرجات ليست منظمة فحسب، بل تم التحقق منها وفقًا لنموذج Pydantic.
+
+إليك مثال يوضح كيفية استخدام output_pydantic:
+
+```python Code
+import json
+
+from crewai import Agent, Crew, Process, Task
+from pydantic import BaseModel
+
+
+class Blog(BaseModel):
+    title: str
+    content: str
+
+
+blog_agent = Agent(
+    role="Blog Content Generator Agent",
+    goal="Generate a blog title and content",
+    backstory="""You are an expert content creator, skilled in crafting engaging and informative blog posts.""",
+    verbose=False,
+    allow_delegation=False,
+    llm="gpt-4o",
+)
+
+task1 = Task(
+    description="""Create a blog title and content on a given topic. Make sure the content is under 200 words.""",
+    expected_output="A compelling blog title and well-written content.",
+    agent=blog_agent,
+    output_pydantic=Blog,
+)
+
+# Instantiate your crew with a sequential process
+crew = Crew(
+    agents=[blog_agent],
+    tasks=[task1],
+    verbose=True,
+    process=Process.sequential,
+)
+
+result = crew.kickoff()
+
+# Option 1: Accessing Properties Using Dictionary-Style Indexing
+print("Accessing Properties - Option 1")
+title = result["title"]
+content = result["content"]
+print("Title:", title)
+print("Content:", content)
+
+# Option 2: Accessing Properties Directly from the Pydantic Model
+print("Accessing Properties - Option 2")
+title = result.pydantic.title
+content = result.pydantic.content
+print("Title:", title)
+print("Content:", content)
+
+# Option 3: Accessing Properties Using the to_dict() Method
+print("Accessing Properties - Option 3")
+output_dict = result.to_dict()
+title = output_dict["title"]
+content = output_dict["content"]
+print("Title:", title)
+print("Content:", content)
+
+# Option 4: Printing the Entire Blog Object
+print("Accessing Properties - Option 5")
+print("Blog:", result)
+
+```
+
+في هذا المثال:
+
+- يتم تعريف نموذج Pydantic Blog مع حقلي title و content.
+- تستخدم المهمة task1 خاصية output_pydantic لتحديد أن مخرجاتها يجب أن تتوافق مع نموذج Blog.
+- بعد تنفيذ الفريق، يمكنك الوصول إلى المخرجات المنظمة بعدة طرق كما هو موضح.
+
+#### شرح الوصول إلى المخرجات
+
+1. الفهرسة بأسلوب القاموس: يمكنك الوصول مباشرة إلى الحقول باستخدام result["field_name"]. يعمل هذا لأن فئة CrewOutput تنفذ دالة **getitem**.
+2. مباشرة من نموذج Pydantic: الوصول إلى الخصائص مباشرة من كائن result.pydantic.
+3. باستخدام دالة to_dict(): تحويل المخرجات إلى قاموس والوصول إلى الحقول.
+4. طباعة الكائن بالكامل: ببساطة اطبع كائن result لرؤية المخرجات المنظمة.
+
+### استخدام `output_json`
+
+تتيح لك خاصية `output_json` تحديد المخرجات المتوقعة بتنسيق JSON. هذا يضمن أن مخرجات المهمة هي هيكل JSON صالح يمكن تحليله واستخدامه بسهولة في تطبيقك.
+
+إليك مثال يوضح كيفية استخدام `output_json`:
+
+```python Code
+import json
+
+from crewai import Agent, Crew, Process, Task
+from pydantic import BaseModel
+
+
+# Define the Pydantic model for the blog
+class Blog(BaseModel):
+    title: str
+    content: str
+
+
+# Define the agent
+blog_agent = Agent(
+    role="Blog Content Generator Agent",
+    goal="Generate a blog title and content",
+    backstory="""You are an expert content creator, skilled in crafting engaging and informative blog posts.""",
+    verbose=False,
+    allow_delegation=False,
+    llm="gpt-4o",
+)
+
+# Define the task with output_json set to the Blog model
+task1 = Task(
+    description="""Create a blog title and content on a given topic. Make sure the content is under 200 words.""",
+    expected_output="A JSON object with 'title' and 'content' fields.",
+    agent=blog_agent,
+    output_json=Blog,
+)
+
+# Instantiate the crew with a sequential process
+crew = Crew(
+    agents=[blog_agent],
+    tasks=[task1],
+    verbose=True,
+    process=Process.sequential,
+)
+
+# Kickoff the crew to execute the task
+result = crew.kickoff()
+
+# Option 1: Accessing Properties Using Dictionary-Style Indexing
+print("Accessing Properties - Option 1")
+title = result["title"]
+content = result["content"]
+print("Title:", title)
+print("Content:", content)
+
+# Option 2: Printing the Entire Blog Object
+print("Accessing Properties - Option 2")
+print("Blog:", result)
+```
+
+في هذا المثال:
+
+- يتم تعريف نموذج Pydantic Blog مع حقلي title و content، الذي يُستخدم لتحديد هيكل مخرجات JSON.
+- تستخدم المهمة task1 خاصية output_json للإشارة إلى أنها تتوقع مخرجات JSON متوافقة مع نموذج Blog.
+- بعد تنفيذ الفريق، يمكنك الوصول إلى مخرجات JSON المنظمة بطريقتين كما هو موضح.
+
+#### شرح الوصول إلى المخرجات
+
+1. الوصول إلى الخصائص باستخدام الفهرسة بأسلوب القاموس: يمكنك الوصول إلى الحقول مباشرة باستخدام result["field_name"]. هذا ممكن لأن فئة CrewOutput تنفذ دالة **getitem**، مما يتيح لك معاملة المخرجات كقاموس. في هذا الخيار، نسترد title و content من النتيجة.
+2. طباعة كائن Blog بالكامل: بطباعة result، تحصل على التمثيل النصي لكائن CrewOutput. نظرًا لأن دالة **str** منفذة لإعادة مخرجات JSON، سيعرض هذا المخرجات الكاملة كسلسلة منسقة تمثل كائن Blog.
+
+---
+
+باستخدام output_pydantic أو output_json، تضمن أن مهامك تنتج مخرجات بتنسيق متسق ومنظم، مما يسهّل معالجة البيانات واستخدامها داخل تطبيقك أو عبر مهام متعددة.
+
+## دمج الأدوات مع المهام
+
+استفد من أدوات [CrewAI Toolkit](https://github.com/joaomdmoura/crewai-tools) و [LangChain Tools](https://python.langchain.com/docs/integrations/tools) لتحسين أداء المهام وتفاعل الوكلاء.
+
+## إنشاء مهمة بأدوات
+
+```python Code
+import os
+os.environ["OPENAI_API_KEY"] = "Your Key"
+os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API key
+
+from crewai import Agent, Task, Crew
+from crewai_tools import SerperDevTool
+
+research_agent = Agent(
+  role='Researcher',
+  goal='Find and summarize the latest AI news',
+  backstory="""You're a researcher at a large company.
+  You're responsible for analyzing data and providing insights
+  to the business.""",
+  verbose=True
+)
+
+# to perform a semantic search for a specified query from a text's content across the internet
+search_tool = SerperDevTool()
+
+task = Task(
+  description='Find and summarize the latest AI news',
+  expected_output='A bullet list summary of the top 5 most important AI news',
+  agent=research_agent,
+  tools=[search_tool]
+)
+
+crew = Crew(
+    agents=[research_agent],
+    tasks=[task],
+    verbose=True
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+يوضح هذا كيف يمكن للمهام ذات الأدوات المحددة تجاوز المجموعة الافتراضية للوكيل لتنفيذ مهام مخصصة.
+
+## الإشارة إلى مهام أخرى
+
+في CrewAI، يتم تمرير مخرجات مهمة واحدة تلقائيًا إلى المهمة التالية، لكن يمكنك تحديد مخرجات مهام بعينها، بما في ذلك عدة مهام، لاستخدامها كسياق لمهمة أخرى.
+
+هذا مفيد عندما تكون لديك مهمة تعتمد على مخرجات مهمة أخرى لا يتم تنفيذها مباشرة بعدها. يتم ذلك من خلال خاصية `context` للمهمة:
+
+```python Code
+# ...
+
+research_ai_task = Task(
+    description="Research the latest developments in AI",
+    expected_output="A list of recent AI developments",
+    async_execution=True,
+    agent=research_agent,
+    tools=[search_tool]
+)
+
+research_ops_task = Task(
+    description="Research the latest developments in AI Ops",
+    expected_output="A list of recent AI Ops developments",
+    async_execution=True,
+    agent=research_agent,
+    tools=[search_tool]
+)
+
+write_blog_task = Task(
+    description="Write a full blog post about the importance of AI and its latest news",
+    expected_output="Full blog post that is 4 paragraphs long",
+    agent=writer_agent,
+    context=[research_ai_task, research_ops_task]
+)
+
+#...
+```
+
+## التنفيذ غير المتزامن
+
+يمكنك تعريف مهمة ليتم تنفيذها بشكل غير متزامن. هذا يعني أن الفريق لن ينتظر اكتمالها للمتابعة مع المهمة التالية. هذا مفيد للمهام التي تستغرق وقتًا طويلاً، أو التي ليست حاسمة لتنفيذ المهام التالية.
+
+يمكنك بعد ذلك استخدام خاصية `context` لتحديد في مهمة مستقبلية أنها يجب أن تنتظر اكتمال مخرجات المهمة غير المتزامنة.
+
+```python Code
+#...
+
+list_ideas = Task(
+    description="List of 5 interesting ideas to explore for an article about AI.",
+    expected_output="Bullet point list of 5 ideas for an article.",
+    agent=researcher,
+    async_execution=True # Will be executed asynchronously
+)
+
+list_important_history = Task(
+    description="Research the history of AI and give me the 5 most important events.",
+    expected_output="Bullet point list of 5 important events.",
+    agent=researcher,
+    async_execution=True # Will be executed asynchronously
+)
+
+write_article = Task(
+    description="Write an article about AI, its history, and interesting ideas.",
+    expected_output="A 4 paragraph article about AI.",
+    agent=writer,
+    context=[list_ideas, list_important_history] # Will wait for the output of the two tasks to be completed
+)
+
+#...
+```
+
+## آلية دالة الاسترجاع
+
+يتم تنفيذ دالة الاسترجاع بعد اكتمال المهمة، مما يتيح تشغيل إجراءات أو إشعارات بناءً على نتيجة المهمة.
+
+```python Code
+# ...
+
+def callback_function(output: TaskOutput):
+    # Do something after the task is completed
+    # Example: Send an email to the manager
+    print(f"""
+        Task completed!
+        Task: {output.description}
+        Output: {output.raw}
+    """)
+
+research_task = Task(
+    description='Find and summarize the latest AI news',
+    expected_output='A bullet list summary of the top 5 most important AI news',
+    agent=research_agent,
+    tools=[search_tool],
+    callback=callback_function
+)
+
+#...
+```
+
+## الوصول إلى مخرجات مهمة محددة
+
+بمجرد انتهاء الفريق من التشغيل، يمكنك الوصول إلى مخرجات مهمة محددة باستخدام خاصية `output` لكائن المهمة:
+
+```python Code
+# ...
+task1 = Task(
+    description='Find and summarize the latest AI news',
+    expected_output='A bullet list summary of the top 5 most important AI news',
+    agent=research_agent,
+    tools=[search_tool]
+)
+
+#...
+
+crew = Crew(
+    agents=[research_agent],
+    tasks=[task1, task2, task3],
+    verbose=True
+)
+
+result = crew.kickoff()
+
+# Returns a TaskOutput object with the description and results of the task
+print(f"""
+    Task completed!
+    Task: {task1.output.description}
+    Output: {task1.output.raw}
+""")
+```
+
+## آلية تجاوز الأدوات
+
+تحديد الأدوات في مهمة يتيح التكيف الديناميكي لقدرات الوكيل، مما يؤكد مرونة CrewAI.
+
+## آليات معالجة الأخطاء والتحقق
+
+أثناء إنشاء المهام وتنفيذها، توجد آليات تحقق معينة لضمان متانة وموثوقية خصائص المهمة. تشمل على سبيل المثال لا الحصر:
+
+- ضمان تعيين نوع مخرجات واحد فقط لكل مهمة للحفاظ على توقعات مخرجات واضحة.
+- منع التعيين اليدوي لخاصية `id` للحفاظ على سلامة نظام المعرّفات الفريدة.
+
+تساعد عمليات التحقق هذه في الحفاظ على اتساق وموثوقية تنفيذ المهام ضمن إطار عمل crewAI.
+
+## إنشاء المجلدات عند حفظ الملفات
+
+يتحكم معامل `create_directory` فيما إذا كان يجب على CrewAI إنشاء المجلدات تلقائيًا عند حفظ مخرجات المهام في ملفات. هذه الميزة مفيدة بشكل خاص لتنظيم المخرجات وضمان هيكلة مسارات الملفات بشكل صحيح، خاصة عند العمل مع تسلسلات مشاريع معقدة.
+
+### السلوك الافتراضي
+
+بشكل افتراضي، `create_directory=True`، مما يعني أن CrewAI سينشئ تلقائيًا أي مجلدات مفقودة في مسار ملف المخرجات:
+
+```python Code
+# Default behavior - directories are created automatically
+report_task = Task(
+    description='Generate a comprehensive market analysis report',
+    expected_output='A detailed market analysis with charts and insights',
+    agent=analyst_agent,
+    output_file='reports/2025/market_analysis.md',  # Creates 'reports/2025/' if it doesn't exist
+    markdown=True
+)
+```
+
+### تعطيل إنشاء المجلدات
+
+إذا كنت تريد منع الإنشاء التلقائي للمجلدات والتأكد من وجود المجلد مسبقًا، عيّن `create_directory=False`:
+
+```python Code
+# Strict mode - directory must already exist
+strict_output_task = Task(
+    description='Save critical data that requires existing infrastructure',
+    expected_output='Data saved to pre-configured location',
+    agent=data_agent,
+    output_file='secure/vault/critical_data.json',
+    create_directory=False  # Will raise RuntimeError if 'secure/vault/' doesn't exist
+)
+```
+
+### إعداد YAML
+
+يمكنك أيضًا إعداد هذا السلوك في تعريفات مهام YAML:
+
+```yaml tasks.yaml
+analysis_task:
+  description: >
+    Generate quarterly financial analysis
+  expected_output: >
+    A comprehensive financial report with quarterly insights
+  agent: financial_analyst
+  output_file: reports/quarterly/q4_2024_analysis.pdf
+  create_directory: true # Automatically create 'reports/quarterly/' directory
+
+audit_task:
+  description: >
+    Perform compliance audit and save to existing audit directory
+  expected_output: >
+    A compliance audit report
+  agent: auditor
+  output_file: audit/compliance_report.md
+  create_directory: false # Directory must already exist
+```
+
+### حالات الاستخدام
+
+**إنشاء المجلدات تلقائيًا (`create_directory=True`):**
+
+- بيئات التطوير والنماذج الأولية
+- إنشاء تقارير ديناميكية مع مجلدات قائمة على التاريخ
+- سير عمل آلي حيث قد يختلف هيكل المجلدات
+- تطبيقات متعددة المستأجرين مع مجلدات خاصة بالمستخدمين
+
+**إدارة المجلدات يدويًا (`create_directory=False`):**
+
+- بيئات الإنتاج مع ضوابط نظام ملفات صارمة
+- التطبيقات الحساسة أمنيًا حيث يجب إعداد المجلدات مسبقًا
+- الأنظمة ذات متطلبات أذونات محددة
+- بيئات الامتثال حيث يتم مراقبة إنشاء المجلدات
+
+### معالجة الأخطاء
+
+عندما يكون `create_directory=False` والمجلد غير موجود، سيرفع CrewAI خطأ `RuntimeError`:
+
+```python Code
+try:
+    result = crew.kickoff()
+except RuntimeError as e:
+    # Handle missing directory error
+    print(f"Directory creation failed: {e}")
+    # Create directory manually or use fallback location
+```
+
+شاهد الفيديو أدناه لمعرفة كيفية استخدام المخرجات المنظمة في CrewAI:
+
+<iframe
+  className="w-full aspect-video rounded-xl"
+  src="https://www.youtube.com/embed/dNpKQk5uxHw"
+  title="Structured outputs in CrewAI"
+  frameBorder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+  referrerPolicy="strict-origin-when-cross-origin"
+  allowFullScreen
+></iframe>
+
+## الخلاصة
+
+المهام هي القوة الدافعة وراء إجراءات الوكلاء في CrewAI.
+من خلال تعريف المهام ونتائجها بشكل صحيح، تمهّد الطريق لعمل وكلاء الذكاء الاصطناعي بفعالية، سواء بشكل مستقل أو كوحدة تعاونية.
+تجهيز المهام بالأدوات المناسبة وفهم عملية التنفيذ واتباع ممارسات التحقق المتينة أمور حاسمة لتعظيم إمكانات CrewAI،
+وضمان إعداد الوكلاء بفعالية لتكليفاتهم وتنفيذ المهام كما هو مقصود.

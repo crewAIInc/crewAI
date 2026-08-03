@@ -26,6 +26,38 @@ class ObservationEvent(BaseEvent):
         self._set_agent_params(data)
 
 
+class PlanStepEvent(BaseEvent):
+    """Base event for authoritative plan step lifecycle updates."""
+
+    type: str
+    agent_role: str
+    step_number: int
+    step_description: str = ""
+    tool_to_use: str | None = None
+    from_task: Any | None = None
+    from_agent: Any | None = None
+
+    def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+        self._set_task_params(data)
+        self._set_agent_params(data)
+
+
+class PlanStepStartedEvent(PlanStepEvent):
+    """Emitted when a concrete plan step starts executing."""
+
+    type: Literal["plan_step_started"] = "plan_step_started"
+
+
+class PlanStepCompletedEvent(PlanStepEvent):
+    """Emitted when a concrete plan step reaches a terminal state."""
+
+    type: Literal["plan_step_completed"] = "plan_step_completed"
+    success: bool = True
+    result: str | None = None
+    error: str | None = None
+
+
 class StepObservationStartedEvent(ObservationEvent):
     """Emitted when the Planner begins observing a step's result.
 

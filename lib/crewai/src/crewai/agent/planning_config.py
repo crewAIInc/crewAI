@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, BeforeValidator, Field
 
+from crewai.agents.agent_builder.base_agent import _validate_llm_ref
 from crewai.llms.base_llm import BaseLLM
 
 
@@ -69,7 +70,7 @@ class PlanningConfig(BaseModel):
                 max_attempts=3,
                 max_steps=10,
                 plan_prompt="Create a focused plan for: {description}",
-                llm="gpt-4o-mini",
+                llm="gpt-5.4-mini",
             ),
         )
         ```
@@ -139,7 +140,10 @@ class PlanningConfig(BaseModel):
             "whether to continue or replan. None means no per-step timeout."
         ),
     )
-    llm: str | BaseLLM | None = Field(
+    llm: Annotated[
+        str | BaseLLM | None,
+        BeforeValidator(_validate_llm_ref),
+    ] = Field(
         default=None,
         description="LLM to use for planning. Uses agent's LLM if None.",
     )

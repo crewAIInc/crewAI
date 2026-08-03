@@ -1,5 +1,116 @@
 interactions:
 - request:
+    body: '{"messages":[{"role":"system","content":"You are Test Agent. Test backstory\nYour
+      personal goal is: Test goal"},{"role":"user","content":"\nCurrent Task: Say
+      hello to the world\n\nThis is the expected criteria for your final answer: hello
+      world\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nProvide your complete response:"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '386'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 2.32.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-DmQXbDeAmcQ7GbteZjiMuOWd66nWp\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1780434139,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"hello world\",\n \
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"\
+        logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\"\
+        : {\n    \"prompt_tokens\": 71,\n    \"completion_tokens\": 2,\n    \"total_tokens\"\
+        : 73,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n   \
+        \   \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n  \
+        \    \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+        : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+        : \"default\",\n  \"system_fingerprint\": \"fp_df8c8d3b43\"\n}\n"
+    headers:
+      Access-Control-Expose-Headers:
+      - ACCESS-CONTROL-XXX
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - a05965f97dd8ad81-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 02 Jun 2026 21:02:19 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '330'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
     body: '{}'
     headers:
       accept:
@@ -88,129 +199,6 @@ interactions:
     status:
       code: 201
       message: Created
-- request:
-    body: '{"messages":[{"role":"system","content":"You are Test Agent. Test backstory\nYour
-      personal goal is: Test goal\nTo give my best complete final answer to the task
-      respond using the exact following format:\n\nThought: I now can give a great
-      answer\nFinal Answer: Your final answer must be the great and the most complete
-      as possible, it must be outcome described.\n\nI MUST use these formats, my job
-      depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello to the
-      world\n\nThis is the expected criteria for your final answer: hello world\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      authorization:
-      - AUTHORIZATION-XXX
-      connection:
-      - keep-alive
-      content-length:
-      - '787'
-      content-type:
-      - application/json
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
-      x-stainless-arch:
-      - X-STAINLESS-ARCH-XXX
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - X-STAINLESS-OS-XXX
-      x-stainless-package-version:
-      - 1.109.1
-      x-stainless-read-timeout:
-      - X-STAINLESS-READ-TIMEOUT-XXX
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.10
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: "{\n  \"id\": \"chatcmpl-Ch5flaLDqIqyRdYlrrvZ3Pu6emSal\",\n  \"object\"\
-        : \"chat.completion\",\n  \"created\": 1764385945,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
-        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
-        \      \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
-        \ answer  \\nFinal Answer: hello world\",\n        \"refusal\": null,\n  \
-        \      \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"\
-        finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
-        : 157,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 170,\n    \"\
-        prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\"\
-        : 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
-        : 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n\
-        \      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
-        : \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
-    headers:
-      CF-RAY:
-      - CF-RAY-XXX
-      Connection:
-      - keep-alive
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 29 Nov 2025 03:12:26 GMT
-      Server:
-      - cloudflare
-      Set-Cookie:
-      - SET-COOKIE-XXX
-      Strict-Transport-Security:
-      - STS-XXX
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - X-CONTENT-TYPE-XXX
-      access-control-expose-headers:
-      - ACCESS-CONTROL-XXX
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - OPENAI-ORG-XXX
-      openai-processing-ms:
-      - '443'
-      openai-project:
-      - OPENAI-PROJECT-XXX
-      openai-version:
-      - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '655'
-      x-openai-proxy-wasm:
-      - v0.1
-      x-ratelimit-limit-project-tokens:
-      - '150000000'
-      x-ratelimit-limit-requests:
-      - X-RATELIMIT-LIMIT-REQUESTS-XXX
-      x-ratelimit-limit-tokens:
-      - X-RATELIMIT-LIMIT-TOKENS-XXX
-      x-ratelimit-remaining-project-tokens:
-      - '149999827'
-      x-ratelimit-remaining-requests:
-      - X-RATELIMIT-REMAINING-REQUESTS-XXX
-      x-ratelimit-remaining-tokens:
-      - X-RATELIMIT-REMAINING-TOKENS-XXX
-      x-ratelimit-reset-project-tokens:
-      - 0s
-      x-ratelimit-reset-requests:
-      - X-RATELIMIT-RESET-REQUESTS-XXX
-      x-ratelimit-reset-tokens:
-      - X-RATELIMIT-RESET-TOKENS-XXX
-      x-request-id:
-      - X-REQUEST-ID-XXX
-    status:
-      code: 200
-      message: OK
 - request:
     body: '{"events": [{"event_id": "e73c85bb-b00f-46be-b07f-cfbd398e24d9", "timestamp":
       "2025-11-29T03:12:24.774266+00:00", "type": "crew_kickoff_started", "event_data":
@@ -416,4 +404,3 @@ interactions:
     status:
       code: 200
       message: OK
-version: 1

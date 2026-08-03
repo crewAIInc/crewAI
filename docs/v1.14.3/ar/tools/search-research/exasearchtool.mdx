@@ -1,0 +1,110 @@
+---
+title: "أداة بحث Exa"
+description: "ابحث في الويب باستخدام Exa Search API للعثور على النتائج الأكثر صلة لأي استعلام، مع خيارات لمحتوى الصفحة الكامل والمقتطفات والملخصات."
+icon: "magnifying-glass"
+mode: "wide"
+---
+
+تتيح أداة `EXASearchTool` لوكلاء CrewAI البحث في الويب باستخدام [Exa](https://exa.ai/) search API. تُرجع النتائج الأكثر صلة لأي استعلام، مع خيارات لمحتوى الصفحة الكامل والملخصات المولّدة بالذكاء الاصطناعي.
+
+## التثبيت
+
+ثبّت حزمة أدوات CrewAI:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## متغيرات البيئة
+
+عيّن مفتاح Exa API كمتغير بيئة:
+
+```bash
+export EXA_API_KEY='your_exa_api_key'
+```
+
+احصل على مفتاح API من [لوحة تحكم Exa](https://dashboard.exa.ai/api-keys).
+
+## مثال على الاستخدام
+
+إليك كيفية استخدام `EXASearchTool` مع وكيل CrewAI:
+
+```python
+import os
+from crewai import Agent, Task, Crew
+from crewai_tools import EXASearchTool
+
+# Initialize the tool
+exa_tool = EXASearchTool()
+
+# Create an agent that uses the tool
+researcher = Agent(
+    role='Research Analyst',
+    goal='Find the latest information on any topic',
+    backstory='An expert researcher who finds the most relevant and up-to-date information.',
+    tools=[exa_tool],
+    verbose=True
+)
+
+# Create a task for the agent
+research_task = Task(
+    description='Find the top 3 recent breakthroughs in quantum computing.',
+    expected_output='A summary of the top 3 breakthroughs with source URLs.',
+    agent=researcher
+)
+
+# Form the crew and kick it off
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    verbose=True
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+## خيارات التكوين
+
+تقبل أداة `EXASearchTool` المعاملات التالية أثناء التهيئة:
+
+- `type` (str، اختياري): نوع البحث المستخدم. الافتراضي هو `"auto"`. الخيارات: `"auto"`، `"instant"`، `"fast"`، `"deep"`.
+- `content` (bool، اختياري): ما إذا كان يجب تضمين محتوى الصفحة الكامل في النتائج. الافتراضي هو `False`.
+- `summary` (bool، اختياري): ما إذا كان يجب تضمين ملخصات مولّدة بالذكاء الاصطناعي لكل نتيجة. يتطلب `content=True`. الافتراضي هو `False`.
+- `api_key` (str، اختياري): مفتاح Exa API الخاص بك. يعود إلى متغير البيئة `EXA_API_KEY` إذا لم يتم تقديمه.
+- `base_url` (str، اختياري): عنوان URL مخصص لخادم API. يعود إلى متغير البيئة `EXA_BASE_URL` إذا لم يتم تقديمه.
+
+عند استدعاء الأداة (أو عندما يستدعيها وكيل)، تتوفر معاملات البحث التالية:
+
+- `search_query` (str): **مطلوب**. سلسلة استعلام البحث.
+- `start_published_date` (str، اختياري): تصفية النتائج المنشورة بعد هذا التاريخ (تنسيق ISO 8601، مثل `"2024-01-01"`).
+- `end_published_date` (str، اختياري): تصفية النتائج المنشورة قبل هذا التاريخ (تنسيق ISO 8601).
+- `include_domains` (list[str]، اختياري): قائمة بالنطاقات لتقييد البحث عليها.
+
+## الاستخدام المتقدم
+
+يمكنك تكوين الأداة بمعاملات مخصصة للحصول على نتائج أغنى:
+
+```python
+# Get full page content with AI summaries
+exa_tool = EXASearchTool(
+    content=True,
+    summary=True,
+    type="deep"
+)
+
+# Use it in an agent
+agent = Agent(
+    role="Deep Researcher",
+    goal="Conduct thorough research with full content and summaries",
+    tools=[exa_tool]
+)
+```
+
+## الميزات
+
+- **البحث الدلالي**: العثور على نتائج بناءً على المعنى، وليس الكلمات المفتاحية فقط
+- **استرجاع المحتوى الكامل**: الحصول على النص الكامل لصفحات الويب مع نتائج البحث
+- **ملخصات الذكاء الاصطناعي**: الحصول على ملخصات موجزة مولّدة بالذكاء الاصطناعي لكل نتيجة
+- **تصفية التاريخ**: تقييد النتائج لفترات زمنية محددة باستخدام فلاتر تاريخ النشر
+- **تصفية النطاقات**: تقييد عمليات البحث على نطاقات محددة

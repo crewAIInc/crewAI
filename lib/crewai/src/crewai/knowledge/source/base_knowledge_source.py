@@ -4,7 +4,13 @@ from typing import Any
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
 
+from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+
+
+# ``KnowledgeStorage`` is re-exported for backwards compatibility; the ``storage``
+# field below is typed to the base interface so any backend plugs in.
+__all__ = ["BaseKnowledgeSource", "KnowledgeStorage"]
 
 
 class BaseKnowledgeSource(BaseModel, ABC):
@@ -18,7 +24,7 @@ class BaseKnowledgeSource(BaseModel, ABC):
     )
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    storage: KnowledgeStorage | None = Field(default=None)
+    storage: BaseKnowledgeStorage | None = Field(default=None)
     metadata: dict[str, Any] = Field(default_factory=dict)  # Currently unused
     collection_name: str | None = Field(default=None)
 
@@ -49,7 +55,7 @@ class BaseKnowledgeSource(BaseModel, ABC):
         Raises:
             ValueError: If no storage is configured.
         """
-        if self.storage:
+        if self.storage is not None:
             self.storage.save(self.chunks)
         else:
             raise ValueError("No storage found to save documents.")
@@ -66,7 +72,7 @@ class BaseKnowledgeSource(BaseModel, ABC):
         Raises:
             ValueError: If no storage is configured.
         """
-        if self.storage:
+        if self.storage is not None:
             await self.storage.asave(self.chunks)
         else:
             raise ValueError("No storage found to save documents.")

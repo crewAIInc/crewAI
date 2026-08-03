@@ -389,13 +389,18 @@ def docs_check(base: str, write: bool, dry_run: bool) -> None:
         )
         return
 
+    # Newly-generated docs are by definition unreleased, so they belong in the
+    # Edge channel (docs/edge/<lang>/...). Frozen snapshots under docs/v<X.Y.Z>/
+    # are immutable and CI rejects writes there outside [docs-freeze] PRs.
+    edge_root = docs_dir / "edge"
+
     for action_item in analysis.actions:
         if action_item.action not in ("create", "update") or not action_item.file:
             continue
 
         rel_path = action_item.file
-        en_path = (docs_dir / "en" / rel_path).resolve()
-        if not en_path.is_relative_to(docs_dir.resolve()):
+        en_path = (edge_root / "en" / rel_path).resolve()
+        if not en_path.is_relative_to(edge_root.resolve()):
             console.print(f"  [red]✗ Skipping unsafe path: {rel_path!r}[/red]")
             continue
         console.print(f"\n[bold]Processing:[/bold] {rel_path}")
@@ -452,10 +457,10 @@ def docs_check(base: str, write: bool, dry_run: bool) -> None:
         if not content:
             continue
 
-        resolved_docs = docs_dir.resolve()
+        resolved_edge = edge_root.resolve()
         for lang in _TRANSLATION_LANGS:
-            lang_path = (docs_dir / lang / rel_path).resolve()
-            if not lang_path.is_relative_to(resolved_docs):
+            lang_path = (edge_root / lang / rel_path).resolve()
+            if not lang_path.is_relative_to(resolved_edge):
                 continue
 
             with console.status(f"  [cyan]Translating to {_LANGUAGE_NAMES[lang]}..."):

@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import Any, Literal, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import BaseModel, Field
 
+from crewai.hooks.tool_hooks import (
+    ToolCallHookContext,
+    clear_after_tool_call_hooks,
+    clear_before_tool_call_hooks,
+    register_after_tool_call_hook,
+)
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.agent_utils import (
     _asummarize_chunks,
@@ -1024,11 +1031,154 @@ class TestParseToolCallArgs:
     def test_error_result_has_correct_keys(self) -> None:
         _, error = parse_tool_call_args("{bad json}", "tool", "call_7")
         assert error is not None
-        assert set(error.keys()) == {"call_id", "func_name", "result", "from_cache", "original_tool"}
+        assert set(error.keys()) == {
+            "call_id",
+            "func_name",
+            "result",
+            "from_cache",
+            "original_tool",
+            "tool_failure",
+        }
 
 
 class TestExecuteSingleNativeToolCall:
     """Tests for execute_single_native_tool_call."""
+
+    def test_typed_tool_output_is_json_agent_text(self) -> None:
+        clear_before_tool_call_hooks()
+        clear_after_tool_call_hooks()
+
+        class SearchOutput(BaseModel):
+            query: str
+            score: float
+
+        class TypedSearchTool(BaseTool):
+            name: str = "typed_search"
+            description: str = "Search for a query"
+            result_schema: type[BaseModel] = SearchOutput
+
+            def _run(self, query: str) -> SearchOutput:
+                return SearchOutput(query=query, score=0.9)
+
+        tool = TypedSearchTool()
+        tool_call = MagicMock()
+        tool_call.id = "call_1"
+        tool_call.function.name = "typed_search"
+        tool_call.function.arguments = '{"query": "crew"}'
+
+        result = execute_single_native_tool_call(
+            tool_call,
+            available_functions={"typed_search": tool._run},
+            original_tools=[tool],
+            structured_tools=[tool.to_structured_tool()],
+            tools_handler=None,
+            agent=None,
+            task=None,
+            crew=None,
+            event_source=MagicMock(),
+            printer=None,
+            verbose=False,
+        )
+
+        assert json.loads(result.result) == {"query": "crew", "score": 0.9}
+        assert json.loads(result.tool_message["content"]) == {
+            "query": "crew",
+            "score": 0.9,
+        }
+
+    def test_custom_agent_output_formatter_is_used_from_structured_tool(
+        self,
+    ) -> None:
+        clear_before_tool_call_hooks()
+        clear_after_tool_call_hooks()
+
+        class SearchOutput(BaseModel):
+            query: str
+            score: float
+
+        class MarkdownSearchTool(BaseTool):
+            name: str = "markdown_search"
+            description: str = "Search for a query"
+            result_schema: type[BaseModel] = SearchOutput
+
+            def _run(self, query: str) -> SearchOutput:
+                return SearchOutput(query=query, score=0.9)
+
+            def format_output_for_agent(self, raw_result: Any) -> str:
+                result = self.result_schema.model_validate(raw_result)
+                return f"### {result.query}\n\nScore: **{result.score}**"
+
+        tool = MarkdownSearchTool()
+        tool_call = MagicMock()
+        tool_call.id = "call_1"
+        tool_call.function.name = "markdown_search"
+        tool_call.function.arguments = '{"query": "crew"}'
+
+        result = execute_single_native_tool_call(
+            tool_call,
+            available_functions={"markdown_search": tool._run},
+            original_tools=[],
+            structured_tools=[tool.to_structured_tool()],
+            tools_handler=None,
+            agent=None,
+            task=None,
+            crew=None,
+            event_source=MagicMock(),
+            printer=None,
+            verbose=False,
+        )
+
+        assert result.result == "### crew\n\nScore: **0.9**"
+        assert result.tool_message["content"] == "### crew\n\nScore: **0.9**"
+
+    def test_after_hook_includes_raw_tool_result_for_typed_output(self) -> None:
+        clear_after_tool_call_hooks()
+
+        class SearchOutput(BaseModel):
+            query: str
+            score: float
+
+        class TypedSearchTool(BaseTool):
+            name: str = "typed_search"
+            description: str = "Search for a query"
+            result_schema: type[BaseModel] = SearchOutput
+
+            def _run(self, query: str) -> SearchOutput:
+                return SearchOutput(query=query, score=0.9)
+
+        seen_results: list[tuple[str | None, object]] = []
+
+        def after_hook(context: ToolCallHookContext) -> None:
+            seen_results.append((context.tool_result, context.raw_tool_result))
+
+        tool = TypedSearchTool()
+        tool_call = MagicMock()
+        tool_call.id = "call_1"
+        tool_call.function.name = "typed_search"
+        tool_call.function.arguments = '{"query": "crew"}'
+
+        register_after_tool_call_hook(after_hook)
+        try:
+            result = execute_single_native_tool_call(
+                tool_call,
+                available_functions={"typed_search": tool._run},
+                original_tools=[tool],
+                structured_tools=[tool.to_structured_tool()],
+                tools_handler=None,
+                agent=None,
+                task=None,
+                crew=None,
+                event_source=MagicMock(),
+                printer=None,
+                verbose=False,
+            )
+        finally:
+            clear_after_tool_call_hooks()
+
+        assert json.loads(result.result) == {"query": "crew", "score": 0.9}
+        assert seen_results == [
+            ('{"query":"crew","score":0.9}', SearchOutput(query="crew", score=0.9))
+        ]
 
     def test_result_as_answer_false_on_tool_error(self) -> None:
         """When a tool with result_as_answer=True raises, result_as_answer must be False.
@@ -1113,3 +1263,81 @@ class TestExecuteSingleNativeToolCall:
         assert isinstance(result, NativeToolCallResult)
         assert result.result_as_answer is False
         assert "blocked by hook" in result.result
+
+
+class TestResolvePlusClient:
+    def test_builds_the_default_when_no_client_is_installed(self) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_client
+
+        default = MagicMock()
+
+        assert resolve_plus_client(lambda: default) is default
+
+    def test_prefers_an_installed_client(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A hosted runtime installs a client; the default must not be built,
+        since looking up a user credential raises when there isn't one."""
+        from crewai.utilities import agent_utils
+
+        installed = MagicMock()
+        monkeypatch.setattr(agent_utils, "_create_plus_client_hook", lambda: installed)
+        default = MagicMock(side_effect=AssertionError("must not be called"))
+
+        assert agent_utils.resolve_plus_client(default) is installed
+        default.assert_not_called()
+
+
+class TestResolvePlusResponse:
+    def test_passes_through_a_sync_response(self) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        response = MagicMock()
+
+        assert resolve_plus_response(response) is response
+
+    @pytest.mark.parametrize("inside_loop", [False, True])
+    def test_awaits_an_async_response(self, inside_loop: bool) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        response = MagicMock()
+
+        async def call() -> Any:
+            return response
+
+        if not inside_loop:
+            assert resolve_plus_response(call()) is response
+            return
+
+        async def main() -> Any:
+            return resolve_plus_response(call())
+
+        assert asyncio.run(main()) is response
+
+    def test_carries_context_vars_into_the_worker_thread(self) -> None:
+        """Inside a running loop the coroutine runs on another thread; a client
+        reading runtime state (the platform token, flow context) must still see
+        the caller's values rather than defaults."""
+        from crewai.context import get_platform_integration_token, platform_context
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        async def call() -> Any:
+            return get_platform_integration_token()
+
+        async def main() -> Any:
+            with platform_context("token-from-caller"):
+                return resolve_plus_response(call())
+
+        assert asyncio.run(main()) == "token-from-caller"
+
+    def test_rejects_an_awaitable_bound_to_a_loop(self) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        async def main() -> None:
+            future: asyncio.Future[Any] = asyncio.get_running_loop().create_future()
+            future.set_result(MagicMock())
+
+            with pytest.raises(TypeError, match="must return a coroutine"):
+                resolve_plus_response(future)
+
+        asyncio.run(main())

@@ -61,9 +61,84 @@ class TestUsageToDict:
     def test_none_returns_none(self):
         assert LLM._usage_to_dict(None) is None
 
-    def test_dict_passes_through(self):
+    def test_dict_without_nested_shapes_is_returned_unchanged(self):
         usage = {"prompt_tokens": 10, "total_tokens": 30}
-        assert LLM._usage_to_dict(usage) is usage
+        result = LLM._usage_to_dict(usage)
+        assert result == usage
+        # The input dict is copied, not mutated, so derived keys are not added.
+        assert "cached_prompt_tokens" not in result
+
+    @pytest.mark.parametrize(
+        ("usage", "expected"),
+        [
+            pytest.param(
+                {"prompt_tokens": 100, "prompt_tokens_details": {"cached_tokens": 40}},
+                {"cached_prompt_tokens": 40},
+                id="openai-nested-cached-tokens",
+            ),
+            pytest.param(
+                {"prompt_tokens": 100, "cached_tokens": 30},
+                {"cached_prompt_tokens": 30},
+                id="flat-cached-tokens",
+            ),
+            pytest.param(
+                {"input_tokens": 100, "cache_read_input_tokens": 25},
+                {"cached_prompt_tokens": 25},
+                id="anthropic-cache-read-input-tokens",
+            ),
+            pytest.param(
+                {
+                    "completion_tokens": 200,
+                    "completion_tokens_details": {"reasoning_tokens": 60},
+                },
+                {"reasoning_tokens": 60},
+                id="openai-nested-reasoning-tokens",
+            ),
+            pytest.param(
+                {"input_tokens": 100, "cache_creation_input_tokens": 70},
+                {"cache_creation_tokens": 70},
+                id="anthropic-cache-creation-input-tokens",
+            ),
+            pytest.param(
+                {
+                    "prompt_tokens": 100,
+                    "completion_tokens": 200,
+                    "prompt_tokens_details": {"cached_tokens": 40},
+                    "completion_tokens_details": {"reasoning_tokens": 60},
+                    "cache_creation_input_tokens": 10,
+                },
+                {
+                    "cached_prompt_tokens": 40,
+                    "reasoning_tokens": 60,
+                    "cache_creation_tokens": 10,
+                },
+                id="all-buckets-from-nested-shapes",
+            ),
+        ],
+    )
+    def test_normalizes_nested_litellm_buckets(self, usage, expected):
+        result = LLM._usage_to_dict(usage)
+        for key, value in expected.items():
+            assert result[key] == value
+
+    def test_does_not_alter_core_token_counts(self):
+        usage = {
+            "prompt_tokens": 100,
+            "completion_tokens": 200,
+            "total_tokens": 300,
+            "prompt_tokens_details": {"cached_tokens": 40},
+        }
+        result = LLM._usage_to_dict(usage)
+        assert result["prompt_tokens"] == 100
+        assert result["completion_tokens"] == 200
+        assert result["total_tokens"] == 300
+
+    def test_absent_buckets_are_not_added(self):
+        usage = {"prompt_tokens": 100, "completion_tokens": 200, "total_tokens": 300}
+        result = LLM._usage_to_dict(usage)
+        assert "cached_prompt_tokens" not in result
+        assert "reasoning_tokens" not in result
+        assert "cache_creation_tokens" not in result
 
     def test_pydantic_model_uses_model_dump(self):
         class Usage(BaseModel):

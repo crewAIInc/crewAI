@@ -11,6 +11,7 @@ from crewai_files.processing.constraints import (
     ProviderConstraints,
     VideoConstraints,
     get_constraints_for_provider,
+    get_supported_content_types,
 )
 import pytest
 
@@ -69,6 +70,13 @@ class TestPDFConstraints:
 
         assert constraints.max_size_bytes == 1000
         assert constraints.max_pages is None
+
+    @pytest.mark.parametrize("provider", ["openai", "gpt", "gpt-4o-mini"])
+    def test_openai_responses_supports_pdf_for_gpt_aliases(self, provider):
+        """OpenAI Responses PDF support applies to concrete GPT model names."""
+        supported_types = get_supported_content_types(provider, api="responses")
+
+        assert "application/pdf" in supported_types
 
 
 class TestAudioConstraints:

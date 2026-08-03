@@ -5,7 +5,7 @@ from typing import Any
 from pydantic import Field, field_validator
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
-from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
 
@@ -22,7 +22,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
         default_factory=list, description="The path to the file"
     )
     content: dict[Path, str] = Field(init=False, default_factory=dict)
-    storage: KnowledgeStorage | None = Field(default=None)
+    storage: BaseKnowledgeStorage | None = Field(default=None)
     safe_file_paths: list[Path] = Field(default_factory=list)
 
     @field_validator("file_path", "file_paths", mode="before")
@@ -70,14 +70,14 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
 
     def _save_documents(self) -> None:
         """Save the documents to the storage."""
-        if self.storage:
+        if self.storage is not None:
             self.storage.save(self.chunks)
         else:
             raise ValueError("No storage found to save documents.")
 
     async def _asave_documents(self) -> None:
         """Save the documents to the storage asynchronously."""
-        if self.storage:
+        if self.storage is not None:
             await self.storage.asave(self.chunks)
         else:
             raise ValueError("No storage found to save documents.")

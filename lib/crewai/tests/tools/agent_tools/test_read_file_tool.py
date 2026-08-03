@@ -1,9 +1,18 @@
 """Unit tests for ReadFileTool."""
 
 import base64
+from pathlib import Path
 
 from crewai.tools.agent_tools.read_file_tool import ReadFileTool
 from crewai_files import ImageFile, PDFFile, TextFile
+
+
+TEST_FIXTURES_DIR = (
+    Path(__file__).parent.parent.parent.parent.parent
+    / "crewai-files"
+    / "tests"
+    / "fixtures"
+)
 
 
 class TestReadFileTool:
@@ -72,15 +81,15 @@ class TestReadFileTool:
         decoded = base64.b64decode(b64_part)
         assert decoded == png_bytes
 
-    def test_run_pdf_file_returns_base64(self) -> None:
-        """Test reading a PDF file returns base64 encoded content."""
-        pdf_bytes = b"%PDF-1.4 some content here"
+    def test_run_pdf_file_returns_extracted_text(self) -> None:
+        """Test reading a PDF file returns extracted text instead of base64."""
+        pdf_bytes = (TEST_FIXTURES_DIR / "agents.pdf").read_bytes()
         self.tool.set_files({"doc.pdf": PDFFile(source=pdf_bytes)})
 
         result = self.tool._run(file_name="doc.pdf")
 
-        assert "[Binary file:" in result
-        assert "application/pdf" in result
+        assert "Base64:" not in result
+        assert "agents" in result.lower()
 
     def test_set_files_none(self) -> None:
         """Test setting files to None."""

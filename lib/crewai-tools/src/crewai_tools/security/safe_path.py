@@ -20,6 +20,53 @@ from urllib.parse import urlparse
 logger = logging.getLogger(__name__)
 
 _UNSAFE_PATHS_ENV = "CREWAI_TOOLS_ALLOW_UNSAFE_PATHS"
+_BYPASS_HINT = f"Set {_UNSAFE_PATHS_ENV}=true to bypass this check."
+
+
+def format_path_for_display(path: str, base_dir: str | None = None) -> str:
+    """Return a path label that does not expose absolute directory prefixes."""
+    if base_dir is None:
+        base_dir = os.getcwd()
+
+    try:
+        resolved_base = os.path.realpath(base_dir)
+        resolved_path = os.path.realpath(
+            os.path.join(resolved_base, path) if not os.path.isabs(path) else path
+        )
+        if os.path.commonpath([resolved_base, resolved_path]) == resolved_base:
+            return os.path.relpath(resolved_path, resolved_base)
+    except (OSError, ValueError) as exc:
+        logger.debug("Falling back to basename for display path formatting: %s", exc)
+
+    return os.path.basename(os.path.realpath(path)) or "[redacted path]"
+
+
+def format_error_for_display(error: Exception) -> str:
+    """Return exception details without OS-added absolute path context."""
+    if isinstance(error, OSError):
+        return error.strerror or error.__class__.__name__
+    return str(error)
+
+
+def format_sandbox_error(error: Exception, remedy: str) -> str:
+    """Restate a containment rejection with a tool-specific remedy.
+
+    Rejections from :func:`validate_file_path` end by advertising the
+    process-wide escape hatch, which also disables the SSRF checks on
+    URL-fetching tools. Tools that accept a narrower ``base_dir`` should point
+    at that instead, so callers reach for the blunt instrument last.
+
+    Args:
+        error: The rejection raised by path validation.
+        remedy: Guidance to offer in place of the escape-hatch advice.
+
+    Returns:
+        The rejection text with *remedy* substituted for the bypass advice.
+    """
+    text = str(error)
+    if text.endswith(_BYPASS_HINT):
+        text = text[: -len(_BYPASS_HINT)].rstrip()
+    return f"{text} {remedy}".strip()
 
 
 def _is_escape_hatch_enabled() -> bool:
@@ -66,8 +113,8 @@ def validate_file_path(path: str, base_dir: str | None = None) -> str:
     prefix = resolved_base if resolved_base.endswith(os.sep) else resolved_base + os.sep
     if not resolved_path.startswith(prefix) and resolved_path != resolved_base:
         raise ValueError(
-            f"Path '{path}' resolves to '{resolved_path}' which is outside "
-            f"the allowed directory '{resolved_base}'. "
+            f"Path '{format_path_for_display(resolved_path, resolved_base)}' is "
+            f"outside the allowed directory. "
             f"Set {_UNSAFE_PATHS_ENV}=true to bypass this check."
         )
 

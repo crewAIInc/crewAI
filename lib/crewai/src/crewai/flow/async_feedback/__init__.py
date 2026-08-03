@@ -20,7 +20,7 @@ Example:
         @human_feedback(
             message="Review this:",
             emit=["approved", "rejected"],
-            llm="gpt-4o-mini",
+            llm="gpt-5.4-mini",
             provider=SlackProvider(),
         )
         def review(self):

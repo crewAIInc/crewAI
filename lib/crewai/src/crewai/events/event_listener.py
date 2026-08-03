@@ -41,7 +41,9 @@ from crewai.events.types.env_events import (
     DefaultEnvEvent,
 )
 from crewai.events.types.flow_events import (
+    ConversationTurnCompletedEvent,
     FlowCreatedEvent,
+    FlowFailedEvent,
     FlowFinishedEvent,
     FlowPausedEvent,
     FlowStartedEvent,
@@ -112,6 +114,7 @@ from crewai.events.types.task_events import (
     TaskStartedEvent,
 )
 from crewai.events.types.tool_usage_events import (
+    ToolFailureDetectedEvent,
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
@@ -158,7 +161,6 @@ class EventListener(BaseEventListener):
             trace_listener.formatter = self.formatter
 
     def setup_listeners(self, crewai_event_bus: CrewAIEventsBus) -> None:
-
         @crewai_event_bus.on(CCEnvEvent)
         def on_cc_env(_: Any, event: CCEnvEvent) -> None:
             self._telemetry.env_context_span(event.type)
@@ -306,20 +308,39 @@ class EventListener(BaseEventListener):
             self._telemetry.flow_execution_span(
                 event.flow_name, list(source._methods.keys())
             )
-            self.formatter.handle_flow_created(event.flow_name, str(source.flow_id))
-            self.formatter.handle_flow_started(event.flow_name, str(source.flow_id))
+            if not getattr(source, "suppress_flow_events", False):
+                self.formatter.handle_flow_created(event.flow_name, str(source.flow_id))
+                self.formatter.handle_flow_started(event.flow_name, str(source.flow_id))
 
         @crewai_event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
-            self.formatter.handle_flow_status(
-                event.flow_name,
-                source.flow_id,
-            )
+            if not getattr(source, "suppress_flow_events", False):
+                self.formatter.handle_flow_status(
+                    event.flow_name,
+                    source.flow_id,
+                )
+
+        @crewai_event_bus.on(FlowFailedEvent)
+        def on_flow_failed(source: Any, event: FlowFailedEvent) -> None:
+            if not getattr(source, "suppress_flow_events", False):
+                self.formatter.handle_flow_status(
+                    event.flow_name,
+                    source.flow_id,
+                    "failed",
+                )
+
+        @crewai_event_bus.on(ConversationTurnCompletedEvent)
+        def on_conversation_turn_completed(
+            _: Any, event: ConversationTurnCompletedEvent
+        ) -> None:
+            self._telemetry.feature_usage_span("flow:conversation_turn")
 
         @crewai_event_bus.on(MethodExecutionStartedEvent)
         def on_method_execution_started(
-            _: Any, event: MethodExecutionStartedEvent
+            source: Any, event: MethodExecutionStartedEvent
         ) -> None:
+            if getattr(source, "suppress_flow_events", False):
+                return
             self.formatter.handle_method_status(
                 event.method_name,
                 "running",
@@ -327,8 +348,10 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(MethodExecutionFinishedEvent)
         def on_method_execution_finished(
-            _: Any, event: MethodExecutionFinishedEvent
+            source: Any, event: MethodExecutionFinishedEvent
         ) -> None:
+            if getattr(source, "suppress_flow_events", False):
+                return
             self.formatter.handle_method_status(
                 event.method_name,
                 "completed",
@@ -402,6 +425,8 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(ToolUsageFinishedEvent)
         def on_tool_usage_finished(source: Any, event: ToolUsageFinishedEvent) -> None:
+            if not self.formatter.should_render_success_panel(event.failure):
+                return
             if isinstance(source, LLM):
                 self.formatter.handle_llm_tool_usage_finished(
                     event.tool_name,
@@ -426,6 +451,18 @@ class EventListener(BaseEventListener):
                     event.error,
                     event.run_attempts,
                 )
+
+        @crewai_event_bus.on(ToolFailureDetectedEvent)
+        def on_tool_failure_detected(
+            source: Any, event: ToolFailureDetectedEvent
+        ) -> None:
+            if not self.formatter.should_render_failure_panel(event.failure):
+                return
+            self.formatter.handle_tool_failure_detected(
+                event.tool_name,
+                event.failure,
+                event.policy,
+            )
 
         @crewai_event_bus.on(LLMCallStartedEvent)
         def on_llm_call_started(_: Any, event: LLMCallStartedEvent) -> None:

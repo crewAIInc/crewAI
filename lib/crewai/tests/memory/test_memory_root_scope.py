@@ -409,6 +409,36 @@ class TestCrewAutoScoping:
         assert crew._memory is not None
         assert hasattr(crew._memory, "root_scope")
         assert crew._memory.root_scope == "/crew/research-crew"
+        assert crew._memory.llm is agent.llm
+
+    def test_crew_memory_true_prefers_chat_llm(self) -> None:
+        """Auto-created crew memory uses chat_llm when configured."""
+        from crewai.agent import Agent
+        from crewai.crew import Crew
+        from crewai.task import Task
+
+        agent = Agent(
+            role="Researcher",
+            goal="Research",
+            backstory="Expert researcher",
+            llm="openai/gpt-4o-mini",
+        )
+        task = Task(
+            description="Do research",
+            expected_output="Report",
+            agent=agent,
+        )
+
+        crew = Crew(
+            name="Research Crew",
+            agents=[agent],
+            tasks=[task],
+            chat_llm="ollama/llama3",
+            memory=True,
+        )
+
+        assert crew._memory is not None
+        assert crew._memory.llm == "ollama/llama3"
 
     def test_crew_memory_instance_preserves_no_root_scope(
         self, tmp_path: Path, mock_embedder: MagicMock

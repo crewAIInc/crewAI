@@ -53,6 +53,12 @@ from crewai.events.types.crew_events import (
     CrewTrainStartedEvent,
 )
 from crewai.events.types.flow_events import (
+    ConversationMessageAddedEvent,
+    ConversationRouteSelectedEvent,
+    ConversationTurnCompletedEvent,
+    ConversationTurnFailedEvent,
+    ConversationTurnStartedEvent,
+    FlowFailedEvent,
     FlowFinishedEvent,
     FlowStartedEvent,
     MethodExecutionFailedEvent,
@@ -97,6 +103,10 @@ from crewai.events.types.memory_events import (
     MemorySaveFailedEvent,
     MemorySaveStartedEvent,
 )
+from crewai.events.types.observation_events import (
+    PlanStepCompletedEvent,
+    PlanStepStartedEvent,
+)
 from crewai.events.types.reasoning_events import (
     AgentReasoningCompletedEvent,
     AgentReasoningFailedEvent,
@@ -108,6 +118,7 @@ from crewai.events.types.task_events import (
     TaskStartedEvent,
 )
 from crewai.events.types.tool_usage_events import (
+    ToolFailureDetectedEvent,
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
@@ -154,14 +165,21 @@ EventTypes = (
     | TaskStartedEvent
     | TaskCompletedEvent
     | TaskFailedEvent
+    | ConversationMessageAddedEvent
+    | ConversationRouteSelectedEvent
+    | ConversationTurnCompletedEvent
+    | ConversationTurnFailedEvent
+    | ConversationTurnStartedEvent
     | FlowStartedEvent
     | FlowFinishedEvent
+    | FlowFailedEvent
     | MethodExecutionStartedEvent
     | MethodExecutionFinishedEvent
     | MethodExecutionFailedEvent
     | AgentExecutionErrorEvent
     | ToolUsageFinishedEvent
     | ToolUsageErrorEvent
+    | ToolFailureDetectedEvent
     | ToolUsageStartedEvent
     | LLMCallStartedEvent
     | LLMCallCompletedEvent
@@ -187,6 +205,8 @@ EventTypes = (
     | MemoryRetrievalStartedEvent
     | MemoryRetrievalCompletedEvent
     | MemoryRetrievalFailedEvent
+    | PlanStepStartedEvent
+    | PlanStepCompletedEvent
     | MCPConnectionStartedEvent
     | MCPConnectionCompletedEvent
     | MCPConnectionFailedEvent

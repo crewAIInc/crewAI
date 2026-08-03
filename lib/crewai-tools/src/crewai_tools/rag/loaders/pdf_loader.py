@@ -6,10 +6,9 @@ import tempfile
 from typing import Any
 from urllib.parse import urlparse
 
-import requests
-
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.source_content import SourceContent
+from crewai_tools.security.safe_requests import safe_get
 
 
 class PDFLoader(BaseLoader):
@@ -47,7 +46,7 @@ class PDFLoader(BaseLoader):
         )
 
         try:
-            response = requests.get(url, headers=headers, timeout=30)
+            response = safe_get(url, headers=headers, timeout=30)
             response.raise_for_status()
 
             with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:

@@ -7,6 +7,8 @@ import os
 import pytest
 
 from crewai_tools.security.safe_path import (
+    format_path_for_display,
+    format_sandbox_error,
     validate_directory_path,
     validate_file_path,
     validate_url,
@@ -65,6 +67,37 @@ class TestValidateFilePath:
         # This would normally be rejected
         result = validate_file_path("/etc/passwd", str(tmp_path))
         assert result == os.path.realpath("/etc/passwd")
+
+    def test_rejection_message_redacts_absolute_prefixes(self, tmp_path):
+        outside = tmp_path.parent / "outside.txt"
+
+        with pytest.raises(ValueError) as exc_info:
+            validate_file_path(str(outside), str(tmp_path))
+
+        message = str(exc_info.value)
+        assert "outside.txt" in message
+        assert str(tmp_path) not in message
+        assert str(tmp_path.parent) not in message
+
+
+class TestFormatPathForDisplay:
+    """Tests for user-visible path labels."""
+
+    def test_returns_relative_path_inside_base(self, tmp_path):
+        nested_file = tmp_path / "nested" / "file.txt"
+        nested_file.parent.mkdir()
+        nested_file.touch()
+
+        result = format_path_for_display(str(nested_file), str(tmp_path))
+
+        assert result == os.path.join("nested", "file.txt")
+
+    def test_redacts_absolute_prefix_outside_base(self, tmp_path):
+        outside_file = tmp_path.parent / "outside.txt"
+
+        result = format_path_for_display(str(outside_file), str(tmp_path))
+
+        assert result == "outside.txt"
 
 
 class TestValidateDirectoryPath:
@@ -159,3 +192,20 @@ class TestValidateUrl:
         # file:// would normally be blocked
         result = validate_url("file:///etc/passwd")
         assert result == "file:///etc/passwd"
+
+
+class TestFormatSandboxError:
+    def test_replaces_bypass_advice_with_remedy(self, tmp_path):
+        with pytest.raises(ValueError) as exc:
+            validate_file_path(str(tmp_path.parent / "outside.txt"), str(tmp_path))
+
+        message = format_sandbox_error(exc.value, "Pass base_dir to widen it.")
+
+        assert "outside the allowed directory" in message
+        assert "Pass base_dir to widen it." in message
+        assert "CREWAI_TOOLS_ALLOW_UNSAFE_PATHS" not in message
+
+    def test_leaves_unrelated_errors_intact(self):
+        message = format_sandbox_error(ValueError("something else"), "Do this.")
+
+        assert message == "something else Do this."

@@ -62,7 +62,7 @@ crewai create flow <name> --skip_provider  # New flow project
 
 # Running
 crewai run                  # Run crew or flow (auto-detects from pyproject.toml)
-crewai flow kickoff         # Legacy flow execution
+crewai flow kickoff         # Deprecated compatibility alias for crewai run
 
 # Testing & training
 crewai test                           # Test crew (default: 2 iterations, gpt-4o-mini)
@@ -767,10 +767,11 @@ class CustomSearchTool(BaseTool):
 ```python
 from crewai.tools import tool
 
-@tool("Calculator")
-def calculator(expression: str) -> str:
-    """Evaluates a mathematical expression and returns the result."""
-    return str(eval(expression))
+@tool("WordCount")
+def word_count(text: str) -> str:
+    """Counts the number of words in the given text."""
+    count = len(text.split())
+    return f"Word count: {count}"
 ```
 
 ### Built-in Tools (install with `uv add crewai-tools`)

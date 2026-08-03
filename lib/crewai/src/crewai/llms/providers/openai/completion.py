@@ -8,7 +8,14 @@ import os
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict
 
 import httpx
-from openai import APIConnectionError, AsyncOpenAI, NotFoundError, OpenAI, Stream
+from openai import (
+    APIConnectionError,
+    AsyncOpenAI,
+    BadRequestError,
+    NotFoundError,
+    OpenAI,
+    Stream,
+)
 from openai.lib.streaming.chat import ChatCompletionStream
 from openai.types.chat import (
     ChatCompletion,
@@ -29,6 +36,7 @@ from openai.types.responses import (
 from pydantic import BaseModel, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
+from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.base_llm import BaseLLM, JsonResponseFormat, llm_call_context
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
@@ -48,6 +56,13 @@ if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
+
+
+# Models learned at runtime to be unavailable on /v1/chat/completions, keyed by
+# the model string as configured. Populated from the 404 by
+# `_remember_responses_only_model` so the wasted round trip is paid once per model
+# per process rather than on every call.
+_LEARNED_RESPONSES_ONLY_MODELS: set[str] = set()
 
 
 class WebSearchResult(TypedDict, total=False):
@@ -231,6 +246,7 @@ class OpenAICompletion(BaseLLM):
     auto_chain: bool = False
     auto_chain_reasoning: bool = False
     api_base: str | None = None
+    custom_openai: bool = False
     is_o1_model: bool = False
     is_gpt4_model: bool = False
 
@@ -244,6 +260,20 @@ class OpenAICompletion(BaseLLM):
     def _normalize_openai_fields(cls, data: Any) -> Any:
         if not isinstance(data, dict):
             return data
+        if data.get("custom_openai"):
+            custom_base_url = (
+                data.get("base_url")
+                or data.get("api_base")
+                or os.getenv("OPENAI_BASE_URL")
+                or os.getenv("OPENAI_API_BASE")
+            )
+            if not custom_base_url:
+                raise ValueError(
+                    "custom_openai=True requires base_url, api_base, "
+                    "OPENAI_BASE_URL, or OPENAI_API_BASE"
+                )
+            if not data.get("base_url") and not data.get("api_base"):
+                data["base_url"] = custom_base_url
         if not data.get("provider"):
             data["provider"] = "openai"
         data["api_key"] = data.get("api_key") or os.getenv("OPENAI_API_KEY")
@@ -354,6 +384,15 @@ class OpenAICompletion(BaseLLM):
             config["seed"] = self.seed
         if self.reasoning_effort is not None:
             config["reasoning_effort"] = self.reasoning_effort
+        if self.custom_openai:
+            config["model"] = self.model
+            config["custom_openai"] = True
+            config["base_url"] = (
+                self.base_url
+                or self.api_base
+                or os.getenv("OPENAI_BASE_URL")
+                or os.getenv("OPENAI_API_BASE")
+            )
         return config
 
     def _get_client_params(self) -> dict[str, Any]:
@@ -371,6 +410,7 @@ class OpenAICompletion(BaseLLM):
             "base_url": self.base_url
             or self.api_base
             or os.getenv("OPENAI_BASE_URL")
+            or os.getenv("OPENAI_API_BASE")
             or None,
             "timeout": self.timeout,
             "max_retries": self.max_retries,
@@ -427,7 +467,7 @@ class OpenAICompletion(BaseLLM):
                 ):
                     raise ValueError("LLM call blocked by before_llm_call hook")
 
-                if self.api == "responses":
+                if self._effective_api() == "responses":
                     return self._call_responses(
                         messages=formatted_messages,
                         tools=tools,
@@ -463,27 +503,65 @@ class OpenAICompletion(BaseLLM):
         from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
-        """Call OpenAI Chat Completions API."""
+        """Call OpenAI Chat Completions API.
+
+        Falls back to the Responses API when the model turns out not to be served
+        by chat completions, which OpenAI reports as a 404 distinct from a genuine
+        unknown model.
+        """
         completion_params = self._prepare_completion_params(
             messages=messages, tools=tools
         )
 
-        if self.stream:
-            return self._handle_streaming_completion(
-                params=completion_params,
+        def dispatch(params: dict[str, Any]) -> str | Any:
+            if self._effective_stream():
+                return self._handle_streaming_completion(
+                    params=params,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
+            return self._handle_completion(
+                params=params,
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
                 response_model=response_model,
             )
 
-        return self._handle_completion(
-            params=completion_params,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
-        )
+        try:
+            return dispatch(completion_params)
+        except Exception as e:
+            cause = e.__cause__ or e
+
+            if self._rejects_reasoning_effort_with_tools(cause):
+                retry_params = self._reasoning_effort_none_params(completion_params)
+                if retry_params is not None:
+                    logging.debug(
+                        'Retrying %r with reasoning_effort="none": function tools '
+                        "and reasoning effort cannot be combined on "
+                        '/v1/chat/completions. Use api="responses" to keep both.',
+                        self.model,
+                    )
+                    return dispatch(retry_params)
+
+            if self.custom_openai or not self._is_responses_only_error(cause):
+                raise
+            self._remember_responses_only_model()
+            logging.debug(
+                "Retrying %r on the Responses API: not served by "
+                '/v1/chat/completions. Set api="responses" to skip this.',
+                self.model,
+            )
+            return self._call_responses(
+                messages=messages,
+                tools=tools,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
 
     async def acall(
         self,
@@ -522,7 +600,7 @@ class OpenAICompletion(BaseLLM):
 
                 formatted_messages = self._format_messages(messages)
 
-                if self.api == "responses":
+                if self._effective_api() == "responses":
                     return await self._acall_responses(
                         messages=formatted_messages,
                         tools=tools,
@@ -558,27 +636,53 @@ class OpenAICompletion(BaseLLM):
         from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
-        """Async call to OpenAI Chat Completions API."""
+        """Async call to OpenAI Chat Completions API.
+
+        Falls back to the Responses API for models not served by chat completions,
+        mirroring :meth:`_call_completions`.
+        """
         completion_params = self._prepare_completion_params(
             messages=messages, tools=tools
         )
 
-        if self.stream:
-            return await self._ahandle_streaming_completion(
-                params=completion_params,
+        async def dispatch(params: dict[str, Any]) -> str | Any:
+            if self._effective_stream():
+                return await self._ahandle_streaming_completion(
+                    params=params,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
+            return await self._ahandle_completion(
+                params=params,
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
                 response_model=response_model,
             )
 
-        return await self._ahandle_completion(
-            params=completion_params,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
-        )
+        try:
+            return await dispatch(completion_params)
+        except Exception as e:
+            cause = e.__cause__ or e
+
+            if self._rejects_reasoning_effort_with_tools(cause):
+                retry_params = self._reasoning_effort_none_params(completion_params)
+                if retry_params is not None:
+                    return await dispatch(retry_params)
+
+            if self.custom_openai or not self._is_responses_only_error(cause):
+                raise
+            self._remember_responses_only_model()
+            return await self._acall_responses(
+                messages=messages,
+                tools=tools,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
 
     def _call_responses(
         self,
@@ -594,7 +698,7 @@ class OpenAICompletion(BaseLLM):
             messages=messages, tools=tools, response_model=response_model
         )
 
-        if self.stream:
+        if self._effective_stream():
             return self._handle_streaming_responses(
                 params=params,
                 available_functions=available_functions,
@@ -625,7 +729,7 @@ class OpenAICompletion(BaseLLM):
             messages=messages, tools=tools, response_model=response_model
         )
 
-        if self.stream:
+        if self._effective_stream():
             return await self._ahandle_streaming_responses(
                 params=params,
                 available_functions=available_functions,
@@ -641,6 +745,52 @@ class OpenAICompletion(BaseLLM):
             from_agent=from_agent,
             response_model=response_model,
         )
+
+    @staticmethod
+    def _to_responses_input(message: LLMMessage) -> list[Any]:
+        """Translate a chat-format message into Responses ``input`` items.
+
+        Tool calling is expressed differently by the two APIs. Chat Completions
+        uses an assistant message carrying ``tool_calls`` (with ``content: None``)
+        followed by ``role: "tool"`` results; the Responses API uses flat
+        ``function_call`` / ``function_call_output`` items keyed by ``call_id``.
+
+        Passing the chat shape straight through is rejected:
+
+            Invalid type for 'input[1].content': expected one of an array of
+            objects or string, but got null instead.
+
+        Anything without tool calls is already valid and passes through unchanged.
+        """
+        role = message.get("role")
+
+        if role == "assistant" and message.get("tool_calls"):
+            items: list[Any] = []
+            content = message.get("content")
+            if content:
+                items.append({"role": "assistant", "content": content})
+            for call in message["tool_calls"]:
+                function = call.get("function", {})
+                items.append(
+                    {
+                        "type": "function_call",
+                        "call_id": call.get("id", ""),
+                        "name": function.get("name", ""),
+                        "arguments": function.get("arguments", "{}"),
+                    }
+                )
+            return items
+
+        if role == "tool":
+            return [
+                {
+                    "type": "function_call_output",
+                    "call_id": message.get("tool_call_id", ""),
+                    "output": str(message.get("content", "")),
+                }
+            ]
+
+        return [message]
 
     def _prepare_responses_params(
         self,
@@ -668,7 +818,7 @@ class OpenAICompletion(BaseLLM):
                 else:
                     instructions = content_str
             else:
-                input_messages.append(message)
+                input_messages.extend(self._to_responses_input(message))
 
         # Prepend reasoning items for ZDR (zero-data-retention) chaining when configured
         final_input: list[Any] = []
@@ -684,7 +834,7 @@ class OpenAICompletion(BaseLLM):
         if instructions:
             params["instructions"] = instructions
 
-        if self.stream:
+        if self._effective_stream():
             params["stream"] = True
 
         if self.store is not None:
@@ -825,6 +975,10 @@ class OpenAICompletion(BaseLLM):
             usage = self._extract_responses_token_usage(response)
             self._track_token_usage_internal(usage)
 
+            finish_reason, response_id = self._extract_responses_finish_reason_and_id(
+                response
+            )
+
             if self.parse_tool_outputs:
                 parsed_result = self._extract_builtin_tool_outputs(response)
                 parsed_result.text = self._apply_stop_words(parsed_result.text)
@@ -836,6 +990,8 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params.get("input", []),
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
 
                 return parsed_result
@@ -849,6 +1005,8 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params.get("input", []),
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
                 return function_calls
 
@@ -887,6 +1045,8 @@ class OpenAICompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params.get("input", []),
                         usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=response_id,
                     )
                     return structured_result
                 except ValueError as e:
@@ -901,6 +1061,8 @@ class OpenAICompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=params.get("input", []),
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
 
             content = self._invoke_after_llm_call_hooks(
@@ -960,6 +1122,10 @@ class OpenAICompletion(BaseLLM):
             usage = self._extract_responses_token_usage(response)
             self._track_token_usage_internal(usage)
 
+            finish_reason, response_id = self._extract_responses_finish_reason_and_id(
+                response
+            )
+
             if self.parse_tool_outputs:
                 parsed_result = self._extract_builtin_tool_outputs(response)
                 parsed_result.text = self._apply_stop_words(parsed_result.text)
@@ -971,6 +1137,8 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params.get("input", []),
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
 
                 return parsed_result
@@ -984,6 +1152,8 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params.get("input", []),
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
                 return function_calls
 
@@ -1022,6 +1192,8 @@ class OpenAICompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params.get("input", []),
                         usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=response_id,
                     )
                     return structured_result
                 except ValueError as e:
@@ -1036,6 +1208,8 @@ class OpenAICompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=params.get("input", []),
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
 
         except NotFoundError as e:
@@ -1123,6 +1297,12 @@ class OpenAICompletion(BaseLLM):
                     usage = self._extract_responses_token_usage(event.response)
                     self._track_token_usage_internal(usage)
 
+        finish_reason, response_id = (
+            self._extract_responses_finish_reason_and_id(final_response)
+            if final_response is not None
+            else (None, response_id_stream)
+        )
+
         if self.parse_tool_outputs and final_response:
             parsed_result = self._extract_builtin_tool_outputs(final_response)
             parsed_result.text = self._apply_stop_words(parsed_result.text)
@@ -1134,6 +1314,8 @@ class OpenAICompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=params.get("input", []),
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
 
             return parsed_result
@@ -1171,6 +1353,8 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params.get("input", []),
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
                 return structured_result
             except ValueError as e:
@@ -1185,6 +1369,8 @@ class OpenAICompletion(BaseLLM):
             from_agent=from_agent,
             messages=params.get("input", []),
             usage=usage,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -1248,6 +1434,12 @@ class OpenAICompletion(BaseLLM):
                     usage = self._extract_responses_token_usage(event.response)
                     self._track_token_usage_internal(usage)
 
+        finish_reason, response_id = (
+            self._extract_responses_finish_reason_and_id(final_response)
+            if final_response is not None
+            else (None, response_id_stream)
+        )
+
         if self.parse_tool_outputs and final_response:
             parsed_result = self._extract_builtin_tool_outputs(final_response)
             parsed_result.text = self._apply_stop_words(parsed_result.text)
@@ -1259,6 +1451,8 @@ class OpenAICompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=params.get("input", []),
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
 
             return parsed_result
@@ -1296,6 +1490,8 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params.get("input", []),
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
                 return structured_result
             except ValueError as e:
@@ -1310,6 +1506,8 @@ class OpenAICompletion(BaseLLM):
             from_agent=from_agent,
             messages=params.get("input", []),
             usage=usage,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
 
         return full_response
@@ -1483,6 +1681,105 @@ class OpenAICompletion(BaseLLM):
         """
         return [item for item in response.output if item.type == "reasoning"]
 
+    @staticmethod
+    def _is_responses_only_error(error: BaseException) -> bool:
+        """Whether a 404 means the model exists but isn't on chat completions.
+
+        OpenAI distinguishes the two 404s it returns here:
+
+            responses-only  param="model", "only supported in v1/responses"
+                            or "This is not a chat model"
+            genuine typo    code="model_not_found", "does not exist"
+
+        Matching the former lets a newly Responses-only model be recovered without
+        needing to be listed in this file.
+        """
+        if not isinstance(error, NotFoundError):
+            return False
+        body = getattr(error, "body", None)
+        inner = body.get("error") if isinstance(body, dict) else None
+        if isinstance(inner, dict) and inner.get("code") == "model_not_found":
+            return False
+        text = str(getattr(error, "message", "") or error).lower()
+        return "only supported in v1/responses" in text or "not a chat model" in text
+
+    def _remember_responses_only_model(self) -> None:
+        """Record that this model must use the Responses API."""
+        _LEARNED_RESPONSES_ONLY_MODELS.add(self.model)
+
+    def _model_not_found_message(self, error: Exception) -> str:
+        """Build a 404 message that says what to do about it.
+
+        OpenAI's own wording ("This is not a chat model") doesn't make the fix
+        obvious, so point at ``api="responses"`` when that's what it means.
+        """
+        if self._is_responses_only_error(error):
+            return (
+                f"Model {self.model} is not available on /v1/chat/completions. "
+                f'Use api="responses" (LLM(model="{self.model}", api="responses")) '
+                f"to reach it: {error}"
+            )
+        return f"Model {self.model} not found: {error}"
+
+    @staticmethod
+    def _rejects_reasoning_effort_with_tools(error: BaseException) -> bool:
+        """Whether a 400 is OpenAI refusing `reasoning_effort` alongside tools.
+
+        GPT-5.6 applies a server-side `reasoning_effort` default and then rejects
+        it when function tools are present, so a payload carrying no
+        `reasoning_effort` at all still fails:
+
+            "Function tools with reasoning_effort are not supported for
+            gpt-5.6-sol in /v1/chat/completions. To use function tools, use
+            /v1/responses or set reasoning_effort to 'none'."
+
+        Matched on the structured `param` field plus the message so the unrelated
+        "Unsupported value" 400 that o1/o3 return for `reasoning_effort="none"`
+        doesn't look recoverable.
+        """
+        if not isinstance(error, BadRequestError):
+            return False
+        body = getattr(error, "body", None)
+        source = None
+        if isinstance(body, dict):
+            inner = body.get("error")
+            source = inner if isinstance(inner, dict) else body
+        if not source or source.get("param") != "reasoning_effort":
+            return False
+        message = str(source.get("message") or "").lower()
+        return "function tools" in message and "reasoning_effort" in message
+
+    def _reasoning_effort_none_params(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Params with an explicit `reasoning_effort="none"`, or None if already set.
+
+        Removing the key is not enough: absence means "use the server default",
+        which is what the request was rejected for in the first place.
+        """
+        if params.get("reasoning_effort") == "none":
+            return None
+        return {**params, "reasoning_effort": "none"}
+
+    def _effective_api(self) -> str:
+        """Which OpenAI API to actually use for this model.
+
+        Honours an explicit ``api`` setting, but upgrades to ``"responses"`` for
+        models already known -- from a previous 404 in this process -- not to be
+        served by chat completions.
+
+        Never overrides ``custom_openai=True``: an OpenAI-compatible server may
+        serve any model name on /v1/chat/completions and most don't implement
+        /v1/responses at all, so the user's choice stands.
+        """
+        if (
+            self.api == "completions"
+            and not self.custom_openai
+            and self.model in _LEARNED_RESPONSES_ONLY_MODELS
+        ):
+            return "responses"
+        return self.api
+
     def _prepare_completion_params(
         self, messages: list[LLMMessage], tools: list[dict[str, BaseTool]] | None = None
     ) -> dict[str, Any]:
@@ -1491,8 +1788,8 @@ class OpenAICompletion(BaseLLM):
             "model": self.model,
             "messages": messages,
         }
-        if self.stream:
-            params["stream"] = self.stream
+        if self._effective_stream():
+            params["stream"] = self._effective_stream()
             params["stream_options"] = {"include_usage": True}
 
         params.update(self.additional_params)
@@ -1603,6 +1900,9 @@ class OpenAICompletion(BaseLLM):
                 usage = self._extract_openai_token_usage(parsed_response)
                 self._track_token_usage_internal(usage)
 
+                parsed_finish_reason, parsed_response_id = (
+                    self._extract_chat_finish_reason_and_id(parsed_response)
+                )
                 parsed_object = parsed_response.choices[0].message.parsed
                 if parsed_object:
                     self._emit_call_completed_event(
@@ -1612,6 +1912,8 @@ class OpenAICompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage,
+                        finish_reason=parsed_finish_reason,
+                        response_id=parsed_response_id,
                     )
                     return parsed_object
 
@@ -1625,6 +1927,9 @@ class OpenAICompletion(BaseLLM):
 
             choice: Choice = response.choices[0]
             message = choice.message
+            finish_reason, response_id = self._extract_chat_finish_reason_and_id(
+                response
+            )
 
             # Without available_functions, return tool_calls so the caller (executor) handles execution
             if message.tool_calls and not available_functions:
@@ -1635,6 +1940,8 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
                 return list(message.tool_calls)
 
@@ -1675,6 +1982,8 @@ class OpenAICompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=response_id,
                     )
                     return structured_result
                 except ValueError as e:
@@ -1689,6 +1998,8 @@ class OpenAICompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
 
             if usage.get("total_tokens", 0) > 0:
@@ -1698,7 +2009,7 @@ class OpenAICompletion(BaseLLM):
                 params["messages"], content, from_agent
             )
         except NotFoundError as e:
-            error_msg = f"Model {self.model} not found: {e}"
+            error_msg = self._model_not_found_message(e)
             logging.error(error_msg)
             self._emit_call_failed_event(
                 error=error_msg, from_task=from_task, from_agent=from_agent
@@ -1715,6 +2026,11 @@ class OpenAICompletion(BaseLLM):
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
+
+            # `_call_completions` retries this one, so reporting a failed call
+            # here would surface an error the caller never experiences.
+            if self._rejects_reasoning_effort_with_tools(e):
+                raise
 
             error_msg = f"OpenAI API call failed: {e!s}"
             logging.error(error_msg)
@@ -1734,6 +2050,8 @@ class OpenAICompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        finish_reason: str | None = None,
+        response_id: str | None = None,
     ) -> str | list[dict[str, Any]]:
         """Finalize a streaming response with usage tracking, tool call handling, and events.
 
@@ -1745,6 +2063,9 @@ class OpenAICompletion(BaseLLM):
             available_functions: Available functions for tool calling.
             from_task: Task that initiated the call.
             from_agent: Agent that initiated the call.
+            finish_reason: Raw provider finish reason (e.g. "stop", "length",
+                "tool_calls") extracted from the last streaming chunk.
+            response_id: Raw provider response id from any chunk.
 
         Returns:
             Tool calls list when tools were invoked without available_functions,
@@ -1774,6 +2095,8 @@ class OpenAICompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=usage_data,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
             return tool_calls_list
 
@@ -1817,6 +2140,8 @@ class OpenAICompletion(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=usage_data,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
 
         return full_response
@@ -1861,6 +2186,9 @@ class OpenAICompletion(BaseLLM):
                 if final_completion:
                     usage = self._extract_openai_token_usage(final_completion)
                     self._track_token_usage_internal(usage)
+                    parsed_finish_reason, parsed_response_id = (
+                        self._extract_chat_finish_reason_and_id(final_completion)
+                    )
                     if final_completion.choices:
                         parsed_result = final_completion.choices[0].message.parsed
                         if parsed_result:
@@ -1871,6 +2199,8 @@ class OpenAICompletion(BaseLLM):
                                 from_agent=from_agent,
                                 messages=params["messages"],
                                 usage=usage,
+                                finish_reason=parsed_finish_reason,
+                                response_id=parsed_response_id,
                             )
                             return parsed_result
 
@@ -1882,11 +2212,15 @@ class OpenAICompletion(BaseLLM):
         )
 
         usage_data: dict[str, Any] | None = None
+        stream_finish_reason: str | None = None
+        stream_response_id: str | None = None
 
         for completion_chunk in completion_stream:
             response_id_stream = (
                 completion_chunk.id if hasattr(completion_chunk, "id") else None
             )
+            if response_id_stream:
+                stream_response_id = response_id_stream
 
             if hasattr(completion_chunk, "usage") and completion_chunk.usage:
                 usage_data = self._extract_openai_token_usage(completion_chunk)
@@ -1897,6 +2231,9 @@ class OpenAICompletion(BaseLLM):
 
             choice = completion_chunk.choices[0]
             chunk_delta: ChoiceDelta = choice.delta
+            chunk_finish = getattr(choice, "finish_reason", None)
+            if chunk_finish:
+                stream_finish_reason = chunk_finish
 
             if chunk_delta.content:
                 full_response += chunk_delta.content
@@ -1954,6 +2291,8 @@ class OpenAICompletion(BaseLLM):
             available_functions=available_functions,
             from_task=from_task,
             from_agent=from_agent,
+            finish_reason=stream_finish_reason,
+            response_id=stream_response_id,
         )
         if isinstance(result, str):
             return self._invoke_after_llm_call_hooks(
@@ -1989,6 +2328,9 @@ class OpenAICompletion(BaseLLM):
                 usage = self._extract_openai_token_usage(parsed_response)
                 self._track_token_usage_internal(usage)
 
+                parsed_finish_reason, parsed_response_id = (
+                    self._extract_chat_finish_reason_and_id(parsed_response)
+                )
                 parsed_object = parsed_response.choices[0].message.parsed
                 if parsed_object:
                     self._emit_call_completed_event(
@@ -1998,6 +2340,8 @@ class OpenAICompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage,
+                        finish_reason=parsed_finish_reason,
+                        response_id=parsed_response_id,
                     )
                     return parsed_object
 
@@ -2011,6 +2355,9 @@ class OpenAICompletion(BaseLLM):
 
             choice: Choice = response.choices[0]
             message = choice.message
+            finish_reason, response_id = self._extract_chat_finish_reason_and_id(
+                response
+            )
 
             # Without available_functions, return tool_calls so the caller (executor) handles execution
             if message.tool_calls and not available_functions:
@@ -2021,6 +2368,8 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
                 return list(message.tool_calls)
 
@@ -2065,6 +2414,8 @@ class OpenAICompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=response_id,
                     )
                     return structured_result
                 except ValueError as e:
@@ -2079,12 +2430,14 @@ class OpenAICompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
 
             if usage.get("total_tokens", 0) > 0:
                 logging.info(f"OpenAI API usage: {usage}")
         except NotFoundError as e:
-            error_msg = f"Model {self.model} not found: {e}"
+            error_msg = self._model_not_found_message(e)
             logging.error(error_msg)
             self._emit_call_failed_event(
                 error=error_msg, from_task=from_task, from_agent=from_agent
@@ -2101,6 +2454,11 @@ class OpenAICompletion(BaseLLM):
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
+
+            # `_call_completions` retries this one, so reporting a failed call
+            # here would surface an error the caller never experiences.
+            if self._rejects_reasoning_effort_with_tools(e):
+                raise
 
             error_msg = f"OpenAI API call failed: {e!s}"
             logging.error(error_msg)
@@ -2130,8 +2488,12 @@ class OpenAICompletion(BaseLLM):
 
             accumulated_content = ""
             usage_data: dict[str, Any] | None = None
+            parsed_stream_finish_reason: str | None = None
+            parsed_stream_response_id: str | None = None
             async for chunk in completion_stream:
                 response_id_stream = chunk.id if hasattr(chunk, "id") else None
+                if response_id_stream:
+                    parsed_stream_response_id = response_id_stream
 
                 if hasattr(chunk, "usage") and chunk.usage:
                     usage_data = self._extract_openai_token_usage(chunk)
@@ -2142,6 +2504,9 @@ class OpenAICompletion(BaseLLM):
 
                 choice = chunk.choices[0]
                 delta: ChoiceDelta = choice.delta
+                chunk_finish = getattr(choice, "finish_reason", None)
+                if chunk_finish:
+                    parsed_stream_finish_reason = chunk_finish
 
                 if delta.content:
                     accumulated_content += delta.content
@@ -2165,6 +2530,8 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=usage_data,
+                    finish_reason=parsed_stream_finish_reason,
+                    response_id=parsed_stream_response_id,
                 )
 
                 return parsed_object
@@ -2177,6 +2544,8 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=usage_data,
+                    finish_reason=parsed_stream_finish_reason,
+                    response_id=parsed_stream_response_id,
                 )
                 return accumulated_content
 
@@ -2185,9 +2554,13 @@ class OpenAICompletion(BaseLLM):
         ] = await self._get_async_client().chat.completions.create(**params)
 
         usage_data = None
+        stream_finish_reason: str | None = None
+        stream_response_id: str | None = None
 
         async for chunk in stream:
             response_id_stream = chunk.id if hasattr(chunk, "id") else None
+            if response_id_stream:
+                stream_response_id = response_id_stream
 
             if hasattr(chunk, "usage") and chunk.usage:
                 usage_data = self._extract_openai_token_usage(chunk)
@@ -2198,6 +2571,9 @@ class OpenAICompletion(BaseLLM):
 
             choice = chunk.choices[0]
             chunk_delta: ChoiceDelta = choice.delta
+            chunk_finish = getattr(choice, "finish_reason", None)
+            if chunk_finish:
+                stream_finish_reason = chunk_finish
 
             if chunk_delta.content:
                 full_response += chunk_delta.content
@@ -2255,6 +2631,8 @@ class OpenAICompletion(BaseLLM):
             available_functions=available_functions,
             from_task=from_task,
             from_agent=from_agent,
+            finish_reason=stream_finish_reason,
+            response_id=stream_response_id,
         )
 
     def supports_function_calling(self) -> bool:
@@ -2286,6 +2664,7 @@ class OpenAICompletion(BaseLLM):
             "gpt-4": 8192,
             "gpt-4o": 128000,
             "gpt-4o-mini": 200000,
+            "gpt-5.4-mini": 200000,
             "gpt-4-turbo": 128000,
             "gpt-4.1": 1047576,
             "gpt-4.1-mini-2025-04-14": 1047576,
@@ -2304,6 +2683,32 @@ class OpenAICompletion(BaseLLM):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
         return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+
+    def _effective_max_tokens(self) -> int | float | None:
+        """Newer OpenAI chat models cap via ``max_completion_tokens``."""
+        return self.max_tokens or self.max_completion_tokens
+
+    @staticmethod
+    def _extract_chat_finish_reason_and_id(
+        response: Any,
+    ) -> tuple[str | None, str | None]:
+        """ChatCompletion / ChatCompletionChunk share the choices-shape;
+        delegate to the shared extractor.
+        """
+        return extract_choices_finish_reason_and_id(response)
+
+    @staticmethod
+    def _extract_responses_finish_reason_and_id(
+        response: Any,
+    ) -> tuple[str | None, str | None]:
+        """Extract finish_reason and response_id from an OpenAI Responses
+        API ``Response`` object. The Responses API exposes ``status`` rather
+        than ``finish_reason``; we forward the raw status value.
+        """
+        return (
+            getattr(response, "status", None),
+            getattr(response, "id", None),
+        )
 
     def _extract_openai_token_usage(
         self, response: ChatCompletion | ChatCompletionChunk

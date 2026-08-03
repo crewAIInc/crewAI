@@ -108,6 +108,16 @@ class TestLiteLLMMultimodal:
 
         assert result == []
 
+    def test_format_responses_pdf_with_concrete_gpt_model(self) -> None:
+        """Test OpenAI Responses PDF support with an inferred GPT provider."""
+        files = {"doc": PDFFile(source=MINIMAL_PDF)}
+
+        result = format_multimodal_content(files, "gpt-4o-mini", api="responses")
+
+        assert len(result) == 1
+        assert result[0]["type"] == "input_file"
+        assert result[0]["file_data"].startswith("data:application/pdf;base64,")
+
 
 @pytest.mark.skipif(not HAS_ANTHROPIC, reason="Anthropic SDK not installed")
 class TestAnthropicMultimodal:

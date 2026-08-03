@@ -91,20 +91,24 @@ class TestToolCallHookContext:
         assert context.task == mock_task
         assert context.crew == mock_crew
         assert context.tool_result is None
+        assert context.raw_tool_result is None
 
     def test_context_with_result(self, mock_tool):
         """Test that context includes result when provided."""
         tool_input = {"arg1": "value1"}
         tool_result = "Test tool result"
+        raw_tool_result = {"value": 42}
 
         context = ToolCallHookContext(
             tool_name="test_tool",
             tool_input=tool_input,
             tool=mock_tool,
             tool_result=tool_result,
+            raw_tool_result=raw_tool_result,
         )
 
         assert context.tool_result == tool_result
+        assert context.raw_tool_result == raw_tool_result
 
     def test_tool_input_is_mutable_reference(self, mock_tool):
         """Test that modifying context.tool_input modifies the original dict."""
@@ -570,6 +574,75 @@ class TestToolHooksIntegration:
         finally:
             unregister_before_tool_call_hook(before_tool_call_hook)
             unregister_after_tool_call_hook(after_tool_call_hook)
+
+
+class TestPerHookFailOpen:
+    """Fail-open is per-hook: a crashing hook must not disable its neighbors.
+
+    Regression guards for the dispatcher migration: previously each seam's
+    ``except Exception`` wrapped the whole hook loop, so a raising hook
+    silently skipped every hook registered after it.
+    """
+
+    def test_raising_before_hook_does_not_skip_later_hooks_or_block(
+        self, mock_tool, mock_agent
+    ):
+        from crewai.hooks.tool_hooks import run_before_tool_call_hooks
+
+        mock_agent.verbose = False
+        ran: list[str] = []
+
+        def crashing_hook(context):
+            ran.append("crashing")
+            raise ValueError("bug in user hook")
+
+        def later_hook(context):
+            ran.append("later")
+
+        register_before_tool_call_hook(crashing_hook)
+        register_before_tool_call_hook(later_hook)
+
+        context = ToolCallHookContext(
+            tool_name="test_tool",
+            tool_input={"arg": "value"},
+            tool=mock_tool,
+            agent=mock_agent,
+        )
+        blocked = run_before_tool_call_hooks(context)
+
+        assert ran == ["crashing", "later"]
+        assert blocked is False
+
+    def test_raising_after_hook_does_not_skip_later_result_rewrites(
+        self, mock_tool, mock_agent
+    ):
+        from crewai.hooks.tool_hooks import run_after_tool_call_hooks
+
+        mock_agent.verbose = False
+        ran: list[str] = []
+
+        def crashing_hook(context):
+            ran.append("crashing")
+            raise ValueError("bug in user hook")
+
+        def rewriting_hook(context):
+            ran.append("rewriting")
+            return f"{context.tool_result} [rewritten]"
+
+        register_after_tool_call_hook(crashing_hook)
+        register_after_tool_call_hook(rewriting_hook)
+
+        context = ToolCallHookContext(
+            tool_name="test_tool",
+            tool_input={"arg": "value"},
+            tool=mock_tool,
+            agent=mock_agent,
+            tool_result="original",
+        )
+        result = run_after_tool_call_hooks(context)
+
+        assert ran == ["crashing", "rewriting"]
+        assert result == "original [rewritten]"
 
 
 class TestNativeToolCallingHooksIntegration:

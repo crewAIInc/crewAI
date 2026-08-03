@@ -1096,6 +1096,7 @@ def test_lite_agent_memory_true_resolves_to_default_memory():
     )
     assert agent._memory is not None
     assert isinstance(agent._memory, Memory)
+    assert agent._memory.llm is agent.llm
 
 
 @pytest.mark.filterwarnings("ignore:LiteAgent is deprecated")
@@ -1137,3 +1138,160 @@ def test_lite_agent_memory_instance_recall_and_save_called():
     mock_memory.remember_many.assert_called_once_with(
         ["Fact one.", "Fact two."], agent_role="Test"
     )
+
+
+class _FixedUsageLLM(BaseLLM):
+    """Offline BaseLLM that records fixed usage (100/10 tokens) per call."""
+
+    def __init__(self):
+        super().__init__(model="fixed-usage-model")
+
+    def call(
+        self,
+        messages,
+        tools=None,
+        callbacks=None,
+        available_functions=None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    ) -> str:
+        self._track_token_usage_internal(
+            {"prompt_tokens": 100, "completion_tokens": 10, "total_tokens": 110}
+        )
+        return "Thought: I know the answer.\nFinal Answer: fake answer"
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def supports_stop_words(self) -> bool:
+        return False
+
+    def get_context_window_size(self) -> int:
+        return 4096
+
+
+class TestKickoffUsageMetricsArePerCall:
+    """Regression tests for EPD-177: kickoff results used to expose the LLM
+    instance's cumulative lifetime counters, so counts accumulated across
+    calls and pooled across agents sharing one LLM object.
+    """
+
+    def _make_agent(self, role: str, llm: BaseLLM) -> Agent:
+        return Agent(
+            role=role,
+            goal="Answer questions.",
+            backstory="Test agent.",
+            llm=llm,
+            verbose=False,
+        )
+
+    def test_agents_sharing_one_llm_report_per_call_usage(self):
+        shared = _FixedUsageLLM()
+        r1 = self._make_agent("agent one", shared).kickoff("question one")
+        r2 = self._make_agent("agent two", shared).kickoff("question two")
+
+        assert r1.usage_metrics is not None
+        assert r1.usage_metrics["prompt_tokens"] > 0
+        # The second agent's call must not include the first agent's tokens.
+        assert r2.usage_metrics == r1.usage_metrics
+
+        # The shared LLM instance still exposes cumulative lifetime totals.
+        lifetime = shared.get_token_usage_summary()
+        assert lifetime.prompt_tokens == (
+            r1.usage_metrics["prompt_tokens"] + r2.usage_metrics["prompt_tokens"]
+        )
+        assert lifetime.successful_requests == (
+            r1.usage_metrics["successful_requests"]
+            + r2.usage_metrics["successful_requests"]
+        )
+
+    def test_repeated_kickoffs_on_same_agent_report_per_call_usage(self):
+        agent = self._make_agent("agent", _FixedUsageLLM())
+        r1 = agent.kickoff("question one")
+        r2 = agent.kickoff("question two")
+
+        assert r1.usage_metrics is not None
+        assert r1.usage_metrics["prompt_tokens"] > 0
+        assert r2.usage_metrics == r1.usage_metrics
+
+    @pytest.mark.asyncio
+    async def test_async_kickoff_reports_per_call_usage(self):
+        shared = _FixedUsageLLM()
+        r1 = await self._make_agent("agent one", shared).kickoff_async("question one")
+        r2 = await self._make_agent("agent two", shared).kickoff_async("question two")
+
+        assert r1.usage_metrics is not None
+        assert r1.usage_metrics["prompt_tokens"] > 0
+        assert r2.usage_metrics == r1.usage_metrics
+
+    def test_guardrail_retry_usage_includes_all_attempts(self):
+        """A guardrail retry re-invokes the LLM within the same kickoff, so
+        the result must report the whole call's usage — every attempt — not
+        just the last one."""
+        baseline = (
+            self._make_agent("baseline", _FixedUsageLLM())
+            .kickoff("question one")
+            .usage_metrics
+        )
+
+        attempts: list[str] = []
+
+        def flaky_guardrail(output):
+            attempts.append(output.raw)
+            if len(attempts) == 1:
+                return (False, "Please try again.")
+            return (True, output.raw)
+
+        agent = Agent(
+            role="agent",
+            goal="Answer questions.",
+            backstory="Test agent.",
+            llm=_FixedUsageLLM(),
+            guardrail=flaky_guardrail,
+            verbose=False,
+        )
+        result = agent.kickoff("question one")
+
+        assert len(attempts) == 2
+        assert result.usage_metrics["successful_requests"] == (
+            2 * baseline["successful_requests"]
+        )
+        assert result.usage_metrics["prompt_tokens"] == 2 * baseline["prompt_tokens"]
+        assert result.usage_metrics["total_tokens"] == 2 * baseline["total_tokens"]
+
+
+class TestUsageMetricsDeltaSince:
+    def test_field_wise_difference(self):
+        baseline = UsageMetrics(
+            total_tokens=110,
+            prompt_tokens=100,
+            completion_tokens=10,
+            successful_requests=1,
+        )
+        current = UsageMetrics(
+            total_tokens=330,
+            prompt_tokens=300,
+            completion_tokens=30,
+            cached_prompt_tokens=5,
+            reasoning_tokens=7,
+            cache_creation_tokens=3,
+            successful_requests=3,
+        )
+
+        delta = current.delta_since(baseline)
+
+        assert delta == UsageMetrics(
+            total_tokens=220,
+            prompt_tokens=200,
+            completion_tokens=20,
+            cached_prompt_tokens=5,
+            reasoning_tokens=7,
+            cache_creation_tokens=3,
+            successful_requests=2,
+        )
+
+    def test_clamps_negative_differences_to_zero(self):
+        baseline = UsageMetrics(total_tokens=100, prompt_tokens=90, successful_requests=2)
+        delta = UsageMetrics().delta_since(baseline)
+        assert delta == UsageMetrics()

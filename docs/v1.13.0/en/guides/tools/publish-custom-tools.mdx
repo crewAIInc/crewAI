@@ -1,0 +1,244 @@
+---
+title: Publish Custom Tools
+description: How to build, package, and publish your own CrewAI-compatible tools to PyPI so any CrewAI user can install and use them.
+icon: box-open
+mode: "wide"
+---
+
+## Overview
+
+CrewAI's tool system is designed to be extended. If you've built a tool that could benefit others, you can package it as a standalone Python library, publish it to PyPI, and make it available to any CrewAI user — no PR to the CrewAI repo required.
+
+This guide walks through the full process: implementing the tools contract, structuring your package, and publishing to PyPI.
+
+<Note type="info" title="Not looking to publish?">
+If you just need a custom tool for your own project, see the [Create Custom Tools](/en/learn/create-custom-tools) guide instead.
+</Note>
+
+## The Tools Contract
+
+Every CrewAI tool must satisfy one of two interfaces:
+
+### Option 1: Subclass `BaseTool`
+
+Subclass `crewai.tools.BaseTool` and implement the `_run` method. Define `name`, `description`, and optionally an `args_schema` for input validation.
+
+```python
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+
+class GeolocateInput(BaseModel):
+    """Input schema for GeolocateTool."""
+    address: str = Field(..., description="The street address to geolocate.")
+
+
+class GeolocateTool(BaseTool):
+    name: str = "Geolocate"
+    description: str = "Converts a street address into latitude/longitude coordinates."
+    args_schema: type[BaseModel] = GeolocateInput
+
+    def _run(self, address: str) -> str:
+        # Your implementation here
+        return f"40.7128, -74.0060"
+```
+
+### Option 2: Use the `@tool` Decorator
+
+For simpler tools, the `@tool` decorator turns a function into a CrewAI tool. The function **must** have a docstring (used as the tool description) and type annotations.
+
+```python
+from crewai.tools import tool
+
+
+@tool("Geolocate")
+def geolocate(address: str) -> str:
+    """Converts a street address into latitude/longitude coordinates."""
+    return "40.7128, -74.0060"
+```
+
+### Key Requirements
+
+Regardless of which approach you use, your tool must:
+
+- Have a **`name`** — a short, descriptive identifier.
+- Have a **`description`** — tells the agent when and how to use the tool. This directly affects how well agents use your tool, so be clear and specific.
+- Implement **`_run`** (BaseTool) or provide a **function body** (@tool) — the synchronous execution logic.
+- Use **type annotations** on all parameters and return values.
+- Return a **string** result (or something that can be meaningfully converted to one).
+
+### Optional: Async Support
+
+If your tool performs I/O-bound work, implement `_arun` for async execution:
+
+```python
+class GeolocateTool(BaseTool):
+    name: str = "Geolocate"
+    description: str = "Converts a street address into latitude/longitude coordinates."
+
+    def _run(self, address: str) -> str:
+        # Sync implementation
+        ...
+
+    async def _arun(self, address: str) -> str:
+        # Async implementation
+        ...
+```
+
+### Optional: Input Validation with `args_schema`
+
+Define a Pydantic model as your `args_schema` to get automatic input validation and clear error messages. If you don't provide one, CrewAI will infer it from your `_run` method's signature.
+
+```python
+from pydantic import BaseModel, Field
+
+
+class TranslateInput(BaseModel):
+    """Input schema for TranslateTool."""
+    text: str = Field(..., description="The text to translate.")
+    target_language: str = Field(
+        default="en",
+        description="ISO 639-1 language code for the target language.",
+    )
+```
+
+Explicit schemas are recommended for published tools — they produce better agent behavior and clearer documentation for your users.
+
+### Optional: Environment Variables
+
+If your tool requires API keys or other configuration, declare them with `env_vars` so users know what to set:
+
+```python
+from crewai.tools import BaseTool, EnvVar
+
+
+class GeolocateTool(BaseTool):
+    name: str = "Geolocate"
+    description: str = "Converts a street address into latitude/longitude coordinates."
+    env_vars: list[EnvVar] = [
+        EnvVar(
+            name="GEOCODING_API_KEY",
+            description="API key for the geocoding service.",
+            required=True,
+        ),
+    ]
+
+    def _run(self, address: str) -> str:
+        ...
+```
+
+## Package Structure
+
+Structure your project as a standard Python package. Here's a recommended layout:
+
+```
+crewai-geolocate/
+├── pyproject.toml
+├── LICENSE
+├── README.md
+└── src/
+    └── crewai_geolocate/
+        ├── __init__.py
+        └── tools.py
+```
+
+### `pyproject.toml`
+
+```toml
+[project]
+name = "crewai-geolocate"
+version = "0.1.0"
+description = "A CrewAI tool for geolocating street addresses."
+requires-python = ">=3.10"
+dependencies = [
+    "crewai",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+```
+
+Declare `crewai` as a dependency so users get a compatible version automatically.
+
+### `__init__.py`
+
+Re-export your tool classes so users can import them directly:
+
+```python
+from crewai_geolocate.tools import GeolocateTool
+
+__all__ = ["GeolocateTool"]
+```
+
+### Naming Conventions
+
+- **Package name**: Use the prefix `crewai-` (e.g., `crewai-geolocate`). This makes your tool discoverable when users search PyPI.
+- **Module name**: Use underscores (e.g., `crewai_geolocate`).
+- **Tool class name**: Use PascalCase ending in `Tool` (e.g., `GeolocateTool`).
+
+## Testing Your Tool
+
+Before publishing, verify your tool works within a crew:
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_geolocate import GeolocateTool
+
+agent = Agent(
+    role="Location Analyst",
+    goal="Find coordinates for given addresses.",
+    backstory="An expert in geospatial data.",
+    tools=[GeolocateTool()],
+)
+
+task = Task(
+    description="Find the coordinates of 1600 Pennsylvania Avenue, Washington, DC.",
+    expected_output="The latitude and longitude of the address.",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+print(result)
+```
+
+## Publishing to PyPI
+
+Once your tool is tested and ready:
+
+```bash
+# Build the package
+uv build
+
+# Publish to PyPI
+uv publish
+```
+
+If this is your first time publishing, you'll need a [PyPI account](https://pypi.org/account/register/) and an [API token](https://pypi.org/help/#apitoken).
+
+### After Publishing
+
+Users can install your tool with:
+
+```bash
+pip install crewai-geolocate
+```
+
+Or with uv:
+
+```bash
+uv add crewai-geolocate
+```
+
+Then use it in their crews:
+
+```python
+from crewai_geolocate import GeolocateTool
+
+agent = Agent(
+    role="Location Analyst",
+    tools=[GeolocateTool()],
+    # ...
+)
+```

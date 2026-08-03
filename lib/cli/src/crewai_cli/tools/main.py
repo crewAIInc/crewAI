@@ -23,6 +23,7 @@ from crewai_cli.utils import (
     tree_copy,
     tree_find_and_replace,
 )
+from crewai_cli.version import get_crewai_tools_dependency
 
 
 console = Console()
@@ -81,6 +82,9 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         tree_copy(template_dir, project_root)
         tree_find_and_replace(project_root, "{{folder_name}}", folder_name)
         tree_find_and_replace(project_root, "{{class_name}}", class_name)
+        tree_find_and_replace(
+            project_root, "{{crewai_tools_dependency}}", get_crewai_tools_dependency()
+        )
 
         agents_md_src = Path(__file__).parent.parent / "templates" / "AGENTS.md"
         if agents_md_src.exists():

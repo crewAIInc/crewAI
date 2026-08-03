@@ -139,3 +139,26 @@ class TestFlowHumanInputIntegration:
                 if call[0]
             )
             assert training_panel_found
+
+    @patch("builtins.input", return_value="please make it warmer")
+    def test_non_empty_input_prints_processing_feedback(self, mock_input):
+        """Non-empty input should be displayed as feedback to process."""
+        provider = SyncHumanInputProvider()
+        crew = MagicMock()
+        crew._train = False
+
+        formatter = event_listener.formatter
+
+        with (
+            patch.object(formatter, "pause_live_updates"),
+            patch.object(formatter, "resume_live_updates"),
+            patch.object(formatter.console, "print") as mock_console_print,
+        ):
+            result = provider._prompt_input(crew)
+
+        assert result == "please make it warmer"
+        mock_input.assert_called_once()
+        printed_text = "\n".join(
+            str(call.args[0]) for call in mock_console_print.call_args_list
+        )
+        assert "Processing your feedback" in printed_text

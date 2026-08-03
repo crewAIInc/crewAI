@@ -8,6 +8,7 @@ import requests
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.source_content import SourceContent
+from crewai_tools.security.safe_requests import safe_get
 
 
 class DocsSiteLoader(BaseLoader):
@@ -26,7 +27,7 @@ class DocsSiteLoader(BaseLoader):
         docs_url = source.source
 
         try:
-            response = requests.get(docs_url, timeout=30)
+            response = safe_get(docs_url, timeout=30)
             response.raise_for_status()
         except requests.RequestException as e:
             raise ValueError(

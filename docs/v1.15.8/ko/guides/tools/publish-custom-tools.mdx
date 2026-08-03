@@ -1,0 +1,244 @@
+---
+title: 커스텀 도구 배포하기
+description: PyPI에 게시할 수 있는 CrewAI 호환 도구를 빌드, 패키징, 배포하는 방법을 안내합니다.
+icon: box-open
+mode: "wide"
+---
+
+## 개요
+
+CrewAI의 도구 시스템은 확장 가능하도록 설계되었습니다. 다른 사용자에게도 유용한 도구를 만들었다면, 독립적인 Python 라이브러리로 패키징하여 PyPI에 게시하고 모든 CrewAI 사용자가 사용할 수 있도록 할 수 있습니다. CrewAI 저장소에 PR을 보낼 필요가 없습니다.
+
+이 가이드에서는 도구 계약 구현, 패키지 구조화, PyPI 게시까지의 전체 과정을 안내합니다.
+
+<Note type="info" title="배포할 계획이 없으신가요?">
+프로젝트 내에서만 사용할 커스텀 도구가 필요하다면 [커스텀 도구 생성](/ko/learn/create-custom-tools) 가이드를 참고하세요.
+</Note>
+
+## 도구 계약
+
+모든 CrewAI 도구는 다음 두 가지 인터페이스 중 하나를 충족해야 합니다:
+
+### 옵션 1: `BaseTool` 서브클래싱
+
+`crewai.tools.BaseTool`을 서브클래싱하고 `_run` 메서드를 구현합니다. `name`, `description`, 그리고 선택적으로 입력 검증을 위한 `args_schema`를 정의합니다.
+
+```python
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+
+class GeolocateInput(BaseModel):
+    """GeolocateTool의 입력 스키마."""
+    address: str = Field(..., description="지오코딩할 도로명 주소.")
+
+
+class GeolocateTool(BaseTool):
+    name: str = "Geolocate"
+    description: str = "도로명 주소를 위도/경도 좌표로 변환합니다."
+    args_schema: type[BaseModel] = GeolocateInput
+
+    def _run(self, address: str) -> str:
+        # 구현 로직
+        return f"40.7128, -74.0060"
+```
+
+### 옵션 2: `@tool` 데코레이터 사용
+
+간단한 도구의 경우, `@tool` 데코레이터로 함수를 CrewAI 도구로 변환할 수 있습니다. 함수에는 반드시 독스트링(도구 설명으로 사용됨)과 타입 어노테이션이 있어야 합니다.
+
+```python
+from crewai.tools import tool
+
+
+@tool("Geolocate")
+def geolocate(address: str) -> str:
+    """도로명 주소를 위도/경도 좌표로 변환합니다."""
+    return "40.7128, -74.0060"
+```
+
+### 핵심 요구사항
+
+어떤 방식을 사용하든, 도구는 다음을 충족해야 합니다:
+
+- **`name`** — 짧고 설명적인 식별자.
+- **`description`** — 에이전트에게 도구를 언제, 어떻게 사용할지 알려줍니다. 에이전트가 도구를 얼마나 잘 활용하는지에 직접적으로 영향을 미치므로 명확하고 구체적으로 작성하세요.
+- **`_run`** (BaseTool) 또는 **함수 본문** (@tool) 구현 — 동기 실행 로직.
+- 모든 매개변수와 반환 값에 **타입 어노테이션** 사용.
+- **문자열** 결과를 반환 (또는 의미 있게 문자열로 변환 가능한 값).
+
+### 선택사항: 비동기 지원
+
+I/O 바운드 작업을 수행하는 도구의 경우 비동기 실행을 위해 `_arun`을 구현합니다:
+
+```python
+class GeolocateTool(BaseTool):
+    name: str = "Geolocate"
+    description: str = "도로명 주소를 위도/경도 좌표로 변환합니다."
+
+    def _run(self, address: str) -> str:
+        # 동기 구현
+        ...
+
+    async def _arun(self, address: str) -> str:
+        # 비동기 구현
+        ...
+```
+
+### 선택사항: `args_schema`를 통한 입력 검증
+
+Pydantic 모델을 `args_schema`로 정의하면 자동 입력 검증과 명확한 에러 메시지를 받을 수 있습니다. 제공하지 않으면 CrewAI가 `_run` 메서드의 시그니처에서 추론합니다.
+
+```python
+from pydantic import BaseModel, Field
+
+
+class TranslateInput(BaseModel):
+    """TranslateTool의 입력 스키마."""
+    text: str = Field(..., description="번역할 텍스트.")
+    target_language: str = Field(
+        default="en",
+        description="대상 언어의 ISO 639-1 언어 코드.",
+    )
+```
+
+배포용 도구에는 명시적 스키마를 권장합니다 — 에이전트 동작이 개선되고 사용자에게 더 명확한 문서를 제공합니다.
+
+### 선택사항: 환경 변수
+
+도구에 API 키나 기타 설정이 필요한 경우, `env_vars`로 선언하여 사용자가 무엇을 설정해야 하는지 알 수 있도록 합니다:
+
+```python
+from crewai.tools import BaseTool, EnvVar
+
+
+class GeolocateTool(BaseTool):
+    name: str = "Geolocate"
+    description: str = "도로명 주소를 위도/경도 좌표로 변환합니다."
+    env_vars: list[EnvVar] = [
+        EnvVar(
+            name="GEOCODING_API_KEY",
+            description="지오코딩 서비스 API 키.",
+            required=True,
+        ),
+    ]
+
+    def _run(self, address: str) -> str:
+        ...
+```
+
+## 패키지 구조
+
+프로젝트를 표준 Python 패키지로 구성합니다. 권장 레이아웃:
+
+```
+crewai-geolocate/
+├── pyproject.toml
+├── LICENSE
+├── README.md
+└── src/
+    └── crewai_geolocate/
+        ├── __init__.py
+        └── tools.py
+```
+
+### `pyproject.toml`
+
+```toml
+[project]
+name = "crewai-geolocate"
+version = "0.1.0"
+description = "도로명 주소를 지오코딩하는 CrewAI 도구."
+requires-python = ">=3.10"
+dependencies = [
+    "crewai",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+```
+
+사용자가 자동으로 호환 버전을 받을 수 있도록 `crewai`를 의존성으로 선언합니다.
+
+### `__init__.py`
+
+사용자가 직접 import할 수 있도록 도구 클래스를 re-export합니다:
+
+```python
+from crewai_geolocate.tools import GeolocateTool
+
+__all__ = ["GeolocateTool"]
+```
+
+### 명명 규칙
+
+- **패키지 이름**: `crewai-` 접두사를 사용합니다 (예: `crewai-geolocate`). PyPI에서 검색할 때 도구를 쉽게 찾을 수 있습니다.
+- **모듈 이름**: 밑줄을 사용합니다 (예: `crewai_geolocate`).
+- **도구 클래스 이름**: `Tool`로 끝나는 PascalCase를 사용합니다 (예: `GeolocateTool`).
+
+## 도구 테스트
+
+게시 전에 도구가 크루 내에서 작동하는지 확인합니다:
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_geolocate import GeolocateTool
+
+agent = Agent(
+    role="Location Analyst",
+    goal="주어진 주소의 좌표를 찾습니다.",
+    backstory="지리공간 데이터 전문가.",
+    tools=[GeolocateTool()],
+)
+
+task = Task(
+    description="1600 Pennsylvania Avenue, Washington, DC의 좌표를 찾으세요.",
+    expected_output="해당 주소의 위도와 경도.",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+print(result)
+```
+
+## PyPI에 게시하기
+
+도구 테스트를 완료하고 준비가 되면:
+
+```bash
+# 패키지 빌드
+uv build
+
+# PyPI에 게시
+uv publish
+```
+
+처음 게시하는 경우 [PyPI 계정](https://pypi.org/account/register/)과 [API 토큰](https://pypi.org/help/#apitoken)이 필요합니다.
+
+### 게시 후
+
+사용자는 다음과 같이 도구를 설치할 수 있습니다:
+
+```bash
+pip install crewai-geolocate
+```
+
+또는 uv를 사용하여:
+
+```bash
+uv add crewai-geolocate
+```
+
+그런 다음 크루에서 사용합니다:
+
+```python
+from crewai_geolocate import GeolocateTool
+
+agent = Agent(
+    role="Location Analyst",
+    tools=[GeolocateTool()],
+    # ...
+)
+```
