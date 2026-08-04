@@ -53,6 +53,10 @@ from crewai_tools.tools.daytona_sandbox_tool import (
     DaytonaFileTool,
     DaytonaPythonTool,
 )
+from crewai_tools.tools.db2_search_tool import (
+    DB2ToolSchema,
+    DB2VectorSearchTool,
+)
 from crewai_tools.tools.directory_read_tool.directory_read_tool import (
     DirectoryReadTool,
 )
@@ -231,6 +235,8 @@ __all__ = [
     "ContextualAIRerankTool",
     "CouchbaseFTSVectorSearchTool",
     "CrewaiPlatformTools",
+    "DB2ToolSchema",
+    "DB2VectorSearchTool",
     "DOCXSearchTool",
     "DallETool",
     "DatabricksQueryTool",

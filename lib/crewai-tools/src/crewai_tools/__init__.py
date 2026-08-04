@@ -64,6 +64,10 @@ from crewai_tools.tools.daytona_sandbox_tool import (
     DaytonaFileTool,
     DaytonaPythonTool,
 )
+from crewai_tools.tools.db2_search_tool import (
+    DB2ToolSchema,
+    DB2VectorSearchTool,
+)
 from crewai_tools.tools.directory_read_tool.directory_read_tool import (
     DirectoryReadTool,
 )
@@ -246,6 +250,8 @@ __all__ = [
     "ContextualAIRerankTool",
     "CouchbaseFTSVectorSearchTool",
     "CrewaiPlatformTools",
+    "DB2ToolSchema",
+    "DB2VectorSearchTool",
     "DOCXSearchTool",
     "DallETool",
     "DatabricksQueryTool",
@@ -332,4 +338,4 @@ __all__ = [
     "ZapierActionTools",
 ]
 
-__version__ = "1.15.9"
+__version__ = "1.15.10"
