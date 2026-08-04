@@ -438,17 +438,6 @@ class BaseLLM(BaseModel, ABC):
         """
         return DEFAULT_SUPPORTS_STOP_WORDS
 
-    def _supports_stop_words_implementation(self) -> bool:
-        """Check if stop words are configured for this LLM instance.
-
-        Native providers can override supports_stop_words() to return this value
-        to ensure consistent behavior based on whether stop words are actually configured.
-
-        Returns:
-            True if stop words are configured and can be applied
-        """
-        return bool(self.stop_sequences)
-
     def _apply_stop_words(self, content: str) -> str:
         """Apply stop words to truncate response content.
 

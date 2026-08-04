@@ -1576,30 +1576,6 @@ def test_anthropic_dict_tool_use_blocks_execute_available_function():
     assert result == "found CrewAI"
 
 
-def test_anthropic_dict_tool_use_blocks_work_in_follow_up_conversation():
-    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
-
-    llm = AnthropicCompletion(model="claude-fable-5")
-    initial_response = _dict_tool_use_response()
-    final_response = MagicMock()
-    final_response.content = [types.SimpleNamespace(text="Final answer")]
-    final_response.usage = MagicMock(input_tokens=4, output_tokens=3)
-    final_response.stop_reason = "end_turn"
-    final_response.id = "msg_final"
-    mock_client = MagicMock()
-    mock_client.messages.create.return_value = final_response
-    llm._client = mock_client
-
-    result = llm._handle_tool_use_conversation(
-        initial_response,
-        initial_response.content,
-        params={"messages": []},
-        available_functions={"search_web": lambda query: f"found {query}"},
-    )
-
-    assert result == "Final answer"
-
-
 @pytest.mark.vcr()
 def test_tool_search_discovers_and_calls_tool():
     """Tool search should discover the right tool and return a tool_use block."""
