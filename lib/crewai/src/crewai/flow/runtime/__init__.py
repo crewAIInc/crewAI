@@ -117,6 +117,7 @@ from crewai.flow.runtime._actions import FlowScriptExecutionDisabledError, build
 from crewai.flow.types import (
     FlowExecutionData,
     FlowMethodName,
+    FlowTriggerEvent,
     InputHistoryEntry,
     PendingListenerKey,
 )
@@ -1000,14 +1001,23 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         with self._or_listeners_lock:
             self._fired_or_listeners.discard(listener_name)
 
+    def _is_self_raised_event(
+        self, listener_name: FlowMethodName, event: FlowTriggerEvent
+    ) -> bool:
+        """Return whether ``listener_name`` raised ``event`` on its own completion."""
+        name = str(listener_name)
+        return name == str(event.label) == str(event.emitter)
+
     def _start_condition_triggered_by(
-        self, method_name: FlowMethodName, trigger: FlowMethodName
+        self, method_name: FlowMethodName, event: FlowTriggerEvent
     ) -> bool:
         condition = self._start_condition(method_name)
         if condition is None:
             return False
+        if self._is_self_raised_event(method_name, event):
+            return False
         return self._condition_met(
-            condition, trigger, PendingListenerKey(f"start:{method_name}")
+            condition, event.label, PendingListenerKey(f"start:{method_name}")
         )
 
     def _rearm_or_listeners_for_trigger(
@@ -1470,12 +1480,18 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         try:
             if emit and collapsed_outcome:
                 await self._execute_listeners(
-                    FlowMethodName(collapsed_outcome),
+                    FlowTriggerEvent(
+                        label=FlowMethodName(collapsed_outcome),
+                        emitter=FlowMethodName(context.method_name),
+                    ),
                     result,
                 )
             else:
                 await self._execute_listeners(
-                    FlowMethodName(context.method_name),
+                    FlowTriggerEvent(
+                        label=FlowMethodName(context.method_name),
+                        emitter=FlowMethodName(context.method_name),
+                    ),
                     result,
                 )
         except Exception as e:
@@ -2679,7 +2695,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 # During resumption, skip execution but continue listeners
                 method_outputs = self.method_outputs
                 last_output = method_outputs[-1] if method_outputs else None
-                await self._execute_listeners(start_method_name, last_output)
+                await self._execute_listeners(
+                    FlowTriggerEvent(
+                        label=start_method_name,
+                        emitter=start_method_name,
+                    ),
+                    last_output,
+                )
                 return
             # For cyclic flows, clear from completed to allow re-execution
             self._completed_methods.discard(start_method_name)
@@ -2696,7 +2718,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         # If start method is a router, use its result as an additional trigger
         if self._is_router(start_method_name) and result is not None:
             # Execute listeners for the start method name first
-            await self._execute_listeners(start_method_name, result, finished_event_id)
+            await self._execute_listeners(
+                FlowTriggerEvent(
+                    label=start_method_name,
+                    emitter=start_method_name,
+                ),
+                result,
+                finished_event_id,
+            )
             # Then execute listeners for the router result (e.g., "approved")
             router_result = result.value if isinstance(result, enum.Enum) else result
             router_result_trigger = FlowMethodName(str(router_result))
@@ -2706,10 +2735,22 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 else result
             )
             await self._execute_listeners(
-                router_result_trigger, listener_result, finished_event_id
+                FlowTriggerEvent(
+                    label=router_result_trigger,
+                    emitter=start_method_name,
+                ),
+                listener_result,
+                finished_event_id,
             )
         else:
-            await self._execute_listeners(start_method_name, result, finished_event_id)
+            await self._execute_listeners(
+                FlowTriggerEvent(
+                    label=start_method_name,
+                    emitter=start_method_name,
+                ),
+                result,
+                finished_event_id,
+            )
 
     def _inject_trigger_payload_for_start_method(
         self, original_method: Callable[..., Any]
@@ -2986,7 +3027,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
     async def _execute_listeners(
         self,
-        trigger_method: FlowMethodName,
+        event: FlowTriggerEvent,
         result: Any,
         triggering_event_id: str | None = None,
     ) -> None:
@@ -2997,30 +3038,31 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         2. Then executing all triggered listeners in parallel
 
         Args:
-            trigger_method: The name of the method that triggered these listeners.
+            event: The trigger event, including its label and the method that
+                raised it.
             result: The result from the triggering method, passed to listeners that accept parameters.
             triggering_event_id: The event_id of the MethodExecutionFinishedEvent that
                 triggered these listeners, used for causal chain tracking.
 
         Note:
             - Routers are executed sequentially to maintain flow control
-            - Each router's result becomes a new trigger_method
+            - Each router's result becomes a new trigger event
             - Normal listeners are executed in parallel for efficiency
             - Listeners can receive the trigger method's result as a parameter
         """
         # First, handle routers repeatedly until no router triggers anymore
-        router_results = []
+        router_results: list[FlowTriggerEvent] = []
         router_result_payloads: dict[str, Any] = {}
         router_result_to_feedback: dict[
             str, Any
         ] = {}  # Map outcome -> HumanFeedbackResult
-        current_trigger = trigger_method
+        current_event = event
         current_result = result  # Track the result to pass to each router
         current_triggering_event_id = triggering_event_id
 
         while True:
             routers_triggered = self._find_triggered_methods(
-                current_trigger, router_only=True
+                current_event, router_only=True
             )
             if not routers_triggered:
                 break
@@ -3028,7 +3070,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             for router_name in routers_triggered:
                 # For routers triggered by a router outcome, pass the HumanFeedbackResult
                 router_input = router_result_to_feedback.get(
-                    str(current_trigger), current_result
+                    str(current_event.label), current_result
                 )
                 (
                     router_result,
@@ -3037,7 +3079,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     router_name, router_input, current_triggering_event_id
                 )
                 if router_result is None:
-                    current_trigger = FlowMethodName("")
+                    current_event = FlowTriggerEvent(
+                        label=FlowMethodName(""),
+                        emitter=FlowMethodName(""),
+                    )
                     continue
 
                 router_result = (
@@ -3047,7 +3092,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 )
                 router_result_str = str(router_result)
                 router_result_event = FlowMethodName(router_result_str)
-                router_results.append(router_result_event)
+                router_event = FlowTriggerEvent(
+                    label=router_result_event,
+                    emitter=router_name,
+                )
+                router_results.append(router_event)
                 router_result_payloads[router_result_str] = (
                     self.last_human_feedback
                     if self.last_human_feedback is not None
@@ -3058,23 +3107,25 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     router_result_to_feedback[router_result_str] = (
                         self.last_human_feedback
                     )
-                current_trigger = router_result_event
+                current_event = router_event
 
-        all_triggers = [trigger_method, *router_results]
+        all_triggers = [event, *router_results]
 
         with self._or_listeners_lock:
             rearmable: set[FlowMethodName] = set(self._fired_or_listeners)
 
-        for idx, current_trigger in enumerate(all_triggers):
-            if current_trigger:
+        for idx, current_event in enumerate(all_triggers):
+            if current_event.label:
                 if idx > 0 and rearmable:
-                    self._rearm_or_listeners_for_trigger(current_trigger, rearmable)
+                    self._rearm_or_listeners_for_trigger(
+                        current_event.label, rearmable
+                    )
                 listeners_triggered = self._find_triggered_methods(
-                    current_trigger, router_only=False
+                    current_event, router_only=False
                 )
                 if listeners_triggered:
                     listener_result = router_result_payloads.get(
-                        str(current_trigger), result
+                        str(current_event.label), result
                     )
                     racing_group = self._get_racing_group_for_listeners(
                         listeners_triggered
@@ -3103,10 +3154,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         ]
                         await asyncio.gather(*tasks)
 
-                if current_trigger in router_results:
+                if current_event in router_results:
                     for method_name in self._start_method_names():
                         if self._start_condition_triggered_by(
-                            method_name, current_trigger
+                            method_name, current_event
                         ):
                             if method_name in self._completed_methods:
                                 # Cyclic re-execution: temporarily clear resumption flag so the method actually re-runs
@@ -3131,7 +3182,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         return True
 
     def _find_triggered_methods(
-        self, trigger_method: FlowMethodName, router_only: bool
+        self, event: FlowTriggerEvent, router_only: bool
     ) -> list[FlowMethodName]:
         triggered: list[FlowMethodName] = []
 
@@ -3144,8 +3195,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if should_check_fired and listener_name in self._fired_or_listeners:
                 continue
 
+            if self._is_self_raised_event(listener_name, event):
+                continue
+
             if self._condition_met(
-                condition, trigger_method, PendingListenerKey(str(listener_name))
+                condition, event.label, PendingListenerKey(str(listener_name))
             ):
                 triggered.append(listener_name)
                 if should_check_fired:
@@ -3197,7 +3251,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if listener_name in self._completed_methods:
             if self._is_execution_resuming:
                 # During resumption, skip execution but continue listeners
-                await self._execute_listeners(listener_name, None)
+                await self._execute_listeners(
+                    FlowTriggerEvent(
+                        label=listener_name,
+                        emitter=listener_name,
+                    ),
+                    None,
+                )
 
                 # For routers, also check if any conditional starts they triggered are completed
                 # If so, continue their chains
@@ -3246,7 +3306,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     )
 
             await self._execute_listeners(
-                listener_name, listener_result, finished_event_id
+                FlowTriggerEvent(
+                    label=listener_name,
+                    emitter=listener_name,
+                ),
+                listener_result,
+                finished_event_id,
             )
 
             return (listener_result, finished_event_id)

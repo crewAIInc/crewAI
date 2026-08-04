@@ -1230,26 +1230,26 @@ def test_static_string_listener_is_allowed_by_contract():
 
 @pytest.mark.parametrize("listen", ["publish", {"or": ["publish", "revise"]}])
 @pytest.mark.parametrize("router_enabled", [False, True])
-def test_flow_definition_rejects_method_self_listen(listen, router_enabled):
-    with pytest.raises(ValueError, match="methods.publish.listen"):
-        flow_definition.FlowDefinition.from_declaration(contents=
-            {
-                "schema": "crewai.flow/v1",
-                "name": "SelfListenFlow",
-                "methods": {
-                    "begin": {
-                        "do": {"ref": "loaded_flows:SelfListenFlow.begin"},
-                        "start": True,
-                    },
-                    "publish": {
-                        "do": {"ref": "loaded_flows:SelfListenFlow.publish"},
-                        "listen": listen,
-                        "router": router_enabled,
-                        "emit": ["done"] if router_enabled else None,
-                    },
+def test_flow_definition_allows_same_name_listen_label(listen, router_enabled):
+    definition = flow_definition.FlowDefinition.from_declaration(
+        contents={
+            "schema": "crewai.flow/v1",
+            "name": "SelfListenFlow",
+            "methods": {
+                "begin": {
+                    "do": {"ref": "loaded_flows:SelfListenFlow.begin"},
+                    "start": True,
                 },
-            }
-        )
+                "publish": {
+                    "do": {"ref": "loaded_flows:SelfListenFlow.publish"},
+                    "listen": listen,
+                    "router": router_enabled,
+                    "emit": ["done"] if router_enabled else None,
+                },
+            },
+        }
+    )
+    assert definition.methods["publish"].listen == listen
 
 
 def test_start_false_not_classified_as_start_method():

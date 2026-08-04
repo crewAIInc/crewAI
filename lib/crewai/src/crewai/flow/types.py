@@ -5,7 +5,7 @@ the Flow system.
 """
 
 from datetime import datetime
-from typing import Annotated, Any, NewType, ParamSpec, Protocol, TypeVar, TypedDict
+from typing import Annotated, Any, NamedTuple, NewType, ParamSpec, Protocol, TypeVar, TypedDict
 
 from typing_extensions import NotRequired, Required
 
@@ -14,6 +14,19 @@ P = ParamSpec("P")
 R = TypeVar("R", covariant=True)
 
 FlowMethodName = NewType("FlowMethodName", str)
+
+
+class FlowTriggerEvent(NamedTuple):
+    """A flow graph trigger carrying both the event label and its emitter.
+
+    Attributes:
+        label: Event name matched by ``@listen`` / ``@start`` conditions
+            (method name or router-emitted string).
+        emitter: Method that raised this event.
+    """
+
+    label: FlowMethodName
+    emitter: FlowMethodName
 PendingListenerKey = NewType(
     "PendingListenerKey",
     Annotated[str, "listener method name, or 'start:<method>' for conditional starts"],

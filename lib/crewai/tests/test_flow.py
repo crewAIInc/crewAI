@@ -2144,7 +2144,32 @@ def test_cyclic_flow_works_with_persist_and_id_input():
 
 
 @pytest.mark.timeout(5)
-def test_self_listening_method_is_rejected():
+def test_same_name_route_listener_is_allowed():
+    """Route labels may match handler names when raised by another method."""
+
+    class SameNameRouteFlow(Flow):
+        @start()
+        def begin(self):
+            return "ok"
+
+        @router(begin)
+        def route(self):
+            return "create_video"
+
+        @listen("create_video")
+        def create_video(self):
+            return "video created"
+
+    flow = SameNameRouteFlow()
+    result = flow.kickoff()
+    assert result == "video created"
+    assert SameNameRouteFlow.flow_definition().methods["create_video"].listen == (
+        "create_video"
+    )
+
+
+@pytest.mark.timeout(5)
+def test_self_raised_same_label_listener_does_not_loop():
     class SelfListenFlow(Flow):
         @start()
         def begin(self):
@@ -2156,13 +2181,13 @@ def test_self_listening_method_is_rejected():
 
         @listen("process")
         def process(self):
-            pass
+            return "done"
 
-    with pytest.raises(ValueError, match="methods.process.listen"):
-        SelfListenFlow.flow_definition()
+    flow = SelfListenFlow()
+    assert flow.kickoff() == "done"
 
 
-def test_or_condition_self_listen_is_rejected():
+def test_or_condition_same_label_listener_skips_self_completion():
     class OrSelfListenFlow(Flow):
         @start()
         def begin(self):
@@ -2174,24 +2199,28 @@ def test_or_condition_self_listen_is_rejected():
 
         @listen(or_("other_trigger", "process"))
         def process(self):
-            pass
+            return "done"
 
-    with pytest.raises(ValueError, match="methods.process.listen"):
-        OrSelfListenFlow.flow_definition()
+    flow = OrSelfListenFlow()
+    assert flow.kickoff() == "done"
 
 
-def test_router_self_listening_method_is_rejected():
+def test_router_same_name_listen_condition_is_allowed():
     class RouterSelfListenFlow(Flow):
         @start()
         def begin(self):
+            return "ok"
+
+        @router(begin)
+        def pick_route(self):
             return "route"
 
-        @router("route")
+        @listen("route")
         def route(self):
             return "done"
 
-    with pytest.raises(ValueError, match="methods.route.listen"):
-        RouterSelfListenFlow.flow_definition()
+    flow = RouterSelfListenFlow()
+    assert flow.kickoff() == "done"
 
 
 class ListState(BaseModel):
