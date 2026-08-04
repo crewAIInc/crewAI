@@ -1657,14 +1657,13 @@ def test_anthropic_cache_creation_tokens_extraction():
     mock_response.stop_reason = None
     mock_response.model = None
 
-    usage = llm._extract_anthropic_token_usage(mock_response)
-    assert usage["input_tokens"] == 150
-    assert usage["output_tokens"] == 50
-    assert usage["total_tokens"] == 200
-    assert usage["cached_prompt_tokens"] == 30
-    assert usage["cache_creation_tokens"] == 20
+    with (
+        patch.object(llm._client.messages, "create", return_value=mock_response),
+        patch("crewai.llms.base_llm.crewai_event_bus.emit"),
+    ):
+        result = llm.call("Hello")
 
-    llm._track_token_usage_internal(usage)
+    assert result == "test response"
     summary = llm.get_token_usage_summary()
     assert summary.prompt_tokens == 150
     assert summary.completion_tokens == 50
