@@ -4,8 +4,20 @@ This module contains TypedDict definitions and type aliases used throughout
 the Flow system.
 """
 
+from __future__ import annotations
+
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Annotated, Any, NewType, ParamSpec, Protocol, TypeVar, TypedDict
+from typing import (
+    Annotated,
+    Any,
+    Literal,
+    NewType,
+    ParamSpec,
+    Protocol,
+    TypeVar,
+    TypedDict,
+)
 
 from typing_extensions import NotRequired, Required
 
@@ -14,10 +26,66 @@ P = ParamSpec("P")
 R = TypeVar("R", covariant=True)
 
 FlowMethodName = NewType("FlowMethodName", str)
+FlowDispatchKind = Literal["method_emit", "router_emit"]
 PendingListenerKey = NewType(
     "PendingListenerKey",
     Annotated[str, "listener method name, or 'start:<method>' for conditional starts"],
 )
+
+
+@dataclass(frozen=True, slots=True)
+class FlowDispatchTrigger:
+    """Runtime trigger with label provenance for listener dispatch.
+
+    ``label`` is what ``@listen("...")`` conditions match. ``kind`` distinguishes
+    router intent labels from a method's own completion event when both share the
+    same string (e.g. conversational ``@listen("create_video") def create_video``).
+
+    Examples::
+
+        When ``route_conversation`` returns ``"create_video"``::
+
+            FlowDispatchTrigger.router_emit("route_conversation", "create_video")
+            # → FlowDispatchTrigger(
+            #        label="create_video",
+            #        emitter="route_conversation",
+            #        kind="router_emit",
+            #    )
+            # Fires ``@listen("create_video")`` handlers, including ``def create_video``.
+
+        When the ``create_video`` handler finishes::
+
+            FlowDispatchTrigger.method_emit("create_video")
+            # → FlowDispatchTrigger(
+            #        label="create_video",
+            #        emitter="create_video",
+            #        kind="method_emit",
+            #    )
+            # Ignored for self-referencing handlers (same label and emitter).
+
+        When ``begin`` completes and ``process`` listens to ``"begin"``::
+
+            FlowDispatchTrigger.method_emit("begin")
+            # → FlowDispatchTrigger(
+            #        label="begin",
+            #        emitter="begin",
+            #        kind="method_emit",
+            #    )
+            # Fires ``@listen("begin") def process`` because emitter != "process".
+    """
+
+    label: str
+    emitter: str
+    kind: FlowDispatchKind
+
+    @classmethod
+    def method_emit(cls, method_name: str) -> FlowDispatchTrigger:
+        name = str(method_name)
+        return cls(label=name, emitter=name, kind="method_emit")
+
+    @classmethod
+    def router_emit(cls, emitter: str, label: str) -> FlowDispatchTrigger:
+        return cls(label=str(label), emitter=str(emitter), kind="router_emit")
 
 
 class FlowMethodCallable(Protocol[P, R]):

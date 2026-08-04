@@ -773,10 +773,11 @@ class FlowDefinition(BaseModel):
     @model_validator(mode="after")
     def _validate_trigger_namespace(self) -> FlowDefinition:
         for method_name, method in self.methods.items():
-            if _condition_references(method.listen, method_name):
-                raise ValueError(
-                    f"methods.{method_name}.listen must not reference itself"
-                )
+            if not _condition_references(method.listen, method_name):
+                continue
+            if _is_conversational_route_handler(self, method_name, method):
+                continue
+            raise ValueError(f"methods.{method_name}.listen must not reference itself")
         return self
 
     @model_validator(mode="after")
@@ -886,6 +887,25 @@ def _condition_references(condition: FlowDefinitionCondition | None, name: str) 
         for key in ("and", "or")
         for child in condition.get(key, [])
     )
+
+
+def _is_conversational_route_handler(
+    definition: FlowDefinition,
+    method_name: str,
+    method: FlowMethodDefinition,
+) -> bool:
+    """Whether a listen/method-name collision is a conversational route binding.
+
+    In conversational flows, ``@listen("create_video")`` on ``def create_video``
+    binds the handler to a router intent label, not to the method's own completion
+    event. Routers are excluded — ``@router("route") def route`` remains invalid.
+    """
+    conversational = definition.conversational
+    if conversational is None or not conversational.enabled:
+        return False
+    if method.router:
+        return False
+    return _condition_references(method.listen, method_name)
 
 
 def _validate_action_cel(

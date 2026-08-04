@@ -17,6 +17,7 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
+from crewai.flow.types import FlowDispatchTrigger, FlowMethodName
 
 
 def test_simple_sequential_flow():
@@ -2192,6 +2193,91 @@ def test_router_self_listening_method_is_rejected():
 
     with pytest.raises(ValueError, match="methods.route.listen"):
         RouterSelfListenFlow.flow_definition()
+
+
+def test_flow_dispatch_trigger_factories():
+    router_trigger = FlowDispatchTrigger.router_emit(
+        "route_conversation", "create_video"
+    )
+    method_trigger = FlowDispatchTrigger.method_emit("create_video")
+
+    assert router_trigger == FlowDispatchTrigger(
+        label="create_video",
+        emitter="route_conversation",
+        kind="router_emit",
+    )
+    assert method_trigger == FlowDispatchTrigger(
+        label="create_video",
+        emitter="create_video",
+        kind="method_emit",
+    )
+
+
+def test_find_triggered_methods_router_emit_fires_self_named_conversational_handler():
+    class CreateVideoFlow(Flow):
+        conversational = True
+
+        @listen("create_video")
+        def create_video(self):
+            return "video"
+
+    flow = CreateVideoFlow()
+    router_trigger = FlowDispatchTrigger.router_emit(
+        "route_conversation", "create_video"
+    )
+    method_trigger = FlowDispatchTrigger.method_emit("create_video")
+
+    assert flow._find_triggered_methods(router_trigger, router_only=False) == [
+        FlowMethodName("create_video")
+    ]
+    assert flow._find_triggered_methods(method_trigger, router_only=False) == []
+
+
+def test_find_triggered_methods_method_emit_still_fires_unrelated_listeners():
+    class ChainFlow(Flow):
+        @start()
+        def begin(self):
+            return "begin"
+
+        @listen("begin")
+        def process(self):
+            return "process"
+
+    flow = ChainFlow()
+    triggered = flow._find_triggered_methods(
+        FlowDispatchTrigger.method_emit("begin"),
+        router_only=False,
+    )
+
+    assert triggered == [FlowMethodName("process")]
+
+
+def test_conversational_route_handler_runs_once_via_dispatch():
+    fire_count = 0
+
+    class CreateVideoFlow(Flow):
+        conversational = True
+
+        @listen("create_video")
+        def create_video(self):
+            nonlocal fire_count
+            fire_count += 1
+            return "video"
+
+    async def run_dispatch() -> None:
+        flow = CreateVideoFlow()
+        await flow._execute_listeners(
+            FlowDispatchTrigger.router_emit("route_conversation", "create_video"),
+            None,
+        )
+        await flow._execute_listeners(
+            FlowDispatchTrigger.method_emit("create_video"),
+            None,
+        )
+
+    asyncio.run(run_dispatch())
+
+    assert fire_count == 1
 
 
 class ListState(BaseModel):

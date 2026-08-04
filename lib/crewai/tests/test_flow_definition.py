@@ -1252,6 +1252,64 @@ def test_flow_definition_rejects_method_self_listen(listen, router_enabled):
         )
 
 
+def test_conversational_flow_allows_route_handler_matching_listen_label():
+    class CreateVideoFlow(Flow):
+        conversational = True
+
+        @listen("create_video")
+        def create_video(self):
+            return "made a video"
+
+    definition = CreateVideoFlow.flow_definition()
+
+    assert definition.methods["create_video"].listen == "create_video"
+
+
+def test_conversational_flow_allows_or_listen_route_handler_matching_method_name():
+    class ResearchFlow(Flow):
+        conversational = True
+
+        @listen(or_("research", "create_video"))
+        def create_video(self):
+            return "handled"
+
+    definition = ResearchFlow.flow_definition()
+
+    assert definition.methods["create_video"].listen == {
+        "or": ["research", "create_video"]
+    }
+
+
+def test_conversational_flow_still_rejects_router_self_listen():
+    class ConversationalRouterSelfListenFlow(Flow):
+        conversational = True
+
+        @router("dispatch")
+        def dispatch(self):
+            return "done"
+
+    with pytest.raises(ValueError, match="methods.dispatch.listen"):
+        ConversationalRouterSelfListenFlow.flow_definition()
+
+
+def test_non_conversational_flow_rejects_route_label_matching_handler_name():
+    class CreateVideoFlow(Flow):
+        @start()
+        def begin(self):
+            return "create_video"
+
+        @router(begin)
+        def route(self):
+            return "create_video"
+
+        @listen("create_video")
+        def create_video(self):
+            return "made a video"
+
+    with pytest.raises(ValueError, match="methods.create_video.listen"):
+        CreateVideoFlow.flow_definition()
+
+
 def test_start_false_not_classified_as_start_method():
     definition = flow_definition.FlowDefinition.from_declaration(contents=
         {
