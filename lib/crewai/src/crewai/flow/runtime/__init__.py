@@ -1004,9 +1004,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     def _is_self_raised_event(
         self, listener_name: FlowMethodName, event: FlowTriggerEvent
     ) -> bool:
-        """Return whether ``listener_name`` raised ``event`` on its own completion."""
-        name = str(listener_name)
-        return name == str(event.label) == str(event.emitter)
+        """Return whether ``listener_name`` is the method that raised ``event``."""
+        return str(listener_name) == str(event.emitter)
 
     def _start_condition_triggered_by(
         self, method_name: FlowMethodName, event: FlowTriggerEvent
@@ -3117,9 +3116,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         for idx, current_event in enumerate(all_triggers):
             if current_event.label:
                 if idx > 0 and rearmable:
-                    self._rearm_or_listeners_for_trigger(
-                        current_event.label, rearmable
-                    )
+                    self._rearm_or_listeners_for_trigger(current_event.label, rearmable)
                 listeners_triggered = self._find_triggered_methods(
                     current_event, router_only=False
                 )

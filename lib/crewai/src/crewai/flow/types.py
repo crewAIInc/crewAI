@@ -5,7 +5,16 @@ the Flow system.
 """
 
 from datetime import datetime
-from typing import Annotated, Any, NamedTuple, NewType, ParamSpec, Protocol, TypeVar, TypedDict
+from typing import (
+    Annotated,
+    Any,
+    NamedTuple,
+    NewType,
+    ParamSpec,
+    Protocol,
+    TypeVar,
+    TypedDict,
+)
 
 from typing_extensions import NotRequired, Required
 
@@ -27,6 +36,8 @@ class FlowTriggerEvent(NamedTuple):
 
     label: FlowMethodName
     emitter: FlowMethodName
+
+
 PendingListenerKey = NewType(
     "PendingListenerKey",
     Annotated[str, "listener method name, or 'start:<method>' for conditional starts"],
