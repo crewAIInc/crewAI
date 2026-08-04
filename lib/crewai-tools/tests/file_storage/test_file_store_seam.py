@@ -434,6 +434,29 @@ def test_a_store_failing_on_the_declared_file_still_builds_the_tool(
     assert "No file path provided" in tool._run()
 
 
+def test_a_rebuild_that_loses_the_pin_stops_advertising_a_default(
+    store, failing_store, tmp_path, monkeypatch
+):
+    """What the tool says must match what it does.
+
+    The description is serialized, so on a rebuild it arrives already naming a
+    default file. If the pin is then lost, leaving that text would tell the LLM
+    it can omit `file_path` — and it would get "No file path provided" back.
+    """
+    monkeypatch.chdir(tmp_path)
+    dumped = FileReadTool(file_path="notes.txt").model_dump()
+    assert "The default file is" in dumped["description"]
+
+    # Same tool, rebuilt against a store that can no longer label the path.
+    failing_store("display")
+    rebuilt = FileReadTool.model_validate(dumped)
+
+    assert rebuilt._declared_label is None
+    assert "The default file is" not in rebuilt.description
+    assert rebuilt.description == FileReadTool.model_fields["description"].default
+    assert "No file path provided" in rebuilt._run()
+
+
 def test_a_store_failing_on_base_dir_is_not_swallowed(
     failing_store, tmp_path, monkeypatch
 ):

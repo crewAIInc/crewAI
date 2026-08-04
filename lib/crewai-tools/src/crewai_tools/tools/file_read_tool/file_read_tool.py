@@ -173,6 +173,16 @@ class FileReadTool(BaseTool):
                 )
                 self._declared_realpath = None
                 self._declared_label = None
+                # The description has to come back too. On a rebuild it arrives
+                # from the serialized data already advertising a default file,
+                # so leaving it would promise the LLM something omitting
+                # 'file_path' can no longer deliver — it would call the tool
+                # with no arguments and get "No file path provided". Restoring
+                # the class default keeps what the tool says matched to what it
+                # does.
+                default = type(self).model_fields["description"].default
+                if isinstance(default, str):
+                    self.description = default
             else:
                 self.description = f"A tool that reads file content. The default file is {self._declared_label}, which is read when 'file_path' is omitted. You can also provide a different 'file_path' parameter to read another file, though reads are confined to the tool's allowed directory and a path that resolves outside it is rejected. Specify 'start_line' and 'line_count' to read specific parts of the file."
 
