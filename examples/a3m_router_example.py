@@ -2,7 +2,6 @@
 Example: Using A3M Router with CrewAI for cost-optimized multi-agent systems.
 
 A3M Router provides intelligent routing for CrewAI agents with:
-- 70-95% cost savings vs GPT-4o
 - Automatic model selection based on task complexity
 - Built-in fallback handling
 - Support for 47+ LLM providers
@@ -99,15 +98,28 @@ def example_multi_agent():
     )
 
     # Define tasks
-    research_task = Task(description="Research AI trends", agent=researcher)
-    writing_task = Task(description="Write article", agent=writer)
-    review_task = Task(description="Review content", agent=critic)
+    research_task = Task(
+        description="Research AI trends and provide a detailed report",
+        agent=researcher,
+        expected_output="A detailed report with findings on AI trends",
+    )
+    writing_task = Task(
+        description="Write an engaging article based on the research",
+        agent=writer,
+        expected_output="A well-structured article with clear sections",
+    )
+    review_task = Task(
+        description="Review the article for quality and accuracy",
+        agent=critic,
+        expected_output="An edited article with corrections noted",
+    )
 
     # Create crew
     crew = Crew(
         agents=[researcher, writer, critic],
         tasks=[research_task, writing_task, review_task],
-        process="hierarchical",  # Manager coordinates others
+        process="hierarchical",
+        manager_llm=researcher_llm,
     )
 
     result = crew.kickoff()
