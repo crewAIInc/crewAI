@@ -73,6 +73,15 @@ from crewai.hooks.types import (
 )
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.tools.tool_failure import (
+    ToolExecutionFailedError,
+    ToolFailure,
+    ToolFailureReason,
+    detect_tool_failure,
+    failure_from_exception,
+    handle_tool_failure,
+    reportable_failure,
+)
 from crewai.utilities.agent_utils import (
     _llm_stop_words_applied,
     build_text_tool_calling_fallback_message,
@@ -1634,6 +1643,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 function_calling_llm=self.function_calling_llm,
                 crew=self.crew,
             )
+        except ToolExecutionFailedError:
+            # A deliberate stop: the generic handler below would feed it back
+            # to the LLM as a recoverable observation.
+            raise
+
         except Exception as e:
             if self.agent and self.agent.verbose:
                 PRINTER.print(content=f"Error in tool execution: {e}", color="red")
@@ -1753,6 +1767,15 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     idx = future_to_idx[future]
                     try:
                         ordered_results[idx] = future.result()
+                    except ToolExecutionFailedError:
+                        # A deliberate stop: folding it into a tool result would
+                        # let the remaining parallel calls carry on. Cancel the
+                        # siblings that have not started so they never run.
+                        # Ones already in flight cannot be interrupted -- Python
+                        # threads are not cancellable -- so a concurrent tool may
+                        # still complete before the abort surfaces.
+                        pool.shutdown(wait=False, cancel_futures=True)
+                        raise
                     except Exception as e:
                         tool_call = runnable_tool_calls[idx]
                         info = extract_tool_call_info(tool_call)
@@ -1799,6 +1822,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     original_tool
                     and hasattr(original_tool, "result_as_answer")
                     and original_tool.result_as_answer
+                    # A failed tool must not become the final answer.
+                    and execution_result.get("tool_failure") is None
                 ):
                     self.state.current_answer = AgentFinish(
                         thought="Tool result is the final answer",
@@ -1837,6 +1862,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 original_tool
                 and hasattr(original_tool, "result_as_answer")
                 and original_tool.result_as_answer
+                # A failed tool must not become the final answer.
+                and execution_result.get("tool_failure") is None
             ):
                 # Set the result as the final answer
                 self.state.current_answer = AgentFinish(
@@ -1904,6 +1931,14 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         # Parse arguments
         parsed_args, parse_error = parse_tool_call_args(func_args, func_name, call_id)
         if parse_error is not None:
+            handle_tool_failure(
+                parse_error["tool_failure"],
+                tool_name=func_name,
+                tool_args=func_args,
+                agent=self.agent,
+                task=self.task,
+                crew=self.crew,
+            )
             return parse_error
         args_dict: dict[str, Any] = parsed_args or {}
 
@@ -1949,6 +1984,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         from_cache = False
         result = "Tool not found"
         raw_tool_result: Any = result
+        tool_failure: ToolFailure | None = None
         input_str = json.dumps(args_dict) if args_dict else ""
         if self.tools_handler and self.tools_handler.cache and output_tool is not None:
             cached_result = self.tools_handler.cache.read(
@@ -1957,6 +1993,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             if cached_result is not None:
                 raw_tool_result = cached_result
                 result = format_native_tool_output_for_agent(output_tool, cached_result)
+                tool_failure = detect_tool_failure(cached_result)
                 from_cache = True
 
         # Emit tool usage started event
@@ -1988,6 +2025,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
             raw_tool_result = result
+            # The blocked message replaces any cached result, so a cached
+            # failure must not be attributed to this call.
+            tool_failure = None
         elif not from_cache and not max_usage_reached and output_tool is not None:
             if func_name in self._available_functions:
                 try:
@@ -2010,9 +2050,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     result = format_native_tool_output_for_agent(
                         output_tool, raw_result
                     )
+                    tool_failure = detect_tool_failure(raw_result)
                 except Exception as e:
                     result = f"Error executing tool: {e}"
                     raw_tool_result = result
+                    tool_failure = failure_from_exception(e)
                     if self.task:
                         self.task.increment_tools_errors()
                     # Emit tool usage error event
@@ -2028,6 +2070,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                         ),
                     )
                     error_event_emitted = True
+            else:
+                tool_failure = self._unknown_tool_failure(func_name, result)
         elif max_usage_reached:
             # Return error message when max usage limit is reached
             if original_tool:
@@ -2035,6 +2079,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             else:
                 result = f"Tool '{func_name}' has reached its maximum usage limit and cannot be used anymore."
             raw_tool_result = result
+            tool_failure = ToolFailure(
+                message=result, reason=ToolFailureReason.USAGE_LIMIT
+            )
+        elif not from_cache:
+            tool_failure = self._unknown_tool_failure(func_name, result)
 
         # Execute after_tool_call hooks (even if blocked, to allow logging/monitoring)
         after_hook_context = ToolCallHookContext(
@@ -2063,7 +2112,27 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     agent_key=agent_key,
                     started_at=started_at,
                     finished_at=datetime.now(),
+                    failure=reportable_failure(
+                        tool_failure,
+                        tool=structured_tool,
+                        agent=self.agent,
+                        task=self.task,
+                        crew=self.crew,
+                    ),
                 ),
+            )
+
+        # After the finished event, so subscribers see the full lifecycle even
+        # when the policy aborts.
+        if tool_failure is not None:
+            handle_tool_failure(
+                tool_failure,
+                tool_name=func_name,
+                tool_args=args_dict,
+                tool=structured_tool,
+                agent=self.agent,
+                task=self.task,
+                crew=self.crew,
             )
 
         return {
@@ -2072,7 +2141,20 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             "result": result,
             "from_cache": from_cache,
             "original_tool": original_tool,
+            "tool_failure": tool_failure,
         }
+
+    @staticmethod
+    def _unknown_tool_failure(func_name: str, result: str) -> ToolFailure:
+        """Build the failure for a tool the model asked for but we lack.
+
+        The ReAct path reports this, so the native path must too.
+        """
+        return ToolFailure(
+            message=result,
+            reason=ToolFailureReason.UNKNOWN_TOOL,
+            code=func_name,
+        )
 
     def _extract_tool_name(self, tool_call: Any) -> str:
         """Extract tool name from various tool call formats."""

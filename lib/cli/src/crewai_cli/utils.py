@@ -9,7 +9,9 @@ from typing import Any
 
 import click
 from crewai_core.project import (
+    get_or_create_project_id as get_or_create_project_id,
     get_project_description as get_project_description,
+    get_project_id as get_project_id,
     get_project_name as get_project_name,
     get_project_version as get_project_version,
     parse_toml as parse_toml,
@@ -30,7 +32,9 @@ __all__ = [
     "copy_template",
     "enable_prompt_line_editing",
     "fetch_and_json_env_file",
+    "get_or_create_project_id",
     "get_project_description",
+    "get_project_id",
     "get_project_name",
     "get_project_version",
     "is_dmn_mode_enabled",

@@ -549,7 +549,13 @@ _CLAUDE_STRICT_UNSUPPORTED: Final[tuple[str, ...]] = (
 def _strip_keys_recursive(
     d: Any, keys: tuple[str, ...], _seen: set[int] | None = None
 ) -> Any:
-    """Recursively delete a fixed set of keys from a schema."""
+    """Recursively delete schema metadata keys without deleting property names.
+
+    JSON Schema stores fields under a ``properties`` map. A user/tool argument can
+    legitimately be named ``title``, ``default``, or another metadata key. Those
+    entries must stay in the map; only metadata inside the schema nodes should be
+    stripped.
+    """
     if _seen is None:
         _seen = set()
     if isinstance(d, dict):
@@ -558,8 +564,12 @@ def _strip_keys_recursive(
         _seen.add(id(d))
         for key in keys:
             d.pop(key, None)
-        for v in d.values():
-            _strip_keys_recursive(v, keys, _seen)
+        for key, value in d.items():
+            if key == "properties" and isinstance(value, dict):
+                for property_schema in value.values():
+                    _strip_keys_recursive(property_schema, keys, _seen)
+            else:
+                _strip_keys_recursive(value, keys, _seen)
     elif isinstance(d, list):
         if id(d) in _seen:
             return d
