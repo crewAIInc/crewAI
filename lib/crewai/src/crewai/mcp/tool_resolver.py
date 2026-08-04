@@ -252,6 +252,7 @@ class MCPToolResolver:
                         tool_name=tool_name,
                         tool_schema=schema,
                         server_name=server_name,
+                        original_tool_name=schema.get("original_name", tool_name),
                     )
                     tools.append(wrapper)
                 except Exception as e:
@@ -615,15 +616,18 @@ class MCPToolResolver:
 
                 schemas = {}
                 for tool in tools_result.tools:
+                    sanitized_name = sanitize_tool_name(tool.name)
+
                     args_schema = None
                     if hasattr(tool, "inputSchema") and tool.inputSchema:
                         args_schema = self._json_schema_to_pydantic(
-                            sanitize_tool_name(tool.name), tool.inputSchema
+                            sanitized_name, tool.inputSchema
                         )
 
-                    schemas[sanitize_tool_name(tool.name)] = {
+                    schemas[sanitized_name] = {
                         "description": getattr(tool, "description", ""),
                         "args_schema": args_schema,
+                        "original_name": tool.name,
                     }
                 return schemas
 
