@@ -16,8 +16,13 @@ jobs:
       - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3
         id: filter
         with:
+          # Exclusion-only patterns match every non-excluded file under the
+          # default "some" quantifier. Require all patterns (including "**")
+          # so docs-only / markdown-only PRs correctly set code=false.
+          predicate-quantifier: every
           filters: |
             code:
+              - '**'
               - '!docs/**'
               - '!**/*.md'
 
