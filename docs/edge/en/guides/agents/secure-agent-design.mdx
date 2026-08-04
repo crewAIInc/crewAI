@@ -1,12 +1,12 @@
 ---
 title: Secure Agent Design
-description: Required reading for production agents — trusted vs untrusted inputs, prompt injection, tool abuse, output validation, approval gates, limited delegation, and agent isolation.
+description: Design safer CrewAI agents — trusted vs untrusted inputs, prompt injection, tool abuse, output validation, approval gates, limited delegation, and agent isolation.
 icon: shield-halved
 mode: "wide"
 ---
 
 <Warning>
-**Required reading for production agents.** Agents with tools can take real-world actions. Treat every agent system as an untrusted code interpreter that can be steered by its inputs, until you prove otherwise with design controls.
+Agents with tools can take real-world actions. Treat every agent system as an untrusted code interpreter that can be steered by its inputs, until you prove otherwise with design controls.
 </Warning>
 
 ## Framework controls vs design patterns
@@ -20,7 +20,7 @@ CrewAI gives you the **primitives** to enforce security (tool hooks, guardrails,
 | `human_input` / `@human_feedback` pauses for review | Trust boundaries in prompts and state |
 | `output_pydantic` validates schema shape | Treating other agents' output as untrusted until checked |
 
-This guide is the checklist. Use it before you ship any agent that touches user data, external content, or side-effecting tools.
+Use this guide whenever an agent touches user data, external content, or side-effecting tools — including local and operator-controlled setups.
 
 ## Why secure agent design matters
 
@@ -298,25 +298,6 @@ class SecureOutreachFlow(Flow[PipelineState]):
 ```
 
 See [Production Architecture](/en/concepts/production-architecture).
-
-## Production checklist
-
-Before shipping:
-
-- [ ] Trust boundaries documented for every input path (user, tools, RAG, other agents)
-- [ ] Untrusted content labeled; secrets never in prompts; policy enforced outside the model
-- [ ] Each agent has least-privilege tools and scoped credentials
-- [ ] Destructive/side-effecting tools gated by hooks and/or HITL
-- [ ] Policy hooks abort with `HookAborted` (other exceptions fail open)
-- [ ] Tool arguments constrained in code (allowlists, schemas, SSRF/egress controls)
-- [ ] Task guardrails and/or structured outputs on critical handoffs (schema ≠ policy)
-- [ ] `allow_delegation=False` unless explicitly required (watch hierarchical managers)
-- [ ] Read-heavy and write-heavy responsibilities isolated across agents or flow steps
-- [ ] Memory/knowledge isolation verified (crew memory fallback understood)
-- [ ] MCP/third-party servers reviewed under [MCP Security](/en/mcp/security)
-- [ ] Production HITL uses a real review channel (not only console stdin)
-- [ ] Logging/tracing enabled for tool calls, hook aborts, and approvals ([Tracing](/en/observability/tracing))
-- [ ] Basic injection/tool-abuse red-team cases exercised before release
 
 ## Related guides
 
