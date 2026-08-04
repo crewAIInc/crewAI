@@ -2280,6 +2280,42 @@ def test_conversational_route_handler_runs_once_via_dispatch():
     assert fire_count == 1
 
 
+@pytest.mark.timeout(5)
+def test_chained_routers_same_label_preserve_distinct_payloads():
+    """Regression: payload map must key by trigger, not label, when emitters collide."""
+
+    class TaggedLabel:
+        def __init__(self, label: str, data: str) -> None:
+            self.label = label
+            self.data = data
+
+        def __str__(self) -> str:
+            return self.label
+
+    received: list[str] = []
+
+    class ParallelSameLabelFlow(Flow):
+        @start()
+        def kick(self):
+            return "kick"
+
+        @router(kick)
+        def router_a(self):
+            return TaggedLabel("shared", "from_a")
+
+        @router(kick)
+        def router_b(self):
+            return TaggedLabel("shared", "from_b")
+
+        @listen("shared")
+        def handler(self, value):
+            received.append(value.data)
+
+    ParallelSameLabelFlow().kickoff()
+
+    assert received == ["from_a", "from_b"]
+
+
 class ListState(BaseModel):
     items: list = []
 
