@@ -1148,7 +1148,8 @@ class Telemetry:
 
         Args:
             feature: Feature identifier, e.g. "planning:creation",
-                     "mcp:connection", "a2a:delegation".
+                     "mcp:connection", "a2a:delegation",
+                     "hooks:pre_tool_call", "hooks:aborted".
         """
 
         def _operation() -> None:
@@ -1159,6 +1160,21 @@ class Telemetry:
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
+
+    def hook_dispatched_span(
+        self,
+        interception_point: str,
+        outcome: str,
+    ) -> None:
+        """Records an interception-hook dispatch via Feature Usage.
+
+        Emits ``hooks:<point>`` on every dispatch, plus ``hooks:aborted`` when
+        a hook aborted the operation (e.g. a policy check). No reasons,
+        payloads, or other user content are recorded.
+        """
+        self.feature_usage_span(f"hooks:{interception_point}")
+        if outcome == "aborted":
+            self.feature_usage_span("hooks:aborted")
 
     def coding_agent_span(self) -> None:
         """Records which AI coding assistant (if any) is running this process.
