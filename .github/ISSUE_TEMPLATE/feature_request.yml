@@ -1,7 +1,7 @@
 name: Feature request
 description: Suggest a new feature for CrewAI
 title: "[FEATURE]"
-labels: ["feature-request"]
+labels: ["feature-request", "state:inbox"]
 assignees: []
 body:
   - type: markdown
@@ -26,8 +26,8 @@ body:
   - type: textarea
     id: problem
     attributes:
-      label: Is your feature request related to a an existing bug? Please link it here.
-      description: A link to the bug or NA if not related to an existing bug.
+      label: Problem statement
+      description: Describe the user problem or unmet need without prescribing an implementation.
     validations:
       required: true
   - type: textarea
@@ -44,6 +44,30 @@ body:
       description: A clear and concise description of any alternative solutions or features you've considered.
     validations:
       required: false
+  - type: textarea
+    id: scope
+    attributes:
+      label: Proposed scope and non-goals
+      description: Describe what should be included and what should intentionally remain out of scope.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: List the observable outcomes that would make this request complete.
+      placeholder: |
+        - [ ] A user can ...
+        - [ ] Existing behavior remains ...
+    validations:
+      required: true
+  - type: textarea
+    id: verification-plan
+    attributes:
+      label: Verification plan
+      description: Describe the automated or manual checks that should confirm the feature works.
+    validations:
+      required: true
   - type: textarea
     id: context
     attributes:

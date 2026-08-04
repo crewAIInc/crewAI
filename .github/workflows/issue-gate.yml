@@ -1,0 +1,46 @@
+name: Issue Gate
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, edited, reopened, synchronize, labeled, unlabeled]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to evaluate
+        required: true
+        type: number
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  statuses: write
+
+concurrency:
+  group: issue-gate-${{ inputs.pr_number || github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  issue-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # pull_request_target is privileged. Explicitly check out only the trusted
+      # default branch and never fetch or execute pull request code.
+      - name: Check out trusted gate implementation
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Evaluate ready issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Until a cutoff is configured, every PR is treated as legacy. This
+          # keeps the newly merged workflow inert by default.
+          ISSUE_GATE_CUTOFF: ${{ vars.ISSUE_GATE_CUTOFF || '9999-12-31T00:00:00Z' }}
+          ISSUE_GATE_MODE: ${{ vars.ISSUE_GATE_MODE || 'observe' }}
+          ISSUE_GATE_READY_LABEL: ${{ vars.ISSUE_GATE_READY_LABEL || 'state:ready' }}
+          PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
+        run: node .github/scripts/issue-gate.mjs
