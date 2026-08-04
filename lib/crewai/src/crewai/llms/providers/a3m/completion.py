@@ -19,7 +19,7 @@ Environment Variables:
     A3M_BASE_URL: Base URL for A3M Router (default: http://localhost:8787/v1)
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 from crewai.llms.providers.openai.completion import OpenAICompletion
 
 
@@ -28,7 +28,6 @@ class A3MCompletion(OpenAICompletion):
 
     A3M Router provides intelligent routing with:
     - Automatic model selection based on query complexity
-    - 70-95% cost savings vs direct GPT-4o calls
     - Built-in fallback handling
     - Support for 47+ LLM providers
     """
@@ -68,14 +67,5 @@ class A3MCompletion(OpenAICompletion):
         """
         return format in ["json", "text", "markdown"]
 
-    def get_cost(self) -> Dict[str, float]:
-        """Get cost statistics for this LLM.
-
-        Returns:
-            Dictionary with cost information.
-        """
-        return {
-            "total": 0.0,
-            "by_model": {},
-            "requests": 0,
-        }
+    # Cost tracking is handled via A3M Router's built-in analytics.
+    # Access via A3M Router dashboard at localhost:8787

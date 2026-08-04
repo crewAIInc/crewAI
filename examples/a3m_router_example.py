@@ -132,11 +132,7 @@ def example_cost_tracking():
 
     crew = Crew(agents=[agent], tasks=[task])
     result = crew.kickoff()
-
-    # Get cost statistics from A3M
-    cost_info = llm.get_cost()
-    print(f"Total cost: ${cost_info.get('total', 0):.6f}")
-    print(f"Requests: {cost_info.get('requests', 0)}")
+    print(f"Result: {result}")
 
 
 if __name__ == "__main__":
