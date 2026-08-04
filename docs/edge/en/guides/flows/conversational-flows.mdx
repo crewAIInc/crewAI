@@ -376,6 +376,15 @@ def handle_internet_search(self) -> str:
     ...
 ```
 
+<Note>
+  Prefer a handler name that differs from the route label — for example,
+  `@listen("INTERNET_SEARCH")` with `def handle_internet_search`, not
+  `def INTERNET_SEARCH`. The router emits the **intent label**; the handler
+  method name is for your code organization. Matching names are supported in
+  conversational flows, but separate names keep routing and completion events
+  easier to reason about.
+</Note>
+
 …and the router LLM sees:
 
 ```

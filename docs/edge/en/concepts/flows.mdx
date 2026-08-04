@@ -130,6 +130,17 @@ The `@listen()` decorator can be used in several ways:
        # Implementation
    ```
 
+<Note>
+  Prefer giving each handler a **different** method name than its `@listen` label
+  (for example, `@listen("create_video")` with `def handle_create_video`). A
+  listener string can come from a router intent or from another method's
+  completion — keeping names distinct makes the graph easier to read and avoids
+  ambiguous dispatch. In non-conversational flows, a handler whose `@listen`
+  condition references its own method name is rejected at validation time.
+  Conversational flows allow route handlers to share an intent label with the
+  method name, but the split-name pattern above is still recommended.
+</Note>
+
 ### Flow Output
 
 Accessing and handling the output of a Flow is essential for integrating your AI workflows into larger applications or systems. CrewAI Flows provide straightforward mechanisms to retrieve the final output, access intermediate results, and manage the overall state of your Flow.
