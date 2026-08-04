@@ -339,7 +339,7 @@ class TestDocumentationCodeSnippets:
         )
         assert provider.model_name == "jina-embeddings-v3"
 
-    @pytest.mark.parametrize("device", ["cuda", "mps", "xpu"])
+    @pytest.mark.parametrize("device", ["cpu", "cuda", "mps", "xpu"])
     def test_ragtool_sentence_transformer_config(self, device: str):
         """Test RagTool SentenceTransformer config from ragtool.mdx.
 
