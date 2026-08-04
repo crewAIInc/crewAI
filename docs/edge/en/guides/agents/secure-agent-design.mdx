@@ -22,6 +22,19 @@ CrewAI gives you the **primitives** to enforce security (tool hooks, guardrails,
 
 Use this guide whenever an agent touches user data, external content, or side-effecting tools — including local and operator-controlled setups.
 
+### Single-agent `kickoff()`
+
+`agent.kickoff(...)` runs through a LiteAgent — no Task and no Crew. Controls differ:
+
+| Still applies | Does **not** apply |
+| --- | --- |
+| Tool hooks, LLM hooks | Task `guardrail`, Task `human_input` |
+| `Agent.guardrail` / `guardrail_max_retries` | Execution boundary hooks (`INPUT` / `OUTPUT` / …) |
+| `response_format=` for structured output | Crew-scoped `@on` methods on `@CrewBase` |
+| Least-privilege `tools=[...]` | Multi-agent isolation / delegation limits |
+
+For standalone kickoffs, put policy on the agent (`guardrail`, tools) and in global tool/LLM hooks. See [Direct agent interaction](/en/concepts/agents#direct-agent-interaction-with-kickoff).
+
 ## Why secure agent design matters
 
 CrewAI agents reason over language, call tools, and often collaborate. That combination creates a different threat model than a typical API (see also [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) — especially prompt injection and excessive agency):
@@ -84,7 +97,7 @@ researcher = Agent(
 )
 ```
 
-Use [execution boundary hooks](/en/learn/execution-boundary-hooks) (`INPUT`) to inspect kickoff inputs. For MCP and web tools, see [MCP Security](/en/mcp/security).
+For Crew/Flow kickoffs, use [execution boundary hooks](/en/learn/execution-boundary-hooks) (`INPUT`) to inspect inputs — these do **not** run on standalone `agent.kickoff()`. For MCP and web tools, see [MCP Security](/en/mcp/security).
 
 ## 2. Prompt injection
 
@@ -213,7 +226,7 @@ Task(
 )
 ```
 
-Also available: `Agent.guardrail` on kickoff paths, string/`LLMGuardrail` checks, and [execution boundary hooks](/en/learn/execution-boundary-hooks). See [Task Guardrails](/en/concepts/tasks#task-guardrails) and [Production Architecture](/en/concepts/production-architecture).
+For `agent.kickoff()`, use `Agent.guardrail` (and `response_format`) instead of Task guardrails — see [Single-agent kickoff](#single-agent-kickoff). String/`LLMGuardrail` checks work in both places. Crew/Flow runs can also use [execution boundary hooks](/en/learn/execution-boundary-hooks). See [Task Guardrails](/en/concepts/tasks#task-guardrails).
 
 ## 6. Approval gates
 
@@ -238,7 +251,7 @@ def require_email_approval(ctx):
         raise HookAborted(reason="denied by operator", source="approval-gate")
 ```
 
-Other patterns: `human_input=True` on a [Task](/en/learn/human-input-on-execution), or `@human_feedback` / Enterprise HITL webhooks ([Human-in-the-Loop](/en/learn/human-in-the-loop), [Human Feedback in Flows](/en/learn/human-feedback-in-flows)).
+Other patterns: `human_input=True` on a [Task](/en/learn/human-input-on-execution) (Crew path only), tool-hook `request_human_input` (works on `agent.kickoff()` too), or `@human_feedback` / Enterprise HITL webhooks ([Human-in-the-Loop](/en/learn/human-in-the-loop), [Human Feedback in Flows](/en/learn/human-feedback-in-flows)).
 
 <Tip>
 Default HITL helpers are often **blocking console** prompts. For production, use a non-blocking provider or Enterprise webhooks.
