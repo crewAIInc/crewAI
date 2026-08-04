@@ -98,7 +98,8 @@
                         "group": "Agents",
                         "icon": "user",
                         "pages": [
-                          "edge/en/guides/agents/crafting-effective-agents"
+                          "edge/en/guides/agents/crafting-effective-agents",
+                          "edge/en/guides/agents/secure-agent-design"
                         ]
                       },
                       {

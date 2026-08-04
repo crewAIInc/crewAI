@@ -154,9 +154,14 @@ flow.kickoff(restore_from_state_id="<previous-run-state-id>")
 
 The new run gets a fresh `state.id` (auto-generated, or `inputs["id"]` if pinned) so its `@persist` writes don't extend the source's history. Combining with `from_checkpoint` raises a `ValueError`; pick one hydration source.
 
+## Security
+
+Agents with tools can take real-world actions. Before you ship, read **[Secure Agent Design](/en/guides/agents/secure-agent-design)** — required guidance on trust boundaries, prompt injection, tool abuse, output validation, approval gates, limited delegation, and agent isolation.
+
 ## Summary
 
 - **Start with a Flow.**
 - **Define a clear State.**
 - **Use Crews for complex tasks.**
 - **Deploy with an API and persistence.**
+- **Apply [Secure Agent Design](/en/guides/agents/secure-agent-design) controls.**
