@@ -9,9 +9,22 @@ mode: "wide"
 **Required reading for production agents.** Agents with tools can take real-world actions. Treat every agent system as an untrusted code interpreter that can be steered by its inputs, until you prove otherwise with design controls.
 </Warning>
 
+## Framework controls vs design patterns
+
+CrewAI gives you the **primitives** to enforce security (tool hooks, guardrails, HITL, structured outputs, flow state). It does **not** automatically enforce a secure threat model. Prompt wording, least-privilege tool lists, allowlists, and approval gates are design choices you implement in code.
+
+| Enforced by the framework when you wire it | Design pattern you must build |
+| --- | --- |
+| `HookAborted` blocks a tool call | Choosing which tools each agent gets |
+| Task `guardrail` rejects/retries output | Dual-agent read/write isolation |
+| `human_input` / `@human_feedback` pauses for review | Trust boundaries in prompts and state |
+| `output_pydantic` validates schema shape | Treating other agents' output as untrusted until checked |
+
+This guide is the checklist. Use it before you ship any agent that touches user data, external content, or side-effecting tools.
+
 ## Why secure agent design matters
 
-CrewAI agents reason over language, call tools, and often collaborate. That combination creates a different threat model than a typical API:
+CrewAI agents reason over language, call tools, and often collaborate. That combination creates a different threat model than a typical API (see also [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) — especially prompt injection and excessive agency):
 
 | Traditional app | Agent system |
 | --- | --- |
@@ -20,8 +33,6 @@ CrewAI agents reason over language, call tools, and often collaborate. That comb
 | Failures are usually bugs | Failures can be *goal hijacking* — the agent does the wrong thing for plausible reasons |
 
 Security here is not a single filter. It is a set of design choices: what each agent can see, what it can do, what must be approved, and how outputs are checked before they move downstream.
-
-This guide is the checklist. Use it before you ship any agent that touches user data, external content, or side-effecting tools.
 
 ## Threat model at a glance
 
@@ -54,10 +65,11 @@ Draw an explicit **trust boundary** for every agent.
 
 ### Design rules
 
-1. **Label untrusted content in the prompt.** Tell the agent that tool results and retrieved documents are data, not instructions.
-2. **Do not concatenate untrusted text into system-level instructions.** Keep user and retrieved content in clearly delimited sections.
+1. **Label untrusted content in the prompt** — useful hygiene, not a security boundary. Tell the agent that tool results and retrieved documents are data, not instructions.
+2. **Do not concatenate untrusted text into system-level instructions.** Keep user and retrieved content in clearly delimited sections (for example, fenced blocks or structured fields).
 3. **Minimize what each agent sees.** Prefer structured fields over dumping entire documents into context.
 4. **Never put secrets in prompts, memory, or tool arguments the model constructs.** Inject credentials in tool implementations from the environment or a secrets manager.
+5. **Enforce policy outside the model** — tool hooks, argument allowlists, and guardrails. Assume prompt labels will sometimes fail.
 
 ```python
 researcher = Agent(
@@ -74,7 +86,7 @@ researcher = Agent(
 )
 ```
 
-For MCP and web tools specifically, see [MCP Security](/en/mcp/security).
+Use [execution boundary hooks](/en/learn/execution-boundary-hooks) (`INPUT`) to inspect or rewrite kickoff inputs before a crew or flow runs. For MCP and web tools specifically, see [MCP Security](/en/mcp/security).
 
 ## 2. Prompt injection
 
@@ -92,14 +104,17 @@ For MCP and web tools specifically, see [MCP Security](/en/mcp/security).
 
 | Control | How in CrewAI |
 | --- | --- |
-| Clear trust-boundary language | Agent `backstory` / task description |
+| Clear trust-boundary language | Agent `backstory` / task description (soft control) |
 | Least-privilege tools | Pass only the tools that agent needs |
-| Hard blocks on dangerous calls | [Tool hooks](/en/learn/tool-hooks) (`PRE_TOOL_CALL`) |
+| Hard blocks on dangerous calls | [Tool hooks](/en/learn/tool-hooks) (`PRE_TOOL_CALL` + `HookAborted`) |
+| Inspect model traffic | [LLM hooks](/en/learn/llm-hooks) (`PRE_MODEL_CALL` / `POST_MODEL_CALL`) |
 | Human approval for irreversible actions | Tool hooks + [HITL](/en/learn/human-in-the-loop) |
 | Output checks before side effects | [Task guardrails](/en/concepts/tasks#task-guardrails) |
-| Structured outputs | `output_pydantic` / `output_json` |
+| Structured outputs | `output_pydantic` / `output_json` (shape only — still validate policy) |
 
 Prompt wording alone is **not** sufficient. Assume a determined injector will sometimes succeed at steering the model. Your safety net is what the agent is *allowed* to do after that.
+
+Where possible, screen proposed tool calls against the **original user intent** in a `PRE_TOOL_CALL` hook — without re-feeding the untrusted intermediate content that may have caused drift.
 
 ## 3. Indirect prompt injection
 
@@ -122,8 +137,9 @@ This is especially high risk for:
 
 - Prefer summaries and structured extracts over raw HTML/Markdown in context when possible.
 - Separate **research agents** (read untrusted content, no side-effect tools) from **action agents** (send email, write files, call APIs).
+- Hand off only **validated structured state** between them — not raw tool dumps. If both agents share one crew transcript without a gated handoff, untrusted text can re-enter the actor's context.
 - Run guardrails on research outputs before an action agent sees them.
-- Validate URLs and destinations in tool hooks (allowlists for domains, block private network ranges where appropriate).
+- Validate URLs and destinations in tool hooks (domain allowlists; block link-local/private ranges where appropriate to reduce SSRF risk).
 - For MCP tool metadata risks (injection via tool names/descriptions), read [MCP Security](/en/mcp/security).
 
 ```python
@@ -149,6 +165,8 @@ sender = Agent(
 )
 ```
 
+Stronger still: put research and send in **separate flow steps** (see [Isolation](#8-isolation-between-agents)) so the sender never receives raw scraped content.
+
 ## 4. Tool abuse
 
 Tool abuse is what happens when a steered agent uses legitimate tools in harmful ways: deleting data, exporting records, spending money, sending messages, or executing code.
@@ -159,6 +177,7 @@ Tool abuse is what happens when a steered agent uses legitimate tools in harmful
 - Prefer read-only tools for research agents.
 - Put irreversible operations behind separate tools with stricter controls.
 - Constrain tool arguments in code (paths, SQL, URLs, recipients) — do not rely on the model to "be careful."
+- Prefer short-lived, per-tool credentials over one shared high-privilege service account.
 
 ```python
 from crewai.hooks import on, HookAborted, InterceptionPoint, ToolCallHookContext
@@ -185,7 +204,11 @@ def constrain_email(ctx: ToolCallHookContext) -> None:
         )
 ```
 
-Also sanitize tool **results** before they re-enter context (redact secrets, strip obvious injection payloads) using `POST_TOOL_CALL` hooks. See [Tool Hooks](/en/learn/tool-hooks).
+<Warning>
+**Hooks fail open on unexpected errors.** Only `HookAborted` (or the legacy abort return) blocks a tool call. Any other exception raised inside a hook is swallowed and the call proceeds. Keep policy hooks simple, tested, and always abort via `HookAborted`.
+</Warning>
+
+Sanitize tool **results** before they re-enter context (redact secrets, strip obvious injection payloads) using `POST_TOOL_CALL` hooks — this is **opt-in**, not automatic. See [Tool Hooks](/en/learn/tool-hooks).
 
 ## 5. Output validation
 
@@ -196,6 +219,8 @@ Never treat raw model text as safe just because the task "looks done." Validate 
 - Trigger a side effect
 - Return a result to an end user or API client
 
+`output_pydantic` / `output_json` check **shape**, not intent. Pair schemas with policy guardrails and tool allowlists.
+
 ### CrewAI mechanisms
 
 **Task guardrails** — reject or transform outputs before the workflow continues:
@@ -204,12 +229,16 @@ Never treat raw model text as safe just because the task "looks done." Validate 
 from typing import Any, Tuple
 from crewai import Task, TaskOutput
 
+ALLOWED_SUMMARY_PREFIXES = ("summary:", "findings:")
+
 def validate_summary(result: TaskOutput) -> Tuple[bool, Any]:
-    text = result.raw or ""
+    text = (result.raw or "").strip()
     if len(text) < 50:
         return (False, "Summary too short. Provide more detail.")
-    if "ignore previous instructions" in text.lower():
-        return (False, "Output contained disallowed instruction-like content.")
+    # Prefer allowlists and structural checks over brittle ban-lists;
+    # string matching alone will not catch encoded or multilingual injections.
+    if not text.lower().startswith(ALLOWED_SUMMARY_PREFIXES):
+        return (False, "Summary must start with 'Summary:' or 'Findings:'.")
     return (True, text)
 
 Task(
@@ -220,6 +249,8 @@ Task(
     guardrail_max_retries=2,
 )
 ```
+
+You can also set `Agent.guardrail` for agent kickoff paths, and use string/`LLMGuardrail` descriptions for subjective checks. See [Task Guardrails](/en/concepts/tasks#task-guardrails).
 
 **Structured outputs** — prefer schemas over free text for machine handoffs:
 
@@ -261,15 +292,25 @@ Human (or external policy) approval is required for actions that are irreversibl
 def require_approval(ctx: ToolCallHookContext) -> None:
     response = ctx.request_human_input(
         prompt=f"Approve {ctx.tool_name}?",
-        default_message=f"Input: {ctx.tool_input}\nType 'yes' to approve:",
+        default_message=(
+            f"Tool: {ctx.tool_name}\n"
+            f"Args: {ctx.tool_input}\n"
+            "Type 'yes' to approve:"
+        ),
     )
     if response.lower() != "yes":
         raise HookAborted(reason="denied by operator", source="approval-gate")
 ```
 
+Show reviewers the tool name, arguments, and enough context to judge drift from the user's original request — avoid rubber-stamp prompts.
+
 2. **Task-level human input** — set `human_input=True` when a task result must be reviewed before the crew continues. See [Human Input on Execution](/en/learn/human-input-on-execution).
 
 3. **Flow-level review** — use `@human_feedback` or Enterprise HITL webhooks for production review queues. See [Human-in-the-Loop](/en/learn/human-in-the-loop) and [Human Feedback in Flows](/en/learn/human-feedback-in-flows).
+
+<Tip>
+Default HITL helpers are often **blocking console** prompts. For production, wire a non-blocking provider or Enterprise webhooks so approvals land in Slack/Teams/your review queue instead of stdin.
+</Tip>
 
 Approval gates should be **enforced in code**, not suggested in the prompt.
 
@@ -279,13 +320,14 @@ Delegation multiplies blast radius: a compromised or confused agent can enlist o
 
 ### Defaults
 
-- Keep `allow_delegation=False` unless collaboration is required.
-- If you enable delegation, restrict which agents exist in the crew and which tools each one has.
-- Prefer explicit task graphs (sequential/hierarchical processes you design) over open-ended delegation for high-risk workflows.
-- Treat remote/A2A delegation as a trust decision — configure carefully and assume remote agents are a separate security domain. See [A2A Agent Delegation](/en/learn/a2a-agent-delegation).
+- Keep `allow_delegation=False` unless collaboration is required (this is the Agent default).
+- If you enable delegation, restrict which agents exist in the crew and which tools each one has. There is no separate "delegate only to agent X" ACL — membership and per-agent tools are the boundary.
+- Prefer explicit task graphs (sequential processes you design) over open-ended delegation for high-risk workflows.
+- In a **hierarchical** process, managers are set up to delegate. Keep high-risk tools on specialists behind hooks and approvals — not on every worker, and not on the manager unless required.
+- Treat remote/A2A delegation as a separate security domain. Prefer `A2AClientConfig`, leave `trust_remote_completion_status=False` unless you intentionally trust remote completion, and validate returned content before acting on it. See [A2A Agent Delegation](/en/learn/a2a-agent-delegation).
 
 ```python
-Analyst = Agent(
+analyst = Agent(
     role="Analyst",
     goal="Analyze only the provided dataset",
     backstory="You do not recruit other agents or expand scope.",
@@ -293,8 +335,6 @@ Analyst = Agent(
     allow_delegation=False,
 )
 ```
-
-When using a manager/hierarchical process, give the manager coordination authority but keep high-risk tools on specialist agents behind hooks and approvals — not on every worker.
 
 ## 8. Isolation between agents
 
@@ -305,8 +345,8 @@ Isolation limits how far a successful injection can spread.
 1. **Split read and write privileges** across agents (researcher vs actor).
 2. **Separate crews or flow steps** for untrusted ingestion vs privileged action.
 3. **Pass validated structured state** between steps, not raw tool dumps.
-4. **Scope memory and knowledge** so sensitive corpora are not visible to every agent.
-5. **Sandbox code execution** (E2B, Modal, or similar) — never run model-generated code on the host. Treat sandbox output as untrusted.
+4. **Scope knowledge** with per-agent `knowledge_sources` when corpora differ in sensitivity. For memory: give an agent its own `Memory` / `MemoryScope`, or disable memory on the **crew** — setting `memory=False` on an agent alone does **not** isolate it if the crew has memory (the agent falls back to crew memory).
+5. **Sandbox code execution** with [E2B tools](/en/tools/ai-ml/e2bsandboxtools) (or another external sandbox you integrate) — never run model-generated code on the host. Treat sandbox output as untrusted. Built-in `CodeInterpreterTool` / `allow_code_execution` are removed/deprecated.
 6. **Isolate MCP and third-party tool servers** — only connect to servers you trust; prefer least-privilege credentials per server. See [MCP Security](/en/mcp/security).
 
 ```python
@@ -342,15 +382,19 @@ Flows make isolation concrete: each step gets only the state fields it needs, an
 Before shipping:
 
 - [ ] Trust boundaries documented for every input path (user, tools, RAG, other agents)
-- [ ] Untrusted content labeled; secrets never in prompts
-- [ ] Each agent has least-privilege tools
+- [ ] Untrusted content labeled; secrets never in prompts; policy enforced outside the model
+- [ ] Each agent has least-privilege tools and scoped credentials
 - [ ] Destructive/side-effecting tools gated by hooks and/or HITL
-- [ ] Tool arguments constrained in code (allowlists, schemas)
-- [ ] Task guardrails and/or structured outputs on critical handoffs
-- [ ] `allow_delegation=False` unless explicitly required and reviewed
+- [ ] Policy hooks abort with `HookAborted` (remember: other exceptions fail open)
+- [ ] Tool arguments constrained in code (allowlists, schemas, SSRF/egress controls for fetch tools)
+- [ ] Task guardrails and/or structured outputs on critical handoffs (schema ≠ policy)
+- [ ] `allow_delegation=False` unless explicitly required and reviewed (watch hierarchical managers)
 - [ ] Read-heavy and write-heavy responsibilities isolated across agents or flow steps
+- [ ] Memory/knowledge isolation verified (crew memory fallback understood)
 - [ ] MCP/third-party servers reviewed under [MCP Security](/en/mcp/security)
-- [ ] Logging/tracing enabled for tool calls and approvals ([Tracing](/en/observability/tracing))
+- [ ] Production HITL uses a real review channel (not only console stdin)
+- [ ] Logging/tracing enabled for tool calls, hook aborts, and approvals ([Tracing](/en/observability/tracing))
+- [ ] Basic injection/tool-abuse red-team cases exercised before release
 
 ## Related guides
 
@@ -368,7 +412,7 @@ Before shipping:
     Trust, metadata injection, and transport security for MCP servers.
   </Card>
   <Card title="Task Guardrails" icon="check-double" href="/en/concepts/tasks#task-guardrails">
-    Validate and transform task outputs before the workflow continues.
+    Validate and transform task outputs before they continue.
   </Card>
   <Card title="Human-in-the-Loop" icon="user-check" href="/en/learn/human-in-the-loop">
     Require human review for high-impact decisions and actions.
