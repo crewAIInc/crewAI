@@ -659,6 +659,17 @@ class LLM(BaseLLM):
         if model in AZURE_MODELS:
             return "azure"
 
+        # Models absent from the constants lists (new releases, "latest"
+        # aliases) still fall back to provider naming patterns, as this
+        # method's docstring describes and the sibling
+        # _validate_model_in_constants already does. Only providers whose
+        # prefixes are unambiguous are checked here; bedrock ("." in name)
+        # and azure (gpt-/o-series) patterns overlap other providers and are
+        # left to the explicit-provider path.
+        for provider in ("anthropic", "gemini"):
+            if cls._matches_provider_pattern(model, provider):
+                return provider
+
         return "openai"
 
     @classmethod

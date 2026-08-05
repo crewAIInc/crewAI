@@ -974,6 +974,30 @@ def test_validate_model_in_constants():
         is True
     )
 
+
+def test_infer_provider_from_model_falls_back_to_patterns():
+    """Unprefixed models not in the constants lists still infer their provider
+    from naming patterns, matching this method's docstring and the behavior of
+    _validate_model_in_constants.
+
+    Regression test for #6813: a bare ``claude-*`` id offered by
+    ``crewai create`` (e.g. ``claude-sonnet-4-6``) is not in ANTHROPIC_MODELS,
+    so it fell through to the ``"openai"`` default and built the wrong client.
+    """
+    # In-constants ids keep resolving exactly as before.
+    assert LLM._infer_provider_from_model("gpt-4o") == "openai"
+    assert LLM._infer_provider_from_model("claude-opus-4-0") == "anthropic"
+    assert LLM._infer_provider_from_model("gemini-2.5-pro") == "gemini"
+
+    # Not in constants but matching a provider pattern -> correct provider.
+    assert LLM._infer_provider_from_model("claude-sonnet-4-6") == "anthropic"
+    assert LLM._infer_provider_from_model("claude-future-5") == "anthropic"
+    assert LLM._infer_provider_from_model("gemma-3-latest") == "gemini"
+
+    # No pattern match still defaults to openai.
+    assert LLM._infer_provider_from_model("unknown-model") == "openai"
+
+
 @pytest.mark.vcr(record_mode="once",decode_compressed_response=True)
 def test_usage_info_non_streaming_with_call():
     llm = LLM(model="gpt-4o-mini", is_litellm=True)
