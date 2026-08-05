@@ -1,8 +1,9 @@
 # Issue Gate Pilot
 
 The issue gate checks whether a pull request references exactly one open issue
-with the `state:ready` label. It runs on `pull_request_target`, checks out only
-the trusted default branch, and never fetches or executes pull request code.
+with the `state:ready` or `state:in-progress` label. It runs on
+`pull_request_target`, checks out only the trusted default branch, and never
+fetches or executes pull request code.
 
 ## Repository setup
 
@@ -22,9 +23,10 @@ Configure these repository variables:
 | `ISSUE_GATE_CUTOFF` | Yes to activate | ISO 8601 timestamp for the first PR covered by the pilot |
 | `ISSUE_GATE_READY_LABEL` | No | Defaults to `state:ready` |
 
-Without `ISSUE_GATE_CUTOFF`, the workflow uses a future cutoff and treats every
-pull request as legacy. This makes the workflow inert until maintainers choose
-the activation time.
+Without `ISSUE_GATE_CUTOFF`, observe mode uses a future cutoff and treats every
+pull request as legacy. Block and close modes refuse to run without an explicit
+cutoff. This makes the workflow inert until maintainers choose the activation
+time and prevents accidental enforcement against the existing backlog.
 
 ## Modes
 
@@ -48,7 +50,7 @@ changing modes:
 1. No implementation issue
 2. A nonexistent, closed, or non-ready issue
 3. More than one implementation issue
-4. One open issue labeled `state:ready`
+4. One open issue labeled `state:ready` or `state:in-progress`
 5. A pull request before the cutoff
 6. A pull request with `issue-gate:override`
 

@@ -3,7 +3,10 @@ import test from "node:test";
 
 import {
   evaluatePullRequest,
+  parseClosingReferences,
   parseIssueReferences,
+  resolveCutoff,
+  shouldSynchronize,
 } from "./issue-gate.mjs";
 
 const repository = "crewAIInc/crewAI";
@@ -49,14 +52,41 @@ test("parses shorthand and full repository references", () => {
   );
 });
 
-test("ignores GitHub closing keywords and template placeholders", () => {
+test("parses prohibited GitHub closing references", () => {
   assert.deepEqual(
-    parseIssueReferences(
-      "Fixes #123\nCloses #456\nImplements #<issue-number>",
+    parseClosingReferences(
+      "Fixes #123\nCloses crewAIInc/crewAI#456\nResolves #789",
       repository,
     ),
-    [],
+    [
+      { keyword: "Fixes", repository, number: 123 },
+      { keyword: "Closes", repository, number: 456 },
+      { keyword: "Resolves", repository, number: 789 },
+    ],
   );
+});
+
+test("rejects closing keywords even with a valid Implements reference", async () => {
+  const closingKeywords = [
+    "Close",
+    "Closes",
+    "Closed",
+    "Fix",
+    "Fixes",
+    "Fixed",
+    "Resolve",
+    "Resolves",
+    "Resolved",
+  ];
+  for (const keyword of closingKeywords) {
+    const result = await evaluate({
+      body: `Implements #123\n${keyword} #123`,
+    });
+
+    assert.equal(result.ok, false);
+    assert.match(result.reason, /prohibited closing reference/);
+    assert.match(result.reason, new RegExp(keyword));
+  }
 });
 
 test("deduplicates repeated references", () => {
@@ -72,6 +102,15 @@ test("passes an open ready issue", async () => {
   assert.equal(result.ok, true);
   assert.equal(result.exempt, false);
   assert.equal(result.issueNumber, 123);
+});
+
+test("passes an open in-progress issue", async () => {
+  const result = await evaluate({}, {
+    labels: [{ name: "state:in-progress" }],
+  });
+
+  assert.equal(result.ok, true);
+  assert.match(result.reason, /in progress/);
 });
 
 test("rejects a missing issue reference", async () => {
@@ -117,7 +156,7 @@ test("rejects an issue without the ready label", async () => {
   const result = await evaluate({}, { labels: [{ name: "state:design" }] });
 
   assert.equal(result.ok, false);
-  assert.match(result.reason, /does not have/);
+  assert.match(result.reason, /neither/);
 });
 
 test("exempts pull requests created before the cutoff", async () => {
@@ -128,7 +167,20 @@ test("exempts pull requests created before the cutoff", async () => {
 
   assert.equal(result.ok, true);
   assert.equal(result.exempt, true);
+  assert.equal(result.exemption, "cutoff-legacy");
   assert.match(result.reason, /predates/);
+});
+
+test("distinguishes an explicit legacy exemption from the cutoff", async () => {
+  const result = await evaluate({
+    body: null,
+    labels: [{ name: "policy:legacy" }],
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.exempt, true);
+  assert.equal(result.exemption, "policy-legacy");
+  assert.match(result.reason, /policy:legacy/);
 });
 
 test("exempts pull requests with an override label", async () => {
@@ -163,4 +215,24 @@ test("fails fast for an invalid cutoff", async () => {
     }),
     /not a valid date/,
   );
+});
+
+test("keeps unconfigured observe mode inert", () => {
+  assert.equal(resolveCutoff("observe", ""), "9999-12-31T00:00:00Z");
+});
+
+test("requires an explicit cutoff for enforcement modes", () => {
+  for (const mode of ["block", "close"]) {
+    assert.throws(() => resolveCutoff(mode, ""), /ISSUE_GATE_CUTOFF is required/);
+  }
+
+  assert.equal(
+    resolveCutoff("block", "2026-08-11T00:00:00Z"),
+    "2026-08-11T00:00:00Z",
+  );
+});
+
+test("synchronizes explicit legacy exemptions but not pre-cutoff PRs", () => {
+  assert.equal(shouldSynchronize({ exemption: "policy-legacy" }), true);
+  assert.equal(shouldSynchronize({ exemption: "cutoff-legacy" }), false);
 });

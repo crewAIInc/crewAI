@@ -14,6 +14,7 @@ const EXEMPT_ACTORS = new Set([
   "renovate[bot]",
 ]);
 const VALID_MODES = new Set(["observe", "block", "close"]);
+const INERT_CUTOFF = "9999-12-31T00:00:00Z";
 
 class ApiError extends Error {
   constructor(status, message) {
@@ -44,6 +45,32 @@ export function parseIssueReferences(body, defaultRepository) {
   return references;
 }
 
+/** Return GitHub closing references that would bypass human verification. */
+export function parseClosingReferences(body, defaultRepository) {
+  const pattern =
+    /\b(?<keyword>Close(?:s|d)?|Fix(?:es|ed)?|Resolve(?:s|d)?)[\t ]+(?:(?<repository>[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+))?#(?<number>\d+)\b/gim;
+
+  return [...(body ?? "").matchAll(pattern)].map((match) => ({
+    keyword: match.groups.keyword,
+    repository: match.groups.repository ?? defaultRepository,
+    number: Number.parseInt(match.groups.number, 10),
+  }));
+}
+
+/** Keep observe mode inert by default and require an explicit enforcement cutoff. */
+export function resolveCutoff(mode, configuredCutoff) {
+  if (mode !== "observe" && !configuredCutoff) {
+    throw new Error("ISSUE_GATE_CUTOFF is required before enabling block or close mode");
+  }
+
+  return configuredCutoff || INERT_CUTOFF;
+}
+
+/** Cutoff-based legacy PRs stay untouched; explicit exemptions clean up gate state. */
+export function shouldSynchronize(result) {
+  return result.exemption !== "cutoff-legacy";
+}
+
 function labelNames(item) {
   return new Set((item.labels ?? []).map((label) => label.name.toLowerCase()));
 }
@@ -53,7 +80,7 @@ function exemptionReason(pullRequest, cutoff) {
   for (const label of EXEMPT_LABELS) {
     if (labels.has(label)) {
       return {
-        kind: label === "policy:legacy" ? "legacy" : "override",
+        kind: label === "policy:legacy" ? "policy-legacy" : "override",
         reason: `the pull request has the \`${label}\` exemption label`,
       };
     }
@@ -80,7 +107,7 @@ function exemptionReason(pullRequest, cutoff) {
 
     if (createdTime < cutoffTime) {
       return {
-        kind: "legacy",
+        kind: "cutoff-legacy",
         reason: `the pull request predates the pilot cutoff (${cutoff})`,
       };
     }
@@ -95,6 +122,7 @@ export async function evaluatePullRequest({
   repository,
   cutoff = "",
   readyLabel = "state:ready",
+  inProgressLabel = "state:in-progress",
   getIssue,
 }) {
   const exemption = exemptionReason(pullRequest, cutoff);
@@ -104,6 +132,16 @@ export async function evaluatePullRequest({
       exempt: true,
       exemption: exemption.kind,
       reason: exemption.reason,
+    };
+  }
+
+  const closingReferences = parseClosingReferences(pullRequest.body, repository);
+  if (closingReferences.length > 0) {
+    const reference = closingReferences[0];
+    return {
+      ok: false,
+      exempt: false,
+      reason: `the description uses prohibited closing reference \`${reference.keyword} ${reference.repository}#${reference.number}\`; use \`Implements\` instead`,
     };
   }
 
@@ -151,20 +189,30 @@ export async function evaluatePullRequest({
     };
   }
 
-  if (!labelNames(issue).has(readyLabel.toLowerCase())) {
+  const issueLabels = labelNames(issue);
+  const normalizedReadyLabel = readyLabel.toLowerCase();
+  const normalizedInProgressLabel = inProgressLabel.toLowerCase();
+  if (
+    !issueLabels.has(normalizedReadyLabel) &&
+    !issueLabels.has(normalizedInProgressLabel)
+  ) {
     return {
       ok: false,
       exempt: false,
       issueNumber: reference.number,
-      reason: `issue #${reference.number} does not have the \`${readyLabel}\` label`,
+      reason: `issue #${reference.number} has neither the \`${readyLabel}\` nor \`${inProgressLabel}\` label`,
     };
   }
+
+  const lifecycleState = issueLabels.has(normalizedReadyLabel)
+    ? "ready for implementation"
+    : "in progress";
 
   return {
     ok: true,
     exempt: false,
     issueNumber: reference.number,
-    reason: `issue #${reference.number} is open and ready for implementation`,
+    reason: `issue #${reference.number} is open and ${lifecycleState}`,
   };
 }
 
@@ -311,7 +359,7 @@ async function run() {
   const eventPath = process.env.GITHUB_EVENT_PATH;
   const pullNumber = Number.parseInt(process.env.PR_NUMBER, 10);
   const mode = (process.env.ISSUE_GATE_MODE || "observe").toLowerCase();
-  const cutoff = process.env.ISSUE_GATE_CUTOFF || "";
+  const configuredCutoff = process.env.ISSUE_GATE_CUTOFF || "";
   const readyLabel = process.env.ISSUE_GATE_READY_LABEL || "state:ready";
 
   if (!token || !repository || !eventPath || !Number.isInteger(pullNumber)) {
@@ -320,9 +368,7 @@ async function run() {
   if (!VALID_MODES.has(mode)) {
     throw new Error(`ISSUE_GATE_MODE must be one of: ${[...VALID_MODES].join(", ")}`);
   }
-  if (mode !== "observe" && !cutoff) {
-    throw new Error("ISSUE_GATE_CUTOFF is required before enabling block or close mode");
-  }
+  const cutoff = resolveCutoff(mode, configuredCutoff);
 
   const [owner, repo] = repository.split("/");
   const event = JSON.parse(await readFile(eventPath, "utf8"));
@@ -352,7 +398,7 @@ async function run() {
   });
 
   await publishStatus({ token, repository, pullRequest, result, mode });
-  if (result.exemption !== "legacy") {
+  if (shouldSynchronize(result)) {
     await updateGateLabel({ token, repository, pullRequest, result });
     await updateGateComment({
       token,

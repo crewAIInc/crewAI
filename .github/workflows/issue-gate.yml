@@ -37,9 +37,9 @@ jobs:
       - name: Evaluate ready issue
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Until a cutoff is configured, every PR is treated as legacy. This
-          # keeps the newly merged workflow inert by default.
-          ISSUE_GATE_CUTOFF: ${{ vars.ISSUE_GATE_CUTOFF || '9999-12-31T00:00:00Z' }}
+          # The script keeps observe mode inert when this is unset and refuses
+          # to enter block or close mode without an explicit value.
+          ISSUE_GATE_CUTOFF: ${{ vars.ISSUE_GATE_CUTOFF }}
           ISSUE_GATE_MODE: ${{ vars.ISSUE_GATE_MODE || 'observe' }}
           ISSUE_GATE_READY_LABEL: ${{ vars.ISSUE_GATE_READY_LABEL || 'state:ready' }}
           PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}

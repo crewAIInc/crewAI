@@ -10,7 +10,7 @@ the issue remains open for human verification after this PR is merged.
 
 ## Summary
 
-<!-- Explain the solution and how it follows the design agreed in the issue. -->
+<!-- Explain the solution, how it follows the agreed design, and how it meets each acceptance criterion. -->
 
 ## Verification
 
