@@ -89,6 +89,7 @@ class CrewaiPlatformToolBuilder:
 
             tool = CrewAIPlatformActionTool(
                 description=description,
+                app=function_details["app"],
                 action_name=action_name,
                 action_schema=action_schema,
             )
