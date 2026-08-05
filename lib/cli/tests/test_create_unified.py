@@ -197,3 +197,34 @@ def test_create_picker_supports_tool_skill_and_template(
     }
     mock_prompt.assert_called_once()
     mock_tool_command_cls.return_value.create.assert_called_once_with("picked-tool")
+
+
+_DMN_ENV = {"CREWAI_DMN": "True"}
+
+
+@mock.patch("crewai_cli.tools.main.ToolCommand")
+def test_create_tool_works_in_dmn_mode(mock_tool_command_cls, runner):
+    result = runner.invoke(create, ["tool", "my_tool"], env=_DMN_ENV)
+
+    assert result.exit_code == 0, result.output
+    mock_tool_command_cls.return_value.create.assert_called_once_with("my_tool")
+
+
+@mock.patch("crewai_cli.skills.main.SkillCommand")
+def test_create_skill_works_in_dmn_mode(mock_skill_command_cls, runner):
+    result = runner.invoke(create, ["skill", "my-skill"], env=_DMN_ENV)
+
+    assert result.exit_code == 0, result.output
+    mock_skill_command_cls.return_value.create.assert_called_once_with(
+        "my-skill", in_project=True
+    )
+
+
+@mock.patch("crewai_cli.remote_template.main.TemplateCommand")
+def test_create_template_works_in_dmn_mode(mock_template_command_cls, runner):
+    result = runner.invoke(create, ["template", "my-template"], env=_DMN_ENV)
+
+    assert result.exit_code == 0, result.output
+    mock_template_command_cls.return_value.add_template.assert_called_once_with(
+        "my-template", None
+    )

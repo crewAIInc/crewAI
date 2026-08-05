@@ -214,7 +214,7 @@ def create(
             click.style(f"  Name of your {type}", fg="cyan", bold=True),
             prompt_suffix=click.style(" › ", fg="bright_white"),  # noqa: RUF001
         )
-    if dmn_mode:
+    if dmn_mode and type == "crew":
         skip_provider = True
     if not in_project and type != "skill":
         raise click.UsageError("--no-project can only be used with skill projects.")
