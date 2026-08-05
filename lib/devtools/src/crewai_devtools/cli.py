@@ -1421,7 +1421,10 @@ def _repin_crewai_install(run_value: str, version: str) -> str:
     return "".join(result)
 
 
-_DEPLOYMENT_TEST_REPO: Final[str] = "crewAIInc/crew_deployment_test"
+_DEPLOYMENT_TEST_REPOS: Final[tuple[str, ...]] = (
+    "crewAIInc/crew_deployment_test",
+    "crewAIInc/flow_deployment_test",
+)
 
 _PUBLISHED_WORKSPACE_PACKAGES: Final[tuple[str, ...]] = (
     "crewai",
@@ -1435,26 +1438,25 @@ _PYPI_POLL_INTERVAL: Final[int] = 15
 _PYPI_POLL_TIMEOUT: Final[int] = 600
 
 
-def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
-    """Update the deployment test repo to pin the new crewai version.
+def _update_deployment_test_repo(repo: str, version: str, is_prerelease: bool) -> None:
+    """Update a deployment test repo to pin the new crewai version.
 
-    Clones the repo, updates the crewai[tools] pin in pyproject.toml
+    Clones the repo, updates the CrewAI pin in pyproject.toml
     and any crewai[extras] pins in .github/workflows, regenerates the
     lockfile, commits to a branch, pushes, opens a PR against main,
     then polls until the PR is merged (or closed).
 
     Args:
+        repo: GitHub repository containing the deployment canary.
         version: New crewai version string.
         is_prerelease: Whether this is a pre-release version.
     """
-    console.print(
-        f"\n[bold cyan]Updating {_DEPLOYMENT_TEST_REPO} to {version}[/bold cyan]"
-    )
+    console.print(f"\n[bold cyan]Updating {repo} to {version}[/bold cyan]")
 
     with tempfile.TemporaryDirectory() as tmp:
-        repo_dir = Path(tmp) / "crew_deployment_test"
-        run_command(["gh", "repo", "clone", _DEPLOYMENT_TEST_REPO, str(repo_dir)])
-        console.print(f"[green]✓[/green] Cloned {_DEPLOYMENT_TEST_REPO}")
+        repo_dir = Path(tmp) / repo.rsplit("/", 1)[-1]
+        run_command(["gh", "repo", "clone", repo, str(repo_dir)])
+        console.print(f"[green]✓[/green] Cloned {repo}")
 
         pyproject = repo_dir / "pyproject.toml"
         content = pyproject.read_text()
@@ -1462,11 +1464,9 @@ def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
         pyproject_changed = new_content != content
         if pyproject_changed:
             pyproject.write_text(new_content)
-            console.print(f"[green]✓[/green] Updated crewai[tools] pin to {version}")
+            console.print(f"[green]✓[/green] Updated crewai pin to {version}")
         else:
-            console.print(
-                "[yellow]Warning:[/yellow] No crewai[tools] pin found to update"
-            )
+            console.print("[yellow]Warning:[/yellow] No crewai pin found to update")
 
         updated_workflows = _update_repo_workflows_crewai_pins(repo_dir, version)
         for wf in updated_workflows:
@@ -1535,10 +1535,16 @@ def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
             ],
             cwd=repo_dir,
         )
-        console.print(f"[green]✓[/green] Opened PR on {_DEPLOYMENT_TEST_REPO}")
+        console.print(f"[green]✓[/green] Opened PR on {repo}")
         console.print(f"[cyan]PR URL:[/cyan] {pr_url.strip()}")
 
         _wait_for_pr_merged(branch, repo_dir)
+
+
+def _update_deployment_test_repos(version: str, is_prerelease: bool) -> None:
+    """Pin and merge the release version in every deployment canary repo."""
+    for repo in _DEPLOYMENT_TEST_REPOS:
+        _update_deployment_test_repo(repo, version, is_prerelease)
 
 
 def _wait_for_pypi(package: str, version: str) -> None:
@@ -2352,13 +2358,13 @@ def release(
 
     try:
         if not dry_run:
-            _update_deployment_test_repo(version, is_prerelease)
+            _update_deployment_test_repos(version, is_prerelease)
     except BaseException as e:
         _print_release_error(e)
         _resume_hint(
-            f"Phase 2 failed updating deployment test repo. "
+            f"Phase 2 failed updating deployment test repos. "
             f"Tag, release, and PyPI are done.\n"
-            f"Fix the issue and update {_DEPLOYMENT_TEST_REPO} manually."
+            "Fix the issue and update the Crew and Flow canary repos manually."
             f"{enterprise_hint}"
         )
         sys.exit(1)

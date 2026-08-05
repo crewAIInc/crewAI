@@ -3,6 +3,7 @@
 from pathlib import Path
 from textwrap import dedent
 
+from crewai_devtools import cli as devtools_cli
 from crewai_devtools.cli import (
     _DEFAULT_WORKSPACE_PACKAGES,
     _pin_crewai_deps,
@@ -11,6 +12,24 @@ from crewai_devtools.cli import (
     update_pyproject_version,
     update_template_dependencies,
 )
+
+
+def test_release_updates_crew_and_flow_canary_repositories(monkeypatch) -> None:
+    updates = []
+    monkeypatch.setattr(
+        devtools_cli,
+        "_update_deployment_test_repo",
+        lambda repo, version, is_prerelease: updates.append(
+            (repo, version, is_prerelease)
+        ),
+    )
+
+    devtools_cli._update_deployment_test_repos("2.0.0a1", True)
+
+    assert updates == [
+        ("crewAIInc/crew_deployment_test", "2.0.0a1", True),
+        ("crewAIInc/flow_deployment_test", "2.0.0a1", True),
+    ]
 
 
 class TestUpdatePyprojectVersion:
