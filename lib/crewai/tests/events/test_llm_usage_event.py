@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pytest
 from pydantic import BaseModel
 
-from crewai.events.event_bus import CrewAIEventsBus
+from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import LLMCallCompletedEvent, LLMCallType
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
@@ -203,7 +203,9 @@ class _StubLLM(BaseLLM):
 class TestEmitCallCompletedEventPassesUsage:
     @pytest.fixture
     def mock_emit(self):
-        with patch.object(CrewAIEventsBus, "emit") as mock:
+        # Patch the singleton instance; class-level patches are unreliable
+        # under pytest ``--import-mode=importlib`` / xdist.
+        with patch.object(crewai_event_bus, "emit") as mock:
             yield mock
 
     @pytest.fixture

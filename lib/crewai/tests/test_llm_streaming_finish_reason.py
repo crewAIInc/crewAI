@@ -11,22 +11,33 @@ from unittest.mock import patch
 
 import pytest
 
-from crewai.events.event_bus import CrewAIEventsBus
+from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import LLMCallCompletedEvent
 from crewai.llm import LLM
 
 
 @pytest.fixture
 def mock_emit():
-    with patch.object(CrewAIEventsBus, "emit") as mock:
+    # Patch the singleton instance (not the class). Class-level patches are
+    # unreliable under pytest ``--import-mode=importlib`` / xdist because the
+    # test and ``crewai.llm`` can observe different class objects.
+    with patch.object(crewai_event_bus, "emit") as mock:
         yield mock
+
+
+def _event_from_call(call) -> object | None:
+    if "event" in call.kwargs:
+        return call.kwargs["event"]
+    if len(call.args) >= 2:
+        return call.args[1]
+    return None
 
 
 def _completed_event(mock_emit) -> LLMCallCompletedEvent:
     matches = [
-        call.kwargs["event"]
+        event
         for call in mock_emit.call_args_list
-        if isinstance(call.kwargs.get("event"), LLMCallCompletedEvent)
+        if isinstance((event := _event_from_call(call)), LLMCallCompletedEvent)
     ]
     assert matches, "expected an LLMCallCompletedEvent to be emitted"
     assert len(matches) == 1, f"expected one completed event, got {len(matches)}"
