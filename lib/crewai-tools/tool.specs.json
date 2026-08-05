@@ -26886,6 +26886,146 @@
       }
     },
     {
+      "description": "A tool that reads the content at a URL and returns it as text. To use this tool, provide a 'url' parameter with an http:// or https:// address. PDF, DOCX, HTML, JSON, XML, CSV and plain-text responses are converted to text; other binary types are rejected. URLs that resolve to private or internal network addresses are refused, as are responses over the tool's size limit. Optionally provide 'start_line' and 'line_count' to read only part of the content.",
+      "env_vars": [],
+      "humanized_name": "Read content from a URL",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Read the content at an arbitrary URL and return it as text.\n\nUnlike :class:`~crewai_tools.tools.file_read_tool.file_read_tool.FileReadTool`,\nwhich is confined to the local filesystem, this tool performs network\nrequests to addresses the caller -- often an LLM -- chooses at runtime. It\nis a separate tool for exactly that reason: granting it is granting network\negress, and that should be a deliberate choice rather than a flag on a\nfilesystem tool.\n\nResponses are decoded to text according to their content type. PDF and DOCX\nbodies have their text extracted, HTML is stripped to visible text, and\ntext-shaped types (plain text, Markdown, JSON, XML, YAML, CSV) are decoded\nas-is. Any other type is refused rather than returned as base64, keeping\nthis tool's output text-only.\n\nSecurity:\n    Requests go through :func:`~crewai_tools.security.safe_requests.safe_get_bounded`,\n    which resolves each hostname and rejects it when any resolved address is\n    private, loopback, link-local, or otherwise reserved -- covering cloud\n    metadata endpoints and internal services. Redirects are never followed\n    automatically: every hop is revalidated, and credentials are dropped on\n    cross-origin hops. Bodies over ``max_bytes`` are abandoned mid-stream.\n\n    Two risks are not closed here. Validation resolves the hostname and\n    requests resolves it again when connecting, so a DNS entry that changes\n    between those lookups can still redirect the connection (DNS\n    rebinding); closing that requires pinning the connection to the\n    validated address. And the returned text is untrusted remote content\n    flowing into an agent's context -- a fetched page can attempt to\n    instruct the agent. Neither is addressable by input validation alone;\n    network egress policy and prompt-level handling cover them.\n\nArgs:\n    max_bytes (int): Largest response body to accept, in decoded bytes.\n        Defaults to 5 MiB.\n    timeout (float): Per-request timeout in seconds. Defaults to 30.\n    headers (Optional[dict[str, str]]): Extra request headers. Developer\n        supplied, not chosen by the model.\n    encoding (Optional[str]): Force a text encoding instead of honoring the\n        charset the server declares.\n    **kwargs: Additional keyword arguments passed to BaseTool.\n\nExample:\n    >>> tool = URLReadTool()\n    >>> content = tool.run(url=\"https://example.com/report.pdf\")\n    >>> head = tool.run(url=\"https://example.com/data.csv\", line_count=20)",
+        "properties": {
+          "encoding": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Encoding"
+          },
+          "headers": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Headers"
+          },
+          "max_bytes": {
+            "default": 5242880,
+            "title": "Max Bytes",
+            "type": "integer"
+          },
+          "timeout": {
+            "default": 30,
+            "title": "Timeout",
+            "type": "number"
+          }
+        },
+        "required": [],
+        "title": "URLReadTool",
+        "type": "object"
+      },
+      "name": "URLReadTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for URLReadTool.",
+        "properties": {
+          "line_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Number of lines to read. If None, reads the entire content",
+            "title": "Line Count"
+          },
+          "start_line": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 1,
+            "description": "Line number to start reading from (1-indexed)",
+            "title": "Start Line"
+          },
+          "url": {
+            "description": "The http:// or https:// URL to read. Addresses that resolve to private or internal networks are refused.",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "URLReadToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "This tool uses OpenAI's Vision API to describe the contents of an image.",
       "env_vars": [
         {
