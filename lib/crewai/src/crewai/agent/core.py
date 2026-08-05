@@ -73,7 +73,6 @@ from crewai.events.types.memory_events import (
     MemoryRetrievalFailedEvent,
     MemoryRetrievalStartedEvent,
 )
-from crewai.events.types.skill_events import SkillActivatedEvent
 from crewai.experimental.agent_executor import AgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -82,8 +81,8 @@ from crewai.llms.base_llm import BaseLLM
 from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
-from crewai.skills.loader import activate_skill, discover_skills
-from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
+from crewai.skills.loader import load_skills
+from crewai.skills.models import Skill as SkillModel
 from crewai.state.checkpoint_config import CheckpointConfig, apply_checkpoint
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.types.callback import SerializableCallable
@@ -202,7 +201,7 @@ class Agent(BaseAgent):
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     max_execution_time: int | None = Field(
         default=None,
-        description="Maximum execution time for an agent to execute a task",
+        description="Maximum execution time in seconds for an agent to execute a task",
     )
     step_callback: SerializableCallable | None = Field(
         default=None,
@@ -429,13 +428,12 @@ class Agent(BaseAgent):
         self,
         resolved_crew_skills: list[SkillModel] | None = None,
     ) -> None:
-        """Resolve skill paths while preserving explicit disclosure levels.
+        """Load configured skills while preserving explicit disclosure levels.
 
-        Path entries trigger discovery and activation because directory-based
-        skills opt into eager loading. Pre-loaded Skill objects keep their
-        current disclosure level so callers can attach METADATA-only skills and
-        progressively activate them later. Crew-level skills are merged in with
-        event emission so observability is consistent regardless of origin.
+        Path strings, Path objects, inline SKILL.md strings, and registry refs
+        are loaded through the shared skill loader. Pre-loaded Skill objects
+        keep their current disclosure level so callers can attach METADATA-only
+        skills and progressively activate them later.
 
         Args:
             resolved_crew_skills: Pre-resolved crew skills. When provided,
@@ -444,7 +442,7 @@ class Agent(BaseAgent):
         from crewai.crew import Crew
 
         if resolved_crew_skills is None:
-            crew_skills: list[Path | SkillModel | str] | None = (
+            crew_skills = (
                 self.crew.skills
                 if isinstance(self.crew, Crew) and isinstance(self.crew.skills, list)
                 else None
@@ -455,58 +453,14 @@ class Agent(BaseAgent):
         if not self.skills and not crew_skills:
             return
 
-        needs_work = self.skills and any(
-            isinstance(s, (Path, str))
-            or (isinstance(s, SkillModel) and s.disclosure_level < INSTRUCTIONS)
-            for s in self.skills
-        )
-        if not needs_work and not crew_skills:
-            return
-
-        seen: set[str] = set()
-        resolved: list[Path | SkillModel | str] = []
-        items: list[Path | SkillModel | str] = list(self.skills) if self.skills else []
-
+        items = list(self.skills) if self.skills else []
         if crew_skills:
             items.extend(crew_skills)
 
-        for item in items:
-            if isinstance(item, str):
-                from crewai.experimental.skills.registry import (
-                    is_registry_ref,
-                    parse_registry_ref,
-                    resolve_registry_ref,
-                )
-
-                if is_registry_ref(item):
-                    skill = resolve_registry_ref(item, source=self)
-                    org, _ = parse_registry_ref(item)
-                    dedup_key = f"{org}/{skill.name}"
-                    if dedup_key not in seen:
-                        seen.add(dedup_key)
-                        resolved.append(skill)
-            elif isinstance(item, Path):
-                discovered = discover_skills(item, source=self)
-                for skill in discovered:
-                    if skill.name not in seen:
-                        seen.add(skill.name)
-                        resolved.append(activate_skill(skill, source=self))
-            elif isinstance(item, SkillModel):
-                if item.name not in seen:
-                    seen.add(item.name)
-                    if item.disclosure_level >= INSTRUCTIONS:
-                        crewai_event_bus.emit(
-                            self,
-                            event=SkillActivatedEvent(
-                                from_agent=self,
-                                skill_name=item.name,
-                                skill_path=item.path,
-                                disclosure_level=item.disclosure_level,
-                            ),
-                        )
-                    resolved.append(item)
-
-        self.skills = resolved if resolved else None
+        self.skills = cast(
+            list[Path | SkillModel | str] | None,
+            load_skills(items, source=self) or None,
+        )
 
     def _is_any_available_memory(self) -> bool:
         """Check if unified memory is available (agent or crew)."""

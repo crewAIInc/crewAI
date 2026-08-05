@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
@@ -21,7 +21,7 @@ from crewai.events.types.flow_events import (
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
-from crewai.events.types.llm_events import LLMCallStartedEvent
+from crewai.events.types.llm_events import LLMCallStartedEvent, LLMStreamChunkEvent
 from crewai.experimental import (
     ConversationConfig,
     ConversationMessage,
@@ -29,11 +29,13 @@ from crewai.experimental import (
     RouterConfig,
 )
 from crewai.flow import Flow, ChatState, listen, start
+from crewai.flow.async_feedback import HumanFeedbackPending, PendingFeedbackContext
 from crewai.flow.flow_context import (
     current_flow_defer_trace_finalization,
     current_flow_id,
     current_flow_name,
 )
+from crewai.llms.base_llm import BaseLLM
 from crewai.flow.conversation import (
     append_message,
     get_conversation_messages,
@@ -137,6 +139,109 @@ class TestClassifyIntent:
 
 
 class TestConversationalFlow:
+    def test_stream_turn_emits_ordered_conversation_frames(self) -> None:
+        flow = ConversationalFlow()
+        flow.stream = True
+        stream_values_seen_by_kickoff: list[bool] = []
+
+        def kickoff_side_effect(*_: Any, **__: Any) -> str:
+            stream_values_seen_by_kickoff.append(flow.stream)
+            crewai_event_bus.emit(
+                flow,
+                LLMStreamChunkEvent(
+                    type="llm_stream_chunk",
+                    chunk="pong",
+                    call_id="call-1",
+                ),
+            )
+            return "pong"
+
+        with patch.object(flow, "kickoff", side_effect=kickoff_side_effect):
+            stream = flow.stream_turn("ping", session_id="session-1")
+
+            with pytest.raises(RuntimeError, match="Streaming has not completed yet"):
+                _ = stream.result
+
+            frames = list(stream.events)
+
+        assert stream.result == "pong"
+        assert stream_values_seen_by_kickoff == [False]
+        assert flow.stream is True
+        assert [frame.seq for frame in frames] == sorted(frame.seq for frame in frames)
+        assert [frame.type for frame in frames] == [
+            "conversation_turn_started",
+            "llm_stream_chunk",
+            "conversation_message_added",
+            "conversation_turn_completed",
+        ]
+        assert [frame.channel for frame in frames] == [
+            "flow",
+            "llm",
+            "messages",
+            "flow",
+        ]
+        assert frames[1].data["chunk"] == "pong"
+        assert flow.state.messages[-1].content == "pong"
+
+    def test_stream_turn_enables_streaming_on_conversation_llm(self) -> None:
+        class FakeLLM(BaseLLM):
+            stream_values: ClassVar[list[bool | None]] = []
+
+            def call(self, messages: Any, *args: Any, **kwargs: Any) -> str:
+                self.stream_values.append(self._effective_stream())
+                for chunk in ("po", "ng"):
+                    crewai_event_bus.emit(
+                        flow,
+                        LLMStreamChunkEvent(
+                            type="llm_stream_chunk",
+                            chunk=chunk,
+                            call_id="call-1",
+                        ),
+                    )
+                return "pong"
+
+        FakeLLM.stream_values = []
+        llm = FakeLLM(model="gpt-4o-mini", stream=False)
+
+        @ConversationConfig(llm=llm)
+        class StreamingChatFlow(ConversationalFlow):
+            pass
+
+        flow = StreamingChatFlow()
+        stream = flow.stream_turn("ping", session_id="session-1")
+        frames = list(stream.events)
+
+        assert stream.result == "pong"
+        assert llm.stream_values == [True]
+        assert llm.stream is False
+        assert [
+            frame.data["chunk"]
+            for frame in frames
+            if frame.type == "llm_stream_chunk"
+        ] == ["po", "ng"]
+
+    def test_stream_turn_returns_pending_feedback_without_failure_event(self) -> None:
+        flow = ConversationalFlow()
+        pending = HumanFeedbackPending(
+            context=PendingFeedbackContext(
+                flow_id="session-1",
+                flow_class="tests.PendingFeedbackFlow",
+                method_name="review",
+                method_output="draft",
+                message="Please review",
+            )
+        )
+
+        def kickoff_side_effect(*_: Any, **__: Any) -> None:
+            raise pending
+
+        with patch.object(flow, "kickoff", side_effect=kickoff_side_effect):
+            stream = flow.stream_turn("review this", session_id="session-1")
+            frames = list(stream.events)
+
+        assert stream.result is pending
+        assert [frame.type for frame in frames] == ["conversation_turn_started"]
+
     def test_deferred_multi_turn_emits_single_flow_finished(self) -> None:
         """A deferred multi-turn session lands as one trace: exactly one
         ``FlowFinishedEvent`` is emitted at ``finalize_session_traces()``, not

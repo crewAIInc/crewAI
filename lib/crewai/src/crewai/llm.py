@@ -749,7 +749,7 @@ class LLM(BaseLLM):
             "base_url": self.base_url,
             "api_version": self.api_version,
             "api_key": self.api_key,
-            "stream": self.stream,
+            "stream": self._effective_stream(),
             "tools": tools,
             "reasoning_effort": self.reasoning_effort,
             **self.additional_params,
@@ -1841,7 +1841,7 @@ class LLM(BaseLLM):
                     self.set_callbacks(callbacks)
                 try:
                     params = self._prepare_completion_params(messages, tools)
-                    if self.stream:
+                    if self._effective_stream():
                         result = self._handle_streaming_response(
                             params=params,
                             callbacks=callbacks,
@@ -1983,7 +1983,7 @@ class LLM(BaseLLM):
                         messages, tools, skip_file_processing=True
                     )
 
-                    if self.stream:
+                    if self._effective_stream():
                         return await self._ahandle_streaming_response(
                             params=params,
                             callbacks=callbacks,

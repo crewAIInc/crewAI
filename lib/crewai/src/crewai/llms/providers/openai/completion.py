@@ -469,7 +469,7 @@ class OpenAICompletion(BaseLLM):
             messages=messages, tools=tools
         )
 
-        if self.stream:
+        if self._effective_stream():
             return self._handle_streaming_completion(
                 params=completion_params,
                 available_functions=available_functions,
@@ -564,7 +564,7 @@ class OpenAICompletion(BaseLLM):
             messages=messages, tools=tools
         )
 
-        if self.stream:
+        if self._effective_stream():
             return await self._ahandle_streaming_completion(
                 params=completion_params,
                 available_functions=available_functions,
@@ -595,7 +595,7 @@ class OpenAICompletion(BaseLLM):
             messages=messages, tools=tools, response_model=response_model
         )
 
-        if self.stream:
+        if self._effective_stream():
             return self._handle_streaming_responses(
                 params=params,
                 available_functions=available_functions,
@@ -626,7 +626,7 @@ class OpenAICompletion(BaseLLM):
             messages=messages, tools=tools, response_model=response_model
         )
 
-        if self.stream:
+        if self._effective_stream():
             return await self._ahandle_streaming_responses(
                 params=params,
                 available_functions=available_functions,
@@ -685,7 +685,7 @@ class OpenAICompletion(BaseLLM):
         if instructions:
             params["instructions"] = instructions
 
-        if self.stream:
+        if self._effective_stream():
             params["stream"] = True
 
         if self.store is not None:
@@ -1540,8 +1540,8 @@ class OpenAICompletion(BaseLLM):
             "model": self.model,
             "messages": messages,
         }
-        if self.stream:
-            params["stream"] = self.stream
+        if self._effective_stream():
+            params["stream"] = self._effective_stream()
             params["stream_options"] = {"include_usage": True}
 
         params.update(self.additional_params)

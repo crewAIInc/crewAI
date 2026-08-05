@@ -3,7 +3,12 @@
 Provides filesystem-based skill packaging with progressive disclosure.
 """
 
-from crewai.skills.loader import activate_skill, discover_skills
+from crewai.skills.loader import (
+    activate_skill,
+    discover_skills,
+    load_skill,
+    load_skills,
+)
 from crewai.skills.models import Skill, SkillFrontmatter
 from crewai.skills.parser import SkillParseError
 
@@ -14,4 +19,6 @@ __all__ = [
     "SkillParseError",
     "activate_skill",
     "discover_skills",
+    "load_skill",
+    "load_skills",
 ]

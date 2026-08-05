@@ -18,7 +18,8 @@ Import surface:
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from enum import Enum
 import json
 import logging
@@ -44,6 +45,7 @@ from crewai.experimental.conversational import (
     _conversational_only,
     message_to_llm_dict,
 )
+from crewai.flow.async_feedback import HumanFeedbackPending
 from crewai.flow.conversation import (
     append_message as _append_conversation_message,
     get_conversation_messages,
@@ -221,7 +223,9 @@ class _ConversationalMixin:
             messages.append({"role": "system", "content": system_prompt})
         messages.extend(self.conversation_messages)
 
-        response = self._coerce_llm(llm).call(messages=messages)
+        llm_instance = self._coerce_llm(llm)
+        with self._conversation_streaming_enabled(llm_instance):
+            response = llm_instance.call(messages=messages)
         content = self._stringify_result(response)
         self.append_assistant_message(content)
         return content
@@ -254,7 +258,8 @@ class _ConversationalMixin:
             },
             *self.build_agent_context("answer_from_history"),
         ]
-        response = llm_instance.call(messages=messages)
+        with self._conversation_streaming_enabled(llm_instance):
+            response = llm_instance.call(messages=messages)
         content = self._stringify_result(response)
         self.append_assistant_message(content)
         return content
@@ -336,6 +341,102 @@ class _ConversationalMixin:
             ),
         )
         return result
+
+    def stream_turn(
+        self,
+        message: str,
+        *,
+        session_id: str | None = None,
+        intents: Sequence[str] | None = None,
+        intent_llm: str | BaseLLM | None = None,
+        **kickoff_kwargs: Any,
+    ) -> Any:
+        """Append a user message and stream one conversational turn as frames."""
+        if not self._is_conversational_enabled():
+            raise ValueError(
+                "Flow.stream_turn() is only available on conversational flows"
+            )
+
+        from crewai.types.streaming import StreamSession
+        from crewai.utilities.streaming import (
+            create_frame_generator,
+            create_frame_streaming_state,
+        )
+
+        state = cast(ConversationState, self.state)
+        sid = session_id or state.id
+        result_holder: list[Any] = []
+        frame_state = create_frame_streaming_state(result_holder, use_async=False)
+        output_holder: list[StreamSession[Any]] = []
+
+        def run_turn() -> Any:
+            crewai_event_bus.emit(
+                self,
+                ConversationTurnStartedEvent(
+                    type="conversation_turn_started",
+                    flow_name=self.name or self.__class__.__name__,
+                    session_id=sid,
+                ),
+            )
+
+            self._pending_user_message = message
+            self._pending_intents = list(intents) if intents else None
+            self._pending_intent_llm = intent_llm
+
+            try:
+                if "from_checkpoint" not in kickoff_kwargs:
+                    self._reset_turn_execution_state()
+
+                assistant_count = self._assistant_message_count()
+                original_stream = bool(getattr(self, "stream", False))
+                original_streaming_turn = getattr(
+                    self, "_streaming_conversation_turn", False
+                )
+                try:
+                    object.__setattr__(self, "stream", False)
+                    object.__setattr__(self, "_streaming_conversation_turn", True)
+                    result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
+                finally:
+                    object.__setattr__(self, "stream", original_stream)
+                    object.__setattr__(
+                        self, "_streaming_conversation_turn", original_streaming_turn
+                    )
+                if (
+                    result is not None
+                    and self._assistant_message_count() == assistant_count
+                    and self._is_public_turn_result(result)
+                ):
+                    self.append_assistant_message(self._stringify_result(result))
+            except HumanFeedbackPending as exc:
+                return exc
+            except Exception as exc:
+                failed_event = ConversationTurnFailedEvent(
+                    type="conversation_turn_failed",
+                    flow_name=self.name or self.__class__.__name__,
+                    session_id=sid,
+                    error=exc,
+                )
+                self._emit_terminal_conversation_turn_event(failed_event)
+                raise
+            finally:
+                self._pending_user_message = None
+                self._pending_intents = None
+                self._pending_intent_llm = None
+
+            self._emit_terminal_conversation_turn_event(
+                ConversationTurnCompletedEvent(
+                    type="conversation_turn_completed",
+                    flow_name=self.name or self.__class__.__name__,
+                    session_id=sid,
+                ),
+            )
+            return result
+
+        stream_session: StreamSession[Any] = StreamSession(
+            sync_iterator=create_frame_generator(frame_state, run_turn, output_holder)
+        )
+        output_holder.append(stream_session)
+        return stream_session
 
     def _emit_terminal_conversation_turn_event(
         self,
@@ -685,6 +786,8 @@ class _ConversationalMixin:
             object.__setattr__(self, "_pending_intents", None)
         if not hasattr(self, "_pending_intent_llm"):
             object.__setattr__(self, "_pending_intent_llm", None)
+        if not hasattr(self, "_streaming_conversation_turn"):
+            object.__setattr__(self, "_streaming_conversation_turn", False)
 
     def _create_default_extension_state(self) -> ConversationState | None:
         initial_state_t = getattr(self, "_initial_state_t", None)
@@ -1054,6 +1157,19 @@ class _ConversationalMixin:
         if isinstance(llm, BaseLLMClass) or callable(getattr(llm, "call", None)):
             return llm
         raise ValueError(f"Invalid llm type: {type(llm)}. Expected str or BaseLLM.")
+
+    @contextmanager
+    def _conversation_streaming_enabled(self, llm: Any) -> Iterator[None]:
+        if not getattr(self, "_streaming_conversation_turn", False) or not hasattr(
+            llm, "stream"
+        ):
+            yield
+            return
+
+        from crewai.llms.base_llm import call_stream_override
+
+        with call_stream_override(llm, True):
+            yield
 
     def finalize_session_traces(self) -> None:
         """Emit a final ``FlowFinishedEvent`` and finalize the trace batch.

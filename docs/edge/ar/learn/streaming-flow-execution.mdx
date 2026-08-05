@@ -11,7 +11,7 @@ mode: "wide"
 
 ## كيف يعمل بث التدفق
 
-عند تفعيل البث في تدفق، يلتقط CrewAI ويبث المخرجات من أي أطقم أو استدعاءات LLM داخل التدفق. يقدم البث أجزاء منظمة تحتوي على المحتوى وسياق المهمة ومعلومات الوكيل مع تقدم التنفيذ.
+عند تفعيل البث في تدفق، يلتقط CrewAI ويبث المخرجات من أي أطقم أو استدعاءات LLM أو أدوات أو أحداث دورة حياة داخل التدفق. يقدم البث عناصر `StreamFrame` مرتبة تحتوي على محتوى قابل للطباعة وبيانات حدث مهيكلة مع تقدم التنفيذ.
 
 ## تفعيل البث
 
@@ -52,7 +52,7 @@ class ResearchFlow(Flow):
 
 ## البث المتزامن
 
-عند استدعاء `kickoff()` على تدفق مع تفعيل البث، يُرجع كائن `FlowStreamingOutput` يمكنك التكرار عليه:
+عند استدعاء `kickoff()` على تدفق مع تفعيل البث، يُرجع جلسة stream تنتج عناصر `StreamFrame` مرتبة:
 
 ```python Code
 flow = ResearchFlow()
@@ -60,44 +60,43 @@ flow = ResearchFlow()
 # Start streaming execution
 streaming = flow.kickoff()
 
-# Iterate over chunks as they arrive
-for chunk in streaming:
-    print(chunk.content, end="", flush=True)
+# Iterate over stream items as they arrive
+for item in streaming:
+    print(item.content, end="", flush=True)
 
 # Access the final result after streaming completes
 result = streaming.result
 print(f"\n\nFinal output: {result}")
 ```
 
-### معلومات جزء البث
+### معلومات عنصر البث
 
-يوفر كل جزء سياقاً حول مصدره في التدفق:
+يوفر كل عنصر محتوى قابلاً للطباعة وبيانات حدث مهيكلة:
 
 ```python Code
 streaming = flow.kickoff()
 
-for chunk in streaming:
-    print(f"Agent: {chunk.agent_role}")
-    print(f"Task: {chunk.task_name}")
-    print(f"Content: {chunk.content}")
-    print(f"Type: {chunk.chunk_type}")  # TEXT or TOOL_CALL
+for item in streaming:
+    print(f"Channel: {item.channel}")
+    print(f"Type: {item.type}")
+    print(f"Content: {item.content}")
+    print(f"Event payload: {item.event}")
 ```
 
 ### الوصول إلى خصائص البث
 
-يوفر كائن `FlowStreamingOutput` خصائص وطرق مفيدة:
+توفر جلسة stream خصائص وطرق مفيدة:
 
 ```python Code
 streaming = flow.kickoff()
 
-# Iterate and collect chunks
-for chunk in streaming:
-    print(chunk.content, end="", flush=True)
+# Iterate and collect items
+for item in streaming:
+    print(item.content, end="", flush=True)
 
 # After iteration completes
 print(f"\nCompleted: {streaming.is_completed}")
-print(f"Full text: {streaming.get_full_text()}")
-print(f"Total chunks: {len(streaming.chunks)}")
+print(f"Total frames: {len(streaming.frames)}")
 print(f"Final result: {streaming.result}")
 ```
 
@@ -114,9 +113,9 @@ async def stream_flow():
     # Start async streaming
     streaming = await flow.kickoff_async()
 
-    # Async iteration over chunks
-    async for chunk in streaming:
-        print(chunk.content, end="", flush=True)
+    # Async iteration over stream items
+    async for item in streaming:
+        print(item.content, end="", flush=True)
 
     # Access final result
     result = streaming.result
@@ -181,13 +180,14 @@ flow = MultiStepFlow()
 streaming = flow.kickoff()
 
 current_step = ""
-for chunk in streaming:
+for item in streaming:
     # Track which flow step is executing
-    if chunk.task_name != current_step:
-        current_step = chunk.task_name
-        print(f"\n\n=== {chunk.task_name} ===\n")
+    step_name = item.event.get("method_name") or item.event.get("task_name")
+    if step_name and step_name != current_step:
+        current_step = step_name
+        print(f"\n\n=== {step_name} ===\n")
 
-    print(chunk.content, end="", flush=True)
+    print(item.content, end="", flush=True)
 
 result = streaming.result
 print(f"\n\nFinal analysis: {result}")
@@ -201,7 +201,6 @@ print(f"\n\nFinal analysis: {result}")
 import asyncio
 from crewai.flow.flow import Flow, listen, start
 from crewai import Agent, Crew, Task
-from crewai.types.streaming import StreamChunkType
 
 class ResearchPipeline(Flow):
     stream = True
@@ -254,33 +253,35 @@ async def run_with_dashboard():
 
     current_agent = ""
     current_task = ""
-    chunk_count = 0
+    frame_count = 0
 
-    async for chunk in streaming:
-        chunk_count += 1
+    async for item in streaming:
+        frame_count += 1
 
         # Display phase transitions
-        if chunk.task_name != current_task:
-            current_task = chunk.task_name
-            current_agent = chunk.agent_role
+        task_name = item.event.get("task_name", "")
+        agent_role = item.event.get("agent_role", "")
+        if task_name and task_name != current_task:
+            current_task = task_name
+            current_agent = agent_role
             print(f"\n\n📋 Phase: {current_task}")
             print(f"👤 Agent: {current_agent}")
             print("-" * 60)
 
         # Display text output
-        if chunk.chunk_type == StreamChunkType.TEXT:
-            print(chunk.content, end="", flush=True)
+        if item.content:
+            print(item.content, end="", flush=True)
 
         # Display tool usage
-        elif chunk.chunk_type == StreamChunkType.TOOL_CALL and chunk.tool_call:
-            print(f"\n🔧 Tool: {chunk.tool_call.tool_name}")
+        elif item.channel == "tools":
+            print(f"\n🔧 Tool event: {item.type}")
 
     # Show completion summary
     result = streaming.result
     print(f"\n\n{'='*60}")
     print("PIPELINE COMPLETE")
     print(f"{'='*60}")
-    print(f"Total chunks: {chunk_count}")
+    print(f"Total frames: {frame_count}")
     print(f"Final output length: {len(str(result))} characters")
 
 asyncio.run(run_with_dashboard())
@@ -353,8 +354,8 @@ class StatefulStreamingFlow(Flow[AnalysisState]):
 flow = StatefulStreamingFlow()
 streaming = flow.kickoff(inputs={"topic": "quantum computing"})
 
-for chunk in streaming:
-    print(chunk.content, end="", flush=True)
+for item in streaming:
+    print(item.content, end="", flush=True)
 
 result = streaming.result
 print(f"\n\nFinal state:")
@@ -374,29 +375,29 @@ print(f"Insights length: {len(flow.state.insights)}")
 - **تتبع التقدم**: إظهار المرحلة الحالية من سير العمل للمستخدمين
 - **لوحات المعلومات الحية**: إنشاء واجهات مراقبة لتدفقات الإنتاج
 
-## أنواع أجزاء البث
+## قنوات إطارات البث
 
-مثل بث الطاقم، يمكن أن تكون أجزاء التدفق من أنواع مختلفة:
+ينتج بث التدفق عناصر `StreamFrame` عبر عدة قنوات:
 
-### أجزاء TEXT
+### إطارات LLM
 
 محتوى نصي قياسي من استجابات LLM:
 
 ```python Code
-for chunk in streaming:
-    if chunk.chunk_type == StreamChunkType.TEXT:
-        print(chunk.content, end="", flush=True)
+for item in streaming:
+    if item.channel == "llm" and item.content:
+        print(item.content, end="", flush=True)
 ```
 
-### أجزاء TOOL_CALL
+### إطارات الأدوات
 
 معلومات حول استدعاءات الأدوات داخل التدفق:
 
 ```python Code
-for chunk in streaming:
-    if chunk.chunk_type == StreamChunkType.TOOL_CALL and chunk.tool_call:
-        print(f"\nTool: {chunk.tool_call.tool_name}")
-        print(f"Args: {chunk.tool_call.arguments}")
+for item in streaming:
+    if item.channel == "tools":
+        print(f"\nTool event: {item.type}")
+        print(f"Payload: {item.event}")
 ```
 
 ## معالجة الأخطاء
@@ -408,8 +409,8 @@ flow = ResearchFlow()
 streaming = flow.kickoff()
 
 try:
-    for chunk in streaming:
-        print(chunk.content, end="", flush=True)
+    for item in streaming:
+        print(item.content, end="", flush=True)
 
     result = streaming.result
     print(f"\nSuccess! Result: {result}")
@@ -422,7 +423,7 @@ except Exception as e:
 
 ## الإلغاء وتنظيف الموارد
 
-يدعم `FlowStreamingOutput` الإلغاء السلس بحيث يتوقف العمل الجاري فوراً عند انقطاع اتصال المستهلك.
+تدعم جلسة stream الإلغاء السلس بحيث يتوقف العمل الجاري فوراً عند انقطاع اتصال المستهلك.
 
 ### مدير السياق غير المتزامن
 
@@ -430,8 +431,8 @@ except Exception as e:
 streaming = await flow.kickoff_async()
 
 async with streaming:
-    async for chunk in streaming:
-        print(chunk.content, end="", flush=True)
+    async for item in streaming:
+        print(item.content, end="", flush=True)
 ```
 
 ### الإلغاء الصريح
@@ -439,8 +440,8 @@ async with streaming:
 ```python Code
 streaming = await flow.kickoff_async()
 try:
-    async for chunk in streaming:
-        print(chunk.content, end="", flush=True)
+    async for item in streaming:
+        print(item.content, end="", flush=True)
 finally:
     await streaming.aclose()  # غير متزامن
     # streaming.close()       # المكافئ المتزامن
@@ -451,10 +452,10 @@ finally:
 ## ملاحظات مهمة
 
 - يفعّل البث تلقائياً بث LLM لأي أطقم مستخدمة داخل التدفق
-- يجب التكرار عبر جميع الأجزاء قبل الوصول إلى خاصية `.result`
+- يجب التكرار عبر جميع عناصر stream قبل الوصول إلى خاصية `.result`
 - يعمل البث مع كل من حالة التدفق المنظمة وغير المنظمة
 - يلتقط بث التدفق المخرجات من جميع الأطقم واستدعاءات LLM في التدفق
-- يتضمن كل جزء سياقاً حول الوكيل والمهمة التي ولدته
+- يتضمن كل إطار سياق حدث مهيكلاً مثل القناة والنوع والنطاق والحمولة
 - يضيف البث حملاً ضئيلاً لتنفيذ التدفق
 
 ## الدمج مع تصور التدفق
@@ -468,8 +469,8 @@ flow.plot("research_flow")  # Creates HTML visualization
 
 # Run with streaming
 streaming = flow.kickoff()
-for chunk in streaming:
-    print(chunk.content, end="", flush=True)
+for item in streaming:
+    print(item.content, end="", flush=True)
 
 result = streaming.result
 print(f"\nFlow complete! View structure at: research_flow.html")

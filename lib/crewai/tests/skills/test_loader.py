@@ -9,9 +9,11 @@ from crewai.skills.loader import (
     discover_skills,
     format_skill_context,
     load_resources,
+    load_skill,
+    load_skills,
 )
 from crewai.skills.models import INSTRUCTIONS, METADATA, RESOURCES, Skill, SkillFrontmatter
-from crewai.skills.parser import load_skill_metadata
+from crewai.skills.parser import SkillParseError, load_skill_metadata
 
 
 def _create_skill_dir(parent: Path, name: str, body: str = "Body.") -> Path:
@@ -82,6 +84,126 @@ class TestActivateSkill:
         activated = activate_skill(skill)
         again = activate_skill(activated)
         assert again is activated
+
+
+class TestLoadSkill:
+    """Tests for load_skill."""
+
+    @pytest.mark.parametrize("as_string", [False, True])
+    def test_loads_path_input(self, tmp_path: Path, as_string: bool) -> None:
+        _create_skill_dir(tmp_path, "first-skill", body="First.")
+        _create_skill_dir(tmp_path, "second-skill", body="Second.")
+        path = str(tmp_path) if as_string else tmp_path
+
+        skills = load_skill(path)
+
+        assert [skill.name for skill in skills] == ["first-skill", "second-skill"]
+        assert [skill.disclosure_level for skill in skills] == [
+            INSTRUCTIONS,
+            INSTRUCTIONS,
+        ]
+        assert [skill.instructions for skill in skills] == ["First.", "Second."]
+
+    def test_loads_preloaded_skill(self, tmp_path: Path) -> None:
+        preloaded = Skill(
+            frontmatter=SkillFrontmatter(
+                name="preloaded-skill",
+                description="Preloaded skill",
+            ),
+            path=tmp_path / "preloaded-skill",
+        )
+
+        skills = load_skill(preloaded)
+
+        assert skills == [preloaded]
+
+    def test_loads_inline_skill(self) -> None:
+        inline_skill = (
+            "---\n"
+            "name: inline-skill\n"
+            "description: Inline guidance\n"
+            "---\n"
+            "Follow these instructions."
+        )
+
+        skills = load_skill(inline_skill)
+
+        assert [skill.name for skill in skills] == ["inline-skill"]
+        assert [skill.disclosure_level for skill in skills] == [INSTRUCTIONS]
+        assert [skill.instructions for skill in skills] == [
+            "Follow these instructions."
+        ]
+
+    def test_invalid_inline_skill_raises_parse_error(self) -> None:
+        with pytest.raises(SkillParseError, match="missing closing"):
+            load_skill("---\nname: inline-skill\n")
+
+    def test_missing_path_raises_file_not_found(self, tmp_path: Path) -> None:
+        with pytest.raises(FileNotFoundError):
+            load_skill(tmp_path / "missing")
+
+    def test_unsupported_input_raises_type_error(self) -> None:
+        with pytest.raises(TypeError, match="Unsupported skill input"):
+            load_skill(object())  # type: ignore[arg-type]
+
+    def test_load_skills_deduplicates_by_name(self, tmp_path: Path) -> None:
+        first = Skill(
+            frontmatter=SkillFrontmatter(
+                name="duplicate-skill",
+                description="First skill",
+            ),
+            path=tmp_path / "first",
+        )
+        second = Skill(
+            frontmatter=SkillFrontmatter(
+                name="duplicate-skill",
+                description="Second skill",
+            ),
+            path=tmp_path / "second",
+        )
+
+        skills = load_skills([first, second])
+
+        assert skills == [first]
+
+    def test_load_skills_keeps_registry_refs_from_different_orgs(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        first = Skill(
+            frontmatter=SkillFrontmatter(
+                name="shared-skill",
+                description="First registry skill",
+            ),
+            path=tmp_path / "first",
+            disclosure_level=INSTRUCTIONS,
+            instructions="First instructions.",
+        )
+        second = Skill(
+            frontmatter=SkillFrontmatter(
+                name="shared-skill",
+                description="Second registry skill",
+            ),
+            path=tmp_path / "second",
+            disclosure_level=INSTRUCTIONS,
+            instructions="Second instructions.",
+        )
+
+        def resolve_registry_ref(ref: str, source: object = None) -> Skill:
+            return {
+                "@first/shared-skill": first,
+                "@second/shared-skill": second,
+            }[ref]
+
+        monkeypatch.setattr(
+            "crewai.experimental.skills.registry.resolve_registry_ref",
+            resolve_registry_ref,
+        )
+
+        skills = load_skills(["@first/shared-skill", "@second/shared-skill"])
+
+        assert skills == [first, second]
 
 
 class TestLoadResources:
