@@ -182,10 +182,8 @@ exclude-newer-package = { pypdf = "2026-06-24T00:00:00Z", msgpack = "2026-06-20T
 # langchain-text-splitters <1.1.2 has GHSA-fv5p-p927-qmxr (SSRF bypass in split_text_from_url).
 # transformers 4.57.6 has CVE-2026-1839; force 5.4+ (docling 2.84 allows huggingface-hub>=1).
 # cryptography 46.0.6 has CVE-2026-39892; force 46.0.7+.
-# cryptography <50.0.0 has GHSA-m2h6-j472-rp4c (wildcard DNS name acceptance bypass),
-# GHSA-g6cj-pr64-35w5 (Bleichenbacher oracle in PKCS#7 EnvelopedData decryption),
-# GHSA-jwv3-5hgf-82ww (exponential path-building via duplicate self-signed intermediates);
-# all fixed in 50.0.0; force 50.0.0+.
+# cryptography <=48.0.x has GHSA-m2h6-j472-rp4c, GHSA-jwv3-5hgf-82ww; fixed in 49.0.0.
+# cryptography <50.0.0 has GHSA-g6cj-pr64-35w5 (PKCS#7 Bleichenbacher oracle); force 50.0.0+.
 # pypdf <6.10.2 has GHSA-4pxv-j86v-mhcw, GHSA-7gw9-cf7v-778f, GHSA-x284-j5p8-9c5p.
 # pypdf <6.14.2 has GHSA-jm82-fx9c-mx94 and GHSA-5qjq-93h5-hrgp/GHSA-55h5-xmcq-c37v/GHSA-g867-7843-wf8q/GHSA-5xf7-4p34-54qr; force 6.14.2+.
 # uv <0.11.15 has GHSA-4gg8-gxpx-9rph (and earlier GHSA-pjjw-68hj-v9mw); force 0.11.15+.
@@ -204,8 +202,8 @@ exclude-newer-package = { pypdf = "2026-06-24T00:00:00Z", msgpack = "2026-06-20T
 # authlib <1.6.12 has GHSA-jj8c-mmj3-mmgv (CSRF bypass in cache-based state storage) and PYSEC-2026-188.
 # pip 26.1.1 has PYSEC-2026-196; force 26.1.2+.
 # aiohttp <=3.13.x has GHSA-jg22-mg44-37j8, GHSA-hg6j-4rv6-33pg; fixed in 3.14.0; force 3.14.0+.
-# aiohttp <3.14.2 has GHSA-mq44-7p77-q5h7 (WebSocket client accepts deflate frames without negotiation),
-# GHSA-mfx4-hv73-q22v, GHSA-cq5v-8q36-5273; all fixed in 3.14.2; force 3.14.2+.
+# aiohttp <=3.14.1 has GHSA-mq44-7p77-q5h7, GHSA-mfx4-hv73-q22v; fixed in 3.14.2.
+# aiohttp <=3.14.2 has GHSA-cq5v-8q36-5273 (C parser OOB read); force 3.14.3+.
 # docling-core 2.74.0 has GHSA-j5xp-7m2f-49jv, GHSA-jmmv-h3mp-59v8; force 2.74.1+.
 # pip <26.1.1 has GHSA-58qw-9mgm-455v (archive handling); OSV considers 26.1.1 unaffected.
 # paramiko <5.0.0 has GHSA-r374-rxx8-8654 (SHA-1 in rsakey.py); OSV considers 5.0.0 unaffected. Transitive via composio-core.
@@ -238,7 +236,7 @@ override-dependencies = [
     "langsmith>=0.8.18,<1",
     "authlib>=1.6.12",
     "pip>=26.1.2",
-    "aiohttp>=3.14.2",
+    "aiohttp>=3.14.3",
     # [chunking] carried here because override-dependencies replace the whole
     # requirement; without it the docling extra's chunking deps get stripped.
     "docling-core[chunking]>=2.74.1",
