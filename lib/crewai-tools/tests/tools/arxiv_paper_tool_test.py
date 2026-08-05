@@ -1,10 +1,10 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-import urllib.error
 import xml.etree.ElementTree as ET
 
 from crewai_tools import ArxivPaperTool
 import pytest
+import requests
 
 
 @pytest.fixture
@@ -26,33 +26,42 @@ def mock_arxiv_response():
         </feed>"""
 
 
-@patch("urllib.request.urlopen")
-def test_fetch_arxiv_data(mock_urlopen, tool):
+@patch("crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool.safe_get")
+def test_fetch_arxiv_data(mock_safe_get, tool):
     mock_response = MagicMock()
-    mock_response.status = 200
-    mock_response.read.return_value = mock_arxiv_response().encode("utf-8")
-    mock_urlopen.return_value.__enter__.return_value = mock_response
+    mock_response.text = mock_arxiv_response()
+    mock_safe_get.return_value = mock_response
 
     results = tool.fetch_arxiv_data("transformer", 1)
     assert isinstance(results, list)
     assert results[0]["title"] == "Sample Paper"
 
 
-@patch("urllib.request.urlopen", side_effect=urllib.error.URLError("Timeout"))
-def test_fetch_arxiv_data_network_error(mock_urlopen, tool):
-    with pytest.raises(urllib.error.URLError):
+@patch(
+    "crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool.safe_get",
+    side_effect=requests.RequestException("Timeout"),
+)
+def test_fetch_arxiv_data_network_error(mock_safe_get, tool):
+    with pytest.raises(requests.RequestException):
         tool.fetch_arxiv_data("transformer", 1)
 
 
-@patch("urllib.request.urlretrieve")
-def test_download_pdf_success(mock_urlretrieve):
+@patch("crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool.safe_download")
+def test_download_pdf_success(mock_safe_download):
     tool = ArxivPaperTool()
     tool.download_pdf("http://arxiv.org/pdf/1234.5678.pdf", Path("test.pdf"))
-    mock_urlretrieve.assert_called_once()
+    mock_safe_download.assert_called_once_with(
+        "http://arxiv.org/pdf/1234.5678.pdf",
+        "test.pdf",
+        timeout=ArxivPaperTool.REQUEST_TIMEOUT,
+    )
 
 
-@patch("urllib.request.urlretrieve", side_effect=OSError("Permission denied"))
-def test_download_pdf_oserror(mock_urlretrieve):
+@patch(
+    "crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool.safe_download",
+    side_effect=OSError("Permission denied"),
+)
+def test_download_pdf_oserror(mock_safe_download):
     tool = ArxivPaperTool()
     with pytest.raises(OSError):
         tool.download_pdf(
@@ -60,26 +69,52 @@ def test_download_pdf_oserror(mock_urlretrieve):
         )
 
 
-@patch("urllib.request.urlopen")
-@patch("urllib.request.urlretrieve")
-def test_run_with_download(mock_urlretrieve, mock_urlopen):
+def test_download_pdf_blocks_private_ip(monkeypatch):
+    """Regression test for the SSRF fix (#6694): download_pdf must reject a
+    URL that resolves to a private/reserved IP before making any request,
+    end to end through the real safe_download/safe_get/validate_and_resolve
+    chain -- not mocked out, so this exercises the actual protection.
+
+    Clears CREWAI_TOOLS_ALLOW_UNSAFE_PATHS so this stays hermetic regardless
+    of the environment: if that variable were set, validation would be
+    skipped and this test would instead attempt a real request to a private
+    address.
+    """
+    monkeypatch.delenv("CREWAI_TOOLS_ALLOW_UNSAFE_PATHS", raising=False)
+    tool = ArxivPaperTool()
+    with pytest.raises(ValueError, match="private/reserved IP"):
+        tool.download_pdf("http://127.0.0.1/malicious.pdf", Path("test.pdf"))
+
+
+def test_download_pdf_blocks_cloud_metadata_endpoint(monkeypatch):
+    """Same as above, for the AWS/GCP/Azure metadata endpoint specifically --
+    the concrete credential-theft scenario named in #6694."""
+    monkeypatch.delenv("CREWAI_TOOLS_ALLOW_UNSAFE_PATHS", raising=False)
+    tool = ArxivPaperTool()
+    with pytest.raises(ValueError, match="private/reserved IP"):
+        tool.download_pdf(
+            "http://169.254.169.254/latest/meta-data/", Path("test.pdf")
+        )
+
+
+@patch("crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool.safe_get")
+@patch("crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool.safe_download")
+def test_run_with_download(mock_safe_download, mock_safe_get):
     mock_response = MagicMock()
-    mock_response.status = 200
-    mock_response.read.return_value = mock_arxiv_response().encode("utf-8")
-    mock_urlopen.return_value.__enter__.return_value = mock_response
+    mock_response.text = mock_arxiv_response()
+    mock_safe_get.return_value = mock_response
 
     tool = ArxivPaperTool(download_pdfs=True)
     output = tool._run("transformer", 1)
     assert "Title: Sample Paper" in output
-    mock_urlretrieve.assert_called_once()
+    mock_safe_download.assert_called_once()
 
 
-@patch("urllib.request.urlopen")
-def test_run_no_download(mock_urlopen):
+@patch("crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool.safe_get")
+def test_run_no_download(mock_safe_get):
     mock_response = MagicMock()
-    mock_response.status = 200
-    mock_response.read.return_value = mock_arxiv_response().encode("utf-8")
-    mock_urlopen.return_value.__enter__.return_value = mock_response
+    mock_response.text = mock_arxiv_response()
+    mock_safe_get.return_value = mock_response
 
     tool = ArxivPaperTool(download_pdfs=False)
     result = tool._run("transformer", 1)
@@ -93,20 +128,21 @@ def test_validate_save_path_creates_directory(mock_mkdir):
     assert isinstance(path, Path)
 
 
-@patch("urllib.request.urlopen")
-def test_run_handles_exception(mock_urlopen):
-    mock_urlopen.side_effect = Exception("API failure")
+@patch(
+    "crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool.safe_get",
+    side_effect=Exception("API failure"),
+)
+def test_run_handles_exception(mock_safe_get):
     tool = ArxivPaperTool()
     result = tool._run("transformer", 1)
     assert "Failed to fetch or download Arxiv papers" in result
 
 
-@patch("urllib.request.urlopen")
-def test_invalid_xml_response(mock_urlopen, tool):
+@patch("crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool.safe_get")
+def test_invalid_xml_response(mock_safe_get, tool):
     mock_response = MagicMock()
-    mock_response.read.return_value = b"<invalid><xml>"
-    mock_response.status = 200
-    mock_urlopen.return_value.__enter__.return_value = mock_response
+    mock_response.text = "<invalid><xml>"
+    mock_safe_get.return_value = mock_response
 
     with pytest.raises(ET.ParseError):
         tool.fetch_arxiv_data("quantum", 1)

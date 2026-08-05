@@ -3,13 +3,14 @@ from pathlib import Path
 import re
 import time
 from typing import Any, ClassVar
-import urllib.error
 import urllib.parse
-import urllib.request
 import xml.etree.ElementTree as ET
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field
+import requests
+
+from crewai_tools.security.safe_requests import safe_download, safe_get
 
 
 logger = logging.getLogger(__file__)
@@ -25,7 +26,7 @@ class ArxivToolInput(BaseModel):
 
 
 class ArxivPaperTool(BaseTool):
-    BASE_API_URL: ClassVar[str] = "http://export.arxiv.org/api/query"
+    BASE_API_URL: ClassVar[str] = "https://export.arxiv.org/api/query"
     SLEEP_DURATION: ClassVar[int] = 1
     SUMMARY_TRUNCATE_LENGTH: ClassVar[int] = 300
     ATOM_NAMESPACE: ClassVar[str] = "{http://www.w3.org/2005/Atom}"
@@ -65,7 +66,7 @@ class ArxivPaperTool(BaseTool):
                         filename = f"{filename_base[:500]}.pdf"
                         save_path = Path(save_dir) / filename
 
-                        self.download_pdf(paper["pdf_url"], save_path)  # type: ignore[arg-type]
+                        self.download_pdf(paper["pdf_url"], save_path)
                         time.sleep(self.SLEEP_DURATION)
 
             results = [self._format_paper_result(p) for p in papers]
@@ -78,17 +79,34 @@ class ArxivPaperTool(BaseTool):
     def fetch_arxiv_data(
         self, search_query: str, max_results: int
     ) -> list[dict[str, Any]]:
+        """Query the Arxiv API and parse the resulting Atom feed into a list
+        of paper records.
+
+        Args:
+            search_query: Free-text Arxiv search query.
+            max_results: Maximum number of entries to request from the API.
+
+        Returns:
+            A list of dicts with keys `arxiv_id`, `title`, `summary`,
+            `authors`, `published_date`, `pdf_url` (the last is `None` if no
+            PDF link was found in the entry).
+
+        Raises:
+            requests.RequestException: If the request to Arxiv fails (network
+                error, timeout, or a non-2xx response).
+            ValueError: If `api_url` (or a redirect it follows) fails
+                `safe_get`'s SSRF validation.
+            xml.etree.ElementTree.ParseError: If the response body isn't
+                valid XML.
+        """
         api_url = f"{self.BASE_API_URL}?search_query={urllib.parse.quote(search_query)}&start=0&max_results={max_results}"
         logger.info(f"Fetching data from Arxiv API: {api_url}")
 
         try:
-            with urllib.request.urlopen(  # noqa: S310
-                api_url, timeout=self.REQUEST_TIMEOUT
-            ) as response:
-                if response.status != 200:
-                    raise Exception(f"HTTP {response.status}: {response.reason}")
-                data = response.read().decode("utf-8")
-        except urllib.error.URLError as e:
+            response = safe_get(api_url, timeout=self.REQUEST_TIMEOUT)
+            response.raise_for_status()
+            data = response.text
+        except (requests.RequestException, ValueError) as e:
             logger.error(f"Error fetching data from Arxiv: {e}")
             raise
 
@@ -158,12 +176,35 @@ class ArxivPaperTool(BaseTool):
         save_path.mkdir(parents=True, exist_ok=True)
         return save_path
 
-    def download_pdf(self, pdf_url: str, save_path: str) -> None:
+    def download_pdf(self, pdf_url: str, save_path: str | Path) -> None:
+        """Download a single PDF to `save_path` via `safe_download`.
+
+        Args:
+            pdf_url: The PDF URL, as extracted from an Arxiv API entry.
+            save_path: Destination file path. `safe_download` writes to a
+                temp file alongside it and renames into place on success, so
+                a failed download never leaves a truncated file here.
+
+        Raises:
+            requests.RequestException: If the request fails (network error,
+                timeout, or a non-2xx response).
+            ValueError: If `pdf_url` (or a redirect it follows) fails
+                `safe_download`'s SSRF validation.
+            OSError: If `save_path` can't be written (permissions, missing
+                parent directory, etc.).
+        """
         try:
             logger.info(f"Downloading PDF from {pdf_url} to {save_path}")
-            urllib.request.urlretrieve(pdf_url, str(save_path))  # noqa: S310
+            # pdf_url comes from the Arxiv API's XML response, not directly from
+            # tool input -- but it's still an untrusted, remotely-supplied URL
+            # (e.g. a network MITM tampering with the plain-HTTP-era API response,
+            # or a malformed/malicious link ever indexed upstream). safe_download
+            # validates the URL and every redirect target, and pins each
+            # connection's DNS resolution to the address that was actually
+            # validated, closing the SSRF exposure a raw urlretrieve() call has.
+            safe_download(pdf_url, str(save_path), timeout=self.REQUEST_TIMEOUT)
             logger.info(f"PDF saved: {save_path}")
-        except urllib.error.URLError as e:
+        except (requests.RequestException, ValueError) as e:
             logger.error(f"Network error occurred while downloading {pdf_url}: {e}")
             raise
         except OSError as e:
