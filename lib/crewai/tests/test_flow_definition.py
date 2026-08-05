@@ -1348,7 +1348,15 @@ def test_skill_documents_flow_wiring():
     assert "```yaml" in skill
     assert "[Method](#method-methods)" in skill
     assert 'input: "Reviewed research: ${outputs.research_brief.raw}"' in skill
-    assert 'text(root, "path", "default")' in skill
+    assert "do not assemble the string with CEL `+`" in skill
+    assert "Do not use CEL `+` to build text in action mappings" in skill
+    assert "Agent prompt template. Insert Flow values with `${...}`" in skill
+    assert (
+        "Repository-backed agents may set `from_repository` and omit inline "
+        "`role`, `goal`, and `backstory`" in skill
+    )
+    assert "Runtime inputs passed to the Crew" in skill
+    assert "Tool input arguments. Insert Flow values with `${...}`" in skill
     assert "trust CrewAI defaults and omit them" in skill
     assert "#### LLM Definition" in skill
     assert "`max_tokens` (optional): integer | null; default `null`" in skill

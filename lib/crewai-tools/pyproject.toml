@@ -10,7 +10,7 @@ requires-python = ">=3.10, <3.14"
 dependencies = [
     "pytube~=15.0.0",
     "requests>=2.33.0,<3",
-    "crewai==1.15.2a2",
+    "crewai==1.15.11",
     "tiktoken>=0.8.0,<0.13",
     "beautifulsoup4~=4.13.4",
     "python-docx~=1.2.0",
@@ -97,17 +97,19 @@ databricks-sdk = [
     "databricks-sdk>=0.46.0",
 ]
 couchbase = [
-    "couchbase>=4.3.5",
+    "couchbase>=4.6.0",
 ]
 mcp = [
-    "mcp>=1.6.0",
+    "mcp>=1.28.1,<2",
     "mcpadapt>=0.1.9",
 ]
 stagehand = [
     "stagehand>=0.4.1",
 ]
 github = [
-    "gitpython>=3.1.50,<4",
+    # <3.1.57 has GHSA-p538-c434-8v24 (arbitrary file truncation) and
+    # GHSA-3f7w-8rr8-f37f (unguarded git option forwarding).
+    "gitpython>=3.1.57,<4",
     "PyGithub==1.59.1",
 ]
 rag = [
@@ -115,7 +117,12 @@ rag = [
     "lxml>=6.1.0,<7",  # 6.1.0+ required for GHSA-vfmq-68hx-4jfw (XXE in iterparse)
 ]
 xml = [
-    "unstructured[local-inference, all-docs]>=0.17.2"
+    "unstructured[local-inference, all-docs]>=0.17.2",
+    # unstructured allows nltk>=3.9.2, but <3.10.0 has GHSA-qvv7-cg9c-w4x3
+    # (DNS-rebinding SSRF bypass), GHSA-fg7f-2386-8897 (ReDoS) and
+    # GHSA-xh95-f55m-82fw (path traversal). Declared here, not only as a uv
+    # override, so consumers installing crewai-tools[xml] get the fixed version.
+    "nltk>=3.10.0",
 ]
 oxylabs = [
     "oxylabs==2.0.0"
@@ -131,7 +138,7 @@ postgresql = [
 ]
 bedrock = [
     "beautifulsoup4>=4.13.4",
-    "bedrock-agentcore>=1.7.0,<1.8.0",
+    "bedrock-agentcore>=1.18.1,<2.0.0",
     "playwright>=1.52.0",
     "nest-asyncio>=1.6.0",
 ]

@@ -73,6 +73,7 @@ from crewai.events.types.memory_events import (
     MemoryRetrievalFailedEvent,
     MemoryRetrievalStartedEvent,
 )
+from crewai.events.types.skill_events import SkillUsedEvent
 from crewai.experimental.agent_executor import AgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -82,10 +83,17 @@ from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
 from crewai.skills.loader import load_skills
-from crewai.skills.models import Skill as SkillModel
+from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.state.checkpoint_config import CheckpointConfig, apply_checkpoint
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools.tool_failure import (
+    ToolExecutionFailedError,
+    ToolFailureRecord,
+    merge_tool_failures,
+    tool_failure_collector,
+)
 from crewai.types.callback import SerializableCallable
+from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.agent_utils import (
     get_tool_names,
     is_inside_event_loop,
@@ -129,7 +137,9 @@ if TYPE_CHECKING:
     from crewai.utilities.types import LLMMessage
 
 
-_passthrough_exceptions: tuple[type[Exception], ...] = ()
+# Deliberate stops, not transient errors: never swallowed into the
+# max_retry_limit loop.
+_passthrough_exceptions: tuple[type[Exception], ...] = (ToolExecutionFailedError,)
 
 _EXECUTOR_CLASS_MAP: dict[str, type] = {
     "CrewAgentExecutor": CrewAgentExecutor,
@@ -400,10 +410,29 @@ class Agent(BaseAgent):
         return self.planning_config is not None or self.planning
 
     def _setup_agent_executor(self) -> None:
-        """Initialize the agent executor with a default cache handler."""
-        if not self.cache_handler:
-            self.cache_handler = CacheHandler()
-        self.set_cache_handler(self.cache_handler)
+        """Initialize the agent's tools handler and optional tool cache.
+
+        Tool-result caching is opt-in: a standalone agent gets a cache only
+        when it was constructed with an explicit ``cache=True`` or a
+        ``cache_handler``. Agents inside a crew additionally receive the
+        crew's shared handler when ``Crew(cache=True)``. Without an opt-in,
+        repeated tool calls with identical arguments always re-execute the
+        tool — the safe default for live-data and state-mutating tools.
+        """
+        # Recorded before any crew can offer its shared handler at kickoff,
+        # so copy() can distinguish a construction-time opt-in from runtime
+        # crew wiring (which must not turn copies into cachers).
+        self._constructor_cache_opt_in = bool(
+            self.cache
+            and (self.cache_handler is not None or "cache" in self.model_fields_set)
+        )
+        opted_in = self.cache_handler is not None or (
+            "cache" in self.model_fields_set and self.cache
+        )
+        if opted_in:
+            if not self.cache_handler:
+                self.cache_handler = CacheHandler()
+            self.set_cache_handler(self.cache_handler)
 
     def set_knowledge(self, crew_embedder: EmbedderConfig | None = None) -> None:
         """Initialize knowledge sources with the agent or crew embedder config."""
@@ -459,8 +488,31 @@ class Agent(BaseAgent):
 
         self.skills = cast(
             list[Path | SkillModel | str] | None,
-            load_skills(items, source=self) or None,
+            load_skills(items, source=self, activate=False) or None,
         )
+
+    def _add_skill_loader_tool(
+        self,
+        tools: list[BaseTool],
+        task: Task | None = None,
+    ) -> list[BaseTool]:
+        """Add the internal loader used for request-scoped skill disclosure."""
+        from crewai.skills.tool import LoadSkillTool, create_skill_loader_tool
+
+        tools = [tool for tool in tools if not isinstance(tool, LoadSkillTool)]
+
+        skill_models = [
+            skill for skill in self.skills or [] if isinstance(skill, SkillModel)
+        ]
+        loader = create_skill_loader_tool(
+            skill_models,
+            source=self,
+            task=task,
+            reserved_names=[tool.name for tool in tools],
+        )
+        if loader is None:
+            return tools
+        return [*tools, loader]
 
     def _is_any_available_memory(self) -> bool:
         """Check if unified memory is available (agent or crew)."""
@@ -506,6 +558,8 @@ class Agent(BaseAgent):
 
         self._inject_date_to_task(task)
 
+        self.reset_tool_failures()
+
         if self.tools_handler:
             self.tools_handler.last_used_tool = None
 
@@ -531,8 +585,39 @@ class Agent(BaseAgent):
             The fully prepared task prompt.
         """
         prepare_tools(self, tools, task)
+        self._emit_skill_usage(task)
 
         return apply_training_data(self, task_prompt)
+
+    def _emit_skill_usage(self, task: Task) -> None:
+        """Emit usage for always-on skills injected into this task's prompt.
+
+        Metadata-only skills emit from ``LoadSkillTool`` if the model selects
+        them. This method covers explicitly activated and inline skills, whose
+        instructions are rendered on every execution.
+
+        Args:
+            task: The task whose prompt the skills are being applied to.
+        """
+        if not self.skills:
+            return
+
+        for skill in self.skills:
+            if (
+                not isinstance(skill, SkillModel)
+                or skill.disclosure_level < INSTRUCTIONS
+            ):
+                continue
+            crewai_event_bus.emit(
+                self,
+                event=SkillUsedEvent(
+                    from_agent=self,
+                    from_task=task,
+                    skill_name=skill.name,
+                    skill_path=skill.path,
+                    disclosure_level=skill.disclosure_level,
+                ),
+            )
 
     def _retrieve_memory_context(self, task: Task, task_prompt: str) -> str:
         """Retrieve memory context and append it to the task prompt.
@@ -839,6 +924,11 @@ class Agent(BaseAgent):
                 raise TimeoutError(
                     f"Task '{task.description}' execution timed out after {timeout} seconds. Consider increasing max_execution_time or optimizing the task."
                 ) from e
+            except _passthrough_exceptions:
+                # Wrapping a deliberate stop in RuntimeError would hide it from
+                # _check_execution_error and trigger the retry loop instead.
+                future.cancel()
+                raise
             except Exception as e:
                 future.cancel()
                 raise RuntimeError(f"Task execution failed: {e!s}") from e
@@ -1001,6 +1091,8 @@ class Agent(BaseAgent):
         Returns:
             A tuple of (prompt, stop_words, rpm_limit_fn).
         """
+        from crewai.skills.tool import LoadSkillTool
+
         use_native_tool_calling = self._supports_native_tool_calling(raw_tools)
 
         prompt = Prompts(
@@ -1011,6 +1103,10 @@ class Agent(BaseAgent):
             system_template=self.system_template,
             prompt_template=self.prompt_template,
             response_template=self.response_template,
+            skill_loader_tool_name=next(
+                (tool.name for tool in raw_tools if isinstance(tool, LoadSkillTool)),
+                None,
+            ),
         ).task_execution()
 
         stop_words = [I18N_DEFAULT.slice("observation")]
@@ -1033,7 +1129,8 @@ class Agent(BaseAgent):
         Returns:
             An instance of the CrewAgentExecutor class.
         """
-        raw_tools: list[BaseTool] = tools or self.tools or []
+        configured_tools = tools if tools is not None else self.tools or []
+        raw_tools = self._add_skill_loader_tool(list(configured_tools), task=task)
         parsed_tools = parse_tools(raw_tools)
 
         prompt, stop_words, rpm_limit_fn = self._build_execution_prompt(raw_tools)
@@ -1372,6 +1469,11 @@ class Agent(BaseAgent):
         Returns:
             Tuple of (executor, inputs, agent_info, parsed_tools) ready for execution.
         """
+        self.reset_tool_failures()
+
+        if self.tools_handler:
+            self.tools_handler.last_used_tool = None
+
         if self.apps:
             platform_tools = self.get_platform_tools(self.apps)
             if platform_tools:
@@ -1385,7 +1487,7 @@ class Agent(BaseAgent):
                     self.tools = []
                 self.tools.extend(mcps)
 
-        raw_tools: list[BaseTool] = self.tools or []
+        raw_tools = list(self.tools or [])
 
         agent_memory = getattr(self, "memory", None)
         if agent_memory is not None:
@@ -1398,6 +1500,7 @@ class Agent(BaseAgent):
                 if sanitize_tool_name(mt.name) not in existing_names
             )
 
+        raw_tools = self._add_skill_loader_tool(raw_tools)
         parsed_tools = parse_tools(raw_tools)
 
         agent_info = {
@@ -1582,9 +1685,18 @@ class Agent(BaseAgent):
                 crewai_event_bus.emit(self, event=started_event)
                 self._kickoff_event_id = started_event.event_id
 
-            output = self._execute_and_build_output(executor, inputs, response_format)
+            usage_baseline = self._current_usage_summary()
+            output = self._execute_and_build_output(
+                executor, inputs, response_format, usage_baseline
+            )
             return self._finalize_kickoff(
-                output, executor, inputs, response_format, messages, agent_info
+                output,
+                executor,
+                inputs,
+                response_format,
+                messages,
+                agent_info,
+                usage_baseline,
             )
 
         except Exception as e:
@@ -1598,6 +1710,7 @@ class Agent(BaseAgent):
         response_format: type[Any] | None,
         messages: str | list[LLMMessage],
         agent_info: dict[str, Any],
+        usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Apply guardrails, save to memory, and emit completion event.
 
@@ -1608,6 +1721,8 @@ class Agent(BaseAgent):
             response_format: Optional response format.
             messages: The original messages.
             agent_info: Agent metadata for events.
+            usage_baseline: Usage snapshot taken at kickoff start, so retries
+                report per-call usage relative to it.
 
         Returns:
             The finalized output.
@@ -1618,6 +1733,7 @@ class Agent(BaseAgent):
                 executor=executor,
                 inputs=inputs,
                 response_format=response_format,
+                usage_baseline=usage_baseline,
             )
 
         self._save_kickoff_to_memory(messages, output.raw)
@@ -1669,11 +1785,25 @@ class Agent(BaseAgent):
         except Exception as e:
             self._logger.log("error", f"Failed to save kickoff result to memory: {e}")
 
+    def _current_usage_summary(self) -> UsageMetrics:
+        """Snapshot the cumulative usage counters backing this agent's LLM.
+
+        The counters live on the LLM instance (or the agent's token process
+        for non-BaseLLM models) and grow for the object's lifetime — across
+        calls and across agents sharing the instance. Per-call usage is the
+        delta between two snapshots.
+        """
+        if isinstance(self.llm, BaseLLM):
+            return self.llm.get_token_usage_summary()
+        return self._token_process.get_summary()
+
     def _build_output_from_result(
         self,
         result: dict[str, Any],
         executor: AgentExecutor,
         response_format: type[Any] | None = None,
+        usage_baseline: UsageMetrics | None = None,
+        kickoff_failures: list[ToolFailureRecord] | None = None,
     ) -> LiteAgentOutput:
         """Build a LiteAgentOutput from an executor result dict.
 
@@ -1683,6 +1813,9 @@ class Agent(BaseAgent):
             result: The result dictionary from executor.invoke / invoke_async.
             executor: The executor instance.
             response_format: Optional response format.
+            usage_baseline: Usage snapshot taken at kickoff start. When given,
+                the output carries only this call's usage (the delta) instead
+                of the LLM instance's cumulative lifetime counters.
 
         Returns:
             LiteAgentOutput with raw output, formatted result, and metrics.
@@ -1727,10 +1860,9 @@ class Agent(BaseAgent):
         else:
             raw_output = str(output) if not isinstance(output, str) else output
 
-        if isinstance(self.llm, BaseLLM):
-            usage_metrics = self.llm.get_token_usage_summary()
-        else:
-            usage_metrics = self._token_process.get_summary()
+        usage_metrics = self._current_usage_summary()
+        if usage_baseline is not None:
+            usage_metrics = usage_metrics.delta_since(usage_baseline)
 
         raw_str = (
             raw_output
@@ -1752,6 +1884,7 @@ class Agent(BaseAgent):
             todos=todo_results,
             replan_count=executor.state.replan_count,
             last_replan_reason=executor.state.last_replan_reason,
+            tool_failures=list(kickoff_failures or []),
         )
 
     def _execute_and_build_output(
@@ -1759,20 +1892,28 @@ class Agent(BaseAgent):
         executor: AgentExecutor,
         inputs: dict[str, str],
         response_format: type[Any] | None = None,
+        usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Execute the agent synchronously and build the output object."""
-        result = cast(dict[str, Any], executor.invoke(inputs))
-        return self._build_output_from_result(result, executor, response_format)
+        with tool_failure_collector() as kickoff_failures:
+            result = cast(dict[str, Any], executor.invoke(inputs))
+        return self._build_output_from_result(
+            result, executor, response_format, usage_baseline, kickoff_failures
+        )
 
     async def _execute_and_build_output_async(
         self,
         executor: AgentExecutor,
         inputs: dict[str, str],
         response_format: type[Any] | None = None,
+        usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Execute the agent asynchronously and build the output object."""
-        result = await executor.invoke_async(inputs)
-        return self._build_output_from_result(result, executor, response_format)
+        with tool_failure_collector() as kickoff_failures:
+            result = await executor.invoke_async(inputs)
+        return self._build_output_from_result(
+            result, executor, response_format, usage_baseline, kickoff_failures
+        )
 
     def _process_kickoff_guardrail(
         self,
@@ -1781,6 +1922,7 @@ class Agent(BaseAgent):
         inputs: dict[str, str],
         response_format: type[Any] | None = None,
         retry_count: int = 0,
+        usage_baseline: UsageMetrics | None = None,
     ) -> LiteAgentOutput:
         """Process guardrail for kickoff execution with retry logic.
 
@@ -1790,6 +1932,9 @@ class Agent(BaseAgent):
             inputs: Input dictionary for re-execution.
             response_format: Optional response format.
             retry_count: Current retry count.
+            usage_baseline: Usage snapshot taken at kickoff start, so a
+                retried output reports the whole call's usage, not just the
+                last attempt's.
 
         Returns:
             Validated/updated output.
@@ -1827,7 +1972,15 @@ class Agent(BaseAgent):
                 role="user",
             )
 
-            output = self._execute_and_build_output(executor, inputs, response_format)
+            retried = self._execute_and_build_output(
+                executor, inputs, response_format, usage_baseline
+            )
+            # The retry opens its own collector, so carry the blocked attempt's
+            # failures forward or they vanish from the final output.
+            retried.tool_failures = merge_tool_failures(
+                output.tool_failures, retried.tool_failures
+            )
+            output = retried
 
             return self._process_kickoff_guardrail(
                 output=output,
@@ -1835,6 +1988,7 @@ class Agent(BaseAgent):
                 inputs=inputs,
                 response_format=response_format,
                 retry_count=retry_count + 1,
+                usage_baseline=usage_baseline,
             )
 
         if guardrail_result.result is not None:
@@ -1897,11 +2051,18 @@ class Agent(BaseAgent):
                 crewai_event_bus.emit(self, event=started_event)
                 self._kickoff_event_id = started_event.event_id
 
+            usage_baseline = self._current_usage_summary()
             output = await self._execute_and_build_output_async(
-                executor, inputs, response_format
+                executor, inputs, response_format, usage_baseline
             )
             return self._finalize_kickoff(
-                output, executor, inputs, response_format, messages, agent_info
+                output,
+                executor,
+                inputs,
+                response_format,
+                messages,
+                agent_info,
+                usage_baseline,
             )
 
         except Exception as e:

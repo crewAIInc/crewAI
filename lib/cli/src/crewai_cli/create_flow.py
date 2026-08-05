@@ -5,6 +5,7 @@ import click
 from crewai_core.telemetry import Telemetry
 
 from crewai_cli.git import initialize_if_git_available
+from crewai_cli.utils import get_or_create_project_id
 from crewai_cli.version import get_crewai_tools_dependency
 
 
@@ -31,6 +32,8 @@ def create_flow(name: str, *, declarative: bool = False) -> None:
     else:
         _create_python_flow(name, class_name, folder_name, project_root)
 
+    # Minted at creation so the project has a stable identity from run one.
+    get_or_create_project_id(project_root / "pyproject.toml")
     initialize_if_git_available(project_root)
 
     click.secho(f"Flow {name} created successfully!", fg="green", bold=True)

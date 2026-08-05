@@ -966,8 +966,15 @@ class BaseLLM(BaseModel, ABC):
     def get_token_usage_summary(self) -> UsageMetrics:
         """Get summary of token usage for this LLM instance.
 
+        The counters are cumulative for the lifetime of this instance: they
+        grow across every call made through it, including calls issued by
+        different agents sharing the instance. For usage scoped to a single
+        call, snapshot before and after and use
+        ``UsageMetrics.delta_since`` (agent kickoff results already report
+        per-call usage this way).
+
         Returns:
-            Dictionary with token usage totals
+            UsageMetrics with this instance's lifetime token usage totals.
         """
         return UsageMetrics(**self._token_usage)
 
@@ -1000,15 +1007,14 @@ class BaseLLM(BaseModel, ABC):
 
         from crewai_core.printer import PRINTER
 
+        from crewai.hooks.dispatch import HookAborted, InterceptionPoint, dispatch
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
-            get_before_llm_call_hooks,
+            before_llm_call_reducer,
         )
 
-        before_hooks = get_before_llm_call_hooks()
-        if not before_hooks:
-            return True
-
+        # No early global-list guard: dispatch resolves global + execution-scoped
+        # hooks and has its own no-op fast path, so scoped hooks still run here.
         hook_context = LLMCallHookContext(
             executor=None,
             messages=messages,
@@ -1017,24 +1023,19 @@ class BaseLLM(BaseModel, ABC):
             task=None,
             crew=None,
         )
-        verbose = getattr(from_agent, "verbose", True) if from_agent else True
 
         try:
-            for hook in before_hooks:
-                result = hook(hook_context)
-                if result is False:
-                    if verbose:
-                        PRINTER.print(
-                            content="LLM call blocked by before_llm_call hook",
-                            color="yellow",
-                        )
-                    return False
-        except Exception as e:
-            if verbose:
-                PRINTER.print(
-                    content=f"Error in before_llm_call hook: {e}",
-                    color="yellow",
-                )
+            dispatch(
+                InterceptionPoint.PRE_MODEL_CALL,
+                hook_context,
+                reducer=before_llm_call_reducer,
+            )
+        except HookAborted:
+            PRINTER.print(
+                content="LLM call blocked by before_llm_call hook",
+                color="yellow",
+            )
+            return False
 
         return True
 
@@ -1067,17 +1068,14 @@ class BaseLLM(BaseModel, ABC):
         if from_agent is not None or not isinstance(response, str):
             return response
 
-        from crewai_core.printer import PRINTER
-
+        from crewai.hooks.dispatch import InterceptionPoint, dispatch
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
-            get_after_llm_call_hooks,
+            after_llm_call_reducer,
         )
 
-        after_hooks = get_after_llm_call_hooks()
-        if not after_hooks:
-            return response
-
+        # No early global-list guard: dispatch resolves global + execution-scoped
+        # hooks and has its own no-op fast path, so scoped hooks still run here.
         hook_context = LLMCallHookContext(
             executor=None,
             messages=messages,
@@ -1087,20 +1085,11 @@ class BaseLLM(BaseModel, ABC):
             crew=None,
             response=response,
         )
-        verbose = getattr(from_agent, "verbose", True) if from_agent else True
-        modified_response = response
 
-        try:
-            for hook in after_hooks:
-                result = hook(hook_context)
-                if result is not None and isinstance(result, str):
-                    modified_response = result
-                    hook_context.response = modified_response
-        except Exception as e:
-            if verbose:
-                PRINTER.print(
-                    content=f"Error in after_llm_call hook: {e}",
-                    color="yellow",
-                )
+        dispatch(
+            InterceptionPoint.POST_MODEL_CALL,
+            hook_context,
+            reducer=after_llm_call_reducer,
+        )
 
-        return modified_response
+        return hook_context.response if hook_context.response is not None else response

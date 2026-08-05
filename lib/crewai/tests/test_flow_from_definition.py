@@ -1102,7 +1102,7 @@ methods:
     )
 
 
-def test_tool_action_renders_text_custom_expression_inputs():
+def test_tool_action_renders_interpolated_inputs():
     yaml_str = f"""
 schema: crewai.flow/v1
 name: ToolFlow
@@ -1112,8 +1112,8 @@ methods:
       call: tool
       ref: {__name__}:StaticSearchTool
       with:
-        search_query: "${{'Ticket ID: ' + text(state, 'ticket.id') + '; Subject: ' + text(state, 'ticket.subject') + '; Priority: ' + text(state, 'priority', 'unknown') + '; Message: ' + text(state, 'messages.0.body')}}"
-        prefix: "${{text(state, 'ticket')}}"
+        search_query: "Ticket ID: ${{state.ticket.id}}; Subject: ${{state.ticket.subject}}; Message: ${{state.messages[0].body}}"
+        prefix: "${{state.prefix}}"
     start: true
 """
 
@@ -1124,9 +1124,10 @@ methods:
             inputs={
                 "ticket": {"id": 123, "subject": None},
                 "messages": [{"body": "Initial report"}],
+                "prefix": "ticket",
             }
         )
-        == '{"id": 123, "subject": null}:Ticket ID: 123; Subject: ; Priority: unknown; Message: Initial report'
+        == "ticket:Ticket ID: 123; Subject: ; Message: Initial report"
     )
 
 
@@ -1319,7 +1320,7 @@ methods:
         role: Analyst
         goal: Answer questions
         backstory: Knows things.
-        input: "Ticket ID: ${text(state, 'ticket.id')}; Subject: ${text(state, 'ticket.subject')}"
+        input: "Ticket ID: ${state.ticket.id}; Subject: ${state.ticket.subject}"
     start: true
 """
 
@@ -2909,37 +2910,6 @@ def test_explicit_cel_fields_accept_expression_markers():
     assert Flow.from_declaration(contents=definition).kickoff(inputs={"score": 90}) == "qualified"
 
 
-def test_expression_action_runs_text_custom_expression():
-    definition = FlowDefinition.from_declaration(contents=
-        {
-            "schema": "crewai.flow/v1",
-            "name": "ExpressionFlow",
-            "methods": {
-                "summarize": {
-                    "start": True,
-                    "do": {
-                        "call": "expression",
-                        "expr": (
-                            "'Ticket ID: ' + text(state, 'ticket.id') + "
-                            "'; Tags: ' + text(state, 'tags')"
-                        ),
-                    },
-                }
-            },
-        }
-    )
-
-    assert (
-        Flow.from_declaration(contents=definition).kickoff(
-            inputs={
-                "ticket": {"id": 123},
-                "tags": ["urgent", "billing"],
-            }
-        )
-        == 'Ticket ID: 123; Tags: ["urgent", "billing"]'
-    )
-
-
 def test_expression_local_context_recurses_into_dataclass_values():
     from crewai.flow.expressions import Expression
 
@@ -2980,6 +2950,52 @@ def test_expression_template_empty_context_overrides_stored_context():
     assert expression.render_template() == {"score": 90}
     with pytest.raises(ExpressionError):
         expression.render_template({})
+
+
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "{'a': 1/0}",
+        "{'a': 1, 'b': state.missing}",
+        "{'a': {'b': 1/0}}",
+        "{'a': [1/0]}",
+    ],
+)
+def test_expression_raises_for_cel_eval_error_returned_as_data(expression):
+    """celpy returns a map literal holding a CELEvalError instead of raising it."""
+    from crewai.flow.expressions import Expression, ExpressionError
+
+    with pytest.raises(ExpressionError, match="failed to evaluate CEL expression"):
+        Expression(expression, context={"state": {"score": 90}}).evaluate()
+
+
+def test_expression_nested_cel_eval_error_reports_underlying_cause():
+    from crewai.flow.expressions import Expression, ExpressionError
+
+    expression = Expression("{'a': 1/0}", context={"state": {}})
+
+    with pytest.raises(ExpressionError, match="modulus or divide by zero"):
+        expression.evaluate()
+
+
+def test_expression_keeps_short_circuited_cel_errors():
+    """Errors that CEL logic intentionally silences must still evaluate."""
+    from crewai.flow.expressions import Expression
+
+    context = {"state": {"tags": ["a", "b"]}}
+
+    assert Expression("{'ok': false && 1/0 == 1}", context=context).evaluate() == {
+        "ok": False
+    }
+    assert Expression("{'ok': true || 1/0 == 1}", context=context).evaluate() == {
+        "ok": True
+    }
+    assert (
+        Expression(
+            "state.tags.exists(t, t == 'a' || 1/0 == 1)", context=context
+        ).evaluate()
+        is True
+    )
 
 
 def test_expression_action_can_route_like_if_else():
