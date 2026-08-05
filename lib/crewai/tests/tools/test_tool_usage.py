@@ -4,6 +4,7 @@ import json
 import random
 import threading
 import time
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from crewai import Agent, Task
@@ -903,3 +904,81 @@ def test_tool_error_does_not_emit_finished_event():
     assert len(finished_events) == 0, (
         "ToolUsageFinishedEvent should NOT be emitted after ToolUsageErrorEvent"
     )
+
+
+def _recording_tool(*, should_fail: bool) -> tuple[Any, list[dict[str, Any]]]:
+    calls: list[dict[str, Any]] = []
+
+    class RecordingTool(BaseTool):
+        name: str = "recording_tool"
+        description: str = "Records each call, optionally failing afterwards."
+
+        def _run(self, to: str) -> str:
+            calls.append({"to": to})
+            if should_fail:
+                raise RuntimeError("upstream timeout after the side effect")
+            return f"sent to {to}"
+
+    return RecordingTool().to_structured_tool(), calls
+
+
+def _tool_usage_for(tool: Any, *, attempts: int = 1) -> ToolUsage:
+    tool_usage = ToolUsage(
+        tools_handler=None,
+        tools=[tool],
+        task=None,
+        function_calling_llm=None,
+        agent=None,
+        action=None,
+    )
+    tool_usage._max_parsing_attempts = attempts
+    return tool_usage
+
+
+def _call(tool_name: str = "recording_tool") -> ToolCalling:
+    return ToolCalling(tool_name=tool_name, arguments={"to": "user@example.com"})
+
+
+def test_failing_tool_body_runs_once_per_attempt():
+    tool, calls = _recording_tool(should_fail=True)
+
+    _tool_usage_for(tool).use(calling=_call(), tool_string="")
+
+    assert len(calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_failing_tool_body_runs_once_per_attempt_async():
+    tool, calls = _recording_tool(should_fail=True)
+
+    await _tool_usage_for(tool).ause(calling=_call(), tool_string="")
+
+    assert len(calls) == 1
+
+
+def test_unreadable_args_schema_falls_back_to_raw_arguments():
+    tool, calls = _recording_tool(should_fail=False)
+    original_schema = tool.args_schema
+
+    class SchemaWithoutProperties:
+        def model_json_schema(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+            schema = dict(original_schema.model_json_schema(*args, **kwargs))
+            schema.pop("properties", None)
+            return schema
+
+        def __getattr__(self, item: str) -> Any:
+            return getattr(original_schema, item)
+
+    tool.args_schema = SchemaWithoutProperties()
+
+    _tool_usage_for(tool).use(calling=_call(), tool_string="")
+
+    assert calls == [{"to": "user@example.com"}]
+
+
+def test_successful_tool_body_runs_once():
+    tool, calls = _recording_tool(should_fail=False)
+
+    _tool_usage_for(tool).use(calling=_call(), tool_string="")
+
+    assert len(calls) == 1
