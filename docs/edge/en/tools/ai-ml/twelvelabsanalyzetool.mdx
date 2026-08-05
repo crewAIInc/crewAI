@@ -1,0 +1,88 @@
+---
+title: TwelveLabs Analyze Tool
+description: The `TwelveLabsAnalyzeTool` analyzes video content using TwelveLabs' Pegasus video-understanding model.
+icon: video
+mode: "wide"
+---
+
+# `TwelveLabsAnalyzeTool`
+
+## Description
+
+The `TwelveLabsAnalyzeTool` uses [TwelveLabs'](https://twelvelabs.io) Pegasus
+video-understanding model to analyze video content and answer natural-language
+prompts about it. Pegasus reasons over a video's visuals, speech, and on-screen
+text, making the tool useful for summarization, question answering over video,
+content moderation, and metadata extraction.
+
+The tool accepts either a public video URL or the `video_id` of a video already
+indexed in TwelveLabs.
+
+## Installation
+
+Install the `crewai_tools` package along with the TwelveLabs SDK:
+
+```shell
+pip install 'crewai[tools]' twelvelabs
+```
+
+You can grab a free API key at [twelvelabs.io](https://twelvelabs.io) — there's a generous free tier.
+
+## Usage
+
+Set your TwelveLabs API key in the environment variable `TWELVELABS_API_KEY`,
+then pass the tool to an agent.
+
+```python Code
+from crewai_tools import TwelveLabsAnalyzeTool
+
+analyze_tool = TwelveLabsAnalyzeTool()
+
+@agent
+def video_researcher(self) -> Agent:
+    '''
+    This agent uses the TwelveLabsAnalyzeTool to understand video content.
+    '''
+    return Agent(
+        config=self.agents_config["video_researcher"],
+        allow_delegation=False,
+        tools=[analyze_tool],
+    )
+```
+
+### Direct invocation
+
+```python Code
+from crewai_tools import TwelveLabsAnalyzeTool
+
+tool = TwelveLabsAnalyzeTool()
+
+# Analyze a public video URL
+result = tool.run(
+    prompt="Summarize this video in three bullet points.",
+    video_url="https://example.com/my-video.mp4",
+)
+
+# Or analyze a video already indexed in TwelveLabs
+result = tool.run(
+    prompt="List every product shown in this video.",
+    video_id="your_indexed_video_id",
+)
+```
+
+## Arguments
+
+| Argument    | Type  | Description                                                                        |
+| ----------- | ----- | ---------------------------------------------------------------------------------- |
+| `prompt`    | `str` | **Required.** Instruction describing what to extract from the video.               |
+| `video_url` | `str` | Public URL of the video to analyze. Provide this or `video_id`.                    |
+| `video_id`  | `str` | ID of a video already indexed in TwelveLabs. Provide this or `video_url`.          |
+
+## Constructor Options
+
+| Option        | Type    | Default        | Description                                              |
+| ------------- | ------- | -------------- | -------------------------------------------------------- |
+| `api_key`     | `str`   | env var        | TwelveLabs API key. Falls back to `TWELVELABS_API_KEY`.  |
+| `model_name`  | `str`   | `pegasus1.5`   | Pegasus model to use.                                    |
+| `max_tokens`  | `int`   | `2048`         | Maximum tokens in the answer (must be at least 512).     |
+| `temperature` | `float` | `None`         | Optional sampling temperature.                           |

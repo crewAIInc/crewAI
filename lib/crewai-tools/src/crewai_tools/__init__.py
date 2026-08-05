@@ -208,6 +208,10 @@ from crewai_tools.tools.tavily_research_tool.tavily_research_tool import (
     TavilyResearchTool,
 )
 from crewai_tools.tools.tavily_search_tool.tavily_search_tool import TavilySearchTool
+from crewai_tools.tools.twelvelabs_analyze_tool.twelvelabs_analyze_tool import (
+    TwelveLabsAnalyzeTool,
+    TwelveLabsAnalyzeToolSchema,
+)
 from crewai_tools.tools.txt_search_tool.txt_search_tool import TXTSearchTool
 from crewai_tools.tools.vision_tool.vision_tool import VisionTool
 from crewai_tools.tools.wait_tool.wait_tool import WaitTool
@@ -327,6 +331,8 @@ __all__ = [
     "TavilyGetResearchTool",
     "TavilyResearchTool",
     "TavilySearchTool",
+    "TwelveLabsAnalyzeTool",
+    "TwelveLabsAnalyzeToolSchema",
     "VisionTool",
     "WaitTool",
     "WeaviateVectorSearchTool",
