@@ -32,10 +32,10 @@ You often need **both**: skills for expertise, tools for action. They are config
 The CLI is the supported way to create a skill — it scaffolds the directory layout and a valid `SKILL.md` for you:
 
 ```shell Terminal
-crewai skill create code-review
+crewai create skill code-review
 ```
 
-Inside a crew project (where `pyproject.toml` lives) this creates `./skills/code-review/`; outside a project it creates `./code-review/` in the current directory (you can force that behavior with `--no-project`):
+Inside a crew project (where `pyproject.toml` lives) this creates `./skills/code-review/`; outside a project it creates `./code-review/` in the current directory (you can force that behavior with `--no-project` on `crewai create skill`):
 
 ```
 skills/
@@ -178,12 +178,16 @@ agent = Agent(
 
 ## Creating, Publishing, and Installing Skills
 
-Skills have a full lifecycle managed by the CLI: **create them with `crewai skill create`, publish them with `crewai skill publish`** — hand-rolling directories works for local experiments, but the CLI is the intended workflow and keeps your skill layout and frontmatter valid.
+Skills have a full lifecycle managed by the CLI: **create them with `crewai create skill`, publish them with `crewai skill publish`** — hand-rolling directories works for local experiments, but the CLI is the intended workflow and keeps your skill layout and frontmatter valid.
+
+<Note>
+  `crewai skill create` is deprecated and still works with a warning. Use `crewai create skill` instead.
+</Note>
 
 ### Create
 
 ```shell Terminal
-crewai skill create my-skill
+crewai create skill my-skill
 ```
 
 Scaffolds the directory (into `./skills/` inside a crew project) with a template `SKILL.md`, plus empty `scripts/`, `references/`, and `assets/` directories. Edit `SKILL.md` to define the instructions.
