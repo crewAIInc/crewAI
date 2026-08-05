@@ -26989,6 +26989,7 @@
           "line_count": {
             "anyOf": [
               {
+                "minimum": 1,
                 "type": "integer"
               },
               {
@@ -27002,6 +27003,7 @@
           "start_line": {
             "anyOf": [
               {
+                "minimum": 1,
                 "type": "integer"
               },
               {

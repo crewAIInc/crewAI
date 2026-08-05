@@ -81,10 +81,11 @@ class URLReadToolSchema(BaseModel):
         ),
     )
     start_line: int | None = Field(
-        1, description="Line number to start reading from (1-indexed)"
+        1, ge=1, description="Line number to start reading from (1-indexed)"
     )
     line_count: int | None = Field(
         None,
+        ge=1,
         description="Number of lines to read. If None, reads the entire content",
     )
 
@@ -311,12 +312,16 @@ class URLReadTool(BaseTool):
 
         The whole body has already been fetched by this point, so unlike the
         filesystem equivalent this only trims output -- it saves no transfer.
+
+        The bounds are clamped rather than trusted: the args schema rejects
+        anything below 1 before it gets here, but islice raises on a negative
+        stop index, and this runs outside the caller's error handling.
         """
         if start_line == 1 and line_count is None:
             return text
 
         start_index = max(start_line - 1, 0)
-        stop_index = None if line_count is None else start_index + line_count
+        stop_index = None if line_count is None else start_index + max(line_count, 0)
         selected = list(islice(text.splitlines(keepends=True), start_index, stop_index))
 
         if not selected and start_index > 0:

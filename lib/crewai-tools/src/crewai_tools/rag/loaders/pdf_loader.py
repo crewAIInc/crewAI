@@ -7,7 +7,12 @@ from urllib.parse import urlparse
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.source_content import SourceContent
-from crewai_tools.security.safe_requests import safe_get
+from crewai_tools.security.safe_requests import safe_get_bounded
+
+
+# Remote PDFs are held in memory for the whole extraction, so the download needs
+# a ceiling. Override per call with the ``max_bytes`` kwarg to ``load``.
+DEFAULT_MAX_PDF_BYTES = 50 * 1024 * 1024
 
 
 class PDFLoader(BaseLoader):
@@ -28,17 +33,19 @@ class PDFLoader(BaseLoader):
 
         The content stays in memory rather than going to a temporary file: the
         whole body has to be buffered either way, and a temp file would need
-        unlinking on every error path to avoid leaving files behind.
+        unlinking on every error path to avoid leaving files behind. Because it
+        is held in memory, the download is capped.
 
         Args:
             url: The URL to download from.
-            kwargs: Optional dict that may contain custom headers.
+            kwargs: Optional dict that may contain custom ``headers`` and a
+                ``max_bytes`` ceiling for the download.
 
         Returns:
             The raw PDF content.
 
         Raises:
-            ValueError: If the download fails.
+            ValueError: If the download fails or exceeds the size ceiling.
         """
         headers = kwargs.get(
             "headers",
@@ -49,9 +56,13 @@ class PDFLoader(BaseLoader):
         )
 
         try:
-            response = safe_get(url, headers=headers, timeout=30)
-            response.raise_for_status()
-            return response.content
+            body, _content_type, _final_url = safe_get_bounded(
+                url,
+                max_bytes=kwargs.get("max_bytes", DEFAULT_MAX_PDF_BYTES),
+                headers=headers,
+                timeout=30,
+            )
+            return body
         except Exception as e:
             raise ValueError(f"Failed to download PDF from {url}: {e!s}") from e
 
