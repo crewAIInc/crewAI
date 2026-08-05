@@ -183,13 +183,24 @@ class AzureCompletion(BaseLLM):
             pass
         return self
 
+    @staticmethod
+    def _openai_completion_class() -> Any:
+        """Return the OpenAICompletion class used for Responses API delegation.
+
+        Isolated so tests can patch this lookup reliably under pytest-xdist
+        instead of racing the dynamic import inside ``_init_responses_delegate``.
+        """
+        from crewai.llms.providers.openai.completion import OpenAICompletion
+
+        return OpenAICompletion
+
     def _init_responses_delegate(self) -> None:
         """Create an OpenAICompletion delegate for the Azure OpenAI Responses API.
 
         The Azure OpenAI Responses API uses the standard OpenAI Python SDK
         with a base_url pointing to the Azure resource's /openai/v1/ endpoint.
         """
-        from crewai.llms.providers.openai.completion import OpenAICompletion
+        openai_completion_cls = self._openai_completion_class()
 
         base_url = self._get_responses_base_url()
 
@@ -239,7 +250,7 @@ class AzureCompletion(BaseLLM):
         if self.additional_params:
             delegate_kwargs["additional_params"] = self.additional_params
 
-        self._responses_delegate = OpenAICompletion(**delegate_kwargs)
+        self._responses_delegate = openai_completion_cls(**delegate_kwargs)
 
     def _get_responses_base_url(self) -> str:
         """Construct the base URL for the Azure OpenAI Responses API.

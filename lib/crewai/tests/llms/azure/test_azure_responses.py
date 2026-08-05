@@ -29,9 +29,12 @@ def azure_env():
 def mock_openai_completion():
     """Mock OpenAICompletion to avoid real client creation.
 
-    Patches at the source module so that the dynamic import inside
-    _init_responses_delegate picks up the mock.
+    Patches ``AzureCompletion._openai_completion_class`` so the Responses
+    delegate lookup is deterministic under pytest-xdist (patching the
+    dynamic import target alone can miss under parallel workers).
     """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
     instance = MagicMock()
     instance.call = MagicMock(return_value="responses-result")
     instance.acall = AsyncMock(return_value="async-responses-result")
@@ -41,9 +44,10 @@ def mock_openai_completion():
     instance.reset_reasoning_chain = MagicMock()
     mock_cls = MagicMock(return_value=instance)
 
-    with patch(
-        "crewai.llms.providers.openai.completion.OpenAICompletion",
-        mock_cls,
+    with patch.object(
+        AzureCompletion,
+        "_openai_completion_class",
+        return_value=mock_cls,
     ):
         yield mock_cls, instance
 
