@@ -50,7 +50,6 @@ class CrewAIPlatformActionTool(BaseTool):
             args_schema=args_schema,
             app=app,
         )
-        self.app = app
         self.action_name = action_name
         self.action_schema = action_schema
 
