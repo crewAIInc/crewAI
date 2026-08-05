@@ -29,4 +29,4 @@ Supported operations:
 
 Provider and service slugs use lowercase letters, numbers, and single hyphens. Incident state is `active` or `resolved`; severity is `minor`, `major`, `critical`, or `maintenance`.
 
-The API is read-only for these operations and the tool fixes requests to OutageDeck's production HTTPS origin. See the [OutageDeck API documentation](https://outagedeck.com/docs/api?utm_source=crewai&utm_medium=integration&utm_campaign=crewai_tool) for the underlying response contract and anonymous rate limit.
+The API is read-only for these operations and the tool fixes requests to OutageDeck's production HTTPS origin. See the [OutageDeck API documentation](https://outagedeck.com/developers/api?utm_source=crewai&utm_medium=integration&utm_campaign=crewai_tool) for the underlying response contract and anonymous rate limit.

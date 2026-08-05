@@ -151,6 +151,13 @@ def test_service_status_caps_incident_context(mock_get: Mock, tool: OutageDeckSt
 
     result = parsed(tool.run(operation="service_status", slug="github-actions"))
 
+    mock_get.assert_called_once_with(
+        "https://outagedeck.com/api/v1/services/github-actions",
+        params={},
+        headers={"Accept": "application/json", "User-Agent": "CrewAI-OutageDeck/1.0"},
+        timeout=7,
+        max_redirects=0,
+    )
     assert result["service"]["status"] == "degraded"
     assert result["provider"] == {"slug": "github", "name": "GitHub"}
     assert len(result["recent_incidents"]) == 10

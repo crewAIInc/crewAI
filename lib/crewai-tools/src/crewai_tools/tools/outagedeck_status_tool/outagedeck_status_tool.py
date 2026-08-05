@@ -160,6 +160,7 @@ class OutageDeckStatusTool(BaseTool):
         return await asyncio.to_thread(self._execute, request)
 
     def _execute(self, request: OutageDeckStatusInput) -> str:
+        """Execute a validated request and serialize a stable result envelope."""
         url, params, resource = self._request_details(request)
         try:
             response = safe_get(
@@ -192,6 +193,7 @@ class OutageDeckStatusTool(BaseTool):
     def _request_details(
         request: OutageDeckStatusInput,
     ) -> tuple[str, dict[str, str | int], str]:
+        """Map an operation to its fixed endpoint, query, and error context."""
         if request.operation == "provider_status":
             return (
                 f"{_API_BASE_URL}/providers/{request.slug}",
@@ -221,6 +223,7 @@ class OutageDeckStatusTool(BaseTool):
     def _parse_response(
         cls, operation: OutageDeckOperation, payload: Any
     ) -> dict[str, Any]:
+        """Dispatch an API payload to the matching response normalizer."""
         if operation == "provider_status":
             return cls._parse_provider(payload)
         if operation == "service_status":
@@ -229,6 +232,7 @@ class OutageDeckStatusTool(BaseTool):
 
     @staticmethod
     def _data(payload: Any) -> dict[str, Any] | None:
+        """Return the response data object when its shape is valid."""
         if not isinstance(payload, dict):
             return None
         data = payload.get("data")
@@ -236,6 +240,7 @@ class OutageDeckStatusTool(BaseTool):
 
     @classmethod
     def _parse_provider(cls, payload: Any) -> dict[str, Any]:
+        """Normalize one provider response for agent consumption."""
         data = cls._data(payload)
         if data is None:
             return {"error": "OutageDeck returned an unexpected provider response."}
@@ -278,6 +283,7 @@ class OutageDeckStatusTool(BaseTool):
 
     @classmethod
     def _parse_incidents(cls, payload: Any) -> dict[str, Any]:
+        """Normalize a paginated incident-list response."""
         data = cls._data(payload)
         if data is None or not isinstance(data.get("incidents"), list):
             return {"error": "OutageDeck returned an unexpected incident response."}
@@ -294,6 +300,7 @@ class OutageDeckStatusTool(BaseTool):
 
     @classmethod
     def _parse_service(cls, payload: Any) -> dict[str, Any]:
+        """Normalize one service response with bounded incident context."""
         data = cls._data(payload)
         if data is None:
             return {"error": "OutageDeck returned an unexpected service response."}
@@ -324,6 +331,7 @@ class OutageDeckStatusTool(BaseTool):
     def _normalized_incidents(
         cls, incidents: Any, limit: int | None = None
     ) -> list[dict[str, Any]]:
+        """Normalize valid incident objects and apply an optional result cap."""
         if not isinstance(incidents, list):
             return []
         normalized = [
@@ -335,6 +343,7 @@ class OutageDeckStatusTool(BaseTool):
 
     @classmethod
     def _incident(cls, incident: Any) -> dict[str, Any] | None:
+        """Normalize one incident object or reject an invalid value."""
         if not isinstance(incident, dict):
             return None
         provider = incident.get("provider")
@@ -369,10 +378,12 @@ class OutageDeckStatusTool(BaseTool):
 
     @staticmethod
     def _attributed_url(path: str) -> str:
+        """Build a campaign-attributed OutageDeck page URL."""
         return f"{_SITE_BASE_URL}{path}?{urlencode(_ATTRIBUTION)}"
 
     @staticmethod
     def _http_error(error: requests.HTTPError, resource: str) -> str:
+        """Translate an HTTP failure into a concise, non-sensitive message."""
         status = error.response.status_code if error.response is not None else None
         if status == 404:
             return f"OutageDeck could not find {resource}."
@@ -384,8 +395,10 @@ class OutageDeckStatusTool(BaseTool):
 
     @staticmethod
     def _success(result: dict[str, Any]) -> str:
+        """Serialize a successful tool result as compact JSON."""
         return json.dumps({"success": True, **result}, separators=(",", ":"))
 
     @staticmethod
     def _failure(message: str) -> str:
+        """Serialize a failed tool result as compact JSON."""
         return json.dumps({"success": False, "error": message}, separators=(",", ":"))
