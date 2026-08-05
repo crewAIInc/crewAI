@@ -21,6 +21,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Confirm
 import tomlkit
+import yaml
 
 from crewai_devtools.docs_check import docs_check
 from crewai_devtools.docs_versioning import (
@@ -1476,39 +1477,20 @@ def _pyproject_crewai_requirements(content: str) -> list[tuple[str, str]]:
 
 
 def _workflow_run_commands(content: str) -> list[str]:
-    """Extract scalar and block ``run`` command values from workflow YAML text."""
-    lines = content.splitlines()
+    """Extract shell commands from workflow ``run`` values."""
     commands: list[str] = []
-    index = 0
-    while index < len(lines):
-        line = lines[index]
-        stripped = line.lstrip()
-        if stripped.startswith("- run:"):
-            stripped = stripped[2:].lstrip()
-        if not stripped.startswith("run:"):
-            index += 1
-            continue
 
-        indent = len(line) - len(line.lstrip())
-        value = stripped.removeprefix("run:").strip()
-        if value not in {"|", "|-", "|+", ">", ">-", ">+"}:
-            commands.append(value)
-            index += 1
-            continue
+    def collect_run_commands(node: object) -> None:
+        if isinstance(node, Mapping):
+            for key, value in node.items():
+                if key == "run" and isinstance(value, str):
+                    commands.append(value)
+                collect_run_commands(value)
+        elif isinstance(node, list):
+            for value in node:
+                collect_run_commands(value)
 
-        block: list[str] = []
-        index += 1
-        while index < len(lines):
-            block_line = lines[index]
-            if (
-                block_line.strip()
-                and len(block_line) - len(block_line.lstrip()) <= indent
-            ):
-                break
-            block.append(block_line.strip())
-            index += 1
-        separator = " " if value.startswith(">") else "\n"
-        commands.append(separator.join(block))
+    collect_run_commands(yaml.safe_load(content))
     return commands
 
 

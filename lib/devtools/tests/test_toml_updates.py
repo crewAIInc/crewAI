@@ -55,6 +55,31 @@ def test_deployment_repo_validation_accepts_workflow_pin(tmp_path: Path) -> None
     )
 
 
+@pytest.mark.parametrize(
+    "run_value",
+    [
+        "'uv pip install \"crewai==2.0.0\"'",
+        '"uv pip install \\"crewai==2.0.0\\""',
+    ],
+)
+def test_deployment_repo_validation_accepts_quoted_workflow_pin(
+    tmp_path: Path,
+    run_value: str,
+) -> None:
+    workflows = tmp_path / ".github" / "workflows"
+    workflows.mkdir(parents=True)
+    (workflows / "test.yml").write_text(
+        f"run: {run_value}\n",
+        encoding="utf-8",
+    )
+
+    _validate_deployment_repo_crewai_pin(
+        tmp_path,
+        '[project]\ndependencies = ["requests>=2"]\n',
+        "2.0.0",
+    )
+
+
 def test_deployment_repo_validation_rejects_mixed_versions(tmp_path: Path) -> None:
     workflows = tmp_path / ".github" / "workflows"
     workflows.mkdir(parents=True)
