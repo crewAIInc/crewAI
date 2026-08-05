@@ -170,3 +170,30 @@ def test_create_crew_rejects_output_dir_flag(mock_template_command_cls, runner):
     assert result.exit_code == 2, result.output
     assert "--output-dir can only be used with template projects." in result.output
     mock_template_command_cls.return_value.add_template.assert_not_called()
+
+
+@mock.patch("crewai_cli.cli.enable_prompt_line_editing")
+@mock.patch("crewai_cli.cli.click.prompt", return_value="picked-tool")
+@mock.patch("crewai_cli.tui_picker.pick", return_value="tool")
+@mock.patch("crewai_cli.tools.main.ToolCommand")
+def test_create_picker_supports_tool_skill_and_template(
+    mock_tool_command_cls,
+    mock_pick,
+    mock_prompt,
+    mock_enable_prompt,
+    runner,
+):
+    result = runner.invoke(create, [])
+
+    assert result.exit_code == 0, result.output
+    mock_pick.assert_called_once()
+    picker_options = mock_pick.call_args[0][1]
+    assert {option[0] for option in picker_options} == {
+        "crew",
+        "flow",
+        "tool",
+        "skill",
+        "template",
+    }
+    mock_prompt.assert_called_once()
+    mock_tool_command_cls.return_value.create.assert_called_once_with("picked-tool")

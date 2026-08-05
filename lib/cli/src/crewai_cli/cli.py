@@ -187,7 +187,8 @@ def create(
         if dmn_mode:
             raise click.UsageError(
                 "TYPE is required when CREWAI_DMN is set. "
-                "Use `crewai create crew <name>` or `crewai create flow <name>`."
+                "Use `crewai create <type> <name>` where type is one of: "
+                "crew, flow, tool, skill, template."
             )
         from crewai_cli.tui_picker import pick
 
@@ -197,6 +198,9 @@ def create(
                 "flow",
                 "A deterministic workflow with full control over agents and crews",
             ),
+            ("tool", "A custom tool for the CrewAI Tool Repository"),
+            ("skill", "An agent skill with instructions and optional assets"),
+            ("template", "A remote project template from the CrewAI gallery"),
         ]
         type = pick("What would you like to create?", options)
         if type is None:
