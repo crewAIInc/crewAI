@@ -25,6 +25,7 @@ from __future__ import annotations
 from collections.abc import Callable
 import contextlib
 import hashlib
+import hmac
 import json
 import os
 from pathlib import Path
@@ -626,7 +627,14 @@ def _cache_key(provider_key: str) -> str:
     api_key = _provider_api_key(provider_key)
     if not api_key:
         return f"{provider_key}#nokey"
-    digest = hashlib.sha256(api_key.encode("utf-8")).hexdigest()[:12]
+    # HMAC with the credential as the key (not as hash input). SHA-256 alone on
+    # API-key material trips CodeQL py/weak-sensitive-data-hashing; keyed HMAC is
+    # the right construction for a local cache partition id.
+    digest = hmac.new(
+        api_key.encode("utf-8"),
+        b"crewai.model_catalog.cache_v1",
+        hashlib.sha256,
+    ).hexdigest()[:12]
     return f"{provider_key}#{digest}"
 
 

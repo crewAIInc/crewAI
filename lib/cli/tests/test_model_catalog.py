@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import time
 
@@ -583,6 +585,14 @@ def test_cache_key_hashes_key_and_never_stores_it(monkeypatch):
     key = mc._cache_key("openai")
     assert key.startswith("openai#") and key != "openai#nokey"
     assert "sk-super-secret" not in key  # only a digest, never the raw key
+    # Credential is the HMAC key (not SHA-256 hash input) so CodeQL
+    # py/weak-sensitive-data-hashing does not flag password-style hashing.
+    expected = hmac.new(
+        b"sk-super-secret",
+        b"crewai.model_catalog.cache_v1",
+        hashlib.sha256,
+    ).hexdigest()[:12]
+    assert key == f"openai#{expected}"
 
 
 def test_dynamic_cache_expires_after_catalog_ttl(monkeypatch):
