@@ -141,7 +141,7 @@ def uv(uv_args: tuple[str, ...]) -> None:
     "type",
     required=False,
     default=None,
-    type=click.Choice(["crew", "flow", "tool", "skill"]),
+    type=click.Choice(["crew", "flow", "tool", "skill", "template"]),
 )
 @click.argument("name", required=False, default=None)
 @click.option("--provider", type=str, help="The provider to use for the crew")
@@ -164,6 +164,13 @@ def uv(uv_args: tuple[str, ...]) -> None:
     flag_value=False,
     help="Skill only: create in current dir instead of ./skills/",
 )
+@click.option(
+    "-o",
+    "--output-dir",
+    type=str,
+    default=None,
+    help="Template only: directory name for the template (defaults to template name)",
+)
 def create(
     type: str | None,
     name: str | None,
@@ -172,8 +179,9 @@ def create(
     classic: bool = False,
     declarative: bool = False,
     in_project: bool = True,
+    output_dir: str | None = None,
 ) -> None:
-    """Create a new crew, flow, tool, or skill."""
+    """Create a new crew, flow, tool, skill, or template."""
     dmn_mode = is_dmn_mode_enabled()
     if not type:
         if dmn_mode:
@@ -206,6 +214,8 @@ def create(
         skip_provider = True
     if not in_project and type != "skill":
         raise click.UsageError("--no-project can only be used with skill projects.")
+    if output_dir is not None and type != "template":
+        raise click.UsageError("--output-dir can only be used with template projects.")
     if type == "tool":
         if declarative or classic or provider is not None or skip_provider:
             raise click.UsageError(
@@ -222,6 +232,13 @@ def create(
         from crewai_cli.skills.main import SkillCommand
 
         SkillCommand().create(name, in_project=in_project)
+    elif type == "template":
+        if declarative or classic or provider is not None or skip_provider:
+            raise click.UsageError(
+                "Crew and flow options cannot be used with template projects."
+            )
+        template_cmd = TemplateCommand()
+        template_cmd.add_template(name, output_dir)
     elif type == "crew":
         if declarative:
             raise click.UsageError("--declarative can only be used with flow projects")
@@ -239,7 +256,7 @@ def create(
         create_flow(name, declarative=declarative)
     else:
         click.secho(
-            "Error: Invalid type. Must be 'crew', 'flow', 'tool', or 'skill'.",
+            "Error: Invalid type. Must be 'crew', 'flow', 'tool', 'skill', or 'template'.",
             fg="red",
         )
 
@@ -803,7 +820,8 @@ def template_list() -> None:
     help="Directory name for the template (defaults to template name)",
 )
 def template_add(name: str, output_dir: str | None) -> None:
-    """Add a template to the current directory."""
+    """[Deprecated: use `crewai create template`] Add a template to the current directory."""
+    warn_deprecated_command(old="crewai template add", new="crewai create template")
     template_cmd = TemplateCommand()
     template_cmd.add_template(name, output_dir)
 

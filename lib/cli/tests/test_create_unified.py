@@ -103,3 +103,70 @@ def test_create_crew_rejects_no_project_flag(mock_skill_command_cls, runner):
     assert result.exit_code == 2, result.output
     assert "--no-project can only be used with skill projects." in result.output
     mock_skill_command_cls.return_value.create.assert_not_called()
+
+
+@mock.patch("crewai_cli.remote_template.main.TemplateCommand")
+def test_create_template_invokes_template_command(mock_template_command_cls, runner):
+    result = runner.invoke(create, ["template", "my-template"])
+
+    assert result.exit_code == 0, result.output
+    mock_template_command_cls.return_value.add_template.assert_called_once_with(
+        "my-template", None
+    )
+    assert "deprecated" not in result.output.lower()
+
+
+@mock.patch("crewai_cli.remote_template.main.TemplateCommand")
+def test_create_template_output_dir_flag(mock_template_command_cls, runner):
+    result = runner.invoke(
+        create, ["template", "my-template", "--output-dir", "custom_dir"]
+    )
+
+    assert result.exit_code == 0, result.output
+    mock_template_command_cls.return_value.add_template.assert_called_once_with(
+        "my-template", "custom_dir"
+    )
+
+
+@mock.patch("crewai_cli.remote_template.main.TemplateCommand")
+def test_template_add_is_deprecated_and_still_works(mock_template_command_cls, runner):
+    result = runner.invoke(
+        crewai, ["template", "add", "my-template", "--output-dir", "custom_dir"]
+    )
+
+    assert result.exit_code == 0, result.output
+    mock_template_command_cls.return_value.add_template.assert_called_once_with(
+        "my-template", "custom_dir"
+    )
+    assert (
+        "Warning: The command 'crewai template add' is deprecated. "
+        "Use 'crewai create template' instead."
+        in result.output
+    )
+
+
+@mock.patch("crewai_cli.remote_template.main.TemplateCommand")
+@pytest.mark.parametrize(
+    "extra_args",
+    [["--classic"], ["--declarative"], ["--provider", "openai"], ["--skip_provider"]],
+)
+def test_create_template_rejects_crew_and_flow_flags(
+    mock_template_command_cls, runner, extra_args
+):
+    result = runner.invoke(create, ["template", "my-template", *extra_args])
+
+    assert result.exit_code == 2, result.output
+    assert (
+        "Crew and flow options cannot be used with template projects."
+        in result.output
+    )
+    mock_template_command_cls.return_value.add_template.assert_not_called()
+
+
+@mock.patch("crewai_cli.remote_template.main.TemplateCommand")
+def test_create_crew_rejects_output_dir_flag(mock_template_command_cls, runner):
+    result = runner.invoke(create, ["crew", "my-crew", "--output-dir", "custom_dir"])
+
+    assert result.exit_code == 2, result.output
+    assert "--output-dir can only be used with template projects." in result.output
+    mock_template_command_cls.return_value.add_template.assert_not_called()
