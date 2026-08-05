@@ -19,6 +19,7 @@ from crewai_cli.utils import (
     enable_prompt_line_editing,
     is_dmn_mode_enabled,
     read_toml,
+    warn_deprecated_command,
 )
 
 
@@ -137,7 +138,10 @@ def uv(uv_args: tuple[str, ...]) -> None:
 
 @crewai.command()
 @click.argument(
-    "type", required=False, default=None, type=click.Choice(["crew", "flow"])
+    "type",
+    required=False,
+    default=None,
+    type=click.Choice(["crew", "flow", "tool"]),
 )
 @click.argument("name", required=False, default=None)
 @click.option("--provider", type=str, help="The provider to use for the crew")
@@ -160,7 +164,7 @@ def create(
     classic: bool = False,
     declarative: bool = False,
 ) -> None:
-    """Create a new crew, or flow."""
+    """Create a new crew, flow, or tool."""
     dmn_mode = is_dmn_mode_enabled()
     if not type:
         if dmn_mode:
@@ -191,7 +195,15 @@ def create(
         )
     if dmn_mode:
         skip_provider = True
-    if type == "crew":
+    if type == "tool":
+        if declarative or classic or provider is not None or skip_provider:
+            raise click.UsageError(
+                "Crew and flow options cannot be used with tool projects."
+            )
+        from crewai_cli.tools.main import ToolCommand
+
+        ToolCommand().create(name)
+    elif type == "crew":
         if declarative:
             raise click.UsageError("--declarative can only be used with flow projects")
         if classic:
@@ -207,7 +219,7 @@ def create(
 
         create_flow(name, declarative=declarative)
     else:
-        click.secho("Error: Invalid type. Must be 'crew' or 'flow'.", fg="red")
+        click.secho("Error: Invalid type. Must be 'crew', 'flow', or 'tool'.", fg="red")
 
 
 @crewai.command()
@@ -652,6 +664,8 @@ def tool() -> None:
 @tool.command(name="create")
 @click.argument("handle")
 def tool_create(handle: str) -> None:
+    """[Deprecated: use `crewai create tool`] Create a custom tool project."""
+    warn_deprecated_command(old="crewai tool create", new="crewai create tool")
     from crewai_cli.tools.main import ToolCommand
 
     tool_cmd = ToolCommand()
