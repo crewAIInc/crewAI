@@ -1017,6 +1017,7 @@ def test_openai_responses_api_preserves_assistant_content_with_tool_calls():
             "tool_calls": [
                 {
                     "type": "function",
+                    "id": "call_fetch_page",
                     "function": {
                         "name": "fetch_page",
                         "arguments": {"url": "https://example.com"},
@@ -1033,8 +1034,37 @@ def test_openai_responses_api_preserves_assistant_content_with_tool_calls():
         "content": "I'll fetch that page now.",
     }
     assert params["input"][1]["type"] == "function_call"
-    assert params["input"][1]["call_id"].startswith("call_")
+    assert params["input"][1]["call_id"] == "call_fetch_page"
     assert params["input"][1]["arguments"] == '{"url": "https://example.com"}'
+
+
+def test_openai_responses_api_defaults_missing_tool_call_arguments():
+    """Missing or empty tool-call arguments must become a valid JSON object."""
+    llm = OpenAICompletion(model="gpt-4o-mini", api="responses")
+
+    messages = [
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "call_no_args",
+                    "type": "function",
+                    "function": {"name": "ping"},
+                },
+                {
+                    "id": "call_empty_args",
+                    "type": "function",
+                    "function": {"name": "ping", "arguments": ""},
+                },
+            ],
+        }
+    ]
+
+    params = llm._prepare_responses_params(messages)
+
+    assert params["input"][0]["arguments"] == "{}"
+    assert params["input"][1]["arguments"] == "{}"
 
 
 def test_openai_responses_api_converts_tool_result_message():

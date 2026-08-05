@@ -771,15 +771,17 @@ class OpenAICompletion(BaseLLM):
                 items.append({"role": "assistant", "content": content})
             for call in message["tool_calls"]:
                 function = call.get("function", {})
-                args = function.get("arguments", "")
+                args = function.get("arguments")
+                if args is None or args == "":
+                    args = "{}"
+                elif not isinstance(args, str):
+                    args = json.dumps(args)
                 items.append(
                     {
                         "type": "function_call",
                         "call_id": call.get("id") or f"call_{id(call)}",
                         "name": function.get("name", ""),
-                        "arguments": args
-                        if isinstance(args, str)
-                        else json.dumps(args),
+                        "arguments": args,
                     }
                 )
             return items
@@ -810,7 +812,7 @@ class OpenAICompletion(BaseLLM):
         - Internally-tagged tool format (flat structure)
         """
         instructions: str | None = self.instructions
-        input_messages: list[Any] = []
+        input_messages: list[dict[str, Any] | LLMMessage] = []
 
         for message in messages:
             if message.get("role") == "system":
@@ -824,7 +826,7 @@ class OpenAICompletion(BaseLLM):
                 input_messages.extend(self._to_responses_input(message))
 
         # Prepend reasoning items for ZDR (zero-data-retention) chaining when configured
-        final_input: list[Any] = []
+        final_input: list[dict[str, Any] | LLMMessage] = []
         if self.auto_chain_reasoning and self._last_reasoning_items:
             final_input.extend(self._last_reasoning_items)
         final_input.extend(input_messages if input_messages else messages)
