@@ -939,25 +939,7 @@ def _call(tool_name: str = "recording_tool") -> ToolCalling:
     return ToolCalling(tool_name=tool_name, arguments={"to": "user@example.com"})
 
 
-def test_failing_tool_body_runs_once_per_attempt():
-    tool, calls = _recording_tool(should_fail=True)
-
-    _tool_usage_for(tool).use(calling=_call(), tool_string="")
-
-    assert len(calls) == 1
-
-
-@pytest.mark.asyncio
-async def test_failing_tool_body_runs_once_per_attempt_async():
-    tool, calls = _recording_tool(should_fail=True)
-
-    await _tool_usage_for(tool).ause(calling=_call(), tool_string="")
-
-    assert len(calls) == 1
-
-
-def test_unreadable_args_schema_falls_back_to_raw_arguments():
-    tool, calls = _recording_tool(should_fail=False)
+def _strip_schema_properties(tool: Any) -> None:
     original_schema = tool.args_schema
 
     class SchemaWithoutProperties:
@@ -971,7 +953,39 @@ def test_unreadable_args_schema_falls_back_to_raw_arguments():
 
     tool.args_schema = SchemaWithoutProperties()
 
+
+def test_failing_tool_body_runs_once_per_attempt():
+    tool, calls = _recording_tool(should_fail=True)
+
+    _tool_usage_for(tool, attempts=3).use(calling=_call(), tool_string="")
+
+    assert len(calls) == 3
+
+
+@pytest.mark.asyncio
+async def test_failing_tool_body_runs_once_per_attempt_async():
+    tool, calls = _recording_tool(should_fail=True)
+
+    await _tool_usage_for(tool, attempts=3).ause(calling=_call(), tool_string="")
+
+    assert len(calls) == 3
+
+
+def test_unreadable_args_schema_falls_back_to_raw_arguments():
+    tool, calls = _recording_tool(should_fail=False)
+    _strip_schema_properties(tool)
+
     _tool_usage_for(tool).use(calling=_call(), tool_string="")
+
+    assert calls == [{"to": "user@example.com"}]
+
+
+@pytest.mark.asyncio
+async def test_unreadable_args_schema_falls_back_to_raw_arguments_async():
+    tool, calls = _recording_tool(should_fail=False)
+    _strip_schema_properties(tool)
+
+    await _tool_usage_for(tool).ause(calling=_call(), tool_string="")
 
     assert calls == [{"to": "user@example.com"}]
 
