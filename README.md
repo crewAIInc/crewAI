@@ -222,7 +222,7 @@ If you encounter issues during installation or usage, here are some common solut
 
    - Ensure Rust compiler is installed (see installation steps above)
    - For Windows: Verify Visual C++ Build Tools are installed
-   - Try upgrading pip: `uv pip install --upgrade pip`
+   - Ensure uv is up to date: uv self update.
    - If issues persist, use a pre-built wheel: `uv pip install tiktoken --prefer-binary`
 
 ### 2. Setting Up Your Crew with the YAML Configuration
@@ -729,7 +729,7 @@ A: CrewAI is a lean, fast Python framework built specifically for orchestrating 
 
 ### Q: How do I install CrewAI?
 
-A: Install CrewAI using pip:
+A: Install CrewAI using UV (recommended): uv pip install crewai.
 
 ```shell
 uv pip install crewai
