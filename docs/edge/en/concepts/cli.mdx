@@ -54,6 +54,25 @@ crewai create flow my_new_flow
 
 By default, `crewai create crew` creates a JSON-first crew project with `crew.jsonc` and `agents/*.jsonc`. Use `crewai create crew my_new_crew --classic` only when you want the older Python/YAML scaffold with `crew.py`, `config/agents.yaml`, and `config/tasks.yaml`.
 
+### Starter Packs
+
+Pull in a job-focused starter pack from the external template catalog. Starter packs are onboarding wrappers around project templates, so they do not add role-specific behavior to CrewAI's core runtime.
+
+```shell Terminal
+crewai starter list
+crewai starter <name>
+crewai starter <name> <target_dir>
+crewai starter <name> --output-dir <target_dir>
+```
+
+Example:
+
+```shell Terminal
+crewai starter analyst my_analyst
+```
+
+See [Starter Packs](/en/starter-packs) for the full workflow.
+
 ### 2. Version
 
 Show the installed version of CrewAI.
