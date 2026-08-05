@@ -2158,7 +2158,7 @@ def test_self_listening_method_is_rejected():
         def process(self):
             pass
 
-    with pytest.raises(ValueError, match="methods.process.listen"):
+    with pytest.raises(ValueError, match="Invalid flow definition for SelfListenFlow"):
         SelfListenFlow.flow_definition()
 
 
@@ -2176,7 +2176,7 @@ def test_or_condition_self_listen_is_rejected():
         def process(self):
             pass
 
-    with pytest.raises(ValueError, match="methods.process.listen"):
+    with pytest.raises(ValueError, match="Invalid flow definition for OrSelfListenFlow"):
         OrSelfListenFlow.flow_definition()
 
 
@@ -2190,7 +2190,7 @@ def test_router_self_listening_method_is_rejected():
         def route(self):
             return "done"
 
-    with pytest.raises(ValueError, match="methods.route.listen"):
+    with pytest.raises(ValueError, match="Invalid flow definition for RouterSelfListenFlow"):
         RouterSelfListenFlow.flow_definition()
 
 
