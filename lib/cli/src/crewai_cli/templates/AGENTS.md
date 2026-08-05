@@ -627,6 +627,26 @@ class MyFlow(Flow):
 | `@listen(method)` | Triggers when specified method completes. Receives output as argument |
 | `@router(method)` | Conditional branching. Returns string labels that trigger `@listen("label")` |
 
+### `@listen` labels vs handler names
+
+The string in `@listen("...")` is an **event or route label**, not the Python method name. Router return values, route labels, and method completion events share one trigger namespace.
+
+**Never** use the same name for the `@listen` label and the handler method:
+
+```python
+# ❌ Wrong — raises a validation error when the flow is instantiated
+@listen("create_video")
+def create_video(self):
+    ...
+
+# ✅ Correct — distinct handler name (handle_* prefix is a common pattern)
+@listen("create_video")
+def handle_create_video(self):
+    ...
+```
+
+If validation were bypassed, matching names would also cause the handler to re-trigger itself in a loop at runtime. This applies to all flows. It is especially common in **conversational flows** (`conversational = True`), where `@listen("...")` is a router intent name — do not name the handler after the route it serves.
+
 ### Structured State
 ```python
 from pydantic import BaseModel
@@ -1148,3 +1168,4 @@ crewai run                    # Execute
 - Using `process=Process.hierarchical` without setting `manager_llm` or `manager_agent`
 - Circular delegation: set `allow_delegation=False` on specialist agents
 - Not installing tools package: `uv add crewai-tools`
+- **Matching `@listen("label")` to the handler method name** — raises a validation error at flow instantiation; would re-trigger in an infinite loop at runtime only if validation is bypassed. Use a different method name (e.g. `handle_create_video` for `@listen("create_video")`)
