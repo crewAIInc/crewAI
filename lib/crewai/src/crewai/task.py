@@ -559,6 +559,22 @@ class Task(BaseModel):
             return value[1:]
         return value
 
+    @staticmethod
+    def _is_unsafe_absolute_output_path(value: str) -> bool:
+        """Return True if ``value`` is an absolute or drive/root-relative path.
+
+        Includes Windows drive-qualified relative paths (``C:foo``) and
+        root-relative paths (``\\Windows\\...``) that ``is_absolute()`` misses
+        but that still escape a relative working directory on Windows.
+        """
+        windows_path = PureWindowsPath(value)
+        return bool(
+            PurePosixPath(value).is_absolute()
+            or windows_path.is_absolute()
+            or windows_path.drive
+            or windows_path.root
+        )
+
     def _validate_output_file_input_values(
         self, inputs: dict[str, str | int | float | dict[str, Any] | list[Any]]
     ) -> None:
@@ -583,27 +599,64 @@ class Task(BaseModel):
             value = str(inputs[var])
             if ".." in value:
                 raise ValueError(
-                    f"Invalid value for output_file variable '{var}': path "
+                    f"Invalid value for output_file variable '{var}': Path "
                     "traversal sequences ('..') are not allowed"
                 )
             if value.startswith(("~", "$")):
                 raise ValueError(
-                    f"Invalid value for output_file variable '{var}': shell "
+                    f"Invalid value for output_file variable '{var}': Shell "
                     "expansion characters are not allowed"
                 )
             if any(char in value for char in ["|", ">", "<", "&", ";"]):
                 raise ValueError(
-                    f"Invalid value for output_file variable '{var}': shell "
+                    f"Invalid value for output_file variable '{var}': Shell "
                     "special characters are not allowed"
                 )
-            if (
-                PurePosixPath(value).is_absolute()
-                or PureWindowsPath(value).is_absolute()
-            ):
+            if self._is_unsafe_absolute_output_path(value):
                 raise ValueError(
-                    f"Invalid value for output_file variable '{var}': absolute "
+                    f"Invalid value for output_file variable '{var}': Absolute "
                     "paths are not allowed"
                 )
+
+    def _validate_interpolated_output_file(self, interpolated: str) -> None:
+        """Reject a fully interpolated path that escapes the trusted template.
+
+        Per-value checks miss hazards formed by concatenating adjacent
+        placeholders (for example ``{a}{b}`` with ``a='.'`` and ``b='.'``).
+        The developer-authored template may include an absolute base directory;
+        that remains allowed when the interpolated result stays absolute for the
+        same reason. A relative template must not become absolute, and no
+        interpolated path may introduce traversal or shell metacharacters.
+        """
+        template = self._original_output_file
+        if not template:
+            return
+
+        if ".." in interpolated:
+            raise ValueError(
+                "Path traversal attempts are not allowed in output_file paths"
+            )
+        if interpolated.startswith(("~", "$")):
+            raise ValueError(
+                "Shell expansion characters are not allowed in output_file paths"
+            )
+        if any(char in interpolated for char in ["|", ">", "<", "&", ";"]):
+            raise ValueError(
+                "Shell special characters are not allowed in output_file paths"
+            )
+
+        dummy_filled = template
+        for var in (part.split("}")[0] for part in template.split("{")[1:]):
+            dummy_filled = dummy_filled.replace("{" + var + "}", "_x_")
+
+        template_is_absolute = self._is_unsafe_absolute_output_path(dummy_filled)
+        if (
+            self._is_unsafe_absolute_output_path(interpolated)
+            and not template_is_absolute
+        ):
+            raise ValueError(
+                "Absolute paths are not allowed in interpolated output_file paths"
+            )
 
     @model_validator(mode="after")
     def set_attributes_based_on_config(self) -> Task:
@@ -1167,14 +1220,19 @@ Follow these guidelines:
             # kickoff inputs. The developer-authored template (including any
             # absolute base directory) is trusted, but an injected value must
             # not introduce path traversal, an absolute path, or shell
-            # expansion that would escape the intended location.
+            # expansion that would escape the intended location. Per-value
+            # checks run first; the fully interpolated path is then checked so
+            # concatenated placeholders cannot form a hazard the individual
+            # values alone would miss.
             self._validate_output_file_input_values(inputs)
             try:
-                self.output_file = interpolate_only(
+                interpolated_output_file = interpolate_only(
                     input_string=self._original_output_file, inputs=inputs
                 )
             except (KeyError, ValueError) as e:
                 raise ValueError(f"Error interpolating output_file path: {e!s}") from e
+            self._validate_interpolated_output_file(interpolated_output_file)
+            self.output_file = interpolated_output_file
 
         if inputs.get("crew_chat_messages"):
             conversation_instruction = I18N_DEFAULT.slice(

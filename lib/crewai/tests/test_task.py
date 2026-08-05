@@ -935,11 +935,16 @@ def test_interpolate_inputs(tmp_path):
 @pytest.mark.parametrize(
     ("template", "malicious_inputs", "expected_error"),
     [
-        ("reports/{name}.md", {"name": "../../../../tmp/pwn"}, "path traversal"),
-        ("{p}", {"p": "/tmp/abs_pwn"}, "absolute paths"),
-        ("{p}", {"p": "~/.bashrc"}, "shell expansion"),
-        ("{p}", {"p": "x;rm -rf /"}, "shell special characters"),
-        ("{p}", {"p": r"C:\Windows\evil"}, "absolute paths"),
+        ("reports/{name}.md", {"name": "../../../../tmp/pwn"}, "Path traversal"),
+        ("{p}", {"p": "/tmp/abs_pwn"}, "Absolute paths"),
+        ("{p}", {"p": "~/.bashrc"}, "Shell expansion"),
+        ("{p}", {"p": "x;rm -rf /"}, "Shell special characters"),
+        ("{p}", {"p": r"C:\Windows\evil"}, "Absolute paths"),
+        # Drive-qualified relative path: not absolute() but escapes on Windows.
+        ("{p}", {"p": r"C:Windows\evil"}, "Absolute paths"),
+        # Adjacent placeholders can concatenate into ".." even when each value
+        # alone looks safe.
+        ("{a}{b}", {"a": ".", "b": "."}, "Path traversal"),
     ],
 )
 def test_interpolate_output_file_rejects_unsafe_inputs(
@@ -947,7 +952,7 @@ def test_interpolate_output_file_rejects_unsafe_inputs(
 ):
     """Untrusted inputs must not escape the output_file path via interpolation."""
     task = Task(
-        description="do {p} {name}".replace("{p}", "x").replace("{name}", "x"),
+        description="d",
         expected_output="e",
         output_file=template,
     )
