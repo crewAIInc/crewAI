@@ -220,7 +220,7 @@ def test_create_skill_works_in_dmn_mode(mock_skill_command_cls, runner):
     )
 
 
-@mock.patch("crewai_cli.remote_template.main.TemplateCommand")
+@mock.patch("crewai_cli.cli.TemplateCommand")
 def test_create_template_works_in_dmn_mode(mock_template_command_cls, runner):
     result = runner.invoke(create, ["template", "my-template"], env=_DMN_ENV)
 
