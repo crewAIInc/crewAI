@@ -69,7 +69,7 @@ class _WithUserIdentifier(TypedDict):
 
 
 class LoginPayload(_WithUserIdentifier):
-    pass
+    project_id: NotRequired[str]
 
 
 class TraceExecutionContext(TypedDict):
@@ -78,6 +78,7 @@ class TraceExecutionContext(TypedDict):
     flow_name: str | None
     crewai_version: str
     privacy_level: str
+    project_id: NotRequired[str | None]
 
 
 class TraceExecutionMetadata(TypedDict):
@@ -229,11 +230,24 @@ class PlusAPI:
             return client.request(method, url, files=files, **request_kwargs)
 
     def login_to_tool_repository(
-        self, user_identifier: str | None = None
+        self, user_identifier: str | None = None, project_id: str | None = None
     ) -> httpx.Response:
+        """Log in to the tool repository.
+
+        This request is authenticated, so sending user_identifier and project_id
+        alongside it links the account to the local pseudonymous user id and to
+        the project the command was run from - letting prior anonymous usage of
+        that project be attributed after signup.
+
+        Args:
+            user_identifier: Local pseudonymous user id.
+            project_id: ``[tool.crewai].project_id`` of the current project.
+        """
         payload: LoginPayload = {}
         if user_identifier:
             payload["user_identifier"] = user_identifier
+        if project_id:
+            payload["project_id"] = project_id
         return self._make_request("POST", f"{self.TOOLS_RESOURCE}/login", json=payload)
 
     def get_tool(self, handle: str) -> httpx.Response:
