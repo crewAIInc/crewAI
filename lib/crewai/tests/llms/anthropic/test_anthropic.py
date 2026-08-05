@@ -549,7 +549,12 @@ def test_anthropic_token_usage_tracking():
     with patch.object(llm._client.messages, 'create') as mock_create:
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="test response")]
-        mock_response.usage = MagicMock(input_tokens=50, output_tokens=25)
+        mock_response.usage = MagicMock(
+            input_tokens=50,
+            output_tokens=25,
+            cache_read_input_tokens=None,
+            cache_creation_input_tokens=None,
+        )
         mock_create.return_value = mock_response
 
         result = llm.call("Hello")
@@ -1652,12 +1657,19 @@ def test_anthropic_cache_creation_tokens_extraction():
     mock_response.stop_reason = None
     mock_response.model = None
 
-    usage = llm._extract_anthropic_token_usage(mock_response)
-    assert usage["input_tokens"] == 100
-    assert usage["output_tokens"] == 50
-    assert usage["total_tokens"] == 150
-    assert usage["cached_prompt_tokens"] == 30
-    assert usage["cache_creation_tokens"] == 20
+    with (
+        patch.object(llm._client.messages, "create", return_value=mock_response),
+        patch("crewai.llms.base_llm.crewai_event_bus.emit"),
+    ):
+        result = llm.call("Hello")
+
+    assert result == "test response"
+    summary = llm.get_token_usage_summary()
+    assert summary.prompt_tokens == 150
+    assert summary.completion_tokens == 50
+    assert summary.total_tokens == 200
+    assert summary.cached_prompt_tokens == 30
+    assert summary.cache_creation_tokens == 20
 
 
 def test_anthropic_missing_cache_fields_default_to_zero():

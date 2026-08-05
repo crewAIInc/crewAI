@@ -322,6 +322,8 @@ Caches can be employed to store the results of tools' execution, making the proc
 
 After the crew execution, you can access the `usage_metrics` attribute to view the language model (LLM) usage metrics for all tasks executed by the crew. This provides insights into operational efficiency and areas for improvement.
 
+Across providers, `total_tokens` is normalized as `prompt_tokens + completion_tokens`. Breakdown fields such as `cached_prompt_tokens`, `cache_creation_tokens`, and `reasoning_tokens` are already represented in those normalized totals and should not be added again. Provider adapters account for API-specific usage shapes; for example, Anthropic prompt usage combines uncached, cache-read, and cache-creation input tokens.
+
 ```python Code
 # Access the crew's usage metrics
 crew = Crew(agents=[agent1, agent2], tasks=[task1, task2])
