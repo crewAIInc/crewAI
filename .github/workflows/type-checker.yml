@@ -18,13 +18,14 @@ jobs:
         with:
           # Exclusion-only patterns match every non-excluded file under the
           # default "some" quantifier. Require all patterns (including "**")
-          # so docs-only / markdown-only PRs correctly set code=false.
+          # so docs/markdown/Actions-only PRs correctly set code=false.
           predicate-quantifier: every
           filters: |
             code:
               - '**'
               - '!docs/**'
               - '!**/*.md'
+              - '!.github/**'
 
   type-checker-matrix:
     name: type-checker (${{ matrix.python-version }})
@@ -85,7 +86,7 @@ jobs:
       - name: Check results
         run: |
           if [ "${{ needs.changes.outputs.code }}" != "true" ]; then
-            echo "Docs-only change, skipping type checks"
+            echo "Non-code change, skipping type checks"
             exit 0
           fi
           if [ "${{ needs.type-checker-matrix.result }}" == "success" ]; then
