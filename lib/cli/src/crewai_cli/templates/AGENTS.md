@@ -39,6 +39,9 @@ This ensures generated code always matches the version actually installed, not s
 - ❌ `ChatOpenAI(model_name=...)` → ✅ `LLM(model="openai/gpt-4o")`
 - ❌ `Agent(llm=ChatOpenAI(...))` → ✅ `Agent(llm="openai/gpt-4o")` or `Agent(llm=LLM(model="..."))`
 - ❌ Passing raw OpenAI client objects → ✅ Use `crewai.LLM` wrapper
+- ❌ `crewai tool create` → ✅ `crewai create tool`
+- ❌ `crewai skill create` → ✅ `crewai create skill`
+- ❌ `crewai template add` → ✅ `crewai create template`
 
 ### How to verify you're using current patterns:
 1. You ran the version check and docs lookup steps above before writing code
@@ -137,8 +140,26 @@ uv sync                   # Sync dependencies
 uv lock                   # Lock dependencies
 
 # Project scaffolding
-crewai create crew <name> --skip_provider   # New crew project
-crewai create flow <name> --skip_provider  # New flow project
+crewai create crew <name> --skip_provider       # New crew project
+crewai create flow <name> --skip_provider       # New flow project
+crewai create tool <handle>                     # Custom tool repository
+crewai create skill <name>                      # Agent skill (./skills/ in crew projects)
+crewai create skill <name> --no-project         # Skill in current directory
+crewai create template <name>                   # Remote project template
+crewai create template <name> -o <output_dir>   # Template with custom output directory
+
+# Deprecated scaffolding aliases (still work; print a yellow warning)
+# crewai tool create <handle>  →  crewai create tool <handle>
+# crewai skill create <name>   →  crewai create skill <name>
+# crewai template add <name>   →  crewai create template <name>
+
+# Tool, skill, and template lifecycle (unchanged)
+crewai tool install <handle>
+crewai tool publish
+crewai skill install @org/name
+crewai skill publish
+crewai skill list
+crewai template list
 
 # Running
 crewai run                  # Run crew or flow (auto-detects from pyproject.toml)
@@ -1113,7 +1134,9 @@ Python >=3.10, <3.14
 ```bash
 uv tool install crewai        # Install CrewAI CLI
 uv tool list                  # Verify installation
-crewai create crew my_crew --skip_provider   # Scaffold a new project
+crewai create crew my_crew --skip_provider   # Scaffold a crew project
+crewai create tool my_tool                   # Scaffold a tool repository
+crewai create skill my_skill                 # Scaffold an agent skill
 crewai install                # Install project dependencies
 crewai run                    # Execute
 ```
