@@ -141,7 +141,7 @@ def uv(uv_args: tuple[str, ...]) -> None:
     "type",
     required=False,
     default=None,
-    type=click.Choice(["crew", "flow", "tool"]),
+    type=click.Choice(["crew", "flow", "tool", "skill"]),
 )
 @click.argument("name", required=False, default=None)
 @click.option("--provider", type=str, help="The provider to use for the crew")
@@ -156,6 +156,14 @@ def uv(uv_args: tuple[str, ...]) -> None:
     is_flag=True,
     help="Create a declarative Flow project instead of a Python Flow project",
 )
+@click.option(
+    "--no-project",
+    "in_project",
+    is_flag=True,
+    default=True,
+    flag_value=False,
+    help="Skill only: create in current dir instead of ./skills/",
+)
 def create(
     type: str | None,
     name: str | None,
@@ -163,8 +171,9 @@ def create(
     skip_provider: bool = False,
     classic: bool = False,
     declarative: bool = False,
+    in_project: bool = True,
 ) -> None:
-    """Create a new crew, flow, or tool."""
+    """Create a new crew, flow, tool, or skill."""
     dmn_mode = is_dmn_mode_enabled()
     if not type:
         if dmn_mode:
@@ -195,6 +204,8 @@ def create(
         )
     if dmn_mode:
         skip_provider = True
+    if not in_project and type != "skill":
+        raise click.UsageError("--no-project can only be used with skill projects.")
     if type == "tool":
         if declarative or classic or provider is not None or skip_provider:
             raise click.UsageError(
@@ -203,6 +214,14 @@ def create(
         from crewai_cli.tools.main import ToolCommand
 
         ToolCommand().create(name)
+    elif type == "skill":
+        if declarative or classic or provider is not None or skip_provider:
+            raise click.UsageError(
+                "Crew and flow options cannot be used with skill projects."
+            )
+        from crewai_cli.skills.main import SkillCommand
+
+        SkillCommand().create(name, in_project=in_project)
     elif type == "crew":
         if declarative:
             raise click.UsageError("--declarative can only be used with flow projects")
@@ -219,7 +238,10 @@ def create(
 
         create_flow(name, declarative=declarative)
     else:
-        click.secho("Error: Invalid type. Must be 'crew', 'flow', or 'tool'.", fg="red")
+        click.secho(
+            "Error: Invalid type. Must be 'crew', 'flow', 'tool', or 'skill'.",
+            fg="red",
+        )
 
 
 @crewai.command()
@@ -716,6 +738,8 @@ def skill() -> None:
     help="Create skill in current dir instead of ./skills/",
 )
 def skill_create(name: str, in_project: bool) -> None:
+    """[Deprecated: use `crewai create skill`] Create a new agent skill."""
+    warn_deprecated_command(old="crewai skill create", new="crewai create skill")
     from crewai_cli.skills.main import SkillCommand
 
     skill_cmd = SkillCommand()
