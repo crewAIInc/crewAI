@@ -1,0 +1,128 @@
+---
+title: العمليات التسلسلية
+description: دليل شامل لاستخدام العمليات التسلسلية لتنفيذ المهام في مشاريع CrewAI.
+icon: forward
+mode: "wide"
+---
+
+## مقدمة
+
+يقدم CrewAI إطار عمل مرن لتنفيذ المهام بطريقة منظمة، يدعم كلاً من العمليات التسلسلية والهرمية.
+يوضح هذا الدليل كيفية تنفيذ هذه العمليات بفعالية لضمان تنفيذ المهام بكفاءة وإكمال المشروع.
+
+## نظرة عامة على العملية التسلسلية
+
+تضمن العملية التسلسلية تنفيذ المهام واحدة تلو الأخرى، باتباع تقدم خطي.
+هذا النهج مثالي للمشاريع التي تتطلب إكمال المهام بترتيب محدد.
+
+### الميزات الرئيسية
+
+- **تدفق مهام خطي**: يضمن تقدماً منظماً من خلال التعامل مع المهام بتسلسل محدد مسبقاً.
+- **البساطة**: الأنسب للمشاريع ذات المهام الواضحة خطوة بخطوة.
+- **سهولة المراقبة**: يسهل التتبع السهل لإكمال المهام وتقدم المشروع.
+
+## تنفيذ العملية التسلسلية
+
+لاستخدام العملية التسلسلية، قم بتجميع طاقمك وتعريف المهام بالترتيب الذي تحتاج إلى تنفيذها به.
+
+```python Code
+from crewai import Crew, Process, Agent, Task, TaskOutput, CrewOutput
+
+# Define your agents
+researcher = Agent(
+  role='Researcher',
+  goal='Conduct foundational research',
+  backstory='An experienced researcher with a passion for uncovering insights'
+)
+analyst = Agent(
+  role='Data Analyst',
+  goal='Analyze research findings',
+  backstory='A meticulous analyst with a knack for uncovering patterns'
+)
+writer = Agent(
+  role='Writer',
+  goal='Draft the final report',
+  backstory='A skilled writer with a talent for crafting compelling narratives'
+)
+
+# Define your tasks
+research_task = Task(
+  description='Gather relevant data...',
+  agent=researcher,
+  expected_output='Raw Data'
+)
+analysis_task = Task(
+  description='Analyze the data...',
+  agent=analyst,
+  expected_output='Data Insights'
+)
+writing_task = Task(
+  description='Compose the report...',
+  agent=writer,
+  expected_output='Final Report'
+)
+
+# Form the crew with a sequential process
+report_crew = Crew(
+  agents=[researcher, analyst, writer],
+  tasks=[research_task, analysis_task, writing_task],
+  process=Process.sequential
+)
+
+# Execute the crew
+result = report_crew.kickoff()
+
+# Accessing the type-safe output
+task_output: TaskOutput = result.tasks[0].output
+crew_output: CrewOutput = result.output
+```
+
+### ملاحظة:
+
+يجب أن يكون لكل مهمة في عملية تسلسلية وكيل مُعيّن. تأكد من أن كل `Task` تتضمن معامل `agent`.
+
+### سير العمل أثناء التنفيذ
+
+1. **المهمة الأولى**: في العملية التسلسلية، يكمل الوكيل الأول مهمته ويشير إلى الإكمال.
+2. **المهام اللاحقة**: يلتقط الوكلاء مهامهم بناءً على نوع العملية، مع نتائج المهام السابقة أو التوجيهات التي تقود تنفيذهم.
+3. **الإكمال**: تنتهي العملية بمجرد تنفيذ المهمة النهائية، مما يؤدي إلى إكمال المشروع.
+
+## الميزات المتقدمة
+
+### تفويض المهام
+
+في العمليات التسلسلية، إذا كان الوكيل لديه `allow_delegation` مُعيّن إلى `True`، يمكنه تفويض المهام إلى وكلاء آخرين في الطاقم.
+يتم إعداد هذه الميزة تلقائياً عندما يكون هناك عدة وكلاء في الطاقم.
+
+### التنفيذ غير المتزامن
+
+يمكن تنفيذ المهام بشكل غير متزامن، مما يسمح بالمعالجة المتوازية عند الاقتضاء.
+لإنشاء مهمة غير متزامنة، عيّن `async_execution=True` عند تعريف المهمة.
+
+### الذاكرة والتخزين المؤقت
+
+يدعم CrewAI كلاً من ميزتي الذاكرة والتخزين المؤقت:
+
+- **الذاكرة**: فعّلها بتعيين `memory=True` عند إنشاء الطاقم. يتيح هذا للوكلاء الاحتفاظ بالمعلومات عبر المهام.
+- **التخزين المؤقت**: افتراضياً، التخزين المؤقت مفعّل. عيّن `cache=False` لتعطيله.
+
+### دوال الاستدعاء الراجع
+
+يمكنك تعيين دوال استدعاء راجع على مستوى المهمة والخطوة:
+
+- `task_callback`: يُنفذ بعد إكمال كل مهمة.
+- `step_callback`: يُنفذ بعد كل خطوة في تنفيذ الوكيل.
+
+### مقاييس الاستخدام
+
+يتتبع CrewAI استخدام الرموز عبر جميع المهام والوكلاء. يمكنك الوصول إلى هذه المقاييس بعد التنفيذ.
+
+## أفضل الممارسات للعمليات التسلسلية
+
+1. **الترتيب مهم**: رتّب المهام بتسلسل منطقي حيث تبني كل مهمة على سابقتها.
+2. **أوصاف مهام واضحة**: قدم أوصافاً مفصلة لكل مهمة لتوجيه الوكلاء بفعالية.
+3. **اختيار الوكيل المناسب**: طابق مهارات وأدوار الوكلاء مع متطلبات كل مهمة.
+4. **استخدم السياق**: استفد من سياق المهام السابقة لإبلاغ المهام اللاحقة.
+
+يضمن هذا التوثيق المحدث أن التفاصيل تعكس بدقة أحدث التغييرات في قاعدة الكود وتصف بوضوح كيفية الاستفادة من الميزات والإعدادات الجديدة.
+تم الحفاظ على بساطة المحتوى ومباشرته لضمان سهولة الفهم.
