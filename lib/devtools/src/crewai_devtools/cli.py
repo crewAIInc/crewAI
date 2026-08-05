@@ -4,6 +4,7 @@ from collections.abc import Mapping
 import os
 from pathlib import Path
 import re
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -1438,12 +1439,126 @@ _PYPI_POLL_INTERVAL: Final[int] = 15
 _PYPI_POLL_TIMEOUT: Final[int] = 600
 
 
-def _has_exact_crewai_pin(content: str, version: str) -> bool:
-    """Return whether text contains an exact CrewAI dependency pin."""
-    pattern = re.compile(
-        rf"\bcrewai(?:\[[^\]\s\"']+\])?=={re.escape(version)}(?=$|[\s\"'])"
-    )
-    return pattern.search(content) is not None
+_CREWAI_REQUIREMENT_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"^crewai(?:\s*\[[^\]]+\])?(?![\w-])"
+    r"\s*(?:(?P<operator>===|==|~=|!=|>=|<=|>|<)\s*"
+    r"(?P<version>[^\s;]+))?",
+    re.IGNORECASE,
+)
+
+
+def _crewai_requirement_pin(requirement: str) -> str | None:
+    """Return an exact CrewAI pin, or an empty string for a non-exact pin."""
+    match = _CREWAI_REQUIREMENT_PATTERN.match(requirement.strip())
+    if not match:
+        return None
+    if match.group("operator") != "==":
+        return ""
+    return match.group("version") or ""
+
+
+def _pyproject_crewai_requirements(content: str) -> list[tuple[str, str]]:
+    """Collect active CrewAI dependency requirements from pyproject content."""
+    requirements: list[tuple[str, str]] = []
+    doc = tomlkit.parse(content)
+    for key in ("dependencies", "optional-dependencies"):
+        deps = doc.get("project", {}).get(key)
+        if deps is None:
+            continue
+        dep_lists = deps.values() if isinstance(deps, Mapping) else [deps]
+        for dep_list in dep_lists:
+            for dep in dep_list:
+                spec = str(dep)
+                pin = _crewai_requirement_pin(spec)
+                if pin is not None:
+                    requirements.append((spec, pin))
+    return requirements
+
+
+def _workflow_run_commands(content: str) -> list[str]:
+    """Extract scalar and block ``run`` command values from workflow YAML text."""
+    lines = content.splitlines()
+    commands: list[str] = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        stripped = line.lstrip()
+        if stripped.startswith("- run:"):
+            stripped = stripped[2:].lstrip()
+        if not stripped.startswith("run:"):
+            index += 1
+            continue
+
+        indent = len(line) - len(line.lstrip())
+        value = stripped.removeprefix("run:").strip()
+        if value not in {"|", "|-", "|+", ">", ">-", ">+"}:
+            commands.append(value)
+            index += 1
+            continue
+
+        block: list[str] = []
+        index += 1
+        while index < len(lines):
+            block_line = lines[index]
+            if (
+                block_line.strip()
+                and len(block_line) - len(block_line.lstrip()) <= indent
+            ):
+                break
+            block.append(block_line.strip())
+            index += 1
+        commands.append("\n".join(block))
+    return commands
+
+
+def _workflow_crewai_requirements(content: str) -> list[tuple[str, str]]:
+    """Collect CrewAI requirements from executable workflow install commands."""
+    requirements: list[tuple[str, str]] = []
+    for command in _workflow_run_commands(content):
+        normalized = command.replace("\\\n", " ").replace("\n", " ; ")
+        lexer = shlex.shlex(normalized, posix=True, punctuation_chars=";&|")
+        lexer.whitespace_split = True
+        lexer.commenters = "#"
+        try:
+            tokens = list(lexer)
+        except ValueError:
+            continue
+
+        index = 0
+        while index < len(tokens):
+            command_lengths = (
+                (tokens[index : index + 3] == ["uv", "pip", "install"], 3),
+                (tokens[index : index + 2] == ["uv", "add"], 2),
+                (
+                    tokens[index : index + 2]
+                    in (["pip", "install"], ["pip3", "install"]),
+                    2,
+                ),
+                (
+                    tokens[index : index + 4]
+                    in (
+                        ["python", "-m", "pip", "install"],
+                        ["python3", "-m", "pip", "install"],
+                    ),
+                    4,
+                ),
+            )
+            install_length = next(
+                (length for matched, length in command_lengths if matched),
+                0,
+            )
+            if not install_length:
+                index += 1
+                continue
+
+            index += install_length
+            while index < len(tokens) and tokens[index] not in {";", "&&", "||", "|"}:
+                argument = tokens[index]
+                pin = _crewai_requirement_pin(argument)
+                if pin is not None:
+                    requirements.append((argument, pin))
+                index += 1
+    return requirements
 
 
 def _validate_deployment_repo_crewai_pin(
@@ -1451,21 +1566,25 @@ def _validate_deployment_repo_crewai_pin(
     pyproject_content: str,
     version: str,
 ) -> None:
-    """Fail unless a deployment canary contains the requested CrewAI pin."""
-    if _has_exact_crewai_pin(pyproject_content, version):
-        return
+    """Fail unless every effective canary CrewAI requirement has the exact pin."""
+    requirements = _pyproject_crewai_requirements(pyproject_content)
 
     workflows_dir = repo_dir / ".github" / "workflows"
     if workflows_dir.exists():
         for workflow in workflows_dir.iterdir():
-            if workflow.suffix in (".yml", ".yaml") and _has_exact_crewai_pin(
-                workflow.read_text(), version
-            ):
-                return
+            if workflow.suffix in (".yml", ".yaml"):
+                requirements.extend(_workflow_crewai_requirements(workflow.read_text()))
 
-    raise RuntimeError(
-        f"No exact CrewAI {version} dependency pin found in {repo_dir.name}"
-    )
+    if not requirements:
+        raise RuntimeError(f"No effective CrewAI dependency found in {repo_dir.name}")
+
+    mismatches = [spec for spec, pin in requirements if pin != version]
+    if mismatches:
+        found = ", ".join(repr(spec) for spec in mismatches)
+        raise RuntimeError(
+            f"CrewAI dependencies in {repo_dir.name} must all pin {version}; "
+            f"found {found}"
+        )
 
 
 def _update_deployment_test_repo(repo: str, version: str, is_prerelease: bool) -> None:
