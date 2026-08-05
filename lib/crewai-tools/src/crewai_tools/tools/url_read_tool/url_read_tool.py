@@ -203,12 +203,15 @@ class URLReadTool(BaseTool):
             return "text"
         return None
 
-    def _resolve_kind(self, content_type: str, url: str) -> str | None:
+    def _resolve_kind(self, content_type: str, *urls: str) -> str | None:
         """Decide how to extract text, by content type then by URL extension.
 
         Args:
             content_type: The raw Content-Type header value.
-            url: The final URL of the response.
+            *urls: URLs to consult for an extension, most authoritative first.
+                A ``.pdf`` link that redirects to an extensionless CDN or
+                presigned path only carries its type on the requested URL, so
+                both ends of the chain are worth checking.
 
         Returns:
             The extractor name, or None when the content type is unsupported.
@@ -217,10 +220,11 @@ class URLReadTool(BaseTool):
         if declared not in _UNINFORMATIVE_TYPES:
             return self._classify(declared)
 
-        path = urlparse(url).path.lower()
-        for extension, media_type in _EXTENSION_TYPES.items():
-            if path.endswith(extension):
-                return self._classify(media_type)
+        for url in urls:
+            path = urlparse(url).path.lower()
+            for extension, media_type in _EXTENSION_TYPES.items():
+                if path.endswith(extension):
+                    return self._classify(media_type)
         return None
 
     def _decode(self, body: bytes, content_type: str) -> str:
@@ -353,7 +357,7 @@ class URLReadTool(BaseTool):
         except requests.RequestException as e:
             return f"Error: Failed to fetch '{url}'. {format_error_for_display(e)}"
 
-        kind = self._resolve_kind(content_type, final_url)
+        kind = self._resolve_kind(content_type, final_url, url)
         if kind is None:
             return (
                 f"Error: Unsupported content type "

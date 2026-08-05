@@ -50,43 +50,54 @@ def _strip_cross_origin_credentials(request_kwargs: dict[str, Any]) -> dict[str,
 
 
 def safe_get(url: str, *, max_redirects: int = 10, **kwargs: Any) -> requests.Response:
-    """GET a URL while validating each redirect target before following it."""
+    """GET a URL while validating each redirect target before following it.
+
+    On success the hops are attached to the returned response's ``history`` and
+    are the caller's to close. On failure they are closed here: a caller given
+    an exception has no handle on them, and a streamed hop holds its connection
+    until its body is read or closed.
+    """
     current_url = validate_url(url)
     request_kwargs = {**kwargs, "allow_redirects": False}
     timeout = request_kwargs.pop("timeout", 30)
     history: list[requests.Response] = []
     redirects_followed = 0
 
-    while True:
-        response = requests.get(current_url, timeout=timeout, **request_kwargs)
-        if (
-            response.status_code not in _REDIRECT_STATUS_CODES
-            or "Location" not in response.headers
-        ):
-            response.history = history
-            return response
+    try:
+        while True:
+            response = requests.get(current_url, timeout=timeout, **request_kwargs)
+            if (
+                response.status_code not in _REDIRECT_STATUS_CODES
+                or "Location" not in response.headers
+            ):
+                response.history = history
+                return response
 
-        if redirects_followed >= max_redirects:
-            response.close()
-            raise ValueError(f"Too many redirects while fetching URL: {url}")
+            if redirects_followed >= max_redirects:
+                response.close()
+                raise ValueError(f"Too many redirects while fetching URL: {url}")
 
-        location = response.headers.get("Location")
-        if not location:
-            response.history = history
-            return response
+            location = response.headers.get("Location")
+            if not location:
+                response.history = history
+                return response
 
-        try:
-            redirect_url = validate_url(urljoin(response.url, location))
-        except ValueError:
-            response.close()
-            raise
+            try:
+                redirect_url = validate_url(urljoin(response.url, location))
+            except ValueError:
+                response.close()
+                raise
 
-        if not _same_origin(current_url, redirect_url):
-            request_kwargs = _strip_cross_origin_credentials(request_kwargs)
+            if not _same_origin(current_url, redirect_url):
+                request_kwargs = _strip_cross_origin_credentials(request_kwargs)
 
-        history.append(response)
-        current_url = redirect_url
-        redirects_followed += 1
+            history.append(response)
+            current_url = redirect_url
+            redirects_followed += 1
+    except BaseException:
+        for hop in history:
+            hop.close()
+        raise
 
 
 def safe_get_bounded(
@@ -116,11 +127,14 @@ def safe_get_bounded(
         last validated URL in the redirect chain.
 
     Raises:
-        ValueError: If URL validation fails, the redirect chain is too long, or
-            the body exceeds *max_bytes*.
+        ValueError: If *max_bytes* is not positive, URL validation fails, the
+            redirect chain is too long, or the body exceeds *max_bytes*.
         requests.RequestException: If the request fails or returns an error
             status.
     """
+    if max_bytes <= 0:
+        raise ValueError(f"max_bytes must be positive, got {max_bytes}.")
+
     response = safe_get(
         url,
         max_redirects=max_redirects,
@@ -138,8 +152,11 @@ def safe_get_bounded(
                 continue
             total += len(chunk)
             if total > max_bytes:
+                # Names the URL that served the body, which after a redirect is
+                # not the one that was requested.
                 raise ValueError(
-                    f"Response body from '{url}' exceeds the {max_bytes} byte limit."
+                    f"Response body from '{response.url}' exceeds the "
+                    f"{max_bytes} byte limit."
                 )
             chunks.append(chunk)
 

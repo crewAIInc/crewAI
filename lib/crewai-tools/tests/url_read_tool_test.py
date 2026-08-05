@@ -216,6 +216,24 @@ def test_query_string_does_not_break_extension_fallback():
         assert tool.run(url=url) == "a,b\n"
 
 
+def test_extension_from_requested_url_survives_a_redirect():
+    """A .pdf link that redirects to an extensionless path is still extracted.
+
+    Presigned CDN targets routinely drop the extension and serve octet-stream,
+    so the requested URL is the only place the type survives.
+    """
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            build_pdf("Survived the redirect"),
+            "application/octet-stream",
+            "https://cdn.example.com/objects/9f8a7b6c5d",
+        )
+        result = tool.run(url="https://example.com/report.pdf")
+
+    assert "Survived the redirect" in result
+
+
 def test_octet_stream_with_unknown_extension_is_rejected():
     """With neither a usable type nor a known extension, the read is refused."""
     tool = URLReadTool()
@@ -321,6 +339,26 @@ class TestSafeGetBounded:
                 safe_get_bounded("https://example.com/big", max_bytes=25)
 
         assert response.closed
+
+    def test_oversized_error_names_the_url_that_served_the_body(self):
+        """After a redirect the requested URL is not the one that sent it."""
+        response = FakeResponse(
+            b"x" * 100, url="https://cdn.example.com/final", chunk_size=10
+        )
+        with patch(
+            "crewai_tools.security.safe_requests.safe_get", return_value=response
+        ):
+            with pytest.raises(ValueError, match="https://cdn.example.com/final"):
+                safe_get_bounded("https://example.com/start", max_bytes=25)
+
+    @pytest.mark.parametrize("max_bytes", [0, -1])
+    def test_non_positive_max_bytes_fails_before_requesting(self, max_bytes):
+        """A misconfigured cap is caught without issuing a request."""
+        with patch("crewai_tools.security.safe_requests.safe_get") as safe_get:
+            with pytest.raises(ValueError, match="max_bytes must be positive"):
+                safe_get_bounded("https://example.com/f", max_bytes=max_bytes)
+
+        safe_get.assert_not_called()
 
     def test_stops_reading_once_the_limit_is_crossed(self):
         """The cap must abandon the stream, not buffer the whole body first."""
