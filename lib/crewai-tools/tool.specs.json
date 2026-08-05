@@ -16892,6 +16892,173 @@
       }
     },
     {
+      "description": "Check current infrastructure-provider and service status with OutageDeck. Use provider_status with a provider slug such as github or openai; use list_incidents for active or historical incidents with optional provider, state, and severity filters; use service_status with a service slug such as github-actions or openai-api. The tool is read-only and requires no API key.",
+      "env_vars": [],
+      "humanized_name": "OutageDeck Status",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Check live infrastructure status and incidents through OutageDeck.\n\nOutageDeck normalizes provider status feeds into a public, read-only API.\nThis tool requires no API key and uses a fixed production origin.",
+        "properties": {
+          "timeout": {
+            "default": 20,
+            "description": "HTTP request timeout in seconds.",
+            "exclusiveMinimum": 0,
+            "maximum": 120,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "OutageDeckStatusTool",
+        "type": "object"
+      },
+      "name": "OutageDeckStatusTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for OutageDeckStatusTool.",
+        "properties": {
+          "limit": {
+            "default": 20,
+            "description": "Incidents per page from 1 through 100.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "operation": {
+            "description": "Operation to run: provider_status, list_incidents, or service_status.",
+            "enum": [
+              "provider_status",
+              "list_incidents",
+              "service_status"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "page": {
+            "default": 1,
+            "description": "1-based incident result page.",
+            "minimum": 1,
+            "title": "Page",
+            "type": "integer"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional provider slug filter for list_incidents.",
+            "title": "Provider"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "enum": [
+                  "minor",
+                  "major",
+                  "critical",
+                  "maintenance"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional severity filter: minor, major, critical, or maintenance.",
+            "title": "Severity"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Provider or service slug required by provider_status and service_status, for example github or github-actions.",
+            "title": "Slug"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "enum": [
+                  "active",
+                  "resolved"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional incident lifecycle filter: active or resolved.",
+            "title": "State"
+          }
+        },
+        "required": [
+          "operation"
+        ],
+        "title": "OutageDeckStatusInput",
+        "type": "object"
+      }
+    },
+    {
       "description": "Scrape Amazon product pages with Oxylabs Amazon Product Scraper",
       "env_vars": [
         {
