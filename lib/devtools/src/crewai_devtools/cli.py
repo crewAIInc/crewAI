@@ -1507,7 +1507,8 @@ def _workflow_run_commands(content: str) -> list[str]:
                 break
             block.append(block_line.strip())
             index += 1
-        commands.append("\n".join(block))
+        separator = " " if value.startswith(">") else "\n"
+        commands.append(separator.join(block))
     return commands
 
 
@@ -1515,8 +1516,9 @@ def _workflow_crewai_requirements(content: str) -> list[tuple[str, str]]:
     """Collect CrewAI requirements from executable workflow install commands."""
     requirements: list[tuple[str, str]] = []
     for command in _workflow_run_commands(content):
-        normalized = command.replace("\\\n", " ").replace("\n", " ; ")
-        lexer = shlex.shlex(normalized, posix=True, punctuation_chars=";&|")
+        normalized = command.replace("\\\n", " ")
+        lexer = shlex.shlex(normalized, posix=True, punctuation_chars=";&|\n")
+        lexer.whitespace = " \t\r"
         lexer.whitespace_split = True
         lexer.commenters = "#"
         try:
@@ -1552,7 +1554,13 @@ def _workflow_crewai_requirements(content: str) -> list[tuple[str, str]]:
                 continue
 
             index += install_length
-            while index < len(tokens) and tokens[index] not in {";", "&&", "||", "|"}:
+            while index < len(tokens) and tokens[index] not in {
+                ";",
+                "&&",
+                "||",
+                "|",
+                "\n",
+            }:
                 argument = tokens[index]
                 pin = _crewai_requirement_pin(argument)
                 if pin is not None:
@@ -1572,8 +1580,10 @@ def _validate_deployment_repo_crewai_pin(
     workflows_dir = repo_dir / ".github" / "workflows"
     if workflows_dir.exists():
         for workflow in workflows_dir.iterdir():
-            if workflow.suffix in (".yml", ".yaml"):
-                requirements.extend(_workflow_crewai_requirements(workflow.read_text()))
+            if workflow.is_file() and workflow.suffix in (".yml", ".yaml"):
+                requirements.extend(
+                    _workflow_crewai_requirements(workflow.read_text(encoding="utf-8"))
+                )
 
     if not requirements:
         raise RuntimeError(f"No effective CrewAI dependency found in {repo_dir.name}")
