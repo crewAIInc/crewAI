@@ -1438,6 +1438,36 @@ _PYPI_POLL_INTERVAL: Final[int] = 15
 _PYPI_POLL_TIMEOUT: Final[int] = 600
 
 
+def _has_exact_crewai_pin(content: str, version: str) -> bool:
+    """Return whether text contains an exact CrewAI dependency pin."""
+    pattern = re.compile(
+        rf"\bcrewai(?:\[[^\]\s\"']+\])?=={re.escape(version)}(?=$|[\s\"'])"
+    )
+    return pattern.search(content) is not None
+
+
+def _validate_deployment_repo_crewai_pin(
+    repo_dir: Path,
+    pyproject_content: str,
+    version: str,
+) -> None:
+    """Fail unless a deployment canary contains the requested CrewAI pin."""
+    if _has_exact_crewai_pin(pyproject_content, version):
+        return
+
+    workflows_dir = repo_dir / ".github" / "workflows"
+    if workflows_dir.exists():
+        for workflow in workflows_dir.iterdir():
+            if workflow.suffix in (".yml", ".yaml") and _has_exact_crewai_pin(
+                workflow.read_text(), version
+            ):
+                return
+
+    raise RuntimeError(
+        f"No exact CrewAI {version} dependency pin found in {repo_dir.name}"
+    )
+
+
 def _update_deployment_test_repo(repo: str, version: str, is_prerelease: bool) -> None:
     """Update a deployment test repo to pin the new crewai version.
 
@@ -1473,6 +1503,8 @@ def _update_deployment_test_repo(repo: str, version: str, is_prerelease: bool) -
             console.print(
                 f"[green]✓[/green] Updated crewai pin in {wf.relative_to(repo_dir)}"
             )
+
+        _validate_deployment_repo_crewai_pin(repo_dir, new_content, version)
 
         if not pyproject_changed and not updated_workflows:
             console.print("[yellow]Nothing to update; skipping commit and PR.[/yellow]")
