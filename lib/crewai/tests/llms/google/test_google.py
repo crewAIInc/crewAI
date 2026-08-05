@@ -123,12 +123,12 @@ def test_gemini_completion_initialization_parameters():
 
 
 def test_gemini_started_event_surfaces_max_output_tokens():
-    from crewai.events.event_bus import CrewAIEventsBus
+    from crewai.events.event_bus import crewai_event_bus
     from crewai.events.types.llm_events import LLMCallStartedEvent
 
     llm = LLM(model="google/gemini-2.0-flash-001", max_output_tokens=2000, api_key="test-key")
 
-    with patch.object(CrewAIEventsBus, "emit") as mock_emit:
+    with patch.object(crewai_event_bus, "emit") as mock_emit:
         llm._emit_call_started_event(messages="hi")
 
     event = mock_emit.call_args[1]["event"]
