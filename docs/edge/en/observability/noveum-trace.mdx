@@ -1,0 +1,94 @@
+---
+title: Noveum Trace Integration
+description: How to trace CrewAI crews, tasks, agents, LLM calls, and tools using Noveum Trace, a community-maintained external observability tool.
+icon: chart-line
+mode: "wide"
+---
+
+# Noveum Trace Overview
+
+Noveum Trace is a community-maintained observability integration for CrewAI. It provides a
+CrewAI `BaseEventListener` that captures crew, task, agent, LLM, tool, memory, knowledge,
+MCP, flow, guardrail, and A2A delegation events and exports them as traces to
+[Noveum](https://noveum.ai) for debugging, analytics, and evaluation. Noveum Trace
+observes CrewAI events; it does not change CrewAI behavior.
+
+## Setup Instructions
+
+<Steps>
+   <Step title="Sign up for Noveum">
+      Create an account at [https://noveum.ai](https://noveum.ai) and generate an API key.
+   </Step>
+   <Step title="Install Noveum Trace in your CrewAI project">
+      Use the following command:
+
+    ```bash
+    pip install "noveum-trace[crewai]"
+    ```
+   </Step>
+   <Step title="Initialize tracing">
+      Initialize Noveum Trace and set up the CrewAI listener before running your crew.
+      `setup_crewai_tracing()` requires `noveum_trace.init()` to be called first:
+
+    ```python
+    import os
+
+    import noveum_trace
+    from noveum_trace.integrations.crewai import setup_crewai_tracing
+
+    noveum_trace.init(
+        project="my-crew",
+        api_key=os.environ["NOVEUM_API_KEY"],
+    )
+    listener = setup_crewai_tracing()
+
+    from crewai import Agent, Crew, Task
+    ```
+   </Step>
+   <Step title="Run your crew and flush traces">
+      Run your crew as usual, then shut down the listener and flush pending traces
+      before the process exits:
+
+    ```python
+    crew = Crew(agents=[...], tasks=[...])
+    result = crew.kickoff()
+
+    listener.shutdown()
+    noveum_trace.flush()
+    ```
+   </Step>
+</Steps>
+
+### Features and Their Application to CrewAI
+
+1. **Complete Crew Execution Tracing**
+
+   - Capture crew, task, agent, LLM, tool, memory, knowledge, MCP, flow, guardrail, and
+     A2A delegation events as structured traces and spans.
+
+2. **Configurable Payload Capture**
+
+   - Payload capture is controlled by listener capture flags such as `capture_inputs`,
+     `capture_outputs`, `capture_llm_messages`, and `capture_tool_schemas` (all default
+     to `True`). Review these settings before tracing crews that handle sensitive data.
+
+3. **Performance and Cost Insights**
+
+   - Inspect latency, token usage, and errors for each step of your crew in the Noveum
+     dashboard.
+
+4. **Evaluation Workflows**
+
+   - Build evaluation datasets from real crew runs and compare models systematically.
+
+### Version Compatibility
+
+Requires Python 3.10+ and `crewai >= 0.177.0`. See the
+[Noveum Trace repository](https://github.com/Noveum/noveum-trace) for the latest tested
+versions and changelog.
+
+### Resources
+
+- [Noveum Trace CrewAI documentation](https://noveum.ai/en/docs/integration-examples/crewai/overview)
+- [Noveum Trace on GitHub](https://github.com/Noveum/noveum-trace)
+- [noveum-trace on PyPI](https://pypi.org/project/noveum-trace/)
