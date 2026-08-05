@@ -44,8 +44,17 @@ __all__ = [
     "render_template",
     "tree_copy",
     "tree_find_and_replace",
+    "warn_deprecated_command",
     "write_env_file",
 ]
+
+
+def warn_deprecated_command(*, old: str, new: str) -> None:
+    """Print a yellow deprecation warning for a legacy CLI command path."""
+    click.secho(
+        f"Warning: The command '{old}' is deprecated. Use '{new}' instead.",
+        fg="yellow",
+    )
 
 
 console = Console()

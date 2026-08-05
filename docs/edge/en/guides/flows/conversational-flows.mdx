@@ -376,6 +376,27 @@ def handle_internet_search(self) -> str:
     ...
 ```
 
+### Naming handlers
+
+The string in `@listen("…")` is a **router route label** (an event name), not the Python method name. Route labels and method completion events share one trigger namespace, so naming a handler the same as its route causes the handler to re-trigger itself in a loop.
+
+Use a different method name — the docs examples use a `handle_*` prefix:
+
+```python
+@listen("create_video")
+def handle_create_video(self) -> str:
+    """User wants a new video."""
+    ...
+```
+
+Do **not** mirror the route label on the method:
+
+```python
+@listen("create_video")
+def create_video(self) -> str:  # rejected at flow instantiation
+    ...
+```
+
 …and the router LLM sees:
 
 ```

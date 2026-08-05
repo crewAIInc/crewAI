@@ -40,6 +40,14 @@ This ensures generated code always matches the version actually installed, not s
 - ❌ `Agent(llm=ChatOpenAI(...))` → ✅ `Agent(llm="openai/gpt-4o")` or `Agent(llm=LLM(model="..."))`
 - ❌ Passing raw OpenAI client objects → ✅ Use `crewai.LLM` wrapper
 
+### Deprecated CLI scaffolding aliases (still supported)
+
+These commands remain supported but print a yellow deprecation warning. Prefer the canonical forms:
+
+- ⚠️ `crewai tool create <handle>` → ✅ `crewai create tool <handle>`
+- ⚠️ `crewai skill create <name>` → ✅ `crewai create skill <name>`
+- ⚠️ `crewai template add <name>` → ✅ `crewai create template <name>`
+
 ### How to verify you're using current patterns:
 1. You ran the version check and docs lookup steps above before writing code
 2. All LLM references use `crewai.LLM` or string shorthand (`"openai/gpt-4o"`)
@@ -137,8 +145,26 @@ uv sync                   # Sync dependencies
 uv lock                   # Lock dependencies
 
 # Project scaffolding
-crewai create crew <name> --skip_provider   # New crew project
-crewai create flow <name> --skip_provider  # New flow project
+crewai create crew <name> --skip_provider       # New crew project
+crewai create flow <name>                       # New flow project
+crewai create tool <handle>                     # Custom tool repository
+crewai create skill <name>                      # Agent skill (./skills/ in crew projects)
+crewai create skill <name> --no-project         # Skill in current directory
+crewai create template <name>                   # Remote project template
+crewai create template <name> -o <output_dir>   # Template with custom output directory
+
+# Deprecated scaffolding aliases (still work; print a yellow warning)
+# crewai tool create <handle>  →  crewai create tool <handle>
+# crewai skill create <name>   →  crewai create skill <name>
+# crewai template add <name>   →  crewai create template <name>
+
+# Tool, skill, and template lifecycle (unchanged)
+crewai tool install <handle>
+crewai tool publish
+crewai skill install @org/name
+crewai skill publish
+crewai skill list
+crewai template list
 
 # Running
 crewai run                  # Run crew or flow (auto-detects from pyproject.toml)
@@ -627,6 +653,26 @@ class MyFlow(Flow):
 | `@listen(method)` | Triggers when specified method completes. Receives output as argument |
 | `@router(method)` | Conditional branching. Returns string labels that trigger `@listen("label")` |
 
+### `@listen` labels vs handler names
+
+The string in `@listen("...")` is an **event or route label**, not the Python method name. Router return values, route labels, and method completion events share one trigger namespace.
+
+**Never** use the same name for the `@listen` label and the handler method:
+
+```python
+# ❌ Wrong — raises a validation error when the flow is instantiated
+@listen("create_video")
+def create_video(self):
+    ...
+
+# ✅ Correct — distinct handler name (handle_* prefix is a common pattern)
+@listen("create_video")
+def handle_create_video(self):
+    ...
+```
+
+If validation were bypassed, matching names would also cause the handler to re-trigger itself in a loop at runtime. This applies to all flows. It is especially common in **conversational flows** (`conversational = True`), where `@listen("...")` is a router intent name — do not name the handler after the route it serves.
+
 ### Structured State
 ```python
 from pydantic import BaseModel
@@ -1113,7 +1159,9 @@ Python >=3.10, <3.14
 ```bash
 uv tool install crewai        # Install CrewAI CLI
 uv tool list                  # Verify installation
-crewai create crew my_crew --skip_provider   # Scaffold a new project
+crewai create crew my_crew --skip_provider   # Scaffold a crew project
+crewai create tool my_tool                   # Scaffold a tool repository
+crewai create skill my_skill                 # Scaffold an agent skill
 crewai install                # Install project dependencies
 crewai run                    # Execute
 ```
@@ -1148,3 +1196,4 @@ crewai run                    # Execute
 - Using `process=Process.hierarchical` without setting `manager_llm` or `manager_agent`
 - Circular delegation: set `allow_delegation=False` on specialist agents
 - Not installing tools package: `uv add crewai-tools`
+- **Matching `@listen("label")` to the handler method name** — raises a validation error at flow instantiation; would re-trigger in an infinite loop at runtime only if validation is bypassed. Use a different method name (e.g. `handle_create_video` for `@listen("create_video")`)

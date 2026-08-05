@@ -38,18 +38,33 @@ def get_temperature_tool_schema() -> dict[str, Any]:
 
 @pytest.fixture
 def mock_emit() -> MagicMock:
-    """Mock the event bus emit function."""
-    from crewai.events.event_bus import CrewAIEventsBus
+    """Mock the singleton event bus emit used by LLM providers.
 
-    with patch.object(CrewAIEventsBus, "emit") as mock:
-        yield mock
+    Patch the singleton instance (not only the class) so a leftover
+    instance-level ``emit`` from other tests cannot shadow the mock.
+    """
+    from crewai.events.event_bus import CrewAIEventsBus, crewai_event_bus
+
+    with (
+        patch.object(CrewAIEventsBus, "emit") as class_mock,
+        patch.object(crewai_event_bus, "emit", new=class_mock),
+    ):
+        yield class_mock
+
+
+def _event_from_emit_call(call: Any) -> Any:
+    """Return the event argument from an emit mock call."""
+    event = call.kwargs.get("event")
+    if event is None and len(call.args) >= 2:
+        event = call.args[1]
+    return event
 
 
 def get_tool_call_events(mock_emit: MagicMock) -> list[LLMStreamChunkEvent]:
     """Extract tool call streaming events from mock emit calls."""
     tool_call_events = []
     for call in mock_emit.call_args_list:
-        event = call[1].get("event") if len(call) > 1 else None
+        event = _event_from_emit_call(call)
         if isinstance(event, LLMStreamChunkEvent) and event.call_type == LLMCallType.TOOL_CALL:
             tool_call_events.append(event)
     return tool_call_events
@@ -59,7 +74,7 @@ def get_all_stream_events(mock_emit: MagicMock) -> list[LLMStreamChunkEvent]:
     """Extract all streaming events from mock emit calls."""
     stream_events = []
     for call in mock_emit.call_args_list:
-        event = call[1].get("event") if len(call) > 1 else None
+        event = _event_from_emit_call(call)
         if isinstance(event, LLMStreamChunkEvent):
             stream_events.append(event)
     return stream_events

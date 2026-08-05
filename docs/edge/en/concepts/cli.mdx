@@ -36,23 +36,72 @@ crewai [COMMAND] [OPTIONS] [ARGUMENTS]
 
 ### 1. Create
 
-Create a new crew or flow.
+Create a new crew, flow, tool, skill, or template project.
 
 ```shell Terminal
 crewai create [OPTIONS] TYPE NAME
 ```
 
-- `TYPE`: Choose between "crew" or "flow"
-- `NAME`: Name of the crew or flow
+- `TYPE`: `crew`, `flow`, `tool`, `skill`, or `template`
+- `NAME`: Name of the project, tool handle, skill, or template
 
-Example:
+#### Crew
 
 ```shell Terminal
 crewai create crew my_new_crew
-crewai create flow my_new_flow
+crewai create crew my_new_crew --classic
 ```
 
 By default, `crewai create crew` creates a JSON-first crew project with `crew.jsonc` and `agents/*.jsonc`. Use `crewai create crew my_new_crew --classic` only when you want the older Python/YAML scaffold with `crew.py`, `config/agents.yaml`, and `config/tasks.yaml`.
+
+#### Flow
+
+```shell Terminal
+crewai create flow my_new_flow
+crewai create flow my_new_flow --declarative
+```
+
+#### Tool
+
+Scaffold a custom tool repository:
+
+```shell Terminal
+crewai create tool my_tool
+```
+
+#### Skill
+
+Scaffold an agent skill. Inside a crew project (where `pyproject.toml` exists), the skill is created under `./skills/`:
+
+```shell Terminal
+crewai create skill my-skill
+crewai create skill my-skill --no-project
+```
+
+Use `--no-project` to create the skill in the current directory instead of `./skills/`.
+
+#### Template
+
+Add a remote project template to the current directory:
+
+```shell Terminal
+crewai create template my-template
+crewai create template my-template --output-dir custom_dir
+```
+
+Use `--output-dir` to override the output folder name (defaults to the template name).
+
+#### Deprecated create aliases
+
+These older commands still work but print a yellow deprecation warning. Prefer the `crewai create <type>` forms above.
+
+| Deprecated | Use instead |
+| :--- | :--- |
+| `crewai tool create <handle>` | `crewai create tool <handle>` |
+| `crewai skill create <name>` | `crewai create skill <name>` |
+| `crewai template add <name>` | `crewai create template <name>` |
+
+Lifecycle commands are unchanged — for example `crewai tool install`, `crewai skill publish`, and `crewai template list` stay under their resource groups.
 
 ### 2. Version
 
