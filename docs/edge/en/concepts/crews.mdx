@@ -322,7 +322,7 @@ Caches can be employed to store the results of tools' execution, making the proc
 
 After the crew execution, you can access the `usage_metrics` attribute to view the language model (LLM) usage metrics for all tasks executed by the crew. This provides insights into operational efficiency and areas for improvement.
 
-`total_tokens` is the billed total (`prompt_tokens + completion_tokens`). Breakdown fields such as `cached_prompt_tokens` describe subsets already included in those totals — see [Flow Usage Metrics](/concepts/flows#flow-usage-metrics) for the full field semantics.
+`total_tokens` is the billed total (`prompt_tokens + completion_tokens`). Breakdown fields such as `cached_prompt_tokens` and `cache_creation_tokens` describe subsets already included in those totals and are not added on top of `total_tokens`. See the **UsageMetrics field semantics** section in the Flows concept documentation for the full contract.
 
 ```python Code
 # Access the crew's usage metrics
