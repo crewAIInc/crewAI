@@ -359,4 +359,43 @@ def test_wikipedia_search_tool_uses_redirected_page_title_for_summary(
     assert "Title: Python (programming language)" in result
     assert "Summary: Python is a high-level language." in result
 
+    # Assert that summary request was called with the resolved title, not original query
+    summary_call_params = mock_get.call_args_list[3].kwargs["params"]
+    assert summary_call_params["titles"] == "Python (programming language)"
+
+
+def test_wikipedia_search_tool_package_dependencies():
+    tool = WikipediaSearchTool()
+    assert tool.package_dependencies == ["beautifulsoup4", "requests"]
+
+
+@patch("crewai_tools.tools.wikipedia_search_tool.wikipedia_search_tool.logger")
+@patch("crewai_tools.tools.wikipedia_search_tool.wikipedia_search_tool.WikipediaClient")
+def test_wikipedia_search_security_logging(mock_client_cls, mock_logger, tool):
+    mock_client = MagicMock()
+    mock_client_cls.return_value = mock_client
+    mock_client.search.side_effect = RuntimeError("Connection timeout")
+
+    sensitive_query = "SECRET_PASSWORD_12345"
+    result = tool._run(search_query=sensitive_query)
+
+    assert sensitive_query in result  # User result contains query for user context
+    mock_logger.error.assert_called_once_with(
+        "Wikipedia search failed: %s", "RuntimeError"
+    )
+
+
+@patch("crewai_tools.tools.wikipedia_search_tool.wikipedia_search_tool.WIKIPEDIA_AVAILABLE", False)
+def test_wikipedia_search_tool_missing_dependencies():
+    with pytest.raises(ImportError) as exc_info:
+        WikipediaSearchTool()
+    assert "beautifulsoup4" in str(exc_info.value)
+    assert "requests" in str(exc_info.value)
+
+    tool = WikipediaSearchTool.__new__(WikipediaSearchTool)
+    res = tool._run(search_query="Python")
+    assert "beautifulsoup4" in res
+    assert "requests" in res
+
+
 

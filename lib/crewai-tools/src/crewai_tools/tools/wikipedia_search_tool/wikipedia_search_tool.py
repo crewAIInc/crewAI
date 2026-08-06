@@ -13,27 +13,25 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-WIKIPEDIA_AVAILABLE = importlib.util.find_spec("wikipedia") is not None
+WIKIPEDIA_AVAILABLE = (
+    importlib.util.find_spec("bs4") is not None
+    and importlib.util.find_spec("requests") is not None
+)
 
-try:
-    from wikipedia.exceptions import (  # type: ignore[import-untyped]
-        DisambiguationError,
-        PageError,
-        WikipediaException,
-    )
-except ImportError:
 
-    class WikipediaException(Exception):  # type: ignore[no-redef]  # noqa: N818
-        pass
+class WikipediaException(Exception):  # noqa: N818
+    pass
 
-    class PageError(Exception):  # type: ignore[no-redef]
-        pass
 
-    class DisambiguationError(Exception):  # type: ignore[no-redef]
-        def __init__(self, title: str, options: list[str]) -> None:
-            self.title = title
-            self.options = options
-            super().__init__(title, options)
+class PageError(Exception):
+    pass
+
+
+class DisambiguationError(Exception):
+    def __init__(self, title: str, options: list[str]) -> None:
+        self.title = title
+        self.options = options
+        super().__init__(title, options)
 
 
 class WikipediaPage:
@@ -302,7 +300,9 @@ class WikipediaSearchTool(BaseTool):
     args_schema: type[BaseModel] = WikipediaSearchToolSchema
     model_config = ConfigDict(extra="allow")
 
-    package_dependencies: list[str] = Field(default_factory=lambda: ["wikipedia"])
+    package_dependencies: list[str] = Field(
+        default_factory=lambda: ["beautifulsoup4", "requests"]
+    )
     env_vars: list[EnvVar] = Field(default_factory=list)
 
     lang: str = "en"
@@ -319,8 +319,8 @@ class WikipediaSearchTool(BaseTool):
     def _initialize_wikipedia(self) -> None:
         if not WIKIPEDIA_AVAILABLE:
             raise ImportError(
-                "The 'wikipedia' package is required to use the WikipediaSearchTool. "
-                "Please install it using your package manager (e.g., `pip install wikipedia` or `uv add wikipedia`)."
+                "The 'beautifulsoup4' and 'requests' packages are required to use the WikipediaSearchTool. "
+                "Please install them using your package manager (e.g., `pip install beautifulsoup4 requests` or `uv add beautifulsoup4 requests`)."
             )
 
     def _run(
@@ -333,8 +333,8 @@ class WikipediaSearchTool(BaseTool):
     ) -> str:
         if not WIKIPEDIA_AVAILABLE:
             return (
-                "Error: The 'wikipedia' package is required to use WikipediaSearchTool. "
-                "Please install it using your package manager (e.g., `pip install wikipedia` or `uv add wikipedia`)."
+                "Error: The 'beautifulsoup4' and 'requests' packages are required to use WikipediaSearchTool. "
+                "Please install them using your package manager (e.g., `pip install beautifulsoup4 requests` or `uv add beautifulsoup4 requests`)."
             )
 
         target_lang = lang or self.lang
@@ -359,7 +359,7 @@ class WikipediaSearchTool(BaseTool):
         try:
             search_results = client.search(search_query, results=target_limit)
         except Exception as e:
-            logger.error(f"Wikipedia search failed for query '{search_query}': {e}")
+            logger.error("Wikipedia search failed: %s", type(e).__name__)
             return f"Error searching Wikipedia for '{search_query}': {e!s}"
 
         if not search_results:
