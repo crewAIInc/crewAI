@@ -277,10 +277,13 @@ The returned [`UsageMetrics`](https://github.com/crewAIInc/crewAI/blob/main/lib/
 | `prompt_tokens` | Full input/prompt tokens billed for the request |
 | `completion_tokens` | Output/completion tokens billed for the request |
 | `cached_prompt_tokens` | Cache-read subset of prompt tokens (breakdown only) |
+| `cache_creation_tokens` | Cache-write subset of prompt tokens (breakdown only, Anthropic) |
 | `reasoning_tokens` | Reasoning/thinking subset where the provider reports it separately (breakdown only) |
 | `successful_requests` | Number of LLM calls aggregated |
 
-Breakdown fields such as `cached_prompt_tokens` and `reasoning_tokens` are **not** added on top of `total_tokens` — they describe portions already included in `prompt_tokens` or `completion_tokens`.
+Breakdown fields such as `cached_prompt_tokens`, `cache_creation_tokens`, and
+`reasoning_tokens` are **not** added on top of `total_tokens` — they describe
+portions already included in `prompt_tokens` or `completion_tokens`.
 
 For Anthropic, cache read and cache write counters are folded into `prompt_tokens`, so cached workloads are fully reflected in `total_tokens`. OpenAI-style providers already include cached input inside `prompt_tokens`; CrewAI surfaces the cached portion separately for visibility.
 

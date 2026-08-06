@@ -177,11 +177,16 @@ class UsageMetrics(BaseModel):
             if isinstance(details, dict):
                 cached_prompt_tokens = _coerce_int(details.get("cached_tokens"))
 
+        cache_creation_tokens = _coerce_int(
+            usage_data.get("cache_creation_tokens")
+        ) or _coerce_int(usage_data.get("cache_creation_input_tokens"))
+
         return cls(
             total_tokens=prompt_tokens + completion_tokens,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             cached_prompt_tokens=cached_prompt_tokens,
             reasoning_tokens=_coerce_int(usage_data.get("reasoning_tokens")),
+            cache_creation_tokens=cache_creation_tokens,
             successful_requests=1,
         )

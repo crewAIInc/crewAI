@@ -331,6 +331,7 @@ class TestFromProviderDictAnthropicCacheTokens:
         assert metrics is not None
         assert metrics.prompt_tokens == 120
         assert metrics.total_tokens == 170
+        assert metrics.cache_creation_tokens == 20
 
     def test_cache_read_and_creation_tokens_both_included(self):
         from crewai.types.usage_metrics import UsageMetrics
@@ -348,6 +349,7 @@ class TestFromProviderDictAnthropicCacheTokens:
         assert metrics.prompt_tokens == 150
         assert metrics.total_tokens == 200
         assert metrics.cached_prompt_tokens == 30
+        assert metrics.cache_creation_tokens == 20
 
     def test_missing_cache_fields_preserve_non_cached_totals(self):
         from crewai.types.usage_metrics import UsageMetrics
@@ -360,6 +362,7 @@ class TestFromProviderDictAnthropicCacheTokens:
         assert metrics.prompt_tokens == 100
         assert metrics.total_tokens == 150
         assert metrics.cached_prompt_tokens == 0
+        assert metrics.cache_creation_tokens == 0
 
     def test_reconciled_native_dict_is_not_double_counted(self):
         from crewai.types.usage_metrics import UsageMetrics
@@ -369,12 +372,14 @@ class TestFromProviderDictAnthropicCacheTokens:
                 "input_tokens": 150,
                 "output_tokens": 50,
                 "cached_prompt_tokens": 30,
+                "cache_creation_tokens": 20,
             }
         )
 
         assert metrics is not None
         assert metrics.prompt_tokens == 150
         assert metrics.total_tokens == 200
+        assert metrics.cache_creation_tokens == 20
 
     def test_openai_cached_prompt_tokens_are_not_added_twice(self):
         from crewai.types.usage_metrics import UsageMetrics

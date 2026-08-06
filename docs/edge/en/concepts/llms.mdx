@@ -427,7 +427,7 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     `cached_prompt_tokens` records the cache-read portion as a breakdown only; it is
     already included in `prompt_tokens` and must not be added again to
-    `total_tokens`.
+    `total_tokens`. `cache_creation_tokens` records cache writes the same way.
 
     ```python Code
     usage = llm.get_token_usage_summary()
