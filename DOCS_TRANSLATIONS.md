@@ -57,7 +57,7 @@ Commit English and locale files together.
 
 ## Checklist
 
-```
+```markdown
 - [ ] Git: listed changed docs/edge/en/*.mdx files
 - [ ] ar: updated/created matching files
 - [ ] ko: updated/created matching files
@@ -70,7 +70,7 @@ Commit English and locale files together.
 
 `git diff --name-only HEAD -- docs/edge/en/` returns:
 
-```
+```text
 docs/edge/en/concepts/llms.mdx
 ```
 
