@@ -10,7 +10,7 @@ mode: "wide"
 ## Description
 
 The `MongoDBVectorSearchTool` enables vector similarity queries on MongoDB Atlas collections. MongoDB Atlas supports 
-native vector search.The tool also supports index creation helpers and bulk insert of embedded texts.
+native vector search. The tool also supports index creation helpers and bulk insert of embedded texts.
 
 MongoDB Vector Search is useful for applications that want to use a vector search database to query data with semantic 
 search or hybrid search (combines semantic and full-text search), filter queries on other fields in your collection, or power 
@@ -36,14 +36,14 @@ uv add crewai-tools --extra mongodb
 - `connection_string` (str): Required. MongoDB Atlas connection string credentials to connect to your cluster.
 - `database_name` (str): Required. The name of the MongoDB database to use.
 - `collection_name` (str): Required. The collection within the database where documents and embeddings are stored.
-- `vector_index_name` (str): Optional. The name of the MongoDB Vector Search index to query (must match the index 
-  created in Atlas). Defaults to `vector_index`.
-- `text_key` (str): Optional. The document field name where raw text is stored. Defaults to text.
-- `embedding_key` (str): Optional. The document field name where the vector embedding is stored.  Defaults to `embedding`. 
-- `dimensions` (int, default `1536`): Optional. The number of dimensions for the embedding model (must match your model). Defaults to 1536.
-- `query_config` (MongoDBVectorSearchConfig): Optional. A `MongoDBVectorSearchConfig` object for advanced query settings like `limit` and `oversampling_factor`.
+- `vector_index_name` (str, default: `vector_index`): Optional. The name of the MongoDB Vector Search index to query (must match the index 
+  created in Atlas).
+- `text_key` (str, default: `text`): Optional. The document field name where raw text is stored.
+- `embedding_key` (str, default: `embedding`): Optional. The document field name where the vector embedding is stored.
+- `dimensions` (int, default: `1536`): Optional. The number of dimensions for the embedding model (must match your model).
+- `query_config` (MongoDBVectorSearchConfig): Optional. A `MongoDBVectorSearchConfig` object for advanced query settings, like `limit` and `oversampling_factor`.
 
-## `MongoDBVectorSearchTool` Methods
+## MongoDBVectorSearchTool Methods
 
 - `run(query=...)`: Embeds a query and performs vector similarity search, returning matching documents. 
   Takes a natural language `query` (`str`) parameter to embed and search.
@@ -131,7 +131,7 @@ rag_agent = Agent(
 )
 ```
 
-## Run a CrewAI workflow
+### Run a CrewAI workflow
 
 The following example demonstrates how to integrate your `MongoDBVectorSearchTool` with an Agent, Task, and 
 Crew to create and run a CrewAI agentic RAG workflow:
