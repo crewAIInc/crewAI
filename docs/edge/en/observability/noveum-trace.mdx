@@ -28,7 +28,9 @@ observes CrewAI events; it does not change CrewAI behavior.
    </Step>
    <Step title="Initialize tracing">
       Initialize Noveum Trace and set up the CrewAI listener before running your crew.
-      `setup_crewai_tracing()` requires `noveum_trace.init()` to be called first:
+      `setup_crewai_tracing()` requires `noveum_trace.init()` to be called first. The
+      returned listener subscribes to CrewAI's event bus automatically when it is
+      created — no manual attachment to the crew is needed:
 
     ```python
     import os
@@ -47,14 +49,17 @@ observes CrewAI events; it does not change CrewAI behavior.
    </Step>
    <Step title="Run your crew and flush traces">
       Run your crew as usual, then shut down the listener and flush pending traces
-      before the process exits:
+      before the process exits. Using `try/finally` ensures traces are exported even
+      if the crew raises:
 
     ```python
     crew = Crew(agents=[...], tasks=[...])
-    result = crew.kickoff()
 
-    listener.shutdown()
-    noveum_trace.flush()
+    try:
+        result = crew.kickoff()
+    finally:
+        listener.shutdown()
+        noveum_trace.flush()
     ```
    </Step>
 </Steps>
