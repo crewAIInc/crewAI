@@ -860,16 +860,19 @@ def test_prefixed_models_with_invalid_constants_use_litellm():
     llm = LLM(model="openai/gemini-2.5-flash", is_litellm=False)
     assert llm.is_litellm is True
     assert llm.model == "openai/gemini-2.5-flash"
+    assert llm.provider == "openai"
 
     # Test openai/ prefix with model that doesn't match patterns (e.g. no gpt- prefix) → LiteLLM
     llm2 = LLM(model="openai/custom-finetune-model", is_litellm=False)
     assert llm2.is_litellm is True
     assert llm2.model == "openai/custom-finetune-model"
+    assert llm2.provider == "openai"
 
     # Test anthropic/ prefix with non-Anthropic model → LiteLLM
     llm3 = LLM(model="anthropic/gpt-4o", is_litellm=False)
     assert llm3.is_litellm is True
     assert llm3.model == "anthropic/gpt-4o"
+    assert llm3.provider == "anthropic"
 
 
 def test_prefixed_models_with_valid_patterns_use_native_sdk():
@@ -893,11 +896,32 @@ def test_prefixed_models_with_non_native_providers_use_litellm():
     llm = LLM(model="groq/llama-3.3-70b", is_litellm=False)
     assert llm.is_litellm is True
     assert llm.model == "groq/llama-3.3-70b"
+    assert llm.provider == "groq"
 
     # Test together/ prefix (not a native provider) → LiteLLM
     llm2 = LLM(model="together/qwen-2.5-72b", is_litellm=False)
     assert llm2.is_litellm is True
     assert llm2.model == "together/qwen-2.5-72b"
+    assert llm2.provider == "together"
+
+
+@pytest.mark.parametrize(
+    ("model", "expected_provider"),
+    [
+        ("groq/llama-3.3-70b", "groq"),
+        ("cohere/command-r", "cohere"),
+        ("sambanova/Meta-Llama-3.1-70B-Instruct", "sambanova"),
+        ("mistral/mistral-large", "mistral"),
+        ("vertex_ai/gemini-1.5-pro", "vertex_ai"),
+        ("openai/custom-finetune-model", "openai"),
+        ("anthropic/gpt-4o", "anthropic"),
+    ],
+)
+def test_litellm_path_preserves_provider_from_model_prefix(model, expected_provider):
+    llm = LLM(model=model, is_litellm=False)
+    assert llm.is_litellm is True
+    assert llm.provider == expected_provider
+    assert llm.model == model
 
 
 def test_unprefixed_models_use_native_sdk():

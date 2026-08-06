@@ -274,7 +274,10 @@ class BaseLLM(BaseModel, ABC):
             data["stop"] = list(stop)
 
         if not data.get("provider"):
-            data["provider"] = "openai"
+            model = data.get("model") or ""
+            data["provider"] = (
+                cls._extract_provider(model) if isinstance(model, str) else "openai"
+            )
 
         known_fields = set(cls.model_fields.keys())
         extras = {k: v for k, v in data.items() if k not in known_fields}
