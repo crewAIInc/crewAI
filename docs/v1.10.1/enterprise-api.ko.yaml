@@ -1,0 +1,358 @@
+openapi: 3.0.3
+info:
+  title: CrewAI 엔터프라이즈 API
+  description: |
+    CrewAI AOP에 배포된 crew와 상호작용하기 위한 REST API입니다.
+
+    ## 시작하기
+    1. **Crew URL 확인**: 대시보드에서 고유한 crew URL을 확인하세요
+    2. **예제 복사**: 각 엔드포인트의 예제를 템플릿으로 사용하세요
+    3. **플레이스홀더 교체**: 실제 URL과 토큰으로 바꾸세요
+    4. **도구로 테스트**: cURL, Postman 등 선호하는 도구로 테스트하세요
+  version: 1.0.0
+  contact:
+    name: CrewAI 지원
+    email: support@crewai.com
+    url: https://crewai.com
+servers:
+  - url: https://your-actual-crew-name.crewai.com
+    description: 대시보드의 실제 crew URL로 교체하세요
+security:
+  - BearerAuth: []
+paths:
+  /inputs:
+    get:
+      summary: 필요 입력값 조회
+      description: |
+        **📋 참조 예제만 제공** - *요청 형식을 보여줍니다. 실제 호출은 cURL 예제를 복사해 URL과 토큰을 교체하세요.*
+
+        실행에 필요한 입력 파라미터 목록을 반환합니다.
+      operationId: getRequiredInputs
+      responses:
+        '200':
+          description: 입력값을 성공적으로 조회
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  inputs:
+                    type: array
+                    items:
+                      type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /kickoff:
+    post:
+      summary: Crew 실행 시작
+      description: |
+        **📋 참조 예제만 제공** - *요청 형식을 보여줍니다. 실제 호출은 cURL 예제를 복사해 URL과 토큰을 교체하세요.*
+
+        제공된 입력으로 새로운 실행을 시작하고 kickoff ID를 반환합니다.
+      operationId: startCrewExecution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - inputs
+              properties:
+                inputs:
+                  type: object
+                  additionalProperties:
+                    type: string
+      responses:
+        '200':
+          description: 실행이 성공적으로 시작됨
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  kickoff_id:
+                    type: string
+                    format: uuid
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /{kickoff_id}/status:
+    get:
+      summary: 실행 상태 조회
+      description: |
+        **📋 참조 예제만 제공** - *요청 형식을 보여줍니다. 실제 호출은 cURL 예제를 복사해 URL과 토큰을 교체하세요.*
+
+        kickoff ID로 실행 상태와 결과를 조회합니다.
+      operationId: getExecutionStatus
+      parameters:
+        - name: kickoff_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 상태를 성공적으로 조회
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ExecutionRunning'
+                  - $ref: '#/components/schemas/ExecutionCompleted'
+                  - $ref: '#/components/schemas/ExecutionError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Kickoff ID를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /resume:
+    post:
+      summary: Resume Crew Execution with Human Feedback
+      description: |
+        **📋 Reference Example Only** - *This shows the request format. To test with your actual crew, copy the cURL example and replace the URL + token with your real values.*
+
+        Resume a paused crew execution with human feedback for Human-in-the-Loop (HITL) workflows.
+        When a task with `human_input=True` completes, the crew execution pauses and waits for human feedback.
+
+        **IMPORTANT**: You must provide the same webhook URLs (`taskWebhookUrl`, `stepWebhookUrl`, `crewWebhookUrl`)
+        that were used in the original kickoff call. Webhook configurations are NOT automatically carried over -
+        they must be explicitly provided in the resume request to continue receiving notifications.
+      operationId: resumeCrewExecution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - execution_id
+                - task_id
+                - human_feedback
+                - is_approve
+              properties:
+                execution_id:
+                  type: string
+                  format: uuid
+                  description: The unique identifier for the crew execution (from kickoff)
+                  example: "abcd1234-5678-90ef-ghij-klmnopqrstuv"
+                task_id:
+                  type: string
+                  description: The ID of the task that requires human feedback
+                  example: "research_task"
+                human_feedback:
+                  type: string
+                  description: Your feedback on the task output. This will be incorporated as additional context for subsequent task executions.
+                  example: "Great research! Please add more details about recent developments in the field."
+                is_approve:
+                  type: boolean
+                  description: "Whether you approve the task output: true = positive feedback (continue), false = negative feedback (retry task)"
+                  example: true
+                taskWebhookUrl:
+                  type: string
+                  format: uri
+                  description: Callback URL executed after each task completion. MUST be provided to continue receiving task notifications.
+                  example: "https://your-server.com/webhooks/task"
+                stepWebhookUrl:
+                  type: string
+                  format: uri
+                  description: Callback URL executed after each agent thought/action. MUST be provided to continue receiving step notifications.
+                  example: "https://your-server.com/webhooks/step"
+                crewWebhookUrl:
+                  type: string
+                  format: uri
+                  description: Callback URL executed when the crew execution completes. MUST be provided to receive completion notification.
+                  example: "https://your-server.com/webhooks/crew"
+            examples:
+              approve_and_continue:
+                summary: Approve task and continue execution
+                value:
+                  execution_id: "abcd1234-5678-90ef-ghij-klmnopqrstuv"
+                  task_id: "research_task"
+                  human_feedback: "Excellent research! Proceed to the next task."
+                  is_approve: true
+                  taskWebhookUrl: "https://api.example.com/webhooks/task"
+                  stepWebhookUrl: "https://api.example.com/webhooks/step"
+                  crewWebhookUrl: "https://api.example.com/webhooks/crew"
+              request_revision:
+                summary: Request task revision with feedback
+                value:
+                  execution_id: "abcd1234-5678-90ef-ghij-klmnopqrstuv"
+                  task_id: "analysis_task"
+                  human_feedback: "Please include more quantitative data and cite your sources."
+                  is_approve: false
+                  taskWebhookUrl: "https://api.example.com/webhooks/task"
+                  crewWebhookUrl: "https://api.example.com/webhooks/crew"
+      responses:
+        '200':
+          description: Execution resumed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: ["resumed", "retrying", "completed"]
+                    description: Status of the resumed execution
+                    example: "resumed"
+                  message:
+                    type: string
+                    description: Human-readable message about the resume operation
+                    example: "Execution resumed successfully"
+              examples:
+                resumed:
+                  summary: Execution resumed with positive feedback
+                  value:
+                    status: "resumed"
+                    message: "Execution resumed successfully"
+                retrying:
+                  summary: Task will be retried with negative feedback
+                  value:
+                    status: "retrying"
+                    message: "Task will be retried with your feedback"
+        '400':
+          description: Invalid request body or execution not in pending state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Invalid Request"
+                message: "Execution is not in pending human input state"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Execution ID or Task ID not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Not Found"
+                message: "Execution ID not found"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        **📋 참고** - *예시의 토큰은 자리 표시자입니다.* 실제 토큰을 사용하세요.
+
+  schemas:
+    ExecutionRunning:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["running"]
+        current_task:
+          type: string
+        progress:
+          type: object
+          properties:
+            completed_tasks:
+              type: integer
+            total_tasks:
+              type: integer
+
+    ExecutionCompleted:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["completed"]
+        result:
+          type: object
+          properties:
+            output:
+              type: string
+            tasks:
+              type: array
+              items:
+                $ref: '#/components/schemas/TaskResult'
+        execution_time:
+          type: number
+
+    ExecutionError:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["error"]
+        error:
+          type: string
+        execution_time:
+          type: number
+
+    TaskResult:
+      type: object
+      properties:
+        task_id:
+          type: string
+        output:
+          type: string
+        agent:
+          type: string
+        execution_time:
+          type: number
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+    ValidationError:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          properties:
+            missing_inputs:
+              type: array
+              items:
+                type: string
+
+  responses:
+    UnauthorizedError:
+      description: 인증 실패
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFoundError:
+      description: 리소스를 찾을 수 없음
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServerError:
+      description: 서버 내부 오류
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

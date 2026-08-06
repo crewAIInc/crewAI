@@ -19,6 +19,7 @@ from crewai_cli.utils import (
     enable_prompt_line_editing,
     is_dmn_mode_enabled,
     read_toml,
+    warn_deprecated_command,
 )
 
 
@@ -38,14 +39,6 @@ def replay_task_command(*args: Any, **kwargs: Any) -> Any:
     from crewai_cli.replay_from_task import replay_task_command as _replay_task_command
 
     return _replay_task_command(*args, **kwargs)
-
-
-def run_flow_definition(*args: Any, **kwargs: Any) -> Any:
-    from crewai_cli.run_flow_definition import (
-        run_flow_definition as _run_flow_definition,
-    )
-
-    return _run_flow_definition(*args, **kwargs)
 
 
 def run_crew(*args: Any, **kwargs: Any) -> Any:
@@ -145,7 +138,10 @@ def uv(uv_args: tuple[str, ...]) -> None:
 
 @crewai.command()
 @click.argument(
-    "type", required=False, default=None, type=click.Choice(["crew", "flow"])
+    "type",
+    required=False,
+    default=None,
+    type=click.Choice(["crew", "flow", "tool", "skill", "template"]),
 )
 @click.argument("name", required=False, default=None)
 @click.option("--provider", type=str, help="The provider to use for the crew")
@@ -155,20 +151,44 @@ def uv(uv_args: tuple[str, ...]) -> None:
     is_flag=True,
     help="Use classic Python/YAML project structure instead of JSON",
 )
+@click.option(
+    "--declarative",
+    is_flag=True,
+    help="Create a declarative Flow project instead of a Python Flow project",
+)
+@click.option(
+    "--no-project",
+    "in_project",
+    is_flag=True,
+    default=True,
+    flag_value=False,
+    help="Skill only: create in current dir instead of ./skills/",
+)
+@click.option(
+    "-o",
+    "--output-dir",
+    type=str,
+    default=None,
+    help="Template only: directory name for the template (defaults to template name)",
+)
 def create(
     type: str | None,
     name: str | None,
     provider: str | None,
     skip_provider: bool = False,
     classic: bool = False,
+    declarative: bool = False,
+    in_project: bool = True,
+    output_dir: str | None = None,
 ) -> None:
-    """Create a new crew, or flow."""
+    """Create a new crew, flow, tool, skill, or template."""
     dmn_mode = is_dmn_mode_enabled()
     if not type:
         if dmn_mode:
             raise click.UsageError(
                 "TYPE is required when CREWAI_DMN is set. "
-                "Use `crewai create crew <name>` or `crewai create flow <name>`."
+                "Use `crewai create <type> <name>` where type is one of: "
+                "crew, flow, tool, skill, template."
             )
         from crewai_cli.tui_picker import pick
 
@@ -178,6 +198,9 @@ def create(
                 "flow",
                 "A deterministic workflow with full control over agents and crews",
             ),
+            ("tool", "A custom tool for the CrewAI Tool Repository"),
+            ("skill", "An agent skill with instructions and optional assets"),
+            ("template", "A remote project template from the CrewAI gallery"),
         ]
         type = pick("What would you like to create?", options)
         if type is None:
@@ -191,9 +214,38 @@ def create(
             click.style(f"  Name of your {type}", fg="cyan", bold=True),
             prompt_suffix=click.style(" › ", fg="bright_white"),  # noqa: RUF001
         )
-    if dmn_mode:
+    if dmn_mode and type == "crew":
         skip_provider = True
-    if type == "crew":
+    if not in_project and type != "skill":
+        raise click.UsageError("--no-project can only be used with skill projects.")
+    if output_dir is not None and type != "template":
+        raise click.UsageError("--output-dir can only be used with template projects.")
+    if type == "tool":
+        if declarative or classic or provider is not None or skip_provider:
+            raise click.UsageError(
+                "Crew and flow options cannot be used with tool projects."
+            )
+        from crewai_cli.tools.main import ToolCommand
+
+        ToolCommand().create(name)
+    elif type == "skill":
+        if declarative or classic or provider is not None or skip_provider:
+            raise click.UsageError(
+                "Crew and flow options cannot be used with skill projects."
+            )
+        from crewai_cli.skills.main import SkillCommand
+
+        SkillCommand().create(name, in_project=in_project)
+    elif type == "template":
+        if declarative or classic or provider is not None or skip_provider:
+            raise click.UsageError(
+                "Crew and flow options cannot be used with template projects."
+            )
+        template_cmd = TemplateCommand()
+        template_cmd.add_template(name, output_dir)
+    elif type == "crew":
+        if declarative:
+            raise click.UsageError("--declarative can only be used with flow projects")
         if classic:
             from crewai_cli.create_crew import create_crew
 
@@ -205,9 +257,12 @@ def create(
     elif type == "flow":
         from crewai_cli.create_flow import create_flow
 
-        create_flow(name)
+        create_flow(name, declarative=declarative)
     else:
-        click.secho("Error: Invalid type. Must be 'crew' or 'flow'.", fg="red")
+        click.secho(
+            "Error: Invalid type. Must be 'crew', 'flow', 'tool', 'skill', or 'template'.",
+            fg="red",
+        )
 
 
 @crewai.command()
@@ -468,7 +523,7 @@ def memory(
     type=str,
     default=None,
     help=(
-        "Path to a trained-agents pickle (produced by `crewai train -f`). "
+        "Crew-only: path to a trained-agents pickle (produced by `crewai train -f`). "
         "When set, agents load suggestions from this file instead of the "
         "default trained_agents_data.pkl. Equivalent to setting "
         "CREWAI_TRAINED_AGENTS_FILE."
@@ -512,16 +567,13 @@ def install(context: click.Context) -> None:
     "--definition",
     type=str,
     default=None,
-    help=(
-        "Experimental: path to a Flow Definition YAML/JSON file, "
-        "or an inline YAML/JSON string."
-    ),
+    help="Flow-only: path to a declarative flow definition.",
 )
 @click.option(
     "--inputs",
     type=str,
     default=None,
-    help='Experimental: JSON object passed to flow.kickoff(), e.g. \'{"topic":"AI"}\'.',
+    help='Flow-only: JSON object passed to the declarative flow, e.g. \'{"topic":"AI"}\'.',
 )
 def run(
     trained_agents_file: str | None,
@@ -529,18 +581,16 @@ def run(
     inputs: str | None,
 ) -> None:
     """Run the Crew or Flow."""
-    if inputs is not None and definition is None:
-        raise click.UsageError("--inputs requires --definition")
+    # --inputs no longer requires --definition: with no override it resolves the
+    # configured [tool.crewai] flow, same as a bare `crewai run`.
+    if trained_agents_file is not None and definition is not None:
+        raise click.UsageError("--filename can only be used when running crews")
 
-    if definition is not None:
-        click.secho(
-            "Warning: `crewai run --definition` is experimental and may change without notice.",
-            fg="yellow",
-        )
-        run_flow_definition(definition=definition, inputs=inputs)
-        return
-
-    run_crew(trained_agents_file=trained_agents_file)
+    run_crew(
+        trained_agents_file=trained_agents_file,
+        definition=definition,
+        inputs=inputs,
+    )
 
 
 @crewai.command()
@@ -657,6 +707,8 @@ def tool() -> None:
 @tool.command(name="create")
 @click.argument("handle")
 def tool_create(handle: str) -> None:
+    """[Deprecated: use `crewai create tool`] Create a custom tool project."""
+    warn_deprecated_command(old="crewai tool create", new="crewai create tool")
     from crewai_cli.tools.main import ToolCommand
 
     tool_cmd = ToolCommand()
@@ -691,20 +743,9 @@ def tool_publish(is_public: bool, force: bool) -> None:
     tool_cmd.publish(is_public, force)
 
 
-@crewai.group()
-def experimental() -> None:
-    """Experimental, unstable commands. Subject to change without notice."""
-    import os
-
-    if os.environ.get("CREWAI_EXPERIMENTAL") != "1":
-        raise click.UsageError(
-            "Experimental commands are gated. Set CREWAI_EXPERIMENTAL=1 to enable."
-        )
-
-
-@experimental.group(name="skill")
+@crewai.group(name="skill")
 def skill() -> None:
-    """Skill Repository related commands (experimental)."""
+    """Create, publish, and install agent skills."""
 
 
 @skill.command(name="create")
@@ -718,7 +759,9 @@ def skill() -> None:
     help="Create skill in current dir instead of ./skills/",
 )
 def skill_create(name: str, in_project: bool) -> None:
-    from crewai_cli.experimental.skills.main import SkillCommand
+    """[Deprecated: use `crewai create skill`] Create a new agent skill."""
+    warn_deprecated_command(old="crewai skill create", new="crewai create skill")
+    from crewai_cli.skills.main import SkillCommand
 
     skill_cmd = SkillCommand()
     skill_cmd.create(name, in_project=in_project)
@@ -727,7 +770,7 @@ def skill_create(name: str, in_project: bool) -> None:
 @skill.command(name="install")
 @click.argument("ref")
 def skill_install(ref: str) -> None:
-    from crewai_cli.experimental.skills.main import SkillCommand
+    from crewai_cli.skills.main import SkillCommand
 
     skill_cmd = SkillCommand()
     skill_cmd.install(ref)
@@ -741,20 +784,19 @@ def skill_install(ref: str) -> None:
     show_default=True,
     help="Skip git-state validation.",
 )
-@click.option("--public", "is_public", flag_value=True, default=False)
-@click.option("--private", "is_public", flag_value=False)
 @click.option("--org", default=None, help="Organisation slug (overrides settings).")
-def skill_publish(is_public: bool, org: str | None, force: bool) -> None:
-    from crewai_cli.experimental.skills.main import SkillCommand
+def skill_publish(org: str | None, force: bool) -> None:
+    """Publish the skill in the current directory, scoped to your organization."""
+    from crewai_cli.skills.main import SkillCommand
 
     skill_cmd = SkillCommand()
-    skill_cmd.publish(is_public, org=org, force=force)
+    skill_cmd.publish(org=org, force=force)
 
 
 @skill.command(name="list")
 def skill_list() -> None:
     """List locally installed skills."""
-    from crewai_cli.experimental.skills.main import SkillCommand
+    from crewai_cli.skills.main import SkillCommand
 
     skill_cmd = SkillCommand()
     skill_cmd.list_cached()
@@ -782,7 +824,8 @@ def template_list() -> None:
     help="Directory name for the template (defaults to template name)",
 )
 def template_add(name: str, output_dir: str | None) -> None:
-    """Add a template to the current directory."""
+    """[Deprecated: use `crewai create template`] Add a template to the current directory."""
+    warn_deprecated_command(old="crewai template add", new="crewai create template")
     template_cmd = TemplateCommand()
     template_cmd.add_template(name, output_dir)
 
@@ -795,10 +838,11 @@ def flow() -> None:
 @flow.command(name="kickoff")
 def flow_run() -> None:
     """Kickoff the Flow."""
-    from crewai_cli.kickoff_flow import kickoff_flow
-
-    click.echo("Running the Flow")
-    kickoff_flow()
+    click.secho(
+        "The command 'crewai flow kickoff' is deprecated. Use 'crewai run' instead.",
+        fg="yellow",
+    )
+    run_crew(trained_agents_file=None, definition=None, inputs=None)
 
 
 @flow.command(name="plot")

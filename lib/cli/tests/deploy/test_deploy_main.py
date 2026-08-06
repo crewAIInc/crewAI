@@ -167,6 +167,36 @@ def test_prepare_project_for_deploy_creates_missing_lock_after_validation(
     assert validators == []
 
 
+def test_deployment_page_url_prefers_deployment_id():
+    assert (
+        deploy_main._deployment_page_url(
+            "https://app.crewai.com",
+            {"uuid": "crew-uuid", "deployment_id": 128687},
+        )
+        == "https://app.crewai.com/crewai_plus/deployments/128687"
+    )
+
+
+def test_deployment_page_url_prefers_nested_deployment_id_over_crew_uuid():
+    assert (
+        deploy_main._deployment_page_url(
+            "https://app.crewai.com",
+            {"uuid": "crew-uuid", "deployment": {"deployment_id": 128687}},
+        )
+        == "https://app.crewai.com/crewai_plus/deployments/128687"
+    )
+
+
+def test_deployment_page_url_does_not_use_uuid_as_deployment_id():
+    assert (
+        deploy_main._deployment_page_url(
+            "https://app.crewai.com/",
+            {"uuid": "crew-uuid", "deployment": {"uuid": "deployment-uuid"}},
+        )
+        is None
+    )
+
+
 class TestDeployCommand(unittest.TestCase):
     @patch("crewai_cli.command.get_auth_token")
     @patch("crewai_cli.deploy.main.get_project_name")
@@ -186,6 +216,12 @@ class TestDeployCommand(unittest.TestCase):
 
         self.deploy_command = deploy_main.DeployCommand()
         self.mock_client = self.deploy_command.plus_api_client
+        self.mock_client.base_url = "https://app.crewai.com"
+        self.mock_browser_open_patcher = patch(
+            "crewai_cli.deploy.main.webbrowser.open"
+        )
+        self.mock_browser_open = self.mock_browser_open_patcher.start()
+        self.addCleanup(self.mock_browser_open_patcher.stop)
 
     def test_init_success(self):
         self.assertEqual(self.deploy_command.project_name, "test_project")
@@ -272,11 +308,95 @@ class TestDeployCommand(unittest.TestCase):
     def test_display_deployment_info(self):
         with patch("sys.stdout", new=StringIO()) as fake_out:
             self.deploy_command._display_deployment_info(
-                {"uuid": "test-uuid", "status": "deployed"}
+                {"uuid": "test-uuid", "id": 128687, "status": "deployed"}
             )
             self.assertIn("Deploying the crew...", fake_out.getvalue())
             self.assertIn("test-uuid", fake_out.getvalue())
             self.assertIn("deployed", fake_out.getvalue())
+            self.assertIn(
+                "https://app.crewai.com/crewai_plus/deployments/128687",
+                fake_out.getvalue(),
+            )
+        self.mock_browser_open.assert_called_once_with(
+            "https://app.crewai.com/crewai_plus/deployments/128687"
+        )
+
+    def test_display_deployment_info_warns_when_browser_open_returns_false(self):
+        self.mock_browser_open.return_value = False
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command._display_deployment_info(
+                {"uuid": "test-uuid", "id": 128687, "status": "deployed"}
+            )
+            self.assertIn(
+                "Could not open the deployment page automatically.",
+                fake_out.getvalue(),
+            )
+
+        self.mock_browser_open.assert_called_once_with(
+            "https://app.crewai.com/crewai_plus/deployments/128687"
+        )
+
+    def test_display_deployment_info_warns_when_browser_open_raises(self):
+        self.mock_browser_open.side_effect = RuntimeError("no browser")
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command._display_deployment_info(
+                {"uuid": "test-uuid", "id": 128687, "status": "deployed"}
+            )
+            self.assertIn(
+                "Could not open the deployment page automatically.",
+                fake_out.getvalue(),
+            )
+
+        self.mock_browser_open.assert_called_once_with(
+            "https://app.crewai.com/crewai_plus/deployments/128687"
+        )
+
+    def test_display_creation_success_resolves_deployment_page_id_from_status(self):
+        status_response = MagicMock()
+        status_response.is_success = True
+        status_response.json.return_value = {
+            "uuid": "new-uuid",
+            "id": 128774,
+            "status": "created",
+        }
+        self.mock_client.crew_status_by_uuid.return_value = status_response
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command._display_creation_success(
+                {"uuid": "new-uuid", "status": "created"}
+            )
+            output = fake_out.getvalue()
+
+        self.assertIn("crewai deploy push --uuid new-uuid", output)
+        self.assertIn(
+            "https://app.crewai.com/crewai_plus/deployments/128774",
+            output,
+        )
+        self.assertNotIn(
+            "https://app.crewai.com/crewai_plus/deployments/new-uuid",
+            output,
+        )
+        self.mock_client.crew_status_by_uuid.assert_called_once_with("new-uuid")
+        self.mock_browser_open.assert_called_once_with(
+            "https://app.crewai.com/crewai_plus/deployments/128774"
+        )
+
+    def test_open_deployment_page_does_not_open_uuid_url_when_status_lookup_fails(
+        self,
+    ):
+        status_response = MagicMock()
+        status_response.is_success = False
+        self.mock_client.crew_status_by_uuid.return_value = status_response
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command._open_deployment_page({"uuid": "new-uuid"})
+            output = fake_out.getvalue()
+
+        self.mock_client.crew_status_by_uuid.assert_called_once_with("new-uuid")
+        self.mock_browser_open.assert_not_called()
+        self.assertNotIn("deployments/new-uuid", output)
 
     def test_display_logs(self):
         with patch("sys.stdout", new=StringIO()) as fake_out:

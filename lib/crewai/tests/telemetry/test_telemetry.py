@@ -96,6 +96,35 @@ def test_flow_execution_span_records_crewai_version():
     span.set_attribute.assert_any_call("flow_name", "ResearchFlow")
 
 
+def test_flow_creation_span_records_crewai_version():
+    tracer = Mock()
+    span = Mock()
+    tracer.start_span.return_value = span
+
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "CREWAI_DISABLE_TELEMETRY": "false",
+                "CREWAI_DISABLE_TRACKING": "false",
+                "OTEL_SDK_DISABLED": "false",
+            },
+        ),
+        patch("crewai.telemetry.telemetry.TracerProvider"),
+        patch("crewai.telemetry.telemetry.trace.get_tracer", return_value=tracer),
+        patch("crewai.telemetry.telemetry.version", return_value="9.9.9"),
+    ):
+        telemetry = Telemetry()
+        # Flow creation also emits a once-per-process coding_agent feature span;
+        # stub it so this test stays focused on the Flow Creation span.
+        with patch.object(telemetry, "coding_agent_span"):
+            telemetry.flow_creation_span("ResearchFlow")
+
+    tracer.start_span.assert_called_once_with("Flow Creation")
+    span.set_attribute.assert_any_call("crewai_version", "9.9.9")
+    span.set_attribute.assert_any_call("flow_name", "ResearchFlow")
+
+
 @patch("crewai.telemetry.telemetry.logger.error")
 @patch(
     "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter.export",
@@ -200,4 +229,74 @@ def test_no_signal_handler_traceback_in_non_main_thread():
     mock_holder["signal"].assert_not_called()
     mock_holder["logger"].debug.assert_any_call(
         "Skipping signal handler registration: not running in main thread"
+    )
+
+
+def test_hook_dispatched_span_counts_point_usage():
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "CREWAI_DISABLE_TELEMETRY": "false",
+                "CREWAI_DISABLE_TRACKING": "false",
+                "OTEL_SDK_DISABLED": "false",
+            },
+        ),
+        patch("crewai.telemetry.telemetry.TracerProvider"),
+    ):
+        telemetry = Telemetry()
+        with patch.object(telemetry, "feature_usage_span") as feature_usage_span:
+            telemetry.hook_dispatched_span("pre_tool_call", "proceeded")
+
+    feature_usage_span.assert_called_once_with("hooks:pre_tool_call")
+
+
+def test_hook_dispatched_span_counts_aborts():
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "CREWAI_DISABLE_TELEMETRY": "false",
+                "CREWAI_DISABLE_TRACKING": "false",
+                "OTEL_SDK_DISABLED": "false",
+            },
+        ),
+        patch("crewai.telemetry.telemetry.TracerProvider"),
+    ):
+        telemetry = Telemetry()
+        with patch.object(telemetry, "feature_usage_span") as feature_usage_span:
+            telemetry.hook_dispatched_span("pre_tool_call", "aborted")
+
+    feature_usage_span.assert_any_call("hooks:pre_tool_call")
+    feature_usage_span.assert_any_call("hooks:aborted")
+    assert feature_usage_span.call_count == 2
+
+
+def test_event_listener_tracks_hook_dispatched_events():
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.event_listener import event_listener
+    from crewai.events.types.hook_events import HookDispatchedEvent
+
+    with (
+        crewai_event_bus.scoped_handlers(),
+        patch.object(
+            event_listener._telemetry,
+            "hook_dispatched_span",
+        ) as hook_dispatched_span,
+    ):
+        event_listener.setup_listeners(crewai_event_bus)
+        crewai_event_bus.emit(
+            "test",
+            HookDispatchedEvent(
+                interception_point="pre_tool_call",
+                outcome="aborted",
+                hook_count=1,
+                duration_ms=1.5,
+            ),
+        )
+        crewai_event_bus.flush()
+
+    hook_dispatched_span.assert_called_once_with(
+        interception_point="pre_tool_call",
+        outcome="aborted",
     )

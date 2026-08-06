@@ -41,7 +41,9 @@ from crewai.events.types.env_events import (
     DefaultEnvEvent,
 )
 from crewai.events.types.flow_events import (
+    ConversationTurnCompletedEvent,
     FlowCreatedEvent,
+    FlowFailedEvent,
     FlowFinishedEvent,
     FlowPausedEvent,
     FlowStartedEvent,
@@ -52,6 +54,7 @@ from crewai.events.types.flow_events import (
     MethodExecutionPausedEvent,
     MethodExecutionStartedEvent,
 )
+from crewai.events.types.hook_events import HookDispatchedEvent
 from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
     KnowledgeQueryFailedEvent,
@@ -112,6 +115,7 @@ from crewai.events.types.task_events import (
     TaskStartedEvent,
 )
 from crewai.events.types.tool_usage_events import (
+    ToolFailureDetectedEvent,
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
@@ -317,6 +321,21 @@ class EventListener(BaseEventListener):
                     source.flow_id,
                 )
 
+        @crewai_event_bus.on(FlowFailedEvent)
+        def on_flow_failed(source: Any, event: FlowFailedEvent) -> None:
+            if not getattr(source, "suppress_flow_events", False):
+                self.formatter.handle_flow_status(
+                    event.flow_name,
+                    source.flow_id,
+                    "failed",
+                )
+
+        @crewai_event_bus.on(ConversationTurnCompletedEvent)
+        def on_conversation_turn_completed(
+            _: Any, event: ConversationTurnCompletedEvent
+        ) -> None:
+            self._telemetry.feature_usage_span("flow:conversation_turn")
+
         @crewai_event_bus.on(MethodExecutionStartedEvent)
         def on_method_execution_started(
             source: Any, event: MethodExecutionStartedEvent
@@ -407,6 +426,8 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(ToolUsageFinishedEvent)
         def on_tool_usage_finished(source: Any, event: ToolUsageFinishedEvent) -> None:
+            if not self.formatter.should_render_success_panel(event.failure):
+                return
             if isinstance(source, LLM):
                 self.formatter.handle_llm_tool_usage_finished(
                     event.tool_name,
@@ -431,6 +452,18 @@ class EventListener(BaseEventListener):
                     event.error,
                     event.run_attempts,
                 )
+
+        @crewai_event_bus.on(ToolFailureDetectedEvent)
+        def on_tool_failure_detected(
+            source: Any, event: ToolFailureDetectedEvent
+        ) -> None:
+            if not self.formatter.should_render_failure_panel(event.failure):
+                return
+            self.formatter.handle_tool_failure_detected(
+                event.tool_name,
+                event.failure,
+                event.policy,
+            )
 
         @crewai_event_bus.on(LLMCallStartedEvent)
         def on_llm_call_started(_: Any, event: LLMCallStartedEvent) -> None:
@@ -842,6 +875,13 @@ class EventListener(BaseEventListener):
             )
             if has_hooks:
                 self._telemetry.feature_usage_span("hooks:registered")
+
+        @crewai_event_bus.on(HookDispatchedEvent)
+        def on_hook_dispatched(_: Any, event: HookDispatchedEvent) -> None:
+            self._telemetry.hook_dispatched_span(
+                interception_point=event.interception_point,
+                outcome=event.outcome,
+            )
 
 
 event_listener = EventListener()

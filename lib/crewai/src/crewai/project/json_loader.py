@@ -16,6 +16,8 @@ from urllib.parse import unquote, urlparse
 
 from pydantic import BaseModel, ValidationError
 
+from crewai.utilities.declarative_refs import InvalidRefError, resolve_class_ref
+
 
 logger = logging.getLogger(__name__)
 
@@ -207,19 +209,18 @@ def load_jsonc_file(source: str | Path) -> Any:
     return parse_jsonc(path.read_text(encoding="utf-8"), source=path)
 
 
-def load_agent(source: str | Path) -> Any:
-    """Load an existing ``Agent`` from a ``.json`` / ``.jsonc`` definition file."""
-    path = Path(source)
-    defn = _expect_object(load_jsonc_file(path), path)
-    root = path.parent.parent if path.parent.name == "agents" else path.parent
+def _instantiate_agent_from_data(
+    defn: dict[str, Any], source_label: str, root: Path
+) -> Any:
+    """Resolve the agent class and kwargs from definition data and instantiate it."""
     agent_class = _agent_class_from_definition(
         defn,
-        f"{path}: type",
+        f"{source_label}: type",
         project_root=root,
     )
     agent_kwargs = _agent_kwargs_from_definition(
         defn,
-        path,
+        source_label,
         agent_class=agent_class,
         project_root=root,
     )
@@ -227,9 +228,50 @@ def load_agent(source: str | Path) -> Any:
     try:
         return agent_class(**agent_kwargs)
     except ValidationError as exc:
-        raise JSONProjectError(_format_validation_error(path, exc)) from exc
+        raise JSONProjectError(_format_validation_error(source_label, exc)) from exc
     except Exception as exc:
-        raise JSONProjectError(f"{path}: failed to load agent: {exc}") from exc
+        raise JSONProjectError(f"{source_label}: failed to load agent: {exc}") from exc
+
+
+def load_agent(source: str | Path) -> Any:
+    """Load an existing ``Agent`` from a ``.json`` / ``.jsonc`` definition file."""
+    path = Path(source)
+    defn = _expect_object(load_jsonc_file(path), path)
+    root = path.parent.parent if path.parent.name == "agents" else path.parent
+    return _instantiate_agent_from_data(defn, str(path), root)
+
+
+def load_agent_from_definition(
+    definition: dict[str, Any] | Any,
+    *,
+    source: str | Path = "<inline agent>",
+    project_root: str | Path | None = None,
+) -> tuple[Any, type[BaseModel] | None]:
+    """Load an ``Agent`` and optional kickoff response model from an inline definition."""
+    from crewai.project.crew_definition import AgentDefinition
+
+    root = Path(project_root) if project_root is not None else Path.cwd()
+    source_label = str(source)
+    agent_definition = (
+        definition
+        if isinstance(definition, AgentDefinition)
+        else AgentDefinition.model_validate(definition)
+    )
+    definition_data = agent_definition.model_dump(mode="python", exclude_none=True)
+    response_format_ref = definition_data.pop("response_format", None)
+    definition_data.pop("input", None)
+
+    agent = _instantiate_agent_from_data(definition_data, source_label, root)
+
+    response_format = None
+    if response_format_ref is not None:
+        response_format = _resolve_model_class(
+            response_format_ref,
+            f"{source_label}: response_format",
+            root,
+        )
+
+    return agent, response_format
 
 
 def validate_crew_project(
@@ -936,9 +978,10 @@ def _agent_kwargs_from_definition(
         extra_allowed,
         skip_unknown=skip_unknown,
     )
-    for required in ("role", "goal", "backstory"):
-        if required not in defn:
-            errors.append(f"{path}: missing required field '{required}'")
+    if not defn.get("from_repository"):
+        for required in ("role", "goal", "backstory"):
+            if defn.get(required) is None:
+                errors.append(f"{path}: missing required field '{required}'")
 
     settings = defn.get("settings", {})
     if settings is None:
@@ -1780,6 +1823,9 @@ def _resolve_tools(tool_defs: list[Any], project_root: Path | None = None) -> li
         if tool_def.startswith("custom:"):
             tools.append(_resolve_custom_tool(tool_def[7:], project_root=project_root))
             continue
+        if ":" in tool_def:
+            tools.append(_instantiate_tool_import_ref(tool_def))
+            continue
         try:
             tool_cls = _find_tool_class(tool_def)
         except Exception as e:
@@ -1787,8 +1833,10 @@ def _resolve_tools(tool_defs: list[Any], project_root: Path | None = None) -> li
         if tool_cls is None:
             raise JSONProjectError(
                 f"Unknown tool '{tool_def}'. Tool names must match a class from "
-                f"the 'crewai_tools' package (e.g. 'SerperDevTool') or use the "
-                f"'custom:<name>' prefix for a tool defined in tools/<name>.py."
+                f"the 'crewai_tools' package (e.g. 'SerperDevTool'), use a "
+                f"'module:ClassName' import ref (e.g. 'crewai_tools:SerperDevTool'), "
+                f"or use the 'custom:<name>' prefix for a tool defined in "
+                f"tools/<name>.py."
             )
         try:
             tools.append(tool_cls())
@@ -1797,6 +1845,32 @@ def _resolve_tools(tool_defs: list[Any], project_root: Path | None = None) -> li
                 f"Failed to initialize tool '{tool_def}': {e}"
             ) from e
     return tools
+
+
+def _instantiate_tool_import_ref(ref: str) -> Any:
+    from crewai.tools import BaseTool
+
+    try:
+        tool_cls = cast(
+            Callable[[], BaseTool],
+            resolve_class_ref(ref, field="tool", base_class=BaseTool),
+        )
+    except InvalidRefError as e:
+        message = str(e)
+        if (
+            message.startswith("unresolvable ")
+            or "expected 'module:qualname'" in message
+        ):
+            raise JSONProjectError(str(e)) from e
+        raise JSONProjectError(
+            f"invalid tool ref {ref!r}; expected a BaseTool class"
+        ) from e
+    try:
+        return tool_cls()
+    except Exception as e:
+        raise JSONProjectError(
+            f"cannot instantiate tool ref {ref!r} without arguments: {e}"
+        ) from e
 
 
 _tool_class_cache: dict[str, type | None] = {}

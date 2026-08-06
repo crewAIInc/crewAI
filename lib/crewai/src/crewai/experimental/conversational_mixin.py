@@ -18,7 +18,8 @@ Import surface:
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from enum import Enum
 import json
 import logging
@@ -30,6 +31,9 @@ from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.flow_events import (
     ConversationMessageAddedEvent,
     ConversationRouteSelectedEvent,
+    ConversationTurnCompletedEvent,
+    ConversationTurnFailedEvent,
+    ConversationTurnStartedEvent,
 )
 from crewai.experimental.conversational import (
     AgentMessage,
@@ -41,6 +45,7 @@ from crewai.experimental.conversational import (
     _conversational_only,
     message_to_llm_dict,
 )
+from crewai.flow.async_feedback import HumanFeedbackPending
 from crewai.flow.conversation import (
     append_message as _append_conversation_message,
     get_conversation_messages,
@@ -128,6 +133,8 @@ class _ConversationalMixin:
         _pending_user_message: str | dict[str, Any] | None
         _pending_intents: Sequence[str] | None
         _pending_intent_llm: str | BaseLLM | None
+        _turn_classified_intent: str | None
+        _assistant_reply_appended: bool
 
         def _clear_or_listeners(self) -> None:
             pass
@@ -180,12 +187,22 @@ class _ConversationalMixin:
             )
             return configured_route
 
-        if state.last_intent:
+        turn_intent = self._turn_classified_intent
+        if turn_intent:
+            state.last_intent = turn_intent
             self._emit_conversation_route_selected(
-                state.last_intent,
+                turn_intent,
                 previous_intent=previous_intent,
             )
-            return state.last_intent
+            return turn_intent
+
+        if previous_intent:
+            logger.debug(
+                "route_turn() returned no route and no intent was classified "
+                "this turn; ignoring stale last_intent=%r from a previous turn "
+                "and falling back to built-in routing",
+                previous_intent,
+            )
 
         if self.can_answer_from_history(context):
             state.last_intent = "answer_from_history"
@@ -218,7 +235,9 @@ class _ConversationalMixin:
             messages.append({"role": "system", "content": system_prompt})
         messages.extend(self.conversation_messages)
 
-        response = self._coerce_llm(llm).call(messages=messages)
+        llm_instance = self._coerce_llm(llm)
+        with self._conversation_streaming_enabled(llm_instance):
+            response = llm_instance.call(messages=messages)
         content = self._stringify_result(response)
         self.append_assistant_message(content)
         return content
@@ -251,7 +270,8 @@ class _ConversationalMixin:
             },
             *self.build_agent_context("answer_from_history"),
         ]
-        response = llm_instance.call(messages=messages)
+        with self._conversation_streaming_enabled(llm_instance):
+            response = llm_instance.call(messages=messages)
         content = self._stringify_result(response)
         self.append_assistant_message(content)
         return content
@@ -280,6 +300,14 @@ class _ConversationalMixin:
         """
         state = cast(ConversationState, self.state)
         sid = session_id or state.id
+        crewai_event_bus.emit(
+            self,
+            ConversationTurnStartedEvent(
+                type="conversation_turn_started",
+                flow_name=self.name or self.__class__.__name__,
+                session_id=sid,
+            ),
+        )
 
         # Stash the pending turn so the kickoff extension hook picks it up
         # after persist restore.
@@ -287,26 +315,157 @@ class _ConversationalMixin:
         self._pending_intents = list(intents) if intents else None
         self._pending_intent_llm = intent_llm
 
-        # Each turn is a fresh execution; clear graph tracking so the second
-        # turn re-runs instead of being treated as a checkpoint restore.
-        if "from_checkpoint" not in kickoff_kwargs:
-            self._reset_turn_execution_state()
-
-        assistant_count = self._assistant_message_count()
+        failed_event: ConversationTurnFailedEvent | None = None
         try:
+            # Each turn is a fresh execution; clear graph tracking so the second
+            # turn re-runs instead of being treated as a checkpoint restore.
+            if "from_checkpoint" not in kickoff_kwargs:
+                self._reset_turn_execution_state()
+
+            object.__setattr__(self, "_assistant_reply_appended", False)
             result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
+            if (
+                result is not None
+                and not self._assistant_reply_appended
+                and self._is_public_turn_result(result)
+            ):
+                self.append_assistant_message(self._stringify_result(result))
+        except Exception as exc:
+            failed_event = ConversationTurnFailedEvent(
+                type="conversation_turn_failed",
+                flow_name=self.name or self.__class__.__name__,
+                session_id=sid,
+                error=exc,
+            )
+            raise
         finally:
             self._pending_user_message = None
             self._pending_intents = None
             self._pending_intent_llm = None
+            if failed_event is not None:
+                self._emit_terminal_conversation_turn_event(failed_event)
 
-        if (
-            result is not None
-            and self._assistant_message_count() == assistant_count
-            and self._is_public_turn_result(result)
-        ):
-            self.append_assistant_message(self._stringify_result(result))
+        self._emit_terminal_conversation_turn_event(
+            ConversationTurnCompletedEvent(
+                type="conversation_turn_completed",
+                flow_name=self.name or self.__class__.__name__,
+                session_id=sid,
+            ),
+        )
         return result
+
+    def stream_turn(
+        self,
+        message: str,
+        *,
+        session_id: str | None = None,
+        intents: Sequence[str] | None = None,
+        intent_llm: str | BaseLLM | None = None,
+        **kickoff_kwargs: Any,
+    ) -> Any:
+        """Append a user message and stream one conversational turn as frames."""
+        if not self._is_conversational_enabled():
+            raise ValueError(
+                "Flow.stream_turn() is only available on conversational flows"
+            )
+
+        from crewai.types.streaming import StreamSession
+        from crewai.utilities.streaming import (
+            create_frame_generator,
+            create_frame_streaming_state,
+        )
+
+        state = cast(ConversationState, self.state)
+        sid = session_id or state.id
+        result_holder: list[Any] = []
+        frame_state = create_frame_streaming_state(result_holder, use_async=False)
+        output_holder: list[StreamSession[Any]] = []
+
+        def run_turn() -> Any:
+            crewai_event_bus.emit(
+                self,
+                ConversationTurnStartedEvent(
+                    type="conversation_turn_started",
+                    flow_name=self.name or self.__class__.__name__,
+                    session_id=sid,
+                ),
+            )
+
+            self._pending_user_message = message
+            self._pending_intents = list(intents) if intents else None
+            self._pending_intent_llm = intent_llm
+
+            try:
+                if "from_checkpoint" not in kickoff_kwargs:
+                    self._reset_turn_execution_state()
+
+                object.__setattr__(self, "_assistant_reply_appended", False)
+                original_stream = bool(getattr(self, "stream", False))
+                original_streaming_turn = getattr(
+                    self, "_streaming_conversation_turn", False
+                )
+                try:
+                    object.__setattr__(self, "stream", False)
+                    object.__setattr__(self, "_streaming_conversation_turn", True)
+                    result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
+                finally:
+                    object.__setattr__(self, "stream", original_stream)
+                    object.__setattr__(
+                        self, "_streaming_conversation_turn", original_streaming_turn
+                    )
+                if (
+                    result is not None
+                    and not self._assistant_reply_appended
+                    and self._is_public_turn_result(result)
+                ):
+                    self.append_assistant_message(self._stringify_result(result))
+            except HumanFeedbackPending as exc:
+                return exc
+            except Exception as exc:
+                failed_event = ConversationTurnFailedEvent(
+                    type="conversation_turn_failed",
+                    flow_name=self.name or self.__class__.__name__,
+                    session_id=sid,
+                    error=exc,
+                )
+                self._emit_terminal_conversation_turn_event(failed_event)
+                raise
+            finally:
+                self._pending_user_message = None
+                self._pending_intents = None
+                self._pending_intent_llm = None
+
+            self._emit_terminal_conversation_turn_event(
+                ConversationTurnCompletedEvent(
+                    type="conversation_turn_completed",
+                    flow_name=self.name or self.__class__.__name__,
+                    session_id=sid,
+                ),
+            )
+            return result
+
+        stream_session: StreamSession[Any] = StreamSession(
+            sync_iterator=create_frame_generator(frame_state, run_turn, output_holder)
+        )
+        output_holder.append(stream_session)
+        return stream_session
+
+    def _emit_terminal_conversation_turn_event(
+        self,
+        event: ConversationTurnCompletedEvent | ConversationTurnFailedEvent,
+    ) -> None:
+        """Emit a terminal turn event and wait for its own handlers."""
+        future = crewai_event_bus.emit(self, event)
+        if future is None:
+            return
+        try:
+            future.result(timeout=30)
+        except Exception:
+            logger.warning(
+                "%s handler failed or timed out",
+                event.__class__.__name__,
+                exc_info=True,
+            )
 
     def chat(
         self,
@@ -403,6 +562,11 @@ class _ConversationalMixin:
         supply per-route descriptions, or change the default/fallback intent.
         Override this method to bypass the LLM router entirely (e.g.,
         permission gates before the LLM decision).
+
+        Returning a falsy value means "no routing decision": the turn falls
+        through to the built-in defaults (``answer_from_history`` when
+        configured, else ``converse``). It never replays a previous turn's
+        intent.
         """
         config = self._conversation_config
         if config is None:
@@ -471,6 +635,9 @@ class _ConversationalMixin:
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """Append a final user-visible assistant message."""
+        # Explicit signal for handle_turn's "did the handler reply?" check.
+        # A count heuristic breaks when handlers trim history mid-turn.
+        object.__setattr__(self, "_assistant_reply_appended", True)
         state = cast(ConversationState, self.state)
         state.messages.append(
             ConversationMessage(
@@ -575,6 +742,7 @@ class _ConversationalMixin:
                     context=self.conversation_messages,
                 )
                 state.last_intent = intent
+                object.__setattr__(self, "_turn_classified_intent", intent)
                 return intent
             return text
 
@@ -639,6 +807,12 @@ class _ConversationalMixin:
             object.__setattr__(self, "_pending_intents", None)
         if not hasattr(self, "_pending_intent_llm"):
             object.__setattr__(self, "_pending_intent_llm", None)
+        if not hasattr(self, "_streaming_conversation_turn"):
+            object.__setattr__(self, "_streaming_conversation_turn", False)
+        if not hasattr(self, "_turn_classified_intent"):
+            object.__setattr__(self, "_turn_classified_intent", None)
+        if not hasattr(self, "_assistant_reply_appended"):
+            object.__setattr__(self, "_assistant_reply_appended", False)
 
     def _create_default_extension_state(self) -> ConversationState | None:
         initial_state_t = getattr(self, "_initial_state_t", None)
@@ -703,6 +877,7 @@ class _ConversationalMixin:
         self._method_call_counts.clear()
         self._clear_or_listeners()
         self._is_execution_resuming = False
+        object.__setattr__(self, "_turn_classified_intent", None)
 
     def _apply_pending_conversational_turn(self) -> None:
         """Drain the stashed user message + classify if intents configured.
@@ -710,6 +885,7 @@ class _ConversationalMixin:
         Called from ``Flow.kickoff_async`` AFTER persist state restore so
         the appended message survives ``self.persistence.load_state(...)``.
         """
+        object.__setattr__(self, "_turn_classified_intent", None)
         if self._pending_user_message is None:
             return
 
@@ -958,10 +1134,6 @@ class _ConversationalMixin:
             return "public"
         return "private"
 
-    def _assistant_message_count(self) -> int:
-        state = cast(ConversationState, self.state)
-        return sum(1 for message in state.messages if message.role == "assistant")
-
     def _is_public_turn_result(self, result: Any) -> bool:
         if not isinstance(result, str):
             return False
@@ -1009,6 +1181,19 @@ class _ConversationalMixin:
             return llm
         raise ValueError(f"Invalid llm type: {type(llm)}. Expected str or BaseLLM.")
 
+    @contextmanager
+    def _conversation_streaming_enabled(self, llm: Any) -> Iterator[None]:
+        if not getattr(self, "_streaming_conversation_turn", False) or not hasattr(
+            llm, "stream"
+        ):
+            yield
+            return
+
+        from crewai.llms.base_llm import call_stream_override
+
+        with call_stream_override(llm, True):
+            yield
+
     def finalize_session_traces(self) -> None:
         """Emit a final ``FlowFinishedEvent`` and finalize the trace batch.
 
@@ -1027,6 +1212,15 @@ class _ConversationalMixin:
             TraceCollectionListener,
         )
         from crewai.events.types.flow_events import FlowFinishedEvent
+
+        # Background memory saves must finish (and emit their completed/failed
+        # events) before the session-end flow_finished / batch finalization
+        # below tears down listeners, mirroring the non-deferred kickoff path.
+        # The flush then waits for those events' async bus handlers.
+        drain_memory_writes = getattr(self, "_drain_memory_writes", None)
+        if callable(drain_memory_writes):
+            drain_memory_writes()
+        crewai_event_bus.flush()
 
         # Only emit the session-end event when a deferred flow_started is
         # actually pending. ``_deferred_flow_started_event_id`` is set only by

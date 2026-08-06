@@ -8,8 +8,8 @@ from crewai.flow.dsl._types import FlowMethodDecorator, FlowTrigger
 from crewai.flow.dsl._utils import (
     P,
     R,
+    _merge_flow_method_definition,
     _method_action,
-    _set_flow_method_definition,
 )
 from crewai.flow.flow_definition import FlowMethodDefinition
 from crewai.flow.flow_wrappers import StartMethod
@@ -54,7 +54,7 @@ def start(
     def decorator(func: Callable[P, R]) -> StartMethod[P, R]:
         wrapper = StartMethod(func)
 
-        _set_flow_method_definition(
+        _merge_flow_method_definition(
             wrapper,
             FlowMethodDefinition(
                 do=_method_action(func),

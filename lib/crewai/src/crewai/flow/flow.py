@@ -24,9 +24,6 @@ from crewai.flow.runtime import (
     Flow as RuntimeFlow,
     FlowMeta,
     FlowState,
-    LockedDictProxy,
-    LockedListProxy,
-    StateProxy,
 )
 
 
@@ -42,9 +39,6 @@ __all__ = [
     "Flow",
     "FlowMeta",
     "FlowState",
-    "LockedDictProxy",
-    "LockedListProxy",
-    "StateProxy",
     "and_",
     "listen",
     "or_",

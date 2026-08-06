@@ -1,0 +1,86 @@
+---
+title: نظرة عامة على خطافات التنفيذ
+description: فهم واستخدام خطافات التنفيذ في CrewAI للتحكم الدقيق في عمليات الـ Agent
+mode: "wide"
+---
+
+توفر خطافات التنفيذ تحكمًا دقيقًا في سلوك وقت تشغيل Agents CrewAI. على عكس خطافات الانطلاق التي تعمل قبل وبعد تنفيذ Crew، تعترض خطافات التنفيذ عمليات محددة أثناء تنفيذ الـ Agent، مما يتيح لك تعديل السلوك وتنفيذ فحوصات أمان وإضافة مراقبة شاملة.
+
+## أنواع خطافات التنفيذ
+
+### 1. [خطافات استدعاء LLM](/learn/llm-hooks)
+
+التحكم ومراقبة تفاعلات نموذج اللغة:
+- **قبل استدعاء LLM**: تعديل المطالبات، التحقق من المدخلات، بوابات الموافقة
+- **بعد استدعاء LLM**: تحويل الاستجابات، تنقية المخرجات، تحديث سجل المحادثة
+
+### 2. [خطافات استدعاء الأدوات](/learn/tool-hooks)
+
+التحكم ومراقبة تنفيذ الأدوات:
+- **قبل استدعاء الأداة**: تعديل المدخلات، التحقق من المعاملات، حظر العمليات الخطرة
+- **بعد استدعاء الأداة**: تحويل النتائج، تنقية المخرجات، تسجيل تفاصيل التنفيذ
+
+## طرق تسجيل الخطافات
+
+### 1. خطافات بالمزخرفات (مُوصى بها)
+
+```python
+from crewai.hooks import before_llm_call, after_llm_call, before_tool_call, after_tool_call
+
+@before_llm_call
+def limit_iterations(context):
+    if context.iterations > 10:
+        return False
+    return None
+
+@after_llm_call
+def sanitize_response(context):
+    if "API_KEY" in context.response:
+        return context.response.replace("API_KEY", "[REDACTED]")
+    return None
+
+@before_tool_call
+def block_dangerous_tools(context):
+    if context.tool_name == "delete_database":
+        return False
+    return None
+```
+
+### 2. خطافات نطاق Crew
+
+```python
+from crewai import CrewBase
+from crewai.project import crew
+from crewai.hooks import before_llm_call_crew, after_tool_call_crew
+
+@CrewBase
+class MyProjCrew:
+    @before_llm_call_crew
+    def validate_inputs(self, context):
+        print(f"LLM call in {self.__class__.__name__}")
+        return None
+
+    @after_tool_call_crew
+    def log_results(self, context):
+        print(f"Tool result: {context.tool_result[:50]}...")
+        return None
+```
+
+## أفضل الممارسات
+
+1. **اجعل الخطافات مركّزة** - كل خطاف يجب أن يكون له مسؤولية واحدة واضحة
+2. **عالج الأخطاء بلطف**
+3. **عدّل السياق في مكانه**
+4. **استخدم تلميحات الأنواع**
+5. **نظّف في الاختبارات**
+
+## التوثيق ذو الصلة
+
+- [خطافات استدعاء LLM](/learn/llm-hooks)
+- [خطافات استدعاء الأدوات](/learn/tool-hooks)
+- [خطافات قبل وبعد الانطلاق](/learn/before-and-after-kickoff-hooks)
+- [التدخل البشري](/learn/human-in-the-loop)
+
+## الخلاصة
+
+توفر خطافات التنفيذ تحكمًا قويًا في سلوك وقت تشغيل الـ Agent. استخدمها لتنفيذ حواجز أمان وسير عمل موافقة ومراقبة شاملة ومنطق أعمال مخصص.

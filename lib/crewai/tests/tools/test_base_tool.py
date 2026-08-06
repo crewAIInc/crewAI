@@ -1,12 +1,13 @@
 import asyncio
 from collections.abc import Callable
+import json
 from unittest.mock import patch
 
 from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.task import Task
 from crewai.tools import BaseTool, tool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 import pytest
 
 
@@ -17,11 +18,16 @@ def test_creating_a_tool_using_annotation():
         return question
 
     assert my_tool.name == "Name of my tool"
-    assert "Tool Name: name_of_my_tool" in my_tool.description
-    assert "Tool Arguments:" in my_tool.description
-    assert '"question"' in my_tool.description
-    assert '"type": "string"' in my_tool.description
-    assert "Tool Description: Clear description for what this tool is useful for" in my_tool.description
+    # The authored description is preserved as written; the LLM-facing
+    # composite lives at formatted_description.
+    assert my_tool.description == (
+        "Clear description for what this tool is useful for, your agent will need this information to use it."
+    )
+    assert "Tool Name: name_of_my_tool" in my_tool.formatted_description
+    assert "Tool Arguments:" in my_tool.formatted_description
+    assert '"question"' in my_tool.formatted_description
+    assert '"type": "string"' in my_tool.formatted_description
+    assert "Tool Description: Clear description for what this tool is useful for" in my_tool.formatted_description
     assert my_tool.args_schema.model_json_schema()["properties"] == {
         "question": {"title": "Question", "type": "string"}
     }
@@ -32,9 +38,10 @@ def test_creating_a_tool_using_annotation():
     converted_tool = my_tool.to_structured_tool()
     assert converted_tool.name == "Name of my tool"
 
-    assert "Tool Name: name_of_my_tool" in converted_tool.description
-    assert "Tool Arguments:" in converted_tool.description
-    assert '"question"' in converted_tool.description
+    assert converted_tool.description == my_tool.description
+    assert "Tool Name: name_of_my_tool" in converted_tool.formatted_description
+    assert "Tool Arguments:" in converted_tool.formatted_description
+    assert '"question"' in converted_tool.formatted_description
     assert converted_tool.args_schema.model_json_schema()["properties"] == {
         "question": {"title": "Question", "type": "string"}
     }
@@ -55,11 +62,16 @@ def test_creating_a_tool_using_baseclass():
     my_tool = MyCustomTool()
     assert my_tool.name == "Name of my tool"
 
-    assert "Tool Name: name_of_my_tool" in my_tool.description
-    assert "Tool Arguments:" in my_tool.description
-    assert '"question"' in my_tool.description
-    assert '"type": "string"' in my_tool.description
-    assert "Tool Description: Clear description for what this tool is useful for" in my_tool.description
+    # The authored description is preserved as written; the LLM-facing
+    # composite lives at formatted_description.
+    assert my_tool.description == (
+        "Clear description for what this tool is useful for, your agent will need this information to use it."
+    )
+    assert "Tool Name: name_of_my_tool" in my_tool.formatted_description
+    assert "Tool Arguments:" in my_tool.formatted_description
+    assert '"question"' in my_tool.formatted_description
+    assert '"type": "string"' in my_tool.formatted_description
+    assert "Tool Description: Clear description for what this tool is useful for" in my_tool.formatted_description
     assert my_tool.args_schema.model_json_schema()["properties"] == {
         "question": {"title": "Question", "type": "string"}
     }
@@ -68,9 +80,10 @@ def test_creating_a_tool_using_baseclass():
     converted_tool = my_tool.to_structured_tool()
     assert converted_tool.name == "Name of my tool"
 
-    assert "Tool Name: name_of_my_tool" in converted_tool.description
-    assert "Tool Arguments:" in converted_tool.description
-    assert '"question"' in converted_tool.description
+    assert converted_tool.description == my_tool.description
+    assert "Tool Name: name_of_my_tool" in converted_tool.formatted_description
+    assert "Tool Arguments:" in converted_tool.formatted_description
+    assert '"question"' in converted_tool.formatted_description
     assert converted_tool.args_schema.model_json_schema()["properties"] == {
         "question": {"title": "Question", "type": "string"}
     }
@@ -351,6 +364,262 @@ class TestToolDecoratorRunValidation:
         assert result == "Hello, World!"
 
 
+class SearchOutput(BaseModel):
+    query: str
+    score: float
+
+
+class SearchResults(RootModel[list[SearchOutput]]):
+    pass
+
+
+class ExplicitSearchTool(BaseTool):
+    name: str = "search"
+    description: str = "Search for a query"
+    result_schema: type[BaseModel] = SearchOutput
+
+    def _run(self, query: str) -> dict[str, object]:
+        return {"query": query, "score": 0.8}
+
+
+class InferredSearchTool(BaseTool):
+    name: str = "search"
+    description: str = "Search for a query"
+
+    def _run(self, query: str) -> SearchOutput:
+        return SearchOutput(query=query, score=0.7)
+
+
+class RootSearchTool(BaseTool):
+    name: str = "search"
+    description: str = "Search for a query"
+
+    def _run(self, query: str) -> SearchResults:
+        return SearchResults([SearchOutput(query=query, score=1.0)])
+
+
+class DictAnnotatedSearchTool(BaseTool):
+    name: str = "search"
+    description: str = "Search for a query"
+
+    def _run(self, query: str) -> dict[str, object]:
+        return {"query": query, "score": 0.5}
+
+
+def _make_explicit_decorator_tool() -> BaseTool:
+    @tool("search", result_schema=SearchOutput)
+    def search(query: str) -> dict[str, object]:
+        """Search for a query."""
+        return {"query": query, "score": 0.8}
+
+    return search
+
+
+def _make_inferred_decorator_tool() -> BaseTool:
+    @tool("search")
+    def search(query: str) -> SearchOutput:
+        """Search for a query."""
+        return SearchOutput(query=query, score=0.6)
+
+    return search
+
+
+def _make_root_decorator_tool() -> BaseTool:
+    @tool("search")
+    def search(query: str) -> SearchResults:
+        """Search for a query."""
+        return SearchResults([SearchOutput(query=query, score=1.0)])
+
+    return search
+
+
+class TestToolOutputSchema:
+    @pytest.mark.parametrize(
+        ("tool_cls", "expected_raw", "expected_agent_payload"),
+        [
+            pytest.param(
+                ExplicitSearchTool,
+                {"query": "crew", "score": 0.8},
+                {"query": "crew", "score": 0.8},
+                id="explicit-schema",
+            ),
+            pytest.param(
+                InferredSearchTool,
+                SearchOutput(query="crew", score=0.7),
+                {"query": "crew", "score": 0.7},
+                id="inferred-base-model",
+            ),
+            pytest.param(
+                RootSearchTool,
+                SearchResults([SearchOutput(query="crew", score=1.0)]),
+                [{"query": "crew", "score": 1.0}],
+                id="inferred-root-model",
+            ),
+        ],
+    )
+    def test_base_tools_return_raw_result_and_json_agent_text(
+        self,
+        tool_cls: type[BaseTool],
+        expected_raw: object,
+        expected_agent_payload: object,
+    ) -> None:
+        t = tool_cls()
+
+        raw_result = t.run(query="crew")
+
+        assert raw_result == expected_raw
+        assert json.loads(t.format_output_for_agent(raw_result)) == (
+            expected_agent_payload
+        )
+
+    def test_base_tool_does_not_infer_non_pydantic_return_annotation(self) -> None:
+        t = DictAnnotatedSearchTool()
+
+        raw_result = t.run(query="crew")
+
+        assert raw_result == {"query": "crew", "score": 0.5}
+        assert t.format_output_for_agent(raw_result) == str(raw_result)
+
+    @pytest.mark.parametrize(
+        ("make_tool", "expected_raw", "expected_agent_payload"),
+        [
+            pytest.param(
+                _make_explicit_decorator_tool,
+                {"query": "crew", "score": 0.8},
+                {"query": "crew", "score": 0.8},
+                id="explicit-schema",
+            ),
+            pytest.param(
+                _make_inferred_decorator_tool,
+                SearchOutput(query="crew", score=0.6),
+                {"query": "crew", "score": 0.6},
+                id="inferred-base-model",
+            ),
+            pytest.param(
+                _make_root_decorator_tool,
+                SearchResults([SearchOutput(query="crew", score=1.0)]),
+                [{"query": "crew", "score": 1.0}],
+                id="inferred-root-model",
+            ),
+        ],
+    )
+    def test_decorator_tools_return_raw_result_and_json_agent_text(
+        self,
+        make_tool: Callable[[], BaseTool],
+        expected_raw: object,
+        expected_agent_payload: object,
+    ) -> None:
+        search = make_tool()
+
+        raw_result = search.run(query="crew")
+
+        assert raw_result == expected_raw
+        assert json.loads(search.format_output_for_agent(raw_result)) == (
+            expected_agent_payload
+        )
+
+    def test_decorator_tool_does_not_infer_non_pydantic_return_annotation(
+        self,
+    ) -> None:
+        @tool("search")
+        def search(query: str) -> dict[str, object]:
+            """Search for a query."""
+            return {"query": query, "score": 0.5}
+
+        raw_result = search.run(query="crew")
+
+        assert raw_result == {"query": "crew", "score": 0.5}
+        assert search.format_output_for_agent(raw_result) == str(raw_result)
+
+    def test_explicit_result_schema_wins_over_return_annotation(self) -> None:
+        class AlternateOutput(BaseModel):
+            value: str
+
+        @tool("search", result_schema=AlternateOutput)
+        def search(query: str) -> SearchOutput:
+            """Search for a query."""
+            return SearchOutput(query=query, score=0.6)
+
+        raw_result = search.run(query="crew")
+
+        with pytest.warns(RuntimeWarning, match="AlternateOutput"):
+            agent_text = search.format_output_for_agent(raw_result)
+
+        assert raw_result == SearchOutput(query="crew", score=0.6)
+        assert agent_text == str(raw_result)
+
+    def test_invalid_typed_output_warns_and_uses_string_agent_text(
+        self,
+    ) -> None:
+        @tool("search", result_schema=SearchOutput)
+        def search(query: str) -> dict[str, object]:
+            """Search for a query."""
+            return {"query": query, "score": "not-a-float"}
+
+        raw_result = search.run(query="crew")
+
+        with pytest.warns(RuntimeWarning, match="Failed to validate or serialize"):
+            agent_text = search.format_output_for_agent(raw_result)
+
+        assert raw_result == {"query": "crew", "score": "not-a-float"}
+        assert agent_text == str(raw_result)
+
+    def test_unserializable_typed_output_warns_and_uses_string_agent_text(
+        self,
+    ) -> None:
+        class OpaqueOutput(BaseModel):
+            value: object
+
+        raw_result = OpaqueOutput(value=object())
+
+        @tool("opaque", result_schema=OpaqueOutput)
+        def opaque() -> OpaqueOutput:
+            """Return an opaque object."""
+            return raw_result
+
+        result = opaque.run()
+
+        with pytest.warns(RuntimeWarning, match="Failed to validate or serialize"):
+            agent_text = opaque.format_output_for_agent(result)
+
+        assert result is raw_result
+        assert agent_text == str(raw_result)
+
+    def test_result_schema_behavior_carries_over_to_structured_tool(self) -> None:
+        structured = ExplicitSearchTool().to_structured_tool()
+
+        raw_result = structured.invoke({"query": "crew"})
+
+        assert raw_result == {"query": "crew", "score": 0.8}
+        assert json.loads(structured.format_output_for_agent(raw_result)) == {
+            "query": "crew",
+            "score": 0.8,
+        }
+
+    def test_custom_agent_output_formatter_carries_over_to_structured_tool(
+        self,
+    ) -> None:
+        class MarkdownSearchTool(BaseTool):
+            name: str = "markdown_search"
+            description: str = "Search for information"
+            result_schema: type[BaseModel] = SearchOutput
+
+            def _run(self, query: str) -> SearchOutput:
+                return SearchOutput(query=query, score=0.8)
+
+            def format_output_for_agent(self, raw_result: object) -> str:
+                result = self.result_schema.model_validate(raw_result)
+                return f"### Search result\n\n- Query: `{result.query}`\n- Score: {result.score}"
+
+        structured = MarkdownSearchTool().to_structured_tool()
+
+        raw_result = structured.invoke({"query": "crew"})
+
+        assert raw_result == SearchOutput(query="crew", score=0.8)
+        assert structured.format_output_for_agent(raw_result) == (
+            "### Search result\n\n- Query: `crew`\n- Score: 0.8"
+        )
+
 # Async arun() Schema Validation Tests
 
 
@@ -438,3 +707,88 @@ class TestToolDecoratorArunValidation:
 
         with pytest.raises(ValueError, match="validation failed"):
             await async_execute.arun(wrong_arg="value")
+
+
+class TestAuthoredDescriptionPreserved:
+    """Regression tests for EPD-179: BaseTool.model_post_init silently
+    rewrote the authored ``description`` into the LLM-facing composite
+    (``Tool Name: …\\nTool Arguments: …\\nTool Description: <authored>``).
+    The authored field must survive construction as written, with the
+    composite exposed separately at ``formatted_description``.
+    """
+
+    AUTHORED = "Returns the current temperature for a city."
+
+    def _make_tool(self) -> BaseTool:
+        class TempArgs(BaseModel):
+            city: str = Field(description="City name to look up.")
+
+        class TempTool(BaseTool):
+            name: str = "get_temperature"
+            description: str = TestAuthoredDescriptionPreserved.AUTHORED
+            args_schema: type[BaseModel] = TempArgs
+
+            def _run(self, city: str) -> str:
+                return f"22C in {city}"
+
+        return TempTool()
+
+    def test_description_equals_authored_text(self):
+        tool_instance = self._make_tool()
+        assert tool_instance.description == self.AUTHORED
+
+    def test_formatted_description_contains_composite(self):
+        tool_instance = self._make_tool()
+        formatted = tool_instance.formatted_description
+        assert "Tool Name: get_temperature" in formatted
+        assert "Tool Arguments:" in formatted
+        assert '"city"' in formatted
+        assert formatted.endswith(f"Tool Description: {self.AUTHORED}")
+
+    def test_formatted_description_tracks_later_description_edits(self):
+        tool_instance = self._make_tool()
+        tool_instance.description = "Edited description."
+        assert tool_instance.formatted_description.endswith(
+            "Tool Description: Edited description."
+        )
+
+    def test_prose_mentioning_the_marker_is_not_truncated(self):
+        """Authored text that merely mentions "Tool Description:" must reach
+        the LLM untouched — only descriptions that ARE a pre-composed block
+        (anchored three-line shape) get stripped."""
+        tool_instance = self._make_tool()
+        prose = (
+            "Formats prompts. The output includes a line reading "
+            "'Tool Description:' followed by the tool's summary."
+        )
+        tool_instance.description = prose
+        assert tool_instance.formatted_description.endswith(
+            f"Tool Description: {prose}"
+        )
+
+    def test_composite_is_not_reapplied_to_prebaked_descriptions(self):
+        """A description that already contains a composed block (old
+        checkpoints, adapters that bake the composite into the field) must
+        not be double-wrapped."""
+        tool_instance = self._make_tool()
+        tool_instance.description = (
+            "Tool Name: get_temperature\n"
+            'Tool Arguments: {"city": "str"}\n'
+            f"Tool Description: {self.AUTHORED}"
+        )
+        formatted = tool_instance.formatted_description
+        assert formatted.count("Tool Description:") == 1
+        assert formatted.endswith(f"Tool Description: {self.AUTHORED}")
+
+    def test_prompt_rendering_still_uses_composite(self):
+        from crewai.utilities.agent_utils import render_text_description_and_args
+
+        tool_instance = self._make_tool()
+        structured = tool_instance.to_structured_tool()
+        assert structured.description == self.AUTHORED
+
+        for candidate in (tool_instance, structured):
+            rendered = render_text_description_and_args([candidate])
+            assert "Tool Name: get_temperature" in rendered
+            assert "Tool Arguments:" in rendered
+            assert f"Tool Description: {self.AUTHORED}" in rendered

@@ -94,6 +94,24 @@ class FlowFinishedEvent(FlowEvent):
     state: dict[str, Any] | BaseModel
 
 
+class FlowFailedEvent(FlowEvent):
+    """Event emitted when a flow execution fails.
+
+    Attributes:
+        flow_name: Name of the flow that failed.
+        error: The exception that ended the execution.
+    """
+
+    error: Exception
+    type: Literal["flow_failed"] = "flow_failed"
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_serializer("error")
+    def _serialize_error(self, error: Exception) -> str:
+        return str(error)
+
+
 class FlowPausedEvent(FlowEvent):
     """Event emitted when a flow is paused waiting for human feedback.
 
@@ -182,6 +200,34 @@ class ConversationMessageAddedEvent(FlowEvent):
     content: Any
     message_index: int
     type: Literal["conversation_message_added"] = "conversation_message_added"
+
+
+class ConversationTurnStartedEvent(FlowEvent):
+    """Event emitted when a conversational Flow starts a user turn."""
+
+    session_id: str
+    type: Literal["conversation_turn_started"] = "conversation_turn_started"
+
+
+class ConversationTurnCompletedEvent(FlowEvent):
+    """Event emitted when a conversational Flow completes a user turn."""
+
+    session_id: str
+    type: Literal["conversation_turn_completed"] = "conversation_turn_completed"
+
+
+class ConversationTurnFailedEvent(FlowEvent):
+    """Event emitted when a conversational Flow turn fails."""
+
+    session_id: str
+    error: Exception
+    type: Literal["conversation_turn_failed"] = "conversation_turn_failed"
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_serializer("error")
+    def _serialize_error(self, error: Exception) -> str:
+        return str(error)
 
 
 class ConversationRouteSelectedEvent(FlowEvent):

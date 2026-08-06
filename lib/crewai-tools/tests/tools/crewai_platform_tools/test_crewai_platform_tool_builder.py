@@ -171,6 +171,10 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
         tool_names = [tool.action_name for tool in tools]
         assert "create_issue" in tool_names
         assert "send_message" in tool_names
+        assert {tool.action_name: tool.app for tool in tools} == {
+            "create_issue": "github",
+            "send_message": "slack",
+        }
 
         github_tool = next((t for t in tools if t.action_name == "create_issue"), None)
         slack_tool = next((t for t in tools if t.action_name == "send_message"), None)

@@ -64,6 +64,10 @@ from crewai_tools.tools.daytona_sandbox_tool import (
     DaytonaFileTool,
     DaytonaPythonTool,
 )
+from crewai_tools.tools.db2_search_tool import (
+    DB2ToolSchema,
+    DB2VectorSearchTool,
+)
 from crewai_tools.tools.directory_read_tool.directory_read_tool import (
     DirectoryReadTool,
 )
@@ -205,7 +209,9 @@ from crewai_tools.tools.tavily_research_tool.tavily_research_tool import (
 )
 from crewai_tools.tools.tavily_search_tool.tavily_search_tool import TavilySearchTool
 from crewai_tools.tools.txt_search_tool.txt_search_tool import TXTSearchTool
+from crewai_tools.tools.url_read_tool.url_read_tool import URLReadTool
 from crewai_tools.tools.vision_tool.vision_tool import VisionTool
+from crewai_tools.tools.wait_tool.wait_tool import WaitTool
 from crewai_tools.tools.weaviate_tool.vector_search import WeaviateVectorSearchTool
 from crewai_tools.tools.website_search.website_search_tool import WebsiteSearchTool
 from crewai_tools.tools.xml_search_tool.xml_search_tool import XMLSearchTool
@@ -245,6 +251,8 @@ __all__ = [
     "ContextualAIRerankTool",
     "CouchbaseFTSVectorSearchTool",
     "CrewaiPlatformTools",
+    "DB2ToolSchema",
+    "DB2VectorSearchTool",
     "DOCXSearchTool",
     "DallETool",
     "DatabricksQueryTool",
@@ -320,7 +328,9 @@ __all__ = [
     "TavilyGetResearchTool",
     "TavilyResearchTool",
     "TavilySearchTool",
+    "URLReadTool",
     "VisionTool",
+    "WaitTool",
     "WeaviateVectorSearchTool",
     "WebsiteSearchTool",
     "XMLSearchTool",
@@ -330,4 +340,4 @@ __all__ = [
     "ZapierActionTools",
 ]
 
-__version__ = "1.14.7"
+__version__ = "1.15.12"

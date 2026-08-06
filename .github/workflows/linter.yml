@@ -16,10 +16,16 @@ jobs:
       - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3
         id: filter
         with:
+          # Exclusion-only patterns match every non-excluded file under the
+          # default "some" quantifier. Require all patterns (including "**")
+          # so docs/markdown/Actions-only PRs correctly set code=false.
+          predicate-quantifier: every
           filters: |
             code:
+              - '**'
               - '!docs/**'
               - '!**/*.md'
+              - '!.github/**'
 
   lint-run:
     needs: changes
@@ -76,7 +82,7 @@ jobs:
       - name: Check results
         run: |
           if [ "${{ needs.changes.outputs.code }}" != "true" ]; then
-            echo "Docs-only change, skipping lint"
+            echo "Non-code change, skipping lint"
             exit 0
           fi
           if [ "${{ needs.lint-run.result }}" == "success" ]; then

@@ -249,12 +249,27 @@ class Telemetry:
 
         self._safe_telemetry_procedure(_operation)
 
+    def feature_usage_span(self, feature: str) -> None:
+        """Records that a feature was used. One span = one count."""
+        from crewai_core.version import get_crewai_version
+
+        def _operation() -> None:
+            tracer = trace.get_tracer("crewai.telemetry")
+            span = tracer.start_span("Feature Usage")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
+            self._add_attribute(span, "feature", feature)
+            close_span(span)
+
+        self._safe_telemetry_procedure(_operation)
+
     def flow_creation_span(self, flow_name: str) -> None:
         """Records the creation of a new flow."""
+        from crewai_core.version import get_crewai_version
 
         def _operation() -> None:
             tracer = trace.get_tracer("crewai.telemetry")
             span = tracer.start_span("Flow Creation")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
             self._add_attribute(span, "flow_name", flow_name)
             close_span(span)
 

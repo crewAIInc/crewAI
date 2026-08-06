@@ -1,3 +1,4 @@
+import builtins
 import json
 from unittest import mock
 
@@ -5,6 +6,19 @@ from crewai.tools.base_tool import BaseTool, EnvVar
 from crewai_tools.generate_tool_specs import ToolSpecExtractor
 from pydantic import BaseModel, Field
 import pytest
+
+
+def _getattr_for(tool_name, tool_cls):
+    """Build a getattr side_effect that resolves the patched tool name to
+    ``tool_cls`` while delegating every other lookup (e.g. the
+    ``is_deprecated_alias`` check) to the real builtin."""
+
+    def _getattr(obj, name, *default):
+        if name == tool_name:
+            return tool_cls
+        return builtins.getattr(obj, name, *default)
+
+    return _getattr
 
 
 class MockToolSchema(BaseModel):
@@ -84,7 +98,10 @@ def test_unwrap_schema(extractor):
 def mock_tool_extractor(extractor):
     with (
         mock.patch("crewai_tools.generate_tool_specs.dir", return_value=["MockTool"]),
-        mock.patch("crewai_tools.generate_tool_specs.getattr", return_value=MockTool),
+        mock.patch(
+            "crewai_tools.generate_tool_specs.getattr",
+            side_effect=_getattr_for("MockTool", MockTool),
+        ),
     ):
         extractor.extract_all_tools()
         assert len(extractor.tools_spec) == 1
@@ -223,7 +240,7 @@ def test_intermediate_base_fields_preserved_for_derived_tool(extractor):
         ),
         mock.patch(
             "crewai_tools.generate_tool_specs.getattr",
-            return_value=MockDerivedTool,
+            side_effect=_getattr_for("MockDerivedTool", MockDerivedTool),
         ),
     ):
         extractor.extract_all_tools()
@@ -253,7 +270,10 @@ def test_future_base_tool_field_auto_excluded(extractor):
     by checking that ONLY non-BaseTool fields appear."""
     with (
         mock.patch("crewai_tools.generate_tool_specs.dir", return_value=["MockTool"]),
-        mock.patch("crewai_tools.generate_tool_specs.getattr", return_value=MockTool),
+        mock.patch(
+            "crewai_tools.generate_tool_specs.getattr",
+            side_effect=_getattr_for("MockTool", MockTool),
+        ),
     ):
         extractor.extract_all_tools()
         tool_info = extractor.tools_spec[0]

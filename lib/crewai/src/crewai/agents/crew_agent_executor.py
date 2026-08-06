@@ -46,8 +46,8 @@ from crewai.hooks.llm_hooks import (
 )
 from crewai.hooks.tool_hooks import (
     ToolCallHookContext,
-    get_after_tool_call_hooks,
-    get_before_tool_call_hooks,
+    run_after_tool_call_hooks,
+    run_before_tool_call_hooks,
 )
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
@@ -57,6 +57,7 @@ from crewai.utilities.agent_utils import (
     convert_tools_to_openai_schema,
     enforce_rpm_limit,
     format_message_for_llm,
+    format_native_tool_output_for_agent,
     get_llm_response,
     handle_agent_action_core,
     handle_context_length,
@@ -907,19 +908,31 @@ class CrewAgentExecutor(BaseAgentExecutor):
         ):
             max_usage_reached = True
 
+        structured_tool: CrewStructuredTool | None = None
+        if original_tool is not None:
+            for structured in self.tools or []:
+                if getattr(structured, "_original_tool", None) is original_tool:
+                    structured_tool = structured
+                    break
+        if structured_tool is None:
+            for structured in self.tools or []:
+                if sanitize_tool_name(structured.name) == func_name:
+                    structured_tool = structured
+                    break
+
+        output_tool = original_tool or structured_tool
+
         from_cache = False
         result: str = "Tool not found"
+        raw_tool_result: Any = result
         input_str = json.dumps(args_dict) if args_dict else ""
-        if self.tools_handler and self.tools_handler.cache:
+        if self.tools_handler and self.tools_handler.cache and output_tool is not None:
             cached_result = self.tools_handler.cache.read(
                 tool=func_name, input=input_str
             )
             if cached_result is not None:
-                result = (
-                    str(cached_result)
-                    if not isinstance(cached_result, str)
-                    else cached_result
-                )
+                raw_tool_result = cached_result
+                result = format_native_tool_output_for_agent(output_tool, cached_result)
                 from_cache = True
 
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
@@ -938,19 +951,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         track_delegation_if_needed(func_name, args_dict or {}, self.task)
 
-        structured_tool: CrewStructuredTool | None = None
-        if original_tool is not None:
-            for structured in self.tools or []:
-                if getattr(structured, "_original_tool", None) is original_tool:
-                    structured_tool = structured
-                    break
-        if structured_tool is None:
-            for structured in self.tools or []:
-                if sanitize_tool_name(structured.name) == func_name:
-                    structured_tool = structured
-                    break
-
-        hook_blocked = False
         before_hook_context = ToolCallHookContext(
             tool_name=func_name,
             tool_input=args_dict or {},
@@ -959,27 +959,22 @@ class CrewAgentExecutor(BaseAgentExecutor):
             task=self.task,
             crew=self.crew,
         )
-        before_hooks = get_before_tool_call_hooks()
-        try:
-            for hook in before_hooks:
-                hook_result = hook(before_hook_context)
-                if hook_result is False:
-                    hook_blocked = True
-                    break
-        except Exception as hook_error:
-            if self.agent.verbose:
-                PRINTER.print(
-                    content=f"Error in before_tool_call hook: {hook_error}",
-                    color="red",
-                )
+        hook_blocked = run_before_tool_call_hooks(before_hook_context)
 
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
+            raw_tool_result = result
         elif max_usage_reached and original_tool:
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
-        elif not from_cache and func_name in available_functions:
+            raw_tool_result = result
+        elif (
+            not from_cache
+            and func_name in available_functions
+            and output_tool is not None
+        ):
             try:
                 raw_result = available_functions[func_name](**(args_dict or {}))
+                raw_tool_result = raw_result
 
                 if self.tools_handler and self.tools_handler.cache:
                     should_cache = True
@@ -996,11 +991,10 @@ class CrewAgentExecutor(BaseAgentExecutor):
                             tool=func_name, input=input_str, output=raw_result
                         )
 
-                result = (
-                    str(raw_result) if not isinstance(raw_result, str) else raw_result
-                )
+                result = format_native_tool_output_for_agent(output_tool, raw_result)
             except Exception as e:
                 result = f"Error executing tool: {e}"
+                raw_tool_result = result
                 if self.task:
                     self.task.increment_tools_errors()
                 crewai_event_bus.emit(
@@ -1024,20 +1018,11 @@ class CrewAgentExecutor(BaseAgentExecutor):
             task=self.task,
             crew=self.crew,
             tool_result=result,
+            raw_tool_result=raw_tool_result,
         )
-        after_hooks = get_after_tool_call_hooks()
-        try:
-            for after_hook in after_hooks:
-                after_hook_result = after_hook(after_hook_context)
-                if after_hook_result is not None:
-                    result = after_hook_result
-                    after_hook_context.tool_result = result
-        except Exception as hook_error:
-            if self.agent.verbose:
-                PRINTER.print(
-                    content=f"Error in after_tool_call hook: {hook_error}",
-                    color="red",
-                )
+        modified_result = run_after_tool_call_hooks(after_hook_context)
+        if modified_result is not None:
+            result = modified_result
 
         if not error_event_emitted:
             crewai_event_bus.emit(
