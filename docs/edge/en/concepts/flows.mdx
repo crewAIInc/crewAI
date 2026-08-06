@@ -267,7 +267,24 @@ print(flow.usage_metrics)
   execution.
 </Note>
 
-Each entry in the returned [`UsageMetrics`](https://github.com/crewAIInc/crewAI/blob/main/lib/crewai/src/crewai/types/usage_metrics.py) is the sum across all LLM calls made within a single `flow.kickoff()` invocation. Counters reset on the next `kickoff()` call (or on each iteration of `kickoff_for_each`), so successive runs don't double-count. The property is safe to read at any point after `kickoff()` completes; reading it during execution returns the partial total accumulated so far.
+### UsageMetrics field semantics
+
+The returned [`UsageMetrics`](https://github.com/crewAIInc/crewAI/blob/main/lib/crewai/src/crewai/types/usage_metrics.py) object uses a provider-neutral contract:
+
+| Field | Meaning |
+| --- | --- |
+| `total_tokens` | Billed total: `prompt_tokens + completion_tokens` |
+| `prompt_tokens` | Full input/prompt tokens billed for the request |
+| `completion_tokens` | Output/completion tokens billed for the request |
+| `cached_prompt_tokens` | Cache-read subset of prompt tokens (breakdown only) |
+| `reasoning_tokens` | Reasoning/thinking subset where the provider reports it separately (breakdown only) |
+| `successful_requests` | Number of LLM calls aggregated |
+
+Breakdown fields such as `cached_prompt_tokens` and `reasoning_tokens` are **not** added on top of `total_tokens` — they describe portions already included in `prompt_tokens` or `completion_tokens`.
+
+For Anthropic, cache read and cache write counters are folded into `prompt_tokens`, so cached workloads are fully reflected in `total_tokens`. OpenAI-style providers already include cached input inside `prompt_tokens`; CrewAI surfaces the cached portion separately for visibility.
+
+Each entry in the returned `UsageMetrics` is the sum across all LLM calls made within a single `flow.kickoff()` invocation. Counters reset on the next `kickoff()` call (or on each iteration of `kickoff_for_each`), so successive runs don't double-count. The property is safe to read at any point after `kickoff()` completes; reading it during execution returns the partial total accumulated so far.
 
 ## Flow State Management
 
