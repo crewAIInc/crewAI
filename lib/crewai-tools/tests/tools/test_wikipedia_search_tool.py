@@ -219,3 +219,144 @@ def test_string_joining_with_separator_multiple_results(mock_client_cls, tool):
     res2_part = "Title: Java\nURL: https://en.wikipedia.org/wiki/Java\nSummary: Java summary text."
     assert result == f"{res1_part}{separator}{res2_part}"
 
+
+@patch("requests.get")
+def test_wikipedia_client_search_http_mock(mock_get):
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "query": {
+            "search": [
+                {"title": "Python (programming language)"},
+                {"title": "Python (snake)"},
+            ]
+        }
+    }
+    mock_get.return_value = mock_response
+
+    client = WikipediaClient(lang="en", user_agent="TestAgent/1.0")
+    titles = client.search("Python", results=2)
+
+    assert titles == ["Python (programming language)", "Python (snake)"]
+    mock_get.assert_called_once_with(
+        "https://en.wikipedia.org/w/api.php",
+        params={
+            "action": "query",
+            "list": "search",
+            "srsearch": "Python",
+            "srlimit": 2,
+            "format": "json",
+        },
+        headers={"User-Agent": "TestAgent/1.0"},
+        timeout=10,
+    )
+
+
+@patch("requests.get")
+def test_wikipedia_client_page_and_summary_http_mock(mock_get):
+    mock_page_res = MagicMock()
+    mock_page_res.json.return_value = {
+        "query": {
+            "pages": {
+                "12345": {
+                    "pageid": 12345,
+                    "title": "Python",
+                    "fullurl": "https://en.wikipedia.org/wiki/Python",
+                }
+            }
+        }
+    }
+    mock_summary_res = MagicMock()
+    mock_summary_res.json.return_value = {
+        "query": {
+            "pages": {
+                "12345": {"extract": "Python is an interpreted programming language."}
+            }
+        }
+    }
+    mock_get.side_effect = [mock_page_res, mock_summary_res]
+
+    client = WikipediaClient(lang="en", user_agent="TestAgent/1.0")
+    page = client.page("Python")
+
+    assert page.title == "Python"
+    assert page.url == "https://en.wikipedia.org/wiki/Python"
+
+    summary = client.summary("Python")
+    assert summary == "Python is an interpreted programming language."
+
+
+@patch("requests.get")
+def test_wikipedia_client_get_content_http_mock(mock_get):
+    mock_res = MagicMock()
+    mock_res.json.return_value = {
+        "query": {
+            "pages": {
+                "12345": {
+                    "extract": "Full article content of Python programming language."
+                }
+            }
+        }
+    }
+    mock_get.return_value = mock_res
+
+    client = WikipediaClient(lang="en", user_agent="TestAgent/1.0")
+    content = client.get_content("Python")
+
+    assert content == "Full article content of Python programming language."
+
+
+def test_wikipedia_client_ssrf_validation_error():
+    with pytest.raises(ValueError, match="Invalid language code"):
+        WikipediaClient(lang="en@hacker.site#")
+
+    with pytest.raises(ValueError, match="Invalid language code"):
+        WikipediaClient(lang="https://malicious.org")
+
+
+@patch("requests.get")
+def test_wikipedia_search_tool_uses_redirected_page_title_for_summary(
+    mock_get, tool
+):
+    search_res = MagicMock()
+    search_res.json.return_value = {"query": {"search": [{"title": "Py"}]}}
+
+    page_redirect_res = MagicMock()
+    page_redirect_res.json.return_value = {
+        "query": {
+            "redirects": [{"from": "Py", "to": "Python (programming language)"}],
+            "pages": {"-1": {"missing": ""}},
+        }
+    }
+
+    target_page_res = MagicMock()
+    target_page_res.json.return_value = {
+        "query": {
+            "pages": {
+                "12345": {
+                    "pageid": 12345,
+                    "title": "Python (programming language)",
+                    "fullurl": "https://en.wikipedia.org/wiki/Python_(programming_language)",
+                }
+            }
+        }
+    }
+
+    summary_res = MagicMock()
+    summary_res.json.return_value = {
+        "query": {
+            "pages": {"12345": {"extract": "Python is a high-level language."}}
+        }
+    }
+
+    mock_get.side_effect = [
+        search_res,
+        page_redirect_res,
+        target_page_res,
+        summary_res,
+    ]
+
+    result = tool._run(search_query="Py")
+    assert "Title: Python (programming language)" in result
+    assert "Summary: Python is a high-level language." in result
+
+

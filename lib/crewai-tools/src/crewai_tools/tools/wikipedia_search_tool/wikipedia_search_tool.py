@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import logging
+import re
 from typing import Any, cast
 
 from bs4 import BeautifulSoup, Tag
@@ -39,6 +40,13 @@ class WikipediaPage:
     """Represents a Wikipedia page with title, url, content, and summary attributes."""
 
     def __init__(self, title: str, url: str, client: WikipediaClient) -> None:
+        """Initializes a WikipediaPage instance.
+
+        Args:
+            title (str): The title of the Wikipedia page.
+            url (str): The full URL of the Wikipedia page.
+            client (WikipediaClient): The WikipediaClient instance used for fetching data.
+        """
         self.title = title
         self.url = url
         self._client = client
@@ -47,12 +55,22 @@ class WikipediaPage:
 
     @property
     def content(self) -> str:
+        """Retrieves the full plain text content of the page.
+
+        Returns:
+            str: The full article content.
+        """
         if self._content is None:
             self._content = self._client.get_content(self.title)
         return self._content
 
     @property
     def summary(self) -> str:
+        """Retrieves the lead section summary of the page.
+
+        Returns:
+            str: The article summary text.
+        """
         if self._summary is None:
             self._summary = self._client.summary(self.title)
         return self._summary
@@ -66,11 +84,34 @@ class WikipediaClient:
         lang: str = "en",
         user_agent: str = "CrewAIWikipediaSearchTool/1.0 (https://crewai.com; contact@crewai.com)",
     ) -> None:
+        """Initializes a WikipediaClient instance with specified language and user agent.
+
+        Args:
+            lang (str): Wikipedia language code (e.g., 'en', 'tr', 'fr'). Defaults to 'en'.
+            user_agent (str): User-Agent string sent in HTTP requests.
+
+        Raises:
+            ValueError: If the language code contains invalid characters.
+        """
+        if not re.match(r"^[a-z\-]+$", lang.lower()):
+            raise ValueError(f"Invalid language code: {lang}")
+
         self.lang = lang
         self.user_agent = user_agent
         self.api_url = f"https://{self.lang.lower()}.wikipedia.org/w/api.php"
 
     def _request(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Sends an HTTP GET request to the Wikipedia API.
+
+        Args:
+            params (dict[str, Any]): Query parameters for the Wikipedia API.
+
+        Returns:
+            dict[str, Any]: Parsed JSON response dictionary.
+
+        Raises:
+            WikipediaException: If the API response contains an error field.
+        """
         params["format"] = "json"
         if "action" not in params:
             params["action"] = "query"
@@ -89,6 +130,15 @@ class WikipediaClient:
         return data
 
     def search(self, query: str, results: int = 3) -> list[str]:
+        """Searches Wikipedia for matching article titles.
+
+        Args:
+            query (str): The search query string.
+            results (int): Maximum number of search result titles to return. Defaults to 3.
+
+        Returns:
+            list[str]: A list of matching Wikipedia page titles.
+        """
         params = {
             "action": "query",
             "list": "search",
@@ -102,6 +152,19 @@ class WikipediaClient:
         return [str(item["title"]) for item in search_items]
 
     def page(self, title: str, auto_suggest: bool = False) -> WikipediaPage:
+        """Retrieves page information and constructs a WikipediaPage instance.
+
+        Args:
+            title (str): Title of the Wikipedia page.
+            auto_suggest (bool): Flag for title suggestion. Defaults to False.
+
+        Returns:
+            WikipediaPage: Constructed WikipediaPage object.
+
+        Raises:
+            PageError: If the page does not exist.
+            DisambiguationError: If the title refers to a disambiguation page.
+        """
         params = {
             "action": "query",
             "prop": "info|pageprops",
@@ -120,12 +183,12 @@ class WikipediaClient:
         page_id = next(iter(pages))
         page_info = cast(dict[str, Any], pages[page_id])
 
-        if "missing" in page_info or page_id == "-1":
-            raise PageError(title)
-
         if query.get("redirects"):
             redirect_to = str(query["redirects"][0]["to"])
             return self.page(redirect_to, auto_suggest=False)
+
+        if "missing" in page_info or page_id == "-1":
+            raise PageError(title)
 
         if "pageprops" in page_info and "disambiguation" in page_info["pageprops"]:
             rev_params = {
@@ -162,6 +225,15 @@ class WikipediaClient:
         return WikipediaPage(title=page_title, url=page_url, client=self)
 
     def summary(self, title: str, auto_suggest: bool = False) -> str:
+        """Retrieves the lead section summary of a Wikipedia page.
+
+        Args:
+            title (str): Title of the Wikipedia page.
+            auto_suggest (bool): Flag for title suggestion. Defaults to False.
+
+        Returns:
+            str: Plain text lead section summary.
+        """
         params = {
             "action": "query",
             "prop": "extracts",
@@ -177,6 +249,14 @@ class WikipediaClient:
         return cast(str, pages[page_id].get("extract", ""))
 
     def get_content(self, title: str) -> str:
+        """Retrieves the full plain text content of a Wikipedia page.
+
+        Args:
+            title (str): Title of the Wikipedia page.
+
+        Returns:
+            str: Full plain text content of the page.
+        """
         params = {
             "action": "query",
             "prop": "extracts",
@@ -293,7 +373,7 @@ class WikipediaSearchTool(BaseTool):
                 if should_load_full_content:
                     body = f"Content: {page.content}"
                 else:
-                    summary = client.summary(title, auto_suggest=False)
+                    summary = client.summary(page.title, auto_suggest=False)
                     body = f"Summary: {summary}"
 
                 formatted_results.append(
