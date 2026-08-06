@@ -1,18 +1,194 @@
-import logging
-from typing import Any
+from __future__ import annotations
 
+import importlib.util
+import logging
+from typing import Any, cast
+
+from bs4 import BeautifulSoup, Tag
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field
+import requests
 
 
 logger = logging.getLogger(__name__)
 
-try:
-    import wikipedia  # type: ignore[import-untyped]
+WIKIPEDIA_AVAILABLE = importlib.util.find_spec("wikipedia") is not None
 
-    WIKIPEDIA_AVAILABLE = True
+try:
+    from wikipedia.exceptions import (  # type: ignore[import-untyped]
+        DisambiguationError,
+        PageError,
+        WikipediaException,
+    )
 except ImportError:
-    WIKIPEDIA_AVAILABLE = False
+
+    class WikipediaException(Exception):  # type: ignore[no-redef]  # noqa: N818
+        pass
+
+    class PageError(Exception):  # type: ignore[no-redef]
+        pass
+
+    class DisambiguationError(Exception):  # type: ignore[no-redef]
+        def __init__(self, title: str, options: list[str]) -> None:
+            self.title = title
+            self.options = options
+            super().__init__(title, options)
+
+
+class WikipediaPage:
+    """Represents a Wikipedia page with title, url, content, and summary attributes."""
+
+    def __init__(self, title: str, url: str, client: WikipediaClient) -> None:
+        self.title = title
+        self.url = url
+        self._client = client
+        self._content: str | None = None
+        self._summary: str | None = None
+
+    @property
+    def content(self) -> str:
+        if self._content is None:
+            self._content = self._client.get_content(self.title)
+        return self._content
+
+    @property
+    def summary(self) -> str:
+        if self._summary is None:
+            self._summary = self._client.summary(self.title)
+        return self._summary
+
+
+class WikipediaClient:
+    """Instance-based Wikipedia API client that avoids mutating global module state."""
+
+    def __init__(
+        self,
+        lang: str = "en",
+        user_agent: str = "CrewAIWikipediaSearchTool/1.0 (https://crewai.com; contact@crewai.com)",
+    ) -> None:
+        self.lang = lang
+        self.user_agent = user_agent
+        self.api_url = f"https://{self.lang.lower()}.wikipedia.org/w/api.php"
+
+    def _request(self, params: dict[str, Any]) -> dict[str, Any]:
+        params["format"] = "json"
+        if "action" not in params:
+            params["action"] = "query"
+
+        headers = {"User-Agent": self.user_agent}
+        response = requests.get(
+            self.api_url, params=params, headers=headers, timeout=10
+        )
+        response.raise_for_status()
+        data = cast(dict[str, Any], response.json())
+
+        if "error" in data:
+            error_info = str(data["error"].get("info", "Unknown Wikipedia API error"))
+            raise WikipediaException(error_info)
+
+        return data
+
+    def search(self, query: str, results: int = 3) -> list[str]:
+        params = {
+            "action": "query",
+            "list": "search",
+            "srsearch": query,
+            "srlimit": results,
+        }
+        data = self._request(params)
+        search_items = cast(
+            list[dict[str, Any]], data.get("query", {}).get("search", [])
+        )
+        return [str(item["title"]) for item in search_items]
+
+    def page(self, title: str, auto_suggest: bool = False) -> WikipediaPage:
+        params = {
+            "action": "query",
+            "prop": "info|pageprops",
+            "inprop": "url",
+            "ppprop": "disambiguation",
+            "redirects": "",
+            "titles": title,
+        }
+        data = self._request(params)
+        query = cast(dict[str, Any], data.get("query", {}))
+        pages = cast(dict[str, Any], query.get("pages", {}))
+
+        if not pages:
+            raise PageError(title)
+
+        page_id = next(iter(pages))
+        page_info = cast(dict[str, Any], pages[page_id])
+
+        if "missing" in page_info or page_id == "-1":
+            raise PageError(title)
+
+        if query.get("redirects"):
+            redirect_to = str(query["redirects"][0]["to"])
+            return self.page(redirect_to, auto_suggest=False)
+
+        if "pageprops" in page_info and "disambiguation" in page_info["pageprops"]:
+            rev_params = {
+                "action": "query",
+                "prop": "revisions",
+                "rvprop": "content",
+                "rvparse": "",
+                "rvlimit": 1,
+                "titles": title,
+            }
+            rev_data = self._request(rev_params)
+            rev_pages = cast(dict[str, Any], rev_data.get("query", {}).get("pages", {}))
+            rev_id = next(iter(rev_pages))
+            revisions = cast(
+                list[dict[str, Any]], rev_pages[rev_id].get("revisions", [])
+            )
+            html = str(revisions[0].get("*", "")) if revisions else ""
+
+            soup = BeautifulSoup(html, "html.parser")
+            may_refer_to = [
+                li.a.get_text()
+                for li in soup.find_all("li")
+                if isinstance(li, Tag) and li.a
+            ]
+            raise DisambiguationError(title, may_refer_to)
+
+        page_title = str(page_info.get("title", title))
+        page_url = str(
+            page_info.get(
+                "fullurl",
+                f"https://{self.lang.lower()}.wikipedia.org/wiki/{page_title}",
+            )
+        )
+        return WikipediaPage(title=page_title, url=page_url, client=self)
+
+    def summary(self, title: str, auto_suggest: bool = False) -> str:
+        params = {
+            "action": "query",
+            "prop": "extracts",
+            "explaintext": "",
+            "exintro": "",
+            "titles": title,
+        }
+        data = self._request(params)
+        pages = cast(dict[str, Any], data.get("query", {}).get("pages", {}))
+        if not pages:
+            return ""
+        page_id = next(iter(pages))
+        return cast(str, pages[page_id].get("extract", ""))
+
+    def get_content(self, title: str) -> str:
+        params = {
+            "action": "query",
+            "prop": "extracts",
+            "explaintext": "",
+            "titles": title,
+        }
+        data = self._request(params)
+        pages = cast(dict[str, Any], data.get("query", {}).get("pages", {}))
+        if not pages:
+            return ""
+        page_id = next(iter(pages))
+        return cast(str, pages[page_id].get("extract", ""))
 
 
 class WikipediaSearchToolSchema(BaseModel):
@@ -50,7 +226,7 @@ class WikipediaSearchTool(BaseTool):
     env_vars: list[EnvVar] = Field(default_factory=list)
 
     lang: str = "en"
-    limit: int = 3
+    limit: int = Field(default=3, ge=1, le=10)
     load_full_content: bool = False
     user_agent: str = (
         "CrewAIWikipediaSearchTool/1.0 (https://crewai.com; contact@crewai.com)"
@@ -82,16 +258,26 @@ class WikipediaSearchTool(BaseTool):
             )
 
         target_lang = lang or self.lang
-        target_limit = limit or self.limit
+
+        # Runtime limit validation & clamping: ensure limit is within [1, 10]
+        raw_limit = self.limit if limit is None else limit
+        if raw_limit < 1:
+            target_limit = 1
+        elif raw_limit > 10:
+            target_limit = 10
+        else:
+            target_limit = raw_limit
+
         should_load_full_content = (
             self.load_full_content if load_full_content is None else load_full_content
         )
 
-        wikipedia.set_user_agent(self.user_agent)
-        wikipedia.set_lang(target_lang)
+        client: WikipediaClient = kwargs.get("client") or WikipediaClient(
+            lang=target_lang, user_agent=self.user_agent
+        )
 
         try:
-            search_results = wikipedia.search(search_query, results=target_limit)
+            search_results = client.search(search_query, results=target_limit)
         except Exception as e:
             logger.error(f"Wikipedia search failed for query '{search_query}': {e}")
             return f"Error searching Wikipedia for '{search_query}': {e!s}"
@@ -103,23 +289,23 @@ class WikipediaSearchTool(BaseTool):
 
         for title in search_results:
             try:
-                page = wikipedia.page(title, auto_suggest=False)
+                page = client.page(title, auto_suggest=False)
                 if should_load_full_content:
                     body = f"Content: {page.content}"
                 else:
-                    summary = wikipedia.summary(title, auto_suggest=False)
+                    summary = client.summary(title, auto_suggest=False)
                     body = f"Summary: {summary}"
 
                 formatted_results.append(
                     f"Title: {page.title}\nURL: {page.url}\n{body}"
                 )
-            except wikipedia.exceptions.DisambiguationError as e:  # noqa: PERF203
+            except DisambiguationError as e:  # noqa: PERF203
                 options_str = ", ".join(e.options[:5])
                 formatted_results.append(
                     f"Title: {title} (Disambiguation)\n"
                     f"Note: '{title}' refers to multiple topics: {options_str}..."
                 )
-            except wikipedia.exceptions.PageError:
+            except PageError:
                 formatted_results.append(
                     f"Title: {title}\nNote: Could not retrieve page details."
                 )
@@ -131,7 +317,8 @@ class WikipediaSearchTool(BaseTool):
                     f"Title: {title}\nNote: Error retrieving details: {e!s}"
                 )
 
-        return "\n\n" + "-" * 80 + "\n\n".join(formatted_results)
+        separator = "\n\n" + "-" * 80 + "\n\n"
+        return separator.join(formatted_results)
 
 
 if WIKIPEDIA_AVAILABLE:
