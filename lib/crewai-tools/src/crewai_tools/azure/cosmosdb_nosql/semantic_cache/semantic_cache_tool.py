@@ -7,7 +7,6 @@ import hashlib
 import json
 from logging import getLogger
 from typing import Any, ClassVar
-import uuid
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
@@ -384,8 +383,14 @@ class AzureCosmosDBSemanticCacheTool(BaseTool):
             partition_paths = self.config.cosmos_container_properties[
                 "partition_key"
             ].get("paths", ["/agent_id"])
+            # Derive a deterministic id from the namespace + prompt so that
+            # re-caching the same prompt upserts the existing row instead of
+            # inserting an unbounded stream of duplicate documents.
+            cache_key = hashlib.sha256(
+                f"{self._llm_namespace}:{prompt}".encode("utf-8")
+            ).hexdigest()
             document: dict[str, Any] = {
-                "id": str(uuid.uuid4()),
+                "id": cache_key,
                 "prompt": prompt,
                 "prompt_embedding": prompt_embedding,
                 "response": response,

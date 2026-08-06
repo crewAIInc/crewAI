@@ -80,6 +80,30 @@ class AzureCosmosDBMemoryToolSchema(BaseModel):
             "Operation: 'store', 'read', 'retrieve', 'update', 'delete', or 'clear'."
         ),
     )
+    memory_item: dict[str, Any] | None = Field(
+        default=None,
+        description="Memory document for 'store' and 'update' operations.",
+    )
+    partition_key_value: str | list[str] | None = Field(
+        default=None,
+        description=(
+            "Partition key value. Provide a list for hierarchical partition keys."
+        ),
+    )
+    memory_id: str | None = Field(
+        default=None,
+        description="Document id for 'read', 'update' and 'delete' operations.",
+    )
+    query_filter: dict[str, Any] | None = Field(
+        default=None,
+        description="Equality filters applied to 'c.content' fields on 'retrieve'.",
+    )
+    max_results: int | None = Field(
+        default=10, description="Maximum number of items returned by 'retrieve'."
+    )
+    ttl: int | None = Field(
+        default=None, description="Time-to-live in seconds for the stored document."
+    )
 
 
 class AzureCosmosDBMemoryTool(BaseTool):
@@ -230,6 +254,7 @@ class AzureCosmosDBMemoryTool(BaseTool):
     def _store_memory(self, memory_item: dict[str, Any], ttl: int | None = None) -> str:
         if ttl is not None:
             memory_item["ttl"] = ttl
+        memory_item.setdefault("created_at", datetime.now(timezone.utc).isoformat())
         try:
             response = self._container.create_item(body=memory_item)
             return json.dumps(response)
@@ -272,7 +297,13 @@ class AzureCosmosDBMemoryTool(BaseTool):
             partition_filter = self._build_partition_key_filter(
                 partition_key_value, field_names
             )
-            top_clause = f"TOP {int(max_results)} " if max_results else ""
+            # Only emit TOP for a positive limit; a negative/zero value would
+            # produce "TOP -1" which Cosmos rejects.
+            top_clause = (
+                f"TOP {int(max_results)} "
+                if max_results is not None and int(max_results) > 0
+                else ""
+            )
             query_sql = f"SELECT {top_clause}* FROM c WHERE {partition_filter}"  # noqa: S608
 
             if query_filter:
@@ -313,8 +344,13 @@ class AzureCosmosDBMemoryTool(BaseTool):
             existing = self._container.read_item(
                 item=memory_id, partition_key=partition_key_value
             )
+            # Merge onto the existing document so fields the caller did not
+            # resend (e.g. created_at, a prior ttl) are preserved rather than
+            # dropped by replace_item's whole-document semantics.
+            merged = {**existing, **upsert_item}
+            merged["id"] = memory_id
             if ttl is not None:
-                upsert_item["ttl"] = ttl
+                merged["ttl"] = ttl
 
             if self.config.use_optimistic_concurrency:
                 # Use ETag from the just-read document so a concurrent writer
@@ -324,14 +360,12 @@ class AzureCosmosDBMemoryTool(BaseTool):
                 etag = existing.get("_etag")
                 response = self._container.replace_item(
                     item=memory_id,
-                    body=upsert_item,
+                    body=merged,
                     etag=etag,
                     match_condition=MatchConditions.IfNotModified,
                 )
             else:
-                response = self._container.replace_item(
-                    item=memory_id, body=upsert_item
-                )
+                response = self._container.replace_item(item=memory_id, body=merged)
             return json.dumps(response)
         except Exception as exc:
             logger.exception("Failed to update memory: %s", exc)
@@ -364,31 +398,38 @@ class AzureCosmosDBMemoryTool(BaseTool):
             return json.dumps(
                 {"error": "partition_key_value is required for clear operation"}
             )
+        field_names, _ = self._get_partition_key_fields()
+        partition_filter = self._build_partition_key_filter(
+            partition_key_value, field_names
+        )
+        query_sql = f"SELECT c.id FROM c WHERE {partition_filter}"  # noqa: S608
+        # Track the count outside the try so a mid-loop batch failure still
+        # reports how many documents were already (transactionally) deleted.
+        deleted_count = 0
+        batch_size = 100
         try:
-            field_names, _ = self._get_partition_key_fields()
-            partition_filter = self._build_partition_key_filter(
-                partition_key_value, field_names
-            )
-            query_sql = f"SELECT c.id FROM c WHERE {partition_filter}"  # noqa: S608
-            items = list(
-                self._container.query_items(
-                    query=query_sql,
-                    partition_key=partition_key_value,
-                    enable_cross_partition_query=False,
-                )
-            )
-
-            deleted_count = 0
-            batch_size = 100
-            for i in range(0, len(items), batch_size):
-                batch = items[i : i + batch_size]
-                batch_ops = [("delete", (item["id"],)) for item in batch]
-                if batch_ops:
+            # Stream ids and delete in fixed-size batches instead of loading the
+            # whole (up to 20 GB) logical partition into memory at once.
+            pending: list[str] = []
+            for item in self._container.query_items(
+                query=query_sql,
+                partition_key=partition_key_value,
+                enable_cross_partition_query=False,
+            ):
+                pending.append(item["id"])
+                if len(pending) >= batch_size:
                     self._container.execute_item_batch(
-                        batch_operations=batch_ops,
+                        batch_operations=[("delete", (doc_id,)) for doc_id in pending],
                         partition_key=partition_key_value,
                     )
-                    deleted_count += len(batch_ops)
+                    deleted_count += len(pending)
+                    pending = []
+            if pending:
+                self._container.execute_item_batch(
+                    batch_operations=[("delete", (doc_id,)) for doc_id in pending],
+                    partition_key=partition_key_value,
+                )
+                deleted_count += len(pending)
 
             return json.dumps(
                 {
@@ -401,7 +442,12 @@ class AzureCosmosDBMemoryTool(BaseTool):
             )
         except Exception as exc:
             logger.exception("Failed to clear memory: %s", exc)
-            return json.dumps({"error": f"Failed to clear memory: {exc}"})
+            return json.dumps(
+                {
+                    "error": f"Failed to clear memory: {exc}",
+                    "deleted_count": deleted_count,
+                }
+            )
 
     def close(self) -> None:
         """Release the underlying CosmosClient (idempotent)."""

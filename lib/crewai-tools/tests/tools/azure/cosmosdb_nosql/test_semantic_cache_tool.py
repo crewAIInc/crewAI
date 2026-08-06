@@ -205,3 +205,23 @@ def test_clear_cache_deletes_items_not_database(patched_helpers):
     assert payload["success"] is True
     assert payload["deleted_count"] == 2
     assert patched_helpers["container"].delete_item.call_count == 2
+
+
+def test_update_uses_deterministic_id(patched_helpers):
+    """Re-caching the same prompt+namespace must reuse the same document id."""
+    tool = _build_tool(llm_string="gpt-4o")
+    patched_helpers["openai"].embeddings.create.return_value = _embed_response(
+        [0.1, 0.2, 0.3, 0.4]
+    )
+    patched_helpers["container"].upsert_item.return_value = {"id": "x"}
+
+    tool._run(operation="update", prompt="hello", response="a")
+    id_1 = patched_helpers["container"].upsert_item.call_args.kwargs["body"]["id"]
+    tool._run(operation="update", prompt="hello", response="b")
+    id_2 = patched_helpers["container"].upsert_item.call_args.kwargs["body"]["id"]
+
+    assert id_1 == id_2  # same prompt -> same id -> upsert replaces
+
+    tool._run(operation="update", prompt="different", response="c")
+    id_3 = patched_helpers["container"].upsert_item.call_args.kwargs["body"]["id"]
+    assert id_3 != id_1  # different prompt -> different id

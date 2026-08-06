@@ -330,8 +330,16 @@ class AzureCosmosDBNoSqlSearchTool(BaseTool):
         """Embed ``texts`` and insert them into the container in batches."""
         if not texts:
             raise ValueError("texts cannot be null or empty")
+        if metadatas is not None and len(metadatas) != len(texts):
+            raise ValueError(
+                f"metadatas length ({len(metadatas)}) must match texts length "
+                f"({len(texts)})"
+            )
+        if ids is not None and len(ids) != len(texts):
+            raise ValueError(
+                f"ids length ({len(ids)}) must match texts length ({len(texts)})"
+            )
 
-        embeddings = self._embed_texts(texts)
         partition_key_config = self.cosmos_container_properties["partition_key"]
         if isinstance(partition_key_config, dict):
             partition_paths = partition_key_config.get("paths", ["/id"])
@@ -339,10 +347,15 @@ class AzureCosmosDBNoSqlSearchTool(BaseTool):
             partition_paths = [partition_key_config]
         else:
             partition_paths = ["/id"]
-        # Hierarchical partition keys are resolved via the first level for
-        # add_texts; callers needing finer control can pre-shape the document.
+        if len(partition_paths) > 1:
+            raise ValueError(
+                "add_texts does not support hierarchical (multi-path) partition "
+                "keys. Pre-shape the documents and insert them directly via the "
+                "container, or configure a single-level partition key."
+            )
         partition_field = partition_paths[0].lstrip("/")
 
+        embeddings = self._embed_texts(texts)
         meta_list = list(metadatas) if metadatas is not None else [{} for _ in texts]
         id_list = list(ids) if ids is not None else [str(uuid.uuid4()) for _ in texts]
 
@@ -359,22 +372,26 @@ class AzureCosmosDBNoSqlSearchTool(BaseTool):
                     )
                 partition_values.append(value)
 
-        items = [
-            {
+        items: list[dict[str, Any]] = []
+        for item_id, pk, text, meta, embedding in zip(
+            id_list, partition_values, texts, meta_list, embeddings, strict=False
+        ):
+            doc: dict[str, Any] = {
                 "id": item_id,
-                "pk": pk,
                 self.text_key: text,
                 self.embedding_key: embedding,
                 self.metadata_key: meta,
             }
-            for item_id, pk, text, meta, embedding in zip(
-                id_list, partition_values, texts, meta_list, embeddings, strict=False
-            )
-        ]
+            # Write the partition value at the container's actual partition-key
+            # path so Cosmos can locate it (a hardcoded "pk" field would be
+            # rejected whenever the path is not "/pk"). "/id" needs nothing extra.
+            if partition_field != "id":
+                doc[partition_field] = pk
+            items.append(doc)
 
         grouped: dict[Any, list[dict[str, Any]]] = defaultdict(list)
-        for item in items:
-            grouped[item["pk"]].append(item)
+        for item, pk in zip(items, partition_values, strict=False):
+            grouped[pk].append(item)
 
         batch_size = 25
         doc_ids: list[str] = []
@@ -455,22 +472,43 @@ class AzureCosmosDBNoSqlSearchTool(BaseTool):
             else None
         )
 
+        # Guard against ``max_results=None`` (typed Optional) producing invalid
+        # SQL like "TOP None" / a null ``@top`` parameter. When there is no
+        # ``max_results`` and no ``offset_limit`` clause, omit TOP entirely.
+        max_results = config.max_results
+        use_top = max_results is not None and not config.offset_limit
         if effective_type in ("full_text_ranking", "hybrid"):
-            sql = f"SELECT {'TOP ' + str(config.max_results) + ' ' if not config.offset_limit else ''}"
+            top_clause = (
+                f"TOP {int(max_results)} "
+                if (max_results is not None and not config.offset_limit)
+                else ""
+            )
         else:
-            sql = f"""SELECT {"TOP @top " if not config.offset_limit else ""}"""
+            top_clause = "TOP @top " if use_top else ""
+        sql = f"SELECT {top_clause}"
 
         sql += self._generate_projection_fields(embeddings, effective_type)
         table = self.table_alias
         sql += f" FROM {table}"
 
-        if config.where:
-            sql += f" WHERE {config.where}"
-
         # NOTE: Cosmos NoSQL VectorDistance/FullTextScore do not currently
         # accept @param placeholders, so embedding values and FTS terms must
         # be interpolated. Embedding values come from the embedder; FTS terms
         # are SQL-quoted via quote_sql_string to defend against injection.
+        where_clauses: list[str] = []
+        if config.where:
+            where_clauses.append(config.where)
+        if effective_type == "full_text_search":
+            # Use the query text as a full-text predicate; without this the
+            # tool would return arbitrary documents that ignore the query.
+            terms = _quote_terms(query)
+            if terms:
+                where_clauses.append(
+                    f"FullTextContainsAll({table}.{self.text_key}, {terms})"
+                )
+        if where_clauses:
+            sql += " WHERE " + " AND ".join(where_clauses)
+
         if effective_type == "full_text_ranking":
             if config.full_text_rank_filter is None:
                 raise ValueError(
@@ -584,9 +622,12 @@ class AzureCosmosDBNoSqlSearchTool(BaseTool):
 
     def _build_parameters(self, embeddings: list[float] | None) -> list[dict[str, Any]]:
         config = self.query_config or AzureCosmosDBNoSqlSearchConfig()
-        parameters: list[dict[str, Any]] = [
-            {"name": "@top", "value": config.max_results},
-        ]
+        parameters: list[dict[str, Any]] = []
+        # Only bind @top when it is actually referenced in the SQL (i.e. there
+        # is a max_results and no offset_limit); otherwise Cosmos would receive
+        # a null-valued parameter.
+        if config.max_results is not None and not config.offset_limit:
+            parameters.append({"name": "@top", "value": config.max_results})
 
         if config.projection_mapping:
             for key in config.projection_mapping:

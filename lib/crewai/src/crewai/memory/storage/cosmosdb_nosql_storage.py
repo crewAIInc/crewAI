@@ -31,7 +31,7 @@ installed; instantiating :class:`CosmosDBNoSqlStorage` does.
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 from typing import Any
 
@@ -87,12 +87,19 @@ def _default_vector_embedding_policy(dimensions: int) -> dict[str, Any]:
     }
 
 
+def _to_naive_utc(dt: datetime) -> datetime:
+    """Convert an aware datetime to naive UTC; leave naive datetimes as-is."""
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
 def _parse_dt(value: Any) -> datetime:
     if isinstance(value, datetime):
-        return value
+        return _to_naive_utc(value)
     if value is None:
         return datetime.utcnow()
-    return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    return _to_naive_utc(datetime.fromisoformat(str(value).replace("Z", "+00:00")))
 
 
 def _quote(value: str) -> str:
@@ -286,8 +293,8 @@ class CosmosDBNoSqlStorage:
             "categories": list(record.categories),
             "metadata": dict(record.metadata),
             "importance": float(record.importance),
-            "created_at": record.created_at.isoformat(),
-            "last_accessed": record.last_accessed.isoformat(),
+            "created_at": _to_naive_utc(record.created_at).isoformat(),
+            "last_accessed": _to_naive_utc(record.last_accessed).isoformat(),
             "source": record.source,
             "private": bool(record.private),
             "embedding": list(record.embedding)
@@ -455,14 +462,19 @@ class CosmosDBNoSqlStorage:
     def get_scope_info(self, scope: str) -> ScopeInfo:
         scope = scope.rstrip("/") or "/"
         clause = self._scope_prefix_filter(scope) or "true"
-        sql = f"SELECT c.scope, c.categories, c.created_at FROM c WHERE {clause}"  # noqa: S608
-        rows = list(
+        where = f" WHERE {clause}"
+        agg_sql = (
+            f"SELECT COUNT(1) AS n, MIN(c.created_at) AS oldest, "  # noqa: S608
+            f"MAX(c.created_at) AS newest FROM c{where}"
+        )
+        agg_rows = list(
             self._container.query_items(
-                query=sql,
-                enable_cross_partition_query=True,
+                query=agg_sql, enable_cross_partition_query=True
             )
         )
-        if not rows:
+        agg = agg_rows[0] if agg_rows else {}
+        record_count = int(agg.get("n", 0) or 0)
+        if record_count == 0:
             return ScopeInfo(
                 path=scope,
                 record_count=0,
@@ -471,31 +483,36 @@ class CosmosDBNoSqlStorage:
                 newest_record=None,
                 child_scopes=[],
             )
-        categories: set[str] = set()
-        oldest: datetime | None = None
-        newest: datetime | None = None
+        oldest = _parse_dt(agg["oldest"]) if agg.get("oldest") else None
+        newest = _parse_dt(agg["newest"]) if agg.get("newest") else None
+
+        # Distinct categories, flattened and de-duplicated server-side.
+        cat_sql = f"SELECT DISTINCT VALUE cat FROM c JOIN cat IN c.categories{where}"  # noqa: S608
+        categories = sorted(
+            str(cat)
+            for cat in self._container.query_items(
+                query=cat_sql, enable_cross_partition_query=True
+            )
+        )
+
+        # Distinct scopes -> immediate child scopes.
+        scope_sql = f"SELECT DISTINCT VALUE c.scope FROM c{where}"  # noqa: S608
         child_prefix = (scope.rstrip("/") + "/") if scope != "/" else "/"
         children: set[str] = set()
-        for row in rows:
-            for cat in row.get("categories") or []:
-                categories.add(str(cat))
-            created = row.get("created_at")
-            if created:
-                dt = _parse_dt(created)
-                if oldest is None or dt < oldest:
-                    oldest = dt
-                if newest is None or dt > newest:
-                    newest = dt
-            sc = str(row.get("scope", ""))
+        for raw in self._container.query_items(
+            query=scope_sql, enable_cross_partition_query=True
+        ):
+            sc = str(raw)
             if child_prefix and sc.startswith(child_prefix):
                 rest = sc[len(child_prefix) :]
                 first = rest.split("/", 1)[0]
                 if first:
                     children.add(child_prefix + first)
+
         return ScopeInfo(
             path=scope,
-            record_count=len(rows),
-            categories=sorted(categories),
+            record_count=record_count,
+            categories=categories,
             oldest_record=oldest,
             newest_record=newest,
             child_scopes=sorted(children),
@@ -526,14 +543,18 @@ class CosmosDBNoSqlStorage:
     def list_categories(self, scope_prefix: str | None = None) -> dict[str, int]:
         clause = self._scope_prefix_filter(scope_prefix)
         where = (" WHERE " + clause) if clause else ""
-        sql = f"SELECT VALUE c.categories FROM c{where}"  # noqa: S608
+        sql = (
+            f"SELECT cat AS category, COUNT(1) AS n "  # noqa: S608
+            f"FROM c JOIN cat IN c.categories{where} GROUP BY cat"
+        )
         rows = list(
             self._container.query_items(query=sql, enable_cross_partition_query=True)
         )
         counts: dict[str, int] = {}
-        for cats in rows:
-            for cat in cats or []:
-                counts[str(cat)] = counts.get(str(cat), 0) + 1
+        for row in rows:
+            cat = row.get("category")
+            if cat is not None:
+                counts[str(cat)] = int(row.get("n", 0) or 0)
         return counts
 
     def count(self, scope_prefix: str | None = None) -> int:
@@ -570,7 +591,9 @@ class CosmosDBNoSqlStorage:
             id_list = ", ".join(_quote(rid) for rid in record_ids)
             where_parts.append(f"c.id IN ({id_list})")
         if older_than is not None:
-            where_parts.append(f"c.created_at < {_quote(older_than.isoformat())}")
+            where_parts.append(
+                f"c.created_at < {_quote(_to_naive_utc(older_than).isoformat())}"
+            )
         if not where_parts:
             # Refuse to wipe the whole container via delete() — use reset() for that.
             raise ValueError(
@@ -601,15 +624,15 @@ class CosmosDBNoSqlStorage:
 
     def reset(self, scope_prefix: str | None = None) -> None:
         if scope_prefix is None or scope_prefix.strip("/") == "":
+            azure_cosmos = _require_azure_cosmos()
             try:
                 self._database.delete_container(self._container_name)
-            except Exception:
-                _logger.debug(
-                    "Container %s could not be dropped on reset",
-                    self._container_name,
-                    exc_info=True,
-                )
-            azure_cosmos = _require_azure_cosmos()
+            except azure_cosmos.exceptions.CosmosResourceNotFoundError:
+                # Container already absent — nothing to drop, safe to recreate.
+                pass
+            # Any other error (throttling, auth, etc.) must propagate: silently
+            # continuing would recreate/return a container that still holds
+            # every record while reporting a successful reset.
             partition_key = azure_cosmos.PartitionKey(path="/scope", kind="Hash")
             self._container = self._database.create_container_if_not_exists(
                 id=self._container_name,
@@ -622,6 +645,34 @@ class CosmosDBNoSqlStorage:
             return
         # Per-scope reset = delete with scope_prefix.
         self.delete(scope_prefix=scope_prefix)
+
+    # ------------------------------------------------------------------
+    # lifecycle
+    # ------------------------------------------------------------------
+
+    def close(self) -> None:
+        """Release the underlying ``CosmosClient`` (idempotent).
+
+        ``Memory.close()`` calls this when the backend defines it; without it the
+        client's HTTP connection pool would leak for the process lifetime.
+        """
+        client = getattr(self, "_client", None)
+        if client is None:
+            return
+        try:
+            close = getattr(client, "close", None)
+            if callable(close):
+                close()
+        except Exception:  # pragma: no cover - defensive cleanup
+            _logger.debug("Failed to close Cosmos client", exc_info=True)
+        finally:
+            self._client = None
+
+    def __enter__(self) -> CosmosDBNoSqlStorage:
+        return self
+
+    def __exit__(self, *exc: Any) -> None:
+        self.close()
 
     # ------------------------------------------------------------------
     # async API (delegates to sync via threadpool)

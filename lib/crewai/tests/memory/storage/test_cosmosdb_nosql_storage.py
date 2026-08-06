@@ -385,3 +385,74 @@ def test_memory_selector_cosmosdb_uses_from_env(monkeypatch: pytest.MonkeyPatch)
         mem = Memory(storage="cosmosdb", llm=MagicMock(), embedder=MagicMock())
     from_env.assert_called_once()
     assert mem._storage is sentinel
+
+
+# ---------------------------------------------------------------------------
+# Review-fix regressions
+# ---------------------------------------------------------------------------
+
+
+def test_parse_dt_normalizes_aware_to_naive_utc() -> None:
+    from crewai.memory.storage.cosmosdb_nosql_storage import _parse_dt
+
+    dt = _parse_dt("2024-01-01T12:00:00+02:00")
+    assert dt.tzinfo is None
+    assert (dt.hour, dt.minute) == (10, 0)  # converted to UTC
+
+
+def test_record_to_doc_stores_naive_utc_iso(storage: CosmosDBNoSqlStorage) -> None:
+    rec = _record()
+    rec.created_at = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
+    doc = storage._record_to_doc(rec)
+    assert "+" not in doc["created_at"] and "Z" not in doc["created_at"]
+
+
+def test_close_releases_client(storage: CosmosDBNoSqlStorage) -> None:
+    client = storage._client
+    storage.close()
+    client.close.assert_called_once()
+    assert storage._client is None
+    storage.close()  # idempotent, no raise
+
+
+def test_reset_propagates_non_notfound_error(storage: CosmosDBNoSqlStorage) -> None:
+    storage._database.delete_container.side_effect = RuntimeError("throttled")
+    with pytest.raises(RuntimeError, match="throttled"):
+        storage.reset()
+
+
+def test_reset_ignores_container_not_found(storage: CosmosDBNoSqlStorage) -> None:
+    import azure.cosmos as ac
+
+    storage._database.delete_container.side_effect = (
+        ac.exceptions.CosmosResourceNotFoundError()
+    )
+    storage.reset()  # must not raise; recreates the container
+    storage._database.create_container_if_not_exists.assert_called()
+
+
+def test_get_scope_info_uses_server_side_aggregates(
+    storage: CosmosDBNoSqlStorage, mock_container: MagicMock
+) -> None:
+    mock_container.query_items.side_effect = [
+        iter([{"n": 2, "oldest": "2024-01-01T00:00:00", "newest": "2024-02-01T00:00:00"}]),
+        iter(["k1", "k2"]),
+        iter(["/a", "/a/b"]),
+    ]
+    info = storage.get_scope_info("/a")
+    assert info.record_count == 2
+    assert info.categories == ["k1", "k2"]
+    agg_sql = mock_container.query_items.call_args_list[0].kwargs["query"]
+    assert "COUNT(1)" in agg_sql and "MIN(c.created_at)" in agg_sql
+
+
+def test_list_categories_uses_group_by(
+    storage: CosmosDBNoSqlStorage, mock_container: MagicMock
+) -> None:
+    mock_container.query_items.return_value = iter(
+        [{"category": "k1", "n": 3}, {"category": "k2", "n": 1}]
+    )
+    counts = storage.list_categories()
+    assert counts == {"k1": 3, "k2": 1}
+    sql = mock_container.query_items.call_args.kwargs["query"]
+    assert "GROUP BY cat" in sql

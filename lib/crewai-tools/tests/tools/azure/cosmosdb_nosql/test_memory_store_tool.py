@@ -178,3 +178,89 @@ def test_partition_key_value_with_quote_is_escaped(patched_helpers):
     tool._run(operation="retrieve", partition_key_value="agent's-1")
     sql = patched_helpers["container"].query_items.call_args.kwargs["query"]
     assert "c.agent_id = 'agent''s-1'" in sql
+
+
+# ---------------------------------------------------------------------------
+# Review-fix regressions
+# ---------------------------------------------------------------------------
+
+
+def test_args_schema_declares_all_operands():
+    """args_schema must expose every field _run needs, or the agent path drops them."""
+    from crewai_tools.azure.cosmosdb_nosql.memory_store.memory_store_tool import (
+        AzureCosmosDBMemoryToolSchema,
+    )
+
+    fields = set(AzureCosmosDBMemoryToolSchema.model_fields)
+    assert {
+        "operation",
+        "memory_item",
+        "partition_key_value",
+        "memory_id",
+        "query_filter",
+        "max_results",
+        "ttl",
+    } <= fields
+
+
+def test_store_stamps_created_at(patched_helpers):
+    """Stored items must get a created_at so retrieve's ORDER BY includes them."""
+    tool = _build_tool()
+    patched_helpers["container"].create_item.return_value = {"id": "m-1"}
+    tool._run(
+        operation="store",
+        memory_item={"id": "m-1", "agent_id": "a-1", "content": {"text": "hi"}},
+    )
+    body = patched_helpers["container"].create_item.call_args.kwargs["body"]
+    assert "created_at" in body
+
+
+def test_update_merges_into_existing(patched_helpers):
+    """update must preserve fields the caller did not resend."""
+    tool = _build_tool()
+    patched_helpers["container"].read_item.return_value = {
+        "id": "m-1",
+        "agent_id": "a-1",
+        "created_at": "2024-01-01T00:00:00+00:00",
+        "content": {"text": "old"},
+        "keep": "me",
+    }
+    patched_helpers["container"].replace_item.return_value = {"id": "m-1"}
+
+    tool._run(
+        operation="update",
+        partition_key_value="a-1",
+        memory_id="m-1",
+        memory_item={"content": {"text": "new"}},
+    )
+
+    body = patched_helpers["container"].replace_item.call_args.kwargs["body"]
+    assert body["content"] == {"text": "new"}      # updated
+    assert body["created_at"] == "2024-01-01T00:00:00+00:00"  # preserved
+    assert body["keep"] == "me"                    # preserved
+    assert body["id"] == "m-1"
+
+
+def test_clear_reports_partial_count_on_failure(patched_helpers):
+    """A mid-loop batch failure must still report how many were deleted."""
+    tool = _build_tool()
+    # 150 ids -> two batches (100 + 50); make the first batch delete fail.
+    patched_helpers["container"].query_items.return_value = iter(
+        [{"id": f"m-{i}"} for i in range(150)]
+    )
+    patched_helpers["container"].execute_item_batch.side_effect = RuntimeError("boom")
+
+    payload = json.loads(tool._run(operation="clear", partition_key_value="a-1"))
+    assert "error" in payload
+    assert payload["deleted_count"] == 0
+
+
+def test_clear_streams_and_counts(patched_helpers):
+    tool = _build_tool()
+    patched_helpers["container"].query_items.return_value = iter(
+        [{"id": f"m-{i}"} for i in range(150)]
+    )
+    payload = json.loads(tool._run(operation="clear", partition_key_value="a-1"))
+    assert payload["success"] is True
+    assert payload["deleted_count"] == 150
+    assert patched_helpers["container"].execute_item_batch.call_count == 2

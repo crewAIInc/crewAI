@@ -155,6 +155,86 @@ def test_add_texts_wraps_batch_create_body_in_tuple(patched_helpers):
         assert isinstance(op[1][0], dict)
 
 
+def test_add_texts_writes_partition_value_at_configured_field(patched_helpers):
+    """The partition value must land on the container's partition path, not 'pk'."""
+    tool = _build_tool(
+        cosmos_container_properties={
+            "partition_key": {"paths": ["/agent_id"], "kind": "Hash"}
+        }
+    )
+    patched_helpers["openai"].embeddings.create.return_value = _embed_response(
+        [0.1, 0.2, 0.3, 0.4]
+    )
+
+    tool.add_texts(["hello"], metadatas=[{"agent_id": "a-1"}])
+
+    call = patched_helpers["container"].execute_item_batch.call_args
+    doc = call.kwargs["batch_operations"][0][1][0]
+    assert doc["agent_id"] == "a-1"
+    assert "pk" not in doc
+    assert call.kwargs["partition_key"] == "a-1"
+
+
+def test_add_texts_rejects_hierarchical_partition_key(patched_helpers):
+    tool = _build_tool(
+        cosmos_container_properties={
+            "partition_key": {"paths": ["/tenant", "/agent_id"], "kind": "MultiHash"}
+        }
+    )
+    patched_helpers["openai"].embeddings.create.return_value = _embed_response(
+        [0.1, 0.2, 0.3, 0.4]
+    )
+    with pytest.raises(ValueError, match="hierarchical"):
+        tool.add_texts(["hello"], metadatas=[{"tenant": "t", "agent_id": "a"}])
+
+
+def test_add_texts_rejects_length_mismatch(patched_helpers):
+    tool = _build_tool()
+    with pytest.raises(ValueError, match="metadatas length"):
+        tool.add_texts(["a", "b"], metadatas=[{"pk": "x"}])
+
+
+def test_full_text_search_uses_query_as_predicate(patched_helpers):
+    """full_text_search must turn the query into a FullTextContains predicate."""
+    fts_indexing = {**INDEXING_POLICY, "fullTextIndexes": [{"path": "/text"}]}
+    tool = _build_tool(
+        full_text_search_enabled=True,
+        search_type="full_text_search",
+        indexing_policy=fts_indexing,
+        full_text_policy={"fullTextPaths": [{"path": "/text", "language": "en-US"}]},
+    )
+    patched_helpers["container"].query_items.return_value = iter([])
+
+    tool._run("quick brown fox")
+
+    sql = patched_helpers["container"].query_items.call_args.kwargs["query"]
+    assert "FullTextContainsAll(c.text, 'quick', 'brown', 'fox')" in sql
+    patched_helpers["openai"].embeddings.create.assert_not_called()
+
+
+def test_max_results_none_omits_top_clause(patched_helpers):
+    """max_results=None must not emit 'TOP None' or a null @top parameter."""
+    from crewai_tools.azure.cosmosdb_nosql.vector_search.vector_search_tool import (
+        AzureCosmosDBNoSqlSearchConfig,
+    )
+
+    tool = _build_tool()
+    tool.query_config = AzureCosmosDBNoSqlSearchConfig(max_results=None)
+    patched_helpers["openai"].embeddings.create.return_value = _embed_response(
+        [0.1, 0.2, 0.3, 0.4]
+    )
+    patched_helpers["container"].query_items.return_value = iter([])
+
+    tool._run("hi")
+
+    call = patched_helpers["container"].query_items.call_args
+    sql = call.kwargs["query"]
+    assert "TOP None" not in sql
+    assert "TOP " not in sql
+    names = [p["name"] for p in call.kwargs["parameters"]]
+    assert "@top" not in names
+
+
 def test_plain_vector_euclidean_keeps_results_without_threshold(patched_helpers):
     """Plain 'vector' + euclidean must not drop every result when no threshold set."""
     euclidean_policy = {
@@ -260,7 +340,10 @@ def test_distance_aware_threshold_for_euclidean(patched_helpers):
             }
         ]
     }
-    tool = _build_tool(vector_embedding_policy=euclidean_policy)
+    tool = _build_tool(
+        vector_embedding_policy=euclidean_policy,
+        search_type="vector_score_threshold",
+    )
     patched_helpers["openai"].embeddings.create.return_value = _embed_response(
         [0.1, 0.2, 0.3, 0.4]
     )
@@ -275,8 +358,6 @@ def test_distance_aware_threshold_for_euclidean(patched_helpers):
     )
 
     # For euclidean, threshold means MAX allowed distance.
-    tool.query_config = AzureCosmosDBNoSqlSearchConfig(
-        search_type="vector_score_threshold", threshold=1.0, max_results=10
-    )
+    tool.query_config = AzureCosmosDBNoSqlSearchConfig(threshold=1.0, max_results=10)
     output = json.loads(tool._run("hi"))
     assert [item["id"] for item in output] == ["near"]
