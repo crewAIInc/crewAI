@@ -39,8 +39,8 @@ Pick the simplest action that does the job.
 - `state` is the initial shared data shape. Action results do not automatically merge into `state`.
 - Read method results with `outputs.method_name` after that method can run.
 - `listen` targets a method name or a router-emitted event name.
-- Methods must not listen to their own method name.
-- Method names and emitted event names share one namespace. Avoid reusing the same string for both unless the user explicitly wants that.
+- Methods must not listen to their own method name — including when the `listen` value is a route label that matches the method name (e.g. `listen: create_video` on method `create_video`).
+- Method names and emitted event names share one namespace. Do not reuse the same string for a method's `listen` target and its method name.
 - Use `router: true` plus `emit` when one method chooses between named branches.
 - A router action must return exactly one emitted event string. It must not return JSON, a list, or an explanation.
 - Use `start: true` for the single entrypoint.
@@ -107,8 +107,8 @@ Dynamic value rules:
 - Do not make `do` a list.
 - Do not use CEL `+` to build text in action mappings. Keep the text literal and insert each dynamic value with `${...}`.
 - Do not reference `outputs.some_method` before `some_method` can run.
-- Do not set a method's `listen` to its own method name.
-- Do not use the same string for an emitted event and a method name unless the user asks for it.
+- Do not set a method's `listen` to its own method name (including matching route labels such as `listen: create_video` on method `create_video`).
+- Do not use the same string for a method's `listen` target and its method name.
 - Do not use `emit` without `router: true`.
 - Do not rely on crew action-level `inputs` alone to ground agent behavior. Inputs that do not match placeholders are effectively unused by the prompt.
 - Do not ask agents to infer missing facts when accuracy matters. Tell them to mark missing dates, amounts, offers, logs, or constraints as unknown.

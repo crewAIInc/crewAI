@@ -54,6 +54,7 @@ from crewai.events.types.flow_events import (
     MethodExecutionPausedEvent,
     MethodExecutionStartedEvent,
 )
+from crewai.events.types.hook_events import HookDispatchedEvent
 from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
     KnowledgeQueryFailedEvent,
@@ -874,6 +875,13 @@ class EventListener(BaseEventListener):
             )
             if has_hooks:
                 self._telemetry.feature_usage_span("hooks:registered")
+
+        @crewai_event_bus.on(HookDispatchedEvent)
+        def on_hook_dispatched(_: Any, event: HookDispatchedEvent) -> None:
+            self._telemetry.hook_dispatched_span(
+                interception_point=event.interception_point,
+                outcome=event.outcome,
+            )
 
 
 event_listener = EventListener()
