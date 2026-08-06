@@ -1,0 +1,281 @@
+---
+title: Execution Hooks
+description: Intercept, modify, and control CrewAI's runtime with the @on decorator - one contract covering every interception point
+mode: "wide"
+---
+
+Execution hooks provide fine-grained control over the runtime behavior of your
+CrewAI agents. Unlike kickoff hooks that run before and after crew execution,
+execution hooks intercept specific operations during execution — from the moment
+a run starts, through every model call, tool call, and task or flow-method step,
+down to the final output.
+
+Hooks are written with the `@on` decorator: one registration API and one
+contract cover every interception point in the framework.
+
+```python
+from crewai.hooks import on, HookAborted, InterceptionPoint
+
+@on(InterceptionPoint.PRE_TOOL_CALL, tools=["delete_file"])
+def guard_deletes(ctx):
+    raise HookAborted(reason="file deletion is not allowed", source="policy")
+```
+
+<Note>
+The point-specific decorators (`@before_llm_call`, `@after_tool_call`, ...) keep
+working unchanged — they are adapters over the same engine. See
+[Point-specific decorators (legacy)](#point-specific-decorators-legacy) at the
+end of this page.
+</Note>
+
+## The contract
+
+Every hook is a **synchronous** callable that receives a single typed context:
+
+```python
+from crewai.hooks import on, HookAborted, InterceptionPoint
+
+@on(InterceptionPoint.INPUT)
+def add_defaults(ctx):
+    # 1. Observe: read anything off the context.
+    # 2. Mutate in place: change ctx.payload or nested fields directly.
+    ctx.payload.setdefault("locale", "en-US")
+    # 3. Or replace: return a new value to swap ctx.payload.
+    # 4. Or abort: raise HookAborted(reason, source) to stop the operation.
+    return None
+```
+
+A hook may do any of four things:
+
+| Action | How | Effect |
+|--------|-----|--------|
+| **Proceed** | `return None` (or nothing) | Operation continues unchanged |
+| **Mutate** | Change `ctx.payload` / fields in place | Change is visible downstream |
+| **Replace** | `return new_payload` | A non-`None` return replaces `ctx.payload` |
+| **Abort** | `raise HookAborted(reason, source)` | Operation is stopped; the reason propagates |
+
+## Registering hooks
+
+Use `@on` for global hooks. It accepts `agents=` / `tools=` filters to scope a
+hook to specific agent roles or tool names:
+
+```python
+from crewai.hooks import on, InterceptionPoint
+
+@on(InterceptionPoint.POST_TOOL_CALL, agents=["researcher"], tools=["web_search"])
+def log_search_results(ctx):
+    print(f"search returned: {(ctx.tool_result or '')[:80]}")
+```
+
+Applied to a method inside a `@CrewBase` class, `@on` registers a
+**crew-scoped** hook, active only while that crew runs:
+
+```python
+from crewai import CrewBase
+from crewai.hooks import on, InterceptionPoint
+
+@CrewBase
+class MyProjCrew:
+    @on(InterceptionPoint.PRE_MODEL_CALL)
+    def validate_inputs(self, ctx):
+        # Only applies to this crew
+        return None
+```
+
+## Interception point catalog
+
+Each family has a detailed guide covering its context schema, payload
+semantics, and examples.
+
+### [Execution boundaries](/edge/en/learn/execution-boundary-hooks)
+
+| Point | When | `ctx.payload` |
+|-------|------|---------------|
+| `EXECUTION_START` | A crew or flow is about to begin | inputs `dict` |
+| `INPUT` | Resolved inputs for the execution | inputs `dict` |
+| `OUTPUT` | Final result is ready | the output object |
+| `EXECUTION_END` | A crew or flow has finished | the output object |
+
+### [Model boundaries](/edge/en/learn/llm-hooks) & [tool boundaries](/edge/en/learn/tool-hooks)
+
+| Point | When | Hook receives |
+|-------|------|---------------|
+| `PRE_MODEL_CALL` | Before an LLM call | `LLMCallHookContext` |
+| `POST_MODEL_CALL` | After an LLM call | `LLMCallHookContext` (with `response` set) |
+| `PRE_TOOL_CALL` | Before a tool runs | `ToolCallHookContext` |
+| `POST_TOOL_CALL` | After a tool runs | `ToolCallHookContext` (with results set) |
+
+At these four points the hook receives the rich legacy context **directly** as
+its argument — there is no separate `ctx.payload`. Mutate `ctx.messages` /
+`ctx.tool_input` in place, and return a string from a post hook to replace the
+response / tool result.
+
+### [Step points](/edge/en/learn/step-hooks)
+
+| Point | When | `ctx.payload` |
+|-------|------|---------------|
+| `PRE_STEP` | Before a task or flow-method step | step input |
+| `POST_STEP` | After a task or flow-method step | step output |
+
+`PRE_STEP` / `POST_STEP` carry `ctx.kind` (`"task"` or `"flow_method"`) and
+`ctx.step_name`.
+
+## Aborting an operation
+
+`HookAborted` carries a `reason` and an optional `source`. The `source` defaults
+to the aborting hook when omitted, which is useful for telemetry and failure
+messages:
+
+```python
+@on(InterceptionPoint.EXECUTION_START)
+def enforce_policy(ctx):
+    if not ctx.payload.get("authorized"):
+        raise HookAborted(reason="unauthorized execution", source="access-control")
+```
+
+## Composition, ordering, and fail-open
+
+- Multiple hooks on the same point run in **registration order**, global hooks
+  first, then execution-scoped hooks. Legacy hooks registered for the same point
+  participate in the same chain.
+- The (possibly mutated) payload flows from one hook to the next.
+- `HookAborted` **propagates by design** and stops the chain.
+- Any *other* exception raised by a hook is **swallowed** (fail-open) so a single
+  buggy hook can't crash a run.
+- When no hook is registered for a point, dispatch is a single dict lookup
+  (no-op fast path), so unused points cost effectively nothing.
+
+## Common patterns
+
+### Safety guardrails
+
+```python
+@on(InterceptionPoint.PRE_TOOL_CALL)
+def block_dangerous_tools(ctx):
+    dangerous = {"delete_file", "drop_table", "system_shutdown"}
+    if ctx.tool_name in dangerous:
+        raise HookAborted(reason=f"{ctx.tool_name} is blocked", source="safety-policy")
+
+@on(InterceptionPoint.PRE_MODEL_CALL)
+def iteration_limit(ctx):
+    if ctx.iterations > 15:
+        raise HookAborted(reason="maximum iterations exceeded", source="loop-guard")
+```
+
+### Human-in-the-loop approval
+
+```python
+@on(InterceptionPoint.PRE_TOOL_CALL, tools=["send_email", "make_payment"])
+def require_approval(ctx):
+    response = ctx.request_human_input(
+        prompt=f"Approve {ctx.tool_name}?",
+        default_message="Type 'yes' to approve:",
+    )
+    if response.lower() != "yes":
+        raise HookAborted(reason="rejected by operator", source="approval-gate")
+```
+
+### Sanitizing outputs
+
+A non-`None` return value replaces the interceptable value, so transformations
+are plain return statements:
+
+```python
+import re
+
+@on(InterceptionPoint.POST_MODEL_CALL)
+def redact_keys(ctx):
+    return re.sub(
+        r'(api[_-]?key)["\']?\s*[:=]\s*["\']?[\w-]+',
+        r"\1: [REDACTED]",
+        ctx.response,
+        flags=re.IGNORECASE,
+    )
+```
+
+### Observing steps
+
+```python
+@on(InterceptionPoint.POST_STEP)
+def trace_steps(ctx):
+    print(f"{ctx.kind} '{ctx.step_name}' finished")
+```
+
+## Telemetry
+
+Whenever a point actually dispatches to at least one hook, CrewAI emits a
+`HookDispatchedEvent` on the event bus with the point, the outcome
+(`proceeded` / `modified` / `aborted`), the hook count, the duration, and — for
+aborts — the reason and source. The no-op fast path emits nothing.
+
+## Managing hooks in tests
+
+Global hooks persist for the lifetime of the process. Reset them between tests:
+
+```python
+import pytest
+from crewai.hooks import clear_all_hooks
+
+@pytest.fixture(autouse=True)
+def reset_hooks():
+    clear_all_hooks()
+    yield
+    clear_all_hooks()
+```
+
+## Best practices
+
+1. **Keep hooks focused** — one clear responsibility per hook; register several
+   small hooks rather than one that does everything.
+2. **Keep hooks fast** — hooks run on every dispatch of their point; avoid heavy
+   computation and lazy-import heavy dependencies.
+3. **Prefer scoping** — use `agents=` / `tools=` filters and crew-scoped
+   registration instead of unconditional global hooks.
+4. **Abort loudly** — raise `HookAborted` with a meaningful `reason` and
+   `source`; that context surfaces in error messages and telemetry. Remember
+   that any other exception is swallowed (fail-open), so don't rely on raising
+   `ValueError` to stop a run.
+
+## Point-specific decorators (legacy)
+
+Before `@on`, LLM and tool calls were hooked with dedicated decorator pairs.
+These keep working unchanged — they are adapters over the same dispatcher, so
+they compose with `@on` hooks in the same registration-order chain:
+
+```python
+from crewai.hooks import before_llm_call, after_llm_call, before_tool_call, after_tool_call
+
+@before_llm_call
+def limit_iterations(context):
+    if context.iterations > 10:
+        return False  # Block execution
+
+@after_tool_call
+def log_tool_result(context):
+    print(f"Tool {context.tool_name} completed")
+```
+
+Differences from `@on`:
+
+- They cover **only** the four model/tool points — no execution boundaries, no
+  steps.
+- Blocking is `return False`, with no abort reason or source attached.
+- They receive the same rich contexts — `LLMCallHookContext` (with full
+  executor access) and `ToolCallHookContext` — that `@on` hooks receive at the
+  model/tool points.
+- Crew-scoping works the same way: apply the decorator to a method inside a
+  `@CrewBase` class.
+- They support the same `agents=` / `tools=` filters.
+
+You might still prefer them for existing codebases that already use
+`return False` semantics, or when you want the point-specific typed signatures.
+For the detailed guides — context attributes, patterns, and management APIs
+(`register_*` / `unregister_*` / `clear_*`) — see:
+
+- [LLM Call Hooks →](/edge/en/learn/llm-hooks)
+- [Tool Call Hooks →](/edge/en/learn/tool-hooks)
+
+## Related documentation
+
+- [Before and After Kickoff Hooks →](/edge/en/learn/before-and-after-kickoff-hooks)
+- [Human-in-the-Loop →](/edge/en/learn/human-in-the-loop)
