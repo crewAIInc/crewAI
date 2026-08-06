@@ -297,3 +297,123 @@ class TestUsageMetricsNewFields:
         dumped = metrics.model_dump()
         assert dumped["reasoning_tokens"] == 10
         assert dumped["cache_creation_tokens"] == 5
+
+
+class TestFromProviderDictAnthropicCacheTokens:
+    def test_cache_read_tokens_included_in_prompt_and_total(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics.from_provider_dict(
+            {
+                "input_tokens": 3,
+                "output_tokens": 44,
+                "cache_read_input_tokens": 2061,
+            }
+        )
+
+        assert metrics is not None
+        assert metrics.prompt_tokens == 2064
+        assert metrics.completion_tokens == 44
+        assert metrics.total_tokens == 2108
+        assert metrics.cached_prompt_tokens == 2061
+
+    def test_cache_creation_tokens_included_in_prompt_and_total(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics.from_provider_dict(
+            {
+                "input_tokens": 100,
+                "output_tokens": 50,
+                "cache_creation_input_tokens": 20,
+            }
+        )
+
+        assert metrics is not None
+        assert metrics.prompt_tokens == 120
+        assert metrics.total_tokens == 170
+
+    def test_cache_read_and_creation_tokens_both_included(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics.from_provider_dict(
+            {
+                "input_tokens": 100,
+                "output_tokens": 50,
+                "cache_read_input_tokens": 30,
+                "cache_creation_input_tokens": 20,
+            }
+        )
+
+        assert metrics is not None
+        assert metrics.prompt_tokens == 150
+        assert metrics.total_tokens == 200
+        assert metrics.cached_prompt_tokens == 30
+
+    def test_missing_cache_fields_preserve_non_cached_totals(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics.from_provider_dict(
+            {"input_tokens": 100, "output_tokens": 50}
+        )
+
+        assert metrics is not None
+        assert metrics.prompt_tokens == 100
+        assert metrics.total_tokens == 150
+        assert metrics.cached_prompt_tokens == 0
+
+    def test_reconciled_native_dict_is_not_double_counted(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics.from_provider_dict(
+            {
+                "input_tokens": 150,
+                "output_tokens": 50,
+                "cached_prompt_tokens": 30,
+            }
+        )
+
+        assert metrics is not None
+        assert metrics.prompt_tokens == 150
+        assert metrics.total_tokens == 200
+
+    def test_openai_cached_prompt_tokens_are_not_added_twice(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics.from_provider_dict(
+            {
+                "prompt_tokens": 100,
+                "completion_tokens": 50,
+                "prompt_tokens_details": {"cached_tokens": 30},
+            }
+        )
+
+        assert metrics is not None
+        assert metrics.prompt_tokens == 100
+        assert metrics.total_tokens == 150
+        assert metrics.cached_prompt_tokens == 30
+
+    def test_cumulative_usage_via_add_usage_metrics(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        first = UsageMetrics.from_provider_dict(
+            {
+                "input_tokens": 100,
+                "output_tokens": 50,
+                "cache_read_input_tokens": 30,
+            }
+        )
+        second = UsageMetrics.from_provider_dict(
+            {
+                "input_tokens": 40,
+                "output_tokens": 20,
+            }
+        )
+
+        assert first is not None and second is not None
+        first.add_usage_metrics(second)
+
+        assert first.prompt_tokens == 170
+        assert first.completion_tokens == 70
+        assert first.total_tokens == 240
+        assert first.cached_prompt_tokens == 30
+        assert first.successful_requests == 2

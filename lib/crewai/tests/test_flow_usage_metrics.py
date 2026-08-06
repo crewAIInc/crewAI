@@ -130,7 +130,6 @@ class TestUsageDictToMetrics:
                     "total_tokens": 180,
                     "cached_prompt_tokens": 40,
                     "reasoning_tokens": 25,
-                    "cache_creation_tokens": 10,
                 },
                 UsageMetrics(
                     prompt_tokens=100,
@@ -138,7 +137,6 @@ class TestUsageDictToMetrics:
                     total_tokens=180,
                     cached_prompt_tokens=40,
                     reasoning_tokens=25,
-                    cache_creation_tokens=10,
                     successful_requests=1,
                 ),
             ),
