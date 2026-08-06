@@ -61,6 +61,6 @@ nl_to_sql = NL2SQLTool()
 # Add to your agent
 agent = Agent(
     role="Data Analyst",
-    tools=[mysql_db,vector_search, nl_to_sql],
+    tools=[mysql_db, vector_search, nl_to_sql],
     goal="Extract insights from various data sources"
 )
