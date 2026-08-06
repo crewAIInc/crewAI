@@ -20,14 +20,14 @@ This tool:
 
 ## Installation
 
-Install the `crewai-tools` package along with the `wikipedia` dependency:
+Install the `crewai-tools` package along with the `beautifulsoup4` and `requests` dependencies:
 
 ```bash
 # Using pip
-pip install 'crewai[tools]' wikipedia
+pip install 'crewai[tools]' beautifulsoup4 requests
 
 # Or using uv
-uv add crewai-tools wikipedia
+uv add crewai-tools beautifulsoup4 requests
 ```
 
 ---

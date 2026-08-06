@@ -1,22 +1,22 @@
 from __future__ import annotations
 
-import importlib.util
 import logging
 import re
 from typing import Any, cast
 
-from bs4 import BeautifulSoup, Tag
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field
-import requests
 
 
 logger = logging.getLogger(__name__)
 
-WIKIPEDIA_AVAILABLE = (
-    importlib.util.find_spec("bs4") is not None
-    and importlib.util.find_spec("requests") is not None
-)
+try:
+    from bs4 import BeautifulSoup, Tag
+    import requests
+
+    WIKIPEDIA_AVAILABLE = True
+except ImportError:
+    WIKIPEDIA_AVAILABLE = False
 
 
 class WikipediaException(Exception):  # noqa: N818
@@ -352,11 +352,10 @@ class WikipediaSearchTool(BaseTool):
             self.load_full_content if load_full_content is None else load_full_content
         )
 
-        client: WikipediaClient = kwargs.get("client") or WikipediaClient(
-            lang=target_lang, user_agent=self.user_agent
-        )
-
         try:
+            client: WikipediaClient = kwargs.get("client") or WikipediaClient(
+                lang=target_lang, user_agent=self.user_agent
+            )
             search_results = client.search(search_query, results=target_limit)
         except Exception as e:
             logger.error("Wikipedia search failed: %s", type(e).__name__)

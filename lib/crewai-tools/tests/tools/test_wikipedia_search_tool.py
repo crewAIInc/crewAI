@@ -313,6 +313,11 @@ def test_wikipedia_client_ssrf_validation_error():
         WikipediaClient(lang="https://malicious.org")
 
 
+def test_wikipedia_search_invalid_language_code(tool):
+    result = tool._run(search_query="Python", lang="invalid@lang!")
+    assert "Error searching Wikipedia for 'Python': Invalid language code: invalid@lang!" in result
+
+
 @patch("requests.get")
 def test_wikipedia_search_tool_uses_redirected_page_title_for_summary(
     mock_get, tool
