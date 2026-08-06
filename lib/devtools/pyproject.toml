@@ -15,6 +15,7 @@ dependencies = [
     "openai>=1.83.0,<3",
     "python-dotenv>=1.2.2,<2",
     "pygithub~=1.59.1",
+    "pyyaml~=6.0",
     "rich>=13.9.4",
 ]
 
