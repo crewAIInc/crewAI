@@ -2320,11 +2320,19 @@ class LLM(BaseLLM):
         if messages is None:
             raise TypeError("Messages cannot be None")
 
+        from crewai.llms.cache import CACHE_BREAKPOINT_KEY
+
+        clean_messages = []
         for msg in messages:
             if not isinstance(msg, dict) or "role" not in msg or "content" not in msg:
                 raise TypeError(
                     "Invalid message format. Each message must be a dict with 'role' and 'content' keys"
                 )
+            clean_msg = dict(msg)
+            clean_msg.pop(CACHE_BREAKPOINT_KEY, None)
+            clean_messages.append(clean_msg)
+            
+        messages = clean_messages  # type: ignore[assignment]
 
         if "o1" in self.model.lower():
             formatted_messages = []
