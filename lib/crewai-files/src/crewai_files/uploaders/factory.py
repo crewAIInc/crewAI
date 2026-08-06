@@ -189,9 +189,8 @@ def get_uploader(
     if "bedrock" in provider_lower or "aws" in provider_lower:
         import os
 
-        if (
-            not os.environ.get("CREWAI_BEDROCK_S3_BUCKET")
-            and "bucket_name" not in kwargs
+        if not os.environ.get("CREWAI_BEDROCK_S3_BUCKET") and not kwargs.get(
+            "bucket_name"
         ):
             logger.debug(
                 "Bedrock S3 uploader not configured. "

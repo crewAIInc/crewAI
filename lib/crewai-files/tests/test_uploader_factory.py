@@ -65,3 +65,10 @@ class TestGetUploader:
 
         uploader = get_uploader("bedrock", bucket_name="my-kwarg-bucket")
         assert isinstance(uploader, BedrockFileUploader)
+
+    def test_get_uploader_bedrock_with_none_bucket_raises(self, monkeypatch):
+        """Test that bedrock provider with bucket_name=None raises PermanentUploadError."""
+        monkeypatch.delenv("CREWAI_BEDROCK_S3_BUCKET", raising=False)
+
+        with pytest.raises(PermanentUploadError, match="Bedrock S3 uploader not configured"):
+            get_uploader("bedrock", bucket_name=None)
