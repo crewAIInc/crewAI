@@ -418,6 +418,27 @@ In this section, you'll find detailed examples that help you select, configure, 
     - Token usage tracking
     - Multi-turn tool use conversations
 
+    **Token usage and prompt caching:**
+
+    Anthropic reports billed input in separate counters — `input_tokens` (uncached),
+    `cache_read_input_tokens`, and `cache_creation_input_tokens`. CrewAI folds all
+    three into `prompt_tokens` (and native `input_tokens` in provider responses) so
+    `total_tokens` reflects full billed usage on cached workloads.
+
+    `cached_prompt_tokens` records the cache-read portion as a breakdown only; it is
+    already included in `prompt_tokens` and must not be added again to
+    `total_tokens`.
+
+    ```python Code
+    usage = llm.get_token_usage_summary()
+    # total_tokens == prompt_tokens + completion_tokens
+    # prompt_tokens includes cache read + cache write for Anthropic
+    ```
+
+    See [UsageMetrics field semantics](/concepts/flows#usagemetrics-field-semantics)
+    for the provider-neutral contract used by `crew.usage_metrics` and
+    `flow.usage_metrics`.
+
     **Important Notes:**
     - `max_tokens` is a **required** parameter for all Anthropic models
     - Claude uses `stop_sequences` instead of `stop`
