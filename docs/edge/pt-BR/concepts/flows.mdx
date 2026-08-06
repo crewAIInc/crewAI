@@ -260,6 +260,24 @@ print(flow.usage_metrics)
   rollup **completo** de tokens da execução do Flow.
 </Note>
 
+### Semântica dos campos UsageMetrics
+
+O objeto [`UsageMetrics`](https://github.com/crewAIInc/crewAI/blob/main/lib/crewai/src/crewai/types/usage_metrics.py) retornado usa um contrato neutro em relação ao provedor:
+
+| Campo | Significado |
+| --- | --- |
+| `total_tokens` | Total faturado: `prompt_tokens + completion_tokens` |
+| `prompt_tokens` | Total de tokens de entrada/prompt faturados para a requisição |
+| `completion_tokens` | Tokens de saída/conclusão faturados para a requisição |
+| `cached_prompt_tokens` | Subconjunto de leitura de cache dos tokens de prompt (apenas breakdown) |
+| `cache_creation_tokens` | Subconjunto de escrita de cache dos tokens de prompt (apenas breakdown, Anthropic) |
+| `reasoning_tokens` | Subconjunto de raciocínio/pensamento quando o provedor reporta separadamente (apenas breakdown) |
+| `successful_requests` | Número de chamadas LLM agregadas |
+
+Campos de breakdown como `cached_prompt_tokens`, `cache_creation_tokens` e `reasoning_tokens` **não** são somados sobre `total_tokens` — eles descrevem porções já incluídas em `prompt_tokens` ou `completion_tokens`.
+
+Para Anthropic, os contadores de leitura e escrita de cache são incorporados em `prompt_tokens`, de modo que workloads em cache são totalmente refletidos em `total_tokens`. Provedores no estilo OpenAI já incluem a entrada em cache dentro de `prompt_tokens`; o CrewAI expõe a porção em cache separadamente para visibilidade.
+
 Cada campo do [`UsageMetrics`](https://github.com/crewAIInc/crewAI/blob/main/lib/crewai/src/crewai/types/usage_metrics.py) retornado representa a soma de todas as chamadas de LLM feitas em uma única invocação de `flow.kickoff()`. Os contadores são resetados a cada novo `kickoff()` (e em cada iteração de `kickoff_for_each`), de modo que execuções sucessivas não duplicam o total. A propriedade é segura para ser lida em qualquer momento após o `kickoff()`; lê-la durante a execução retorna o total parcial acumulado até aquele instante.
 
 ## Gerenciamento de Estado em Flows

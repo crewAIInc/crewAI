@@ -266,6 +266,24 @@ print(flow.usage_metrics)
   كلما احتجت إلى الإجمالي **الكامل** للتوكنات لتنفيذ التدفق.
 </Note>
 
+### دلالات حقول UsageMetrics
+
+يستخدم كائن [`UsageMetrics`](https://github.com/crewAIInc/crewAI/blob/main/lib/crewai/src/crewai/types/usage_metrics.py) المُعاد عقدًا محايدًا للمزود:
+
+| الحقل | المعنى |
+| --- | --- |
+| `total_tokens` | الإجمالي المفوتر: `prompt_tokens + completion_tokens` |
+| `prompt_tokens` | إجمالي رموز الإدخال/المطالبة المفوترة للطلب |
+| `completion_tokens` | رموز الإخراج/الإكمال المفوترة للطلب |
+| `cached_prompt_tokens` | جزء قراءة الذاكرة المؤقتة من رموز المطالبة (تفصيل فقط) |
+| `cache_creation_tokens` | جزء كتابة الذاكرة المؤقتة من رموز المطالبة (تفصيل فقط، Anthropic) |
+| `reasoning_tokens` | جزء التفكير/الاستدلال حيث يبلّغ المزود عنه بشكل منفصل (تفصيل فقط) |
+| `successful_requests` | عدد استدعاءات LLM المُجمّعة |
+
+حقول التفصيل مثل `cached_prompt_tokens` و`cache_creation_tokens` و`reasoning_tokens` **لا تُضاف** فوق `total_tokens` — بل تصف أجزاءً مُدرجة بالفعل ضمن `prompt_tokens` أو `completion_tokens`.
+
+بالنسبة إلى Anthropic، تُدمج عدادات قراءة وكتابة الذاكرة المؤقتة ضمن `prompt_tokens`، لذا تنعكس أعباء العمل المخزنة مؤقتًا بالكامل في `total_tokens`. يُدرج مزودو OpenAI الرموز المخزنة مؤقتًا بالفعل داخل `prompt_tokens`؛ يعرض CrewAI الجزء المخزن مؤقتًا بشكل منفصل للوضوح.
+
 كل حقل في [`UsageMetrics`](https://github.com/crewAIInc/crewAI/blob/main/lib/crewai/src/crewai/types/usage_metrics.py) المُعاد هو مجموع جميع استدعاءات نموذج اللغة التي حدثت خلال استدعاء واحد لـ `flow.kickoff()`. تتم إعادة تعيين العدادات عند الاستدعاء التالي لـ `kickoff()` (وفي كل تكرار من `kickoff_for_each`)، لذلك لن تتكرر العدّات عبر التشغيلات المتتالية. يمكن قراءة هذه الخاصية بأمان في أي وقت بعد اكتمال `kickoff()`؛ قراءتها أثناء التنفيذ تُرجع المجموع الجزئي المتراكم حتى تلك اللحظة.
 
 ## إدارة حالة التدفق

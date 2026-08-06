@@ -270,6 +270,22 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     )
     ```
 
+    **Uso de tokens e prompt caching:**
+
+    A Anthropic reporta a entrada faturada em contadores separados — `input_tokens` (não em cache), `cache_read_input_tokens` e `cache_creation_input_tokens`. O CrewAI incorpora os três em `prompt_tokens` (e no `input_tokens` nativo nas respostas do provedor) para que `total_tokens` reflita o uso faturado completo em workloads em cache.
+
+    `cached_prompt_tokens` registra a porção de leitura de cache apenas como breakdown; ela já está incluída em `prompt_tokens` e não deve ser somada novamente a `total_tokens`. `cache_creation_tokens` registra escritas de cache da mesma forma.
+
+    ```python Code
+    usage = llm.get_token_usage_summary()
+    # total_tokens == prompt_tokens + completion_tokens
+    # prompt_tokens includes cache read + cache write for Anthropic
+    ```
+
+    Consulte a seção **UsageMetrics field semantics** na documentação do
+    conceito Flows para o contrato neutro em relação ao provedor usado por
+    `crew.usage_metrics` e `flow.usage_metrics`.
+
     Consulte a [visão geral dos modelos](https://platform.claude.com/docs/en/about-claude/models/overview) da Anthropic para obter IDs e capacidades atuais e revise a [tabela de descontinuação](https://platform.claude.com/docs/en/about-claude/model-deprecations) antes de fixar um modelo em produção.
   </Accordion>
 

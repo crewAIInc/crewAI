@@ -392,6 +392,22 @@ mode: "wide"
     - تتبع استخدام الرموز
     - محادثات استخدام أدوات متعددة الأدوار
 
+    **استخدام الرموز والتخزين المؤقت للمطالبة:**
+
+    يُبلّغ Anthropic عن الإدخال المفوتر في عدادات منفصلة — `input_tokens` (غير المخزن مؤقتًا)، و`cache_read_input_tokens`، و`cache_creation_input_tokens`. يدمج CrewAI الثلاثة ضمن `prompt_tokens` (و`input_tokens` الأصلي في استجابات المزود) بحيث يعكس `total_tokens` الاستخدام المفوتر الكامل على أعباء العمل المخزنة مؤقتًا.
+
+    يسجّل `cached_prompt_tokens` جزء قراءة الذاكرة المؤقتة كتفصيل فقط؛ وهو مُدرج بالفعل ضمن `prompt_tokens` ولا يجب إضافته مرة أخرى إلى `total_tokens`. يسجّل `cache_creation_tokens` عمليات الكتابة في الذاكرة المؤقتة بنفس الطريقة.
+
+    ```python Code
+    usage = llm.get_token_usage_summary()
+    # total_tokens == prompt_tokens + completion_tokens
+    # prompt_tokens includes cache read + cache write for Anthropic
+    ```
+
+    راجع قسم **UsageMetrics field semantics** في توثيق مفهوم Flows
+    للحصول على العقد المحايد للمزود المستخدم في `crew.usage_metrics`
+    و`flow.usage_metrics`.
+
     **ملاحظات مهمة:**
     - `max_tokens` معامل **مطلوب** لجميع نماذج Anthropic
     - يستخدم Claude `stop_sequences` بدلاً من `stop`

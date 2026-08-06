@@ -322,6 +322,8 @@ Caches podem ser utilizados para armazenar resultados de execuções de ferramen
 
 Após a execução da crew, você pode acessar o atributo `usage_metrics` para visualizar as métricas de uso do modelo de linguagem (LLM) para todas as tasks executadas pela crew. Isso fornece insights sobre eficiência operacional e oportunidades de melhoria.
 
+`total_tokens` é o total faturado (`prompt_tokens + completion_tokens`). Campos de breakdown como `cached_prompt_tokens` e `cache_creation_tokens` descrevem subconjuntos já incluídos nesses totais e não são somados novamente a `total_tokens`. Consulte a seção **UsageMetrics field semantics** na documentação do conceito Flows para o contrato completo.
+
 ```python Code
 # Acessar as métricas de uso da crew
 crew = Crew(agents=[agent1, agent2], tasks=[task1, task2])

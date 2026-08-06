@@ -261,6 +261,24 @@ print(flow.usage_metrics)
   **전체** 토큰 집계가 필요할 때는 항상 `flow.usage_metrics`를 사용하십시오.
 </Note>
 
+### UsageMetrics 필드 의미
+
+반환되는 [`UsageMetrics`](https://github.com/crewAIInc/crewAI/blob/main/lib/crewai/src/crewai/types/usage_metrics.py) 객체는 제공자 중립 계약을 사용합니다:
+
+| 필드 | 의미 |
+| --- | --- |
+| `total_tokens` | 청구된 총합: `prompt_tokens + completion_tokens` |
+| `prompt_tokens` | 요청에 대해 청구된 전체 입력/프롬프트 토큰 |
+| `completion_tokens` | 요청에 대해 청구된 출력/완료 토큰 |
+| `cached_prompt_tokens` | 프롬프트 토큰 중 캐시 읽기 부분 집합 (breakdown 전용) |
+| `cache_creation_tokens` | 프롬프트 토큰 중 캐시 쓰기 부분 집합 (breakdown 전용, Anthropic) |
+| `reasoning_tokens` | 제공자가 별도로 보고하는 추론/사고 부분 집합 (breakdown 전용) |
+| `successful_requests` | 집계된 LLM 호출 수 |
+
+`cached_prompt_tokens`, `cache_creation_tokens`, `reasoning_tokens`와 같은 breakdown 필드는 `total_tokens` **위에 추가되지 않습니다** — 이미 `prompt_tokens` 또는 `completion_tokens`에 포함된 부분을 설명합니다.
+
+Anthropic의 경우 캐시 읽기 및 쓰기 카운터가 `prompt_tokens`에 포함되므로, 캐시된 워크로드가 `total_tokens`에 완전히 반영됩니다. OpenAI 스타일 제공자는 캐시된 입력을 이미 `prompt_tokens`에 포함합니다. CrewAI는 가시성을 위해 캐시된 부분을 별도로 표시합니다.
+
 반환되는 [`UsageMetrics`](https://github.com/crewAIInc/crewAI/blob/main/lib/crewai/src/crewai/types/usage_metrics.py)의 각 항목은 단일 `flow.kickoff()` 실행 동안 발생한 모든 LLM 호출의 합계입니다. 다음 `kickoff()` 호출(및 `kickoff_for_each`의 각 반복)에서 카운터가 초기화되므로 연속 실행이 이중으로 집계되지 않습니다. 이 속성은 `kickoff()` 완료 후 언제든지 안전하게 읽을 수 있으며, 실행 중에 읽으면 그 시점까지 누적된 부분 합계를 반환합니다.
 
 ## 플로우 상태 관리
