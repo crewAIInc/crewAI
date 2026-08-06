@@ -549,7 +549,12 @@ def test_anthropic_token_usage_tracking():
     with patch.object(llm._client.messages, 'create') as mock_create:
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="test response")]
-        mock_response.usage = MagicMock(input_tokens=50, output_tokens=25)
+        mock_response.usage = MagicMock(
+            input_tokens=50,
+            output_tokens=25,
+            cache_read_input_tokens=0,
+            cache_creation_input_tokens=0,
+        )
         mock_create.return_value = mock_response
 
         result = llm.call("Hello")
@@ -1653,9 +1658,9 @@ def test_anthropic_cache_creation_tokens_extraction():
     mock_response.model = None
 
     usage = llm._extract_anthropic_token_usage(mock_response)
-    assert usage["input_tokens"] == 100
+    assert usage["input_tokens"] == 150
     assert usage["output_tokens"] == 50
-    assert usage["total_tokens"] == 150
+    assert usage["total_tokens"] == 200
     assert usage["cached_prompt_tokens"] == 30
     assert usage["cache_creation_tokens"] == 20
 
