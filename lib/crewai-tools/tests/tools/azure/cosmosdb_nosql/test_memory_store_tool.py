@@ -264,3 +264,29 @@ def test_clear_streams_and_counts(patched_helpers):
     assert payload["success"] is True
     assert payload["deleted_count"] == 150
     assert patched_helpers["container"].execute_item_batch.call_count == 2
+
+
+def test_retrieve_supports_nested_partition_path(patched_helpers):
+    """Nested partition paths ('/address/zip') must map to SQL dot notation."""
+    tool = _build_tool(
+        cosmos_container_properties={
+            "partition_key": {"paths": ["/address/zip"], "kind": "Hash"}
+        }
+    )
+    patched_helpers["container"].query_items.return_value = iter([])
+    tool._run(operation="retrieve", partition_key_value="98052")
+    sql = patched_helpers["container"].query_items.call_args.kwargs["query"]
+    assert "c.address.zip = '98052'" in sql
+
+
+def test_retrieve_rejects_non_positive_max_results(patched_helpers):
+    """max_results <= 0 must error out instead of loading the whole partition."""
+    tool = _build_tool()
+    for bad in (0, -5):
+        payload = json.loads(
+            tool._run(
+                operation="retrieve", partition_key_value="a-1", max_results=bad
+            )
+        )
+        assert payload == {"error": "max_results must be a positive integer"}
+    patched_helpers["container"].query_items.assert_not_called()

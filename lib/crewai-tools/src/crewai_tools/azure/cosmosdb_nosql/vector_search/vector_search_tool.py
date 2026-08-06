@@ -294,18 +294,28 @@ class AzureCosmosDBNoSqlSearchTool(BaseTool):
             )
         if self.cosmos_container_properties.get("partition_key") is None:
             raise ValueError("partition_key cannot be null or empty for a container.")
-        if self.full_text_search_enabled:
+        # Full-text / hybrid queries build FullTextScore / FullTextContains SQL
+        # that needs a full-text index + policy. search_type is independent of
+        # full_text_search_enabled, so require the policy whenever either the
+        # flag is set or the search_type implies full-text.
+        needs_full_text = self.full_text_search_enabled or self.search_type in (
+            "full_text_search",
+            "full_text_ranking",
+            "hybrid",
+            "hybrid_score_threshold",
+        )
+        if needs_full_text:
             full_text_indexes = (self.indexing_policy or {}).get("fullTextIndexes")
             if not full_text_indexes:
                 raise ValueError(
                     "fullTextIndexes cannot be null or empty in the indexing_policy "
-                    "if full text search is enabled."
+                    "for full-text or hybrid search."
                 )
             full_text_paths = (self.full_text_policy or {}).get("fullTextPaths")
             if not full_text_paths:
                 raise ValueError(
                     "fullTextPaths cannot be null or empty in the full_text_policy "
-                    "if full text search is enabled."
+                    "for full-text or hybrid search."
                 )
 
     def _infer_distance_strategy(self) -> DistanceStrategy:
@@ -403,10 +413,14 @@ class AzureCosmosDBNoSqlSearchTool(BaseTool):
 
     @retry_on_cosmos_throttle()
     def _batch_create(self, batch: list[dict[str, Any]], pk_value: Any) -> None:
-        # execute_item_batch expects each operation as (type, args_tuple[, kwargs]);
-        # the create body must be wrapped in a 1-tuple, i.e. ("create", (doc,)).
+        # Use "upsert" rather than "create" so this operation is idempotent
+        # under the retry decorator: a transient error (429/503) can occur
+        # *after* the batch already committed server-side, and a "create"
+        # retry would then fail the whole batch with a 409 Conflict.
+        # execute_item_batch expects each op as (type, args_tuple[, kwargs]);
+        # the body is wrapped in a 1-tuple, i.e. ("upsert", (doc,)).
         self._container.execute_item_batch(
-            batch_operations=[("create", (doc,)) for doc in batch],
+            batch_operations=[("upsert", (doc,)) for doc in batch],
             partition_key=pk_value,
         )
 

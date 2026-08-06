@@ -459,21 +459,28 @@ class CosmosDBNoSqlStorage:
         )
         return [self._doc_to_record(doc) for doc in items]
 
+    def _scalar_query(self, sql: str) -> Any:
+        """Run a single-value query (e.g. ``SELECT VALUE COUNT(1)``) and return it.
+
+        The Cosmos NoSQL Python SDK only supports one VALUE aggregate per
+        cross-partition query (it rejects multiple/non-VALUE aggregates), so
+        aggregates are issued one at a time through this helper.
+        """
+        rows = list(
+            self._container.query_items(query=sql, enable_cross_partition_query=True)
+        )
+        return rows[0] if rows else None
+
     def get_scope_info(self, scope: str) -> ScopeInfo:
         scope = scope.rstrip("/") or "/"
         clause = self._scope_prefix_filter(scope) or "true"
         where = f" WHERE {clause}"
-        agg_sql = (
-            f"SELECT COUNT(1) AS n, MIN(c.created_at) AS oldest, "  # noqa: S608
-            f"MAX(c.created_at) AS newest FROM c{where}"
+
+        # One VALUE aggregate per query — the SDK cannot serve multiple/aliased
+        # aggregates in a single cross-partition query.
+        record_count = int(
+            self._scalar_query(f"SELECT VALUE COUNT(1) FROM c{where}") or 0  # noqa: S608
         )
-        agg_rows = list(
-            self._container.query_items(
-                query=agg_sql, enable_cross_partition_query=True
-            )
-        )
-        agg = agg_rows[0] if agg_rows else {}
-        record_count = int(agg.get("n", 0) or 0)
         if record_count == 0:
             return ScopeInfo(
                 path=scope,
@@ -483,8 +490,14 @@ class CosmosDBNoSqlStorage:
                 newest_record=None,
                 child_scopes=[],
             )
-        oldest = _parse_dt(agg["oldest"]) if agg.get("oldest") else None
-        newest = _parse_dt(agg["newest"]) if agg.get("newest") else None
+        oldest_raw = self._scalar_query(
+            f"SELECT VALUE MIN(c.created_at) FROM c{where}"  # noqa: S608
+        )
+        newest_raw = self._scalar_query(
+            f"SELECT VALUE MAX(c.created_at) FROM c{where}"  # noqa: S608
+        )
+        oldest = _parse_dt(oldest_raw) if oldest_raw else None
+        newest = _parse_dt(newest_raw) if newest_raw else None
 
         # Distinct categories, flattened and de-duplicated server-side.
         cat_sql = f"SELECT DISTINCT VALUE cat FROM c JOIN cat IN c.categories{where}"  # noqa: S608
@@ -543,18 +556,18 @@ class CosmosDBNoSqlStorage:
     def list_categories(self, scope_prefix: str | None = None) -> dict[str, int]:
         clause = self._scope_prefix_filter(scope_prefix)
         where = (" WHERE " + clause) if clause else ""
-        sql = (
-            f"SELECT cat AS category, COUNT(1) AS n "  # noqa: S608
-            f"FROM c JOIN cat IN c.categories{where} GROUP BY cat"
-        )
-        rows = list(
-            self._container.query_items(query=sql, enable_cross_partition_query=True)
-        )
+        # The Cosmos NoSQL Python SDK cannot serve a cross-partition GROUP BY,
+        # so instead of aggregating server-side we UNWIND the categories array
+        # (JOIN) and stream just the category values (not whole documents),
+        # counting them client-side. This still avoids transferring full docs.
+        sql = f"SELECT VALUE cat FROM c JOIN cat IN c.categories{where}"  # noqa: S608
         counts: dict[str, int] = {}
-        for row in rows:
-            cat = row.get("category")
+        for cat in self._container.query_items(
+            query=sql, enable_cross_partition_query=True
+        ):
             if cat is not None:
-                counts[str(cat)] = int(row.get("n", 0) or 0)
+                key = str(cat)
+                counts[key] = counts.get(key, 0) + 1
         return counts
 
     def count(self, scope_prefix: str | None = None) -> int:

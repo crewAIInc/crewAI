@@ -230,6 +230,15 @@ class AzureCosmosDBSemanticCacheTool(BaseTool):
         return DistanceStrategy.COSINE
 
     def _validate_params(self) -> None:
+        partition_key = self.config.cosmos_container_properties.get("partition_key")
+        if isinstance(partition_key, dict):
+            for path in partition_key.get("paths", []):
+                if len([seg for seg in str(path).split("/") if seg]) > 1:
+                    raise ValueError(
+                        f"Nested partition key paths are not supported by the "
+                        f"semantic cache tool: {path!r}. Use a single-level path "
+                        f"such as '/agent_id'."
+                    )
         if not self.config.create_container:
             return
         vector_indexes = (self.config.indexing_policy or {}).get("vectorIndexes")
@@ -440,6 +449,7 @@ class AzureCosmosDBSemanticCacheTool(BaseTool):
                 )
             )
             deleted = 0
+            failed = 0
             for item in items:
                 try:
                     self._container.delete_item(
@@ -447,6 +457,7 @@ class AzureCosmosDBSemanticCacheTool(BaseTool):
                     )
                     deleted += 1
                 except Exception:  # noqa: PERF203
+                    failed += 1
                     logger.debug(
                         "Failed to delete cache item %s",
                         item.get("id"),
@@ -454,8 +465,9 @@ class AzureCosmosDBSemanticCacheTool(BaseTool):
                     )
             return json.dumps(
                 {
-                    "success": True,
+                    "success": failed == 0,
                     "deleted_count": deleted,
+                    "failed_count": failed,
                     "llm_namespace": self._llm_namespace,
                 }
             )

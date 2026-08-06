@@ -134,9 +134,9 @@ def test_add_texts_without_metadata_partition_key_raises(patched_helpers):
         tool.add_texts(["hello"])
 
 
-def test_add_texts_wraps_batch_create_body_in_tuple(patched_helpers):
-    """execute_item_batch requires ('create', (doc,)); a bare dict body is rejected
-    by the SDK's _format_batch_operations. Guard the tuple shape here."""
+def test_add_texts_wraps_batch_body_in_tuple(patched_helpers):
+    """execute_item_batch requires (op, (doc,)); a bare dict body is rejected by
+    the SDK's _format_batch_operations. Use 'upsert' so retries are idempotent."""
     tool = _build_tool()
     patched_helpers["openai"].embeddings.create.return_value = _embed_response(
         [0.1, 0.2, 0.3, 0.4]
@@ -150,7 +150,7 @@ def test_add_texts_wraps_batch_create_body_in_tuple(patched_helpers):
     ]
     assert ops, "expected at least one batch operation"
     for op in ops:
-        assert op[0] == "create"
+        assert op[0] == "upsert"
         assert isinstance(op[1], tuple) and len(op[1]) == 1
         assert isinstance(op[1][0], dict)
 
@@ -361,3 +361,10 @@ def test_distance_aware_threshold_for_euclidean(patched_helpers):
     tool.query_config = AzureCosmosDBNoSqlSearchConfig(threshold=1.0, max_results=10)
     output = json.loads(tool._run("hi"))
     assert [item["id"] for item in output] == ["near"]
+
+
+def test_hybrid_search_type_requires_full_text_policy(patched_helpers):
+    """search_type='hybrid' must require a full-text policy even when the
+    full_text_search_enabled flag is left at its default (False)."""
+    with pytest.raises(ValueError, match="fullTextIndexes|fullTextPaths"):
+        _build_tool(search_type="hybrid")  # no fullTextIndexes/paths provided

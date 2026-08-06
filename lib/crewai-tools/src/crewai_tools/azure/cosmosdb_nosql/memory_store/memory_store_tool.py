@@ -174,29 +174,44 @@ class AzureCosmosDBMemoryTool(BaseTool):
         field_names = [path.lstrip("/") for path in paths]
         return field_names, partition_key_config
 
+    @staticmethod
+    def _field_ref(field: str) -> str:
+        """Return a validated SQL reference for a partition-key field path.
+
+        Cosmos declares hierarchical/nested partition paths with ``/`` (e.g.
+        ``/address/zip`` -> field ``address/zip``) but accesses those
+        properties in SQL with dot notation (``c.address.zip``). Each path
+        segment is validated as a SQL identifier.
+        """
+        segments = [seg for seg in field.split("/") if seg]
+        if not segments:
+            raise ValueError("partition_key field must be a non-empty path")
+        for seg in segments:
+            validate_sql_identifier(seg, name="partition_key field")
+        return ".".join(segments)
+
     @classmethod
     def _build_partition_key_filter(
         cls,
         partition_key_value: str | list[str],
         field_names: list[str],
     ) -> str:
-        for field in field_names:
-            validate_sql_identifier(field, name="partition_key field")
+        refs = [cls._field_ref(field) for field in field_names]
         if isinstance(partition_key_value, str):
-            if len(field_names) > 1:
+            if len(refs) > 1:
                 raise ValueError(
                     f"Container has hierarchical partition key with "
-                    f"{len(field_names)} levels, but only one value provided"
+                    f"{len(refs)} levels, but only one value provided"
                 )
-            return f"c.{field_names[0]} = {cls._format_partition_value(partition_key_value)}"
-        if len(partition_key_value) != len(field_names):
+            return f"c.{refs[0]} = {cls._format_partition_value(partition_key_value)}"
+        if len(partition_key_value) != len(refs):
             raise ValueError(
-                f"Container has {len(field_names)} partition key levels, but "
+                f"Container has {len(refs)} partition key levels, but "
                 f"{len(partition_key_value)} values provided"
             )
         return " AND ".join(
-            f"c.{field} = {cls._format_partition_value(value)}"
-            for field, value in zip(field_names, partition_key_value, strict=False)
+            f"c.{ref} = {cls._format_partition_value(value)}"
+            for ref, value in zip(refs, partition_key_value, strict=False)
         )
 
     def _run(
@@ -297,13 +312,16 @@ class AzureCosmosDBMemoryTool(BaseTool):
             partition_filter = self._build_partition_key_filter(
                 partition_key_value, field_names
             )
-            # Only emit TOP for a positive limit; a negative/zero value would
-            # produce "TOP -1" which Cosmos rejects.
-            top_clause = (
-                f"TOP {int(max_results)} "
-                if max_results is not None and int(max_results) > 0
-                else ""
-            )
+            # Reject non-positive limits: omitting TOP would load the entire
+            # logical partition into memory. None means "no explicit limit".
+            top_clause = ""
+            if max_results is not None:
+                limit = int(max_results)
+                if limit <= 0:
+                    return json.dumps(
+                        {"error": "max_results must be a positive integer"}
+                    )
+                top_clause = f"TOP {limit} "
             query_sql = f"SELECT {top_clause}* FROM c WHERE {partition_filter}"  # noqa: S608
 
             if query_filter:

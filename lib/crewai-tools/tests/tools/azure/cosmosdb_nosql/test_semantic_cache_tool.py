@@ -225,3 +225,29 @@ def test_update_uses_deterministic_id(patched_helpers):
     tool._run(operation="update", prompt="different", response="c")
     id_3 = patched_helpers["container"].upsert_item.call_args.kwargs["body"]["id"]
     assert id_3 != id_1  # different prompt -> different id
+
+
+def test_nested_partition_path_rejected_at_init(patched_helpers):
+    """Nested partition paths would be written as a flat 'metadata/agent_id'
+    field; the cache must reject them at construction time."""
+    with pytest.raises(ValueError, match="Nested partition key"):
+        _build_tool(
+            cosmos_container_properties={
+                "partition_key": {"paths": ["/metadata/agent_id"], "kind": "Hash"}
+            }
+        )
+
+
+def test_clear_reports_failed_deletions(patched_helpers):
+    """_clear_cache must surface failed deletions instead of always success."""
+    tool = _build_tool(llm_string="gpt-4o")
+    patched_helpers["container"].query_items.return_value = iter(
+        [{"id": "a", "_pk": "p"}, {"id": "b", "_pk": None}]
+    )
+    # Second delete (missing _pk) raises; first succeeds.
+    patched_helpers["container"].delete_item.side_effect = [None, RuntimeError("boom")]
+
+    payload = json.loads(tool._run(operation="clear"))
+    assert payload["deleted_count"] == 1
+    assert payload["failed_count"] == 1
+    assert payload["success"] is False

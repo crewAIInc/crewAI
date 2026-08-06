@@ -434,25 +434,36 @@ def test_reset_ignores_container_not_found(storage: CosmosDBNoSqlStorage) -> Non
 def test_get_scope_info_uses_server_side_aggregates(
     storage: CosmosDBNoSqlStorage, mock_container: MagicMock
 ) -> None:
+    # get_scope_info issues one VALUE aggregate per query (COUNT, then MIN, then
+    # MAX), followed by DISTINCT category and scope queries — the SDK cannot
+    # serve multiple/aliased aggregates in a single cross-partition query.
     mock_container.query_items.side_effect = [
-        iter([{"n": 2, "oldest": "2024-01-01T00:00:00", "newest": "2024-02-01T00:00:00"}]),
-        iter(["k1", "k2"]),
-        iter(["/a", "/a/b"]),
+        iter([2]),  # SELECT VALUE COUNT(1)
+        iter(["2024-01-01T00:00:00"]),  # SELECT VALUE MIN(c.created_at)
+        iter(["2024-02-01T00:00:00"]),  # SELECT VALUE MAX(c.created_at)
+        iter(["k1", "k2"]),  # DISTINCT categories
+        iter(["/a", "/a/b"]),  # DISTINCT scopes
     ]
     info = storage.get_scope_info("/a")
     assert info.record_count == 2
     assert info.categories == ["k1", "k2"]
-    agg_sql = mock_container.query_items.call_args_list[0].kwargs["query"]
-    assert "COUNT(1)" in agg_sql and "MIN(c.created_at)" in agg_sql
+    assert info.oldest_record is not None and info.newest_record is not None
+    queries = [c.kwargs["query"] for c in mock_container.query_items.call_args_list]
+    assert "VALUE COUNT(1)" in queries[0]
+    assert "MIN(c.created_at)" in queries[1]
+    assert "MAX(c.created_at)" in queries[2]
+    # No multi-aggregate / aliased-aggregate query (rejected by the SDK).
+    assert not any(" AS n" in q for q in queries)
 
 
-def test_list_categories_uses_group_by(
+def test_list_categories_counts_without_group_by(
     storage: CosmosDBNoSqlStorage, mock_container: MagicMock
 ) -> None:
-    mock_container.query_items.return_value = iter(
-        [{"category": "k1", "n": 3}, {"category": "k2", "n": 1}]
-    )
+    # Cross-partition GROUP BY is unsupported by the SDK: categories are
+    # unwound with JOIN and counted client-side over the streamed values.
+    mock_container.query_items.return_value = iter(["k1", "k1", "k1", "k2"])
     counts = storage.list_categories()
     assert counts == {"k1": 3, "k2": 1}
     sql = mock_container.query_items.call_args.kwargs["query"]
-    assert "GROUP BY cat" in sql
+    assert "SELECT VALUE cat" in sql
+    assert "GROUP BY" not in sql
