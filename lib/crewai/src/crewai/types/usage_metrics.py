@@ -120,12 +120,9 @@ class UsageMetrics(BaseModel):
         reconciling here, ``prompt_tokens`` and ``total_tokens`` undercount
         billed usage on cached Anthropic workloads.
         """
-        return (
-            "input_tokens" in usage_data
-            and (
-                "cache_read_input_tokens" in usage_data
-                or "cache_creation_input_tokens" in usage_data
-            )
+        return "input_tokens" in usage_data and (
+            "cache_read_input_tokens" in usage_data
+            or "cache_creation_input_tokens" in usage_data
         )
 
     @staticmethod
