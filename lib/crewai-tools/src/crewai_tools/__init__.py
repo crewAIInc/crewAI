@@ -7,6 +7,21 @@ from crewai_tools.aws.bedrock.knowledge_base.retriever_tool import (
 )
 from crewai_tools.aws.s3.reader_tool import S3ReaderTool
 from crewai_tools.aws.s3.writer_tool import S3WriterTool
+from crewai_tools.azure.cosmosdb_nosql.memory_store import (
+    AzureCosmosDBMemoryConfig,
+    AzureCosmosDBMemoryTool,
+    AzureCosmosDBMemoryToolSchema,
+)
+from crewai_tools.azure.cosmosdb_nosql.semantic_cache import (
+    AzureCosmosDBSemanticCacheConfig,
+    AzureCosmosDBSemanticCacheTool,
+    AzureCosmosDBSemanticCacheToolSchema,
+)
+from crewai_tools.azure.cosmosdb_nosql.vector_search import (
+    AzureCosmosDBNoSqlSearchConfig,
+    AzureCosmosDBNoSqlSearchTool,
+    AzureCosmosDBNoSqlToolSchema,
+)
 from crewai_tools.tools.ai_mind_tool.ai_mind_tool import AIMindTool
 from crewai_tools.tools.apify_actors_tool.apify_actors_tool import ApifyActorsTool
 from crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool import ArxivPaperTool
@@ -228,6 +243,15 @@ __all__ = [
     "AIMindTool",
     "ApifyActorsTool",
     "ArxivPaperTool",
+    "AzureCosmosDBMemoryConfig",
+    "AzureCosmosDBMemoryTool",
+    "AzureCosmosDBMemoryToolSchema",
+    "AzureCosmosDBNoSqlSearchConfig",
+    "AzureCosmosDBNoSqlSearchTool",
+    "AzureCosmosDBNoSqlToolSchema",
+    "AzureCosmosDBSemanticCacheConfig",
+    "AzureCosmosDBSemanticCacheTool",
+    "AzureCosmosDBSemanticCacheToolSchema",
     "BedrockInvokeAgentTool",
     "BedrockKBRetrieverTool",
     "BraveImageSearchTool",

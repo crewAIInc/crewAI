@@ -1,0 +1,222 @@
+---
+title: 'Azure Cosmos DB (NoSQL) Tools'
+description: 'Vector, full-text, and hybrid search plus semantic caching and agent memory on Azure Cosmos DB for NoSQL'
+icon: database
+mode: "wide"
+---
+
+## Overview
+
+The Azure Cosmos DB (NoSQL) tools let your CrewAI agents use [Azure Cosmos DB for NoSQL](https://learn.microsoft.com/azure/cosmos-db/nosql/) as a vector store, a semantic cache, and a memory store. The package ships three agent-callable tools plus a native CrewAI memory backend:
+
+| Tool | Purpose |
+| ---- | ------- |
+| `AzureCosmosDBNoSqlSearchTool` | Vector, full-text, or hybrid search over a Cosmos NoSQL container |
+| `AzureCosmosDBSemanticCacheTool` | Semantic cache for LLM responses with TTL support |
+| `AzureCosmosDBMemoryTool` | CRUD over agent memory items with hierarchical partition keys |
+| `CosmosDBNoSqlStorage` | Native `Memory` storage backend (vs. an agent-callable tool) |
+
+## Installation
+
+The tools live behind an optional extra so the base install stays small:
+
+```bash
+uv add 'crewai-tools[azure-cosmosdb]'
+```
+
+This pulls in `azure-cosmos`, `azure-identity`, and `openai`. To use the native
+memory backend from the `crewai` package, install its extra instead:
+
+```bash
+uv add 'crewai[cosmosdb]'
+```
+
+## Authentication
+
+All three tools accept an account key, a connection string, **or** an
+`azure.core.credentials.TokenCredential` (e.g. `DefaultAzureCredential`):
+
+```python
+from azure.identity import DefaultAzureCredential
+
+# Any one of these auth styles works:
+#   key="<account-key>"
+#   connection_string="AccountEndpoint=...;AccountKey=...;"
+#   token_credential=DefaultAzureCredential()
+```
+
+For embeddings, set either `azure_openai_endpoint` (Azure OpenAI) or
+`openai_api_key` (standard OpenAI). The `AZURE_OPENAI_ENDPOINT`,
+`AZURE_OPENAI_API_KEY`, and `OPENAI_API_KEY` environment variables are used as
+fallbacks. You can also plug in a custom embedder that exposes
+`embed_documents` / `embed_query`.
+
+## Vector / Full-text / Hybrid Search Tool
+
+`AzureCosmosDBNoSqlSearchTool` embeds the incoming query and retrieves the most
+relevant documents from a Cosmos NoSQL container.
+
+```python
+from crewai import Agent
+from crewai_tools import AzureCosmosDBNoSqlSearchTool
+
+indexing_policy = {
+    "indexingMode": "consistent",
+    "automatic": True,
+    "vectorIndexes": [{"path": "/embedding", "type": "diskANN"}],
+}
+vector_embedding_policy = {
+    "vectorEmbeddings": [
+        {
+            "path": "/embedding",
+            "dataType": "float32",
+            "dimensions": 1536,
+            "distanceFunction": "cosine",
+        }
+    ]
+}
+container_properties = {"partition_key": {"paths": ["/id"], "kind": "Hash"}}
+
+search_tool = AzureCosmosDBNoSqlSearchTool(
+    cosmos_host="https://<account>.documents.azure.com:443/",
+    key="<account-key>",
+    database_name="crewAI_database",
+    container_name="crewAI_container",
+    indexing_policy=indexing_policy,
+    vector_embedding_policy=vector_embedding_policy,
+    cosmos_container_properties=container_properties,
+    embedding_model="text-embedding-3-large",
+    dimensions=1536,
+    search_type="vector",  # see options below
+)
+
+# Ingest documents (embeds text and writes them in batches):
+search_tool.add_texts(
+    texts=["CrewAI orchestrates role-playing autonomous agents."],
+    metadatas=[{"source": "docs"}],
+)
+
+agent = Agent(
+    role="Research Assistant",
+    goal="Find relevant information in the knowledge base",
+    tools=[search_tool],
+)
+```
+
+### Search types
+
+Set `search_type` to one of:
+
+- `vector` – pure vector similarity search.
+- `vector_score_threshold` – vector search with a minimum-similarity cutoff.
+- `full_text_search` – keyword search (no embedding required).
+- `full_text_ranking` – BM25-style full-text ranking.
+- `hybrid` – Reciprocal Rank Fusion (RRF) of vector + full-text.
+- `hybrid_score_threshold` – hybrid search with a similarity cutoff.
+
+Full-text and hybrid searches require `full_text_search_enabled=True`, a
+`fullTextIndexes` entry in the indexing policy, and a `full_text_policy`.
+
+### Query configuration
+
+Pass an `AzureCosmosDBNoSqlSearchConfig` via `query_config` to control per-query
+behaviour — `max_results`, `where`, `offset_limit`, `projection_mapping`,
+`full_text_rank_filter`, `weights` (hybrid RRF), and `threshold`.
+
+```python
+from crewai_tools import AzureCosmosDBNoSqlSearchConfig
+
+search_tool.query_config = AzureCosmosDBNoSqlSearchConfig(
+    max_results=5,
+    threshold=0.75,
+)
+```
+
+You can also build the tool from a connection string with
+`AzureCosmosDBNoSqlSearchTool.from_connection_string(...)`.
+
+## Semantic Cache Tool
+
+`AzureCosmosDBSemanticCacheTool` caches LLM responses keyed by prompt
+similarity, so semantically equivalent prompts return a cached answer. Cache
+entries are namespaced per `llm_string` and can expire via `default_ttl`.
+
+```python
+from crewai_tools import (
+    AzureCosmosDBSemanticCacheTool,
+    AzureCosmosDBSemanticCacheConfig,
+)
+
+config = AzureCosmosDBSemanticCacheConfig(
+    cosmos_host="https://<account>.documents.azure.com:443/",
+    key="<account-key>",
+    indexing_policy=indexing_policy,
+    vector_embedding_policy=vector_embedding_policy,
+    full_text_policy={"fullTextPaths": [{"path": "/prompt", "language": "en-US"}]},
+    similarity_threshold=0.85,
+    default_ttl=86400,          # seconds; None disables expiry
+    enable_hybrid_search=True,
+    llm_string="gpt-4o-2024-08-06",
+)
+
+cache_tool = AzureCosmosDBSemanticCacheTool(config=config)
+```
+
+Operations (passed as the `operation` argument):
+
+- `search` – look up a cached response for a `prompt`.
+- `update` – store a `prompt` / `response` pair.
+- `clear` – delete cached entries for the current `llm_string` namespace.
+
+## Agent Memory Tool
+
+`AzureCosmosDBMemoryTool` performs CRUD over memory items and supports
+[hierarchical partition keys](https://learn.microsoft.com/azure/cosmos-db/hierarchical-partition-keys).
+
+```python
+from crewai_tools import AzureCosmosDBMemoryTool, AzureCosmosDBMemoryConfig
+
+config = AzureCosmosDBMemoryConfig(
+    cosmos_host="https://<account>.documents.azure.com:443/",
+    key="<account-key>",
+    database_name="memory_database",
+    container_name="memory_container",
+    cosmos_container_properties={
+        "partition_key": {"paths": ["/agent_id"], "kind": "Hash"}
+    },
+    use_optimistic_concurrency=False,
+)
+
+memory_tool = AzureCosmosDBMemoryTool(config=config)
+```
+
+Operations (passed as the `operation` argument): `store`, `read`, `retrieve`,
+`update`, `delete`, and `clear`. Set `use_optimistic_concurrency=True` to guard
+updates with the document's `_etag` (surfacing a 412 on concurrent writes).
+
+## Native Memory Backend
+
+For a native CrewAI **memory backend** (as opposed to an agent-callable tool),
+use `CosmosDBNoSqlStorage`. It implements the `StorageBackend` protocol and can
+be selected by name from `Memory`:
+
+```python
+from crewai.memory.unified_memory import Memory
+
+# Reads AZURE_COSMOS_CONNECTION_STRING, or AZURE_COSMOS_HOST (+ AZURE_COSMOS_KEY,
+# else DefaultAzureCredential). Optional: AZURE_COSMOS_DATABASE_NAME,
+# AZURE_COSMOS_CONTAINER_NAME, AZURE_COSMOS_VECTOR_DIM.
+memory = Memory(storage="cosmosdb")
+
+# ...or pass a pre-configured instance for full control:
+from crewai.memory.storage.cosmosdb_nosql_storage import CosmosDBNoSqlStorage
+
+memory = Memory(storage=CosmosDBNoSqlStorage.from_env())
+```
+
+## See also
+
+- [Azure Cosmos DB NoSQL vector search](https://learn.microsoft.com/azure/cosmos-db/nosql/vector-search)
+- [Full-text and hybrid search](https://learn.microsoft.com/azure/cosmos-db/gen-ai/hybrid-search)
+- [Hierarchical partition keys](https://learn.microsoft.com/azure/cosmos-db/hierarchical-partition-keys)
+- [Container TTL](https://learn.microsoft.com/azure/cosmos-db/nosql/time-to-live)

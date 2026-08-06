@@ -91,7 +91,12 @@ class Memory(BaseModel):
     )
     storage: Annotated[StorageBackend | str, PlainValidator(_passthrough)] = Field(
         default="lancedb",
-        description="Storage backend instance or path string.",
+        description=(
+            "Storage backend: a StorageBackend instance, a recognised selector "
+            "string ('lancedb', 'qdrant-edge', 'cosmosdb'), or a filesystem path "
+            "(treated as a LanceDB location). 'cosmosdb' is configured from "
+            "AZURE_COSMOS_* environment variables."
+        ),
     )
     embedder: Any = Field(
         default=None,
@@ -239,6 +244,12 @@ class Memory(BaseModel):
                 from crewai.memory.storage.qdrant_edge_storage import QdrantEdgeStorage
 
                 self._storage = QdrantEdgeStorage()
+            elif self.storage == "cosmosdb":
+                from crewai.memory.storage.cosmosdb_nosql_storage import (
+                    CosmosDBNoSqlStorage,
+                )
+
+                self._storage = CosmosDBNoSqlStorage.from_env()
             elif self.storage == "lancedb":
                 from crewai.memory.storage.lancedb_storage import LanceDBStorage
 

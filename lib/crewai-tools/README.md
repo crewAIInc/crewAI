@@ -26,6 +26,8 @@ CrewAI provides an extensive collection of powerful tools ready to enhance your 
 - **Web Scraping**: `ScrapeWebsiteTool`, `SeleniumScrapingTool`
 - **Database Integrations**: `MySQLSearchTool`
 - **Vector Database Integrations**: `MongoDBVectorSearchTool`, `QdrantVectorSearchTool`, `WeaviateVectorSearchTool`
+- **Vector Database Integrations**: `MongoDBVectorSearchTool`, `QdrantVectorSearchTool`, `WeaviateVectorSearchTool`
+- **Azure Cosmos DB (NoSQL)**: `AzureCosmosDBNoSqlSearchTool`, `AzureCosmosDBSemanticCacheTool`, `AzureCosmosDBMemoryTool`
 - **API Integrations**: `SerperApiTool`, `ExaSearchTool`
 - **AI-powered Tools**: `DallETool`, `VisionTool`, `StagehandTool`
 
