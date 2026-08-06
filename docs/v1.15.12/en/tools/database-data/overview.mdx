@@ -51,17 +51,16 @@ These tools enable your agents to interact with various database systems, from t
 - **Real-time Analytics**: Access live data for decision making
 
 ```python
-from crewai_tools import MySQLTool, MongoDBVectorSearchTool, QdrantVectorSearchTool, NL2SQLTool
+from crewai_tools import MySQLTool, QdrantVectorSearchTool, NL2SQLTool
 
 # Create database tools
 mysql_db = MySQLTool()
-mongodb_vector_search =  MongoDBVectorSearchTool()
-qdrant_vector_search = QdrantVectorSearchTool()
+vector_search = QdrantVectorSearchTool()
 nl_to_sql = NL2SQLTool()
 
 # Add to your agent
 agent = Agent(
     role="Data Analyst",
-    tools=[mysql_db, mongodb_vector_search, vector_search, nl_to_sql],
+    tools=[mysql_db,vector_search, nl_to_sql],
     goal="Extract insights from various data sources"
 )
