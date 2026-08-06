@@ -17,6 +17,7 @@ from crewai_tools.tools.crewai_platform_tools.misc import (
 
 
 class CrewAIPlatformActionTool(BaseTool):
+    app: str = Field(description="The integration slug for this action")
     action_name: str = Field(default="", description="The name of the action")
     action_schema: dict[str, Any] = Field(
         default_factory=dict, description="The schema of the action"
@@ -25,6 +26,7 @@ class CrewAIPlatformActionTool(BaseTool):
     def __init__(
         self,
         description: str,
+        app: str,
         action_name: str,
         action_schema: dict[str, Any],
     ):
@@ -46,6 +48,7 @@ class CrewAIPlatformActionTool(BaseTool):
             name=action_name.lower().replace(" ", "_"),
             description=description,
             args_schema=args_schema,
+            app=app,
         )
         self.action_name = action_name
         self.action_schema = action_schema
