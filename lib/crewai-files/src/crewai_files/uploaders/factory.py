@@ -7,6 +7,7 @@ from typing import Any as AnyType, Literal, TypeAlias, TypedDict, overload
 
 from typing_extensions import NotRequired, Unpack
 
+from crewai_files.processing.exceptions import PermanentUploadError
 from crewai_files.uploaders.anthropic import AnthropicFileUploader
 from crewai_files.uploaders.bedrock import BedrockFileUploader
 from crewai_files.uploaders.gemini import GeminiFileUploader
@@ -196,7 +197,11 @@ def get_uploader(
                 "Bedrock S3 uploader not configured. "
                 "Set CREWAI_BEDROCK_S3_BUCKET environment variable to enable."
             )
-            raise
+            raise PermanentUploadError(
+                "Bedrock S3 uploader not configured. "
+                "Set CREWAI_BEDROCK_S3_BUCKET environment variable or pass "
+                "bucket_name to enable Bedrock file uploads."
+            )
         try:
             from crewai_files.uploaders.bedrock import BedrockFileUploader
 
@@ -213,4 +218,7 @@ def get_uploader(
             raise
 
     logger.debug(f"No file uploader available for provider: {provider}")
-    raise
+    raise PermanentUploadError(
+      f"No file uploader available for provider: {provider}. "
+      f"Supported providers: gemini, anthropic, openai, bedrock."
+    )
