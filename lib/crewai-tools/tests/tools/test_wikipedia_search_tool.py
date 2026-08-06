@@ -403,4 +403,13 @@ def test_wikipedia_search_tool_missing_dependencies():
     assert "requests" in res
 
 
+@patch("crewai_tools.tools.wikipedia_search_tool.wikipedia_search_tool.WIKIPEDIA_AVAILABLE", False)
+def test_wikipedia_client_missing_dependencies():
+    with pytest.raises(ImportError) as exc_info:
+        WikipediaClient()
+    assert "beautifulsoup4" in str(exc_info.value)
+    assert "requests" in str(exc_info.value)
+
+
+
 

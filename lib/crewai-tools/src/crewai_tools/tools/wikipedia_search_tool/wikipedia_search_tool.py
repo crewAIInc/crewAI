@@ -91,6 +91,12 @@ class WikipediaClient:
         Raises:
             ValueError: If the language code contains invalid characters.
         """
+        if not WIKIPEDIA_AVAILABLE:
+            raise ImportError(
+                "The 'beautifulsoup4' and 'requests' packages are required to use WikipediaClient. "
+                "Please install them using your package manager (e.g., `pip install beautifulsoup4 requests` or `uv add beautifulsoup4 requests`)."
+            )
+
         if not re.match(r"^[a-z\-]+$", lang.lower()):
             raise ValueError(f"Invalid language code: {lang}")
 
