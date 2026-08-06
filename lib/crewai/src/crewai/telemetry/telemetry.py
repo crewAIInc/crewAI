@@ -19,13 +19,15 @@ import platform
 import signal
 import threading
 from typing import TYPE_CHECKING, Any
+import weakref
 
 from opentelemetry import trace
+from opentelemetry.context import Context
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
     OTLPSpanExporter,
 )
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
     SpanExportResult,
@@ -51,6 +53,7 @@ from crewai.telemetry.utils import (
     add_crew_and_task_attributes,
     add_crew_attributes,
     close_span,
+    detect_coding_agent,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.logger_utils import suppress_warnings
@@ -87,6 +90,55 @@ class SafeOTLPSpanExporter(OTLPSpanExporter):
             return SpanExportResult.FAILURE
 
 
+class CommonAttributesSpanProcessor(SpanProcessor):
+    """Applies a fixed set of attributes to every span at start.
+
+    Used for process-wide context that should appear on all spans (e.g. which
+    AI coding assistant is running the process) without each span-emitting
+    method having to set it. Attributes are applied as span attributes rather
+    than Resource attributes because the ingestion pipeline preserves only
+    serviceName from the resource.
+    """
+
+    def __init__(self, attributes: dict[str, str]) -> None:
+        """Initialize the processor.
+
+        Args:
+            attributes: Attributes applied to every span. Values must not
+                contain user data - this is process-wide context only.
+        """
+        self._attributes = attributes
+
+    def on_start(self, span: Span, parent_context: Context | None = None) -> None:
+        """Apply the common attributes to a span as it starts.
+
+        Args:
+            span: The span being started.
+            parent_context: Parent context, unused.
+        """
+        try:
+            span.set_attributes(self._attributes)
+        except Exception:  # noqa: S110 - telemetry must never break execution
+            pass
+
+    def on_end(self, span: Any) -> None:
+        """No-op; export is handled by the batch processor."""
+
+    def shutdown(self) -> None:
+        """No-op; this processor holds no resources."""
+
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        """No-op flush.
+
+        Args:
+            timeout_millis: Unused.
+
+        Returns:
+            Always True.
+        """
+        return True
+
+
 class Telemetry:
     """Handle anonymous telemetry for the CrewAI package.
 
@@ -115,6 +167,11 @@ class Telemetry:
         self.ready: bool = False
         self.trace_set: bool = False
         self._initialized: bool = True
+        self._coding_agent_reported: bool = False
+        self._coding_agent_lock = threading.Lock()
+        # Weak so instrumented apps' providers are not kept alive by telemetry.
+        self._common_attributes_providers: weakref.WeakSet[Any] = weakref.WeakSet()
+        self._common_attributes_lock = threading.Lock()
 
         if self._is_telemetry_disabled():
             return
@@ -125,6 +182,8 @@ class Telemetry:
             )
             with suppress_warnings():
                 self.provider = TracerProvider(resource=self.resource)
+
+            self._attach_common_attributes(self.provider)
 
             processor = BatchSpanProcessor(
                 SafeOTLPSpanExporter(
@@ -143,6 +202,41 @@ class Telemetry:
             ):
                 raise
             self.ready = False
+
+    def _attach_common_attributes(self, provider: Any) -> None:
+        """Attach process-wide attributes to every span a provider emits.
+
+        Applied as *span* attributes rather than Resource attributes: the
+        ingestion pipeline preserves only serviceName from the resource, so
+        anything else set there is dropped before it reaches storage.
+
+        Tracked per provider rather than once globally: our own provider and an
+        application's pre-installed provider both need the processor, but
+        neither should receive it twice.
+
+        Args:
+            provider: Tracer provider to attach the processor to. Ignored if it
+                does not accept span processors (e.g. a NoOp provider).
+        """
+        add_span_processor = getattr(provider, "add_span_processor", None)
+        if add_span_processor is None:
+            return
+
+        try:
+            # Locked: check-then-act. Crews and flows created from different
+            # threads can both reach set_tracer() before trace_set flips, and
+            # would otherwise each attach a processor to the same provider.
+            with self._common_attributes_lock:
+                if provider in self._common_attributes_providers:
+                    return
+                add_span_processor(
+                    CommonAttributesSpanProcessor(
+                        {"coding_agent": detect_coding_agent()}
+                    )
+                )
+                self._common_attributes_providers.add(provider)
+        except Exception as e:  # Telemetry must never break execution.
+            logger.debug(f"Failed to attach common span attributes: {e}")
 
     @classmethod
     def _is_telemetry_disabled(cls) -> bool:
@@ -164,6 +258,11 @@ class Telemetry:
                 with suppress_warnings():
                     existing_provider = trace.get_tracer_provider()
                     if not isinstance(existing_provider, ProxyTracerProvider):
+                        # An application installed its own provider, so our
+                        # spans are created by theirs. Attach the common
+                        # attributes there too, otherwise every span emitted in
+                        # an instrumented app would silently lose coding_agent.
+                        self._attach_common_attributes(existing_provider)
                         self.trace_set = True
                         return
                     trace.set_tracer_provider(self.provider)
@@ -474,6 +573,7 @@ class Telemetry:
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
+        self.coding_agent_span()
 
     def task_started(self, crew: Crew, task: Task) -> Span | None:
         """Records task started in a crew.
@@ -954,6 +1054,7 @@ class Telemetry:
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
+        self.coding_agent_span()
 
     def flow_plotting_span(self, flow_name: str, node_names: list[str]) -> None:
         """Records flow visualization/plotting activity.
@@ -1047,7 +1148,8 @@ class Telemetry:
 
         Args:
             feature: Feature identifier, e.g. "planning:creation",
-                     "mcp:connection", "a2a:delegation".
+                     "mcp:connection", "a2a:delegation",
+                     "hooks:pre_tool_call", "hooks:aborted".
         """
 
         def _operation() -> None:
@@ -1058,6 +1160,35 @@ class Telemetry:
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
+
+    def hook_dispatched_span(
+        self,
+        interception_point: str,
+        outcome: str,
+    ) -> None:
+        """Records an interception-hook dispatch via Feature Usage.
+
+        Emits ``hooks:<point>`` on every dispatch, plus ``hooks:aborted`` when
+        a hook aborted the operation (e.g. a policy check). No reasons,
+        payloads, or other user content are recorded.
+        """
+        self.feature_usage_span(f"hooks:{interception_point}")
+        if outcome == "aborted":
+            self.feature_usage_span("hooks:aborted")
+
+    def coding_agent_span(self) -> None:
+        """Records which AI coding assistant (if any) is running this process.
+
+        Emitted at most once per process as a feature usage event, so it lands
+        in the existing feature-usage aggregation as "coding_agent:<name>".
+        Only the assistant's name is recorded - never any environment values.
+        """
+        with self._coding_agent_lock:
+            if self._coding_agent_reported:
+                return
+            self._coding_agent_reported = True
+
+        self.feature_usage_span(f"coding_agent:{detect_coding_agent()}")
 
     def template_installed_span(self, template_name: str) -> None:
         """Records when a template is downloaded and installed.

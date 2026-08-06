@@ -1,7 +1,7 @@
 import os
 import sys
 import types
-from unittest.mock import patch, MagicMock
+from unittest.mock import AsyncMock, patch, MagicMock
 import pytest
 
 from crewai.llm import LLM
@@ -1356,6 +1356,248 @@ _MANY_TOOLS = [
         ("create_dashboard", "Create a new monitoring dashboard with widgets"),
     ]
 ]
+
+
+def _dict_tool_use_response():
+    mock_response = MagicMock()
+    mock_response.content = [
+        {
+            "type": "tool_use",
+            "id": "toolu_123",
+            "name": "search_web",
+            "input": {"query": "CrewAI"},
+        }
+    ]
+    mock_response.usage = MagicMock(input_tokens=10, output_tokens=2)
+    mock_response.stop_reason = "tool_use"
+    mock_response.id = "msg_123"
+    return mock_response
+
+
+class _SyncAnthropicStream:
+    def __init__(self, events, final_message):
+        self.events = events
+        self.final_message = final_message
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def __iter__(self):
+        return iter(self.events)
+
+    def get_final_message(self):
+        return self.final_message
+
+
+class _AsyncAnthropicStream:
+    def __init__(self, events, final_message):
+        self.events = list(events)
+        self.final_message = final_message
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *_args):
+        return False
+
+    def __aiter__(self):
+        self._iter = iter(self.events)
+        return self
+
+    async def __anext__(self):
+        try:
+            return next(self._iter)
+        except StopIteration:
+            raise StopAsyncIteration
+
+    async def get_final_message(self):
+        return self.final_message
+
+
+def _dict_tool_use_stream_events():
+    return [
+        types.SimpleNamespace(
+            type="content_block_start",
+            index=0,
+            content_block={
+                "type": "tool_use",
+                "id": "toolu_123",
+                "name": "search_web",
+                "input": {},
+            },
+        ),
+        types.SimpleNamespace(
+            type="content_block_delta",
+            index=0,
+            delta=types.SimpleNamespace(
+                type="input_json_delta",
+                partial_json='{"query":"CrewAI"}',
+            ),
+        ),
+    ]
+
+
+def test_anthropic_tool_use_dict_blocks_are_returned_as_tool_calls():
+    """Preview Anthropic models may return dict-shaped tool_use blocks."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5")
+    mock_response = _dict_tool_use_response()
+
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = mock_response
+    llm._client = mock_client
+
+    result = llm.call("Search for CrewAI", tools=_MANY_TOOLS)
+
+    assert result == mock_response.content
+
+
+def test_anthropic_dict_tool_use_blocks_require_id():
+    """Incomplete dict-shaped tool_use blocks are not valid tool calls."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5")
+    mock_response = _dict_tool_use_response()
+    del mock_response.content[0]["id"]
+
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = mock_response
+    llm._client = mock_client
+
+    result = llm.call("Search for CrewAI", tools=_MANY_TOOLS)
+
+    assert result == ""
+
+
+def test_anthropic_object_tool_use_blocks_require_id():
+    """Incomplete object-shaped tool_use blocks are not valid tool calls."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5")
+    mock_response = MagicMock()
+    mock_response.content = [
+        types.SimpleNamespace(
+            type="tool_use",
+            name="search_web",
+            input={"query": "CrewAI"},
+        )
+    ]
+    mock_response.usage = MagicMock(input_tokens=10, output_tokens=2)
+    mock_response.stop_reason = "tool_use"
+    mock_response.id = "msg_123"
+
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = mock_response
+    llm._client = mock_client
+
+    result = llm.call("Search for CrewAI", tools=_MANY_TOOLS)
+
+    assert result == ""
+
+
+@pytest.mark.asyncio
+async def test_anthropic_acall_returns_dict_tool_use_blocks_as_tool_calls():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5")
+    mock_response = _dict_tool_use_response()
+
+    mock_client = MagicMock()
+    mock_client.messages.create = AsyncMock(return_value=mock_response)
+    llm._async_client = mock_client
+
+    result = await llm.acall("Search for CrewAI", tools=_MANY_TOOLS)
+
+    assert result == mock_response.content
+
+
+def test_anthropic_streaming_returns_dict_tool_use_blocks_as_tool_calls():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5", stream=True)
+    mock_response = _dict_tool_use_response()
+    mock_client = MagicMock()
+    mock_client.messages.stream.return_value = _SyncAnthropicStream(
+        _dict_tool_use_stream_events(), mock_response
+    )
+    llm._client = mock_client
+    llm._emit_stream_chunk_event = MagicMock()
+
+    result = llm.call("Search for CrewAI", tools=_MANY_TOOLS)
+
+    assert result == mock_response.content
+    assert any(
+        call.kwargs.get("tool_call", {}).get("id") == "toolu_123"
+        for call in llm._emit_stream_chunk_event.call_args_list
+    )
+
+
+@pytest.mark.asyncio
+async def test_anthropic_async_streaming_returns_dict_tool_use_blocks_as_tool_calls():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5", stream=True)
+    mock_response = _dict_tool_use_response()
+    mock_client = MagicMock()
+    mock_client.messages.stream.return_value = _AsyncAnthropicStream(
+        _dict_tool_use_stream_events(), mock_response
+    )
+    llm._async_client = mock_client
+    llm._emit_stream_chunk_event = MagicMock()
+
+    result = await llm.acall("Search for CrewAI", tools=_MANY_TOOLS)
+
+    assert result == mock_response.content
+    assert any(
+        call.kwargs.get("tool_call", {}).get("id") == "toolu_123"
+        for call in llm._emit_stream_chunk_event.call_args_list
+    )
+
+
+def test_anthropic_dict_tool_use_blocks_execute_available_function():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5")
+    mock_response = _dict_tool_use_response()
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = mock_response
+    llm._client = mock_client
+
+    result = llm.call(
+        "Search for CrewAI",
+        tools=_MANY_TOOLS,
+        available_functions={"search_web": lambda query: f"found {query}"},
+    )
+
+    assert result == "found CrewAI"
+
+
+def test_anthropic_dict_tool_use_blocks_work_in_follow_up_conversation():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5")
+    initial_response = _dict_tool_use_response()
+    final_response = MagicMock()
+    final_response.content = [types.SimpleNamespace(text="Final answer")]
+    final_response.usage = MagicMock(input_tokens=4, output_tokens=3)
+    final_response.stop_reason = "end_turn"
+    final_response.id = "msg_final"
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = final_response
+    llm._client = mock_client
+
+    result = llm._handle_tool_use_conversation(
+        initial_response,
+        initial_response.content,
+        params={"messages": []},
+        available_functions={"search_web": lambda query: f"found {query}"},
+    )
+
+    assert result == "Final answer"
 
 
 @pytest.mark.vcr()
