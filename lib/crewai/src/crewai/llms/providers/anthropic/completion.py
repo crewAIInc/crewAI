@@ -1971,10 +1971,19 @@ class AnthropicCompletion(BaseLLM):
             cache_creation_tokens = (
                 getattr(usage, "cache_creation_input_tokens", 0) or 0
             )
+            # Anthropic reports input_tokens NET of the prompt cache and bills
+            # cache_read_input_tokens and cache_creation_input_tokens on top of
+            # it, so input_tokens alone is not what the request was charged for.
+            # OpenAI and Gemini report a prompt count that already contains its
+            # cached portion, so normalise to that shape here: prompt_tokens is
+            # the full billed input and cached_prompt_tokens is the subset of it
+            # that was served from cache. Without this, total_tokens is short by
+            # the cached amount on Anthropic alone and nothing raises.
+            prompt_tokens = input_tokens + cache_read_tokens + cache_creation_tokens
             result: dict[str, Any] = {
-                "input_tokens": input_tokens,
+                "input_tokens": prompt_tokens,
                 "output_tokens": output_tokens,
-                "total_tokens": input_tokens + output_tokens,
+                "total_tokens": prompt_tokens + output_tokens,
                 "cached_prompt_tokens": cache_read_tokens,
                 "cache_creation_tokens": cache_creation_tokens,
             }
