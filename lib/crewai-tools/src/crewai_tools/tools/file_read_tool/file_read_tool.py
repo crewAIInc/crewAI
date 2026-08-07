@@ -178,8 +178,8 @@ class FileReadTool(BaseTool):
         line_count: int | None = None,
     ) -> str:
         """Read a file, or a window of its lines, as text."""
-        start_line = start_line or 1
-        line_count = line_count or None
+        start_line = start_line if start_line is not None else 1
+        line_count = line_count if line_count is not None else None
 
         if file_path is None:
             if self._declared_realpath is None:
@@ -196,6 +196,10 @@ class FileReadTool(BaseTool):
                 )
 
         display_path = format_path_for_display(file_path, self.base_dir)
+
+        if line_count == 0:
+            return "Error: zero lines from the file is requested."
+
         try:
             with open(file_path, "r", encoding=self.encoding) as file:
                 if start_line == 1 and line_count is None:
