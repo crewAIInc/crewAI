@@ -67,6 +67,7 @@ class TestTraceEnableDisable:
             mp.setenv("CREWAI_TRACING_ENABLED", "true")
             mp.setenv("CREWAI_DISABLE_TELEMETRY", "false")
             mp.setenv("OTEL_SDK_DISABLED", "false")
+            mp.setenv("CREWAI_PLUS_URL", "https://app.crewai.com")
 
             agent = Agent(
                 role="Test Agent",
@@ -92,6 +93,7 @@ class TestTraceEnableDisable:
         with pytest.MonkeyPatch.context() as mp:
             mp.setenv("CREWAI_DISABLE_TELEMETRY", "false")
             mp.setenv("OTEL_SDK_DISABLED", "false")
+            mp.setenv("CREWAI_PLUS_URL", "https://app.crewai.com")
 
             agent = Agent(
                 role="Test Agent",
