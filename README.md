@@ -217,8 +217,8 @@ If you encounter issues during installation or usage, here are some common solut
 
 1. **ModuleNotFoundError: No module named 'tiktoken'**
 
-   - Install the embeddings extra: `uv pip install 'crewai[embeddings]'`
-   - Or install tools (includes additional agent tooling): `uv pip install 'crewai[tools]'`
+   - Install tiktoken explicitly: `uv pip install 'crewai[embeddings]'`
+   - If using embedchain or other tools: `uv pip install 'crewai[tools]'`
 
 2. **Failed building wheel for tiktoken**
 
