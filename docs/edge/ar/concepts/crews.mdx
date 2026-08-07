@@ -172,6 +172,8 @@ class YourCrewName:
 
 بعد تنفيذ الطاقم، يمكنك الوصول إلى خاصية `usage_metrics` لعرض مقاييس استخدام نموذج اللغة (LLM) لجميع المهام المنفذة.
 
+`total_tokens` هو الإجمالي المفوتر (`prompt_tokens + completion_tokens`). حقول التفصيل مثل `cached_prompt_tokens` و`cache_creation_tokens` تصف أجزاءً مُدرجة بالفعل ضمن تلك الإجماليات ولا تُضاف مرة أخرى إلى `total_tokens`. راجع قسم **UsageMetrics field semantics** في توثيق مفهوم Flows للحصول على العقد الكامل.
+
 ```python Code
 crew = Crew(agents=[agent1, agent2], tasks=[task1, task2])
 crew.kickoff()

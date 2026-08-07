@@ -216,6 +216,9 @@ exclude-newer-package = { pypdf = "2026-06-24T00:00:00Z", msgpack = "2026-06-20T
 # 3.9.4, so that ignore is no longer needed. Transitive via
 # crewai-tools[xml] -> unstructured.
 # pydantic-settings <2.14.2 has GHSA-4xgf-cpjx-pc3j.
+# h2 <=4.4.0 has GHSA-6hr6-w5qg-qmwg (CVE-2026-71554): duplicate Host headers
+# can facilitate request smuggling; fixed in 4.4.1. Transitive via
+# qdrant-client -> httpx[http2].
 # Keep OpenAI on the SDK range required by CrewAI when transitive dependencies
 # loosen or pin their own lower versions.
 override-dependencies = [
@@ -246,6 +249,7 @@ override-dependencies = [
     "pydantic-settings>=2.14.2",
     "setuptools>=83.0.0", # PYSEC-2026-3447
     "nltk>=3.10.0",
+    "h2>=4.4.1",
 ]
 
 [tool.uv.workspace]
