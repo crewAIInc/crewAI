@@ -14,6 +14,7 @@ from opentelemetry.trace import Span, Status, StatusCode
 
 from crewai.utilities.constants import (
     CODING_AGENT_ENV_MARKERS,
+    GENERIC_AGENT_ENV_VARS,
     RUNTIME_CONTEXT_ENV_MARKERS,
 )
 
@@ -35,13 +36,14 @@ _EDITOR_TERM_MARKERS: Final[tuple[tuple[str, str, str], ...]] = (
 _DOCKER_ENV_PATH: Final[str] = "/.dockerenv"
 
 _UNKNOWN: Final[str] = "unknown"
+_OTHER: Final[str] = "other"
 
 # The complete set of values detect_coding_agent() can ever return. Every value
 # is a literal from CODING_AGENT_ENV_MARKERS or this module, which is what makes
 # the function structurally incapable of emitting PII: no environment value,
 # path, hostname, or user-supplied string can reach the return value.
 KNOWN_CODING_AGENTS: Final[frozenset[str]] = frozenset(
-    [name for name, _ in CODING_AGENT_ENV_MARKERS] + [_UNKNOWN]
+    [name for name, _ in CODING_AGENT_ENV_MARKERS] + [_OTHER, _UNKNOWN]
 )
 
 # The same guarantee for detect_runtime_context(): a closed set of literals.
@@ -81,6 +83,11 @@ def detect_coding_agent() -> str:
     for agent_name, env_vars in CODING_AGENT_ENV_MARKERS:
         if any(os.environ.get(env_var) for env_var in env_vars):
             return agent_name
+
+    # Checked last and by presence: the cross-vendor marker establishes that an
+    # assistant is present without naming one, and an empty value still says so.
+    if any(env_var in os.environ for env_var in GENERIC_AGENT_ENV_VARS):
+        return _OTHER
 
     return _UNKNOWN
 

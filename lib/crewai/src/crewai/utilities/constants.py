@@ -92,9 +92,9 @@ GENERIC_AGENT_ENV_VARS: Final[tuple[str, ...]] = ("AI_AGENT",)
 #      a leftover config value would mislabel ordinary human executions.
 #
 # Extend the shared sets above rather than adding a parallel tuple here, so both
-# detection paths pick the new markers up together. Entries past the first three
-# have no ``get_env_context()`` event of their own yet and fall to
-# ``DefaultEnvEvent`` there.
+# detection paths pick the new markers up together: ``get_env_context()`` walks
+# this same table for its precedence and emits ``DefaultEnvEvent`` for the
+# assistants that have no event class of their own.
 #
 # Markers below the first three were taken from the published detection matrix
 # at vercel/detect-agent (agents.json), cross-checked against the proposal in
@@ -118,7 +118,6 @@ CODING_AGENT_ENV_MARKERS: Final[tuple[tuple[str, tuple[str, ...]], ...]] = (
     ("antigravity", ANTIGRAVITY_ENV_VARS),
     ("junie", JUNIE_ENV_VARS),
     ("cursor", CURSOR_ENV_VARS),
-    ("other", GENERIC_AGENT_ENV_VARS),
 )
 
 # Markers for *where* a process runs, kept separate from which assistant is
@@ -145,6 +144,8 @@ CI_ENV_VARS: Final[tuple[str, ...]] = (
 )
 SERVERLESS_ENV_VARS: Final[tuple[str, ...]] = (
     "AWS_LAMBDA_FUNCTION_NAME",
+    "FUNCTIONS_EXTENSION_VERSION",
+    "FUNCTIONS_WORKER_RUNTIME",
     "FUNCTION_TARGET",
     "K_SERVICE",
     "VERCEL",
@@ -153,6 +154,10 @@ SERVERLESS_ENV_VARS: Final[tuple[str, ...]] = (
 # set for long-lived containers rather than per-invocation functions, and
 # checking them under "serverless" would have claimed every Heroku dyno and
 # Azure App Service instance before the container check could see them.
+#
+# Azure Functions run on the App Service host and inherit WEBSITE_INSTANCE_ID,
+# so they would land here despite being serverless. The FUNCTIONS_* markers
+# above are checked first to keep them out.
 PAAS_ENV_VARS: Final[tuple[str, ...]] = (
     "DYNO",
     "WEBSITE_INSTANCE_ID",

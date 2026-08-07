@@ -37,6 +37,7 @@ RUNTIME_MARKERS = tuple(
 ALL_MARKERS = (
     tuple(var for _, env_vars in CODING_AGENT_ENV_MARKERS for var in env_vars)
     + RUNTIME_MARKERS
+    + GENERIC_AGENT_ENV_VARS
     + ("TERM_PROGRAM", "TERMINAL_EMULATOR")
 )
 
@@ -214,7 +215,6 @@ def test_every_marker_comes_from_a_verified_set():
         *CODEX_ENV_VARS,
         *CURSOR_ENV_VARS,
         *GEMINI_CLI_ENV_VARS,
-        *GENERIC_AGENT_ENV_VARS,
         *JUNIE_ENV_VARS,
         *OPENCODE_ENV_VARS,
     }
@@ -685,3 +685,82 @@ def test_serverless_markers_still_win_over_paas(clean_env):
     clean_env.setenv("AWS_LAMBDA_FUNCTION_NAME", "my-fn")
 
     assert detect_runtime_context() == "serverless"
+
+
+def test_generic_marker_is_detected_by_presence(clean_env):
+    """An empty AI_AGENT still says an assistant is present.
+
+    The named markers keep truthiness, where an empty value means the tool set
+    a placeholder rather than claiming the session.
+    """
+    clean_env.setenv("AI_AGENT", "")
+
+    assert detect_coding_agent() == "other"
+
+
+def test_azure_functions_are_not_reported_as_paas(clean_env):
+    """Azure Functions run on the App Service host and inherit its marker."""
+    clean_env.setenv("WEBSITE_INSTANCE_ID", "abc123")
+    clean_env.setenv("FUNCTIONS_WORKER_RUNTIME", "python")
+
+    assert detect_runtime_context() == "serverless"
+
+
+def test_env_context_precedence_matches_the_shared_table(clean_env):
+    """Both detection paths must agree on which assistant is present.
+
+    get_env_context previously restated precedence, so a marker added for
+    telemetry was invisible here and the two disagreed.
+    """
+    from crewai.events.types.env_events import (
+        CCEnvEvent,
+        CodexEnvEvent,
+        CursorEnvEvent,
+        DefaultEnvEvent,
+    )
+    from crewai.utilities import env as env_module
+
+    agent_to_event = {
+        "claude_code": CCEnvEvent,
+        "codex": CodexEnvEvent,
+        "cursor": CursorEnvEvent,
+    }
+
+    for agent, env_vars in CODING_AGENT_ENV_MARKERS:
+        for var in env_vars:
+            for other in ALL_MARKERS:
+                clean_env.delenv(other, raising=False)
+            clean_env.setenv(var, "1")
+
+            emitted: list[type] = []
+            clean_env.setattr(
+                env_module.crewai_event_bus,
+                "emit",
+                lambda _source, event, sink=emitted: sink.append(type(event)),
+            )
+            env_module._env_context_emitted.set(False)
+            env_module.get_env_context()
+
+            assert detect_coding_agent() == agent, var
+            assert emitted[0] is agent_to_event.get(agent, DefaultEnvEvent), var
+
+
+def test_assistant_inside_cursor_agrees_across_both_paths(clean_env):
+    """Cursor sets CURSOR_* in every terminal, including for other assistants."""
+    from crewai.events.types.env_events import DefaultEnvEvent
+    from crewai.utilities import env as env_module
+
+    clean_env.setenv("CURSOR_TRACE_ID", "t-1")
+    clean_env.setenv("CLINE_ACTIVE", "true")
+
+    emitted: list[type] = []
+    clean_env.setattr(
+        env_module.crewai_event_bus,
+        "emit",
+        lambda _source, event, sink=emitted: sink.append(type(event)),
+    )
+    env_module._env_context_emitted.set(False)
+    env_module.get_env_context()
+
+    assert detect_coding_agent() == "cline"
+    assert emitted[0] is DefaultEnvEvent
