@@ -1,0 +1,57 @@
+"""
+GuardrailProvider protocol types.
+
+These types mirror the upstream CrewAI GuardrailProvider contract from
+crewAIInc/crewAI#4877. Once the upstream PR is merged, this module will
+import directly from crewai.hooks.guardrails.
+
+Until then, this module provides a standalone, drop-in implementation
+that is structurally compatible with the upstream contract.
+
+Extensions beyond upstream (backward-compatible optional fields):
+- GuardrailRequest.timestamp: enables latency measurement across queue time
+- GuardrailDecision.action_id: enables audit traceability linking
+
+Missing from upstream (to be added):
+- GuardrailRequest.tool_alias: internal tool identifier vs human-readable name
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any, Mapping, Protocol, runtime_checkable
+
+
+@dataclass(frozen=True, slots=True)
+class GuardrailRequest:
+    """Provider-agnostic context for one pre-tool-call authorization decision."""
+
+    tool_name: str
+    tool_input: Mapping[str, Any]
+    tool_alias: str | None = None
+    agent_id: str | None = None
+    agent_role: str | None = None
+    task_description: str | None = None
+    crew_id: str | None = None
+    timestamp: float | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class GuardrailDecision:
+    """Authorization verdict returned by a GuardrailProvider."""
+
+    allow: bool
+    reason: str | None = None
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+    action_id: str | None = None
+
+
+@runtime_checkable
+class GuardrailProvider(Protocol):
+    """Contract for pluggable pre-tool-call authorization providers."""
+
+    name: str
+
+    def evaluate(self, request: GuardrailRequest) -> GuardrailDecision:
+        """Evaluate whether the requested tool call should proceed."""
+        ...
