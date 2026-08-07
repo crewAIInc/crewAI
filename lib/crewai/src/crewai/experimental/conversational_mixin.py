@@ -153,9 +153,6 @@ class _ConversationalMixin:
         def kickoff(self, *args: Any, **kwargs: Any) -> Any:
             pass
 
-        def _persist_method_completion(self, method_name: Any) -> None:
-            pass
-
         @property
         def method_outputs(self) -> list[Any]:
             pass
@@ -897,9 +894,12 @@ class _ConversationalMixin:
         if not isinstance(last_entry, dict) or not last_entry.get("method"):
             return
 
+        from crewai.flow.runtime import Flow as RuntimeFlow
         from crewai.flow.types import FlowMethodName
 
-        self._persist_method_completion(FlowMethodName(str(last_entry["method"])))
+        cast(RuntimeFlow[Any], self)._persist_method_completion(
+            FlowMethodName(str(last_entry["method"]))
+        )
 
     def _apply_pending_conversational_turn(self) -> None:
         """Drain the stashed user message + classify if intents configured.
