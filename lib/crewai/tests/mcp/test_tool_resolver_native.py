@@ -138,3 +138,28 @@ class TestResolveNativeRuntimeError:
         mock_executor.submit.assert_called_once()
         # asyncio.run must not be invoked on this thread when a loop is running
         mock_asyncio_run.assert_not_called()
+
+    @patch("crewai.mcp.tool_resolver.MCPToolResolver._run_coro_sync")
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    def test_cleanup_uses_loop_safe_runner_when_discovery_fails(
+        self, mock_client_class, mock_run_coro_sync, resolver, http_config
+    ):
+        mock_client = AsyncMock()
+        mock_client.connected = True
+        mock_client_class.return_value = mock_client
+
+        mock_run_coro_sync.side_effect = [
+            RuntimeError("discovery blew up"),
+            None,
+        ]
+
+        with pytest.raises(RuntimeError, match="Failed to get native MCP tools"):
+            resolver._resolve_native(http_config)
+
+        assert mock_run_coro_sync.call_count == 2
+        cleanup_coro = mock_run_coro_sync.call_args_list[1].args[0]
+        assert asyncio.iscoroutine(cleanup_coro)
+        cleanup_coro.close()
+        first_coro = mock_run_coro_sync.call_args_list[0].args[0]
+        if asyncio.iscoroutine(first_coro):
+            first_coro.close()

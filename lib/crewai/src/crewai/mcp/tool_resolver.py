@@ -347,31 +347,20 @@ class MCPToolResolver:
                 return tools_list
             except Exception as e:
                 if discovery_client.connected:
-                    await discovery_client.disconnect()
-                    await asyncio.sleep(0.1)
+                    try:
+                        await discovery_client.disconnect()
+                        await asyncio.sleep(0.1)
+                    except Exception as disconnect_error:
+                        self._logger.log(
+                            "error", f"Error during disconnect: {disconnect_error}"
+                        )
                 raise RuntimeError(
                     f"Error during setup client and list tools: {e}"
                 ) from e
 
         try:
-            # Flows already run inside asyncio.run(...). Never fall back to
-            # asyncio.run() on this thread when a loop is active — a broad
-            # RuntimeError catch around the worker-thread path used to do that
-            # and re-raised "asyncio.run() cannot be called from a running
-            # event loop" (#6843). Mirror agent_utils' worker-thread pattern.
             try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = None
-
-            coro = _setup_client_and_list_tools()
-            try:
-                if loop is not None and loop.is_running():
-                    ctx = contextvars.copy_context()
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                        tools_list = executor.submit(ctx.run, asyncio.run, coro).result()
-                else:
-                    tools_list = asyncio.run(coro)
+                tools_list = self._run_coro_sync(_setup_client_and_list_tools())
             except RuntimeError as e:
                 error_msg = str(e).lower()
                 if "cancel scope" in error_msg or "task" in error_msg:
@@ -464,9 +453,28 @@ class MCPToolResolver:
             return cast(list[BaseTool], tools), []
         except Exception as e:
             if discovery_client.connected:
-                asyncio.run(discovery_client.disconnect())
+                try:
+                    self._run_coro_sync(discovery_client.disconnect())
+                except Exception as disconnect_error:
+                    self._logger.log(
+                        "error", f"Error during MCP client cleanup: {disconnect_error}"
+                    )
 
             raise RuntimeError(f"Failed to get native MCP tools: {e}") from e
+
+    @staticmethod
+    def _run_coro_sync(coro: Any) -> Any:
+        """Run ``coro`` synchronously without nesting ``asyncio.run`` on an active loop."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop is not None and loop.is_running():
+            ctx = contextvars.copy_context()
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                return executor.submit(ctx.run, asyncio.run, coro).result()
+        return asyncio.run(coro)
 
     @staticmethod
     def _build_mcp_config_from_dict(
