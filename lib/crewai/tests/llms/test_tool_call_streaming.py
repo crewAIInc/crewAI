@@ -38,18 +38,10 @@ def get_temperature_tool_schema() -> dict[str, Any]:
 
 @pytest.fixture
 def mock_emit() -> MagicMock:
-    """Mock the singleton event bus emit used by LLM providers.
+    from crewai.events.event_bus import crewai_event_bus
 
-    Patch the singleton instance (not only the class) so a leftover
-    instance-level ``emit`` from other tests cannot shadow the mock.
-    """
-    from crewai.events.event_bus import CrewAIEventsBus, crewai_event_bus
-
-    with (
-        patch.object(CrewAIEventsBus, "emit") as class_mock,
-        patch.object(crewai_event_bus, "emit", new=class_mock),
-    ):
-        yield class_mock
+    with patch.object(crewai_event_bus, "emit") as mock:
+        yield mock
 
 
 def _event_from_emit_call(call: Any) -> Any:
