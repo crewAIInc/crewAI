@@ -5,20 +5,38 @@ from unittest.mock import patch
 
 import pytest
 
-from crewai.telemetry.utils import KNOWN_CODING_AGENTS, detect_coding_agent
+from crewai.telemetry.utils import (
+    KNOWN_CODING_AGENTS,
+    KNOWN_RUNTIME_CONTEXTS,
+    detect_coding_agent,
+    detect_runtime_context,
+)
 from crewai.utilities.constants import (
     CC_ENV_VAR,
     CODEX_ENV_VARS,
     CODING_AGENT_ENV_MARKERS,
     CURSOR_ENV_VARS,
+    RUNTIME_CONTEXT_ENV_MARKERS,
 )
 
 
-# Derived from the shared table rather than restated, so adding an assistant
-# there cannot leave these tests silently checking a stale marker set.
-ALL_MARKERS = tuple(
-    var for _, env_vars in CODING_AGENT_ENV_MARKERS for var in env_vars
-) + ("TERM_PROGRAM", "TERMINAL_EMULATOR")
+# Derived from the shared tables rather than restated, so adding an assistant
+# or runtime there cannot leave these tests silently checking a stale set.
+RUNTIME_MARKERS = tuple(
+    var for _, env_vars in RUNTIME_CONTEXT_ENV_MARKERS for var in env_vars
+)
+
+ALL_MARKERS = (
+    tuple(var for _, env_vars in CODING_AGENT_ENV_MARKERS for var in env_vars)
+    + RUNTIME_MARKERS
+    + ("TERM_PROGRAM", "TERMINAL_EMULATOR")
+)
+
+EVERY_RUNTIME_CASE = [
+    (var, context)
+    for context, env_vars in RUNTIME_CONTEXT_ENV_MARKERS
+    for var in env_vars
+]
 
 EVERY_MARKER_CASE = [
     (var, agent) for agent, env_vars in CODING_AGENT_ENV_MARKERS for var in env_vars
@@ -216,16 +234,16 @@ def test_concurrent_attach_registers_the_processor_once(isolated_telemetry, clea
 
 def test_editor_terminal_requires_exact_value(clean_env):
     clean_env.setenv("TERM_PROGRAM", "vscode")
-    assert detect_coding_agent() == "vscode_terminal"
+    assert detect_runtime_context() == "vscode_terminal"
 
     clean_env.setenv("TERM_PROGRAM", "iTerm.app")
-    assert detect_coding_agent() != "vscode_terminal"
+    assert detect_runtime_context() != "vscode_terminal"
 
 
-def test_explicit_agent_marker_wins_over_editor_terminal(clean_env):
+def test_editor_terminal_is_not_reported_as_an_assistant(clean_env):
+    """An editor's terminal says where a process runs, not who drove it."""
     clean_env.setenv("TERM_PROGRAM", "vscode")
-    clean_env.setenv("CLAUDECODE", "1")
-    assert detect_coding_agent() == "claude_code"
+    assert detect_coding_agent() == "unknown"
 
 
 def test_empty_marker_value_is_ignored(clean_env):
@@ -233,12 +251,61 @@ def test_empty_marker_value_is_ignored(clean_env):
     assert detect_coding_agent() != "claude_code"
 
 
+@pytest.mark.parametrize(("env_var", "expected"), EVERY_RUNTIME_CASE)
+def test_detects_every_runtime_marker(clean_env, env_var, expected):
+    """Every runtime marker must map to its context."""
+    clean_env.setenv(env_var, "1")
+    assert detect_runtime_context() == expected
+
+
+def test_runtime_precedence_prefers_the_most_specific(clean_env):
+    """CI and hosted IDEs usually run in containers; the specific one wins."""
+    clean_env.setenv("KUBERNETES_SERVICE_HOST", "10.0.0.1")
+    assert detect_runtime_context() == "container"
+
+    clean_env.setenv("GITHUB_ACTIONS", "true")
+    assert detect_runtime_context() == "ci"
+
+
+def test_an_automated_run_still_reports_an_unknown_assistant(clean_env):
+    """The split must keep the two fields independent.
+
+    A CI run has no assistant to find, which is different from failing to
+    recognize one - the reason they no longer share a field.
+    """
+    clean_env.setenv("CI", "true")
+    assert detect_runtime_context() == "ci"
+    assert detect_coding_agent() == "unknown"
+
+
+def test_assistant_and_runtime_are_reported_together(clean_env):
+    """An assistant inside CI must not mask either signal."""
+    clean_env.setenv("CI", "true")
+    clean_env.setenv("CLAUDECODE", "1")
+    assert detect_coding_agent() == "claude_code"
+    assert detect_runtime_context() == "ci"
+
+
 def test_falls_back_to_non_interactive_without_tty(clean_env, monkeypatch):
+    monkeypatch.setattr("os.path.exists", lambda path: False)
     monkeypatch.setattr("sys.stdout", type("S", (), {"isatty": lambda self: False})())
-    assert detect_coding_agent() == "non_interactive"
+    assert detect_runtime_context() == "non_interactive"
 
 
-def test_falls_back_to_unknown_with_tty(clean_env, monkeypatch):
+def test_falls_back_to_interactive_with_tty(clean_env, monkeypatch):
+    monkeypatch.setattr("os.path.exists", lambda path: False)
+    monkeypatch.setattr("sys.stdout", type("S", (), {"isatty": lambda self: True})())
+    assert detect_runtime_context() == "interactive"
+
+
+def test_dockerenv_marks_a_container(clean_env, monkeypatch):
+    """The container check is the last resort before the TTY fallback."""
+    monkeypatch.setattr("os.path.exists", lambda path: path == "/.dockerenv")
+    assert detect_runtime_context() == "container"
+
+
+def test_unmatched_assistant_is_unknown(clean_env, monkeypatch):
+    """No marker means a gap in the table, reported as unknown."""
     monkeypatch.setattr("sys.stdout", type("S", (), {"isatty": lambda self: True})())
     assert detect_coding_agent() == "unknown"
 
@@ -255,8 +322,9 @@ def test_handles_broken_stdout(clean_env, monkeypatch):
         def isatty(self):
             raise ValueError("detached")
 
+    monkeypatch.setattr("os.path.exists", lambda path: False)
     monkeypatch.setattr("sys.stdout", BrokenStdout())
-    assert detect_coding_agent() == "unknown"
+    assert detect_runtime_context() == "unknown"
 
 
 def test_result_is_always_a_known_literal(clean_env):
@@ -269,15 +337,18 @@ def test_result_is_always_a_known_literal(clean_env):
 
     for var in ALL_MARKERS:
         clean_env.setenv(var, sensitive)
-        result = detect_coding_agent()
-        assert result in KNOWN_CODING_AGENTS
-        assert sensitive not in result
+        agent = detect_coding_agent()
+        context = detect_runtime_context()
+        assert agent in KNOWN_CODING_AGENTS
+        assert context in KNOWN_RUNTIME_CONTEXTS
+        assert sensitive not in agent
+        assert sensitive not in context
         clean_env.delenv(var, raising=False)
 
 
 def test_known_agents_contains_no_pii_shaped_values():
     """Every possible emitted value is a short, opaque identifier."""
-    for name in KNOWN_CODING_AGENTS:
+    for name in KNOWN_CODING_AGENTS | KNOWN_RUNTIME_CONTEXTS:
         assert name.replace("_", "").isalnum(), name
         assert len(name) <= 32, name
 
@@ -402,3 +473,107 @@ def test_attaching_to_a_provider_without_processors_is_safe(isolated_telemetry):
     telemetry = isolated_telemetry()
 
     telemetry._attach_common_attributes(object())
+
+
+def _common_attributes(monkeypatch, project_id=None):
+    """Build the process-wide span attributes with a stubbed project id."""
+    from crewai.telemetry.telemetry import Telemetry
+
+    monkeypatch.setattr(
+        "crewai.telemetry.telemetry.get_project_id", lambda *a, **k: project_id
+    )
+    telemetry = Telemetry.__new__(Telemetry)
+    telemetry._common_attributes = None
+    return telemetry._common_span_attributes()
+
+
+def test_common_attributes_carry_agent_and_runtime(clean_env, monkeypatch):
+    """Both fields ride on every span, independently of each other."""
+    clean_env.setenv("CLAUDECODE", "1")
+    clean_env.setenv("GITHUB_ACTIONS", "true")
+
+    attributes = _common_attributes(monkeypatch)
+
+    assert attributes["coding_agent"] == "claude_code"
+    assert attributes["runtime_context"] == "ci"
+
+
+def test_common_attributes_include_project_id_when_declared(clean_env, monkeypatch):
+    attributes = _common_attributes(monkeypatch, project_id="proj-123")
+
+    assert attributes["project_id"] == "proj-123"
+
+
+def test_project_id_is_omitted_when_absent(clean_env, monkeypatch):
+    """Projects without an id must not report a placeholder."""
+    attributes = _common_attributes(monkeypatch, project_id=None)
+
+    assert "project_id" not in attributes
+
+
+def test_project_id_lookup_never_breaks_telemetry(clean_env, monkeypatch):
+    """A failed lookup degrades to omitting the attribute."""
+    from crewai.telemetry.telemetry import Telemetry
+
+    def boom(*args, **kwargs):
+        raise OSError("unreadable")
+
+    monkeypatch.setattr("crewai.telemetry.telemetry.get_project_id", boom)
+    telemetry = Telemetry.__new__(Telemetry)
+    telemetry._common_attributes = None
+
+    attributes = telemetry._common_span_attributes()
+
+    assert "project_id" not in attributes
+    assert "coding_agent" in attributes
+
+
+def test_common_attributes_are_computed_once(clean_env, monkeypatch):
+    """The project file must not be re-read for each provider."""
+    from crewai.telemetry.telemetry import Telemetry
+
+    calls = []
+
+    def counting_get_project_id(*args, **kwargs):
+        calls.append(1)
+        return "proj-123"
+
+    monkeypatch.setattr(
+        "crewai.telemetry.telemetry.get_project_id", counting_get_project_id
+    )
+    telemetry = Telemetry.__new__(Telemetry)
+    telemetry._common_attributes = None
+
+    first = telemetry._common_span_attributes()
+    second = telemetry._common_span_attributes()
+
+    assert first is second
+    assert len(calls) == 1
+
+
+def test_all_common_attributes_land_on_exported_spans(clean_env, monkeypatch):
+    """End-to-end: every common attribute survives onto arbitrary spans."""
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+
+    from crewai.telemetry.telemetry import CommonAttributesSpanProcessor
+
+    clean_env.setenv("CLAUDECODE", "1")
+    clean_env.setenv("CI", "true")
+    attributes = _common_attributes(monkeypatch, project_id="proj-123")
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(CommonAttributesSpanProcessor(attributes))
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+
+    provider.get_tracer("test").start_span("Feature Usage").end()
+    provider.force_flush()
+
+    exported = dict(exporter.get_finished_spans()[0].attributes)
+    assert exported["coding_agent"] == "claude_code"
+    assert exported["runtime_context"] == "ci"
+    assert exported["project_id"] == "proj-123"

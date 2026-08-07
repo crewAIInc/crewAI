@@ -13,14 +13,20 @@ from pydantic_core import CoreSchema
 
 __all__ = [
     "CC_ENV_VAR",
+    "CI_ENV_VARS",
     "CODEX_ENV_VARS",
     "CODING_AGENT_ENV_MARKERS",
+    "CONTAINER_ENV_VARS",
     "CREWAI_TRAINED_AGENTS_FILE_ENV",
     "CURSOR_ENV_VARS",
     "EMITTER_COLOR",
+    "HOSTED_IDE_ENV_VARS",
     "KNOWLEDGE_DIRECTORY",
     "MAX_FILE_NAME_LENGTH",
+    "NOTEBOOK_ENV_VARS",
     "NOT_SPECIFIED",
+    "RUNTIME_CONTEXT_ENV_MARKERS",
+    "SERVERLESS_ENV_VARS",
     "TRAINED_AGENTS_DATA_FILE",
     "TRAINING_DATA_FILE",
 ]
@@ -67,6 +73,59 @@ CODING_AGENT_ENV_MARKERS: Final[tuple[tuple[str, tuple[str, ...]], ...]] = (
     ("claude_code", (CC_ENV_VAR,)),
     ("codex", CODEX_ENV_VARS),
     ("cursor", CURSOR_ENV_VARS),
+)
+
+# Markers for *where* a process runs, kept separate from which assistant is
+# driving it. The two answer different questions: a scheduled container run has
+# no assistant to detect, and folding it into the assistant field made "no
+# marker found" and "no assistant possible" indistinguishable.
+#
+# These are published platform contracts rather than per-tool observations, so
+# they do not need the case-by-case verification the assistant table requires.
+# Presence is all that is checked; no value is ever read.
+CI_ENV_VARS: Final[tuple[str, ...]] = (
+    "APPVEYOR",
+    "BITBUCKET_BUILD_NUMBER",
+    "BUILDKITE",
+    "CI",
+    "CIRCLECI",
+    "DRONE",
+    "GITHUB_ACTIONS",
+    "GITLAB_CI",
+    "JENKINS_URL",
+    "TEAMCITY_VERSION",
+    "TF_BUILD",
+    "TRAVIS",
+)
+SERVERLESS_ENV_VARS: Final[tuple[str, ...]] = (
+    "AWS_EXECUTION_ENV",
+    "AWS_LAMBDA_FUNCTION_NAME",
+    "DYNO",
+    "FUNCTION_TARGET",
+    "K_SERVICE",
+    "VERCEL",
+    "WEBSITE_INSTANCE_ID",
+)
+HOSTED_IDE_ENV_VARS: Final[tuple[str, ...]] = (
+    "CODESPACES",
+    "GITPOD_WORKSPACE_ID",
+    "REPL_ID",
+)
+NOTEBOOK_ENV_VARS: Final[tuple[str, ...]] = (
+    "COLAB_RELEASE_TAG",
+    "JPY_PARENT_PID",
+)
+CONTAINER_ENV_VARS: Final[tuple[str, ...]] = ("KUBERNETES_SERVICE_HOST",)
+
+# Ordered most specific first. CI jobs and hosted IDEs usually run inside
+# containers, so a bare container match is only meaningful once the others have
+# been ruled out.
+RUNTIME_CONTEXT_ENV_MARKERS: Final[tuple[tuple[str, tuple[str, ...]], ...]] = (
+    ("ci", CI_ENV_VARS),
+    ("serverless", SERVERLESS_ENV_VARS),
+    ("hosted_ide", HOSTED_IDE_ENV_VARS),
+    ("notebook", NOTEBOOK_ENV_VARS),
+    ("container", CONTAINER_ENV_VARS),
 )
 
 
