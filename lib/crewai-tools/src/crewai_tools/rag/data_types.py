@@ -135,7 +135,8 @@ class DataTypes:
 
             if "docs" in url.netloc or ("docs" in url.path and url.scheme != "file"):
                 return DataType.DOCS_SITE
-            if "github.com" in url.netloc:
+            hostname = (url.hostname or "").lower()
+            if hostname == "github.com" or hostname.endswith(".github.com"):
                 return DataType.GITHUB
 
             return DataType.WEBSITE

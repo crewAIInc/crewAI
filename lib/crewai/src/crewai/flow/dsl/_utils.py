@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Any, ParamSpec, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from typing_extensions import TypeIs
 
 from crewai.flow.flow_definition import (
@@ -432,6 +432,20 @@ def _iter_flow_methods(flow_class: type) -> dict[str, Any]:
     return methods
 
 
+def _flow_definition_validation_error(
+    flow_class: type, exc: ValidationError
+) -> ValueError:
+    errors = exc.errors()
+    if errors:
+        detail = errors[0].get("msg", str(exc))
+        if isinstance(detail, str) and detail.startswith("Value error, "):
+            detail = detail.removeprefix("Value error, ")
+    else:
+        detail = str(exc)
+    class_name = getattr(flow_class, "__name__", "Flow")
+    return ValueError(f"Invalid flow definition for {class_name}: {detail}")
+
+
 def _build_flow_definition_from_class(
     flow_class: type,
     namespace: dict[str, Any] | None = None,
@@ -455,15 +469,18 @@ def _build_flow_definition_from_class(
     if docstring:
         description = docstring.strip()
 
-    definition = FlowDefinition(
-        name=getattr(flow_class, "__name__", "Flow"),
-        description=description,
-        state=_build_state_definition(flow_class),
-        config=_build_config_definition(flow_class),
-        persist=_build_persistence_definition(flow_class),
-        conversational=_build_conversational_definition(flow_class),
-        methods=methods,
-    )
+    try:
+        definition = FlowDefinition(
+            name=getattr(flow_class, "__name__", "Flow"),
+            description=description,
+            state=_build_state_definition(flow_class),
+            config=_build_config_definition(flow_class),
+            persist=_build_persistence_definition(flow_class),
+            conversational=_build_conversational_definition(flow_class),
+            methods=methods,
+        )
+    except ValidationError as exc:
+        raise _flow_definition_validation_error(flow_class, exc) from exc
     log_flow_definition_issues(definition)
     return definition
 

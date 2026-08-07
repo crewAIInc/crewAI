@@ -18,13 +18,14 @@ jobs:
         with:
           # Exclusion-only patterns match every non-excluded file under the
           # default "some" quantifier. Require all patterns (including "**")
-          # so docs-only / markdown-only PRs correctly set code=false.
+          # so docs/markdown/Actions-only PRs correctly set code=false.
           predicate-quantifier: every
           filters: |
             code:
               - '**'
               - '!docs/**'
               - '!**/*.md'
+              - '!.github/**'
 
   tests-matrix:
     name: tests (${{ matrix.python-version }})
@@ -121,17 +122,31 @@ jobs:
             .venv
           key: uv-main-py${{ matrix.python-version }}-${{ hashFiles('uv.lock') }}
 
+  # Report the required check names (tests 3.10–3.13) when the matrix is skipped.
+  # Branch protection expects these names; a skipped matrix never reports them.
+  tests-skip:
+    name: tests (${{ matrix.python-version }})
+    needs: changes
+    if: needs.changes.outputs.code != 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+    steps:
+      - name: Skip non-code change
+        run: echo "Non-code change, skipping tests"
+
   # Summary job to provide single status for branch protection
   tests:
     name: tests
     runs-on: ubuntu-latest
-    needs: [changes, tests-matrix]
+    needs: [changes, tests-matrix, tests-skip]
     if: always()
     steps:
       - name: Check results
         run: |
           if [ "${{ needs.changes.outputs.code }}" != "true" ]; then
-            echo "Docs-only change, skipping tests"
+            echo "Non-code change, skipping tests"
             exit 0
           fi
           if [ "${{ needs.tests-matrix.result }}" == "success" ]; then
