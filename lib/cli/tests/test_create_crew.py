@@ -11,6 +11,7 @@ from packaging.requirements import Requirement
 from packaging.version import Version
 import crewai_cli.create_json_crew as json_crew
 import crewai_cli.tui_picker as tui_picker
+from crewai_cli import __version__ as crewai_cli_version
 from crewai_cli.cli import crewai
 from crewai_cli.create_crew import create_crew, create_folder_structure
 from crewai_cli.utils import render_template
@@ -762,15 +763,15 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
     pyproject = tomli.loads((tmp_path / "json_crew" / "pyproject.toml").read_text())
     dependency = pyproject["project"]["dependencies"][0]
     assert dependency == get_crewai_tools_dependency()
-    assert Version("1.15.0") in Requirement(dependency).specifier
+    assert Version(crewai_cli_version) in Requirement(dependency).specifier
     assert Version("2.0.0") not in Requirement(dependency).specifier
     assert pyproject["tool"]["hatch"]["build"]["targets"]["wheel"][
         "only-include"
     ] == ["agents", "crew.jsonc", "tools", "knowledge", "skills"]
-    assert pyproject["tool"]["crewai"] == {
-        "type": "crew",
-        "definition": "crew.jsonc",
-    }
+    crewai_config = pyproject["tool"]["crewai"]
+    assert crewai_config["type"] == "crew"
+    assert crewai_config["definition"] == "crew.jsonc"
+    assert crewai_config["project_id"]
 
     crew_template = (tmp_path / "json_crew" / "crew.jsonc").read_text()
     assert (
@@ -933,4 +934,4 @@ def test_json_create_dmn_mode_uses_non_interactive_defaults(tmp_path, monkeypatc
     assert '"description": "Research current AI trends and write a concise summary."' in (
         crew_template
     )
-    assert '"llm": "anthropic/claude-opus-4-6"' in agent_template
+    assert '"llm": "anthropic/claude-fable-5"' in agent_template
