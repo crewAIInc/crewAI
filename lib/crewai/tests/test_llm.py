@@ -534,9 +534,9 @@ def assert_event_count(
 
 @pytest.fixture
 def mock_emit() -> MagicMock:
-    from crewai.events.event_bus import CrewAIEventsBus
+    from crewai.events.event_bus import crewai_event_bus
 
-    with patch.object(CrewAIEventsBus, "emit") as mock_emit:
+    with patch.object(crewai_event_bus, "emit") as mock_emit:
         yield mock_emit
 
 
