@@ -1,6 +1,8 @@
 """Tests for async agent executor functionality."""
 
 import asyncio
+import threading
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
@@ -418,6 +420,99 @@ class TestAsyncLLMResponseHelper:
 
         mock_llm.acall.assert_called_once()
         assert result == "LLM response"
+
+    @pytest.mark.asyncio
+    async def test_aget_llm_response_offloads_sync_only_llm(self) -> None:
+        """Sync-only custom LLMs should run in a worker thread."""
+        from crewai.utilities.agent_utils import aget_llm_response
+        from crewai_core.printer import Printer
+
+        caller_thread = threading.get_ident()
+        call_threads: list[int] = []
+        mock_llm = MagicMock()
+        mock_llm.acall = AsyncMock(side_effect=NotImplementedError)
+
+        def sync_call(*args: Any, **kwargs: Any) -> str:
+            call_threads.append(threading.get_ident())
+            return "LLM response"
+
+        mock_llm.call.side_effect = sync_call
+
+        result = await aget_llm_response(
+            llm=mock_llm,
+            messages=[{"role": "user", "content": "test"}],
+            callbacks=[],
+            printer=Printer(),
+        )
+
+        assert result == "LLM response"
+        assert call_threads and call_threads[0] != caller_thread
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "hook_attribute",
+        ["before_llm_call_hooks", "after_llm_call_hooks"],
+    )
+    async def test_aget_llm_response_keeps_event_loop_responsive_during_hooks(
+        self, hook_attribute: str
+    ) -> None:
+        """Blocking LLM hooks should run outside the caller event loop."""
+        from crewai.utilities.agent_utils import aget_llm_response
+        from crewai_core.printer import Printer
+
+        hook_started = threading.Event()
+        release_hook = threading.Event()
+        execution_order: list[str] = []
+
+        def blocking_hook(context: Any) -> None:
+            execution_order.append("hook_started")
+            hook_started.set()
+            release_hook.wait(timeout=1)
+            execution_order.append("hook_finished")
+
+        hook_lists = {
+            "before_llm_call_hooks": [],
+            "after_llm_call_hooks": [],
+        }
+        hook_lists[hook_attribute].append(blocking_hook)
+
+        class AsyncLLM:
+            async def acall(self, *args: Any, **kwargs: Any) -> str:
+                return "LLM response"
+
+        mock_llm = AsyncLLM()
+        executor = SimpleNamespace(
+            messages=[{"role": "user", "content": "test"}],
+            agent=SimpleNamespace(),
+            task=SimpleNamespace(),
+            crew=SimpleNamespace(),
+            llm=mock_llm,
+            iterations=0,
+            **hook_lists,
+        )
+
+        async def observe_loop_progress() -> None:
+            while not hook_started.is_set():
+                await asyncio.sleep(0)
+            execution_order.append("loop_progress")
+            release_hook.set()
+
+        try:
+            result, _ = await asyncio.gather(
+                aget_llm_response(
+                    llm=mock_llm,
+                    messages=list(executor.messages),
+                    callbacks=[],
+                    printer=Printer(),
+                    executor_context=executor,
+                ),
+                observe_loop_progress(),
+            )
+        finally:
+            release_hook.set()
+
+        assert result == "LLM response"
+        assert execution_order == ["hook_started", "loop_progress", "hook_finished"]
 
     @pytest.mark.asyncio
     async def test_aget_llm_response_raises_on_empty_response(self) -> None:

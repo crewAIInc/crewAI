@@ -630,20 +630,42 @@ async def aget_llm_response(
         Exception: If an error occurs.
         ValueError: If the response is None or empty.
     """
-    messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
-
-    answer = await llm.acall(
+    messages = await asyncio.to_thread(
+        _prepare_llm_call,
+        executor_context,
         messages,
-        tools=tools,
-        callbacks=callbacks,
-        available_functions=available_functions,
-        from_task=from_task,
-        from_agent=from_agent,
-        response_model=response_model,
+        printer,
+        verbose=verbose,
     )
 
-    return _validate_and_finalize_llm_response(
-        answer, executor_context, printer, verbose=verbose
+    try:
+        answer = await llm.acall(
+            messages,
+            tools=tools,
+            callbacks=callbacks,
+            available_functions=available_functions,
+            from_task=from_task,
+            from_agent=from_agent,
+            response_model=response_model,
+        )
+    except NotImplementedError:
+        answer = await asyncio.to_thread(
+            llm.call,
+            messages,
+            tools=tools,
+            callbacks=callbacks,
+            available_functions=available_functions,
+            from_task=from_task,
+            from_agent=from_agent,
+            response_model=response_model,
+        )
+
+    return await asyncio.to_thread(
+        _validate_and_finalize_llm_response,
+        answer,
+        executor_context,
+        printer,
+        verbose=verbose,
     )
 
 

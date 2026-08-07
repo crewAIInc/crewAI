@@ -471,7 +471,8 @@ class TestAgentExecutor:
 
         assert result == "check_iteration"
 
-    def test_call_llm_and_parse_does_not_pass_response_model_with_tools(
+    @pytest.mark.asyncio
+    async def test_call_llm_and_parse_does_not_pass_response_model_with_tools(
         self, mock_dependencies
     ):
         """Structured output should not be requested during ReAct tool loops."""
@@ -484,15 +485,80 @@ class TestAgentExecutor:
         executor.state.messages = [{"role": "user", "content": "Use a tool"}]
 
         with patch(
-            "crewai.experimental.agent_executor.get_llm_response",
+            "crewai.experimental.agent_executor.aget_llm_response",
+            new_callable=AsyncMock,
             return_value="Thought: done\nFinal Answer: complete",
-        ) as get_llm_response_mock:
-            result = executor.call_llm_and_parse()
+        ) as aget_llm_response_mock:
+            result = await executor.call_llm_and_parse()
 
         assert result == "parsed"
-        assert get_llm_response_mock.call_args.kwargs["response_model"] is None
+        assert aget_llm_response_mock.call_args.kwargs["response_model"] is None
 
-    def test_call_llm_native_tools_does_not_pass_response_model_with_tools(
+    @pytest.mark.asyncio
+    async def test_call_llm_and_parse_uses_async_llm(self, mock_dependencies):
+        """Async ReAct routing should call the LLM asynchronously."""
+        executor = _build_executor(**mock_dependencies, callbacks=[])
+        executor.state.messages = [{"role": "user", "content": "Answer the task"}]
+        executor.llm.call.side_effect = AssertionError("sync LLM call used")
+        executor.llm.acall = AsyncMock(
+            return_value="Thought: done\nFinal Answer: complete"
+        )
+
+        result = await executor.call_llm_and_parse()
+
+        assert result == "parsed"
+        executor.llm.acall.assert_awaited_once()
+        executor.llm.call.assert_not_called()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("router_name", "llm_response", "expected_result"),
+        [
+            (
+                "call_llm_and_parse",
+                "Thought: done\nFinal Answer: complete",
+                "parsed",
+            ),
+            ("call_llm_native_tools", "complete", "native_finished"),
+        ],
+    )
+    async def test_async_llm_routers_offload_rpm_limit(
+        self,
+        mock_dependencies,
+        router_name,
+        llm_response,
+        expected_result,
+    ):
+        """Async LLM routers should run a synchronous RPM limiter in a worker."""
+        caller_thread = threading.get_ident()
+        rpm_threads: list[int] = []
+
+        def check_rpm_limit() -> bool:
+            rpm_threads.append(threading.get_ident())
+            return True
+
+        executor = _build_executor(
+            **mock_dependencies,
+            callbacks=[],
+            request_within_rpm_limit=check_rpm_limit,
+        )
+        executor._openai_tools = [
+            {"type": "function", "function": {"name": "lookup"}}
+        ]
+        executor.state.messages = [{"role": "user", "content": "Answer the task"}]
+
+        with patch(
+            "crewai.experimental.agent_executor.aget_llm_response",
+            new_callable=AsyncMock,
+            return_value=llm_response,
+        ):
+            result = await getattr(executor, router_name)()
+
+        assert result == expected_result
+        assert rpm_threads and rpm_threads[0] != caller_thread
+
+    @pytest.mark.asyncio
+    async def test_call_llm_native_tools_does_not_pass_response_model_with_tools(
         self, mock_dependencies
     ):
         """Structured output should not be requested during native tool calls."""
@@ -506,15 +572,34 @@ class TestAgentExecutor:
         executor.state.messages = [{"role": "user", "content": "Use a tool"}]
 
         with patch(
-            "crewai.experimental.agent_executor.get_llm_response",
+            "crewai.experimental.agent_executor.aget_llm_response",
+            new_callable=AsyncMock,
             return_value="complete",
-        ) as get_llm_response_mock:
-            result = executor.call_llm_native_tools()
+        ) as aget_llm_response_mock:
+            result = await executor.call_llm_native_tools()
 
         assert result == "native_finished"
-        assert get_llm_response_mock.call_args.kwargs["response_model"] is None
+        assert aget_llm_response_mock.call_args.kwargs["response_model"] is None
 
-    def test_call_llm_native_tools_falls_back_when_provider_rejects_tools(
+    @pytest.mark.asyncio
+    async def test_call_llm_native_tools_uses_async_llm(self, mock_dependencies):
+        """Async native-tool routing should call the LLM asynchronously."""
+        executor = _build_executor(**mock_dependencies, callbacks=[])
+        executor._openai_tools = [
+            {"type": "function", "function": {"name": "lookup"}}
+        ]
+        executor.state.messages = [{"role": "user", "content": "Use a tool"}]
+        executor.llm.call.side_effect = AssertionError("sync LLM call used")
+        executor.llm.acall = AsyncMock(return_value="complete")
+
+        result = await executor.call_llm_native_tools()
+
+        assert result == "native_finished"
+        executor.llm.acall.assert_awaited_once()
+        executor.llm.call.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_call_llm_native_tools_falls_back_when_provider_rejects_tools(
         self, mock_dependencies
     ):
         """Provider-level unsupported tools errors should downgrade to ReAct."""
@@ -532,13 +617,14 @@ class TestAgentExecutor:
         executor.tools_description = "lookup: search for information"
 
         with patch(
-            "crewai.experimental.agent_executor.get_llm_response",
+            "crewai.experimental.agent_executor.aget_llm_response",
+            new_callable=AsyncMock,
             side_effect=RuntimeError(
                 "Error code: 400 - registry.ollama.ai/library/mariner:latest "
                 "does not support tools"
             ),
         ):
-            result = executor.call_llm_native_tools()
+            result = await executor.call_llm_native_tools()
 
         assert result == "continue_reasoning"
         assert executor.state.use_native_tools is False
@@ -1052,9 +1138,13 @@ class TestFlowErrorHandling:
             "tools_handler": Mock(),
         }
 
-    @patch("crewai.experimental.agent_executor.get_llm_response")
+    @pytest.mark.asyncio
+    @patch(
+        "crewai.experimental.agent_executor.aget_llm_response",
+        new_callable=AsyncMock,
+    )
     @patch("crewai.experimental.agent_executor.enforce_rpm_limit")
-    def test_call_llm_parser_error(
+    async def test_call_llm_parser_error(
         self, mock_enforce_rpm, mock_get_llm, mock_dependencies
     ):
         """Test call_llm_and_parse handles OutputParserError."""
@@ -1064,15 +1154,19 @@ class TestFlowErrorHandling:
         mock_get_llm.side_effect = OutputParserError("parse failed")
 
         executor = _build_executor(**mock_dependencies)
-        result = executor.call_llm_and_parse()
+        result = await executor.call_llm_and_parse()
 
         assert result == "parser_error"
         assert executor._last_parser_error is not None
 
-    @patch("crewai.experimental.agent_executor.get_llm_response")
+    @pytest.mark.asyncio
+    @patch(
+        "crewai.experimental.agent_executor.aget_llm_response",
+        new_callable=AsyncMock,
+    )
     @patch("crewai.experimental.agent_executor.enforce_rpm_limit")
     @patch("crewai.experimental.agent_executor.is_context_length_exceeded")
-    def test_call_llm_context_error(
+    async def test_call_llm_context_error(
         self,
         mock_is_context_exceeded,
         mock_enforce_rpm,
@@ -1085,7 +1179,7 @@ class TestFlowErrorHandling:
         mock_is_context_exceeded.return_value = True
 
         executor = _build_executor(**mock_dependencies)
-        result = executor.call_llm_and_parse()
+        result = await executor.call_llm_and_parse()
 
         assert result == "context_error"
         assert executor._last_context_error is not None
