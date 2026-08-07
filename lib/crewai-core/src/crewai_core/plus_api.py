@@ -69,7 +69,7 @@ class _WithUserIdentifier(TypedDict):
 
 
 class LoginPayload(_WithUserIdentifier):
-    pass
+    project_id: NotRequired[str]
 
 
 class TraceExecutionContext(TypedDict):
@@ -78,6 +78,7 @@ class TraceExecutionContext(TypedDict):
     flow_name: str | None
     crewai_version: str
     privacy_level: str
+    project_id: NotRequired[str | None]
 
 
 class TraceExecutionMetadata(TypedDict):
@@ -149,7 +150,13 @@ class PlusAPI:
     EPHEMERAL_TRACING_RESOURCE: Final = "/crewai_plus/api/v1/tracing/ephemeral"
     INTEGRATIONS_RESOURCE: Final = "/crewai_plus/api/v1/integrations"
 
-    def __init__(self, api_key: str | None = None) -> None:
+    def __init__(
+        self,
+        api_key: str | None = None,
+        *,
+        base_url: str | None = None,
+        organization_id: str | None = None,
+    ) -> None:
         version = get_crewai_version()
         self.api_key = api_key
         self.headers: Headers = {
@@ -161,12 +168,13 @@ class PlusAPI:
             self.headers["Authorization"] = f"Bearer {api_key}"
 
         settings = Settings()
-        if settings.org_uuid:
-            self.headers["X-Crewai-Organization-Id"] = settings.org_uuid
+        if organization_id := organization_id or settings.org_uuid:
+            self.headers["X-Crewai-Organization-Id"] = organization_id
 
         self.base_url = (
-            os.getenv("CREWAI_PLUS_URL")
-            or str(settings.enterprise_base_url)
+            base_url
+            or os.getenv("CREWAI_PLUS_URL")
+            or settings.enterprise_base_url
             or DEFAULT_CREWAI_ENTERPRISE_URL
         )
 
@@ -222,20 +230,31 @@ class PlusAPI:
             return client.request(method, url, files=files, **request_kwargs)
 
     def login_to_tool_repository(
-        self, user_identifier: str | None = None
+        self, user_identifier: str | None = None, project_id: str | None = None
     ) -> httpx.Response:
+        """Log in to the tool repository.
+
+        This request is authenticated, so sending user_identifier and project_id
+        alongside it links the account to the local pseudonymous user id and to
+        the project the command was run from - letting prior anonymous usage of
+        that project be attributed after signup.
+
+        Args:
+            user_identifier: Local pseudonymous user id.
+            project_id: ``[tool.crewai].project_id`` of the current project.
+        """
         payload: LoginPayload = {}
         if user_identifier:
             payload["user_identifier"] = user_identifier
+        if project_id:
+            payload["project_id"] = project_id
         return self._make_request("POST", f"{self.TOOLS_RESOURCE}/login", json=payload)
 
     def get_tool(self, handle: str) -> httpx.Response:
         return self._make_request("GET", f"{self.TOOLS_RESOURCE}/{handle}")
 
-    async def get_agent(self, handle: str) -> httpx.Response:
-        url = urljoin(self.base_url, f"{self.AGENTS_RESOURCE}/{handle}")
-        async with httpx.AsyncClient() as client:
-            return await client.get(url, headers=cast(dict[str, str], self.headers))
+    def get_agent(self, handle: str) -> httpx.Response:
+        return self._make_request("GET", f"{self.AGENTS_RESOURCE}/{handle}")
 
     def publish_tool(
         self,

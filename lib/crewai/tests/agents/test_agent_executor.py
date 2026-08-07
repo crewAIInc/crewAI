@@ -18,6 +18,7 @@ import pytest
 from pydantic import BaseModel
 
 from crewai.agents.tools_handler import ToolsHandler as _ToolsHandler
+from crewai.core.providers.human_input import SyncHumanInputProvider
 from crewai.agents.step_executor import StepExecutor
 
 
@@ -27,6 +28,13 @@ def _build_executor(**kwargs: Any) -> AgentExecutor:
     Uses model_construct to skip Pydantic validators so plain Mock()
     objects are accepted for typed fields like llm, agent, crew, task.
     """
+    prompt = kwargs.get("prompt")
+    if isinstance(prompt, dict):
+        if "system" in prompt:
+            kwargs["prompt"] = SystemPromptResult(**prompt)
+        else:
+            kwargs["prompt"] = StandardPromptResult(**prompt)
+
     executor = AgentExecutor.model_construct(**kwargs)
     executor._state = AgentExecutorState()
     executor._methods = {}
@@ -50,6 +58,7 @@ def _build_executor(**kwargs: Any) -> AgentExecutor:
     executor._last_context_error = None
     executor._step_executor = None
     executor._planner_observer = None
+    executor._is_feedback_iteration = False
     return executor
 from crewai.agents.planner_observer import PlannerObserver
 from crewai.experimental.agent_executor import (
@@ -68,7 +77,8 @@ from crewai.events.types.tool_usage_events import (
 )
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities.step_execution_context import StepExecutionContext
-from crewai.utilities.planning_types import TodoItem
+from crewai.utilities.planning_types import TodoItem, TodoList
+from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 from crewai.utilities.file_store import clear_files, clear_task_files, store_files
 from crewai_files import TextFile
 
@@ -118,6 +128,189 @@ class TestAgentExecutor:
 
     class StructuredResult(BaseModel):
         value: str
+
+    def test_setup_messages_calls_human_input_provider_hooks(self):
+        """Message setup should preserve the HumanInputProvider hook contract."""
+        executor = _build_executor(
+            prompt=StandardPromptResult(prompt="Original task: {input}"),
+        )
+        provider = Mock()
+        provider.setup_messages.return_value = False
+
+        def post_setup(context: AgentExecutor) -> None:
+            context.messages.append(
+                {"role": "system", "content": "provider post setup"}
+            )
+
+        provider.post_setup_messages.side_effect = post_setup
+
+        with patch(
+            "crewai.experimental.agent_executor.get_provider", return_value=provider
+        ):
+            executor._setup_messages(
+                {"input": "draft this", "tool_names": "", "tools": ""}
+            )
+
+        provider.setup_messages.assert_called_once_with(executor)
+        provider.post_setup_messages.assert_called_once_with(executor)
+        assert executor.state.messages[0]["role"] == "user"
+        assert executor.state.messages[0]["content"] == "Original task: draft this"
+        assert executor.state.messages[1] == {
+            "role": "system",
+            "content": "provider post setup",
+        }
+
+    def test_setup_messages_can_be_owned_by_human_input_provider(self):
+        """Providers can skip standard prompt setup by returning True."""
+        executor = _build_executor(
+            prompt=StandardPromptResult(prompt="Original task: {input}"),
+        )
+        provider = Mock()
+
+        def setup(context: AgentExecutor) -> bool:
+            context.messages.append({"role": "user", "content": "provider message"})
+            return True
+
+        provider.setup_messages.side_effect = setup
+
+        with patch(
+            "crewai.experimental.agent_executor.get_provider", return_value=provider
+        ):
+            executor._setup_messages(
+                {"input": "draft this", "tool_names": "", "tools": ""}
+            )
+
+        provider.setup_messages.assert_called_once_with(executor)
+        provider.post_setup_messages.assert_not_called()
+        assert executor.state.messages == [
+            {"role": "user", "content": "provider message"}
+        ]
+
+    def test_human_feedback_reruns_flow_with_state_messages(self):
+        """Human feedback should use AgentExecutor state messages."""
+        executor = _build_executor(agent=SimpleNamespace(verbose=False), crew=None)
+        executor.state.messages = [{"role": "user", "content": "original task"}]
+        executor.state.current_answer = AgentFinish(
+            thought="", output="draft", text="draft"
+        )
+        executor.state.is_finished = True
+        executor._finalize_called = True
+        executor.ask_for_human_input = True
+        executor.state.iterations = executor.max_iter
+        executor.state.plan = "completed plan"
+        executor.state.plan_ready = True
+        executor.state.todos = TodoList(
+            items=[TodoItem(step_number=1, description="Done", status="completed")]
+        )
+
+        improved_answer = AgentFinish(thought="", output="improved", text="improved")
+        feedback_responses = iter(["make it friendlier", ""])
+
+        def finish_feedback_iteration(*_args: Any, **_kwargs: Any) -> None:
+            assert executor._is_feedback_iteration is True
+            assert executor.state.iterations == 0
+            assert executor.state.plan is None
+            assert executor.state.todos.items == []
+            executor.state.current_answer = improved_answer
+            executor.state.is_finished = True
+
+        with (
+            patch.object(
+                SyncHumanInputProvider,
+                "_prompt_input",
+                side_effect=lambda *_args, **_kwargs: next(feedback_responses),
+            ) as mock_prompt_input,
+            patch.object(
+                AgentExecutor, "kickoff", side_effect=finish_feedback_iteration
+            ) as mock_kickoff,
+        ):
+            result = executor._handle_human_feedback(
+                AgentFinish(thought="", output="draft", text="draft")
+            )
+
+        assert result is improved_answer
+        assert mock_prompt_input.call_count == 2
+        mock_kickoff.assert_called_once()
+        assert executor.messages is executor.state.messages
+        assert "make it friendlier" in executor.state.messages[-1]["content"]
+        assert executor.ask_for_human_input is False
+        assert executor.state.current_answer is improved_answer
+        assert executor.state.is_finished is True
+        assert executor._finalize_called is True
+        assert executor._is_feedback_iteration is False
+
+    @pytest.mark.asyncio
+    async def test_async_human_feedback_reruns_flow_with_state_messages(self):
+        """Async human feedback should use AgentExecutor state messages."""
+        executor = _build_executor(agent=SimpleNamespace(verbose=False), crew=None)
+        executor.state.messages = [{"role": "user", "content": "original task"}]
+        executor.state.current_answer = AgentFinish(
+            thought="", output="draft", text="draft"
+        )
+        executor.state.is_finished = True
+        executor._finalize_called = True
+        executor.ask_for_human_input = True
+        executor.state.iterations = executor.max_iter
+        executor.state.plan = "completed plan"
+        executor.state.plan_ready = True
+        executor.state.todos = TodoList(
+            items=[TodoItem(step_number=1, description="Done", status="completed")]
+        )
+
+        improved_answer = AgentFinish(thought="", output="improved", text="improved")
+        feedback_responses = iter(["make it friendlier", ""])
+
+        async def finish_feedback_iteration(*_args: Any, **_kwargs: Any) -> None:
+            assert executor._is_feedback_iteration is True
+            assert executor.state.iterations == 0
+            assert executor.state.plan is None
+            assert executor.state.todos.items == []
+            executor.state.current_answer = improved_answer
+            executor.state.is_finished = True
+
+        with (
+            patch.object(
+                SyncHumanInputProvider,
+                "_prompt_input_async",
+                new_callable=AsyncMock,
+                side_effect=lambda *_args, **_kwargs: next(feedback_responses),
+            ) as mock_prompt_input,
+            patch.object(
+                AgentExecutor,
+                "kickoff_async",
+                new_callable=AsyncMock,
+                side_effect=finish_feedback_iteration,
+            ) as mock_kickoff,
+        ):
+            result = await executor._ahandle_human_feedback(
+                AgentFinish(thought="", output="draft", text="draft")
+            )
+
+        assert result is improved_answer
+        assert mock_prompt_input.await_count == 2
+        mock_kickoff.assert_awaited_once()
+        assert executor.messages is executor.state.messages
+        assert "make it friendlier" in executor.state.messages[-1]["content"]
+        assert executor.ask_for_human_input is False
+        assert executor.state.current_answer is improved_answer
+        assert executor.state.is_finished is True
+        assert executor._finalize_called is True
+        assert executor._is_feedback_iteration is False
+
+    def test_feedback_iteration_skips_plan_generation(self):
+        """Feedback reruns should reason over feedback without regenerating a plan."""
+        executor = _build_executor(
+            agent=SimpleNamespace(planning_enabled=True, verbose=False),
+            task=SimpleNamespace(),
+        )
+        executor._is_feedback_iteration = True
+
+        with patch("crewai.utilities.reasoning_handler.AgentReasoning") as reasoning:
+            executor.generate_plan()
+
+        reasoning.assert_not_called()
+        assert executor.state.plan is None
+        assert executor.state.todos.items == []
 
     def test_inject_files_from_crew_task_store(self):
         """Crew-level input_files should attach to the LLM user message."""

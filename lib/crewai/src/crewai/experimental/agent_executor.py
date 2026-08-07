@@ -62,8 +62,8 @@ from crewai.hooks.llm_hooks import (
 )
 from crewai.hooks.tool_hooks import (
     ToolCallHookContext,
-    get_after_tool_call_hooks,
-    get_before_tool_call_hooks,
+    run_after_tool_call_hooks,
+    run_before_tool_call_hooks,
 )
 from crewai.hooks.types import (
     AfterLLMCallHookCallable,
@@ -73,6 +73,15 @@ from crewai.hooks.types import (
 )
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.tools.tool_failure import (
+    ToolExecutionFailedError,
+    ToolFailure,
+    ToolFailureReason,
+    detect_tool_failure,
+    failure_from_exception,
+    handle_tool_failure,
+    reportable_failure,
+)
 from crewai.utilities.agent_utils import (
     _llm_stop_words_applied,
     build_text_tool_calling_fallback_message,
@@ -106,6 +115,7 @@ from crewai.utilities.planning_types import (
     TodoItem,
     TodoList,
 )
+from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
@@ -118,7 +128,6 @@ if TYPE_CHECKING:
     from crewai.agents.tools_handler import ToolsHandler
     from crewai.llms.base_llm import BaseLLM
     from crewai.tools.tool_types import ToolResult
-    from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 
 _RouteT = TypeVar("_RouteT", bound=str)
 
@@ -218,6 +227,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     _instance_id: str = PrivateAttr(default_factory=lambda: str(uuid4())[:8])
     _step_executor: Any = PrivateAttr(default=None)
     _planner_observer: PlannerObserver | None = PrivateAttr(default=None)
+    _is_feedback_iteration: bool = PrivateAttr(default=False)
 
     @model_validator(mode="after")
     def _setup_executor(self) -> Self:
@@ -296,6 +306,33 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         """Set state messages."""
         self._state.messages = value
 
+    def _setup_messages(self, inputs: dict[str, Any]) -> None:
+        """Set up messages for the agent execution."""
+        provider = get_provider()
+        if provider.setup_messages(cast("ExecutorContext", self)):
+            return
+
+        from crewai.llms.cache import mark_cache_breakpoint
+
+        if isinstance(self.prompt, SystemPromptResult):
+            system_prompt = self._format_prompt(self.prompt["system"], inputs)
+            user_prompt = self._format_prompt(self.prompt["user"], inputs)
+            self.state.messages.append(
+                mark_cache_breakpoint(
+                    format_message_for_llm(system_prompt, role="system")
+                )
+            )
+            self.state.messages.append(
+                mark_cache_breakpoint(format_message_for_llm(user_prompt))
+            )
+        elif isinstance(self.prompt, StandardPromptResult):
+            user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
+            self.state.messages.append(
+                mark_cache_breakpoint(format_message_for_llm(user_prompt))
+            )
+
+        provider.post_setup_messages(cast("ExecutorContext", self))
+
     @property
     def ask_for_human_input(self) -> bool:
         """Compatibility property - returns state ask_for_human_input."""
@@ -314,6 +351,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         enabled on the agent, it generates a plan before execution begins.
         The plan is stored in state and todos are created from the steps.
         """
+        if self._is_feedback_iteration:
+            return
         if not getattr(self.agent, "planning_enabled", False):
             return
 
@@ -1604,6 +1643,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 function_calling_llm=self.function_calling_llm,
                 crew=self.crew,
             )
+        except ToolExecutionFailedError:
+            # A deliberate stop: the generic handler below would feed it back
+            # to the LLM as a recoverable observation.
+            raise
+
         except Exception as e:
             if self.agent and self.agent.verbose:
                 PRINTER.print(content=f"Error in tool execution: {e}", color="red")
@@ -1723,6 +1767,15 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     idx = future_to_idx[future]
                     try:
                         ordered_results[idx] = future.result()
+                    except ToolExecutionFailedError:
+                        # A deliberate stop: folding it into a tool result would
+                        # let the remaining parallel calls carry on. Cancel the
+                        # siblings that have not started so they never run.
+                        # Ones already in flight cannot be interrupted -- Python
+                        # threads are not cancellable -- so a concurrent tool may
+                        # still complete before the abort surfaces.
+                        pool.shutdown(wait=False, cancel_futures=True)
+                        raise
                     except Exception as e:
                         tool_call = runnable_tool_calls[idx]
                         info = extract_tool_call_info(tool_call)
@@ -1769,6 +1822,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     original_tool
                     and hasattr(original_tool, "result_as_answer")
                     and original_tool.result_as_answer
+                    # A failed tool must not become the final answer.
+                    and execution_result.get("tool_failure") is None
                 ):
                     self.state.current_answer = AgentFinish(
                         thought="Tool result is the final answer",
@@ -1807,6 +1862,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 original_tool
                 and hasattr(original_tool, "result_as_answer")
                 and original_tool.result_as_answer
+                # A failed tool must not become the final answer.
+                and execution_result.get("tool_failure") is None
             ):
                 # Set the result as the final answer
                 self.state.current_answer = AgentFinish(
@@ -1874,6 +1931,14 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         # Parse arguments
         parsed_args, parse_error = parse_tool_call_args(func_args, func_name, call_id)
         if parse_error is not None:
+            handle_tool_failure(
+                parse_error["tool_failure"],
+                tool_name=func_name,
+                tool_args=func_args,
+                agent=self.agent,
+                task=self.task,
+                crew=self.crew,
+            )
             return parse_error
         args_dict: dict[str, Any] = parsed_args or {}
 
@@ -1919,6 +1984,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         from_cache = False
         result = "Tool not found"
         raw_tool_result: Any = result
+        tool_failure: ToolFailure | None = None
         input_str = json.dumps(args_dict) if args_dict else ""
         if self.tools_handler and self.tools_handler.cache and output_tool is not None:
             cached_result = self.tools_handler.cache.read(
@@ -1927,6 +1993,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             if cached_result is not None:
                 raw_tool_result = cached_result
                 result = format_native_tool_output_for_agent(output_tool, cached_result)
+                tool_failure = detect_tool_failure(cached_result)
                 from_cache = True
 
         # Emit tool usage started event
@@ -1945,7 +2012,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         track_delegation_if_needed(func_name, args_dict, self.task)
 
-        hook_blocked = False
         before_hook_context = ToolCallHookContext(
             tool_name=func_name,
             tool_input=args_dict,
@@ -1954,23 +2020,14 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             task=self.task,
             crew=self.crew,
         )
-        before_hooks = get_before_tool_call_hooks()
-        try:
-            for hook in before_hooks:
-                hook_result = hook(before_hook_context)
-                if hook_result is False:
-                    hook_blocked = True
-                    break
-        except Exception as hook_error:
-            if self.agent.verbose:
-                PRINTER.print(
-                    content=f"Error in before_tool_call hook: {hook_error}",
-                    color="red",
-                )
+        hook_blocked = run_before_tool_call_hooks(before_hook_context)
 
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
             raw_tool_result = result
+            # The blocked message replaces any cached result, so a cached
+            # failure must not be attributed to this call.
+            tool_failure = None
         elif not from_cache and not max_usage_reached and output_tool is not None:
             if func_name in self._available_functions:
                 try:
@@ -1993,9 +2050,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     result = format_native_tool_output_for_agent(
                         output_tool, raw_result
                     )
+                    tool_failure = detect_tool_failure(raw_result)
                 except Exception as e:
                     result = f"Error executing tool: {e}"
                     raw_tool_result = result
+                    tool_failure = failure_from_exception(e)
                     if self.task:
                         self.task.increment_tools_errors()
                     # Emit tool usage error event
@@ -2011,6 +2070,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                         ),
                     )
                     error_event_emitted = True
+            else:
+                tool_failure = self._unknown_tool_failure(func_name, result)
         elif max_usage_reached:
             # Return error message when max usage limit is reached
             if original_tool:
@@ -2018,6 +2079,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             else:
                 result = f"Tool '{func_name}' has reached its maximum usage limit and cannot be used anymore."
             raw_tool_result = result
+            tool_failure = ToolFailure(
+                message=result, reason=ToolFailureReason.USAGE_LIMIT
+            )
+        elif not from_cache:
+            tool_failure = self._unknown_tool_failure(func_name, result)
 
         # Execute after_tool_call hooks (even if blocked, to allow logging/monitoring)
         after_hook_context = ToolCallHookContext(
@@ -2030,19 +2096,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             tool_result=result,
             raw_tool_result=raw_tool_result,
         )
-        after_hooks = get_after_tool_call_hooks()
-        try:
-            for after_hook in after_hooks:
-                after_hook_result = after_hook(after_hook_context)
-                if after_hook_result is not None:
-                    result = after_hook_result
-                    after_hook_context.tool_result = result
-        except Exception as hook_error:
-            if self.agent.verbose:
-                PRINTER.print(
-                    content=f"Error in after_tool_call hook: {hook_error}",
-                    color="red",
-                )
+        modified_result = run_after_tool_call_hooks(after_hook_context)
+        if modified_result is not None:
+            result = modified_result
 
         if not error_event_emitted:
             crewai_event_bus.emit(
@@ -2056,7 +2112,27 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     agent_key=agent_key,
                     started_at=started_at,
                     finished_at=datetime.now(),
+                    failure=reportable_failure(
+                        tool_failure,
+                        tool=structured_tool,
+                        agent=self.agent,
+                        task=self.task,
+                        crew=self.crew,
+                    ),
                 ),
+            )
+
+        # After the finished event, so subscribers see the full lifecycle even
+        # when the policy aborts.
+        if tool_failure is not None:
+            handle_tool_failure(
+                tool_failure,
+                tool_name=func_name,
+                tool_args=args_dict,
+                tool=structured_tool,
+                agent=self.agent,
+                task=self.task,
+                crew=self.crew,
             )
 
         return {
@@ -2065,7 +2141,20 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             "result": result,
             "from_cache": from_cache,
             "original_tool": original_tool,
+            "tool_failure": tool_failure,
         }
+
+    @staticmethod
+    def _unknown_tool_failure(func_name: str, result: str) -> ToolFailure:
+        """Build the failure for a tool the model asked for but we lack.
+
+        The ReAct path reports this, so the native path must too.
+        """
+        return ToolFailure(
+            message=result,
+            reason=ToolFailureReason.UNKNOWN_TOOL,
+            code=func_name,
+        )
 
     def _extract_tool_name(self, tool_call: Any) -> str:
         """Extract tool name from various tool call formats."""
@@ -2761,27 +2850,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     "AgentExecutor.llm or .prompt is unset; the executor was "
                     "not fully restored or initialized before execution."
                 )
-            if "system" in self.prompt:
-                from crewai.llms.cache import mark_cache_breakpoint
-
-                prompt = cast("SystemPromptResult", self.prompt)
-                system_prompt = self._format_prompt(prompt["system"], inputs)
-                user_prompt = self._format_prompt(prompt["user"], inputs)
-                self.state.messages.append(
-                    mark_cache_breakpoint(
-                        format_message_for_llm(system_prompt, role="system")
-                    )
-                )
-                self.state.messages.append(
-                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
-                )
-            else:
-                from crewai.llms.cache import mark_cache_breakpoint
-
-                user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
-                self.state.messages.append(
-                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
-                )
+            self._setup_messages(inputs)
 
             self._inject_files_from_inputs(inputs)
 
@@ -2867,27 +2936,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     "AgentExecutor.llm or .prompt is unset; the executor was "
                     "not fully restored or initialized before execution."
                 )
-            if "system" in self.prompt:
-                from crewai.llms.cache import mark_cache_breakpoint
-
-                prompt = cast("SystemPromptResult", self.prompt)
-                system_prompt = self._format_prompt(prompt["system"], inputs)
-                user_prompt = self._format_prompt(prompt["user"], inputs)
-                self.state.messages.append(
-                    mark_cache_breakpoint(
-                        format_message_for_llm(system_prompt, role="system")
-                    )
-                )
-                self.state.messages.append(
-                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
-                )
-            else:
-                from crewai.llms.cache import mark_cache_breakpoint
-
-                user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
-                self.state.messages.append(
-                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
-                )
+            self._setup_messages(inputs)
 
             await self._ainject_files_from_inputs(inputs)
 
@@ -3169,8 +3218,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         Returns:
             Final answer after feedback.
         """
+        self.messages = self.state.messages
         provider = get_provider()
-        return provider.handle_feedback(formatted_answer, cast("ExecutorContext", self))
+        final_answer = provider.handle_feedback(
+            formatted_answer, cast("ExecutorContext", self)
+        )
+        self._complete_feedback(final_answer)
+        return final_answer
 
     async def _ahandle_human_feedback(
         self, formatted_answer: AgentFinish
@@ -3183,10 +3237,63 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         Returns:
             Final answer after feedback.
         """
+        self.messages = self.state.messages
         provider = get_provider()
-        return await provider.handle_feedback_async(
+        final_answer = await provider.handle_feedback_async(
             formatted_answer, cast("AsyncExecutorContext", self)
         )
+        self._complete_feedback(final_answer)
+        return final_answer
+
+    def _complete_feedback(self, final_answer: AgentFinish) -> None:
+        """Mark the final reviewed answer as the completed executor state."""
+        self.state.current_answer = final_answer
+        self.state.is_finished = True
+        self.state.ask_for_human_input = False
+        self._finalize_called = True
+
+    def _prepare_feedback_iteration(self) -> None:
+        """Reset flow completion state before rerunning with feedback."""
+        self._finalize_called = False
+        self._is_feedback_iteration = True
+        self.state.current_answer = None
+        self.state.is_finished = False
+        self.state.iterations = 0
+        self.state.use_native_tools = False
+        self.state.pending_tool_calls = []
+        self.state.plan = None
+        self.state.plan_ready = False
+        self.state.todos = TodoList()
+        self.state.replan_count = 0
+        self.state.last_replan_reason = None
+        self.state.observations = {}
+        self.state.execution_log = []
+
+    def _invoke_loop(self) -> AgentFinish:
+        """Re-run the executor flow using the existing feedback messages."""
+        self._prepare_feedback_iteration()
+        try:
+            self.kickoff()
+        finally:
+            self._is_feedback_iteration = False
+
+        if not isinstance(self.state.current_answer, AgentFinish):
+            raise RuntimeError("Agent execution ended without reaching a final answer.")
+
+        return self.state.current_answer
+
+    async def _ainvoke_loop(self) -> AgentFinish:
+        """Re-run the executor flow asynchronously using feedback messages."""
+        self._prepare_feedback_iteration()
+        try:
+            await self.kickoff_async()
+        finally:
+            self._is_feedback_iteration = False
+
+        if not isinstance(self.state.current_answer, AgentFinish):
+            raise RuntimeError("Agent execution ended without reaching a final answer.")
+
+        return self.state.current_answer
 
     def _is_training_mode(self) -> bool:
         """Check if training mode is active.
@@ -3195,6 +3302,12 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             True if in training mode.
         """
         return bool(self.crew and self.crew._train)
+
+    def _format_feedback_message(self, feedback: str) -> LLMMessage:
+        """Format human feedback as an LLM message."""
+        return format_message_for_llm(
+            I18N_DEFAULT.slice("feedback_instructions").format(feedback=feedback)
+        )
 
 
 # Backward compatibility alias (deprecated)

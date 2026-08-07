@@ -18,7 +18,7 @@ from crewai_cli.utils import fetch_and_json_env_file, get_project_name
 console = Console()
 _MISSING_LOCKFILE_ERROR_CODES = {"missing_lockfile"}
 _DEPLOYMENT_ID_KEYS = ("deployment_id", "deploymentId")
-_DEPLOYMENT_FALLBACK_IDENTIFIER_KEYS = ("id", "uuid")
+_DEPLOYMENT_FALLBACK_IDENTIFIER_KEYS = ("id",)
 
 
 def _run_predeploy_validation(
@@ -223,7 +223,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             getattr(self.plus_api_client, "base_url", None)
             or DEFAULT_CREWAI_ENTERPRISE_URL
         )
-        deployment_url = _deployment_page_url(base_url, json_response)
+        deployment_url = self._deployment_page_url(json_response, base_url)
         if not deployment_url:
             return
 
@@ -238,6 +238,52 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
                 "Could not open the deployment page automatically.",
                 style="yellow",
             )
+
+    def _deployment_page_url(
+        self,
+        json_response: dict[str, Any],
+        base_url: str,
+    ) -> str | None:
+        """Build the deployment show URL, resolving UUID-only responses if needed."""
+        deployment_url = _deployment_page_url(base_url, json_response)
+        if deployment_url:
+            return deployment_url
+
+        identifier = self._deployment_identifier_from_status(json_response)
+        if not identifier:
+            return None
+
+        return (
+            f"{base_url.rstrip('/')}/crewai_plus/deployments/"
+            f"{quote(identifier, safe='')}"
+        )
+
+    def _deployment_identifier_from_status(
+        self,
+        json_response: dict[str, Any],
+    ) -> str | None:
+        """Resolve the deployment page id from status without failing the command."""
+        crew_uuid = json_response.get("uuid")
+        if not crew_uuid:
+            return None
+
+        try:
+            response = self.plus_api_client.crew_status_by_uuid(str(crew_uuid))
+        except Exception:
+            return None
+
+        if not getattr(response, "is_success", False):
+            return None
+
+        try:
+            status_response = response.json()
+        except ValueError:
+            return None
+
+        if not isinstance(status_response, dict):
+            return None
+
+        return _deployment_identifier(status_response)
 
     def deploy(self, uuid: str | None = None, skip_validate: bool = False) -> None:
         """

@@ -5,6 +5,7 @@ import click
 from crewai_core.telemetry import Telemetry
 
 from crewai_cli.git import initialize_if_git_available
+from crewai_cli.utils import get_or_create_project_id
 from crewai_cli.version import get_crewai_tools_dependency
 
 
@@ -31,6 +32,8 @@ def create_flow(name: str, *, declarative: bool = False) -> None:
     else:
         _create_python_flow(name, class_name, folder_name, project_root)
 
+    # Minted at creation so the project has a stable identity from run one.
+    get_or_create_project_id(project_root / "pyproject.toml")
     initialize_if_git_available(project_root)
 
     click.secho(f"Flow {name} created successfully!", fg="green", bold=True)
@@ -126,10 +129,7 @@ def _create_declarative_flow(
 
     package_dir = Path(__file__).parent
     templates_dir = package_dir / "templates" / "declarative_flow"
-
-    agents_md_src = package_dir / "templates" / "AGENTS.md"
-    if agents_md_src.exists():
-        shutil.copy2(agents_md_src, project_root / "AGENTS.md")
+    root_template_files = {".gitignore", "AGENTS.md", "README.md", "pyproject.toml"}
 
     for src_file in templates_dir.rglob("*"):
         if not src_file.is_file():
@@ -138,7 +138,7 @@ def _create_declarative_flow(
         relative_path = src_file.relative_to(templates_dir)
         dst_file = (
             project_root / relative_path
-            if relative_path.name in {".gitignore", "README.md", "pyproject.toml"}
+            if relative_path.name in root_template_files
             else package_root / relative_path
         )
         dst_file.parent.mkdir(parents=True, exist_ok=True)

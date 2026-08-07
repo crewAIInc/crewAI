@@ -151,12 +151,14 @@ def test_run_with_definition_uses_project_runner(run_crew, runner):
 
 
 @mock.patch("crewai_cli.cli.run_crew")
-def test_run_rejects_inputs_without_definition(run_crew, runner):
+def test_run_inputs_without_definition_calls_run_crew(run_crew, runner):
+    # --inputs no longer requires --definition; the resolution happens in run_crew.
     result = runner.invoke(run, ["--inputs", '{"topic":"AI"}'])
 
-    assert result.exit_code == 2
-    assert "Error: --inputs requires --definition" in result.output
-    run_crew.assert_not_called()
+    assert result.exit_code == 0
+    run_crew.assert_called_once_with(
+        trained_agents_file=None, definition=None, inputs='{"topic":"AI"}'
+    )
 
 
 @mock.patch("crewai_cli.cli.run_crew")
@@ -226,6 +228,7 @@ def test_create_requires_type_in_dmn_mode(runner):
 
     assert result.exit_code == 2
     assert "TYPE is required when CREWAI_DMN is set" in result.output
+    assert "crew, flow, tool, skill, template" in result.output
 
 
 def test_create_requires_name_in_dmn_mode(runner):

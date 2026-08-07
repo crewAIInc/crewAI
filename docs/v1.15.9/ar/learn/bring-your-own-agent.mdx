@@ -1,0 +1,41 @@
+---
+title: أحضر Agent الخاص بك
+description: تعلم كيفية إحضار Agents خاصة بك تعمل ضمن Crew.
+icon: robots
+mode: "wide"
+---
+
+قابلية التشغيل البيني مفهوم أساسي في CrewAI. يوضح هذا الدليل كيفية إحضار Agents خاصة بك تعمل ضمن Crew.
+
+## دليل المحوّلات لإحضار Agents الخاصة (Agents من LangGraph وOpenAI وغيرها...)
+
+نتطلب 3 محوّلات لتحويل أي Agent من أطر عمل مختلفة للعمل ضمن Crew.
+
+1. BaseAgentAdapter
+2. BaseToolAdapter
+3. BaseConverter
+
+## BaseAgentAdapter
+
+تعرّف هذه الفئة المجردة الواجهة المشتركة والوظائف التي يجب أن تنفذها جميع محوّلات الـ Agent. تمتد BaseAgent للحفاظ على التوافق مع إطار عمل CrewAI مع إضافة متطلبات خاصة بالمحوّل.
+
+الطرق المطلوبة:
+
+1. `def configure_tools`
+2. `def configure_structured_output`
+
+## إنشاء محوّل خاص بك
+
+لدمج Agent من إطار عمل مختلف في CrewAI، تحتاج لإنشاء محوّل مخصص بوراثة `BaseAgentAdapter`. يعمل هذا المحوّل كطبقة توافق تترجم بين واجهات CrewAI والمتطلبات المحددة للـ Agent الخارجي.
+
+راجع الملف الإنجليزي الأصلي لأمثلة الكود التفصيلية لتنفيذ BaseAgentAdapter وBaseToolAdapter وBaseConverter.
+
+## محوّلات جاهزة للاستخدام
+
+نوفر محوّلات جاهزة للأطر التالية:
+1. LangGraph
+2. OpenAI Agents
+
+## تشغيل Crew مع Agents محوّلة:
+
+راجع الملف الإنجليزي الأصلي للحصول على مثال الكود الكامل الذي يوضح استخدام CrewAI Agent وOpenAI Agent Adapter وLangGraph Agent Adapter معًا في Crew واحد.

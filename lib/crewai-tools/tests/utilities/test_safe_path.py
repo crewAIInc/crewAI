@@ -8,6 +8,7 @@ import pytest
 
 from crewai_tools.security.safe_path import (
     format_path_for_display,
+    format_sandbox_error,
     validate_directory_path,
     validate_file_path,
     validate_url,
@@ -191,3 +192,20 @@ class TestValidateUrl:
         # file:// would normally be blocked
         result = validate_url("file:///etc/passwd")
         assert result == "file:///etc/passwd"
+
+
+class TestFormatSandboxError:
+    def test_replaces_bypass_advice_with_remedy(self, tmp_path):
+        with pytest.raises(ValueError) as exc:
+            validate_file_path(str(tmp_path.parent / "outside.txt"), str(tmp_path))
+
+        message = format_sandbox_error(exc.value, "Pass base_dir to widen it.")
+
+        assert "outside the allowed directory" in message
+        assert "Pass base_dir to widen it." in message
+        assert "CREWAI_TOOLS_ALLOW_UNSAFE_PATHS" not in message
+
+    def test_leaves_unrelated_errors_intact(self):
+        message = format_sandbox_error(ValueError("something else"), "Do this.")
+
+        assert message == "something else Do this."
