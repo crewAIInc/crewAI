@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import socket
 
 import pytest
 
@@ -182,7 +183,12 @@ class TestValidateUrl:
         with pytest.raises(ValueError, match="no hostname"):
             validate_url("http:///path")
 
-    def test_blocks_unresolvable_host(self):
+    def test_blocks_unresolvable_host(self, monkeypatch):
+        def fail_resolution(*_args, **_kwargs):
+            raise socket.gaierror("host not found")
+
+        monkeypatch.setattr(socket, "getaddrinfo", fail_resolution)
+
         with pytest.raises(ValueError, match="Could not resolve"):
             validate_url("http://this-host-definitely-does-not-exist-abc123.com/")
 

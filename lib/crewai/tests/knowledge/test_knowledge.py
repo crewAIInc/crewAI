@@ -509,12 +509,14 @@ def test_excel_knowledge_source(mock_vector_db, tmpdir):
     mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.vcr
-def test_docling_source(mock_vector_db):
+def test_docling_source(mock_vector_db, tmp_path):
+    document = tmp_path / "reward-hacking.html"
+    document.write_text(
+        "<html><body><h1>Reward hacking</h1><p>Reward hacking changes agent behavior.</p></body></html>",
+        encoding="utf-8",
+    )
     docling_source = CrewDoclingSource(
-        file_paths=[
-            "https://lilianweng.github.io/posts/2024-11-28-reward-hacking/",
-        ],
+        file_paths=[document],
     )
     mock_vector_db.sources = [docling_source]
     mock_vector_db.query.return_value = [
@@ -530,16 +532,21 @@ def test_docling_source(mock_vector_db):
     mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.vcr
 @pytest.mark.timeout(180)
-def test_multiple_docling_sources() -> None:
-    urls: list[Path | str] = [
-        "https://lilianweng.github.io/posts/2024-11-28-reward-hacking/",
-        "https://lilianweng.github.io/posts/2024-07-07-hallucination/",
+def test_multiple_docling_sources(tmp_path) -> None:
+    documents = [
+        tmp_path / "reward-hacking.html",
+        tmp_path / "hallucination.html",
     ]
-    docling_source = CrewDoclingSource(file_paths=urls)
+    documents[0].write_text(
+        "<html><body><h1>Reward hacking</h1></body></html>", encoding="utf-8"
+    )
+    documents[1].write_text(
+        "<html><body><h1>Hallucination</h1></body></html>", encoding="utf-8"
+    )
+    docling_source = CrewDoclingSource(file_paths=documents)
 
-    assert docling_source.file_paths == urls
+    assert docling_source.file_paths == documents
     assert docling_source.content is not None
 
 
