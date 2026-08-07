@@ -1,0 +1,78 @@
+---
+title: البحث في المواقع باستخدام RAG
+description: أداة `WebsiteSearchTool` مصممة لإجراء بحث RAG (التوليد المعزز بالاسترجاع) داخل محتوى موقع ويب.
+icon: globe-stand
+mode: "wide"
+---
+
+# `WebsiteSearchTool`
+
+<Note>
+    أداة WebsiteSearchTool حالياً في مرحلة تجريبية. نحن نعمل بنشاط على دمج هذه الأداة في مجموعة عروضنا وسنقوم بتحديث التوثيق وفقاً لذلك.
+</Note>
+
+## الوصف
+
+أداة WebsiteSearchTool مصممة كمفهوم لإجراء عمليات بحث دلالية داخل محتوى المواقع.
+تهدف إلى الاستفادة من نماذج التعلم الآلي المتقدمة مثل التوليد المعزز بالاسترجاع (RAG) للتنقل واستخراج المعلومات من عناوين URL المحددة بكفاءة.
+تهدف هذه الأداة إلى توفير المرونة، مما يسمح للمستخدمين بإجراء عمليات بحث عبر أي موقع أو التركيز على مواقع محددة ذات اهتمام.
+يرجى ملاحظة أن تفاصيل التنفيذ الحالية لأداة WebsiteSearchTool قيد التطوير، وقد لا تكون وظائفها كما هو موصوف متاحة بعد.
+
+## التثبيت
+
+لتحضير بيئتك لعندما تصبح أداة WebsiteSearchTool متاحة، يمكنك تثبيت الحزمة الأساسية بـ:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+يثبّت هذا الأمر التبعيات اللازمة لضمان أنه بمجرد دمج الأداة بالكامل، يمكن للمستخدمين البدء في استخدامها فوراً.
+
+## مثال على الاستخدام
+
+فيما يلي أمثلة على كيفية استخدام أداة WebsiteSearchTool في سيناريوهات مختلفة. يرجى ملاحظة أن هذه الأمثلة توضيحية وتمثل وظائف مخططة:
+
+```python Code
+from crewai_tools import WebsiteSearchTool
+
+# Example of initiating tool that agents can use
+# to search across any discovered websites
+tool = WebsiteSearchTool()
+
+# Example of limiting the search to the content of a specific website,
+# so now agents can only search within that website
+tool = WebsiteSearchTool(website='https://example.com')
+```
+
+## المعاملات
+
+- `website`: معامل اختياري مخصص لتحديد عنوان URL للموقع لعمليات البحث المركزة. هذا المعامل مصمم لتعزيز مرونة الأداة من خلال السماح بعمليات بحث موجّهة عند الحاجة.
+
+## خيارات التخصيص
+
+بشكل افتراضي، تستخدم الأداة OpenAI لكل من التضمينات والتلخيص. لتخصيص النموذج، يمكنك استخدام قاموس تكوين كما يلي:
+
+
+```python Code
+tool = WebsiteSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # or google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google-generativeai", # or openai, ollama, ...
+            config=dict(
+                model_name="gemini-embedding-001",
+                task_type="RETRIEVAL_DOCUMENT",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

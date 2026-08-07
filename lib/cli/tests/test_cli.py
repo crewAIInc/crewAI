@@ -228,6 +228,7 @@ def test_create_requires_type_in_dmn_mode(runner):
 
     assert result.exit_code == 2
     assert "TYPE is required when CREWAI_DMN is set" in result.output
+    assert "crew, flow, tool, skill, template" in result.output
 
 
 def test_create_requires_name_in_dmn_mode(runner):

@@ -1,0 +1,140 @@
+---
+title: 첫 번째 Crew 만들기
+description: JSON-first crew 설정으로 협업 AI 팀을 만드는 단계별 튜토리얼입니다.
+icon: users-gear
+mode: "wide"
+---
+
+## 리서치 Crew 만들기
+
+이 가이드에서는 두 에이전트가 주제를 조사하고 markdown 보고서를 작성하는 crew를 만듭니다. 새 crew 프로젝트는 JSON-first입니다. 에이전트는 `agents/*.jsonc`, 태스크와 crew 설정은 `crew.jsonc`에 두며, `crewai run`이 이 정의를 직접 로드합니다.
+
+### 준비 사항
+
+1. [설치 가이드](/ko/installation)에 따라 CrewAI 설치
+2. [LLM 설정](/ko/concepts/llms#setting-up-your-llm)에 따라 모델 API 키 설정
+3. 웹 검색을 사용할 경우 [Serper.dev](https://serper.dev/) API 키 준비
+
+## 1단계: 새 Crew 만들기
+
+```bash
+crewai create crew research_crew
+cd research_crew
+```
+
+생성되는 구조:
+
+```text
+research_crew/
+├── .gitignore
+├── .env
+├── agents/
+│   └── researcher.jsonc
+├── crew.jsonc
+├── knowledge/
+├── pyproject.toml
+├── README.md
+├── skills/
+└── tools/
+```
+
+<Tip>
+`crew.py`, `config/agents.yaml`, `config/tasks.yaml`을 쓰는 기존 레이아웃이 필요하면 `crewai create crew research_crew --classic`을 사용하세요.
+</Tip>
+
+## 2단계: 에이전트 정의
+
+생성된 `agents/researcher.jsonc` 파일을 교체하고 `agents/analyst.jsonc`를 추가합니다. 파일 이름이 `crew.jsonc`에서 참조하는 에이전트 이름입니다.
+
+```jsonc agents/researcher.jsonc
+{
+  "role": "Senior Research Specialist for {topic}",
+  "goal": "Find comprehensive and accurate information about {topic}, with a focus on recent developments and key insights.",
+  "backstory": "You are an experienced research specialist who organizes complex information into clear, useful notes.",
+  // 사용하는 모델로 바꾸세요. 예: "openai/gpt-4o".
+  "llm": "provider/model-id",
+  "tools": ["SerperDevTool"],
+  "settings": {
+    "verbose": true,
+    "allow_delegation": false
+  }
+}
+```
+
+```jsonc agents/analyst.jsonc
+{
+  "role": "Report Analyst for {topic}",
+  "goal": "Turn research findings into a clear, well-structured report.",
+  "backstory": "You are a careful analyst with strong technical writing skills and a talent for extracting useful insights.",
+  // 사용하는 모델로 바꾸세요. 예: "openai/gpt-4o".
+  "llm": "provider/model-id",
+  "settings": {
+    "verbose": true,
+    "allow_delegation": false
+  }
+}
+```
+
+`provider/model-id`를 `openai/gpt-4o`, `anthropic/claude-sonnet-4-6`, `gemini/gemini-2.0-flash-001` 같은 모델로 바꾸세요.
+
+## 3단계: 태스크와 Crew 설정
+
+`crew.jsonc`를 다음으로 교체합니다:
+
+```jsonc crew.jsonc
+{
+  "name": "Research Crew",
+  "agents": ["researcher", "analyst"],
+  "tasks": [
+    {
+      "name": "research_task",
+      "description": "Conduct thorough research on {topic}. Focus on key concepts, recent developments, major challenges, notable applications, and future outlook.",
+      "expected_output": "A comprehensive research document with organized sections, specific facts, and useful examples about {topic}.",
+      "agent": "researcher"
+    },
+    {
+      "name": "analysis_task",
+      "description": "Analyze the research findings and create a polished report on {topic}. Include an executive summary, key insights, trend analysis, and recommendations.",
+      "expected_output": "A professional markdown report with clear headings, a concise summary, main findings, and recommendations.",
+      "agent": "analyst",
+      "context": ["research_task"],
+      "output_file": "output/report.md",
+      "markdown": true
+    }
+  ],
+  "process": "sequential",
+  "verbose": true,
+  "memory": true,
+  "inputs": {
+    "topic": "Artificial Intelligence in Healthcare"
+  }
+}
+```
+
+`context`는 이전 태스크 이름을 가리키므로 analyst가 research 태스크 출력을 받습니다. `inputs`는 `{topic}`의 기본값을 제공합니다. 기본값이 없으면 `crewai run`이 실행 중에 물어봅니다.
+
+## 4단계: 환경 변수 설정
+
+`.env`를 편집합니다:
+
+```sh
+SERPER_API_KEY=your_serper_api_key
+# 모델 제공자 API 키도 추가하세요.
+```
+
+## 5단계: 설치 및 실행
+
+```bash
+crewai install
+crewai run
+```
+
+실행이 끝나면 `output/report.md`를 확인하세요.
+
+<Warning>
+신뢰하는 출처의 JSON crew 프로젝트만 실행하세요. `custom:<name>` 도구와 `{"python": "module.attribute"}` 참조는 crew 로드 시 로컬 Python 코드를 실행합니다.
+</Warning>
+
+<Check>
+주제를 조사하고 보고서를 작성하는 JSON-first crew를 만들었습니다.
+</Check>
