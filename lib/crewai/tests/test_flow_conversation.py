@@ -1619,6 +1619,54 @@ class TestHandleTurnReplyFallback:
         ]
         assert assistant_messages == ["computed reply"]
 
+    def test_return_only_handler_persists_assistant_for_fresh_instance(
+        self, tmp_path: Any
+    ) -> None:
+        """Return-only handlers must survive @persist restore on a new Flow instance."""
+        from crewai.flow.persistence import SQLiteFlowPersistence, persist
+
+        persistence = SQLiteFlowPersistence(str(tmp_path / "fallback_persist.db"))
+        session_id = str(uuid4())
+
+        @persist(persistence)
+        class ReturnOnlyBot(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "WORK"
+
+            @listen("WORK")
+            def work(self) -> str:
+                return "computed reply"
+
+        first_turn = ReturnOnlyBot(persistence=persistence)
+        first_turn.handle_turn("hello", session_id=session_id)
+
+        second_turn = ReturnOnlyBot(persistence=persistence)
+        second_turn.handle_turn("follow up", session_id=session_id)
+
+        roles = [message.role for message in second_turn.state.messages]
+        assert roles == ["user", "assistant", "user", "assistant"]
+        assert [message.content for message in second_turn.state.messages] == [
+            "hello",
+            "computed reply",
+            "follow up",
+            "computed reply",
+        ]
+
+        restored = persistence.load_state(session_id)
+        assert restored is not None
+        assert [message["content"] for message in restored["messages"]] == [
+            "hello",
+            "computed reply",
+            "follow up",
+            "computed reply",
+        ]
+        assert [message["role"] for message in restored["messages"]] == [
+            "user",
+            "assistant",
+            "user",
+            "assistant",
+        ]
+
 
 class TestFalsyRouteTurnFallback:
     """A falsy ``route_turn()`` must never replay a previous turn's intent.
