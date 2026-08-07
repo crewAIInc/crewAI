@@ -253,7 +253,15 @@ class TestAgentDefinitions:
                 )
             return "391"
 
+        async def fake_ahandle(params, available_functions=None, **kwargs):
+            return fake_handle(
+                params,
+                available_functions=available_functions,
+                **kwargs,
+            )
+
         monkeypatch.setattr(llm, "_handle_completion", fake_handle)
+        monkeypatch.setattr(llm, "_ahandle_completion", fake_ahandle)
         return sent
 
     @staticmethod

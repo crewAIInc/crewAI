@@ -63,6 +63,15 @@ class ScriptedLLM(LLM):
         self._index += 1
         return step
 
+    async def acall(self, messages, tools=None, callbacks=None, available_functions=None, **kw):  # noqa: ANN001, ANN003
+        return self.call(
+            messages,
+            tools=tools,
+            callbacks=callbacks,
+            available_functions=available_functions,
+            **kw,
+        )
+
     def supports_function_calling(self) -> bool:
         return False
 
@@ -98,6 +107,15 @@ class StatelessToolLLM(LLM):
             "Thought: posting\n"
             + f"Action: {self._tool_name}\n"
             + f"Action Input: {json.dumps(self._tool_args)}"
+        )
+
+    async def acall(self, messages, tools=None, callbacks=None, available_functions=None, **kw):  # noqa: ANN001, ANN003
+        return self.call(
+            messages,
+            tools=tools,
+            callbacks=callbacks,
+            available_functions=available_functions,
+            **kw,
         )
 
     def supports_function_calling(self) -> bool:

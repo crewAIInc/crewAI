@@ -102,8 +102,19 @@ def make_scripted_llm():
         def __init__(self):
             self.chat = type("Chat", (), {"completions": FakeCompletions()})()
 
+    class FakeAsyncCompletions(FakeCompletions):
+        async def create(self, **params):
+            return super().create(**params)
+
+    class FakeAsyncClient:
+        def __init__(self):
+            self.chat = type(
+                "Chat", (), {"completions": FakeAsyncCompletions()}
+            )()
+
     llm = LLM(model="openai/gpt-4o")
     llm._client = FakeClient()
+    llm._async_client = FakeAsyncClient()
     return llm
 
 

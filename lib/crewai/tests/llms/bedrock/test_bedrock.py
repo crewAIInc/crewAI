@@ -1,7 +1,7 @@
 import os
 import sys
 import types
-from unittest.mock import patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from crewai.llm import LLM
@@ -40,6 +40,14 @@ def _create_bedrock_mocks():
     mock_session_class.return_value = mock_session_instance
 
     return mock_session_class, mock_client
+
+
+def _install_async_bedrock_client(llm: LLM, *responses: dict) -> AsyncMock:
+    """Install an offline async client while retaining Bedrock response parsing."""
+    mock_converse = AsyncMock(side_effect=responses)
+    llm._async_client = MagicMock(converse=mock_converse)
+    llm._async_client_initialized = True
+    return mock_converse
 
 
 @pytest.fixture(autouse=True)
@@ -231,11 +239,16 @@ def test_bedrock_completion_call():
 
 def test_bedrock_completion_called_during_crew_execution():
     """
-    Test that BedrockCompletion.call is actually invoked when running a crew
+    Test that BedrockCompletion.acall is actually invoked when running a crew
     """
     bedrock_llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    with patch.object(bedrock_llm, 'call', return_value="Tokyo has 14 million people.") as mock_call:
+    with patch.object(
+        bedrock_llm,
+        "acall",
+        new_callable=AsyncMock,
+        return_value="Tokyo has 14 million people.",
+    ) as mock_acall:
 
         agent = Agent(
             role="Research Assistant",
@@ -253,19 +266,23 @@ def test_bedrock_completion_called_during_crew_execution():
         crew = Crew(agents=[agent], tasks=[task])
         result = crew.kickoff()
 
-        assert mock_call.called
+        mock_acall.assert_awaited()
         assert "14 million" in str(result)
 
 
 @pytest.mark.skip(reason="Crew execution test - may hang, needs investigation")
 def test_bedrock_completion_call_arguments():
     """
-    Test that BedrockCompletion.call is invoked with correct arguments
+    Test that BedrockCompletion.acall is invoked with correct arguments
     """
     bedrock_llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    with patch.object(bedrock_llm, 'call') as mock_call:
-        mock_call.return_value = "Task completed successfully."
+    with patch.object(
+        bedrock_llm,
+        "acall",
+        new_callable=AsyncMock,
+        return_value="Task completed successfully.",
+    ) as mock_acall:
 
         agent = Agent(
             role="Test Agent",
@@ -283,12 +300,12 @@ def test_bedrock_completion_call_arguments():
         crew = Crew(agents=[agent], tasks=[task])
         crew.kickoff()
 
-        assert mock_call.called
+        mock_acall.assert_awaited()
 
-        call_args = mock_call.call_args
-        assert call_args is not None
+        await_args = mock_acall.await_args
+        assert await_args is not None
 
-        messages = call_args[0][0]
+        messages = await_args.args[0]
         assert isinstance(messages, (str, list))
 
         if isinstance(messages, str):
@@ -300,12 +317,16 @@ def test_bedrock_completion_call_arguments():
 
 def test_multiple_bedrock_calls_in_crew():
     """
-    Test that BedrockCompletion.call is invoked multiple times for multiple tasks
+    Test that BedrockCompletion.acall is invoked multiple times for multiple tasks
     """
     bedrock_llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    with patch.object(bedrock_llm, 'call') as mock_call:
-        mock_call.return_value = "Task completed."
+    with patch.object(
+        bedrock_llm,
+        "acall",
+        new_callable=AsyncMock,
+        return_value="Task completed.",
+    ) as mock_acall:
 
         agent = Agent(
             role="Multi-task Agent",
@@ -332,16 +353,16 @@ def test_multiple_bedrock_calls_in_crew():
         )
         crew.kickoff()
 
-        assert mock_call.call_count >= 2  # At least one call per task
+        assert mock_acall.await_count >= 2  # At least one call per task
 
-        for call in mock_call.call_args_list:
-            assert len(call[0]) > 0
-            messages = call[0][0]
+        for await_args in mock_acall.await_args_list:
+            assert len(await_args.args) > 0
+            messages = await_args.args[0]
             assert messages is not None
 
 def test_bedrock_completion_with_tools():
     """
-    Test that BedrockCompletion.call is invoked with tools when agent has tools
+    Test that BedrockCompletion.acall is invoked with tools when agent has tools
     """
     from crewai.tools import tool
 
@@ -352,8 +373,12 @@ def test_bedrock_completion_with_tools():
 
     bedrock_llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    with patch.object(bedrock_llm, 'call') as mock_call:
-        mock_call.return_value = "Task completed with tools."
+    with patch.object(
+        bedrock_llm,
+        "acall",
+        new_callable=AsyncMock,
+        return_value="Task completed with tools.",
+    ) as mock_acall:
 
         agent = Agent(
             role="Tool User",
@@ -373,14 +398,14 @@ def test_bedrock_completion_with_tools():
 
         crew.kickoff()
 
-        assert mock_call.called
+        mock_acall.assert_awaited()
 
-        call_args = mock_call.call_args
-        call_kwargs = call_args[1] if len(call_args) > 1 else {}
+        await_args = mock_acall.await_args
+        assert await_args is not None
 
-        if 'tools' in call_kwargs:
-            assert call_kwargs['tools'] is not None
-            assert len(call_kwargs['tools']) > 0
+        if "tools" in await_args.kwargs:
+            assert await_args.kwargs["tools"] is not None
+            assert len(await_args.kwargs["tools"]) > 0
 
 
 @pytest.mark.timeout(180)
@@ -826,7 +851,6 @@ def test_bedrock_stop_sequences_sent_to_api():
 # Agent Kickoff Structured Output Tests
 
 
-@pytest.mark.vcr()
 def test_bedrock_agent_kickoff_structured_output_without_tools():
     """
     Test that agent kickoff returns structured output without tools.
@@ -841,11 +865,38 @@ def test_bedrock_agent_kickoff_structured_output_without_tools():
         key_points: list[str] = Field(description="Key insights from the analysis")
         summary: str = Field(description="Brief summary of findings")
 
+    llm = LLM(model="bedrock/us.anthropic.claude-sonnet-4-6")
+    mock_converse = _install_async_bedrock_client(
+        llm,
+        {
+            "output": {
+                "message": {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "toolUse": {
+                                "toolUseId": "structured-1",
+                                "name": "structured_output",
+                                "input": {
+                                    "topic": "Remote work",
+                                    "key_points": ["Flexibility", "Lower commuting time"],
+                                    "summary": "Remote work improves flexibility.",
+                                },
+                            }
+                        }
+                    ],
+                }
+            },
+            "usage": {"inputTokens": 10, "outputTokens": 5, "totalTokens": 15},
+            "stopReason": "tool_use",
+        },
+    )
+
     agent = Agent(
         role="Analyst",
         goal="Provide structured analysis on topics",
         backstory="You are an expert analyst who provides clear, structured insights.",
-        llm=LLM(model="bedrock/us.anthropic.claude-sonnet-4-6"),
+        llm=llm,
         tools=[],
         verbose=True,
     )
@@ -860,9 +911,9 @@ def test_bedrock_agent_kickoff_structured_output_without_tools():
     assert result.pydantic.topic, "Topic should not be empty"
     assert len(result.pydantic.key_points) > 0, "Should have at least one key point"
     assert result.pydantic.summary, "Summary should not be empty"
+    mock_converse.assert_awaited_once()
 
 
-@pytest.mark.vcr()
 def test_bedrock_agent_kickoff_structured_output_with_tools():
     """
     Test that agent kickoff returns structured output after using tools.
@@ -883,11 +934,67 @@ def test_bedrock_agent_kickoff_structured_output_with_tools():
         """Add two numbers together and return the sum."""
         return a + b
 
+    llm = LLM(model="bedrock/us.anthropic.claude-sonnet-4-6")
+    mock_converse = _install_async_bedrock_client(
+        llm,
+        {
+            "output": {
+                "message": {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "toolUse": {
+                                "toolUseId": "add-1",
+                                "name": "add_numbers",
+                                "input": {"a": 15, "b": 27},
+                            }
+                        }
+                    ],
+                }
+            },
+            "usage": {"inputTokens": 10, "outputTokens": 5, "totalTokens": 15},
+            "stopReason": "tool_use",
+        },
+        {
+            "output": {
+                "message": {
+                    "role": "assistant",
+                    "content": [{"text": "The result of 15 + 27 is 42."}],
+                }
+            },
+            "usage": {"inputTokens": 12, "outputTokens": 6, "totalTokens": 18},
+            "stopReason": "end_turn",
+        },
+    )
+    llm._client = MagicMock()
+    llm._client.converse.return_value = {
+        "output": {
+            "message": {
+                "role": "assistant",
+                "content": [
+                    {
+                        "toolUse": {
+                            "toolUseId": "structured-1",
+                            "name": "structured_output",
+                            "input": {
+                                "operation": "15 + 27",
+                                "result": 42,
+                                "explanation": "The numbers sum to 42.",
+                            },
+                        }
+                    }
+                ],
+            }
+        },
+        "usage": {"inputTokens": 8, "outputTokens": 4, "totalTokens": 12},
+        "stopReason": "tool_use",
+    }
+
     agent = Agent(
         role="Calculator",
         goal="Perform calculations using available tools",
         backstory="You are a calculator assistant that uses tools to compute results.",
-        llm=LLM(model="bedrock/us.anthropic.claude-sonnet-4-6"),
+        llm=llm,
         tools=[add_numbers],
         verbose=True,
     )
@@ -902,6 +1009,7 @@ def test_bedrock_agent_kickoff_structured_output_with_tools():
     assert result.pydantic.result == 42, f"Expected result 42 but got {result.pydantic.result}"
     assert result.pydantic.operation, "Operation should not be empty"
     assert result.pydantic.explanation, "Explanation should not be empty"
+    assert mock_converse.await_count == 2
 
 
 def test_bedrock_groups_three_tool_results():

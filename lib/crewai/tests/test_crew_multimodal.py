@@ -4,6 +4,7 @@ Tests crew.kickoff(input_files={...}) across different providers and file types.
 """
 
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -107,6 +108,25 @@ def _create_analyst_crew(llm: LLM) -> Crew:
         agent=agent,
     )
     return Crew(agents=[agent], tasks=[task], verbose=False)
+
+
+def _install_async_bedrock_client(llm: LLM) -> AsyncMock:
+    """Install an offline Bedrock client that captures multimodal requests."""
+    mock_converse = AsyncMock(
+        return_value={
+            "output": {
+                "message": {
+                    "role": "assistant",
+                    "content": [{"text": "The supplied file was analyzed."}],
+                }
+            },
+            "usage": {"inputTokens": 10, "outputTokens": 5, "totalTokens": 15},
+            "stopReason": "end_turn",
+        }
+    )
+    llm._async_client = MagicMock(converse=mock_converse)
+    llm._async_client_initialized = True
+    return mock_converse
 
 
 class TestCrewMultimodalOpenAI:
@@ -297,29 +317,31 @@ class TestCrewMultimodalGemini:
 class TestCrewMultimodalBedrock:
     """Test Crew with input_files using Bedrock models."""
 
-    @pytest.mark.vcr()
     @pytest.mark.parametrize("model", BEDROCK_MODELS)
     def test_image_file(self, model: str, image_file: ImageFile) -> None:
         """Test crew can process an image file."""
         llm = LLM(model=model)
+        mock_converse = _install_async_bedrock_client(llm)
         crew = _create_analyst_crew(llm)
 
         result = crew.kickoff(input_files={"chart": image_file})
 
         assert result.raw
         assert len(result.raw) > 0
+        assert "image" in str(mock_converse.await_args.kwargs["messages"])
 
-    @pytest.mark.vcr()
     @pytest.mark.parametrize("model", BEDROCK_MODELS)
     def test_pdf_file(self, model: str, pdf_file: PDFFile) -> None:
         """Test crew can process a PDF file."""
         llm = LLM(model=model)
+        mock_converse = _install_async_bedrock_client(llm)
         crew = _create_analyst_crew(llm)
 
         result = crew.kickoff(input_files={"document": pdf_file})
 
         assert result.raw
         assert len(result.raw) > 0
+        assert "document" in str(mock_converse.await_args.kwargs["messages"])
 
 
 class TestCrewMultimodalFileTypes:

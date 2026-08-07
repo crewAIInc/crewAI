@@ -35,6 +35,7 @@ def create_mock_llm() -> Mock:
     """
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Hello! This is a test response."
+    mock_llm.acall.return_value = "Hello! This is a test response."
     mock_llm.stop = []
     mock_llm.model = "gpt-4o-mini"
     mock_llm.supports_stop_words.return_value = True
@@ -134,7 +135,7 @@ def test_crew_execution_span_in_flow_with_share_crew():
     flow.kickoff()
 
     assert flow.state.result != ""
-    mock_llm.call.assert_called()
+    mock_llm.acall.assert_awaited()
 
 
 def test_crew_execution_span_not_set_in_flow_without_share_crew():
@@ -179,7 +180,7 @@ def test_crew_execution_span_not_set_in_flow_without_share_crew():
     flow.kickoff()
 
     assert flow.state.result != ""
-    mock_llm.call.assert_called()
+    mock_llm.acall.assert_awaited()
 
 
 def test_multiple_crews_in_flow_span_lifecycle():
@@ -190,9 +191,11 @@ def test_multiple_crews_in_flow_span_lifecycle():
     """
     mock_llm_1 = create_mock_llm()
     mock_llm_1.call.return_value = "First crew result"
+    mock_llm_1.acall.return_value = "First crew result"
 
     mock_llm_2 = create_mock_llm()
     mock_llm_2.call.return_value = "Second crew result"
+    mock_llm_2.acall.return_value = "Second crew result"
 
     class SampleMultiCrewFlow(Flow[SimpleState]):
         @start()
@@ -252,8 +255,8 @@ def test_multiple_crews_in_flow_span_lifecycle():
 
     assert flow.state.result != ""
     assert "+" in flow.state.result
-    mock_llm_1.call.assert_called()
-    mock_llm_2.call.assert_called()
+    mock_llm_1.acall.assert_awaited()
+    mock_llm_2.acall.assert_awaited()
 
 
 @pytest.mark.skip(
@@ -304,4 +307,4 @@ async def test_crew_execution_span_in_async_flow():
     await flow.kickoff_async()
 
     assert flow.state.result != ""
-    mock_llm.call.assert_called()
+    mock_llm.acall.assert_awaited()
