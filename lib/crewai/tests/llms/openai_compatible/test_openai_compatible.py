@@ -95,6 +95,14 @@ class TestProviderRegistry:
         assert config.api_key_env == "DASHSCOPE_API_KEY"
         assert config.api_key_required is True
 
+    def test_groq_config(self):
+        """Test Groq provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["groq"]
+        assert config.base_url == "https://api.groq.com/openai/v1"
+        assert config.api_key_env == "GROQ_API_KEY"
+        assert config.base_url_env == "GROQ_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -270,6 +278,13 @@ class TestLLMIntegration:
             llm = LLM(model="dashscope/qwen-turbo")
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "dashscope"
+
+    def test_llm_creates_openai_compatible_for_groq(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for Groq."""
+        with patch.dict(os.environ, {"GROQ_API_KEY": "test-key"}):
+            llm = LLM(model="groq/llama-3.3-70b-versatile")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "groq"
 
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""
