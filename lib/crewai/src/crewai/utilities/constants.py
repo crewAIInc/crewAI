@@ -12,19 +12,27 @@ from pydantic_core import CoreSchema
 
 
 __all__ = [
+    "ANTIGRAVITY_ENV_VARS",
+    "AUGMENT_ENV_VARS",
     "CC_ENV_VAR",
+    "CC_ENV_VARS",
     "CI_ENV_VARS",
+    "CLINE_ENV_VARS",
     "CODEX_ENV_VARS",
     "CODING_AGENT_ENV_MARKERS",
     "CONTAINER_ENV_VARS",
     "CREWAI_TRAINED_AGENTS_FILE_ENV",
     "CURSOR_ENV_VARS",
     "EMITTER_COLOR",
+    "GEMINI_CLI_ENV_VARS",
+    "GENERIC_AGENT_ENV_VARS",
     "HOSTED_IDE_ENV_VARS",
+    "JUNIE_ENV_VARS",
     "KNOWLEDGE_DIRECTORY",
     "MAX_FILE_NAME_LENGTH",
     "NOTEBOOK_ENV_VARS",
     "NOT_SPECIFIED",
+    "OPENCODE_ENV_VARS",
     "PAAS_ENV_VARS",
     "RUNTIME_CONTEXT_ENV_MARKERS",
     "SERVERLESS_ENV_VARS",
@@ -42,6 +50,7 @@ CODEX_ENV_VARS: Final[tuple[str, ...]] = (
     "CODEX_SANDBOX_NETWORK_DISABLED",
     "CODEX_THREAD_ID",
 )
+CC_ENV_VARS: Final[tuple[str, ...]] = (CC_ENV_VAR, "CLAUDE_CODE")
 CURSOR_ENV_VARS: Final[tuple[str, ...]] = (
     "CURSOR_AGENT",
     "CURSOR_EXTENSION_HOST_ROLE",
@@ -49,6 +58,20 @@ CURSOR_ENV_VARS: Final[tuple[str, ...]] = (
     "CURSOR_TRACE_ID",
     "CURSOR_WORKSPACE_LABEL",
 )
+ANTIGRAVITY_ENV_VARS: Final[tuple[str, ...]] = (
+    "ANTIGRAVITY_AGENT",
+    "ANTIGRAVITY_CLI_ALIAS",
+)
+AUGMENT_ENV_VARS: Final[tuple[str, ...]] = ("AUGMENT_AGENT",)
+CLINE_ENV_VARS: Final[tuple[str, ...]] = ("CLINE_ACTIVE",)
+GEMINI_CLI_ENV_VARS: Final[tuple[str, ...]] = ("GEMINI_CLI",)
+JUNIE_ENV_VARS: Final[tuple[str, ...]] = ("JUNIE_DATA", "JUNIE_SHIM_PATH")
+OPENCODE_ENV_VARS: Final[tuple[str, ...]] = ("OPENCODE", "OPENCODE_CLIENT")
+
+# Proposed cross-vendor marker (agentsmd/agents.md#136). Checked last and
+# reported as "other": it says an assistant is present without naming one, and
+# reading its value to find out would put an arbitrary string in telemetry.
+GENERIC_AGENT_ENV_VARS: Final[tuple[str, ...]] = ("AI_AGENT",)
 
 # Ordered (name, env vars) pairs for identifying the AI coding assistant a
 # process is running under. Reuses the sets above and keeps the same precedence
@@ -69,11 +92,33 @@ CURSOR_ENV_VARS: Final[tuple[str, ...]] = (
 #      a leftover config value would mislabel ordinary human executions.
 #
 # Extend the shared sets above rather than adding a parallel tuple here, so both
-# detection paths pick the new markers up together.
+# detection paths pick the new markers up together. Entries past the first three
+# have no ``get_env_context()`` event of their own yet and fall to
+# ``DefaultEnvEvent`` there.
+#
+# Markers below the first three were taken from the published detection matrix
+# at vercel/detect-agent (agents.json), cross-checked against the proposal in
+# agentsmd/agents.md#136 and microsoft/vscode#311734. Rule 2 excluded several
+# entries those sources list: Goose's ``GOOSE_PROVIDER`` and Copilot's
+# ``COPILOT_MODEL`` / ``COPILOT_GITHUB_TOKEN`` are user configuration, and a
+# committed ``.env`` carrying one would relabel every ordinary run. Replit's
+# ``REPL_ID`` is a hosted environment rather than an assistant, so it stays in
+# HOSTED_IDE_ENV_VARS.
+#
+# The assistants that spawn inside another editor's terminal are ordered ahead
+# of Cursor for the same reason Codex is: CURSOR_* is set for every integrated
+# terminal, so checking Cursor first would mask anything running inside it.
 CODING_AGENT_ENV_MARKERS: Final[tuple[tuple[str, tuple[str, ...]], ...]] = (
-    ("claude_code", (CC_ENV_VAR,)),
+    ("claude_code", CC_ENV_VARS),
     ("codex", CODEX_ENV_VARS),
+    ("cline", CLINE_ENV_VARS),
+    ("gemini_cli", GEMINI_CLI_ENV_VARS),
+    ("augment", AUGMENT_ENV_VARS),
+    ("opencode", OPENCODE_ENV_VARS),
+    ("antigravity", ANTIGRAVITY_ENV_VARS),
+    ("junie", JUNIE_ENV_VARS),
     ("cursor", CURSOR_ENV_VARS),
+    ("other", GENERIC_AGENT_ENV_VARS),
 )
 
 # Markers for *where* a process runs, kept separate from which assistant is

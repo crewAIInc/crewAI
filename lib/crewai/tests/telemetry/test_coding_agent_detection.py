@@ -12,10 +12,18 @@ from crewai.telemetry.utils import (
     detect_runtime_context,
 )
 from crewai.utilities.constants import (
+    ANTIGRAVITY_ENV_VARS,
+    AUGMENT_ENV_VARS,
     CC_ENV_VAR,
+    CC_ENV_VARS,
+    CLINE_ENV_VARS,
     CODEX_ENV_VARS,
     CODING_AGENT_ENV_MARKERS,
     CURSOR_ENV_VARS,
+    GEMINI_CLI_ENV_VARS,
+    GENERIC_AGENT_ENV_VARS,
+    JUNIE_ENV_VARS,
+    OPENCODE_ENV_VARS,
     RUNTIME_CONTEXT_ENV_MARKERS,
 )
 
@@ -161,15 +169,33 @@ def test_precedence_matches_get_env_context(clean_env):
         assert detect_coding_agent() == expected, markers
 
 
-def test_config_style_variables_are_not_used_as_markers():
+@pytest.mark.parametrize(
+    "config_var",
+    [
+        "AIDER_MODEL",
+        "COPILOT_GITHUB_TOKEN",
+        "COPILOT_MODEL",
+        "GOOSE_PROVIDER",
+    ],
+)
+def test_config_style_variables_are_not_used_as_markers(config_var):
     """Persistent user config must never be treated as a session marker.
 
     crewai loads dotenv files on normal runs, so a committed AIDER_MODEL or
-    similar would mislabel ordinary human executions.
+    GOOSE_PROVIDER would mislabel ordinary human executions. Published
+    detection matrices list several of these; they are deliberately excluded
+    here rather than copied wholesale.
     """
     all_vars = {var for _, env_vars in CODING_AGENT_ENV_MARKERS for var in env_vars}
 
-    assert "AIDER_MODEL" not in all_vars
+    assert config_var not in all_vars
+
+
+def test_hosted_environments_are_not_reported_as_assistants():
+    """REPL_ID marks a hosted environment, not an assistant driving the run."""
+    all_vars = {var for _, env_vars in CODING_AGENT_ENV_MARKERS for var in env_vars}
+
+    assert "REPL_ID" not in all_vars
 
 
 def test_every_marker_comes_from_a_verified_set():
@@ -180,13 +206,62 @@ def test_every_marker_comes_from_a_verified_set():
     Adding an assistant means extending the canonical sets, which keeps both
     detection paths in sync.
     """
-    verified = {CC_ENV_VAR, *CODEX_ENV_VARS, *CURSOR_ENV_VARS}
+    verified = {
+        *ANTIGRAVITY_ENV_VARS,
+        *AUGMENT_ENV_VARS,
+        *CC_ENV_VARS,
+        *CLINE_ENV_VARS,
+        *CODEX_ENV_VARS,
+        *CURSOR_ENV_VARS,
+        *GEMINI_CLI_ENV_VARS,
+        *GENERIC_AGENT_ENV_VARS,
+        *JUNIE_ENV_VARS,
+        *OPENCODE_ENV_VARS,
+    }
     declared = {var for _, env_vars in CODING_AGENT_ENV_MARKERS for var in env_vars}
 
     assert declared == verified, (
-        "markers must come from CC_ENV_VAR / CODEX_ENV_VARS / CURSOR_ENV_VARS; "
+        "markers must come from the canonical per-assistant sets; "
         f"unverified names present: {sorted(declared - verified)}"
     )
+
+
+def test_generic_marker_is_the_last_resort(clean_env):
+    """AI_AGENT says an assistant is present without naming which one.
+
+    A named marker must win, so the generic entry cannot mask a specific one.
+    """
+    clean_env.setenv("AI_AGENT", "1")
+    assert detect_coding_agent() == "other"
+
+    clean_env.setenv("CLINE_ACTIVE", "true")
+    assert detect_coding_agent() == "cline"
+
+
+def test_generic_marker_value_is_never_reported(clean_env):
+    """Its value is an arbitrary vendor string, so it is never read."""
+    clean_env.setenv("AI_AGENT", "some-unreleased-tool/2.0")
+
+    assert detect_coding_agent() == "other"
+
+
+def test_terminal_bound_assistants_outrank_cursor(clean_env):
+    """CURSOR_* is set for every integrated terminal.
+
+    Checking Cursor first would report cursor for anything spawned inside it,
+    the same trap Codex already had to be ordered around.
+    """
+    clean_env.setenv("CURSOR_TRACE_ID", "t-1")
+
+    for marker, expected in (
+        ("CLINE_ACTIVE", "cline"),
+        ("GEMINI_CLI", "gemini_cli"),
+        ("AUGMENT_AGENT", "augment"),
+        ("OPENCODE_CLIENT", "opencode"),
+    ):
+        clean_env.setenv(marker, "1")
+        assert detect_coding_agent() == expected, marker
+        clean_env.delenv(marker)
 
 
 def test_concurrent_attach_registers_the_processor_once(isolated_telemetry, clean_env):
