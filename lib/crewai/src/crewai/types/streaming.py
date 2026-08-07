@@ -342,7 +342,7 @@ class StreamingOutputBase(Generic[T]):
         async_iterator: AsyncIterator[StreamChunk] | None = None,
     ) -> None:
         """Initialize streaming output base."""
-        self._result: T | None = None
+        self._result: T | object = _MISSING
         self._completed: bool = False
         self._chunks: list[StreamChunk] = []
         self._error: Exception | None = None
@@ -370,9 +370,9 @@ class StreamingOutputBase(Generic[T]):
             )
         if self._error is not None:
             raise self._error
-        if self._result is None:
+        if self._result is _MISSING:
             raise RuntimeError("No result available")
-        return self._result
+        return self._result  # type: ignore[return-value]
 
     @property
     def is_completed(self) -> bool:
@@ -553,8 +553,8 @@ class CrewStreamingOutput(StreamingOutputBase["CrewOutput"]):
             raise self._error
         if self._results is not None:
             return self._results
-        if self._result is not None:
-            return [self._result]
+        if self._result is not _MISSING:
+            return [self._result]  # type: ignore[list-item]
         raise RuntimeError("No results available")
 
     def _set_results(self, results: list[CrewOutput]) -> None:
