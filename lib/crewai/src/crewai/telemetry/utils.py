@@ -105,19 +105,19 @@ def detect_runtime_context() -> str:
         "unknown" when that check cannot be made. The result is always a member
         of KNOWN_RUNTIME_CONTEXTS.
     """
+    # Presence, not truthiness: a platform that exports an empty CI= is still
+    # CI, unlike the assistant markers where an empty value means the tool set
+    # a placeholder rather than claiming the session.
     for context_name, env_vars in RUNTIME_CONTEXT_ENV_MARKERS:
-        if any(os.environ.get(env_var) for env_var in env_vars):
+        if any(env_var in os.environ for env_var in env_vars):
             return context_name
 
     for env_var, expected, context_name in _EDITOR_TERM_MARKERS:
         if os.environ.get(env_var) == expected:
             return context_name
 
-    try:
-        if os.path.exists(_DOCKER_ENV_PATH):
-            return "container"
-    except OSError:
-        pass
+    if os.path.exists(_DOCKER_ENV_PATH):
+        return "container"
 
     try:
         return "interactive" if sys.stdout.isatty() else "non_interactive"

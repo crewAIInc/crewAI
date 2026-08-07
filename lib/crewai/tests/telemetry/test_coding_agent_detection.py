@@ -577,3 +577,36 @@ def test_all_common_attributes_land_on_exported_spans(clean_env, monkeypatch):
     assert exported["coding_agent"] == "claude_code"
     assert exported["runtime_context"] == "ci"
     assert exported["project_id"] == "proj-123"
+
+
+def test_runtime_markers_are_detected_by_presence(clean_env, monkeypatch):
+    """An empty value still means the platform set the marker.
+
+    Some platforms export a bare `CI=`; truthiness checks would drop those
+    runs to the TTY fallback and mislabel them as ordinary local executions.
+    """
+    monkeypatch.setattr("os.path.exists", lambda path: False)
+    clean_env.setenv("CI", "")
+
+    assert detect_runtime_context() == "ci"
+
+
+def test_managed_platforms_are_not_reported_as_serverless(clean_env):
+    """Long-lived managed platforms must not claim the serverless label.
+
+    DYNO and WEBSITE_INSTANCE_ID mark Heroku dynos and Azure App Service
+    instances, which are containers rather than per-invocation functions.
+    """
+    clean_env.setenv("DYNO", "web.1")
+    assert detect_runtime_context() == "paas"
+
+    clean_env.delenv("DYNO")
+    clean_env.setenv("WEBSITE_INSTANCE_ID", "abc123")
+    assert detect_runtime_context() == "paas"
+
+
+def test_serverless_markers_still_win_over_paas(clean_env):
+    clean_env.setenv("DYNO", "web.1")
+    clean_env.setenv("AWS_LAMBDA_FUNCTION_NAME", "my-fn")
+
+    assert detect_runtime_context() == "serverless"

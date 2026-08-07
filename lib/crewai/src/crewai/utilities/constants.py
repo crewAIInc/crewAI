@@ -25,6 +25,7 @@ __all__ = [
     "MAX_FILE_NAME_LENGTH",
     "NOTEBOOK_ENV_VARS",
     "NOT_SPECIFIED",
+    "PAAS_ENV_VARS",
     "RUNTIME_CONTEXT_ENV_MARKERS",
     "SERVERLESS_ENV_VARS",
     "TRAINED_AGENTS_DATA_FILE",
@@ -98,12 +99,17 @@ CI_ENV_VARS: Final[tuple[str, ...]] = (
     "TRAVIS",
 )
 SERVERLESS_ENV_VARS: Final[tuple[str, ...]] = (
-    "AWS_EXECUTION_ENV",
     "AWS_LAMBDA_FUNCTION_NAME",
-    "DYNO",
     "FUNCTION_TARGET",
     "K_SERVICE",
     "VERCEL",
+)
+# Managed application platforms, kept apart from serverless: their markers are
+# set for long-lived containers rather than per-invocation functions, and
+# checking them under "serverless" would have claimed every Heroku dyno and
+# Azure App Service instance before the container check could see them.
+PAAS_ENV_VARS: Final[tuple[str, ...]] = (
+    "DYNO",
     "WEBSITE_INSTANCE_ID",
 )
 HOSTED_IDE_ENV_VARS: Final[tuple[str, ...]] = (
@@ -123,6 +129,7 @@ CONTAINER_ENV_VARS: Final[tuple[str, ...]] = ("KUBERNETES_SERVICE_HOST",)
 RUNTIME_CONTEXT_ENV_MARKERS: Final[tuple[tuple[str, tuple[str, ...]], ...]] = (
     ("ci", CI_ENV_VARS),
     ("serverless", SERVERLESS_ENV_VARS),
+    ("paas", PAAS_ENV_VARS),
     ("hosted_ide", HOSTED_IDE_ENV_VARS),
     ("notebook", NOTEBOOK_ENV_VARS),
     ("container", CONTAINER_ENV_VARS),
