@@ -510,6 +510,10 @@ class BaseLLM(BaseModel, ABC):
         """
         return False
 
+    def _multimodal_formatter_name(self) -> str:
+        # Content-block schema key for crewai_files. Identity stays on self.provider.
+        return self.provider or self.model
+
     def format_text_content(self, text: str) -> dict[str, Any]:
         """Format text as a content block for the LLM.
 
@@ -869,7 +873,7 @@ class BaseLLM(BaseModel, ABC):
                 )
             return messages
 
-        provider = getattr(self, "provider", None) or getattr(self, "model", "openai")
+        formatter = self._multimodal_formatter_name()
         api = getattr(self, "api", None)
 
         for msg in messages:
@@ -881,7 +885,7 @@ class BaseLLM(BaseModel, ABC):
             text = existing_content if isinstance(existing_content, str) else None
 
             content_blocks = format_multimodal_content(
-                files, provider, api=api, prefer_upload=self.prefer_upload, text=text
+                files, formatter, api=api, prefer_upload=self.prefer_upload, text=text
             )
             if not content_blocks:
                 msg.pop("files", None)

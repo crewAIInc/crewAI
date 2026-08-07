@@ -924,6 +924,12 @@ def test_litellm_path_preserves_provider_from_model_prefix(model, expected_provi
     assert llm.model == model
 
 
+def test_litellm_keeps_provider_but_formats_multimodal_as_openai_schema():
+    llm = LLM(model="anthropic/claude-3-5-haiku-20241022", is_litellm=True)
+    assert llm.provider == "anthropic"
+    assert llm._multimodal_formatter_name() == "openai"
+
+
 def test_unprefixed_models_use_native_sdk():
     """Test that unprefixed models use native SDK when model is in constants."""
     # gpt-4o is in OPENAI_MODELS → Native OpenAI SDK
