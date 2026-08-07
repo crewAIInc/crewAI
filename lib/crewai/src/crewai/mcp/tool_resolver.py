@@ -11,6 +11,7 @@ into a standalone MCPToolResolver. It handles three flavours of MCP reference:
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import contextvars
 import time
 from typing import TYPE_CHECKING, Any, Final, cast
@@ -353,32 +354,37 @@ class MCPToolResolver:
                 ) from e
 
         try:
+            # Flows already run inside asyncio.run(...). Never fall back to
+            # asyncio.run() on this thread when a loop is active — a broad
+            # RuntimeError catch around the worker-thread path used to do that
+            # and re-raised "asyncio.run() cannot be called from a running
+            # event loop" (#6843). Mirror agent_utils' worker-thread pattern.
             try:
-                asyncio.get_running_loop()
-                import concurrent.futures
-
-                ctx = contextvars.copy_context()
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        ctx.run, asyncio.run, _setup_client_and_list_tools()
-                    )
-                    tools_list = future.result()
+                loop = asyncio.get_running_loop()
             except RuntimeError:
-                try:
-                    tools_list = asyncio.run(_setup_client_and_list_tools())
-                except RuntimeError as e:
-                    error_msg = str(e).lower()
-                    if "cancel scope" in error_msg or "task" in error_msg:
-                        raise ConnectionError(
-                            "MCP connection failed due to event loop cleanup issues. "
-                            "This may be due to authentication errors or server unavailability."
-                        ) from e
-                    raise
-                except asyncio.CancelledError as e:
+                loop = None
+
+            coro = _setup_client_and_list_tools()
+            try:
+                if loop is not None and loop.is_running():
+                    ctx = contextvars.copy_context()
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                        tools_list = executor.submit(ctx.run, asyncio.run, coro).result()
+                else:
+                    tools_list = asyncio.run(coro)
+            except RuntimeError as e:
+                error_msg = str(e).lower()
+                if "cancel scope" in error_msg or "task" in error_msg:
                     raise ConnectionError(
-                        "MCP connection was cancelled. This may indicate an authentication "
-                        "error or server unavailability."
+                        "MCP connection failed due to event loop cleanup issues. "
+                        "This may be due to authentication errors or server unavailability."
                     ) from e
+                raise
+            except asyncio.CancelledError as e:
+                raise ConnectionError(
+                    "MCP connection was cancelled. This may indicate an authentication "
+                    "error or server unavailability."
+                ) from e
 
             if mcp_config.tool_filter:
                 filtered_tools = []
