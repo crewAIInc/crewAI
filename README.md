@@ -66,7 +66,7 @@ standard for production-ready agentic automation.
 
 # CrewAI AMP Suite
 
-For organizations that need a commercial control plane around CrewAI, [CrewAI AMP Suite](https://www.crewai.com/enterprise) adds managed deployment, observability, governance, security, and enterprise support.
+For organizations that need a commercial control plane around CrewAI, [CrewAI AMP Suite](https://crewai.com/amp) adds managed deployment, observability, governance, security, and enterprise support.
 
 You can try one part of the suite, the [Crew Control Plane, for free](https://app.crewai.com).
 
@@ -88,8 +88,12 @@ intelligent automations.
 - [Build with AI](#build-with-ai)
 - [Why CrewAI?](#why-crewai)
 - [Getting Started](#getting-started)
+  - [Learning Resources](#learning-resources)
+  - [Understanding Flows and Crews](#understanding-flows-and-crews)
+  - [Installation](#1-installation)
+  - [Setting Up Your Crew](#2-setting-up-your-crew-with-the-yaml-configuration)
+  - [Running Your Crew](#3-running-your-crew)
 - [Key Features](#key-features)
-- [Understanding Flows and Crews](#understanding-flows-and-crews)
 - [Examples](#examples)
   - [Quick Tutorial](#quick-tutorial)
   - [Write Job Descriptions](#write-job-descriptions)
@@ -151,9 +155,7 @@ Setup and run your first CrewAI agents by following this tutorial.
 
 [![CrewAI Getting Started Tutorial](https://img.youtube.com/vi/-kSOTtYzgEw/hqdefault.jpg)](https://www.youtube.com/watch?v=-kSOTtYzgEw "CrewAI Getting Started Tutorial")
 
-###
-
-Learning Resources
+### Learning Resources
 
 Learn CrewAI through our comprehensive courses:
 
@@ -307,7 +309,7 @@ research_task:
   description: >
     Conduct a thorough research about {topic}
     Make sure you find any interesting and relevant information given
-    the current year is 2025.
+    the current year is 2026.
   expected_output: >
     A list with 10 bullet points of the most relevant information about {topic}
   agent: researcher
@@ -317,7 +319,7 @@ reporting_task:
     Review the context you got and expand each topic into a full section for a report.
     Make sure the report is detailed and contains any and all relevant information.
   expected_output: >
-    A fully fledge reports with the mains topics, each with a full section of information.
+    A fully fledged report with the main topics, each with a full section of information.
     Formatted as markdown without '```'
   agent: reporting_analyst
   output_file: report.md
@@ -430,7 +432,7 @@ crewai update
 
 You should see the output in the console and the `report.md` file should be created in the root of your project with the full final report.
 
-In addition to the sequential process, you can use the hierarchical process, which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results. [See more about the processes here](https://docs.crewai.com/core-concepts/Processes/).
+In addition to the sequential process, you can use the hierarchical process, which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results. [See more about the processes here](https://docs.crewai.com/en/concepts/processes).
 
 ## Key Features
 
@@ -451,7 +453,7 @@ Choose CrewAI to build powerful, adaptable, and production-ready AI automations.
 You can test different real life examples of AI crews in the [CrewAI-examples repo](https://github.com/crewAIInc/crewAI-examples?tab=readme-ov-file):
 
 - [Landing Page Generator](https://github.com/crewAIInc/crewAI-examples/tree/main/crews/landing_page_generator)
-- [Having Human input on the execution](https://docs.crewai.com/how-to/Human-Input-on-Execution)
+- [Having Human input on the execution](https://docs.crewai.com/en/learn/human-input-on-execution)
 - [Trip Planner](https://github.com/crewAIInc/crewAI-examples/tree/main/crews/trip_planner)
 - [Stock Analysis](https://github.com/crewAIInc/crewAI-examples/tree/main/crews/stock_analysis)
 
@@ -483,7 +485,7 @@ CrewAI's power truly shines when combining Crews with Flows to create sophistica
 CrewAI flows support logical operators like `or_` and `and_` to combine multiple conditions. This can be used with `@start`, `@listen`, or `@router` decorators to create complex triggering conditions.
 
 - `or_`: Triggers when any of the specified conditions are met.
-- `and_`Triggers when all of the specified conditions are met.
+- `and_`: Triggers when all of the specified conditions are met.
 
 Here's how you can orchestrate multiple Crews within a Flow:
 
@@ -580,7 +582,7 @@ This example demonstrates how to:
 
 CrewAI supports using various LLMs through a variety of connection options. By default your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents to use a local model via the Ollama tool.
 
-Please refer to the [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring your agents' connections to models.
+Please refer to the [Connect CrewAI to LLMs](https://docs.crewai.com/en/learn/llm-connections) page for details on configuring your agents' connections to models.
 
 ## When to Use CrewAI
 
@@ -596,13 +598,26 @@ CrewAI is especially useful when you want to:
 
 ## Contribution
 
-CrewAI is open-source and we welcome contributions. If you're looking to contribute, please:
+CrewAI is open-source and we welcome contributions. See
+[`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md) for the full setup guide,
+branching conventions, and PR checklist.
 
-- Fork the repository.
-- Create a new branch for your feature.
-- Add your feature or improvement.
-- Send a pull request.
-- We appreciate your input!
+Quick start:
+
+```bash
+git clone https://github.com/crewAIInc/crewAI.git
+cd crewAI
+uv sync --all-groups --all-extras
+uv run pre-commit install
+```
+
+```bash
+# Tests
+uv run pytest lib/crewai/tests/ -x -q
+
+# Type checks
+uv run mypy lib/
+```
 
 ### Contributing to the docs
 
@@ -614,51 +629,8 @@ immediately and are frozen into a new versioned snapshot under
 `docs/v<X.Y.Z>/` at the next release cut. Frozen snapshots are immutable — CI
 rejects PRs that modify them without a `[docs-freeze]` title prefix. The
 release CLI (`devtools release`) handles the freeze automatically; see
-[`AGENTS.md`](AGENTS.md) for the full contributor guide and
-[`RELEASING.md`](RELEASING.md) for the release-cut runbook.
-
-### Installing Dependencies
-
-```bash
-uv lock
-uv sync
-```
-
-### Virtual Env
-
-```bash
-uv venv
-```
-
-### Pre-commit hooks
-
-```bash
-pre-commit install
-```
-
-### Running Tests
-
-```bash
-uv run pytest .
-```
-
-### Running static type checks
-
-```bash
-uvx mypy src
-```
-
-### Packaging
-
-```bash
-uv build
-```
-
-### Installing Locally
-
-```bash
-uv pip install dist/*.tar.gz
-```
+[`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md) for contributor guidance and
+[`lib/devtools/README.md`](lib/devtools/README.md) for release tooling.
 
 ## Telemetry
 
@@ -729,7 +701,7 @@ A: CrewAI is a lean, fast Python framework built specifically for orchestrating 
 
 ### Q: How do I install CrewAI?
 
-A: Install CrewAI using pip:
+A: Install CrewAI with [UV](https://docs.astral.sh/uv/):
 
 ```shell
 uv pip install crewai
@@ -751,7 +723,7 @@ A: Yes. CrewAI excels at both simple and highly complex real-world scenarios, of
 
 ### Q: Can I use CrewAI with local AI models?
 
-A: Absolutely! CrewAI supports various language models, including local ones. Tools like Ollama and LM Studio allow seamless integration. Check the [LLM Connections documentation](https://docs.crewai.com/how-to/LLM-Connections/) for more details.
+A: Absolutely! CrewAI supports various language models, including local ones. Tools like Ollama and LM Studio allow seamless integration. Check the [LLM Connections documentation](https://docs.crewai.com/en/learn/llm-connections) for more details.
 
 ### Q: What makes Crews different from Flows?
 
@@ -771,7 +743,7 @@ A: Check out practical examples in the [CrewAI-examples repository](https://gith
 
 ### Q: How can I contribute to CrewAI?
 
-A: Contributions are warmly welcomed! Fork the repository, create your branch, implement your changes, and submit a pull request. See the Contribution section of the README for detailed guidelines.
+A: Contributions are warmly welcomed! Fork the repository, create your branch, implement your changes, and submit a pull request. See [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md) for detailed guidelines.
 
 ### Q: What additional features does CrewAI AMP offer?
 
