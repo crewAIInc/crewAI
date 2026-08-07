@@ -193,6 +193,7 @@ def convert_to_model(
     output_json: type[BaseModel] | None,
     agent: Agent | BaseAgent | None = None,
     converter_cls: type[Converter] | None = None,
+    max_retries: int = 0,
 ) -> dict[str, Any] | BaseModel | str:
     """Convert a result to a Pydantic model or JSON.
 
@@ -204,6 +205,9 @@ def convert_to_model(
         output_json: The Pydantic model class to convert to JSON.
         agent: The agent instance.
         converter_cls: The converter class to use.
+        max_retries: Maximum number of LLM-based retry attempts when validation
+            fails. Each retry feeds the validation error back to the LLM so it
+            can self-correct. Defaults to 0 (no retry, backward compatible).
 
     Returns:
         The converted result as a dict, BaseModel, or original string.
@@ -218,12 +222,13 @@ def convert_to_model(
         result = result.model_dump_json()
 
     if converter_cls:
-        return convert_with_instructions(
+        return _convert_with_retry(
             result=result,
             model=model,
             is_json_output=bool(output_json),
             agent=agent,
             converter_cls=converter_cls,
+            max_retries=max_retries,
         )
 
     try:
@@ -231,22 +236,26 @@ def convert_to_model(
         return validate_model(
             result=escaped_result, model=model, is_json_output=bool(output_json)
         )
-    except json.JSONDecodeError:
-        return handle_partial_json(
+    except json.JSONDecodeError as e:
+        return _handle_and_retry(
             result=result,
             model=model,
             is_json_output=bool(output_json),
             agent=agent,
             converter_cls=converter_cls,
+            max_retries=max_retries,
+            last_error=str(e),
         )
 
-    except ValidationError:
-        return handle_partial_json(
+    except ValidationError as e:
+        return _handle_and_retry(
             result=result,
             model=model,
             is_json_output=bool(output_json),
             agent=agent,
             converter_cls=converter_cls,
+            max_retries=max_retries,
+            last_error=str(e),
         )
 
     except Exception as e:
@@ -256,6 +265,137 @@ def convert_to_model(
                 color="red",
             )
         return result
+
+
+def _handle_and_retry(
+    result: str,
+    model: type[BaseModel],
+    is_json_output: bool,
+    agent: Agent | BaseAgent | None,
+    converter_cls: type[Converter] | None = None,
+    max_retries: int = 0,
+    last_error: str | None = None,
+) -> dict[str, Any] | BaseModel | str:
+    """Handle validation failure with optional LLM-based retry.
+
+    First attempts ``handle_partial_json`` to extract and validate JSON from
+    the result text. If that fails and ``max_retries > 0``, feeds the
+    validation error back to the LLM via ``convert_with_instructions``,
+    retrying up to ``max_retries`` times.
+
+    Args:
+        result: The original result string from the agent.
+        model: The Pydantic model class to convert to.
+        is_json_output: Whether to return a dict or Pydantic model.
+        agent: The agent instance (required for LLM-based conversion).
+        converter_cls: Optional converter class override.
+        max_retries: Maximum number of LLM retry attempts (0 = no LLM call).
+        last_error: Original validation error message from the first attempt.
+
+    Returns:
+        The converted result, or the original string if all attempts fail.
+    """
+    # First attempt: extract JSON from text and validate
+    converted = handle_partial_json(
+        result=result,
+        model=model,
+        is_json_output=is_json_output,
+        agent=agent,
+        converter_cls=converter_cls,
+    )
+
+    # If already valid, return immediately
+    if isinstance(converted, (dict, BaseModel)):
+        return converted
+
+    # No LLM retries requested: return best-effort result
+    if max_retries <= 0:
+        return converted
+
+    # LLM-based retry loop
+    return _convert_with_retry(
+        result=result,
+        model=model,
+        is_json_output=is_json_output,
+        agent=agent,
+        converter_cls=converter_cls,
+        max_retries=max_retries,
+        last_error=last_error,
+    )
+
+
+def _convert_with_retry(
+    result: str,
+    model: type[BaseModel],
+    is_json_output: bool,
+    agent: Agent | BaseAgent | None,
+    converter_cls: type[Converter] | None = None,
+    max_retries: int = 0,
+    last_error: str | None = None,
+) -> dict[str, Any] | BaseModel | str:
+    """Call ``convert_with_instructions`` with retry on validation failure.
+
+    Each retry appends the validation error to the result text so the LLM
+    can see what went wrong and self-correct.
+
+    Args:
+        result: The original result string from the agent.
+        model: The Pydantic model class to convert to.
+        is_json_output: Whether to return a dict or Pydantic model.
+        agent: The agent instance.
+        converter_cls: Optional converter class override.
+        max_retries: Maximum number of retry attempts.
+        last_error: Original validation error to include from the first retry.
+
+    Returns:
+        The converted result, or the original string if all retries fail.
+    """
+    current_result = result
+    converted: dict[str, Any] | BaseModel | str | ConverterError = result
+
+    for attempt in range(1, max(max_retries, 1) + 1):
+        # Include the validation error so the LLM can self-correct
+        if last_error:
+            current_result = (
+                f"{result}\n\n"
+                f"[Validation Error (attempt {attempt}/{max(max_retries, 1)})]: {last_error}\n"
+                f"Please fix the JSON to match the expected schema and try again."
+            )
+
+        converted = convert_with_instructions(
+            result=current_result,
+            model=model,
+            is_json_output=is_json_output,
+            agent=agent,
+            converter_cls=converter_cls,
+        )
+
+        # Success: return the valid result
+        if isinstance(converted, (dict, BaseModel)):
+            return converted
+
+        # ConverterError: extract error message for next retry
+        if isinstance(converted, ConverterError):
+            last_error = str(converted)
+            if agent and getattr(agent, "verbose", True):
+                PRINTER.print(
+                    content=(
+                        f"Output validation failed (attempt {attempt}/"
+                        f"{max(max_retries, 1)}): {last_error}"
+                    ),
+                    color="yellow",
+                )
+
+    # All retries exhausted
+    if agent and getattr(agent, "verbose", True):
+        PRINTER.print(
+            content=(
+                f"Output validation failed after {max(max_retries, 1)} "
+                f"attempt(s). Returning best-effort result."
+            ),
+            color="red",
+        )
+    return converted if isinstance(converted, ConverterError) else result
 
 
 def validate_model(
@@ -395,11 +535,16 @@ async def async_convert_to_model(
     output_json: type[BaseModel] | None,
     agent: Agent | BaseAgent | None = None,
     converter_cls: type[Converter] | None = None,
+    max_retries: int = 0,
 ) -> dict[str, Any] | BaseModel | str:
     """Async equivalent of ``convert_to_model`` — uses native ``acall``.
 
     Mirrors the dispatch semantics of the sync version exactly; the only
     difference is that LLM-bearing branches are awaited.
+
+    Args:
+        max_retries: Maximum number of LLM-based retry attempts when validation
+            fails. Defaults to 0 (no retry, backward compatible).
     """
     model = output_pydantic or output_json
     if model is None:
@@ -411,12 +556,13 @@ async def async_convert_to_model(
         result = result.model_dump_json()
 
     if converter_cls:
-        return await async_convert_with_instructions(
+        return await _async_convert_with_retry(
             result=result,
             model=model,
             is_json_output=bool(output_json),
             agent=agent,
             converter_cls=converter_cls,
+            max_retries=max_retries,
         )
 
     try:
@@ -424,13 +570,15 @@ async def async_convert_to_model(
         return validate_model(
             result=escaped_result, model=model, is_json_output=bool(output_json)
         )
-    except (json.JSONDecodeError, ValidationError):
-        return await async_handle_partial_json(
+    except (json.JSONDecodeError, ValidationError) as e:
+        return await _async_handle_and_retry(
             result=result,
             model=model,
             is_json_output=bool(output_json),
             agent=agent,
             converter_cls=converter_cls,
+            max_retries=max_retries,
+            last_error=str(e),
         )
     except Exception as e:
         if agent and getattr(agent, "verbose", True):
@@ -439,6 +587,95 @@ async def async_convert_to_model(
                 color="red",
             )
         return result
+
+
+async def _async_handle_and_retry(
+    result: str,
+    model: type[BaseModel],
+    is_json_output: bool,
+    agent: Agent | BaseAgent | None,
+    converter_cls: type[Converter] | None = None,
+    max_retries: int = 0,
+    last_error: str | None = None,
+) -> dict[str, Any] | BaseModel | str:
+    """Async version of ``_handle_and_retry``."""
+    converted = await async_handle_partial_json(
+        result=result,
+        model=model,
+        is_json_output=is_json_output,
+        agent=agent,
+        converter_cls=converter_cls,
+    )
+
+    if isinstance(converted, (dict, BaseModel)):
+        return converted
+
+    if max_retries <= 0:
+        return converted
+
+    return await _async_convert_with_retry(
+        result=result,
+        model=model,
+        is_json_output=is_json_output,
+        agent=agent,
+        converter_cls=converter_cls,
+        max_retries=max_retries,
+        last_error=last_error,
+    )
+
+
+async def _async_convert_with_retry(
+    result: str,
+    model: type[BaseModel],
+    is_json_output: bool,
+    agent: Agent | BaseAgent | None,
+    converter_cls: type[Converter] | None = None,
+    max_retries: int = 0,
+    last_error: str | None = None,
+) -> dict[str, Any] | BaseModel | str:
+    """Async version of ``_convert_with_retry``."""
+    current_result = result
+    converted: dict[str, Any] | BaseModel | str | ConverterError = result
+
+    for attempt in range(1, max(max_retries, 1) + 1):
+        if last_error:
+            current_result = (
+                f"{result}\n\n"
+                f"[Validation Error (attempt {attempt}/{max(max_retries, 1)})]: {last_error}\n"
+                f"Please fix the JSON to match the expected schema and try again."
+            )
+
+        converted = await async_convert_with_instructions(
+            result=current_result,
+            model=model,
+            is_json_output=is_json_output,
+            agent=agent,
+            converter_cls=converter_cls,
+        )
+
+        if isinstance(converted, (dict, BaseModel)):
+            return converted
+
+        if isinstance(converted, ConverterError):
+            last_error = str(converted)
+            if agent and getattr(agent, "verbose", True):
+                PRINTER.print(
+                    content=(
+                        f"Output validation failed (attempt {attempt}/"
+                        f"{max(max_retries, 1)}): {last_error}"
+                    ),
+                    color="yellow",
+                )
+
+    if agent and getattr(agent, "verbose", True):
+        PRINTER.print(
+            content=(
+                f"Output validation failed after {max(max_retries, 1)} "
+                f"attempt(s). Returning best-effort result."
+            ),
+            color="red",
+        )
+    return converted if isinstance(converted, ConverterError) else result
 
 
 async def async_handle_partial_json(
