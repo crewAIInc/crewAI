@@ -341,9 +341,8 @@ def test_gemini_completion_with_tools():
         await_args = mock_acall.await_args
         assert await_args is not None
 
-        if "tools" in await_args.kwargs:
-            assert await_args.kwargs["tools"] is not None
-            assert len(await_args.kwargs["tools"]) > 0
+        tools = await_args.kwargs["tools"]
+        assert tools
 
 
 def test_gemini_raises_error_when_model_not_supported():
