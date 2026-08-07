@@ -8,19 +8,6 @@ import shutil
 from typing import Any
 
 import click
-from crewai_core.project import (
-    get_or_create_project_id as get_or_create_project_id,
-    get_project_description as get_project_description,
-    get_project_id as get_project_id,
-    get_project_name as get_project_name,
-    get_project_version as get_project_version,
-    parse_toml as parse_toml,
-    read_toml as read_toml,
-)
-from crewai_core.tool_credentials import (
-    build_env_with_all_tool_credentials as build_env_with_all_tool_credentials,
-    build_env_with_tool_repository_credentials as build_env_with_tool_repository_credentials,
-)
 from rich.console import Console
 
 from crewai_cli.version import get_crewai_tools_dependency
@@ -59,6 +46,64 @@ def warn_deprecated_command(*, old: str, new: str) -> None:
 
 console = Console()
 _TEMPLATE_TOKEN_RE = re.compile(r"{{([a-zA-Z_][a-zA-Z0-9_]*)}}")
+
+
+def get_or_create_project_id(*args: Any, **kwargs: Any) -> Any:
+    from crewai_core.project import get_or_create_project_id as implementation
+
+    return implementation(*args, **kwargs)
+
+
+def get_project_description(*args: Any, **kwargs: Any) -> Any:
+    from crewai_core.project import get_project_description as implementation
+
+    return implementation(*args, **kwargs)
+
+
+def get_project_id(*args: Any, **kwargs: Any) -> Any:
+    from crewai_core.project import get_project_id as implementation
+
+    return implementation(*args, **kwargs)
+
+
+def get_project_name(*args: Any, **kwargs: Any) -> Any:
+    from crewai_core.project import get_project_name as implementation
+
+    return implementation(*args, **kwargs)
+
+
+def get_project_version(*args: Any, **kwargs: Any) -> Any:
+    from crewai_core.project import get_project_version as implementation
+
+    return implementation(*args, **kwargs)
+
+
+def parse_toml(*args: Any, **kwargs: Any) -> Any:
+    from crewai_core.project import parse_toml as implementation
+
+    return implementation(*args, **kwargs)
+
+
+def read_toml(*args: Any, **kwargs: Any) -> Any:
+    from crewai_core.project import read_toml as implementation
+
+    return implementation(*args, **kwargs)
+
+
+def build_env_with_all_tool_credentials(*args: Any, **kwargs: Any) -> Any:
+    from crewai_core.tool_credentials import (
+        build_env_with_all_tool_credentials as implementation,
+    )
+
+    return implementation(*args, **kwargs)
+
+
+def build_env_with_tool_repository_credentials(*args: Any, **kwargs: Any) -> Any:
+    from crewai_core.tool_credentials import (
+        build_env_with_tool_repository_credentials as implementation,
+    )
+
+    return implementation(*args, **kwargs)
 
 
 def is_dmn_mode_enabled() -> bool:
