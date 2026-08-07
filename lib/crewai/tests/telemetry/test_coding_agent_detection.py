@@ -61,6 +61,18 @@ def clean_env(monkeypatch):
 
 
 @pytest.fixture
+def otel_enabled(monkeypatch):
+    """Let the SDK build real spans for tests that assert on exported ones.
+
+    The suite runs with OTEL_SDK_DISABLED set, which makes TracerProvider hand
+    out no-op tracers. An export-based assertion then sees zero spans rather
+    than a failed attribute, so it fails only when it happens to run before a
+    test whose fixture flips the variable - which random ordering decides.
+    """
+    monkeypatch.setenv("OTEL_SDK_DISABLED", "false")
+
+
+@pytest.fixture
 def isolated_telemetry(monkeypatch):
     """Build a fresh Telemetry without touching the process-wide singleton.
 
@@ -428,7 +440,7 @@ def test_known_agents_contains_no_pii_shaped_values():
         assert len(name) <= 32, name
 
 
-def test_coding_agent_lands_on_every_exported_span(clean_env):
+def test_coding_agent_lands_on_every_exported_span(clean_env, otel_enabled):
     """End-to-end: the attribute must appear as a *span attribute* on any span.
 
     It cannot be a Resource attribute - the ingestion pipeline preserves only
@@ -465,7 +477,7 @@ def test_coding_agent_lands_on_every_exported_span(clean_env):
     assert "coding_agent" not in exported[0].resource.attributes
 
 
-def test_common_attributes_processor_never_breaks_span_creation(clean_env):
+def test_common_attributes_processor_never_breaks_span_creation(clean_env, otel_enabled):
     """A failure applying attributes must not propagate into user execution."""
     from crewai.telemetry.telemetry import CommonAttributesSpanProcessor
 
@@ -494,7 +506,7 @@ def test_coding_agent_span_emits_once(isolated_telemetry, clean_env, monkeypatch
 
 
 def test_attribute_survives_an_externally_installed_provider(
-    isolated_telemetry, clean_env
+    isolated_telemetry, clean_env, otel_enabled
 ):
     """Spans must keep coding_agent when the app installs its own provider.
 
@@ -626,7 +638,7 @@ def test_common_attributes_are_computed_once(clean_env, monkeypatch):
     assert len(calls) == 1
 
 
-def test_all_common_attributes_land_on_exported_spans(clean_env, monkeypatch):
+def test_all_common_attributes_land_on_exported_spans(clean_env, monkeypatch, otel_enabled):
     """End-to-end: every common attribute survives onto arbitrary spans."""
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import SimpleSpanProcessor
