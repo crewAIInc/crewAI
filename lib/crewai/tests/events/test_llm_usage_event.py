@@ -202,7 +202,9 @@ class _StubLLM(BaseLLM):
 class TestEmitCallCompletedEventPassesUsage:
     @pytest.fixture
     def mock_emit(self):
-        with patch("crewai.llms.base_llm.crewai_event_bus.emit") as mock:
+        from crewai.events.event_bus import crewai_event_bus
+
+        with patch.object(crewai_event_bus, "emit") as mock:
             yield mock
 
     @pytest.fixture
