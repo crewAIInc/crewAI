@@ -19,6 +19,7 @@ class RWLock:
         _cond: Condition variable for coordinating lock access
         _readers: Count of active readers
         _writer: Whether a writer currently holds the lock
+        _waiting_writers: Count of writers waiting to acquire the lock
     """
 
     def __init__(self) -> None:
@@ -26,11 +27,12 @@ class RWLock:
         self._cond = Condition()
         self._readers = 0
         self._writer = False
+        self._waiting_writers = 0
 
     def r_acquire(self) -> None:
-        """Acquire a read lock, blocking if a writer holds the lock."""
+        """Acquire a read lock, blocking if a writer holds or is waiting for the lock."""
         with self._cond:
-            while self._writer:
+            while self._writer or self._waiting_writers > 0:
                 self._cond.wait()
             self._readers += 1
 
@@ -57,9 +59,13 @@ class RWLock:
     def w_acquire(self) -> None:
         """Acquire a write lock, blocking if any readers or writers are active."""
         with self._cond:
-            while self._writer or self._readers > 0:
-                self._cond.wait()
-            self._writer = True
+            self._waiting_writers += 1
+            try:
+                while self._writer or self._readers > 0:
+                    self._cond.wait()
+                self._writer = True
+            finally:
+                self._waiting_writers -= 1
 
     def w_release(self) -> None:
         """Release a write lock and notify all waiting threads."""
