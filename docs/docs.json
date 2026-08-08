@@ -138,7 +138,8 @@
                         "icon": "gear",
                         "pages": [
                           "edge/en/guides/advanced/customizing-prompts",
-                          "edge/en/guides/advanced/fingerprinting"
+                          "edge/en/guides/advanced/fingerprinting",
+                          "edge/en/guides/advanced/security-best-practices"
                         ]
                       },
                       {
