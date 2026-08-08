@@ -39,6 +39,7 @@ claim tasks, submit artifacts, sign wallet messages, or move funds. Keep any
 write-side workflow behind a separate, human-approved application boundary.
 
 ```python
+from crewai import Agent
 from crewai_tools import TaskMarketGetTaskTool, TaskMarketSearchTool
 
 agent = Agent(
@@ -243,5 +244,4 @@ Join our rapidly growing community and receive real-time support:
 - [Discourse](https://community.crewai.com/)
 - [Open an Issue](https://github.com/crewAIInc/crewAI/issues)
 
-Build smarter, faster, and more powerful AI solutionsâ€”powered by CrewAI Tools.
-
+Build smarter, faster, and more powerful AI solutions—powered by CrewAI Tools.

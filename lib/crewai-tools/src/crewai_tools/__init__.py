@@ -324,6 +324,8 @@ __all__ = [
     "SnowflakeSearchTool",
     "SpiderTool",
     "StagehandTool",
+    "TaskMarketGetTaskTool",
+    "TaskMarketSearchTool",
     "TXTSearchTool",
     "TavilyExtractorTool",
     "TavilyGetResearchTool",

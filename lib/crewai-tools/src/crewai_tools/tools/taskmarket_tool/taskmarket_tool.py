@@ -12,7 +12,7 @@ import json
 from decimal import Decimal, InvalidOperation
 from typing import Any, ClassVar, Mapping
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
 from crewai.tools import BaseTool
@@ -55,6 +55,7 @@ class _TaskMarketReadOnlyTool(BaseTool):
 
     @staticmethod
     def _reward_usdc(row: Mapping[str, Any]) -> Decimal:
+        """Normalize a TaskMarket reward into decimal USDC units."""
         raw = row.get("rewardUsdc", row.get("reward", "0"))
         try:
             value = Decimal(str(raw))
@@ -68,6 +69,7 @@ class _TaskMarketReadOnlyTool(BaseTool):
         return value
 
     def _get_json(self, path: str) -> Any:
+        """Fetch and decode one public TaskMarket JSON endpoint."""
         request = Request(
             f"{self.base_url.rstrip('/')}/{path.lstrip('/')}",
             headers={"Accept": "application/json"},
@@ -86,6 +88,7 @@ class _TaskMarketReadOnlyTool(BaseTool):
 
     @staticmethod
     def _public_row(row: Mapping[str, Any]) -> dict[str, Any]:
+        """Return the stable, non-sensitive fields exposed to an agent."""
         tags = row.get("tags") or []
         if isinstance(tags, str):
             tags = [tags]
@@ -116,6 +119,7 @@ class TaskMarketSearchTool(_TaskMarketReadOnlyTool):
         tags: str = "",
         limit: int = 20,
     ) -> str:
+        """Return qualifying open tasks without performing a write operation."""
         args = TaskMarketSearchInput(
             max_reward_usdc=max_reward_usdc,
             tags=tags,
@@ -136,7 +140,7 @@ class TaskMarketSearchTool(_TaskMarketReadOnlyTool):
             raise RuntimeError("TaskMarket returned an unexpected task-list shape")
 
         results = []
-        for row in rows:
+        for row in rows[: args.limit]:
             if not isinstance(row, Mapping):
                 continue
             if str(row.get("status", "")).lower() != "open":
@@ -157,10 +161,10 @@ class TaskMarketGetTaskTool(_TaskMarketReadOnlyTool):
     args_schema: type[BaseModel] = TaskMarketGetTaskInput
 
     def _run(self, task_id: str) -> str:
-        if not task_id or "/" in task_id or "\\" in task_id:
+        """Return one public task after validating and encoding its opaque ID."""
+        if not task_id or task_id in {".", ".."} or "/" in task_id or "\\" in task_id:
             raise ValueError("task_id must be a non-empty opaque ID")
-        payload = self._get_json(f"tasks/{task_id}")
+        payload = self._get_json(f"tasks/{quote(task_id, safe='')}")
         if not isinstance(payload, Mapping):
             raise RuntimeError("TaskMarket returned an unexpected task shape")
         return json.dumps(self._public_row(payload), ensure_ascii=False)
-
