@@ -1328,6 +1328,11 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                 attributes[key] = []
                 for tool in value:
                     try:
+                        if tool["module"] not in _ALLOWED_TOOL_MODULES:
+                            raise AgentRepositoryError(
+                                f"Tool module {tool['module']!r} is not in the allowlist. "
+                                f"Allowed modules: {', '.join(sorted(_ALLOWED_TOOL_MODULES))}"
+                            )
                         module = importlib.import_module(tool["module"])
                         tool_class = getattr(module, tool["name"])
 
