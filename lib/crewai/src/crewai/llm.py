@@ -190,6 +190,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "bedrock",
     "aws",
     "openrouter",
+    "trustedrouter",
     "deepseek",
     "ollama",
     "ollama_chat",
@@ -215,6 +216,7 @@ PROVIDER_ALIASES: Final[dict[str, str]] = {
     "bedrock": "bedrock",
     "aws": "bedrock",
     "openrouter": "openrouter",
+    "trustedrouter": "trustedrouter",
     "deepseek": "deepseek",
     "ollama": "ollama",
     "ollama_chat": "ollama_chat",
@@ -452,6 +454,10 @@ class LLM(BaseLLM):
             parts = model_lower.split("/")
             return len(parts) == 2 and all(parts)
 
+        if provider == "trustedrouter":
+            # TrustedRouter routes provider-prefixed ids and router aliases
+            return True
+
         if provider == "snowflake":
             return True
 
@@ -673,6 +679,7 @@ class LLM(BaseLLM):
 
         openai_compatible_providers = {
             "openrouter",
+            "trustedrouter",
             "deepseek",
             "ollama",
             "ollama_chat",
