@@ -119,7 +119,11 @@ class AzureCompletion(BaseLLM):
                 "Interceptors are currently supported for OpenAI and Anthropic providers only."
             )
 
-        data["api_key"] = data.get("api_key") or os.getenv("AZURE_API_KEY")
+        api_key = data.get("api_key") or os.getenv("AZURE_API_KEY")
+        if isinstance(api_key, str):
+            api_key = api_key.strip()
+        data["api_key"] = api_key
+
         data["endpoint"] = (
             data.get("endpoint")
             or os.getenv("AZURE_ENDPOINT")
@@ -269,6 +273,8 @@ class AzureCompletion(BaseLLM):
         # module import before deployment env vars were injected).
         if not self.api_key:
             self.api_key = os.getenv("AZURE_API_KEY")
+        if isinstance(self.api_key, str):
+            self.api_key = self.api_key.strip()
         if not self.endpoint:
             endpoint = (
                 os.getenv("AZURE_ENDPOINT")
