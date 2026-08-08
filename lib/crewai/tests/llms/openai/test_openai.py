@@ -35,6 +35,32 @@ def test_openai_completion_is_used_when_no_provider_prefix():
     assert llm.model == "gpt-4o"
 
 
+def test_openai_context_window_uses_longest_prefix_match():
+    """Model prefixes must resolve to the most specific match.
+
+    Regression test: ``gpt-4o`` (and other ``gpt-4*`` models) must not be
+    shadowed by the shorter ``gpt-4`` prefix, which would collapse their
+    context window to 8192. This mirrors the Azure provider, which already
+    matches the longest prefix first.
+    """
+    from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
+
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False):
+        llm_gpt4 = LLM(model="gpt-4")
+        llm_gpt4o = LLM(model="gpt-4o")
+        llm_gpt4o_mini = LLM(model="gpt-4o-mini")
+
+    assert isinstance(llm_gpt4o, OpenAICompletion)
+    assert llm_gpt4.get_context_window_size() == int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert llm_gpt4o.get_context_window_size() == int(
+        128000 * CONTEXT_WINDOW_USAGE_RATIO
+    )
+    assert llm_gpt4o_mini.get_context_window_size() == int(
+        200000 * CONTEXT_WINDOW_USAGE_RATIO
+    )
+    assert llm_gpt4o.get_context_window_size() > llm_gpt4.get_context_window_size()
+
+
 def test_custom_openai_flag_uses_native_openai_without_provider_prefix():
     """Custom OpenAI-compatible endpoints can serve arbitrary model ids."""
     with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False):
