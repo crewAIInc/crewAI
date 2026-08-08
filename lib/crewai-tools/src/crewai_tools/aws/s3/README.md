@@ -15,7 +15,7 @@ pip install 'crewai[tools]'
 ## AWS Connectivity
 
 The tools use `boto3` to connect to AWS S3.
-You can configure your environment to use AWS IAM roles, see [AWS IAM Roles documentation](https://docs.aws.amazon.com/sdk-for-python/v1/developer-guide/iam-roles.html#creating-an-iam-role)
+You can configure your environment to use AWS IAM roles, see [AWS IAM Roles documentation](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html)
 
 Set the following environment variables:
 
