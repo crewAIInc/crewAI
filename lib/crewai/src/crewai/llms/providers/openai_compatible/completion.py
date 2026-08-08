@@ -50,6 +50,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         default_headers={"HTTP-Referer": "https://crewai.com"},
         api_key_required=True,
     ),
+    "trustedrouter": ProviderConfig(
+        base_url="https://api.trustedrouter.com/v1",
+        api_key_env="TRUSTEDROUTER_API_KEY",
+        base_url_env="TRUSTEDROUTER_BASE_URL",
+        api_key_required=True,
+    ),
     "deepseek": ProviderConfig(
         base_url="https://api.deepseek.com/v1",
         api_key_env="DEEPSEEK_API_KEY",
@@ -119,6 +125,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
 
     Supported providers:
         - openrouter: OpenRouter (https://openrouter.ai)
+        - trustedrouter: TrustedRouter (https://trustedrouter.com)
         - deepseek: DeepSeek (https://deepseek.com)
         - ollama: Ollama local server (https://ollama.ai)
         - ollama_chat: Alias for ollama
