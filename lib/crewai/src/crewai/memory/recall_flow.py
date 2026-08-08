@@ -342,9 +342,15 @@ class RecallFlow(Flow[RecallState]):
 
     @listen("synthesize")
     def synthesize_results(self) -> list[MemoryMatch]:
-        """Deduplicate, composite-score, rank, and attach evidence gaps."""
-        seen_ids: set[str] = set()
-        matches: list[MemoryMatch] = []
+        """Deduplicate, composite-score, rank, and attach evidence gaps.
+
+        A record reachable from more than one (sub-query, scope) task is scored
+        once per task, and the scores differ. ``_do_search`` collects findings in
+        ``as_completed`` order, so keeping the first occurrence would let thread
+        timing pick the surviving score. The best score is kept instead, which is
+        both deterministic and the one ranking should use.
+        """
+        best: dict[str, MemoryMatch] = {}
         for finding in self.state.chunk_findings:
             if not isinstance(finding, dict):
                 continue
@@ -356,19 +362,22 @@ class RecallFlow(Flow[RecallState]):
                     record, score = item[0], item[1]
                 else:
                     continue
-                if isinstance(record, MemoryRecord) and record.id not in seen_ids:
-                    seen_ids.add(record.id)
-                    composite, reasons = compute_composite_score(
-                        record, float(score), self._config
+                if not isinstance(record, MemoryRecord):
+                    continue
+                composite, reasons = compute_composite_score(
+                    record, float(score), self._config
+                )
+                previous = best.get(record.id)
+                if previous is None or composite > previous.score:
+                    best[record.id] = MemoryMatch(
+                        record=record,
+                        score=composite,
+                        match_reasons=reasons,
                     )
-                    matches.append(
-                        MemoryMatch(
-                            record=record,
-                            score=composite,
-                            match_reasons=reasons,
-                        )
-                    )
-        matches.sort(key=lambda m: m.score, reverse=True)
+        matches: list[MemoryMatch] = list(best.values())
+        # ``record.id`` breaks ties, so equal-scoring records do not order by
+        # which task happened to finish first either.
+        matches.sort(key=lambda m: (-m.score, m.record.id))
         final_results = matches[: self.state.limit]
         self.state.final_results = final_results
 
