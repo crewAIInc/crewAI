@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+from typing import Any
 from unittest.mock import Mock
 
 from crewai.hooks import (
@@ -670,3 +672,399 @@ class TestDirectLLMScopedHooks:
             )
 
         assert result == "contains [REDACTED]"
+
+
+class _Recorder:
+    """Records what each provider client was actually asked to send.
+
+    ``issued`` answers whether a request went out at all (and on which path),
+    which is what the blocking tests need. ``payloads`` keeps the request kwargs
+    so a test can assert on the data the provider received rather than on the
+    in-memory list the hook mutated -- the two are only the same object if the
+    guard passes the real payload through, which is the property under test.
+    """
+
+    def __init__(self) -> None:
+        self.issued: list[str] = []
+        self.payloads: list[dict[str, Any]] = []
+
+    def record(self, path: str, kwargs: dict[str, Any]) -> None:
+        self.issued.append(path)
+        self.payloads.append(kwargs)
+
+    @property
+    def payload_text(self) -> str:
+        """Every recorded payload flattened to text.
+
+        Providers disagree on payload shape (plain dicts, Anthropic content
+        blocks, Gemini ``Content`` objects), and these tests only ask whether a
+        hook's addition is in there, so the repr is searched instead of a
+        per-provider structure being walked.
+        """
+        return repr(self.payloads)
+
+
+def _usage_stub() -> Any:
+    """Token-usage payload accepted by every provider's usage extractor."""
+    return SimpleNamespace(
+        input_tokens=1,
+        output_tokens=1,
+        cache_read_input_tokens=0,
+        cache_creation_input_tokens=0,
+        prompt_tokens=1,
+        completion_tokens=1,
+        total_tokens=2,
+    )
+
+
+def _anthropic_response() -> Any:
+    return SimpleNamespace(
+        content=[SimpleNamespace(type="text", text="the model answered")],
+        usage=_usage_stub(),
+        stop_reason="end_turn",
+        id="msg_stub",
+    )
+
+
+def _openai_response() -> Any:
+    return SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(content="the model answered", tool_calls=None),
+                finish_reason="stop",
+            )
+        ],
+        usage=_usage_stub(),
+        id="cmpl_stub",
+    )
+
+
+def _stub_anthropic_llm(rec: _Recorder, monkeypatch: pytest.MonkeyPatch) -> Any:
+    """A real AnthropicCompletion whose SDK client records every request."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-sonnet-4-5", api_key="stub", stream=False)
+
+    def create(**kwargs: Any) -> Any:
+        rec.record("sync", kwargs)
+        return _anthropic_response()
+
+    async def acreate(**kwargs: Any) -> Any:
+        rec.record("async", kwargs)
+        return _anthropic_response()
+
+    llm._client = SimpleNamespace(messages=SimpleNamespace(create=create))
+    llm._async_client = SimpleNamespace(messages=SimpleNamespace(create=acreate))
+    return llm
+
+
+def _stub_openai_llm(rec: _Recorder, monkeypatch: pytest.MonkeyPatch) -> Any:
+    """A real OpenAICompletion whose SDK client records every request."""
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+
+    llm = OpenAICompletion(model="gpt-4o", api_key="stub", stream=False)
+
+    def create(**kwargs: Any) -> Any:
+        rec.record("sync", kwargs)
+        return _openai_response()
+
+    async def acreate(**kwargs: Any) -> Any:
+        rec.record("async", kwargs)
+        return _openai_response()
+
+    llm._client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=create))
+    )
+    llm._async_client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=acreate))
+    )
+    return llm
+
+
+def _bedrock_response() -> dict[str, Any]:
+    return {
+        "output": {
+            "message": {
+                "role": "assistant",
+                "content": [{"text": "the model answered"}],
+            }
+        },
+        "stopReason": "end_turn",
+        "usage": {"inputTokens": 1, "outputTokens": 1, "totalTokens": 2},
+    }
+
+
+def _stub_bedrock_llm(rec: _Recorder, monkeypatch: pytest.MonkeyPatch) -> Any:
+    """A real BedrockCompletion whose Converse client records every request."""
+    from crewai.llms.providers.bedrock import completion as bedrock_completion
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+
+    # ``acall`` refuses to run at all without aiobotocore, which is an optional
+    # extra. The hook gating under test is upstream of any AWS I/O and the client
+    # below is a stub, so the dependency check is patched rather than installed.
+    monkeypatch.setattr(bedrock_completion, "AIOBOTOCORE_AVAILABLE", True)
+
+    llm = BedrockCompletion(
+        model="anthropic.claude-3-5-sonnet-20241022-v2:0",
+        aws_access_key_id="stub",
+        aws_secret_access_key="stub",
+        region_name="us-east-1",
+        stream=False,
+    )
+
+    def converse(**kwargs: Any) -> dict[str, Any]:
+        rec.record("sync", kwargs)
+        return _bedrock_response()
+
+    async def aconverse(**kwargs: Any) -> dict[str, Any]:
+        rec.record("async", kwargs)
+        return _bedrock_response()
+
+    llm._client = SimpleNamespace(converse=converse)
+    # ``_ensure_async_client`` builds the aiobotocore client inside an exit stack;
+    # marking it initialized makes it return this stub instead.
+    llm._async_client = SimpleNamespace(converse=aconverse)
+    llm._async_client_initialized = True
+    return llm
+
+
+def _gemini_response() -> Any:
+    part = SimpleNamespace(text="the model answered", function_call=None, thought=None)
+    return SimpleNamespace(
+        candidates=[
+            SimpleNamespace(
+                content=SimpleNamespace(parts=[part], role="model"),
+                finish_reason=None,
+            )
+        ],
+        text="the model answered",
+        usage_metadata=SimpleNamespace(
+            prompt_token_count=1,
+            candidates_token_count=1,
+            total_token_count=2,
+            cached_content_token_count=0,
+        ),
+        function_calls=None,
+    )
+
+
+def _stub_gemini_llm(rec: _Recorder, monkeypatch: pytest.MonkeyPatch) -> Any:
+    """A real GeminiCompletion whose genai client records every request.
+
+    Gemini exposes one client for both paths (``_get_async_client`` returns
+    ``_get_sync_client``), with the async surface under ``.aio``.
+    """
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    llm = GeminiCompletion(model="gemini-2.0-flash", api_key="stub", stream=False)
+
+    def generate_content(**kwargs: Any) -> Any:
+        rec.record("sync", kwargs)
+        return _gemini_response()
+
+    async def agenerate_content(**kwargs: Any) -> Any:
+        rec.record("async", kwargs)
+        return _gemini_response()
+
+    llm._client = SimpleNamespace(
+        models=SimpleNamespace(generate_content=generate_content),
+        aio=SimpleNamespace(
+            models=SimpleNamespace(generate_content=agenerate_content)
+        ),
+        vertexai=False,
+    )
+    return llm
+
+
+def _azure_response() -> Any:
+    return SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(content="the model answered", tool_calls=None),
+                finish_reason="stop",
+            )
+        ],
+        usage=_usage_stub(),
+        id="azure_stub",
+    )
+
+
+def _stub_azure_llm(rec: _Recorder, monkeypatch: pytest.MonkeyPatch) -> Any:
+    """A real AzureCompletion whose inference client records every request."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    llm = AzureCompletion(
+        model="gpt-4o",
+        api_key="stub",
+        endpoint="https://stub.services.ai.azure.com/models",
+        stream=False,
+    )
+
+    def complete(**kwargs: Any) -> Any:
+        rec.record("sync", kwargs)
+        return _azure_response()
+
+    async def acomplete(**kwargs: Any) -> Any:
+        rec.record("async", kwargs)
+        return _azure_response()
+
+    llm._client = SimpleNamespace(complete=complete)
+    llm._async_client = SimpleNamespace(complete=acomplete)
+    return llm
+
+
+_PROVIDER_STUBS = {
+    "openai": _stub_openai_llm,
+    "anthropic": _stub_anthropic_llm,
+    "bedrock": _stub_bedrock_llm,
+    "gemini": _stub_gemini_llm,
+    "azure": _stub_azure_llm,
+}
+
+
+class TestBeforeLLMCallHooksOnAsyncPaths:
+    """before_llm_call must gate acall() exactly as it gates call().
+
+    A hook returning False aborts the call. When acall() skipped the hook the
+    request still went out, so a policy check that worked synchronously silently
+    stopped blocking anything once the caller switched to async.
+    """
+
+    @pytest.fixture(params=sorted(_PROVIDER_STUBS))
+    def provider(
+        self, request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+    ) -> tuple[Any, _Recorder]:
+        rec = _Recorder()
+        return _PROVIDER_STUBS[request.param](rec, monkeypatch), rec
+
+    def test_sync_call_is_blocked_by_before_hook(
+        self, provider: tuple[Any, _Recorder]
+    ) -> None:
+        llm, rec = provider
+        seen: list[int] = []
+        register_before_llm_call_hook(lambda ctx: seen.append(len(ctx.messages)) or False)
+
+        with pytest.raises(ValueError, match="blocked by before_llm_call hook"):
+            llm.call("hi")
+
+        assert len(seen) == 1
+        assert rec.issued == []
+
+    @pytest.mark.asyncio
+    async def test_async_call_is_blocked_by_before_hook(
+        self, provider: tuple[Any, _Recorder]
+    ) -> None:
+        """The regression: acall() used to issue the request and return the response."""
+        llm, rec = provider
+        seen: list[int] = []
+        register_before_llm_call_hook(lambda ctx: seen.append(len(ctx.messages)) or False)
+
+        with pytest.raises(ValueError, match="blocked by before_llm_call hook"):
+            await llm.acall("hi")
+
+        assert len(seen) == 1
+        assert rec.issued == []
+
+    @pytest.mark.asyncio
+    async def test_async_call_runs_before_hook_that_allows(
+        self, provider: tuple[Any, _Recorder]
+    ) -> None:
+        """A hook that does not abort observes the messages and the call proceeds."""
+        llm, rec = provider
+        seen: list[list[dict[str, Any]]] = []
+
+        def observe(ctx: LLMCallHookContext) -> None:
+            seen.append(list(ctx.messages))
+
+        register_before_llm_call_hook(observe)
+
+        result = await llm.acall("hi")
+
+        assert result == "the model answered"
+        assert rec.issued == ["async"]
+        # The content shape differs per provider (a plain string, a list of
+        # content blocks, a Gemini part dict), so the prompt is located inside
+        # the last message rather than compared to one provider's layout.
+        assert seen and "hi" in str(seen[0][-1])
+        # The hook must see the prompt the provider is actually about to be sent,
+        # not a placeholder assembled for the hook's benefit.
+        assert "hi" in rec.payload_text
+
+    @pytest.mark.asyncio
+    async def test_async_call_without_hooks_is_unchanged(
+        self, provider: tuple[Any, _Recorder]
+    ) -> None:
+        """Negative control: no hook registered, nothing blocked or altered."""
+        llm, rec = provider
+
+        result = await llm.acall("hi")
+
+        assert result == "the model answered"
+        assert rec.issued == ["async"]
+
+    @pytest.mark.asyncio
+    async def test_async_before_hook_mutation_reaches_the_provider_as_on_sync(
+        self, provider: tuple[Any, _Recorder]
+    ) -> None:
+        """A mutation must land in the request, and to the same extent as on sync.
+
+        Asserting only that ``ctx.messages`` gained an entry would pass even if
+        the guard were handed a copy and ``acall()`` dropped the mutation on the
+        floor, so the check is against the kwargs the stubbed client received.
+
+        The comparison is against the *sync* path rather than a hard-coded
+        expectation because whether a mutation propagates at all is a
+        pre-existing per-provider property, not something this change decides:
+        four providers pass the payload list straight to the hook, while Gemini
+        converts its ``Content`` objects to dicts first and so hands over a copy
+        on both paths. Pinning ``async == sync`` states the invariant this PR is
+        responsible for -- acall() gates and forwards exactly as call() does --
+        and would fail if the async guard were ever wired to a different list
+        than its sync twin, without asserting that Gemini's copy is correct.
+        """
+        llm, rec = provider
+        guard_rail = {"role": "user", "content": "and be brief"}
+
+        register_before_llm_call_hook(
+            lambda ctx: ctx.messages.append(guard_rail),  # type: ignore[func-returns-value]
+        )
+
+        llm.call("hi")
+        sync_propagated = "and be brief" in rec.payload_text
+        assert rec.issued == ["sync"]
+
+        rec.issued.clear()
+        rec.payloads.clear()
+
+        await llm.acall("hi")
+        async_propagated = "and be brief" in rec.payload_text
+
+        assert rec.issued == ["async"]
+        assert async_propagated == sync_propagated
+
+    @pytest.mark.asyncio
+    async def test_async_before_hook_mutation_reaches_the_provider(
+        self, provider: tuple[Any, _Recorder]
+    ) -> None:
+        """The four providers that forward the payload list really do forward it.
+
+        The symmetry test above cannot tell "both paths propagate" from "neither
+        does", so it would still pass if a future refactor made every provider
+        hand the guard a copy. This pins the propagating providers by name.
+        Gemini is excluded because its own sync path does not propagate either;
+        that asymmetry is upstream of this change and is left alone.
+        """
+        llm, rec = provider
+        if llm.__class__.__name__ == "GeminiCompletion":
+            pytest.skip("Gemini hands the guard a converted copy on both paths")
+
+        register_before_llm_call_hook(
+            lambda ctx: ctx.messages.append(  # type: ignore[func-returns-value]
+                {"role": "user", "content": "and be brief"}
+            ),
+        )
+
+        await llm.acall("hi")
+
+        assert rec.issued == ["async"]
+        assert "and be brief" in rec.payload_text

@@ -510,6 +510,11 @@ class BedrockCompletion(BaseLLM):
                     messages
                 )
 
+                if not self._invoke_before_llm_call_hooks(
+                    formatted_messages, from_agent
+                ):
+                    raise ValueError("LLM call blocked by before_llm_call hook")
+
                 body: BedrockConverseRequestBody = {
                     "inferenceConfig": self._get_inference_config(),
                 }
