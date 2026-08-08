@@ -22,14 +22,17 @@ class MCPToolWrapper(BaseTool):
         tool_name: str,
         tool_schema: dict[str, Any],
         server_name: str,
+        original_tool_name: str | None = None,
     ):
         """Initialize the MCP tool wrapper.
 
         Args:
             mcp_server_params: Parameters for connecting to the MCP server
-            tool_name: Original name of the tool on the MCP server
+            tool_name: Name of the tool, which may have been sanitized
             tool_schema: Schema information for the tool
             server_name: Name of the MCP server for prefixing
+            original_tool_name: Original name of the tool on the MCP server.
+                Defaults to ``tool_name`` when the two are identical.
         """
         prefixed_name = f"{server_name}_{tool_name}"
 
@@ -48,7 +51,7 @@ class MCPToolWrapper(BaseTool):
         super().__init__(**kwargs)
 
         self._mcp_server_params = mcp_server_params
-        self._original_tool_name = tool_name
+        self._original_tool_name = original_tool_name or tool_name
         self._server_name = server_name
 
     @property
