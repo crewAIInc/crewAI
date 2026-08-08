@@ -1,0 +1,80 @@
+---
+title: telemetry.dev Integration
+description: Learn how to send CrewAI OpenTelemetry traces to telemetry.dev using OpenLIT
+icon: magnifying-glass-chart
+mode: "wide"
+---
+
+# Integrate telemetry.dev with CrewAI
+
+This guide demonstrates how to integrate **telemetry.dev** with **CrewAI** using OpenTelemetry via the **OpenLIT** SDK. By the end, you will be able to trace CrewAI runs in telemetry.dev for debugging, latency analysis, and token-based cost tracking.
+
+> **What is telemetry.dev?** [telemetry.dev](https://telemetry.dev) is an observability platform for AI applications. It accepts standard OTLP/HTTP data and normalizes GenAI semantic-convention attributes into model, provider, token, latency, and cost fields.
+
+## Get Started
+
+We'll walk through a simple CrewAI application and send its OpenTelemetry traces to telemetry.dev using OpenLIT.
+
+### Step 1: Install Dependencies
+
+```shell
+pip install crewai openlit
+```
+
+### Step 2: Set Up Environment Variables
+
+Create a telemetry.dev project API key, then configure OpenTelemetry to export to the telemetry.dev OTLP/HTTP endpoint. Keep your model provider API key configured for CrewAI as usual.
+
+```shell
+export TELEMETRY_DEV_API_KEY="td_live_..."
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://ingest.telemetry.dev"
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer%20$TELEMETRY_DEV_API_KEY"
+export OTEL_SERVICE_NAME="your-crewai-service"
+export OTEL_RESOURCE_ATTRIBUTES="deployment.environment.name=production"
+
+# For example, if your crew uses OpenAI:
+export OPENAI_API_KEY="sk-..."
+```
+
+OTLP/HTTP exporters append `/v1/traces` to the endpoint when sending traces.
+
+### Step 3: Initialize OpenLIT
+
+Initialize OpenLIT before creating your crew. OpenLIT auto-instruments CrewAI and exports the resulting OpenTelemetry spans using the environment variables above.
+
+```python
+import openlit
+
+openlit.init()
+```
+
+### Step 4: Create and Run a Simple CrewAI Application
+
+```python
+from crewai import Agent, Crew, Task
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find one practical use for AI agents",
+    backstory="You explain technical ideas clearly and concisely.",
+)
+
+task = Task(
+    description="Describe one practical use for AI agents.",
+    expected_output="A concise paragraph with one concrete example.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+print(result)
+```
+
+### Step 5: View Traces in telemetry.dev
+
+Open your telemetry.dev project after the crew finishes. The trace contains the CrewAI and model spans emitted by OpenLIT, with available token usage, latency, errors, and server-side cost attached.
+
+## References
+
+- [telemetry.dev CrewAI integration guide](https://telemetry.dev/integrations/crewai)
+- [OpenLIT CrewAI instrumentation](https://docs.openlit.io/latest/sdk/integrations/crewai)
