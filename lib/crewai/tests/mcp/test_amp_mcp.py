@@ -503,3 +503,112 @@ class TestResolveExternalToolFilter:
         tools = resolver._resolve_external("https://mcp.example.com/api#nonexistent")
 
         assert len(tools) == 0
+
+
+class TestResolveNativeNoToolsWarning:
+    """Tests that _resolve_native logs a warning when no tools are discovered."""
+
+    @pytest.fixture
+    def agent(self):
+        return Agent(
+            role="Test Agent",
+            goal="Test goal",
+            backstory="Test backstory",
+        )
+
+    @pytest.fixture
+    def resolver(self, agent):
+        return MCPToolResolver(agent=agent, logger=agent._logger)
+
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    def test_logs_warning_when_server_returns_no_tools(
+        self, mock_client_class, resolver
+    ):
+        """_resolve_native should log a warning when the MCP server returns no tools."""
+        mock_client = AsyncMock()
+        mock_client.list_tools = AsyncMock(return_value=[])
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        config = MCPServerHTTP(
+            url="https://empty.mcp.com/api",
+            headers={"Authorization": "Bearer token"},
+        )
+
+        with patch.object(resolver._logger, "log") as mock_log:
+            tools, clients = resolver._resolve_native(config)
+
+            assert tools == []
+            assert clients == []
+            mock_log.assert_any_call(
+                "warning",
+                "No tools discovered from MCP server: empty_mcp_com_api",
+            )
+
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    def test_logs_warning_when_tool_filter_removes_all_tools(
+        self, mock_client_class, resolver
+    ):
+        """_resolve_native should log a warning when tool_filter removes all tools."""
+        tool_definitions = [
+            {
+                "name": "search",
+                "description": "Search tool",
+                "inputSchema": {},
+            },
+        ]
+
+        mock_client = AsyncMock()
+        mock_client.list_tools = AsyncMock(return_value=tool_definitions)
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        config = MCPServerHTTP(
+            url="https://filtered.mcp.com/api",
+            headers={"Authorization": "Bearer token"},
+            tool_filter=lambda ctx, tool: False,  # reject all tools
+        )
+
+        with patch.object(resolver._logger, "log") as mock_log:
+            tools, clients = resolver._resolve_native(config)
+
+            assert tools == []
+            assert clients == []
+            mock_log.assert_any_call(
+                "warning",
+                "No tools discovered from MCP server: filtered_mcp_com_api",
+            )
+
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    def test_no_unbound_local_error_on_failed_async_run(
+        self, mock_client_class, resolver
+    ):
+        """tools_list should be initialized to [] to prevent UnboundLocalError."""
+        mock_client = AsyncMock()
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        # Simulate a RuntimeError that does NOT match the "cancel scope"/"task" pattern
+        mock_client.list_tools = AsyncMock(
+            side_effect=RuntimeError("some unexpected error")
+        )
+        mock_client_class.return_value = mock_client
+
+        config = MCPServerHTTP(
+            url="https://failing.mcp.com/api",
+            headers={"Authorization": "Bearer token"},
+        )
+
+        with patch.object(resolver._logger, "log") as mock_log:
+            tools, clients = resolver._resolve_native(config)
+
+            assert tools == []
+            assert clients == []
+            mock_log.assert_any_call(
+                "warning",
+                "No tools discovered from MCP server: failing_mcp_com_api",
+            )
