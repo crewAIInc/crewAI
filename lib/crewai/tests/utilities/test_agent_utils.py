@@ -15,6 +15,7 @@ from crewai.hooks.tool_hooks import (
     clear_after_tool_call_hooks,
     clear_before_tool_call_hooks,
     register_after_tool_call_hook,
+    register_before_tool_call_hook,
 )
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.agent_utils import (
@@ -1043,6 +1044,52 @@ class TestParseToolCallArgs:
 
 class TestExecuteSingleNativeToolCall:
     """Tests for execute_single_native_tool_call."""
+
+    def test_transform_precedes_cache_lookup_and_execution(self) -> None:
+        clear_before_tool_call_hooks()
+        clear_after_tool_call_hooks()
+
+        class SearchTool(BaseTool):
+            name: str = "search"
+            description: str = "Search for a query"
+
+            def _run(self, query: str) -> str:
+                return f"executed:{query}"
+
+        def transform(context: ToolCallHookContext) -> None:
+            context.tool_input["query"] = "safe"
+
+        tool = SearchTool()
+        tool_call = MagicMock()
+        tool_call.id = "provider-call-1"
+        tool_call.function.name = "search"
+        tool_call.function.arguments = '{"query": "unsafe"}'
+        tools_handler = MagicMock()
+        tools_handler.cache.read.return_value = None
+
+        register_before_tool_call_hook(transform)
+        try:
+            result = execute_single_native_tool_call(
+                tool_call,
+                available_functions={"search": tool._run},
+                original_tools=[tool],
+                structured_tools=[tool.to_structured_tool()],
+                tools_handler=tools_handler,
+                agent=None,
+                task=None,
+                crew=None,
+                event_source=MagicMock(),
+                printer=None,
+                verbose=False,
+            )
+        finally:
+            clear_before_tool_call_hooks()
+
+        assert result.call_id == "provider-call-1"
+        assert result.result == "executed:safe"
+        tools_handler.cache.read.assert_called_once_with(
+            tool="search", input='{"query": "safe"}'
+        )
 
     def test_typed_tool_output_is_json_agent_text(self) -> None:
         clear_before_tool_call_hooks()

@@ -306,6 +306,29 @@ class TestLLMHooksIntegration:
         assert text == "final answer"
         assert observed == ["final answer"]
 
+    def test_invalid_pydantic_rewrite_without_governor_restores_original(
+        self, mock_executor
+    ) -> None:
+        """Legacy hooks keep compatibility when no control engine is active."""
+        from pydantic import BaseModel
+
+        from crewai.utilities.agent_utils import _setup_after_llm_call_hooks
+
+        class Response(BaseModel):
+            value: int
+
+        mock_executor.after_llm_call_hooks = [lambda _context: "not-json"]
+        response = Response(value=7)
+
+        result = _setup_after_llm_call_hooks(
+            mock_executor,
+            response,
+            printer=Mock(),
+            verbose=False,
+        )
+
+        assert result is response
+
     def test_unregister_before_hook(self):
         """Test that before hooks can be unregistered."""
         def test_hook(context):
@@ -435,6 +458,28 @@ class TestLLMHooksIntegration:
 
         assert ran == ["blocking"]
         assert proceed is False
+
+    @pytest.mark.parametrize("source", ["my-policy", "agent-hooks"])
+    def test_custom_string_abort_source_preserves_legacy_contract(
+        self, mock_executor, source: str
+    ) -> None:
+        """A custom string source is not an agent-hooks ownership marker."""
+        from crewai.hooks.dispatch import HookAborted
+        from crewai.utilities.agent_utils import _setup_before_llm_call_hooks
+
+        def blocking_hook(context):
+            raise HookAborted(reason="custom policy denied", source=source)
+
+        mock_executor.before_llm_call_hooks = [blocking_hook]
+
+        assert (
+            _setup_before_llm_call_hooks(
+                mock_executor,
+                printer=Mock(),
+                verbose=False,
+            )
+            is False
+        )
 
     @pytest.mark.vcr()
     def test_lite_agent_hooks_integration_with_real_llm(self):

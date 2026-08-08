@@ -1927,6 +1927,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             }
 
         call_id, func_name, func_args = info
+        governance_call_id = str(uuid4())
 
         # Parse arguments
         parsed_args, parse_error = parse_tool_call_args(func_args, func_name, call_id)
@@ -1980,21 +1981,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         output_tool = original_tool or structured_tool
 
-        # Check cache before executing
         from_cache = False
         result = "Tool not found"
         raw_tool_result: Any = result
         tool_failure: ToolFailure | None = None
-        input_str = json.dumps(args_dict) if args_dict else ""
-        if self.tools_handler and self.tools_handler.cache and output_tool is not None:
-            cached_result = self.tools_handler.cache.read(
-                tool=func_name, input=input_str
-            )
-            if cached_result is not None:
-                raw_tool_result = cached_result
-                result = format_native_tool_output_for_agent(output_tool, cached_result)
-                tool_failure = detect_tool_failure(cached_result)
-                from_cache = True
 
         # Emit tool usage started event
         started_at = datetime.now()
@@ -2019,8 +2009,25 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             agent=self.agent,
             task=self.task,
             crew=self.crew,
+            call_id=governance_call_id,
         )
         hook_blocked = run_before_tool_call_hooks(before_hook_context)
+
+        input_str = json.dumps(args_dict) if args_dict else ""
+        if (
+            not hook_blocked
+            and self.tools_handler
+            and self.tools_handler.cache
+            and output_tool is not None
+        ):
+            cached_result = self.tools_handler.cache.read(
+                tool=func_name, input=input_str
+            )
+            if cached_result is not None:
+                raw_tool_result = cached_result
+                result = format_native_tool_output_for_agent(output_tool, cached_result)
+                tool_failure = detect_tool_failure(cached_result)
+                from_cache = True
 
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
@@ -2095,6 +2102,14 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             crew=self.crew,
             tool_result=result,
             raw_tool_result=raw_tool_result,
+            call_id=governance_call_id,
+            is_error=(
+                hook_blocked
+                or max_usage_reached
+                or error_event_emitted
+                or tool_failure is not None
+            ),
+            was_blocked=hook_blocked,
         )
         modified_result = run_after_tool_call_hooks(after_hook_context)
         if modified_result is not None:

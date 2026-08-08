@@ -383,6 +383,7 @@
                           "edge/en/learn/tool-hooks",
                           "edge/en/learn/execution-boundary-hooks",
                           "edge/en/learn/step-hooks",
+                          "edge/en/learn/agent-hooks",
                           "edge/en/learn/before-and-after-kickoff-hooks"
                         ]
                       }
