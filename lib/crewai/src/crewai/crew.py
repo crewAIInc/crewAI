@@ -1910,7 +1910,10 @@ class Crew(FlowTrackable, BaseModel):
         if not task_outputs:
             raise ValueError("No task outputs available to create crew output.")
 
-        valid_outputs = [t for t in task_outputs if t.raw]
+        # Exclude skipped tasks (e.g. conditional tasks whose condition was not
+        # met) rather than filtering on truthiness, so a task that legitimately
+        # produced an empty output is still selected as the final output.
+        valid_outputs = [t for t in task_outputs if not t.skipped]
         if not valid_outputs:
             raise ValueError("No valid task outputs available to create crew output.")
         final_task_output = valid_outputs[-1]
