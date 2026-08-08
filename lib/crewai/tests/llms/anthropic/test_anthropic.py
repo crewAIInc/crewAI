@@ -1680,5 +1680,91 @@ def test_anthropic_missing_cache_fields_default_to_zero():
     mock_response.usage.cache_creation_input_tokens = None
 
     usage = llm._extract_anthropic_token_usage(mock_response)
+    assert usage["input_tokens"] == 40
+    assert usage["output_tokens"] == 20
+    assert usage["total_tokens"] == 60
     assert usage["cached_prompt_tokens"] == 0
     assert usage["cache_creation_tokens"] == 0
+
+
+def _cache_usage_final_message(
+    *,
+    text: str = "cached reply",
+    input_tokens: int = 100,
+    output_tokens: int = 50,
+    cache_read_input_tokens: int = 30,
+    cache_creation_input_tokens: int = 20,
+):
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text=text, type="text")]
+    mock_response.usage = MagicMock(
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        cache_read_input_tokens=cache_read_input_tokens,
+        cache_creation_input_tokens=cache_creation_input_tokens,
+    )
+    mock_response.stop_reason = "end_turn"
+    mock_response.id = "msg_cache_usage"
+    mock_response.model = None
+    return mock_response
+
+
+def test_anthropic_streaming_tracks_cache_tokens_in_total():
+    """Streaming uses the same usage extractor as non-streaming completions."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-3-5-sonnet-20241022", stream=True)
+    final_message = _cache_usage_final_message()
+    mock_client = MagicMock()
+    mock_client.messages.stream.return_value = _SyncAnthropicStream(
+        [
+            types.SimpleNamespace(
+                type="content_block_delta",
+                index=0,
+                delta=types.SimpleNamespace(type="text_delta", text="cached reply"),
+            )
+        ],
+        final_message,
+    )
+    llm._client = mock_client
+
+    result = llm.call("Hello")
+
+    assert result == "cached reply"
+    usage = llm.get_token_usage_summary()
+    assert usage.prompt_tokens == 150
+    assert usage.completion_tokens == 50
+    assert usage.total_tokens == 200
+    assert usage.cached_prompt_tokens == 30
+    assert usage.cache_creation_tokens == 20
+
+
+@pytest.mark.asyncio
+async def test_anthropic_async_streaming_tracks_cache_tokens_in_total():
+    """Async streaming applies identical cache-inclusive total_tokens accounting."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-3-5-sonnet-20241022", stream=True)
+    final_message = _cache_usage_final_message()
+    mock_client = MagicMock()
+    mock_client.messages.stream.return_value = _AsyncAnthropicStream(
+        [
+            types.SimpleNamespace(
+                type="content_block_delta",
+                index=0,
+                delta=types.SimpleNamespace(type="text_delta", text="cached reply"),
+            )
+        ],
+        final_message,
+    )
+    llm._async_client = mock_client
+
+    result = await llm.acall("Hello")
+
+    assert result == "cached reply"
+    usage = llm.get_token_usage_summary()
+    assert usage.prompt_tokens == 150
+    assert usage.completion_tokens == 50
+    assert usage.total_tokens == 200
+    assert usage.cached_prompt_tokens == 30
+    assert usage.cache_creation_tokens == 20
