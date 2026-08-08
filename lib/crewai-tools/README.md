@@ -31,6 +31,24 @@ CrewAI provides an extensive collection of powerful tools ready to enhance your 
 
 And many more robust tools to simplify your agent integrations.
 
+### TaskMarket discovery (read-only)
+
+`TaskMarketSearchTool` and `TaskMarketGetTaskTool` expose public TaskMarket
+job discovery to a CrewAI agent. They use only `GET` requests: they never
+claim tasks, submit artifacts, sign wallet messages, or move funds. Keep any
+write-side workflow behind a separate, human-approved application boundary.
+
+```python
+from crewai import Agent
+from crewai_tools import TaskMarketGetTaskTool, TaskMarketSearchTool
+
+agent = Agent(
+    role="work scout",
+    goal="find small, legitimate jobs",
+    tools=[TaskMarketSearchTool(), TaskMarketGetTaskTool()],
+)
+```
+
 ---
 
 ## Creating Custom Tools
