@@ -1,36 +1,18 @@
 from itertools import islice
-import os
+import logging
 from typing import Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field, PrivateAttr
 
+from crewai_tools.file_storage import FileStore, FileStoreError, resolve_file_store
 from crewai_tools.security.safe_path import (
     format_error_for_display,
-    format_path_for_display,
     format_sandbox_error,
-    validate_file_path,
 )
 
 
-def _resolve_against_base(path: str, base_dir: str | None) -> str:
-    """Resolve *path* the way the sandbox does, anchoring relatives to *base_dir*.
-
-    ``validate_file_path`` and ``format_path_for_display`` both join a relative
-    path onto *base_dir* rather than the working directory. Resolution has to
-    agree with them, or the same relative string would mean two different files.
-
-    Args:
-        path: The path to resolve.
-        base_dir: The anchor for relative paths. Defaults to the working directory.
-
-    Returns:
-        The resolved absolute path.
-    """
-    if os.path.isabs(path):
-        return os.path.realpath(path)
-    base = os.path.realpath(base_dir) if base_dir is not None else os.getcwd()
-    return os.path.realpath(os.path.join(base, path))
+logger = logging.getLogger(__name__)
 
 
 class FileReadToolSchema(BaseModel):
@@ -72,6 +54,15 @@ class FileReadTool(BaseTool):
     construction, so a later chdir cannot repoint it, and it can be addressed
     either by omitting ``file_path`` or by the label shown in the description.
 
+    That pin is anchored from what was declared, which matters when a tool is
+    rebuilt from a serialized crew in a different working directory. An
+    absolute ``file_path``, or a relative one with ``base_dir`` set, names the
+    same file after the rebuild as before it. A *relative* ``file_path`` with
+    no ``base_dir`` names nothing absolute, so it re-anchors to the working
+    directory of the process doing the rebuilding — the same file the same
+    arguments would have named there. Pass ``base_dir`` when a declared
+    relative path must survive a move.
+
     Args:
         file_path (Optional[str]): Path to the file to be read. If provided,
             this becomes the default file path for the tool.
@@ -103,6 +94,9 @@ class FileReadTool(BaseTool):
     _declared_realpath: str | None = PrivateAttr(default=None)
     # The label the tool's description shows the LLM for the declared file.
     _declared_label: str | None = PrivateAttr(default=None)
+    # Resolved once per tool: a deployment installs its store before the crew
+    # is built, and swapping mid-run would change where a path points.
+    _store: FileStore = PrivateAttr(default=None)  # type: ignore[assignment]
 
     def __init__(
         self,
@@ -121,28 +115,76 @@ class FileReadTool(BaseTool):
             encoding (str): Text encoding used to decode the file.
             **kwargs: Additional keyword arguments passed to BaseTool.
         """
-        # Anchor base_dir once, so the sandbox root cannot move under a later
-        # chdir while the declared file stays pinned to its original location.
-        if base_dir is not None:
-            base_dir = os.path.realpath(base_dir)
-
-        display_path = None
+        # Hand these to pydantic rather than assigning them afterwards, so the
+        # fields are already populated by the time model_post_init derives
+        # everything that depends on them. That hook is the only place the
+        # derivation can live: see its docstring.
         if file_path is not None:
-            display_path = format_path_for_display(file_path, base_dir)
-            kwargs["description"] = (
-                f"A tool that reads file content. The default file is {display_path}, which is read when 'file_path' is omitted. You can also provide a different 'file_path' parameter to read another file, though reads are confined to the tool's allowed directory and a path that resolves outside it is rejected. Specify 'start_line' and 'line_count' to read specific parts of the file."
-            )
+            kwargs["file_path"] = file_path
+        if base_dir is not None:
+            kwargs["base_dir"] = base_dir
+        kwargs["encoding"] = encoding
 
         super().__init__(**kwargs)
-        self.file_path = file_path
-        self.base_dir = base_dir
-        self.encoding = encoding
-        self._declared_realpath = (
-            _resolve_against_base(file_path, base_dir)
-            if file_path is not None
-            else None
-        )
-        self._declared_label = display_path
+
+    def model_post_init(self, context: object) -> None:
+        """Bind the store, then derive everything that depends on it.
+
+        This has to happen here rather than in ``__init__`` because pydantic
+        reconstructs a serialized tool through ``model_validate``, which skips
+        ``__init__`` entirely — ``BaseTool._resolve_tool_dict`` does exactly
+        that when a crew carrying this tool is rebuilt. Deriving here means a
+        reconstructed reader binds its store and pins its declared path just
+        like a freshly constructed one, instead of coming back with no store
+        and failing on the first read.
+        """
+        super().model_post_init(context)
+
+        store = resolve_file_store()
+        self._store = store
+
+        # Anchor base_dir once, so the sandbox root cannot move under a later
+        # chdir while the declared file stays pinned to its original location.
+        # Deliberately not guarded: anchoring is a containment guarantee, and
+        # quietly leaving the root relative would let a later chdir move the
+        # sandbox. A store that cannot normalize should fail loudly here rather
+        # than hand back a weaker sandbox than the caller asked for.
+        if self.base_dir is not None:
+            self.base_dir = store.normalize(self.base_dir)
+
+        if self.file_path is not None:
+            # Guarded, unlike base_dir above: the declared default is a
+            # convenience, so a store hiccuping while canonicalizing a filename
+            # should not stop a serialized crew from loading. The reader simply
+            # comes back without a default file, and any real problem resurfaces
+            # on the first read, where _run reports it instead of raising.
+            try:
+                self._declared_realpath = store.normalize(self.file_path, self.base_dir)
+                self._declared_label = store.display(
+                    self._declared_realpath, self.base_dir
+                )
+            except (FileStoreError, OSError):
+                logger.warning(
+                    "the %s store could not resolve the declared file %r; the "
+                    "tool will have no default file",
+                    getattr(store, "label", "configured"),
+                    self.file_path,
+                    exc_info=True,
+                )
+                self._declared_realpath = None
+                self._declared_label = None
+                # The description has to come back too. On a rebuild it arrives
+                # from the serialized data already advertising a default file,
+                # so leaving it would promise the LLM something omitting
+                # 'file_path' can no longer deliver — it would call the tool
+                # with no arguments and get "No file path provided". Restoring
+                # the class default keeps what the tool says matched to what it
+                # does.
+                default = type(self).model_fields["description"].default
+                if isinstance(default, str):
+                    self.description = default
+            else:
+                self.description = f"A tool that reads file content. The default file is {self._declared_label}, which is read when 'file_path' is omitted. You can also provide a different 'file_path' parameter to read another file, though reads are confined to the tool's allowed directory and a path that resolves outside it is rejected. Specify 'start_line' and 'line_count' to read specific parts of the file."
 
     def _resolve_path(self, file_path: str) -> str:
         """Resolve *file_path* and confirm the tool is allowed to read it.
@@ -166,10 +208,10 @@ class FileReadTool(BaseTool):
         declared = self._declared_realpath
         if declared is not None and (
             file_path == self._declared_label
-            or _resolve_against_base(file_path, self.base_dir) == declared
+            or self._store.normalize(file_path, self.base_dir) == declared
         ):
             return declared
-        return validate_file_path(file_path, self.base_dir)
+        return self._store.resolve(file_path, self.base_dir)
 
     def _run(
         self,
@@ -178,6 +220,27 @@ class FileReadTool(BaseTool):
         line_count: int | None = None,
     ) -> str:
         """Read a file, or a window of its lines, as text."""
+        try:
+            return self._read(file_path, start_line, line_count)
+        except (FileStoreError, OSError) as e:
+            # A store can fail for reasons the local filesystem never had: an
+            # unreachable endpoint, a rejected request. Every other exit from
+            # this tool is an agent-visible string, and raising here would kill
+            # the agent's step rather than let it react, so this one is too.
+            # Path resolution and the store's own path labelling both live
+            # under here, which is why the message carries no path.
+            return (
+                f"Error: the {self._store.label} store failed. "
+                f"{format_error_for_display(e)}"
+            )
+
+    def _read(
+        self,
+        file_path: str | None,
+        start_line: int | None,
+        line_count: int | None,
+    ) -> str:
+        """Do the read. Wrapped by :meth:`_run`, which reports store failures."""
         start_line = start_line or 1
         line_count = line_count or None
 
@@ -195,9 +258,10 @@ class FileReadTool(BaseTool):
                     "directory tree.",
                 )
 
-        display_path = format_path_for_display(file_path, self.base_dir)
+        store = self._store
+        display_path = store.display(file_path, self.base_dir)
         try:
-            with open(file_path, "r", encoding=self.encoding) as file:
+            with store.open_text(file_path, self.encoding) as file:
                 if start_line == 1 and line_count is None:
                     return file.read()
 
