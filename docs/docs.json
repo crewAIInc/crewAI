@@ -244,6 +244,7 @@
                           "edge/en/tools/search-research/bravesearchtool",
                           "edge/en/tools/search-research/exasearchtool",
                           "edge/en/tools/search-research/linkupsearchtool",
+                          "edge/en/tools/search-research/queritsearchtool",
                           "edge/en/tools/search-research/githubsearchtool",
                           "edge/en/tools/search-research/websitesearchtool",
                           "edge/en/tools/search-research/codedocssearchtool",
