@@ -1,0 +1,195 @@
+from typing import TYPE_CHECKING
+from threading import Lock
+from abc import ABC, abstractmethod
+import logging
+
+if TYPE_CHECKING:
+    from k8s_agent_sandbox.sandbox import Sandbox  # type: ignore[import-untyped]
+
+
+from .settings import (
+    K8sAgentSandboxToolClientSettings,
+    K8sAgentSandboxToolSandboxSettings,
+)
+
+from .utils import lazy_import_k8s_agent_sandbox
+
+logger = logging.getLogger(__name__)
+
+
+class K8sAgentSandboxLifecycleManager(ABC):
+    """
+    The base lifecycle manager of the K8s Agent Sandbox.
+    """
+
+    def __init__(
+        self,
+        client_settings: K8sAgentSandboxToolClientSettings,
+        sandbox_settings: K8sAgentSandboxToolSandboxSettings,
+        close_timeout: int = 60,
+    ):
+        self._sandbox_settings = sandbox_settings
+        self._client_settings = client_settings or K8sAgentSandboxToolClientSettings()
+
+        self._client = self._client_settings.client
+
+        self._lock = Lock()
+        self._closed = False
+
+        self._sandbox: "Sandbox | None" = None  # type: ignore[no-any-unimported]
+        self._sandbox_acquired: bool = False
+
+        self._close_timeout = close_timeout
+
+    def acquire_sandbox(self) -> "Sandbox":  # type: ignore[no-any-unimported]
+        """
+        Acquires a sandbox based on this implementation and returns it.
+        In order to be acquired again by someone else, it has to be
+        released first by the :meth:`release_sandbox` method.
+        """
+        self._lock.acquire()
+        if self._closed:
+            self._lock.release()
+            raise RuntimeError("Attempt to acquire a sandbox from a closed helper.")
+        self._sandbox_acquired = True
+        return self._acquire_sandbox()
+
+    def release_sandbox(self) -> None:
+        """
+        Releases a sandbox that is previously acquired.
+        """
+        if not self._sandbox_acquired:
+            return
+        try:
+            if not self._closed:
+                self._release_sandbox()
+        finally:
+            self._sandbox_acquired = False
+            self._lock.release()
+
+    def close(self) -> None:
+        """Closes the lifecycle manager."""
+        if self._closed:
+            return
+
+        acquired = self._lock.acquire(timeout=self._close_timeout)
+        if not acquired:
+            logger.warning(
+                "Failed to acquire lock on close before the timeout. Closing anyway."
+            )
+
+        try:
+            self._close()
+            self._closed = True
+        finally:
+            if acquired:
+                self._lock.release()
+
+    @abstractmethod
+    def _acquire_sandbox(self) -> "Sandbox":  # type: ignore[no-any-unimported]
+        pass
+
+    @abstractmethod
+    def _release_sandbox(self) -> None:
+        pass
+
+    @abstractmethod
+    def _close(self) -> None:
+        pass
+
+    def _terminate_sandbox(self) -> None:
+        if self._sandbox is None:
+            return
+
+        self._sandbox.terminate()
+        self._sandbox = None
+
+    def _create_sandbox(self) -> "Sandbox":  # type: ignore[no-any-unimported]
+        return self._client.create_sandbox(
+            warmpool=self._sandbox_settings.warmpool,
+            namespace=self._sandbox_settings.namespace,
+            shutdown_after_seconds=self._sandbox_settings.sandbox_timeout,
+        )
+
+
+class EphemeralModeK8sAgentSandboxLifecycleManager(K8sAgentSandboxLifecycleManager):
+    """
+    Lifecycle manager that creates new sandbox on each call of the `acquire_sandbox`
+    method and terminates it on `release_sandbox`.
+    """
+
+    def _acquire_sandbox(self) -> "Sandbox":  # type: ignore[no-any-unimported]
+        self._sandbox = self._create_sandbox()
+        return self._sandbox
+
+    def _release_sandbox(self) -> None:
+        self._terminate_sandbox()
+
+    def _close(self) -> None:
+        self._terminate_sandbox()
+
+
+class AttachModeK8sAgentSandboxLifecycleManager(K8sAgentSandboxLifecycleManager):
+    """
+    Lifecycle manager that attaches to existing sandbox by its claim name without creating a new sandbox.
+    Sandbox is also not terminated on the `release_sandbox`.
+    """
+
+    def __init__(
+        self,
+        client_settings: K8sAgentSandboxToolClientSettings,
+        sandbox_settings: K8sAgentSandboxToolSandboxSettings,
+        claim_name: str,
+        close_timeout: int = 60,
+    ):
+        super().__init__(
+            client_settings,
+            sandbox_settings,
+            close_timeout=close_timeout,
+        )
+        self._claim_name = claim_name
+
+    def _acquire_sandbox(self) -> "Sandbox":  # type: ignore[no-any-unimported]
+        kas_exceptions_module = lazy_import_k8s_agent_sandbox("exceptions")
+        try:
+            self._sandbox = self._client.get_sandbox(
+                self._claim_name,
+                namespace=self._sandbox_settings.namespace,
+            )
+
+        except kas_exceptions_module.SandboxNotFoundError:
+            self._sandbox = None
+
+        if self._sandbox is not None:
+            return self._sandbox
+
+        raise kas_exceptions_module.SandboxNotFoundError(
+            f"A sandbox with sandbox claim '{self._claim_name}' "
+            "is expected to exist, but cannot be found."
+        )
+
+    def _release_sandbox(self) -> None:
+        pass
+
+    def _close(self) -> None:
+        pass
+
+
+class PersistentModeK8sAgentSandboxLifecycleManager(K8sAgentSandboxLifecycleManager):
+    """
+    Lifecycle manager that manages a sandbox which remains the same across all calls
+    of the`acquire_sandbox` and `release_sandbox`.
+    """
+
+    def _acquire_sandbox(self) -> "Sandbox":  # type: ignore[no-any-unimported]
+        if self._sandbox is not None:
+            return self._sandbox
+
+        self._sandbox = self._create_sandbox()
+        return self._sandbox
+
+    def _release_sandbox(self) -> None:
+        pass
+
+    def _close(self) -> None:
+        self._terminate_sandbox()
