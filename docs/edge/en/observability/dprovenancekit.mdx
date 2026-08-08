@@ -1,0 +1,88 @@
+---
+title: DProvenanceKit Integration
+description: Record every CrewAI kickoff as a diffable trace and fail CI when the crew's reasoning drifts
+icon: code-compare
+mode: "wide"
+---
+
+# Introduction
+
+[DProvenanceKit](https://dprovenance.dev/crewai/) turns each `crew.kickoff()` into a **queryable, diffable trace**, then diffs a candidate run against a golden baseline and **fails your CI build** when the crew's reasoning drifts — a dropped task, a looping tool, a changed execution path — even when the final answer still looks right.
+
+It is open source (Apache-2.0); the core library is dependency-free, and the CrewAI adapter is the only part that imports `crewai`.
+
+## Why use DProvenanceKit?
+
+CrewAI agents take multiple reasoning steps across tasks, tools, and models. When a model or prompt change quietly alters that path, the output can still look plausible while a validation step silently disappears.
+
+DProvenanceKit lets you:
+
+- **Record** every kickoff as a structured run — crew, task, agent, tool, and LLM events in a span tree
+- **Diff** a run against a known-good baseline to see exactly what changed
+- **Fingerprint** a run's execution path, so two runs that diverge are easy to detect
+- **Gate CI** — fail the pull request when a reasoning regression is introduced
+
+## How it works
+
+The adapter is a `crewai.events.BaseEventListener`. **Constructing the listener registers it** on CrewAI's global event bus, and every `crew.kickoff()` afterwards is recorded — no other code changes. Events are ordered by CrewAI's own `emission_sequence` (the event bus is multithreaded, so arrival order isn't emission order), which keeps a run — and its fingerprint — stable across executions.
+
+## Quick Setup with CrewAI
+
+<Steps>
+  <Step title="Install">
+    ```bash
+    pip install "dprovenancekit[crewai]"
+    ```
+    Python 3.10+, Apache-2.0. The `[crewai]` extra pulls in `crewai>=1.0.0`; the DProvenanceKit core stays dependency-free.
+  </Step>
+  <Step title="Attach the listener">
+    Constructing `DProvenanceKitEventListener(store)` registers it on CrewAI's event bus. Build your agents, tasks, and crew as usual.
+
+    ```python
+    from crewai import Agent, Crew, Task
+    from dprovenancekit import SQLiteTraceStore
+    from dprovenancekit.integrations.crewai import (
+        CrewAITraceEvent,
+        DProvenanceKitEventListener,
+    )
+
+    store = SQLiteTraceStore(CrewAITraceEvent, "traces.sqlite")
+    DProvenanceKitEventListener(store)   # registers on crewai's event bus
+
+    researcher = Agent(
+        role="Researcher",
+        goal="Find accurate information",
+        backstory="A meticulous researcher",
+    )
+    task = Task(
+        description="Summarize the latest developments in AI agent testing",
+        expected_output="A short summary",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[task])
+    ```
+  </Step>
+  <Step title="Run the crew">
+    Every kickoff is recorded as one diffable run — `crew.start`/`.end`, `task.*`, `agent.*`, `tool.*`, and `llm.*` events, with `DERIVED_FROM` / `INFORMED` provenance edges.
+
+    ```python
+    crew.kickoff()   # recorded: crew / task / agent / tool / llm events
+    store.flush()    # make the run durable before the process exits
+    ```
+  </Step>
+  <Step title="Gate it in CI">
+    Once runs are recorded, diff any run against a golden baseline and fail the PR when the reasoning drifts. The server-less `gate` CLI exits non-zero on regression:
+
+    ```bash
+    dprovenancekit gate --db traces.sqlite --golden <run-id> --candidate <run-id>
+    ```
+
+    The [DProvenanceKit Regression Gate](https://github.com/marketplace/actions/dprovenancekit-regression-gate) GitHub Action drops this into any workflow.
+  </Step>
+</Steps>
+
+## Learn more
+
+- Integration guide: [dprovenance.dev/crewai](https://dprovenance.dev/crewai/)
+- Source and full reference: [github.com/Therealdk8890/DProvenanceKitPython](https://github.com/Therealdk8890/DProvenanceKitPython#crewai)
+- PyPI: [`dprovenancekit`](https://pypi.org/project/dprovenancekit/)
