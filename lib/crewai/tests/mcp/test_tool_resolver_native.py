@@ -1,5 +1,6 @@
 """Tests for MCPToolResolver native (non-AMP) resolution paths."""
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -97,3 +98,53 @@ class TestResolveNativeRuntimeError:
 
         with pytest.raises(RuntimeError, match="Failed to get native MCP tools"):
             resolver._resolve_native(http_config)
+
+    @patch("concurrent.futures.ThreadPoolExecutor")
+    @patch("crewai.mcp.tool_resolver.asyncio.run")
+    @patch.object(asyncio, "get_running_loop", return_value=MagicMock())
+    def test_thread_pool_runtimeerror_not_mistaken_for_no_event_loop(
+        self, mock_get_loop, mock_asyncio_run, mock_executor, resolver, http_config
+    ):
+        mock_future = MagicMock()
+        mock_future.result.side_effect = RuntimeError(
+            "Error during setup client and list tools: connection refused"
+        )
+
+        def _submit_side_effect(fn, *args, **kwargs):
+            coro = args[1] if len(args) > 1 else kwargs.get("coro")
+            if coro is not None:
+                coro.close()
+            return mock_future
+
+        mock_executor.return_value.__enter__.return_value.submit.side_effect = (
+            _submit_side_effect
+        )
+
+        with pytest.raises(RuntimeError, match="Failed to get native MCP tools"):
+            resolver._resolve_native(http_config)
+
+        mock_asyncio_run.assert_not_called()
+
+    @patch("concurrent.futures.ThreadPoolExecutor")
+    @patch("crewai.mcp.tool_resolver.asyncio.run")
+    @patch.object(asyncio, "get_running_loop", return_value=MagicMock())
+    def test_thread_pool_cancellederror_handled(
+        self, mock_get_loop, mock_asyncio_run, mock_executor, resolver, http_config
+    ):
+        mock_future = MagicMock()
+        mock_future.result.side_effect = asyncio.CancelledError("task cancelled")
+
+        def _submit_side_effect(fn, *args, **kwargs):
+            coro = args[1] if len(args) > 1 else kwargs.get("coro")
+            if coro is not None:
+                coro.close()
+            return mock_future
+
+        mock_executor.return_value.__enter__.return_value.submit.side_effect = (
+            _submit_side_effect
+        )
+
+        with pytest.raises(ConnectionError, match="MCP connection was cancelled"):
+            resolver._resolve_native(http_config)
+
+        mock_asyncio_run.assert_not_called()
