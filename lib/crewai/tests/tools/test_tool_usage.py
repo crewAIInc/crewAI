@@ -25,7 +25,7 @@ from crewai.hooks.tool_hooks import (
 )
 from crewai.tools import BaseTool
 from crewai.tools.tool_calling import ToolCalling
-from crewai.tools.tool_usage import ToolUsage
+from crewai.tools.tool_usage import ToolUsage, ToolUsageError
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from pydantic import BaseModel, Field
 import pytest
@@ -259,6 +259,46 @@ def test_last_raw_result_falls_back_only_until_recorded():
     tool_usage.last_raw_result = None
 
     assert tool_usage.get_last_raw_result("formatted result") is None
+
+
+def _tool_usage_for_calling() -> ToolUsage:
+    return ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        task=MagicMock(),
+        function_calling_llm=MagicMock(),
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+
+def test_original_tool_calling_non_dict_raises_tool_usage_error():
+    """When validated arguments are not a dict and raise_error=True, a
+    ToolUsageError must be raised — not a RuntimeError from a bare `raise`
+    with no active exception (#6430)."""
+    tool_usage = _tool_usage_for_calling()
+
+    with (
+        patch.object(tool_usage, "_select_tool", return_value=MagicMock()),
+        patch.object(tool_usage, "_validate_tool_input", return_value=[1, 2, 3]),
+    ):
+        with pytest.raises(ToolUsageError):
+            tool_usage._original_tool_calling("some tool string", raise_error=True)
+
+
+def test_original_tool_calling_non_dict_returns_error_when_not_raising():
+    """With raise_error=False, non-dict arguments return a ToolUsageError."""
+    tool_usage = _tool_usage_for_calling()
+
+    with (
+        patch.object(tool_usage, "_select_tool", return_value=MagicMock()),
+        patch.object(tool_usage, "_validate_tool_input", return_value=[1, 2, 3]),
+    ):
+        result = tool_usage._original_tool_calling(
+            "some tool string", raise_error=False
+        )
+
+    assert isinstance(result, ToolUsageError)
 
 
 def test_validate_tool_input_booleans_and_none():
