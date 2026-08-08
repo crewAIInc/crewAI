@@ -13,6 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import contextvars
 import inspect
 import logging
+import traceback
 from typing import TYPE_CHECKING, Annotated, Any, Literal, cast
 import warnings
 
@@ -993,7 +994,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
                 result = format_native_tool_output_for_agent(output_tool, raw_result)
             except Exception as e:
-                result = f"Error executing tool: {e}"
+                result = f"Error executing tool: {e}\nTraceback:\n{traceback.format_exc(limit=5)}"
                 raw_tool_result = result
                 if self.task:
                     self.task.increment_tools_errors()
