@@ -2175,3 +2175,55 @@ def test_openai_no_detail_fields_omitted():
     assert usage["completion_tokens"] == 30
     assert "cached_prompt_tokens" not in usage
     assert "reasoning_tokens" not in usage
+
+
+from pydantic import BaseModel
+
+
+class SampleOutput(BaseModel):
+    name: str
+    value: int
+
+
+def test_structured_output_json_schema_for_supported_models():
+    """Test that json_schema response_format is used for models that support it."""
+    llm = LLM(model="gpt-4o", response_format=SampleOutput, api_key="test-key")
+    params = llm._prepare_completion_params(messages=[{"role": "user", "content": "test"}])
+    assert params["response_format"]["type"] == "json_schema"
+    assert "json_schema" in params["response_format"]
+
+
+def test_structured_output_fallback_for_unsupported_models():
+    """Test that json_object fallback is used for models that don't support json_schema."""
+    llm = LLM(model="o1-preview", response_format=SampleOutput, api_key="test-key")
+    params = llm._prepare_completion_params(messages=[{"role": "user", "content": "test"}])
+    assert params["response_format"]["type"] == "json_object"
+
+
+def test_structured_output_fallback_for_o1_mini():
+    """Test that o1-mini falls back to json_object."""
+    llm = LLM(model="o1-mini", response_format=SampleOutput, api_key="test-key")
+    params = llm._prepare_completion_params(messages=[{"role": "user", "content": "test"}])
+    assert params["response_format"]["type"] == "json_object"
+
+
+def test_structured_output_json_schema_for_o3_mini():
+    """Test that o3-mini supports json_schema (it's a newer reasoning model)."""
+    llm = LLM(model="o3-mini", response_format=SampleOutput, api_key="test-key")
+    params = llm._prepare_completion_params(messages=[{"role": "user", "content": "test"}])
+    assert params["response_format"]["type"] == "json_schema"
+
+
+def test_structured_output_json_schema_for_gpt4_turbo():
+    """Test that gpt-4-turbo supports json_schema."""
+    llm = LLM(model="gpt-4-turbo", response_format=SampleOutput, api_key="test-key")
+    params = llm._prepare_completion_params(messages=[{"role": "user", "content": "test"}])
+    assert params["response_format"]["type"] == "json_schema"
+
+
+def test_dict_response_format_passed_through():
+    """Test that dict response_format is passed through unchanged."""
+    custom_format = {"type": "json_object"}
+    llm = LLM(model="o1-preview", response_format=custom_format, api_key="test-key")
+    params = llm._prepare_completion_params(messages=[{"role": "user", "content": "test"}])
+    assert params["response_format"] == custom_format
