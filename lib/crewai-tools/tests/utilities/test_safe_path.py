@@ -154,6 +154,24 @@ class TestValidateUrl:
         with pytest.raises(ValueError, match="private/reserved IP"):
             validate_url("http://169.254.169.254/latest/meta-data/")
 
+    def test_blocks_cgnat_100_64(self):
+        """CGNAT shared address space must be blocked (not covered by is_private)."""
+        with pytest.raises(ValueError, match="private/reserved IP"):
+            validate_url("http://100.64.0.1/internal")
+
+    def test_blocks_benchmarking_198_18(self):
+        with pytest.raises(ValueError, match="private/reserved IP"):
+            validate_url("http://198.18.0.1/")
+
+    def test_blocks_documentation_192_0_2(self):
+        with pytest.raises(ValueError, match="private/reserved IP"):
+            validate_url("http://192.0.2.1/")
+
+    def test_blocks_this_network_0_0_0_1(self):
+        """Full 0.0.0.0/8, not only 0.0.0.0/32."""
+        with pytest.raises(ValueError, match="private/reserved IP"):
+            validate_url("http://0.0.0.1/")
+
     def test_blocks_private_10_range(self):
         with pytest.raises(ValueError, match="private/reserved IP"):
             validate_url("http://10.0.0.1/internal")
