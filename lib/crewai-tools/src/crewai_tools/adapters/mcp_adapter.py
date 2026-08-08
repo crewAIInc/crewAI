@@ -165,14 +165,15 @@ class MCPServerAdapter:
                 import subprocess
 
                 try:
-                    subprocess.run(["uv", "add", "mcp crewai-tools'[mcp]'"], check=True)  # noqa: S607
-
+                    subprocess.run(["uv", "add", "crewai-tools[mcp]"], check=True)  # noqa: S607
                 except subprocess.CalledProcessError as e:
                     raise ImportError("Failed to install mcp package") from e
-            else:
                 raise ImportError(
-                    "`mcp` package not found, please run `uv add crewai-tools[mcp]`"
+                    "MCP dependencies installed. Restart Python and retry."
                 )
+            raise ImportError(
+                "`mcp` package not found, please run `uv add crewai-tools[mcp]`"
+            )
 
         try:
             self._serverparams = serverparams
