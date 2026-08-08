@@ -189,6 +189,13 @@ class BaseLLM(BaseModel, ABC):
     )
     additional_params: dict[str, Any] = Field(default_factory=dict)
 
+    def __repr__(self) -> str:
+        """Return a representation with sensitive fields masked."""
+        d = self.model_dump()
+        if d.get("api_key"):
+            d["api_key"] = "***"
+        return f"{self.__class__.__name__}({d})"
+
     @field_serializer("response_format", when_used="json", check_fields=False)
     def _serialize_response_format(self, value: Any) -> Any:
         return serialize_model_class(value)
