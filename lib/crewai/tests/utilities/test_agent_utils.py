@@ -1341,3 +1341,22 @@ class TestResolvePlusResponse:
                 resolve_plus_response(future)
 
         asyncio.run(main())
+
+
+class TestModuleAllowlist:
+    """Tests for the tool module allowlist in load_agent_from_repository."""
+
+    def test_blocked_module_raises_error(self):
+        """Modules not in the allowlist should be rejected."""
+        from crewai.utilities.agent_utils import _ALLOWED_TOOL_MODULES
+        from crewai.utilities.errors import AgentRepositoryError
+
+        assert "os" not in _ALLOWED_TOOL_MODULES
+        assert "subprocess" not in _ALLOWED_TOOL_MODULES
+        assert "crewai.tools" in _ALLOWED_TOOL_MODULES
+
+    def test_allowlist_is_immutable(self):
+        """The allowlist should be a frozenset to prevent runtime modification."""
+        from crewai.utilities.agent_utils import _ALLOWED_TOOL_MODULES
+
+        assert isinstance(_ALLOWED_TOOL_MODULES, frozenset)
