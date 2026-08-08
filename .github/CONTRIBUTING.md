@@ -12,7 +12,7 @@ Thank you for your interest in contributing to CrewAI. This guide covers everyth
 
 ## Prerequisites
 
-- Python 3.10–3.14 (development targets 3.12)
+- Python 3.10–3.14 (development targets 3.13)
 - [uv](https://docs.astral.sh/uv/) for package management
 - [pre-commit](https://pre-commit.com/) for Git hooks
 
@@ -29,7 +29,7 @@ uv run pre-commit install
 
 ## Repository Structure
 
-This is a uv workspace with four packages under `lib/`:
+This is a uv workspace with six packages under `lib/`:
 
 | Package | Path | Description |
 |---------|------|-------------|
@@ -37,6 +37,8 @@ This is a uv workspace with four packages under `lib/`:
 | `crewai-tools` | `lib/crewai-tools/` | Tool integrations |
 | `crewai-files` | `lib/crewai-files/` | File handling |
 | `devtools` | `lib/devtools/` | Internal release tooling |
+| `cli` | `lib/cli/` | Command-line interface |
+| `crewai-core` | `lib/crewai-core/` | Shared core utilities |
 
 Documentation lives in `docs/` with translations under `docs/{en,ar,ko,pt-BR}/`.
 

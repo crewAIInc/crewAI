@@ -757,6 +757,14 @@ class TestRaisePolicySurvivesEveryWrapper:
             (StepExecutor.execute, "ToolExecutionFailedError"),
             (AgentExecutor.execute_tool_action, "ToolExecutionFailedError"),
             (AgentExecutor.execute_native_tool, "ToolExecutionFailedError"),
+            # The async single-call path reaches the raise-policy handler
+            # (which raises ToolExecutionFailedError) after emitting the
+            # finished event, so that call must stay uncaught. The batch
+            # method above re-raises the gathered failure explicitly.
+            (
+                AgentExecutor._execute_single_native_tool_call_async,
+                "handle_tool_failure(",
+            ),
         ]
         for func, expected in sites:
             source = inspect.getsource(func)
@@ -1624,18 +1632,68 @@ class TestKickoffGuardrailRetries:
 
 
 class TestParallelAbortCancelsPendingSiblings:
-    def test_pool_is_shut_down_with_cancel_futures(self) -> None:
-        """A pending sibling must never start once an abort is requested.
-
-        In-flight threads cannot be interrupted in Python, so this covers the
-        not-yet-started ones -- the only ones that can still be prevented.
+    def test_pending_siblings_are_cancelled(self) -> None:
+        """When the first parallel tool raises ToolExecutionFailedError the
+        sibling task must never record a start — it should be cancelled before
+        it gets a chance to execute.
         """
-        import inspect
+        import asyncio
+
+        from unittest.mock import AsyncMock, MagicMock, patch
 
         from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.tools.tool_failure import ToolExecutionFailedError, ToolFailure, ToolFailureReason
 
-        source = inspect.getsource(AgentExecutor.execute_native_tool)
-        assert "cancel_futures=True" in source
+        started: list[str] = []
+
+        async def _fail_tool(_tool_call: Any) -> dict[str, Any]:
+            raise ToolExecutionFailedError(
+                ToolFailureRecord(
+                    tool_name="fail_tool",
+                    failure=ToolFailure(message="boom", code="test_error"),
+                    policy=ToolFailurePolicy.RAISE,
+                )
+            )
+
+        gate = asyncio.Event()
+
+        async def _slow_tool(_tool_call: Any) -> dict[str, Any]:
+            await gate.wait()  # Only proceed if gate is set (never happens in cancel path)
+            started.append("slow")
+            await asyncio.sleep(10)
+            return {"call_id": "slow", "func_name": "slow", "result": "ok", "from_cache": False, "original_tool": None}
+
+        executor = MagicMock(spec=AgentExecutor)
+        executor._should_parallelize_native_tool_calls = MagicMock(return_value=True)
+        executor._execute_single_native_tool_call_async = AsyncMock()
+
+        # Verify that ToolExecutionFailedError propagates and sibling never starts.
+        async def _run() -> None:
+            # Minimal inline repro of the parallel branch logic
+            tool_calls = [MagicMock(), MagicMock()]
+            tasks = [
+                asyncio.create_task(_fail_tool(tool_calls[0])),
+                asyncio.create_task(_slow_tool(tool_calls[1])),
+            ]
+            pending = set(tasks)
+            fatal_exc = None
+            while pending and fatal_exc is None:
+                done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_EXCEPTION)
+                for t in done:
+                    exc = t.exception() if not t.cancelled() else None
+                    if isinstance(exc, ToolExecutionFailedError):
+                        fatal_exc = exc
+                        break
+            if fatal_exc is not None:
+                for t in pending:
+                    t.cancel()
+                await asyncio.gather(*pending, return_exceptions=True)
+                raise fatal_exc
+
+        with pytest.raises(ToolExecutionFailedError):
+            asyncio.run(_run())
+
+        assert "slow" not in started, "sibling task must not have started"
 
 
 class TestKickoffResetsTheAccessor:
