@@ -1,7 +1,7 @@
 name: Bug report
 description: Create a report to help us improve CrewAI
 title: "[BUG]"
-labels: ["bug"]
+labels: ["bug", "state:inbox"]
 assignees: []
 body:
   - type: textarea
@@ -28,6 +28,13 @@ body:
     attributes:
       label: Expected behavior
       description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: Describe who is affected and how this problem affects their work.
     validations:
       required: true
   - type: textarea
@@ -104,6 +111,14 @@ body:
     attributes:
       label: Possible Solution
       description: Have a solution in mind? Please suggest it here, or write "None".
+    validations:
+      required: true
+  - type: textarea
+    id: verification-plan
+    attributes:
+      label: Verification plan
+      description: Describe how a maintainer can confirm that a future fix resolves the problem.
+      placeholder: Include a minimal reproduction, expected assertions, or a manual verification procedure.
     validations:
       required: true
   - type: textarea

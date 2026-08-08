@@ -42,6 +42,40 @@ Documentation lives in `docs/` with translations under `docs/{en,ar,ko,pt-BR}/`.
 
 ## Development Workflow
 
+### Issue-First Contributions
+
+CrewAI is piloting an issue-first contribution workflow. The issue is where
+contributors and maintainers agree on the problem and intended solution before
+implementation begins.
+
+Issues move through the following lifecycle:
+
+```
+state:inbox -> state:design -> state:ready -> state:in-progress -> state:verification -> Done
+```
+
+Maintainers apply `state:ready` after the issue has a clear problem statement,
+agreed scope and non-goals, acceptance criteria, and a verification plan. A
+pull request should not begin before its issue is ready unless a maintainer has
+approved an exception.
+
+Every new pull request must reference exactly one ready issue in its description:
+
+```
+Implements #123
+```
+
+Use `Implements`, not `Closes`, `Fixes`, or `Resolves`. GitHub's closing
+keywords close the issue as soon as the pull request merges, but issue-first
+contributions remain open in `state:verification` until a human confirms the
+result.
+
+The issue gate currently runs in **observe mode**. It reports whether a pull
+request would satisfy this policy, but it does not block or close pull requests.
+Maintainers can apply `issue-gate:override` for security work, release
+automation, urgent fixes, or another documented exception. Pull requests that
+predate the pilot can be marked `policy:legacy`.
+
 ### Branching
 
 Create a branch off `main` using the conventional commit type:
@@ -103,7 +137,9 @@ chore(deps): bump pydantic to 2.11
 - Keep PRs focused — avoid bundling unrelated changes
 - PRs over 500 lines are labeled `size/XL` automatically
 - Title must follow the same conventional commit format
-- Link related issues where applicable
+- Reference exactly one ready issue with `Implements #<issue-number>`
+- Explain how the implementation meets the issue's acceptance criteria
+- Include the automated and manual verification performed
 
 ## Testing
 
