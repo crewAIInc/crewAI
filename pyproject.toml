@@ -115,6 +115,7 @@ ignore-decorators = ["typing.overload"]
 "lib/cli/tests/**/*.py" = ["S101", "RET504", "S105", "S106"]  # Allow assert statements in tests
 "lib/crewai-core/tests/**/*.py" = ["S101", "RET504", "S105", "S106"]  # Allow assert statements in tests
 "lib/devtools/tests/**/*.py" = ["S101"]
+".claude/hooks/test_*.py" = ["S101"]  # Allow assert statements in tests
 
 
 [tool.mypy]

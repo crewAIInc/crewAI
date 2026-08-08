@@ -61,6 +61,18 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-push, manual]
+  - repo: local
+    hooks:
+      - id: agent-guard-hook
+        name: agent-guard-hook
+        # --confcutdir keeps the root conftest out: it assumes every test lives
+        # under lib/<package>/tests/, which these do not.
+        entry: >-
+          bash -c 'source .venv/bin/activate && uv run pytest
+          .claude/hooks/test_guard.py -q --confcutdir=.claude/hooks'
+        language: system
+        pass_filenames: false
+        files: ^\.claude/hooks/
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v4.10.1
     hooks:

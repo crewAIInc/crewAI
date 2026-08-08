@@ -26,7 +26,16 @@ plan.md
 conceptual_plan.md
 build_image
 chromadb-*.lock
-.claude
+# Everything under .claude is personal except the shared agent config below.
+# Git cannot re-include a file whose parent directory is excluded, so this
+# excludes the contents rather than the directory itself.
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+.claude/hooks/*
+!.claude/hooks/guard.py
+!.claude/hooks/test_guard.py
+CLAUDE.local.md
 .crewai/memory
 blogs/*
 secrets/*
