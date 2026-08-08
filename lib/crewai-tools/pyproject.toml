@@ -15,7 +15,7 @@ dependencies = [
     "beautifulsoup4~=4.13.4",
     "python-docx~=1.2.0",
     "youtube-transcript-api~=1.2.2",
-    "pymupdf~=1.26.6",
+    "pymupdf~=1.28.0",
 ]
 
 
