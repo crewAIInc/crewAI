@@ -51,6 +51,16 @@ from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.types import LLMMessage
 
 
+_ALLOWED_TOOL_MODULES: frozenset[str] = frozenset(
+    {
+        "crewai.tools",
+        "crewai_tools",
+        "crewai.tools.base_tool",
+        "crewai.tools.structured_tool",
+        "crewai.tools.tool_usage",
+    }
+)
+
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.agents.crew_agent_executor import CrewAgentExecutor
