@@ -179,6 +179,7 @@ class SyncHumanInputProvider(HumanInputProvider):
         Returns:
             The final answer after feedback processing.
         """
+        self._ensure_result_displayed(formatted_answer, context)
         feedback = self._prompt_input(context.crew)
 
         if context._is_training_mode():
@@ -200,6 +201,7 @@ class SyncHumanInputProvider(HumanInputProvider):
         Returns:
             The final answer after feedback processing.
         """
+        self._ensure_result_displayed(formatted_answer, context)
         feedback = await self._prompt_input_async(context.crew)
 
         if context._is_training_mode():
@@ -259,6 +261,7 @@ class SyncHumanInputProvider(HumanInputProvider):
             else:
                 context.messages.append(context._format_feedback_message(feedback))
                 answer = context._invoke_loop()
+                self._ensure_result_displayed(answer, context)
                 feedback = self._prompt_input(context.crew)
 
         return answer
@@ -311,9 +314,38 @@ class SyncHumanInputProvider(HumanInputProvider):
             else:
                 context.messages.append(context._format_feedback_message(feedback))
                 answer = await context._ainvoke_loop()
+                self._ensure_result_displayed(answer, context)
                 feedback = await self._prompt_input_async(context.crew)
 
         return answer
+
+    @staticmethod
+    def _ensure_result_displayed(
+        answer: AgentFinish,
+        context: ExecutorContext,
+    ) -> None:
+        """Render the agent's final result before prompting for feedback.
+
+        The feedback panel asks the operator to review "the Final Result
+        above", but that result is only rendered when the agent or crew runs
+        verbose. With ``human_input=True`` and verbose off, the operator would
+        otherwise be asked to approve output that was never shown (#6072). When
+        verbose, the result was already displayed, so this is a no-op to avoid
+        a duplicate panel.
+
+        Args:
+            answer: The agent answer the operator is being asked to review.
+            context: Executor context exposing the agent and crew.
+        """
+        agent = getattr(context, "agent", None)
+        crew = getattr(context, "crew", None)
+        if getattr(agent, "verbose", False) or getattr(crew, "verbose", False):
+            return
+
+        from crewai.events.event_listener import event_listener
+
+        role = getattr(agent, "role", "") or ""
+        event_listener.formatter.handle_agent_logs_execution(role, answer, verbose=True)
 
     @staticmethod
     def _prompt_input(crew: Crew | None) -> str:
