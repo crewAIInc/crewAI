@@ -340,6 +340,7 @@
                       "edge/en/observability/maxim",
                       "edge/en/observability/mlflow",
                       "edge/en/observability/neatlogs",
+                      "edge/en/observability/noveum-trace",
                       "edge/en/observability/openlit",
                       "edge/en/observability/opik",
                       "edge/en/observability/patronus-evaluation",
