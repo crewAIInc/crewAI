@@ -150,7 +150,8 @@ _BLOCKED_IPV4_NETWORKS = [
     ipaddress.ip_network("192.168.0.0/16"),
     ipaddress.ip_network("127.0.0.0/8"),
     ipaddress.ip_network("169.254.0.0/16"),  # Link-local / cloud metadata
-    ipaddress.ip_network("0.0.0.0/32"),
+    ipaddress.ip_network("0.0.0.0/8"),  # "this" network (was /32 only)
+    ipaddress.ip_network("100.64.0.0/10"),  # CGNAT / shared address space
 ]
 
 _BLOCKED_IPV6_NETWORKS = [
@@ -162,7 +163,13 @@ _BLOCKED_IPV6_NETWORKS = [
 
 
 def _is_private_or_reserved(ip_str: str) -> bool:
-    """Check if an IP address is private, reserved, or otherwise unsafe."""
+    """Check if an IP address is private, reserved, or otherwise unsafe.
+
+    Uses ``ipaddress`` global/private classification so ranges the hand-maintained
+    blocklists omitted (CGNAT ``100.64/10``, documentation nets, Class E, the
+    rest of ``0.0.0.0/8``) stay blocked. Explicit network lists remain as a
+    belt-and-suspenders check.
+    """
     try:
         addr = ipaddress.ip_address(ip_str)
         # Unwrap IPv4-mapped IPv6 addresses (e.g., ::ffff:127.0.0.1) to IPv4
@@ -170,6 +177,10 @@ def _is_private_or_reserved(ip_str: str) -> bool:
         # an IPv4Address is compared against an IPv6Network).
         if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped:
             addr = addr.ipv4_mapped
+        # ``is_global`` is False for CGNAT (100.64/10) even though ``is_private``
+        # is also False there — that gap let SSRF past the old list check.
+        if not addr.is_global:
+            return True
         networks = (
             _BLOCKED_IPV4_NETWORKS
             if isinstance(addr, ipaddress.IPv4Address)
