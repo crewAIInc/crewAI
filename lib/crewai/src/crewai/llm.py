@@ -338,6 +338,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "bedrock",
     "aws",
     "openrouter",
+    "trustedrouter",
     "deepseek",
     "ollama",
     "ollama_chat",
@@ -443,6 +444,7 @@ class LLM(BaseLLM):
                 "bedrock": "bedrock",
                 "aws": "bedrock",
                 "openrouter": "openrouter",
+                "trustedrouter": "trustedrouter",
                 "deepseek": "deepseek",
                 "ollama": "ollama",
                 "ollama_chat": "ollama_chat",
@@ -580,6 +582,10 @@ class LLM(BaseLLM):
             # OpenRouter uses org/model format but accepts anything
             return True
 
+        if provider == "trustedrouter":
+            # TrustedRouter routes provider-prefixed ids and router aliases
+            return True
+
         if provider == "snowflake":
             return True
 
@@ -715,6 +721,7 @@ class LLM(BaseLLM):
 
         openai_compatible_providers = {
             "openrouter",
+            "trustedrouter",
             "deepseek",
             "ollama",
             "ollama_chat",

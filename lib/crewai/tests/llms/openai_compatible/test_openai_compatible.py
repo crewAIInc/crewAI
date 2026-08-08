@@ -50,6 +50,14 @@ class TestProviderRegistry:
         assert "HTTP-Referer" in config.default_headers
         assert config.api_key_required is True
 
+    def test_trustedrouter_config(self):
+        """Test TrustedRouter provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["trustedrouter"]
+        assert config.base_url == "https://api.trustedrouter.com/v1"
+        assert config.api_key_env == "TRUSTEDROUTER_API_KEY"
+        assert config.base_url_env == "TRUSTEDROUTER_BASE_URL"
+        assert config.api_key_required is True
+
     def test_deepseek_config(self):
         """Test DeepSeek provider configuration."""
         config = OPENAI_COMPATIBLE_PROVIDERS["deepseek"]
