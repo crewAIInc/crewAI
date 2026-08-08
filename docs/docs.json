@@ -250,6 +250,7 @@
                           "edge/en/tools/search-research/youtubechannelsearchtool",
                           "edge/en/tools/search-research/youtubevideosearchtool",
                           "edge/en/tools/search-research/tavilysearchtool",
+                          "edge/en/tools/search-research/iflowsearchtools",
                           "edge/en/tools/search-research/tavilyextractortool",
                           "edge/en/tools/search-research/tavilyresearchtool",
                           "edge/en/tools/search-research/arxivpapertool",
@@ -6038,6 +6039,7 @@
                           "v1.14.7/en/tools/search-research/youtubechannelsearchtool",
                           "v1.14.7/en/tools/search-research/youtubevideosearchtool",
                           "v1.14.7/en/tools/search-research/tavilysearchtool",
+                          "v1.14.7/en/tools/search-research/iflowsearchtools",
                           "v1.14.7/en/tools/search-research/tavilyextractortool",
                           "v1.14.7/en/tools/search-research/tavilyresearchtool",
                           "v1.14.7/en/tools/search-research/arxivpapertool",
@@ -6045,6 +6047,7 @@
                           "v1.14.7/en/tools/search-research/serpapi-googleshoppingtool",
                           "v1.14.7/en/tools/search-research/databricks-query-tool",
                           "v1.14.7/en/tools/search-research/youai-search"
+
                         ]
                       },
                       {
@@ -6420,6 +6423,7 @@
                           "v1.14.6/en/tools/search-research/serpapi-googleshoppingtool",
                           "v1.14.6/en/tools/search-research/databricks-query-tool",
                           "v1.14.6/en/tools/search-research/youai-search"
+
                         ]
                       },
                       {
@@ -6795,6 +6799,7 @@
                           "v1.14.5/en/tools/search-research/serpapi-googleshoppingtool",
                           "v1.14.5/en/tools/search-research/databricks-query-tool",
                           "v1.14.5/en/tools/search-research/youai-search"
+
                         ]
                       },
                       {
@@ -7168,6 +7173,7 @@
                           "v1.14.4/en/tools/search-research/serpapi-googleshoppingtool",
                           "v1.14.4/en/tools/search-research/databricks-query-tool",
                           "v1.14.4/en/tools/search-research/youai-search"
+
                         ]
                       },
                       {
@@ -7538,6 +7544,7 @@
                           "v1.14.3/en/tools/search-research/serpapi-googlesearchtool",
                           "v1.14.3/en/tools/search-research/serpapi-googleshoppingtool",
                           "v1.14.3/en/tools/search-research/databricks-query-tool"
+
                         ]
                       },
                       {
@@ -7904,6 +7911,7 @@
                           "v1.14.2/en/tools/search-research/serpapi-googlesearchtool",
                           "v1.14.2/en/tools/search-research/serpapi-googleshoppingtool",
                           "v1.14.2/en/tools/search-research/databricks-query-tool"
+
                         ]
                       },
                       {
@@ -8270,6 +8278,7 @@
                           "v1.14.1/en/tools/search-research/serpapi-googlesearchtool",
                           "v1.14.1/en/tools/search-research/serpapi-googleshoppingtool",
                           "v1.14.1/en/tools/search-research/databricks-query-tool"
+
                         ]
                       },
                       {
@@ -8635,6 +8644,7 @@
                           "v1.14.0/en/tools/search-research/serpapi-googlesearchtool",
                           "v1.14.0/en/tools/search-research/serpapi-googleshoppingtool",
                           "v1.14.0/en/tools/search-research/databricks-query-tool"
+
                         ]
                       },
                       {
@@ -8999,6 +9009,7 @@
                           "v1.13.0/en/tools/search-research/serpapi-googlesearchtool",
                           "v1.13.0/en/tools/search-research/serpapi-googleshoppingtool",
                           "v1.13.0/en/tools/search-research/databricks-query-tool"
+
                         ]
                       },
                       {
@@ -9362,6 +9373,7 @@
                           "v1.12.2/en/tools/search-research/serpapi-googlesearchtool",
                           "v1.12.2/en/tools/search-research/serpapi-googleshoppingtool",
                           "v1.12.2/en/tools/search-research/databricks-query-tool"
+
                         ]
                       },
                       {
@@ -9725,6 +9737,7 @@
                           "v1.12.1/en/tools/search-research/serpapi-googlesearchtool",
                           "v1.12.1/en/tools/search-research/serpapi-googleshoppingtool",
                           "v1.12.1/en/tools/search-research/databricks-query-tool"
+
                         ]
                       },
                       {
@@ -10088,6 +10101,7 @@
                           "v1.12.0/en/tools/search-research/serpapi-googlesearchtool",
                           "v1.12.0/en/tools/search-research/serpapi-googleshoppingtool",
                           "v1.12.0/en/tools/search-research/databricks-query-tool"
+
                         ]
                       },
                       {
@@ -10450,6 +10464,7 @@
                           "v1.11.1/en/tools/search-research/serpapi-googlesearchtool",
                           "v1.11.1/en/tools/search-research/serpapi-googleshoppingtool",
                           "v1.11.1/en/tools/search-research/databricks-query-tool"
+
                         ]
                       },
                       {
@@ -10804,6 +10819,7 @@
                           "v1.11.0/en/tools/search-research/serpapi-googlesearchtool",
                           "v1.11.0/en/tools/search-research/serpapi-googleshoppingtool",
                           "v1.11.0/en/tools/search-research/databricks-query-tool"
+
                         ]
                       },
                       {
@@ -11159,6 +11175,7 @@
                           "v1.10.1/en/tools/search-research/serpapi-googlesearchtool",
                           "v1.10.1/en/tools/search-research/serpapi-googleshoppingtool",
                           "v1.10.1/en/tools/search-research/databricks-query-tool"
+
                         ]
                       },
                       {
@@ -11506,6 +11523,7 @@
                           "v1.10.0/en/tools/search-research/serpapi-googlesearchtool",
                           "v1.10.0/en/tools/search-research/serpapi-googleshoppingtool",
                           "v1.10.0/en/tools/search-research/databricks-query-tool"
+
                         ]
                       },
                       {
