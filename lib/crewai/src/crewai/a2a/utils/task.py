@@ -159,10 +159,19 @@ def cancellable(
             try:
                 client = cache.client
                 pubsub = client.pubsub()
-                await pubsub.subscribe(f"cancel:{task_id}")
-                async for message in pubsub.listen():
-                    if message["type"] == "message":
-                        return True
+                try:
+                    await pubsub.subscribe(f"cancel:{task_id}")
+                    async for message in pubsub.listen():
+                        if message["type"] == "message":
+                            return True
+                finally:
+                    try:
+                        await pubsub.aclose()
+                    except (OSError, ConnectionError) as e:
+                        logger.warning(
+                            "Failed to close cancel watcher Redis pubsub",
+                            extra={"task_id": task_id, "error": str(e)},
+                        )
             except (OSError, ConnectionError) as e:
                 logger.warning(
                     "Cancel watcher Redis error, falling back to polling",
@@ -182,14 +191,13 @@ def cancellable(
 
             if cancel_watch in done:
                 execute_task.cancel()
-                try:
-                    await execute_task
-                except asyncio.CancelledError:
-                    pass
                 raise asyncio.CancelledError(f"Task {task_id} was cancelled")
-            cancel_watch.cancel()
             return execute_task.result()
         finally:
+            for task in (execute_task, cancel_watch):
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(execute_task, cancel_watch, return_exceptions=True)
             await cache.delete(f"cancel:{task_id}")
 
     return wrapper
