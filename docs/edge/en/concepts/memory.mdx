@@ -762,6 +762,7 @@ memory = Memory(
 ## Storage Backend
 
 - **Default**: LanceDB, stored under `./.crewai/memory` (or `$CREWAI_STORAGE_DIR/memory` if the env var is set, or the path you pass as `storage="path/to/dir"`).
+- **Azure Cosmos DB (NoSQL)**: Pass `storage="cosmosdb"` to persist memories in Azure Cosmos DB for NoSQL with vector search. Install the extra (`pip install 'crewai[cosmosdb]'`) and configure the connection via environment variables — either `AZURE_COSMOS_CONNECTION_STRING`, or `AZURE_COSMOS_HOST` together with `AZURE_COSMOS_KEY` (falling back to `DefaultAzureCredential` when no key is set). Optional overrides: `AZURE_COSMOS_DATABASE_NAME`, `AZURE_COSMOS_CONTAINER_NAME`, `AZURE_COSMOS_VECTOR_DIM`. For full control, pass a pre-built instance: `Memory(storage=CosmosDBNoSqlStorage.from_env())`.
 - **Custom backend**: Implement the `StorageBackend` protocol (see `crewai.memory.storage.backend`) and pass an instance to `Memory(storage=your_backend)`.
 
 
@@ -868,7 +869,7 @@ All configuration is passed as keyword arguments to `Memory(...)`. Every paramet
 | Parameter | Default | Description |
 | :--- | :--- | :--- |
 | `llm` | `"gpt-4o-mini"` | LLM for analysis (model name or `BaseLLM` instance). |
-| `storage` | `"lancedb"` | Storage backend (`"lancedb"`, a path string, or a `StorageBackend` instance). |
+| `storage` | `"lancedb"` | Storage backend (`"lancedb"`, `"cosmosdb"`, a path string, or a `StorageBackend` instance). |
 | `embedder` | `None` (OpenAI `text-embedding-3-large`) | Embedder (config dict, callable, or `None` for default OpenAI). |
 | `recency_weight` | `0.3` | Weight for recency in composite score. |
 | `semantic_weight` | `0.5` | Weight for semantic similarity in composite score. |

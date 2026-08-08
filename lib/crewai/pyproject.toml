@@ -116,6 +116,10 @@ file-processing = [
 qdrant-edge = [
     "qdrant-edge-py>=0.6.0",
 ]
+cosmosdb = [
+    "azure-cosmos>=4.7.0",
+    "azure-identity>=1.17.0",
+]
 
 
 [tool.uv]
