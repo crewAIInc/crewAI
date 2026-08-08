@@ -181,6 +181,10 @@ class BaseTool(BaseModel, ABC):
         default=False,
         description="Flag to check if the tool should be the final agent answer.",
     )
+    requires_human_approval: bool = Field(
+        default=False,
+        description="Flag to check if tool execution requires explicit human approval before running.",
+    )
     max_usage_count: int | None = Field(
         default=None,
         description="Maximum number of times this tool can be used. None means unlimited usage.",
