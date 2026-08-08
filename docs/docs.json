@@ -252,6 +252,7 @@
                           "edge/en/tools/search-research/tavilysearchtool",
                           "edge/en/tools/search-research/tavilyextractortool",
                           "edge/en/tools/search-research/tavilyresearchtool",
+                          "edge/en/tools/search-research/serpdivesearchtool",
                           "edge/en/tools/search-research/arxivpapertool",
                           "edge/en/tools/search-research/serpapi-googlesearchtool",
                           "edge/en/tools/search-research/serpapi-googleshoppingtool",
