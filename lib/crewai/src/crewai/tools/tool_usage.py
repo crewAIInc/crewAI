@@ -419,7 +419,9 @@ class ToolUsage:
                     if available_tool and hasattr(
                         available_tool, "_increment_usage_count"
                     ):
-                        available_tool._increment_usage_count()
+                        # The tool's own invoke()/ainvoke() already incremented
+                        # the count; incrementing again here double-counts and
+                        # halves the effective max_usage_count.
                         if (
                             hasattr(available_tool, "max_usage_count")
                             and available_tool.max_usage_count is not None
@@ -670,7 +672,9 @@ class ToolUsage:
                     if available_tool and hasattr(
                         available_tool, "_increment_usage_count"
                     ):
-                        available_tool._increment_usage_count()
+                        # The tool's own invoke()/ainvoke() already incremented
+                        # the count; incrementing again here double-counts and
+                        # halves the effective max_usage_count.
                         if (
                             hasattr(available_tool, "max_usage_count")
                             and available_tool.max_usage_count is not None
