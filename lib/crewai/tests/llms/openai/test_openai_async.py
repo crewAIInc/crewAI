@@ -1,9 +1,47 @@
 """Tests for OpenAI async completion functionality."""
 
 import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
+
+from pydantic import BaseModel
 
 from crewai import Agent, Task, Crew
 from crewai.llm import LLM
+from crewai.llms.providers.openai.completion import OpenAICompletion
+
+
+@pytest.mark.asyncio
+async def test_deepseek_async_response_model_uses_plain_completion_and_local_validation():
+    """Unsupported providers must not send response_model to async parse."""
+
+    class TestResponse(BaseModel):
+        answer: str
+
+    llm = OpenAICompletion(
+        model="deepseek/deepseek-chat",
+        api_key="test-key",
+    )
+    client = MagicMock()
+    response = MagicMock()
+    response.choices = [MagicMock()]
+    response.choices[0].message.content = '{"answer":"test"}'
+    response.choices[0].message.tool_calls = None
+    response.choices[0].finish_reason = "stop"
+    response.id = "response-id"
+    response.usage = None
+    client.chat.completions.create = AsyncMock(return_value=response)
+    client.beta.chat.completions.parse = AsyncMock()
+
+    with patch.object(llm, "_get_async_client", return_value=client):
+        result = await llm._ahandle_completion(
+            {"model": llm.model, "messages": [{"role": "user", "content": "Hi"}]},
+            response_model=TestResponse,
+        )
+
+    client.beta.chat.completions.parse.assert_not_awaited()
+    client.chat.completions.create.assert_awaited_once()
+    assert "response_format" not in client.chat.completions.create.call_args.kwargs
+    assert result == TestResponse(answer="test")
 
 
 @pytest.mark.vcr()
