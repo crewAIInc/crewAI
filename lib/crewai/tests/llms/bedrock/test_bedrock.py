@@ -1164,6 +1164,60 @@ def test_bedrock_cached_token_alternate_key():
         assert llm._token_usage['cached_prompt_tokens'] == 25
 
 
+def test_bedrock_cache_write_token_tracking():
+    """Test that cache writes (cacheWriteInputTokenCount) are tracked for Bedrock."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        mock_response = {
+            'output': {
+                'message': {
+                    'role': 'assistant',
+                    'content': [{'text': 'test response'}]
+                }
+            },
+            'usage': {
+                'inputTokens': 100,
+                'outputTokens': 50,
+                'totalTokens': 150,
+                'cacheReadInputTokenCount': 0,
+                'cacheWriteInputTokenCount': 1024,
+            }
+        }
+        mock_converse.return_value = mock_response
+
+        llm.call("Hello")
+        assert llm._token_usage['cache_creation_tokens'] == 1024
+        assert llm._token_usage['cached_prompt_tokens'] == 0
+
+
+def test_bedrock_cache_write_token_alternate_key():
+    """Test that the alternate key cacheWriteInputTokens also works."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        mock_response = {
+            'output': {
+                'message': {
+                    'role': 'assistant',
+                    'content': [{'text': 'test response'}]
+                }
+            },
+            'usage': {
+                'inputTokens': 80,
+                'outputTokens': 40,
+                'totalTokens': 120,
+                'cacheReadInputTokens': 25,
+                'cacheWriteInputTokens': 512,
+            }
+        }
+        mock_converse.return_value = mock_response
+
+        llm.call("Hello")
+        assert llm._token_usage['cached_prompt_tokens'] == 25
+        assert llm._token_usage['cache_creation_tokens'] == 512
+
+
 def test_bedrock_no_cache_tokens_defaults_to_zero():
     """Test that missing cache token keys default to zero."""
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
@@ -1186,3 +1240,4 @@ def test_bedrock_no_cache_tokens_defaults_to_zero():
 
         llm.call("Hello")
         assert llm._token_usage['cached_prompt_tokens'] == 0
+        assert llm._token_usage['cache_creation_tokens'] == 0
