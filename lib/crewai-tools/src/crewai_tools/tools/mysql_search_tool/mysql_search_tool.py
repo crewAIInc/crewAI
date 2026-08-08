@@ -17,7 +17,7 @@ class MySQLSearchToolSchema(BaseModel):
 
 class MySQLSearchTool(RagTool):
     name: str = "Search a database's table content"
-    description: str = "A tool that can be used to semantic search a query from a database table's content."
+    description: str = "A tool that can be used to semantically search a query from a database table's content."
     args_schema: type[BaseModel] = MySQLSearchToolSchema
     db_uri: str = Field(..., description="Mandatory database URI")
 

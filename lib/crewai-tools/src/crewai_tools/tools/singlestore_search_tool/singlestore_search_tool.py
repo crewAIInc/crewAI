@@ -40,7 +40,7 @@ class SingleStoreSearchTool(BaseTool):
 
     name: str = "Search a database's table(s) content"
     description: str = (
-        "A tool that can be used to semantic search a query from a database."
+        "A tool that can be used to semantically search a query from a database."
     )
     args_schema: type[BaseModel] = SingleStoreSearchToolSchema
 
@@ -315,7 +315,7 @@ class SingleStoreSearchTool(BaseTool):
             conn.close()
 
         self.description = (
-            f"A tool that can be used to semantic search a query from a SingleStore "
+            f"A tool that can be used to semantically search a query from a SingleStore "
             f"database's {', '.join(table_definitions)} table(s) content."
         )
         self._generate_description()

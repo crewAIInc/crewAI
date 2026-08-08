@@ -26,14 +26,14 @@ class WebsiteSearchToolSchema(FixedWebsiteSearchToolSchema):
 
 class WebsiteSearchTool(RagTool):
     name: str = "Search in a specific website"
-    description: str = "A tool that can be used to semantic search a query from a specific URL content."
+    description: str = "A tool that can be used to semantically search a query from a specific URL content."
     args_schema: type[BaseModel] = WebsiteSearchToolSchema
 
     def __init__(self, website: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         if website is not None:
             self.add(website)
-            self.description = f"A tool that can be used to semantic search a query from {website} website content."
+            self.description = f"A tool that can be used to semantically search a query from {website} website content."
             self.args_schema = FixedWebsiteSearchToolSchema
             self._generate_description()
 
