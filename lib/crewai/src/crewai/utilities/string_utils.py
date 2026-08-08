@@ -9,7 +9,9 @@ from typing import Any, Final
 import unicodedata
 
 
-_VARIABLE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{([A-Za-z_][A-Za-z0-9_\-]*)}")
+TEMPLATE_VARIABLE_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"\{([A-Za-z_][A-Za-z0-9_\-]*)}"
+)
 _QUOTE_PATTERN: Final[re.Pattern[str]] = re.compile(r"[\'\"]+")
 _CAMEL_LOWER_UPPER: Final[re.Pattern[str]] = re.compile(r"([a-z])([A-Z])")
 _CAMEL_UPPER_LOWER: Final[re.Pattern[str]] = re.compile(r"([A-Z]+)([A-Z][a-z])")
@@ -132,7 +134,7 @@ def interpolate_only(
             "Inputs dictionary cannot be empty when interpolating variables"
         )
 
-    variables = _VARIABLE_PATTERN.findall(input_string)
+    variables = TEMPLATE_VARIABLE_PATTERN.findall(input_string)
     result = input_string
 
     missing_vars = [var for var in variables if var not in inputs]
