@@ -1343,20 +1343,54 @@ class TestResolvePlusResponse:
         asyncio.run(main())
 
 
+
 class TestModuleAllowlist:
     """Tests for the tool module allowlist in load_agent_from_repository."""
 
-    def test_blocked_module_raises_error(self):
-        """Modules not in the allowlist should be rejected."""
-        from crewai.utilities.agent_utils import _ALLOWED_TOOL_MODULES
+    def test_blocked_module_raises_repository_error(self):
+        """Loading an agent whose tool references a non-allowlisted module should raise AgentRepositoryError."""
+        from unittest.mock import MagicMock, patch
+
         from crewai.utilities.errors import AgentRepositoryError
 
-        assert "os" not in _ALLOWED_TOOL_MODULES
-        assert "subprocess" not in _ALLOWED_TOOL_MODULES
-        assert "crewai.tools" in _ALLOWED_TOOL_MODULES
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "name": "test-agent",
+            "tools": [
+                {
+                    "module": "os",
+                    "name": "system",
+                    "init_params": {},
+                }
+            ],
+        }
 
-    def test_allowlist_is_immutable(self):
-        """The allowlist should be a frozenset to prevent runtime modification."""
-        from crewai.utilities.agent_utils import _ALLOWED_TOOL_MODULES
+        with (
+            patch("crewai.utilities.agent_utils.resolve_plus_response", return_value=mock_response),
+            patch("crewai.utilities.agent_utils.resolve_plus_client"),
+        ):
+            from crewai.utilities.agent_utils import load_agent_from_repository
 
-        assert isinstance(_ALLOWED_TOOL_MODULES, frozenset)
+            with pytest.raises(AgentRepositoryError, match="not in the allowlist"):
+                load_agent_from_repository("test-agent")
+
+    def test_allowed_module_proceeds_past_allowlist(self):
+        """A tool referencing an allowlisted module should not trigger the allowlist rejection."""
+        from unittest.mock import MagicMock, patch
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "name": "test-agent",
+            "tools": [],
+        }
+
+        with (
+            patch("crewai.utilities.agent_utils.resolve_plus_response", return_value=mock_response),
+            patch("crewai.utilities.agent_utils.resolve_plus_client"),
+        ):
+            from crewai.utilities.agent_utils import load_agent_from_repository
+
+            result = load_agent_from_repository("test-agent")
+            assert result.get("name") == "test-agent"

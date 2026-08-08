@@ -124,6 +124,7 @@ class PickleHandler:
 
     A keyed HMAC-SHA256 signature is written alongside the pickle file on save.
     On load, the signature is verified before deserialization to detect tampering.
+    Files without a signature are rejected to prevent loading untrusted data.
 
     Attributes:
         file_path: The path to the pickle file.
@@ -149,12 +150,20 @@ class PickleHandler:
         return self.file_path + ".sig"
 
     def _load_or_create_key(self) -> bytes:
-        """Load the HMAC key from the key file, or create a new one if it doesn't exist.
+        """Load the HMAC key from the user home directory, or create a new one.
+
+        The key is stored in ``~/.crewai/.hmac_key`` with mode 0600 to keep it
+        separate from the working directory where pickle files reside.
 
         Returns:
             The 32-byte HMAC key.
+
+        Raises:
+            OSError: If the key file cannot be created or permissioned.
         """
-        key_path = os.path.join(os.getcwd(), ".crewai_key")
+        key_dir = os.path.join(os.path.expanduser("~"), ".crewai")
+        key_path = os.path.join(key_dir, ".hmac_key")
+
         if os.path.exists(key_path):
             try:
                 with open(key_path, "rb") as f:
@@ -165,12 +174,22 @@ class PickleHandler:
                 pass
 
         key = secrets.token_bytes(32)
+        os.makedirs(key_dir, mode=0o700, exist_ok=True)
+
+        # Write atomically: temp file + rename to avoid partial writes
+        import tempfile
+
+        fd, tmp_path = tempfile.mkstemp(dir=key_dir)
         try:
-            with open(key_path, "wb") as f:
+            with os.fdopen(fd, "wb") as f:
                 f.write(key)
-            os.chmod(key_path, 0o600)
+            os.chmod(tmp_path, 0o600)
+            os.replace(tmp_path, key_path)
         except OSError:
-            pass
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            raise
+
         return key
 
     def initialize_file(self) -> None:
@@ -196,14 +215,14 @@ class PickleHandler:
     def load(self) -> Any:
         """Load the data from the specified file with HMAC integrity verification.
 
-        If a signature file exists, it is verified before deserialization.
-        If no signature file exists (legacy files), the data is loaded with a warning.
+        The signature file must exist and match the pickle file's contents.
+        Files without a signature are rejected to prevent loading untrusted data.
 
         Returns:
             The data loaded from the file.
 
         Raises:
-            ValueError: If the signature verification fails (file may have been tampered with).
+            ValueError: If the signature file is missing or verification fails.
         """
         if not os.path.exists(self.file_path):
             return {}
@@ -213,25 +232,21 @@ class PickleHandler:
                 with open(self.file_path, "rb") as file:
                     payload = file.read()
 
-                if os.path.exists(self._sig_path):
-                    with open(self._sig_path, "rb") as f:
-                        stored_sig = f.read()
+                if not os.path.exists(self._sig_path):
+                    raise ValueError(
+                        f"Integrity check failed for {self.file_path}: "
+                        "no signature file found. Re-save the data to generate one."
+                    )
 
-                    expected_sig = hmac.new(self._key, payload, hashlib.sha256).digest()
+                with open(self._sig_path, "rb") as f:
+                    stored_sig = f.read()
 
-                    if not hmac.compare_digest(stored_sig, expected_sig):
-                        raise ValueError(
-                            f"Integrity check failed for {self.file_path}: "
-                            "signature mismatch - file may have been tampered with"
-                        )
-                else:
-                    import warnings
+                expected_sig = hmac.new(self._key, payload, hashlib.sha256).digest()
 
-                    warnings.warn(
-                        f"No signature file found for {self.file_path}. "
-                        "Loading without integrity verification. "
-                        "Re-save the data to generate a signature.",
-                        stacklevel=2,
+                if not hmac.compare_digest(stored_sig, expected_sig):
+                    raise ValueError(
+                        f"Integrity check failed for {self.file_path}: "
+                        "signature mismatch - file may have been tampered with"
                     )
 
                 import io
