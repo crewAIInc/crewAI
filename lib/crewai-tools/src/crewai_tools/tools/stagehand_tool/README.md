@@ -262,7 +262,7 @@ stagehand_tool = StagehandTool(
 
 ## Resources
 
-- [Stagehand Documentation](https://docs.stagehand.dev/reference/introduction) - Complete reference for the Stagehand framework
+- [Stagehand Documentation](https://docs.stagehand.dev) - Complete reference for the Stagehand framework
 - [Browserbase](https://www.browserbase.com) - Browser automation platform
 - [Join Slack Community](https://stagehand.dev/slack) - Get help and connect with other users of Stagehand
 
