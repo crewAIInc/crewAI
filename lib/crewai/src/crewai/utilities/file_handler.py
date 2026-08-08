@@ -1,7 +1,10 @@
 from datetime import datetime
+import hashlib
+import hmac
 import json
 import os
 import pickle
+import secrets
 from typing import Any, TypedDict
 
 from crewai_core.lock_store import lock as store_lock
@@ -117,7 +120,10 @@ class FileHandler:
 
 
 class PickleHandler:
-    """Handler for saving and loading data using pickle.
+    """Handler for saving and loading data using pickle with integrity verification.
+
+    A keyed HMAC-SHA256 signature is written alongside the pickle file on save.
+    On load, the signature is verified before deserialization to detect tampering.
 
     Attributes:
         file_path: The path to the pickle file.
@@ -135,27 +141,69 @@ class PickleHandler:
             file_name += ".pkl"
 
         self.file_path = os.path.join(os.getcwd(), file_name)
+        self._key = self._load_or_create_key()
+
+    @property
+    def _sig_path(self) -> str:
+        """Path to the HMAC signature file."""
+        return self.file_path + ".sig"
+
+    def _load_or_create_key(self) -> bytes:
+        """Load the HMAC key from the key file, or create a new one if it doesn't exist.
+
+        Returns:
+            The 32-byte HMAC key.
+        """
+        key_path = os.path.join(os.getcwd(), ".crewai_key")
+        if os.path.exists(key_path):
+            try:
+                with open(key_path, "rb") as f:
+                    key = f.read()
+                    if len(key) == 32:
+                        return key
+            except OSError:
+                pass
+
+        key = secrets.token_bytes(32)
+        try:
+            with open(key_path, "wb") as f:
+                f.write(key)
+            os.chmod(key_path, 0o600)
+        except OSError:
+            pass
+        return key
 
     def initialize_file(self) -> None:
         """Initialize the file with an empty dictionary and overwrite any existing data."""
         self.save({})
 
     def save(self, data: Any) -> None:
-        """
-        Save the data to the specified file using pickle.
+        """Save the data to the specified file using pickle with HMAC signature.
 
         Args:
-          data: The data to be saved to the file.
+            data: The data to be saved to the file.
         """
         with store_lock(f"file:{os.path.realpath(self.file_path)}"):
             with open(self.file_path, "wb") as f:
                 pickle.dump(obj=data, file=f)
 
+            with open(self.file_path, "rb") as f:
+                payload = f.read()
+            signature = hmac.new(self._key, payload, hashlib.sha256).digest()
+            with open(self._sig_path, "wb") as f:
+                f.write(signature)
+
     def load(self) -> Any:
-        """Load the data from the specified file using pickle.
+        """Load the data from the specified file with HMAC integrity verification.
+
+        If a signature file exists, it is verified before deserialization.
+        If no signature file exists (legacy files), the data is loaded with a warning.
 
         Returns:
             The data loaded from the file.
+
+        Raises:
+            ValueError: If the signature verification fails (file may have been tampered with).
         """
         if not os.path.exists(self.file_path):
             return {}
@@ -163,6 +211,31 @@ class PickleHandler:
         with store_lock(f"file:{os.path.realpath(self.file_path)}"):
             try:
                 with open(self.file_path, "rb") as file:
-                    return pickle.load(file)  # noqa: S301
+                    payload = file.read()
+
+                if os.path.exists(self._sig_path):
+                    with open(self._sig_path, "rb") as f:
+                        stored_sig = f.read()
+
+                    expected_sig = hmac.new(self._key, payload, hashlib.sha256).digest()
+
+                    if not hmac.compare_digest(stored_sig, expected_sig):
+                        raise ValueError(
+                            f"Integrity check failed for {self.file_path}: "
+                            "signature mismatch - file may have been tampered with"
+                        )
+                else:
+                    import warnings
+
+                    warnings.warn(
+                        f"No signature file found for {self.file_path}. "
+                        "Loading without integrity verification. "
+                        "Re-save the data to generate a signature.",
+                        stacklevel=2,
+                    )
+
+                import io
+
+                return pickle.load(io.BytesIO(payload))  # noqa: S301
             except (FileNotFoundError, EOFError):
                 return {}
