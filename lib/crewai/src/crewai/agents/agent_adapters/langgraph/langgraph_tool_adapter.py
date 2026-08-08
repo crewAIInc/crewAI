@@ -4,7 +4,6 @@ This module contains the LangGraphToolAdapter class that converts CrewAI tools
 to LangGraph-compatible format using langchain_core.tools.
 """
 
-from collections.abc import Awaitable
 import inspect
 from typing import Any
 
@@ -29,6 +28,65 @@ class LangGraphToolAdapter(BaseToolAdapter):
         self.original_tools: list[BaseTool] = tools or []
         self.converted_tools: list[Any] = []
 
+    async def _safe_execute(self, tool: BaseTool, *args: Any, **kwargs: Any) -> Any:
+        """Safely execute a tool with error handling.
+
+        Args:
+            tool: The CrewAI tool instance to execute.
+            *args: Positional arguments to pass to the tool.
+            **kwargs: Keyword arguments to pass to the tool.
+
+        Returns:
+            The result of the tool execution, or a dictionary containing
+            error information if execution fails.
+        """
+        try:
+            output = tool.run(*args, **kwargs)
+
+            if inspect.isawaitable(output):
+                return await output
+
+            return output
+
+        except Exception as e:
+            return {
+                "error": str(e),
+                "tool": tool.name,
+            }
+
+    def _make_tool_wrapper(self, tool: BaseTool):
+        """Create a wrapper function for a CrewAI tool compatible with LangGraph.
+
+        This method generates an async wrapper that standardizes input handling
+        and delegates execution to the safe execution layer.
+
+        Args:
+            tool: The CrewAI tool instance to wrap.
+
+        Returns:
+            An async callable that executes the tool with safe error handling.
+        """
+
+        async def tool_wrapper(*args: Any, **kwargs: Any) -> Any:
+            """Execute the wrapped tool with standardized input handling.
+
+            Args:
+                *args: Positional arguments for the tool.
+                **kwargs: Keyword arguments for the tool.
+
+            Returns:
+                The tool execution result, or a dictionary with keys
+                "error" and "tool" if execution fails.
+            """
+            if len(args) > 0 and isinstance(args[0], str):
+                return await self._safe_execute(tool, args[0])
+            elif "input" in kwargs:
+                return await self._safe_execute(tool, kwargs["input"])
+            else:
+                return await self._safe_execute(tool, **kwargs)
+
+        return tool_wrapper
+
     def configure_tools(self, tools: list[BaseTool]) -> None:
         """Configure and convert CrewAI tools to LangGraph-compatible format.
 
@@ -52,37 +110,10 @@ class LangGraphToolAdapter(BaseToolAdapter):
 
             sanitized_name: str = self.sanitize_tool_name(tool.name)
 
-            async def tool_wrapper(
-                *args: Any, tool: BaseTool = tool, **kwargs: Any
-            ) -> Any:
-                """Wrapper function to adapt CrewAI tool calls to LangGraph format.
-
-                Args:
-                    *args: Positional arguments for the tool.
-                    tool: The CrewAI tool to wrap.
-                    **kwargs: Keyword arguments for the tool.
-
-                Returns:
-                    The result from the tool execution.
-                """
-                output: Any | Awaitable[Any]
-                if len(args) > 0 and isinstance(args[0], str):
-                    output = tool.run(args[0])
-                elif "input" in kwargs:
-                    output = tool.run(kwargs["input"])
-                else:
-                    output = tool.run(**kwargs)
-
-                if inspect.isawaitable(output):
-                    result: Any = await output
-                else:
-                    result = output
-                return result
-
             converted_tool: StructuredTool = StructuredTool(
                 name=sanitized_name,
                 description=tool.description,
-                func=tool_wrapper,
+                func=self._make_tool_wrapper(tool),
                 args_schema=tool.args_schema,
             )
 
