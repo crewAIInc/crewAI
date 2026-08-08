@@ -602,7 +602,11 @@ class AzureCompletion(BaseLLM):
                 effective_response_model = response_model or self.response_format
 
                 formatted_messages = self._format_messages_for_azure(messages)
-
+                if not self._invoke_before_llm_call_hooks(
+                    formatted_messages, from_agent
+                ):
+                    raise ValueError("LLM call blocked by before_llm_call hook")
+                                
                 completion_params = self._prepare_completion_params(
                     formatted_messages, tools, effective_response_model
                 )
