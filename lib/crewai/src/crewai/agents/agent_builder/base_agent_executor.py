@@ -24,7 +24,7 @@ class BaseAgentExecutor(BaseModel):
     agent: BaseAgent | None = Field(default=None, exclude=True)
     task: Task | None = Field(default=None, exclude=True)
     iterations: int = Field(default=0)
-    max_iter: int = Field(default=25)
+    max_iter: int = Field(default=25, gt=0, le=500)
     messages: list[LLMMessage] = Field(default_factory=list)
     _resuming: bool = PrivateAttr(default=False)
 
