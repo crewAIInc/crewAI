@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 from collections.abc import Callable, Sequence
 from concurrent.futures import Future
 from copy import copy as shallow_copy
@@ -1254,7 +1255,8 @@ class Crew(FlowTrackable, BaseModel):
 
         runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
-            inputs = prepare_kickoff(self, inputs, input_files)
+            from crewai.crews.utils import aprepare_kickoff
+            inputs = await aprepare_kickoff(self, inputs, input_files)
 
             if self.process == Process.sequential:
                 result = await self._arun_sequential_process()
@@ -1267,6 +1269,8 @@ class Crew(FlowTrackable, BaseModel):
 
             for after_callback in self.after_kickoff_callbacks:
                 result = after_callback(result)
+                if inspect.isawaitable(result):
+                    result = await result
 
             result = self._post_kickoff(result)
 
