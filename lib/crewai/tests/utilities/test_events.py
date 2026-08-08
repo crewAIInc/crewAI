@@ -1244,7 +1244,6 @@ def test_llm_completed_event_includes_usage():
     assert event.usage.get("total_tokens", 0) > 0
 
 
-@pytest.mark.vcr()
 def test_llm_emits_call_failed_event():
     received_events = []
     event_received = threading.Event()
@@ -1256,12 +1255,10 @@ def test_llm_emits_call_failed_event():
 
     error_message = "OpenAI API call failed: Simulated API failure"
 
-    with patch(
-        "crewai.llms.providers.openai.completion.OpenAICompletion._handle_completion"
-    ) as mock_handle_completion:
-        mock_handle_completion.side_effect = Exception("Simulated API failure")
-
-        llm = LLM(model="gpt-4o-mini")
+    llm = LLM(model="gpt-4o-mini")
+    with patch.object(
+        llm, "_handle_completion", side_effect=Exception("Simulated API failure")
+    ):
         with pytest.raises(Exception) as exc_info:
             llm.call("Hello, how are you?")
 

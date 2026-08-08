@@ -21,6 +21,7 @@ import threading
 from typing import TYPE_CHECKING, Any
 import weakref
 
+from crewai_core.project import get_project_id
 from opentelemetry import trace
 from opentelemetry.context import Context
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
@@ -54,6 +55,7 @@ from crewai.telemetry.utils import (
     add_crew_attributes,
     close_span,
     detect_coding_agent,
+    detect_runtime_context,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.logger_utils import suppress_warnings
@@ -172,6 +174,7 @@ class Telemetry:
         # Weak so instrumented apps' providers are not kept alive by telemetry.
         self._common_attributes_providers: weakref.WeakSet[Any] = weakref.WeakSet()
         self._common_attributes_lock = threading.Lock()
+        self._common_attributes: dict[str, str] | None = None
 
         if self._is_telemetry_disabled():
             return
@@ -203,6 +206,39 @@ class Telemetry:
                 raise
             self.ready = False
 
+    def _common_span_attributes(self) -> dict[str, str]:
+        """Build the attributes every span carries, once per process.
+
+        Memoized because it is computed per provider and reads the project's
+        ``pyproject.toml``, and because a process cannot change which
+        assistant, runtime, or project it belongs to partway through.
+
+        Returns:
+            Attributes to stamp on every span. ``project_id`` is omitted for
+            projects that do not declare one.
+        """
+        if self._common_attributes is not None:
+            return self._common_attributes
+
+        attributes = {
+            "coding_agent": detect_coding_agent(),
+            "runtime_context": detect_runtime_context(),
+        }
+
+        try:
+            # Read-only: minting an id belongs to the CLI commands a user
+            # invoked, not to a library call during execution.
+            project_id = get_project_id()
+        except Exception as e:  # Telemetry must never break execution.
+            logger.debug(f"Failed to read project id: {e}")
+            project_id = None
+
+        if project_id:
+            attributes["project_id"] = project_id
+
+        self._common_attributes = attributes
+        return attributes
+
     def _attach_common_attributes(self, provider: Any) -> None:
         """Attach process-wide attributes to every span a provider emits.
 
@@ -230,9 +266,7 @@ class Telemetry:
                 if provider in self._common_attributes_providers:
                     return
                 add_span_processor(
-                    CommonAttributesSpanProcessor(
-                        {"coding_agent": detect_coding_agent()}
-                    )
+                    CommonAttributesSpanProcessor(self._common_span_attributes())
                 )
                 self._common_attributes_providers.add(provider)
         except Exception as e:  # Telemetry must never break execution.
