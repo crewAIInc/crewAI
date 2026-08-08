@@ -728,7 +728,6 @@ class LLM(BaseLLM):
         self.is_litellm = True
         if _ensure_litellm():
             litellm.drop_params = True
-            self.set_callbacks(self.callbacks or [])
             self.set_env_callbacks()
         return self
 
@@ -1877,14 +1876,12 @@ class LLM(BaseLLM):
                 raise ValueError("LLM call blocked by before_llm_call hook")
 
             with suppress_warnings():
-                if callbacks and len(callbacks) > 0:
-                    self.set_callbacks(callbacks)
                 try:
                     params = self._prepare_completion_params(messages, tools)
                     if self._effective_stream():
                         result = self._handle_streaming_response(
                             params=params,
-                            callbacks=callbacks,
+                            callbacks=effective_callbacks,
                             available_functions=available_functions,
                             from_task=from_task,
                             from_agent=from_agent,
@@ -1893,7 +1890,7 @@ class LLM(BaseLLM):
                     else:
                         result = self._handle_non_streaming_response(
                             params=params,
-                            callbacks=callbacks,
+                            callbacks=effective_callbacks,
                             available_functions=available_functions,
                             from_task=from_task,
                             from_agent=from_agent,
@@ -2015,18 +2012,22 @@ class LLM(BaseLLM):
                         msg_role: Literal["assistant"] = "assistant"
                         message["role"] = msg_role
 
+            effective_callbacks = callbacks if callbacks is not None else self.callbacks
+
             with suppress_warnings():
-                if callbacks and len(callbacks) > 0:
-                    self.set_callbacks(callbacks)
                 try:
                     params = self._prepare_completion_params(
                         messages, tools, skip_file_processing=True
                     )
+                    if effective_callbacks and len(effective_callbacks) > 0:
+                        # Avoid mutating LiteLLM global callback lists. Pass callbacks per request
+                        # so concurrent LLM instances don't race on shared global state.
+                        params["callbacks"] = effective_callbacks
 
                     if self._effective_stream():
                         return await self._ahandle_streaming_response(
                             params=params,
-                            callbacks=callbacks,
+                            callbacks=effective_callbacks,
                             available_functions=available_functions,
                             from_task=from_task,
                             from_agent=from_agent,
@@ -2035,7 +2036,7 @@ class LLM(BaseLLM):
 
                     return await self._ahandle_non_streaming_response(
                         params=params,
-                        callbacks=callbacks,
+                        callbacks=effective_callbacks,
                         available_functions=available_functions,
                         from_task=from_task,
                         from_agent=from_agent,
