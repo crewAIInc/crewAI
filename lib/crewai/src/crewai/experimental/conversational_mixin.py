@@ -330,6 +330,7 @@ class _ConversationalMixin:
                 and self._is_public_turn_result(result)
             ):
                 self.append_assistant_message(self._stringify_result(result))
+                self._persist_state_after_fallback_append()
         except Exception as exc:
             failed_event = ConversationTurnFailedEvent(
                 type="conversation_turn_failed",
@@ -419,6 +420,7 @@ class _ConversationalMixin:
                     and self._is_public_turn_result(result)
                 ):
                     self.append_assistant_message(self._stringify_result(result))
+                    self._persist_state_after_fallback_append()
             except HumanFeedbackPending as exc:
                 return exc
             except Exception as exc:
@@ -878,6 +880,26 @@ class _ConversationalMixin:
         self._clear_or_listeners()
         self._is_execution_resuming = False
         object.__setattr__(self, "_turn_classified_intent", None)
+
+    def _persist_state_after_fallback_append(self) -> None:
+        """Re-persist after fallback append so restore sees the assistant reply.
+
+        Per-method snapshots inside ``kickoff`` run before this fallback, so
+        return-only ``@listen`` handlers need one more save for restore to see
+        the assistant message on the next turn.
+        """
+        if not self._method_outputs:
+            return
+        last_entry = self._method_outputs[-1]
+        if not isinstance(last_entry, dict) or not last_entry.get("method"):
+            return
+
+        from crewai.flow.runtime import Flow as RuntimeFlow
+        from crewai.flow.types import FlowMethodName
+
+        cast(RuntimeFlow[Any], self)._persist_method_completion(
+            FlowMethodName(str(last_entry["method"]))
+        )
 
     def _apply_pending_conversational_turn(self) -> None:
         """Drain the stashed user message + classify if intents configured.
