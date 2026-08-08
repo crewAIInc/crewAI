@@ -6,6 +6,8 @@ import asyncio
 import atexit
 import builtins
 from collections.abc import Iterator
+import concurrent.futures
+import contextvars
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
@@ -403,14 +405,13 @@ class UploadCache:
     def _run_sync(coro: Any) -> Any:
         """Run an async coroutine from sync context without blocking event loop."""
         try:
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
         except RuntimeError:
-            loop = None
+            return asyncio.run(coro)
 
-        if loop is not None and loop.is_running():
-            future = asyncio.run_coroutine_threadsafe(coro, loop)
-            return future.result(timeout=30)
-        return asyncio.run(coro)
+        context = contextvars.copy_context()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            return executor.submit(context.run, asyncio.run, coro).result()
 
     def get(self, file: FileInput, provider: ProviderType) -> CachedUpload | None:
         """Sync wrapper for aget."""
