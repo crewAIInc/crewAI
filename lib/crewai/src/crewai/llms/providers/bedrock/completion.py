@@ -1034,6 +1034,13 @@ class BedrockCompletion(BaseLLM):
                         logging.debug("Content block stopped in stream")
                         if current_tool_use:
                             function_name = current_tool_use["name"]
+                            # accumulated_tool_input holds the full JSON string for streaming tool calls.
+                            # Parse it back to a dict; fall back to empty dict on failure.
+                            if accumulated_tool_input:
+                                try:
+                                    current_tool_use["input"] = json.loads(accumulated_tool_input)
+                                except (json.JSONDecodeError, ValueError):
+                                    current_tool_use["input"] = {}
                             function_args = cast(
                                 dict[str, Any], current_tool_use.get("input", {})
                             )
@@ -1632,6 +1639,13 @@ class BedrockCompletion(BaseLLM):
                         logging.debug("Content block stopped in stream")
                         if current_tool_use:
                             function_name = current_tool_use["name"]
+                            # accumulated_tool_input holds the full JSON string for streaming tool calls.
+                            # Parse it back to a dict; fall back to empty dict on failure.
+                            if accumulated_tool_input:
+                                try:
+                                    current_tool_use["input"] = json.loads(accumulated_tool_input)
+                                except (json.JSONDecodeError, ValueError):
+                                    current_tool_use["input"] = {}
                             function_args = cast(
                                 dict[str, Any], current_tool_use.get("input", {})
                             )
