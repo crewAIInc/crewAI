@@ -312,7 +312,7 @@ def analyze_for_save(
             e,
             exc_info=False,
         )
-        return _SAVE_DEFAULTS
+        return _SAVE_DEFAULTS.model_copy(deep=True)
 
 
 _CONSOLIDATION_DEFAULT = ConsolidationPlan(actions=[], insert_new=True)
@@ -372,4 +372,4 @@ def analyze_for_consolidation(
             e,
             exc_info=False,
         )
-        return _CONSOLIDATION_DEFAULT
+        return _CONSOLIDATION_DEFAULT.model_copy(deep=True)
