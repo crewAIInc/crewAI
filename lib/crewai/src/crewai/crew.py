@@ -1114,7 +1114,6 @@ class Crew(FlowTrackable, BaseModel):
 
         if not self.stream:
             self.usage_metrics = total_usage_metrics
-        self._task_output_handler.reset()
         return results
 
     async def kickoff_async(
