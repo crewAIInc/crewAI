@@ -9,11 +9,12 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
+import json
 import logging
 from typing import TYPE_CHECKING, Any
 
 from aiocache import Cache  # type: ignore[import-untyped]
-from aiocache.serializers import PickleSerializer  # type: ignore[import-untyped]
+from aiocache.serializers import BaseSerializer  # type: ignore[import-untyped]
 
 from crewai_files.core.constants import DEFAULT_MAX_CACHE_ENTRIES, DEFAULT_TTL_SECONDS
 from crewai_files.uploaders.factory import ProviderType
@@ -23,6 +24,62 @@ if TYPE_CHECKING:
     from crewai_files.core.types import FileInput
 
 logger = logging.getLogger(__name__)
+
+
+class _CachedUploadSerializer(BaseSerializer):
+    """JSON serializer for cached upload metadata.
+
+    The UploadCache supports external backends (e.g. redis). Avoid pickle-based
+    serialization for cached values so cache poisoning cannot turn into code
+    execution via unsafe deserialization.
+    """
+
+    @staticmethod
+    def _to_json(obj: CachedUpload) -> dict[str, Any]:
+        return {
+            "file_id": obj.file_id,
+            "provider": obj.provider,
+            "file_uri": obj.file_uri,
+            "content_type": obj.content_type,
+            "uploaded_at": obj.uploaded_at.isoformat(),
+            "expires_at": obj.expires_at.isoformat()
+            if obj.expires_at is not None
+            else None,
+        }
+
+    @staticmethod
+    def _from_json(data: dict[str, Any]) -> CachedUpload:
+        return CachedUpload(
+            file_id=data["file_id"],
+            provider=data["provider"],
+            file_uri=data.get("file_uri"),
+            content_type=data["content_type"],
+            uploaded_at=datetime.fromisoformat(data["uploaded_at"]),
+            expires_at=(
+                datetime.fromisoformat(data["expires_at"])
+                if data.get("expires_at") is not None
+                else None
+            ),
+        )
+
+    def dumps(self, value: CachedUpload | None) -> str:  # type: ignore[override]
+        if value is None:
+            return "null"
+        return json.dumps(self._to_json(value), sort_keys=True)
+
+    def loads(self, value: str | None) -> CachedUpload | None:  # type: ignore[override]
+        if value is None:
+            return None
+        try:
+            parsed = json.loads(value)
+            if parsed is None:
+                return None
+            if not isinstance(parsed, dict):
+                return None
+            return self._from_json(parsed)
+        except (TypeError, ValueError, KeyError) as exc:
+            logger.debug("Ignoring unreadable cached upload payload: %s", exc)
+            return None
 
 
 @dataclass
@@ -123,13 +180,13 @@ class UploadCache:
         if cache_type == "redis":
             self._cache = Cache(
                 Cache.REDIS,
-                serializer=PickleSerializer(),
+                serializer=_CachedUploadSerializer(),
                 namespace=namespace,
                 **cache_kwargs,
             )
         else:
             self._cache = Cache(
-                serializer=PickleSerializer(),
+                serializer=_CachedUploadSerializer(),
                 namespace=namespace,
             )
 
