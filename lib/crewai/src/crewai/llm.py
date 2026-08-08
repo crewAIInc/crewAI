@@ -342,6 +342,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "cerebras",
     "dashscope",
     "snowflake",
+    "nearai",
 ]
 
 
@@ -447,6 +448,7 @@ class LLM(BaseLLM):
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
                 "snowflake": "snowflake",
+                "nearai": "nearai",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -579,6 +581,10 @@ class LLM(BaseLLM):
         if provider == "snowflake":
             return True
 
+        if provider == "nearai":
+            # NEAR AI Cloud publishes a dynamic model catalog and accepts provider/model IDs.
+            return True
+
         return False
 
     @classmethod
@@ -704,6 +710,7 @@ class LLM(BaseLLM):
             "hosted_vllm",
             "cerebras",
             "dashscope",
+            "nearai",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (

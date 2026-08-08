@@ -2,7 +2,7 @@
 
 This module provides a thin subclass of OpenAICompletion that supports
 various OpenAI-compatible APIs like OpenRouter, DeepSeek, Ollama, vLLM,
-Cerebras, and Dashscope (Alibaba/Qwen).
+Cerebras, Dashscope (Alibaba/Qwen), and NEAR AI Cloud.
 
 Usage:
     llm = LLM(model="deepseek/deepseek-chat")  # Uses DeepSeek API
@@ -32,6 +32,11 @@ class ProviderConfig:
         default_headers: HTTP headers to include in all requests.
         api_key_required: Whether an API key is required for this provider.
         default_api_key: Default API key to use if none is provided and not required.
+        use_max_tokens_for_completion_tokens: Whether to send max_completion_tokens
+            as max_tokens for providers that do not support the newer OpenAI field.
+        supports_reasoning_effort: Whether reasoning_effort can be sent.
+        supports_strict_tool_schema: Whether strict tool schema mode can be sent.
+        unsupported_params: Request parameters to remove before sending.
     """
 
     base_url: str
@@ -40,6 +45,10 @@ class ProviderConfig:
     default_headers: dict[str, str] = field(default_factory=dict)
     api_key_required: bool = True
     default_api_key: str | None = None
+    use_max_tokens_for_completion_tokens: bool = False
+    supports_reasoning_effort: bool = True
+    supports_strict_tool_schema: bool = True
+    unsupported_params: tuple[str, ...] = ()
 
 
 OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
@@ -89,6 +98,16 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DASHSCOPE_BASE_URL",
         api_key_required=True,
     ),
+    "nearai": ProviderConfig(
+        base_url="https://cloud-api.near.ai/v1",
+        api_key_env="NEARAI_API_KEY",
+        base_url_env="NEARAI_BASE_URL",
+        api_key_required=True,
+        use_max_tokens_for_completion_tokens=True,
+        supports_reasoning_effort=False,
+        supports_strict_tool_schema=False,
+        unsupported_params=("store",),
+    ),
 }
 
 
@@ -125,6 +144,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - hosted_vllm: vLLM server (https://github.com/vllm-project/vllm)
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
+        - nearai: NEAR AI Cloud TEE inference (https://cloud.near.ai)
 
     Example:
         # Using provider prefix
@@ -249,6 +269,51 @@ class OpenAICompatibleCompletion(OpenAICompletion):
             merged.update(headers)
 
         return merged if merged else None
+
+    def _get_provider_config(self) -> ProviderConfig | None:
+        """Return the configuration for this provider."""
+        return OPENAI_COMPATIBLE_PROVIDERS.get(self.provider)
+
+    def _prepare_completion_params(
+        self,
+        messages: list[Any],
+        tools: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        """Prepare chat completion parameters with provider-specific compatibility."""
+        params = super()._prepare_completion_params(messages=messages, tools=tools)
+        config = self._get_provider_config()
+        if config is None:
+            return params
+
+        if (
+            config.use_max_tokens_for_completion_tokens
+            and "max_completion_tokens" in params
+        ):
+            params["max_tokens"] = params.pop("max_completion_tokens")
+
+        if not config.supports_reasoning_effort:
+            params.pop("reasoning_effort", None)
+
+        for param in config.unsupported_params:
+            params.pop(param, None)
+
+        return params
+
+    def _convert_tools_for_interference(
+        self, tools: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Convert tools while honoring provider-specific schema support."""
+        converted_tools = super()._convert_tools_for_interference(tools)
+        config = self._get_provider_config()
+        if config is None or config.supports_strict_tool_schema:
+            return converted_tools
+
+        for tool in converted_tools:
+            function = tool.get("function")
+            if isinstance(function, dict):
+                function.pop("strict", None)
+
+        return converted_tools
 
     def supports_function_calling(self) -> bool:
         """Check if the provider supports function calling.
