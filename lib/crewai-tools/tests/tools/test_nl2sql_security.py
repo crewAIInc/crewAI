@@ -598,3 +598,85 @@ class TestCTEUnknownCommand:
         tool = _make_tool(allow_dml=False)
         with pytest.raises(ValueError, match="unrecognised"):
             tool._validate_query("WITH cte AS (SELECT 1) FOOBAR")
+
+
+# --- require_approval tests ---
+
+
+class TestRequireApproval:
+    def test_approval_granted_executes_query(self):
+        """When the approval handler returns True, the query runs normally."""
+        tool = _make_tool(
+            require_approval=True,
+            approval_handler=lambda sql: True,
+        )
+        result = tool._run("SELECT 1 AS val")
+        assert result == [{"val": 1}]
+
+    def test_approval_rejected_blocks_query(self):
+        """When the approval handler returns False, execution is blocked."""
+        tool = _make_tool(
+            require_approval=True,
+            approval_handler=lambda sql: False,
+        )
+        result = tool._run("SELECT 1 AS val")
+        assert "rejected" in result.lower()
+
+    def test_approval_handler_receives_sql_string(self):
+        """The approval_handler receives the exact SQL query string."""
+        received: list[str] = []
+
+        def spy(sql: str) -> bool:
+            received.append(sql)
+            return True
+
+        tool = _make_tool(require_approval=True, approval_handler=spy)
+        tool._run("SELECT 42 AS answer")
+        assert received == ["SELECT 42 AS answer"]
+
+    def test_no_approval_when_flag_is_false(self):
+        """require_approval=False never invokes the handler."""
+        handler = MagicMock(return_value=True)
+        tool = _make_tool(require_approval=False, approval_handler=handler)
+        tool._run("SELECT 1")
+        handler.assert_not_called()
+
+    def test_default_prompt_on_eof(self):
+        """The built-in prompt returns False when input() raises EOFError."""
+        tool = _make_tool(require_approval=True)
+        with patch("builtins.input", side_effect=EOFError):
+            result = tool._run("SELECT 1")
+        assert "rejected" in result.lower()
+
+    def test_default_prompt_yes(self):
+        """The built-in prompt allows execution when user types 'y'."""
+        tool = _make_tool(require_approval=True)
+        with patch("builtins.input", return_value="y"):
+            result = tool._run("SELECT 1 AS val")
+        assert result == [{"val": 1}]
+
+    def test_default_prompt_no(self):
+        """The built-in prompt blocks execution when user types 'n'."""
+        tool = _make_tool(require_approval=True)
+        with patch("builtins.input", return_value="n"):
+            result = tool._run("SELECT 1")
+        assert "rejected" in result.lower()
+
+    def test_approval_checked_after_validation(self):
+        """Validation runs before approval — blocked queries never reach the handler."""
+        handler = MagicMock(return_value=True)
+        tool = _make_tool(
+            allow_dml=False,
+            require_approval=True,
+            approval_handler=handler,
+        )
+        with pytest.raises(ValueError, match="read-only mode"):
+            tool._run("DROP TABLE users")
+        handler.assert_not_called()
+
+    def test_approval_with_keyboard_interrupt(self):
+        """KeyboardInterrupt during input() rejects the query gracefully."""
+        tool = _make_tool(require_approval=True)
+        with patch("builtins.input", side_effect=KeyboardInterrupt):
+            result = tool._run("SELECT 1")
+        assert "rejected" in result.lower()

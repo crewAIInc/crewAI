@@ -1,3 +1,4 @@
+from collections.abc import Callable
 import logging
 import traceback
 from typing import Any, cast
@@ -32,6 +33,16 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         | type[BaseEmbeddingsProvider[Any]]
         | None
     ) = Field(default=None, exclude=True)
+    content_filter: Callable[[list[str]], list[str]] | None = Field(
+        default=None,
+        exclude=True,
+        description=(
+            "Optional callable that inspects and filters documents before "
+            "they are indexed. Receives the full document list and must "
+            "return the (possibly filtered) list to persist. Raise an "
+            "exception inside the callable to abort the save entirely."
+        ),
+    )
     _client: BaseClient | None = PrivateAttr(default=None)
 
     @model_validator(mode="after")
@@ -105,6 +116,11 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     def save(self, documents: list[str]) -> None:
         if not documents:
             return
+
+        if self.content_filter is not None:
+            documents = self.content_filter(documents)
+            if not documents:
+                return
 
         try:
             client = self._get_client()
@@ -186,6 +202,11 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         """
         if not documents:
             return
+
+        if self.content_filter is not None:
+            documents = self.content_filter(documents)
+            if not documents:
+                return
 
         try:
             client = self._get_client()
