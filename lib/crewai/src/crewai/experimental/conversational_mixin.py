@@ -153,6 +153,9 @@ class _ConversationalMixin:
         def kickoff(self, *args: Any, **kwargs: Any) -> Any:
             pass
 
+        def _persist_state_snapshot(self, label: str) -> None:
+            pass
+
         @property
         def method_outputs(self) -> list[Any]:
             pass
@@ -330,6 +333,11 @@ class _ConversationalMixin:
                 and self._is_public_turn_result(result)
             ):
                 self.append_assistant_message(self._stringify_result(result))
+                # ``@persist`` snapshots state per method *inside* kickoff(),
+                # so this append lands after the last snapshot and would never
+                # reach the backend. Re-snapshot so custom ``@listen`` routes
+                # persist their reply like the built-in routes do.
+                self._persist_state_snapshot("handle_turn")
         except Exception as exc:
             failed_event = ConversationTurnFailedEvent(
                 type="conversation_turn_failed",
@@ -419,6 +427,7 @@ class _ConversationalMixin:
                     and self._is_public_turn_result(result)
                 ):
                     self.append_assistant_message(self._stringify_result(result))
+                    self._persist_state_snapshot("stream_turn")
             except HumanFeedbackPending as exc:
                 return exc
             except Exception as exc:
