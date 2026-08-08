@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Protocol
 if TYPE_CHECKING:
     from crewai.rag.chromadb.client import ChromaDBClient
     from crewai.rag.chromadb.config import ChromaDBConfig
+    from crewai.rag.milvus.client import MilvusClient
+    from crewai.rag.milvus.config import MilvusConfig
     from crewai.rag.qdrant.client import QdrantClient
     from crewai.rag.qdrant.config import QdrantConfig
 
@@ -25,4 +27,12 @@ class QdrantFactoryModule(Protocol):
 
     def create_client(self, config: QdrantConfig) -> QdrantClient:
         """Creates a Qdrant client from configuration."""
+        ...
+
+
+class MilvusFactoryModule(Protocol):
+    """Protocol for Milvus factory module."""
+
+    def create_client(self, config: MilvusConfig) -> MilvusClient:
+        """Creates a Milvus client from configuration."""
         ...
