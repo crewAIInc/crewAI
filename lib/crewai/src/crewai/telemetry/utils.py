@@ -12,7 +12,11 @@ from typing import TYPE_CHECKING, Any, Final
 
 from opentelemetry.trace import Span, Status, StatusCode
 
-from crewai.utilities.constants import CODING_AGENT_ENV_MARKERS
+from crewai.utilities.constants import (
+    CODING_AGENT_ENV_MARKERS,
+    GENERIC_AGENT_ENV_VARS,
+    RUNTIME_CONTEXT_ENV_MARKERS,
+)
 
 
 if TYPE_CHECKING:
@@ -20,23 +24,33 @@ if TYPE_CHECKING:
     from crewai.task import Task
 
 
-# Editors whose integrated terminal implies a human is likely present. Used only
-# as a weaker fallback when no explicit coding-agent marker is found.
+# Editors whose integrated terminal a process can be launched from. Matched on
+# an exact value rather than presence, since these variables name the terminal.
 _EDITOR_TERM_MARKERS: Final[tuple[tuple[str, str, str], ...]] = (
     ("TERM_PROGRAM", "vscode", "vscode_terminal"),
     ("TERMINAL_EMULATOR", "JetBrains-JediTerm", "jetbrains_terminal"),
 )
 
-_FALLBACK_AGENT_NAMES: Final[tuple[str, ...]] = ("non_interactive", "unknown")
+# Marks a process running inside a container when no more specific runtime
+# marker is present.
+_DOCKER_ENV_PATH: Final[str] = "/.dockerenv"
+
+_UNKNOWN: Final[str] = "unknown"
+_OTHER: Final[str] = "other"
 
 # The complete set of values detect_coding_agent() can ever return. Every value
 # is a literal from CODING_AGENT_ENV_MARKERS or this module, which is what makes
 # the function structurally incapable of emitting PII: no environment value,
 # path, hostname, or user-supplied string can reach the return value.
 KNOWN_CODING_AGENTS: Final[frozenset[str]] = frozenset(
-    [name for name, _ in CODING_AGENT_ENV_MARKERS]
+    [name for name, _ in CODING_AGENT_ENV_MARKERS] + [_OTHER, _UNKNOWN]
+)
+
+# The same guarantee for detect_runtime_context(): a closed set of literals.
+KNOWN_RUNTIME_CONTEXTS: Final[frozenset[str]] = frozenset(
+    [name for name, _ in RUNTIME_CONTEXT_ENV_MARKERS]
     + [name for _, _, name in _EDITOR_TERM_MARKERS]
-    + list(_FALLBACK_AGENT_NAMES)
+    + ["interactive", "non_interactive", _UNKNOWN]
 )
 
 
@@ -57,27 +71,65 @@ def detect_coding_agent() -> str:
     integrated terminal, so a result names the environment the process is
     running *under*, not proof that an agent authored the code.
 
+    Answers only *which assistant*. Where the process runs is
+    :func:`detect_runtime_context`, so an "unknown" here is a genuine gap in
+    the marker table rather than a run that never had an assistant to find.
+
     Returns:
-        A normalized assistant name (e.g. "claude_code", "cursor", "codex"),
-        an editor terminal hint (e.g. "vscode_terminal"), "non_interactive"
-        when no marker is found and there is no TTY, or "unknown" otherwise.
-        The result is always a member of KNOWN_CODING_AGENTS.
+        A normalized assistant name (e.g. "claude_code", "cursor", "codex"), or
+        "unknown" when no marker matches. The result is always a member of
+        KNOWN_CODING_AGENTS.
     """
     for agent_name, env_vars in CODING_AGENT_ENV_MARKERS:
         if any(os.environ.get(env_var) for env_var in env_vars):
             return agent_name
 
-    for env_var, expected, agent_name in _EDITOR_TERM_MARKERS:
+    # Checked last and by presence: the cross-vendor marker establishes that an
+    # assistant is present without naming one, and an empty value still says so.
+    if any(env_var in os.environ for env_var in GENERIC_AGENT_ENV_VARS):
+        return _OTHER
+
+    return _UNKNOWN
+
+
+def detect_runtime_context() -> str:
+    """Best-effort detection of where this process is running.
+
+    Separate from :func:`detect_coding_agent` because the two answer different
+    questions. Automated runs -- CI, containers, serverless -- have no
+    assistant to detect, and reporting them in the assistant field made an
+    unrecognized assistant indistinguishable from a run that could never have
+    had one.
+
+    Precedence runs most specific first: CI and hosted IDEs typically run
+    inside containers, so a bare container match only applies once the more
+    specific markers have been ruled out.
+
+    Returns:
+        One of the runtime names (e.g. "ci", "serverless", "container",
+        "notebook", "hosted_ide"), an editor terminal (e.g. "vscode_terminal"),
+        "interactive" or "non_interactive" when only a TTY check applies, or
+        "unknown" when that check cannot be made. The result is always a member
+        of KNOWN_RUNTIME_CONTEXTS.
+    """
+    # Presence, not truthiness: a platform that exports an empty CI= is still
+    # CI, unlike the assistant markers where an empty value means the tool set
+    # a placeholder rather than claiming the session.
+    for context_name, env_vars in RUNTIME_CONTEXT_ENV_MARKERS:
+        if any(env_var in os.environ for env_var in env_vars):
+            return context_name
+
+    for env_var, expected, context_name in _EDITOR_TERM_MARKERS:
         if os.environ.get(env_var) == expected:
-            return agent_name
+            return context_name
+
+    if os.path.exists(_DOCKER_ENV_PATH):
+        return "container"
 
     try:
-        if not sys.stdout.isatty():
-            return "non_interactive"
+        return "interactive" if sys.stdout.isatty() else "non_interactive"
     except (AttributeError, ValueError, OSError):
-        return "unknown"
-
-    return "unknown"
+        return _UNKNOWN
 
 
 def add_agent_fingerprint_to_span(
