@@ -5,6 +5,7 @@ import json
 import os
 import pickle
 import secrets
+import stat
 from typing import Any, TypedDict
 
 from crewai_core.lock_store import lock as store_lock
@@ -153,44 +154,101 @@ class PickleHandler:
         """Load the HMAC key from the user home directory, or create a new one.
 
         The key is stored in ``~/.crewai/.hmac_key`` with mode 0600 to keep it
-        separate from the working directory where pickle files reside.
+        separate from the working directory where pickle files reside. The
+        directory and key file are validated for ownership and restrictive
+        permissions before use. Key creation uses an exclusive-create flag so
+        concurrent processes cannot overwrite each other's key.
 
         Returns:
             The 32-byte HMAC key.
 
         Raises:
             OSError: If the key file cannot be created or permissioned.
+            PermissionError: If existing key storage has insecure ownership or mode.
         """
         key_dir = os.path.join(os.path.expanduser("~"), ".crewai")
         key_path = os.path.join(key_dir, ".hmac_key")
 
         if os.path.exists(key_path):
-            try:
-                with open(key_path, "rb") as f:
-                    key = f.read()
-                    if len(key) == 32:
-                        return key
-            except OSError:
-                pass
+            if self._validate_key_storage(key_dir, key_path):
+                try:
+                    with open(key_path, "rb") as f:
+                        key = f.read()
+                        if len(key) == 32:
+                            return key
+                except OSError:
+                    pass
 
         key = secrets.token_bytes(32)
         os.makedirs(key_dir, mode=0o700, exist_ok=True)
 
-        # Write atomically: temp file + rename to avoid partial writes
-        import tempfile
-
-        fd, tmp_path = tempfile.mkstemp(dir=key_dir)
+        # Atomic no-clobber creation: O_CREAT|O_EXCL prevents two processes
+        # from writing different keys simultaneously. If another process won,
+        # load its key instead of using our in-memory copy.
         try:
-            with os.fdopen(fd, "wb") as f:
-                f.write(key)
-            os.chmod(tmp_path, 0o600)
-            os.replace(tmp_path, key_path)
-        except OSError:
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
-            raise
+            fd = os.open(key_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError:
+            # Another process created the key between our check and create.
+            # Validate and load the installed key.
+            if self._validate_key_storage(key_dir, key_path):
+                with open(key_path, "rb") as f:
+                    installed = f.read()
+                if len(installed) == 32:
+                    return installed
+            # Fall through to re-create if the winner's key is invalid.
+            fd = os.open(key_path, os.O_CREAT | os.O_TRUNC | os.O_WRONLY, 0o600)
+
+        try:
+            os.write(fd, key)
+        finally:
+            os.close(fd)
 
         return key
+
+    @staticmethod
+    def _validate_key_storage(key_dir: str, key_path: str) -> bool:
+        """Validate that key storage is owned by the current user and has restrictive permissions.
+
+        Args:
+            key_dir: Directory containing the key file.
+            key_path: Path to the key file.
+
+        Returns:
+            True if storage is safe to use.
+
+        Raises:
+            PermissionError: If ownership or permissions are insecure.
+        """
+        dir_stat = os.stat(key_dir)
+        file_stat = os.stat(key_path)
+
+        current_uid = os.getuid()
+
+        if dir_stat.st_uid != current_uid:
+            raise PermissionError(
+                f"HMAC key directory {key_dir} is not owned by the current user"
+            )
+        if file_stat.st_uid != current_uid:
+            raise PermissionError(
+                f"HMAC key file {key_path} is not owned by the current user"
+            )
+
+        if os.path.islink(key_dir) or os.path.islink(key_path):
+            raise PermissionError("HMAC key storage must not be a symlink")
+
+        dir_mode = stat.S_IMODE(dir_stat.st_mode)
+        file_mode = stat.S_IMODE(file_stat.st_mode)
+
+        if dir_mode & 0o077:
+            raise PermissionError(
+                f"HMAC key directory {key_dir} has insecure mode {oct(dir_mode)}; expected 0700"
+            )
+        if file_mode & 0o077:
+            raise PermissionError(
+                f"HMAC key file {key_path} has insecure mode {oct(file_mode)}; expected 0600"
+            )
+
+        return True
 
     def initialize_file(self) -> None:
         """Initialize the file with an empty dictionary and overwrite any existing data."""

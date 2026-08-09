@@ -1686,8 +1686,8 @@ class TestModuleAllowlist:
             with pytest.raises(AgentRepositoryError, match="not in the allowlist"):
                 load_agent_from_repository("test-agent")
 
-    def test_allowed_module_proceeds_past_allowlist(self):
-        """A tool referencing an allowlisted module should not trigger the allowlist rejection."""
+    def test_agent_without_tools_loads_successfully(self):
+        """An agent with no tools should load without tool-module validation."""
         from unittest.mock import MagicMock, patch
 
         mock_response = MagicMock()
