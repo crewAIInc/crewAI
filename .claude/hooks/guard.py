@@ -11,6 +11,14 @@ exits 0 either way. No subprocess, no filesystem writes, no network.
 
 Escape hatch: include `# policy-override: <reason>` in a Bash command to state
 an exception explicitly rather than working around the guard silently.
+
+Known limitation: rules match the command text, so a command that passes a
+protected path to another program as a quoted argument — writing a commit
+message or a PR comment about `docs/images`, for example — is denied even
+though it changes nothing. Heredoc bodies are stripped before matching because
+they are unambiguously data, but quoted arguments are not: `rm -rf "docs/..."`
+is a real command, so stripping quotes would open a bypass. Use the override
+marker in that case.
 """
 
 from __future__ import annotations
