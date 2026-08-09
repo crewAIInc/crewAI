@@ -420,6 +420,7 @@ class BaseTool(BaseModel, ABC):
             current_usage_count=self.current_usage_count,
             cache_function=self.cache_function,
             tool_failure_policy=self.tool_failure_policy,
+            requires_human_approval=self.requires_human_approval,
         )
         structured_tool._original_tool = self
         return structured_tool
@@ -690,6 +691,7 @@ def tool(
     result_schema: type[BaseModel] | None = ...,
     result_as_answer: bool = ...,
     max_usage_count: int | None = ...,
+    requires_human_approval: bool = ...,
 ) -> Callable[[Callable[P2, R2]], Tool[P2, R2]]: ...
 
 
@@ -699,6 +701,7 @@ def tool(
     result_schema: type[BaseModel] | None = ...,
     result_as_answer: bool = ...,
     max_usage_count: int | None = ...,
+    requires_human_approval: bool = ...,
 ) -> Callable[[Callable[P2, R2]], Tool[P2, R2]]: ...
 
 
@@ -707,6 +710,7 @@ def tool(
     result_schema: type[BaseModel] | None = None,
     result_as_answer: bool = False,
     max_usage_count: int | None = None,
+    requires_human_approval: bool = False,
 ) -> Tool[P2, R2] | Callable[[Callable[P2, R2]], Tool[P2, R2]]:
     """Decorator to create a Tool from a function.
 
@@ -773,6 +777,7 @@ def tool(
                 result_as_answer=result_as_answer,
                 max_usage_count=max_usage_count,
                 current_usage_count=0,
+                requires_human_approval=requires_human_approval,
             )
 
         return _make_tool

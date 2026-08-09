@@ -210,6 +210,7 @@ class CrewStructuredTool(BaseModel):
     func: Any = Field(default=None, exclude=True)
     result_as_answer: bool = Field(default=False)
     max_usage_count: int | None = Field(default=None)
+    requires_human_approval: bool = Field(default=False)
     current_usage_count: int = Field(default=0)
     tool_failure_policy: ToolFailurePolicy | None = Field(default=None)
     cache_function: Any = Field(default=None, exclude=True)

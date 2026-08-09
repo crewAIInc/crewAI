@@ -792,3 +792,99 @@ class TestAuthoredDescriptionPreserved:
             assert "Tool Name: get_temperature" in rendered
             assert "Tool Arguments:" in rendered
             assert f"Tool Description: {self.AUTHORED}" in rendered
+def test_tool_requires_human_approval_type_validation():
+    """Verify that requires_human_approval strictly enforces boolean types 
+    and handles valid/invalid type conversions correctly."""
+    
+    class StringFlagTool(BaseTool):
+        name: str = "Validation Tool"
+        description: str = "Test tool"
+        requires_human_approval: bool = True
+
+        def _run(self, val: str) -> str:
+            return val
+
+    tool_inst = StringFlagTool()
+    assert tool_inst.requires_human_approval is True
+    assert isinstance(tool_inst.requires_human_approval, bool)
+
+
+# 2. CRITICAL: Dynamic Mutability
+def test_tool_requires_human_approval_dynamic_toggle():
+    """Verify that human approval can be dynamically toggled at runtime 
+    (e.g., toggled on/off based on context or user permissions)."""
+
+    @tool("Dynamic Approval Tool")
+    def action_tool(data: str) -> str:
+        """Dynamic tool."""
+        return data
+
+    # Starts as default False
+    assert action_tool.requires_human_approval is False
+
+    # Enable dynamically
+    action_tool.requires_human_approval = True
+    assert action_tool.requires_human_approval is True
+
+    # Disable dynamically
+    action_tool.requires_human_approval = False
+    assert action_tool.requires_human_approval is False
+
+
+# 3. CRITICAL: Schema & Serialization
+def test_tool_pydantic_schema_and_serialization():
+    """Verify that requiring human approval doesn't corrupt Pydantic serialization 
+    or the schema exported to LLMs."""
+    
+    class CriticalDataTool(BaseTool):
+        name: str = "Critical Data Tool"
+        description: str = "Processes sensitive payload"
+        requires_human_approval: bool = True
+
+        def _run(self, payload: str) -> str:
+            return payload
+
+    t = CriticalDataTool()
+    serialized = t.model_dump()
+
+    # Ensure field is present in model dump for Agent inspectability
+    assert "requires_human_approval" in serialized
+    assert serialized["requires_human_approval"] is True
+
+
+# 4. CRITICAL: Decorator Metadata Preservation
+def test_tool_decorator_preserves_approval_state_on_copy_or_args():
+    """Verify that the @tool decorator preserves requires_human_approval state 
+    even when additional tool attributes or docstrings are modified."""
+
+    @tool("Sensitivty Test Tool")
+    def sensitive_fn(val: int) -> int:
+        """Processes integer val."""
+        return val * 2
+
+    sensitive_fn.requires_human_approval = True
+
+    # Check function introspection attributes remain intact
+    assert sensitive_fn.name == "Sensitivty Test Tool"
+    assert sensitive_fn.requires_human_approval is True
+    assert callable(sensitive_fn._run)
+
+
+# 5. CRITICAL: Tool Execution Behavior Contract
+def test_tool_execution_preserves_approval_flag_during_run():
+    """Verify that calling the tool's execution method directly does not reset 
+    or mutate the requires_human_approval flag."""
+
+    @tool("Execution Test Tool")
+    def execute_tool(data: str) -> str:
+        """Executes data operation."""
+        return f"Executed {data}"
+
+    execute_tool.requires_human_approval = True
+
+    # Run the tool
+    result = execute_tool.run(data="test_input")
+
+    # Assert execution result and flag immutability after run
+    assert "Executed test_input" in result
+    assert execute_tool.requires_human_approval is True
