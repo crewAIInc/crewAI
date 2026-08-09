@@ -136,6 +136,31 @@ def test_a_heredoc_writing_into_a_frozen_snapshot_is_still_blocked() -> None:
     assert "frozen release snapshots" in reason
 
 
+def test_a_redirect_after_the_heredoc_delimiter_is_still_seen() -> None:
+    """The opener's own line must survive stripping, redirect included."""
+    command = "cat <<'EOF' > docs/v1.15.0/index.mdx\nsome new content\nEOF\n"
+    reason = guard.bash_violation(command)
+    assert reason is not None
+    assert "frozen release snapshots" in reason
+
+
+@pytest.mark.parametrize(
+    ("command", "expected"),
+    [
+        ("bash <<'EOF'\nrm -rf docs/images/a.png\nEOF\n", "docs/images/"),
+        ("sh <<'EOF'\npip install ruff\nEOF\n", "do not use pip directly"),
+        ("bash -s <<'EOF'\ngit commit --no-verify -m x\nEOF\n", "--no-verify"),
+    ],
+)
+def test_a_heredoc_piped_into_a_shell_is_executable_not_data(
+    command: str, expected: str
+) -> None:
+    """A body a shell will run must still be matched, not stripped as data."""
+    reason = guard.bash_violation(command)
+    assert reason is not None, f"expected {command!r} to be blocked"
+    assert expected in reason
+
+
 def test_a_command_after_a_heredoc_is_still_inspected() -> None:
     command = "cat <<'EOF' > notes.txt\njust notes\nEOF\npip install ruff\n"
     reason = guard.bash_violation(command)

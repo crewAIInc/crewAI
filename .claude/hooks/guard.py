@@ -94,21 +94,38 @@ def deny(reason: str) -> None:
     )
 
 
-def strip_heredocs(command: str) -> str:
-    """Replace heredoc bodies with a placeholder.
+#: A heredoc opener, its same-line remainder, and the body up to the delimiter.
+HEREDOC = re.compile(
+    r"(<<-?\s*[\"']?(\w+)[\"']?)([^\n]*)\n.*?^[ \t]*\2\b",
+    re.DOTALL | re.MULTILINE,
+)
 
-    A heredoc body is data — a commit message, a file being written, a PR body —
-    not a command. Matching rules against it produces false denials, such as
-    blocking a commit whose message merely discusses `rm -rf docs/images`. The
-    redirection and the delimiter stay on the command line, so a heredoc that
-    genuinely writes into a protected path is still caught.
+#: Commands that execute their heredoc body instead of consuming it as data.
+SHELL_INTERPRETER = re.compile(r"\b(?:bash|sh|zsh|dash|ksh|eval)\b")
+
+
+def strip_heredocs(command: str) -> str:
+    """Replace data heredoc bodies with a placeholder.
+
+    A heredoc body is usually data — a commit message, a file being written, a
+    PR body — not a command, and matching rules against it produces false
+    denials, such as blocking a commit whose message merely discusses a
+    protected path.
+
+    Two things keep that from becoming a bypass. A body piped into a shell
+    (`bash <<'EOF'`) is executable, so it is left intact and still matched. And
+    the opener's own line is preserved in full, so a redirection written after
+    the delimiter (`cat <<'EOF' > docs/v1/x.mdx`) is still seen.
     """
-    return re.sub(
-        r"(<<-?\s*[\"']?(\w+)[\"']?).*?^\s*\2\b",
-        r"\1 HEREDOC_BODY",
-        command,
-        flags=re.DOTALL | re.MULTILINE,
-    )
+
+    def replace(match: re.Match[str]) -> str:
+        line_start = command.rfind("\n", 0, match.start()) + 1
+        opener_line = command[line_start : match.start()] + match.group(1)
+        if SHELL_INTERPRETER.search(opener_line):
+            return match.group(0)
+        return f"{match.group(1)}{match.group(3)}\nHEREDOC_BODY\n{match.group(2)}"
+
+    return HEREDOC.sub(replace, command)
 
 
 def bash_violation(command: str) -> str | None:
