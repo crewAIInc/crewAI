@@ -26,23 +26,35 @@ OVERRIDE_MARKER = "# policy-override:"
 #: (pattern, reason). Patterns match the raw Bash command string.
 BASH_RULES: tuple[tuple[str, str], ...] = (
     (
-        r"(?:^|[;&|(\n])\s*(?:sudo\s+)?(?:pip3?|python3?\s+-m\s+pip)\s+"
+        # Version-suffixed interpreters (pip3.12, python3.12 -m pip) bypass a bare
+        # pip3? match. `uv pip` is unaffected: the anchor requires command position.
+        r"(?:^|[;&|(\n])\s*(?:sudo\s+)?"
+        r"(?:pip(?:[23](?:\.\d+)?)?|python(?:[23](?:\.\d+)?)?\s+-m\s+pip)\s+"
         r"(?:install|uninstall)\b",
         "CONTRIBUTING.md (Dependency Management): do not use pip directly. "
         "Use `uv add --package <pkg> <dep>`, `uv add --dev <dep>`, or `uv sync`.",
     ),
     (
-        r"\bgit\b[^\n;&|]*\b(?:commit|push)\b[^\n;&|]*(?:--no-verify\b|\s-n(?=\s|$))",
+        # `-n` is only the skip-hooks flag for commit; on push it means --dry-run,
+        # which is safe and must stay allowed.
+        r"\bgit\b[^\n;&|]*\b(?:commit|push)\b[^\n;&|]*--no-verify\b"
+        r"|\bgit\b[^\n;&|]*\bcommit\b[^\n;&|]*\s-n(?=\s|$)",
         "CONTRIBUTING.md (Commits): do not use --no-verify to skip hooks. "
         "Fix what pre-commit reports instead.",
     ),
     (
-        r"\b(?:rm|mv)\b[^\n]*\bdocs/images/",
+        # Stops at shell separators so a later segment merely naming the path does
+        # not trigger, and matches the directory with or without a trailing slash.
+        r"\b(?:rm|mv)\b[^\n;&|]*\bdocs/images(?![\w.-])",
         "AGENTS.md (Changing Docs, rule 3): do not delete or rename files under "
         "docs/images/ — frozen doc snapshots still reference them.",
     ),
     (
-        r"\b(?:rm|mv|tee)\b[^\n]*\bdocs/v[0-9]",
+        # Write verbs and output redirection. Read-only access (cat, grep, less)
+        # is deliberately allowed. `cp` is matched in either direction: failing
+        # closed on a copy out of the tree is cheaper than missing a copy into it.
+        r"\b(?:rm|mv|cp|tee|sed\s+-i)\b[^\n;&|]*\bdocs/v[0-9]"
+        r"|>>?\s*[^\n;&|]*\bdocs/v[0-9]",
         "AGENTS.md (Changing Docs, rule 2): docs/v*/ are frozen release snapshots "
         "managed by devtools. Edit docs/edge/en/ instead.",
     ),
@@ -74,12 +86,30 @@ def deny(reason: str) -> None:
     )
 
 
+def strip_heredocs(command: str) -> str:
+    """Replace heredoc bodies with a placeholder.
+
+    A heredoc body is data — a commit message, a file being written, a PR body —
+    not a command. Matching rules against it produces false denials, such as
+    blocking a commit whose message merely discusses `rm -rf docs/images`. The
+    redirection and the delimiter stay on the command line, so a heredoc that
+    genuinely writes into a protected path is still caught.
+    """
+    return re.sub(
+        r"(<<-?\s*[\"']?(\w+)[\"']?).*?^\s*\2\b",
+        r"\1 HEREDOC_BODY",
+        command,
+        flags=re.DOTALL | re.MULTILINE,
+    )
+
+
 def bash_violation(command: str) -> str | None:
     """Return the reason this command is blocked, or None if it is allowed."""
     if OVERRIDE_MARKER in command:
         return None
+    inspectable = strip_heredocs(command)
     for pattern, reason in BASH_RULES:
-        if re.search(pattern, command):
+        if re.search(pattern, inspectable):
             return reason
     return None
 

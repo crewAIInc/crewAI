@@ -46,6 +46,19 @@ BLOCKED_COMMANDS: list[tuple[str, str]] = [
     ("rm docs/images/flow.png", "docs/images/"),
     ("mv docs/images/a.png docs/images/b.png", "docs/images/"),
     ("rm -rf docs/v1.15.0", "frozen release snapshots"),
+    # Version-suffixed interpreters must not bypass the pip rule.
+    ("pip3.12 install ruff", "do not use pip directly"),
+    ("pip2 install ruff", "do not use pip directly"),
+    ("python3.12 -m pip install ruff", "do not use pip directly"),
+    # The protected directory named without a trailing slash.
+    ("rm -rf docs/images", "docs/images/"),
+    ("mv docs/images docs/img", "docs/images/"),
+    # Writes into a frozen snapshot by redirection or copy, not just rm/mv.
+    ("echo x > docs/v1.15.0/index.mdx", "frozen release snapshots"),
+    ("cat tmp.mdx >> docs/v1.15.0/index.mdx", "frozen release snapshots"),
+    ("cp new.mdx docs/v1.15.0/index.mdx", "frozen release snapshots"),
+    ("sed -i 's/a/b/' docs/v1.15.0/index.mdx", "frozen release snapshots"),
+    ("tee docs/v1.15.0/index.mdx < new.mdx", "frozen release snapshots"),
 ]
 
 ALLOWED_COMMANDS: list[str] = [
@@ -63,7 +76,19 @@ ALLOWED_COMMANDS: list[str] = [
     "uv run pytest -n auto lib/crewai/tests",
     "uv run pip-audit --skip-editable --ignore-vuln PYSEC-2024-277",
     "rm docs/edge/en/scratch.mdx",
+    # Read-only access to a frozen snapshot is allowed; only writes are blocked.
     "cat docs/v1.15.0/index.mdx",
+    "grep -rn 'agents' docs/v1.15.0/ > /tmp/hits.txt",
+    "less docs/v1.15.0/index.mdx",
+    "ls docs/images/",
+    # `-n` on push is --dry-run, not skip-hooks.
+    "git push -n origin main",
+    "git push --dry-run origin main",
+    # A protected path named in a later, unrelated command segment.
+    "rm /tmp/scratch.txt && ls docs/images/",
+    "rm /tmp/scratch.txt && cat docs/v1.15.0/index.mdx",
+    # Paths that merely start with the same prefix.
+    "rm docs/imagesets/old.png",
 ]
 
 
@@ -86,6 +111,36 @@ def test_blocked_reasons_cite_a_committed_document() -> None:
         reason = guard.bash_violation(command)
         assert reason is not None
         assert "CONTRIBUTING.md" in reason or "AGENTS.md" in reason
+
+
+HEREDOC_COMMIT = """git commit -m "$(cat <<'EOF'
+fix(agents): close guard bypasses found in review
+
+- rm -rf docs/images without a trailing slash was not matched
+- pip install was reachable via pip3.12
+EOF
+)"
+"""
+
+
+def test_heredoc_bodies_are_data_not_commands() -> None:
+    """A commit message discussing a blocked command must not itself be blocked."""
+    assert guard.bash_violation(HEREDOC_COMMIT) is None
+
+
+def test_a_heredoc_writing_into_a_frozen_snapshot_is_still_blocked() -> None:
+    """Stripping the body must not hide a redirection on the command line."""
+    command = "cat > docs/v1.15.0/index.mdx <<'EOF'\nsome new content\nEOF\n"
+    reason = guard.bash_violation(command)
+    assert reason is not None
+    assert "frozen release snapshots" in reason
+
+
+def test_a_command_after_a_heredoc_is_still_inspected() -> None:
+    command = "cat <<'EOF' > notes.txt\njust notes\nEOF\npip install ruff\n"
+    reason = guard.bash_violation(command)
+    assert reason is not None
+    assert "do not use pip directly" in reason
 
 
 def test_override_marker_allows_a_stated_exception() -> None:
