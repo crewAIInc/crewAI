@@ -1,6 +1,8 @@
 ﻿import os
+import tempfile
 import unittest
 import uuid
+from unittest.mock import patch
 
 import pytest
 from crewai.utilities.file_handler import PickleHandler
@@ -8,17 +10,31 @@ from crewai.utilities.file_handler import PickleHandler
 
 class TestPickleHandler(unittest.TestCase):
     def setUp(self):
+        self._home_patcher = patch.dict(os.environ, {})
+        self._home_patcher.start()
+
+        self._tmp_home = tempfile.mkdtemp(prefix="crewai_test_home_")
+        self._home_patch = patch("os.path.expanduser", return_value=self._tmp_home)
+        self._home_patch.start()
+
         unique_id = str(uuid.uuid4())
         self.file_name = f"test_data_{unique_id}.pkl"
         self.file_path = os.path.join(os.getcwd(), self.file_name)
         self.handler = PickleHandler(self.file_name)
 
     def tearDown(self):
+        self._home_patch.stop()
+        self._home_patcher.stop()
+
         if os.path.exists(self.file_path):
             os.remove(self.file_path)
         sig_path = self.file_path + ".sig"
         if os.path.exists(sig_path):
             os.remove(sig_path)
+
+        import shutil
+
+        shutil.rmtree(self._tmp_home, ignore_errors=True)
 
     def test_initialize_file(self):
         assert os.path.exists(self.file_path) is False
