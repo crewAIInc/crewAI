@@ -274,7 +274,10 @@ class BaseLLM(BaseModel, ABC):
             data["stop"] = list(stop)
 
         if not data.get("provider"):
-            data["provider"] = "openai"
+            model = data.get("model") or ""
+            data["provider"] = (
+                cls._extract_provider(model) if isinstance(model, str) else "openai"
+            )
 
         known_fields = set(cls.model_fields.keys())
         extras = {k: v for k, v in data.items() if k not in known_fields}
@@ -506,6 +509,10 @@ class BaseLLM(BaseModel, ABC):
             True if the LLM supports images, PDFs, audio, or video.
         """
         return False
+
+    def _multimodal_formatter_name(self) -> str:
+        # Content-block schema key for crewai_files. Identity stays on self.provider.
+        return self.provider or self.model
 
     def format_text_content(self, text: str) -> dict[str, Any]:
         """Format text as a content block for the LLM.
@@ -866,7 +873,7 @@ class BaseLLM(BaseModel, ABC):
                 )
             return messages
 
-        provider = getattr(self, "provider", None) or getattr(self, "model", "openai")
+        formatter = self._multimodal_formatter_name()
         api = getattr(self, "api", None)
 
         for msg in messages:
@@ -878,7 +885,7 @@ class BaseLLM(BaseModel, ABC):
             text = existing_content if isinstance(existing_content, str) else None
 
             content_blocks = format_multimodal_content(
-                files, provider, api=api, prefer_upload=self.prefer_upload, text=text
+                files, formatter, api=api, prefer_upload=self.prefer_upload, text=text
             )
             if not content_blocks:
                 msg.pop("files", None)
