@@ -162,21 +162,36 @@ _BLOCKED_IPV6_NETWORKS = [
 ]
 
 
+_NAT64_WELL_KNOWN = ipaddress.ip_network("64:ff9b::/96")
+
+
+def _unwrap_embedded_ipv4(addr: ipaddress.IPv4Address | ipaddress.IPv6Address):
+    """Return embedded IPv4 for IPv4-mapped or well-known NAT64 addresses."""
+    if isinstance(addr, ipaddress.IPv6Address):
+        if addr.ipv4_mapped:
+            return addr.ipv4_mapped
+        if addr in _NAT64_WELL_KNOWN:
+            # Last 32 bits carry the IPv4 (RFC 6052 well-known prefix).
+            return ipaddress.IPv4Address(int(addr) & 0xFFFFFFFF)
+    return addr
+
+
 def _is_private_or_reserved(ip_str: str) -> bool:
     """Check if an IP address is private, reserved, or otherwise unsafe.
 
     Uses ``ipaddress`` global/private classification so ranges the hand-maintained
     blocklists omitted (CGNAT ``100.64/10``, documentation nets, Class E, the
     rest of ``0.0.0.0/8``) stay blocked. Explicit network lists remain as a
-    belt-and-suspenders check.
+    belt-and-suspenders check. Multicast and NAT64-wrapped non-global IPv4 are
+    also rejected (``is_global`` is True for multicast and for many NAT64 embeds).
     """
     try:
         addr = ipaddress.ip_address(ip_str)
-        # Unwrap IPv4-mapped IPv6 addresses (e.g., ::ffff:127.0.0.1) to IPv4
-        # so they are only checked against IPv4 networks (avoids TypeError when
-        # an IPv4Address is compared against an IPv6Network).
-        if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped:
-            addr = addr.ipv4_mapped
+        # Unwrap IPv4-mapped (::ffff:) and well-known NAT64 (64:ff9b::/96) so
+        # embedded loopback/link-local/private IPv4 cannot bypass the check.
+        addr = _unwrap_embedded_ipv4(addr)
+        if addr.is_multicast:
+            return True
         # ``is_global`` is False for CGNAT (100.64/10) even though ``is_private``
         # is also False there — that gap let SSRF past the old list check.
         if not addr.is_global:
