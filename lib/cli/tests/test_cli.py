@@ -38,6 +38,15 @@ def test_train_default_iterations(train_crew, runner):
 
 @mock.patch("crewai_cli.cli.train_crew")
 def test_train_custom_iterations(train_crew, runner):
+    result = runner.invoke(train, ["--n-iterations", "10"])
+
+    train_crew.assert_called_once_with(10, "trained_agents_data.pkl")
+    assert result.exit_code == 0
+    assert "Training the Crew for 10 iterations" in result.output
+
+
+@mock.patch("crewai_cli.cli.train_crew")
+def test_train_custom_iterations_snake_case_alias(train_crew, runner):
     result = runner.invoke(train, ["--n_iterations", "10"])
 
     train_crew.assert_called_once_with(10, "trained_agents_data.pkl")
@@ -47,12 +56,12 @@ def test_train_custom_iterations(train_crew, runner):
 
 @mock.patch("crewai_cli.cli.train_crew")
 def test_train_invalid_string_iterations(train_crew, runner):
-    result = runner.invoke(train, ["--n_iterations", "invalid"])
+    result = runner.invoke(train, ["--n-iterations", "invalid"])
 
     train_crew.assert_not_called()
     assert result.exit_code == 2
     assert (
-        "Usage: train [OPTIONS]\nTry 'train --help' for help.\n\nError: Invalid value for '-n' / '--n_iterations': 'invalid' is not a valid integer.\n"
+        "Usage: train [OPTIONS]\nTry 'train --help' for help.\n\nError: Invalid value for '-n' / '--n-iterations': 'invalid' is not a valid integer.\n"
         in result.output
     )
 
@@ -103,6 +112,15 @@ def test_test_default_iterations(evaluate_crew, runner):
 
 @mock.patch("crewai_cli.cli.evaluate_crew")
 def test_test_custom_iterations(evaluate_crew, runner):
+    result = runner.invoke(test, ["--n-iterations", "5", "--model", "gpt-4o"])
+
+    evaluate_crew.assert_called_once_with(5, "gpt-4o", trained_agents_file=None)
+    assert result.exit_code == 0
+    assert "Testing the crew for 5 iterations with model gpt-4o" in result.output
+
+
+@mock.patch("crewai_cli.cli.evaluate_crew")
+def test_test_custom_iterations_snake_case_alias(evaluate_crew, runner):
     result = runner.invoke(test, ["--n_iterations", "5", "--model", "gpt-4o"])
 
     evaluate_crew.assert_called_once_with(5, "gpt-4o", trained_agents_file=None)
@@ -112,12 +130,12 @@ def test_test_custom_iterations(evaluate_crew, runner):
 
 @mock.patch("crewai_cli.cli.evaluate_crew")
 def test_test_invalid_string_iterations(evaluate_crew, runner):
-    result = runner.invoke(test, ["--n_iterations", "invalid"])
+    result = runner.invoke(test, ["--n-iterations", "invalid"])
 
     evaluate_crew.assert_not_called()
     assert result.exit_code == 2
     assert (
-        "Usage: test [OPTIONS]\nTry 'test --help' for help.\n\nError: Invalid value for '-n' / '--n_iterations': 'invalid' is not a valid integer.\n"
+        "Usage: test [OPTIONS]\nTry 'test --help' for help.\n\nError: Invalid value for '-n' / '--n-iterations': 'invalid' is not a valid integer.\n"
         in result.output
     )
 

@@ -145,7 +145,19 @@ def uv(uv_args: tuple[str, ...]) -> None:
 )
 @click.argument("name", required=False, default=None)
 @click.option("--provider", type=str, help="The provider to use for the crew")
-@click.option("--skip_provider", is_flag=True, help="Skip provider validation")
+@click.option(
+    "--skip-provider",
+    "skip_provider",
+    is_flag=True,
+    help="Skip provider validation",
+)
+@click.option(
+    "--skip_provider",
+    "skip_provider",
+    is_flag=True,
+    hidden=True,
+    help="[Deprecated: use --skip-provider] Skip provider validation",
+)
 @click.option(
     "--classic",
     is_flag=True,
@@ -288,10 +300,18 @@ def version(tools: bool) -> None:
 @crewai.command()
 @click.option(
     "-n",
-    "--n_iterations",
+    "--n-iterations",
+    "n_iterations",
     type=int,
     default=5,
     help="Number of iterations to train the crew",
+)
+@click.option(
+    "--n_iterations",
+    "n_iterations",
+    type=int,
+    hidden=True,
+    help="[Deprecated: use --n-iterations]",
 )
 @click.option(
     "-f",
@@ -309,9 +329,17 @@ def train(n_iterations: int, filename: str) -> None:
 @crewai.command()
 @click.option(
     "-t",
-    "--task_id",
+    "--task-id",
+    "task_id",
     type=str,
     help="Replay the crew from this task ID, including all subsequent tasks.",
+)
+@click.option(
+    "--task_id",
+    "task_id",
+    type=str,
+    hidden=True,
+    help="[Deprecated: use --task-id]",
 )
 @click.option(
     "-f",
@@ -504,10 +532,18 @@ def memory(
 @crewai.command()
 @click.option(
     "-n",
-    "--n_iterations",
+    "--n-iterations",
+    "n_iterations",
     type=int,
     default=3,
     help="Number of iterations to Test the crew",
+)
+@click.option(
+    "--n_iterations",
+    "n_iterations",
+    type=int,
+    hidden=True,
+    help="[Deprecated: use --n-iterations]",
 )
 @click.option(
     "-m",
