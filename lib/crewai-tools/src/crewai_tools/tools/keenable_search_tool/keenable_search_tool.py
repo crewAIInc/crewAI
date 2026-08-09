@@ -53,7 +53,7 @@ class KeenableSearchTool(BaseTool):
         description="Search mode. 'pro' is the default and the only mode needed here.",
     )
     n_results: int = Field(
-        default=10, description="Maximum number of results to return."
+        default=10, ge=0, description="Maximum number of results to return."
     )
     timeout: int = Field(default=30, description="Request timeout in seconds.")
     env_vars: list[EnvVar] = Field(
