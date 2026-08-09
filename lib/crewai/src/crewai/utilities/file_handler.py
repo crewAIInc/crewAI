@@ -176,11 +176,23 @@ class PickleHandler:
                         key = f.read()
                         if len(key) == 32:
                             return key
+                    raise ValueError(
+                        f"HMAC key file {key_path} exists but has invalid length "
+                        f"({len(key)} bytes, expected 32). Remove the file to "
+                        "regenerate, or restore from a valid backup."
+                    )
                 except OSError:
                     pass
+            # If validation passed but read failed, fall through to create.
+
+        # Validate directory before first-time key creation: os.makedirs with
+        # exist_ok=True does not tighten an existing insecure directory.
+        if os.path.exists(key_dir):
+            self._validate_key_storage(key_dir, key_path)
+        else:
+            os.makedirs(key_dir, mode=0o700, exist_ok=False)
 
         key = secrets.token_bytes(32)
-        os.makedirs(key_dir, mode=0o700, exist_ok=True)
 
         # Atomic no-clobber creation: O_CREAT|O_EXCL prevents two processes
         # from writing different keys simultaneously. If another process won,
@@ -195,11 +207,18 @@ class PickleHandler:
                     installed = f.read()
                 if len(installed) == 32:
                     return installed
-            # Fall through to re-create if the winner's key is invalid.
-            fd = os.open(key_path, os.O_CREAT | os.O_TRUNC | os.O_WRONLY, 0o600)
+                raise ValueError(
+                    f"HMAC key file {key_path} was created concurrently but has "
+                    "invalid length. Remove the file to regenerate."
+                ) from None
+            raise
 
         try:
-            os.write(fd, key)
+            # Write all bytes, handling short writes from the OS.
+            offset = 0
+            while offset < len(key):
+                offset += os.write(fd, key[offset:])
+            os.fsync(fd)
         finally:
             os.close(fd)
 
@@ -211,7 +230,7 @@ class PickleHandler:
 
         Args:
             key_dir: Directory containing the key file.
-            key_path: Path to the key file.
+            key_path: Path to the key file. May not exist yet during first creation.
 
         Returns:
             True if storage is safe to use.
@@ -220,7 +239,6 @@ class PickleHandler:
             PermissionError: If ownership or permissions are insecure.
         """
         dir_stat = os.stat(key_dir)
-        file_stat = os.stat(key_path)
 
         current_uid = os.getuid()
 
@@ -228,25 +246,35 @@ class PickleHandler:
             raise PermissionError(
                 f"HMAC key directory {key_dir} is not owned by the current user"
             )
-        if file_stat.st_uid != current_uid:
-            raise PermissionError(
-                f"HMAC key file {key_path} is not owned by the current user"
-            )
 
-        if os.path.islink(key_dir) or os.path.islink(key_path):
-            raise PermissionError("HMAC key storage must not be a symlink")
+        if os.path.islink(key_dir):
+            raise PermissionError("HMAC key directory must not be a symlink")
 
         dir_mode = stat.S_IMODE(dir_stat.st_mode)
-        file_mode = stat.S_IMODE(file_stat.st_mode)
 
         if dir_mode & 0o077:
             raise PermissionError(
                 f"HMAC key directory {key_dir} has insecure mode {oct(dir_mode)}; expected 0700"
             )
-        if file_mode & 0o077:
-            raise PermissionError(
-                f"HMAC key file {key_path} has insecure mode {oct(file_mode)}; expected 0600"
-            )
+
+        # Validate key file only if it exists (it may not during first creation).
+        if os.path.exists(key_path):
+            file_stat = os.stat(key_path)
+
+            if file_stat.st_uid != current_uid:
+                raise PermissionError(
+                    f"HMAC key file {key_path} is not owned by the current user"
+                )
+
+            if os.path.islink(key_path):
+                raise PermissionError("HMAC key file must not be a symlink")
+
+            file_mode = stat.S_IMODE(file_stat.st_mode)
+
+            if file_mode & 0o077:
+                raise PermissionError(
+                    f"HMAC key file {key_path} has insecure mode {oct(file_mode)}; expected 0600"
+                )
 
         return True
 
@@ -286,29 +314,32 @@ class PickleHandler:
             return {}
 
         with store_lock(f"file:{os.path.realpath(self.file_path)}"):
+            with open(self.file_path, "rb") as file:
+                payload = file.read()
+
+            if not os.path.exists(self._sig_path):
+                raise ValueError(
+                    f"Integrity check failed for {self.file_path}: "
+                    "no signature file found. Re-save the data to generate one."
+                )
+
             try:
-                with open(self.file_path, "rb") as file:
-                    payload = file.read()
-
-                if not os.path.exists(self._sig_path):
-                    raise ValueError(
-                        f"Integrity check failed for {self.file_path}: "
-                        "no signature file found. Re-save the data to generate one."
-                    )
-
                 with open(self._sig_path, "rb") as f:
                     stored_sig = f.read()
+            except FileNotFoundError:
+                raise ValueError(
+                    f"Integrity check failed for {self.file_path}: "
+                    "signature file disappeared during loading."
+                ) from None
 
-                expected_sig = hmac.new(self._key, payload, hashlib.sha256).digest()
+            expected_sig = hmac.new(self._key, payload, hashlib.sha256).digest()
 
-                if not hmac.compare_digest(stored_sig, expected_sig):
-                    raise ValueError(
-                        f"Integrity check failed for {self.file_path}: "
-                        "signature mismatch - file may have been tampered with"
-                    )
+            if not hmac.compare_digest(stored_sig, expected_sig):
+                raise ValueError(
+                    f"Integrity check failed for {self.file_path}: "
+                    "signature mismatch - file may have been tampered with"
+                )
 
-                import io
+            import io
 
-                return pickle.load(io.BytesIO(payload))  # noqa: S301
-            except (FileNotFoundError, EOFError):
-                return {}
+            return pickle.load(io.BytesIO(payload))  # noqa: S301
