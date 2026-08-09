@@ -107,3 +107,21 @@ class TestPickleHandler(unittest.TestCase):
 
         loaded_data = self.handler.load()
         assert loaded_data == {}
+
+    def test_load_rejects_disappearing_signature(self):
+        """If the signature file is removed after the existence check, load should raise ValueError."""
+        data = {"key": "value"}
+        self.handler.save(data)
+
+        original_exists = os.path.exists
+        sig_path = self.file_path + ".sig"
+
+        def remove_sig_after_check(path):
+            if path == sig_path and original_exists(path):
+                os.remove(sig_path)
+                return False
+            return original_exists(path)
+
+        with patch("os.path.exists", side_effect=remove_sig_after_check):
+            with pytest.raises(ValueError, match="signature file"):
+                self.handler.load()
