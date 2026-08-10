@@ -1,0 +1,140 @@
+---
+title: أداة استخراج عنصر من موقع
+description: أداة `ScrapeElementFromWebsiteTool` تتيح لوكلاء CrewAI استخراج عناصر محددة من المواقع باستخدام محددات CSS.
+icon: code
+mode: "wide"
+---
+
+# `ScrapeElementFromWebsiteTool`
+
+## الوصف
+
+أداة `ScrapeElementFromWebsiteTool` مصممة لاستخراج عناصر محددة من المواقع باستخدام محددات CSS. تسمح هذه الأداة لوكلاء CrewAI باستخراج محتوى مستهدف من صفحات الويب، مما يجعلها مفيدة لمهام استخراج البيانات حيث تكون أجزاء محددة فقط من صفحة الويب مطلوبة.
+
+## التثبيت
+
+لاستخدام هذه الأداة، تحتاج إلى تثبيت التبعيات المطلوبة:
+
+```shell
+uv add requests beautifulsoup4
+```
+
+## خطوات البدء
+
+لاستخدام `ScrapeElementFromWebsiteTool` بفعالية، اتبع هذه الخطوات:
+
+1. **تثبيت التبعيات**: ثبّت الحزم المطلوبة باستخدام الأمر أعلاه.
+2. **تحديد محددات CSS**: حدد محددات CSS للعناصر التي تريد استخراجها من الموقع.
+3. **تهيئة الأداة**: أنشئ نسخة من الأداة بالمعاملات اللازمة.
+
+## مثال
+
+يوضح المثال التالي كيفية استخدام `ScrapeElementFromWebsiteTool` لاستخراج عناصر محددة من موقع:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import ScrapeElementFromWebsiteTool
+
+# Initialize the tool
+scrape_tool = ScrapeElementFromWebsiteTool()
+
+# Define an agent that uses the tool
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract specific information from websites",
+    backstory="An expert in web scraping who can extract targeted content from web pages.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# Example task to extract headlines from a news website
+scrape_task = Task(
+    description="Extract the main headlines from the CNN homepage. Use the CSS selector '.headline' to target the headline elements.",
+    expected_output="A list of the main headlines from CNN.",
+    agent=web_scraper_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[web_scraper_agent], tasks=[scrape_task])
+result = crew.kickoff()
+```
+
+يمكنك أيضاً تهيئة الأداة بمعاملات محددة مسبقاً:
+
+```python Code
+# Initialize the tool with predefined parameters
+scrape_tool = ScrapeElementFromWebsiteTool(
+    website_url="https://www.example.com",
+    css_element=".main-content"
+)
+```
+
+## المعاملات
+
+تقبل أداة `ScrapeElementFromWebsiteTool` المعاملات التالية أثناء التهيئة:
+
+- **website_url**: اختياري. عنوان URL للموقع المراد استخراجه. إذا تم تقديمه أثناء التهيئة، لن يحتاج الوكيل إلى تحديده عند استخدام الأداة.
+- **css_element**: اختياري. محدد CSS للعناصر المراد استخراجها. إذا تم تقديمه أثناء التهيئة، لن يحتاج الوكيل إلى تحديده عند استخدام الأداة.
+- **cookies**: اختياري. قاموس يحتوي على ملفات تعريف الارتباط لإرسالها مع الطلب. يمكن أن يكون مفيداً للمواقع التي تتطلب مصادقة.
+
+## الاستخدام
+
+عند استخدام `ScrapeElementFromWebsiteTool` مع وكيل، سيحتاج الوكيل إلى تقديم المعاملات التالية (ما لم يتم تحديدها أثناء التهيئة):
+
+- **website_url**: عنوان URL للموقع المراد استخراجه.
+- **css_element**: محدد CSS للعناصر المراد استخراجها.
+
+ستُرجع الأداة المحتوى النصي لجميع العناصر المطابقة لمحدد CSS، مفصولة بأسطر جديدة.
+
+```python Code
+# Example of using the tool with an agent
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract specific elements from websites",
+    backstory="An expert in web scraping who can extract targeted content using CSS selectors.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# Create a task for the agent to extract specific elements
+extract_task = Task(
+    description="""
+    Extract all product titles from the featured products section on example.com.
+    Use the CSS selector '.product-title' to target the title elements.
+    """,
+    expected_output="A list of product titles from the website",
+    agent=web_scraper_agent,
+)
+
+# Run the task through a crew
+crew = Crew(agents=[web_scraper_agent], tasks=[extract_task])
+result = crew.kickoff()
+```
+
+## تفاصيل التنفيذ
+
+تستخدم أداة `ScrapeElementFromWebsiteTool` مكتبة `requests` لجلب صفحة الويب و `BeautifulSoup` لتحليل HTML واستخراج العناصر المحددة:
+
+```python Code
+class ScrapeElementFromWebsiteTool(BaseTool):
+    name: str = "Read a website content"
+    description: str = "A tool that can be used to read a website content."
+
+    # Implementation details...
+
+    def _run(self, **kwargs: Any) -> Any:
+        website_url = kwargs.get("website_url", self.website_url)
+        css_element = kwargs.get("css_element", self.css_element)
+        page = requests.get(
+            website_url,
+            headers=self.headers,
+            cookies=self.cookies if self.cookies else {},
+        )
+        parsed = BeautifulSoup(page.content, "html.parser")
+        elements = parsed.select(css_element)
+        return "\n".join([element.get_text() for element in elements])
+```
+
+## الخلاصة
+
+توفر أداة `ScrapeElementFromWebsiteTool` طريقة قوية لاستخراج عناصر محددة من المواقع باستخدام محددات CSS. من خلال تمكين الوكلاء من استهداف المحتوى الذي يحتاجونه فقط، تجعل مهام استخراج البيانات من الويب أكثر كفاءة وتركيزاً. هذه الأداة مفيدة بشكل خاص لاستخراج البيانات ومراقبة المحتوى ومهام البحث حيث تحتاج معلومات محددة إلى استخراجها من صفحات الويب.
