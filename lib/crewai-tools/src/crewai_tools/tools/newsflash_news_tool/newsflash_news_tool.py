@@ -1,6 +1,7 @@
+import asyncio
 import logging
 import os
-from typing import Any
+from typing import Any, Literal
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
@@ -9,7 +10,7 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-_CATEGORIES = [
+Category = Literal[
     "crypto",
     "tradfi",
     "business",
@@ -38,11 +39,9 @@ class NewsflashNewsToolSchema(BaseModel):
             "matching."
         ),
     )
-    category: str | None = Field(
+    category: Category | None = Field(
         None,
-        description=(
-            "Optional category filter. One of: " + ", ".join(_CATEGORIES) + "."
-        ),
+        description="Optional category filter.",
     )
     limit: int = Field(
         10, ge=1, le=_MAX_API_LIMIT, description="Maximum number of events to return"
@@ -72,6 +71,9 @@ class NewsflashNewsTool(BaseTool):
     args_schema: type[BaseModel] = NewsflashNewsToolSchema
     base_url: str = "https://newsflash.sh/api"
     request_timeout: int = 15
+    # Article links require one /events/{id} call each; cap them so a wide
+    # search doesn't turn into N+1 requests against the caller's rate budget.
+    max_link_fetches: int = 5
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
             EnvVar(
@@ -105,6 +107,8 @@ class NewsflashNewsTool(BaseTool):
 
     def _first_article_url(self, event_id: Any) -> str | None:
         """Fetch event details and return the URL of its first article."""
+        if event_id is None:
+            return None
         try:
             details = self._get(f"/events/{event_id}")
         except requests.exceptions.RequestException as e:
@@ -186,9 +190,15 @@ class NewsflashNewsTool(BaseTool):
             )
             return f"{message} ({note})" if note else message
 
-        # Fetch article links only for the events actually returned.
+        # Fetch article links for the top events only (one detail call each).
         formatted = [
-            self._format_event(i, event, self._first_article_url(event.get("id")))
+            self._format_event(
+                i,
+                event,
+                self._first_article_url(event.get("id"))
+                if i <= self.max_link_fetches
+                else None,
+            )
             for i, event in enumerate(events, start=1)
         ]
 
@@ -199,4 +209,5 @@ class NewsflashNewsTool(BaseTool):
         return "\n\n".join([header, *formatted])
 
     async def _arun(self, *args: Any, **kwargs: Any) -> str:
-        return self._run(*args, **kwargs)
+        # requests is synchronous; keep it off the event loop.
+        return await asyncio.to_thread(self._run, *args, **kwargs)

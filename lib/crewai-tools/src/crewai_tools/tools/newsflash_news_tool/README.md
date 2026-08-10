@@ -16,7 +16,7 @@ effective gate against single-source and fabricated news.
 pip install 'crewai[tools]'
 ```
 
-No extra dependencies are needed (the tool uses the standard `requests` package).
+No extra dependencies are needed (the tool uses the existing `requests` dependency).
 
 ## Example
 

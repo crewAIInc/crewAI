@@ -2,7 +2,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from crewai_tools.tools.newsflash_news_tool.newsflash_news_tool import NewsflashNewsTool
+from pydantic import ValidationError
+
+from crewai_tools.tools.newsflash_news_tool.newsflash_news_tool import (
+    NewsflashNewsTool,
+    NewsflashNewsToolSchema,
+)
 
 
 def _mock_response(payload):
@@ -188,3 +193,46 @@ def test_newsflash_tool_no_results(mock_get, newsflash_tool):
 
     assert "No corroborated news events found" in result
     assert "nonexistent topic" in result
+
+
+def test_newsflash_tool_rejects_unknown_category():
+    # Validation must fail before any API call is made.
+    with pytest.raises(ValidationError):
+        NewsflashNewsToolSchema(query="fed rates", category="astrology")
+
+
+@patch("requests.get")
+def test_newsflash_tool_bounds_detail_fetches(mock_get, newsflash_tool):
+    # A wide result set must not fan out into N+1 detail requests: article
+    # links are only fetched for the first `max_link_fetches` events.
+    events = [
+        {
+            "id": i,
+            "canonical_title": f"Event {i}",
+            "category": "business",
+            "confidence": 1.0,
+            "corroboration": 3,
+            "sources": ["a", "b", "c"],
+            "first_seen_at": "2026-08-01T00:00:00Z",
+            "summary": "s",
+        }
+        for i in range(1, 9)
+    ]
+
+    def routed(url, **kwargs):
+        response = MagicMock()
+        response.raise_for_status = MagicMock()
+        if url.endswith("/events"):
+            response.json.return_value = {"count": len(events), "events": events}
+        else:
+            response.json.return_value = {"articles": [{"url": "https://x.test/a"}]}
+        return response
+
+    mock_get.side_effect = routed
+    result = newsflash_tool.run(query="anything", limit=8)
+
+    assert "Event 8" in result, "all events are still formatted"
+    detail_calls = [
+        call for call in mock_get.call_args_list if "/events/" in call.args[0]
+    ]
+    assert len(detail_calls) == newsflash_tool.max_link_fetches
