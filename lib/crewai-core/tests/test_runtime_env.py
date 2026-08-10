@@ -13,6 +13,8 @@ to crewai-core standing alone is tested here.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+
 from crewai_core.runtime_env import (
     CODING_AGENT_ENV_MARKERS,
     GENERIC_AGENT_ENV_VARS,
@@ -20,12 +22,27 @@ from crewai_core.runtime_env import (
     detect_coding_agent,
     detect_runtime_context,
 )
+import crewai_core.telemetry as telemetry_module
 from crewai_core.telemetry import Telemetry, common_span_attributes
+from opentelemetry.sdk.trace.export import SpanExportResult
 import pytest
 
 
+class _NullExporter:
+    """Stands in for the OTLP exporter so no test attempts a real export."""
+
+    def export(self, spans: object) -> SpanExportResult:
+        return SpanExportResult.SUCCESS
+
+    def shutdown(self) -> None:
+        pass
+
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        return True
+
+
 @pytest.fixture(autouse=True)
-def _reset_cache():
+def _reset_cache() -> Iterator[None]:
     common_span_attributes.cache_clear()
     yield
     common_span_attributes.cache_clear()
@@ -42,7 +59,7 @@ def clean_env(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
     return monkeypatch
 
 
-def test_detection_works_from_crewai_core(clean_env) -> None:
+def test_detection_works_from_crewai_core(clean_env: pytest.MonkeyPatch) -> None:
     """The detectors resolve here, not only through the crewai re-export."""
     clean_env.setenv("CLAUDECODE", "1")
     clean_env.setenv("GITHUB_ACTIONS", "true")
@@ -79,7 +96,7 @@ def test_runtime_env_does_not_import_crewai() -> None:
 
 
 def test_cli_spans_carry_the_process_context(
-    clean_env, monkeypatch: pytest.MonkeyPatch
+    clean_env: pytest.MonkeyPatch, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The regression: CLI spans must carry coding_agent and runtime_context."""
     from opentelemetry.sdk.trace.export import SimpleSpanProcessor
@@ -95,17 +112,27 @@ def test_cli_spans_carry_the_process_context(
 
     Telemetry._instance = None
     monkeypatch.setattr(Telemetry, "_register_shutdown_handlers", lambda self: None)
+    # Patched before construction: __init__ wires a BatchSpanProcessor around the
+    # real OTLP exporter, which would attempt a live export to the collector.
+    monkeypatch.setattr(
+        telemetry_module, "SafeOTLPSpanExporter", lambda **_kwargs: _NullExporter()
+    )
     telemetry = Telemetry()
 
     exporter = InMemorySpanExporter()
     telemetry.provider.add_span_processor(SimpleSpanProcessor(exporter))
 
-    telemetry.feature_usage_span("cli_usage:deploy")
-    telemetry.template_installed_span("crew-template")
-    Telemetry._instance = None
+    try:
+        telemetry.feature_usage_span("cli_usage:deploy")
+        telemetry.template_installed_span("crew-template")
+    finally:
+        telemetry.provider.shutdown()
+        Telemetry._instance = None
 
     exported = exporter.get_finished_spans()
     assert [span.name for span in exported] == ["Feature Usage", "Template Installed"]
     for span in exported:
-        assert span.attributes["coding_agent"] == "claude_code"
-        assert span.attributes["runtime_context"] == "ci"
+        attributes = span.attributes
+        assert attributes is not None
+        assert attributes["coding_agent"] == "claude_code"
+        assert attributes["runtime_context"] == "ci"

@@ -194,8 +194,9 @@ def detect_coding_agent() -> str:
 
     Uses the shared ``CODING_AGENT_ENV_MARKERS`` table, so this agrees with the
     env-context events emitted by ``get_env_context()`` rather than maintaining
-    a second, narrower set of markers. Precedence follows that table: Claude
-    Code, then Codex, then Cursor, then the remaining assistants.
+    a second, narrower set of markers. Precedence follows that table, which ends
+    with Cursor: ``CURSOR_*`` is set for every integrated terminal, so checking
+    it earlier would mask any assistant running inside one.
 
     Only the assistant's normalized name is returned - environment variable
     values are never read into the return value or recorded anywhere.

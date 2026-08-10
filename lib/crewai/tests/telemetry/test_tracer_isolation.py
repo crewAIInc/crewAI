@@ -7,18 +7,33 @@ clients, ORMs - resolved ``trace.get_tracer()`` to our provider and shipped its
 spans to CrewAI's endpoint.
 """
 
+from typing import Any
 from unittest.mock import patch
 
 import opentelemetry.trace as ot
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor, SpanExportResult
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
     InMemorySpanExporter,
 )
 import pytest
 
+import crewai.telemetry.telemetry as telemetry_module
 from crewai.telemetry.constants import TRACER_NAME
 from crewai.telemetry.telemetry import Telemetry
+
+
+class _NullExporter:
+    """Stands in for the OTLP exporter so no test attempts a real export."""
+
+    def export(self, spans: Any) -> SpanExportResult:
+        return SpanExportResult.SUCCESS
+
+    def shutdown(self) -> None:
+        pass
+
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        return True
 
 
 @pytest.fixture
@@ -40,14 +55,25 @@ def telemetry_with_exporter(monkeypatch):
     monkeypatch.setenv("CREWAI_DISABLE_TRACKING", "false")
     monkeypatch.setenv("OTEL_SDK_DISABLED", "false")
 
+    # Patched before construction: Telemetry.__init__ wires a BatchSpanProcessor
+    # around the real OTLP exporter, so without this every test in this module
+    # attempts a live export to the collector and logs the blocked-network error.
+    monkeypatch.setattr(
+        telemetry_module, "SafeOTLPSpanExporter", lambda **_kwargs: _NullExporter()
+    )
+
     telemetry = Telemetry()
 
     exporter = InMemorySpanExporter()
     telemetry.provider.add_span_processor(SimpleSpanProcessor(exporter))
 
-    yield telemetry, exporter
-
-    Telemetry._instance = None
+    try:
+        yield telemetry, exporter
+    finally:
+        # Shut the provider down so its batch worker thread does not outlive
+        # the test, then release the singleton.
+        telemetry.provider.shutdown()
+        Telemetry._instance = None
 
 
 def test_third_party_spans_never_reach_our_exporter(telemetry_with_exporter):
