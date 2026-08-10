@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
+from crewai.telemetry.constants import TRACER_NAME
 from crewai.telemetry.utils import (
     KNOWN_CODING_AGENTS,
     KNOWN_RUNTIME_CONTEXTS,
@@ -276,49 +277,6 @@ def test_terminal_bound_assistants_outrank_cursor(clean_env):
         clean_env.delenv(marker)
 
 
-def test_concurrent_attach_registers_the_processor_once(isolated_telemetry, clean_env):
-    """Check-then-act on the provider set must be locked.
-
-    Crews and flows created from different threads can both reach set_tracer()
-    before trace_set flips, and without a lock each would attach its own
-    processor to the same provider for the life of the process.
-    """
-    import threading
-    import time
-
-    telemetry = isolated_telemetry()
-    threads_count = 8
-
-    class SlowProvider:
-        """Widens the check-then-act window so the race is deterministic.
-
-        Sleeping inside add_span_processor guarantees every unlocked thread gets
-        past the membership check before any of them records the provider.
-        """
-
-        def __init__(self) -> None:
-            self.processors: list[object] = []
-
-        def add_span_processor(self, processor: object) -> None:
-            time.sleep(0.05)
-            self.processors.append(processor)
-
-    provider = SlowProvider()
-    start = threading.Barrier(threads_count)
-
-    def attach() -> None:
-        start.wait()
-        telemetry._attach_common_attributes(provider)
-
-    threads = [threading.Thread(target=attach) for _ in range(threads_count)]
-    for thread in threads:
-        thread.start()
-    for thread in threads:
-        thread.join()
-
-    assert len(provider.processors) == 1
-
-
 def test_editor_terminal_requires_exact_value(clean_env):
     clean_env.setenv("TERM_PROGRAM", "vscode")
     assert detect_runtime_context() == "vscode_terminal"
@@ -505,15 +463,36 @@ def test_coding_agent_span_emits_once(isolated_telemetry, clean_env, monkeypatch
     assert emitted == ["coding_agent:claude_code"]
 
 
-def test_attribute_survives_an_externally_installed_provider(
+def test_common_attributes_land_on_our_own_spans(
     isolated_telemetry, clean_env, otel_enabled
 ):
-    """Spans must keep coding_agent when the app installs its own provider.
+    """Spans built from our own provider must carry the process-wide context."""
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
 
-    set_tracer() leaves an existing non-proxy provider in place, and telemetry
-    methods resolve their tracer through the global provider - so attaching the
-    processor only to our own provider would drop the attribute entirely in any
-    already-instrumented application.
+    clean_env.setenv("CLAUDECODE", "1")
+
+    telemetry = isolated_telemetry()
+    exporter = InMemorySpanExporter()
+    telemetry.provider.add_span_processor(SimpleSpanProcessor(exporter))
+
+    telemetry.provider.get_tracer(TRACER_NAME).start_span("Crew Created").end()
+
+    exported = exporter.get_finished_spans()
+    assert len(exported) == 1
+    assert exported[0].attributes["coding_agent"] == "claude_code"
+
+
+def test_an_app_provider_never_receives_our_processor(
+    isolated_telemetry, clean_env, otel_enabled
+):
+    """An application's own provider must be left completely alone.
+
+    Attaching our processor to it stamped CrewAI's process-wide attributes onto
+    that application's unrelated spans - HTTP handlers, DB queries - which is
+    both wrong data and data we were never given permission to annotate.
     """
     from opentelemetry import trace as ot
     from opentelemetry.sdk.trace import TracerProvider
@@ -532,34 +511,12 @@ def test_attribute_survives_an_externally_installed_provider(
         telemetry = isolated_telemetry()
         telemetry.set_tracer()
 
-    span = app_provider.get_tracer("crewai.telemetry").start_span("Crew Created")
-    span.end()
+    app_provider.get_tracer("some.app.library").start_span("GET /status").end()
 
     exported = exporter.get_finished_spans()
     assert len(exported) == 1
-    assert exported[0].attributes["coding_agent"] == "claude_code"
-
-
-def test_attaching_common_attributes_is_idempotent(isolated_telemetry, clean_env):
-    """Repeated set_tracer() calls must not stack duplicate processors."""
-    from opentelemetry.sdk.trace import TracerProvider
-
-    provider = TracerProvider()
-    telemetry = isolated_telemetry()
-
-    before = len(provider._active_span_processor._span_processors)
-    telemetry._attach_common_attributes(provider)
-    telemetry._attach_common_attributes(provider)
-    after = len(provider._active_span_processor._span_processors)
-
-    assert after - before == 1
-
-
-def test_attaching_to_a_provider_without_processors_is_safe(isolated_telemetry):
-    """A NoOp provider has no add_span_processor; this must not raise."""
-    telemetry = isolated_telemetry()
-
-    telemetry._attach_common_attributes(object())
+    assert "coding_agent" not in (exported[0].attributes or {})
+    assert "project_id" not in (exported[0].attributes or {})
 
 
 def _common_attributes(monkeypatch, project_id=None):

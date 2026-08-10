@@ -19,7 +19,6 @@ import os
 import threading
 from typing import Any, ClassVar, Final
 
-from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
@@ -27,7 +26,7 @@ from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
     SpanExportResult,
 )
-from opentelemetry.trace import ProxyTracerProvider, Span, Status, StatusCode
+from opentelemetry.trace import Span, Status, StatusCode
 from typing_extensions import Self
 
 
@@ -36,6 +35,10 @@ logger = logging.getLogger(__name__)
 
 CREWAI_TELEMETRY_BASE_URL: Final[str] = "https://telemetry.crewai.com:4319"
 CREWAI_TELEMETRY_SERVICE_NAME: Final[str] = "crewAI-telemetry"
+
+# Instrumentation scope for spans this module creates. Resolved against our own
+# provider, never the global one - see set_tracer().
+TRACER_NAME: Final[str] = "crewai.telemetry"
 
 
 def close_span(span: Span) -> None:
@@ -145,20 +148,21 @@ class Telemetry:
             logger.debug("Telemetry shutdown failed: %s", e)
 
     def set_tracer(self) -> None:
-        """Install our TracerProvider as the global one (idempotent)."""
-        if self.ready and not self.trace_set:
-            try:
-                with suppress_warnings():
-                    existing_provider = trace.get_tracer_provider()
-                    if not isinstance(existing_provider, ProxyTracerProvider):
-                        self.trace_set = True
-                        return
-                    trace.set_tracer_provider(self.provider)
-                    self.trace_set = True
-            except Exception as e:
-                logger.debug("Failed to set tracer provider: %s", e)
-                self.ready = False
-                self.trace_set = False
+        """Mark telemetry live (idempotent).
+
+        Deliberately does not install a global TracerProvider. Doing so made
+        every OTel-instrumented library in the host process - HTTP servers,
+        Redis clients, ORMs - resolve ``trace.get_tracer()`` to our provider
+        and export to our collector. It also meant that when an application
+        had already installed its own provider, our spans went to *their*
+        collector instead of ours. Spans are now created from ``self.provider``
+        directly, so neither can happen.
+
+        Retained rather than removed because it is called across packages
+        (``crewai_cli.command``, ``crewai_cli.crew_run_tui``) and by the
+        ``crewai`` event listener.
+        """
+        self.trace_set = self.ready
 
     def _safe_telemetry_operation(
         self, operation: Callable[[], Span | None]
@@ -194,7 +198,7 @@ class Telemetry:
         """Records when an error occurs during the deployment signup process."""
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Deploy Signup Error")
             close_span(span)
 
@@ -204,7 +208,7 @@ class Telemetry:
         """Records the start of a deployment process."""
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Start Deployment")
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
@@ -216,7 +220,7 @@ class Telemetry:
         """Records the creation of a new crew deployment."""
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Create Crew Deployment")
             close_span(span)
 
@@ -228,7 +232,7 @@ class Telemetry:
         """Records the retrieval of crew logs."""
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Get Crew Logs")
             self._add_attribute(span, "log_type", log_type)
             if uuid:
@@ -241,7 +245,7 @@ class Telemetry:
         """Records the removal of a crew."""
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Remove Crew")
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
@@ -254,7 +258,7 @@ class Telemetry:
         from crewai_core.version import get_crewai_version
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Feature Usage")
             self._add_attribute(span, "crewai_version", get_crewai_version())
             self._add_attribute(span, "feature", feature)
@@ -267,7 +271,7 @@ class Telemetry:
         from crewai_core.version import get_crewai_version
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Flow Creation")
             self._add_attribute(span, "crewai_version", get_crewai_version())
             self._add_attribute(span, "flow_name", flow_name)
@@ -280,7 +284,7 @@ class Telemetry:
         from crewai_core.version import get_crewai_version
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Template Installed")
             self._add_attribute(span, "crewai_version", get_crewai_version())
             self._add_attribute(span, "template_name", template_name)
