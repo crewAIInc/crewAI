@@ -14,20 +14,25 @@ import asyncio
 import atexit
 from collections.abc import Callable
 import contextlib
+from functools import cache
 import logging
 import os
 import threading
 from typing import Any, ClassVar, Final
 
+from opentelemetry.context import Context
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
     SpanExportResult,
 )
 from opentelemetry.trace import Span, Status, StatusCode
 from typing_extensions import Self
+
+from crewai_core.project import get_project_id
+from crewai_core.runtime_env import detect_coding_agent, detect_runtime_context
 
 
 logger = logging.getLogger(__name__)
@@ -68,6 +73,89 @@ class SafeOTLPSpanExporter(OTLPSpanExporter):
             return SpanExportResult.FAILURE
 
 
+class CommonAttributesSpanProcessor(SpanProcessor):
+    """Applies a fixed set of attributes to every span at start.
+
+    Used for process-wide context that should appear on all spans (e.g. which
+    AI coding assistant is running the process) without each span-emitting
+    method having to set it. Attributes are applied as span attributes rather
+    than Resource attributes because the ingestion pipeline preserves only
+    serviceName from the resource.
+    """
+
+    def __init__(self, attributes: dict[str, str]) -> None:
+        """Initialize the processor.
+
+        Args:
+            attributes: Attributes applied to every span. Values must not
+                contain user data - this is process-wide context only.
+        """
+        self._attributes = attributes
+
+    def on_start(self, span: Span, parent_context: Context | None = None) -> None:
+        """Apply the common attributes to a span as it starts.
+
+        Args:
+            span: The span being started.
+            parent_context: Parent context, unused.
+        """
+        try:
+            span.set_attributes(self._attributes)
+        except Exception:  # noqa: S110 - telemetry must never break execution
+            pass
+
+    def on_end(self, span: Any) -> None:
+        """No-op; export is handled by the batch processor."""
+
+    def shutdown(self) -> None:
+        """No-op; this processor holds no resources."""
+
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        """No-op flush.
+
+        Args:
+            timeout_millis: Unused.
+
+        Returns:
+            Always True.
+        """
+        return True
+
+
+@cache
+def common_span_attributes() -> dict[str, str]:
+    """Build the attributes every span carries, once per process.
+
+    Cached because it reads the project's ``pyproject.toml``, and because a
+    process cannot change which assistant, runtime, or project it belongs to
+    partway through.
+
+    Shared by both telemetry implementations so a CLI-only process, which never
+    imports ``crewai``, still reports the same process-wide context.
+
+    Returns:
+        Attributes to stamp on every span. ``project_id`` is omitted for
+        projects that do not declare one.
+    """
+    attributes = {
+        "coding_agent": detect_coding_agent(),
+        "runtime_context": detect_runtime_context(),
+    }
+
+    try:
+        # Read-only: minting an id belongs to the CLI commands a user
+        # invoked, not to a library call during execution.
+        project_id = get_project_id()
+    except Exception as e:  # Telemetry must never break execution.
+        logger.debug("Failed to read project id: %s", e)
+        project_id = None
+
+    if project_id:
+        attributes["project_id"] = project_id
+
+    return attributes
+
+
 class Telemetry:
     """Base telemetry: OTLP setup + the spans needed by the CLI.
 
@@ -103,6 +191,13 @@ class Telemetry:
             )
             with suppress_warnings():
                 self.provider = TracerProvider(resource=self.resource)
+
+            # Span attributes, not Resource attributes: the ingestion pipeline
+            # preserves only serviceName from the resource, so anything else set
+            # there is dropped before it reaches storage.
+            self.provider.add_span_processor(
+                CommonAttributesSpanProcessor(common_span_attributes())
+            )
 
             processor = BatchSpanProcessor(
                 SafeOTLPSpanExporter(

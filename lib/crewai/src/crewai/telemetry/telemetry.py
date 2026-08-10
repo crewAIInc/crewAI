@@ -20,13 +20,15 @@ import signal
 import threading
 from typing import TYPE_CHECKING, Any
 
-from crewai_core.project import get_project_id
-from opentelemetry.context import Context
+from crewai_core.telemetry import (
+    CommonAttributesSpanProcessor,
+    common_span_attributes,
+)
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
     OTLPSpanExporter,
 )
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
+from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
     SpanExportResult,
@@ -53,8 +55,6 @@ from crewai.telemetry.utils import (
     add_crew_and_task_attributes,
     add_crew_attributes,
     close_span,
-    detect_coding_agent,
-    detect_runtime_context,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.logger_utils import suppress_warnings
@@ -91,55 +91,6 @@ class SafeOTLPSpanExporter(OTLPSpanExporter):
             return SpanExportResult.FAILURE
 
 
-class CommonAttributesSpanProcessor(SpanProcessor):
-    """Applies a fixed set of attributes to every span at start.
-
-    Used for process-wide context that should appear on all spans (e.g. which
-    AI coding assistant is running the process) without each span-emitting
-    method having to set it. Attributes are applied as span attributes rather
-    than Resource attributes because the ingestion pipeline preserves only
-    serviceName from the resource.
-    """
-
-    def __init__(self, attributes: dict[str, str]) -> None:
-        """Initialize the processor.
-
-        Args:
-            attributes: Attributes applied to every span. Values must not
-                contain user data - this is process-wide context only.
-        """
-        self._attributes = attributes
-
-    def on_start(self, span: Span, parent_context: Context | None = None) -> None:
-        """Apply the common attributes to a span as it starts.
-
-        Args:
-            span: The span being started.
-            parent_context: Parent context, unused.
-        """
-        try:
-            span.set_attributes(self._attributes)
-        except Exception:  # noqa: S110 - telemetry must never break execution
-            pass
-
-    def on_end(self, span: Any) -> None:
-        """No-op; export is handled by the batch processor."""
-
-    def shutdown(self) -> None:
-        """No-op; this processor holds no resources."""
-
-    def force_flush(self, timeout_millis: int = 30000) -> bool:
-        """No-op flush.
-
-        Args:
-            timeout_millis: Unused.
-
-        Returns:
-            Always True.
-        """
-        return True
-
-
 class Telemetry:
     """Handle anonymous telemetry for the CrewAI package.
 
@@ -170,7 +121,6 @@ class Telemetry:
         self._initialized: bool = True
         self._coding_agent_reported: bool = False
         self._coding_agent_lock = threading.Lock()
-        self._common_attributes: dict[str, str] | None = None
 
         if self._is_telemetry_disabled():
             return
@@ -186,7 +136,7 @@ class Telemetry:
             # preserves only serviceName from the resource, so anything else set
             # there is dropped before it reaches storage.
             self.provider.add_span_processor(
-                CommonAttributesSpanProcessor(self._common_span_attributes())
+                CommonAttributesSpanProcessor(common_span_attributes())
             )
 
             processor = BatchSpanProcessor(
@@ -206,39 +156,6 @@ class Telemetry:
             ):
                 raise
             self.ready = False
-
-    def _common_span_attributes(self) -> dict[str, str]:
-        """Build the attributes every span carries, once per process.
-
-        Memoized because it is computed per provider and reads the project's
-        ``pyproject.toml``, and because a process cannot change which
-        assistant, runtime, or project it belongs to partway through.
-
-        Returns:
-            Attributes to stamp on every span. ``project_id`` is omitted for
-            projects that do not declare one.
-        """
-        if self._common_attributes is not None:
-            return self._common_attributes
-
-        attributes = {
-            "coding_agent": detect_coding_agent(),
-            "runtime_context": detect_runtime_context(),
-        }
-
-        try:
-            # Read-only: minting an id belongs to the CLI commands a user
-            # invoked, not to a library call during execution.
-            project_id = get_project_id()
-        except Exception as e:  # Telemetry must never break execution.
-            logger.debug(f"Failed to read project id: {e}")
-            project_id = None
-
-        if project_id:
-            attributes["project_id"] = project_id
-
-        self._common_attributes = attributes
-        return attributes
 
     @classmethod
     def _is_telemetry_disabled(cls) -> bool:
@@ -1183,13 +1100,19 @@ class Telemetry:
         Emitted at most once per process as a feature usage event, so it lands
         in the existing feature-usage aggregation as "coding_agent:<name>".
         Only the assistant's name is recorded - never any environment values.
+
+        Read from the shared common attributes rather than detecting again, so
+        the feature event and the ``coding_agent`` span attribute cannot
+        disagree.
         """
         with self._coding_agent_lock:
             if self._coding_agent_reported:
                 return
             self._coding_agent_reported = True
 
-        self.feature_usage_span(f"coding_agent:{detect_coding_agent()}")
+        self.feature_usage_span(
+            f"coding_agent:{common_span_attributes()['coding_agent']}"
+        )
 
     def template_installed_span(self, template_name: str) -> None:
         """Records when a template is downloaded and installed.

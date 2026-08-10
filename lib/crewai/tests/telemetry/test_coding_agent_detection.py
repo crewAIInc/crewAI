@@ -412,7 +412,7 @@ def test_coding_agent_lands_on_every_exported_span(clean_env, otel_enabled):
         InMemorySpanExporter,
     )
 
-    from crewai.telemetry.telemetry import CommonAttributesSpanProcessor
+    from crewai_core.telemetry import CommonAttributesSpanProcessor
 
     exporter = InMemorySpanExporter()
     provider = TracerProvider()
@@ -437,7 +437,7 @@ def test_coding_agent_lands_on_every_exported_span(clean_env, otel_enabled):
 
 def test_common_attributes_processor_never_breaks_span_creation(clean_env, otel_enabled):
     """A failure applying attributes must not propagate into user execution."""
-    from crewai.telemetry.telemetry import CommonAttributesSpanProcessor
+    from crewai_core.telemetry import CommonAttributesSpanProcessor
 
     class ExplodingSpan:
         def set_attributes(self, _):
@@ -521,14 +521,13 @@ def test_an_app_provider_never_receives_our_processor(
 
 def _common_attributes(monkeypatch, project_id=None):
     """Build the process-wide span attributes with a stubbed project id."""
-    from crewai.telemetry.telemetry import Telemetry
+    from crewai_core.telemetry import common_span_attributes
 
     monkeypatch.setattr(
-        "crewai.telemetry.telemetry.get_project_id", lambda *a, **k: project_id
+        "crewai_core.telemetry.get_project_id", lambda *a, **k: project_id
     )
-    telemetry = Telemetry.__new__(Telemetry)
-    telemetry._common_attributes = None
-    return telemetry._common_span_attributes()
+    common_span_attributes.cache_clear()
+    return common_span_attributes()
 
 
 def test_common_attributes_carry_agent_and_runtime(clean_env, monkeypatch):
@@ -557,16 +556,15 @@ def test_project_id_is_omitted_when_absent(clean_env, monkeypatch):
 
 def test_project_id_lookup_never_breaks_telemetry(clean_env, monkeypatch):
     """A failed lookup degrades to omitting the attribute."""
-    from crewai.telemetry.telemetry import Telemetry
+    from crewai_core.telemetry import common_span_attributes
 
     def boom(*args, **kwargs):
         raise OSError("unreadable")
 
-    monkeypatch.setattr("crewai.telemetry.telemetry.get_project_id", boom)
-    telemetry = Telemetry.__new__(Telemetry)
-    telemetry._common_attributes = None
+    monkeypatch.setattr("crewai_core.telemetry.get_project_id", boom)
+    common_span_attributes.cache_clear()
 
-    attributes = telemetry._common_span_attributes()
+    attributes = common_span_attributes()
 
     assert "project_id" not in attributes
     assert "coding_agent" in attributes
@@ -574,7 +572,7 @@ def test_project_id_lookup_never_breaks_telemetry(clean_env, monkeypatch):
 
 def test_common_attributes_are_computed_once(clean_env, monkeypatch):
     """The project file must not be re-read for each provider."""
-    from crewai.telemetry.telemetry import Telemetry
+    from crewai_core.telemetry import common_span_attributes
 
     calls = []
 
@@ -583,13 +581,12 @@ def test_common_attributes_are_computed_once(clean_env, monkeypatch):
         return "proj-123"
 
     monkeypatch.setattr(
-        "crewai.telemetry.telemetry.get_project_id", counting_get_project_id
+        "crewai_core.telemetry.get_project_id", counting_get_project_id
     )
-    telemetry = Telemetry.__new__(Telemetry)
-    telemetry._common_attributes = None
+    common_span_attributes.cache_clear()
 
-    first = telemetry._common_span_attributes()
-    second = telemetry._common_span_attributes()
+    first = common_span_attributes()
+    second = common_span_attributes()
 
     assert first is second
     assert len(calls) == 1
@@ -603,7 +600,7 @@ def test_all_common_attributes_land_on_exported_spans(clean_env, monkeypatch, ot
         InMemorySpanExporter,
     )
 
-    from crewai.telemetry.telemetry import CommonAttributesSpanProcessor
+    from crewai_core.telemetry import CommonAttributesSpanProcessor
 
     clean_env.setenv("CLAUDECODE", "1")
     clean_env.setenv("CI", "true")
