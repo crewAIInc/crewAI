@@ -19,8 +19,7 @@ from crewai_cli.utils import (
     enable_prompt_line_editing,
     is_dmn_mode_enabled,
     read_toml,
-    warn_deprecated_command,
-    warn_deprecated_flag,
+    warn_deprecated,
 )
 
 
@@ -197,7 +196,7 @@ def create(
 ) -> None:
     """Create a new crew, flow, tool, skill, or template."""
     if deprecated_skip_provider:
-        warn_deprecated_flag(old="--skip_provider", new="--skip-provider")
+        warn_deprecated(kind="flag", old="--skip_provider", new="--skip-provider")
         skip_provider = True
     dmn_mode = is_dmn_mode_enabled()
     if not type:
@@ -333,7 +332,7 @@ def train(
 ) -> None:
     """Train the crew."""
     if deprecated_n_iterations is not None:
-        warn_deprecated_flag(old="--n_iterations", new="--n-iterations")
+        warn_deprecated(kind="flag", old="--n_iterations", new="--n-iterations")
         n_iterations = deprecated_n_iterations
     click.echo(f"Training the Crew for {n_iterations} iterations")
     train_crew(n_iterations, filename)
@@ -380,7 +379,7 @@ def replay(
         trained_agents_file: Optional trained-agents pickle path.
     """
     if deprecated_task_id is not None:
-        warn_deprecated_flag(old="--task_id", new="--task-id")
+        warn_deprecated(kind="flag", old="--task_id", new="--task-id")
         task_id = deprecated_task_id
     try:
         click.echo(f"Replaying the crew from task {task_id}")
@@ -595,7 +594,7 @@ def test(
 ) -> None:
     """Test the crew and evaluate the results."""
     if deprecated_n_iterations is not None:
-        warn_deprecated_flag(old="--n_iterations", new="--n-iterations")
+        warn_deprecated(kind="flag", old="--n_iterations", new="--n-iterations")
         n_iterations = deprecated_n_iterations
     click.echo(f"Testing the crew for {n_iterations} iterations with model {model}")
     evaluate_crew(n_iterations, model, trained_agents_file=trained_agents_file)
@@ -774,7 +773,7 @@ def tool() -> None:
 @click.argument("handle")
 def tool_create(handle: str) -> None:
     """[Deprecated: use `crewai create tool`] Create a custom tool project."""
-    warn_deprecated_command(old="crewai tool create", new="crewai create tool")
+    warn_deprecated(kind="command", old="crewai tool create", new="crewai create tool")
     from crewai_cli.tools.main import ToolCommand
 
     tool_cmd = ToolCommand()
@@ -826,7 +825,9 @@ def skill() -> None:
 )
 def skill_create(name: str, in_project: bool) -> None:
     """[Deprecated: use `crewai create skill`] Create a new agent skill."""
-    warn_deprecated_command(old="crewai skill create", new="crewai create skill")
+    warn_deprecated(
+        kind="command", old="crewai skill create", new="crewai create skill"
+    )
     from crewai_cli.skills.main import SkillCommand
 
     skill_cmd = SkillCommand()
@@ -891,7 +892,9 @@ def template_list() -> None:
 )
 def template_add(name: str, output_dir: str | None) -> None:
     """[Deprecated: use `crewai create template`] Add a template to the current directory."""
-    warn_deprecated_command(old="crewai template add", new="crewai create template")
+    warn_deprecated(
+        kind="command", old="crewai template add", new="crewai create template"
+    )
     template_cmd = TemplateCommand()
     template_cmd.add_template(name, output_dir)
 
