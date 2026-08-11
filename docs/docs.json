@@ -12394,7 +12394,8 @@
                       "edge/pt-BR/learn/using-annotations",
                       "edge/pt-BR/learn/execution-hooks",
                       "edge/pt-BR/learn/llm-hooks",
-                      "edge/pt-BR/learn/tool-hooks"
+                      "edge/pt-BR/learn/tool-hooks",
+                      "edge/pt-BR/learn/execution-boundary-hooks"
                     ]
                   },
                   {
@@ -23684,7 +23685,8 @@
                       "edge/ko/learn/using-annotations",
                       "edge/ko/learn/execution-hooks",
                       "edge/ko/learn/llm-hooks",
-                      "edge/ko/learn/tool-hooks"
+                      "edge/ko/learn/tool-hooks",
+                      "edge/ko/learn/execution-boundary-hooks"
                     ]
                   },
                   {
@@ -35346,7 +35348,8 @@
                       "edge/ar/learn/using-annotations",
                       "edge/ar/learn/execution-hooks",
                       "edge/ar/learn/llm-hooks",
-                      "edge/ar/learn/tool-hooks"
+                      "edge/ar/learn/tool-hooks",
+                      "edge/ar/learn/execution-boundary-hooks"
                     ]
                   },
                   {
