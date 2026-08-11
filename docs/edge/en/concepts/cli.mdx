@@ -36,23 +36,82 @@ crewai [COMMAND] [OPTIONS] [ARGUMENTS]
 
 ### 1. Create
 
-Create a new crew or flow.
+Create a new crew, flow, tool, skill, or template project.
 
 ```shell Terminal
 crewai create [OPTIONS] TYPE NAME
 ```
 
-- `TYPE`: Choose between "crew" or "flow"
-- `NAME`: Name of the crew or flow
+- `TYPE`: `crew`, `flow`, `tool`, `skill`, or `template`
+- `NAME`: Name of the project, tool handle, skill, or template
 
-Example:
+#### Crew
 
 ```shell Terminal
 crewai create crew my_new_crew
-crewai create flow my_new_flow
+crewai create crew my_new_crew --classic
 ```
 
 By default, `crewai create crew` creates a JSON-first crew project with `crew.jsonc` and `agents/*.jsonc`. Use `crewai create crew my_new_crew --classic` only when you want the older Python/YAML scaffold with `crew.py`, `config/agents.yaml`, and `config/tasks.yaml`.
+
+#### Flow
+
+```shell Terminal
+crewai create flow my_new_flow
+crewai create flow my_new_flow --declarative
+```
+
+#### Tool
+
+Scaffold a custom tool repository:
+
+```shell Terminal
+crewai create tool my_tool
+```
+
+#### Skill
+
+Scaffold an agent skill. Inside a crew project (where `pyproject.toml` exists), the skill is created under `./skills/`:
+
+```shell Terminal
+crewai create skill my-skill
+crewai create skill my-skill --no-project
+```
+
+Use `--no-project` to create the skill in the current directory instead of `./skills/`.
+
+#### Template
+
+Add a remote project template to the current directory:
+
+```shell Terminal
+crewai create template my-template
+crewai create template my-template --output-dir custom_dir
+```
+
+Use `--output-dir` to override the output folder name (defaults to the template name).
+
+#### Deprecated create aliases
+
+These older commands still work but print a yellow deprecation warning. Prefer the `crewai create <type>` forms above.
+
+| Deprecated | Use instead |
+| :--- | :--- |
+| `crewai tool create <handle>` | `crewai create tool <handle>` |
+| `crewai skill create <name>` | `crewai create skill <name>` |
+| `crewai template add <name>` | `crewai create template <name>` |
+
+Lifecycle commands are unchanged — for example `crewai tool install`, `crewai skill publish`, and `crewai template list` stay under their resource groups.
+
+#### Deprecated flag aliases
+
+These older snake_case flags still work but are hidden from `--help`. Prefer the kebab-case forms documented in each command section below.
+
+| Deprecated | Use instead |
+| :--- | :--- |
+| `--skip_provider` (on `crewai create crew`) | `--skip-provider` |
+| `--n_iterations` (on `crewai train`, `crewai test`) | `--n-iterations` |
+| `--task_id` (on `crewai replay`) | `--task-id` |
 
 ### 2. Version
 
@@ -79,7 +138,7 @@ Train the crew for a specified number of iterations.
 crewai train [OPTIONS]
 ```
 
-- `-n, --n_iterations INTEGER`: Number of iterations to train the crew (default: 5)
+- `-n, --n-iterations INTEGER`: Number of iterations to train the crew (default: 5)
 - `-f, --filename TEXT`: Path to a custom file for training (default: "trained_agents_data.pkl")
 
 Example:
@@ -96,7 +155,7 @@ Replay the crew execution from a specific task.
 crewai replay [OPTIONS]
 ```
 
-- `-t, --task_id TEXT`: Replay the crew from this task ID, including all subsequent tasks
+- `-t, --task-id TEXT`: Replay the crew from this task ID, including all subsequent tasks
 
 Example:
 
@@ -143,7 +202,7 @@ Test the crew and evaluate the results.
 crewai test [OPTIONS]
 ```
 
-- `-n, --n_iterations INTEGER`: Number of iterations to test the crew (default: 3)
+- `-n, --n-iterations INTEGER`: Number of iterations to test the crew (default: 3)
 - `-m, --model TEXT`: LLM Model to run the tests on the Crew (default: "gpt-4o-mini")
 
 Example:

@@ -1698,6 +1698,7 @@ class TestPlatformActionTool:
 
         return mod.CrewAIPlatformActionTool(
             description="Send a Slack message",
+            app="slack",
             action_name="slackbot_send_message",
             action_schema={
                 "function": {

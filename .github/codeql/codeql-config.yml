@@ -2,7 +2,7 @@ name: "CodeQL Config"
 
 paths-ignore:
   # Ignore template files - these are boilerplate code that shouldn't be analyzed
-  - "lib/crewai/src/crewai/cli/templates/**"
+  - "lib/cli/src/crewai_cli/templates/**"
   # Ignore test cassettes - these are test fixtures/recordings
   - "lib/crewai/tests/cassettes/**"
   - "lib/crewai-tools/tests/cassettes/**"
@@ -18,12 +18,16 @@ paths:
   - ".github/workflows/**"
   - ".github/actions/**"
   # Include all Python source code from workspace packages
+  - "lib/cli/src/**"
   - "lib/crewai/src/**"
+  - "lib/crewai-core/src/**"
   - "lib/crewai-tools/src/**"
   - "lib/crewai-files/src/**"
   - "lib/devtools/src/**"
   # Include tests (but exclude cassettes via paths-ignore)
+  - "lib/cli/tests/**"
   - "lib/crewai/tests/**"
+  - "lib/crewai-core/tests/**"
   - "lib/crewai-tools/tests/**"
   - "lib/crewai-files/tests/**"
   - "lib/devtools/tests/**"

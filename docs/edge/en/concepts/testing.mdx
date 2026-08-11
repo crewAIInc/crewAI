@@ -20,7 +20,7 @@ crewai test
 If you want to run more iterations or use a different model, you can specify the parameters like this:
 
 ```bash
-crewai test --n_iterations 5 --model gpt-4o
+crewai test --n-iterations 5 --model gpt-4o
 ```
 
 or using the short forms:
@@ -28,6 +28,11 @@ or using the short forms:
 ```bash
 crewai test -n 5 -m gpt-4o
 ```
+
+<Note>
+  The older `--n_iterations` flag still works but is deprecated and hidden from
+  `--help`. Use `--n-iterations` (or `-n`) instead.
+</Note>
 
 When you run the `crewai test` command, the crew will be executed for the specified number of iterations, and the performance metrics will be displayed at the end of the run.
 

@@ -112,6 +112,80 @@ def test_safe_get_fails_closed_after_too_many_redirects(
         safe_get("http://public.example/start", max_redirects=1, timeout=15)
 
 
+def _closable_response(
+    url: str, status_code: int, *, location: str | None = None, closed: list[str]
+) -> requests.Response:
+    """Build a response that records its own URL when closed."""
+    response = _response(url, status_code, location=location)
+    response.close = lambda: closed.append(url)  # type: ignore[method-assign]
+    return response
+
+
+def test_safe_get_closes_earlier_hops_after_too_many_redirects(
+    monkeypatch: pytest.MonkeyPatch, public_dns: None
+) -> None:
+    """Hops accumulated before the failure must not be left open.
+
+    Under stream=True each hop holds its connection until its body is read or
+    closed, and a caller handed an exception has no handle on them.
+    """
+    closed: list[str] = []
+
+    def fake_get(url: str, **kwargs: Any) -> requests.Response:
+        return _closable_response(
+            url, 302, location="http://safe.example/again", closed=closed
+        )
+
+    _mock_get(monkeypatch, fake_get)
+
+    with pytest.raises(ValueError, match="Too many redirects"):
+        safe_get("http://public.example/start", max_redirects=2, timeout=15, stream=True)
+
+    assert len(closed) == 3
+
+
+def test_safe_get_closes_earlier_hops_when_a_redirect_is_rejected(
+    monkeypatch: pytest.MonkeyPatch, public_dns: None
+) -> None:
+    """A hop rejected mid-chain still releases the connections already open."""
+    closed: list[str] = []
+
+    def fake_get(url: str, **kwargs: Any) -> requests.Response:
+        if url == "http://public.example/start":
+            return _closable_response(
+                url, 302, location="http://safe.example/next", closed=closed
+            )
+        return _closable_response(
+            url, 302, location="http://169.254.169.254/latest", closed=closed
+        )
+
+    _mock_get(monkeypatch, fake_get)
+
+    with pytest.raises(ValueError, match="private/reserved IP"):
+        safe_get("http://public.example/start", timeout=15, stream=True)
+
+    assert closed == ["http://safe.example/next", "http://public.example/start"]
+
+
+def test_safe_get_leaves_hops_open_on_success(
+    monkeypatch: pytest.MonkeyPatch, public_dns: None
+) -> None:
+    """On success the hops belong to the caller, via response.history."""
+    closed: list[str] = []
+
+    def fake_get(url: str, **kwargs: Any) -> requests.Response:
+        if url == "http://public.example/start":
+            return _closable_response(url, 302, location="/final", closed=closed)
+        return _closable_response(url, 200, closed=closed)
+
+    _mock_get(monkeypatch, fake_get)
+
+    response = safe_get("http://public.example/start", timeout=15, stream=True)
+
+    assert closed == []
+    assert len(response.history) == 1
+
+
 def test_safe_get_strips_credentials_on_cross_origin_redirect(
     monkeypatch: pytest.MonkeyPatch, public_dns: None
 ) -> None:

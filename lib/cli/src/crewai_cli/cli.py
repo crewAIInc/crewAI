@@ -19,6 +19,7 @@ from crewai_cli.utils import (
     enable_prompt_line_editing,
     is_dmn_mode_enabled,
     read_toml,
+    warn_deprecated,
 )
 
 
@@ -137,11 +138,26 @@ def uv(uv_args: tuple[str, ...]) -> None:
 
 @crewai.command()
 @click.argument(
-    "type", required=False, default=None, type=click.Choice(["crew", "flow"])
+    "type",
+    required=False,
+    default=None,
+    type=click.Choice(["crew", "flow", "tool", "skill", "template"]),
 )
 @click.argument("name", required=False, default=None)
 @click.option("--provider", type=str, help="The provider to use for the crew")
-@click.option("--skip_provider", is_flag=True, help="Skip provider validation")
+@click.option(
+    "--skip-provider",
+    "skip_provider",
+    is_flag=True,
+    help="Skip provider validation",
+)
+@click.option(
+    "--skip_provider",
+    "deprecated_skip_provider",
+    is_flag=True,
+    hidden=True,
+    help="[Deprecated: use --skip-provider] Skip provider validation",
+)
 @click.option(
     "--classic",
     is_flag=True,
@@ -152,21 +168,43 @@ def uv(uv_args: tuple[str, ...]) -> None:
     is_flag=True,
     help="Create a declarative Flow project instead of a Python Flow project",
 )
+@click.option(
+    "--no-project",
+    "in_project",
+    is_flag=True,
+    default=True,
+    flag_value=False,
+    help="Skill only: create in current dir instead of ./skills/",
+)
+@click.option(
+    "-o",
+    "--output-dir",
+    type=str,
+    default=None,
+    help="Template only: directory name for the template (defaults to template name)",
+)
 def create(
     type: str | None,
     name: str | None,
     provider: str | None,
     skip_provider: bool = False,
+    deprecated_skip_provider: bool = False,
     classic: bool = False,
     declarative: bool = False,
+    in_project: bool = True,
+    output_dir: str | None = None,
 ) -> None:
-    """Create a new crew, or flow."""
+    """Create a new crew, flow, tool, skill, or template."""
+    if deprecated_skip_provider:
+        warn_deprecated(kind="flag", old="--skip_provider", new="--skip-provider")
+        skip_provider = True
     dmn_mode = is_dmn_mode_enabled()
     if not type:
         if dmn_mode:
             raise click.UsageError(
                 "TYPE is required when CREWAI_DMN is set. "
-                "Use `crewai create crew <name>` or `crewai create flow <name>`."
+                "Use `crewai create <type> <name>` where type is one of: "
+                "crew, flow, tool, skill, template."
             )
         from crewai_cli.tui_picker import pick
 
@@ -176,6 +214,9 @@ def create(
                 "flow",
                 "A deterministic workflow with full control over agents and crews",
             ),
+            ("tool", "A custom tool for the CrewAI Tool Repository"),
+            ("skill", "An agent skill with instructions and optional assets"),
+            ("template", "A remote project template from the CrewAI gallery"),
         ]
         type = pick("What would you like to create?", options)
         if type is None:
@@ -189,9 +230,36 @@ def create(
             click.style(f"  Name of your {type}", fg="cyan", bold=True),
             prompt_suffix=click.style(" › ", fg="bright_white"),  # noqa: RUF001
         )
-    if dmn_mode:
+    if dmn_mode and type == "crew":
         skip_provider = True
-    if type == "crew":
+    if not in_project and type != "skill":
+        raise click.UsageError("--no-project can only be used with skill projects.")
+    if output_dir is not None and type != "template":
+        raise click.UsageError("--output-dir can only be used with template projects.")
+    if type == "tool":
+        if declarative or classic or provider is not None or skip_provider:
+            raise click.UsageError(
+                "Crew and flow options cannot be used with tool projects."
+            )
+        from crewai_cli.tools.main import ToolCommand
+
+        ToolCommand().create(name)
+    elif type == "skill":
+        if declarative or classic or provider is not None or skip_provider:
+            raise click.UsageError(
+                "Crew and flow options cannot be used with skill projects."
+            )
+        from crewai_cli.skills.main import SkillCommand
+
+        SkillCommand().create(name, in_project=in_project)
+    elif type == "template":
+        if declarative or classic or provider is not None or skip_provider:
+            raise click.UsageError(
+                "Crew and flow options cannot be used with template projects."
+            )
+        template_cmd = TemplateCommand()
+        template_cmd.add_template(name, output_dir)
+    elif type == "crew":
         if declarative:
             raise click.UsageError("--declarative can only be used with flow projects")
         if classic:
@@ -207,7 +275,10 @@ def create(
 
         create_flow(name, declarative=declarative)
     else:
-        click.secho("Error: Invalid type. Must be 'crew' or 'flow'.", fg="red")
+        click.secho(
+            "Error: Invalid type. Must be 'crew', 'flow', 'tool', 'skill', or 'template'.",
+            fg="red",
+        )
 
 
 @crewai.command()
@@ -233,10 +304,19 @@ def version(tools: bool) -> None:
 @crewai.command()
 @click.option(
     "-n",
-    "--n_iterations",
+    "--n-iterations",
+    "n_iterations",
     type=int,
     default=5,
     help="Number of iterations to train the crew",
+)
+@click.option(
+    "--n_iterations",
+    "deprecated_n_iterations",
+    type=int,
+    default=None,
+    hidden=True,
+    help="[Deprecated: use --n-iterations]",
 )
 @click.option(
     "-f",
@@ -245,8 +325,15 @@ def version(tools: bool) -> None:
     default="trained_agents_data.pkl",
     help="Path to a custom file for training",
 )
-def train(n_iterations: int, filename: str) -> None:
+def train(
+    n_iterations: int,
+    deprecated_n_iterations: int | None,
+    filename: str,
+) -> None:
     """Train the crew."""
+    if deprecated_n_iterations is not None:
+        warn_deprecated(kind="flag", old="--n_iterations", new="--n-iterations")
+        n_iterations = deprecated_n_iterations
     click.echo(f"Training the Crew for {n_iterations} iterations")
     train_crew(n_iterations, filename)
 
@@ -254,9 +341,18 @@ def train(n_iterations: int, filename: str) -> None:
 @crewai.command()
 @click.option(
     "-t",
-    "--task_id",
+    "--task-id",
+    "task_id",
     type=str,
     help="Replay the crew from this task ID, including all subsequent tasks.",
+)
+@click.option(
+    "--task_id",
+    "deprecated_task_id",
+    type=str,
+    default=None,
+    hidden=True,
+    help="[Deprecated: use --task-id]",
 )
 @click.option(
     "-f",
@@ -271,13 +367,20 @@ def train(n_iterations: int, filename: str) -> None:
         "CREWAI_TRAINED_AGENTS_FILE."
     ),
 )
-def replay(task_id: str, trained_agents_file: str | None) -> None:
+def replay(
+    task_id: str | None,
+    deprecated_task_id: str | None,
+    trained_agents_file: str | None,
+) -> None:
     """Replay the crew execution from a specific task.
 
     Args:
         task_id: The ID of the task to replay from.
         trained_agents_file: Optional trained-agents pickle path.
     """
+    if deprecated_task_id is not None:
+        warn_deprecated(kind="flag", old="--task_id", new="--task-id")
+        task_id = deprecated_task_id
     try:
         click.echo(f"Replaying the crew from task {task_id}")
         replay_task_command(task_id, trained_agents_file=trained_agents_file)
@@ -449,10 +552,19 @@ def memory(
 @crewai.command()
 @click.option(
     "-n",
-    "--n_iterations",
+    "--n-iterations",
+    "n_iterations",
     type=int,
     default=3,
     help="Number of iterations to Test the crew",
+)
+@click.option(
+    "--n_iterations",
+    "deprecated_n_iterations",
+    type=int,
+    default=None,
+    hidden=True,
+    help="[Deprecated: use --n-iterations]",
 )
 @click.option(
     "-m",
@@ -474,8 +586,16 @@ def memory(
         "CREWAI_TRAINED_AGENTS_FILE."
     ),
 )
-def test(n_iterations: int, model: str, trained_agents_file: str | None) -> None:
+def test(
+    n_iterations: int,
+    deprecated_n_iterations: int | None,
+    model: str,
+    trained_agents_file: str | None,
+) -> None:
     """Test the crew and evaluate the results."""
+    if deprecated_n_iterations is not None:
+        warn_deprecated(kind="flag", old="--n_iterations", new="--n-iterations")
+        n_iterations = deprecated_n_iterations
     click.echo(f"Testing the crew for {n_iterations} iterations with model {model}")
     evaluate_crew(n_iterations, model, trained_agents_file=trained_agents_file)
 
@@ -652,6 +772,8 @@ def tool() -> None:
 @tool.command(name="create")
 @click.argument("handle")
 def tool_create(handle: str) -> None:
+    """[Deprecated: use `crewai create tool`] Create a custom tool project."""
+    warn_deprecated(kind="command", old="crewai tool create", new="crewai create tool")
     from crewai_cli.tools.main import ToolCommand
 
     tool_cmd = ToolCommand()
@@ -702,6 +824,10 @@ def skill() -> None:
     help="Create skill in current dir instead of ./skills/",
 )
 def skill_create(name: str, in_project: bool) -> None:
+    """[Deprecated: use `crewai create skill`] Create a new agent skill."""
+    warn_deprecated(
+        kind="command", old="crewai skill create", new="crewai create skill"
+    )
     from crewai_cli.skills.main import SkillCommand
 
     skill_cmd = SkillCommand()
@@ -765,7 +891,10 @@ def template_list() -> None:
     help="Directory name for the template (defaults to template name)",
 )
 def template_add(name: str, output_dir: str | None) -> None:
-    """Add a template to the current directory."""
+    """[Deprecated: use `crewai create template`] Add a template to the current directory."""
+    warn_deprecated(
+        kind="command", old="crewai template add", new="crewai create template"
+    )
     template_cmd = TemplateCommand()
     template_cmd.add_template(name, output_dir)
 

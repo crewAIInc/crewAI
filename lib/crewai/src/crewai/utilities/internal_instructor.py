@@ -105,7 +105,12 @@ class InternalInstructor(Generic[T]):
                 if value is not None:
                     extra_kwargs[attr] = value
 
-        return instructor.from_provider(f"{provider}/{model_string}", **extra_kwargs)
+        qualified_model = (
+            model_string
+            if not provider or model_string.startswith(f"{provider}/")
+            else f"{provider}/{model_string}"
+        )
+        return instructor.from_provider(qualified_model, **extra_kwargs)
 
     def _extract_provider(self) -> str:
         """Extract provider from LLM model name.
