@@ -25,7 +25,10 @@ class BaseKnowledgeSource(BaseModel, ABC):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
     storage: BaseKnowledgeStorage | None = Field(default=None)
-    metadata: dict[str, Any] = Field(default_factory=dict)  # Currently unused
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Metadata to attach to all chunks from this source",
+    )
     collection_name: str | None = Field(default=None)
 
     @abstractmethod
@@ -56,7 +59,10 @@ class BaseKnowledgeSource(BaseModel, ABC):
             ValueError: If no storage is configured.
         """
         if self.storage is not None:
-            self.storage.save(self.chunks)
+            self.storage.save(
+                self.chunks,
+                metadata=self.metadata if self.metadata else None,
+            )
         else:
             raise ValueError("No storage found to save documents.")
 
@@ -73,6 +79,9 @@ class BaseKnowledgeSource(BaseModel, ABC):
             ValueError: If no storage is configured.
         """
         if self.storage is not None:
-            await self.storage.asave(self.chunks)
+            await self.storage.asave(
+                self.chunks,
+                metadata=self.metadata if self.metadata else None,
+            )
         else:
             raise ValueError("No storage found to save documents.")
