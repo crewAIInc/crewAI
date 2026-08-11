@@ -335,6 +335,11 @@ class EventListener(BaseEventListener):
             conversational turn re-emits completion for a restored run - so a
             missing stamp means "no duration to report", not an error.
             """
+            # Cleared on every terminal path, not only on finish: a turn that
+            # fails without deferred finalization ends via FlowFailedEvent, and
+            # a flag left set there would mark the next run on this instance
+            # failed.
+            source._telemetry_turn_failed = False
             started_at = getattr(source, "_telemetry_started_at", None)
             if started_at is None:
                 return
@@ -348,17 +353,18 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(FlowStartedEvent)
         def on_flow_started(source: Any, event: FlowStartedEvent) -> None:
+            # A run restored from a pause is only visible here: there is no
+            # resume event, and resuming re-enters kickoff(). Keyed off the
+            # pending-feedback context rather than _is_execution_resuming, which
+            # a checkpoint restore also sets even though nobody ever paused.
+            resumed = getattr(source, "_pending_feedback_context", None) is not None
             self._telemetry.flow_execution_span(
-                event.flow_name, list(source._methods.keys()), _flow_origin(source)
+                event.flow_name,
+                list(source._methods.keys()),
+                _flow_origin(source),
+                resumed,
             )
             source._telemetry_started_at = time.monotonic()
-            if getattr(source, "_pending_feedback_context", None) is not None:
-                # No resume event exists, so a run restored from a pause is only
-                # visible here. Keyed off the pending-feedback context rather
-                # than _is_execution_resuming, which is also set by checkpoint
-                # restores that never paused for a human - counting those would
-                # inflate resumes past pauses and break the abandonment rate.
-                self._telemetry.feature_usage_span("flow:resumed")
             if not getattr(source, "suppress_flow_events", False):
                 self.formatter.handle_flow_created(event.flow_name, str(source.flow_id))
                 self.formatter.handle_flow_started(event.flow_name, str(source.flow_id))
@@ -370,9 +376,6 @@ class EventListener(BaseEventListener):
                 if getattr(source, "_telemetry_turn_failed", False)
                 else "completed"
             )
-            source._telemetry_turn_failed = False
-            if _flow_origin(source) == "user":
-                self._telemetry.feature_usage_span(f"flow:{outcome}")
             _report_flow_duration(source, event.flow_name, outcome)
 
             if not getattr(source, "suppress_flow_events", False):
@@ -383,8 +386,6 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(FlowFailedEvent)
         def on_flow_failed(source: Any, event: FlowFailedEvent) -> None:
-            if _flow_origin(source) == "user":
-                self._telemetry.feature_usage_span("flow:failed")
             _report_flow_duration(source, event.flow_name, "failed")
 
             if not getattr(source, "suppress_flow_events", False):
@@ -445,8 +446,9 @@ class EventListener(BaseEventListener):
         ) -> None:
             # The method name is not recorded: it is user-authored and would put
             # arbitrary strings in telemetry.
-            if _flow_origin(source) == "user":
-                self._telemetry.feature_usage_span("flow:method_failed")
+            self._telemetry.flow_method_failed_span(
+                event.flow_name, _flow_origin(source)
+            )
 
             self.formatter.handle_method_status(
                 event.method_name,
@@ -465,8 +467,8 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(FlowPausedEvent)
-        def on_flow_paused(_: Any, event: FlowPausedEvent) -> None:
-            self._telemetry.feature_usage_span("flow:paused")
+        def on_flow_paused(source: Any, event: FlowPausedEvent) -> None:
+            self._telemetry.flow_paused_span(event.flow_name, _flow_origin(source))
 
             self.formatter.handle_flow_status(
                 event.flow_name,

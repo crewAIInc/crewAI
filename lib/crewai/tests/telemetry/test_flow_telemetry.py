@@ -53,9 +53,59 @@ def flow_spans(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
     monkeypatch.setattr(
         listener_module.event_listener._telemetry,
         "flow_execution_span",
-        lambda flow_name, node_names, origin="user": recorded.append(
+        lambda flow_name, node_names, origin="user", resumed=False: recorded.append(
             (flow_name, origin)
         ),
+    )
+    return recorded
+
+
+@pytest.fixture
+def starts(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, bool]]:
+    """Record (flow_name, resumed) for every Flow Execution span."""
+    from crewai.events import event_listener as listener_module
+
+    _reregister_listener()
+
+    recorded: list[tuple[str, bool]] = []
+    monkeypatch.setattr(
+        listener_module.event_listener._telemetry,
+        "flow_execution_span",
+        lambda flow_name, node_names, origin="user", resumed=False: recorded.append(
+            (flow_name, resumed)
+        ),
+    )
+    return recorded
+
+
+@pytest.fixture
+def pauses(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
+    """Record (flow_name, origin) for every Flow Paused span."""
+    from crewai.events import event_listener as listener_module
+
+    _reregister_listener()
+
+    recorded: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        listener_module.event_listener._telemetry,
+        "flow_paused_span",
+        lambda flow_name, origin="user": recorded.append((flow_name, origin)),
+    )
+    return recorded
+
+
+@pytest.fixture
+def method_failures(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
+    """Record (flow_name, origin) for every Flow Method Failed span."""
+    from crewai.events import event_listener as listener_module
+
+    _reregister_listener()
+
+    recorded: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        listener_module.event_listener._telemetry,
+        "flow_method_failed_span",
+        lambda flow_name, origin="user": recorded.append((flow_name, origin)),
     )
     return recorded
 
@@ -101,7 +151,11 @@ def features(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     return recorded
 
 
-def test_completed_flow_reports_its_outcome(features: list[str]) -> None:
+def test_completed_flow_reports_its_outcome(
+    durations: list[tuple[str, float, str]],
+) -> None:
+    """Outcome is a lifecycle fact, so it belongs on a span, not a feature."""
+
     class OkFlow(Flow):
         @start()
         def go(self) -> str:
@@ -109,10 +163,12 @@ def test_completed_flow_reports_its_outcome(features: list[str]) -> None:
 
     OkFlow().kickoff()
 
-    assert "flow:completed" in features
+    assert [(n, o) for n, _d, o in durations] == [("OkFlow", "completed")]
 
 
-def test_failed_flow_reports_the_failure_and_the_method(features: list[str]) -> None:
+def test_failed_flow_reports_the_failure_and_the_method(
+    durations: list[tuple[str, float, str]], method_failures: list[tuple[str, str]]
+) -> None:
     class BoomFlow(Flow):
         @start()
         def go(self) -> str:
@@ -121,10 +177,8 @@ def test_failed_flow_reports_the_failure_and_the_method(features: list[str]) -> 
     with pytest.raises(RuntimeError, match="boom"):
         BoomFlow().kickoff()
 
-    emitted = features
-    assert "flow:failed" in emitted
-    assert "flow:method_failed" in emitted
-    assert "flow:completed" not in emitted
+    assert [(n, o) for n, _d, o in durations] == [("BoomFlow", "failed")]
+    assert ("BoomFlow", "user") in method_failures
 
 
 def test_a_failed_flow_is_still_counted_as_an_execution(
@@ -145,7 +199,9 @@ def test_a_failed_flow_is_still_counted_as_an_execution(
     monkeypatch.setattr(
         listener_module.event_listener._telemetry,
         "flow_execution_span",
-        lambda flow_name, node_names, origin="user": started.append(flow_name),
+        lambda flow_name, node_names, origin="user", resumed=False: started.append(
+            flow_name
+        ),
     )
 
     class BoomFlow(Flow):
@@ -176,7 +232,9 @@ def test_requesting_input_reports_both_sides(features: list[str]) -> None:
     assert "flow:input_received" in emitted
 
 
-def test_paused_flow_reports_the_pause(features: list[str]) -> None:
+def test_paused_flow_reports_the_pause(
+    features: list[str], pauses: list[tuple[str, str]]
+) -> None:
     """An async feedback provider pauses the flow; both signals must land."""
 
     class AsyncProvider:
@@ -198,9 +256,10 @@ def test_paused_flow_reports_the_pause(features: list[str]) -> None:
     with contextlib.suppress(BaseException):
         PausingFlow().kickoff()
 
-    emitted = features
-    assert "flow:hitl_paused" in emitted
-    assert "flow:paused" in emitted
+    # The pause itself is lifecycle and lands on a span; that a human-feedback
+    # method was what paused is genuine feature adoption.
+    assert ("PausingFlow", "user") in pauses
+    assert "flow:hitl_paused" in features
 
 
 def test_failed_conversation_turn_is_reported(features: list[str]) -> None:
@@ -219,8 +278,16 @@ def test_failed_conversation_turn_is_reported(features: list[str]) -> None:
     assert "flow:conversation_turn_failed" in features
 
 
-def test_no_user_authored_strings_are_recorded(features: list[str]) -> None:
-    """Method names, flow names and error text must not reach telemetry."""
+def test_no_method_names_or_error_text_are_recorded(
+    method_failures: list[tuple[str, str]],
+    durations: list[tuple[str, float, str]],
+    features: list[str],
+) -> None:
+    """Method names and error text are user-authored and must not be sent.
+
+    The flow name is recorded, as it already is for flow creation and
+    execution, so it is deliberately not asserted against here.
+    """
 
     class SecretNamedFlow(Flow):
         @start()
@@ -230,12 +297,15 @@ def test_no_user_authored_strings_are_recorded(features: list[str]) -> None:
     with pytest.raises(RuntimeError, match="secret error detail"):
         SecretNamedFlow().kickoff()
 
-    emitted = features
-    assert emitted
-    for feature in emitted:
-        assert "my_secret_method_name" not in feature
-        assert "secret error detail" not in feature
-        assert "SecretNamedFlow" not in feature
+    assert method_failures, "the failure must still be reported"
+    recorded = [
+        str(value)
+        for row in (*method_failures, *durations)
+        for value in row
+    ] + features
+    for value in recorded:
+        assert "my_secret_method_name" not in value
+        assert "secret error detail" not in value
 
 
 def test_completed_flow_reports_a_real_duration(
@@ -367,7 +437,12 @@ def test_crewais_own_agent_executor_is_tagged_internal(flow_spans) -> None:
     assert origins.get("AgentExecutor") == "internal"
 
 
-def test_resumed_flow_is_reported(tmp_path, features: list[str]) -> None:
+def test_resumed_flow_is_reported(
+    tmp_path,
+    pauses: list[tuple[str, str]],
+    starts: list[tuple[str, bool]],
+    durations: list[tuple[str, float, str]],
+) -> None:
     """A restored run is only visible here - there is no resume event.
 
     Without it, a paused flow that was abandoned cannot be told apart from one
@@ -407,18 +482,18 @@ def test_resumed_flow_is_reported(tmp_path, features: list[str]) -> None:
     with contextlib.suppress(BaseException):
         ReviewFlow(persistence=persistence).kickoff()
 
-    assert "flow:paused" in features
-    assert "flow:resumed" not in features
+    assert ("ReviewFlow", "user") in pauses
+    assert starts == [("ReviewFlow", False)]
 
     flow = ReviewFlow.from_pending(paused["flow_id"], persistence)
     flow.resume("looks good")
 
-    assert "flow:resumed" in features
-    assert "flow:completed" in features
+    assert ("ReviewFlow", True) in starts
+    assert ("ReviewFlow", "completed") in [(n, o) for n, _d, o in durations]
 
 
 def test_a_user_flow_that_suppresses_console_events_still_reports(
-    features: list[str],
+    durations: list[tuple[str, float, str]],
 ) -> None:
     """``suppress_flow_events`` asks for console quiet, not for no telemetry."""
 
@@ -431,7 +506,7 @@ def test_a_user_flow_that_suppresses_console_events_still_reports(
 
     QuietFlow().kickoff()
 
-    assert "flow:completed" in features
+    assert [(n, o) for n, _d, o in durations] == [("QuietFlow", "completed")]
 
 
 def test_a_declarative_flow_is_not_treated_as_internal(
@@ -469,7 +544,6 @@ def test_a_failed_conversation_session_is_not_reported_completed(
     chat.finalize_session_traces()
 
     assert "flow:conversation_turn_failed" in features
-    assert "flow:completed" not in features
     assert all(outcome != "completed" for _n, _d, outcome in durations)
 
 
@@ -506,10 +580,12 @@ def test_infrastructure_flows_do_not_pollute_outcome_signals(
     task = Task(description="Do it", expected_output="A result", agent=agent)
     Crew(agents=[agent], tasks=[task]).kickoff()
 
-    assert "flow:completed" not in features
+    # Internal outcomes are still recorded - on the span, tagged internal -
+    # they simply do not masquerade as a user's flow finishing.
     assert ("AgentExecutor", "completed") in [
         (name, outcome) for name, _duration, outcome in durations
     ]
+    assert "flow:completed" not in features
 
 
 def test_a_checkpoint_restore_is_not_counted_as_a_resume(
