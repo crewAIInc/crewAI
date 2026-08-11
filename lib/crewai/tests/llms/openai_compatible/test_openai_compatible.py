@@ -299,6 +299,63 @@ class TestLLMIntegration:
             assert llm.max_tokens == 1000
 
 
+class TestTrustedRouter:
+    """Tests for TrustedRouter model resolution and construction."""
+
+    def test_llm_creates_openai_compatible_for_trustedrouter(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for TrustedRouter."""
+        with patch.dict(os.environ, {"TRUSTEDROUTER_API_KEY": "test-key"}):
+            llm = LLM(model="trustedrouter/moonshotai/kimi-k3")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "trustedrouter"
+            # Upstream ids keep their vendor namespace, minus the routing prefix
+            assert llm.model == "moonshotai/kimi-k3"
+
+    @pytest.mark.parametrize("alias", ["auto", "zdr", "e2e"])
+    def test_router_aliases_keep_their_prefix(self, alias):
+        """Test router aliases reach the API with the trustedrouter/ prefix intact."""
+        with patch.dict(os.environ, {"TRUSTEDROUTER_API_KEY": "test-key"}):
+            llm = LLM(model=f"trustedrouter/{alias}")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "trustedrouter"
+            assert llm.model == f"trustedrouter/{alias}"
+
+    def test_missing_api_key_raises_error(self):
+        """Test that a missing TrustedRouter API key raises ValueError."""
+        original = os.environ.pop("TRUSTEDROUTER_API_KEY", None)
+        try:
+            with pytest.raises(ValueError, match="API key required"):
+                OpenAICompatibleCompletion(
+                    model="trustedrouter/auto", provider="trustedrouter"
+                )
+        finally:
+            if original is not None:
+                os.environ["TRUSTEDROUTER_API_KEY"] = original
+
+    def test_base_url_from_env(self):
+        """Test TRUSTEDROUTER_BASE_URL overrides the default base URL."""
+        with patch.dict(
+            os.environ,
+            {
+                "TRUSTEDROUTER_API_KEY": "test-key",
+                "TRUSTEDROUTER_BASE_URL": "https://eu.trustedrouter.com/v1",
+            },
+        ):
+            completion = OpenAICompatibleCompletion(
+                model="trustedrouter/auto", provider="trustedrouter"
+            )
+            assert completion.base_url == "https://eu.trustedrouter.com/v1"
+
+    def test_default_base_url(self):
+        """Test the default base URL is used when no override is set."""
+        with patch.dict(os.environ, {"TRUSTEDROUTER_API_KEY": "test-key"}, clear=False):
+            os.environ.pop("TRUSTEDROUTER_BASE_URL", None)
+            completion = OpenAICompatibleCompletion(
+                model="trustedrouter/auto", provider="trustedrouter"
+            )
+            assert completion.base_url == "https://api.trustedrouter.com/v1"
+
+
 class TestCallMocking:
     """Tests for mocking the call method."""
 
