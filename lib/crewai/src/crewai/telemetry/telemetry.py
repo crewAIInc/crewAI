@@ -19,21 +19,21 @@ import platform
 import signal
 import threading
 from typing import TYPE_CHECKING, Any
-import weakref
 
-from crewai_core.project import get_project_id
-from opentelemetry import trace
-from opentelemetry.context import Context
+from crewai_core.telemetry import (
+    CommonAttributesSpanProcessor,
+    common_span_attributes,
+)
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
     OTLPSpanExporter,
 )
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
+from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
     SpanExportResult,
 )
-from opentelemetry.trace import ProxyTracerProvider, Span
+from opentelemetry.trace import Span
 from typing_extensions import Self
 
 from crewai.events.event_bus import crewai_event_bus
@@ -48,14 +48,13 @@ from crewai.llms.base_llm import BaseLLM
 from crewai.telemetry.constants import (
     CREWAI_TELEMETRY_BASE_URL,
     CREWAI_TELEMETRY_SERVICE_NAME,
+    TRACER_NAME,
 )
 from crewai.telemetry.utils import (
     add_agent_fingerprint_to_span,
     add_crew_and_task_attributes,
     add_crew_attributes,
     close_span,
-    detect_coding_agent,
-    detect_runtime_context,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.logger_utils import suppress_warnings
@@ -92,55 +91,6 @@ class SafeOTLPSpanExporter(OTLPSpanExporter):
             return SpanExportResult.FAILURE
 
 
-class CommonAttributesSpanProcessor(SpanProcessor):
-    """Applies a fixed set of attributes to every span at start.
-
-    Used for process-wide context that should appear on all spans (e.g. which
-    AI coding assistant is running the process) without each span-emitting
-    method having to set it. Attributes are applied as span attributes rather
-    than Resource attributes because the ingestion pipeline preserves only
-    serviceName from the resource.
-    """
-
-    def __init__(self, attributes: dict[str, str]) -> None:
-        """Initialize the processor.
-
-        Args:
-            attributes: Attributes applied to every span. Values must not
-                contain user data - this is process-wide context only.
-        """
-        self._attributes = attributes
-
-    def on_start(self, span: Span, parent_context: Context | None = None) -> None:
-        """Apply the common attributes to a span as it starts.
-
-        Args:
-            span: The span being started.
-            parent_context: Parent context, unused.
-        """
-        try:
-            span.set_attributes(self._attributes)
-        except Exception:  # noqa: S110 - telemetry must never break execution
-            pass
-
-    def on_end(self, span: Any) -> None:
-        """No-op; export is handled by the batch processor."""
-
-    def shutdown(self) -> None:
-        """No-op; this processor holds no resources."""
-
-    def force_flush(self, timeout_millis: int = 30000) -> bool:
-        """No-op flush.
-
-        Args:
-            timeout_millis: Unused.
-
-        Returns:
-            Always True.
-        """
-        return True
-
-
 class Telemetry:
     """Handle anonymous telemetry for the CrewAI package.
 
@@ -171,10 +121,6 @@ class Telemetry:
         self._initialized: bool = True
         self._coding_agent_reported: bool = False
         self._coding_agent_lock = threading.Lock()
-        # Weak so instrumented apps' providers are not kept alive by telemetry.
-        self._common_attributes_providers: weakref.WeakSet[Any] = weakref.WeakSet()
-        self._common_attributes_lock = threading.Lock()
-        self._common_attributes: dict[str, str] | None = None
 
         if self._is_telemetry_disabled():
             return
@@ -186,7 +132,12 @@ class Telemetry:
             with suppress_warnings():
                 self.provider = TracerProvider(resource=self.resource)
 
-            self._attach_common_attributes(self.provider)
+            # Span attributes, not Resource attributes: the ingestion pipeline
+            # preserves only serviceName from the resource, so anything else set
+            # there is dropped before it reaches storage.
+            self.provider.add_span_processor(
+                CommonAttributesSpanProcessor(common_span_attributes())
+            )
 
             processor = BatchSpanProcessor(
                 SafeOTLPSpanExporter(
@@ -206,72 +157,6 @@ class Telemetry:
                 raise
             self.ready = False
 
-    def _common_span_attributes(self) -> dict[str, str]:
-        """Build the attributes every span carries, once per process.
-
-        Memoized because it is computed per provider and reads the project's
-        ``pyproject.toml``, and because a process cannot change which
-        assistant, runtime, or project it belongs to partway through.
-
-        Returns:
-            Attributes to stamp on every span. ``project_id`` is omitted for
-            projects that do not declare one.
-        """
-        if self._common_attributes is not None:
-            return self._common_attributes
-
-        attributes = {
-            "coding_agent": detect_coding_agent(),
-            "runtime_context": detect_runtime_context(),
-        }
-
-        try:
-            # Read-only: minting an id belongs to the CLI commands a user
-            # invoked, not to a library call during execution.
-            project_id = get_project_id()
-        except Exception as e:  # Telemetry must never break execution.
-            logger.debug(f"Failed to read project id: {e}")
-            project_id = None
-
-        if project_id:
-            attributes["project_id"] = project_id
-
-        self._common_attributes = attributes
-        return attributes
-
-    def _attach_common_attributes(self, provider: Any) -> None:
-        """Attach process-wide attributes to every span a provider emits.
-
-        Applied as *span* attributes rather than Resource attributes: the
-        ingestion pipeline preserves only serviceName from the resource, so
-        anything else set there is dropped before it reaches storage.
-
-        Tracked per provider rather than once globally: our own provider and an
-        application's pre-installed provider both need the processor, but
-        neither should receive it twice.
-
-        Args:
-            provider: Tracer provider to attach the processor to. Ignored if it
-                does not accept span processors (e.g. a NoOp provider).
-        """
-        add_span_processor = getattr(provider, "add_span_processor", None)
-        if add_span_processor is None:
-            return
-
-        try:
-            # Locked: check-then-act. Crews and flows created from different
-            # threads can both reach set_tracer() before trace_set flips, and
-            # would otherwise each attach a processor to the same provider.
-            with self._common_attributes_lock:
-                if provider in self._common_attributes_providers:
-                    return
-                add_span_processor(
-                    CommonAttributesSpanProcessor(self._common_span_attributes())
-                )
-                self._common_attributes_providers.add(provider)
-        except Exception as e:  # Telemetry must never break execution.
-            logger.debug(f"Failed to attach common span attributes: {e}")
-
     @classmethod
     def _is_telemetry_disabled(cls) -> bool:
         """Check if telemetry should be disabled based on environment variables."""
@@ -286,25 +171,24 @@ class Telemetry:
         return self.ready and not self._is_telemetry_disabled()
 
     def set_tracer(self) -> None:
-        """Set the tracer provider if ready and not already set."""
-        if self.ready and not self.trace_set:
-            try:
-                with suppress_warnings():
-                    existing_provider = trace.get_tracer_provider()
-                    if not isinstance(existing_provider, ProxyTracerProvider):
-                        # An application installed its own provider, so our
-                        # spans are created by theirs. Attach the common
-                        # attributes there too, otherwise every span emitted in
-                        # an instrumented app would silently lose coding_agent.
-                        self._attach_common_attributes(existing_provider)
-                        self.trace_set = True
-                        return
-                    trace.set_tracer_provider(self.provider)
-                    self.trace_set = True
-            except Exception as e:
-                logger.debug(f"Failed to set tracer provider: {e}")
-                self.ready = False
-                self.trace_set = False
+        """Mark telemetry live (idempotent).
+
+        Deliberately does not install a global TracerProvider. Doing so made
+        every OTel-instrumented library in the host process - HTTP servers,
+        Redis clients, ORMs - resolve ``trace.get_tracer()`` to our provider
+        and export to our collector, which is neither data we asked for nor
+        data a user consented to send. It also meant that when an application
+        had already installed its own provider, our spans were created by
+        theirs and went to *their* collector instead of ours.
+
+        Spans are now created from ``self.provider`` directly, so neither can
+        happen, and the common attributes only ever land on our own spans.
+
+        Retained rather than removed because it is called across packages
+        (``crewai_cli.command``, ``crewai_cli.crew_run_tui``) and by
+        ``crewai.events.event_listener``.
+        """
+        self.trace_set = self.ready
 
     def _register_shutdown_handlers(self) -> None:
         """Register handlers for graceful shutdown on process exit and signals."""
@@ -408,7 +292,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Crew Created")
             self._add_attribute(
                 span,
@@ -621,7 +505,7 @@ class Telemetry:
         """
 
         def _operation() -> Span:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
 
             created_span = tracer.start_span("Task Created")
 
@@ -715,7 +599,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Tool Repeated Usage")
             self._add_attribute(
                 span,
@@ -743,7 +627,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Tool Usage")
             self._add_attribute(
                 span,
@@ -772,7 +656,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Tool Usage Error")
             self._add_attribute(
                 span,
@@ -803,7 +687,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Crew Individual Test Result")
 
             self._add_attribute(
@@ -838,7 +722,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Crew Test Execution")
 
             self._add_attribute(
@@ -863,7 +747,7 @@ class Telemetry:
         """Records when an error occurs during the deployment signup process."""
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Deploy Signup Error")
             close_span(span)
 
@@ -877,7 +761,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Start Deployment")
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
@@ -889,7 +773,7 @@ class Telemetry:
         """Records the creation of a new crew deployment."""
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Create Crew Deployment")
             close_span(span)
 
@@ -906,7 +790,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Get Crew Logs")
             self._add_attribute(span, "log_type", log_type)
             if uuid:
@@ -923,7 +807,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Remove Crew")
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
@@ -948,7 +832,7 @@ class Telemetry:
         self.crew_creation(crew, inputs)
 
         def _operation() -> Span:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Crew Execution")
             self._add_attribute(
                 span,
@@ -1081,7 +965,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Flow Creation")
             self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "flow_name", flow_name)
@@ -1099,7 +983,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Flow Plotting")
             self._add_attribute(span, "flow_name", flow_name)
             self._add_attribute(span, "node_names", json.dumps(node_names))
@@ -1116,7 +1000,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Flow Execution")
             self._add_attribute(
                 span,
@@ -1133,7 +1017,7 @@ class Telemetry:
         """Records the coding tool environment context."""
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Environment Context")
             self._add_attribute(
                 span,
@@ -1164,7 +1048,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Human Feedback")
             self._add_attribute(span, "event_type", event_type)
             self._add_attribute(span, "has_routing", has_routing)
@@ -1187,7 +1071,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Feature Usage")
             self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "feature", feature)
@@ -1216,13 +1100,19 @@ class Telemetry:
         Emitted at most once per process as a feature usage event, so it lands
         in the existing feature-usage aggregation as "coding_agent:<name>".
         Only the assistant's name is recorded - never any environment values.
+
+        Read from the shared common attributes rather than detecting again, so
+        the feature event and the ``coding_agent`` span attribute cannot
+        disagree.
         """
         with self._coding_agent_lock:
             if self._coding_agent_reported:
                 return
             self._coding_agent_reported = True
 
-        self.feature_usage_span(f"coding_agent:{detect_coding_agent()}")
+        self.feature_usage_span(
+            f"coding_agent:{common_span_attributes()['coding_agent']}"
+        )
 
     def template_installed_span(self, template_name: str) -> None:
         """Records when a template is downloaded and installed.
@@ -1233,7 +1123,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Template Installed")
             self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "template_name", template_name)

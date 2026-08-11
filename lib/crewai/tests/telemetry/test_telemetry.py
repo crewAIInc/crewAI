@@ -53,20 +53,22 @@ def test_telemetry_enabled_by_default():
             assert telemetry.ready is True
 
 
-def test_set_tracer_skips_when_provider_already_configured():
-    """A second telemetry instance must not re-install the global provider."""
-    with (
-        patch.dict(os.environ, {}, clear=True),
-        patch(
-            "crewai.telemetry.telemetry.trace.get_tracer_provider",
-            return_value=TracerProvider(),
-        ),
-        patch("crewai.telemetry.telemetry.trace.set_tracer_provider") as mock_set,
-    ):
+def test_set_tracer_never_installs_a_global_provider():
+    """Telemetry must not hijack the process-wide TracerProvider.
+
+    Installing it globally made every OTel-instrumented library in the host
+    process export to CrewAI's collector, so the global provider must be left
+    exactly as it was found whether or not an application installed one.
+    """
+    import opentelemetry.trace as ot
+
+    with patch.dict(os.environ, {}, clear=True):
+        before = ot.get_tracer_provider()
         telemetry = Telemetry()
         telemetry.set_tracer()
+        after = ot.get_tracer_provider()
 
-    mock_set.assert_not_called()
+    assert after is before
     assert telemetry.trace_set is True
 
 
@@ -84,8 +86,10 @@ def test_flow_execution_span_records_crewai_version():
                 "OTEL_SDK_DISABLED": "false",
             },
         ),
-        patch("crewai.telemetry.telemetry.TracerProvider"),
-        patch("crewai.telemetry.telemetry.trace.get_tracer", return_value=tracer),
+        patch(
+            "crewai.telemetry.telemetry.TracerProvider",
+            return_value=Mock(get_tracer=Mock(return_value=tracer)),
+        ),
         patch("crewai.telemetry.telemetry.version", return_value="9.9.9"),
     ):
         telemetry = Telemetry()
@@ -110,8 +114,10 @@ def test_flow_creation_span_records_crewai_version():
                 "OTEL_SDK_DISABLED": "false",
             },
         ),
-        patch("crewai.telemetry.telemetry.TracerProvider"),
-        patch("crewai.telemetry.telemetry.trace.get_tracer", return_value=tracer),
+        patch(
+            "crewai.telemetry.telemetry.TracerProvider",
+            return_value=Mock(get_tracer=Mock(return_value=tracer)),
+        ),
         patch("crewai.telemetry.telemetry.version", return_value="9.9.9"),
     ):
         telemetry = Telemetry()
