@@ -46,17 +46,14 @@ def telemetry_with_exporter(monkeypatch):
     monkeypatch.setattr(Telemetry, "_instance", None)
     monkeypatch.setattr(Telemetry, "_register_shutdown_handlers", lambda self: None)
 
-    # Set for the whole test, not just construction: the suite runs with
-    # OTEL_SDK_DISABLED set, and _is_telemetry_disabled() is re-read on every
-    # span call - so restoring it before the assertions would skip the export
-    # and make these tests pass or fail on ordering alone.
+    # Set for the whole test: _is_telemetry_disabled() is re-read on every span
+    # call, and the suite runs with OTEL_SDK_DISABLED set.
     monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", "false")
     monkeypatch.setenv("CREWAI_DISABLE_TRACKING", "false")
     monkeypatch.setenv("OTEL_SDK_DISABLED", "false")
 
-    # Patched before construction: Telemetry.__init__ wires a BatchSpanProcessor
-    # around the real OTLP exporter, so without this every test in this module
-    # attempts a live export to the collector and logs the blocked-network error.
+    # Patched before construction: __init__ wires the real OTLP exporter, which
+    # would make every test here attempt a live export.
     monkeypatch.setattr(
         "crewai.telemetry.telemetry.SafeOTLPSpanExporter",
         lambda **_kwargs: _NullExporter(),
@@ -70,8 +67,6 @@ def telemetry_with_exporter(monkeypatch):
     try:
         yield telemetry, exporter
     finally:
-        # Shut the provider down so its batch worker thread does not outlive
-        # the test, then release the singleton.
         telemetry.provider.shutdown()
         Telemetry._instance = None
 

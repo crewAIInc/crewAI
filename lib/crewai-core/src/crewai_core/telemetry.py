@@ -41,8 +41,6 @@ logger = logging.getLogger(__name__)
 CREWAI_TELEMETRY_BASE_URL: Final[str] = "https://telemetry.crewai.com:4319"
 CREWAI_TELEMETRY_SERVICE_NAME: Final[str] = "crewAI-telemetry"
 
-# Instrumentation scope for spans this module creates. Resolved against our own
-# provider, never the global one - see set_tracer().
 TRACER_NAME: Final[str] = "crewai.telemetry"
 
 

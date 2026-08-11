@@ -111,8 +111,7 @@ def test_cli_spans_carry_the_process_context(
 
     Telemetry._instance = None
     monkeypatch.setattr(Telemetry, "_register_shutdown_handlers", lambda self: None)
-    # Patched before construction: __init__ wires a BatchSpanProcessor around the
-    # real OTLP exporter, which would attempt a live export to the collector.
+    # Patched before construction: __init__ wires the real OTLP exporter.
     monkeypatch.setattr(
         "crewai_core.telemetry.SafeOTLPSpanExporter",
         lambda **_kwargs: _NullExporter(),
