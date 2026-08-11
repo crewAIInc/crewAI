@@ -56,7 +56,7 @@ CrewAI AOP에는 코드를 작성하지 않고도 에이전트 생성 및 구성
 | **컨텍스트 윈도우 준수** _(옵션)_         | `respect_context_window` | `bool`                        | 메시지를 컨텍스트 윈도우 크기 내로 유지하기 위하여 요약 기능을 사용합니다. 기본값은 True입니다.                         |
 | **코드 실행 모드** _(옵션)_              | `code_execution_mode`    | `Literal["safe", "unsafe"]`   | 코드 실행 모드: 'safe'(Docker 사용) 또는 'unsafe'(직접 실행). 기본값은 'safe'입니다.                                   |
 | **멀티모달** _(옵션)_                    | `multimodal`             | `bool`                        | 에이전트가 멀티모달 기능을 지원하는지 여부입니다. 기본값은 False입니다.                                                |
-| **날짜 자동 삽입** _(옵션)_              | `inject_date`            | `bool`                        | 작업에 현재 날짜를 자동으로 삽입할지 여부입니다. 기본값은 False입니다.                                                 |
+| **날짜 자동 삽입** _(옵션)_              | `inject_date`            | `bool`                        | 에이전트 프롬프트에 현재 날짜를 자동으로 삽입할지 여부입니다. 기본값은 False입니다.                                     |
 | **날짜 형식** _(옵션)_                   | `date_format`            | `str`                         | inject_date 활성화 시 날짜 표시 형식 문자열입니다. 기본값은 "%Y-%m-%d"(ISO 포맷)입니다.                                 |
 | **추론** _(옵션)_                        | `reasoning`              | `bool`                        | 에이전트가 작업을 실행하기 전에 반영 및 플랜을 생성할지 여부입니다. 기본값은 False입니다.                              |
 | **최대 추론 시도 수** _(옵션)_           | `max_reasoning_attempts` | `Optional[int]`               | 작업 실행 전 최대 추론 시도 횟수입니다. 설정하지 않으면 준비될 때까지 시도합니다.                                        |
@@ -267,7 +267,7 @@ strategic_agent = Agent(
     role="Market Analyst",
     goal="Track market movements with precise date references and strategic planning",
     backstory="Expert in time-sensitive financial analysis and strategic reporting",
-    inject_date=True,  # Automatically inject current date into tasks
+    inject_date=True,  # Automatically inject current date into the prompt
     date_format="%B %d, %Y",  # Format as "May 21, 2025"
     reasoning=True,  # Enable strategic planning
     max_reasoning_attempts=2,  # Limit planning iterations
@@ -328,7 +328,7 @@ multimodal_agent = Agent(
 #### 고급 기능
 - `multimodal`: 텍스트와 시각적 콘텐츠 처리를 위한 멀티모달 기능 활성화
 - `reasoning`: 에이전트가 작업을 수행하기 전에 반영하고 계획을 작성할 수 있도록 활성화
-- `inject_date`: 현재 날짜를 작업 설명에 자동으로 삽입
+- `inject_date`: 현재 날짜를 에이전트 프롬프트에 자동으로 삽입
 
 #### 템플릿
 - `system_template`: 에이전트의 핵심 동작을 정의합니다

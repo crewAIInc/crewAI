@@ -61,7 +61,7 @@ The Visual Agent Builder enables:
 | **Respect Context Window** _(optional)_ | `respect_context_window` | `bool`                                | Keep messages under context window size by summarizing. Default is True.                                 |
 | **Code Execution Mode** _(optional)_    | `code_execution_mode`    | `Literal["safe", "unsafe"]`           | Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct). Default is 'safe'.                  |
 | **Multimodal** _(optional)_             | `multimodal`             | `bool`                                | Whether the agent supports multimodal capabilities. Default is False.                                    |
-| **Inject Date** _(optional)_            | `inject_date`            | `bool`                                | Whether to automatically inject the current date into tasks. Default is False.                           |
+| **Inject Date** _(optional)_            | `inject_date`            | `bool`                                | Whether to automatically inject the current date into the agent's prompt. Default is False.              |
 | **Date Format** _(optional)_            | `date_format`            | `str`                                 | Format string for date when inject_date is enabled. Default is "%Y-%m-%d" (ISO format).                  |
 | **Reasoning** _(optional)_              | `reasoning`              | `bool`                                | Whether the agent should reflect and create a plan before executing a task. Default is False.            |
 | **Max Reasoning Attempts** _(optional)_ | `max_reasoning_attempts` | `Optional[int]`                       | Maximum number of reasoning attempts before executing the task. If None, will try until ready.           |
@@ -236,7 +236,7 @@ strategic_agent = Agent(
     role="Market Analyst",
     goal="Track market movements with precise date references and strategic planning",
     backstory="Expert in time-sensitive financial analysis and strategic reporting",
-    inject_date=True,  # Automatically inject current date into tasks
+    inject_date=True,  # Automatically inject current date into the prompt
     date_format="%B %d, %Y",  # Format as "May 21, 2025"
     reasoning=True,  # Enable strategic planning
     max_reasoning_attempts=2,  # Limit planning iterations
@@ -303,7 +303,7 @@ multimodal_agent = Agent(
 
 - `multimodal`: Enable multimodal capabilities for processing text and visual content
 - `reasoning`: Enable agent to reflect and create plans before executing tasks
-- `inject_date`: Automatically inject current date into task descriptions
+- `inject_date`: Automatically inject current date into the agents prompt
 
 #### Templates
 

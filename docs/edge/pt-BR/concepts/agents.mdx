@@ -61,7 +61,7 @@ O Construtor Visual de Agentes permite:
 | **Respect Context Window** _(opcional)_ | `respect_context_window` | `bool`                                | Mantém as mensagens dentro do tamanho da janela de contexto, resumindo quando necessário. Padrão: True.   |
 | **Code Execution Mode** _(opcional)_    | `code_execution_mode`    | `Literal["safe", "unsafe"]`           | Modo de execução de código: 'safe' (usando Docker) ou 'unsafe' (direto). Padrão: 'safe'.                  |
 | **Multimodal** _(opcional)_             | `multimodal`             | `bool`                                | Se o agente suporta capacidades multimodais. Padrão: False.                                               |
-| **Inject Date** _(opcional)_            | `inject_date`            | `bool`                                | Se deve injetar automaticamente a data atual nas tarefas. Padrão: False.                                  |
+| **Inject Date** _(opcional)_            | `inject_date`            | `bool`                                | Se deve injetar automaticamente a data atual no prompt do agente. Padrão: False.                          |
 | **Date Format** _(opcional)_            | `date_format`            | `str`                                 | Formato de data utilizado quando `inject_date` está ativo. Padrão: "%Y-%m-%d" (formato ISO).              |
 | **Reasoning** _(opcional)_              | `reasoning`              | `bool`                                | Se o agente deve refletir e criar um plano antes de executar uma tarefa. Padrão: False.                   |
 | **Max Reasoning Attempts** _(opcional)_ | `max_reasoning_attempts` | `Optional[int]`                       | Número máximo de tentativas de raciocínio antes de executar a tarefa. Se None, tentará até estar pronto.  |
@@ -274,7 +274,7 @@ strategic_agent = Agent(
     role="Analista de Mercado",
     goal="Acompanhar movimentos do mercado com referências de datas precisas e planejamento estratégico",
     backstory="Especialista em análise financeira sensível ao tempo e relatórios estratégicos",
-    inject_date=True,  # Injeta automaticamente a data atual nas tarefas
+    inject_date=True,  # Injeta automaticamente a data atual no prompt
     date_format="%d de %B de %Y",  # Exemplo: "21 de maio de 2025"
     reasoning=True,  # Ativa planejamento estratégico
     max_reasoning_attempts=2,  # Limite de iterações de planejamento
@@ -341,7 +341,7 @@ multimodal_agent = Agent(
 
 - `multimodal`: Habilita capacidades multimodais para processar texto e conteúdo visual
 - `reasoning`: Permite que o agente reflita e crie planos antes de executar tarefas
-- `inject_date`: Injeta a data atual automaticamente nas descrições das tarefas
+- `inject_date`: Injeta a data atual automaticamente no prompt do agente
 
 #### Templates
 
