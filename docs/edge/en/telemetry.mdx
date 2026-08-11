@@ -34,6 +34,20 @@ os.environ['CREWAI_DISABLE_TELEMETRY'] = 'true'
 os.environ['OTEL_SDK_DISABLED'] = 'true'
 ```
 
+### Isolation from your own OpenTelemetry setup
+
+CrewAI's telemetry runs on its own private `TracerProvider` and never registers
+itself as the global one. This keeps the two directions separate:
+
+- Spans from other instrumented libraries in your process — web frameworks,
+  database clients, HTTP clients — are never sent to CrewAI.
+- CrewAI's telemetry spans are never sent to your observability backend, so they
+  will not appear in Langfuse, Braintrust, Phoenix, or any other collector you
+  configure.
+
+Observability integrations are unaffected: they instrument CrewAI through their
+own tracer provider, which is independent of the one described here.
+
 ### Data Explanation:
 | Defaulted | Data                                      | Reason and Specifics                                                                                                       |
 |:----------|:------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------|
