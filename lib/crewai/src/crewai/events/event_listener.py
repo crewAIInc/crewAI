@@ -42,9 +42,12 @@ from crewai.events.types.env_events import (
 )
 from crewai.events.types.flow_events import (
     ConversationTurnCompletedEvent,
+    ConversationTurnFailedEvent,
     FlowCreatedEvent,
     FlowFailedEvent,
     FlowFinishedEvent,
+    FlowInputReceivedEvent,
+    FlowInputRequestedEvent,
     FlowPausedEvent,
     FlowStartedEvent,
     HumanFeedbackReceivedEvent,
@@ -315,6 +318,8 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
+            self._telemetry.feature_usage_span("flow:completed")
+
             if not getattr(source, "suppress_flow_events", False):
                 self.formatter.handle_flow_status(
                     event.flow_name,
@@ -323,6 +328,8 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(FlowFailedEvent)
         def on_flow_failed(source: Any, event: FlowFailedEvent) -> None:
+            self._telemetry.feature_usage_span("flow:failed")
+
             if not getattr(source, "suppress_flow_events", False):
                 self.formatter.handle_flow_status(
                     event.flow_name,
@@ -335,6 +342,20 @@ class EventListener(BaseEventListener):
             _: Any, event: ConversationTurnCompletedEvent
         ) -> None:
             self._telemetry.feature_usage_span("flow:conversation_turn")
+
+        @crewai_event_bus.on(ConversationTurnFailedEvent)
+        def on_conversation_turn_failed(
+            _: Any, event: ConversationTurnFailedEvent
+        ) -> None:
+            self._telemetry.feature_usage_span("flow:conversation_turn_failed")
+
+        @crewai_event_bus.on(FlowInputRequestedEvent)
+        def on_flow_input_requested(_: Any, event: FlowInputRequestedEvent) -> None:
+            self._telemetry.feature_usage_span("flow:input_requested")
+
+        @crewai_event_bus.on(FlowInputReceivedEvent)
+        def on_flow_input_received(_: Any, event: FlowInputReceivedEvent) -> None:
+            self._telemetry.feature_usage_span("flow:input_received")
 
         @crewai_event_bus.on(MethodExecutionStartedEvent)
         def on_method_execution_started(
@@ -362,6 +383,10 @@ class EventListener(BaseEventListener):
         def on_method_execution_failed(
             _: Any, event: MethodExecutionFailedEvent
         ) -> None:
+            # The method name is not recorded: it is user-authored and would put
+            # arbitrary strings in telemetry.
+            self._telemetry.feature_usage_span("flow:method_failed")
+
             self.formatter.handle_method_status(
                 event.method_name,
                 "failed",
@@ -371,6 +396,8 @@ class EventListener(BaseEventListener):
         def on_method_execution_paused(
             _: Any, event: MethodExecutionPausedEvent
         ) -> None:
+            self._telemetry.feature_usage_span("flow:hitl_paused")
+
             self.formatter.handle_method_status(
                 event.method_name,
                 "paused",
@@ -378,6 +405,8 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(FlowPausedEvent)
         def on_flow_paused(_: Any, event: FlowPausedEvent) -> None:
+            self._telemetry.feature_usage_span("flow:paused")
+
             self.formatter.handle_flow_status(
                 event.flow_name,
                 event.flow_id,
