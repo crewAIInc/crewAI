@@ -308,26 +308,24 @@ class EventListener(BaseEventListener):
         def on_flow_created(_: Any, event: FlowCreatedEvent) -> None:
             self._telemetry.flow_creation_span(event.flow_name)
 
-        def _is_infrastructure_flow(source: Any) -> bool:
-            """Flows CrewAI runs for its own bookkeeping.
-
-            The agent executor, memory encoding and memory recall are all Flows
-            and all set ``suppress_flow_events``. They run far more often than
-            anything a user wrote, so counting their outcomes in the same
-            feature as user flows makes that feature meaningless. Their outcome
-            is still recorded on the Flow Completed span, which carries origin.
-            """
-            return bool(getattr(source, "suppress_flow_events", False))
-
         def _flow_origin(source: Any) -> str:
-            """Separate CrewAI's own flows from the caller's.
+            """Separate flows CrewAI runs itself from the ones a caller wrote.
 
-            The agent executor is itself a Flow and runs once per agent
-            execution, so it dominates flow counts and would otherwise be
-            indistinguishable from flows a user wrote.
+            The agent executor and the memory encoding/recall flows are all
+            Flows and run far more often than anything a user wrote, so without
+            this they swamp every flow metric.
+
+            Reads the declared ``is_crewai_internal`` marker rather than the
+            defining module: a declarative flow built with
+            ``Flow.from_declaration()`` is typed as ``Flow`` itself, so a module
+            check would report a caller's flow as internal. It is also not
+            ``suppress_flow_events``, which only asks for console quiet and can
+            legitimately be set on a caller's own flow.
             """
             return (
-                "internal" if type(source).__module__.startswith("crewai.") else "user"
+                "internal"
+                if getattr(type(source), "is_crewai_internal", False)
+                else "user"
             )
 
         def _report_flow_duration(source: Any, flow_name: str, outcome: str) -> None:
@@ -367,9 +365,15 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
-            if not _is_infrastructure_flow(source):
-                self._telemetry.feature_usage_span("flow:completed")
-            _report_flow_duration(source, event.flow_name, "completed")
+            outcome = (
+                "failed"
+                if getattr(source, "_telemetry_turn_failed", False)
+                else "completed"
+            )
+            source._telemetry_turn_failed = False
+            if _flow_origin(source) == "user":
+                self._telemetry.feature_usage_span(f"flow:{outcome}")
+            _report_flow_duration(source, event.flow_name, outcome)
 
             if not getattr(source, "suppress_flow_events", False):
                 self.formatter.handle_flow_status(
@@ -379,7 +383,7 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(FlowFailedEvent)
         def on_flow_failed(source: Any, event: FlowFailedEvent) -> None:
-            if not _is_infrastructure_flow(source):
+            if _flow_origin(source) == "user":
                 self._telemetry.feature_usage_span("flow:failed")
             _report_flow_duration(source, event.flow_name, "failed")
 
@@ -398,9 +402,12 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(ConversationTurnFailedEvent)
         def on_conversation_turn_failed(
-            _: Any, event: ConversationTurnFailedEvent
+            source: Any, event: ConversationTurnFailedEvent
         ) -> None:
             self._telemetry.feature_usage_span("flow:conversation_turn_failed")
+            # A conversational session closes with FlowFinishedEvent whatever
+            # happened, so record the failure for on_flow_finished to read.
+            source._telemetry_turn_failed = True
 
         @crewai_event_bus.on(FlowInputRequestedEvent)
         def on_flow_input_requested(_: Any, event: FlowInputRequestedEvent) -> None:
@@ -438,7 +445,7 @@ class EventListener(BaseEventListener):
         ) -> None:
             # The method name is not recorded: it is user-authored and would put
             # arbitrary strings in telemetry.
-            if not _is_infrastructure_flow(source):
+            if _flow_origin(source) == "user":
                 self._telemetry.feature_usage_span("flow:method_failed")
 
             self.formatter.handle_method_status(

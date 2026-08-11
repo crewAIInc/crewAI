@@ -717,6 +717,18 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _or_listeners_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _completed_methods: set[FlowMethodName] = PrivateAttr(default_factory=set)
     _method_call_counts: dict[FlowMethodName, int] = PrivateAttr(default_factory=dict)
+    # True on flows CrewAI runs for its own bookkeeping - the agent executor and
+    # the memory encoding/recall flows. Declared rather than inferred from the
+    # module: a declarative flow built with Flow.from_declaration() is typed as
+    # Flow itself, so a module check would call a caller's flow internal.
+    is_crewai_internal: ClassVar[bool] = False
+
+    # Set by the telemetry listener when a conversational turn fails. A
+    # conversational session emits FlowFinishedEvent from
+    # finalize_session_traces() regardless of outcome, so without this a failed
+    # session would be reported as a successful completion.
+    _telemetry_turn_failed: bool = PrivateAttr(default=False)
+
     _is_execution_resuming: bool = PrivateAttr(default=False)
     _restored_from_checkpoint: bool = PrivateAttr(default=False)
     # Monotonic stamp set by the telemetry listener at flow start, so the

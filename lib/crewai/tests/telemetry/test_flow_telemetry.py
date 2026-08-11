@@ -417,6 +417,62 @@ def test_resumed_flow_is_reported(tmp_path, features: list[str]) -> None:
     assert "flow:completed" in features
 
 
+def test_a_user_flow_that_suppresses_console_events_still_reports(
+    features: list[str],
+) -> None:
+    """``suppress_flow_events`` asks for console quiet, not for no telemetry."""
+
+    class QuietFlow(Flow):
+        suppress_flow_events: bool = True
+
+        @start()
+        def go(self) -> str:
+            return "ok"
+
+    QuietFlow().kickoff()
+
+    assert "flow:completed" in features
+
+
+def test_a_declarative_flow_is_not_treated_as_internal(
+    flow_spans: list[tuple[str, str]],
+) -> None:
+    """``Flow.from_declaration()`` yields a ``Flow``, defined inside crewai.
+
+    Deciding origin from the defining module would report a caller's
+    declarative flow as one of CrewAI's own.
+    """
+    flow = Flow.from_declaration(contents={"name": "MyDeclarativeFlow"})
+
+    assert getattr(type(flow), "is_crewai_internal", False) is False
+
+
+def test_a_failed_conversation_session_is_not_reported_completed(
+    features: list[str], durations: list[tuple[str, float, str]]
+) -> None:
+    """A conversational session closes with FlowFinishedEvent either way.
+
+    Reading that event at face value counted a failed session as a success,
+    alongside the turn-failure signal.
+    """
+
+    class FailingChat(Flow):
+        conversational = True
+
+        @start()
+        def begin(self) -> str:
+            raise RuntimeError("turn exploded")
+
+    chat = FailingChat()
+    with pytest.raises(RuntimeError, match="turn exploded"):
+        chat.handle_turn("hello")
+    chat.finalize_session_traces()
+
+    assert "flow:conversation_turn_failed" in features
+    assert "flow:completed" not in features
+    assert all(outcome != "completed" for _n, _d, outcome in durations)
+
+
 def test_infrastructure_flows_do_not_pollute_outcome_signals(
     features: list[str], durations: list[tuple[str, float, str]]
 ) -> None:
