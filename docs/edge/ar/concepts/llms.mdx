@@ -959,6 +959,29 @@ mode: "wide"
     ```
   </Accordion>
 
+  <Accordion title="TrustedRouter">
+    TrustedRouter هو موجّه متوافق مع OpenAI ومُصدَّق (attested) مخصص لأعمال الوكلاء الحساسة للخصوصية، مع اختيار تلقائي للنماذج، ومسارات بدون احتفاظ بالبيانات، ومسارات مشفّرة من طرف إلى طرف.
+
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    TRUSTEDROUTER_API_KEY=<your-api-key>
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="trustedrouter/auto",
+    )
+    ```
+
+    <Info>
+      أسماء التوجيه المستعارة:
+      - trustedrouter/auto (المسارات السليمة، يتم اختيارها تلقائيًا)
+      - trustedrouter/zdr (مسارات بدون احتفاظ بالبيانات)
+      - trustedrouter/e2e (مسارات مشفّرة من طرف إلى طرف)
+    </Info>
+  </Accordion>
+
   <Accordion title="Open Router">
     عيّن متغيرات البيئة التالية في ملف `.env`:
     ```toml Code

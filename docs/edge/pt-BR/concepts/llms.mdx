@@ -702,6 +702,29 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     ```
   </Accordion>
 
+  <Accordion title="TrustedRouter">
+    O TrustedRouter é um roteador compatível com OpenAI e atestado para trabalhos de agentes sensíveis à privacidade, com seleção automática de modelos, rotas sem retenção de dados e rotas criptografadas de ponta a ponta.
+
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    TRUSTEDROUTER_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="trustedrouter/auto",
+    )
+    ```
+
+    <Info>
+      Aliases de roteamento:
+      - trustedrouter/auto (rotas saudáveis, escolhidas automaticamente)
+      - trustedrouter/zdr (rotas sem retenção de dados)
+      - trustedrouter/e2e (rotas criptografadas de ponta a ponta)
+    </Info>
+  </Accordion>
+
   <Accordion title="Open Router">
     Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
     ```toml Code
