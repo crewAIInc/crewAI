@@ -779,7 +779,7 @@ class OpenAICompletion(BaseLLM):
                 items.append(
                     {
                         "type": "function_call",
-                        "call_id": call.get("id") or f"call_{id(call)}",
+                        "call_id": call.get("id"),
                         "name": function.get("name", ""),
                         "arguments": args,
                     }
