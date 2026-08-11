@@ -33,6 +33,19 @@ os.environ['CREWAI_DISABLE_TELEMETRY'] = 'true'
 os.environ['OTEL_SDK_DISABLED'] = 'true'
 ```
 
+### 사용자 OpenTelemetry 설정과의 격리
+
+CrewAI의 telemetry는 자체 전용 `TracerProvider`에서 실행되며 자신을 전역
+provider로 등록하지 않습니다. 이를 통해 양방향이 분리됩니다:
+
+- 프로세스 내 다른 계측된 라이브러리(웹 프레임워크, 데이터베이스 클라이언트,
+  HTTP 클라이언트)의 span은 CrewAI로 전송되지 않습니다.
+- CrewAI의 telemetry span은 사용자의 관측 가능성 백엔드로 전송되지 않으므로
+  Langfuse, Braintrust, Phoenix 또는 구성한 다른 수집기에 나타나지 않습니다.
+
+관측 가능성 통합은 영향을 받지 않습니다: 해당 통합은 여기서 설명한 provider와
+독립적인 자체 tracer provider를 통해 CrewAI를 계측합니다.
+
 ### 데이터 설명:
 | 기본값 | 데이터                                      | 사유 및 세부 사항                                                                                                       |
 |:--------|:-------------------------------------------|:----------------------------------------------------------------------------------------------------------------------|
