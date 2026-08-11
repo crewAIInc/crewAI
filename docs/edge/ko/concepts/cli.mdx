@@ -54,6 +54,16 @@ crewai create flow my_new_flow
 
 기본적으로 `crewai create crew`는 `crew.jsonc`와 `agents/*.jsonc`가 있는 JSON-first 프로젝트를 만듭니다. `crew.py`, `config/agents.yaml`, `config/tasks.yaml`을 사용하는 기존 Python/YAML 스캐폴드가 필요할 때만 `crewai create crew my_new_crew --classic`을 사용하세요.
 
+#### 사용 중단된 플래그 별칭
+
+이전 snake_case 플래그는 여전히 동작하지만 `--help`에는 표시되지 않습니다. 아래 각 명령 섹션에 문서화된 kebab-case 형식을 사용하세요.
+
+| 사용 중단 | 대신 사용 |
+| :--- | :--- |
+| `--skip_provider` (`crewai create crew`) | `--skip-provider` |
+| `--n_iterations` (`crewai train`, `crewai test`) | `--n-iterations` |
+| `--task_id` (`crewai replay`) | `--task-id` |
+
 ### 2. 버전
 
 설치된 CrewAI의 버전을 표시합니다.
@@ -79,7 +89,7 @@ crewai version --tools
 crewai train [OPTIONS]
 ```
 
-- `-n, --n_iterations INTEGER`: crew를 훈련할 반복 횟수 (기본값: 5)
+- `-n, --n-iterations INTEGER`: crew를 훈련할 반복 횟수 (기본값: 5)
 - `-f, --filename TEXT`: 훈련에 사용할 커스텀 파일의 경로 (기본값: "trained_agents_data.pkl")
 
 예시:
@@ -96,7 +106,7 @@ crewai train -n 10 -f my_training_data.pkl
 crewai replay [OPTIONS]
 ```
 
-- `-t, --task_id TEXT`: 이 task ID에서부터 crew를 다시 재생하며, 이후의 모든 task를 포함합니다.
+- `-t, --task-id TEXT`: 이 task ID에서부터 crew를 다시 재생하며, 이후의 모든 task를 포함합니다.
 
 예시:
 
@@ -143,7 +153,7 @@ crew를 테스트하고 결과를 평가합니다.
 crewai test [OPTIONS]
 ```
 
-- `-n, --n_iterations INTEGER`: crew를 테스트할 반복 횟수 (기본값: 3)
+- `-n, --n-iterations INTEGER`: crew를 테스트할 반복 횟수 (기본값: 3)
 - `-m, --model TEXT`: Crew에서 테스트를 실행할 LLM 모델 (기본값: "gpt-4o-mini")
 
 예시:
