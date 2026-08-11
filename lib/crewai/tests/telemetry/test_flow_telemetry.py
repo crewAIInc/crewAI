@@ -415,3 +415,68 @@ def test_resumed_flow_is_reported(tmp_path, features: list[str]) -> None:
 
     assert "flow:resumed" in features
     assert "flow:completed" in features
+
+
+def test_infrastructure_flows_do_not_pollute_outcome_signals(
+    features: list[str], durations: list[tuple[str, float, str]]
+) -> None:
+    """CrewAI's own flows must not be counted as user flow outcomes.
+
+    The agent executor, memory encoding and memory recall are all Flows and run
+    far more often than anything a user wrote. Counting their outcomes in the
+    same feature would make ``flow:completed`` mostly bookkeeping. Their outcome
+    is still recorded on the Flow Completed span, which carries ``origin``.
+    """
+    from crewai import Agent, Crew, Task
+    from crewai.llms.base_llm import BaseLLM
+
+    class StubLLM(BaseLLM):
+        def __init__(self) -> None:
+            super().__init__(model="stub-model")
+
+        def call(self, messages, **kwargs) -> str:
+            return "Final Answer: done"
+
+        def supports_function_calling(self) -> bool:
+            return False
+
+        def supports_stop_words(self) -> bool:
+            return False
+
+        def get_context_window_size(self) -> int:
+            return 8192
+
+    agent = Agent(role="R", goal="G", backstory="B", llm=StubLLM())
+    task = Task(description="Do it", expected_output="A result", agent=agent)
+    Crew(agents=[agent], tasks=[task]).kickoff()
+
+    assert "flow:completed" not in features
+    assert ("AgentExecutor", "completed") in [
+        (name, outcome) for name, _duration, outcome in durations
+    ]
+
+
+def test_a_checkpoint_restore_is_not_counted_as_a_resume(
+    features: list[str],
+) -> None:
+    """Only a run restored from a human pause counts as resumed.
+
+    ``_is_execution_resuming`` is also set by checkpoint restores that never
+    paused for anyone. Counting those would push resumes above pauses and make
+    the abandonment rate meaningless.
+    """
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.flow_events import FlowStartedEvent
+
+    class RestoredFlow(Flow):
+        @start()
+        def go(self) -> str:
+            return "ok"
+
+    flow = RestoredFlow()
+    flow._is_execution_resuming = True
+    assert flow._pending_feedback_context is None
+
+    crewai_event_bus.emit(flow, FlowStartedEvent(flow_name="RestoredFlow"))
+
+    assert "flow:resumed" not in features

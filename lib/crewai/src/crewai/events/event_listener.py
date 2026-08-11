@@ -308,6 +308,17 @@ class EventListener(BaseEventListener):
         def on_flow_created(_: Any, event: FlowCreatedEvent) -> None:
             self._telemetry.flow_creation_span(event.flow_name)
 
+        def _is_infrastructure_flow(source: Any) -> bool:
+            """Flows CrewAI runs for its own bookkeeping.
+
+            The agent executor, memory encoding and memory recall are all Flows
+            and all set ``suppress_flow_events``. They run far more often than
+            anything a user wrote, so counting their outcomes in the same
+            feature as user flows makes that feature meaningless. Their outcome
+            is still recorded on the Flow Completed span, which carries origin.
+            """
+            return bool(getattr(source, "suppress_flow_events", False))
+
         def _flow_origin(source: Any) -> str:
             """Separate CrewAI's own flows from the caller's.
 
@@ -343,10 +354,12 @@ class EventListener(BaseEventListener):
                 event.flow_name, list(source._methods.keys()), _flow_origin(source)
             )
             source._telemetry_started_at = time.monotonic()
-            if getattr(source, "_is_execution_resuming", False):
+            if getattr(source, "_pending_feedback_context", None) is not None:
                 # No resume event exists, so a run restored from a pause is only
-                # visible here. Without it, paused flows can be counted but
-                # abandoned ones cannot be told apart from resumed ones.
+                # visible here. Keyed off the pending-feedback context rather
+                # than _is_execution_resuming, which is also set by checkpoint
+                # restores that never paused for a human - counting those would
+                # inflate resumes past pauses and break the abandonment rate.
                 self._telemetry.feature_usage_span("flow:resumed")
             if not getattr(source, "suppress_flow_events", False):
                 self.formatter.handle_flow_created(event.flow_name, str(source.flow_id))
@@ -354,7 +367,8 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
-            self._telemetry.feature_usage_span("flow:completed")
+            if not _is_infrastructure_flow(source):
+                self._telemetry.feature_usage_span("flow:completed")
             _report_flow_duration(source, event.flow_name, "completed")
 
             if not getattr(source, "suppress_flow_events", False):
@@ -365,7 +379,8 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(FlowFailedEvent)
         def on_flow_failed(source: Any, event: FlowFailedEvent) -> None:
-            self._telemetry.feature_usage_span("flow:failed")
+            if not _is_infrastructure_flow(source):
+                self._telemetry.feature_usage_span("flow:failed")
             _report_flow_duration(source, event.flow_name, "failed")
 
             if not getattr(source, "suppress_flow_events", False):
@@ -419,11 +434,12 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(MethodExecutionFailedEvent)
         def on_method_execution_failed(
-            _: Any, event: MethodExecutionFailedEvent
+            source: Any, event: MethodExecutionFailedEvent
         ) -> None:
             # The method name is not recorded: it is user-authored and would put
             # arbitrary strings in telemetry.
-            self._telemetry.feature_usage_span("flow:method_failed")
+            if not _is_infrastructure_flow(source):
+                self._telemetry.feature_usage_span("flow:method_failed")
 
             self.formatter.handle_method_status(
                 event.method_name,
