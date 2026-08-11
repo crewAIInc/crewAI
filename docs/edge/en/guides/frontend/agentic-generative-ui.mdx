@@ -32,7 +32,7 @@ Subclass `CopilotKitState` to declare the state your UI needs. `CopilotKitState`
 
 ```python
 from typing import List, Literal
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from ag_ui_crewai.sdk import CopilotKitState
 
 
@@ -42,7 +42,7 @@ class TaskStep(BaseModel):
 
 
 class AgentState(CopilotKitState):
-    steps: List[TaskStep] = []
+    steps: List[TaskStep] = Field(default_factory=list)
 ```
 
 Everything on `AgentState` is included in the state snapshot the frontend receives. A snapshot is emitted automatically at each step boundary, so writing to `self.state` is enough for the UI to pick it up between steps. To update the UI *during* a long step, emit explicitly (shown below).

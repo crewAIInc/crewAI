@@ -679,24 +679,6 @@
                         ]
                       },
                       {
-                        "group": "Frontend",
-                        "icon": "browser",
-                        "pages": [
-                          "v1.15.5/en/guides/frontend/overview",
-                          "v1.15.5/en/guides/frontend/conversational-flows",
-                          "v1.15.5/en/guides/frontend/generative-ui",
-                          "v1.15.5/en/guides/frontend/tool-based-generative-ui",
-                          "v1.15.5/en/guides/frontend/agentic-generative-ui",
-                          "v1.15.5/en/guides/frontend/reasoning",
-                          "v1.15.5/en/guides/frontend/a2ui",
-                          "v1.15.5/en/guides/frontend/human-in-the-loop",
-                          "v1.15.5/en/guides/frontend/shared-state",
-                          "v1.15.5/en/guides/frontend/frontend-actions",
-                          "v1.15.5/en/guides/frontend/predictive-state-updates",
-                          "v1.15.5/en/guides/frontend/channels"
-                        ]
-                      },
-                      {
                         "group": "Tools",
                         "icon": "wrench",
                         "pages": [

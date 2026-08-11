@@ -97,15 +97,15 @@ class SharedStateFlow(Flow[AgentState]):
         message = response.choices[0].message
         self.state.messages.append(message)
 
-        if message.get("tool_calls"):
-            call = message["tool_calls"][0]
-            if call["function"]["name"] == "generate_recipe":
-                args = json.loads(call["function"]["arguments"])
+        if message.tool_calls:
+            call = message.tool_calls[0]
+            if call.function.name == "generate_recipe":
+                args = json.loads(call.function.arguments)
                 self.state.recipe = Recipe(**args["recipe"])  # write to shared state
                 self.state.messages.append({
                     "role": "tool",
                     "content": "Recipe updated.",
-                    "tool_call_id": call["id"],
+                    "tool_call_id": call.id,
                 })
                 return "route_follow_up"
         return "route_end"
@@ -163,7 +163,7 @@ function RecipeEditor() {
   // state and override only the field you changed. Passing just
   // `{ recipe }` would drop messages and other runtime fields.
   const updateRecipe = (patch: Partial<Recipe>) =>
-    agent.setState({ ...agent.state, recipe: { ...recipe, ...patch } });
+    agent?.setState({ ...(agent.state ?? {}), recipe: { ...(recipe ?? {}), ...patch } });
 
   return (
     <div>
