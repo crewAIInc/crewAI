@@ -55,6 +55,16 @@ crewai create flow my_new_flow
 
 Por padrão, `crewai create crew` cria um projeto JSON-first com `crew.jsonc` e `agents/*.jsonc`. Use `crewai create crew my_new_crew --classic` somente quando quiser o scaffold antigo em Python/YAML com `crew.py`, `config/agents.yaml` e `config/tasks.yaml`.
 
+#### Aliases de flags obsoletas
+
+As flags antigas em snake_case ainda funcionam, mas ficam ocultas no `--help`. Prefira as formas em kebab-case documentadas em cada seção de comando abaixo.
+
+| Obsoleto | Use em vez disso |
+| :--- | :--- |
+| `--skip_provider` (em `crewai create crew`) | `--skip-provider` |
+| `--n_iterations` (em `crewai train`, `crewai test`) | `--n-iterations` |
+| `--task_id` (em `crewai replay`) | `--task-id` |
+
 ### 2. Version
 
 Mostre a versão instalada do CrewAI.
@@ -80,7 +90,7 @@ Treine o crew por um número específico de iterações.
 crewai train [OPTIONS]
 ```
 
-- `-n, --n_iterations INTEGER`: Número de iterações para treinar o crew (padrão: 5)
+- `-n, --n-iterations INTEGER`: Número de iterações para treinar o crew (padrão: 5)
 - `-f, --filename TEXT`: Caminho para um arquivo customizado para treinamento (padrão: "trained_agents_data.pkl")
 
 Exemplo:
@@ -113,7 +123,7 @@ Reexecute a execução do crew a partir de uma tarefa específica.
 crewai replay [OPTIONS]
 ```
 
-- `-t, --task_id TEXT`: Reexecuta o crew a partir deste task ID, incluindo todas as tarefas subsequentes
+- `-t, --task-id TEXT`: Reexecuta o crew a partir deste task ID, incluindo todas as tarefas subsequentes
 
 Exemplo:
 
@@ -160,7 +170,7 @@ Teste o crew e avalie os resultados.
 crewai test [OPTIONS]
 ```
 
-- `-n, --n_iterations INTEGER`: Número de iterações para testar o crew (padrão: 3)
+- `-n, --n-iterations INTEGER`: Número de iterações para testar o crew (padrão: 3)
 - `-m, --model TEXT`: Modelo LLM para executar os testes no Crew (padrão: "gpt-4o-mini")
 
 Exemplo:
