@@ -43,6 +43,24 @@ def _reregister_listener() -> None:
 
 
 @pytest.fixture
+def flow_spans(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
+    """Record (flow_name, origin) for every Flow Execution span."""
+    from crewai.events import event_listener as listener_module
+
+    _reregister_listener()
+
+    recorded: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        listener_module.event_listener._telemetry,
+        "flow_execution_span",
+        lambda flow_name, node_names, origin="user": recorded.append(
+            (flow_name, origin)
+        ),
+    )
+    return recorded
+
+
+@pytest.fixture
 def durations(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, float, str]]:
     """Record every (flow_name, duration_ms, outcome) the listener reports."""
     from crewai.events import event_listener as listener_module
@@ -53,7 +71,7 @@ def durations(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, float, str]]:
     monkeypatch.setattr(
         listener_module.event_listener._telemetry,
         "flow_completed_span",
-        lambda flow_name, duration_ms, outcome: recorded.append(
+        lambda flow_name, duration_ms, outcome, origin="user": recorded.append(
             (flow_name, duration_ms, outcome)
         ),
     )
@@ -127,7 +145,7 @@ def test_a_failed_flow_is_still_counted_as_an_execution(
     monkeypatch.setattr(
         listener_module.event_listener._telemetry,
         "flow_execution_span",
-        lambda flow_name, node_names: started.append(flow_name),
+        lambda flow_name, node_names, origin="user": started.append(flow_name),
     )
 
     class BoomFlow(Flow):
@@ -303,3 +321,97 @@ def test_duration_is_reported_once_per_run(
     )
 
     assert len(durations) == 1
+
+
+def test_user_authored_flows_are_tagged_as_user(flow_spans) -> None:
+    class MyOwnFlow(Flow):
+        @start()
+        def go(self) -> str:
+            return "ok"
+
+    MyOwnFlow().kickoff()
+
+    assert ("MyOwnFlow", "user") in flow_spans
+
+
+def test_crewais_own_agent_executor_is_tagged_internal(flow_spans) -> None:
+    """The agent executor is a Flow and runs once per agent execution.
+
+    Without an origin tag it is indistinguishable from a user's flows in the
+    daily counts, and it dominates them.
+    """
+    from crewai import Agent, Crew, Task
+    from crewai.llms.base_llm import BaseLLM
+
+    class StubLLM(BaseLLM):
+        def __init__(self) -> None:
+            super().__init__(model="stub-model")
+
+        def call(self, messages, **kwargs) -> str:
+            return "Final Answer: done"
+
+        def supports_function_calling(self) -> bool:
+            return False
+
+        def supports_stop_words(self) -> bool:
+            return False
+
+        def get_context_window_size(self) -> int:
+            return 8192
+
+    agent = Agent(role="R", goal="G", backstory="B", llm=StubLLM())
+    task = Task(description="Do it", expected_output="A result", agent=agent)
+    Crew(agents=[agent], tasks=[task]).kickoff()
+
+    origins = {name: origin for name, origin in flow_spans}
+    assert origins.get("AgentExecutor") == "internal"
+
+
+def test_resumed_flow_is_reported(tmp_path, features: list[str]) -> None:
+    """A restored run is only visible here - there is no resume event.
+
+    Without it, a paused flow that was abandoned cannot be told apart from one
+    the user came back to.
+    """
+    from pydantic import BaseModel
+
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.flow_events import FlowPausedEvent
+    from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+
+    persistence = SQLiteFlowPersistence(str(tmp_path / "flows.db"))
+
+    class State(BaseModel):
+        id: str = "resume-test-1"
+
+    class AsyncProvider:
+        def request_feedback(self, context: PendingFeedbackContext, flow: Flow) -> str:
+            raise HumanFeedbackPending(context=context)
+
+    class ReviewFlow(Flow[State]):
+        @start()
+        @human_feedback(message="Review:", provider=AsyncProvider())
+        def draft(self) -> str:
+            return "draft"
+
+        @listen(draft)
+        def finish(self, result) -> str:
+            return f"final: {result.feedback}"
+
+    paused: dict[str, str] = {}
+
+    @crewai_event_bus.on(FlowPausedEvent)
+    def _capture(source, event) -> None:
+        paused["flow_id"] = event.flow_id
+
+    with contextlib.suppress(BaseException):
+        ReviewFlow(persistence=persistence).kickoff()
+
+    assert "flow:paused" in features
+    assert "flow:resumed" not in features
+
+    flow = ReviewFlow.from_pending(paused["flow_id"], persistence)
+    flow.resume("looks good")
+
+    assert "flow:resumed" in features
+    assert "flow:completed" in features

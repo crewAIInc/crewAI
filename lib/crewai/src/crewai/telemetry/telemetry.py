@@ -991,12 +991,18 @@ class Telemetry:
 
         self._safe_telemetry_operation(_operation)
 
-    def flow_execution_span(self, flow_name: str, node_names: list[str]) -> None:
+    def flow_execution_span(
+        self, flow_name: str, node_names: list[str], origin: str = "user"
+    ) -> None:
         """Records the execution of a flow.
 
         Args:
             flow_name: Name of the flow being executed.
             node_names: List of nodes being executed in the flow.
+            origin: ``"internal"`` for flows CrewAI itself runs (the agent
+                executor), ``"user"`` for flows the caller authored. Without it
+                the agent executor, which runs once per agent execution, is
+                indistinguishable from a user's own flows in the daily counts.
         """
 
         def _operation() -> None:
@@ -1009,12 +1015,13 @@ class Telemetry:
             )
             self._add_attribute(span, "flow_name", flow_name)
             self._add_attribute(span, "node_names", json.dumps(node_names))
+            self._add_attribute(span, "origin", origin)
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
 
     def flow_completed_span(
-        self, flow_name: str, duration_ms: float, outcome: str
+        self, flow_name: str, duration_ms: float, outcome: str, origin: str = "user"
     ) -> None:
         """Records how long a flow ran and how it ended.
 
@@ -1033,6 +1040,8 @@ class Telemetry:
             duration_ms: Wall-clock milliseconds from flow start, measured on a
                 monotonic clock.
             outcome: Either ``"completed"`` or ``"failed"``.
+            origin: ``"internal"`` for flows CrewAI itself runs (the agent
+                executor), ``"user"`` for flows the caller authored.
         """
 
         def _operation() -> None:
@@ -1042,6 +1051,7 @@ class Telemetry:
             self._add_attribute(span, "flow_name", flow_name)
             self._add_attribute(span, "duration_ms", duration_ms)
             self._add_attribute(span, "outcome", outcome)
+            self._add_attribute(span, "origin", origin)
             close_span(span)
 
         self._safe_telemetry_operation(_operation)

@@ -308,6 +308,17 @@ class EventListener(BaseEventListener):
         def on_flow_created(_: Any, event: FlowCreatedEvent) -> None:
             self._telemetry.flow_creation_span(event.flow_name)
 
+        def _flow_origin(source: Any) -> str:
+            """Separate CrewAI's own flows from the caller's.
+
+            The agent executor is itself a Flow and runs once per agent
+            execution, so it dominates flow counts and would otherwise be
+            indistinguishable from flows a user wrote.
+            """
+            return (
+                "internal" if type(source).__module__.startswith("crewai.") else "user"
+            )
+
         def _report_flow_duration(source: Any, flow_name: str, outcome: str) -> None:
             """Emit the elapsed time for a flow that reached a terminal state.
 
@@ -320,15 +331,23 @@ class EventListener(BaseEventListener):
                 return
             source._telemetry_started_at = None
             self._telemetry.flow_completed_span(
-                flow_name, (time.monotonic() - started_at) * 1000, outcome
+                flow_name,
+                (time.monotonic() - started_at) * 1000,
+                outcome,
+                _flow_origin(source),
             )
 
         @crewai_event_bus.on(FlowStartedEvent)
         def on_flow_started(source: Any, event: FlowStartedEvent) -> None:
             self._telemetry.flow_execution_span(
-                event.flow_name, list(source._methods.keys())
+                event.flow_name, list(source._methods.keys()), _flow_origin(source)
             )
             source._telemetry_started_at = time.monotonic()
+            if getattr(source, "_is_execution_resuming", False):
+                # No resume event exists, so a run restored from a pause is only
+                # visible here. Without it, paused flows can be counted but
+                # abandoned ones cannot be told apart from resumed ones.
+                self._telemetry.feature_usage_span("flow:resumed")
             if not getattr(source, "suppress_flow_events", False):
                 self.formatter.handle_flow_created(event.flow_name, str(source.flow_id))
                 self.formatter.handle_flow_started(event.flow_name, str(source.flow_id))
