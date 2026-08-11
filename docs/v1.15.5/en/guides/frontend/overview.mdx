@@ -44,6 +44,10 @@ React app  ──►  CopilotKit runtime (/api/copilotkit)  ──►  CrewAI se
 This guide covers the **self-hosted** path: you run the CrewAI agent server yourself with `ag-ui-crewai`, and it works locally with no managed service. CopilotKit also offers a **managed** path (CopilotKit Cloud / Enterprise Intelligence) with hosted threads and an inspector — see the [CopilotKit CrewAI quickstart](https://docs.copilotkit.ai/crewai-crews/quickstart) if you want that instead. The frontend code in this section is the same either way; only how the agent is hosted and registered differs.
 </Note>
 
+<Note>
+CrewAI runs behind AG-UI in three shapes: regular **Flows** (used throughout these guides), **[Conversational Flows](/en/guides/frontend/conversational-flows)** (native, session-aware, turn-based, at full feature parity), and **Crews** (basic chat). The frontend in this section is identical across them — only the backend authoring and registration differ.
+</Note>
+
 ## Integration guide
 
 <Steps>
