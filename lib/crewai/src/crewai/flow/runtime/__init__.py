@@ -719,6 +719,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _method_call_counts: dict[FlowMethodName, int] = PrivateAttr(default_factory=dict)
     _is_execution_resuming: bool = PrivateAttr(default=False)
     _restored_from_checkpoint: bool = PrivateAttr(default=False)
+    # Monotonic stamp set by the telemetry listener at flow start, so the
+    # duration span emitted at the end does not need to hold a span open for
+    # the life of the run.
+    _telemetry_started_at: float | None = PrivateAttr(default=None)
     _event_futures: list[Future[None]] = PrivateAttr(default_factory=list)
     _pending_feedback_context: PendingFeedbackContext | None = PrivateAttr(default=None)
     _human_feedback_method_outputs: dict[str, Any] = PrivateAttr(default_factory=dict)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from io import StringIO
+import time
 from typing import TYPE_CHECKING, Any
 
 from pydantic import Field, PrivateAttr
@@ -307,11 +308,27 @@ class EventListener(BaseEventListener):
         def on_flow_created(_: Any, event: FlowCreatedEvent) -> None:
             self._telemetry.flow_creation_span(event.flow_name)
 
+        def _report_flow_duration(source: Any, flow_name: str, outcome: str) -> None:
+            """Emit the elapsed time for a flow that reached a terminal state.
+
+            A flow can finish without this listener having seen it start - a
+            conversational turn re-emits completion for a restored run - so a
+            missing stamp means "no duration to report", not an error.
+            """
+            started_at = getattr(source, "_telemetry_started_at", None)
+            if started_at is None:
+                return
+            source._telemetry_started_at = None
+            self._telemetry.flow_completed_span(
+                flow_name, (time.monotonic() - started_at) * 1000, outcome
+            )
+
         @crewai_event_bus.on(FlowStartedEvent)
         def on_flow_started(source: Any, event: FlowStartedEvent) -> None:
             self._telemetry.flow_execution_span(
                 event.flow_name, list(source._methods.keys())
             )
+            source._telemetry_started_at = time.monotonic()
             if not getattr(source, "suppress_flow_events", False):
                 self.formatter.handle_flow_created(event.flow_name, str(source.flow_id))
                 self.formatter.handle_flow_started(event.flow_name, str(source.flow_id))
@@ -319,6 +336,7 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
             self._telemetry.feature_usage_span("flow:completed")
+            _report_flow_duration(source, event.flow_name, "completed")
 
             if not getattr(source, "suppress_flow_events", False):
                 self.formatter.handle_flow_status(
@@ -329,6 +347,7 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(FlowFailedEvent)
         def on_flow_failed(source: Any, event: FlowFailedEvent) -> None:
             self._telemetry.feature_usage_span("flow:failed")
+            _report_flow_duration(source, event.flow_name, "failed")
 
             if not getattr(source, "suppress_flow_events", False):
                 self.formatter.handle_flow_status(

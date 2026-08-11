@@ -13,6 +13,7 @@ the input and conversation-failure events had no listener at all.
 from __future__ import annotations
 
 import contextlib
+import time
 
 import pytest
 
@@ -39,6 +40,24 @@ def _reregister_listener() -> None:
         return
 
     listener_module.event_listener.setup_listeners(crewai_event_bus)
+
+
+@pytest.fixture
+def durations(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, float, str]]:
+    """Record every (flow_name, duration_ms, outcome) the listener reports."""
+    from crewai.events import event_listener as listener_module
+
+    _reregister_listener()
+
+    recorded: list[tuple[str, float, str]] = []
+    monkeypatch.setattr(
+        listener_module.event_listener._telemetry,
+        "flow_completed_span",
+        lambda flow_name, duration_ms, outcome: recorded.append(
+            (flow_name, duration_ms, outcome)
+        ),
+    )
+    return recorded
 
 
 @pytest.fixture
@@ -199,3 +218,88 @@ def test_no_user_authored_strings_are_recorded(features: list[str]) -> None:
         assert "my_secret_method_name" not in feature
         assert "secret error detail" not in feature
         assert "SecretNamedFlow" not in feature
+
+
+def test_completed_flow_reports_a_real_duration(
+    durations: list[tuple[str, float, str]],
+) -> None:
+    """Elapsed time must be measured, not merely present."""
+
+    class SlowFlow(Flow):
+        @start()
+        def go(self) -> str:
+            time.sleep(0.05)
+            return "ok"
+
+    SlowFlow().kickoff()
+
+    assert len(durations) == 1
+    flow_name, duration_ms, outcome = durations[0]
+    assert flow_name == "SlowFlow"
+    assert outcome == "completed"
+    assert duration_ms >= 50
+
+
+def test_failed_flow_reports_its_duration_and_outcome(
+    durations: list[tuple[str, float, str]],
+) -> None:
+    class SlowBoomFlow(Flow):
+        @start()
+        def go(self) -> str:
+            time.sleep(0.05)
+            raise RuntimeError("boom")
+
+    with pytest.raises(RuntimeError, match="boom"):
+        SlowBoomFlow().kickoff()
+
+    assert len(durations) == 1
+    flow_name, duration_ms, outcome = durations[0]
+    assert flow_name == "SlowBoomFlow"
+    assert outcome == "failed"
+    assert duration_ms >= 50
+
+
+def test_no_duration_is_reported_without_a_recorded_start(
+    durations: list[tuple[str, float, str]],
+) -> None:
+    """A completion with no observed start reports nothing, and does not raise.
+
+    A conversational turn can re-emit completion for a restored run, so the
+    stamp is genuinely absent rather than impossible.
+    """
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.flow_events import FlowFinishedEvent
+
+    class NeverStartedFlow(Flow):
+        @start()
+        def go(self) -> str:
+            return "ok"
+
+    flow = NeverStartedFlow()
+    crewai_event_bus.emit(
+        flow,
+        FlowFinishedEvent(flow_name="NeverStartedFlow", result="ok", state={}),
+    )
+
+    assert durations == []
+
+
+def test_duration_is_reported_once_per_run(
+    durations: list[tuple[str, float, str]],
+) -> None:
+    """The stamp is cleared on use, so a repeated completion cannot double-count."""
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.flow_events import FlowFinishedEvent
+
+    class OkFlow(Flow):
+        @start()
+        def go(self) -> str:
+            return "ok"
+
+    flow = OkFlow()
+    flow.kickoff()
+    crewai_event_bus.emit(
+        flow, FlowFinishedEvent(flow_name="OkFlow", result="ok", state={})
+    )
+
+    assert len(durations) == 1

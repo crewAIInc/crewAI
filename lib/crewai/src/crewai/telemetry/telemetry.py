@@ -1013,6 +1013,39 @@ class Telemetry:
 
         self._safe_telemetry_operation(_operation)
 
+    def flow_completed_span(
+        self, flow_name: str, duration_ms: float, outcome: str
+    ) -> None:
+        """Records how long a flow ran and how it ended.
+
+        A separate span from ``Flow Execution`` rather than that span held open
+        to completion: ``Flow Execution`` is emitted and closed at start, and
+        the daily aggregate counts it, so holding it would drop every run that
+        is killed or crashes from the execution count entirely.
+
+        The elapsed time is recorded as an explicit ``duration_ms`` attribute
+        rather than left to the span's own duration, which the ingestion
+        pipeline stores as a suffixed string ("0.0000184s") that downstream
+        aggregation cannot parse.
+
+        Args:
+            flow_name: Name of the flow that finished.
+            duration_ms: Wall-clock milliseconds from flow start, measured on a
+                monotonic clock.
+            outcome: Either ``"completed"`` or ``"failed"``.
+        """
+
+        def _operation() -> None:
+            tracer = self.provider.get_tracer(TRACER_NAME)
+            span = tracer.start_span("Flow Completed")
+            self._add_attribute(span, "crewai_version", version("crewai"))
+            self._add_attribute(span, "flow_name", flow_name)
+            self._add_attribute(span, "duration_ms", duration_ms)
+            self._add_attribute(span, "outcome", outcome)
+            close_span(span)
+
+        self._safe_telemetry_operation(_operation)
+
     def env_context_span(self, tool: str) -> None:
         """Records the coding tool environment context."""
 
