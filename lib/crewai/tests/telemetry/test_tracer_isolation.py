@@ -18,7 +18,6 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
 )
 import pytest
 
-import crewai.telemetry.telemetry as telemetry_module
 from crewai.telemetry.constants import TRACER_NAME
 from crewai.telemetry.telemetry import Telemetry
 
@@ -59,7 +58,8 @@ def telemetry_with_exporter(monkeypatch):
     # around the real OTLP exporter, so without this every test in this module
     # attempts a live export to the collector and logs the blocked-network error.
     monkeypatch.setattr(
-        telemetry_module, "SafeOTLPSpanExporter", lambda **_kwargs: _NullExporter()
+        "crewai.telemetry.telemetry.SafeOTLPSpanExporter",
+        lambda **_kwargs: _NullExporter(),
     )
 
     telemetry = Telemetry()

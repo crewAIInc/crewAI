@@ -22,7 +22,6 @@ from crewai_core.runtime_env import (
     detect_coding_agent,
     detect_runtime_context,
 )
-import crewai_core.telemetry as telemetry_module
 from crewai_core.telemetry import Telemetry, common_span_attributes
 from opentelemetry.sdk.trace.export import SpanExportResult
 import pytest
@@ -115,7 +114,8 @@ def test_cli_spans_carry_the_process_context(
     # Patched before construction: __init__ wires a BatchSpanProcessor around the
     # real OTLP exporter, which would attempt a live export to the collector.
     monkeypatch.setattr(
-        telemetry_module, "SafeOTLPSpanExporter", lambda **_kwargs: _NullExporter()
+        "crewai_core.telemetry.SafeOTLPSpanExporter",
+        lambda **_kwargs: _NullExporter(),
     )
     telemetry = Telemetry()
 
