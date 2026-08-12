@@ -190,7 +190,13 @@ class PickleHandler:
         if os.path.exists(key_dir):
             self._validate_key_storage(key_dir, key_path)
         else:
-            os.makedirs(key_dir, mode=0o700, exist_ok=False)
+            try:
+                os.makedirs(key_dir, mode=0o700, exist_ok=False)
+            except FileExistsError:
+                # Another process created the directory between our check and
+                # creation. Validate the winning directory and continue into
+                # the no-clobber key creation path below.
+                self._validate_key_storage(key_dir, key_path)
 
         key = secrets.token_bytes(32)
 
