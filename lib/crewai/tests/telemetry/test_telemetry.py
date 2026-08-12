@@ -364,6 +364,17 @@ def test_flow_completed_records_duration_outcome_and_origin() -> None:
     span.set_attribute.assert_any_call("duration_ms", 12.5)
     span.set_attribute.assert_any_call("outcome", "failed")
     span.set_attribute.assert_any_call("origin", "user")
+    span.set_attribute.assert_any_call("conversational", "false")
+
+
+@pytest.mark.parametrize(("flag", "expected"), [(True, "true"), (False, "false")])
+def test_conversational_is_recorded_as_a_string(flag: bool, expected: str) -> None:
+    """Same reason as resumed: a bool arrives as key presence, not a value."""
+    _tracer, span = _emit(
+        "flow_execution_span", "ResearchFlow", ["start"], "user", False, flag
+    )
+
+    span.set_attribute.assert_any_call("conversational", expected)
 
 
 def test_paused_and_method_failed_record_flow_and_origin() -> None:
