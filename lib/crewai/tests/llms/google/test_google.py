@@ -500,6 +500,36 @@ def test_gemini_message_formatting():
     assert formatted_contents[1].role == "model"
 
 
+def test_gemini_message_formatting_appends_user_turn_after_trailing_model_turn():
+    """
+    Gemini's generateContent API rejects a request whose history ends on a
+    model turn ("Requests ending with a model turn are not supported"). Agent
+    loops can produce this (e.g. after max-iteration handling or a guardrail
+    retry), so formatting must append a synthetic user turn to recover.
+    """
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    test_messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there!"},
+    ]
+
+    formatted_contents, _ = llm._format_messages_for_gemini(test_messages)
+
+    assert formatted_contents[-1].role == "user"
+
+
+def test_gemini_message_formatting_leaves_user_terminated_history_unchanged():
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    test_messages = [{"role": "user", "content": "Hello"}]
+
+    formatted_contents, _ = llm._format_messages_for_gemini(test_messages)
+
+    assert len(formatted_contents) == 1
+    assert formatted_contents[0].role == "user"
+
+
 def test_gemini_streaming_parameter():
     """
     Test that streaming parameter is properly handled
