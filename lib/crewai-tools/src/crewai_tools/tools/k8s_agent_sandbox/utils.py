@@ -23,6 +23,11 @@ def lazy_import_k8s_agent_sandbox(target: str) -> types.ModuleType:
     try:
         obj = importlib.import_module(full_target)
     except ModuleNotFoundError as e:
+        # An installed SDK can raise this too when one of its own dependencies
+        # is missing, and reporting that as an absent SDK sends people down the
+        # wrong path.
+        if e.name != "k8s_agent_sandbox":
+            raise
         raise ImportError(
             "The 'k8s-agent-sandbox' package is required for K8s Agent Sandbox tools. "
         ) from e
