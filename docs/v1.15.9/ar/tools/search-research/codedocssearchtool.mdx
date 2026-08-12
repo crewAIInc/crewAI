@@ -1,0 +1,85 @@
+---
+title: البحث في توثيق الكود باستخدام RAG
+description: أداة `CodeDocsSearchTool` هي أداة RAG (التوليد المعزز بالاسترجاع) قوية مصممة للبحث الدلالي داخل توثيق الكود.
+icon: code
+mode: "wide"
+---
+
+# `CodeDocsSearchTool`
+
+<Note>
+    **تجريبي**: لا نزال نعمل على تحسين الأدوات، لذا قد يحدث سلوك غير متوقع أو تغييرات في المستقبل.
+</Note>
+
+## الوصف
+
+أداة CodeDocsSearchTool هي أداة RAG (التوليد المعزز بالاسترجاع) قوية مصممة للبحث الدلالي داخل توثيق الكود.
+تتيح للمستخدمين العثور بكفاءة على معلومات أو مواضيع محددة داخل توثيق الكود. من خلال تقديم `docs_url` أثناء التهيئة،
+تقتصر الأداة على البحث في موقع التوثيق المحدد. بدلاً من ذلك، بدون `docs_url` محدد،
+تبحث الأداة عبر مجموعة واسعة من توثيق الكود المعروف أو المكتشف خلال تنفيذها، مما يجعلها متعددة الاستخدامات لاحتياجات البحث المختلفة في التوثيق.
+
+## التثبيت
+
+للبدء في استخدام CodeDocsSearchTool، قم أولاً بتثبيت حزمة crewai_tools عبر pip:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## مثال
+
+استخدم CodeDocsSearchTool كما يلي لإجراء عمليات بحث داخل توثيق الكود:
+
+```python Code
+from crewai_tools import CodeDocsSearchTool
+
+# To search any code documentation content
+# if the URL is known or discovered during its execution:
+tool = CodeDocsSearchTool()
+
+# OR
+
+# To specifically focus your search on a given documentation site
+# by providing its URL:
+tool = CodeDocsSearchTool(docs_url='https://docs.example.com/reference')
+```
+<Note>
+    استبدل 'https://docs.example.com/reference' بعنوان URL الخاص بالتوثيق المستهدف
+    و 'How to use search tool' باستعلام البحث المناسب لاحتياجاتك.
+</Note>
+
+## المعاملات
+
+يمكن استخدام المعاملات التالية لتخصيص سلوك `CodeDocsSearchTool`:
+
+| المعامل       | النوع     | الوصف                                                                                                                         |
+|:---------------|:---------|:-------------------------------------------------------------------------------------------------------------------------------------|
+| **docs_url**    | `string` | _اختياري_. يحدد عنوان URL لتوثيق الكود المراد البحث فيه.                                                |
+
+## النموذج المخصص والتضمينات
+
+بشكل افتراضي، تستخدم الأداة OpenAI لكل من التضمينات والتلخيص. لتخصيص النموذج، يمكنك استخدام قاموس تكوين كما يلي:
+
+```python Code
+tool = CodeDocsSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # or google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google-generativeai", # or openai, ollama, ...
+            config=dict(
+                model_name="gemini-embedding-001",
+                task_type="RETRIEVAL_DOCUMENT",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

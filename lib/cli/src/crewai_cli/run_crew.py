@@ -20,6 +20,7 @@ from crewai_cli.input_prompt import (
 )
 from crewai_cli.utils import (
     build_env_with_all_tool_credentials,
+    get_or_create_project_id,
     is_dmn_mode_enabled,
 )
 from crewai_cli.version import get_crewai_tools_dependency, get_crewai_version
@@ -627,6 +628,15 @@ def run_crew(
         return
 
     pyproject_data = read_toml()
+
+    # Backfills projects created before project_id existed. Only here, in a
+    # command the user explicitly invoked - never from the SDK during kickoff.
+    # Placed after the --definition early return so an explicit-flow run does
+    # not touch the cwd; get_or_create_project_id itself refuses to act unless
+    # [tool.crewai] is already present, so an unrelated project is never
+    # rewritten.
+    get_or_create_project_id()
+
     if json_crew_definition := configured_project_json_crew(pyproject_data):
         # Declarative (JSON) crews resolve inputs the same way flows do: --inputs
         # layers over the crew's declared defaults, missing {placeholder}s are

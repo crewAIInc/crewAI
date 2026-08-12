@@ -53,20 +53,22 @@ def test_telemetry_enabled_by_default():
             assert telemetry.ready is True
 
 
-def test_set_tracer_skips_when_provider_already_configured():
-    """A second telemetry instance must not re-install the global provider."""
-    with (
-        patch.dict(os.environ, {}, clear=True),
-        patch(
-            "crewai.telemetry.telemetry.trace.get_tracer_provider",
-            return_value=TracerProvider(),
-        ),
-        patch("crewai.telemetry.telemetry.trace.set_tracer_provider") as mock_set,
-    ):
+def test_set_tracer_never_installs_a_global_provider():
+    """Telemetry must not hijack the process-wide TracerProvider.
+
+    Installing it globally made every OTel-instrumented library in the host
+    process export to CrewAI's collector, so the global provider must be left
+    exactly as it was found whether or not an application installed one.
+    """
+    import opentelemetry.trace as ot
+
+    with patch.dict(os.environ, {}, clear=True):
+        before = ot.get_tracer_provider()
         telemetry = Telemetry()
         telemetry.set_tracer()
+        after = ot.get_tracer_provider()
 
-    mock_set.assert_not_called()
+    assert after is before
     assert telemetry.trace_set is True
 
 
@@ -84,8 +86,10 @@ def test_flow_execution_span_records_crewai_version():
                 "OTEL_SDK_DISABLED": "false",
             },
         ),
-        patch("crewai.telemetry.telemetry.TracerProvider"),
-        patch("crewai.telemetry.telemetry.trace.get_tracer", return_value=tracer),
+        patch(
+            "crewai.telemetry.telemetry.TracerProvider",
+            return_value=Mock(get_tracer=Mock(return_value=tracer)),
+        ),
         patch("crewai.telemetry.telemetry.version", return_value="9.9.9"),
     ):
         telemetry = Telemetry()
@@ -110,12 +114,17 @@ def test_flow_creation_span_records_crewai_version():
                 "OTEL_SDK_DISABLED": "false",
             },
         ),
-        patch("crewai.telemetry.telemetry.TracerProvider"),
-        patch("crewai.telemetry.telemetry.trace.get_tracer", return_value=tracer),
+        patch(
+            "crewai.telemetry.telemetry.TracerProvider",
+            return_value=Mock(get_tracer=Mock(return_value=tracer)),
+        ),
         patch("crewai.telemetry.telemetry.version", return_value="9.9.9"),
     ):
         telemetry = Telemetry()
-        telemetry.flow_creation_span("ResearchFlow")
+        # Flow creation also emits a once-per-process coding_agent feature span;
+        # stub it so this test stays focused on the Flow Creation span.
+        with patch.object(telemetry, "coding_agent_span"):
+            telemetry.flow_creation_span("ResearchFlow")
 
     tracer.start_span.assert_called_once_with("Flow Creation")
     span.set_attribute.assert_any_call("crewai_version", "9.9.9")
@@ -227,3 +236,138 @@ def test_no_signal_handler_traceback_in_non_main_thread():
     mock_holder["logger"].debug.assert_any_call(
         "Skipping signal handler registration: not running in main thread"
     )
+
+
+def test_hook_dispatched_span_counts_point_usage():
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "CREWAI_DISABLE_TELEMETRY": "false",
+                "CREWAI_DISABLE_TRACKING": "false",
+                "OTEL_SDK_DISABLED": "false",
+            },
+        ),
+        patch("crewai.telemetry.telemetry.TracerProvider"),
+    ):
+        telemetry = Telemetry()
+        with patch.object(telemetry, "feature_usage_span") as feature_usage_span:
+            telemetry.hook_dispatched_span("pre_tool_call", "proceeded")
+
+    feature_usage_span.assert_called_once_with("hooks:pre_tool_call")
+
+
+def test_hook_dispatched_span_counts_aborts():
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "CREWAI_DISABLE_TELEMETRY": "false",
+                "CREWAI_DISABLE_TRACKING": "false",
+                "OTEL_SDK_DISABLED": "false",
+            },
+        ),
+        patch("crewai.telemetry.telemetry.TracerProvider"),
+    ):
+        telemetry = Telemetry()
+        with patch.object(telemetry, "feature_usage_span") as feature_usage_span:
+            telemetry.hook_dispatched_span("pre_tool_call", "aborted")
+
+    feature_usage_span.assert_any_call("hooks:pre_tool_call")
+    feature_usage_span.assert_any_call("hooks:aborted")
+    assert feature_usage_span.call_count == 2
+
+
+def test_event_listener_tracks_hook_dispatched_events():
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.event_listener import event_listener
+    from crewai.events.types.hook_events import HookDispatchedEvent
+
+    with (
+        crewai_event_bus.scoped_handlers(),
+        patch.object(
+            event_listener._telemetry,
+            "hook_dispatched_span",
+        ) as hook_dispatched_span,
+    ):
+        event_listener.setup_listeners(crewai_event_bus)
+        crewai_event_bus.emit(
+            "test",
+            HookDispatchedEvent(
+                interception_point="pre_tool_call",
+                outcome="aborted",
+                hook_count=1,
+                duration_ms=1.5,
+            ),
+        )
+        crewai_event_bus.flush()
+
+    hook_dispatched_span.assert_called_once_with(
+        interception_point="pre_tool_call",
+        outcome="aborted",
+    )
+
+
+def _emit(method: str, *args, **kwargs):
+    """Run one telemetry span method against a mocked tracer.
+
+    The singleton is reset first: it caches the provider built on the very
+    first construction, so without this only the earliest caller in a session
+    would see the mocked tracer.
+    """
+    tracer = Mock()
+    span = Mock()
+    tracer.start_span.return_value = span
+    Telemetry._instance = None
+
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "CREWAI_DISABLE_TELEMETRY": "false",
+                "CREWAI_DISABLE_TRACKING": "false",
+                "OTEL_SDK_DISABLED": "false",
+            },
+        ),
+        patch(
+            "crewai.telemetry.telemetry.TracerProvider",
+            return_value=Mock(get_tracer=Mock(return_value=tracer)),
+        ),
+        patch("crewai.telemetry.telemetry.version", return_value="9.9.9"),
+    ):
+        getattr(Telemetry(), method)(*args, **kwargs)
+    Telemetry._instance = None
+    return tracer, span
+
+
+@pytest.mark.parametrize(("resumed", "expected"), [(True, "true"), (False, "false")])
+def test_resumed_is_recorded_as_a_string(resumed: bool, expected: str) -> None:
+    """A boolean is encoded as the presence of a key, not as a value.
+
+    ``false`` arrives as the key simply being absent, which is invisible in the
+    schema and easy to extract wrongly - crew_memory reads 1 for 99.8% of crews
+    for exactly that reason. A string leaves nothing to infer.
+    """
+    _tracer, span = _emit(
+        "flow_execution_span", "ResearchFlow", ["start"], "user", resumed
+    )
+
+    span.set_attribute.assert_any_call("resumed", expected)
+    for call in span.set_attribute.call_args_list:
+        assert call.args[1] is not True and call.args[1] is not False
+
+
+def test_flow_completed_records_duration_outcome_and_origin() -> None:
+    _tracer, span = _emit("flow_completed_span", "ResearchFlow", 12.5, "failed", "user")
+
+    span.set_attribute.assert_any_call("flow_name", "ResearchFlow")
+    span.set_attribute.assert_any_call("duration_ms", 12.5)
+    span.set_attribute.assert_any_call("outcome", "failed")
+    span.set_attribute.assert_any_call("origin", "user")
+
+
+def test_paused_and_method_failed_record_flow_and_origin() -> None:
+    for method in ("flow_paused_span", "flow_method_failed_span"):
+        _tracer, span = _emit(method, "ResearchFlow", "internal")
+        span.set_attribute.assert_any_call("flow_name", "ResearchFlow")
+        span.set_attribute.assert_any_call("origin", "internal")

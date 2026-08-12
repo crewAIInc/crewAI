@@ -4,6 +4,7 @@ from collections.abc import Mapping
 import os
 from pathlib import Path
 import re
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -20,6 +21,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Confirm
 import tomlkit
+import yaml
 
 from crewai_devtools.docs_check import docs_check
 from crewai_devtools.docs_versioning import (
@@ -1421,7 +1423,10 @@ def _repin_crewai_install(run_value: str, version: str) -> str:
     return "".join(result)
 
 
-_DEPLOYMENT_TEST_REPO: Final[str] = "crewAIInc/crew_deployment_test"
+_DEPLOYMENT_TEST_REPOS: Final[tuple[str, ...]] = (
+    "crewAIInc/crew_deployment_test",
+    "crewAIInc/flow_deployment_test",
+)
 
 _PUBLISHED_WORKSPACE_PACKAGES: Final[tuple[str, ...]] = (
     "crewai",
@@ -1435,26 +1440,164 @@ _PYPI_POLL_INTERVAL: Final[int] = 15
 _PYPI_POLL_TIMEOUT: Final[int] = 600
 
 
-def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
-    """Update the deployment test repo to pin the new crewai version.
+_CREWAI_REQUIREMENT_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"^crewai(?:\s*\[[^\]]+\])?(?![\w-])"
+    r"\s*(?:(?P<operator>===|==|~=|!=|>=|<=|>|<)\s*"
+    r"(?P<version>[^\s;]+))?",
+    re.IGNORECASE,
+)
 
-    Clones the repo, updates the crewai[tools] pin in pyproject.toml
+
+def _crewai_requirement_pin(requirement: str) -> str | None:
+    """Return an exact CrewAI pin, or an empty string for a non-exact pin."""
+    match = _CREWAI_REQUIREMENT_PATTERN.match(requirement.strip())
+    if not match:
+        return None
+    if match.group("operator") != "==":
+        return ""
+    return match.group("version") or ""
+
+
+def _pyproject_crewai_requirements(content: str) -> list[tuple[str, str]]:
+    """Collect active CrewAI dependency requirements from pyproject content."""
+    requirements: list[tuple[str, str]] = []
+    doc = tomlkit.parse(content)
+    for key in ("dependencies", "optional-dependencies"):
+        deps = doc.get("project", {}).get(key)
+        if deps is None:
+            continue
+        dep_lists = deps.values() if isinstance(deps, Mapping) else [deps]
+        for dep_list in dep_lists:
+            for dep in dep_list:
+                spec = str(dep)
+                pin = _crewai_requirement_pin(spec)
+                if pin is not None:
+                    requirements.append((spec, pin))
+    return requirements
+
+
+def _workflow_run_commands(content: str) -> list[str]:
+    """Extract shell commands from workflow ``run`` values."""
+    commands: list[str] = []
+
+    def collect_run_commands(node: object) -> None:
+        if isinstance(node, Mapping):
+            for key, value in node.items():
+                if key == "run" and isinstance(value, str):
+                    commands.append(value)
+                collect_run_commands(value)
+        elif isinstance(node, list):
+            for value in node:
+                collect_run_commands(value)
+
+    collect_run_commands(yaml.safe_load(content))
+    return commands
+
+
+def _workflow_crewai_requirements(content: str) -> list[tuple[str, str]]:
+    """Collect CrewAI requirements from executable workflow install commands."""
+    requirements: list[tuple[str, str]] = []
+    for command in _workflow_run_commands(content):
+        normalized = command.replace("\\\n", " ")
+        lexer = shlex.shlex(normalized, posix=True, punctuation_chars=";&|\n")
+        lexer.whitespace = " \t\r"
+        lexer.whitespace_split = True
+        lexer.commenters = "#"
+        try:
+            tokens = list(lexer)
+        except ValueError:
+            continue
+
+        index = 0
+        while index < len(tokens):
+            command_lengths = (
+                (tokens[index : index + 3] == ["uv", "pip", "install"], 3),
+                (tokens[index : index + 2] == ["uv", "add"], 2),
+                (
+                    tokens[index : index + 2]
+                    in (["pip", "install"], ["pip3", "install"]),
+                    2,
+                ),
+                (
+                    tokens[index : index + 4]
+                    in (
+                        ["python", "-m", "pip", "install"],
+                        ["python3", "-m", "pip", "install"],
+                    ),
+                    4,
+                ),
+            )
+            install_length = next(
+                (length for matched, length in command_lengths if matched),
+                0,
+            )
+            if not install_length:
+                index += 1
+                continue
+
+            index += install_length
+            while index < len(tokens) and tokens[index] not in {
+                ";",
+                "&&",
+                "||",
+                "|",
+                "\n",
+            }:
+                argument = tokens[index]
+                pin = _crewai_requirement_pin(argument)
+                if pin is not None:
+                    requirements.append((argument, pin))
+                index += 1
+    return requirements
+
+
+def _validate_deployment_repo_crewai_pin(
+    repo_dir: Path,
+    pyproject_content: str,
+    version: str,
+) -> None:
+    """Fail unless every effective canary CrewAI requirement has the exact pin."""
+    requirements = _pyproject_crewai_requirements(pyproject_content)
+
+    workflows_dir = repo_dir / ".github" / "workflows"
+    if workflows_dir.exists():
+        for workflow in workflows_dir.iterdir():
+            if workflow.is_file() and workflow.suffix in (".yml", ".yaml"):
+                requirements.extend(
+                    _workflow_crewai_requirements(workflow.read_text(encoding="utf-8"))
+                )
+
+    if not requirements:
+        raise RuntimeError(f"No effective CrewAI dependency found in {repo_dir.name}")
+
+    mismatches = [spec for spec, pin in requirements if pin != version]
+    if mismatches:
+        found = ", ".join(repr(spec) for spec in mismatches)
+        raise RuntimeError(
+            f"CrewAI dependencies in {repo_dir.name} must all pin {version}; "
+            f"found {found}"
+        )
+
+
+def _update_deployment_test_repo(repo: str, version: str, is_prerelease: bool) -> None:
+    """Update a deployment test repo to pin the new crewai version.
+
+    Clones the repo, updates the CrewAI pin in pyproject.toml
     and any crewai[extras] pins in .github/workflows, regenerates the
     lockfile, commits to a branch, pushes, opens a PR against main,
     then polls until the PR is merged (or closed).
 
     Args:
+        repo: GitHub repository containing the deployment canary.
         version: New crewai version string.
         is_prerelease: Whether this is a pre-release version.
     """
-    console.print(
-        f"\n[bold cyan]Updating {_DEPLOYMENT_TEST_REPO} to {version}[/bold cyan]"
-    )
+    console.print(f"\n[bold cyan]Updating {repo} to {version}[/bold cyan]")
 
     with tempfile.TemporaryDirectory() as tmp:
-        repo_dir = Path(tmp) / "crew_deployment_test"
-        run_command(["gh", "repo", "clone", _DEPLOYMENT_TEST_REPO, str(repo_dir)])
-        console.print(f"[green]✓[/green] Cloned {_DEPLOYMENT_TEST_REPO}")
+        repo_dir = Path(tmp) / repo.rsplit("/", 1)[-1]
+        run_command(["gh", "repo", "clone", repo, str(repo_dir)])
+        console.print(f"[green]✓[/green] Cloned {repo}")
 
         pyproject = repo_dir / "pyproject.toml"
         content = pyproject.read_text()
@@ -1462,17 +1605,17 @@ def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
         pyproject_changed = new_content != content
         if pyproject_changed:
             pyproject.write_text(new_content)
-            console.print(f"[green]✓[/green] Updated crewai[tools] pin to {version}")
+            console.print(f"[green]✓[/green] Updated crewai pin to {version}")
         else:
-            console.print(
-                "[yellow]Warning:[/yellow] No crewai[tools] pin found to update"
-            )
+            console.print("[yellow]Warning:[/yellow] No crewai pin found to update")
 
         updated_workflows = _update_repo_workflows_crewai_pins(repo_dir, version)
         for wf in updated_workflows:
             console.print(
                 f"[green]✓[/green] Updated crewai pin in {wf.relative_to(repo_dir)}"
             )
+
+        _validate_deployment_repo_crewai_pin(repo_dir, new_content, version)
 
         if not pyproject_changed and not updated_workflows:
             console.print("[yellow]Nothing to update; skipping commit and PR.[/yellow]")
@@ -1535,10 +1678,16 @@ def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
             ],
             cwd=repo_dir,
         )
-        console.print(f"[green]✓[/green] Opened PR on {_DEPLOYMENT_TEST_REPO}")
+        console.print(f"[green]✓[/green] Opened PR on {repo}")
         console.print(f"[cyan]PR URL:[/cyan] {pr_url.strip()}")
 
         _wait_for_pr_merged(branch, repo_dir)
+
+
+def _update_deployment_test_repos(version: str, is_prerelease: bool) -> None:
+    """Pin and merge the release version in every deployment canary repo."""
+    for repo in _DEPLOYMENT_TEST_REPOS:
+        _update_deployment_test_repo(repo, version, is_prerelease)
 
 
 def _wait_for_pypi(package: str, version: str) -> None:
@@ -2352,13 +2501,13 @@ def release(
 
     try:
         if not dry_run:
-            _update_deployment_test_repo(version, is_prerelease)
+            _update_deployment_test_repos(version, is_prerelease)
     except BaseException as e:
         _print_release_error(e)
         _resume_hint(
-            f"Phase 2 failed updating deployment test repo. "
+            f"Phase 2 failed updating deployment test repos. "
             f"Tag, release, and PyPI are done.\n"
-            f"Fix the issue and update {_DEPLOYMENT_TEST_REPO} manually."
+            "Fix the issue and update the Crew and Flow canary repos manually."
             f"{enterprise_hint}"
         )
         sys.exit(1)

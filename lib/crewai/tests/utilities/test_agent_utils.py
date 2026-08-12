@@ -1031,7 +1031,14 @@ class TestParseToolCallArgs:
     def test_error_result_has_correct_keys(self) -> None:
         _, error = parse_tool_call_args("{bad json}", "tool", "call_7")
         assert error is not None
-        assert set(error.keys()) == {"call_id", "func_name", "result", "from_cache", "original_tool"}
+        assert set(error.keys()) == {
+            "call_id",
+            "func_name",
+            "result",
+            "from_cache",
+            "original_tool",
+            "tool_failure",
+        }
 
 
 class TestExecuteSingleNativeToolCall:

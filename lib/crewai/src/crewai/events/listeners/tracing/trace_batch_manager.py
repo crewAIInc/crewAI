@@ -14,6 +14,7 @@ from crewai_core.plus_api import (
     TraceExecutionMetadata,
     TraceFinalizePayload,
 )
+from crewai_core.project import get_project_id
 from crewai_core.settings import Settings
 from rich.console import Console
 from rich.panel import Panel
@@ -145,6 +146,10 @@ class TraceBatchManager:
                 "flow_name": execution_metadata.get("flow_name", None),
                 "crewai_version": self.current_batch.version,
                 "privacy_level": user_context.get("privacy_level", "standard"),
+                # Read-only: never mints an id. Sent on both the ephemeral and
+                # authenticated paths, so a project's traces stay attributable
+                # to it before and after the user creates an account.
+                "project_id": get_project_id(),
             }
             execution_metadata_payload: TraceExecutionMetadata = {
                 "expected_duration_estimate": execution_metadata.get(

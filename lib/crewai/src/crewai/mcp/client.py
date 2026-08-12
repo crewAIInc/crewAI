@@ -430,7 +430,27 @@ class MCPClient:
             arguments: Tool arguments.
 
         Returns:
-            Tool execution result.
+            Tool execution result content. The ``isError`` flag is dropped;
+            use :meth:`call_tool_result` when the caller needs it.
+        """
+        return (await self.call_tool_result(tool_name, arguments)).content
+
+    async def call_tool_result(
+        self, tool_name: str, arguments: dict[str, Any] | None = None
+    ) -> _MCPToolResult:
+        """Call a tool and return its content together with the ``isError`` flag.
+
+        MCP servers report a failed tool as a *successful* JSON-RPC response
+        carrying ``isError: true``. Callers that only take the content cannot
+        tell that apart from a normal result, which is how a failed step ends
+        up looking like a successful one.
+
+        Args:
+            tool_name: Name of the tool to call.
+            arguments: Tool arguments.
+
+        Returns:
+            The content string plus whether the server flagged it as an error.
         """
         if not self.connected:
             await self.connect()
@@ -492,7 +512,7 @@ class MCPClient:
                     ),
                 )
 
-            return tool_result.content
+            return tool_result
         except Exception as e:
             failed_at = datetime.now()
             error_type = (
