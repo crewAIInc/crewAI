@@ -1024,7 +1024,12 @@ class Telemetry:
             self._add_attribute(span, "flow_name", flow_name)
             self._add_attribute(span, "node_names", json.dumps(node_names))
             self._add_attribute(span, "origin", origin)
-            self._add_attribute(span, "resumed", resumed)
+            # Recorded as a string rather than a bool. The pipeline encodes a
+            # boolean as the presence of a vBool key - false arrives as the key
+            # simply being absent - which is invisible in the schema and easy to
+            # extract wrongly. crew_memory reads 1 for 99.8% of crews for exactly
+            # that reason, against a field that defaults to False.
+            self._add_attribute(span, "resumed", "true" if resumed else "false")
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
