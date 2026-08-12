@@ -335,10 +335,8 @@ class EventListener(BaseEventListener):
             conversational turn re-emits completion for a restored run - so a
             missing stamp means "no duration to report", not an error.
             """
-            # Cleared on every terminal path, not only on finish: a turn that
-            # fails without deferred finalization ends via FlowFailedEvent, and
-            # a flag left set there would mark the next run on this instance
-            # failed.
+            # Reset point for the flag a deferred session accumulates across
+            # turns, so a later session on this instance starts clean.
             source._telemetry_turn_failed = False
             started_at = getattr(source, "_telemetry_started_at", None)
             if started_at is None:
@@ -406,9 +404,13 @@ class EventListener(BaseEventListener):
             source: Any, event: ConversationTurnFailedEvent
         ) -> None:
             self._telemetry.feature_usage_span("flow:conversation_turn_failed")
-            # A conversational session closes with FlowFinishedEvent whatever
-            # happened, so record the failure for on_flow_finished to read.
-            source._telemetry_turn_failed = True
+            # A deferred session closes with FlowFinishedEvent whatever happened,
+            # so record the failure for on_flow_finished to read. Without
+            # deferral the run already emitted FlowFailedEvent before
+            # handle_turn emits this one - it cleared the stamp, and flagging
+            # now would mark the next turn on this instance failed.
+            if getattr(source, "_telemetry_started_at", None) is not None:
+                source._telemetry_turn_failed = True
 
         @crewai_event_bus.on(FlowInputRequestedEvent)
         def on_flow_input_requested(_: Any, event: FlowInputRequestedEvent) -> None:

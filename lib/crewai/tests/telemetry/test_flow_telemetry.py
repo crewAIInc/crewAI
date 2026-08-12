@@ -17,6 +17,7 @@ import time
 
 import pytest
 
+from crewai.experimental.conversational import ConversationConfig
 from crewai.flow.async_feedback import HumanFeedbackPending, PendingFeedbackContext
 from crewai.flow.flow import Flow, listen, start
 from crewai.flow.human_feedback import human_feedback
@@ -220,14 +221,17 @@ def test_a_failed_flow_is_still_counted_as_an_execution(
 def test_requesting_input_reports_both_sides(features: list[str]) -> None:
     class StubProvider:
         def request_input(self, message: str, flow: Flow, metadata=None):
-            return InputResponse(value="typed answer")
+            return InputResponse(text="typed answer")
 
     class AskFlow(Flow):
         @start()
         def go(self) -> str:
             return self.ask("What topic?")
 
-    AskFlow(input_provider=StubProvider()).kickoff()
+    # ask() swallows provider errors and returns None, so the answer is
+    # asserted too: a provider that raises would otherwise still emit both
+    # signals and pass this test.
+    assert AskFlow(input_provider=StubProvider()).kickoff() == "typed answer"
 
     emitted = features
     assert "flow:input_requested" in emitted
@@ -547,6 +551,64 @@ def test_a_failed_conversation_session_is_not_reported_completed(
 
     assert "flow:conversation_turn_failed" in features
     assert all(outcome != "completed" for _n, _d, outcome in durations)
+
+
+def test_a_deferred_session_still_reports_a_failed_turn(
+    durations: list[tuple[str, float, str]],
+) -> None:
+    """A deferring session has no per-turn terminal event to carry the failure.
+
+    Its only outcome span is the one ``finalize_session_traces()`` triggers, so
+    the turn-failure flag is what makes that span say ``failed``. Deferral is
+    the default for a conversational flow, so this is the common path.
+    """
+
+    class DeferringChat(Flow):
+        conversational = True
+
+        @start()
+        def begin(self) -> str:
+            raise RuntimeError("turn exploded")
+
+    chat = DeferringChat()
+    with pytest.raises(RuntimeError, match="turn exploded"):
+        chat.handle_turn("hello")
+    chat.finalize_session_traces()
+    # finalize_session_traces() emits without awaiting its handlers.
+    wait_for_event_handlers()
+
+    assert [outcome for _n, _d, outcome in durations] == ["failed"]
+
+
+def test_a_failed_turn_does_not_mark_the_next_turn_failed(
+    durations: list[tuple[str, float, str]],
+) -> None:
+    """A session that opts out of deferral ends each turn with its own event.
+
+    That terminal event fires inside ``kickoff()``, before ``handle_turn()``
+    emits the turn-failure event, so the flag was set after the run that owned
+    it had already cleared it - and the next healthy turn read it as failed.
+    """
+
+    turns: list[str] = []
+
+    @ConversationConfig(defer_trace_finalization=False)
+    class FlakyChat(Flow):
+        conversational = True
+
+        @start()
+        def begin(self) -> str:
+            turns.append("turn")
+            if len(turns) == 1:
+                raise RuntimeError("turn exploded")
+            return "second turn is fine"
+
+    chat = FlakyChat()
+    with pytest.raises(RuntimeError, match="turn exploded"):
+        chat.handle_turn("hello")
+    chat.handle_turn("again")
+
+    assert [outcome for _n, _d, outcome in durations] == ["failed", "completed"]
 
 
 def test_infrastructure_flows_do_not_pollute_outcome_signals(
