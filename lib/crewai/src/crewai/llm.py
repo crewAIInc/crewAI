@@ -2360,6 +2360,14 @@ class LLM(BaseLLM):
         ):
             return [*messages, {"role": "user", "content": ""}]  # type: ignore[list-item]
 
+        # Handle Gemini models - they require the last message to not be 'assistant'
+        if (
+            ("gemini" in self.model.lower() or "google" in self.model.lower())
+            and messages
+            and messages[-1]["role"] == "assistant"
+        ):
+            return [*messages, {"role": "user", "content": "Please continue."}]  # type: ignore[list-item]
+
         if not self.is_anthropic:
             return messages  # type: ignore[return-value]
 
