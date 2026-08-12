@@ -20,7 +20,7 @@ crewai test
 إذا أردت تشغيل المزيد من التكرارات أو استخدام نموذج مختلف، يمكنك تحديد المعاملات هكذا:
 
 ```bash
-crewai test --n_iterations 5 --model gpt-4o
+crewai test --n-iterations 5 --model gpt-4o
 ```
 
 أو باستخدام الصيغة المختصرة:
@@ -28,6 +28,11 @@ crewai test --n_iterations 5 --model gpt-4o
 ```bash
 crewai test -n 5 -m gpt-4o
 ```
+
+<Note>
+  العلم القديم `--n_iterations` لا يزال يعمل، لكنه مهمل ومخفي من `--help`.
+  استخدم `--n-iterations` (أو `-n`) بدلاً من ذلك.
+</Note>
 
 عند تشغيل أمر `crewai test`، سيتم تنفيذ الطاقم للعدد المحدد من التكرارات، وستُعرض مقاييس الأداء في نهاية التشغيل.
 

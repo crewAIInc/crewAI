@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from io import StringIO
+import time
 from typing import TYPE_CHECKING, Any
 
 from pydantic import Field, PrivateAttr
@@ -42,9 +43,12 @@ from crewai.events.types.env_events import (
 )
 from crewai.events.types.flow_events import (
     ConversationTurnCompletedEvent,
+    ConversationTurnFailedEvent,
     FlowCreatedEvent,
     FlowFailedEvent,
     FlowFinishedEvent,
+    FlowInputReceivedEvent,
+    FlowInputRequestedEvent,
     FlowPausedEvent,
     FlowStartedEvent,
     HumanFeedbackReceivedEvent,
@@ -304,17 +308,76 @@ class EventListener(BaseEventListener):
         def on_flow_created(_: Any, event: FlowCreatedEvent) -> None:
             self._telemetry.flow_creation_span(event.flow_name)
 
+        def _flow_origin(source: Any) -> str:
+            """Separate flows CrewAI runs itself from the ones a caller wrote.
+
+            The agent executor and the memory encoding/recall flows are all
+            Flows and run far more often than anything a user wrote, so without
+            this they swamp every flow metric.
+
+            Reads the declared ``is_crewai_internal`` marker rather than the
+            defining module: a declarative flow built with
+            ``Flow.from_declaration()`` is typed as ``Flow`` itself, so a module
+            check would report a caller's flow as internal. It is also not
+            ``suppress_flow_events``, which only asks for console quiet and can
+            legitimately be set on a caller's own flow.
+            """
+            return (
+                "internal"
+                if getattr(type(source), "is_crewai_internal", False)
+                else "user"
+            )
+
+        def _report_flow_duration(source: Any, flow_name: str, outcome: str) -> None:
+            """Emit the elapsed time for a flow that reached a terminal state.
+
+            A flow can finish without this listener having seen it start - a
+            conversational turn re-emits completion for a restored run - so a
+            missing stamp means "no duration to report", not an error.
+            """
+            # Cleared on every terminal path, not only on finish: a turn that
+            # fails without deferred finalization ends via FlowFailedEvent, and
+            # a flag left set there would mark the next run on this instance
+            # failed.
+            source._telemetry_turn_failed = False
+            started_at = getattr(source, "_telemetry_started_at", None)
+            if started_at is None:
+                return
+            source._telemetry_started_at = None
+            self._telemetry.flow_completed_span(
+                flow_name,
+                (time.monotonic() - started_at) * 1000,
+                outcome,
+                _flow_origin(source),
+            )
+
         @crewai_event_bus.on(FlowStartedEvent)
         def on_flow_started(source: Any, event: FlowStartedEvent) -> None:
+            # A run restored from a pause is only visible here: there is no
+            # resume event, and resuming re-enters kickoff(). Keyed off the
+            # pending-feedback context rather than _is_execution_resuming, which
+            # a checkpoint restore also sets even though nobody ever paused.
+            resumed = getattr(source, "_pending_feedback_context", None) is not None
             self._telemetry.flow_execution_span(
-                event.flow_name, list(source._methods.keys())
+                event.flow_name,
+                list(source._methods.keys()),
+                _flow_origin(source),
+                resumed,
             )
+            source._telemetry_started_at = time.monotonic()
             if not getattr(source, "suppress_flow_events", False):
                 self.formatter.handle_flow_created(event.flow_name, str(source.flow_id))
                 self.formatter.handle_flow_started(event.flow_name, str(source.flow_id))
 
         @crewai_event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
+            outcome = (
+                "failed"
+                if getattr(source, "_telemetry_turn_failed", False)
+                else "completed"
+            )
+            _report_flow_duration(source, event.flow_name, outcome)
+
             if not getattr(source, "suppress_flow_events", False):
                 self.formatter.handle_flow_status(
                     event.flow_name,
@@ -323,6 +386,8 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(FlowFailedEvent)
         def on_flow_failed(source: Any, event: FlowFailedEvent) -> None:
+            _report_flow_duration(source, event.flow_name, "failed")
+
             if not getattr(source, "suppress_flow_events", False):
                 self.formatter.handle_flow_status(
                     event.flow_name,
@@ -335,6 +400,23 @@ class EventListener(BaseEventListener):
             _: Any, event: ConversationTurnCompletedEvent
         ) -> None:
             self._telemetry.feature_usage_span("flow:conversation_turn")
+
+        @crewai_event_bus.on(ConversationTurnFailedEvent)
+        def on_conversation_turn_failed(
+            source: Any, event: ConversationTurnFailedEvent
+        ) -> None:
+            self._telemetry.feature_usage_span("flow:conversation_turn_failed")
+            # A conversational session closes with FlowFinishedEvent whatever
+            # happened, so record the failure for on_flow_finished to read.
+            source._telemetry_turn_failed = True
+
+        @crewai_event_bus.on(FlowInputRequestedEvent)
+        def on_flow_input_requested(_: Any, event: FlowInputRequestedEvent) -> None:
+            self._telemetry.feature_usage_span("flow:input_requested")
+
+        @crewai_event_bus.on(FlowInputReceivedEvent)
+        def on_flow_input_received(_: Any, event: FlowInputReceivedEvent) -> None:
+            self._telemetry.feature_usage_span("flow:input_received")
 
         @crewai_event_bus.on(MethodExecutionStartedEvent)
         def on_method_execution_started(
@@ -360,8 +442,14 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(MethodExecutionFailedEvent)
         def on_method_execution_failed(
-            _: Any, event: MethodExecutionFailedEvent
+            source: Any, event: MethodExecutionFailedEvent
         ) -> None:
+            # The method name is not recorded: it is user-authored and would put
+            # arbitrary strings in telemetry.
+            self._telemetry.flow_method_failed_span(
+                event.flow_name, _flow_origin(source)
+            )
+
             self.formatter.handle_method_status(
                 event.method_name,
                 "failed",
@@ -371,13 +459,17 @@ class EventListener(BaseEventListener):
         def on_method_execution_paused(
             _: Any, event: MethodExecutionPausedEvent
         ) -> None:
+            self._telemetry.feature_usage_span("flow:hitl_paused")
+
             self.formatter.handle_method_status(
                 event.method_name,
                 "paused",
             )
 
         @crewai_event_bus.on(FlowPausedEvent)
-        def on_flow_paused(_: Any, event: FlowPausedEvent) -> None:
+        def on_flow_paused(source: Any, event: FlowPausedEvent) -> None:
+            self._telemetry.flow_paused_span(event.flow_name, _flow_origin(source))
+
             self.formatter.handle_flow_status(
                 event.flow_name,
                 event.flow_id,

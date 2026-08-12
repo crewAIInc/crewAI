@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import re
 import shutil
-from typing import Any
+from typing import Any, Literal
 
 import click
 from crewai_core.project import (
@@ -44,15 +44,21 @@ __all__ = [
     "render_template",
     "tree_copy",
     "tree_find_and_replace",
-    "warn_deprecated_command",
+    "warn_deprecated",
     "write_env_file",
 ]
 
 
-def warn_deprecated_command(*, old: str, new: str) -> None:
-    """Print a yellow deprecation warning for a legacy CLI command path."""
+def warn_deprecated(
+    *,
+    kind: Literal["command", "flag"],
+    old: str,
+    new: str,
+) -> None:
+    """Print a yellow deprecation warning for a legacy CLI command or flag."""
+    label = "command" if kind == "command" else "flag"
     click.secho(
-        f"Warning: The command '{old}' is deprecated. Use '{new}' instead.",
+        f"Warning: The {label} '{old}' is deprecated. Use '{new}' instead.",
         fg="yellow",
     )
 

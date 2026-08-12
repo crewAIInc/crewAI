@@ -54,6 +54,16 @@ crewai create flow my_new_flow
 
 افتراضيًا، ينشئ `crewai create crew` مشروعًا JSON-first يحتوي على `crew.jsonc` و `agents/*.jsonc`. استخدم `crewai create crew my_new_crew --classic` فقط إذا أردت البنية القديمة Python/YAML مع `crew.py` و `config/agents.yaml` و `config/tasks.yaml`.
 
+#### أسماء مستعار قديمة للأعلام (مهملة)
+
+لا تزال أعلام snake_case القديمة تعمل، لكنها مخفية من `--help`. يُفضّل استخدام صيغ kebab-case الموثّقة في أقسام الأوامر أدناه.
+
+| مهمل | استخدم بدلاً منه |
+| :--- | :--- |
+| `--skip_provider` (في `crewai create crew`) | `--skip-provider` |
+| `--n_iterations` (في `crewai train`، `crewai test`) | `--n-iterations` |
+| `--task_id` (في `crewai replay`) | `--task-id` |
+
 ### 2. الإصدار
 
 عرض الإصدار المثبت من CrewAI.
@@ -72,7 +82,7 @@ crewai version [OPTIONS]
 crewai train [OPTIONS]
 ```
 
-- `-n, --n_iterations INTEGER`: عدد تكرارات التدريب (افتراضي: 5)
+- `-n, --n-iterations INTEGER`: عدد تكرارات التدريب (افتراضي: 5)
 - `-f, --filename TEXT`: مسار ملف مخصص للتدريب (افتراضي: "trained_agents_data.pkl")
 
 ### 4. الإعادة
@@ -83,7 +93,7 @@ crewai train [OPTIONS]
 crewai replay [OPTIONS]
 ```
 
-- `-t, --task_id TEXT`: إعادة تنفيذ الطاقم من معرّف المهمة هذا، بما في ذلك جميع المهام اللاحقة
+- `-t, --task-id TEXT`: إعادة تنفيذ الطاقم من معرّف المهمة هذا، بما في ذلك جميع المهام اللاحقة
 
 ### 5. سجل مخرجات المهام
 
@@ -117,7 +127,7 @@ crewai reset-memories [OPTIONS]
 crewai test [OPTIONS]
 ```
 
-- `-n, --n_iterations INTEGER`: عدد تكرارات الاختبار (افتراضي: 3)
+- `-n, --n-iterations INTEGER`: عدد تكرارات الاختبار (افتراضي: 3)
 - `-m, --model TEXT`: نموذج LLM لتشغيل الاختبارات (افتراضي: "gpt-4o-mini")
 
 ### 8. التشغيل

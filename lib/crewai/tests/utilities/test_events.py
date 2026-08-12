@@ -505,7 +505,9 @@ def test_flow_emits_start_event(reset_event_listener_singleton):
         flow.kickoff()
 
     assert event_received.wait(timeout=5), "Timeout waiting for flow started event"
-    mock_telemetry.flow_execution_span.assert_called_once_with("TestFlow", ["begin"])
+    mock_telemetry.flow_execution_span.assert_called_once_with(
+        "TestFlow", ["begin"], "user", False
+    )
     assert len(received_events) == 1
     assert received_events[0].flow_name == "TestFlow"
     assert received_events[0].type == "flow_started"
@@ -628,9 +630,10 @@ def test_suppressed_flow_failure_matches_finished_event_emission():
     assert len(failed) == 1
 
 
-def test_abort_before_flow_started_emits_no_failed_event():
+def test_abort_at_execution_start_emits_started_then_failed_events():
     started: list[FlowStartedEvent] = []
     failed: list[FlowFailedEvent] = []
+    finished: list[FlowFinishedEvent] = []
 
     class BlockedFlow(Flow):
         @start()
@@ -654,14 +657,23 @@ def test_abort_before_flow_started_emits_no_failed_event():
             def handle_flow_failed(source, event):
                 failed.append(event)
 
+            @crewai_event_bus.on(FlowFinishedEvent)
+            def handle_flow_finished(source, event):
+                finished.append(event)
+
             with pytest.raises(HookAborted):
                 BlockedFlow().kickoff()
             wait_for_event_handlers()
     finally:
         clear_all()
 
-    assert started == []
-    assert failed == []
+    assert len(started) == 1
+    assert len(failed) == 1
+    assert finished == []
+    assert failed[0].flow_name == "BlockedFlow"
+    assert isinstance(failed[0].error, HookAborted)
+    assert failed[0].error.reason == "blocked by policy"
+    assert failed[0].started_event_id == started[0].event_id
 
 
 def test_resume_emits_failed_event_paired_with_resume_started_event(tmp_path):

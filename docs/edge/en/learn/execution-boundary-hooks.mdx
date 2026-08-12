@@ -120,6 +120,11 @@ def add_defaults(ctx):
 Rewritten inputs flow into task interpolation, so the run behaves as if it was
 kicked off with the modified dict.
 
+Prefer `INPUT` for rewriting and treat `EXECUTION_START` as the allow/deny
+gate. Rewrites at `EXECUTION_START` are still honored — on crews they also
+feed the `before_kickoff` callbacks; on flows they land exactly like an
+`INPUT` rewrite.
+
 ### Output Sanitization
 
 ```python
@@ -156,9 +161,10 @@ def report_outcome(ctx):
 ```
 
 Two caveats: `EXECUTION_END` does not fire when `EXECUTION_START` never
-dispatched (an abort at start counts as the execution never beginning), and
-raising `HookAborted` from a failure-path `EXECUTION_END` dispatch is ignored —
-there is nothing left to abort, and the original error wins.
+dispatched (an abort at start means the boundary never opened, so there is no
+end to pair), and raising `HookAborted` from a failure-path `EXECUTION_END`
+dispatch is ignored — there is nothing left to abort, and the original error
+wins.
 
 ## Ordering
 
@@ -167,6 +173,19 @@ For a crew run the boundary order is:
 ```
 EXECUTION_START → before_kickoff callbacks → INPUT → tasks execute → OUTPUT → EXECUTION_END
 ```
+
+For a flow run, the boundary hooks resolve the inputs before the lifecycle
+events begin:
+
+```
+EXECUTION_START → INPUT → FlowStartedEvent → flow methods execute → OUTPUT → EXECUTION_END → FlowFinishedEvent
+```
+
+`FlowStartedEvent` carries the hook-resolved inputs, and rewriting
+`inputs["id"]` in a boundary hook redirects state restoration. An abort at
+`EXECUTION_START` still surfaces as `FlowStartedEvent` followed by
+`FlowFailedEvent`, emitted at the abort with the payload as resolved by the
+hooks that ran before it.
 
 Hooks at the same point run in registration order, global hooks first, then
 crew-scoped hooks. Telemetry (`HookDispatchedEvent`) is emitted per dispatch.
