@@ -1,7 +1,7 @@
 import logging
 import os
 from time import sleep
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.events.event_types import (
@@ -198,6 +198,55 @@ def test_llm_passes_additional_params():
         assert kwargs["messages"] == messages
 
         assert result == "Test response"
+
+
+def test_call_does_not_mutate_file_messages():
+    llm = LLM(model="openai/gpt-4o", is_litellm=True)
+    messages = [{"role": "user", "content": "describe it", "files": ["image"]}]
+
+    with patch.object(llm, "supports_multimodal", return_value=True), patch(
+        "crewai.llm.format_multimodal_content",
+        return_value=[{"type": "image_url"}],
+    ), patch.object(llm, "_handle_non_streaming_response", return_value="done") as handle:
+        assert llm.call(messages) == "done"
+
+    params = handle.call_args.kwargs["params"]
+    assert params["messages"][0]["content"] == [
+        {"type": "text", "text": "describe it"},
+        {"type": "image_url"},
+    ]
+    assert messages == [
+        {"role": "user", "content": "describe it", "files": ["image"]}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_acall_does_not_mutate_file_messages():
+    llm = LLM(model="openai/gpt-4o", is_litellm=True)
+    messages = [{"role": "user", "content": "describe it", "files": ["image"]}]
+
+    async def format_files(*args, **kwargs):
+        return [{"type": "image_url"}]
+
+    with patch.object(llm, "supports_multimodal", return_value=True), patch(
+        "crewai.llm.aformat_multimodal_content",
+        new=format_files,
+    ), patch.object(
+        llm,
+        "_ahandle_non_streaming_response",
+        new_callable=AsyncMock,
+        return_value="done",
+    ) as handle:
+        assert await llm.acall(messages) == "done"
+
+    params = handle.await_args.kwargs["params"]
+    assert params["messages"][0]["content"] == [
+        {"type": "text", "text": "describe it"},
+        {"type": "image_url"},
+    ]
+    assert messages == [
+        {"role": "user", "content": "describe it", "files": ["image"]}
+    ]
 
 
 def test_get_custom_llm_provider_openrouter():
