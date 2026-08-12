@@ -260,18 +260,6 @@ class Telemetry:
         """
         self.trace_set = self.ready
 
-    def _safe_telemetry_operation(
-        self, operation: Callable[[], Span | None]
-    ) -> Span | None:
-        """Run a span-returning telemetry operation, swallowing failures."""
-        if not self._should_execute_telemetry():
-            return None
-        try:
-            return operation()
-        except Exception as e:
-            logger.debug("Telemetry operation failed: %s", e)
-            return None
-
     def _safe_telemetry_procedure(self, operation: Callable[[], None]) -> None:
         """Run a void telemetry procedure, swallowing failures."""
         if not self._should_execute_telemetry():
