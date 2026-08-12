@@ -56,7 +56,7 @@ def flow_spans(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
     monkeypatch.setattr(
         listener_module.event_listener._telemetry,
         "flow_execution_span",
-        lambda flow_name, node_names, origin="user", resumed=False: recorded.append(
+        lambda flow_name, node_names, origin="user", resumed=False, conversational=False: recorded.append(
             (flow_name, origin)
         ),
     )
@@ -74,9 +74,29 @@ def starts(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, bool]]:
     monkeypatch.setattr(
         listener_module.event_listener._telemetry,
         "flow_execution_span",
-        lambda flow_name, node_names, origin="user", resumed=False: recorded.append(
+        lambda flow_name, node_names, origin="user", resumed=False, conversational=False: recorded.append(
             (flow_name, resumed)
         ),
+    )
+    return recorded
+
+
+@pytest.fixture
+def conversational_marks(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, bool]]:
+    """Record (flow_name, conversational) for every Flow Execution span."""
+    from crewai.events import event_listener as listener_module
+
+    _reregister_listener()
+
+    recorded: list[tuple[str, bool]] = []
+    monkeypatch.setattr(
+        listener_module.event_listener._telemetry,
+        "flow_execution_span",
+        lambda flow_name,
+        node_names,
+        origin="user",
+        resumed=False,
+        conversational=False: recorded.append((flow_name, conversational)),
     )
     return recorded
 
@@ -124,7 +144,7 @@ def durations(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, float, str]]:
     monkeypatch.setattr(
         listener_module.event_listener._telemetry,
         "flow_completed_span",
-        lambda flow_name, duration_ms, outcome, origin="user": recorded.append(
+        lambda flow_name, duration_ms, outcome, origin="user", conversational=False: recorded.append(
             (flow_name, duration_ms, outcome)
         ),
     )
@@ -202,7 +222,7 @@ def test_a_failed_flow_is_still_counted_as_an_execution(
     monkeypatch.setattr(
         listener_module.event_listener._telemetry,
         "flow_execution_span",
-        lambda flow_name, node_names, origin="user", resumed=False: started.append(
+        lambda flow_name, node_names, origin="user", resumed=False, conversational=False: started.append(
             flow_name
         ),
     )
@@ -707,3 +727,37 @@ def test_a_checkpoint_restore_is_not_counted_as_a_resume(
     wait_for_event_handlers()
 
     assert starts == [("RestoredFlow", False)]
+
+
+def test_a_conversational_turn_is_marked(
+    conversational_marks: list[tuple[str, bool]],
+) -> None:
+    """Each turn is its own kickoff, but a session reports one completion.
+
+    Without the marker those spans run many-to-one against Flow Completed and
+    silently drag any completion rate computed across all flows.
+    """
+
+    class Chatty(Flow):
+        conversational = True
+
+        @start()
+        def begin(self) -> str:
+            return "hi"
+
+    Chatty().handle_turn("hello")
+
+    assert ("Chatty", True) in conversational_marks
+
+
+def test_an_ordinary_flow_is_not_marked_conversational(
+    conversational_marks: list[tuple[str, bool]],
+) -> None:
+    class PlainFlow(Flow):
+        @start()
+        def go(self) -> str:
+            return "ok"
+
+    PlainFlow().kickoff()
+
+    assert ("PlainFlow", False) in conversational_marks

@@ -308,6 +308,17 @@ class EventListener(BaseEventListener):
         def on_flow_created(_: Any, event: FlowCreatedEvent) -> None:
             self._telemetry.flow_creation_span(event.flow_name)
 
+        def _is_conversational(source: Any) -> bool:
+            """Whether this run is a turn of a conversational session.
+
+            Reads the flow's own accessor, which covers both the
+            ``conversational = True`` class attribute and a conversational
+            definition. Each turn is its own kickoff while the session reports
+            a single completion, so these spans run many-to-one.
+            """
+            checker = getattr(source, "_is_conversational_enabled", None)
+            return bool(checker()) if callable(checker) else False
+
         def _flow_origin(source: Any) -> str:
             """Separate flows CrewAI runs itself from the ones a caller wrote.
 
@@ -347,6 +358,7 @@ class EventListener(BaseEventListener):
                 (time.monotonic() - started_at) * 1000,
                 outcome,
                 _flow_origin(source),
+                _is_conversational(source),
             )
 
         @crewai_event_bus.on(FlowStartedEvent)
@@ -361,6 +373,7 @@ class EventListener(BaseEventListener):
                 list(source._methods.keys()),
                 _flow_origin(source),
                 resumed,
+                _is_conversational(source),
             )
             source._telemetry_started_at = time.monotonic()
             if not getattr(source, "suppress_flow_events", False):
