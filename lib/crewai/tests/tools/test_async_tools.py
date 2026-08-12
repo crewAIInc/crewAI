@@ -5,6 +5,7 @@ import asyncio
 import pytest
 
 from crewai.tools import BaseTool, tool
+from crewai.tools.structured_tool import CrewStructuredTool
 
 
 class SyncTool(BaseTool):
@@ -140,6 +141,66 @@ class TestToolDecorator:
 
         result = await async_func.arun(value="test")
         assert result == "async: test"
+
+
+class TestToolRunUnderRunningLoop:
+    """Regression tests: running a tool whose ``_run`` returns a coroutine from
+    inside a running event loop must return the result instead of raising
+    ``RuntimeError: asyncio.run() cannot be called from a running event loop``.
+    """
+
+    def test_base_tool_run_inside_running_loop(self) -> None:
+        """BaseTool.run() must resolve a coroutine result under a running loop."""
+
+        class CoroReturningTool(BaseTool):
+            name: str = "coro_returning"
+            description: str = "Returns a coroutine from _run"
+
+            def _run(self, value: str) -> str:
+                async def _inner() -> str:
+                    await asyncio.sleep(0.01)
+                    return f"result: {value}"
+
+                return _inner()  # type: ignore[return-value]
+
+        async def caller() -> str:
+            return CoroReturningTool().run(value="x")
+
+        result = asyncio.run(caller())
+        assert result == "result: x"
+
+    def test_async_decorated_tool_run_inside_running_loop(self) -> None:
+        """@tool with an async function must run under a running loop."""
+
+        @tool("async_in_loop")
+        async def async_func(value: str) -> str:
+            """An async decorated tool."""
+            await asyncio.sleep(0.01)
+            return f"async: {value}"
+
+        async def caller() -> str:
+            return async_func.run(value="test")
+
+        result = asyncio.run(caller())
+        assert result == "async: test"
+
+    def test_structured_tool_invoke_inside_running_loop(self) -> None:
+        """CrewStructuredTool.invoke() must run an async func under a running loop."""
+
+        async def async_func(value: str) -> str:
+            """A structured async tool."""
+            await asyncio.sleep(0.01)
+            return f"structured: {value}"
+
+        structured = CrewStructuredTool.from_function(
+            func=async_func, name="structured_async"
+        )
+
+        async def caller() -> str:
+            return structured.invoke({"value": "test"})
+
+        result = asyncio.run(caller())
+        assert result == "structured: test"
 
 
 class TestAsyncToolWithIO:
