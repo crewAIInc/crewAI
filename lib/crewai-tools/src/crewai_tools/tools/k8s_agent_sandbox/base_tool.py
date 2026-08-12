@@ -60,7 +60,7 @@ def remove_staged_file(sandbox: "Sandbox", path: str) -> None:  # type: ignore[n
     """
 
     try:
-        sandbox.commands.run(
+        result = sandbox.commands.run(
             f"rm -f -- {shlex.quote(path)}",
             timeout=CLEANUP_TIMEOUT_SEC,
         )
@@ -69,6 +69,14 @@ def remove_staged_file(sandbox: "Sandbox", path: str) -> None:  # type: ignore[n
             "Could not remove the temporary file %s from the sandbox.",
             path,
             exc_info=True,
+        )
+        return
+
+    if result.exit_code != 0:
+        logger.warning(
+            "Could not remove the temporary file %s from the sandbox. Error: %s.",
+            path,
+            result.stderr,
         )
 
 

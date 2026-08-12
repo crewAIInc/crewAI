@@ -1,3 +1,4 @@
+from types import ModuleType
 from unittest.mock import patch
 
 import pytest
@@ -17,6 +18,16 @@ def import_module():
             "crewai_tools.tools.k8s_agent_sandbox.utils.importlib.import_module"
         ) as import_module:
             yield import_module
+
+
+def test_imported_module_is_cached(import_module):
+    module = ModuleType("k8s_agent_sandbox.sandbox_client")
+    import_module.return_value = module
+
+    assert lazy_import_k8s_agent_sandbox("sandbox_client") is module
+    assert lazy_import_k8s_agent_sandbox("sandbox_client") is module
+
+    import_module.assert_called_once_with("k8s_agent_sandbox.sandbox_client")
 
 
 def test_missing_sdk_is_reported_as_a_missing_extra(import_module):

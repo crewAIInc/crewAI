@@ -4,7 +4,12 @@ from typing import Any
 from pydantic import BaseModel, Field
 import pytest
 
-from crewai_tools.tools.k8s_agent_sandbox.base_tool import K8sAgentSandboxBaseTool
+from k8s_agent_sandbox.models import ExecutionResult
+
+from crewai_tools.tools.k8s_agent_sandbox.base_tool import (
+    K8sAgentSandboxBaseTool,
+    remove_staged_file,
+)
 
 
 class DummyToolInputSchema(BaseModel):
@@ -34,6 +39,26 @@ class DummyK8sTool(K8sAgentSandboxBaseTool):
             arg=test_arg,
             kwarg=test_kwarg,
         )
+
+
+class TestRemoveStagedFile:
+    def test_failed_cleanup_is_reported(self, mock_sandbox, caplog):
+        mock_sandbox.commands.run.return_value = ExecutionResult(
+            exit_code=1, stdout="", stderr="permission denied"
+        )
+
+        remove_staged_file(mock_sandbox, "/tmp/crewai-staged.py")
+
+        assert "/tmp/crewai-staged.py" in caplog.text
+        assert "permission denied" in caplog.text
+
+    def test_unreachable_sandbox_is_reported(self, mock_sandbox, caplog):
+        mock_sandbox.commands.run.side_effect = RuntimeError("connection lost")
+
+        remove_staged_file(mock_sandbox, "/tmp/crewai-staged.py")
+
+        assert "/tmp/crewai-staged.py" in caplog.text
+        assert "connection lost" in caplog.text
 
 
 def test_tool_added_to_toolset(sample_toolset):
