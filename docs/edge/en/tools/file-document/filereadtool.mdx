@@ -16,7 +16,8 @@ Use it to process text files, read config files, or load data for analysis.
 It works with any text format, such as `.txt`, `.csv`, `.json`, and `.md`.
 The tool always returns plain text. If you need structured data (for example, JSON), parse it in your agent or your own code.
 
-For large files, use `start_line` and `line_count` to read only a range of lines instead of the full file.
+For large files, use `start_line` and `line_count` to read only a range of lines.
+The tool stops once it has those lines, so it does not scan the rest of the file.
 
 ## Installation
 
@@ -31,35 +32,36 @@ pip install 'crewai[tools]'
 ```python Code
 from crewai_tools import FileReadTool
 
-# Agent must pass file_path at runtime
-file_read_tool = FileReadTool()
-content = file_read_tool.run(file_path='path/to/your/file.txt')
+# No default file — pass file_path when you call the tool
+tool = FileReadTool()
+content = tool.run(file_path='path/to/your/file.txt')
 
 # OR set a default file at construction
-file_read_tool = FileReadTool(file_path='path/to/your/file.txt')
-content = file_read_tool.run()  # reads the default file
+tool = FileReadTool(file_path='path/to/your/file.txt')
+content = tool.run()  # reads the default file
 
-# Read only lines 100-149
-partial_content = file_read_tool.run(
-    file_path='path/to/your/file.txt',
-    start_line=100,
-    line_count=50,
-)
+# Read only lines 100-149 of the default file
+partial_content = tool.run(start_line=100, line_count=50)
+
+# Read another file inside the sandbox
+other = tool.run(file_path='path/to/other.txt')
 ```
 
 ## Arguments
 
 The agent can pass these at runtime:
 
-- `file_path`: (Optional) Path to the file to read. Absolute and relative paths are both valid. The file must exist, and the process must have permission to read it. If you omit this argument, the tool reads the default file set at construction. If there is no default, the tool reports that no path was provided.
+- `file_path`: (Optional) Path to the file to read. Absolute paths and relative paths are both valid. A relative path resolves against `base_dir` when set, otherwise against the current working directory. Omit it to read the default file set at construction. If there is no default, the tool returns an error saying no path was provided.
 - `start_line`: (Optional) First line to read. Line numbers start at `1`. Default is `1`.
 - `line_count`: (Optional) How many lines to read. If omitted, the tool reads from `start_line` to the end of the file.
 
 You can set these when you create the tool:
 
-- `file_path`: (Optional) Default file to read when the agent calls the tool with no arguments.
-- `base_dir`: (Optional) Directory that runtime paths must stay inside. Default is the current working directory.
-- `encoding`: (Optional) Text encoding used to decode the file. Default is `utf-8`.
+- `file_path`: (Optional) Default file to read when the agent calls the tool with no path.
+- `base_dir`: (Optional) Directory that runtime paths must stay inside. Default is the current working directory. The tool resolves this path when the tool is created, so a later change of working directory does not move the sandbox.
+- `encoding`: (Optional) Text encoding used to decode the file. Default is `utf-8`. If decoding fails, the tool returns an error and suggests passing a different `encoding`.
+
+Common failures (missing file, permission denied, wrong encoding, or a path outside the sandbox) return an error string. They do not raise an exception.
 
 ## Allowed paths
 
@@ -72,7 +74,7 @@ To let an agent read files outside the working directory, set `base_dir` to that
 
 ```python Code
 # The agent can read anything under /data, and nothing outside it
-file_read_tool = FileReadTool(base_dir='/data')
+tool = FileReadTool(base_dir='/data')
 ```
 
 As a last resort, set `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true` to turn off path checks. This setting applies to every crewai-tools tool in the process, including SSRF protections on URL-fetching tools. Prefer `base_dir` instead.
