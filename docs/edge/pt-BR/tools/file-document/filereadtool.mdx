@@ -1,6 +1,6 @@
 ---
 title: Leitura de Arquivo
-description: O `FileReadTool` foi desenvolvido para ler arquivos do sistema de arquivos local.
+description: O `FileReadTool` lê arquivos do sistema de arquivos local.
 icon: folders
 mode: "wide"
 ---
@@ -8,37 +8,63 @@ mode: "wide"
 ## Visão Geral
 
 <Note>
-    Ainda estamos trabalhando para melhorar as ferramentas, portanto pode haver comportamentos inesperados ou alterações no futuro.
+    Ainda estamos melhorando as ferramentas, então o comportamento pode mudar.
 </Note>
 
-O FileReadTool representa conceitualmente um conjunto de funcionalidades dentro do pacote crewai_tools voltadas para facilitar a leitura e a recuperação de conteúdo de arquivos.
-Esse conjunto inclui ferramentas para processar arquivos de texto em lote, ler arquivos de configuração em tempo de execução e importar dados para análise.
-Ele suporta uma variedade de formatos de arquivo baseados em texto, como `.txt`, `.csv`, `.json` e outros. O conteúdo é sempre retornado como texto simples.
+O `FileReadTool` lê um arquivo local e retorna o conteúdo como texto.
+Use-o para processar arquivos de texto, ler arquivos de configuração ou carregar dados para análise.
+Ele funciona com qualquer formato de texto, como `.txt`, `.csv`, `.json` e `.md`.
+A ferramenta sempre retorna texto simples. Se você precisar de dados estruturados (por exemplo, JSON), faça o parse no Agent ou no seu próprio código.
+
+Para arquivos grandes, o Agent pode passar `start_line` e `line_count` para ler apenas um intervalo de linhas.
+A ferramenta para assim que obtém essas linhas, então não percorre o restante do arquivo.
 
 ## Instalação
 
-Para utilizar as funcionalidades anteriormente atribuídas ao FileReadTool, instale o pacote crewai_tools:
-
 ```shell
-pip install 'crewai[tools]'
+uv add 'crewai[tools]'
 ```
 
 ## Exemplo de Uso
 
-Para começar a usar o FileReadTool:
-
 ```python Code
 from crewai_tools import FileReadTool
 
-# Inicialize a ferramenta para ler quaisquer arquivos que os agentes conhecem ou informe o caminho para
-file_read_tool = FileReadTool()
+# Agent chooses the file path at runtime
+tool = FileReadTool()
 
-# OU
+# OR set a default file the agent can read with no path argument
+tool = FileReadTool(file_path='path/to/your/file.txt')
 
-# Inicialize a ferramenta com um caminho de arquivo específico, assim o agente poderá ler apenas o conteúdo do arquivo especificado
-file_read_tool = FileReadTool(file_path='path/to/your/file.txt')
+# OR let the agent read any file under a directory
+tool = FileReadTool(base_dir='/data')
 ```
+
+Passe a ferramenta para um Agent. Em tempo de execução, o LLM envia `file_path` e, opcionalmente, `start_line` e `line_count`.
 
 ## Argumentos
 
-- `file_path`: O caminho para o arquivo que você deseja ler. Aceita caminhos absolutos e relativos. Certifique-se de que o arquivo exista e de que você tenha as permissões necessárias para acessá-lo.
+O Agent pode passar estes argumentos em tempo de execução:
+
+- `file_path`: (Opcional) Caminho do arquivo a ler. Caminhos absolutos e relativos só são válidos quando resolvem dentro do sandbox de `base_dir`. Um caminho relativo resolve em relação a `base_dir` quando definido; caso contrário, em relação ao diretório de trabalho atual (o sandbox padrão). Omita-o para ler o arquivo padrão definido na construção. Se não houver padrão, a ferramenta retorna um erro dizendo que nenhum caminho foi fornecido.
+- `start_line`: (Opcional) Primeira linha a ler. A numeração começa em `1`. O padrão é `1`.
+- `line_count`: (Opcional) Quantidade de linhas a ler. Se omitido, a ferramenta lê de `start_line` até o fim do arquivo.
+
+Você pode definir estes argumentos ao criar a ferramenta:
+
+- `file_path`: (Opcional) Arquivo padrão a ler quando o Agent chama a ferramenta sem caminho. Um caminho relativo resolve em relação a `base_dir` quando `base_dir` é fornecido; caso contrário, em relação ao diretório de trabalho atual.
+- `base_dir`: (Opcional) Diretório dentro do qual os caminhos em tempo de execução devem permanecer. O padrão é o diretório de trabalho atual. A ferramenta resolve este caminho na criação, então uma mudança posterior do diretório de trabalho não move o sandbox.
+- `encoding`: (Opcional) Codificação de texto usada para decodificar o arquivo. O padrão é `utf-8`. Se a decodificação falhar, a ferramenta retorna um erro e sugere passar um `encoding` diferente.
+
+Falhas comuns (arquivo ausente, permissão negada, encoding incorreto ou caminho fora do sandbox) retornam uma string de erro. Elas não levantam uma exceção.
+
+## Caminhos permitidos
+
+Um LLM geralmente escolhe o caminho do arquivo em tempo de execução, então as leituras ficam limitadas a um sandbox:
+
+- Os caminhos em tempo de execução devem resolver dentro de `base_dir` (padrão: o diretório de trabalho atual). A ferramenta resolve segmentos `..` e links simbólicos antes de verificar o caminho, então eles não podem escapar do sandbox.
+- Um `file_path` passado ao construtor é sempre permitido, mesmo fora de `base_dir`. A leitura ainda pode falhar se o arquivo estiver ausente, for um diretório ou não puder ser acessado. Esse caminho fica fixo quando a ferramenta é criada, então uma mudança posterior do diretório de trabalho não altera o arquivo apontado. O Agent pode lê-lo omitindo `file_path` ou usando o nome mostrado na descrição da ferramenta. Declarar um arquivo não permite acesso a outros arquivos na mesma pasta.
+
+Para permitir que um Agent leia arquivos fora do diretório de trabalho, defina `base_dir` ao criar a ferramenta (veja o exemplo acima).
+
+Como último recurso, defina `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true` para desativar as verificações de caminho. Essa configuração se aplica a todas as ferramentas crewai-tools no processo, incluindo proteções SSRF em ferramentas que buscam URLs. Prefira `base_dir`.

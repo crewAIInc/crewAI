@@ -1,6 +1,6 @@
 ---
 title: 파일 읽기
-description: FileReadTool은 로컬 파일 시스템에서 파일을 읽도록 설계되었습니다.
+description: FileReadTool은 로컬 파일 시스템에서 파일을 읽습니다.
 icon: folders
 mode: "wide"
 ---
@@ -8,37 +8,63 @@ mode: "wide"
 ## 개요
 
 <Note>
-    우리는 도구를 계속 개선하고 있으므로, 향후 예기치 않은 동작이나 변경 사항이 발생할 수 있습니다.
+    도구를 계속 개선하고 있으므로 동작이 변경될 수 있습니다.
 </Note>
 
-FileReadTool은 crewai_tools 패키지 내에서 파일 읽기와 콘텐츠 검색을 용이하게 하는 기능 모음입니다.
-이 모음에는 배치 텍스트 파일 처리, 런타임 구성 파일 읽기, 분석을 위한 데이터 가져오기 등 다양한 도구가 포함되어 있습니다.
-`.txt`, `.csv`, `.json` 등 다양한 텍스트 기반 파일 형식을 지원합니다. 콘텐츠는 항상 일반 텍스트로 반환됩니다.
+`FileReadTool`은 로컬 파일을 읽고 내용을 텍스트로 반환합니다.
+텍스트 파일 처리, 구성 파일 읽기, 분석용 데이터 로드에 사용하세요.
+`.txt`, `.csv`, `.json`, `.md`와 같은 모든 텍스트 형식에서 동작합니다.
+도구는 항상 일반 텍스트를 반환합니다. 구조화된 데이터(예: JSON)가 필요하면 Agent 또는 사용자 코드에서 파싱하세요.
+
+큰 파일의 경우 Agent가 `start_line`과 `line_count`를 전달해 일부 줄만 읽을 수 있습니다.
+요청한 줄을 모으면 읽기를 멈추므로 파일의 나머지를 스캔하지 않습니다.
 
 ## 설치
 
-이전에 FileReadTool에 할당된 기능을 사용하려면 crewai_tools 패키지를 설치하세요:
-
 ```shell
-pip install 'crewai[tools]'
+uv add 'crewai[tools]'
 ```
 
 ## 사용 예시
 
-FileReadTool을 시작하려면:
-
 ```python Code
 from crewai_tools import FileReadTool
 
-# 에이전트가 알고 있거나 경로를 학습한 파일을 읽기 위해 도구를 초기화합니다.
-file_read_tool = FileReadTool()
+# Agent chooses the file path at runtime
+tool = FileReadTool()
 
-# 또는
+# OR set a default file the agent can read with no path argument
+tool = FileReadTool(file_path='path/to/your/file.txt')
 
-# 특정 파일 경로로 도구를 초기화하여 에이전트가 지정된 파일의 내용만 읽을 수 있도록 합니다.
-file_read_tool = FileReadTool(file_path='path/to/your/file.txt')
+# OR let the agent read any file under a directory
+tool = FileReadTool(base_dir='/data')
 ```
+
+도구를 Agent에 전달하세요. 런타임에 LLM이 `file_path`를 전달하며, 선택적으로 `start_line`과 `line_count`도 전달합니다.
 
 ## 인수
 
-- `file_path`: 읽고자 하는 파일의 경로입니다. 절대 경로와 상대 경로 모두 허용됩니다. 파일이 존재하는지와 필요한 접근 권한이 있는지 반드시 확인하세요.
+Agent가 런타임에 전달할 수 있는 인수:
+
+- `file_path`: (선택) 읽을 파일 경로입니다. 절대 경로와 상대 경로는 `base_dir` 샌드박스 안에서 해석될 때만 유효합니다. 상대 경로는 `base_dir`이 설정된 경우 그 기준이고, 그렇지 않으면 현재 작업 디렉터리(기본 샌드박스)를 기준으로 해석됩니다. 생략하면 생성 시 설정한 기본 파일을 읽습니다. 기본값이 없으면 경로가 제공되지 않았다는 오류를 반환합니다.
+- `start_line`: (선택) 읽기를 시작할 첫 줄입니다. 줄 번호는 `1`부터 시작합니다. 기본값은 `1`입니다.
+- `line_count`: (선택) 읽을 줄 수입니다. 생략하면 `start_line`부터 파일 끝까지 읽습니다.
+
+도구를 만들 때 설정할 수 있는 인수:
+
+- `file_path`: (선택) Agent가 경로 없이 도구를 호출할 때 읽을 기본 파일입니다. 상대 경로는 `base_dir`이 제공되면 `base_dir`을 기준으로, 그렇지 않으면 현재 작업 디렉터리를 기준으로 해석됩니다.
+- `base_dir`: (선택) 런타임 경로가 머물러야 하는 디렉터리입니다. 기본값은 현재 작업 디렉터리입니다. 도구 생성 시 이 경로를 해석하므로, 이후 작업 디렉터리가 바뀌어도 샌드박스는 이동하지 않습니다.
+- `encoding`: (선택) 파일을 디코딩할 때 사용하는 텍스트 인코딩입니다. 기본값은 `utf-8`입니다. 디코딩에 실패하면 오류를 반환하고 다른 `encoding`을 전달하도록 안내합니다.
+
+일반적인 실패(파일 없음, 권한 거부, 잘못된 인코딩, 샌드박스 밖 경로)는 예외를 발생시키지 않고 오류 문자열을 반환합니다.
+
+## 허용 경로
+
+LLM이 보통 런타임에 파일 경로를 선택하므로, 읽기는 샌드박스로 제한됩니다.
+
+- 런타임 경로는 `base_dir`(기본값: 현재 작업 디렉터리) 안에서 해석되어야 합니다. 도구는 경로를 검사하기 전에 `..` 세그먼트와 심볼릭 링크를 해석하므로 샌드박스를 벗어날 수 없습니다.
+- 생성자에 전달한 `file_path`는 `base_dir` 밖이어도 항상 허용됩니다. 파일이 없거나, 디렉터리이거나, 접근할 수 없으면 읽기 자체는 실패할 수 있습니다. 이 경로는 도구 생성 시 고정되므로, 이후 작업 디렉터리가 바뀌어도 가리키는 파일이 바뀌지 않습니다. Agent는 `file_path`를 생략하거나 도구 설명에 표시된 이름으로 읽을 수 있습니다. 파일 하나를 선언해도 같은 폴더의 다른 파일에는 접근할 수 없습니다.
+
+Agent가 작업 디렉터리 밖의 파일을 읽게 하려면 도구를 만들 때 `base_dir`을 설정하세요(위 예시 참고).
+
+최후의 수단으로 `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true`를 설정하면 경로 검사가 꺼집니다. 이 설정은 프로세스의 모든 crewai-tools 도구에 적용되며, URL을 가져오는 도구의 SSRF 보호도 포함됩니다. 가능하면 `base_dir`을 사용하세요.
