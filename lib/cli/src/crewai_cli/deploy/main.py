@@ -5,6 +5,7 @@ from urllib.parse import quote
 import webbrowser
 
 from crewai_core.plus_api import CreateCrewPayload
+from crewai_core.telemetry import DeploySource
 from rich.console import Console
 
 from crewai_cli import git
@@ -285,17 +286,23 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
 
         return _deployment_identifier(status_response)
 
-    def deploy(self, uuid: str | None = None, skip_validate: bool = False) -> None:
+    def deploy(
+        self,
+        uuid: str | None = None,
+        skip_validate: bool = False,
+        source: DeploySource = "cli",
+    ) -> None:
         """
         Deploy a crew using either UUID or project name.
 
         Args:
             uuid (Optional[str]): The UUID of the crew to deploy.
             skip_validate (bool): Skip pre-deploy validation checks.
+            source (DeploySource): Where the deployment was initiated from.
         """
         if not _prepare_project_for_deploy(skip_validate):
             return
-        self._telemetry.start_deployment_span(uuid)
+        self._telemetry.start_deployment_span(uuid, source=source)
         console.print("Starting deployment...", style="bold blue")
         repository = self._prepare_git_repository()
         remote_repo_url = repository.origin_url() if repository else None
@@ -337,17 +344,23 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             raise ValueError("Deployment status response did not include a uuid")
         return str(uuid)
 
-    def create_crew(self, confirm: bool = False, skip_validate: bool = False) -> None:
+    def create_crew(
+        self,
+        confirm: bool = False,
+        skip_validate: bool = False,
+        source: DeploySource = "cli",
+    ) -> None:
         """
         Create a new crew deployment.
 
         Args:
             confirm (bool): Whether to skip the interactive confirmation prompt.
             skip_validate (bool): Skip pre-deploy validation checks.
+            source (DeploySource): Where the deployment was initiated from.
         """
         if not _prepare_project_for_deploy(skip_validate):
             return
-        self._telemetry.create_crew_deployment_span()
+        self._telemetry.create_crew_deployment_span(source=source)
         console.print("Creating deployment...", style="bold blue")
         env_vars = fetch_and_json_env_file()
         repository = self._prepare_git_repository()
