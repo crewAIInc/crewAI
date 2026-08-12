@@ -15,6 +15,9 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3
         id: filter
+        env:
+          # Node 24 (forced for node20 actions) may not trust system CAs by default.
+          NODE_OPTIONS: --use-system-ca
         with:
           # Exclusion-only patterns match every non-excluded file under the
           # default "some" quantifier. Require all patterns (including "**")
