@@ -233,6 +233,28 @@ class TestFileToolAppendAction:
         mock_sandbox.files.write.assert_not_called()
         mock_sandbox.commands.run.assert_not_called()
 
+    def test_staged_chunk_removed_when_the_command_raises(
+        self, k8s_file_tool, mock_sandbox
+    ):
+        mock_sandbox.commands.run.side_effect = [
+            ExecutionResult(exit_code=0, stdout="", stderr=""),  # mkdir
+            RuntimeError("connection lost"),  # cat
+            ExecutionResult(exit_code=0, stdout="", stderr=""),  # cleanup
+        ]
+
+        with pytest.raises(RuntimeError, match="connection lost"):
+            k8s_file_tool.run(
+                action="append",
+                path="parent/file.txt",
+                content="some content",
+                timeout=120,
+            )
+
+        tmp_file_path = mock_sandbox.files.write.call_args.args[0]
+        assert mock_sandbox.commands.run.call_args.args[0] == (
+            f"rm -f -- {shlex.quote(tmp_file_path)}"
+        )
+
 
 class TestFileToolListAction:
     def test_success(self, k8s_file_tool, mock_sandbox):

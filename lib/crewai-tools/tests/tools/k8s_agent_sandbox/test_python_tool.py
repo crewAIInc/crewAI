@@ -1,4 +1,5 @@
-import base64
+import shlex
+
 import pytest
 
 from k8s_agent_sandbox.models import ExecutionResult
@@ -38,3 +39,18 @@ def test_run(k8s_python_tool, mock_sandbox, exit_code):
         f"python3 {written_path};"
     )
     assert 0 <= mock_sandbox.commands.run.call_args.kwargs["timeout"] <= 120
+
+
+def test_staged_code_removed_when_the_command_raises(k8s_python_tool, mock_sandbox):
+    mock_sandbox.commands.run.side_effect = [
+        RuntimeError("connection lost"),
+        ExecutionResult(exit_code=0, stdout="", stderr=""),
+    ]
+
+    with pytest.raises(RuntimeError, match="connection lost"):
+        k8s_python_tool.run(code="some-code", timeout=120)
+
+    written_path = mock_sandbox.files.write.call_args.args[0]
+    assert mock_sandbox.commands.run.call_args.args[0] == (
+        f"rm -f -- {shlex.quote(written_path)}"
+    )

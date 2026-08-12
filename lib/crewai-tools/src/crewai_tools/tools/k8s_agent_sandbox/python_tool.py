@@ -12,6 +12,7 @@ from crewai_tools.tools.k8s_agent_sandbox.base_tool import (
     K8sAgentSandboxBaseTool,
     DEFAULT_TOOL_TIMEOUT_SEC,
     create_timeout_tracker,
+    remove_staged_file,
 )
 
 
@@ -59,10 +60,15 @@ class K8sAgentSandboxPythonTool(K8sAgentSandboxBaseTool):
             timeout=timeout_tracker(),
         )
 
-        result = sandbox.commands.run(
-            f"python3 {tmp_file_path}; rc=$?; rm -f {tmp_file_path}; exit $rc",
-            timeout=timeout_tracker(),
-        )
+        try:
+            result = sandbox.commands.run(
+                f"python3 {tmp_file_path}; rc=$?; rm -f {tmp_file_path}; exit $rc",
+                timeout=timeout_tracker(),
+            )
+        except Exception:
+            # The command that would have cleaned the file up never finished.
+            remove_staged_file(sandbox, tmp_file_path)
+            raise
 
         return K8sAgentSandboxPythonToolOutput(
             exit_code=result.exit_code,

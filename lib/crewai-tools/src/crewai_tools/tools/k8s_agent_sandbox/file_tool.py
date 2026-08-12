@@ -25,6 +25,7 @@ from crewai_tools.tools.k8s_agent_sandbox.base_tool import (
     DEFAULT_TOOL_TIMEOUT_SEC,
     K8sAgentSandboxBaseTool,
     create_timeout_tracker,
+    remove_staged_file,
 )
 
 
@@ -302,9 +303,15 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
         )
         q = shlex.quote(path)
         qt = shlex.quote(tmp_file_path)
-        result = sandbox.commands.run(
-            f"cat {qt} >> {q}; rc=$?; rm -f {qt}; exit $rc", timeout=timeout_tracker()
-        )
+        try:
+            result = sandbox.commands.run(
+                f"cat {qt} >> {q}; rc=$?; rm -f {qt}; exit $rc",
+                timeout=timeout_tracker(),
+            )
+        except Exception:
+            # The command that would have cleaned the chunk up never finished.
+            remove_staged_file(sandbox, tmp_file_path)
+            raise
         if result.exit_code != 0:
             raise RuntimeError(f"Cannot append to {path}. Error: {result.stderr}.")
 

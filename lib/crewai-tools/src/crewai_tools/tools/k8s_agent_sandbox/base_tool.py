@@ -1,5 +1,6 @@
 from typing import Any, Callable, TYPE_CHECKING
 import time
+import shlex
 import logging
 from pydantic import (
     BaseModel,
@@ -19,6 +20,8 @@ from .toolset import K8sAgentSandboxToolset
 logger = logging.getLogger(__name__)
 
 DEFAULT_TOOL_TIMEOUT_SEC = 60
+
+CLEANUP_TIMEOUT_SEC = 10
 
 
 class K8sAgentSandboxBaseTool(BaseTool, arbitrary_types_allowed=True):
@@ -44,6 +47,29 @@ class K8sAgentSandboxBaseTool(BaseTool, arbitrary_types_allowed=True):
         self, sandbox: "Sandbox", *args: Any, **kwargs: Any
     ) -> BaseModel:
         pass
+
+
+def remove_staged_file(sandbox: "Sandbox", path: str) -> None:  # type: ignore[no-any-unimported]
+    """
+    Removes a temporary file that a tool staged inside the sandbox.
+
+    The tools delete their staging files as a part of the command that consumes
+    them, so this only covers the case where that command never got to run. It
+    is best effort: a sandbox that cannot be reached anymore is not worth
+    masking the original error with.
+    """
+
+    try:
+        sandbox.commands.run(
+            f"rm -f -- {shlex.quote(path)}",
+            timeout=CLEANUP_TIMEOUT_SEC,
+        )
+    except Exception:
+        logger.warning(
+            "Could not remove the temporary file %s from the sandbox.",
+            path,
+            exc_info=True,
+        )
 
 
 def create_timeout_tracker(timeout: int) -> Callable[[], int]:
