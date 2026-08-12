@@ -17,6 +17,7 @@ import time
 
 import pytest
 
+from crewai.experimental.conversational import ConversationConfig
 from crewai.flow.async_feedback import HumanFeedbackPending, PendingFeedbackContext
 from crewai.flow.flow import Flow, listen, start
 from crewai.flow.human_feedback import human_feedback
@@ -55,7 +56,7 @@ def flow_spans(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
     monkeypatch.setattr(
         listener_module.event_listener._telemetry,
         "flow_execution_span",
-        lambda flow_name, node_names, origin="user", resumed=False: recorded.append(
+        lambda flow_name, node_names, origin="user", resumed=False, conversational=False: recorded.append(
             (flow_name, origin)
         ),
     )
@@ -73,9 +74,29 @@ def starts(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, bool]]:
     monkeypatch.setattr(
         listener_module.event_listener._telemetry,
         "flow_execution_span",
-        lambda flow_name, node_names, origin="user", resumed=False: recorded.append(
+        lambda flow_name, node_names, origin="user", resumed=False, conversational=False: recorded.append(
             (flow_name, resumed)
         ),
+    )
+    return recorded
+
+
+@pytest.fixture
+def conversational_marks(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, bool]]:
+    """Record (flow_name, conversational) for every Flow Execution span."""
+    from crewai.events import event_listener as listener_module
+
+    _reregister_listener()
+
+    recorded: list[tuple[str, bool]] = []
+    monkeypatch.setattr(
+        listener_module.event_listener._telemetry,
+        "flow_execution_span",
+        lambda flow_name,
+        node_names,
+        origin="user",
+        resumed=False,
+        conversational=False: recorded.append((flow_name, conversational)),
     )
     return recorded
 
@@ -123,7 +144,7 @@ def durations(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, float, str]]:
     monkeypatch.setattr(
         listener_module.event_listener._telemetry,
         "flow_completed_span",
-        lambda flow_name, duration_ms, outcome, origin="user": recorded.append(
+        lambda flow_name, duration_ms, outcome, origin="user", conversational=False: recorded.append(
             (flow_name, duration_ms, outcome)
         ),
     )
@@ -201,7 +222,7 @@ def test_a_failed_flow_is_still_counted_as_an_execution(
     monkeypatch.setattr(
         listener_module.event_listener._telemetry,
         "flow_execution_span",
-        lambda flow_name, node_names, origin="user", resumed=False: started.append(
+        lambda flow_name, node_names, origin="user", resumed=False, conversational=False: started.append(
             flow_name
         ),
     )
@@ -220,14 +241,17 @@ def test_a_failed_flow_is_still_counted_as_an_execution(
 def test_requesting_input_reports_both_sides(features: list[str]) -> None:
     class StubProvider:
         def request_input(self, message: str, flow: Flow, metadata=None):
-            return InputResponse(value="typed answer")
+            return InputResponse(text="typed answer")
 
     class AskFlow(Flow):
         @start()
         def go(self) -> str:
             return self.ask("What topic?")
 
-    AskFlow(input_provider=StubProvider()).kickoff()
+    # ask() swallows provider errors and returns None, so the answer is
+    # asserted too: a provider that raises would otherwise still emit both
+    # signals and pass this test.
+    assert AskFlow(input_provider=StubProvider()).kickoff() == "typed answer"
 
     emitted = features
     assert "flow:input_requested" in emitted
@@ -549,6 +573,94 @@ def test_a_failed_conversation_session_is_not_reported_completed(
     assert all(outcome != "completed" for _n, _d, outcome in durations)
 
 
+def test_a_deferred_session_still_reports_a_failed_turn(
+    durations: list[tuple[str, float, str]],
+) -> None:
+    """A deferring session has no per-turn terminal event to carry the failure.
+
+    Its only outcome span is the one ``finalize_session_traces()`` triggers, so
+    the turn-failure flag is what makes that span say ``failed``. Deferral is
+    the default for a conversational flow, so this is the common path.
+    """
+
+    class DeferringChat(Flow):
+        conversational = True
+
+        @start()
+        def begin(self) -> str:
+            raise RuntimeError("turn exploded")
+
+    chat = DeferringChat()
+    with pytest.raises(RuntimeError, match="turn exploded"):
+        chat.handle_turn("hello")
+    chat.finalize_session_traces()
+    # finalize_session_traces() emits without awaiting its handlers.
+    wait_for_event_handlers()
+
+    assert [outcome for _n, _d, outcome in durations] == ["failed"]
+
+
+def test_a_failed_turn_does_not_mark_the_next_turn_failed(
+    durations: list[tuple[str, float, str]],
+) -> None:
+    """A session that opts out of deferral ends each turn with its own event.
+
+    That terminal event fires inside ``kickoff()``, before ``handle_turn()``
+    emits the turn-failure event, so the flag was set after the run that owned
+    it had already cleared it - and the next healthy turn read it as failed.
+    """
+
+    turns: list[str] = []
+
+    @ConversationConfig(defer_trace_finalization=False)
+    class FlakyChat(Flow):
+        conversational = True
+
+        @start()
+        def begin(self) -> str:
+            turns.append("turn")
+            if len(turns) == 1:
+                raise RuntimeError("turn exploded")
+            return "second turn is fine"
+
+    chat = FlakyChat()
+    with pytest.raises(RuntimeError, match="turn exploded"):
+        chat.handle_turn("hello")
+    chat.handle_turn("again")
+
+    assert [outcome for _n, _d, outcome in durations] == ["failed", "completed"]
+
+
+def test_a_failed_streamed_turn_does_not_mark_the_next_turn_failed(
+    durations: list[tuple[str, float, str]],
+) -> None:
+    """``stream_turn`` is the other emitter of the turn-failure event.
+
+    It emits from its own ``except`` block, after ``kickoff()`` has closed the
+    run out, so it leaks the same flag as the non-streamed path.
+    """
+
+    turns: list[str] = []
+
+    @ConversationConfig(defer_trace_finalization=False)
+    class FlakyStreamingChat(Flow):
+        conversational = True
+
+        @start()
+        def begin(self) -> str:
+            turns.append("turn")
+            if len(turns) == 1:
+                raise RuntimeError("turn exploded")
+            return "second turn is fine"
+
+    chat = FlakyStreamingChat()
+    with pytest.raises(RuntimeError, match="turn exploded"):
+        list(chat.stream_turn("hello").events)
+    list(chat.stream_turn("again").events)
+
+    assert [outcome for _n, _d, outcome in durations] == ["failed", "completed"]
+
+
 def test_infrastructure_flows_do_not_pollute_outcome_signals(
     features: list[str], durations: list[tuple[str, float, str]]
 ) -> None:
@@ -615,3 +727,37 @@ def test_a_checkpoint_restore_is_not_counted_as_a_resume(
     wait_for_event_handlers()
 
     assert starts == [("RestoredFlow", False)]
+
+
+def test_a_conversational_turn_is_marked(
+    conversational_marks: list[tuple[str, bool]],
+) -> None:
+    """Each turn is its own kickoff, but a session reports one completion.
+
+    Without the marker those spans run many-to-one against Flow Completed and
+    silently drag any completion rate computed across all flows.
+    """
+
+    class Chatty(Flow):
+        conversational = True
+
+        @start()
+        def begin(self) -> str:
+            return "hi"
+
+    Chatty().handle_turn("hello")
+
+    assert ("Chatty", True) in conversational_marks
+
+
+def test_an_ordinary_flow_is_not_marked_conversational(
+    conversational_marks: list[tuple[str, bool]],
+) -> None:
+    class PlainFlow(Flow):
+        @start()
+        def go(self) -> str:
+            return "ok"
+
+    PlainFlow().kickoff()
+
+    assert ("PlainFlow", False) in conversational_marks
