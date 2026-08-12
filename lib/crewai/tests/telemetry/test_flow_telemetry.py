@@ -22,6 +22,8 @@ from crewai.flow.flow import Flow, listen, start
 from crewai.flow.human_feedback import human_feedback
 from crewai.flow.input_provider import InputResponse
 
+from ..utils import wait_for_event_handlers
+
 
 def _reregister_listener() -> None:
     """Re-subscribe the global listener to the event bus.
@@ -589,9 +591,9 @@ def test_infrastructure_flows_do_not_pollute_outcome_signals(
 
 
 def test_a_checkpoint_restore_is_not_counted_as_a_resume(
-    features: list[str],
+    starts: list[tuple[str, bool]],
 ) -> None:
-    """Only a run restored from a human pause counts as resumed.
+    """Only a run restored from a human pause is marked resumed.
 
     ``_is_execution_resuming`` is also set by checkpoint restores that never
     paused for anyone. Counting those would push resumes above pauses and make
@@ -610,5 +612,6 @@ def test_a_checkpoint_restore_is_not_counted_as_a_resume(
     assert flow._pending_feedback_context is None
 
     crewai_event_bus.emit(flow, FlowStartedEvent(flow_name="RestoredFlow"))
+    wait_for_event_handlers()
 
-    assert "flow:resumed" not in features
+    assert starts == [("RestoredFlow", False)]
