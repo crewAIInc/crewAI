@@ -46,7 +46,7 @@ Give the tool to an agent. At runtime the LLM passes `file_path`, and optionally
 
 The agent can pass these at runtime:
 
-- `file_path`: (Optional) Path to the file to read. Absolute paths and relative paths are both valid. A relative path resolves against `base_dir` when set, otherwise against the current working directory. Omit it to read the default file set at construction. If there is no default, the tool returns an error saying no path was provided.
+- `file_path`: (Optional) Path to the file to read. Absolute and relative paths are both valid only when they resolve inside the `base_dir` sandbox. A relative path resolves against `base_dir` when set, otherwise against the current working directory (the default sandbox). Omit it to read the default file set at construction. If there is no default, the tool returns an error saying no path was provided.
 - `start_line`: (Optional) First line to read. Line numbers start at `1`. Default is `1`.
 - `line_count`: (Optional) How many lines to read. If omitted, the tool reads from `start_line` to the end of the file.
 
