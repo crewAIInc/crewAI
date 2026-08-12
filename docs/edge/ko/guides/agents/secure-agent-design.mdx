@@ -254,7 +254,7 @@ def require_email_approval(ctx):
 - `allow_delegation` 기본값은 `False`입니다. 협업이 필요할 때만 `True`로 설정하세요.
 - 대상별 위임 ACL은 없습니다. 경계는 crew 소속과 각 에이전트의 `tools`입니다.
 - Hierarchical process는 `manager_agent.allow_delegation = True`를 설정합니다. 고위험 도구는 전문가에게 두고 hooks 또는 승인 뒤에 두세요.
-- A2A에서는 `A2AClientConfig`를 선호하세요. 원격 completion status를 신뢰할 의도가 없으면 `trust_remote_completion_status=False`로 두세요. [A2A Agent Delegation](/ko/learn/a2a-agent-delegation)을 참고하세요.
+- A2A에서는 `A2AClientConfig`를 선호하세요. 원격 completion status를 신뢰할 의도가 없으면 `trust_remote_completion_status=False`로 두세요. [A2A Agent Delegation](/en/learn/a2a-agent-delegation)을 참고하세요.
 
 ```python
 analyst = Agent(
@@ -272,7 +272,7 @@ analyst = Agent(
 2. 비신뢰 수집과 권한 있는 동작에는 별도 crews 또는 Flow 단계를 사용하세요.
 3. 단계 간에 원시 도구 dump가 아니라 검증된 구조화 상태를 전달하세요.
 4. 에이전트별 `knowledge_sources`로 knowledge를 범위 지정하세요. 메모리: 에이전트에 자체 `Memory` / `MemoryScope`를 주거나 **crew**에서 메모리를 비활성화하세요. Task 경로에서 에이전트의 `memory=False`는 `None`이 되며, crew에 메모리가 켜져 있으면 crew 메모리로 폴백합니다.
-5. [E2B tools](/ko/tools/ai-ml/e2bsandboxtools) 또는 Modal 같은 외부 sandbox에서 코드를 실행하세요. sandbox 출력은 비신뢰로 취급하세요. `CodeInterpreterTool`은 제거되었습니다. `allow_code_execution`은 deprecated이며 더 이상 코드 도구를 연결하지 않습니다.
+5. [E2B tools](/en/tools/ai-ml/e2bsandboxtools) 또는 Modal 같은 외부 sandbox에서 코드를 실행하세요. sandbox 출력은 비신뢰로 취급하세요. `CodeInterpreterTool`은 제거되었습니다. `allow_code_execution`은 deprecated이며 더 이상 코드 도구를 연결하지 않습니다.
 6. 신뢰하는 MCP 서버에만 연결하세요. [MCP 보안](/ko/mcp/security)을 참고하세요.
 
 ```python

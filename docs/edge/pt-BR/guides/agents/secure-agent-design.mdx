@@ -254,7 +254,7 @@ Aplique a aprovação em código, não apenas no prompt.
 - `allow_delegation` é `False` por padrão. Defina como `True` apenas quando a colaboração for necessária.
 - Não há ACL de delegação por alvo. Os limites são a associação ao crew e as `tools` de cada agente.
 - O processo hierárquico define `manager_agent.allow_delegation = True`. Mantenha ferramentas de alto risco em especialistas e atrás de hooks ou aprovações.
-- Para A2A, prefira `A2AClientConfig`. Deixe `trust_remote_completion_status=False` a menos que você pretenda confiar no status de conclusão remoto. Veja [Delegação de Agente A2A](/pt-BR/learn/a2a-agent-delegation).
+- Para A2A, prefira `A2AClientConfig`. Deixe `trust_remote_completion_status=False` a menos que você pretenda confiar no status de conclusão remoto. Veja [Delegação de Agente A2A](/en/learn/a2a-agent-delegation).
 
 ```python
 analyst = Agent(
@@ -272,7 +272,7 @@ analyst = Agent(
 2. Use crews separados ou passos de Flow para ingestão não confiável e ação privilegiada.
 3. Passe estado estruturado validado entre passos, não dumps brutos de ferramentas.
 4. Restrinja knowledge com `knowledge_sources` por agente. Para memória: dê ao agente seu próprio `Memory` / `MemoryScope`, ou desabilite memória no **crew**. No caminho da Task, `memory=False` em um agente vira `None` e o agente cai na memória do crew se o crew tiver memória habilitada.
-5. Execute código em um sandbox externo como [ferramentas E2B](/pt-BR/tools/ai-ml/e2bsandboxtools) ou Modal. Trate a saída do sandbox como não confiável. `CodeInterpreterTool` foi removido; `allow_code_execution` está deprecated e não anexa mais uma ferramenta de código.
+5. Execute código em um sandbox externo como [ferramentas E2B](/en/tools/ai-ml/e2bsandboxtools) ou Modal. Trate a saída do sandbox como não confiável. `CodeInterpreterTool` foi removido; `allow_code_execution` está deprecated e não anexa mais uma ferramenta de código.
 6. Conecte-se apenas a servidores MCP em que você confia. Veja [Segurança MCP](/pt-BR/mcp/security).
 
 ```python

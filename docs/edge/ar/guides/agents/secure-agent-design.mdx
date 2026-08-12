@@ -272,7 +272,7 @@ analyst = Agent(
 2. استخدم crews منفصلة أو خطوات Flow للابتلاع غير الموثوق والإجراء المميز.
 3. مرّر حالة منظمة مُتحقَّقًا منها بين الخطوات، وليس تفريغ أدوات خام.
 4. ضيّق المعرفة بـ `knowledge_sources` لكل Agent. للذاكرة: امنح الـ Agent `Memory` / `MemoryScope` الخاص به، أو عطّل الذاكرة على **الـ crew**. على مسار Task، يصبح `memory=False` على Agent هو `None` ويعود الـ Agent إلى ذاكرة الـ crew إذا كانت مفعّلة على الـ crew.
-5. شغّل الكود في sandbox خارجي مثل [أدوات E2B](/ar/tools/ai-ml/e2bsandboxtools) أو Modal. عامل مخرج sandbox على أنه غير موثوق. أُزيل `CodeInterpreterTool`؛ و`allow_code_execution` مهمل ولم يعد يرفق أداة كود.
+5. شغّل الكود في sandbox خارجي مثل [أدوات E2B](/en/tools/ai-ml/e2bsandboxtools) أو Modal. عامل مخرج sandbox على أنه غير موثوق. أُزيل `CodeInterpreterTool`؛ و`allow_code_execution` مهمل ولم يعد يرفق أداة كود.
 6. اتصل فقط بخوادم MCP التي تثق بها. راجع [أمان MCP](/ar/mcp/security).
 
 ```python
