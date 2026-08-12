@@ -611,6 +611,36 @@ def test_a_failed_turn_does_not_mark_the_next_turn_failed(
     assert [outcome for _n, _d, outcome in durations] == ["failed", "completed"]
 
 
+def test_a_failed_streamed_turn_does_not_mark_the_next_turn_failed(
+    durations: list[tuple[str, float, str]],
+) -> None:
+    """``stream_turn`` is the other emitter of the turn-failure event.
+
+    It emits from its own ``except`` block, after ``kickoff()`` has closed the
+    run out, so it leaks the same flag as the non-streamed path.
+    """
+
+    turns: list[str] = []
+
+    @ConversationConfig(defer_trace_finalization=False)
+    class FlakyStreamingChat(Flow):
+        conversational = True
+
+        @start()
+        def begin(self) -> str:
+            turns.append("turn")
+            if len(turns) == 1:
+                raise RuntimeError("turn exploded")
+            return "second turn is fine"
+
+    chat = FlakyStreamingChat()
+    with pytest.raises(RuntimeError, match="turn exploded"):
+        list(chat.stream_turn("hello").events)
+    list(chat.stream_turn("again").events)
+
+    assert [outcome for _n, _d, outcome in durations] == ["failed", "completed"]
+
+
 def test_infrastructure_flows_do_not_pollute_outcome_signals(
     features: list[str], durations: list[tuple[str, float, str]]
 ) -> None:
