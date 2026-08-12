@@ -31,13 +31,13 @@ pip install 'crewai[tools]'
 ```python Code
 from crewai_tools import FileReadTool
 
-# Let the agent choose the file path at runtime
+# Agent must pass file_path at runtime
 file_read_tool = FileReadTool()
+content = file_read_tool.run(file_path='path/to/your/file.txt')
 
-# OR
-
-# Set a default file path when you create the tool
+# OR set a default file at construction
 file_read_tool = FileReadTool(file_path='path/to/your/file.txt')
+content = file_read_tool.run()  # reads the default file
 
 # Read only lines 100-149
 partial_content = file_read_tool.run(
