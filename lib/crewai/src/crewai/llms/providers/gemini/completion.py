@@ -676,6 +676,12 @@ class GeminiCompletion(BaseLLM):
             # Gemini's generateContent API rejects a request whose history ends
             # on a model turn (agent loops can produce this, e.g. after
             # max-iteration handling or a guardrail retry).
+            if any(part.function_call for part in contents[-1].parts):
+                raise ValueError(
+                    "Gemini message history ends on an unresolved function call "
+                    "-- a function response must be provided before calling the "
+                    "model again."
+                )
             contents.append(
                 types.Content(
                     role="user", parts=[types.Part.from_text(text="Please continue.")]
