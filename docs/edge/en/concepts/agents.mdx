@@ -638,9 +638,10 @@ asyncio.run(main())
 ```
 
 <Note>
-  The `kickoff()` method uses a `LiteAgent` internally, which provides a simpler
-  execution flow while preserving all of the agent's configuration (role, goal,
-  backstory, tools, etc.).
+  The `kickoff()` method uses an `AgentExecutor` directly (no Task or Crew),
+  which provides a simpler execution flow while preserving all of the agent's
+  configuration (role, goal, backstory, tools, etc.). It returns a
+  `LiteAgentOutput`.
 </Note>
 
 ## Important Considerations and Best Practices
