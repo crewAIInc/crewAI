@@ -7,11 +7,11 @@ _MODULE_CACHE: dict[str, types.ModuleType] = {}
 
 def lazy_import_k8s_agent_sandbox(target: str) -> types.ModuleType:
     """
-    Lazily imports a module or attribute by string name, caches it globally,
-    and returns it. Subsequent calls return the object directly from the cache.
+    Lazily imports a `k8s_agent_sandbox` submodule by name, caches it globally,
+    and returns it. Subsequent calls return the module directly from the cache.
 
-    :param target: Module name (e.g., 'json') or object path (e.g., 'math.sqrt')
-    :return: The imported module or attribute object
+    :param target: Submodule name (e.g., 'sandbox_client')
+    :return: The imported module object
     """
 
     full_target = f"k8s_agent_sandbox.{target}"
@@ -27,11 +27,6 @@ def lazy_import_k8s_agent_sandbox(target: str) -> types.ModuleType:
             "The 'k8s-agent-sandbox' package is required for K8s Agent Sandbox tools. "
         ) from e
 
-    # 3. Store in global cache collection
     _MODULE_CACHE[full_target] = obj
-
-    # 4. Inject into the module's global space (using short name)
-    short_name = full_target.split(".")[-1]
-    globals()[short_name] = obj
 
     return obj

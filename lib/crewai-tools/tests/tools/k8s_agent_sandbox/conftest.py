@@ -2,6 +2,14 @@ from unittest.mock import MagicMock
 
 import pytest
 
+
+# The tools themselves import the SDK lazily, but these tests use it directly,
+# so skip the whole package when the optional extra is not installed.
+pytest.importorskip(
+    "k8s_agent_sandbox",
+    reason="requires the 'k8s_agent_sandbox' extra (uv sync --all-extras)",
+)
+
 from crewai_tools.tools.k8s_agent_sandbox.settings import (
     K8sAgentSandboxToolSandboxSettings,
 )

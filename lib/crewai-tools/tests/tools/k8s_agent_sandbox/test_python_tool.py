@@ -30,7 +30,11 @@ def test_run(k8s_python_tool, mock_sandbox, exit_code):
         stderr="some-logs",
     )
 
-    assert mock_sandbox.files.write.called
+    written_path, written_content = mock_sandbox.files.write.call_args.args
+    assert written_content == b"some-code"
 
-    assert mock_sandbox.commands.run.call_args.args[0].startswith("python3 /tmp",)
+    # The code that was written is the code that gets executed.
+    assert mock_sandbox.commands.run.call_args.args[0].startswith(
+        f"python3 {written_path};"
+    )
     assert 0 <= mock_sandbox.commands.run.call_args.kwargs["timeout"] <= 120

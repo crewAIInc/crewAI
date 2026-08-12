@@ -3,6 +3,7 @@ from dataclasses import (
     dataclass,
     field,
 )
+from threading import Lock
 
 if TYPE_CHECKING:
     from k8s_agent_sandbox.models import (  # type: ignore[import-untyped]
@@ -27,22 +28,31 @@ class K8sAgentSandboxToolClientSettings:  # type: ignore[no-any-unimported]
     cleanup: bool = False
 
     _client: "SandboxClient | None" = field(default=None, init=False, repr=False)  # type: ignore[no-any-unimported]
+    _client_lock: Lock = field(
+        default_factory=Lock, init=False, repr=False, compare=False
+    )
 
     @property
     def client(self) -> "SandboxClient":  # type: ignore[no-any-unimported]
         if self._client is not None:
             return self._client
 
-        # from k8s_agent_sandbox.sandbox_client import SandboxClient
-        kas_client_sandbox_module = lazy_import_k8s_agent_sandbox("sandbox_client")
+        # The same settings can be shared by several lifecycle managers, so the
+        # client has to be created only once even when they race for it.
+        with self._client_lock:
+            if self._client is not None:
+                return self._client
 
-        client: "SandboxClient" = kas_client_sandbox_module.SandboxClient(  # type: ignore[no-any-unimported]
-            connection_config=self.connection_config,
-            tracer_config=self.tracer_config,
-            cleanup=self.cleanup,
-        )
-        self._client = client
-        return self._client
+            # from k8s_agent_sandbox.sandbox_client import SandboxClient
+            kas_client_sandbox_module = lazy_import_k8s_agent_sandbox("sandbox_client")
+
+            client: "SandboxClient" = kas_client_sandbox_module.SandboxClient(  # type: ignore[no-any-unimported]
+                connection_config=self.connection_config,
+                tracer_config=self.tracer_config,
+                cleanup=self.cleanup,
+            )
+            self._client = client
+            return self._client
 
 
 @dataclass

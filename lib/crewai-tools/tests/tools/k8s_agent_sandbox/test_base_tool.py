@@ -101,6 +101,8 @@ def test_sandbox_released_after_error(
                 test_kwarg="some-kwarg",
             )
 
+        m.release_sandbox.assert_called_once_with()
+
     if lifecycle_mode_sandbox_termination_expected:
         assert mock_sandbox.terminate.called
     else:

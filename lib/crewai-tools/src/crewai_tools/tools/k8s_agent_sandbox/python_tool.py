@@ -15,7 +15,7 @@ from crewai_tools.tools.k8s_agent_sandbox.base_tool import (
 )
 
 
-class k8sAgentSandboxPythonToolSchema(BaseModel):
+class K8sAgentSandboxPythonToolSchema(BaseModel):
     code: str = Field(..., description="Python code to execute in the sandbox.")
     timeout: int = Field(
         default=DEFAULT_TOOL_TIMEOUT_SEC,
@@ -42,7 +42,7 @@ class K8sAgentSandboxPythonTool(K8sAgentSandboxBaseTool):
         "Executes Python code inside an isolated K8s Agent Sandbox. "
         "Input should be a string containing raw Python code."
     )
-    args_schema: type[BaseModel] = k8sAgentSandboxPythonToolSchema
+    args_schema: type[BaseModel] = K8sAgentSandboxPythonToolSchema
 
     def _run_with_sandbox(  # type: ignore[no-any-unimported]
         self, sandbox: "Sandbox", code: str, timeout: int

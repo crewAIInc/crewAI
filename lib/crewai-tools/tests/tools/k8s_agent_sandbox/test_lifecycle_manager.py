@@ -1,5 +1,5 @@
 from typing import cast
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from abc import ABC, abstractmethod
 
 import pytest
@@ -37,6 +37,25 @@ class LifecycleModeManagetTestBase(ABC):
         manager.close()
 
         assert "Closing anyway" in caplog.text
+
+    def test_failed_acquire_does_not_hold_the_lock(
+        self, mock_client_settings, sample_sandbox_settings, caplog
+    ):
+        manager = self._create_manager(
+            mock_client_settings,
+            sample_sandbox_settings,
+            # A leaked lock makes close() give up on the grace period instead
+            # of shutting down cleanly.
+            close_timeout=0,
+        )
+
+        with patch.object(manager, "_acquire_sandbox", side_effect=Exception("boom")):
+            with pytest.raises(Exception, match="boom"):
+                manager.acquire_sandbox()
+
+        manager.close()
+
+        assert "Closing anyway" not in caplog.text
 
 
 class TestEphemeralModeManager(LifecycleModeManagetTestBase):

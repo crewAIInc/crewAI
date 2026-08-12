@@ -51,8 +51,13 @@ class K8sAgentSandboxLifecycleManager(ABC):
         if self._closed:
             self._lock.release()
             raise RuntimeError("Attempt to acquire a sandbox from a closed helper.")
+        try:
+            sandbox = self._acquire_sandbox()
+        except BaseException:
+            self._lock.release()
+            raise
         self._sandbox_acquired = True
-        return self._acquire_sandbox()
+        return sandbox
 
     def release_sandbox(self) -> None:
         """
