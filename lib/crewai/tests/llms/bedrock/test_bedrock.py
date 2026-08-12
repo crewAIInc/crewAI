@@ -530,6 +530,21 @@ def test_bedrock_context_window_size():
     assert context_size_titan > 5000
 
 
+def test_bedrock_cross_region_inference_profile_context_window():
+    """Cross-region inference profile ids (us./eu./apac./us-gov.) must map to the bare model window."""
+    from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
+
+    expected = int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+    for model in (
+        "bedrock/us.anthropic.claude-sonnet-4-20250514-v1:0",
+        "bedrock/eu.anthropic.claude-sonnet-4-20250514-v1:0",
+        "bedrock/apac.anthropic.claude-3-5-sonnet-20241022-v2:0",
+        "us.anthropic.claude-sonnet-4-20250514-v1:0",
+    ):
+        llm = LLM(model=model)
+        assert llm.get_context_window_size() == expected, model
+
+
 def test_bedrock_message_formatting():
     """
     Test that messages are properly formatted for Bedrock Converse API
