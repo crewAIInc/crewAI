@@ -119,7 +119,7 @@ class TestPickleHandler(unittest.TestCase):
         def remove_sig_after_check(path):
             if path == sig_path and original_exists(path):
                 os.remove(sig_path)
-                return False
+                return True  # exists() must report True so open() hits FileNotFoundError
             return original_exists(path)
 
         with patch("os.path.exists", side_effect=remove_sig_after_check):
