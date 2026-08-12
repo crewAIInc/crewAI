@@ -16,7 +16,7 @@ Use it to process text files, read config files, or load data for analysis.
 It works with any text format, such as `.txt`, `.csv`, `.json`, and `.md`.
 The tool always returns plain text. If you need structured data (for example, JSON), parse it in your agent or your own code.
 
-For large files, use `start_line` and `line_count` to read only a range of lines.
+For large files, the agent can pass `start_line` and `line_count` to read only a range of lines.
 The tool stops once it has those lines, so it does not scan the rest of the file.
 
 ## Installation
@@ -32,20 +32,17 @@ pip install 'crewai[tools]'
 ```python Code
 from crewai_tools import FileReadTool
 
-# No default file — pass file_path when you call the tool
+# Agent chooses the file path at runtime
 tool = FileReadTool()
-content = tool.run(file_path='path/to/your/file.txt')
 
-# OR set a default file at construction
+# OR set a default file the agent can read with no path argument
 tool = FileReadTool(file_path='path/to/your/file.txt')
-content = tool.run()  # reads the default file
 
-# Read only lines 100-149 of the default file
-partial_content = tool.run(start_line=100, line_count=50)
-
-# Read another file inside the sandbox
-other = tool.run(file_path='path/to/other.txt')
+# OR let the agent read any file under a directory
+tool = FileReadTool(base_dir='/data')
 ```
+
+Give the tool to an agent. At runtime the LLM passes `file_path`, and optionally `start_line` and `line_count`.
 
 ## Arguments
 
@@ -70,11 +67,6 @@ An LLM usually chooses the file path at runtime, so reads are limited to a sandb
 - Runtime paths must resolve inside `base_dir` (default: the current working directory). The tool resolves `..` segments and symlinks before it checks the path, so they cannot escape the sandbox.
 - A `file_path` you pass to the constructor is always allowed, even if it is outside `base_dir`. The read can still fail if the file is missing, is a directory, or cannot be accessed. That path is fixed when the tool is created, so a later change of working directory does not change which file it points to. The agent can read it by omitting `file_path`, or by using the name shown in the tool description. Declaring one file does not allow access to other files in the same folder.
 
-To let an agent read files outside the working directory, set `base_dir` to that directory:
-
-```python Code
-# The agent can read anything under /data, and nothing outside it
-tool = FileReadTool(base_dir='/data')
-```
+To let an agent read files outside the working directory, set `base_dir` when you create the tool (see the example above).
 
 As a last resort, set `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true` to turn off path checks. This setting applies to every crewai-tools tool in the process, including SSRF protections on URL-fetching tools. Prefer `base_dir` instead.
