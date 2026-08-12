@@ -1429,7 +1429,6 @@ class Crew(FlowTrackable, BaseModel):
             async_outputs = await self._aprocess_async_tasks(
                 pending_tasks, was_replayed
             )
-            task_outputs.clear()
             task_outputs.extend(async_outputs)
             pending_tasks.clear()
 
@@ -1641,7 +1640,6 @@ class Crew(FlowTrackable, BaseModel):
     ) -> TaskOutput | None:
         if futures:
             async_outputs = self._process_async_tasks(futures, was_replayed)
-            task_outputs.clear()
             task_outputs.extend(async_outputs)
             futures.clear()
 
