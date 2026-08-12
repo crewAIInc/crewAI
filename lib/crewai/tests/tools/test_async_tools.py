@@ -202,6 +202,31 @@ class TestToolRunUnderRunningLoop:
         result = asyncio.run(caller())
         assert result == "structured: test"
 
+    def test_structured_tool_invoke_returned_coroutine_inside_running_loop(
+        self,
+    ) -> None:
+        """CrewStructuredTool.invoke() must resolve a coroutine returned by a
+        sync func under a running loop (the non-``async def`` branch)."""
+
+        def sync_returns_coro(value: str) -> str:
+            """A sync structured tool that returns a coroutine."""
+
+            async def _inner() -> str:
+                await asyncio.sleep(0.01)
+                return f"returned: {value}"
+
+            return _inner()  # type: ignore[return-value]
+
+        structured = CrewStructuredTool.from_function(
+            func=sync_returns_coro, name="structured_returns_coro"
+        )
+
+        async def caller() -> str:
+            return structured.invoke({"value": "test"})
+
+        result = asyncio.run(caller())
+        assert result == "returned: test"
+
 
 class TestAsyncToolWithIO:
     """Tests for async tools with simulated I/O operations."""

@@ -16,9 +16,11 @@ def run_coroutine_sync(coro: Coroutine[Any, Any, T]) -> T:
     When called from within a running event loop (for example a FastAPI
     request handler, a Jupyter cell or any ``async def``), ``asyncio.run``
     raises ``RuntimeError: asyncio.run() cannot be called from a running event
-    loop``. In that case the coroutine is executed to completion in a
-    dedicated worker thread so the calling loop is neither blocked nor
-    re-entered. Otherwise it falls back to ``asyncio.run``.
+    loop``. In that case the coroutine is executed to completion on a
+    dedicated worker thread (with a copy of the current context), which avoids
+    re-entering the running loop. The calling thread blocks on
+    ``Future.result()`` until the coroutine finishes, so the running loop makes
+    no progress while it waits. Otherwise it falls back to ``asyncio.run``.
     """
     try:
         asyncio.get_running_loop()
