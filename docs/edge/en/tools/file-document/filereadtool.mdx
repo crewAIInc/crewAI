@@ -52,7 +52,7 @@ The agent can pass these at runtime:
 
 You can set these when you create the tool:
 
-- `file_path`: (Optional) Default file to read when the agent calls the tool with no path.
+- `file_path`: (Optional) Default file to read when the agent calls the tool with no path. A relative path resolves against `base_dir` when `base_dir` is provided, otherwise against the current working directory.
 - `base_dir`: (Optional) Directory that runtime paths must stay inside. Default is the current working directory. The tool resolves this path when the tool is created, so a later change of working directory does not move the sandbox.
 - `encoding`: (Optional) Text encoding used to decode the file. Default is `utf-8`. If decoding fails, the tool returns an error and suggests passing a different `encoding`.
 
