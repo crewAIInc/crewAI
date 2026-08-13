@@ -3,19 +3,19 @@ repos:
     hooks:
       - id: ruff
         name: ruff
-        entry: bash -c 'source .venv/bin/activate && uv run ruff check --config pyproject.toml "$@"' --
+        entry: uv run ruff check --config pyproject.toml
         language: system
         pass_filenames: true
         types: [python]
       - id: ruff-format
         name: ruff-format
-        entry: bash -c 'source .venv/bin/activate && uv run ruff format --config pyproject.toml "$@"' --
+        entry: uv run ruff format --config pyproject.toml
         language: system
         pass_filenames: true
         types: [python]
       - id: mypy
         name: mypy
-        entry: bash -c 'source .venv/bin/activate && uv run mypy --config-file pyproject.toml "$@"' --
+        entry: uv run mypy --config-file pyproject.toml
         language: system
         pass_filenames: true
         types: [python]
@@ -30,7 +30,7 @@ repos:
         name: pip-audit
         # Keep this ignore list in sync with .github/workflows/vulnerability-scan.yml.
         entry: >-
-          bash -c 'source .venv/bin/activate && uv run pip-audit --skip-editable
+          uv run pip-audit --skip-editable
           --ignore-vuln PYSEC-2024-277
           --ignore-vuln PYSEC-2026-89
           --ignore-vuln PYSEC-2026-97
@@ -56,7 +56,7 @@ repos:
           --ignore-vuln PYSEC-2025-216
           --ignore-vuln PYSEC-2025-217
           --ignore-vuln PYSEC-2025-218
-          --ignore-vuln GHSA-f4j7-r4q5-qw2c' --
+          --ignore-vuln GHSA-f4j7-r4q5-qw2c
         language: system
         pass_filenames: false
         stages: [pre-push, manual]
