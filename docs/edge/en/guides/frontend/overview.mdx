@@ -12,16 +12,16 @@ CrewAI runs your agents. [CopilotKit](https://copilotkit.ai) gives them a fronte
 The two connect through the [AG-UI protocol](https://docs.ag-ui.com). The `ag-ui-crewai` package exposes any Crew or Flow as an AG-UI endpoint. CopilotKit's React hooks and components consume that endpoint. This unlocks experiences that go well beyond a chat box:
 
 <CardGroup cols={2}>
-  <Card title="Generative UI" icon="wand-magic-sparkles" href="/en/guides/frontend/generative-ui">
+  <Card title="Generative UI" icon="wand-magic-sparkles" href="/edge/en/guides/frontend/generative-ui">
     Render agent tool calls and state as your own React components.
   </Card>
-  <Card title="Human-in-the-Loop" icon="user-check" href="/en/guides/frontend/human-in-the-loop">
+  <Card title="Human-in-the-Loop" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
     Pause the agent to collect user approval or input mid-run.
   </Card>
-  <Card title="Shared State" icon="arrows-rotate" href="/en/guides/frontend/shared-state">
+  <Card title="Shared State" icon="arrows-rotate" href="/edge/en/guides/frontend/shared-state">
     Keep agent state and your app UI in two-way sync.
   </Card>
-  <Card title="Channels" icon="slack" href="/en/guides/frontend/channels">
+  <Card title="Channels" icon="slack" href="/edge/en/guides/frontend/channels">
     Run the same agent as a Slack, Discord, or Teams bot.
   </Card>
 </CardGroup>
@@ -45,7 +45,7 @@ This guide covers the **self-hosted** path: you run the CrewAI agent server your
 </Note>
 
 <Note>
-CrewAI runs behind AG-UI in three shapes: regular **Flows** (used throughout these guides), **[Conversational Flows](/en/guides/frontend/conversational-flows)** (native, session-aware, turn-based, at full feature parity), and **Crews** (basic chat). The frontend in this section is identical across them — only the backend authoring and registration differ.
+CrewAI runs behind AG-UI in three shapes: regular **Flows** (used throughout these guides), **[Conversational Flows](/edge/en/guides/frontend/conversational-flows)** (native, session-aware, turn-based, at full feature parity), and **Crews** (basic chat). The frontend in this section is identical across them — only the backend authoring and registration differ.
 </Note>
 
 ## Integration guide
@@ -223,16 +223,16 @@ import { CopilotChat } from "@copilotkit/react-core/v2";
 ## Where to go next
 
 <CardGroup cols={2}>
-  <Card title="Generative UI" icon="wand-magic-sparkles" href="/en/guides/frontend/generative-ui">
+  <Card title="Generative UI" icon="wand-magic-sparkles" href="/edge/en/guides/frontend/generative-ui">
     Render tool calls and agent state as custom components.
   </Card>
-  <Card title="Frontend Actions" icon="bolt" href="/en/guides/frontend/frontend-actions">
+  <Card title="Frontend Actions" icon="bolt" href="/edge/en/guides/frontend/frontend-actions">
     Let the agent call functions that run in the browser.
   </Card>
-  <Card title="Human-in-the-Loop" icon="user-check" href="/en/guides/frontend/human-in-the-loop">
+  <Card title="Human-in-the-Loop" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
     Gate agent actions behind user approval.
   </Card>
-  <Card title="Predictive State" icon="gauge-high" href="/en/guides/frontend/predictive-state-updates">
+  <Card title="Predictive State" icon="gauge-high" href="/edge/en/guides/frontend/predictive-state-updates">
     Stream in-progress state to the UI as the agent works.
   </Card>
 </CardGroup>

@@ -11,7 +11,7 @@ When your Crew or Flow calls a tool, you rarely want the raw arguments dumped in
 
 Because CopilotKit streams the tool call to the frontend as the model generates it, the arguments fill in progressively. Your component can paint the moment the first field arrives and update as the rest stream in.
 
-This guide builds a haiku generator: the agent calls a `generate_haiku` tool, and the frontend renders each haiku as a card. It assumes you already have a Crew or Flow talking to a Next.js app. If not, start with the [Frontend Overview](/en/guides/frontend/overview) for the full server, runtime, and provider setup.
+This guide builds a haiku generator: the agent calls a `generate_haiku` tool, and the frontend renders each haiku as a card. It assumes you already have a Crew or Flow talking to a Next.js app. If not, start with the [Frontend Overview](/edge/en/guides/frontend/overview) for the full server, runtime, and provider setup.
 
 <Note>
 Tool rendering works with both Crews and Flows. The example below uses a Flow, but the frontend wiring is identical either way.
@@ -108,7 +108,7 @@ add_crewai_flow_fastapi_endpoint(
 )
 ```
 
-Register the agent with the CopilotKit runtime and point `<CopilotKit>` at it exactly as shown in the [Frontend Overview](/en/guides/frontend/overview). The rest of this guide assumes the agent is registered under the id `haiku`.
+Register the agent with the CopilotKit runtime and point `<CopilotKit>` at it exactly as shown in the [Frontend Overview](/edge/en/guides/frontend/overview). The rest of this guide assumes the agent is registered under the id `haiku`.
 
 </Step>
 
@@ -117,7 +117,7 @@ Register the agent with the CopilotKit runtime and point `<CopilotKit>` at it ex
 On the frontend, call `useRenderTool` with the same `name` the backend declared. `useRenderTool` is the hook for *rendering* a tool call: it takes a `render` function and nothing to execute, because this tool is pure display.
 
 <Note>
-Use `useRenderTool` when the tool only draws UI. If the tool also needs to *run* something in the browser, use [`useFrontendTool`](/en/guides/frontend/frontend-actions) instead, which pairs a `handler` with an optional `render`.
+Use `useRenderTool` when the tool only draws UI. If the tool also needs to *run* something in the browser, use [`useFrontendTool`](/edge/en/guides/frontend/frontend-actions) instead, which pairs a `handler` with an optional `render`.
 </Note>
 
 ```tsx
@@ -223,13 +223,13 @@ A backend tool must return a **JSON string**, not a Python dict. The bridge stri
 ## Related
 
 <CardGroup cols={2}>
-  <Card title="Agentic Generative UI" icon="list-check" href="/en/guides/frontend/agentic-generative-ui">
+  <Card title="Agentic Generative UI" icon="list-check" href="/edge/en/guides/frontend/agentic-generative-ui">
     Render live agent state as it changes across a multi-step run.
   </Card>
-  <Card title="Human-in-the-Loop" icon="user-check" href="/en/guides/frontend/human-in-the-loop">
+  <Card title="Human-in-the-Loop" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
     Pause the agent to collect user approval or input mid-run.
   </Card>
-  <Card title="Frontend Actions" icon="bolt" href="/en/guides/frontend/frontend-actions">
+  <Card title="Frontend Actions" icon="bolt" href="/edge/en/guides/frontend/frontend-actions">
     Let the agent call functions that run in the browser.
   </Card>
 </CardGroup>

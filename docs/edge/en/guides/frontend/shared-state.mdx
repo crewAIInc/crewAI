@@ -115,13 +115,13 @@ class SharedStateFlow(Flow[AgentState]):
         pass
 ```
 
-Two things make this shared rather than one-way: dumping `self.state` into the prompt means the agent always works from the latest recipe (including edits the user made in the UI), and assigning `self.state.recipe` puts the new value into the state snapshot sent to connected clients at the end of the step. For updates during a long step, emit explicitly with `copilotkit_emit_state` (see [Agentic Generative UI](/en/guides/frontend/agentic-generative-ui)).
+Two things make this shared rather than one-way: dumping `self.state` into the prompt means the agent always works from the latest recipe (including edits the user made in the UI), and assigning `self.state.recipe` puts the new value into the state snapshot sent to connected clients at the end of the step. For updates during a long step, emit explicitly with `copilotkit_emit_state` (see [Agentic Generative UI](/edge/en/guides/frontend/agentic-generative-ui)).
 
 </Step>
 
 <Step title="Serve the Flow over AG-UI">
 
-Expose the Flow from your FastAPI app with `add_crewai_flow_fastapi_endpoint`, then register it in the CopilotKit runtime. See the [Frontend Overview](/en/guides/frontend/overview) for the full server and runtime setup.
+Expose the Flow from your FastAPI app with `add_crewai_flow_fastapi_endpoint`, then register it in the CopilotKit runtime. See the [Frontend Overview](/edge/en/guides/frontend/overview) for the full server and runtime setup.
 
 ```python
 # server.py
@@ -198,13 +198,13 @@ Putting the pieces together, a single recipe object is kept in sync in both dire
 ## Related
 
 <CardGroup cols={2}>
-  <Card title="Agentic Generative UI" icon="list-check" href="/en/guides/frontend/agentic-generative-ui">
+  <Card title="Agentic Generative UI" icon="list-check" href="/edge/en/guides/frontend/agentic-generative-ui">
     Render live agent state as it changes.
   </Card>
-  <Card title="Predictive State" icon="gauge-high" href="/en/guides/frontend/predictive-state-updates">
+  <Card title="Predictive State" icon="gauge-high" href="/edge/en/guides/frontend/predictive-state-updates">
     Stream in-progress state to the UI as the agent works.
   </Card>
-  <Card title="Human-in-the-Loop" icon="user-check" href="/en/guides/frontend/human-in-the-loop">
+  <Card title="Human-in-the-Loop" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
     Pause the agent to collect user approval or input mid-run.
   </Card>
 </CardGroup>
