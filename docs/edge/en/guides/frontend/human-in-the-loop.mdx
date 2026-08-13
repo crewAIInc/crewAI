@@ -74,7 +74,7 @@ class HumanInTheLoopFlow(Flow[CopilotKitState]):
 
 <Step title="Serve the Flow over AG-UI">
 
-Expose the Flow from your FastAPI server with `add_crewai_flow_fastapi_endpoint`, the same way as every other agent. See [Frontend Overview](/en/guides/frontend/overview) for the full server, runtime, and provider setup.
+Expose the Flow from your FastAPI server with `add_crewai_flow_fastapi_endpoint`, the same way as every other agent. See [Frontend Overview](/edge/en/guides/frontend/overview) for the full server, runtime, and provider setup.
 
 ```python
 # server.py
@@ -179,13 +179,13 @@ Once the user clicks Confirm, `respond()` fires, the run resumes, and the Flow's
 ## Related
 
 <CardGroup cols={2}>
-  <Card title="Frontend Actions" icon="bolt" href="/en/guides/frontend/frontend-actions">
+  <Card title="Frontend Actions" icon="bolt" href="/edge/en/guides/frontend/frontend-actions">
     Let the agent call functions that run in the browser.
   </Card>
-  <Card title="Shared State" icon="arrows-rotate" href="/en/guides/frontend/shared-state">
+  <Card title="Shared State" icon="arrows-rotate" href="/edge/en/guides/frontend/shared-state">
     Keep agent state and your app UI in two-way sync.
   </Card>
-  <Card title="Agentic Generative UI" icon="list-check" href="/en/guides/frontend/agentic-generative-ui">
+  <Card title="Agentic Generative UI" icon="list-check" href="/edge/en/guides/frontend/agentic-generative-ui">
     Render live agent state as custom components.
   </Card>
 </CardGroup>

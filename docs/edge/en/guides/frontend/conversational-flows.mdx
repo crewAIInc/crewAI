@@ -18,7 +18,7 @@ Behind the AG-UI bridge, a CrewAI backend can take one of three shapes. Knowing 
 Conversational Flows are a newer CrewAI capability, and an important thing to be clear about up front: **they are Flows, not Crews.** They now run at full regular-Flow feature parity. This page introduces them and shows how they fit the rest of the frontend guides.
 
 <Note>
-Reach for a Conversational Flow when you want native multi-turn conversation with CrewAI managing session state and history for you, rather than wiring turn and state handling into a regular Flow yourself. If you are new here, start with the [Frontend Overview](/en/guides/frontend/overview) for the base server, runtime, and provider setup.
+Reach for a Conversational Flow when you want native multi-turn conversation with CrewAI managing session state and history for you, rather than wiring turn and state handling into a regular Flow yourself. If you are new here, start with the [Frontend Overview](/edge/en/guides/frontend/overview) for the base server, runtime, and provider setup.
 </Note>
 
 ## Register a Conversational Flow
@@ -66,25 +66,25 @@ This is the point to hold onto: **Conversational Flows run through the same even
 There is no Conversational-Flow-specific frontend API. Every feature in these guides works exactly the same way with a Conversational Flow as it does with a regular Flow, using the same hooks and components:
 
 <CardGroup cols={2}>
-  <Card title="Tool-Based Generative UI" icon="puzzle-piece" href="/en/guides/frontend/tool-based-generative-ui">
+  <Card title="Tool-Based Generative UI" icon="puzzle-piece" href="/edge/en/guides/frontend/tool-based-generative-ui">
     Map agent tool calls to your React components.
   </Card>
-  <Card title="Agentic Generative UI" icon="list-check" href="/en/guides/frontend/agentic-generative-ui">
+  <Card title="Agentic Generative UI" icon="list-check" href="/edge/en/guides/frontend/agentic-generative-ui">
     Render the Flow's live state as it works.
   </Card>
-  <Card title="Shared State" icon="arrows-rotate" href="/en/guides/frontend/shared-state">
+  <Card title="Shared State" icon="arrows-rotate" href="/edge/en/guides/frontend/shared-state">
     Keep agent state and app UI in two-way sync.
   </Card>
-  <Card title="Human-in-the-Loop" icon="user-check" href="/en/guides/frontend/human-in-the-loop">
+  <Card title="Human-in-the-Loop" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
     Pause the agent for user approval or input mid-turn.
   </Card>
-  <Card title="Predictive State" icon="gauge-high" href="/en/guides/frontend/predictive-state-updates">
+  <Card title="Predictive State" icon="gauge-high" href="/edge/en/guides/frontend/predictive-state-updates">
     Stream in-progress tool arguments into state.
   </Card>
-  <Card title="Reasoning" icon="brain" href="/en/guides/frontend/reasoning">
+  <Card title="Reasoning" icon="brain" href="/edge/en/guides/frontend/reasoning">
     Show the model's thinking in the chat.
   </Card>
-  <Card title="A2UI" icon="table-cells" href="/en/guides/frontend/a2ui">
+  <Card title="A2UI" icon="table-cells" href="/edge/en/guides/frontend/a2ui">
     Render agent-authored UI from a component catalog.
   </Card>
 </CardGroup>
@@ -94,13 +94,13 @@ The only difference is on the backend: how you author the Flow (turn-based `stre
 ## Related
 
 <CardGroup cols={2}>
-  <Card title="Frontend Overview" icon="browser" href="/en/guides/frontend/overview">
+  <Card title="Frontend Overview" icon="browser" href="/edge/en/guides/frontend/overview">
     Wire a Crew or Flow to a Next.js frontend end to end.
   </Card>
-  <Card title="Generative UI" icon="wand-magic-sparkles" href="/en/guides/frontend/generative-ui">
+  <Card title="Generative UI" icon="wand-magic-sparkles" href="/edge/en/guides/frontend/generative-ui">
     Render tool calls and agent state as custom components.
   </Card>
-  <Card title="Human-in-the-Loop" icon="user-check" href="/en/guides/frontend/human-in-the-loop">
+  <Card title="Human-in-the-Loop" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
     Gate agent actions behind user approval.
   </Card>
 </CardGroup>

@@ -727,7 +727,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     # conversational session emits FlowFinishedEvent from
     # finalize_session_traces() regardless of outcome, so without this a failed
     # session would be reported as a successful completion.
-    _telemetry_turn_failed: bool = PrivateAttr(default=False)
+    _telemetry_turn_error: type[BaseException] | None = PrivateAttr(default=None)
 
     _is_execution_resuming: bool = PrivateAttr(default=False)
     _restored_from_checkpoint: bool = PrivateAttr(default=False)

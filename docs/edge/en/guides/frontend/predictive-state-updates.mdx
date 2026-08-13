@@ -22,13 +22,13 @@ Both patterns read the agent's state from the frontend, but they solve different
 | Pattern | What it does |
 | --- | --- |
 | **Predictive state** | One-way. Streams an in-progress tool argument into a state field so the UI updates *during* generation, before the call completes. |
-| **[Shared State](/en/guides/frontend/shared-state)** | Two-way. The UI reads *and writes* the agent's committed state, keeping app and agent in sync across turns. |
+| **[Shared State](/edge/en/guides/frontend/shared-state)** | Two-way. The UI reads *and writes* the agent's committed state, keeping app and agent in sync across turns. |
 
-Reach for predictive state when you want an optimistic, in-flight preview of what the agent is producing. Reach for [Shared State](/en/guides/frontend/shared-state) when the user needs to edit that state back.
+Reach for predictive state when you want an optimistic, in-flight preview of what the agent is producing. Reach for [Shared State](/edge/en/guides/frontend/shared-state) when the user needs to edit that state back.
 
 ## Walkthrough
 
-This assumes you already have a Crew or Flow served over AG-UI and a CopilotKit frontend wired up. If not, start with the [Frontend Overview](/en/guides/frontend/overview).
+This assumes you already have a Crew or Flow served over AG-UI and a CopilotKit frontend wired up. If not, start with the [Frontend Overview](/edge/en/guides/frontend/overview).
 
 <Steps>
 
@@ -99,7 +99,7 @@ Call `copilotkit_predict_state` **before** you start streaming the completion. I
 
 The key is `copilotkit_predict_state({ "<state_field>": {"tool_name": ..., "tool_argument": ...} })`. Without it, the frontend would only see `document` once the tool call completed. With it, the partial argument streams onto the field while the agent is still generating.
 
-Serve the Flow with `add_crewai_flow_fastapi_endpoint(...)` as shown in the [Frontend Overview](/en/guides/frontend/overview).
+Serve the Flow with `add_crewai_flow_fastapi_endpoint(...)` as shown in the [Frontend Overview](/edge/en/guides/frontend/overview).
 
 </Step>
 
@@ -130,13 +130,13 @@ The `document` field fills in progressively as the agent generates the `write_do
 ## Related
 
 <CardGroup cols={2}>
-  <Card title="Shared State" icon="arrows-rotate" href="/en/guides/frontend/shared-state">
+  <Card title="Shared State" icon="arrows-rotate" href="/edge/en/guides/frontend/shared-state">
     Read and write the agent's state two-way.
   </Card>
-  <Card title="Agentic Generative UI" icon="list-check" href="/en/guides/frontend/agentic-generative-ui">
+  <Card title="Agentic Generative UI" icon="list-check" href="/edge/en/guides/frontend/agentic-generative-ui">
     Render live agent state as it changes.
   </Card>
-  <Card title="Tool-Based Generative UI" icon="puzzle-piece" href="/en/guides/frontend/tool-based-generative-ui">
+  <Card title="Tool-Based Generative UI" icon="puzzle-piece" href="/edge/en/guides/frontend/tool-based-generative-ui">
     Map agent tool calls to components.
   </Card>
 </CardGroup>
