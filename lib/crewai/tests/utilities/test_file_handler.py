@@ -1,4 +1,5 @@
 ﻿import os
+import stat
 import tempfile
 import unittest
 import uuid
@@ -125,3 +126,40 @@ class TestPickleHandler(unittest.TestCase):
         with patch("os.path.exists", side_effect=remove_sig_after_check):
             with pytest.raises(ValueError, match="signature file"):
                 self.handler.load()
+
+    def test_validate_key_storage_skips_posix_checks_on_windows(self):
+        """On Windows os.getuid() is unavailable; validation must skip POSIX checks."""
+        key_dir = tempfile.mkdtemp(prefix="crewai_key_")
+        key_path = os.path.join(key_dir, "key.bin")
+        try:
+            with patch("os.name", "nt"):
+                self.assertTrue(PickleHandler._validate_key_storage(key_dir, key_path))
+        finally:
+            os.rmdir(key_dir)
+
+    def test_validate_key_storage_rejects_symlinked_directory(self):
+        """A symlinked key directory must be rejected before any ownership checks."""
+        key_dir = "/nonexistent/key/dir"
+        key_path = os.path.join(key_dir, "key.bin")
+        fake_stat = os.stat_result((stat.S_IFLNK | 0o777, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+        with patch("crewai.utilities.file_handler.os.lstat", return_value=fake_stat):
+            with self.assertRaises(PermissionError):
+                PickleHandler._validate_key_storage(key_dir, key_path)
+
+    def test_validate_key_storage_rejects_symlinked_key_file(self):
+        """A symlinked key file must be rejected before any ownership checks."""
+        key_dir = "/nonexistent/key/dir"
+        key_path = "/nonexistent/key/dir/key.bin"
+        dir_stat = os.stat_result((0o40700, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+        file_stat = os.stat_result((stat.S_IFLNK | 0o777, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+
+        def fake_lstat(path):
+            if path == key_dir:
+                return dir_stat
+            return file_stat
+
+        with patch("crewai.utilities.file_handler.os.lstat", side_effect=fake_lstat), patch(
+            "crewai.utilities.file_handler.os.path.exists", return_value=True
+        ):
+            with self.assertRaises(PermissionError):
+                PickleHandler._validate_key_storage(key_dir, key_path)
