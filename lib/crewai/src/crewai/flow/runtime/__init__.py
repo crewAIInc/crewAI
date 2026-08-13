@@ -78,6 +78,10 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.events.types.llm_events import LLMCallCompletedEvent
+from crewai.execution import (
+    begin_execution,
+    end_execution,
+)
 from crewai.flow.async_feedback.types import (
     HumanFeedbackPending,
     HumanFeedbackProvider,
@@ -2131,6 +2135,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if current_flow_request_id.get() is None:
             request_id_token = current_flow_request_id.set(self.flow_id)
 
+        execution_token = begin_execution()
+
         runtime_scope = crewai_event_bus._enter_runtime_scope()
 
         # Reentrant kickoffs on the same Flow share the outer call's
@@ -2486,6 +2492,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 current_flow_id.reset(flow_id_token)
             if flow_inputs_token is not None:
                 detach(flow_inputs_token)
+            end_execution(execution_token)
             detach(flow_token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
 
