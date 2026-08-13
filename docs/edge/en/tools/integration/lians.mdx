@@ -13,7 +13,7 @@ icon: brain
 Install CrewAI and the Lians CrewAI integration. Include the `local` extra for zero-setup local storage.
 
 ```bash
-pip install "crewai lians-sdk[crewai,local]"
+pip install crewai "lians-sdk[crewai,local]"
 ```
 
 ## Usage
@@ -60,5 +60,18 @@ Use a stable `agent_id` when multiple crew runs should share the same memory his
 ## Remote service
 
 To use a deployed Lians service, create the standard Lians client with your service URL and credentials, then pass it to `build_crewai_tools` in place of `LocalLiansClient`.
+
+```python
+import os
+
+from lians import LiansClient
+from lians.crewai_integration import build_crewai_tools
+
+client = LiansClient(
+    base_url=os.environ["LIANS_BASE_URL"],
+    api_key=os.environ["LIANS_API_KEY"],
+)
+memory_tools = build_crewai_tools(client, agent_id="research-crew")
+```
 
 For configuration and API details, see the [Lians documentation](https://www.lians.ai/docs).
