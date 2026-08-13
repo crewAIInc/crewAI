@@ -382,3 +382,98 @@ def test_paused_and_method_failed_record_flow_and_origin() -> None:
         _tracer, span = _emit(method, "ResearchFlow", "internal")
         span.set_attribute.assert_any_call("flow_name", "ResearchFlow")
         span.set_attribute.assert_any_call("origin", "internal")
+
+
+def _version_attr(span) -> str | None:
+    """The crewai_version value recorded on a mocked span, if any."""
+    for call in span.set_attribute.call_args_list:
+        if call.args and call.args[0] == "crewai_version":
+            return call.args[1]
+    return None
+
+
+@pytest.mark.parametrize(
+    ("method", "args"),
+    [
+        ("flow_plotting_span", ("ResearchFlow", ["step_a", "step_b"])),
+        ("deploy_signup_error_span", ()),
+        ("start_deployment_span", ("dep-123",)),
+        ("create_crew_deployment_span", ()),
+        ("get_crew_logs_span", ("dep-123", "deployment")),
+        ("remove_crew_span", ("dep-123",)),
+        ("human_feedback_span", ("requested", False)),
+    ],
+)
+def test_span_records_the_crewai_version(method: str, args: tuple) -> None:
+    """Version-filtered queries silently drop any span kind missing this.
+
+    Without it a release cannot be attributed for that span, so version-adoption
+    and per-release regression analysis are blind to it.
+    """
+    _tracer, span = _emit(method, *args)
+
+    recorded = _version_attr(span)
+    assert recorded, f"{method} recorded no crewai_version"
+    assert recorded[0].isdigit(), f"{method} recorded a non-version: {recorded!r}"
+
+
+def test_task_spans_record_the_crewai_version() -> None:
+    """Task Created and Task Execution are the highest-volume span kinds.
+
+    They are emitted together by task_started, and both were missing the
+    version - so every version-filtered task metric returned nothing.
+    """
+    agent = Agent(role="R", goal="G", backstory="B")
+    task = Task(description="D", expected_output="E", agent=agent)
+    crew = Crew(agents=[agent], tasks=[task])
+
+    tracer, span = _emit("task_started", crew, task)
+
+    emitted = [c.args[0] for c in tracer.start_span.call_args_list]
+    assert emitted == ["Task Created", "Task Execution"]
+
+    # The harness hands the same mock back for both start_span calls, so the
+    # attribute writes accumulate: one crewai_version per span emitted.
+    versions = [
+        c.args[1]
+        for c in span.set_attribute.call_args_list
+        if c.args and c.args[0] == "crewai_version"
+    ]
+    assert len(versions) == 2, f"expected one version per task span, got {versions}"
+    assert all(v and v[0].isdigit() for v in versions)
+
+
+def test_every_span_records_the_crewai_version() -> None:
+    """Regression guard for span kinds added later.
+
+    Enumerating the source rather than emitting all 32 spans: the point is to
+    fail when someone adds a new span without the version, which a fixed list
+    of behavioural cases cannot do.
+    """
+    import ast
+    from pathlib import Path
+
+    import crewai
+    import crewai_core
+
+    missing: list[str] = []
+    for module in (crewai, crewai_core):
+        path = Path(module.__file__).parent / "telemetry" / "telemetry.py"
+        if not path.is_file():  # crewai_core keeps it flat
+            path = Path(module.__file__).parent / "telemetry.py"
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef):
+                continue
+            # Skip the nested closure: its enclosing method is already checked and
+            # is the name a reader needs to act on.
+            if node.name == "_operation":
+                continue
+            dumped = ast.dump(node)
+            if "start_span" in dumped and "crewai_version" not in dumped:
+                missing.append(f"{path.name}::{node.name}")
+
+    assert not missing, (
+        "these span methods create a span without recording crewai_version: "
+        + ", ".join(sorted(missing))
+    )
