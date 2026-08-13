@@ -81,6 +81,7 @@ from crewai.events.types.llm_events import LLMCallCompletedEvent
 from crewai.execution import (
     begin_execution,
     end_execution,
+    get_execution_uuid,
 )
 from crewai.flow.async_feedback.types import (
     HumanFeedbackPending,
@@ -1346,6 +1347,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "No pending feedback context. Use from_pending() to restore a paused flow."
             )
 
+        execution_token = begin_execution(self._pending_feedback_context.execution_uuid)
+
         # Force `current_flow_id` to this flow's match id for the
         # duration of the resume so the usage listener's filter passes
         # even when resume runs under another flow's active context.
@@ -1372,6 +1375,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._detach_usage_aggregation_listener()
             if flow_id_token is not None:
                 current_flow_id.reset(flow_id_token)
+            end_execution(execution_token)
 
     async def _resume_async_body(
         self, feedback: str = "", hook_state: dict[str, bool] | None = None
@@ -3539,6 +3543,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 llm=llm
                 if llm is None or isinstance(llm, (str, dict))
                 else _serialize_llm_for_context(llm),
+                execution_uuid=get_execution_uuid(),
             )
             feedback_value = await asyncio.to_thread(
                 provider.request_feedback, context, self

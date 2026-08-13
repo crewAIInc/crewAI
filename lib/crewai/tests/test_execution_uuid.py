@@ -176,3 +176,74 @@ async def test_crew_akickoff_inherits_enterprise_execution_uuid() -> None:
         assert get_execution_uuid() == "celery-kickoff-id"
 
     assert get_execution_uuid() is None
+
+
+def test_flow_pause_persists_execution_uuid_and_resume_restores_it() -> None:
+    import os
+    import tempfile
+
+    from crewai.flow.async_feedback.types import (
+        HumanFeedbackPending,
+        PendingFeedbackContext,
+    )
+    from crewai.flow import Flow, human_feedback, listen, start
+    from crewai.flow.persistence import SQLiteFlowPersistence
+
+    seen: dict[str, str | None] = {}
+
+    class PausingProvider:
+        def request_feedback(
+            self, context: PendingFeedbackContext, flow: Flow
+        ) -> str:
+            raise HumanFeedbackPending(context=context)
+
+    class ReviewFlow(Flow):
+        @start()
+        @human_feedback(message="Review:", provider=PausingProvider())
+        def generate(self) -> str:
+            seen["during_kickoff"] = get_execution_uuid()
+            return "draft"
+
+        @listen(generate)
+        def process(self, result: object) -> str:
+            seen["during_resume"] = get_execution_uuid()
+            return "done"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        persistence = SQLiteFlowPersistence(os.path.join(tmpdir, "test.db"))
+        pending = ReviewFlow(persistence=persistence).kickoff()
+        assert isinstance(pending, HumanFeedbackPending)
+        paused_id = seen["during_kickoff"]
+        assert paused_id
+        assert pending.context.execution_uuid == paused_id
+        assert get_execution_uuid() is None
+
+        ReviewFlow.from_pending(pending.context.flow_id, persistence).resume("ok")
+        assert seen["during_resume"] == paused_id
+        assert get_execution_uuid() is None
+
+
+def test_pending_feedback_context_roundtrips_execution_uuid() -> None:
+    from crewai.flow.async_feedback.types import PendingFeedbackContext
+
+    original = PendingFeedbackContext(
+        flow_id="flow-1",
+        flow_class="test.Flow",
+        method_name="review",
+        method_output="draft",
+        message="Review:",
+        execution_uuid="kickoff-uuid",
+    )
+    restored = PendingFeedbackContext.from_dict(original.to_dict())
+    assert restored.execution_uuid == "kickoff-uuid"
+
+    legacy = PendingFeedbackContext.from_dict(
+        {
+            "flow_id": "flow-1",
+            "flow_class": "test.Flow",
+            "method_name": "review",
+            "method_output": "draft",
+            "message": "Review:",
+        }
+    )
+    assert legacy.execution_uuid is None
