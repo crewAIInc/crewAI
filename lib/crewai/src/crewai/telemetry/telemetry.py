@@ -1042,6 +1042,21 @@ class Telemetry:
 
         self._safe_telemetry_operation(_operation)
 
+    @staticmethod
+    def _safe_error_type(error_type: str | None) -> str | None:
+        """The exception class name, or None if it is not a bare identifier.
+
+        Only a class name is ever recorded - never ``str(error)``, which
+        routinely carries prompts, model output, file paths and credentials.
+        ``isidentifier()`` is the allowlist that enforces it: any message text
+        reaching this argument would contain a space, quote or punctuation and
+        be dropped. Applied here rather than at the call site so a future
+        caller cannot bypass it.
+        """
+        if error_type and error_type.isidentifier():
+            return error_type
+        return None
+
     def flow_completed_span(
         self,
         flow_name: str,
@@ -1049,6 +1064,7 @@ class Telemetry:
         outcome: str,
         origin: str = "user",
         conversational: bool = False,
+        error_type: str | None = None,
     ) -> None:
         """Records how long a flow ran and how it ended.
 
@@ -1071,7 +1087,11 @@ class Telemetry:
                 executor), ``"user"`` for flows the caller authored.
             conversational: True when this closes a conversational session. One
                 of these answers many ``Flow Execution`` spans, one per turn.
+            error_type: Class name of the exception that ended the run, for a
+                failed outcome. The name only - never the message. See
+                :meth:`_safe_error_type`.
         """
+        safe_error_type = self._safe_error_type(error_type)
 
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
@@ -1084,6 +1104,8 @@ class Telemetry:
             self._add_attribute(
                 span, "conversational", "true" if conversational else "false"
             )
+            if safe_error_type:
+                self._add_attribute(span, "error_type", safe_error_type)
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
@@ -1111,17 +1133,24 @@ class Telemetry:
 
         self._safe_telemetry_operation(_operation)
 
-    def flow_method_failed_span(self, flow_name: str, origin: str = "user") -> None:
+    def flow_method_failed_span(
+        self, flow_name: str, origin: str = "user", error_type: str | None = None
+    ) -> None:
         """Records that a method inside a flow raised.
 
         The method name is deliberately not recorded: it is user-authored and
-        would put arbitrary strings in telemetry.
+        would put arbitrary strings in telemetry. The exception's class name is
+        recorded, because knowing *what* fails is the whole point of the span
+        and a class name is a bare identifier, not free text.
 
         Args:
             flow_name: Name of the flow whose method failed.
             origin: ``"internal"`` or ``"user"`` - see
                 :meth:`flow_execution_span`.
+            error_type: Class name of the exception raised. The name only -
+                never the message. See :meth:`_safe_error_type`.
         """
+        safe_error_type = self._safe_error_type(error_type)
 
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
@@ -1129,6 +1158,8 @@ class Telemetry:
             self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "flow_name", flow_name)
             self._add_attribute(span, "origin", origin)
+            if safe_error_type:
+                self._add_attribute(span, "error_type", safe_error_type)
             close_span(span)
 
         self._safe_telemetry_operation(_operation)

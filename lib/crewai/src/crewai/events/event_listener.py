@@ -339,7 +339,12 @@ class EventListener(BaseEventListener):
                 else "user"
             )
 
-        def _report_flow_duration(source: Any, flow_name: str, outcome: str) -> None:
+        def _report_flow_duration(
+            source: Any,
+            flow_name: str,
+            outcome: str,
+            error_type: str | None = None,
+        ) -> None:
             """Emit the elapsed time for a flow that reached a terminal state.
 
             A flow can finish without this listener having seen it start - a
@@ -359,6 +364,7 @@ class EventListener(BaseEventListener):
                 outcome,
                 _flow_origin(source),
                 _is_conversational(source),
+                error_type=error_type,
             )
 
         @crewai_event_bus.on(FlowStartedEvent)
@@ -397,7 +403,11 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(FlowFailedEvent)
         def on_flow_failed(source: Any, event: FlowFailedEvent) -> None:
-            _report_flow_duration(source, event.flow_name, "failed")
+            # Class name only. The message is never read - it routinely carries
+            # prompts, model output and credentials.
+            _report_flow_duration(
+                source, event.flow_name, "failed", type(event.error).__name__
+            )
 
             if not getattr(source, "suppress_flow_events", False):
                 self.formatter.handle_flow_status(
@@ -460,9 +470,12 @@ class EventListener(BaseEventListener):
             source: Any, event: MethodExecutionFailedEvent
         ) -> None:
             # The method name is not recorded: it is user-authored and would put
-            # arbitrary strings in telemetry.
+            # arbitrary strings in telemetry. The exception class name is, so a
+            # failure is diagnosable; the message never is.
             self._telemetry.flow_method_failed_span(
-                event.flow_name, _flow_origin(source)
+                event.flow_name,
+                _flow_origin(source),
+                error_type=type(event.error).__name__,
             )
 
             self.formatter.handle_method_status(
