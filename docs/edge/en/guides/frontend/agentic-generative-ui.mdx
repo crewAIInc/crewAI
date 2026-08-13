@@ -17,12 +17,12 @@ The pattern has two halves:
 The Flow's state reaches the frontend over AG-UI without you wiring up any transport. A state snapshot is emitted automatically at each step (method) boundary of the Flow, and you can push intermediate updates during a long-running step by calling `copilotkit_emit_state` explicitly. You subclass the state to add your own fields, update them in the Flow, and read them in React.
 
 <Note>
-State-driven rendering requires a **Flow** with custom state (`Flow[AgentState]`). Crews are chat-oriented and do not expose custom state this way, so with a Crew use [tool rendering](/en/guides/frontend/tool-based-generative-ui) instead.
+State-driven rendering requires a **Flow** with custom state (`Flow[AgentState]`). Crews are chat-oriented and do not expose custom state this way, so with a Crew use [tool rendering](/edge/en/guides/frontend/tool-based-generative-ui) instead.
 </Note>
 
 ## Build a live task planner
 
-This example builds a planner that breaks a request into about ten steps and streams them to the UI as a checklist. It assumes you already have a CrewAI server and a CopilotKit frontend wired up. If you do not, start with the [Frontend Overview](/en/guides/frontend/overview).
+This example builds a planner that breaks a request into about ten steps and streams them to the UI as a checklist. It assumes you already have a CrewAI server and a CopilotKit frontend wired up. If you do not, start with the [Frontend Overview](/edge/en/guides/frontend/overview).
 
 <Steps>
 
@@ -146,7 +146,7 @@ add_crewai_flow_fastapi_endpoint(
 )
 ```
 
-See the [Frontend Overview](/en/guides/frontend/overview) for the full server, runtime, and provider setup, and remember to register the agent (here `task_planner`) in your CopilotKit runtime route.
+See the [Frontend Overview](/edge/en/guides/frontend/overview) for the full server, runtime, and provider setup, and remember to register the agent (here `task_planner`) in your CopilotKit runtime route.
 
 </Step>
 
@@ -190,19 +190,19 @@ function TaskPlan() {
 
 Reading state is the foundation. Two guides build directly on it:
 
-- [Shared State](/en/guides/frontend/shared-state) adds the other direction: editing the agent's state from the UI and having the Flow pick up the change.
-- [Predictive State](/en/guides/frontend/predictive-state-updates) streams a tool's in-progress arguments into state so the UI reflects work before it is committed.
+- [Shared State](/edge/en/guides/frontend/shared-state) adds the other direction: editing the agent's state from the UI and having the Flow pick up the change.
+- [Predictive State](/edge/en/guides/frontend/predictive-state-updates) streams a tool's in-progress arguments into state so the UI reflects work before it is committed.
 
 ## Related
 
 <CardGroup cols={2}>
-  <Card title="Shared State" icon="arrows-rotate" href="/en/guides/frontend/shared-state">
+  <Card title="Shared State" icon="arrows-rotate" href="/edge/en/guides/frontend/shared-state">
     Sync agent state and app UI in both directions.
   </Card>
-  <Card title="Predictive State" icon="gauge-high" href="/en/guides/frontend/predictive-state-updates">
+  <Card title="Predictive State" icon="gauge-high" href="/edge/en/guides/frontend/predictive-state-updates">
     Stream in-progress tool arguments into state.
   </Card>
-  <Card title="Tool-Based Generative UI" icon="puzzle-piece" href="/en/guides/frontend/tool-based-generative-ui">
+  <Card title="Tool-Based Generative UI" icon="puzzle-piece" href="/edge/en/guides/frontend/tool-based-generative-ui">
     Map agent tool calls to components.
   </Card>
 </CardGroup>

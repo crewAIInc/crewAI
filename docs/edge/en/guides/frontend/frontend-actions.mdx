@@ -89,7 +89,7 @@ class AssistantFlow(Flow[CopilotKitState]):
 
 <Step title="Serve the Flow">
 
-Expose the Flow over AG-UI with `add_crewai_flow_fastapi_endpoint(...)` and register it in the CopilotKit runtime, exactly as in the [Frontend Overview](/en/guides/frontend/overview). Once both are running, asking the assistant to "switch to dark mode" triggers `set_theme`, and the page flips.
+Expose the Flow over AG-UI with `add_crewai_flow_fastapi_endpoint(...)` and register it in the CopilotKit runtime, exactly as in the [Frontend Overview](/edge/en/guides/frontend/overview). Once both are running, asking the assistant to "switch to dark mode" triggers `set_theme`, and the page flips.
 
 </Step>
 
@@ -104,18 +104,18 @@ Expose the Flow over AG-UI with `add_crewai_flow_fastapi_endpoint(...)` and regi
 | **`handler`** | Runs code in the browser (a frontend action) |
 | **`render`** | Draws UI for the tool call (generative UI) |
 
-You can supply either one, or both. A `handler` with a `render` alongside it performs the action and draws UI while it runs. For render-only tools that just display the result of an agent action, see [Tool-Based Generative UI](/en/guides/frontend/tool-based-generative-ui).
+You can supply either one, or both. A `handler` with a `render` alongside it performs the action and draws UI while it runs. For render-only tools that just display the result of an agent action, see [Tool-Based Generative UI](/edge/en/guides/frontend/tool-based-generative-ui).
 
 ## Related
 
 <CardGroup cols={2}>
-  <Card title="Tool-Based Generative UI" icon="puzzle-piece" href="/en/guides/frontend/tool-based-generative-ui">
+  <Card title="Tool-Based Generative UI" icon="puzzle-piece" href="/edge/en/guides/frontend/tool-based-generative-ui">
     Map agent tool calls to React components.
   </Card>
-  <Card title="Human-in-the-Loop" icon="user-check" href="/en/guides/frontend/human-in-the-loop">
+  <Card title="Human-in-the-Loop" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
     Gate agent actions behind user approval.
   </Card>
-  <Card title="Shared State" icon="arrows-rotate" href="/en/guides/frontend/shared-state">
+  <Card title="Shared State" icon="arrows-rotate" href="/edge/en/guides/frontend/shared-state">
     Keep agent state and your app UI in two-way sync.
   </Card>
 </CardGroup>

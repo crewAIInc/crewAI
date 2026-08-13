@@ -14,7 +14,7 @@ CopilotKit renders generative UI along a **spectrum**, from fully author-control
 | Tier | Who decides the UI | CrewAI mechanism |
 | --- | --- | --- |
 | **[Controlled](#controlled)** | You — a fixed set of components the agent picks from | `useRenderTool`, `useAgent`, reasoning |
-| **[Declarative](#declarative)** | The agent — assembles a surface from *your* component catalog | [A2UI](/en/guides/frontend/a2ui) |
+| **[Declarative](#declarative)** | The agent — assembles a surface from *your* component catalog | [A2UI](/edge/en/guides/frontend/a2ui) |
 | **[Open-ended](#open-ended)** | An external tool/server invents the surface | MCP tools |
 
 The tiers compose freely; a single app usually mixes them.
@@ -43,10 +43,10 @@ useRenderTool({
 ```
 
 <Note>
-`useRenderTool` renders a tool call. When a tool also needs to *run* code in the browser, use [`useFrontendTool`](/en/guides/frontend/frontend-actions) (a `handler`, with optional `render`).
+`useRenderTool` renders a tool call. When a tool also needs to *run* code in the browser, use [`useFrontendTool`](/edge/en/guides/frontend/frontend-actions) (a `handler`, with optional `render`).
 </Note>
 
-See [Tool-Based Generative UI](/en/guides/frontend/tool-based-generative-ui) for the full walkthrough, including progressive rendering as arguments stream, and [Backend Tool Rendering](/en/guides/frontend/tool-based-generative-ui#backend-tools) for tools your Crew or Flow executes server-side.
+See [Tool-Based Generative UI](/edge/en/guides/frontend/tool-based-generative-ui) for the full walkthrough, including progressive rendering as arguments stream, and [Backend Tool Rendering](/edge/en/guides/frontend/tool-based-generative-ui#backend-tools) for tools your Crew or Flow executes server-side.
 
 ### State rendering
 
@@ -63,17 +63,17 @@ function TaskProgress() {
 }
 ```
 
-See [Agentic Generative UI](/en/guides/frontend/agentic-generative-ui) for streaming state from a Flow, and [Shared State](/en/guides/frontend/shared-state) for editing that state from the UI.
+See [Agentic Generative UI](/edge/en/guides/frontend/agentic-generative-ui) for streaming state from a Flow, and [Shared State](/edge/en/guides/frontend/shared-state) for editing that state from the UI.
 
 ### Reasoning
 
-When the model reasons before answering, that thinking renders in the chat automatically. No component to write. See [Reasoning](/en/guides/frontend/reasoning).
+When the model reasons before answering, that thinking renders in the chat automatically. No component to write. See [Reasoning](/edge/en/guides/frontend/reasoning).
 
 ## Declarative
 
 The agent goes beyond picking a component: it **assembles a surface** by combining building blocks from a catalog *you* define. You still own the components (the agent can only use what is in your catalog), but the layout is the agent's.
 
-This is [A2UI](/en/guides/frontend/a2ui). You register a catalog on the provider:
+This is [A2UI](/edge/en/guides/frontend/a2ui). You register a catalog on the provider:
 
 ```tsx
 <CopilotKit runtimeUrl="/api/copilotkit" agent="assistant" a2ui={{ catalog }}>
@@ -81,7 +81,7 @@ This is [A2UI](/en/guides/frontend/a2ui). You register a catalog on the provider
 </CopilotKit>
 ```
 
-The agent then builds surfaces from that catalog — either dynamically (it designs the layout from the conversation) or from a fixed schema your backend fills with data. See [A2UI](/en/guides/frontend/a2ui) for both modes and error recovery.
+The agent then builds surfaces from that catalog — either dynamically (it designs the layout from the conversation) or from a fixed schema your backend fills with data. See [A2UI](/edge/en/guides/frontend/a2ui) for both modes and error recovery.
 
 ## Open-ended
 
@@ -92,16 +92,16 @@ MCP tool calls surface as standard tool-call UI — render them with `useRenderT
 ## Related
 
 <CardGroup cols={2}>
-  <Card title="Tool-Based Generative UI" icon="puzzle-piece" href="/en/guides/frontend/tool-based-generative-ui">
+  <Card title="Tool-Based Generative UI" icon="puzzle-piece" href="/edge/en/guides/frontend/tool-based-generative-ui">
     Map agent tool calls to components (controlled).
   </Card>
-  <Card title="Agentic Generative UI" icon="list-check" href="/en/guides/frontend/agentic-generative-ui">
+  <Card title="Agentic Generative UI" icon="list-check" href="/edge/en/guides/frontend/agentic-generative-ui">
     Render live agent state (controlled).
   </Card>
-  <Card title="A2UI" icon="table-cells" href="/en/guides/frontend/a2ui">
+  <Card title="A2UI" icon="table-cells" href="/edge/en/guides/frontend/a2ui">
     Let the agent assemble surfaces from your catalog (declarative).
   </Card>
-  <Card title="Reasoning" icon="brain" href="/en/guides/frontend/reasoning">
+  <Card title="Reasoning" icon="brain" href="/edge/en/guides/frontend/reasoning">
     Render the agent's thinking.
   </Card>
 </CardGroup>
