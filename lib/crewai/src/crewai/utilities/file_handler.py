@@ -242,45 +242,60 @@ class PickleHandler:
             True if storage is safe to use.
 
         Raises:
-            PermissionError: If ownership or permissions are insecure.
+            PermissionError: If the storage is a symlink, or on POSIX if
+                ownership or permissions are insecure.
         """
-        dir_stat = os.stat(key_dir)
+        is_posix = os.name == "posix"
 
-        current_uid = os.getuid()
-
-        if dir_stat.st_uid != current_uid:
-            raise PermissionError(
-                f"HMAC key directory {key_dir} is not owned by the current user"
-            )
-
-        if os.path.islink(key_dir):
+        # Inspect the paths themselves with lstat() so a symlink cannot pass
+        # validation by pointing at a well-formed directory or file. Symlinks
+        # are rejected on every platform.
+        dir_stat = os.lstat(key_dir)
+        if stat.S_ISLNK(dir_stat.st_mode):
             raise PermissionError("HMAC key directory must not be a symlink")
 
-        dir_mode = stat.S_IMODE(dir_stat.st_mode)
+        # Ownership and permission checks are POSIX-only: os.getuid() is not
+        # available on Windows, where these semantics do not apply. Resolve it
+        # dynamically so the module type-checks on every platform (mypy's
+        # Windows stubs omit os.getuid); it only runs on POSIX.
+        if is_posix:
+            getuid = getattr(os, "getuid", None)
+            if getuid is None:
+                raise PermissionError(
+                    "os.getuid is unavailable; cannot verify HMAC key ownership"
+                )
+            current_uid = getuid()
 
-        if dir_mode & 0o077:
-            raise PermissionError(
-                f"HMAC key directory {key_dir} has insecure mode {oct(dir_mode)}; expected 0700"
-            )
+            if dir_stat.st_uid != current_uid:
+                raise PermissionError(
+                    f"HMAC key directory {key_dir} is not owned by the current user"
+                )
+
+            dir_mode = stat.S_IMODE(dir_stat.st_mode)
+
+            if dir_mode & 0o077:
+                raise PermissionError(
+                    f"HMAC key directory {key_dir} has insecure mode {oct(dir_mode)}; expected 0700"
+                )
 
         # Validate key file only if it exists (it may not during first creation).
         if os.path.exists(key_path):
-            file_stat = os.stat(key_path)
-
-            if file_stat.st_uid != current_uid:
-                raise PermissionError(
-                    f"HMAC key file {key_path} is not owned by the current user"
-                )
-
-            if os.path.islink(key_path):
+            file_stat = os.lstat(key_path)
+            if stat.S_ISLNK(file_stat.st_mode):
                 raise PermissionError("HMAC key file must not be a symlink")
 
-            file_mode = stat.S_IMODE(file_stat.st_mode)
+            if is_posix:
+                if file_stat.st_uid != current_uid:
+                    raise PermissionError(
+                        f"HMAC key file {key_path} is not owned by the current user"
+                    )
 
-            if file_mode & 0o077:
-                raise PermissionError(
-                    f"HMAC key file {key_path} has insecure mode {oct(file_mode)}; expected 0600"
-                )
+                file_mode = stat.S_IMODE(file_stat.st_mode)
+
+                if file_mode & 0o077:
+                    raise PermissionError(
+                        f"HMAC key file {key_path} has insecure mode {oct(file_mode)}; expected 0600"
+                    )
 
         return True
 
