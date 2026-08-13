@@ -8,66 +8,65 @@ from crewai_core.constants import (
     TRAINING_DATA_FILE as TRAINING_DATA_FILE,
 )
 from crewai_core.printer import PrinterColor
+
+# Coding-assistant and runtime marker tables live in crewai_core so the CLI can
+# detect the same context without importing crewai. Re-exported here because
+# these names are the established import path.
+from crewai_core.runtime_env import (
+    ANTIGRAVITY_ENV_VARS as ANTIGRAVITY_ENV_VARS,
+    AUGMENT_ENV_VARS as AUGMENT_ENV_VARS,
+    CC_ENV_VAR as CC_ENV_VAR,
+    CC_ENV_VARS as CC_ENV_VARS,
+    CI_ENV_VARS as CI_ENV_VARS,
+    CLINE_ENV_VARS as CLINE_ENV_VARS,
+    CODEX_ENV_VARS as CODEX_ENV_VARS,
+    CODING_AGENT_ENV_MARKERS as CODING_AGENT_ENV_MARKERS,
+    CONTAINER_ENV_VARS as CONTAINER_ENV_VARS,
+    CURSOR_ENV_VARS as CURSOR_ENV_VARS,
+    GEMINI_CLI_ENV_VARS as GEMINI_CLI_ENV_VARS,
+    GENERIC_AGENT_ENV_VARS as GENERIC_AGENT_ENV_VARS,
+    HOSTED_IDE_ENV_VARS as HOSTED_IDE_ENV_VARS,
+    JUNIE_ENV_VARS as JUNIE_ENV_VARS,
+    NOTEBOOK_ENV_VARS as NOTEBOOK_ENV_VARS,
+    OPENCODE_ENV_VARS as OPENCODE_ENV_VARS,
+    PAAS_ENV_VARS as PAAS_ENV_VARS,
+    RUNTIME_CONTEXT_ENV_MARKERS as RUNTIME_CONTEXT_ENV_MARKERS,
+    SERVERLESS_ENV_VARS as SERVERLESS_ENV_VARS,
+)
 from pydantic_core import CoreSchema
 
 
 __all__ = [
+    "ANTIGRAVITY_ENV_VARS",
+    "AUGMENT_ENV_VARS",
     "CC_ENV_VAR",
+    "CC_ENV_VARS",
+    "CI_ENV_VARS",
+    "CLINE_ENV_VARS",
     "CODEX_ENV_VARS",
     "CODING_AGENT_ENV_MARKERS",
+    "CONTAINER_ENV_VARS",
     "CREWAI_TRAINED_AGENTS_FILE_ENV",
     "CURSOR_ENV_VARS",
     "EMITTER_COLOR",
+    "GEMINI_CLI_ENV_VARS",
+    "GENERIC_AGENT_ENV_VARS",
+    "HOSTED_IDE_ENV_VARS",
+    "JUNIE_ENV_VARS",
     "KNOWLEDGE_DIRECTORY",
     "MAX_FILE_NAME_LENGTH",
+    "NOTEBOOK_ENV_VARS",
     "NOT_SPECIFIED",
+    "OPENCODE_ENV_VARS",
+    "PAAS_ENV_VARS",
+    "RUNTIME_CONTEXT_ENV_MARKERS",
+    "SERVERLESS_ENV_VARS",
     "TRAINED_AGENTS_DATA_FILE",
     "TRAINING_DATA_FILE",
 ]
 
 
 EMITTER_COLOR: Final[PrinterColor] = "bold_blue"
-CC_ENV_VAR: Final[str] = "CLAUDECODE"
-CODEX_ENV_VARS: Final[tuple[str, ...]] = (
-    "CODEX_CI",
-    "CODEX_MANAGED_BY_NPM",
-    "CODEX_SANDBOX",
-    "CODEX_SANDBOX_NETWORK_DISABLED",
-    "CODEX_THREAD_ID",
-)
-CURSOR_ENV_VARS: Final[tuple[str, ...]] = (
-    "CURSOR_AGENT",
-    "CURSOR_EXTENSION_HOST_ROLE",
-    "CURSOR_SANDBOX",
-    "CURSOR_TRACE_ID",
-    "CURSOR_WORKSPACE_LABEL",
-)
-
-# Ordered (name, env vars) pairs for identifying the AI coding assistant a
-# process is running under. Reuses the sets above and keeps the same precedence
-# as ``get_env_context()``, so the env-context events and telemetry never
-# disagree about which assistant is present.
-#
-# Deliberately limited to assistants whose markers are verified. Guessing a
-# variable name is worse than omitting the assistant: a wrong name never
-# matches, so that assistant is silently counted as "unknown" while the table
-# implies it is covered.
-#
-# Two rules for adding an entry:
-#   1. Confirm the variable the tool actually sets - do not infer it from the
-#      product name.
-#   2. Use only *session*-scoped variables the assistant sets for processes it
-#      spawns. Persistent user configuration (an ``AIDER_MODEL`` in a committed
-#      ``.env``, say) is unusable: crewai loads dotenv files on normal runs, so
-#      a leftover config value would mislabel ordinary human executions.
-#
-# Extend the shared sets above rather than adding a parallel tuple here, so both
-# detection paths pick the new markers up together.
-CODING_AGENT_ENV_MARKERS: Final[tuple[tuple[str, tuple[str, ...]], ...]] = (
-    ("claude_code", (CC_ENV_VAR,)),
-    ("codex", CODEX_ENV_VARS),
-    ("cursor", CURSOR_ENV_VARS),
-)
 
 
 class _NotSpecified:
