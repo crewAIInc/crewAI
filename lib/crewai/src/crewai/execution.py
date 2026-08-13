@@ -15,8 +15,6 @@ Enterprise (or any host) can call :func:`set_execution_uuid` before kickoff;
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from contextlib import contextmanager
 import contextvars
 from uuid import uuid4
 
@@ -42,68 +40,12 @@ def set_execution_uuid(execution_uuid: str) -> contextvars.Token[str | None]:
     return _current_execution_uuid.set(execution_uuid)
 
 
-def ensure_execution_uuid(preferred: str | None = None) -> str:
-    """Return the active execution uuid, creating one if needed.
+def clear_execution_uuid(token: contextvars.Token[str | None]) -> None:
+    """Restore the execution uuid that was active before ``token`` was issued.
 
-    Never overwrites an existing value — nested kickoffs and enterprise
-    sessions inherit the outer id.
+    ``token`` is required so this cannot wipe an outer kickoff's uuid.
     """
-    existing = _current_execution_uuid.get()
-    if existing is not None:
-        return existing
-    value = preferred or str(uuid4())
-    if not value:
-        raise ValueError("execution_uuid must be a non-empty string")
-    _current_execution_uuid.set(value)
-    return value
-
-
-def clear_execution_uuid(token: contextvars.Token[str | None] | None = None) -> None:
-    """Reset the execution uuid.
-
-    Prefer passing the :class:`~contextvars.Token` returned when the value was
-    set so nested contexts restore correctly. Without a token, clears to
-    ``None``.
-    """
-    if token is not None:
-        _current_execution_uuid.reset(token)
-    else:
-        _current_execution_uuid.set(None)
-
-
-@contextmanager
-def execution_uuid_scope(
-    execution_uuid: str | None = None, *, force: bool = False
-) -> Iterator[str]:
-    """Bind an execution uuid for the duration of the block.
-
-    Args:
-        execution_uuid: Value to bind. When ``None`` and ``force`` is false,
-            reuses the active uuid or creates a new one.
-        force: When true, ``execution_uuid`` must be provided and replaces any
-            active value (enterprise / host path).
-    """
-    if force:
-        if not execution_uuid:
-            raise ValueError("execution_uuid is required when force=True")
-        token = set_execution_uuid(execution_uuid)
-        try:
-            yield execution_uuid
-        finally:
-            clear_execution_uuid(token)
-        return
-
-    existing = _current_execution_uuid.get()
-    if existing is not None:
-        yield existing
-        return
-
-    value = execution_uuid or str(uuid4())
-    token = set_execution_uuid(value)
-    try:
-        yield value
-    finally:
-        clear_execution_uuid(token)
+    _current_execution_uuid.reset(token)
 
 
 def begin_execution(
@@ -120,6 +62,9 @@ def begin_execution(
 
 
 def end_execution(token: contextvars.Token[str | None] | None) -> None:
-    """End an execution context owned by the current kickoff."""
+    """End an execution context owned by the current kickoff.
+
+    Nested kickoffs pass ``None`` and leave the outer uuid in place.
+    """
     if token is not None:
         clear_execution_uuid(token)

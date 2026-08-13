@@ -5,61 +5,46 @@ from __future__ import annotations
 import pytest
 
 from crewai.execution import (
+    _current_execution_uuid,
     begin_execution,
     clear_execution_uuid,
     end_execution,
-    ensure_execution_uuid,
-    execution_uuid_scope,
     get_execution_uuid,
     set_execution_uuid,
 )
 
 
 @pytest.fixture(autouse=True)
-def _clear_execution_uuid() -> None:
-    clear_execution_uuid()
+def _isolate_execution_uuid() -> None:
+    token = _current_execution_uuid.set(None)
     yield
-    clear_execution_uuid()
+    _current_execution_uuid.reset(token)
 
 
-def test_ensure_creates_when_empty() -> None:
+def test_begin_creates_when_empty() -> None:
     assert get_execution_uuid() is None
-    first = ensure_execution_uuid()
-    second = ensure_execution_uuid()
+    first_token = begin_execution()
+    first = get_execution_uuid()
+    second_token = begin_execution()
     assert first
-    assert first == second
+    assert get_execution_uuid() == first
+    assert second_token is None
+    end_execution(second_token)
+    end_execution(first_token)
 
 
-def test_ensure_does_not_overwrite_existing() -> None:
-    set_execution_uuid("enterprise-kickoff-id")
-    assert ensure_execution_uuid("should-not-win") == "enterprise-kickoff-id"
+def test_begin_does_not_overwrite_existing() -> None:
+    token = set_execution_uuid("enterprise-kickoff-id")
+    try:
+        assert begin_execution("should-not-win") is None
+        assert get_execution_uuid() == "enterprise-kickoff-id"
+    finally:
+        clear_execution_uuid(token)
 
 
 def test_set_rejects_empty() -> None:
     with pytest.raises(ValueError, match="non-empty"):
         set_execution_uuid("")
-
-
-def test_execution_uuid_scope_creates_and_clears() -> None:
-    with execution_uuid_scope() as value:
-        assert value
-        assert get_execution_uuid() == value
-    assert get_execution_uuid() is None
-
-
-def test_execution_uuid_scope_inherits_without_clearing_parent() -> None:
-    set_execution_uuid("parent")
-    with execution_uuid_scope() as value:
-        assert value == "parent"
-    assert get_execution_uuid() == "parent"
-
-
-def test_execution_uuid_scope_force_overrides() -> None:
-    set_execution_uuid("parent")
-    with execution_uuid_scope("celery-id", force=True) as value:
-        assert value == "celery-id"
-        assert get_execution_uuid() == "celery-id"
-    assert get_execution_uuid() == "parent"
 
 
 def test_nested_execution_inherits_and_only_owner_clears() -> None:
@@ -118,11 +103,14 @@ def test_flow_kickoff_inherits_enterprise_execution_uuid() -> None:
             seen["during"] = get_execution_uuid()
             return "ok"
 
-    with execution_uuid_scope("celery-kickoff-id", force=True):
+    token = set_execution_uuid("celery-kickoff-id")
+    try:
         ProbeFlow().kickoff()
         assert seen["during"] == "celery-kickoff-id"
-        # Owner was enterprise scope, not the flow — still set here.
+        # Owner was enterprise set(), not the flow — still set here.
         assert get_execution_uuid() == "celery-kickoff-id"
+    finally:
+        clear_execution_uuid(token)
 
     assert get_execution_uuid() is None
 
@@ -167,13 +155,14 @@ async def test_crew_akickoff_inherits_enterprise_execution_uuid() -> None:
         seen["during"] = get_execution_uuid()
         return TaskOutput(description="d", raw="ok", agent="r")
 
-    with (
-        patch("crewai.task.Task.aexecute_sync", side_effect=capture),
-        execution_uuid_scope("celery-kickoff-id", force=True),
-    ):
-        await crew.akickoff()
+    token = set_execution_uuid("celery-kickoff-id")
+    try:
+        with patch("crewai.task.Task.aexecute_sync", side_effect=capture):
+            await crew.akickoff()
         assert seen["during"] == "celery-kickoff-id"
         assert get_execution_uuid() == "celery-kickoff-id"
+    finally:
+        clear_execution_uuid(token)
 
     assert get_execution_uuid() is None
 
@@ -182,11 +171,11 @@ def test_flow_pause_persists_execution_uuid_and_resume_restores_it() -> None:
     import os
     import tempfile
 
+    from crewai.flow import Flow, human_feedback, listen, start
     from crewai.flow.async_feedback.types import (
         HumanFeedbackPending,
         PendingFeedbackContext,
     )
-    from crewai.flow import Flow, human_feedback, listen, start
     from crewai.flow.persistence import SQLiteFlowPersistence
 
     seen: dict[str, str | None] = {}

@@ -38,7 +38,9 @@ class PendingFeedbackContext:
         llm: LLM model string for outcome collapsing
         requested_at: When the feedback was requested
         execution_uuid: Outermost kickoff uuid to restore on resume so traces
-            stay on the same run after HITL pause.
+            stay on the same run after HITL pause. ``None`` only for pending
+            rows persisted before this field existed; resume then creates a
+            new uuid. New pauses always store a value.
 
     Example:
         ```python
