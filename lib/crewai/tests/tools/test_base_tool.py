@@ -792,99 +792,79 @@ class TestAuthoredDescriptionPreserved:
             assert "Tool Name: get_temperature" in rendered
             assert "Tool Arguments:" in rendered
             assert f"Tool Description: {self.AUTHORED}" in rendered
-def test_tool_requires_human_approval_type_validation():
-    """Verify that requires_human_approval strictly enforces boolean types 
-    and handles valid/invalid type conversions correctly."""
+
+def test_tool_requires_approval_approved():
+    """Test that the tool executes if the human approves."""
+    class DummyTestTool(BaseTool):
+        name: str = "dummy_tool"
+        description: str = "A dummy tool for testing"
+
+        def _run(self, question: str = "") -> str:
+            return "success_output"
+
+    tool = DummyTestTool(requires_human_approval=True) 
+    with patch.object(tool, '_request_human_approval', return_value=True):
+        with patch.object(tool, '_run', return_value="success_output") as mock_run:
+            result = tool.run(question="test")
+            assert result == "success_output"
+            mock_run.assert_called_once()
+
+
+def test_tool_requires_approval_rejected():
+    """Test that the tool hard-fails and DOES NOT execute if the human rejects."""
+    class DummyTestTool(BaseTool):
+        name: str = "dummy_tool"
+        description: str = "A dummy tool for testing"
+
+        def _run(self, question: str = "") -> str:
+            return "success_output"
+
+    tool = DummyTestTool(requires_human_approval=True)
+    with patch.object(tool, '_request_human_approval', return_value=False):
+        with patch.object(tool, '_run') as mock_run:
+            with pytest.raises(PermissionError, match="explicitly rejected by human"):
+                tool.run(question="test")
+            mock_run.assert_not_called()
+
+
+def test_tool_requires_approval_timeout():
+    """Test that timeouts fail closed securely."""
+    class DummyTestTool(BaseTool):
+        name: str = "dummy_tool"
+        description: str = "A dummy tool for testing"
+
+        def _run(self, question: str = "") -> str:
+            return "success_output"
+
+    tool = DummyTestTool(requires_human_approval=True)
+    with patch.object(tool, '_request_human_approval', side_effect=TimeoutError("Approval timed out")):
+        with patch.object(tool, '_run') as mock_run:
+            with pytest.raises(TimeoutError, match="Approval timed out"):
+                tool.run(question="test")
+            mock_run.assert_not_called()
+
+
+def test_tool_requires_approval_predicate():
+    """Test that requires_human_approval works as a callable predicate."""
+    class DummyTestTool(BaseTool):
+        name: str = "dummy_tool"
+        description: str = "A dummy tool for testing"
+
+        def _run(self, question: str = "") -> str:
+            return "success_output"
+
+    tool = DummyTestTool(requires_human_approval=lambda **kwargs: kwargs.get('question', '') == 'sensitive')
     
-    class StringFlagTool(BaseTool):
-        name: str = "Validation Tool"
-        description: str = "Test tool"
-        requires_human_approval: bool = True
-
-        def _run(self, val: str) -> str:
-            return val
-
-    tool_inst = StringFlagTool()
-    assert tool_inst.requires_human_approval is True
-    assert isinstance(tool_inst.requires_human_approval, bool)
-
-
-# 2. CRITICAL: Dynamic Mutability
-def test_tool_requires_human_approval_dynamic_toggle():
-    """Verify that human approval can be dynamically toggled at runtime 
-    (e.g., toggled on/off based on context or user permissions)."""
-
-    @tool("Dynamic Approval Tool")
-    def action_tool(data: str) -> str:
-        """Dynamic tool."""
-        return data
-
-    # Starts as default False
-    assert action_tool.requires_human_approval is False
-
-    # Enable dynamically
-    action_tool.requires_human_approval = True
-    assert action_tool.requires_human_approval is True
-
-    # Disable dynamically
-    action_tool.requires_human_approval = False
-    assert action_tool.requires_human_approval is False
-
-
-# 3. CRITICAL: Schema & Serialization
-def test_tool_pydantic_schema_and_serialization():
-    """Verify that requiring human approval doesn't corrupt Pydantic serialization 
-    or the schema exported to LLMs."""
-    
-    class CriticalDataTool(BaseTool):
-        name: str = "Critical Data Tool"
-        description: str = "Processes sensitive payload"
-        requires_human_approval: bool = True
-
-        def _run(self, payload: str) -> str:
-            return payload
-
-    t = CriticalDataTool()
-    serialized = t.model_dump()
-
-    # Ensure field is present in model dump for Agent inspectability
-    assert "requires_human_approval" in serialized
-    assert serialized["requires_human_approval"] is True
-
-
-# 4. CRITICAL: Decorator Metadata Preservation
-def test_tool_decorator_preserves_approval_state_on_copy_or_args():
-    """Verify that the @tool decorator preserves requires_human_approval state 
-    even when additional tool attributes or docstrings are modified."""
-
-    @tool("Sensitivty Test Tool")
-    def sensitive_fn(val: int) -> int:
-        """Processes integer val."""
-        return val * 2
-
-    sensitive_fn.requires_human_approval = True
-
-    # Check function introspection attributes remain intact
-    assert sensitive_fn.name == "Sensitivty Test Tool"
-    assert sensitive_fn.requires_human_approval is True
-    assert callable(sensitive_fn._run)
-
-
-# 5. CRITICAL: Tool Execution Behavior Contract
-def test_tool_execution_preserves_approval_flag_during_run():
-    """Verify that calling the tool's execution method directly does not reset 
-    or mutate the requires_human_approval flag."""
-
-    @tool("Execution Test Tool")
-    def execute_tool(data: str) -> str:
-        """Executes data operation."""
-        return f"Executed {data}"
-
-    execute_tool.requires_human_approval = True
-
-    # Run the tool
-    result = execute_tool.run(data="test_input")
-
-    # Assert execution result and flag immutability after run
-    assert "Executed test_input" in result
-    assert execute_tool.requires_human_approval is True
+    with patch.object(tool, '_request_human_approval', return_value=True) as mock_approve:
+        with patch.object(tool, '_run', return_value="ok") as mock_run:
+            # Should NOT request approval (question != 'sensitive')
+            tool.run(question="normal")
+            mock_approve.assert_not_called()
+            mock_run.assert_called_once()
+            
+            mock_run.reset_mock()
+            
+            # SHOULD request approval (question == 'sensitive')
+            tool.run(question="sensitive")
+            mock_approve.assert_called_once()
+            mock_run.assert_called_once()

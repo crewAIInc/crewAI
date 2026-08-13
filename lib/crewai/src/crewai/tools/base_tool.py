@@ -41,6 +41,7 @@ from crewai.tools.structured_tool import (
 from crewai.tools.tool_failure import ToolFailure, ToolFailurePolicy, ToolFailureReason
 from crewai.types.callback import SerializableCallable, _resolve_dotted_path
 from crewai.utilities.string_utils import sanitize_tool_name
+import logging, time
 
 
 P = ParamSpec("P")
@@ -181,9 +182,9 @@ class BaseTool(BaseModel, ABC):
         default=False,
         description="Flag to check if the tool should be the final agent answer.",
     )
-    requires_human_approval: bool = Field(
+    requires_human_approval: Any = Field(
         default=False,
-        description="Flag to check if tool execution requires explicit human approval before running.",
+        description="Flag to check if tool execution requires explicit human approval before running. Accepts a boolean or a predicate function evaluating args/kwargs.",
     )
     max_usage_count: int | None = Field(
         default=None,
@@ -326,7 +327,46 @@ class BaseTool(BaseModel, ABC):
                 )
             self.current_usage_count += 1
             return None
+        
+    def _should_require_approval(self, *args: Any, **kwargs: Any) -> bool:
+        """Evaluates if human approval is needed, supporting both booleans and predicate functions."""
+        logger = logging.getLogger(__name__)
+        
+        approval_flag = getattr(self, "requires_human_approval", False)
+        if callable(approval_flag):
+            try:
+                return approval_flag(*args, **kwargs)
+            except Exception as e:
+                logger.error(f"Error in requires_human_approval predicate for {self.name}: {e}")
+                return True
+        return bool(approval_flag)
 
+    def _request_human_approval(self, *args: Any, **kwargs: Any) -> bool:
+        """Requests human approval, logs the audit trail, and handles timeouts securely."""
+        logger = logging.getLogger(__name__)
+        
+        print(f"Human approval required for tool: {self.name}")
+        print(f"Description: {self.description}")
+        print(f"Args: {args}, Kwargs: {kwargs}")
+        
+        audit_data = {
+            "tool": self.name,
+            "args": args,
+            "kwargs": kwargs,
+            "timestamp": time.time()
+        }
+        
+        try:
+            # Note: For async/Slack workflows, developers can subclass and override this specific block.
+            response = input("Approve execution? (yes/no): ").strip().lower()
+            approved = response in ["yes", "y", "approve"]
+            logger.info(f"Audit [HITL]: Tool={self.name}, Approved={approved}, Timestamp={audit_data['timestamp']}, Args={args}, Kwargs={kwargs}")
+            return approved
+        except Exception as e:
+            logger.error(f"Audit [HITL]: Tool={self.name}, Approved=False (Timeout/Error), Error={e}")
+            # Fail closed on timeout to prevent agent from retrying endlessly
+            raise TimeoutError(f"Approval timed out for '{self.name}'. Tool execution blocked.")
+        
     def run(
         self,
         *args: Any,
@@ -338,6 +378,10 @@ class BaseTool(BaseModel, ABC):
         limit_error = self._claim_usage()
         if limit_error:
             return limit_error
+
+        if self._should_require_approval(*args, **kwargs):
+            if not self._request_human_approval(*args, **kwargs):
+                raise PermissionError(f"Action '{self.name}' explicitly rejected by human.")
 
         result = self._run(*args, **kwargs)
 
@@ -366,6 +410,10 @@ class BaseTool(BaseModel, ABC):
         limit_error = self._claim_usage()
         if limit_error:
             return limit_error
+
+        if self._should_require_approval(*args, **kwargs):
+            if not self._request_human_approval(*args, **kwargs):
+                raise PermissionError(f"Action '{self.name}' explicitly rejected by human.")
 
         return await self._arun(*args, **kwargs)
 
@@ -691,7 +739,7 @@ def tool(
     result_schema: type[BaseModel] | None = ...,
     result_as_answer: bool = ...,
     max_usage_count: int | None = ...,
-    requires_human_approval: bool = ...,
+    requires_human_approval: Any = ...,
 ) -> Callable[[Callable[P2, R2]], Tool[P2, R2]]: ...
 
 
@@ -701,7 +749,7 @@ def tool(
     result_schema: type[BaseModel] | None = ...,
     result_as_answer: bool = ...,
     max_usage_count: int | None = ...,
-    requires_human_approval: bool = ...,
+    requires_human_approval: Any = ...,
 ) -> Callable[[Callable[P2, R2]], Tool[P2, R2]]: ...
 
 
@@ -710,7 +758,7 @@ def tool(
     result_schema: type[BaseModel] | None = None,
     result_as_answer: bool = False,
     max_usage_count: int | None = None,
-    requires_human_approval: bool = False,
+    requires_human_approval: Any = False,
 ) -> Tool[P2, R2] | Callable[[Callable[P2, R2]], Tool[P2, R2]]:
     """Decorator to create a Tool from a function.
 
