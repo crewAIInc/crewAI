@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import ssl
+import threading
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict
 
 import httpx
@@ -69,6 +70,7 @@ _LEARNED_RESPONSES_ONLY_MODELS: set[str] = set()
 
 
 _SHARED_SSL_CONTEXT: ssl.SSLContext | None = None
+_SHARED_SSL_CONTEXT_LOCK = threading.Lock()
 
 
 def _shared_ssl_context() -> ssl.SSLContext:
@@ -80,7 +82,9 @@ def _shared_ssl_context() -> ssl.SSLContext:
     """
     global _SHARED_SSL_CONTEXT
     if _SHARED_SSL_CONTEXT is None:
-        _SHARED_SSL_CONTEXT = httpx.create_ssl_context()
+        with _SHARED_SSL_CONTEXT_LOCK:
+            if _SHARED_SSL_CONTEXT is None:
+                _SHARED_SSL_CONTEXT = httpx.create_ssl_context()
     return _SHARED_SSL_CONTEXT
 
 
@@ -271,6 +275,8 @@ class OpenAICompletion(BaseLLM):
 
     _client: Any = PrivateAttr(default=None)
     _async_client: Any = PrivateAttr(default=None)
+    _owns_sync_http_client: bool = PrivateAttr(default=False)
+    _owns_async_http_client: bool = PrivateAttr(default=False)
     _last_response_id: str | None = PrivateAttr(default=None)
     _last_reasoning_items: list[Any] | None = PrivateAttr(default=None)
 
@@ -321,10 +327,14 @@ class OpenAICompletion(BaseLLM):
         if self.interceptor:
             transport = HTTPTransport(interceptor=self.interceptor)
             client_config["http_client"] = httpx.Client(transport=transport)
+            self._owns_sync_http_client = True
         elif "http_client" not in client_config:
             client_config["http_client"] = DefaultHttpxClient(
                 verify=_shared_ssl_context()
             )
+            self._owns_sync_http_client = True
+        else:
+            self._owns_sync_http_client = False
         return OpenAI(**client_config)
 
     def _build_async_client(self) -> Any:
@@ -332,10 +342,14 @@ class OpenAICompletion(BaseLLM):
         if self.interceptor:
             transport = AsyncHTTPTransport(interceptor=self.interceptor)
             client_config["http_client"] = httpx.AsyncClient(transport=transport)
+            self._owns_async_http_client = True
         elif "http_client" not in client_config:
             client_config["http_client"] = DefaultAsyncHttpxClient(
                 verify=_shared_ssl_context()
             )
+            self._owns_async_http_client = True
+        else:
+            self._owns_async_http_client = False
         return AsyncOpenAI(**client_config)
 
     def _get_sync_client(self) -> Any:
@@ -347,6 +361,20 @@ class OpenAICompletion(BaseLLM):
         if self._async_client is None:
             self._async_client = self._build_async_client()
         return self._async_client
+
+    def close(self) -> None:
+        """Close the provider-owned synchronous HTTP client."""
+        if self._client is not None and self._owns_sync_http_client:
+            self._client.close()
+            self._client = None
+            self._owns_sync_http_client = False
+
+    async def aclose(self) -> None:
+        """Close the provider-owned asynchronous HTTP client."""
+        if self._async_client is not None and self._owns_async_http_client:
+            await self._async_client.close()
+            self._async_client = None
+            self._owns_async_http_client = False
 
     @property
     def last_response_id(self) -> str | None:
