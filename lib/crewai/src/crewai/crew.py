@@ -1259,6 +1259,8 @@ class Crew(FlowTrackable, BaseModel):
         )
         token = attach(baggage_ctx)
 
+        execution_token = begin_execution()
+
         runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
             inputs = prepare_kickoff(self, inputs, input_files)
@@ -1297,6 +1299,7 @@ class Crew(FlowTrackable, BaseModel):
             self._drain_memory_writes()
             clear_files(self.id)
             detach(token)
+            end_execution(execution_token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
 
     async def akickoff_for_each(

@@ -125,3 +125,54 @@ def test_flow_kickoff_inherits_enterprise_execution_uuid() -> None:
         assert get_execution_uuid() == "celery-kickoff-id"
 
     assert get_execution_uuid() is None
+
+
+@pytest.mark.asyncio
+async def test_crew_akickoff_creates_and_clears_execution_uuid() -> None:
+    from unittest.mock import patch
+
+    from crewai import Agent, Crew, Task
+    from crewai.tasks.task_output import TaskOutput
+
+    seen: dict[str, str | None] = {}
+    agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+    task = Task(description="d", expected_output="o", agent=agent)
+    crew = Crew(agents=[agent], tasks=[task])
+
+    async def capture(*_args: object, **_kwargs: object) -> TaskOutput:
+        seen["during"] = get_execution_uuid()
+        return TaskOutput(description="d", raw="ok", agent="r")
+
+    with patch("crewai.task.Task.aexecute_sync", side_effect=capture):
+        assert get_execution_uuid() is None
+        await crew.akickoff()
+
+    assert seen["during"]
+    assert get_execution_uuid() is None
+
+
+@pytest.mark.asyncio
+async def test_crew_akickoff_inherits_enterprise_execution_uuid() -> None:
+    from unittest.mock import patch
+
+    from crewai import Agent, Crew, Task
+    from crewai.tasks.task_output import TaskOutput
+
+    seen: dict[str, str | None] = {}
+    agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+    task = Task(description="d", expected_output="o", agent=agent)
+    crew = Crew(agents=[agent], tasks=[task])
+
+    async def capture(*_args: object, **_kwargs: object) -> TaskOutput:
+        seen["during"] = get_execution_uuid()
+        return TaskOutput(description="d", raw="ok", agent="r")
+
+    with (
+        patch("crewai.task.Task.aexecute_sync", side_effect=capture),
+        execution_uuid_scope("celery-kickoff-id", force=True),
+    ):
+        await crew.akickoff()
+        assert seen["during"] == "celery-kickoff-id"
+        assert get_execution_uuid() == "celery-kickoff-id"
+
+    assert get_execution_uuid() is None
