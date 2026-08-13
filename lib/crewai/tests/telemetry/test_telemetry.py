@@ -1,10 +1,14 @@
+import ast
+import inspect
 import os
+from pathlib import Path
 import threading
 from unittest.mock import Mock, patch
 
 import pytest
 from crewai import Agent, Crew, Task
 from crewai.telemetry import Telemetry
+from crewai_core.telemetry import Telemetry as CoreTelemetry
 from opentelemetry.sdk.trace import TracerProvider
 
 
@@ -443,37 +447,59 @@ def test_task_spans_record_the_crewai_version() -> None:
     assert all(v and v[0].isdigit() for v in versions)
 
 
+def _calls(node: ast.AST, attr: str, key: str | None = None) -> int:
+    """Count calls to ``.attr(...)`` beneath a node, optionally keyed on arg 2.
+
+    Used to compare how many spans a method opens against how many of them it
+    records ``crewai_version`` on.
+    """
+    total = 0
+    for sub in ast.walk(node):
+        if not isinstance(sub, ast.Call):
+            continue
+        func = sub.func
+        if not isinstance(func, ast.Attribute) or func.attr != attr:
+            continue
+        if key is None:
+            total += 1
+        elif len(sub.args) >= 2:
+            named = sub.args[1]
+            if isinstance(named, ast.Constant) and named.value == key:
+                total += 1
+    return total
+
+
 def test_every_span_records_the_crewai_version() -> None:
-    """Regression guard for span kinds added later.
+    """Regression guard for span kinds added later, in BOTH emitters.
 
     Enumerating the source rather than emitting all 32 spans: the point is to
-    fail when someone adds a new span without the version, which a fixed list
-    of behavioural cases cannot do.
+    fail when someone adds a new span without the version, which a fixed list of
+    behavioural cases cannot do.
+
+    Counts rather than merely detects. A method that opens two spans and records
+    the version on only one of them must fail - ``task_started`` is exactly that
+    shape, so "the method mentions crewai_version somewhere" is not enough.
     """
-    import ast
-    from pathlib import Path
-
-    import crewai
-    import crewai_core
-
-    missing: list[str] = []
-    for module in (crewai, crewai_core):
-        path = Path(module.__file__).parent / "telemetry" / "telemetry.py"
-        if not path.is_file():  # crewai_core keeps it flat
-            path = Path(module.__file__).parent / "telemetry.py"
+    shortfalls: list[str] = []
+    for cls in (Telemetry, CoreTelemetry):
+        path = Path(inspect.getfile(cls))
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
-            if not isinstance(node, ast.FunctionDef):
+            # The nested closure is reached via its enclosing method, whose name
+            # is the one a reader needs in the failure message.
+            if not isinstance(node, ast.FunctionDef) or node.name == "_operation":
                 continue
-            # Skip the nested closure: its enclosing method is already checked and
-            # is the name a reader needs to act on.
-            if node.name == "_operation":
+            spans = _calls(node, "start_span")
+            if not spans:
                 continue
-            dumped = ast.dump(node)
-            if "start_span" in dumped and "crewai_version" not in dumped:
-                missing.append(f"{path.name}::{node.name}")
+            versions = _calls(node, "_add_attribute", "crewai_version")
+            if versions < spans:
+                shortfalls.append(
+                    f"{path.name}::{node.name} "
+                    f"({spans} span(s), {versions} version attribute(s))"
+                )
 
-    assert not missing, (
-        "these span methods create a span without recording crewai_version: "
-        + ", ".join(sorted(missing))
+    assert not shortfalls, (
+        "these methods open more spans than they record crewai_version on: "
+        + ", ".join(sorted(shortfalls))
     )

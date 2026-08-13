@@ -136,3 +136,40 @@ class TestDisabledTelemetry:
             "deploy:created",
             "deploy:pushed",
         ]
+
+
+class TestReleaseAttribution:
+    """Every span this emitter produces must carry the running release.
+
+    A span without ``crewai_version`` cannot be attributed to a version, so a
+    version-filtered question returns nothing for it rather than something
+    visibly wrong. Covers all eight spans this module emits, not only the ones
+    that were missing it, so a regression on the others is caught too.
+    """
+
+    @pytest.mark.parametrize(
+        ("method", "args"),
+        [
+            ("deploy_signup_error_span", ()),
+            ("start_deployment_span", ("dep-123",)),
+            ("create_crew_deployment_span", ()),
+            ("get_crew_logs_span", ("dep-123", "deployment")),
+            ("remove_crew_span", ("dep-123",)),
+            ("feature_usage_span", ("memory:query",)),
+            ("flow_creation_span", ("ResearchFlow",)),
+            ("template_installed_span", ("my-template",)),
+        ],
+    )
+    def test_span_records_the_release(
+        self,
+        telemetry: tuple[Telemetry, MagicMock],
+        method: str,
+        args: tuple[object, ...],
+    ) -> None:
+        instance, span = telemetry
+
+        getattr(instance, method)(*args)
+
+        recorded = _attributes(span).get("crewai_version")
+        assert recorded, f"{method} recorded no crewai_version"
+        assert recorded[0].isdigit(), f"{method} recorded a non-version: {recorded!r}"
