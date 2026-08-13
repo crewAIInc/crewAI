@@ -506,7 +506,7 @@ def test_flow_emits_start_event(reset_event_listener_singleton):
 
     assert event_received.wait(timeout=5), "Timeout waiting for flow started event"
     mock_telemetry.flow_execution_span.assert_called_once_with(
-        "TestFlow", ["begin"], "user", False
+        "TestFlow", ["begin"], "user", False, False
     )
     assert len(received_events) == 1
     assert received_events[0].flow_name == "TestFlow"

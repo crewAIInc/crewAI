@@ -997,6 +997,7 @@ class Telemetry:
         node_names: list[str],
         origin: str = "user",
         resumed: bool = False,
+        conversational: bool = False,
     ) -> None:
         """Records the execution of a flow.
 
@@ -1011,6 +1012,10 @@ class Telemetry:
                 Resuming re-enters ``kickoff()``, so the same event fires again;
                 without this the second leg is indistinguishable from a fresh
                 run and a paused flow looks like two separate executions.
+            conversational: True for a turn of a conversational flow. Each turn
+                is its own kickoff but a session reports one completion, so
+                these spans run many-to-one and would otherwise drag any
+                completion rate computed across all flows.
         """
 
         def _operation() -> None:
@@ -1030,12 +1035,20 @@ class Telemetry:
             # extract wrongly. crew_memory reads 1 for 99.8% of crews for exactly
             # that reason, against a field that defaults to False.
             self._add_attribute(span, "resumed", "true" if resumed else "false")
+            self._add_attribute(
+                span, "conversational", "true" if conversational else "false"
+            )
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
 
     def flow_completed_span(
-        self, flow_name: str, duration_ms: float, outcome: str, origin: str = "user"
+        self,
+        flow_name: str,
+        duration_ms: float,
+        outcome: str,
+        origin: str = "user",
+        conversational: bool = False,
     ) -> None:
         """Records how long a flow ran and how it ended.
 
@@ -1056,6 +1069,8 @@ class Telemetry:
             outcome: Either ``"completed"`` or ``"failed"``.
             origin: ``"internal"`` for flows CrewAI itself runs (the agent
                 executor), ``"user"`` for flows the caller authored.
+            conversational: True when this closes a conversational session. One
+                of these answers many ``Flow Execution`` spans, one per turn.
         """
 
         def _operation() -> None:
@@ -1066,6 +1081,9 @@ class Telemetry:
             self._add_attribute(span, "duration_ms", duration_ms)
             self._add_attribute(span, "outcome", outcome)
             self._add_attribute(span, "origin", origin)
+            self._add_attribute(
+                span, "conversational", "true" if conversational else "false"
+            )
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
