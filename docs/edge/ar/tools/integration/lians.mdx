@@ -1,0 +1,78 @@
+---
+title: أدوات ذاكرة الوكيل من Lians
+description: أضف ذاكرة دائمة ومؤرخة زمنياً إلى وكلاء CrewAI باستخدام Lians.
+icon: brain
+---
+
+# أدوات ذاكرة الوكيل من Lians
+
+يوفر [Lians](https://www.lians.ai/) أربع أدوات CrewAI لتخزين ذاكرة الوكيل واسترجاعها وإعادة تشغيلها وتفريغها. يمكن تشغيله محلياً من دون مفتاح API أو الاتصال بخدمة Lians بعيدة.
+
+## التثبيت
+
+ثبّت CrewAI وتكامل Lians مع CrewAI. أضف الخيار `local` للحصول على تخزين محلي من دون إعداد.
+
+```bash
+pip install crewai "lians-sdk[crewai,local]"
+```
+
+## الاستخدام
+
+أنشئ عميلاً محلياً، وابنِ الأدوات، ثم أرفقها بوكيل.
+
+```python
+from crewai import Agent, Crew, Task
+from lians import LocalLiansClient
+from lians.crewai_integration import build_crewai_tools
+
+with LocalLiansClient() as client:
+    memory_tools = build_crewai_tools(client, agent_id="research-crew")
+
+    researcher = Agent(
+        role="Researcher",
+        goal="Build on verified findings from earlier research",
+        backstory="You preserve useful evidence and retrieve it when relevant.",
+        tools=memory_tools,
+        verbose=True,
+    )
+
+    task = Task(
+        description="Research the topic, recall relevant prior findings, and save new evidence.",
+        expected_output="A concise research brief with the useful findings saved to memory.",
+        agent=researcher,
+    )
+
+    result = Crew(agents=[researcher], tasks=[task]).kickoff()
+    print(result)
+```
+
+## الأدوات المتاحة
+
+| الأداة | الغرض |
+|:-----|:--------|
+| `remember_fact` | تخزين حقيقة مع بيانات المصدر والثقة |
+| `recall_facts` | استرجاع الذكريات ذات الصلة بالاستعلام الحالي |
+| `recall_facts_at` | إعادة بناء ما كان الوكيل يعرفه في وقت محدد |
+| `flush_memory` | حفظ تحديثات الذاكرة المعلّقة |
+
+استخدم `agent_id` ثابتاً عندما يجب أن تشترك عمليات تشغيل متعددة للطاقم في سجل الذاكرة نفسه. استخدم معرّفاً مختلفاً عندما تحتاج عمليات التشغيل إلى ذاكرة معزولة.
+
+## الخدمة البعيدة
+
+لاستخدام خدمة Lians منشورة، أنشئ عميل Lians القياسي باستخدام عنوان الخدمة وبيانات الاعتماد، ثم مرره إلى `build_crewai_tools` بدلاً من `LocalLiansClient`.
+
+```python
+import os
+
+from lians import LiansClient
+from lians.crewai_integration import build_crewai_tools
+
+with LiansClient(
+    base_url=os.environ["LIANS_BASE_URL"],
+    api_key=os.environ["LIANS_API_KEY"],
+) as client:
+    memory_tools = build_crewai_tools(client, agent_id="research-crew")
+    # أنشئ الوكيل والطاقم وشغّلهما داخل هذه الكتلة ليظل العميل مفتوحاً.
+```
+
+للحصول على تفاصيل الإعداد وواجهة API، راجع [وثائق Lians](https://www.lians.ai/docs).
