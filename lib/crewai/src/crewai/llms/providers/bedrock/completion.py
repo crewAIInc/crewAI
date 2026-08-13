@@ -1034,9 +1034,19 @@ class BedrockCompletion(BaseLLM):
                         logging.debug("Content block stopped in stream")
                         if current_tool_use:
                             function_name = current_tool_use["name"]
-                            function_args = cast(
-                                dict[str, Any], current_tool_use.get("input", {})
-                            )
+                            if accumulated_tool_input:
+                                try:
+                                    function_args = json.loads(accumulated_tool_input)
+                                except json.JSONDecodeError:
+                                    function_args = {}
+                                    logging.warning(
+                                        f"Failed to parse accumulated tool input: {accumulated_tool_input[:200]}"
+                                    )
+                            else:
+                                function_args = cast(
+                                    dict[str, Any], current_tool_use.get("input", {})
+                                )
+                            current_tool_use["input"] = function_args
 
                             # Check if this is the structured_output tool
                             if (
@@ -1632,9 +1642,19 @@ class BedrockCompletion(BaseLLM):
                         logging.debug("Content block stopped in stream")
                         if current_tool_use:
                             function_name = current_tool_use["name"]
-                            function_args = cast(
-                                dict[str, Any], current_tool_use.get("input", {})
-                            )
+                            if accumulated_tool_input:
+                                try:
+                                    function_args = json.loads(accumulated_tool_input)
+                                except json.JSONDecodeError:
+                                    function_args = {}
+                                    logging.warning(
+                                        f"Failed to parse accumulated tool input: {accumulated_tool_input[:200]}"
+                                    )
+                            else:
+                                function_args = cast(
+                                    dict[str, Any], current_tool_use.get("input", {})
+                                )
+                            current_tool_use["input"] = function_args
 
                             # Check if this is the structured_output tool
                             if (
