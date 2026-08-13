@@ -343,7 +343,7 @@ class EventListener(BaseEventListener):
             source: Any,
             flow_name: str,
             outcome: str,
-            error_type: str | None = None,
+            error_type: type[BaseException] | None = None,
         ) -> None:
             """Emit the elapsed time for a flow that reached a terminal state.
 
@@ -353,7 +353,7 @@ class EventListener(BaseEventListener):
             """
             # Reset point for the flag a deferred session accumulates across
             # turns, so a later session on this instance starts clean.
-            source._telemetry_turn_failed = False
+            source._telemetry_turn_error = None
             started_at = getattr(source, "_telemetry_started_at", None)
             if started_at is None:
                 return
@@ -388,12 +388,12 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
-            outcome = (
-                "failed"
-                if getattr(source, "_telemetry_turn_failed", False)
-                else "completed"
-            )
-            _report_flow_duration(source, event.flow_name, outcome)
+            # A deferred session closes here whatever happened, so the class
+            # stored by on_conversation_turn_failed is the only record of what
+            # went wrong - FlowFailedEvent never fires on that path.
+            turn_error = getattr(source, "_telemetry_turn_error", None)
+            outcome = "failed" if turn_error is not None else "completed"
+            _report_flow_duration(source, event.flow_name, outcome, turn_error)
 
             if not getattr(source, "suppress_flow_events", False):
                 self.formatter.handle_flow_status(
@@ -405,9 +405,7 @@ class EventListener(BaseEventListener):
         def on_flow_failed(source: Any, event: FlowFailedEvent) -> None:
             # Class name only. The message is never read - it routinely carries
             # prompts, model output and credentials.
-            _report_flow_duration(
-                source, event.flow_name, "failed", type(event.error).__name__
-            )
+            _report_flow_duration(source, event.flow_name, "failed", type(event.error))
 
             if not getattr(source, "suppress_flow_events", False):
                 self.formatter.handle_flow_status(
@@ -433,7 +431,7 @@ class EventListener(BaseEventListener):
             # handle_turn emits this one - it cleared the stamp, and flagging
             # now would mark the next turn on this instance failed.
             if getattr(source, "_telemetry_started_at", None) is not None:
-                source._telemetry_turn_failed = True
+                source._telemetry_turn_error = type(event.error)
 
         @crewai_event_bus.on(FlowInputRequestedEvent)
         def on_flow_input_requested(_: Any, event: FlowInputRequestedEvent) -> None:
@@ -475,7 +473,7 @@ class EventListener(BaseEventListener):
             self._telemetry.flow_method_failed_span(
                 event.flow_name,
                 _flow_origin(source),
-                error_type=type(event.error).__name__,
+                error_type=type(event.error),
             )
 
             self.formatter.handle_method_status(

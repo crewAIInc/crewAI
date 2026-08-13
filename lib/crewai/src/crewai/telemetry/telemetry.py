@@ -1043,18 +1043,25 @@ class Telemetry:
         self._safe_telemetry_operation(_operation)
 
     @staticmethod
-    def _safe_error_type(error_type: str | None) -> str | None:
-        """The exception class name, or None if it is not a bare identifier.
+    def _safe_error_type(error_type: type[BaseException] | None) -> str | None:
+        """The exception's class name, or None if the argument is not one.
 
-        Only a class name is ever recorded - never ``str(error)``, which
-        routinely carries prompts, model output, file paths and credentials.
-        ``isidentifier()`` is the allowlist that enforces it: any message text
-        reaching this argument would contain a space, quote or punctuation and
-        be dropped. Applied here rather than at the call site so a future
-        caller cannot bypass it.
+        Takes the exception *class* rather than a string so that ``str(error)``
+        cannot be passed at all: a message is never a type. Accepting a string
+        and filtering it with ``isidentifier()`` would not be enough, because a
+        single-word message such as ``"secret_token"`` is itself a valid
+        identifier. The identifier check is kept as a second gate on the
+        derived name.
+
+        Only a class name is ever recorded - never the message, which routinely
+        carries prompts, model output, file paths and credentials.
         """
-        if error_type and error_type.isidentifier():
-            return error_type
+        if (
+            isinstance(error_type, type)
+            and issubclass(error_type, BaseException)
+            and error_type.__name__.isidentifier()
+        ):
+            return error_type.__name__
         return None
 
     def flow_completed_span(
@@ -1064,7 +1071,7 @@ class Telemetry:
         outcome: str,
         origin: str = "user",
         conversational: bool = False,
-        error_type: str | None = None,
+        error_type: type[BaseException] | None = None,
     ) -> None:
         """Records how long a flow ran and how it ended.
 
@@ -1087,8 +1094,8 @@ class Telemetry:
                 executor), ``"user"`` for flows the caller authored.
             conversational: True when this closes a conversational session. One
                 of these answers many ``Flow Execution`` spans, one per turn.
-            error_type: Class name of the exception that ended the run, for a
-                failed outcome. The name only - never the message. See
+            error_type: Class of the exception that ended the run, for a
+                failed outcome. Only its name is recorded. See
                 :meth:`_safe_error_type`.
         """
         safe_error_type = self._safe_error_type(error_type)
@@ -1134,7 +1141,10 @@ class Telemetry:
         self._safe_telemetry_operation(_operation)
 
     def flow_method_failed_span(
-        self, flow_name: str, origin: str = "user", error_type: str | None = None
+        self,
+        flow_name: str,
+        origin: str = "user",
+        error_type: type[BaseException] | None = None,
     ) -> None:
         """Records that a method inside a flow raised.
 
@@ -1147,8 +1157,8 @@ class Telemetry:
             flow_name: Name of the flow whose method failed.
             origin: ``"internal"`` or ``"user"`` - see
                 :meth:`flow_execution_span`.
-            error_type: Class name of the exception raised. The name only -
-                never the message. See :meth:`_safe_error_type`.
+            error_type: Class of the exception raised. Only its name is
+                recorded. See :meth:`_safe_error_type`.
         """
         safe_error_type = self._safe_error_type(error_type)
 

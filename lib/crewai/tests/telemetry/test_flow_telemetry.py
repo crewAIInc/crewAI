@@ -118,7 +118,9 @@ def pauses(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
 
 
 @pytest.fixture
-def method_failures(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
+def method_failures(
+    monkeypatch: pytest.MonkeyPatch,
+) -> list[tuple[str, str, str | None]]:
     """Record (flow_name, origin, error_type) for every Flow Method Failed span."""
     from crewai.events import event_listener as listener_module
 
@@ -129,14 +131,16 @@ def method_failures(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
         listener_module.event_listener._telemetry,
         "flow_method_failed_span",
         lambda flow_name, origin="user", error_type=None: recorded.append(
-            (flow_name, origin, error_type)
+            (flow_name, origin, getattr(error_type, "__name__", None))
         ),
     )
     return recorded
 
 
 @pytest.fixture
-def durations(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, float, str]]:
+def durations(
+    monkeypatch: pytest.MonkeyPatch,
+) -> list[tuple[str, float, str, str | None]]:
     """Record every (flow_name, duration_ms, outcome, error_type) reported."""
     from crewai.events import event_listener as listener_module
 
@@ -152,7 +156,7 @@ def durations(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, float, str]]:
         origin="user",
         conversational=False,
         error_type=None: recorded.append(
-            (flow_name, duration_ms, outcome, error_type)
+            (flow_name, duration_ms, outcome, getattr(error_type, "__name__", None))
         ),
     )
     return recorded
@@ -182,7 +186,7 @@ def features(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
 
 def test_completed_flow_reports_its_outcome(
-    durations: list[tuple[str, float, str]],
+    durations: list[tuple[str, float, str, str | None]],
 ) -> None:
     """Outcome is a lifecycle fact, so it belongs on a span, not a feature."""
 
@@ -197,7 +201,7 @@ def test_completed_flow_reports_its_outcome(
 
 
 def test_failed_flow_reports_the_failure_and_the_method(
-    durations: list[tuple[str, float, str]], method_failures: list[tuple[str, str]]
+    durations: list[tuple[str, float, str, str | None]], method_failures: list[tuple[str, str, str | None]]
 ) -> None:
     class BoomFlow(Flow):
         @start()
@@ -314,8 +318,8 @@ def test_failed_conversation_turn_is_reported(features: list[str]) -> None:
 
 
 def test_no_method_names_or_error_text_are_recorded(
-    method_failures: list[tuple[str, str]],
-    durations: list[tuple[str, float, str]],
+    method_failures: list[tuple[str, str, str | None]],
+    durations: list[tuple[str, float, str, str | None]],
     features: list[str],
 ) -> None:
     """Method names and error text are user-authored and must not be sent.
@@ -348,30 +352,35 @@ def test_no_method_names_or_error_text_are_recorded(
     assert durations[0][3] == "RuntimeError"
 
 
-def test_error_type_rejects_anything_that_is_not_a_bare_identifier() -> None:
-    """The isidentifier() allowlist is what keeps message text out.
+def test_error_type_only_accepts_an_exception_class() -> None:
+    """A message can never be recorded, because a message is not a class.
 
-    Guarded inside Telemetry rather than at the call site, so a future caller
-    passing str(error) by mistake still cannot leak it.
+    Filtering a string with isidentifier() would not be enough: a single-word
+    message such as "secret_token" is itself a valid identifier. Taking the
+    class removes the possibility rather than filtering for it.
     """
     from crewai.telemetry.telemetry import Telemetry
 
-    assert Telemetry._safe_error_type("RuntimeError") == "RuntimeError"
-    assert Telemetry._safe_error_type("AuthenticationError") == "AuthenticationError"
+    class AuthenticationError(Exception):
+        pass
 
-    for leaked in (
+    assert Telemetry._safe_error_type(RuntimeError) == "RuntimeError"
+    assert Telemetry._safe_error_type(AuthenticationError) == "AuthenticationError"
+
+    for not_a_class in (
+        "secret_token",  # identifier-form message: the regression this pins
+        "RuntimeError",  # even the correct name, as a string, is refused
         "secret error detail",
-        "RuntimeError: boom",
         "Invalid API key sk-abc123",
-        "/Users/someone/project/main.py",
-        "",
+        RuntimeError("boom"),  # an instance is not the class
         None,
+        42,
     ):
-        assert Telemetry._safe_error_type(leaked) is None
+        assert Telemetry._safe_error_type(not_a_class) is None
 
 
 def test_completed_flow_reports_a_real_duration(
-    durations: list[tuple[str, float, str]],
+    durations: list[tuple[str, float, str, str | None]],
 ) -> None:
     """Elapsed time must be measured, not merely present."""
 
@@ -391,7 +400,7 @@ def test_completed_flow_reports_a_real_duration(
 
 
 def test_failed_flow_reports_its_duration_and_outcome(
-    durations: list[tuple[str, float, str]],
+    durations: list[tuple[str, float, str, str | None]],
 ) -> None:
     class SlowBoomFlow(Flow):
         @start()
@@ -410,7 +419,7 @@ def test_failed_flow_reports_its_duration_and_outcome(
 
 
 def test_no_duration_is_reported_without_a_recorded_start(
-    durations: list[tuple[str, float, str]],
+    durations: list[tuple[str, float, str, str | None]],
 ) -> None:
     """A completion with no observed start reports nothing, and does not raise.
 
@@ -435,7 +444,7 @@ def test_no_duration_is_reported_without_a_recorded_start(
 
 
 def test_duration_is_reported_once_per_run(
-    durations: list[tuple[str, float, str]],
+    durations: list[tuple[str, float, str, str | None]],
 ) -> None:
     """The stamp is cleared on use, so a repeated completion cannot double-count."""
     from crewai.events.event_bus import crewai_event_bus
@@ -503,7 +512,7 @@ def test_resumed_flow_is_reported(
     tmp_path,
     pauses: list[tuple[str, str]],
     starts: list[tuple[str, bool]],
-    durations: list[tuple[str, float, str]],
+    durations: list[tuple[str, float, str, str | None]],
 ) -> None:
     """A restored run is only visible here - there is no resume event.
 
@@ -555,7 +564,7 @@ def test_resumed_flow_is_reported(
 
 
 def test_a_user_flow_that_suppresses_console_events_still_reports(
-    durations: list[tuple[str, float, str]],
+    durations: list[tuple[str, float, str, str | None]],
 ) -> None:
     """``suppress_flow_events`` asks for console quiet, not for no telemetry."""
 
@@ -585,7 +594,7 @@ def test_a_declarative_flow_is_not_treated_as_internal(
 
 
 def test_a_failed_conversation_session_is_not_reported_completed(
-    features: list[str], durations: list[tuple[str, float, str]]
+    features: list[str], durations: list[tuple[str, float, str, str | None]]
 ) -> None:
     """A conversational session closes with FlowFinishedEvent either way.
 
@@ -610,7 +619,7 @@ def test_a_failed_conversation_session_is_not_reported_completed(
 
 
 def test_a_deferred_session_still_reports_a_failed_turn(
-    durations: list[tuple[str, float, str]],
+    durations: list[tuple[str, float, str, str | None]],
 ) -> None:
     """A deferring session has no per-turn terminal event to carry the failure.
 
@@ -633,11 +642,15 @@ def test_a_deferred_session_still_reports_a_failed_turn(
     # finalize_session_traces() emits without awaiting its handlers.
     wait_for_event_handlers()
 
-    assert [outcome for _n, _d, outcome, _e in durations] == ["failed"]
+    # FlowFailedEvent never fires on this path, so the class stored by
+    # on_conversation_turn_failed is the only record of what went wrong.
+    assert [(outcome, e) for _n, _d, outcome, e in durations] == [
+        ("failed", "RuntimeError")
+    ]
 
 
 def test_a_failed_turn_does_not_mark_the_next_turn_failed(
-    durations: list[tuple[str, float, str]],
+    durations: list[tuple[str, float, str, str | None]],
 ) -> None:
     """A session that opts out of deferral ends each turn with its own event.
 
@@ -668,7 +681,7 @@ def test_a_failed_turn_does_not_mark_the_next_turn_failed(
 
 
 def test_a_failed_streamed_turn_does_not_mark_the_next_turn_failed(
-    durations: list[tuple[str, float, str]],
+    durations: list[tuple[str, float, str, str | None]],
 ) -> None:
     """``stream_turn`` is the other emitter of the turn-failure event.
 
@@ -698,7 +711,7 @@ def test_a_failed_streamed_turn_does_not_mark_the_next_turn_failed(
 
 
 def test_infrastructure_flows_do_not_pollute_outcome_signals(
-    features: list[str], durations: list[tuple[str, float, str]]
+    features: list[str], durations: list[tuple[str, float, str, str | None]]
 ) -> None:
     """CrewAI's own flows must not be counted as user flow outcomes.
 
