@@ -1,4 +1,4 @@
-"""Tests for redirect-aware safe HTTP helpers."""
+"""Tests for redirect-aware, connection-pinning safe HTTP helpers."""
 
 from __future__ import annotations
 
@@ -9,7 +9,12 @@ from typing import Any
 import pytest
 import requests
 
-from crewai_tools.security.safe_requests import safe_get
+from crewai_tools.security import safe_requests
+from crewai_tools.security.safe_requests import (
+    SSRFProtectedAdapter,
+    create_safe_session,
+    safe_get,
+)
 
 
 def _response(url: str, status_code: int, *, location: str | None = None) -> requests.Response:
@@ -52,7 +57,7 @@ def test_safe_get_blocks_direct_internal_url() -> None:
 
 def _mock_get(monkeypatch: pytest.MonkeyPatch, get_response: Any) -> None:
     monkeypatch.setattr(
-        "crewai_tools.security.safe_requests.requests.get",
+        "crewai_tools.security.safe_requests._raw_get",
         get_response,
     )
 
@@ -249,3 +254,162 @@ def test_safe_get_preserves_credentials_on_same_origin_redirect(
 
     assert requests_made[1][1]["headers"] == {"Authorization": "Bearer token"}
     assert requests_made[1][1]["cookies"] == {"session": "abc"}
+
+
+def test_safe_get_rejects_proxies(
+    monkeypatch: pytest.MonkeyPatch, public_dns: None
+) -> None:
+    _mock_get(monkeypatch, lambda url, **kwargs: _response(url, 200))
+
+    with pytest.raises(ValueError, match="Proxies are not allowed"):
+        safe_get(
+            "http://public.example/start",
+            timeout=15,
+            proxies={"http": "http://127.0.0.1:8080"},
+        )
+
+
+def test_session_mounts_protected_adapter_and_ignores_env_proxies() -> None:
+    session = create_safe_session()
+    assert isinstance(session.get_adapter("http://x"), SSRFProtectedAdapter)
+    assert isinstance(session.get_adapter("https://x"), SSRFProtectedAdapter)
+    assert session.trust_env is False
+    assert session.proxies == {}
+
+
+def test_adapter_revalidates_before_any_network_call(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    def spy(url: str) -> str:
+        calls.append(url)
+        if "internal.target" in url:
+            raise ValueError("URL resolves to private/reserved IP")
+        return url
+
+    monkeypatch.setattr(safe_requests, "validate_url", spy)
+
+    adapter = SSRFProtectedAdapter()
+    req = requests.Request("GET", "http://internal.target/").prepare()
+    with pytest.raises(ValueError, match="private/reserved"):
+        adapter.send(req)
+    assert calls == ["http://internal.target/"]
+
+
+class _FakeSock:
+    def __init__(self, peer: tuple[str, int]) -> None:
+        self._peer = peer
+
+    def getpeername(self) -> tuple[str, int]:
+        return self._peer
+
+
+def test_assert_safe_peer_blocks_private() -> None:
+    with pytest.raises(ValueError, match="private/reserved"):
+        safe_requests._assert_safe_peer(_FakeSock(("127.0.0.1", 80)))
+
+
+def test_assert_safe_peer_blocks_metadata() -> None:
+    with pytest.raises(ValueError, match="private/reserved"):
+        safe_requests._assert_safe_peer(_FakeSock(("169.254.169.254", 80)))
+
+
+def test_assert_safe_peer_allows_public() -> None:
+    safe_requests._assert_safe_peer(_FakeSock(("93.184.216.34", 80)))
+
+
+def test_assert_safe_peer_respects_escape_hatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CREWAI_TOOLS_ALLOW_UNSAFE_PATHS", "true")
+    safe_requests._assert_safe_peer(_FakeSock(("127.0.0.1", 80)))
+
+
+def test_assert_safe_peer_force_safe_overrides_escape_hatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CREWAI_TOOLS_ALLOW_UNSAFE_PATHS", "true")
+    monkeypatch.setenv("CREWAI_TOOLS_FORCE_SAFE_PATHS", "true")
+    with pytest.raises(ValueError, match="private/reserved"):
+        safe_requests._assert_safe_peer(_FakeSock(("127.0.0.1", 80)))
+
+
+def test_create_validated_connection_pins_resolved_ip(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The socket is connected to the sockaddr from the lookup we just checked.
+
+    A second getaddrinfo (what urllib3 would do if we passed the hostname
+    through) returning a private IP must not be the address we connect to.
+    """
+    lookups = {"n": 0}
+    connected_to: list[tuple[str, int]] = []
+
+    def fake_getaddrinfo(
+        host: str, port: int, *args: Any, **kwargs: Any
+    ) -> list[tuple[Any, ...]]:
+        lookups["n"] += 1
+        ip = "93.184.216.34" if lookups["n"] == 1 else "169.254.169.254"
+        return [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", (ip, port or 80)),
+        ]
+
+    class RecordingSocket:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            self.peer: tuple[str, int] | None = None
+
+        def setsockopt(self, *args: Any, **kwargs: Any) -> None:
+            return None
+
+        def settimeout(self, timeout: Any) -> None:
+            return None
+
+        def connect(self, sockaddr: tuple[str, int]) -> None:
+            connected_to.append(sockaddr)
+            self.peer = sockaddr
+
+        def getpeername(self) -> tuple[str, int]:
+            assert self.peer is not None
+            return self.peer
+
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr(socket, "socket", lambda *a, **k: RecordingSocket())
+
+    sock = safe_requests.create_validated_connection("rebind.example", 80)
+
+    assert connected_to == [("93.184.216.34", 80)]
+    assert sock.getpeername() == ("93.184.216.34", 80)
+
+
+def test_create_validated_connection_blocks_when_any_record_is_private(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_getaddrinfo(
+        host: str, port: int, *args: Any, **kwargs: Any
+    ) -> list[tuple[Any, ...]]:
+        return [
+            (
+                socket.AF_INET,
+                socket.SOCK_STREAM,
+                6,
+                "",
+                ("93.184.216.34", port or 80),
+            ),
+            (
+                socket.AF_INET,
+                socket.SOCK_STREAM,
+                6,
+                "",
+                ("169.254.169.254", port or 80),
+            ),
+        ]
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+
+    with pytest.raises(ValueError, match="169.254.169.254"):
+        safe_requests.create_validated_connection("dual.example", 80)
+
+
+def test_create_validated_connection_blocks_direct_loopback() -> None:
+    with pytest.raises(ValueError, match="private/reserved"):
+        safe_requests.create_validated_connection("127.0.0.1", 9)
