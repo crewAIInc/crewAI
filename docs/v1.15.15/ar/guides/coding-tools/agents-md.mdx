@@ -1,0 +1,61 @@
+---
+title: أدوات البرمجة
+description: استخدم AGENTS.md لتوجيه أدوات البرمجة وبيئات التطوير عبر مشاريع CrewAI.
+icon: terminal
+mode: "wide"
+---
+
+## لماذا AGENTS.md
+
+`AGENTS.md` هو ملف تعليمات خفيف محلي للمستودع يمنح أدوات البرمجة توجيهات متسقة خاصة بالمشروع. ضعه في جذر المشروع واعتبره المصدر الموثوق لكيفية عمل المساعدين: الاصطلاحات والأوامر وملاحظات البنية والحدود.
+
+## إنشاء مشروع باستخدام CLI
+
+استخدم CLI الخاص بـ CrewAI لإنشاء هيكل مشروع، وسيُضاف `AGENTS.md` تلقائيًا في الجذر.
+
+```bash
+# Crew
+crewai create crew my_crew
+
+# Flow
+crewai create flow my_flow
+
+# Tool repository
+crewai tool create my_tool
+```
+
+## إعداد الأدوات: توجيه المساعدين إلى AGENTS.md
+
+### Codex
+
+يمكن توجيه Codex بملفات `AGENTS.md` الموضوعة في مستودعك. استخدمها لتوفير سياق مشروع مستمر مثل الاصطلاحات والأوامر وتوقعات سير العمل.
+
+### Claude Code
+
+يخزّن Claude Code ذاكرة المشروع في `CLAUDE.md`. يمكنك تهيئته بـ `/init` وتحريره باستخدام `/memory`. يدعم Claude Code أيضًا الاستيرادات داخل `CLAUDE.md`، فيمكنك إضافة سطر واحد مثل `@AGENTS.md` لسحب التعليمات المشتركة دون تكرارها.
+
+يمكنك ببساطة استخدام:
+
+```bash
+mv AGENTS.md CLAUDE.md
+```
+
+### Gemini CLI وGoogle Antigravity
+
+يقوم Gemini CLI وAntigravity بتحميل ملف سياق المشروع (الافتراضي: `GEMINI.md`) من جذر المستودع والمجلدات الأصلية. يمكنك تهيئته لقراءة `AGENTS.md` بدلاً من ذلك (أو بالإضافة إليه) بتعيين `context.fileName` في إعدادات Gemini CLI. على سبيل المثال، عيّنه إلى `AGENTS.md` فقط، أو أدرج كلاً من `AGENTS.md` و`GEMINI.md` إذا أردت الاحتفاظ بتنسيق كل أداة.
+
+يمكنك ببساطة استخدام:
+
+```bash
+mv AGENTS.md GEMINI.md
+```
+
+### Cursor
+
+يدعم Cursor ملف `AGENTS.md` كملف تعليمات مشروع. ضعه في جذر المشروع لتوفير توجيهات لمساعد البرمجة في Cursor.
+
+### Windsurf
+
+يوفر Claude Code تكاملاً رسميًا مع Windsurf. إذا كنت تستخدم Claude Code داخل Windsurf، اتبع توجيهات Claude Code أعلاه واستورد `AGENTS.md` من `CLAUDE.md`.
+
+إذا كنت تستخدم مساعد Windsurf الأصلي، هيّئ ميزة قواعد أو تعليمات المشروع (إذا كانت متاحة) لقراءة `AGENTS.md` أو الصق المحتويات مباشرة.

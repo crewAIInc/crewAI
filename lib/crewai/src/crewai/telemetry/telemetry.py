@@ -991,12 +991,31 @@ class Telemetry:
 
         self._safe_telemetry_operation(_operation)
 
-    def flow_execution_span(self, flow_name: str, node_names: list[str]) -> None:
+    def flow_execution_span(
+        self,
+        flow_name: str,
+        node_names: list[str],
+        origin: str = "user",
+        resumed: bool = False,
+        conversational: bool = False,
+    ) -> None:
         """Records the execution of a flow.
 
         Args:
             flow_name: Name of the flow being executed.
             node_names: List of nodes being executed in the flow.
+            origin: ``"internal"`` for flows CrewAI itself runs (the agent
+                executor), ``"user"`` for flows the caller authored. Without it
+                the agent executor, which runs once per agent execution, is
+                indistinguishable from a user's own flows in the daily counts.
+            resumed: True when this start is a run restored from a human pause.
+                Resuming re-enters ``kickoff()``, so the same event fires again;
+                without this the second leg is indistinguishable from a fresh
+                run and a paused flow looks like two separate executions.
+            conversational: True for a turn of a conversational flow. Each turn
+                is its own kickoff but a session reports one completion, so
+                these spans run many-to-one and would otherwise drag any
+                completion rate computed across all flows.
         """
 
         def _operation() -> None:
@@ -1009,6 +1028,107 @@ class Telemetry:
             )
             self._add_attribute(span, "flow_name", flow_name)
             self._add_attribute(span, "node_names", json.dumps(node_names))
+            self._add_attribute(span, "origin", origin)
+            # Recorded as a string rather than a bool. The pipeline encodes a
+            # boolean as the presence of a vBool key - false arrives as the key
+            # simply being absent - which is invisible in the schema and easy to
+            # extract wrongly. crew_memory reads 1 for 99.8% of crews for exactly
+            # that reason, against a field that defaults to False.
+            self._add_attribute(span, "resumed", "true" if resumed else "false")
+            self._add_attribute(
+                span, "conversational", "true" if conversational else "false"
+            )
+            close_span(span)
+
+        self._safe_telemetry_operation(_operation)
+
+    def flow_completed_span(
+        self,
+        flow_name: str,
+        duration_ms: float,
+        outcome: str,
+        origin: str = "user",
+        conversational: bool = False,
+    ) -> None:
+        """Records how long a flow ran and how it ended.
+
+        A separate span from ``Flow Execution`` rather than that span held open
+        to completion: ``Flow Execution`` is emitted and closed at start, and
+        the daily aggregate counts it, so holding it would drop every run that
+        is killed or crashes from the execution count entirely.
+
+        The elapsed time is recorded as an explicit ``duration_ms`` attribute
+        rather than left to the span's own duration, which the ingestion
+        pipeline stores as a suffixed string ("0.0000184s") that downstream
+        aggregation cannot parse.
+
+        Args:
+            flow_name: Name of the flow that finished.
+            duration_ms: Wall-clock milliseconds from flow start, measured on a
+                monotonic clock.
+            outcome: Either ``"completed"`` or ``"failed"``.
+            origin: ``"internal"`` for flows CrewAI itself runs (the agent
+                executor), ``"user"`` for flows the caller authored.
+            conversational: True when this closes a conversational session. One
+                of these answers many ``Flow Execution`` spans, one per turn.
+        """
+
+        def _operation() -> None:
+            tracer = self.provider.get_tracer(TRACER_NAME)
+            span = tracer.start_span("Flow Completed")
+            self._add_attribute(span, "crewai_version", version("crewai"))
+            self._add_attribute(span, "flow_name", flow_name)
+            self._add_attribute(span, "duration_ms", duration_ms)
+            self._add_attribute(span, "outcome", outcome)
+            self._add_attribute(span, "origin", origin)
+            self._add_attribute(
+                span, "conversational", "true" if conversational else "false"
+            )
+            close_span(span)
+
+        self._safe_telemetry_operation(_operation)
+
+    def flow_paused_span(self, flow_name: str, origin: str = "user") -> None:
+        """Records that a flow stopped to wait for a human.
+
+        A pause is a lifecycle state, not a feature: the run has neither
+        completed nor failed, so it appears in neither terminal span. Without
+        this a paused flow is simply a start with no end.
+
+        Args:
+            flow_name: Name of the flow that paused.
+            origin: ``"internal"`` or ``"user"`` - see
+                :meth:`flow_execution_span`.
+        """
+
+        def _operation() -> None:
+            tracer = self.provider.get_tracer(TRACER_NAME)
+            span = tracer.start_span("Flow Paused")
+            self._add_attribute(span, "crewai_version", version("crewai"))
+            self._add_attribute(span, "flow_name", flow_name)
+            self._add_attribute(span, "origin", origin)
+            close_span(span)
+
+        self._safe_telemetry_operation(_operation)
+
+    def flow_method_failed_span(self, flow_name: str, origin: str = "user") -> None:
+        """Records that a method inside a flow raised.
+
+        The method name is deliberately not recorded: it is user-authored and
+        would put arbitrary strings in telemetry.
+
+        Args:
+            flow_name: Name of the flow whose method failed.
+            origin: ``"internal"`` or ``"user"`` - see
+                :meth:`flow_execution_span`.
+        """
+
+        def _operation() -> None:
+            tracer = self.provider.get_tracer(TRACER_NAME)
+            span = tracer.start_span("Flow Method Failed")
+            self._add_attribute(span, "crewai_version", version("crewai"))
+            self._add_attribute(span, "flow_name", flow_name)
+            self._add_attribute(span, "origin", origin)
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
