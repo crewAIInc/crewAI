@@ -7,8 +7,6 @@ import os
 import re
 from typing import Any, Literal, cast
 
-from pydantic import BaseModel, Field, PrivateAttr, model_validator
-
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM, llm_call_context
 from crewai.llms.hooks.base import BaseInterceptor
@@ -18,6 +16,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 
 try:
@@ -671,6 +670,14 @@ class GeminiCompletion(BaseLLM):
 
                 gemini_content = types.Content(role=gemini_role, parts=parts)
                 contents.append(gemini_content)
+
+        if contents and contents[-1].role == "model":
+            contents.append(
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text="Please continue.")],
+                )
+            )
 
         return contents, system_instruction
 
