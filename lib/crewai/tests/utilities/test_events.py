@@ -505,7 +505,9 @@ def test_flow_emits_start_event(reset_event_listener_singleton):
         flow.kickoff()
 
     assert event_received.wait(timeout=5), "Timeout waiting for flow started event"
-    mock_telemetry.flow_execution_span.assert_called_once_with("TestFlow", ["begin"])
+    mock_telemetry.flow_execution_span.assert_called_once_with(
+        "TestFlow", ["begin"], "user", False, False
+    )
     assert len(received_events) == 1
     assert received_events[0].flow_name == "TestFlow"
     assert received_events[0].type == "flow_started"
@@ -628,9 +630,10 @@ def test_suppressed_flow_failure_matches_finished_event_emission():
     assert len(failed) == 1
 
 
-def test_abort_before_flow_started_emits_no_failed_event():
+def test_abort_at_execution_start_emits_started_then_failed_events():
     started: list[FlowStartedEvent] = []
     failed: list[FlowFailedEvent] = []
+    finished: list[FlowFinishedEvent] = []
 
     class BlockedFlow(Flow):
         @start()
@@ -654,14 +657,23 @@ def test_abort_before_flow_started_emits_no_failed_event():
             def handle_flow_failed(source, event):
                 failed.append(event)
 
+            @crewai_event_bus.on(FlowFinishedEvent)
+            def handle_flow_finished(source, event):
+                finished.append(event)
+
             with pytest.raises(HookAborted):
                 BlockedFlow().kickoff()
             wait_for_event_handlers()
     finally:
         clear_all()
 
-    assert started == []
-    assert failed == []
+    assert len(started) == 1
+    assert len(failed) == 1
+    assert finished == []
+    assert failed[0].flow_name == "BlockedFlow"
+    assert isinstance(failed[0].error, HookAborted)
+    assert failed[0].error.reason == "blocked by policy"
+    assert failed[0].started_event_id == started[0].event_id
 
 
 def test_resume_emits_failed_event_paired_with_resume_started_event(tmp_path):
@@ -1244,7 +1256,6 @@ def test_llm_completed_event_includes_usage():
     assert event.usage.get("total_tokens", 0) > 0
 
 
-@pytest.mark.vcr()
 def test_llm_emits_call_failed_event():
     received_events = []
     event_received = threading.Event()
@@ -1256,12 +1267,10 @@ def test_llm_emits_call_failed_event():
 
     error_message = "OpenAI API call failed: Simulated API failure"
 
-    with patch(
-        "crewai.llms.providers.openai.completion.OpenAICompletion._handle_completion"
-    ) as mock_handle_completion:
-        mock_handle_completion.side_effect = Exception("Simulated API failure")
-
-        llm = LLM(model="gpt-4o-mini")
+    llm = LLM(model="gpt-4o-mini")
+    with patch.object(
+        llm, "_handle_completion", side_effect=Exception("Simulated API failure")
+    ):
         with pytest.raises(Exception) as exc_info:
             llm.call("Hello, how are you?")
 

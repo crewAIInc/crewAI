@@ -2952,6 +2952,52 @@ def test_expression_template_empty_context_overrides_stored_context():
         expression.render_template({})
 
 
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "{'a': 1/0}",
+        "{'a': 1, 'b': state.missing}",
+        "{'a': {'b': 1/0}}",
+        "{'a': [1/0]}",
+    ],
+)
+def test_expression_raises_for_cel_eval_error_returned_as_data(expression):
+    """celpy returns a map literal holding a CELEvalError instead of raising it."""
+    from crewai.flow.expressions import Expression, ExpressionError
+
+    with pytest.raises(ExpressionError, match="failed to evaluate CEL expression"):
+        Expression(expression, context={"state": {"score": 90}}).evaluate()
+
+
+def test_expression_nested_cel_eval_error_reports_underlying_cause():
+    from crewai.flow.expressions import Expression, ExpressionError
+
+    expression = Expression("{'a': 1/0}", context={"state": {}})
+
+    with pytest.raises(ExpressionError, match="modulus or divide by zero"):
+        expression.evaluate()
+
+
+def test_expression_keeps_short_circuited_cel_errors():
+    """Errors that CEL logic intentionally silences must still evaluate."""
+    from crewai.flow.expressions import Expression
+
+    context = {"state": {"tags": ["a", "b"]}}
+
+    assert Expression("{'ok': false && 1/0 == 1}", context=context).evaluate() == {
+        "ok": False
+    }
+    assert Expression("{'ok': true || 1/0 == 1}", context=context).evaluate() == {
+        "ok": True
+    }
+    assert (
+        Expression(
+            "state.tags.exists(t, t == 'a' || 1/0 == 1)", context=context
+        ).evaluate()
+        is True
+    )
+
+
 def test_expression_action_can_route_like_if_else():
     yaml_str = f"""
 schema: crewai.flow/v1

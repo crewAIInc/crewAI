@@ -2305,14 +2305,14 @@ class LLM(BaseLLM):
                 )
             return messages
 
-        provider = self.provider or self.model
+        formatter = self._multimodal_formatter_name()
 
         for msg in messages:
             files = msg.get("files")
             if not files:
                 continue
 
-            content_blocks = format_multimodal_content(files, provider)
+            content_blocks = format_multimodal_content(files, formatter)
             if not content_blocks:
                 msg.pop("files", None)
                 continue
@@ -2329,6 +2329,13 @@ class LLM(BaseLLM):
             msg.pop("files", None)
 
         return messages
+
+    def _multimodal_formatter_name(self) -> str:
+        # Identity (`self.provider`) stays e.g. anthropic. LiteLLM's completion()
+        # API is OpenAI-shaped and translates blocks to the vendor on the wire.
+        if self.is_litellm:
+            return "openai"
+        return self.provider or self.model
 
     async def _aprocess_message_files(
         self, messages: list[LLMMessage]
@@ -2356,14 +2363,14 @@ class LLM(BaseLLM):
                 )
             return messages
 
-        provider = self.provider or self.model
+        formatter = self._multimodal_formatter_name()
 
         for msg in messages:
             files = msg.get("files")
             if not files:
                 continue
 
-            content_blocks = await aformat_multimodal_content(files, provider)
+            content_blocks = await aformat_multimodal_content(files, formatter)
             if not content_blocks:
                 msg.pop("files", None)
                 continue
