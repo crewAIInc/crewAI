@@ -306,7 +306,7 @@ class SingleStoreSearchTool(BaseTool):
                             f"Please ensure the table is created."
                         )
 
-                    cursor.execute(f"SHOW COLUMNS FROM {table}")
+                    cursor.execute(f"SHOW COLUMNS FROM `{table.replace('`', '')}`")
                     columns = cursor.fetchall()
                     column_info = ", ".join(f"{row[0]} {row[1]}" for row in columns)
                     table_definitions.append(f"{table}({column_info})")
@@ -356,7 +356,9 @@ class SingleStoreSearchTool(BaseTool):
     def _validate_query(self, search_query: str) -> tuple[bool, str]:
         """Validate the search query to ensure it's safe to execute.
 
-        Only SELECT and SHOW statements are allowed for security reasons.
+        Only a single SELECT or SHOW statement is allowed. Stacked statements
+        such as ``SELECT 1; DROP TABLE users`` are rejected so a read-only
+        start token cannot hide a following write.
 
         Args:
             search_query: The SQL query to validate
@@ -367,10 +369,16 @@ class SingleStoreSearchTool(BaseTool):
         if not isinstance(search_query, str):
             return False, "Search query must be a string."
 
-        query_lower = search_query.strip().lower()
+        stripped = search_query.strip()
+        if stripped.endswith(";"):
+            stripped = stripped[:-1].rstrip()
+        if not stripped:
+            return False, "Search query must be a string."
+        if ";" in stripped:
+            return False, "Multiple SQL statements are not supported."
 
-        # Allow only SELECT and SHOW statements
-        if not (query_lower.startswith(("select", "show"))):
+        first_token = stripped.split(None, 1)[0].lower().rstrip("(")
+        if first_token not in {"select", "show"}:
             return (
                 False,
                 "Only SELECT and SHOW queries are supported for security reasons.",
