@@ -167,9 +167,15 @@ class TestReleaseAttribution:
         args: tuple[object, ...],
     ) -> None:
         instance, span = telemetry
+        sentinel = "0.0.0-release-sentinel"
 
-        getattr(instance, method)(*args)
+        # Patched at the source module, not at crewai_core.telemetry: these
+        # methods import get_crewai_version inside the call, so a patch on the
+        # importing module would never be seen. An arbitrary sentinel also means
+        # a hard-coded literal cannot satisfy the assertion.
+        with patch("crewai_core.version.get_crewai_version", return_value=sentinel):
+            getattr(instance, method)(*args)
 
-        recorded = _attributes(span).get("crewai_version")
-        assert recorded, f"{method} recorded no crewai_version"
-        assert recorded[0].isdigit(), f"{method} recorded a non-version: {recorded!r}"
+        assert _attributes(span).get("crewai_version") == sentinel, (
+            f"{method} did not record the value returned by get_crewai_version()"
+        )

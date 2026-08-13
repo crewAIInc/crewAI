@@ -94,7 +94,7 @@ def test_flow_execution_span_records_crewai_version():
             "crewai.telemetry.telemetry.TracerProvider",
             return_value=Mock(get_tracer=Mock(return_value=tracer)),
         ),
-        patch("crewai.telemetry.telemetry.version", return_value="9.9.9"),
+        patch("crewai.telemetry.telemetry.version", return_value=_EMITTED_VERSION),
     ):
         telemetry = Telemetry()
         telemetry.flow_execution_span("ResearchFlow", ["start", "finish"])
@@ -312,6 +312,11 @@ def test_event_listener_tracks_hook_dispatched_events():
     )
 
 
+# The version _emit injects. Assertions compare against this exact value, so a
+# hard-coded literal in an emitter cannot satisfy them.
+_EMITTED_VERSION = "9.9.9"
+
+
 def _emit(method: str, *args, **kwargs):
     """Run one telemetry span method against a mocked tracer.
 
@@ -416,9 +421,11 @@ def test_span_records_the_crewai_version(method: str, args: tuple) -> None:
     """
     _tracer, span = _emit(method, *args)
 
-    recorded = _version_attr(span)
-    assert recorded, f"{method} recorded no crewai_version"
-    assert recorded[0].isdigit(), f"{method} recorded a non-version: {recorded!r}"
+    # Exact equality with the value _emit injected: "looks like a version" would
+    # also accept a hard-coded literal in the emitter.
+    assert _version_attr(span) == _EMITTED_VERSION, (
+        f"{method} did not record the value returned by version('crewai')"
+    )
 
 
 def test_task_spans_record_the_crewai_version() -> None:
@@ -443,8 +450,9 @@ def test_task_spans_record_the_crewai_version() -> None:
         for c in span.set_attribute.call_args_list
         if c.args and c.args[0] == "crewai_version"
     ]
-    assert len(versions) == 2, f"expected one version per task span, got {versions}"
-    assert all(v and v[0].isdigit() for v in versions)
+    assert versions == [_EMITTED_VERSION, _EMITTED_VERSION], (
+        f"expected one version per task span, got {versions}"
+    )
 
 
 def _calls(node: ast.AST, attr: str, key: str | None = None) -> int:
