@@ -196,9 +196,9 @@ def create_validated_connection(
             sock.connect(sockaddr)
             try:
                 _assert_safe_peer(sock)
-            except BaseException:
-                sock.close()
-                raise
+            finally:
+                if sys.exc_info()[0] is not None:
+                    sock.close()
             return sock
         except OSError as exc:
             err = exc
