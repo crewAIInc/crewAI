@@ -55,6 +55,16 @@ class KeenableSearchTool(BaseTool):
     n_results: int = Field(
         default=10, ge=0, description="Maximum number of results to return."
     )
+    max_snippet_chars: int = Field(
+        default=500,
+        ge=0,
+        description=(
+            "Truncate each result's description to this many characters. Keenable "
+            "returns page text, which is far longer than a typical search snippet, "
+            "so this keeps a result set from crowding the agent's context. "
+            "Set to 0 for no truncation."
+        ),
+    )
     timeout: int = Field(default=30, description="Request timeout in seconds.")
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
@@ -83,6 +93,21 @@ class KeenableSearchTool(BaseTool):
         raise ValueError(
             f"KEENABLE_API_URL must be an https:// URL with a host, got {base!r}"
         )
+
+    def _result_text(self, result: dict[str, Any]) -> str:
+        """Return a result's text, whitespace-collapsed and length-capped.
+
+        The API returns both "snippet" and "description": "snippet" holds the page
+        text and "description" is usually empty, so reading "description" first
+        would return results with no text at all. Snippets are raw page text and
+        arrive with newlines, hence the collapse.
+        """
+        text = " ".join(
+            str(result.get("snippet") or result.get("description") or "").split()
+        )
+        if 0 < self.max_snippet_chars < len(text):
+            return text[: self.max_snippet_chars].rstrip() + "…"
+        return text
 
     def _run(self, **kwargs: Any) -> Any:
         search_query = kwargs.get("query") or kwargs.get("search_query")
@@ -124,7 +149,7 @@ class KeenableSearchTool(BaseTool):
                 {
                     "title": r.get("title"),
                     "url": r.get("url"),
-                    "description": r.get("description"),
+                    "description": self._result_text(r),
                 }
                 for r in results[: self.n_results]
                 if isinstance(r, dict) and r.get("url")
