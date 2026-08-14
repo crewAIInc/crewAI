@@ -12,6 +12,7 @@ from crewai_tools.tools.usdctofiat_tool.usdctofiat_tool import (
     UsdctoFiatDepositsTool,
     UsdctoFiatEstimateTool,
     UsdctoFiatWatchTool,
+    UsdctoFiatWithdrawSchema,
     UsdctoFiatWithdrawTool,
 )
 
@@ -87,13 +88,16 @@ def tools(mock_offramp: MagicMock):
         "crewai_tools.tools.usdctofiat_tool.usdctofiat_tool._create_offramp",
         return_value=mock_offramp,
     ):
-        yield {
-            "cashout": UsdctoFiatCashoutTool(),
-            "estimate": UsdctoFiatEstimateTool(),
-            "watch": UsdctoFiatWatchTool(),
-            "withdraw": UsdctoFiatWithdrawTool(),
-            "deposits": UsdctoFiatDepositsTool(),
-        }, mock_offramp
+        yield (
+            {
+                "cashout": UsdctoFiatCashoutTool(),
+                "estimate": UsdctoFiatEstimateTool(),
+                "watch": UsdctoFiatWatchTool(),
+                "withdraw": UsdctoFiatWithdrawTool(),
+                "deposits": UsdctoFiatDepositsTool(),
+            },
+            mock_offramp,
+        )
 
 
 def test_docstring_discloses_product_and_docs() -> None:
@@ -123,6 +127,19 @@ def test_no_private_key_constructor() -> None:
     assert kit.signer is None
 
 
+def test_constructor_rejects_attribution_kwargs() -> None:
+    for key, value in (
+        ("referrer", "0xabc"),
+        ("referrers", ["0xabc"]),
+        ("extra_referrers", ["0xabc"]),
+        ("referral_code", "HIJACK"),
+    ):
+        with pytest.raises(TypeError, match="does not accept attribution"):
+            UsdctoFiatCashoutTool(**{key: value})
+        with pytest.raises(TypeError, match="does not accept attribution"):
+            UsdctoFiatEstimateTool(**{key: value})
+
+
 def test_args_schema_requires_mode() -> None:
     fields = UsdctoFiatCashoutTool.args_schema.model_fields
     assert "mode" in fields
@@ -144,6 +161,34 @@ def test_cashout_without_signer_returns_unsigned_prepare(tools) -> None:
     offramp.cashout.assert_not_called()
 
 
+def test_cashout_run_accepts_int_base_units(tools) -> None:
+    kit, offramp = tools
+    payload = json.loads(
+        kit["cashout"].run(
+            mode="fast",
+            amount=100_000_000,
+            currency="EUR",
+            platform="revolut",
+            payee="alice",
+        )
+    )
+    assert payload["signed"] is False
+    assert payload["prepared"]["mode"] == "fast"
+    offramp.prepare.assert_called_once()
+    assert offramp.prepare.call_args.kwargs["amount"] == 100_000_000
+
+
+def test_estimate_run_accepts_int_base_units(tools) -> None:
+    kit, offramp = tools
+    payload = json.loads(
+        kit["estimate"].run(mode="fast", amount=100_000_000, currency="EUR")
+    )
+    assert payload["amount_units"] == 100_000_000
+    assert payload["spread_bps"] == 0
+    offramp.estimate.assert_called_once()
+    assert offramp.estimate.call_args.kwargs["amount"] == 100_000_000
+
+
 def test_cashout_with_injected_signer(mock_offramp: MagicMock) -> None:
     def signer(tx):
         return {"hash": "0x" + "cd" * 32, "deposit_id": "42"}
@@ -154,7 +199,13 @@ def test_cashout_with_injected_signer(mock_offramp: MagicMock) -> None:
     ):
         kit = UsdctoFiatCashoutTool(signer=signer)
         payload = json.loads(
-            kit._run(mode="fast", amount="10", currency="GBP", platform="monzo", payee="alice")
+            kit._run(
+                mode="fast",
+                amount="10",
+                currency="GBP",
+                platform="monzo",
+                payee="alice",
+            )
         )
     assert payload["signed"] is True
     assert payload["result"]["deposit_id"] == "42"
@@ -179,7 +230,9 @@ def test_cashout_mode_required_is_returned_as_json(tools) -> None:
 
 def test_estimate_watch_withdraw_deposits(tools) -> None:
     kit, _offramp = tools
-    estimate = json.loads(kit["estimate"]._run(mode="fast", amount="100", currency="EUR"))
+    estimate = json.loads(
+        kit["estimate"]._run(mode="fast", amount="100", currency="EUR")
+    )
     assert estimate["spread_bps"] == 0
     assert estimate["manager_fee_bps"] == 0
     assert estimate["mode"] == "fast"
@@ -187,7 +240,9 @@ def test_estimate_watch_withdraw_deposits(tools) -> None:
     watched = json.loads(kit["watch"]._run("42"))
     assert watched["snapshots"][0]["status"] == "ACTIVE"
 
-    rows = json.loads(kit["deposits"]._run("0x1111111111111111111111111111111111111111"))
+    rows = json.loads(
+        kit["deposits"]._run("0x1111111111111111111111111111111111111111")
+    )
     assert rows["deposits"][0]["id"] == "42"
 
     withdrawn = json.loads(kit["withdraw"]._run("42"))
@@ -196,8 +251,32 @@ def test_estimate_watch_withdraw_deposits(tools) -> None:
     assert closed["data"] == "0xwithdraw"
 
 
+def test_withdraw_schema_is_split_from_watch() -> None:
+    assert UsdctoFiatWatchTool.args_schema is not UsdctoFiatWithdrawTool.args_schema
+    assert UsdctoFiatWithdrawTool.args_schema is UsdctoFiatWithdrawSchema
+    UsdctoFiatWatchTool.args_schema.model_validate(
+        {"deposit_id": "fast:0xabc:composite"}
+    )
+    UsdctoFiatWithdrawSchema.model_validate({"deposit_id": "42"})
+    UsdctoFiatWithdrawSchema.model_validate({"deposit_id": 42})
+    with pytest.raises(Exception, match="numeric EscrowV2"):
+        UsdctoFiatWithdrawSchema.model_validate({"deposit_id": "fast:0xabc:composite"})
+
+
+def test_withdraw_run_rejects_fast_composite_key(tools) -> None:
+    kit, offramp = tools
+    with pytest.raises(ValueError, match="numeric EscrowV2"):
+        kit["withdraw"].run(deposit_id="fast:0xabc:composite")
+    offramp.withdraw.assert_not_called()
+    watched = json.loads(kit["watch"].run(deposit_id="fast:0xabc:composite"))
+    assert watched["deposit_id"] == "fast:0xabc:composite"
+    offramp.watch.assert_called_once()
+
+
 def test_estimate_mode_required(tools) -> None:
     kit, offramp = tools
     offramp.estimate.side_effect = _ModeRequired()
-    payload = json.loads(kit["estimate"]._run(mode="slow", amount="100", currency="EUR"))
+    payload = json.loads(
+        kit["estimate"]._run(mode="slow", amount="100", currency="EUR")
+    )
     assert "mode is required" in payload["error"]

@@ -23,7 +23,7 @@ import json
 from typing import Any
 
 from crewai.tools import BaseTool
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 
 
 _BANNED_KEY_KWARGS = (
@@ -37,15 +37,18 @@ _BANNED_KEY_KWARGS = (
     "EVM_PRIVATE_KEY",
 )
 
+_BANNED_ATTRIBUTION_KWARGS = (
+    "referrer",
+    "referrers",
+    "extra_referrers",
+    "referral_code",
+)
+
 _OFFRAMP_KWARGS = (
     "curator_url",
     "indexer_url",
     "curator",
     "indexer",
-    "referrer",
-    "referrers",
-    "extra_referrers",
-    "referral_code",
 )
 
 
@@ -57,12 +60,28 @@ def _reject_keys_and_mode(kwargs: dict[str, Any], *, mode: str | None) -> None:
                 "Inject a signer callback or call cashout without a signer "
                 "to receive unsigned txs."
             )
+    for banned in _BANNED_ATTRIBUTION_KWARGS:
+        if banned in kwargs:
+            raise TypeError(
+                "This tool does not accept attribution overrides. "
+                "The usdctofiat client locks peer-ref-TOFIAT then galleonlabs."
+            )
     if mode is not None:
         raise TypeError(
             "This tool does not default mode. "
             'Pass mode="fast" (0% / TOFIAT) or mode="best" (Delegate, 10 bps) '
             "on each cashout/estimate call."
         )
+
+
+def _require_numeric_deposit_id(deposit_id: str | int) -> str:
+    text = str(deposit_id).strip()
+    if not text.isdigit():
+        raise ValueError(
+            "withdraw requires a numeric EscrowV2 deposit id; "
+            "Fast composite keys are not accepted"
+        )
+    return text
 
 
 def _create_offramp(**kwargs: Any) -> Any:
@@ -83,7 +102,7 @@ class UsdctoFiatCashoutSchema(BaseModel):
         ...,
         description='Required. "fast" (0% / TOFIAT) or "best" (Delegate, 10 bps).',
     )
-    amount: str = Field(
+    amount: str | int = Field(
         ..., description="Human USDC amount. An int is six-decimal units."
     )
     currency: str = Field(..., description="Fiat ISO code, e.g. EUR, USD, GBP.")
@@ -95,16 +114,32 @@ class UsdctoFiatEstimateSchema(BaseModel):
     """Input schema for UsdctoFiatEstimateTool. mode is required."""
 
     mode: str = Field(..., description='Required. "fast" (0 bps) or "best" (10 bps).')
-    amount: str = Field(..., description="Human USDC amount.")
+    amount: str | int = Field(
+        ..., description="Human USDC amount. An int is six-decimal units."
+    )
     currency: str = Field(..., description="Fiat ISO code.")
 
 
 class UsdctoFiatDepositSchema(BaseModel):
-    """Input schema for watch / withdraw tools."""
+    """Input schema for UsdctoFiatWatchTool."""
 
     deposit_id: str = Field(
         ..., description="Fast composite resume key or Best numeric EscrowV2 id."
     )
+
+
+class UsdctoFiatWithdrawSchema(BaseModel):
+    """Input schema for UsdctoFiatWithdrawTool. Numeric EscrowV2 id only."""
+
+    deposit_id: str | int = Field(
+        ...,
+        description="Numeric EscrowV2 deposit id. Fast composite keys are rejected.",
+    )
+
+    @field_validator("deposit_id")
+    @classmethod
+    def _numeric_escrow_id(cls, value: str | int) -> str:
+        return _require_numeric_deposit_id(value)
 
 
 class UsdctoFiatOwnerSchema(BaseModel):
@@ -165,7 +200,7 @@ class UsdctoFiatCashoutTool(_UsdctoFiatBase):
     args_schema: type[BaseModel] = UsdctoFiatCashoutSchema
 
     def _run(
-        self, mode: str, amount: str, currency: str, platform: str, payee: str
+        self, mode: str, amount: str | int, currency: str, platform: str, payee: str
     ) -> str:
         try:
             offramp = self._get_offramp()
@@ -202,7 +237,7 @@ class UsdctoFiatEstimateTool(_UsdctoFiatBase):
     )
     args_schema: type[BaseModel] = UsdctoFiatEstimateSchema
 
-    def _run(self, mode: str, amount: str, currency: str) -> str:
+    def _run(self, mode: str, amount: str | int, currency: str) -> str:
         try:
             return _dumps(
                 _as_dict(
@@ -240,16 +275,17 @@ class UsdctoFiatWithdrawTool(_UsdctoFiatBase):
         "Withdraw or close a USDCtoFiat deposit. "
         "Docs: https://usdctofiat.xyz/developers"
     )
-    args_schema: type[BaseModel] = UsdctoFiatDepositSchema
+    args_schema: type[BaseModel] = UsdctoFiatWithdrawSchema
 
-    def _run(self, deposit_id: str) -> str:
+    def _run(self, deposit_id: str | int) -> str:
         try:
+            deposit_id = _require_numeric_deposit_id(deposit_id)
             result = self._get_offramp().withdraw(deposit_id, signer=self.signer)
             return _dumps(_as_dict(result))
         except Exception as exc:
             return _error(exc)
 
-    def close(self, deposit_id: str) -> str:
+    def close(self, deposit_id: str | int) -> str:
         """Alias for withdraw."""
         return self._run(deposit_id)
 
