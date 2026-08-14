@@ -4,6 +4,7 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from copy import copy as shallow_copy, deepcopy
 import gc
+import pickle
 import threading
 import time
 from typing import Any
@@ -250,6 +251,80 @@ async def test_shallow_copy_preserves_caller_owned_clients() -> None:
 
     sync_http_client.close()
     await async_http_client.aclose()
+
+
+def test_pickle_round_trip_recreates_pristine_runtime_locks() -> None:
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api_key="test-key",
+        organization="test-organization",
+        default_headers={"x-test": "value"},
+    )
+
+    restored = pickle.loads(pickle.dumps(llm))
+
+    assert restored.model_dump() == llm.model_dump()
+    assert restored._sync_client_lock is not llm._sync_client_lock
+    assert restored._async_client_lock is not llm._async_client_lock
+    assert restored._client is None
+    assert restored._async_client is None
+    assert not restored._owns_sync_http_client
+    assert not restored._owns_async_http_client
+    assert not restored._async_client_closing
+
+
+@pytest.mark.asyncio
+async def test_pickle_round_trip_drops_only_provider_owned_clients() -> None:
+    assert not openai_completion._PENDING_ASYNC_CLOSE_TASKS
+    llm = OpenAICompletion(model="gpt-4o", api_key="test-key")
+    original_sync_client = llm._get_sync_client()
+    original_async_client = llm._get_async_client()
+
+    restored = pickle.loads(pickle.dumps(llm))
+
+    assert llm._client is original_sync_client
+    assert llm._async_client is original_async_client
+    assert llm._owns_sync_http_client
+    assert llm._owns_async_http_client
+    assert not original_sync_client.is_closed()
+    assert not original_async_client.is_closed()
+    assert restored._client is None
+    assert restored._async_client is None
+    assert not restored._owns_sync_http_client
+    assert not restored._owns_async_http_client
+    assert restored._sync_client_lock is not llm._sync_client_lock
+    assert restored._async_client_lock is not llm._async_client_lock
+
+    restored_sync_client = restored._get_sync_client()
+    restored_async_client = restored._get_async_client()
+    assert restored_sync_client is not original_sync_client
+    assert restored_async_client is not original_async_client
+
+    await restored.aclose()
+    await llm.aclose()
+    assert not openai_completion._PENDING_ASYNC_CLOSE_TASKS
+
+
+@pytest.mark.asyncio
+async def test_pickle_round_trip_preserves_caller_owned_client_state() -> None:
+    llm = OpenAICompletion(model="gpt-4o", api_key="test-key")
+    sync_client = _TrackingSyncAPIClient()
+    async_client = _TrackingAsyncAPIClient()
+    llm._client = sync_client
+    llm._async_client = async_client
+
+    restored = pickle.loads(pickle.dumps(llm))
+
+    assert isinstance(restored._client, _TrackingSyncAPIClient)
+    assert isinstance(restored._async_client, _TrackingAsyncAPIClient)
+    assert restored._client is not sync_client
+    assert restored._async_client is not async_client
+    assert not restored._owns_sync_http_client
+    assert not restored._owns_async_http_client
+    restored.close()
+    await restored.aclose()
+    assert restored._client.close_calls == 0
+    assert restored._async_client.close_calls == 0
 
 
 @pytest.mark.parametrize("mode", ["sync", "async"])

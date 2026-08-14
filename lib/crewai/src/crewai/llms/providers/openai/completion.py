@@ -93,6 +93,10 @@ class _ClientLock:
         memo[id(self)] = copied
         return copied
 
+    def __reduce__(self) -> tuple[type[_ClientLock], tuple[()]]:
+        """Recreate an unlocked lock instead of serializing thread state."""
+        return type(self), ()
+
 
 def _consume_async_close_task(task: asyncio.Task[None]) -> None:
     """Retain finalizer tasks until completion and consume cleanup errors."""
@@ -507,6 +511,22 @@ class OpenAICompletion(BaseLLM):
                 copied._async_client = None
                 copied._owns_async_http_client = False
             return copied
+
+    def __getstate__(self) -> dict[Any, Any]:
+        """Serialize configuration without live provider-owned resources."""
+        with self._sync_client_lock, self._async_client_lock:
+            state = super().__getstate__()
+            private = state.get("__pydantic_private__")
+            if private is None:
+                return state
+            if self._owns_sync_http_client:
+                private["_client"] = None
+                private["_owns_sync_http_client"] = False
+            if self._owns_async_http_client:
+                private["_async_client"] = None
+                private["_owns_async_http_client"] = False
+            private["_async_client_closing"] = False
+            return state
 
     def __enter__(self) -> OpenAICompletion:
         """Return this provider for synchronous managed use."""
