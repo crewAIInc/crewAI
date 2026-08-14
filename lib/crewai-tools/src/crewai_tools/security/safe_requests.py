@@ -194,10 +194,12 @@ def create_validated_connection(
             if source_address:
                 sock.bind(source_address)
             sock.connect(sockaddr)
+            peer_validated = False
             try:
                 _assert_safe_peer(sock)
+                peer_validated = True
             finally:
-                if sys.exc_info()[0] is not None:
+                if not peer_validated:
                     sock.close()
             return sock
         except OSError as exc:
@@ -343,10 +345,36 @@ def _reject_proxies(kwargs: dict[str, Any]) -> None:
     kwargs["proxies"] = {}
 
 
+def _attach_session(response: requests.Response, session: requests.Session) -> None:
+    """Close *session* when *response* is closed.
+
+    Streamed bodies are read after ``_raw_get`` returns, so the session that
+    owns the connection must outlive the ``get()`` call.
+    """
+    original_close = response.close
+
+    def close_with_session() -> None:
+        try:
+            original_close()
+        finally:
+            session.close()
+
+    response.close = close_with_session  # type: ignore[method-assign]
+
+
 def _raw_get(url: str, **kwargs: Any) -> requests.Response:
     """GET through an SSRF-protected session. Patchable in tests."""
-    with create_safe_session() as session:
-        return session.get(url, **kwargs)
+    session = create_safe_session()
+    owns_session = True
+    try:
+        response = session.get(url, **kwargs)
+        if kwargs.get("stream"):
+            _attach_session(response, session)
+            owns_session = False
+        return response
+    finally:
+        if owns_session:
+            session.close()
 
 
 def safe_get(url: str, *, max_redirects: int = 10, **kwargs: Any) -> requests.Response:

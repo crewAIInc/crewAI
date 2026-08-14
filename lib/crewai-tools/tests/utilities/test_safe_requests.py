@@ -413,3 +413,148 @@ def test_create_validated_connection_blocks_when_any_record_is_private(
 def test_create_validated_connection_blocks_direct_loopback() -> None:
     with pytest.raises(ValueError, match="private/reserved"):
         safe_requests.create_validated_connection("127.0.0.1", 9)
+
+
+def test_create_validated_connection_keeps_socket_when_called_from_except(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An outer except must not make a successful connect look like a failure.
+
+    ``sys.exc_info()`` is the exception currently being handled, not "did
+    this connect fail?". urllib3 retries from inside ``except``.
+    """
+    closed: list[bool] = []
+
+    def fake_getaddrinfo(
+        host: str, port: int, *args: Any, **kwargs: Any
+    ) -> list[tuple[Any, ...]]:
+        return [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port or 80)),
+        ]
+
+    class RecordingSocket:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            self.peer: tuple[str, int] | None = None
+
+        def setsockopt(self, *args: Any, **kwargs: Any) -> None:
+            return None
+
+        def settimeout(self, timeout: Any) -> None:
+            return None
+
+        def connect(self, sockaddr: tuple[str, int]) -> None:
+            self.peer = sockaddr
+
+        def getpeername(self) -> tuple[str, int]:
+            assert self.peer is not None
+            return self.peer
+
+        def close(self) -> None:
+            closed.append(True)
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr(socket, "socket", lambda *a, **k: RecordingSocket())
+
+    try:
+        raise RuntimeError("caller is handling an error")
+    except RuntimeError:
+        sock = safe_requests.create_validated_connection("public.example", 80)
+
+    assert closed == []
+    assert sock.getpeername() == ("93.184.216.34", 80)
+
+
+def test_create_validated_connection_closes_socket_when_peer_is_blocked(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    closed: list[bool] = []
+
+    def fake_getaddrinfo(
+        host: str, port: int, *args: Any, **kwargs: Any
+    ) -> list[tuple[Any, ...]]:
+        return [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port or 80)),
+        ]
+
+    class RecordingSocket:
+        def setsockopt(self, *args: Any, **kwargs: Any) -> None:
+            return None
+
+        def settimeout(self, timeout: Any) -> None:
+            return None
+
+        def connect(self, sockaddr: tuple[str, int]) -> None:
+            return None
+
+        def getpeername(self) -> tuple[str, int]:
+            return ("127.0.0.1", 80)
+
+        def close(self) -> None:
+            closed.append(True)
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    monkeypatch.setattr(socket, "socket", lambda *a, **k: RecordingSocket())
+
+    with pytest.raises(ValueError, match="private/reserved"):
+        safe_requests.create_validated_connection("rebind.example", 80)
+
+    assert closed == [True]
+
+
+class _TrackingSession:
+    """Session stand-in that records whether it was closed too early."""
+
+    def __init__(self) -> None:
+        self.closed = False
+
+    def get(self, url: str, **kwargs: Any) -> requests.Response:
+        response = requests.Response()
+        response.status_code = 200
+        response.url = url
+        response._content = b"hello" if not kwargs.get("stream") else False
+        response.raw = BytesIO()
+
+        def iter_content(
+            chunk_size: int = 1, decode_unicode: bool = False
+        ) -> Any:
+            if self.closed:
+                raise RuntimeError("session already closed")
+            yield b"hello"
+
+        response.iter_content = iter_content  # type: ignore[method-assign]
+        return response
+
+    def close(self) -> None:
+        self.closed = True
+
+    def __enter__(self) -> _TrackingSession:
+        return self
+
+    def __exit__(self, *args: Any) -> None:
+        self.close()
+
+
+def test_streamed_raw_get_keeps_session_open_until_response_close(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session = _TrackingSession()
+    monkeypatch.setattr(safe_requests, "create_safe_session", lambda: session)
+
+    response = safe_requests._raw_get("http://example.com/file", stream=True)
+
+    assert session.closed is False
+    assert b"".join(response.iter_content()) == b"hello"
+    response.close()
+    assert session.closed is True
+
+
+def test_non_streamed_raw_get_closes_session_before_return(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session = _TrackingSession()
+    monkeypatch.setattr(safe_requests, "create_safe_session", lambda: session)
+
+    response = safe_requests._raw_get("http://example.com/file")
+
+    assert session.closed is True
+    assert response.content == b"hello"
