@@ -14,6 +14,7 @@ from crewai_cli.cli import (
     flow_add_crew,
     flow_run,
     login,
+    replay,
     reset_memories,
     run,
     test,
@@ -38,7 +39,7 @@ def test_train_default_iterations(train_crew, runner):
 
 @mock.patch("crewai_cli.cli.train_crew")
 def test_train_custom_iterations(train_crew, runner):
-    result = runner.invoke(train, ["--n_iterations", "10"])
+    result = runner.invoke(train, ["--n-iterations", "10"])
 
     train_crew.assert_called_once_with(10, "trained_agents_data.pkl")
     assert result.exit_code == 0
@@ -46,13 +47,26 @@ def test_train_custom_iterations(train_crew, runner):
 
 
 @mock.patch("crewai_cli.cli.train_crew")
+def test_train_custom_iterations_snake_case_alias(train_crew, runner):
+    result = runner.invoke(train, ["--n_iterations", "10"])
+
+    train_crew.assert_called_once_with(10, "trained_agents_data.pkl")
+    assert result.exit_code == 0
+    assert "Training the Crew for 10 iterations" in result.output
+    assert (
+        "Warning: The flag '--n_iterations' is deprecated. Use '--n-iterations' instead."
+        in result.output
+    )
+
+
+@mock.patch("crewai_cli.cli.train_crew")
 def test_train_invalid_string_iterations(train_crew, runner):
-    result = runner.invoke(train, ["--n_iterations", "invalid"])
+    result = runner.invoke(train, ["--n-iterations", "invalid"])
 
     train_crew.assert_not_called()
     assert result.exit_code == 2
     assert (
-        "Usage: train [OPTIONS]\nTry 'train --help' for help.\n\nError: Invalid value for '-n' / '--n_iterations': 'invalid' is not a valid integer.\n"
+        "Usage: train [OPTIONS]\nTry 'train --help' for help.\n\nError: Invalid value for '-n' / '--n-iterations': 'invalid' is not a valid integer.\n"
         in result.output
     )
 
@@ -103,7 +117,7 @@ def test_test_default_iterations(evaluate_crew, runner):
 
 @mock.patch("crewai_cli.cli.evaluate_crew")
 def test_test_custom_iterations(evaluate_crew, runner):
-    result = runner.invoke(test, ["--n_iterations", "5", "--model", "gpt-4o"])
+    result = runner.invoke(test, ["--n-iterations", "5", "--model", "gpt-4o"])
 
     evaluate_crew.assert_called_once_with(5, "gpt-4o", trained_agents_file=None)
     assert result.exit_code == 0
@@ -111,15 +125,111 @@ def test_test_custom_iterations(evaluate_crew, runner):
 
 
 @mock.patch("crewai_cli.cli.evaluate_crew")
+def test_test_custom_iterations_snake_case_alias(evaluate_crew, runner):
+    result = runner.invoke(test, ["--n_iterations", "5", "--model", "gpt-4o"])
+
+    evaluate_crew.assert_called_once_with(5, "gpt-4o", trained_agents_file=None)
+    assert result.exit_code == 0
+    assert "Testing the crew for 5 iterations with model gpt-4o" in result.output
+    assert (
+        "Warning: The flag '--n_iterations' is deprecated. Use '--n-iterations' instead."
+        in result.output
+    )
+
+
+@mock.patch("crewai_cli.cli.evaluate_crew")
 def test_test_invalid_string_iterations(evaluate_crew, runner):
-    result = runner.invoke(test, ["--n_iterations", "invalid"])
+    result = runner.invoke(test, ["--n-iterations", "invalid"])
 
     evaluate_crew.assert_not_called()
     assert result.exit_code == 2
     assert (
-        "Usage: test [OPTIONS]\nTry 'test --help' for help.\n\nError: Invalid value for '-n' / '--n_iterations': 'invalid' is not a valid integer.\n"
+        "Usage: test [OPTIONS]\nTry 'test --help' for help.\n\nError: Invalid value for '-n' / '--n-iterations': 'invalid' is not a valid integer.\n"
         in result.output
     )
+
+
+def test_train_help_hides_legacy_flag_aliases(runner):
+    result = runner.invoke(train, ["--help"])
+
+    assert result.exit_code == 0
+    assert "--n-iterations" in result.output
+    assert "--n_iterations" not in result.output
+
+
+def test_test_help_hides_legacy_flag_aliases(runner):
+    result = runner.invoke(test, ["--help"])
+
+    assert result.exit_code == 0
+    assert "--n-iterations" in result.output
+    assert "--n_iterations" not in result.output
+
+
+def test_create_help_hides_legacy_flag_aliases(runner):
+    result = runner.invoke(create, ["--help"])
+
+    assert result.exit_code == 0
+    assert "--skip-provider" in result.output
+    assert "--skip_provider" not in result.output
+
+
+def test_replay_help_hides_legacy_flag_aliases(runner):
+    result = runner.invoke(replay, ["--help"])
+
+    assert result.exit_code == 0
+    assert "--task-id" in result.output
+    assert "--task_id" not in result.output
+
+
+@mock.patch("crewai_cli.create_json_crew.create_json_crew")
+def test_create_skip_provider_flag(create_json_crew, runner):
+    result = runner.invoke(create, ["crew", "my-crew", "--skip-provider"])
+
+    assert result.exit_code == 0, result.output
+    create_json_crew.assert_called_once_with("my-crew", None, True)
+    assert "deprecated" not in result.output.lower()
+
+
+@mock.patch("crewai_cli.create_json_crew.create_json_crew")
+def test_create_skip_provider_snake_case_alias_warns(create_json_crew, runner):
+    result = runner.invoke(create, ["crew", "my-crew", "--skip_provider"])
+
+    assert result.exit_code == 0, result.output
+    create_json_crew.assert_called_once_with("my-crew", None, True)
+    assert (
+        "Warning: The flag '--skip_provider' is deprecated. Use '--skip-provider' instead."
+        in result.output
+    )
+
+
+@mock.patch("crewai_cli.cli.replay_task_command")
+def test_replay_task_id_flag(replay_task_command, runner):
+    result = runner.invoke(replay, ["--task-id", "task_123"])
+
+    assert result.exit_code == 0, result.output
+    replay_task_command.assert_called_once_with("task_123", trained_agents_file=None)
+    assert "Replaying the crew from task task_123" in result.output
+
+
+@mock.patch("crewai_cli.cli.replay_task_command")
+def test_replay_task_id_snake_case_alias_warns(replay_task_command, runner):
+    result = runner.invoke(replay, ["--task_id", "task_123"])
+
+    assert result.exit_code == 0, result.output
+    replay_task_command.assert_called_once_with("task_123", trained_agents_file=None)
+    assert (
+        "Warning: The flag '--task_id' is deprecated. Use '--task-id' instead."
+        in result.output
+    )
+
+
+@mock.patch("crewai_cli.cli.replay_task_command")
+def test_replay_without_task_id(replay_task_command, runner):
+    result = runner.invoke(replay)
+
+    assert result.exit_code == 0, result.output
+    replay_task_command.assert_called_once_with(None, trained_agents_file=None)
+    assert "Replaying the crew from task None" in result.output
 
 
 @mock.patch("crewai_cli.cli.run_crew")
