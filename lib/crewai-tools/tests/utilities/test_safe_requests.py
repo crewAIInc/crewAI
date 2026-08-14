@@ -15,7 +15,10 @@ from crewai_tools.security.safe_requests import (
     create_safe_session,
     safe_get,
 )
-from crewai_tools.security.ssrf_adapter import _assert_safe_peer
+from crewai_tools.security.ssrf_adapter import (
+    _assert_safe_peer,
+    create_validated_connection,
+)
 
 
 def _response(url: str, status_code: int, *, location: str | None = None) -> requests.Response:
@@ -422,7 +425,7 @@ def test_create_validated_connection_pins_resolved_ip(
     monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
     monkeypatch.setattr(socket, "socket", lambda *a, **k: RecordingSocket())
 
-    sock = safe_requests.create_validated_connection("rebind.example", 80)
+    sock = create_validated_connection("rebind.example", 80)
 
     assert connected_to == [("93.184.216.34", 80)]
     assert sock.getpeername() == ("93.184.216.34", 80)
@@ -454,12 +457,12 @@ def test_create_validated_connection_blocks_when_any_record_is_private(
     monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
 
     with pytest.raises(ValueError, match="169.254.169.254"):
-        safe_requests.create_validated_connection("dual.example", 80)
+        create_validated_connection("dual.example", 80)
 
 
 def test_create_validated_connection_blocks_direct_loopback() -> None:
     with pytest.raises(ValueError, match="private/reserved"):
-        safe_requests.create_validated_connection("127.0.0.1", 9)
+        create_validated_connection("127.0.0.1", 9)
 
 
 def test_create_validated_connection_keeps_socket_when_called_from_except(
@@ -505,7 +508,7 @@ def test_create_validated_connection_keeps_socket_when_called_from_except(
     try:
         raise RuntimeError("caller is handling an error")
     except RuntimeError:
-        sock = safe_requests.create_validated_connection("public.example", 80)
+        sock = create_validated_connection("public.example", 80)
 
     assert closed == []
     assert sock.getpeername() == ("93.184.216.34", 80)
@@ -543,7 +546,7 @@ def test_create_validated_connection_closes_socket_when_peer_is_blocked(
     monkeypatch.setattr(socket, "socket", lambda *a, **k: RecordingSocket())
 
     with pytest.raises(ValueError, match="private/reserved"):
-        safe_requests.create_validated_connection("rebind.example", 80)
+        create_validated_connection("rebind.example", 80)
 
     assert closed == [True]
 

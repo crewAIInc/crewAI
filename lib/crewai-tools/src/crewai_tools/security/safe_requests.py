@@ -32,10 +32,7 @@ from crewai_tools.security.safe_path import (
     _is_escape_hatch_enabled,
     validate_url,
 )
-from crewai_tools.security.ssrf_adapter import (
-    SSRFProtectedAdapter as SSRFProtectedAdapter,
-    create_validated_connection as create_validated_connection,
-)
+from crewai_tools.security.ssrf_adapter import SSRFProtectedAdapter
 
 
 _REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
