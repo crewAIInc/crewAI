@@ -262,6 +262,72 @@ async def test_client_initialization_failure_closes_provider_clients(
     assert not llm._owns_async_http_client
 
 
+def test_async_initialization_failure_without_loop_closes_only_owned_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    owned_http_client = httpx.AsyncClient()
+    caller_http_client = httpx.AsyncClient()
+    monkeypatch.setattr(
+        openai_completion,
+        "_SharedSSLAsyncHttpxClient",
+        lambda **_: owned_http_client,
+    )
+    monkeypatch.setattr(
+        openai_completion,
+        "AsyncOpenAI",
+        lambda **_: (_ for _ in ()).throw(ValueError("initialization failed")),
+    )
+
+    owned_llm = OpenAICompletion(model="gpt-4o", api_key="test-key")
+    with pytest.raises(ValueError, match="initialization failed"):
+        owned_llm._get_async_client()
+
+    assert owned_http_client.is_closed
+    assert not owned_llm._owns_async_http_client
+
+    caller_llm = OpenAICompletion(
+        model="gpt-4o",
+        api_key="test-key",
+        client_params={"http_client": caller_http_client},
+    )
+    with pytest.raises(ValueError, match="initialization failed"):
+        caller_llm._get_async_client()
+
+    assert not caller_http_client.is_closed
+    asyncio.run(caller_http_client.aclose())
+
+
+def test_async_initialization_failure_preserves_original_cleanup_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FailingAsyncClient:
+        def __init__(self) -> None:
+            self.close_calls = 0
+
+        async def aclose(self) -> None:
+            self.close_calls += 1
+            raise RuntimeError("cleanup failed")
+
+    http_client = FailingAsyncClient()
+    monkeypatch.setattr(
+        openai_completion,
+        "_SharedSSLAsyncHttpxClient",
+        lambda **_: http_client,
+    )
+    monkeypatch.setattr(
+        openai_completion,
+        "AsyncOpenAI",
+        lambda **_: (_ for _ in ()).throw(ValueError("initialization failed")),
+    )
+
+    llm = OpenAICompletion(model="gpt-4o", api_key="test-key")
+    with pytest.raises(ValueError, match="initialization failed"):
+        llm._get_async_client()
+
+    assert http_client.close_calls == 1
+    assert not llm._owns_async_http_client
+
+
 @pytest.mark.asyncio
 async def test_cleanup_failures_remain_retryable() -> None:
     llm = OpenAICompletion(model="gpt-4o", api_key="test-key")

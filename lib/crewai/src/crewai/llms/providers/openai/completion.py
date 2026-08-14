@@ -100,6 +100,21 @@ def _schedule_async_client_close(client: httpx.AsyncClient) -> bool:
     return True
 
 
+def _close_failed_async_client(client: httpx.AsyncClient) -> None:
+    """Close a newly created async client after API-client initialization fails."""
+    if _schedule_async_client_close(client):
+        return
+    try:
+        # No loop is running in this thread, and the client has not performed
+        # any I/O yet, so it is not bound to a different event loop.
+        asyncio.run(client.aclose())
+    except Exception:
+        logging.debug(
+            "Failed to close an async OpenAI HTTP client after initialization",
+            exc_info=True,
+        )
+
+
 def _shared_ssl_context() -> ssl.SSLContext:
     """Return one process-wide TLS context for OpenAI clients.
 
@@ -428,7 +443,7 @@ class OpenAICompletion(BaseLLM):
             return AsyncOpenAI(**client_config)
         except Exception:
             if http_client is not None:
-                _schedule_async_client_close(http_client)
+                _close_failed_async_client(http_client)
                 self._owns_async_http_client = False
             raise
 
