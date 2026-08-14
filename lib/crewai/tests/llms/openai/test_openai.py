@@ -491,10 +491,11 @@ def test_openai_client_setup_with_extra_arguments():
     assert llm.max_tokens == 1000
     assert llm.top_p == 0.5
 
-    assert llm._client.max_retries == 3
-    assert llm._client.timeout == 30
+    client = llm._get_sync_client()
+    assert client.max_retries == 3
+    assert client.timeout == 30
 
-    with patch.object(llm._client.chat.completions, 'create') as mock_create:
+    with patch.object(client.chat.completions, 'create') as mock_create:
         mock_create.return_value = MagicMock(
             choices=[MagicMock(message=MagicMock(content="test response", tool_calls=None))],
             usage=MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
@@ -514,7 +515,8 @@ def test_extra_arguments_are_passed_to_openai_completion():
     """
     llm = LLM(model="gpt-4o", temperature=0.7, max_tokens=1000, top_p=0.5, max_retries=3)
 
-    with patch.object(llm._client.chat.completions, 'create') as mock_create:
+    client = llm._get_sync_client()
+    with patch.object(client.chat.completions, 'create') as mock_create:
         mock_create.return_value = MagicMock(
             choices=[MagicMock(message=MagicMock(content="test response", tool_calls=None))],
             usage=MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
@@ -634,7 +636,8 @@ def test_openai_streaming_with_response_model():
 
     llm = LLM(model="openai/gpt-4o", stream=True)
 
-    with patch.object(llm._client.beta.chat.completions, "stream") as mock_stream:
+    client = llm._get_sync_client()
+    with patch.object(client.beta.chat.completions, "stream") as mock_stream:
         mock_chunk1 = MagicMock()
         mock_chunk1.type = "content.delta"
         mock_chunk1.delta = '{"answer": "test", '
@@ -1980,8 +1983,9 @@ def test_openai_streaming_returns_tool_calls_without_available_functions():
     mock_chunk_3.usage.completion_tokens = 5
     mock_chunk_3.id = "chatcmpl-1"
 
+    client = llm._get_sync_client()
     with patch.object(
-        llm._client.chat.completions, "create", return_value=iter([mock_chunk_1, mock_chunk_2, mock_chunk_3])
+        client.chat.completions, "create", return_value=iter([mock_chunk_1, mock_chunk_2, mock_chunk_3])
     ):
         result = llm.call(
             messages=[{"role": "user", "content": "Calculate 1+1"}],
@@ -2112,8 +2116,9 @@ async def test_openai_async_streaming_returns_tool_calls_without_available_funct
     async def mock_create(**kwargs: Any) -> MockAsyncStream:
         return MockAsyncStream([mock_chunk_1, mock_chunk_2, mock_chunk_3])
 
+    async_client = llm._get_async_client()
     with patch.object(
-        llm._async_client.chat.completions, "create", side_effect=mock_create
+        async_client.chat.completions, "create", side_effect=mock_create
     ):
         result = await llm.acall(
             messages=[{"role": "user", "content": "Calculate 1+1"}],
