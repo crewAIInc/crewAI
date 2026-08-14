@@ -123,7 +123,7 @@ class TestBeforeLLMCallHookRunsOnAsyncBedrock:
         with patch.object(
             provider, "_invoke_before_llm_call_hooks", return_value=True
         ), patch.object(
-            provider, "_ahandle_converse_response", return_value="mocked response"
+            provider, "_ahandle_converse", return_value="mocked response"
         ), patch.object(
             provider, "_ahandle_streaming_converse", return_value="mocked response"
         ):
@@ -143,7 +143,7 @@ class TestBeforeLLMCallHookRunsOnAsyncBedrock:
         with patch.object(
             provider, "_invoke_before_llm_call_hooks", return_value=False
         ), patch.object(
-            provider, "_ahandle_converse_response"
+            provider, "_ahandle_converse"
         ) as mock_ahandle, patch.object(
             provider, "_ahandle_streaming_converse"
         ) as mock_ahandle_streaming:
