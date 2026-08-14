@@ -1,24 +1,19 @@
 """SSRF-safe HTTP fetching for crewai-tools.
 
-:func:`~crewai_tools.security.safe_path.validate_url` checks the URL it is
-handed, but it cannot protect a fetch on its own: ``requests`` re-resolves
-DNS at connect time and follows redirects automatically, so a public-looking
-host that 302-redirects to an internal address (or that rebinds DNS between
-validation and connect) reaches the internal target without ever being
-re-checked.
+:func:`safe_get` already validates the initial URL and each ``Location``
+before following it. That hop loop does not pin the TCP peer:
+``requests`` re-resolves DNS at connect time, so a host that looks public
+at validation and rebinds to an internal address still reaches the
+internal target. A proxy would also be the connected peer, so the
+destination IP would never be inspected.
 
-This module closes both gaps at the connection layer:
+This module closes those remaining gaps at the connection layer:
 
-* :class:`SSRFProtectedAdapter` re-runs :func:`validate_url` for every
-  request it sends. Combined with :func:`safe_get`'s explicit hop loop,
-  each ``Location`` target is validated before it is followed.
 * Connections resolve DNS once, refuse any private/reserved address, and
   ``connect()`` to the authorised sockaddr. The IP that was checked is the
-  IP the socket uses, so DNS rebinding between validation and connect
-  cannot retarget the request.
+  IP the socket uses.
 * After connect, the real peer from ``getpeername()`` is checked again.
-* Environment proxies are disabled: a proxy would be the connected peer,
-  so the destination IP would never be inspected.
+* Environment proxies are disabled.
 
 Use :func:`safe_get` (or :func:`create_safe_session`) instead of calling
 ``requests.get`` directly from any tool that fetches a user- or
@@ -271,11 +266,11 @@ class _SafePoolManager(PoolManager):
 
 
 class SSRFProtectedAdapter(HTTPAdapter):
-    """Transport adapter that re-validates every hop and pins the peer IP.
+    """Transport adapter that pins TCP to a validated peer IP.
 
-    ``validate_url`` runs on each ``send`` — including every redirect hop
-    ``requests`` follows — and the underlying connections refuse any socket
-    that would land on a private/reserved address.
+    Redirect hops are validated by :func:`safe_get`, not here. This adapter
+    exists so each connection uses the sockaddr from the lookup that was
+    just checked, and so environment proxies cannot hide the destination.
     """
 
     def init_poolmanager(
@@ -308,7 +303,6 @@ class SSRFProtectedAdapter(HTTPAdapter):
         cert: Any = None,
         proxies: Any = None,
     ) -> requests.Response:
-        validate_url(request.url or "")
         if proxies and not _is_escape_hatch_enabled():
             raise ValueError(
                 f"Proxies are not allowed for SSRF-safe requests. {_UNSAFE_PATHS_HINT}"
@@ -324,10 +318,10 @@ class SSRFProtectedAdapter(HTTPAdapter):
 
 
 def create_safe_session() -> requests.Session:
-    """Return a ``requests.Session`` that is hardened against SSRF.
+    """Return a ``requests.Session`` that pins connections against SSRF.
 
-    The session validates every request (and redirect hop), pins
-    connections to a validated peer IP, and ignores environment proxies.
+    The session pins TCP to a validated peer IP and ignores environment
+    proxies. Redirect hops are still the caller's job via :func:`safe_get`.
     """
     session = requests.Session()
     session.trust_env = False
@@ -385,8 +379,8 @@ def safe_get(url: str, *, max_redirects: int = 10, **kwargs: Any) -> requests.Re
     an exception has no handle on them, and a streamed hop holds its connection
     until its body is read or closed.
 
-    Each hop is fetched through :class:`SSRFProtectedAdapter`, which re-runs
-    :func:`validate_url` and pins the TCP connection to an authorised IP.
+    Each hop is fetched through :class:`SSRFProtectedAdapter`, which pins
+    the TCP connection to an authorised IP.
     """
     current_url = validate_url(url)
     _reject_proxies(kwargs)

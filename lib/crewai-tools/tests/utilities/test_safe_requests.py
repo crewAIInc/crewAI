@@ -277,22 +277,11 @@ def test_session_mounts_protected_adapter_and_ignores_env_proxies() -> None:
     assert session.proxies == {}
 
 
-def test_adapter_revalidates_before_any_network_call(monkeypatch: pytest.MonkeyPatch) -> None:
-    calls: list[str] = []
-
-    def spy(url: str) -> str:
-        calls.append(url)
-        if "internal.target" in url:
-            raise ValueError("URL resolves to private/reserved IP")
-        return url
-
-    monkeypatch.setattr(safe_requests, "validate_url", spy)
-
+def test_adapter_rejects_proxies() -> None:
     adapter = SSRFProtectedAdapter()
-    req = requests.Request("GET", "http://internal.target/").prepare()
-    with pytest.raises(ValueError, match="private/reserved"):
-        adapter.send(req)
-    assert calls == ["http://internal.target/"]
+    req = requests.Request("GET", "http://example.com/").prepare()
+    with pytest.raises(ValueError, match="Proxies are not allowed"):
+        adapter.send(req, proxies={"http": "http://127.0.0.1:8080"})
 
 
 class _FakeSock:

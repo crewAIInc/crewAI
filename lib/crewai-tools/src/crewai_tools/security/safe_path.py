@@ -210,9 +210,8 @@ def validate_url(url: str) -> str:
     This checks the URL string it is handed. Callers that then fetch must
     use :func:`crewai_tools.security.safe_requests.safe_get` (or a session
     from :func:`crewai_tools.security.safe_requests.create_safe_session`)
-    so redirect hops are re-validated and the connection is pinned to an
-    authorised IP. Calling ``requests.get`` after this function re-resolves
-    DNS and follows redirects without these checks.
+    so the connection is pinned to an authorised IP. Calling
+    ``requests.get`` after this function re-resolves DNS without that pin.
 
     Args:
         url: The URL to validate.
