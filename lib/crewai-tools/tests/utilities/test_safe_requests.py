@@ -15,6 +15,7 @@ from crewai_tools.security.safe_requests import (
     create_safe_session,
     safe_get,
 )
+from crewai_tools.security.ssrf_adapter import _assert_safe_peer
 
 
 def _response(url: str, status_code: int, *, location: str | None = None) -> requests.Response:
@@ -294,21 +295,21 @@ class _FakeSock:
 
 def test_assert_safe_peer_blocks_private() -> None:
     with pytest.raises(ValueError, match="private/reserved"):
-        safe_requests._assert_safe_peer(_FakeSock(("127.0.0.1", 80)))
+        _assert_safe_peer(_FakeSock(("127.0.0.1", 80)))
 
 
 def test_assert_safe_peer_blocks_metadata() -> None:
     with pytest.raises(ValueError, match="private/reserved"):
-        safe_requests._assert_safe_peer(_FakeSock(("169.254.169.254", 80)))
+        _assert_safe_peer(_FakeSock(("169.254.169.254", 80)))
 
 
 def test_assert_safe_peer_allows_public() -> None:
-    safe_requests._assert_safe_peer(_FakeSock(("93.184.216.34", 80)))
+    _assert_safe_peer(_FakeSock(("93.184.216.34", 80)))
 
 
 def test_assert_safe_peer_respects_escape_hatch(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CREWAI_TOOLS_ALLOW_UNSAFE_PATHS", "true")
-    safe_requests._assert_safe_peer(_FakeSock(("127.0.0.1", 80)))
+    _assert_safe_peer(_FakeSock(("127.0.0.1", 80)))
 
 
 def test_assert_safe_peer_force_safe_overrides_escape_hatch(
@@ -317,7 +318,7 @@ def test_assert_safe_peer_force_safe_overrides_escape_hatch(
     monkeypatch.setenv("CREWAI_TOOLS_ALLOW_UNSAFE_PATHS", "true")
     monkeypatch.setenv("CREWAI_TOOLS_FORCE_SAFE_PATHS", "true")
     with pytest.raises(ValueError, match="private/reserved"):
-        safe_requests._assert_safe_peer(_FakeSock(("127.0.0.1", 80)))
+        _assert_safe_peer(_FakeSock(("127.0.0.1", 80)))
 
 
 def test_create_validated_connection_pins_resolved_ip(
