@@ -1,4 +1,4 @@
 {
   "name": "CrewAI",
-  "install": "bash .cursor/install.sh"
+  "install": "export PATH=\"$HOME/.local/bin:$PATH\"\ncommand -v uv >/dev/null 2>&1 || curl -LsSf https://astral.sh/uv/install.sh | sh\nexport PATH=\"$HOME/.local/bin:$PATH\"\nuv sync --all-groups --all-extras"
 }
