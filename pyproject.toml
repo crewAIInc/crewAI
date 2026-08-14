@@ -226,6 +226,8 @@ exclude-newer-package = { pypdf = "2026-08-07T00:00:00Z", msgpack = "2026-06-20T
 # h2 <=4.4.0 has GHSA-6hr6-w5qg-qmwg (CVE-2026-71554): duplicate Host headers
 # can facilitate request smuggling; fixed in 4.4.1. Transitive via
 # qdrant-client -> httpx[http2].
+# torch <=2.12.1 has GHSA-rrmf-rvhw-rf47 (CVE-2025-3000): memory corruption in
+# torch.jit.script; fixed in 2.13.0. Transitive via docling/unstructured extras.
 # Keep OpenAI on the SDK range required by CrewAI when transitive dependencies
 # loosen or pin their own lower versions.
 override-dependencies = [
@@ -257,6 +259,7 @@ override-dependencies = [
     "setuptools>=83.0.0", # PYSEC-2026-3447
     "nltk>=3.10.0",
     "h2>=4.4.1",
+    "torch>=2.13.0",
 ]
 
 [tool.uv.workspace]

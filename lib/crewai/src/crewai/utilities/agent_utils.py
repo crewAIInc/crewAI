@@ -1404,9 +1404,9 @@ def is_tool_call_list(response: list[Any]) -> bool:
     if isinstance(first_item, dict) and "name" in first_item and "input" in first_item:
         return True
     # OpenAI Responses API style: {"id", "name", "arguments"}, with no nested
-    # "function" object and no "input". Without this the list isn't recognized as
-    # tool calls, so the executor hands it back verbatim and the agent returns raw
-    # tool-call JSON instead of running the tool and producing a final answer.
+    # "function" object and no "input". This intentionally accepts the same broad
+    # shape as the Bedrock check above; only provider paths that return lists reach
+    # this classifier.
     if (
         isinstance(first_item, dict)
         and "name" in first_item

@@ -1,0 +1,152 @@
+---
+title: Introdução
+description: Construa equipes de agentes de IA que trabalham juntas para resolver tarefas complexas
+icon: handshake
+mode: "wide"
+---
+
+# O que é CrewAI?
+
+**CrewAI é o principal framework open-source para orquestrar agentes de IA autônomos e construir fluxos de trabalho complexos.**
+
+Ele capacita desenvolvedores a construir sistemas multi-agente prontos para produção, combinando a inteligência colaborativa dos **Crews** com o controle preciso dos **Flows**.
+
+- **[Flows do CrewAI](/pt-BR/guides/flows/first-flow)**: A espinha dorsal da sua aplicação de IA. Flows permitem criar fluxos de trabalho estruturados e orientados a eventos que gerenciam estado e controlam a execução. Eles fornecem a estrutura para seus agentes de IA trabalharem.
+- **[Crews do CrewAI](/pt-BR/guides/crews/first-crew)**: As unidades de trabalho dentro do seu Flow. Crews são equipes de agentes autônomos que colaboram para resolver tarefas específicas delegadas a eles pelo Flow.
+
+Com mais de 100.000 desenvolvedores certificados em nossos cursos comunitários, o CrewAI é o padrão para automação de IA pronta para empresas.
+
+### Assista: Construindo Agents e Flows CrewAI com Coding Agent Skills
+
+Instale nossas coding agent skills (Claude Code, Codex, ...) para colocar seus agentes de código para funcionar rapidamente com o CrewAI.
+
+Você pode instalar com `npx skills add crewaiinc/skills`
+
+<iframe src="https://www.loom.com/embed/befb9f68b81f42ad8112bfdd95a780af" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style={{width: "100%", height: "400px"}}></iframe>
+
+## A Arquitetura do CrewAI
+
+A arquitetura do CrewAI foi projetada para equilibrar autonomia com controle.
+
+### 1. Flows: A Espinha Dorsal
+
+<Note>
+  Pense em um Flow como o "gerente" ou a "definição do processo" da sua aplicação. Ele define as etapas, a lógica e como os dados se movem através do seu sistema.
+</Note>
+
+<Frame caption="Visão Geral do Framework CrewAI">
+  <img src="/images/flows.png" alt="Visão Geral do Framework CrewAI" />
+</Frame>
+
+Flows fornecem:
+- **Gerenciamento de Estado**: Persistem dados através de etapas e execuções.
+- **Execução Orientada a Eventos**: Acionam ações com base em eventos ou entradas externas.
+- **Controle de Fluxo**: Usam lógica condicional, loops e ramificações.
+
+### 2. Crews: A Inteligência
+
+<Note>
+  Crews são as "equipes" que fazem o trabalho pesado. Dentro de um Flow, você pode acionar um Crew para lidar com um problema complexo que requer criatividade e colaboração.
+</Note>
+
+<Frame caption="Visão Geral do Framework CrewAI">
+  <img src="/images/crews.png" alt="Visão Geral do Framework CrewAI" />
+</Frame>
+
+Crews fornecem:
+- **Agentes com Funções**: Agentes especializados com objetivos e ferramentas específicas.
+- **Colaboração Autônoma**: Agentes trabalham juntos para resolver tarefas.
+- **Delegação de Tarefas**: Tarefas são atribuídas e executadas com base nas capacidades dos agentes.
+
+## Como Tudo Funciona Junto
+
+1.  **O Flow** aciona um evento ou inicia um processo.
+2.  **O Flow** gerencia o estado e decide o que fazer a seguir.
+3.  **O Flow** delega uma tarefa complexa para um **Crew**.
+4.  Os agentes do **Crew** colaboram para completar a tarefa.
+5.  **O Crew** retorna o resultado para o **Flow**.
+6.  **O Flow** continua a execução com base no resultado.
+
+## Principais Funcionalidades
+
+<CardGroup cols={2}>
+  <Card title="Flows de Nível de Produção" icon="arrow-progress">
+    Construa fluxos de trabalho confiáveis e com estado que podem lidar com processos de longa duração e lógica complexa.
+  </Card>
+  <Card title="Crews Autônomos" icon="users">
+    Implante equipes de agentes que podem planejar, executar e colaborar para alcançar objetivos de alto nível.
+  </Card>
+  <Card title="Ferramentas Flexíveis" icon="screwdriver-wrench">
+     Conecte seus agentes a qualquer API, banco de dados ou ferramenta local.
+  </Card>
+  <Card title="Segurança Empresarial" icon="lock">
+    Projetado com segurança e conformidade em mente para implantações empresariais.
+  </Card>
+</CardGroup>
+
+## Quando usar Crews vs. Flows
+
+**A resposta curta: Use ambos.**
+
+Para qualquer aplicação pronta para produção, **comece com um Flow**.
+
+- **Use um Flow** para definir a estrutura geral, estado e lógica da sua aplicação.
+- **Use um Crew** dentro de uma etapa do Flow quando precisar de uma equipe de agentes para realizar uma tarefa específica e complexa que requer autonomia.
+
+| Caso de Uso | Arquitetura |
+| :--- | :--- |
+| **Automação Simples** | Flow único com tarefas Python |
+| **Pesquisa Complexa** | Flow gerenciando estado -> Crew realizando pesquisa |
+| **Backend de Aplicação** | Flow lidando com requisições API -> Crew gerando conteúdo -> Flow salvando no BD |
+
+## Por que escolher o CrewAI?
+
+- 🧠 **Operação Autônoma**: Agentes tomam decisões inteligentes com base em suas funções e nas ferramentas disponíveis
+- 📝 **Interação Natural**: Agentes se comunicam e colaboram como membros humanos de uma equipe
+- 🛠️ **Design Extensível**: Fácil de adicionar novas ferramentas, funções e capacidades
+- 🚀 **Pronto para Produção**: Construído para confiabilidade e escalabilidade em aplicações reais
+- 🔒 **Foco em Segurança**: Desenvolvido para atender requisitos de segurança empresarial
+- 💰 **Custo-Efetivo**: Otimizado para minimizar o uso de tokens e chamadas de API
+
+## Pronto para começar a construir?
+
+<CardGroup cols={2}>
+  <Card
+    title="Crie Seu Primeiro Flow"
+    icon="diagram-project"
+    href="/pt-BR/guides/flows/first-flow"
+  >
+    Aprenda a criar fluxos de trabalho estruturados e orientados por eventos com controle preciso de execução.
+  </Card>
+  <Card
+    title="Crie Seu Primeiro Crew"
+    icon="users-gear"
+    href="/pt-BR/guides/crews/first-crew"
+  >
+    Tutorial passo a passo para criar uma equipe de IA colaborativa que trabalha junto para resolver problemas complexos.
+  </Card>
+</CardGroup>
+
+<CardGroup cols={3}>
+  <Card
+    title="Instale o CrewAI"
+    icon="wrench"
+    href="/pt-BR/installation"
+  >
+    Comece a usar o CrewAI em seu ambiente de desenvolvimento.
+  </Card>
+  <Card
+    title="Primeiros Passos"
+    icon="bolt"
+    href="/pt-BR/quickstart"
+  >
+    Gere um Flow, execute um crew com um agente e produza um relatório ponta a ponta.
+  </Card>
+  <Card
+    title="Junte-se à Comunidade"
+    icon="comments"
+    href="https://community.crewai.com"
+  >
+    Conecte-se com outros desenvolvedores, obtenha ajuda e compartilhe suas experiências com o CrewAI.
+  </Card>
+</CardGroup>

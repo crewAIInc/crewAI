@@ -747,7 +747,7 @@ class OpenAICompletion(BaseLLM):
         )
 
     @staticmethod
-    def _to_responses_input(message: LLMMessage) -> list[Any]:
+    def _to_responses_input(message: LLMMessage) -> list[dict[str, Any] | LLMMessage]:
         """Translate a chat-format message into Responses ``input`` items.
 
         Tool calling is expressed differently by the two APIs. Chat Completions
@@ -765,18 +765,23 @@ class OpenAICompletion(BaseLLM):
         role = message.get("role")
 
         if role == "assistant" and message.get("tool_calls"):
-            items: list[Any] = []
+            items: list[dict[str, Any] | LLMMessage] = []
             content = message.get("content")
             if content:
                 items.append({"role": "assistant", "content": content})
             for call in message["tool_calls"]:
                 function = call.get("function", {})
+                args = function.get("arguments")
+                if args is None or args == "":
+                    args = "{}"
+                elif not isinstance(args, str):
+                    args = json.dumps(args)
                 items.append(
                     {
                         "type": "function_call",
                         "call_id": call.get("id", ""),
                         "name": function.get("name", ""),
-                        "arguments": function.get("arguments", "{}"),
+                        "arguments": args,
                     }
                 )
             return items
@@ -807,7 +812,7 @@ class OpenAICompletion(BaseLLM):
         - Internally-tagged tool format (flat structure)
         """
         instructions: str | None = self.instructions
-        input_messages: list[LLMMessage] = []
+        input_messages: list[dict[str, Any] | LLMMessage] = []
 
         for message in messages:
             if message.get("role") == "system":
@@ -821,7 +826,7 @@ class OpenAICompletion(BaseLLM):
                 input_messages.extend(self._to_responses_input(message))
 
         # Prepend reasoning items for ZDR (zero-data-retention) chaining when configured
-        final_input: list[Any] = []
+        final_input: list[dict[str, Any] | LLMMessage] = []
         if self.auto_chain_reasoning and self._last_reasoning_items:
             final_input.extend(self._last_reasoning_items)
         final_input.extend(input_messages if input_messages else messages)
