@@ -75,6 +75,25 @@ _SHARED_SSL_CONTEXT_LOCK = threading.Lock()
 _PENDING_ASYNC_CLOSE_TASKS: set[asyncio.Task[None]] = set()
 
 
+class _ClientLock:
+    """A lock that gives deep-copied providers independent synchronization."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+
+    def __enter__(self) -> _ClientLock:
+        self._lock.acquire()
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self._lock.release()
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> _ClientLock:
+        copied = type(self)()
+        memo[id(self)] = copied
+        return copied
+
+
 def _consume_async_close_task(task: asyncio.Task[None]) -> None:
     """Retain finalizer tasks until completion and consume cleanup errors."""
     _PENDING_ASYNC_CLOSE_TASKS.discard(task)
@@ -365,6 +384,9 @@ class OpenAICompletion(BaseLLM):
     _async_client: Any = PrivateAttr(default=None)
     _owns_sync_http_client: bool = PrivateAttr(default=False)
     _owns_async_http_client: bool = PrivateAttr(default=False)
+    _sync_client_lock: _ClientLock = PrivateAttr(default_factory=_ClientLock)
+    _async_client_lock: _ClientLock = PrivateAttr(default_factory=_ClientLock)
+    _async_client_closing: bool = PrivateAttr(default=False)
     _last_response_id: str | None = PrivateAttr(default=None)
     _last_reasoning_items: list[Any] | None = PrivateAttr(default=None)
 
@@ -448,14 +470,28 @@ class OpenAICompletion(BaseLLM):
             raise
 
     def _get_sync_client(self) -> Any:
-        if self._client is None:
-            self._client = self._build_sync_client()
-        return self._client
+        client = self._client
+        if client is not None:
+            return client
+        with self._sync_client_lock:
+            client = self._client
+            if client is None:
+                client = self._build_sync_client()
+                self._client = client
+            return client
 
     def _get_async_client(self) -> Any:
-        if self._async_client is None:
-            self._async_client = self._build_async_client()
-        return self._async_client
+        client = self._async_client
+        if client is not None and not self._async_client_closing:
+            return client
+        with self._async_client_lock:
+            if self._async_client_closing:
+                raise RuntimeError("OpenAI async client is being closed")
+            client = self._async_client
+            if client is None:
+                client = self._build_async_client()
+                self._async_client = client
+            return client
 
     def __enter__(self) -> OpenAICompletion:
         """Return this provider for synchronous managed use."""
@@ -475,20 +511,38 @@ class OpenAICompletion(BaseLLM):
 
     def close(self) -> None:
         """Close the provider-owned synchronous HTTP client."""
-        if self._client is not None and self._owns_sync_http_client:
-            self._client.close()
-            self._client = None
-            self._owns_sync_http_client = False
+        with self._sync_client_lock:
+            if self._client is not None and self._owns_sync_http_client:
+                self._client.close()
+                self._client = None
+                self._owns_sync_http_client = False
 
     async def aclose(self) -> None:
         """Close all provider-owned HTTP clients."""
         try:
             self.close()
         finally:
-            if self._async_client is not None and self._owns_async_http_client:
-                await self._async_client.close()
-                self._async_client = None
-                self._owns_async_http_client = False
+            while True:
+                client = None
+                with self._async_client_lock:
+                    if not self._async_client_closing:
+                        if self._owns_async_http_client:
+                            client = self._async_client
+                        if client is not None:
+                            self._async_client_closing = True
+                        break
+                await asyncio.sleep(0)
+            if client is not None:
+                closed = False
+                try:
+                    await client.close()
+                    closed = True
+                finally:
+                    with self._async_client_lock:
+                        if closed:
+                            self._async_client = None
+                            self._owns_async_http_client = False
+                        self._async_client_closing = False
 
     @property
     def last_response_id(self) -> str | None:

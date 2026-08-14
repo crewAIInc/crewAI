@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
 import gc
 import threading
 import time
@@ -49,6 +50,22 @@ class _FailOnceAsyncClient:
             raise RuntimeError("async close failed")
 
 
+class _TrackingSyncAPIClient:
+    def __init__(self) -> None:
+        self.close_calls = 0
+
+    def close(self) -> None:
+        self.close_calls += 1
+
+
+class _TrackingAsyncAPIClient:
+    def __init__(self) -> None:
+        self.close_calls = 0
+
+    async def close(self) -> None:
+        self.close_calls += 1
+
+
 def test_shared_ssl_context_is_initialized_once_across_threads(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -79,6 +96,125 @@ def test_shared_ssl_context_is_initialized_once_across_threads(
 
     assert len(contexts) == 1
     assert all(context is results[0] for context in results)
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
+def test_lazy_client_is_initialized_once_across_threads(
+    monkeypatch: pytest.MonkeyPatch, mode: str
+) -> None:
+    workers = 32
+    start = threading.Barrier(workers)
+    calls = 0
+    calls_lock = threading.Lock()
+    client = object()
+    llm = OpenAICompletion(model="gpt-4o", api_key="test-key")
+
+    def build(_: OpenAICompletion) -> object:
+        nonlocal calls
+        with calls_lock:
+            calls += 1
+        time.sleep(0.02)
+        return client
+
+    monkeypatch.setattr(OpenAICompletion, f"_build_{mode}_client", build)
+
+    def get_client(_: int) -> object:
+        start.wait()
+        getter = getattr(llm, f"_get_{mode}_client")
+        return getter()
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        results = list(pool.map(get_client, range(workers)))
+
+    assert calls == 1
+    assert all(result is client for result in results)
+
+
+def test_deep_copy_has_independent_client_locks() -> None:
+    llm = OpenAICompletion(model="gpt-4o", api_key="test-key")
+
+    copied = deepcopy(llm)
+
+    assert copied._sync_client_lock is not llm._sync_client_lock
+    assert copied._async_client_lock is not llm._async_client_lock
+
+
+@pytest.mark.parametrize("mode", ["sync", "async"])
+def test_cleanup_waits_for_concurrent_first_client_creation(
+    monkeypatch: pytest.MonkeyPatch, mode: str
+) -> None:
+    started = threading.Event()
+    release = threading.Event()
+    llm = OpenAICompletion(model="gpt-4o", api_key="test-key")
+    client = (
+        _TrackingSyncAPIClient() if mode == "sync" else _TrackingAsyncAPIClient()
+    )
+
+    def build(_: OpenAICompletion) -> object:
+        if mode == "sync":
+            llm._owns_sync_http_client = True
+        else:
+            llm._owns_async_http_client = True
+        started.set()
+        assert release.wait(timeout=5)
+        return client
+
+    monkeypatch.setattr(OpenAICompletion, f"_build_{mode}_client", build)
+
+    def close_client() -> None:
+        if mode == "sync":
+            llm.close()
+        else:
+            asyncio.run(llm.aclose())
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        get_future = pool.submit(getattr(llm, f"_get_{mode}_client"))
+        assert started.wait(timeout=5)
+        close_future = pool.submit(close_client)
+        time.sleep(0.02)
+        assert not close_future.done()
+        release.set()
+        assert get_future.result(timeout=5) is client
+        close_future.result(timeout=5)
+
+    assert client.close_calls == 1
+    assert getattr(llm, f"_{mode}_client" if mode == "async" else "_client") is None
+
+
+def test_concurrent_async_cleanup_closes_once_and_rejects_new_getter() -> None:
+    started = threading.Event()
+    release = threading.Event()
+
+    class BlockingAsyncClient:
+        def __init__(self) -> None:
+            self.close_calls = 0
+
+        async def close(self) -> None:
+            self.close_calls += 1
+            started.set()
+            while not release.is_set():
+                await asyncio.sleep(0.001)
+
+    llm = OpenAICompletion(model="gpt-4o", api_key="test-key")
+    client = BlockingAsyncClient()
+    llm._async_client = client
+    llm._owns_async_http_client = True
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first_close = pool.submit(lambda: asyncio.run(llm.aclose()))
+        assert started.wait(timeout=5)
+        second_close = pool.submit(lambda: asyncio.run(llm.aclose()))
+        time.sleep(0.02)
+        assert not second_close.done()
+        with pytest.raises(RuntimeError, match="being closed"):
+            llm._get_async_client()
+        release.set()
+        first_close.result(timeout=5)
+        second_close.result(timeout=5)
+
+    assert client.close_calls == 1
+    assert llm._async_client is None
+    assert not llm._owns_async_http_client
 
 
 def test_sync_client_is_lazy_and_does_not_create_async_client() -> None:
