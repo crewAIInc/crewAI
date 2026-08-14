@@ -164,6 +164,8 @@ def _open_validated_socket(conn: HTTPConnection) -> socket.socket:
             source_address=conn.source_address,
             socket_options=conn.socket_options,
         )
+    # The safe path converts gaierror to ValueError. This still fires when
+    # the escape hatch uses urllib3_create_connection, which re-raises it.
     except socket.gaierror as exc:
         raise NameResolutionError(conn.host, conn, exc) from exc
     except socket.timeout as exc:
@@ -226,6 +228,9 @@ class SSRFProtectedAdapter(HTTPAdapter):
         block: bool = DEFAULT_POOLBLOCK,
         **pool_kwargs: Any,
     ) -> None:
+        self._pool_connections = connections
+        self._pool_maxsize = maxsize
+        self._pool_block = block
         self.poolmanager = _SafePoolManager(
             num_pools=connections,
             maxsize=maxsize,

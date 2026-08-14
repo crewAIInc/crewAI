@@ -28,6 +28,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 
 from crewai_tools.security.safe_path import (
+    _BYPASS_HINT,
     _is_escape_hatch_enabled,
     validate_url,
 )
@@ -46,7 +47,6 @@ _SENSITIVE_HEADER_NAMES = {
     "x-api-key",
 }
 _SENSITIVE_HEADER_FRAGMENTS = ("api-key", "apikey", "secret", "token")
-_UNSAFE_PATHS_HINT = "Set CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true to bypass this check."
 
 
 def _same_origin(previous_url: str, next_url: str) -> bool:
@@ -77,13 +77,37 @@ def _strip_cross_origin_credentials(request_kwargs: dict[str, Any]) -> dict[str,
     return sanitized
 
 
+class _SafeSession(requests.Session):
+    """Session that does not follow redirects unless the caller opts in.
+
+    :func:`safe_get` validates each ``Location`` itself. ``Session.get``
+    would otherwise default to ``allow_redirects=True`` and follow hops
+    without that check.
+    """
+
+    def get(self, url: str | bytes, **kwargs: Any) -> requests.Response:
+        kwargs.setdefault("allow_redirects", False)
+        return super().get(url, **kwargs)
+
+    def options(self, url: str | bytes, **kwargs: Any) -> requests.Response:
+        kwargs.setdefault("allow_redirects", False)
+        return super().options(url, **kwargs)
+
+    def request(
+        self, method: str | bytes, url: str | bytes, *args: Any, **kwargs: Any
+    ) -> requests.Response:
+        kwargs.setdefault("allow_redirects", False)
+        return super().request(method, url, *args, **kwargs)
+
+
 def create_safe_session() -> requests.Session:
     """Return a ``requests.Session`` that pins connections against SSRF.
 
-    The session pins TCP to a validated peer IP and ignores environment
-    proxies. Redirect hops are still the caller's job via :func:`safe_get`.
+    The session pins TCP to a validated peer IP, ignores environment
+    proxies, and does not follow redirects. Redirect hops are the
+    caller's job via :func:`safe_get`.
     """
-    session = requests.Session()
+    session = _SafeSession()
     session.trust_env = False
     session.proxies = {}
     adapter = SSRFProtectedAdapter()
@@ -95,7 +119,7 @@ def create_safe_session() -> requests.Session:
 def _reject_proxies(kwargs: dict[str, Any]) -> None:
     proxies = kwargs.pop("proxies", None)
     if proxies and not _is_escape_hatch_enabled():
-        raise ValueError(f"Proxies are not allowed for safe_get. {_UNSAFE_PATHS_HINT}")
+        raise ValueError(f"Proxies are not allowed for safe_get. {_BYPASS_HINT}")
     kwargs["proxies"] = {}
 
 

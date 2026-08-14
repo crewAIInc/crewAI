@@ -278,6 +278,63 @@ def test_session_mounts_protected_adapter_and_ignores_env_proxies() -> None:
     assert session.proxies == {}
 
 
+def test_safe_session_does_not_follow_redirects_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """create_safe_session().get must not follow Location without safe_get."""
+    session = create_safe_session()
+    urls: list[str] = []
+
+    def fake_send(request: requests.PreparedRequest, **kwargs: Any) -> requests.Response:
+        urls.append(request.url or "")
+        response = requests.Response()
+        response.status_code = 302
+        response.url = request.url
+        response.request = request
+        response.headers["Location"] = "http://127.0.0.1/admin"
+        response._content = b""
+        response.raw = BytesIO()
+        return response
+
+    adapter = session.get_adapter("http://example.com/")
+    monkeypatch.setattr(adapter, "send", fake_send)
+
+    response = session.get("http://example.com/start")
+
+    assert response.status_code == 302
+    assert urls == ["http://example.com/start"]
+
+
+def test_safe_session_follows_redirects_when_caller_opts_in(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session = create_safe_session()
+    urls: list[str] = []
+
+    def fake_send(request: requests.PreparedRequest, **kwargs: Any) -> requests.Response:
+        url = request.url or ""
+        urls.append(url)
+        response = requests.Response()
+        response.url = url
+        response.request = request
+        response._content = b""
+        response.raw = BytesIO()
+        if url.endswith("/start"):
+            response.status_code = 302
+            response.headers["Location"] = "http://example.com/final"
+        else:
+            response.status_code = 200
+        return response
+
+    adapter = session.get_adapter("http://example.com/")
+    monkeypatch.setattr(adapter, "send", fake_send)
+
+    response = session.get("http://example.com/start", allow_redirects=True)
+
+    assert response.status_code == 200
+    assert urls == ["http://example.com/start", "http://example.com/final"]
+
+
 def test_adapter_rejects_proxies() -> None:
     adapter = SSRFProtectedAdapter()
     req = requests.Request("GET", "http://example.com/").prepare()
