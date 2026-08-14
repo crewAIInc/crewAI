@@ -360,12 +360,9 @@ class TestLLMHooksIntegration:
         register_before_llm_call_hook(later_hook)
         mock_executor.before_llm_call_hooks = get_before_llm_call_hooks()
 
-        proceed = _setup_before_llm_call_hooks(
-            mock_executor, printer=Mock(), verbose=False
-        )
+        _setup_before_llm_call_hooks(mock_executor, printer=Mock(), verbose=False)
 
         assert ran == ["crashing", "later"]
-        assert proceed is True
 
     def test_scoped_hooks_fire_on_agent_executor_llm_seams(self, mock_executor):
         """register_scoped hooks must run on the executor model seams.
@@ -401,19 +398,21 @@ class TestLLMHooksIntegration:
                 lambda ctx: order.append("scoped_post"),
             )
 
-            proceed = _setup_before_llm_call_hooks(
-                mock_executor, printer=Mock(), verbose=False
-            )
+            _setup_before_llm_call_hooks(mock_executor, printer=Mock(), verbose=False)
             answer = _setup_after_llm_call_hooks(
                 mock_executor, "answer", printer=Mock(), verbose=False
             )
 
         assert order == ["snapshot", "scoped_pre", "scoped_post"]
-        assert proceed is True
         assert answer == "answer"
 
     def test_intentional_block_still_short_circuits_later_hooks(self, mock_executor):
-        """A hook returning False blocks the call and skips later hooks (unchanged)."""
+        """A hook returning False skips later hooks and aborts the call.
+
+        The abort propagates instead of degrading into a generic error, so the
+        caller can tell a deliberate block apart from a transient failure.
+        """
+        from crewai.hooks.dispatch import HookAborted
         from crewai.utilities.agent_utils import _setup_before_llm_call_hooks
 
         ran: list[str] = []
@@ -429,12 +428,10 @@ class TestLLMHooksIntegration:
         register_before_llm_call_hook(later_hook)
         mock_executor.before_llm_call_hooks = get_before_llm_call_hooks()
 
-        proceed = _setup_before_llm_call_hooks(
-            mock_executor, printer=Mock(), verbose=False
-        )
+        with pytest.raises(HookAborted, match="before_llm_call hook returned False"):
+            _setup_before_llm_call_hooks(mock_executor, printer=Mock(), verbose=False)
 
         assert ran == ["blocking"]
-        assert proceed is False
 
     @pytest.mark.vcr()
     def test_lite_agent_hooks_integration_with_real_llm(self):
@@ -646,11 +643,10 @@ class TestDirectLLMScopedHooks:
 
         with scoped_hooks():
             register_scoped(InterceptionPoint.PRE_MODEL_CALL, block)
-            proceed = llm._invoke_before_llm_call_hooks(
-                [{"role": "user", "content": "hi"}], from_agent=None
-            )
-
-        assert proceed is False
+            with pytest.raises(HookAborted, match="blocked by scoped hook"):
+                llm._invoke_before_llm_call_hooks(
+                    [{"role": "user", "content": "hi"}], from_agent=None
+                )
 
     def test_scoped_after_hook_modifies_direct_response(self):
         from crewai.hooks import InterceptionPoint

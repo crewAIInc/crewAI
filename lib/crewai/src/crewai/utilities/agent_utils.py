@@ -499,11 +499,10 @@ def _prepare_llm_call(
         The resolved messages list (may come from executor_context).
 
     Raises:
-        ValueError: If a before hook blocks the call.
+        HookAborted: If a hook aborted the call.
     """
     if executor_context is not None:
-        if not _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose):
-            raise ValueError("LLM call blocked by before_llm_call hook")
+        _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose)
         messages = executor_context.messages
     return messages
 
@@ -1875,7 +1874,7 @@ def _setup_before_llm_call_hooks(
     executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
     printer: Printer,
     verbose: bool = True,
-) -> bool:
+) -> None:
     """Setup and invoke before_llm_call hooks for the executor context.
 
     Args:
@@ -1883,8 +1882,8 @@ def _setup_before_llm_call_hooks(
         printer: Printer instance for error logging.
         verbose: Whether to print output.
 
-    Returns:
-        True if LLM execution should proceed, False if blocked by a hook.
+    Raises:
+        HookAborted: If a hook aborted the call, carrying its reason.
     """
     if executor_context:
         from crewai.hooks.dispatch import (
@@ -1902,7 +1901,7 @@ def _setup_before_llm_call_hooks(
             *get_scoped_hooks(InterceptionPoint.PRE_MODEL_CALL),
         ]
         if not hooks:
-            return True
+            return
 
         original_messages = executor_context.messages
 
@@ -1915,13 +1914,13 @@ def _setup_before_llm_call_hooks(
                 reducer=before_llm_call_reducer,
                 verbose=verbose,
             )
-        except HookAborted:
+        except HookAborted as aborted:
             if verbose:
                 printer.print(
-                    content="LLM call blocked by before_llm_call hook",
+                    content=f"LLM call blocked by before_llm_call hook: {aborted.reason}",
                     color="yellow",
                 )
-            return False
+            raise
 
         if not isinstance(executor_context.messages, list):
             if verbose:
@@ -1937,8 +1936,6 @@ def _setup_before_llm_call_hooks(
                 executor_context.messages = original_messages
             else:
                 executor_context.messages = []
-
-    return True
 
 
 def _setup_after_llm_call_hooks(

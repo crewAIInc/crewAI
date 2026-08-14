@@ -478,6 +478,57 @@ def test_agent_retry_that_succeeds_closes_one_scope_per_attempt():
     assert task_completed[0].started_event_id == task_started[0].event_id
 
 
+def test_hook_abort_is_not_retried():
+    agent_started = []
+    agent_errored = []
+    task_started = []
+    task_failed = []
+
+    @crewai_event_bus.on(AgentExecutionStartedEvent)
+    def handle_agent_started(source, event):
+        agent_started.append(event)
+
+    @crewai_event_bus.on(AgentExecutionErrorEvent)
+    def handle_agent_error(source, event):
+        agent_errored.append(event)
+
+    @crewai_event_bus.on(TaskStartedEvent)
+    def handle_task_started(source, event):
+        task_started.append(event)
+
+    @crewai_event_bus.on(TaskFailedEvent)
+    def handle_task_failed(source, event):
+        task_failed.append(event)
+
+    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.hooks.dispatch import HookAborted
+
+    agent = Agent(
+        role="aborted_agent",
+        llm="gpt-4o-mini",
+        goal="Just say hi",
+        backstory="You are a helpful assistant that just says hi",
+        max_retry_limit=2,
+    )
+    task = Task(description="Just say hi", expected_output="hi", agent=agent)
+    crew = Crew(agents=[agent], tasks=[task])
+
+    with patch.object(
+        AgentExecutor, "invoke", side_effect=HookAborted("blocked by policy")
+    ):
+        with pytest.raises(Exception):  # noqa: B017
+            crew.kickoff()
+
+    wait_for_event_handlers()
+
+    assert len(agent_started) == 1
+    assert len(agent_errored) == 1
+    assert agent_errored[0].started_event_id == agent_started[0].event_id
+    assert "blocked by policy" in agent_errored[0].error
+    assert len(task_failed) == 1
+    assert task_failed[0].started_event_id == task_started[0].event_id
+
+
 class SayHiTool(BaseTool):
     name: str = Field(default="say_hi", description="The name of the tool")
     description: str = Field(

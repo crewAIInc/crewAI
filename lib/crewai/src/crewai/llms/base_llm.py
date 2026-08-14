@@ -1000,7 +1000,12 @@ class BaseLLM(BaseModel, ABC):
             from_agent: The agent making the call (None for direct calls)
 
         Returns:
-            True if LLM call should proceed, False if blocked by hook
+            True if LLM call should proceed.
+
+        Raises:
+            HookAborted: If a hook aborted the call. The abort carries the
+                reason, so callers must let it propagate rather than turning it
+                into a generic error.
 
         Example:
             >>> # In a native provider's call() method:
@@ -1037,12 +1042,12 @@ class BaseLLM(BaseModel, ABC):
                 hook_context,
                 reducer=before_llm_call_reducer,
             )
-        except HookAborted:
+        except HookAborted as aborted:
             PRINTER.print(
-                content="LLM call blocked by before_llm_call hook",
+                content=f"LLM call blocked by before_llm_call hook: {aborted.reason}",
                 color="yellow",
             )
-            return False
+            raise
 
         return True
 

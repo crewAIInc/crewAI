@@ -46,8 +46,9 @@ Unlike the boundary and step points, the model-call points pass the rich
 `ctx.payload`): mutate `ctx.messages` in place before the call, and return a
 string to replace the response after it.
 
-Blocking a call raises `ValueError("LLM call blocked by before_llm_call hook")`
-inside the executor; the `HookAborted` reason and source are recorded in
+Blocking a call propagates the `HookAborted` out of the executor, carrying its
+reason, and the agent does not retry the attempt: an abort is a decision, not a
+transient failure. The reason and source are also recorded in
 [telemetry](/edge/en/learn/execution-hooks#telemetry).
 
 ## LLM Hook Context

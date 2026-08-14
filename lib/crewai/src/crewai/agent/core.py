@@ -74,6 +74,7 @@ from crewai.events.types.memory_events import (
 )
 from crewai.events.types.skill_events import SkillUsedEvent
 from crewai.experimental.agent_executor import AgentExecutor
+from crewai.hooks.dispatch import HookAborted
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent_output import LiteAgentOutput
@@ -726,7 +727,8 @@ class Agent(BaseAgent):
             task: The task being executed.
 
         Raises:
-            Exception: If the error is from litellm, a passthrough, or retries are exhausted.
+            Exception: If the error is from litellm, a hook abort, a passthrough,
+                or retries are exhausted.
         """
         if isinstance(e, _passthrough_exceptions):
             raise
@@ -740,7 +742,9 @@ class Agent(BaseAgent):
                 error=str(e),
             ),
         )
-        if e.__class__.__module__.startswith("litellm"):
+        # A hook abort is a decision, not a transient failure: a retry would only
+        # re-run the same abort.
+        if isinstance(e, HookAborted) or e.__class__.__module__.startswith("litellm"):
             raise e
         self._times_executed += 1
         if self._times_executed > self.max_retry_limit:
