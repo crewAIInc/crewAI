@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from copy import deepcopy
+from copy import copy as shallow_copy, deepcopy
 import gc
 import threading
 import time
@@ -137,6 +137,119 @@ def test_deep_copy_has_independent_client_locks() -> None:
 
     assert copied._sync_client_lock is not llm._sync_client_lock
     assert copied._async_client_lock is not llm._async_client_lock
+
+
+def test_shallow_copy_before_client_creation_has_independent_runtime_state() -> None:
+    llm = OpenAICompletion(model="gpt-4o", api_key="test-key")
+
+    copied = shallow_copy(llm)
+
+    assert copied.model_dump() == llm.model_dump()
+    assert copied._sync_client_lock is not llm._sync_client_lock
+    assert copied._async_client_lock is not llm._async_client_lock
+    assert copied._client is None
+    assert copied._async_client is None
+    assert not copied._owns_sync_http_client
+    assert not copied._owns_async_http_client
+    assert not copied._async_client_closing
+
+
+def test_shallow_copy_does_not_share_provider_owned_sync_client() -> None:
+    llm = OpenAICompletion(model="gpt-4o", api_key="test-key")
+    original_client = llm._get_sync_client()
+
+    copied = shallow_copy(llm)
+    copied_client = copied._get_sync_client()
+
+    assert copied_client is not original_client
+    assert copied._sync_client_lock is not llm._sync_client_lock
+    copied.close()
+    assert copied_client.is_closed()
+    assert not original_client.is_closed()
+    llm.close()
+    assert original_client.is_closed()
+
+    second = OpenAICompletion(model="gpt-4o", api_key="test-key")
+    second_client = second._get_sync_client()
+    second_copy = shallow_copy(second)
+    second_copy_client = second_copy._get_sync_client()
+
+    second.close()
+    assert second_client.is_closed()
+    assert not second_copy_client.is_closed()
+    second_copy.close()
+    assert second_copy_client.is_closed()
+
+
+@pytest.mark.asyncio
+async def test_shallow_copy_does_not_share_provider_owned_async_client() -> None:
+    assert not openai_completion._PENDING_ASYNC_CLOSE_TASKS
+    llm = OpenAICompletion(model="gpt-4o", api_key="test-key")
+    original_client = llm._get_async_client()
+
+    copied = shallow_copy(llm)
+    copied_client = copied._get_async_client()
+
+    assert copied_client is not original_client
+    assert copied._async_client_lock is not llm._async_client_lock
+    await copied.aclose()
+    assert copied_client.is_closed()
+    assert not original_client.is_closed()
+    assert not openai_completion._PENDING_ASYNC_CLOSE_TASKS
+    await llm.aclose()
+    assert original_client.is_closed()
+
+    second = OpenAICompletion(model="gpt-4o", api_key="test-key")
+    second_client = second._get_async_client()
+    second_copy = shallow_copy(second)
+    second_copy_client = second_copy._get_async_client()
+
+    await second.aclose()
+    assert second_client.is_closed()
+    assert not second_copy_client.is_closed()
+    await second_copy.aclose()
+    assert second_copy_client.is_closed()
+    assert not openai_completion._PENDING_ASYNC_CLOSE_TASKS
+
+
+@pytest.mark.asyncio
+async def test_shallow_copy_preserves_caller_owned_clients() -> None:
+    sync_http_client = httpx.Client()
+    sync_llm = OpenAICompletion(
+        model="gpt-4o",
+        api_key="test-key",
+        client_params={"http_client": sync_http_client},
+    )
+    sync_api_client = sync_llm._get_sync_client()
+
+    sync_copy = shallow_copy(sync_llm)
+
+    assert sync_copy._client is sync_api_client
+    assert sync_copy._sync_client_lock is not sync_llm._sync_client_lock
+    assert not sync_copy._owns_sync_http_client
+    sync_copy.close()
+    sync_llm.close()
+    assert not sync_http_client.is_closed
+
+    async_http_client = httpx.AsyncClient()
+    async_llm = OpenAICompletion(
+        model="gpt-4o",
+        api_key="test-key",
+        client_params={"http_client": async_http_client},
+    )
+    async_api_client = async_llm._get_async_client()
+
+    async_copy = shallow_copy(async_llm)
+
+    assert async_copy._async_client is async_api_client
+    assert async_copy._async_client_lock is not async_llm._async_client_lock
+    assert not async_copy._owns_async_http_client
+    await async_copy.aclose()
+    await async_llm.aclose()
+    assert not async_http_client.is_closed
+
+    sync_http_client.close()
+    await async_http_client.aclose()
 
 
 @pytest.mark.parametrize("mode", ["sync", "async"])

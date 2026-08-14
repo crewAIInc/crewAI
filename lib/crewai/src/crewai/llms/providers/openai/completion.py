@@ -493,6 +493,21 @@ class OpenAICompletion(BaseLLM):
                 self._async_client = client
             return client
 
+    def __copy__(self) -> OpenAICompletion:
+        """Copy configuration without sharing provider-owned client state."""
+        with self._sync_client_lock, self._async_client_lock:
+            copied = super().__copy__()
+            copied._sync_client_lock = _ClientLock()
+            copied._async_client_lock = _ClientLock()
+            copied._async_client_closing = False
+            if self._owns_sync_http_client:
+                copied._client = None
+                copied._owns_sync_http_client = False
+            if self._owns_async_http_client:
+                copied._async_client = None
+                copied._owns_async_http_client = False
+            return copied
+
     def __enter__(self) -> OpenAICompletion:
         """Return this provider for synchronous managed use."""
         return self
