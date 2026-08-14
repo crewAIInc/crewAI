@@ -62,3 +62,25 @@ def test_validate_query_rejects_writes_and_non_strings(query: object) -> None:
     ok, message = _tool()._validate_query(query)  # type: ignore[arg-type]
     assert ok is False
     assert message
+
+
+@pytest.mark.parametrize(
+    "query,keyword",
+    [
+        ("SELECT * FROM employees INTO OUTFILE '/tmp/data.csv'", "OUTFILE"),
+        ("SELECT * FROM employees INTO DUMPFILE '/tmp/data.bin'", "DUMPFILE"),
+        ("SELECT * FROM employees INTO FS '/mnt/data'", "FS"),
+        ("SELECT * FROM employees INTO LINK 's3://bucket'", "LINK"),
+        ("SELECT * FROM employees INTO S3 's3://bucket/key'", "S3"),
+        ("SELECT * FROM employees INTO HDFS '/path'", "HDFS"),
+        ("SELECT * FROM employees INTO AZURE 'wasb://container'", "AZURE"),
+        ("SELECT * FROM employees INTO GCS 'gs://bucket'", "GCS"),
+        ("SELECT * FROM employees INTO KAFKA 'kafka:topic'", "KAFKA"),
+        ("select id from t into outfile '/tmp/out.csv'", "OUTFILE"),
+    ],
+)
+def test_validate_query_rejects_select_into_write_targets(query: str, keyword: str) -> None:
+    """SELECT … INTO <write-target> is rejected even though it starts with SELECT."""
+    ok, message = _tool()._validate_query(query)
+    assert ok is False
+    assert keyword in message

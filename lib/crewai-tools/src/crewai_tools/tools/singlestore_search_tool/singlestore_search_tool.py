@@ -1,3 +1,4 @@
+import re
 from collections.abc import Callable
 from typing import Any
 
@@ -382,6 +383,21 @@ class SingleStoreSearchTool(BaseTool):
             return (
                 False,
                 "Only SELECT and SHOW queries are supported for security reasons.",
+            )
+
+        # Reject SELECT … INTO clauses that can write to external resources
+        # (OUTFILE, FS, LINK, S3, HDFS, AZURE, GCS, KAFKA).  Although these
+        # start with a SELECT token, they grant FILE WRITE or OUTBOUND
+        # privileges and are not read-only.
+        into_clause = re.search(
+            r"\bINTO\s+(OUTFILE|DUMPFILE|FS|LINK|S3|HDFS|AZURE|GCS|KAFKA)\b",
+            stripped,
+            re.IGNORECASE,
+        )
+        if into_clause:
+            return (
+                False,
+                f"INTO {into_clause.group(1).upper()} is not supported for security reasons.",
             )
 
         return True, "Valid query"
