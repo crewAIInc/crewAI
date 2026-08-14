@@ -210,7 +210,37 @@ class TestOperation:
         finished = span_exporter.get_finished_spans()
         assert [s.name for s in finished] == ["sample op"]
         assert finished[0].attributes["crewai.test.key"] == "value"
-        assert finished[0].status.status_code == StatusCode.UNSET
+        assert finished[0].status.status_code == StatusCode.OK
+
+    def test_stamps_execution_uuid_from_contextvar(
+        self, span_exporter: InMemorySpanExporter
+    ) -> None:
+        from crewai.execution import clear_execution_uuid, set_execution_uuid
+
+        token = set_execution_uuid("kickoff-uuid-1")
+        try:
+            with operation("sample op"):
+                pass
+        finally:
+            clear_execution_uuid(token)
+
+        finished = span_exporter.get_finished_spans()
+        assert finished[0].attributes["crewai.execution_uuid"] == "kickoff-uuid-1"
+
+    def test_leaves_explicit_execution_uuid_in_place(
+        self, span_exporter: InMemorySpanExporter
+    ) -> None:
+        from crewai.execution import clear_execution_uuid, set_execution_uuid
+
+        token = set_execution_uuid("contextvar-id")
+        try:
+            with operation("sample op", {"crewai.execution_uuid": "explicit-id"}):
+                pass
+        finally:
+            clear_execution_uuid(token)
+
+        finished = span_exporter.get_finished_spans()
+        assert finished[0].attributes["crewai.execution_uuid"] == "explicit-id"
 
     def test_exception_marks_span_error(
         self, span_exporter: InMemorySpanExporter
@@ -310,6 +340,7 @@ class TestHotPathSpans:
         ]
         assert len(crew_spans) == 1
         assert crew_spans[0].attributes["crewai.crew.id"] == str(crew.id)
+        assert crew_spans[0].attributes.get("crewai.execution_uuid")
 
     def test_nested_spans_share_trace_id(
         self, span_exporter: InMemorySpanExporter

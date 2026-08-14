@@ -21,6 +21,8 @@ from opentelemetry.trace import (
     TraceFlags,
 )
 
+from crewai.execution import get_execution_uuid
+
 
 _TRACER_NAME = "crewai"
 
@@ -70,9 +72,14 @@ def operation(
         The active :class:`Span`.  Callers may attach additional
         attributes or events to it as the operation progresses.
     """
+    attrs: dict[str, Any] = dict(attributes or {})
+    execution_uuid = get_execution_uuid()
+    if execution_uuid and "crewai.execution_uuid" not in attrs:
+        attrs["crewai.execution_uuid"] = execution_uuid
+
     with _tracer().start_as_current_span(
         name,
-        attributes=attributes or {},
+        attributes=attrs,
         links=links or [],
         record_exception=False,
         set_status_on_exception=False,
@@ -85,6 +92,8 @@ def operation(
             span.record_exception(exc, escaped=True)
             span.set_status(Status(StatusCode.ERROR, f"{type(exc).__name__}: {exc}"))
             raise
+        else:
+            span.set_status(Status(StatusCode.OK))
 
 
 def follows_from(
