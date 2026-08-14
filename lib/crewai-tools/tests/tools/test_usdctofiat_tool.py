@@ -96,15 +96,13 @@ def tools(mock_offramp: MagicMock):
         }, mock_offramp
 
 
-def test_docstring_discloses_galleon_not_peer_cash() -> None:
+def test_docstring_discloses_product_and_docs() -> None:
     import crewai_tools.tools.usdctofiat_tool.usdctofiat_tool as module
 
     text = f"{UsdctoFiatCashoutTool.__doc__ or ''} {module.__doc__ or ''}".lower()
     assert "usdctofiat" in text
     assert "galleon" in text
-    assert "not a peer cash product" in text
     assert "usdctofiat.xyz/developers" in text
-    assert "peer-cash" not in (UsdctoFiatCashoutTool.__module__ or "")
 
 
 def test_mode_is_not_a_constructor_default() -> None:

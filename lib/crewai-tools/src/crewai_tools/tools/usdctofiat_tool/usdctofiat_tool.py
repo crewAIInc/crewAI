@@ -1,7 +1,7 @@
 """USDCtoFiat BaseTools for CrewAI.
 
 USDCtoFiat by Galleon Labs. Built on the public Peer/ZKP2P protocol.
-Not a Peer Cash product. https://usdctofiat.xyz/developers
+Docs: https://usdctofiat.xyz/developers
 
 Wraps ``usdctofiat.cashout(mode="fast"|"best")``, ``watch``,
 ``withdraw``/``close``, ``deposits``, and ``estimate``. Mode is required
@@ -18,12 +18,13 @@ Install: ``pip install 'crewai-tools[usdctofiat]'`` (depends on
 
 from __future__ import annotations
 
-import json
 from collections.abc import Callable
+import json
 from typing import Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+
 
 _BANNED_KEY_KWARGS = (
     "private_key",
@@ -82,7 +83,9 @@ class UsdctoFiatCashoutSchema(BaseModel):
         ...,
         description='Required. "fast" (0% / TOFIAT) or "best" (Delegate, 10 bps).',
     )
-    amount: str = Field(..., description="Human USDC amount. An int is six-decimal units.")
+    amount: str = Field(
+        ..., description="Human USDC amount. An int is six-decimal units."
+    )
     currency: str = Field(..., description="Fiat ISO code, e.g. EUR, USD, GBP.")
     platform: str = Field(..., description="Payment rail, e.g. revolut, venmo, monzo.")
     payee: str = Field(..., description="Handle on that platform.")
@@ -111,7 +114,7 @@ class UsdctoFiatOwnerSchema(BaseModel):
 
 
 class _UsdctoFiatBase(BaseTool):
-    """Shared construction. Galleon Labs. Not Peer Cash."""
+    """Shared construction for USDCtoFiat tools."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
     signer: Callable[[Any], Any] | None = None
@@ -143,7 +146,7 @@ class UsdctoFiatCashoutTool(_UsdctoFiatBase):
     """Cash out Base USDC to fiat via USDCtoFiat by Galleon Labs.
 
     mode is required. There is no default.
-    - fast: 0% spread / 0 bps. We earn TOFIAT.
+    - fast: Live market pricing with 0% spread / 0 bps.
     - best: Delegate, 10 bps.
 
     If a signer was injected, unsigned txs are submitted and the deposit
@@ -155,13 +158,15 @@ class UsdctoFiatCashoutTool(_UsdctoFiatBase):
     name: str = "usdctofiat_cashout"
     description: str = (
         "Cash out Base USDC to fiat via USDCtoFiat by Galleon Labs. "
-        "Built on the public Peer/ZKP2P protocol. Not a Peer Cash product. "
+        "Built on the public Peer/ZKP2P protocol. "
         'mode is required: "fast" (0% / TOFIAT) or "best" (Delegate, 10 bps). '
         "Never pass a wallet private key. https://usdctofiat.xyz/developers"
     )
     args_schema: type[BaseModel] = UsdctoFiatCashoutSchema
 
-    def _run(self, mode: str, amount: str, currency: str, platform: str, payee: str) -> str:
+    def _run(
+        self, mode: str, amount: str, currency: str, platform: str, payee: str
+    ) -> str:
         try:
             offramp = self._get_offramp()
             if self.signer is None:
@@ -193,14 +198,18 @@ class UsdctoFiatEstimateTool(_UsdctoFiatBase):
     description: str = (
         "Estimate a USDCtoFiat cash-out. Not a locked quote. "
         'mode is required: "fast" (0 bps) or "best" (10 bps). '
-        "Galleon Labs. Not Peer Cash. https://usdctofiat.xyz/developers"
+        "Docs: https://usdctofiat.xyz/developers"
     )
     args_schema: type[BaseModel] = UsdctoFiatEstimateSchema
 
     def _run(self, mode: str, amount: str, currency: str) -> str:
         try:
             return _dumps(
-                _as_dict(self._get_offramp().estimate(mode=mode, amount=amount, currency=currency))
+                _as_dict(
+                    self._get_offramp().estimate(
+                        mode=mode, amount=amount, currency=currency
+                    )
+                )
             )
         except Exception as exc:
             return _error(exc)
@@ -211,8 +220,7 @@ class UsdctoFiatWatchTool(_UsdctoFiatBase):
 
     name: str = "usdctofiat_watch"
     description: str = (
-        "Watch a USDCtoFiat deposit by id. Galleon Labs. Not Peer Cash. "
-        "https://usdctofiat.xyz/developers"
+        "Watch a USDCtoFiat deposit by id. Docs: https://usdctofiat.xyz/developers"
     )
     args_schema: type[BaseModel] = UsdctoFiatDepositSchema
 
@@ -229,8 +237,8 @@ class UsdctoFiatWithdrawTool(_UsdctoFiatBase):
 
     name: str = "usdctofiat_withdraw"
     description: str = (
-        "Withdraw or close a USDCtoFiat deposit. Galleon Labs. Not Peer Cash. "
-        "https://usdctofiat.xyz/developers"
+        "Withdraw or close a USDCtoFiat deposit. "
+        "Docs: https://usdctofiat.xyz/developers"
     )
     args_schema: type[BaseModel] = UsdctoFiatDepositSchema
 
@@ -251,14 +259,16 @@ class UsdctoFiatDepositsTool(_UsdctoFiatBase):
 
     name: str = "usdctofiat_deposits"
     description: str = (
-        "List USDCtoFiat deposits for an owner on Base. Galleon Labs. "
-        "Not Peer Cash. https://usdctofiat.xyz/developers"
+        "List USDCtoFiat deposits for an owner on Base. "
+        "Docs: https://usdctofiat.xyz/developers"
     )
     args_schema: type[BaseModel] = UsdctoFiatOwnerSchema
 
     def _run(self, owner: str) -> str:
         try:
-            return _dumps({"owner": owner, "deposits": self._get_offramp().deposits(owner)})
+            return _dumps(
+                {"owner": owner, "deposits": self._get_offramp().deposits(owner)}
+            )
         except Exception as exc:
             return _error(exc)
 
