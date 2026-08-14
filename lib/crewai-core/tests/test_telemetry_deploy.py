@@ -136,3 +136,46 @@ class TestDisabledTelemetry:
             "deploy:created",
             "deploy:pushed",
         ]
+
+
+class TestReleaseAttribution:
+    """Every span this emitter produces must carry the running release.
+
+    A span without ``crewai_version`` cannot be attributed to a version, so a
+    version-filtered question returns nothing for it rather than something
+    visibly wrong. Covers all eight spans this module emits, not only the ones
+    that were missing it, so a regression on the others is caught too.
+    """
+
+    @pytest.mark.parametrize(
+        ("method", "args"),
+        [
+            ("deploy_signup_error_span", ()),
+            ("start_deployment_span", ("dep-123",)),
+            ("create_crew_deployment_span", ()),
+            ("get_crew_logs_span", ("dep-123", "deployment")),
+            ("remove_crew_span", ("dep-123",)),
+            ("feature_usage_span", ("memory:query",)),
+            ("flow_creation_span", ("ResearchFlow",)),
+            ("template_installed_span", ("my-template",)),
+        ],
+    )
+    def test_span_records_the_release(
+        self,
+        telemetry: tuple[Telemetry, MagicMock],
+        method: str,
+        args: tuple[object, ...],
+    ) -> None:
+        instance, span = telemetry
+        sentinel = "0.0.0-release-sentinel"
+
+        # Patched at the source module, not at crewai_core.telemetry: these
+        # methods import get_crewai_version inside the call, so a patch on the
+        # importing module would never be seen. An arbitrary sentinel also means
+        # a hard-coded literal cannot satisfy the assertion.
+        with patch("crewai_core.version.get_crewai_version", return_value=sentinel):
+            getattr(instance, method)(*args)
+
+        assert _attributes(span).get("crewai_version") == sentinel, (
+            f"{method} did not record the value returned by get_crewai_version()"
+        )

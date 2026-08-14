@@ -1,0 +1,200 @@
+---
+title: خطافات حدود التنفيذ
+description: اعتراض بداية تنفيذ الـ Crew والـ Flow ومدخلاته ومخرجاته ونهايته باستخدام المزخرف @on
+mode: "wide"
+---
+
+تعترض خطافات حدود التنفيذ الأطراف الخارجية للتشغيل — قبل بدء أي عمل، وعند
+حسم المدخلات، وعند جاهزية النتيجة النهائية، وعند انتهاء التنفيذ. وهي تعمل مع
+الـ Crew والـ Flow على حد سواء، وتُعد المكان المناسب لفحوصات السياسة على
+مستوى التشغيل وإعادة كتابة المدخلات وتنقية المخرجات.
+
+## نظرة عامة
+
+أربع نقاط اعتراض تغطي الحدود:
+
+| النقطة | التوقيت | `ctx.payload` |
+|--------|---------|---------------|
+| `EXECUTION_START` | Crew أو Flow على وشك البدء | `dict` المدخلات |
+| `INPUT` | المدخلات المحسومة للتنفيذ | `dict` المدخلات |
+| `OUTPUT` | النتيجة النهائية جاهزة | كائن المخرجات |
+| `EXECUTION_END` | انتهى التنفيذ (نجاحًا أو فشلًا) | كائن المخرجات، أو `None` عند الفشل |
+
+بالنسبة إلى الـ Crew، يكون payload المخرجات `CrewOutput`. أما في الـ Flow فهو
+النتيجة النهائية لدالة الـ Flow.
+
+## توقيع الخطاف
+
+```python
+from crewai.hooks import on, HookAborted, InterceptionPoint
+
+@on(InterceptionPoint.EXECUTION_START)
+def boundary_hook(ctx) -> Any | None:
+    # Mutate ctx.payload in place, or
+    # return a non-None value to replace it, or
+    # raise HookAborted(reason, source) to stop the run
+    return None
+```
+
+تتبع خطافات الحدود العقد القياسي: المتابعة (`return None`)، أو التعديل في
+المكان، أو الاستبدال بإرجاع قيمة، أو الإجهاض برفع `HookAborted`. أي إجهاض
+عند أي حد ينتشر خارج `kickoff()` مع سببه.
+
+## مخطط السياق
+
+تتلقى كل نقطة سياقًا منمّطًا. تشترك جميع السياقات في الحقول الأساسية:
+
+```python
+class InterceptionContext:
+    payload: Any            # The interceptable value (see table above)
+    agent: Any = None       # Not populated at execution boundaries
+    agent_role: str | None  # Not populated at execution boundaries
+    task: Any = None        # Not populated at execution boundaries
+    crew: Any = None        # The Crew instance (crew runs only)
+    flow: Any = None        # The Flow instance (flow runs only)
+```
+
+تضيف سياقات كل نقطة اسمًا بديلًا للـ payload:
+
+```python
+class ExecutionStartContext(InterceptionContext):
+    inputs: dict            # Same dict as payload
+
+class InputContext(InterceptionContext):
+    inputs: dict            # Same dict as payload
+
+class OutputContext(InterceptionContext):
+    output: Any             # The output object
+
+class ExecutionEndContext(InterceptionContext):
+    output: Any                    # The output object (None when status == "failed")
+    status: str                    # "completed" or "failed"
+    error: BaseException | None    # The exception when status == "failed"
+```
+
+<Note>
+`ctx.inputs` هو اسم بديل لقاموس المدخلات **الأصلي**، لذا فإن التعديلات في
+المكان عبر أي من الاسمين متكافئة. إذا *استبدل* خطاف سابق الـ payload بإرجاع
+dict جديد، فإن `ctx.payload` وحده يُعاد ربطه — اقرأ واكتب دائمًا عبر
+`ctx.payload` عندما يمكن أن تتسلسل الخطافات.
+</Note>
+
+## تشغيلات الـ Crew مقابل تشغيلات الـ Flow
+
+تعمل خطافات الحدود على كلا وقتي التشغيل، وتنفيذ الـ Crew يجري داخليًا فوق وقت
+تشغيل Flow. لذلك أثناء `crew.kickoff()` يُطلق الخطاف الحدودي العام لحدّ الـ
+Crew (‏`ctx.crew` مضبوط و`ctx.flow` يساوي `None`) **و** للـ Flow الداخلي
+(‏`ctx.flow` مضبوط و`ctx.crew` يساوي `None`). ميّز حسب وقت التشغيل:
+
+```python
+@on(InterceptionPoint.OUTPUT)
+def crew_output_only(ctx):
+    if ctx.crew is None:
+        return None  # Skip the internal flow (or a bare flow)
+    ctx.payload.raw = ctx.payload.raw.strip()
+```
+
+## حالات استخدام شائعة
+
+### فحص السياسة عند البدء
+
+```python
+@on(InterceptionPoint.EXECUTION_START)
+def enforce_policy(ctx):
+    if ctx.crew is not None and not ctx.payload.get("authorized"):
+        raise HookAborted(reason="unauthorized execution", source="access-control")
+```
+
+### إعادة كتابة المدخلات
+
+```python
+@on(InterceptionPoint.INPUT)
+def add_defaults(ctx):
+    if ctx.crew is None:
+        return None
+    ctx.payload.setdefault("locale", "en-US")
+    ctx.payload["topic"] = ctx.payload["topic"].strip().lower()
+```
+
+تتدفق المدخلات المعاد كتابتها إلى استيفاء الـ Task، فيتصرف التشغيل كما لو
+بدأ بالقاموس المعدل.
+
+فضّل `INPUT` لإعادة الكتابة وعامل `EXECUTION_START` كبوابة سماح/منع. إعادة
+الكتابة عند `EXECUTION_START` تظل مُحترمة — في الـ Crew تغذي أيضًا استدعاءات
+`before_kickoff`؛ وفي الـ Flow تُطبق تمامًا كإعادة كتابة `INPUT`.
+
+### تنقية المخرجات
+
+```python
+import re
+
+@on(InterceptionPoint.OUTPUT)
+def redact_emails(ctx):
+    if ctx.crew is None:
+        return None
+    ctx.payload.raw = re.sub(
+        r"\b[\w.+-]+@[\w-]+\.[\w.]+\b", "[EMAIL-REDACTED]", ctx.payload.raw
+    )
+```
+
+يعمل `OUTPUT` قبل `EXECUTION_END`، وكلاهما يرى الـ payload (الذي ربما
+استُبدل) من الخطافات السابقة؛ والقيمة النهائية المعاد كتابتها هي ما يعيده
+`kickoff()`.
+
+### مراقبة الإخفاقات
+
+يُطلق `EXECUTION_END` مرة واحدة بالضبط لكل تنفيذ، عند النجاح والفشل على حد
+سواء. عندما يرفع التشغيل استثناءً — خطأ في Task، أو استثناء في دالة Flow، أو
+`HookAborted` من نقطة سابقة — يتلقى الخطاف `status="failed"` مع الاستثناء في
+`ctx.error`، ويظل الاستثناء الأصلي ينتشر خارج `kickoff()` دون تغيير:
+
+```python
+@on(InterceptionPoint.EXECUTION_END)
+def report_outcome(ctx):
+    if ctx.status == "failed":
+        notify_policy_engine(status="failed", error=repr(ctx.error))
+    else:
+        notify_policy_engine(status="completed")
+```
+
+تنبيهان: لا يُطلق `EXECUTION_END` عندما لا يكون `EXECUTION_START` قد أُرسل
+أصلًا (الإجهاض عند البدء يعني أن الحد لم يُفتح قط، فلا توجد نهاية تقابله)،
+ورفع `HookAborted` من إرسال `EXECUTION_END` في مسار الفشل يُتجاهل — لم يعد
+هناك ما يُجهض، والخطأ الأصلي هو الغالب.
+
+## الترتيب
+
+لتشغيل Crew يكون ترتيب الحدود:
+
+```
+EXECUTION_START → before_kickoff callbacks → INPUT → tasks execute → OUTPUT → EXECUTION_END
+```
+
+لتشغيل Flow، تحسم خطافات الحدود المدخلات قبل أن تبدأ أحداث دورة الحياة:
+
+```
+EXECUTION_START → INPUT → FlowStartedEvent → flow methods execute → OUTPUT → EXECUTION_END → FlowFinishedEvent
+```
+
+يحمل `FlowStartedEvent` المدخلات كما حسمتها الخطافات، وإعادة كتابة
+`inputs["id"]` داخل خطاف حدودي تعيد توجيه استعادة الحالة. يظهر الإجهاض عند
+`EXECUTION_START` مع ذلك كحدث `FlowStartedEvent` يتبعه `FlowFailedEvent`،
+ويُبثان عند الإجهاض مع الحمولة كما حسمتها الخطافات التي عملت قبله.
+
+تعمل الخطافات في النقطة نفسها حسب ترتيب التسجيل، الخطافات العامة أولًا ثم
+الخطافات المحدودة بالـ Crew. تُبث القياسات (`HookDispatchedEvent`) مع كل
+إرسال.
+
+## إدارة الخطافات في الاختبارات
+
+```python
+from crewai.hooks import clear_all_hooks
+
+clear_all_hooks()  # Clears every point, including boundaries
+```
+
+## وثائق ذات صلة
+
+- [نظرة عامة على خطافات التنفيذ →](/edge/ar/learn/execution-hooks)
+- [خطافات استدعاء LLM →](/edge/ar/learn/llm-hooks)
+- [خطافات استدعاء الأدوات →](/edge/ar/learn/tool-hooks)

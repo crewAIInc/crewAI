@@ -293,9 +293,12 @@ class Telemetry:
     def deploy_signup_error_span(self) -> None:
         """Records when an error occurs during the deployment signup process."""
 
+        from crewai_core.version import get_crewai_version
+
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Deploy Signup Error")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
             close_span(span)
 
         self._safe_telemetry_procedure(_operation)
@@ -313,9 +316,12 @@ class Telemetry:
             source: Where the deployment was initiated from.
         """
 
+        from crewai_core.version import get_crewai_version
+
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Start Deployment")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
             self._add_attribute(span, "source", source)
@@ -334,9 +340,12 @@ class Telemetry:
             source: Where the deployment was initiated from.
         """
 
+        from crewai_core.version import get_crewai_version
+
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Create Crew Deployment")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
             self._add_attribute(span, "source", source)
             close_span(span)
 
@@ -348,9 +357,12 @@ class Telemetry:
     ) -> None:
         """Records the retrieval of crew logs."""
 
+        from crewai_core.version import get_crewai_version
+
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Get Crew Logs")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
             self._add_attribute(span, "log_type", log_type)
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
@@ -361,9 +373,12 @@ class Telemetry:
     def remove_crew_span(self, uuid: str | None = None) -> None:
         """Records the removal of a crew."""
 
+        from crewai_core.version import get_crewai_version
+
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Remove Crew")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
             close_span(span)

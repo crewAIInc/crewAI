@@ -508,6 +508,7 @@ class Telemetry:
             tracer = self.provider.get_tracer(TRACER_NAME)
 
             created_span = tracer.start_span("Task Created")
+            self._add_attribute(created_span, "crewai_version", version("crewai"))
 
             add_crew_and_task_attributes(created_span, crew, task, self._add_attribute)
 
@@ -543,6 +544,7 @@ class Telemetry:
             close_span(created_span)
 
             span = tracer.start_span("Task Execution")
+            self._add_attribute(span, "crewai_version", version("crewai"))
 
             add_crew_and_task_attributes(span, crew, task, self._add_attribute)
 
@@ -749,6 +751,7 @@ class Telemetry:
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Deploy Signup Error")
+            self._add_attribute(span, "crewai_version", version("crewai"))
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
@@ -763,6 +766,7 @@ class Telemetry:
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Start Deployment")
+            self._add_attribute(span, "crewai_version", version("crewai"))
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
             close_span(span)
@@ -775,6 +779,7 @@ class Telemetry:
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Create Crew Deployment")
+            self._add_attribute(span, "crewai_version", version("crewai"))
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
@@ -792,6 +797,7 @@ class Telemetry:
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Get Crew Logs")
+            self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "log_type", log_type)
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
@@ -809,6 +815,7 @@ class Telemetry:
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Remove Crew")
+            self._add_attribute(span, "crewai_version", version("crewai"))
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
             close_span(span)
@@ -985,6 +992,7 @@ class Telemetry:
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Flow Plotting")
+            self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "flow_name", flow_name)
             self._add_attribute(span, "node_names", json.dumps(node_names))
             close_span(span)
@@ -1211,6 +1219,7 @@ class Telemetry:
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Human Feedback")
+            self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "event_type", event_type)
             self._add_attribute(span, "has_routing", has_routing)
             self._add_attribute(span, "num_outcomes", num_outcomes)
