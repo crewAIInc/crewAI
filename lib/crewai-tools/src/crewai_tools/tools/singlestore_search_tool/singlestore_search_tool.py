@@ -400,6 +400,22 @@ class SingleStoreSearchTool(BaseTool):
                 f"INTO {into_clause.group(1).upper()} is not supported for security reasons.",
             )
 
+        # Reject locking clauses (FOR UPDATE, LOCK IN SHARE MODE) — a
+        # read-only search tool has no legitimate reason to acquire row
+        # locks, and they can deadlock or block other transactions.
+        if re.search(r"\bFOR\s+UPDATE\b", stripped, re.IGNORECASE):
+            return (
+                False,
+                "FOR UPDATE is not supported for security reasons.",
+            )
+        if re.search(
+            r"\bLOCK\s+IN\s+(?:SHARE\s+)?MODE\b", stripped, re.IGNORECASE
+        ):
+            return (
+                False,
+                "LOCK IN SHARE MODE is not supported for security reasons.",
+            )
+
         return True, "Valid query"
 
     def _run(self, search_query: str) -> Any:

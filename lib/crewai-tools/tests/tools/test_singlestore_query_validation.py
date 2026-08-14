@@ -84,3 +84,21 @@ def test_validate_query_rejects_select_into_write_targets(query: str, keyword: s
     ok, message = _tool()._validate_query(query)
     assert ok is False
     assert keyword in message
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "SELECT * FROM employees FOR UPDATE",
+        "SELECT id FROM t WHERE id = 1 FOR UPDATE",
+        "select * from users for update",
+        "SELECT * FROM employees LOCK IN SHARE MODE",
+        "SELECT * FROM employees LOCK IN SHARE MODE",
+        "select * from t lock in share mode",
+    ],
+)
+def test_validate_query_rejects_locking_clauses(query: str) -> None:
+    """FOR UPDATE and LOCK IN SHARE MODE acquire row locks that can deadlock."""
+    ok, message = _tool()._validate_query(query)
+    assert ok is False
+    assert ("FOR UPDATE" in message) or ("LOCK" in message)
