@@ -2,7 +2,7 @@
 
 `TaskMarketTool` lets a CrewAI agent discover public TaskMarket work, inspect a task and its available submissions, and prepare a requester task without performing an external write. The integration is designed around TaskMarket’s documented task endpoints and the first-party TaskMarket command-line client.[1] [2]
 
-> **Safety boundary.** Discovery and drafting do not create external state. The only creation path requires a fresh exact confirmation phrase, an explicit maximum-spend value at least equal to the requested reward, and a separately configured first-party TaskMarket CLI. The tool does not accept or store wallet keys, seed phrases, passwords, tokens, or payment credentials.
+> **Safety boundary.** Discovery and drafting do not create external state. The only creation path requires the exact confirmation phrase, an explicit maximum-spend value at least equal to the requested reward, and a separately configured first-party TaskMarket CLI. The tool does not accept or store wallet keys, seed phrases, passwords, tokens, or payment credentials.
 
 ## Capabilities
 
@@ -18,7 +18,7 @@ The tool intentionally does **not** claim tasks, submit work, accept or reject s
 
 ## Installation
 
-This contribution is currently a local implementation candidate and is **not yet merged upstream**. To run it from this CrewAI workspace, install the repository’s development environment and execute the focused test suite:
+To run this tool from a CrewAI repository checkout, install the repository's development environment and execute the focused test suite:
 
 ```bash
 cd crewai
@@ -26,7 +26,7 @@ uv run --group dev --package crewai-tools pytest -q \
   lib/crewai-tools/tests/tools/taskmarket_tool/test_taskmarket_tool.py
 ```
 
-To use the eventual upstream package in a CrewAI project, import the standard public export:
+To use the installed package in a CrewAI project, import the standard public export:
 
 ```python
 from crewai_tools import TaskMarketTool
@@ -89,7 +89,7 @@ created = taskmarket.run(
 print(created)
 ```
 
-If the command times out or fails ambiguously, the tool returns an **unknown-settlement** status and does not retry. The user must inspect TaskMarket directly before deciding what to do next.
+If the command times out, the tool returns text explaining that settlement status is unknown and does not retry. If the CLI exits unsuccessfully, it returns an unsuccessful-attempt message and does not retry. If the CLI succeeds without a recognizable task ID, it returns JSON containing `status_check_required`. In every case, inspect TaskMarket directly before taking further action.
 
 ## Validation
 
@@ -108,4 +108,3 @@ uv run --group dev --package crewai-tools pytest -q \
 
 [1]: https://api.taskmarket.dev/openapi.json "TaskMarket OpenAPI specification"
 [2]: https://www.npmjs.com/package/@lucid-agents/taskmarket "TaskMarket first-party CLI package"
-[3]: https://github.com/crewAIInc/crewAI "CrewAI official source repository"

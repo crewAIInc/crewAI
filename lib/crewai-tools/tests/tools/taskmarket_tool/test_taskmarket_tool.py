@@ -81,6 +81,19 @@ def test_get_task_includes_description(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result["reward_usdc"] == "1"
 
 
+def test_list_tasks_rejects_non_list_tasks_field(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    response = MagicMock()
+    response.ok = True
+    response.json.return_value = {"tasks": None}
+    monkeypatch.setattr(requests, "get", MagicMock(return_value=response))
+
+    result = TaskMarketTool()._run(action="list_tasks")
+
+    assert result == "Error: TaskMarket returned an unexpected response shape."
+
+
 def test_list_tasks_returns_network_error(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         requests,
@@ -99,7 +112,7 @@ def test_draft_never_runs_cli() -> None:
     result = json.loads(tool._run(action="draft_task", **_create_arguments()))
 
     assert result["write_performed"] is False
-    assert result["fresh_confirmation_required"] == CREATE_CONFIRMATION_PHRASE
+    assert result["exact_confirmation_required"] == CREATE_CONFIRMATION_PHRASE
     assert result["maximum_spend_required"] == "2.5"
     assert result["task"]["duration_hours"] == 24
     assert result["task"]["deliverables"].startswith("One Markdown report")
@@ -146,6 +159,36 @@ def test_create_rejects_insufficient_maximum_spend(monkeypatch: pytest.MonkeyPat
     )
 
     assert "max_spend_usdc is lower" in result
+    run.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("field_name", "invalid_value"),
+    [
+        ("description", "invalid\x00description"),
+        ("deliverables", "invalid\x00deliverables"),
+        ("tags", ["research", "invalid\x00tag"]),
+    ],
+)
+def test_create_rejects_nul_without_invoking_cli(
+    monkeypatch: pytest.MonkeyPatch,
+    field_name: str,
+    invalid_value: str | list[str],
+) -> None:
+    run = MagicMock()
+    monkeypatch.setattr(subprocess, "run", run)
+    monkeypatch.setattr("shutil.which", MagicMock(return_value="/usr/local/bin/taskmarket"))
+    arguments = _create_arguments()
+    arguments[field_name] = invalid_value
+
+    result = TaskMarketTool()._run(
+        action="create_task",
+        max_spend_usdc="3.00",
+        confirmation=CREATE_CONFIRMATION_PHRASE,
+        **arguments,
+    )
+
+    assert "must not contain NUL characters" in result
     run.assert_not_called()
 
 

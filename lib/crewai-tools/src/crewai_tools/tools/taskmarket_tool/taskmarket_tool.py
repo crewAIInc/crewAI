@@ -130,7 +130,7 @@ class TaskMarketTool(BaseTool):
     ``list_tasks``, ``get_task``, and ``list_submissions`` only use TaskMarket's
     public read API. ``draft_task`` returns the exact first-party CLI command
     preview and performs no network write. ``create_task`` is the only write path:
-    it requires fresh confirmation and invokes an already installed TaskMarket CLI
+    it requires exact confirmation and invokes an already installed TaskMarket CLI
     without receiving any wallet secret or payment credential from this tool.
 
     The tool never claims tasks, submits work, accepts or rejects submissions,
@@ -216,6 +216,8 @@ class TaskMarketTool(BaseTool):
             return response_or_error
         data = response_or_error
         tasks = data.get("tasks", [])
+        if not isinstance(tasks, list):
+            return "Error: TaskMarket returned an unexpected response shape."
         return json.dumps(
             {
                 "task_count": len(tasks),
@@ -290,6 +292,12 @@ class TaskMarketTool(BaseTool):
             return "Error: at least one tag is required for draft_task and create_task."
         if len(tags) > 10 or any(not tag.strip() for tag in tags):
             return "Error: provide between 1 and 10 non-empty tags."
+        if (
+            "\x00" in description
+            or "\x00" in deliverables
+            or any("\x00" in tag for tag in tags)
+        ):
+            return "Error: description, deliverables, and tags must not contain NUL characters."
         if mode not in SUPPORTED_MODES:
             return "Error: unsupported TaskMarket mode."
         if task_visibility not in SUPPORTED_TASK_VISIBILITIES:
@@ -325,7 +333,7 @@ class TaskMarketTool(BaseTool):
                 "network": "Base",
                 "deadline_utc_estimate": deadline_utc,
                 "write_performed": False,
-                "fresh_confirmation_required": CREATE_CONFIRMATION_PHRASE,
+                "exact_confirmation_required": CREATE_CONFIRMATION_PHRASE,
                 "maximum_spend_required": payload["reward_usdc"],
                 "task": payload,
                 "first_party_cli_preview": command,
