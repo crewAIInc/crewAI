@@ -880,7 +880,8 @@ class Agent(BaseAgent):
             )
             raise e
         except Exception as e:
-            result = self._handle_execution_error(e, task, context, tools)
+            # The retry runs a whole execute_task of its own, result already finalized.
+            return self._handle_execution_error(e, task, context, tools)
 
         return self._finalize_task_execution(task, result)
 
@@ -1014,7 +1015,8 @@ class Agent(BaseAgent):
             )
             raise e
         except Exception as e:
-            result = await self._handle_execution_error_async(e, task, context, tools)
+            # The retry runs a whole aexecute_task of its own, result already finalized.
+            return await self._handle_execution_error_async(e, task, context, tools)
 
         return self._finalize_task_execution(task, result)
 
