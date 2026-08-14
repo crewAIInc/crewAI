@@ -106,7 +106,9 @@ def test_list_tasks_returns_network_error(monkeypatch: pytest.MonkeyPatch) -> No
     assert result == "Error: TaskMarket read request failed: offline"
 
 
-def test_draft_never_runs_cli() -> None:
+def test_draft_never_runs_cli(monkeypatch: pytest.MonkeyPatch) -> None:
+    run = MagicMock()
+    monkeypatch.setattr(subprocess, "run", run)
     tool = TaskMarketTool()
 
     result = json.loads(tool._run(action="draft_task", **_create_arguments()))
@@ -119,6 +121,7 @@ def test_draft_never_runs_cli() -> None:
     assert "## Deliverables" in result["task"]["description"]
     assert result["deadline_utc_estimate"].endswith("+00:00")
     assert result["first_party_cli_preview"][:3] == ["taskmarket", "task", "create"]
+    run.assert_not_called()
 
 
 def test_draft_requires_explicit_deliverables() -> None:
