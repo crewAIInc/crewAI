@@ -535,6 +535,12 @@ def test_gemini_message_formatting_appends_user_after_model(
         "model",
         "user",
     ]
+    model_parts = formatted_contents[1].parts
+    if assistant_message.get("tool_calls"):
+        assert model_parts[0].function_call.name == "search"
+        assert model_parts[0].function_call.args == {}
+    else:
+        assert model_parts[0].text == "Partial response"
     assert formatted_contents[-1].parts[0].text == "Please continue."
 
 
