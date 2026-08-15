@@ -5,11 +5,13 @@ import os
 from pathlib import Path
 import re
 import shutil
-from typing import Any
+from typing import Any, Literal
 
 import click
 from crewai_core.project import (
+    get_or_create_project_id as get_or_create_project_id,
     get_project_description as get_project_description,
+    get_project_id as get_project_id,
     get_project_name as get_project_name,
     get_project_version as get_project_version,
     parse_toml as parse_toml,
@@ -30,7 +32,9 @@ __all__ = [
     "copy_template",
     "enable_prompt_line_editing",
     "fetch_and_json_env_file",
+    "get_or_create_project_id",
     "get_project_description",
+    "get_project_id",
     "get_project_name",
     "get_project_version",
     "is_dmn_mode_enabled",
@@ -40,8 +44,23 @@ __all__ = [
     "render_template",
     "tree_copy",
     "tree_find_and_replace",
+    "warn_deprecated",
     "write_env_file",
 ]
+
+
+def warn_deprecated(
+    *,
+    kind: Literal["command", "flag"],
+    old: str,
+    new: str,
+) -> None:
+    """Print a yellow deprecation warning for a legacy CLI command or flag."""
+    label = "command" if kind == "command" else "flag"
+    click.secho(
+        f"Warning: The {label} '{old}' is deprecated. Use '{new}' instead.",
+        fg="yellow",
+    )
 
 
 console = Console()

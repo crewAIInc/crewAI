@@ -25,6 +25,8 @@ from crewai.utilities.agent_utils import (
     _split_messages_into_chunks,
     convert_tools_to_openai_schema,
     execute_single_native_tool_call,
+    extract_tool_call_info,
+    is_tool_call_list,
     NativeToolCallResult,
     parse_tool_call_args,
     summarize_messages,
@@ -981,6 +983,88 @@ class TestParallelSummarizationVCR:
         assert "report.pdf" in summary_msg["files"]
 
 
+class TestIsToolCallListResponsesApiShape:
+    """Regression tests: OpenAI Responses API tool-call dicts must be recognized.
+
+    Responses API function_call output items are flat dicts shaped
+    {"id", "name", "arguments"} - no nested "function" key, and "arguments"
+    instead of Anthropic/Bedrock-style "input".
+    """
+
+    def test_responses_api_dict_is_recognized_as_tool_call(self) -> None:
+        response = [
+            {
+                "id": "call_abc123",
+                "name": "fetch_page",
+                "arguments": '{"url": "https://example.com"}',
+            }
+        ]
+        assert is_tool_call_list(response) is True
+
+    def test_plain_text_answer_not_misclassified(self) -> None:
+        assert is_tool_call_list(["just a string, not a tool call"]) is False
+
+    def test_empty_list_returns_false(self) -> None:
+        assert is_tool_call_list([]) is False
+
+    def test_chat_completions_style_still_recognized(self) -> None:
+        response = [{"function": {"name": "fetch_page", "arguments": "{}"}}]
+        assert is_tool_call_list(response) is True
+
+    def test_bedrock_anthropic_style_still_recognized(self) -> None:
+        response = [{"name": "fetch_page", "input": {"url": "https://example.com"}}]
+        assert is_tool_call_list(response) is True
+
+
+class TestExtractToolCallInfoResponsesApiShape:
+    """Regression tests: extract_tool_call_info must parse Responses API dicts."""
+
+    def test_responses_api_dict_extracts_real_arguments(self) -> None:
+        tool_call = {
+            "id": "call_abc123",
+            "name": "fetch_page",
+            "arguments": '{"url": "https://example.com"}',
+        }
+        result = extract_tool_call_info(tool_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "call_abc123"
+        assert func_name == "fetch_page"
+        assert func_args == '{"url": "https://example.com"}'
+
+    def test_responses_api_dict_does_not_return_empty_args(self) -> None:
+        tool_call = {
+            "id": "call_xyz",
+            "name": "fetch_page",
+            "arguments": '{"url": "https://example.com"}',
+        }
+        _, _, func_args = extract_tool_call_info(tool_call)
+        assert func_args != {}
+
+    def test_bedrock_anthropic_style_still_uses_input(self) -> None:
+        tool_call = {"name": "fetch_page", "input": {"url": "https://example.com"}}
+        _, func_name, func_args = extract_tool_call_info(tool_call)
+        assert func_name == "fetch_page"
+        assert func_args == {"url": "https://example.com"}
+
+    def test_chat_completions_style_still_uses_nested_function(self) -> None:
+        tool_call = {
+            "id": "call_1",
+            "function": {"name": "fetch_page", "arguments": "{}"},
+        }
+        _, func_name, func_args = extract_tool_call_info(tool_call)
+        assert func_name == "fetch_page"
+        assert func_args == "{}"
+
+    def test_non_dict_unrecognized_shape_returns_none(self) -> None:
+        assert extract_tool_call_info("just a string") is None
+
+    def test_unrecognized_dict_shape_returns_empty_name_and_args(self) -> None:
+        call_id, func_name, func_args = extract_tool_call_info({"unrelated": "data"})
+        assert func_name == ""
+        assert func_args == {}
+
+
 class TestParseToolCallArgs:
     """Unit tests for parse_tool_call_args."""
 
@@ -1031,7 +1115,14 @@ class TestParseToolCallArgs:
     def test_error_result_has_correct_keys(self) -> None:
         _, error = parse_tool_call_args("{bad json}", "tool", "call_7")
         assert error is not None
-        assert set(error.keys()) == {"call_id", "func_name", "result", "from_cache", "original_tool"}
+        assert set(error.keys()) == {
+            "call_id",
+            "func_name",
+            "result",
+            "from_cache",
+            "original_tool",
+            "tool_failure",
+        }
 
 
 class TestExecuteSingleNativeToolCall:
@@ -1256,3 +1347,81 @@ class TestExecuteSingleNativeToolCall:
         assert isinstance(result, NativeToolCallResult)
         assert result.result_as_answer is False
         assert "blocked by hook" in result.result
+
+
+class TestResolvePlusClient:
+    def test_builds_the_default_when_no_client_is_installed(self) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_client
+
+        default = MagicMock()
+
+        assert resolve_plus_client(lambda: default) is default
+
+    def test_prefers_an_installed_client(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A hosted runtime installs a client; the default must not be built,
+        since looking up a user credential raises when there isn't one."""
+        from crewai.utilities import agent_utils
+
+        installed = MagicMock()
+        monkeypatch.setattr(agent_utils, "_create_plus_client_hook", lambda: installed)
+        default = MagicMock(side_effect=AssertionError("must not be called"))
+
+        assert agent_utils.resolve_plus_client(default) is installed
+        default.assert_not_called()
+
+
+class TestResolvePlusResponse:
+    def test_passes_through_a_sync_response(self) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        response = MagicMock()
+
+        assert resolve_plus_response(response) is response
+
+    @pytest.mark.parametrize("inside_loop", [False, True])
+    def test_awaits_an_async_response(self, inside_loop: bool) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        response = MagicMock()
+
+        async def call() -> Any:
+            return response
+
+        if not inside_loop:
+            assert resolve_plus_response(call()) is response
+            return
+
+        async def main() -> Any:
+            return resolve_plus_response(call())
+
+        assert asyncio.run(main()) is response
+
+    def test_carries_context_vars_into_the_worker_thread(self) -> None:
+        """Inside a running loop the coroutine runs on another thread; a client
+        reading runtime state (the platform token, flow context) must still see
+        the caller's values rather than defaults."""
+        from crewai.context import get_platform_integration_token, platform_context
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        async def call() -> Any:
+            return get_platform_integration_token()
+
+        async def main() -> Any:
+            with platform_context("token-from-caller"):
+                return resolve_plus_response(call())
+
+        assert asyncio.run(main()) == "token-from-caller"
+
+    def test_rejects_an_awaitable_bound_to_a_loop(self) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        async def main() -> None:
+            future: asyncio.Future[Any] = asyncio.get_running_loop().create_future()
+            future.set_result(MagicMock())
+
+            with pytest.raises(TypeError, match="must return a coroutine"):
+                resolve_plus_response(future)
+
+        asyncio.run(main())

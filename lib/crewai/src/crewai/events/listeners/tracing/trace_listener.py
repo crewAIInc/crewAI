@@ -66,6 +66,7 @@ from crewai.events.types.flow_events import (
     ConversationMessageAddedEvent,
     ConversationRouteSelectedEvent,
     FlowCreatedEvent,
+    FlowFailedEvent,
     FlowFinishedEvent,
     FlowPlotEvent,
     FlowStartedEvent,
@@ -118,6 +119,7 @@ from crewai.events.types.skill_events import (
     SkillDiscoveryStartedEvent,
     SkillLoadFailedEvent,
     SkillLoadedEvent,
+    SkillUsedEvent,
 )
 from crewai.events.types.system_events import SignalEvent, on_signal
 from crewai.events.types.task_events import (
@@ -126,6 +128,7 @@ from crewai.events.types.task_events import (
     TaskStartedEvent,
 )
 from crewai.events.types.tool_usage_events import (
+    ToolFailureDetectedEvent,
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
@@ -274,6 +277,10 @@ class TraceCollectionListener(BaseEventListener):
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
             self._handle_trace_event("flow_finished", source, event)
 
+        @event_bus.on(FlowFailedEvent)
+        def on_flow_failed(source: Any, event: FlowFailedEvent) -> None:
+            self._handle_trace_event("flow_failed", source, event)
+
         @event_bus.on(FlowPlotEvent)
         def on_flow_plot(source: Any, event: FlowPlotEvent) -> None:
             self._handle_action_event("flow_plot", source, event)
@@ -409,6 +416,12 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(ToolUsageErrorEvent)
         def on_tool_error(source: Any, event: ToolUsageErrorEvent) -> None:
             self._handle_action_event("tool_usage_error", source, event)
+
+        @event_bus.on(ToolFailureDetectedEvent)
+        def on_tool_failure_detected(
+            source: Any, event: ToolFailureDetectedEvent
+        ) -> None:
+            self._handle_action_event("tool_failure_detected", source, event)
 
         @event_bus.on(MemoryQueryStartedEvent)
         def on_memory_query_started(
@@ -596,6 +609,13 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(SkillLoadFailedEvent)
         def on_skill_load_failed(source: Any, event: SkillLoadFailedEvent) -> None:
             self._handle_action_event("skill_load_failed", source, event)
+
+        @event_bus.on(SkillUsedEvent)
+        def on_skill_used(source: Any, event: SkillUsedEvent) -> None:
+            # The other five describe setup; this is the only one that says a
+            # skill was actually used, and the only one that re-fires per
+            # execution. Without it a trace cannot attribute usage to a task.
+            self._handle_action_event("skill_used", source, event)
 
     def _register_a2a_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
         """Register handlers for A2A (Agent-to-Agent) events."""

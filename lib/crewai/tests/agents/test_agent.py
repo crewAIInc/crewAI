@@ -3,13 +3,14 @@
 import os
 import threading
 from unittest import mock
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 import warnings
 
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
 from crewai.constants import DEFAULT_LLM_MODEL
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
+from crewai.experimental.agent_executor import AgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -800,6 +801,97 @@ def test_agent_human_input():
         # It should have requested feedback twice.
         assert mock_prompt_input.call_count == 2
         assert output.strip().lower() == "hello"
+
+
+def test_agent_default_executor_human_input():
+    from crewai.core.providers.human_input import SyncHumanInputProvider
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+    )
+    task = Task(
+        agent=agent,
+        description="Say the word: Hi",
+        expected_output="The word: Hi",
+        human_input=True,
+    )
+    answers = iter(
+        [
+            AgentFinish(output="Hi", thought="", text="Hi"),
+            AgentFinish(output="Hello", thought="", text="Hello"),
+        ]
+    )
+    feedback_responses = iter(["Don't say hi, say Hello instead!", ""])
+
+    def kickoff_side_effect(executor, *_args, **_kwargs):
+        executor.state.current_answer = next(answers)
+        executor.state.is_finished = True
+
+    with (
+        patch.object(
+            SyncHumanInputProvider,
+            "_prompt_input",
+            side_effect=lambda *_args, **_kwargs: next(feedback_responses),
+        ) as mock_prompt_input,
+        patch.object(
+            AgentExecutor, "kickoff", autospec=True, side_effect=kickoff_side_effect
+        ) as mock_kickoff,
+    ):
+        output = agent.execute_task(task)
+
+    assert output == "Hello"
+    assert mock_prompt_input.call_count == 2
+    assert mock_kickoff.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_agent_default_executor_async_human_input():
+    from crewai.core.providers.human_input import SyncHumanInputProvider
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+    )
+    task = Task(
+        agent=agent,
+        description="Say the word: Hi",
+        expected_output="The word: Hi",
+        human_input=True,
+    )
+    answers = iter(
+        [
+            AgentFinish(output="Hi", thought="", text="Hi"),
+            AgentFinish(output="Hello", thought="", text="Hello"),
+        ]
+    )
+    feedback_responses = iter(["Don't say hi, say Hello instead!", ""])
+
+    async def kickoff_side_effect(executor, *_args, **_kwargs):
+        executor.state.current_answer = next(answers)
+        executor.state.is_finished = True
+
+    with (
+        patch.object(
+            SyncHumanInputProvider,
+            "_prompt_input_async",
+            new_callable=AsyncMock,
+            side_effect=lambda *_args, **_kwargs: next(feedback_responses),
+        ) as mock_prompt_input,
+        patch.object(
+            AgentExecutor,
+            "kickoff_async",
+            autospec=True,
+            side_effect=kickoff_side_effect,
+        ) as mock_kickoff,
+    ):
+        output = await agent.aexecute_task(task)
+
+    assert output == "Hello"
+    assert mock_prompt_input.await_count == 2
+    assert mock_kickoff.await_count == 2
 
 
 def test_interpolate_inputs():
@@ -2244,6 +2336,25 @@ def test_agent_from_repository_override_attributes(mock_get_agent, mock_get_auth
 
 
 @patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_ignores_null_attributes(
+    mock_get_agent, mock_get_auth_token
+):
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "goal": "test goal",
+        "backstory": "test backstory",
+        "reasoning": None,
+    }
+    mock_get_agent.return_value = mock_get_response
+
+    agent = Agent(from_repository="test_agent")
+
+    assert agent.reasoning is False
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository_ignores_empty_skills(
     mock_get_agent, mock_get_auth_token
 ):
@@ -2262,6 +2373,42 @@ def test_agent_from_repository_ignores_empty_skills(
 
     assert agent.role == "test role"
     assert agent.skills is None
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_pins_skills_to_recorded_versions(
+    mock_get_agent, mock_get_auth_token
+):
+    """The repository records a version per skill; without the pin the runtime
+    resolves whatever is newest, so publishing a skill would silently change
+    every agent using it."""
+    from crewai.utilities.agent_utils import load_agent_from_repository
+
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "skills": [
+            "@acme/crewai-brand",
+            "@acme/already-pinned@3.0.0",
+            "@acme/unrecorded",
+        ],
+        "skill_versions": [
+            {"registry_ref": "@acme/crewai-brand", "version": "2.1.0"},
+            {"registry_ref": "@acme/already-pinned", "version": "1.0.0"},
+        ],
+    }
+    mock_get_agent.return_value = mock_get_response
+
+    attributes = load_agent_from_repository("test_agent")
+
+    assert attributes["skills"] == [
+        "@acme/crewai-brand@2.1.0",
+        "@acme/already-pinned@3.0.0",  # keeps the pin it already carried
+        "@acme/unrecorded",  # no recorded version to apply
+    ]
+    # Not an Agent field — it only exists to carry the pins.
+    assert "skill_versions" not in attributes
 
 
 @patch("crewai.plus_api.PlusAPI.get_agent")

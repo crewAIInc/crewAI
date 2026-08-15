@@ -88,7 +88,7 @@ class E2BBaseTool(BaseTool):
             EnvVar(
                 name="E2B_API_KEY",
                 description="API key for E2B sandbox service",
-                required=False,
+                required=True,
             ),
             EnvVar(
                 name="E2B_DOMAIN",

@@ -76,6 +76,69 @@ class UsageMetrics(BaseModel):
         self.cache_creation_tokens += usage_metrics.cache_creation_tokens
         self.successful_requests += usage_metrics.successful_requests
 
+    def delta_since(self, baseline: Self) -> Self:
+        """Return the per-call usage accrued since ``baseline`` was captured.
+
+        Both objects must come from the same monotonically increasing
+        accumulator (e.g. an LLM instance's lifetime counters). Differences
+        are clamped at zero so a reset accumulator can't produce negative
+        usage.
+
+        Args:
+            baseline: A snapshot of the same accumulator taken earlier.
+
+        Returns:
+            A new UsageMetrics with the field-wise difference.
+        """
+        return type(self)(
+            total_tokens=max(0, self.total_tokens - baseline.total_tokens),
+            prompt_tokens=max(0, self.prompt_tokens - baseline.prompt_tokens),
+            cached_prompt_tokens=max(
+                0, self.cached_prompt_tokens - baseline.cached_prompt_tokens
+            ),
+            completion_tokens=max(
+                0, self.completion_tokens - baseline.completion_tokens
+            ),
+            reasoning_tokens=max(0, self.reasoning_tokens - baseline.reasoning_tokens),
+            cache_creation_tokens=max(
+                0, self.cache_creation_tokens - baseline.cache_creation_tokens
+            ),
+            successful_requests=max(
+                0, self.successful_requests - baseline.successful_requests
+            ),
+        )
+
+    @staticmethod
+    def _has_unreconciled_anthropic_cache_keys(usage_data: dict[str, Any]) -> bool:
+        """Detect raw Anthropic usage that still splits cache from ``input_tokens``.
+
+        The native ``AnthropicCompletion`` provider folds cache read/creation
+        counters into ``input_tokens`` before usage reaches this normalizer.
+        LiteLLM and flow-level event aggregation can still deliver the raw
+        Anthropic API shape, where ``input_tokens`` is only the uncached
+        portion and cache counters arrive as separate keys. Without
+        reconciling here, ``prompt_tokens`` and ``total_tokens`` undercount
+        billed usage on cached Anthropic workloads.
+        """
+        return "input_tokens" in usage_data and (
+            "cache_read_input_tokens" in usage_data
+            or "cache_creation_input_tokens" in usage_data
+        )
+
+    @staticmethod
+    def _resolve_billed_prompt_tokens(usage_data: dict[str, Any]) -> int:
+        """Return the full billed prompt/input token count for a usage dict."""
+        if UsageMetrics._has_unreconciled_anthropic_cache_keys(usage_data):
+            return (
+                _coerce_int(usage_data.get("input_tokens"))
+                + _coerce_int(usage_data.get("cache_read_input_tokens"))
+                + _coerce_int(usage_data.get("cache_creation_input_tokens"))
+            )
+
+        return _first_int(
+            usage_data, "prompt_tokens", "prompt_token_count", "input_tokens"
+        )
+
     @classmethod
     def from_provider_dict(cls, usage_data: dict[str, Any] | None) -> Self | None:
         """Normalize a provider's raw usage dict into a ``UsageMetrics``.
@@ -93,9 +156,7 @@ class UsageMetrics(BaseModel):
         if not usage_data:
             return None
 
-        prompt_tokens = _first_int(
-            usage_data, "prompt_tokens", "prompt_token_count", "input_tokens"
-        )
+        prompt_tokens = cls._resolve_billed_prompt_tokens(usage_data)
         completion_tokens = _first_int(
             usage_data,
             "completion_tokens",
@@ -113,12 +174,16 @@ class UsageMetrics(BaseModel):
             if isinstance(details, dict):
                 cached_prompt_tokens = _coerce_int(details.get("cached_tokens"))
 
+        cache_creation_tokens = _coerce_int(
+            usage_data.get("cache_creation_tokens")
+        ) or _coerce_int(usage_data.get("cache_creation_input_tokens"))
+
         return cls(
             total_tokens=prompt_tokens + completion_tokens,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             cached_prompt_tokens=cached_prompt_tokens,
             reasoning_tokens=_coerce_int(usage_data.get("reasoning_tokens")),
-            cache_creation_tokens=_coerce_int(usage_data.get("cache_creation_tokens")),
+            cache_creation_tokens=cache_creation_tokens,
             successful_requests=1,
         )

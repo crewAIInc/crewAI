@@ -1,0 +1,190 @@
+---
+title: "ترقية CrewAI"
+description: "كيفية ترقية CrewAI في مشروعك والتكيّف مع التغييرات الجذرية بين الإصدارات."
+icon: "arrow-up-circle"
+---
+
+## نظرة عامة
+
+تجلب إصدارات CrewAI قدرات جديدة بانتظام. يرشدك هذا الدليل خلال الخطوات العملية للحفاظ على تثبيتك محدّثًا — سواء أداة سطر الأوامر أو البيئة الافتراضية لمشروعك.
+
+إذا كنت تبدأ من الصفر، راجع [التثبيت](/ar/installation). إذا كنت قادمًا من إطار عمل آخر، راجع [الترحيل من LangGraph](/ar/guides/migration/migrating-from-langgraph).
+
+---
+
+## الشيئان اللذان قد ترغب في ترقيتهما
+
+يوجد CrewAI في مكانين على جهازك، ويتم ترقيتهما بشكل مستقل:
+
+| ماذا | كيف يُثبَّت | كيف تتم الترقية |
+|---|---|---|
+| **أداة سطر الأوامر العامة `crewai`** | `uv tool install crewai` | `uv tool install crewai --upgrade` |
+| **بيئة venv للمشروع** (حيث يعمل الكود) | `crewai install` / `uv sync` | `uv add "crewai[...]>=X.Y.Z"` ثم `crewai install` |
+
+يمكن لهما — وغالبًا ما يحدث — أن يخرجا عن التزامن. تشغيل `crewai --version` يُظهر إصدار سطر الأوامر. تشغيل `uv pip show crewai` داخل مشروعك يُظهر إصدار venv. إذا اختلفا، فهذا طبيعي؛ ما يهم بالنسبة للكود قيد التشغيل هو إصدار venv.
+
+## لماذا لا يقوم `crewai install` وحده بالترقية
+
+`crewai install` هو غلاف رفيع حول `uv sync`. يُثبّت بالضبط ما يقوله ملف `uv.lock` الحالي — وهو **لا** يرفع أي قيود إصدار.
+
+إذا كان `pyproject.toml` يقول `crewai>=1.11.1` وقد قام ملف القفل بحلّه إلى `1.11.1`، فإن تشغيل `crewai install` سيُبقيك على `1.11.1` للأبد، حتى وإن كان الإصدار `1.14.4` متاحًا.
+
+للترقية فعلًا، عليك:
+
+1. تحديث قيد الإصدار في `pyproject.toml`
+2. إعادة حلّ ملف القفل
+3. مزامنة venv
+
+`uv add` يقوم بالثلاثة في خطوة واحدة.
+
+## كيفية ترقية مشروعك
+
+```bash
+# يرفع القيد ويعيد القفل في أمر واحد
+uv add "crewai[tools]>=1.14.4"
+
+# يزامن venv (crewai install يستدعي uv sync تحت الغطاء)
+crewai install
+
+# تحقّق
+uv pip show crewai
+# → Version: 1.14.4
+```
+
+استبدل `[tools]` بأي إضافات يستخدمها مشروعك (مثلًا `[tools,anthropic]`). تحقّق من قائمة `dependencies` في `pyproject.toml` إن لم تكن متأكدًا.
+
+<Note>
+  يحدّث `uv add` كلا من `pyproject.toml` **و** `uv.lock` بشكل ذرّي. إذا قمت بتحرير `pyproject.toml` يدويًا، فإنك لا تزال بحاجة إلى تشغيل `uv lock --upgrade-package crewai` لإعادة حلّ ملف القفل قبل أن يلتقط `crewai install` الإصدار الجديد.
+</Note>
+
+## ترقية أداة سطر الأوامر العامة
+
+أداة سطر الأوامر العامة منفصلة عن مشروعك. قم بترقيتها عبر:
+
+```bash
+uv tool install crewai --upgrade
+```
+
+إذا حذّرك الـ shell بشأن `PATH` بعد الترقية، قم بتحديثه:
+
+```bash
+uv tool update-shell
+```
+
+هذا **لا** يمسّ بيئة venv الخاصة بمشروعك — لا تزال بحاجة إلى `uv add` + `crewai install` داخل المشروع.
+
+## التحقق من تزامن الاثنين
+
+```bash
+# إصدار سطر الأوامر العام
+crewai --version
+
+# إصدار venv للمشروع
+uv pip show crewai | grep Version
+```
+
+ليس من الضروري أن يتطابقا — لكن إصدار venv للمشروع هو ما يهم لسلوك التشغيل.
+
+<Note>
+  يتطلب CrewAI `Python >=3.10, <3.14`. إذا كان `uv` مثبَّتًا مقابل مفسّر أقدم، فأعد إنشاء venv للمشروع باستخدام إصدار Python مدعوم قبل تشغيل `crewai install`.
+</Note>
+
+---
+
+## التغييرات الجذرية وملاحظات الترحيل
+
+تتطلب معظم الترقيات تعديلات صغيرة فقط. المناطق أدناه هي تلك التي تنكسر بصمت أو بتتبعات مكدّس مربكة.
+
+### مسارات الاستيراد: tools و`BaseTool`
+
+الموقع الرسمي لاستيراد الـ tools هو `crewai.tools`. لا تزال المسارات القديمة تظهر في الدروس لكن يجب تحديثها.
+
+```python
+# قبل
+from crewai_tools import BaseTool
+from crewai.agents.tools import tool
+
+# بعد
+from crewai.tools import BaseTool, tool
+```
+
+كلٌ من المُزخرف `@tool` والفئة الفرعية `BaseTool` يقعان في `crewai.tools`. `AgentFinish` والرموز الأخرى الداخلية للوكيل لم تعد جزءًا من السطح العام — إذا كنت تستوردها، فانتقل إلى event listeners أو callbacks الـ `Task` بدلًا منها.
+
+### تغييرات معاملات `Agent`
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Researcher",
+    goal="Find authoritative sources on {topic}",
+    backstory="You are a careful, source-driven researcher.",
+    llm="gpt-4o-mini",   # اسم نموذج كسلسلة نصية أو كائن LLM
+    verbose=True,        # bool وليس مستوى عددي صحيح
+    max_iter=15,         # تغيّر الافتراضي بين الإصدارات — حدّده بشكل صريح
+    allow_delegation=False,
+)
+```
+
+- يقبل `llm` إما اسم نموذج كسلسلة نصية (يُحلَّ عبر المزوّد المهيّأ) أو كائن `LLM` للتحكم الدقيق.
+- `verbose` هو `bool` بسيط. تمرير عدد صحيح لم يعد يبدّل مستويات السجل.
+- تغيّرت افتراضات `max_iter` بين الإصدارات. إذا توقف وكيلك بصمت عن التكرار بعد أول استدعاء tool، فحدّد `max_iter` صراحةً.
+
+### معاملات `Crew`
+
+```python
+from crewai import Crew, Process
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,   # أو Process.hierarchical
+    memory=True,
+    cache=True,
+    embedder={"provider": "openai", "config": {"model": "text-embedding-3-small"}},
+)
+```
+
+- يتطلب `process=Process.hierarchical` إما `manager_llm=` أو `manager_agent=`. بدون أحدهما، يرفع kickoff خطأً عند التحقّق.
+- `memory=True` مع مزوّد embedding غير افتراضي يحتاج إلى قاموس `embedder` — راجع [إعداد الذاكرة وembedder](#memory-embedder-config) أدناه.
+
+### الإخراج المُهيكل لـ `Task`
+
+استخدم `output_pydantic` أو `output_json` أو `output_file` لإلزام نتيجة المهمة بشكل مكتوب الأنواع:
+
+```python
+from pydantic import BaseModel
+from crewai import Task
+
+class Article(BaseModel):
+    title: str
+    body: str
+
+write = Task(
+    description="Write an article about {topic}",
+    expected_output="A short article with a title and body",
+    agent=writer,
+    output_pydantic=Article,        # الفئة، وليس مثيلًا منها
+    output_file="output/article.md",
+)
+```
+
+`output_pydantic` يأخذ **الفئة** نفسها. تمرير `Article(title="", body="")` خطأ شائع ويفشل بخطأ تحقّق مربك.
+
+### إعداد الذاكرة وembedder {#memory-embedder-config}
+
+إذا كان `memory=True` وأنت لا تستخدم embeddings الافتراضية الخاصة بـ OpenAI، فيجب أن تمرّر `embedder`:
+
+```python
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=True,
+    embedder={
+        "provider": "ollama",
+        "config": {"model": "nomic-embed-text"},
+    },
+)
+```
+
+ضع بيانات اعتماد المزوّد المعنيّة (`OPENAI_API_KEY`, `OLLAMA_HOST`, إلخ) في ملف `.env`. مسارات تخزين الذاكرة محلية بالنسبة للمشروع افتراضيًا — احذف مجلد ذاكرة المشروع إذا غيّرت embedders، لأن الأبعاد لا تختلط.

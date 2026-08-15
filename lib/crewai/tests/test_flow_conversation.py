@@ -1555,6 +1555,180 @@ class TestConversationalFlow:
         )
 
 
+class TestHandleTurnReplyFallback:
+    """Regression tests for EPD-181: ``handle_turn()`` decided "did the
+    handler append its reply?" by comparing assistant-message counts. A
+    handler that appends its reply AND trims history to a cap left the count
+    unchanged, so the fallback appended the reply a second time — every turn,
+    once trimming engaged. The check now uses an explicit appended-this-turn
+    flag.
+    """
+
+    MAX_MESSAGES = 4
+
+    def _make_bot(self) -> ConversationalFlow:
+        max_messages = self.MAX_MESSAGES
+
+        class EchoBot(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "ECHO"
+
+            @listen("ECHO")
+            def echo(self) -> str:
+                reply = f"echo: {self.state.current_user_message or ''}"
+                self.append_assistant_message(reply)  # handler DOES append
+                if len(self.state.messages) > max_messages:  # ...and trims
+                    self.state.messages = self.state.messages[-max_messages:]
+                return reply
+
+        return EchoBot()
+
+    def test_no_duplicate_reply_when_handler_trims_history(self) -> None:
+        bot = self._make_bot()
+        for i in range(1, 5):
+            bot.handle_turn(f"message {i}")
+            contents = [message.content for message in bot.state.messages]
+            assert len(contents) == len(set(contents)), (
+                f"duplicate reply on turn {i}: {contents}"
+            )
+
+        # The capped window holds the last two full turns, in order.
+        assert [message.content for message in bot.state.messages] == [
+            "message 3",
+            "echo: message 3",
+            "message 4",
+            "echo: message 4",
+        ]
+
+    def test_fallback_still_appends_when_handler_does_not_reply(self) -> None:
+        class SilentBot(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "WORK"
+
+            @listen("WORK")
+            def work(self) -> str:
+                return "computed reply"  # returns without appending
+
+        bot = SilentBot()
+        bot.handle_turn("hello")
+
+        assistant_messages = [
+            message.content
+            for message in bot.state.messages
+            if message.role == "assistant"
+        ]
+        assert assistant_messages == ["computed reply"]
+
+
+class TestFalsyRouteTurnFallback:
+    """A falsy ``route_turn()`` must never replay a previous turn's intent.
+
+    Regression tests for EPD-176: an overridden ``route_turn()`` returning
+    ``None`` on an unhandled input used to silently reuse the sticky
+    ``state.last_intent`` from the *previous* turn, running the wrong handler
+    with no error or warning.
+    """
+
+    def test_falsy_route_turn_does_not_replay_previous_turns_intent(self) -> None:
+        ran: list[str] = []
+
+        class Bot(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                message = context.get("current_user_message") or ""
+                if "hello" in message.lower():
+                    return "GREETING"
+                return None  # unhandled input -> falsy return
+
+            @listen("GREETING")
+            def greeting(self) -> str:
+                ran.append("GREETING")
+                reply = "Hi! I only do greetings."
+                self.append_assistant_message(reply)
+                return reply
+
+            @listen("WEATHER")
+            def weather(self) -> str:
+                ran.append("WEATHER")
+                reply = "It is sunny."
+                self.append_assistant_message(reply)
+                return reply
+
+        flow = Bot()
+        flow.handle_turn("hello there")
+        assert ran == ["GREETING"]
+        assert flow.state.last_intent == "GREETING"
+
+        flow.handle_turn("what is the meaning of life?")
+        assert ran == ["GREETING"], (
+            "an unhandled turn must not re-run the previous turn's handler"
+        )
+        # With no routing decision the turn falls through to the built-in
+        # 'converse' default instead of replaying the stale intent.
+        assert flow.state.last_intent == "converse"
+        assert flow.state.messages[-1].content != "Hi! I only do greetings."
+
+    def test_stale_intent_ignored_but_route_selected_event_still_emitted(
+        self,
+    ) -> None:
+        class Bot(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                message = context.get("current_user_message") or ""
+                return "work" if "work" in message else None
+
+            @listen("work")
+            def do_work(self) -> str:
+                self.append_assistant_message("worked")
+                return "worked"
+
+        flow = Bot()
+        routes: list[ConversationRouteSelectedEvent] = []
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(ConversationRouteSelectedEvent)
+            def capture(_: Any, event: ConversationRouteSelectedEvent) -> None:
+                routes.append(event)
+
+            flow.handle_turn("work please")
+            flow.handle_turn("something unrelated")
+            crewai_event_bus.flush()
+
+        assert [event.route for event in routes] == ["work", "converse"]
+        # The fallback decision still reports the prior intent for visibility.
+        assert routes[1].previous_intent == "work"
+
+    def test_fresh_intent_classified_this_turn_still_routes(self) -> None:
+        """The legacy ``default_intents`` path classifies per turn and must
+        keep routing on the freshly classified intent — including when the
+        intent changes between turns."""
+        ran: list[str] = []
+
+        @ConversationConfig(
+            default_intents=["search", "weather"], intent_llm="gpt-4o-mini"
+        )
+        class LegacyFlow(ConversationalFlow):
+            @listen("search")
+            def handle_search(self) -> str:
+                ran.append("search")
+                self.append_assistant_message("searched")
+                return "searched"
+
+            @listen("weather")
+            def handle_weather(self) -> str:
+                ran.append("weather")
+                self.append_assistant_message("sunny")
+                return "sunny"
+
+        flow = LegacyFlow()
+        with patch.object(
+            flow, "_collapse_to_outcome", side_effect=["search", "weather"]
+        ):
+            flow.handle_turn("look up crewai")
+            flow.handle_turn("how is the weather?")
+
+        assert ran == ["search", "weather"]
+        assert flow.state.last_intent == "weather"
+
+
 class TestFlowTracingWhenSuppressed:
     def test_flow_started_emitted_when_panel_events_suppressed(self) -> None:
         class QuietFlow(Flow[ChatState]):
