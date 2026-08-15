@@ -102,3 +102,19 @@ def test_validate_query_rejects_locking_clauses(query: str) -> None:
     ok, message = _tool()._validate_query(query)
     assert ok is False
     assert ("FOR UPDATE" in message) or ("LOCK" in message)
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "SELECT 1 INTO/**/S3",
+        "SELECT * FROM t FOR/**/UPDATE",
+        "SELECT 1 INTO /* comment */ OUTFILE",
+        "SELECT * FROM t /**/ LOCK IN SHARE MODE",
+    ],
+)
+def test_validate_query_rejects_sql_comments(query: str) -> None:
+    """SQL comments can separate keywords and bypass pattern checks."""
+    ok, message = _tool()._validate_query(query)
+    assert ok is False
+    assert "comments" in message

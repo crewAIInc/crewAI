@@ -378,6 +378,16 @@ class SingleStoreSearchTool(BaseTool):
         if ";" in stripped:
             return False, "Multiple SQL statements are not supported."
 
+        # Reject SQL comments — they can separate keywords and bypass
+        # the regex-based pattern checks below (e.g. INTO/**/S3,
+        # FOR/**/UPDATE).  A legitimate search query has no reason to
+        # contain comment syntax.
+        if "/*" in stripped or stripped.startswith("--"):
+            return (
+                False,
+                "SQL comments are not supported in search queries.",
+            )
+
         first_token = stripped.split(None, 1)[0].lower().rstrip("(")
         if first_token not in {"select", "show"}:
             return (
