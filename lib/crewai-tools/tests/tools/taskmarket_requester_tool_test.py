@@ -297,9 +297,11 @@ def test_concurrent_create_calls_cannot_duplicate_spend(
         first = executor.submit(tool._run, operation="create", preview_id=preview_id)
         assert runner.address_started.wait(timeout=5)
         second = executor.submit(tool._run, operation="create", preview_id=preview_id)
-        with pytest.raises(PermissionError, match="already attempted"):
-            second.result(timeout=5)
-        runner.release_address.set()
+        try:
+            with pytest.raises(PermissionError, match="already attempted"):
+                second.result(timeout=5)
+        finally:
+            runner.release_address.set()
         created = json.loads(first.result(timeout=5))
 
     assert created["created"] is True
