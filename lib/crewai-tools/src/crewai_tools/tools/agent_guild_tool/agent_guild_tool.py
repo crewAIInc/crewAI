@@ -37,6 +37,7 @@ _ENV_VARS: List[EnvVar] = [
 
 
 def _base_url() -> str:
+    """Return the validated Agent Guild HTTP(S) base URL."""
     configured = os.environ.get(
         "AGENT_GUILD_BASE_URL", DEFAULT_AGENT_GUILD_BASE_URL).rstrip("/")
     parsed = urllib.parse.urlparse(configured)
@@ -108,6 +109,8 @@ def _request(path: str, data: Optional[bytes] = None) -> str:
 
 
 class AgentGuildCheckInput(BaseModel):
+    """Input schema for finding a safe agent for a capability."""
+
     capability: str = Field(
         ...,
         description="The capability to vet before delegating, e.g. "
@@ -115,6 +118,8 @@ class AgentGuildCheckInput(BaseModel):
 
 
 class AgentGuildCheckTool(BaseTool):
+    """Ask Agent Guild which agent is safest for a capability."""
+
     name: str = "Agent Guild capability check"
     description: str = (
         "Vet a capability before delegating work to another AI agent. Returns "
@@ -128,15 +133,20 @@ class AgentGuildCheckTool(BaseTool):
     env_vars: List[EnvVar] = Field(default_factory=lambda: list(_ENV_VARS))
 
     def _run(self, capability: str) -> str:
+        """Return Agent Guild's ranked capability check as JSON text."""
         return _request("/check?capability=" + urllib.parse.quote(capability, safe=""))
 
 
 class AgentGuildRiskScoreInput(BaseModel):
+    """Input schema for checking one Agent Guild agent id."""
+
     agent_id: str = Field(
         ..., description="The Agent Guild agent id to assess, e.g. 'agent_1a2b3c'")
 
 
 class AgentGuildRiskScoreTool(BaseTool):
+    """Fetch Agent Guild's current risk verdict for one agent."""
+
     name: str = "Agent Guild risk score"
     description: str = (
         "Get a hire/caution/avoid risk verdict for one specific Agent Guild "
@@ -146,11 +156,14 @@ class AgentGuildRiskScoreTool(BaseTool):
     env_vars: List[EnvVar] = Field(default_factory=lambda: list(_ENV_VARS))
 
     def _run(self, agent_id: str) -> str:
+        """Return the selected agent's current risk score as JSON text."""
         quoted_id = urllib.parse.quote(agent_id, safe="")
         return _request(f"/agents/{quoted_id}/risk-score")
 
 
 class AgentGuildVerifyPassportInput(BaseModel):
+    """Input schema for a presented Agent Passport JSON document."""
+
     credential_json: str = Field(
         ...,
         description="The Agent Passport (a Guild-signed W3C Verifiable "
@@ -158,6 +171,8 @@ class AgentGuildVerifyPassportInput(BaseModel):
 
 
 class AgentGuildVerifyPassportTool(BaseTool):
+    """Verify a signed Agent Passport and retrieve current trust state."""
+
     name: str = "Agent Guild passport verification"
     description: str = (
         "Verify an Agent Passport (Guild-signed W3C Verifiable Credential) "
@@ -169,5 +184,6 @@ class AgentGuildVerifyPassportTool(BaseTool):
     env_vars: List[EnvVar] = Field(default_factory=lambda: list(_ENV_VARS))
 
     def _run(self, credential_json: str) -> str:
+        """Return passport signature validity and current trust as JSON text."""
         return _request(
             "/credentials/verify", data=credential_json.encode("utf-8"))
