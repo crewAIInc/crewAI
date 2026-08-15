@@ -20,6 +20,7 @@ from urllib.parse import urlparse
 logger = logging.getLogger(__name__)
 
 _UNSAFE_PATHS_ENV = "CREWAI_TOOLS_ALLOW_UNSAFE_PATHS"
+_BYPASS_HINT = f"Set {_UNSAFE_PATHS_ENV}=true to bypass this check."
 
 
 def format_path_for_display(path: str, base_dir: str | None = None) -> str:
@@ -45,6 +46,27 @@ def format_error_for_display(error: Exception) -> str:
     if isinstance(error, OSError):
         return error.strerror or error.__class__.__name__
     return str(error)
+
+
+def format_sandbox_error(error: Exception, remedy: str) -> str:
+    """Restate a containment rejection with a tool-specific remedy.
+
+    Rejections from :func:`validate_file_path` end by advertising the
+    process-wide escape hatch, which also disables the SSRF checks on
+    URL-fetching tools. Tools that accept a narrower ``base_dir`` should point
+    at that instead, so callers reach for the blunt instrument last.
+
+    Args:
+        error: The rejection raised by path validation.
+        remedy: Guidance to offer in place of the escape-hatch advice.
+
+    Returns:
+        The rejection text with *remedy* substituted for the bypass advice.
+    """
+    text = str(error)
+    if text.endswith(_BYPASS_HINT):
+        text = text[: -len(_BYPASS_HINT)].rstrip()
+    return f"{text} {remedy}".strip()
 
 
 def _is_escape_hatch_enabled() -> bool:

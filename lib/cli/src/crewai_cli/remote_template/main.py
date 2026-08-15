@@ -17,7 +17,7 @@ from crewai_cli.command import BaseCommand
 logger = logging.getLogger(__name__)
 console = Console()
 
-GITHUB_ORG = "crewAIInc"
+GITHUB_ORG = "crewAIInc-fde"
 TEMPLATE_PREFIX = "template_"
 GITHUB_API_BASE = "https://api.github.com"
 
@@ -218,7 +218,7 @@ class TemplateCommand(BaseCommand):
     def _extract_zip(self, zip_bytes: bytes, dest: str) -> None:
         """Extract a GitHub zipball into dest, stripping the top-level directory."""
         with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
-            # GitHub zipballs have a single top-level dir like 'crewAIInc-template_xxx-<sha>/'
+            # GitHub zipballs have a single top-level dir like 'crewAIInc-fde-template_xxx-<sha>/'
             members = zf.namelist()
             if not members:
                 click.secho("Downloaded archive is empty.", fg="red")

@@ -322,7 +322,7 @@ class GeminiCompletion(BaseLLM):
                     system_instruction, tools, effective_response_model
                 )
 
-                if self.stream:
+                if self._effective_stream():
                     return self._handle_streaming_completion(
                         formatted_content,
                         config,
@@ -401,7 +401,7 @@ class GeminiCompletion(BaseLLM):
                     system_instruction, tools, effective_response_model
                 )
 
-                if self.stream:
+                if self._effective_stream():
                     return await self._ahandle_streaming_completion(
                         formatted_content,
                         config,

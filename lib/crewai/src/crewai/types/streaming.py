@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Callable, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator, Sequence
+from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, Field
 from typing_extensions import Self
@@ -15,6 +16,262 @@ if TYPE_CHECKING:
 
 
 T = TypeVar("T")
+_MISSING = object()
+
+StreamChannel = Literal[
+    "llm",
+    "flow",
+    "tools",
+    "messages",
+    "lifecycle",
+    "custom",
+]
+
+
+class StreamFrame(BaseModel):
+    """Stable public stream frame emitted by streamable runtimes."""
+
+    id: str = Field(description="Unique frame/event identifier")
+    seq: int | None = Field(default=None, description="Execution-local order")
+    type: str = Field(description="Source event type")
+    channel: StreamChannel = Field(description="High-level stream channel")
+    namespace: list[str] = Field(default_factory=list)
+    timestamp: datetime
+    parent_id: str | None = None
+    previous_id: str | None = None
+    data: dict[str, Any] = Field(default_factory=dict)
+
+    @property
+    def content(self) -> str:
+        """Printable text content for chunk-like consumers."""
+        chunk = self.data.get("chunk")
+        if isinstance(chunk, str):
+            return chunk
+        return ""
+
+    @property
+    def event(self) -> dict[str, Any]:
+        """Structured source event payload."""
+        return self.data
+
+
+class StreamSessionBase(Generic[T]):
+    """Base stream session with ordered frame iteration and result access."""
+
+    def __init__(
+        self,
+        sync_iterator: Iterator[StreamFrame] | None = None,
+        async_iterator: AsyncIterator[StreamFrame] | None = None,
+    ) -> None:
+        self._result: T | object = _MISSING
+        self._completed = False
+        self._frames: list[StreamFrame] = []
+        self._error: Exception | None = None
+        self._cancelled = False
+        self._exhausted = False
+        self._on_cleanup: Callable[[], None] | None = None
+        self._sync_iterator = sync_iterator
+        self._async_iterator = async_iterator
+
+    @property
+    def result(self) -> T:
+        """Return the final result after stream exhaustion or completion."""
+        if not self._completed:
+            raise RuntimeError(
+                "Streaming has not completed yet. "
+                "Iterate over all frames before accessing result."
+            )
+        if self._error is not None:
+            raise self._error
+        if self._result is _MISSING:
+            raise RuntimeError("No result available")
+        return self._result  # type: ignore[return-value]
+
+    @property
+    def is_completed(self) -> bool:
+        """Check if the stream has completed."""
+        return self._completed
+
+    @property
+    def is_cancelled(self) -> bool:
+        """Check if the stream was cancelled."""
+        return self._cancelled
+
+    @property
+    def is_exhausted(self) -> bool:
+        """Check if the stream iterator was fully consumed."""
+        return self._exhausted
+
+    @property
+    def frames(self) -> list[StreamFrame]:
+        """Return collected frames."""
+        return self._frames.copy()
+
+    def _set_result(self, result: T) -> None:
+        self._result = result
+        self._completed = True
+
+
+class StreamSession(StreamSessionBase[T]):
+    """Synchronous stream session for ordered public frames."""
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *exc_info: Any) -> None:
+        if not self._exhausted:
+            self.close()
+
+    @property
+    def events(self) -> Iterator[StreamFrame]:
+        """Iterate over all ordered frames."""
+        return self.subscribe()
+
+    def __iter__(self) -> Iterator[StreamFrame]:
+        """Iterate over all ordered frames."""
+        return self.events
+
+    @property
+    def llm(self) -> Iterator[StreamFrame]:
+        """Iterate over LLM token and thinking frames."""
+        return self.subscribe(channels=["llm"])
+
+    @property
+    def messages(self) -> Iterator[StreamFrame]:
+        """Iterate over conversation message frames."""
+        return self.subscribe(channels=["messages"])
+
+    @property
+    def flow(self) -> Iterator[StreamFrame]:
+        """Iterate over Flow lifecycle and method frames."""
+        return self.subscribe(channels=["flow"])
+
+    @property
+    def tools(self) -> Iterator[StreamFrame]:
+        """Iterate over tool execution frames."""
+        return self.subscribe(channels=["tools"])
+
+    def interleave(self, channels: Sequence[StreamChannel]) -> Iterator[StreamFrame]:
+        """Iterate over selected channels while preserving global order."""
+        return self.subscribe(channels=channels)
+
+    def subscribe(
+        self, channels: Sequence[StreamChannel] | None = None
+    ) -> Iterator[StreamFrame]:
+        """Iterate over frames, optionally filtered by channel."""
+        selected = set(channels) if channels is not None else None
+        if self._exhausted:
+            for frame in self._frames:
+                if selected is None or frame.channel in selected:
+                    yield frame
+            return
+        if self._sync_iterator is None:
+            raise RuntimeError("Sync iterator not available")
+        try:
+            for frame in self._sync_iterator:
+                self._frames.append(frame)
+                if selected is None or frame.channel in selected:
+                    yield frame
+            self._exhausted = True
+        except Exception as e:
+            self._error = e
+            raise
+        finally:
+            self._completed = True
+
+    def close(self) -> None:
+        """Cancel streaming and clean up resources."""
+        if self._cancelled or self._exhausted or self._error is not None:
+            return
+        self._cancelled = True
+        self._completed = True
+        if self._sync_iterator is not None and hasattr(self._sync_iterator, "close"):
+            self._sync_iterator.close()
+        if self._on_cleanup is not None:
+            self._on_cleanup()
+            self._on_cleanup = None
+
+
+class AsyncStreamSession(StreamSessionBase[T]):
+    """Asynchronous stream session for ordered public frames."""
+
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(self, *exc_info: Any) -> None:
+        if not self._exhausted:
+            await self.aclose()
+
+    @property
+    def events(self) -> AsyncIterator[StreamFrame]:
+        """Iterate over all ordered frames."""
+        return self.subscribe()
+
+    def __aiter__(self) -> AsyncIterator[StreamFrame]:
+        """Iterate over all ordered frames."""
+        return self.events
+
+    @property
+    def llm(self) -> AsyncIterator[StreamFrame]:
+        """Iterate over LLM token and thinking frames."""
+        return self.subscribe(channels=["llm"])
+
+    @property
+    def messages(self) -> AsyncIterator[StreamFrame]:
+        """Iterate over conversation message frames."""
+        return self.subscribe(channels=["messages"])
+
+    @property
+    def flow(self) -> AsyncIterator[StreamFrame]:
+        """Iterate over Flow lifecycle and method frames."""
+        return self.subscribe(channels=["flow"])
+
+    @property
+    def tools(self) -> AsyncIterator[StreamFrame]:
+        """Iterate over tool execution frames."""
+        return self.subscribe(channels=["tools"])
+
+    def interleave(
+        self, channels: Sequence[StreamChannel]
+    ) -> AsyncIterator[StreamFrame]:
+        """Iterate over selected channels while preserving global order."""
+        return self.subscribe(channels=channels)
+
+    async def subscribe(
+        self, channels: Sequence[StreamChannel] | None = None
+    ) -> AsyncIterator[StreamFrame]:
+        """Iterate over frames, optionally filtered by channel."""
+        selected = set(channels) if channels is not None else None
+        if self._exhausted:
+            for frame in self._frames:
+                if selected is None or frame.channel in selected:
+                    yield frame
+            return
+        if self._async_iterator is None:
+            raise RuntimeError("Async iterator not available")
+        try:
+            async for frame in self._async_iterator:
+                self._frames.append(frame)
+                if selected is None or frame.channel in selected:
+                    yield frame
+            self._exhausted = True
+        except Exception as e:
+            self._error = e
+            raise
+        finally:
+            self._completed = True
+
+    async def aclose(self) -> None:
+        """Cancel streaming and clean up resources."""
+        if self._cancelled or self._exhausted or self._error is not None:
+            return
+        self._cancelled = True
+        self._completed = True
+        if self._async_iterator is not None and hasattr(self._async_iterator, "aclose"):
+            await self._async_iterator.aclose()
+        if self._on_cleanup is not None:
+            self._on_cleanup()
+            self._on_cleanup = None
 
 
 class StreamChunkType(Enum):

@@ -28,6 +28,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.tools.tool_failure import ToolExecutionFailedError
 from crewai.utilities.agent_utils import (
     build_text_tool_calling_fallback_message,
     build_tool_calls_assistant_message,
@@ -180,6 +181,11 @@ class StepExecutor:
                 tool_calls_made=tool_calls_made,
                 execution_time=elapsed,
             )
+        except ToolExecutionFailedError:
+            # A deliberate stop: StepResult(success=False) would let the plan
+            # carry on.
+            raise
+
         except Exception as e:
             if self._use_native_tools and is_native_tool_calling_unsupported_error(e):
                 try:
@@ -218,6 +224,11 @@ class StepExecutor:
                         tool_calls_made=tool_calls_made,
                         execution_time=elapsed,
                     )
+                except ToolExecutionFailedError:
+                    # Same as the outer handler, reached via the text-tooling
+                    # fallback.
+                    raise
+
                 except Exception as fallback_error:
                     e = fallback_error
 

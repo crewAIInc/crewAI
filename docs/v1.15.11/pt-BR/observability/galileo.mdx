@@ -1,0 +1,115 @@
+---
+title: Galileo Galileu
+description: Integração Galileo para rastreamento e avaliação CrewAI
+icon: telescope
+mode: "wide"
+---
+
+## Visão geral
+
+Este guia demonstra como integrar o **Galileo**com o **CrewAI**
+para rastreamento abrangente e engenharia de avaliação.
+Ao final deste guia, você será capaz de rastrear seus agentes CrewAI,
+monitorar seu desempenho e avaliar seu comportamento com
+A poderosa plataforma de observabilidade do Galileo.
+
+> **O que é Galileo?**[Galileo](https://galileo.ai/) é avaliação e observabilidade de IA
+plataforma que oferece rastreamento, avaliação e
+e monitoramento de aplicações de IA. Ele permite que as equipes capturem a verdade,
+criar grades de proteção robustas e realizar experimentos sistemáticos com
+rastreamento de experimentos integrado e análise de desempenho -garantindo confiabilidade,
+transparência e melhoria contínua em todo o ciclo de vida da IA.
+
+## Primeiros passos
+
+Este tutorial segue o [CrewAI Quickstart](pt-BR/quickstart) e mostra como adicionar
+[CrewAIEventListener] do Galileo(https://v2docs.galileo.ai/sdk-api/python/reference/handlers/crewai/handler),
+um manipulador de eventos.
+Para mais informações, consulte Galileu
+[Adicionar Galileo a um aplicativo CrewAI](https://v2docs.galileo.ai/how-to-guides/third-party-integrations/add-galileo-to-crewai/add-galileo-to-crewai)
+guia prático.
+
+> **Observação**Este tutorial pressupõe que você concluiu o [CrewAI Quickstart](pt-BR/quickstart).
+Se você quiser um exemplo completo e abrangente, consulte o Galileo
+[Repositório de exemplo SDK da CrewAI](https://github.com/rungalileo/sdk-examples/tree/main/python/agent/crew-ai).
+
+### Etapa 1: instalar dependências
+
+Instale as dependências necessárias para seu aplicativo.
+Crie um ambiente virtual usando seu método preferido,
+em seguida, instale dependências dentro desse ambiente usando seu
+ferramenta preferida:
+
+```bash
+uv add galileo 
+```
+
+### Etapa 2: adicione ao arquivo .env do [CrewAI Quickstart](/pt-BR/quickstart)
+
+```bash
+# Your Galileo API key
+GALILEO_API_KEY="your-galileo-api-key"
+
+# Your Galileo project name
+GALILEO_PROJECT="your-galileo-project-name"
+
+# The name of the Log stream you want to use for logging
+GALILEO_LOG_STREAM="your-galileo-log-stream "
+```
+
+### Etapa 3: adicionar o ouvinte de eventos Galileo
+
+Para habilitar o registro com Galileo, você precisa criar uma instância do `CrewAIEventListener`.
+Importe o pacote manipulador Galileo CrewAI por
+adicionando o seguinte código no topo do seu arquivo main.py:
+
+```python
+from galileo.handlers.crewai.handler import CrewAIEventListener
+```
+
+No início da sua função run, crie o ouvinte de evento:
+
+```python
+def run():
+    # Create the event listener
+    CrewAIEventListener()
+    # The rest of your existing code goes here
+```
+
+Quando você cria a instância do listener, ela é automaticamente
+registrado na CrewAI.
+
+### Etapa 4: administre sua Crew
+
+Administre sua Crew com o CrewAI CLI:
+
+```bash
+crewai run
+```
+
+### Passo 5: Visualize os traços no Galileo
+
+Assim que sua tripulação terminar, os rastros serão eliminados e aparecerão no Galileo.
+
+![Galileo trace view](/images/galileo-trace-veiw.png)
+  
+## Compreendendo a integração do Galileo
+
+Galileo se integra ao CrewAI registrando um ouvinte de evento
+que captura eventos de execução da tripulação (por exemplo, ações do agente, chamadas de ferramentas, respostas do modelo)
+e os encaminha ao Galileo para observabilidade e avaliação.
+
+### Compreendendo o ouvinte de eventos
+
+Criar uma instância `CrewAIEventListener()` é tudo o que você precisa
+necessário para habilitar o Galileo para uma execução do CrewAI. Quando instanciado, o ouvinte:
+
+-Registra-se automaticamente no CrewAI
+-Lê a configuração do Galileo a partir de variáveis de ambiente
+-Registra todos os dados de execução no projeto Galileo e fluxo de log especificado por
+  `GALILEO_PROJECT` e `GALILEO_LOG_STREAM`
+
+Nenhuma configuração adicional ou alterações de código são necessárias.
+Todos os dados desta execução são registados no projecto Galileo e
+fluxo de log especificado pela configuração do seu ambiente
+(por exemplo, GALILEO_PROJECT e GALILEO_LOG_STREAM).
