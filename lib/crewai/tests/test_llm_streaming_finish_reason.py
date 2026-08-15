@@ -11,14 +11,14 @@ from unittest.mock import patch
 
 import pytest
 
-from crewai.events.event_bus import CrewAIEventsBus
+from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import LLMCallCompletedEvent
 from crewai.llm import LLM
 
 
 @pytest.fixture
 def mock_emit():
-    with patch.object(CrewAIEventsBus, "emit") as mock:
+    with patch.object(crewai_event_bus, "emit") as mock:
         yield mock
 
 
