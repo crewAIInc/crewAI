@@ -197,15 +197,47 @@ If you encounter issues during installation or usage, here are some common solut
    - Try upgrading pip: `pip install --upgrade pip`
    - If issues persist, use a pre-built wheel: `pip install tiktoken --prefer-binary`
 
-### 2. Setting Up Your Crew with the YAML Configuration
+### 2. Setting Up Your Crew with JSON Configuration
 
-To create a new CrewAI project, run the following CLI (Command Line Interface) command:
+`crewai create crew` creates a JSON-first project. Agents live in `agents/*.jsonc`, tasks and crew settings live in `crew.jsonc`, and `crewai run` loads that definition directly.
 
 ```shell
 crewai create crew <project_name>
 ```
 
 This command creates a new project folder with the following structure:
+
+```
+my_project/
+├── .gitignore
+├── .env
+├── agents/
+│   └── researcher.jsonc
+├── crew.jsonc
+├── knowledge/
+├── pyproject.toml
+├── README.md
+├── skills/
+└── tools/
+```
+
+You can now start developing your crew by editing the generated JSON files:
+
+- Modify `agents/*.jsonc` to define each agent's role, goal, backstory, LLM, tools, and settings.
+- Modify `crew.jsonc` to configure tasks, process, memory, and input defaults.
+- Add custom tools in `tools/` and reference them as `"custom:<name>"`.
+- Add knowledge files in `knowledge/` and skills in `skills/`.
+- Add your environment variables into the `.env` file.
+
+Use `{placeholder}` values in agent and task text, then set defaults in `crew.jsonc` under `inputs`. When you run `crewai run`, the CLI prompts for any missing values.
+
+Need the older Python/YAML scaffold with `crew.py`, `config/agents.yaml`, and `config/tasks.yaml`? Create it with `--classic`:
+
+```shell
+crewai create crew <project_name> --classic
+```
+
+That generates:
 
 ```
 my_project/
@@ -226,16 +258,6 @@ my_project/
             └── tasks.yaml
 ```
 
-You can now start developing your crew by editing the files in the `src/my_project` folder. The `main.py` file is the entry point of the project, the `crew.py` file is where you define your crew, the `agents.yaml` file is where you define your agents, and the `tasks.yaml` file is where you define your tasks.
-
-#### To customize your project, you can:
-
-- Modify `src/my_project/config/agents.yaml` to define your agents.
-- Modify `src/my_project/config/tasks.yaml` to define your tasks.
-- Modify `src/my_project/crew.py` to add your own logic, tools, and specific arguments.
-- Modify `src/my_project/main.py` to add custom inputs for your agents and tasks.
-- Add your environment variables into the `.env` file.
-
 #### Example of a simple crew with a sequential process:
 
 Instantiate your crew:
@@ -244,129 +266,72 @@ Instantiate your crew:
 crewai create crew latest-ai-development
 ```
 
-Modify the files as needed to fit your use case:
+The CLI creates a `latest_ai_development/` folder. Modify the generated files to fit your use case. Agent file names are the names you reference from `crew.jsonc`.
 
-**agents.yaml**
+**agents/researcher.jsonc**
 
-```yaml
-# src/my_project/config/agents.yaml
-researcher:
-  role: >
-    {topic} Senior Data Researcher
-  goal: >
-    Uncover cutting-edge developments in {topic}
-  backstory: >
-    You're a seasoned researcher with a knack for uncovering the latest
-    developments in {topic}. Known for your ability to find the most relevant
-    information and present it in a clear and concise manner.
-
-reporting_analyst:
-  role: >
-    {topic} Reporting Analyst
-  goal: >
-    Create detailed reports based on {topic} data analysis and research findings
-  backstory: >
-    You're a meticulous analyst with a keen eye for detail. You're known for
-    your ability to turn complex data into clear and concise reports, making
-    it easy for others to understand and act on the information you provide.
+```jsonc
+{
+  "role": "{topic} Senior Data Researcher",
+  "goal": "Uncover cutting-edge developments in {topic}",
+  "backstory": "You're a seasoned researcher with a knack for uncovering the latest developments in {topic}. Known for your ability to find the most relevant information and present it in a clear and concise manner.",
+  "llm": "openai/gpt-4o",
+  "tools": ["SerperDevTool"],
+  "settings": {
+    "verbose": true,
+    "allow_delegation": false
+  }
+}
 ```
 
-**tasks.yaml**
+**agents/reporting_analyst.jsonc**
 
-````yaml
-# src/my_project/config/tasks.yaml
-research_task:
-  description: >
-    Conduct a thorough research about {topic}
-    Make sure you find any interesting and relevant information given
-    the current year is 2025.
-  expected_output: >
-    A list with 10 bullet points of the most relevant information about {topic}
-  agent: researcher
-
-reporting_task:
-  description: >
-    Review the context you got and expand each topic into a full section for a report.
-    Make sure the report is detailed and contains any and all relevant information.
-  expected_output: >
-    A fully fledge reports with the mains topics, each with a full section of information.
-    Formatted as markdown without '```'
-  agent: reporting_analyst
-  output_file: report.md
-````
-
-**crew.py**
-
-```python
-# src/my_project/crew.py
-from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
-from crewai_tools import SerperDevTool
-from crewai.agents.agent_builder.base_agent import BaseAgent
-from typing import List
-
-@CrewBase
-class LatestAiDevelopmentCrew():
-	"""LatestAiDevelopment crew"""
-	agents: List[BaseAgent]
-	tasks: List[Task]
-
-	@agent
-	def researcher(self) -> Agent:
-		return Agent(
-			config=self.agents_config['researcher'],
-			verbose=True,
-			tools=[SerperDevTool()]
-		)
-
-	@agent
-	def reporting_analyst(self) -> Agent:
-		return Agent(
-			config=self.agents_config['reporting_analyst'],
-			verbose=True
-		)
-
-	@task
-	def research_task(self) -> Task:
-		return Task(
-			config=self.tasks_config['research_task'],
-		)
-
-	@task
-	def reporting_task(self) -> Task:
-		return Task(
-			config=self.tasks_config['reporting_task'],
-			output_file='report.md'
-		)
-
-	@crew
-	def crew(self) -> Crew:
-		"""Creates the LatestAiDevelopment crew"""
-		return Crew(
-			agents=self.agents, # Automatically created by the @agent decorator
-			tasks=self.tasks, # Automatically created by the @task decorator
-			process=Process.sequential,
-			verbose=True,
-		)
+```jsonc
+{
+  "role": "{topic} Reporting Analyst",
+  "goal": "Create detailed reports based on {topic} data analysis and research findings",
+  "backstory": "You're a meticulous analyst with a keen eye for detail. You're known for your ability to turn complex data into clear and concise reports, making it easy for others to understand and act on the information you provide.",
+  "llm": "openai/gpt-4o",
+  "settings": {
+    "verbose": true,
+    "allow_delegation": false
+  }
+}
 ```
 
-**main.py**
+**crew.jsonc**
 
-```python
-#!/usr/bin/env python
-# src/my_project/main.py
-import sys
-from latest_ai_development.crew import LatestAiDevelopmentCrew
-
-def run():
-    """
-    Run the crew.
-    """
-    inputs = {
-        'topic': 'AI Agents'
+```jsonc
+{
+  "name": "latest-ai-development",
+  "agents": ["researcher", "reporting_analyst"],
+  "tasks": [
+    {
+      "name": "research_task",
+      "description": "Conduct a thorough research about {topic}. Make sure you find any interesting and relevant information given the current year is {current_year}.",
+      "expected_output": "A list with 10 bullet points of the most relevant information about {topic}",
+      "agent": "researcher"
+    },
+    {
+      "name": "reporting_task",
+      "description": "Review the context you got and expand each topic into a full section for a report. Make sure the report is detailed and contains any and all relevant information.",
+      "expected_output": "A fully fledged report with the main topics, each with a full section of information. Formatted as markdown without fenced code blocks around the whole document.",
+      "agent": "reporting_analyst",
+      "context": ["research_task"],
+      "output_file": "report.md"
     }
-    LatestAiDevelopmentCrew().crew().kickoff(inputs=inputs)
+  ],
+  "process": "sequential",
+  "verbose": true,
+  "memory": true,
+  "inputs": {
+    "topic": "AI Agents",
+    "current_year": "2026"
+  }
+}
 ```
+
+`context` points to prior task names, so the reporting analyst receives the research task output. The `inputs` object provides default values for `{topic}` and `{current_year}`.
 
 ### 3. Running Your Crew
 
@@ -378,8 +343,8 @@ Before running your crew, make sure you have the following keys set as environme
 Lock the dependencies and install them by using the CLI command but first, navigate to your project directory:
 
 ```shell
-cd my_project
-crewai install (Optional)
+cd latest_ai_development
+crewai install
 ```
 
 To run your crew, execute the following command in the root of your project:
@@ -388,10 +353,12 @@ To run your crew, execute the following command in the root of your project:
 crewai run
 ```
 
-or
+`crewai run` detects `crew.jsonc`, loads the agents from `agents/`, prompts for any missing placeholders, and kicks off the crew.
+
+If you created a `--classic` project instead, you can also run:
 
 ```bash
-python src/my_project/main.py
+python src/latest_ai_development/main.py
 ```
 
 If an error happens due to the usage of poetry, please run the following command to update your crewai package:
