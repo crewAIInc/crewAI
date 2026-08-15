@@ -40,10 +40,26 @@ def _base_url() -> str:
     configured = os.environ.get(
         "AGENT_GUILD_BASE_URL", DEFAULT_AGENT_GUILD_BASE_URL).rstrip("/")
     parsed = urllib.parse.urlparse(configured)
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+    try:
+        parsed.port
+    except ValueError as e:
+        raise ValueError(
+            "AGENT_GUILD_BASE_URL must be an absolute http(s) URL") from e
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
         raise ValueError(
             "AGENT_GUILD_BASE_URL must be an absolute http(s) URL")
     return configured
+
+
+def _safe_endpoint(base_url: str) -> str:
+    """Return a diagnostic URL without credentials, query, or fragment."""
+    parsed = urllib.parse.urlsplit(base_url)
+    hostname = parsed.hostname or ""
+    if ":" in hostname:
+        hostname = f"[{hostname}]"
+    if parsed.port is not None:
+        hostname = f"{hostname}:{parsed.port}"
+    return urllib.parse.urlunsplit((parsed.scheme, hostname, parsed.path, "", ""))
 
 
 def _request(path: str, data: Optional[bytes] = None) -> str:
@@ -85,7 +101,7 @@ def _request(path: str, data: Optional[bytes] = None) -> str:
         return json.dumps({
             "error": "agent_guild_unreachable",
             "detail": str(e),
-            "endpoint": base_url,
+            "endpoint": _safe_endpoint(base_url),
             "hint": "The hosted instance may be cold-starting; retry once, "
                     "or set AGENT_GUILD_BASE_URL to a self-hosted instance.",
         })
