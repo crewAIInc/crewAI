@@ -13,6 +13,7 @@ import shutil
 
 # Required for the fixed first-party CLI and always invoked without a shell.
 import subprocess  # nosec B404
+from threading import Lock
 from typing import Any, Literal
 from uuid import uuid4
 
@@ -171,6 +172,7 @@ class TaskMarketRequesterTool(BaseTool):
     _previews: dict[str, _PreparedCreate] = PrivateAttr(default_factory=dict)
     _approved: dict[str, datetime] = PrivateAttr(default_factory=dict)
     _attempted: set[str] = PrivateAttr(default_factory=set)
+    _lock: Any = PrivateAttr(default_factory=Lock)
 
     def __init__(
         self,
@@ -197,12 +199,15 @@ class TaskMarketRequesterTool(BaseTool):
         Raises:
             ValueError: If the preview is missing, changed, or already attempted.
         """
-        preview = self._previews.get(preview_id)
-        if preview is None or preview.fingerprint != fingerprint:
-            raise ValueError("Preview ID or fingerprint does not match.")
-        if preview_id in self._attempted:
-            raise ValueError("This preview was already attempted and cannot be reused.")
-        self._approved[preview_id] = datetime.now(UTC)
+        with self._lock:
+            preview = self._previews.get(preview_id)
+            if preview is None or preview.fingerprint != fingerprint:
+                raise ValueError("Preview ID or fingerprint does not match.")
+            if preview_id in self._attempted:
+                raise ValueError(
+                    "This preview was already attempted and cannot be reused."
+                )
+            self._approved[preview_id] = datetime.now(UTC)
 
     def _run(
         self,
@@ -232,7 +237,9 @@ class TaskMarketRequesterTool(BaseTool):
             return self._create(preview_id)
         if operation == "status":
             return self._read_task(task_id)
-        return self._read_submissions(task_id)
+        if operation == "submissions":
+            return self._read_submissions(task_id)
+        raise ValueError(f"Unsupported operation: {operation}")
 
     def _prepare_create(
         self,
@@ -344,30 +351,31 @@ class TaskMarketRequesterTool(BaseTool):
         )
 
     def _create(self, preview_id: str | None) -> str:
-        if not preview_id or preview_id not in self._previews:
-            raise ValueError("A valid preview_id is required for create.")
-        if preview_id in self._attempted:
-            raise PermissionError(
-                "This preview was already attempted and cannot be retried."
-            )
-        approved_at = self._approved.get(preview_id)
-        if approved_at is None:
-            raise PermissionError(
-                "This exact preview has not been approved by trusted host code."
-            )
-        if datetime.now(UTC) - approved_at > timedelta(
-            seconds=self.approval_ttl_seconds
-        ):
+        with self._lock:
+            if not preview_id or preview_id not in self._previews:
+                raise ValueError("A valid preview_id is required for create.")
+            if preview_id in self._attempted:
+                raise PermissionError(
+                    "This preview was already attempted and cannot be retried."
+                )
+            approved_at = self._approved.get(preview_id)
+            if approved_at is None:
+                raise PermissionError(
+                    "This exact preview has not been approved by trusted host code."
+                )
+            if datetime.now(UTC) - approved_at > timedelta(
+                seconds=self.approval_ttl_seconds
+            ):
+                self._approved.pop(preview_id, None)
+                raise PermissionError(
+                    "Approval expired; display the exact preview and request fresh "
+                    "authorization before creating."
+                )
+            preview = self._previews[preview_id]
             self._approved.pop(preview_id, None)
-            raise PermissionError(
-                "Approval expired; display the exact preview and request fresh "
-                "authorization before creating."
-            )
+            self._attempted.add(preview_id)
 
-        preview = self._previews[preview_id]
         preflight = self._preflight(preview.reward_usdc)
-        self._approved.pop(preview_id, None)
-        self._attempted.add(preview_id)
         try:
             created = self._cli(preview.cli_args, write=True)
         except _UnknownSettlementError as exc:
@@ -428,7 +436,12 @@ class TaskMarketRequesterTool(BaseTool):
             raise RuntimeError(
                 "Taskmarket CLI returned a non-canonical Base USDC contract."
             )
-        if legal_data.get("enforcementEnabled") and not legal_data.get("accepted"):
+        enforcement_enabled = legal_data.get("enforcementEnabled")
+        if not isinstance(enforcement_enabled, bool):
+            raise RuntimeError(
+                "Taskmarket CLI did not report the legal enforcement state."
+            )
+        if enforcement_enabled and not legal_data.get("accepted"):
             raise RuntimeError(
                 "The current Taskmarket legal bundle requires acceptance."
             )
@@ -494,6 +507,11 @@ class TaskMarketRequesterTool(BaseTool):
             if write:
                 raise _UnknownSettlementError(str(message))
             raise RuntimeError(str(message))
+        if not isinstance(result.get("data", {}), dict):
+            message = "Taskmarket CLI returned a malformed data payload."
+            if write:
+                raise _UnknownSettlementError(message)
+            raise RuntimeError(message)
         return result
 
     @staticmethod

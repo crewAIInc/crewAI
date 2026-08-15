@@ -1,8 +1,10 @@
 from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from decimal import Decimal
 import json
 import subprocess
+from threading import Event
 
 from crewai_tools import TaskMarketRequesterTool
 from crewai_tools.tools.taskmarket_requester_tool import TaskMarketRequesterSchema
@@ -20,6 +22,8 @@ class RecordedRunner:
         self.calls: list[tuple[str, ...]] = []
         self.overrides: dict[tuple[str, ...], dict[str, object]] = {}
         self.create_exception: Exception | None = None
+        self.address_started: Event | None = None
+        self.release_address: Event | None = None
         self.create_result: dict[str, object] = {
             "ok": True,
             "data": {"taskId": TASK_ID},
@@ -31,6 +35,10 @@ class RecordedRunner:
         assert timeout == 45
         command = tuple(args[1:])
         self.calls.append(command)
+        if command == ("address",) and self.address_started is not None:
+            self.address_started.set()
+            assert self.release_address is not None
+            assert self.release_address.wait(timeout=5)
         if command[:2] == ("task", "create"):
             if self.create_exception is not None:
                 raise self.create_exception
@@ -94,7 +102,7 @@ def prepare(tool: TaskMarketRequesterTool, **overrides: object) -> dict[str, obj
         "submission_visibility": "winner_only",
     }
     inputs.update(overrides)
-    return json.loads(tool._run(**inputs))
+    return json.loads(tool.run(**inputs))
 
 
 def approve_prepared(tool: TaskMarketRequesterTool) -> dict[str, object]:
@@ -155,11 +163,10 @@ def test_public_tool_entrypoint_validates_and_prepares(
         ({"deliverables": []}, "At least one non-empty deliverable"),
         ({"reward_usdc": Decimal("5.000001")}, "at most 5"),
         ({"reward_usdc": Decimal("1.0000001")}, "at most six decimals"),
-        ({"reward_usdc": Decimal("Infinity")}, "must be finite"),
-        ({"duration_hours": 0}, "between 1 and 720"),
-        ({"duration_hours": 721}, "between 1 and 720"),
         ({"description": "x" * 8_001}, "must not exceed 8,000"),
+        ({"description": "unsafe\x00description"}, "cannot contain NUL"),
         ({"deliverables": ["x" * 501]}, "at most 30 deliverables"),
+        ({"deliverables": ["unsafe\x00deliverable"]}, "cannot contain NUL"),
         ({"tags": ["safe,unsafe"]}, "Tags cannot contain commas"),
         ({"tags": [str(index) for index in range(11)]}, "at most 10 tags"),
         ({"tags": ["unsafe\x00tag"]}, "Tags cannot contain NUL"),
@@ -172,6 +179,32 @@ def test_prepare_rejects_unsafe_or_ambiguous_inputs(
 ) -> None:
     with pytest.raises(ValueError, match=message):
         prepare(tool, **overrides)
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"reward_usdc": Decimal("Infinity")}, "must be finite"),
+        ({"duration_hours": 0}, "between 1 and 720"),
+        ({"duration_hours": 721}, "between 1 and 720"),
+    ],
+)
+def test_direct_run_repeats_guards_enforced_by_schema(
+    tool: TaskMarketRequesterTool,
+    overrides: dict[str, object],
+    message: str,
+) -> None:
+    inputs: dict[str, object] = {
+        "operation": "prepare_create",
+        "description": "Audit the release candidate.",
+        "deliverables": ["Written report"],
+        "reward_usdc": Decimal("1.25"),
+        "duration_hours": 24,
+    }
+    inputs.update(overrides)
+
+    with pytest.raises(ValueError, match=message):
+        tool._run(**inputs)
 
 
 def test_create_requires_fresh_exact_host_approval(
@@ -245,6 +278,32 @@ def test_approved_create_runs_preflight_and_returns_live_status(
 
     with pytest.raises(PermissionError, match="already attempted"):
         tool._run(operation="create", preview_id=str(preview["preview_id"]))
+    with pytest.raises(ValueError, match="already attempted"):
+        tool.approve(
+            str(preview["preview_id"]),
+            str(preview["fingerprint_sha256"]),
+        )
+
+
+def test_concurrent_create_calls_cannot_duplicate_spend(
+    tool: TaskMarketRequesterTool, runner: RecordedRunner
+) -> None:
+    runner.address_started = Event()
+    runner.release_address = Event()
+    preview = approve_prepared(tool)
+    preview_id = str(preview["preview_id"])
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(tool._run, operation="create", preview_id=preview_id)
+        assert runner.address_started.wait(timeout=5)
+        second = executor.submit(tool._run, operation="create", preview_id=preview_id)
+        with pytest.raises(PermissionError, match="already attempted"):
+            second.result(timeout=5)
+        runner.release_address.set()
+        created = json.loads(first.result(timeout=5))
+
+    assert created["created"] is True
+    assert sum(call[:2] == ("task", "create") for call in runner.calls) == 1
 
 
 @pytest.mark.parametrize(
@@ -264,6 +323,16 @@ def test_approved_create_runs_preflight_and_returns_live_status(
             ("legal", "status"),
             {"ok": True, "data": {"enforcementEnabled": True, "accepted": False}},
             "requires acceptance",
+        ),
+        (
+            ("legal", "status"),
+            {"ok": True, "data": {}},
+            "did not report the legal enforcement state",
+        ),
+        (
+            ("address",),
+            {"ok": True, "data": {}},
+            "did not return the acting wallet address",
         ),
         (
             ("wallet", "balance"),
@@ -286,6 +355,8 @@ def test_preflight_blocks_write_when_safety_check_fails(
         tool._run(operation="create", preview_id=str(preview["preview_id"]))
 
     assert not any(call[:2] == ("task", "create") for call in runner.calls)
+    with pytest.raises(PermissionError, match="already attempted"):
+        tool._run(operation="create", preview_id=str(preview["preview_id"]))
 
 
 def test_timed_out_write_is_unknown_and_cannot_be_retried(
@@ -321,6 +392,24 @@ def test_malformed_create_success_is_unknown_and_not_retriable(
     assert result["raw_result"] == runner.create_result
 
 
+def test_malformed_cli_data_fails_clearly_for_reads_and_writes(
+    tool: TaskMarketRequesterTool, runner: RecordedRunner
+) -> None:
+    runner.overrides[("task", "get", TASK_ID)] = {"ok": True, "data": None}
+    with pytest.raises(RuntimeError, match="malformed data payload"):
+        tool._run(operation="status", task_id=TASK_ID)
+
+    runner.create_result = {"ok": True, "data": None}
+    preview = approve_prepared(tool)
+    result = json.loads(
+        tool._run(operation="create", preview_id=str(preview["preview_id"]))
+    )
+
+    assert result["created"] == "unknown"
+    assert result["retry_allowed"] is False
+    assert "malformed data payload" in result["error"]
+
+
 def test_status_and_submissions_are_read_only_human_review_operations(
     tool: TaskMarketRequesterTool, runner: RecordedRunner
 ) -> None:
@@ -348,6 +437,11 @@ def test_invalid_task_id_never_reaches_cli(
 def test_schema_rejects_unknown_operation() -> None:
     with pytest.raises(ValidationError):
         TaskMarketRequesterSchema(operation="accept")
+
+
+def test_direct_run_rejects_unknown_operation() -> None:
+    with pytest.raises(ValueError, match="Unsupported operation"):
+        TaskMarketRequesterTool()._run(operation="accept")
 
 
 def test_parse_envelope_uses_last_json_line() -> None:

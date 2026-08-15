@@ -41,8 +41,10 @@ if user_confirmed():
 
 Only then can the agent call `create` with that `preview_id`. Approval is bound to
 the exact prepared arguments, expires after five minutes by default, and is
-consumed before the CLI write. A timed-out or ambiguous write is never retried:
-the tool tells the operator to reconcile using Taskmarket inbox and wallet history.
+claimed atomically before preflight so concurrent calls cannot duplicate a spend.
+After any create attempt begins, a new preview and approval are required. A
+timed-out or ambiguous write is never retried: the tool tells the operator to
+reconcile using Taskmarket inbox and wallet history.
 
 Immediately before creation, the tool verifies:
 
