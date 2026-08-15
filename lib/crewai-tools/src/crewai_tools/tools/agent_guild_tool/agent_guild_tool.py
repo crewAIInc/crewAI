@@ -37,8 +37,13 @@ _ENV_VARS: List[EnvVar] = [
 
 
 def _base_url() -> str:
-    return os.environ.get(
+    configured = os.environ.get(
         "AGENT_GUILD_BASE_URL", DEFAULT_AGENT_GUILD_BASE_URL).rstrip("/")
+    parsed = urllib.parse.urlparse(configured)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError(
+            "AGENT_GUILD_BASE_URL must be an absolute http(s) URL")
+    return configured
 
 
 def _request(path: str, data: Optional[bytes] = None) -> str:
@@ -51,7 +56,13 @@ def _request(path: str, data: Optional[bytes] = None) -> str:
       return a structured JSON error string that names the endpoint and
       distinguishes "service unreachable" from an in-band API error.
     """
-    base_url = _base_url()
+    try:
+        base_url = _base_url()
+    except ValueError as e:
+        return json.dumps({
+            "error": "agent_guild_invalid_base_url",
+            "detail": str(e),
+        })
     headers = {"User-Agent": _UA}
     if data is not None:
         headers["content-type"] = "application/json"
