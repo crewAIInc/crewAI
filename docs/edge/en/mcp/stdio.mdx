@@ -145,10 +145,18 @@ from crewai_tools import MCPServerAdapter
 from mcp import StdioServerParameters
 import os
 
+# Run this example from the repository Entroly should index, or replace this
+# value with that repository's absolute path.
+project_root = os.getcwd()
+
 server_params = StdioServerParameters(
     command="uvx",
-    args=["--from", "entroly", "entroly", "serve"],
-    env={"ENTROLY_NO_DOCKER": "1", **os.environ},
+    args=["--from", "entroly==1.0.77", "entroly", "serve"],
+    env={
+        **os.environ,
+        "ENTROLY_NO_DOCKER": "1",
+        "ENTROLY_SOURCE": project_root,
+    },
 )
 
 with MCPServerAdapter(server_params) as tools:
@@ -160,7 +168,7 @@ Before using it in a workflow, verify the installed package and local recovery
 path without an API key:
 
 ```bash
-uvx --from entroly entroly verify-claims --max-files 30
+uvx --from 'entroly==1.0.77' entroly verify-claims --max-files 30
 ```
 
 Context reduction and downstream task quality depend on the workload and selected
