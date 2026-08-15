@@ -382,7 +382,7 @@ class SingleStoreSearchTool(BaseTool):
         # the regex-based pattern checks below (e.g. INTO/**/S3,
         # FOR/**/UPDATE).  A legitimate search query has no reason to
         # contain comment syntax.
-        if "/*" in stripped or stripped.startswith("--"):
+        if "/*" in stripped or "--" in stripped or "#" in stripped:
             return (
                 False,
                 "SQL comments are not supported in search queries.",

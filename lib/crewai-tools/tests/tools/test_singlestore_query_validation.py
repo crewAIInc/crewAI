@@ -128,6 +128,18 @@ def test_validate_query_rejects_select_into_variable(query: str) -> None:
         "SELECT * FROM t FOR/**/UPDATE",
         "SELECT 1 INTO /* comment */ OUTFILE",
         "SELECT * FROM t /**/ LOCK IN SHARE MODE",
+        # Double-dash comments between restricted keyword pairs
+        "SELECT 1 INTO -- bypass\nS3",
+        "SELECT * FROM t FOR -- comment\nUPDATE",
+        "SELECT 1 INTO --comment OUTFILE",
+        # Hash comments between restricted keyword pairs
+        "SELECT 1 INTO # bypass\nS3",
+        "SELECT * FROM t FOR # comment\nUPDATE",
+        "SELECT 1 INTO #comment OUTFILE",
+        # Double-dash / hash mid-query
+        "SELECT * FROM employees -- rest ignored",
+        "SHOW TABLES # ignored rest",
+        "SELECT id FROM t WHERE x=1 --trail",
     ],
 )
 def test_validate_query_rejects_sql_comments(query: str) -> None:
