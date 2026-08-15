@@ -396,11 +396,12 @@ class SingleStoreSearchTool(BaseTool):
             )
 
         # Reject SELECT … INTO clauses that can write to external resources
-        # (OUTFILE, FS, LINK, S3, HDFS, AZURE, GCS, KAFKA).  Although these
-        # start with a SELECT token, they grant FILE WRITE or OUTBOUND
-        # privileges and are not read-only.
+        # (OUTFILE, DUMPFILE, FS, LINK, S3, HDFS, AZURE, GCS, KAFKA, STAGE).
+        # Although these start with a SELECT token, they grant FILE WRITE
+        # or OUTBOUND privileges and are not read-only.  Also reject SELECT
+        # … INTO @<variable> (session-variable assignment).
         into_clause = re.search(
-            r"\bINTO\s+(OUTFILE|DUMPFILE|FS|LINK|S3|HDFS|AZURE|GCS|KAFKA)\b",
+            r"\bINTO\s+(OUTFILE|DUMPFILE|FS|LINK|S3|HDFS|AZURE|GCS|KAFKA|STAGE)\b",
             stripped,
             re.IGNORECASE,
         )
@@ -408,6 +409,12 @@ class SingleStoreSearchTool(BaseTool):
             return (
                 False,
                 f"INTO {into_clause.group(1).upper()} is not supported for security reasons.",
+            )
+        # Reject session-variable assignment (SELECT … INTO @var).
+        if re.search(r"\bINTO\s+@", stripped, re.IGNORECASE):
+            return (
+                False,
+                "INTO <variable> is not supported for security reasons.",
             )
 
         # Reject locking clauses (FOR UPDATE, LOCK IN SHARE MODE) — a

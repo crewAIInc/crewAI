@@ -77,6 +77,8 @@ def test_validate_query_rejects_writes_and_non_strings(query: object) -> None:
         ("SELECT * FROM employees INTO GCS 'gs://bucket'", "GCS"),
         ("SELECT * FROM employees INTO KAFKA 'kafka:topic'", "KAFKA"),
         ("select id from t into outfile '/tmp/out.csv'", "OUTFILE"),
+        ("SELECT * FROM t INTO STAGE 'result.csv'", "STAGE"),
+        ("select id from employees into stage 'out.csv'", "STAGE"),
     ],
 )
 def test_validate_query_rejects_select_into_write_targets(query: str, keyword: str) -> None:
@@ -102,6 +104,21 @@ def test_validate_query_rejects_locking_clauses(query: str) -> None:
     ok, message = _tool()._validate_query(query)
     assert ok is False
     assert ("FOR UPDATE" in message) or ("LOCK" in message)
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "SELECT 3.14 INTO @pi",
+        "SELECT 1 INTO @result",
+        "select name from t into @x",
+    ],
+)
+def test_validate_query_rejects_select_into_variable(query: str) -> None:
+    """SELECT … INTO @<variable> assigns a session variable and is not read-only."""
+    ok, message = _tool()._validate_query(query)
+    assert ok is False
+    assert "variable" in message
 
 
 @pytest.mark.parametrize(
