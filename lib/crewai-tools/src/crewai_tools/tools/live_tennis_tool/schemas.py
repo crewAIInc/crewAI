@@ -16,8 +16,17 @@ LiveTennisAction = Literal[
     "rankings",
     "usage",
 ]
+"""Operations the tool can perform, each mapping to one REST endpoint."""
 
-RankingSystem = Literal["atp", "wta", "itf_jt", "itf_mt", "itf_wt", "utr"]
+RankingSystem = Literal["atp", "wta", "itf_jt", "itf_mt", "itf_wt"]
+"""Ranking systems with a published rank-ordered listing.
+
+UTR is intentionally absent: the API's ``/rankings`` listing mode does not
+serve it ("`utr` has no listing — it is a rating, not a ranking").
+"""
+
+Tour = Literal["atp", "wta", "challenger", "itf", "juniors"]
+"""Valid ``tour`` filter values; an unrecognised value is a 400 from the API."""
 
 
 class LiveTennisToolSchema(BaseModel):
@@ -31,14 +40,15 @@ class LiveTennisToolSchema(BaseModel):
             "'fixtures' (scheduled matches), 'search_players' (find players by "
             "name, requires 'search'), 'player_profile' (single player detail "
             "including current ranking, requires 'player_id'), 'rankings' "
-            "(published ranking table, requires 'system'), 'usage' (your API "
-            "quota and consumption)."
+            "(published ranking table, requires 'system'; needs a PRO-plan "
+            "API key), 'usage' (your API quota and consumption)."
         ),
     )
-    tour: str | None = Field(
+    tour: Tour | None = Field(
         default=None,
         description=(
-            "Optional tour filter for match and fixture actions, e.g. 'atp' or 'wta'."
+            "Optional tour filter for match and fixture actions: 'atp', 'wta', "
+            "'challenger', 'itf' or 'juniors'. Omit for all tours."
         ),
     )
     search: str | None = Field(
@@ -48,18 +58,18 @@ class LiveTennisToolSchema(BaseModel):
             "'search_players' action."
         ),
     )
-    player_id: str | None = Field(
+    player_id: int | None = Field(
         default=None,
         description=(
-            "Player id as returned by 'search_players'. Required for the "
-            "'player_profile' action."
+            "Numeric player id as returned by 'search_players'. Required for "
+            "the 'player_profile' action."
         ),
     )
     system: RankingSystem | None = Field(
         default=None,
         description=(
             "Ranking system for the 'rankings' action: 'atp', 'wta', 'itf_jt', "
-            "'itf_mt', 'itf_wt' or 'utr'."
+            "'itf_mt' or 'itf_wt'. The rankings listing needs a PRO-plan key."
         ),
     )
     limit: int | None = Field(
@@ -75,13 +85,12 @@ class LiveTennisToolSchema(BaseModel):
 
     @model_validator(mode="after")
     def _validate_action_arguments(self) -> LiveTennisToolSchema:
+        """Ensure the arguments each action depends on are present."""
         if self.action == "search_players" and not (
             self.search and self.search.strip()
         ):
             raise ValueError("'search' is required for the 'search_players' action.")
-        if self.action == "player_profile" and not (
-            self.player_id and self.player_id.strip()
-        ):
+        if self.action == "player_profile" and self.player_id is None:
             raise ValueError("'player_id' is required for the 'player_profile' action.")
         if self.action == "rankings" and self.system is None:
             raise ValueError("'system' is required for the 'rankings' action.")

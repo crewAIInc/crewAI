@@ -8,13 +8,18 @@ The tool is scoped to REST endpoints, most of which are available on the free ti
 
 | `action` | Endpoint | Plan | Notes |
 |---|---|---|---|
-| `live_matches` | `GET /matches?status=live` | Free | Matches in play with current scores |
-| `upcoming_matches` | `GET /matches?status=upcoming` | Free | Matches starting soon |
-| `fixtures` | `GET /fixtures` | Free | Scheduled matches |
+| `live_matches` | `GET /matches?status=live` | Free | Matches in play with current scores; optional `tour` |
+| `upcoming_matches` | `GET /matches?status=upcoming` | Free | Matches starting soon; optional `tour` |
+| `fixtures` | `GET /fixtures` | Free | Scheduled matches; optional `tour` |
 | `search_players` | `GET /players?search=` | Free | Requires `search` |
-| `player_profile` | `GET /players/{id}` | Free | Requires `player_id`; includes current ranking |
-| `rankings` | `GET /rankings?system=` | PRO | Requires `system` (`atp`, `wta`, `itf_jt`, `itf_mt`, `itf_wt`, `utr`) |
+| `player_profile` | `GET /players/{id}` | Free | Requires `player_id` (numeric id from `search_players`); includes current ranking |
+| `rankings` | `GET /rankings?system=` | PRO | Requires `system` (`atp`, `wta`, `itf_jt`, `itf_mt`, `itf_wt`); UTR has no listing (it is a rating, not a ranking) |
 | `usage` | `GET /usage` | Free | Your quota vs. consumption; exempt from quota |
+
+### Parameters
+
+- `tour` — optional filter for `live_matches`, `upcoming_matches` and `fixtures`: one of `atp`, `wta`, `challenger`, `itf`, `juniors`. Omit for all tours.
+- `limit` / `offset` — pagination for the list actions (`live_matches`, `upcoming_matches`, `fixtures`, `search_players`, `rankings`). The API default is 50 results.
 
 The free tier is keyed and rate-limited to 30 requests/minute and 100 requests/day. Completed-match history is a paid feature and is not part of this tool. The API also offers a WebSocket push feed and model win probability on its top tier; this tool intentionally sticks to the polling REST surface.
 
@@ -38,7 +43,7 @@ print(tool.run(action="live_matches", tour="atp"))
 
 # Find a player, then load their profile
 players = tool.run(action="search_players", search="alcaraz")
-profile = tool.run(action="player_profile", player_id="<id from search>")
+profile = tool.run(action="player_profile", player_id=12345)  # numeric id from the search result
 ```
 
 ## With an Agent

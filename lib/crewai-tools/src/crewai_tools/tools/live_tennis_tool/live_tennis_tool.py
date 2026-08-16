@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import os
 from typing import Any
-from urllib.parse import quote
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field, ValidationError
@@ -48,6 +47,12 @@ class LiveTennisTool(BaseTool):
     )
 
     def _run(self, **kwargs: Any) -> str:
+        """Validate the arguments, call the API, and return the response.
+
+        Returns the endpoint's JSON as a string on success, or a readable
+        error message (missing key, invalid arguments, 401/403/429/other
+        HTTP errors, network failure) so an agent can recover.
+        """
         api_key = os.environ.get(API_KEY_ENV_VAR, "").strip()
         if not api_key:
             return (
@@ -116,7 +121,7 @@ class LiveTennisTool(BaseTool):
             query["search"] = params.search
             return "/players", query
         if params.action == "player_profile":
-            return f"/players/{quote(str(params.player_id), safe='')}", {}
+            return f"/players/{params.player_id}", {}
         if params.action == "rankings":
             query["system"] = params.system
             return "/rankings", query

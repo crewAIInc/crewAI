@@ -24,12 +24,17 @@ LIVETENNIS_API_KEY=your_api_key   # Free key at livetennisapi.com
 | `action` | What it returns | Plan |
 |---|---|---|
 | `live_matches` | Matches in play with current scores (optional `tour` filter) | Free |
-| `upcoming_matches` | Matches starting soon | Free |
-| `fixtures` | Scheduled matches | Free |
+| `upcoming_matches` | Matches starting soon (optional `tour` filter) | Free |
+| `fixtures` | Scheduled matches (optional `tour` filter) | Free |
 | `search_players` | Player search by name (requires `search`) | Free |
-| `player_profile` | Single player detail, including current ranking (requires `player_id`) | Free |
-| `rankings` | Published ranking table (requires `system`: `atp`, `wta`, `itf_jt`, `itf_mt`, `itf_wt`, `utr`) | PRO |
+| `player_profile` | Single player detail, including current ranking (requires `player_id`, the numeric id from `search_players`) | Free |
+| `rankings` | Published ranking table (requires `system`: `atp`, `wta`, `itf_jt`, `itf_mt`, `itf_wt`; UTR has no listing — it is a rating, not a ranking) | PRO |
 | `usage` | Your API quota vs. consumption | Free |
+
+### Parameters
+
+- `tour` — optional filter for `live_matches`, `upcoming_matches` and `fixtures`: one of `atp`, `wta`, `challenger`, `itf`, `juniors`. Omit for all tours.
+- `limit` / `offset` — pagination for the list actions (`live_matches`, `upcoming_matches`, `fixtures`, `search_players`, `rankings`). The API default is 50 results.
 
 ## Basic Usage
 
@@ -59,7 +64,7 @@ print(tool.run(action="live_matches", tour="atp"))
 
 # Find a player, then load their profile
 players = tool.run(action="search_players", search="alcaraz")
-profile = tool.run(action="player_profile", player_id="<id from search>")
+profile = tool.run(action="player_profile", player_id=12345)  # numeric id from the search result
 ```
 
 ## Error Handling
