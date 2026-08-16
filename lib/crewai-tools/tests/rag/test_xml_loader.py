@@ -22,7 +22,7 @@ class TestWebPageLoader:
         soup.return_value = script_style_elements or []
         return soup
 
-    @patch("requests.get")
+    @patch("crewai_tools.rag.loaders.webpage_loader.safe_get")
     @patch("crewai_tools.rag.loaders.webpage_loader.BeautifulSoup")
     def test_load_basic_webpage(self, mock_bs, mock_get):
         mock_get.return_value = self.setup_mock_response(
@@ -37,7 +37,7 @@ class TestWebPageLoader:
         assert result.content == "Test content"
         assert result.metadata["title"] == "Test Page"
 
-    @patch("requests.get")
+    @patch("crewai_tools.rag.loaders.webpage_loader.safe_get")
     @patch("crewai_tools.rag.loaders.webpage_loader.BeautifulSoup")
     def test_load_webpage_with_scripts_and_styles(self, mock_bs, mock_get):
         html = """
@@ -62,7 +62,7 @@ class TestWebPageLoader:
         for el in scripts + styles:
             el.decompose.assert_called_once()
 
-    @patch("requests.get")
+    @patch("crewai_tools.rag.loaders.webpage_loader.safe_get")
     @patch("crewai_tools.rag.loaders.webpage_loader.BeautifulSoup")
     def test_text_cleaning_and_title_handling(self, mock_bs, mock_get):
         mock_get.return_value = self.setup_mock_response(
@@ -77,7 +77,7 @@ class TestWebPageLoader:
         assert result.content is not None
         assert result.metadata["title"] == ""
 
-    @patch("requests.get")
+    @patch("crewai_tools.rag.loaders.webpage_loader.safe_get")
     @patch("crewai_tools.rag.loaders.webpage_loader.BeautifulSoup")
     def test_empty_or_missing_title(self, mock_bs, mock_get):
         for title in [None, ""]:
@@ -90,7 +90,7 @@ class TestWebPageLoader:
             result = loader.load(SourceContent("https://example.com"))
             assert result.metadata["title"] == ""
 
-    @patch("requests.get")
+    @patch("crewai_tools.rag.loaders.webpage_loader.safe_get")
     def test_custom_and_default_headers(self, mock_get):
         mock_get.return_value = self.setup_mock_response(
             "<html><body>Test</body></html>"
@@ -109,14 +109,14 @@ class TestWebPageLoader:
 
         assert mock_get.call_args[1]["headers"] == custom_headers
 
-    @patch("requests.get")
+    @patch("crewai_tools.rag.loaders.webpage_loader.safe_get")
     def test_error_handling(self, mock_get):
         for error in [Exception("Fail"), ValueError("Bad"), ImportError("Oops")]:
             mock_get.side_effect = error
             with pytest.raises(ValueError, match="Error loading webpage"):
                 WebPageLoader().load(SourceContent("https://example.com"))
 
-    @patch("requests.get")
+    @patch("crewai_tools.rag.loaders.webpage_loader.safe_get")
     def test_timeout_and_http_error(self, mock_get):
         import requests
 
@@ -131,7 +131,7 @@ class TestWebPageLoader:
         with pytest.raises(ValueError):
             WebPageLoader().load(SourceContent("https://example.com/404"))
 
-    @patch("requests.get")
+    @patch("crewai_tools.rag.loaders.webpage_loader.safe_get")
     @patch("crewai_tools.rag.loaders.webpage_loader.BeautifulSoup")
     def test_doc_id_consistency(self, mock_bs, mock_get):
         mock_get.return_value = self.setup_mock_response(
@@ -145,7 +145,7 @@ class TestWebPageLoader:
 
         assert result1.doc_id == result2.doc_id
 
-    @patch("requests.get")
+    @patch("crewai_tools.rag.loaders.webpage_loader.safe_get")
     @patch("crewai_tools.rag.loaders.webpage_loader.BeautifulSoup")
     def test_status_code_and_content_type(self, mock_bs, mock_get):
         for status in [200, 201, 301]:

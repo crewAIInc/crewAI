@@ -161,8 +161,8 @@ _BLOCKED_IPV6_NETWORKS = [
 ]
 
 
-def _is_private_or_reserved(ip_str: str) -> bool:
-    """Check if an IP address is private, reserved, or otherwise unsafe."""
+def is_blocked_ip(ip_str: str) -> bool:
+    """Return True if *ip_str* is private, reserved, or otherwise unsafe to fetch."""
     try:
         addr = ipaddress.ip_address(ip_str)
         # Unwrap IPv4-mapped IPv6 addresses (e.g., ::ffff:127.0.0.1) to IPv4
@@ -186,6 +186,9 @@ def validate_url(url: str) -> str:
     Blocks ``file://`` scheme entirely. For ``http``/``https``, resolves
     DNS and checks that the target IP is not private or reserved (prevents
     SSRF to internal services and cloud metadata endpoints).
+
+    This checks the URL string only. Fetch with ``safe_get`` so the
+    connection is pinned to an authorised IP.
 
     Args:
         url: The URL to validate.
@@ -232,7 +235,7 @@ def validate_url(url: str) -> str:
 
     for _family, _, _, _, sockaddr in addrinfos:
         ip_str = str(sockaddr[0])
-        if _is_private_or_reserved(ip_str):
+        if is_blocked_ip(ip_str):
             raise ValueError(
                 f"URL '{url}' resolves to private/reserved IP {ip_str}. "
                 f"Access to internal networks is not allowed. "
