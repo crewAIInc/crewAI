@@ -34,6 +34,8 @@ Get a free key at [livetennisapi.com](https://livetennisapi.com). Full API docum
 ## Example Usage
 
 ```python
+import json
+
 from crewai_tools import LiveTennisTool
 
 tool = LiveTennisTool()
@@ -41,9 +43,10 @@ tool = LiveTennisTool()
 # Matches in play right now
 print(tool.run(action="live_matches", tour="atp"))
 
-# Find a player, then load their profile
-players = tool.run(action="search_players", search="alcaraz")
-profile = tool.run(action="player_profile", player_id=12345)  # numeric id from the search result
+# Find a player, then load their profile using the id from the search result
+players = json.loads(tool.run(action="search_players", search="alcaraz"))
+player_id = players["data"][0]["id"]
+profile = tool.run(action="player_profile", player_id=player_id)
 ```
 
 ## With an Agent
