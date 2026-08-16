@@ -136,7 +136,7 @@ Now, let's configure the content writer crew with JSONC. We'll set up two specia
 }
 ```
 
-Replace `provider/model-id` with the model you use, for example `openai/gpt-4o`, `gemini/gemini-2.0-flash-001`, or `anthropic/claude-sonnet-4-6`.
+Replace `provider/model-id` with the model you use, for example `openai/gpt-4o`, `gemini/gemini-3.7-flash`, or `anthropic/claude-sonnet-4-6`.
 
 3. Create `src/guide_creator_flow/crews/content_crew/crew.jsonc`:
 
@@ -483,7 +483,7 @@ Flows allow you to make direct calls to language models when you need simple, st
 
 ```python
 llm = LLM(
-    model="model-id-here",  # gpt-4o, gemini-2.0-flash, anthropic/claude...
+    model="model-id-here",  # gpt-4o, gemini-3.7-flash, anthropic/claude...
     response_format=GuideOutline
 )
 response = llm.call(messages=messages)

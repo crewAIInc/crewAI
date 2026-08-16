@@ -145,7 +145,7 @@ planning agent는 복잡한 전략적 사고와 다단계 분석을 처리할 �
 from crewai import Agent, Task, Crew, LLM
 
 # High-capability reasoning model for strategic planning
-manager_llm = LLM(model="gemini-2.5-flash-preview-05-20", temperature=0.1)
+manager_llm = LLM(model="gemini-3.7-flash", temperature=0.1)
 
 # Creative model for content generation
 content_llm = LLM(model="claude-3-5-sonnet-20241022", temperature=0.7)
@@ -411,7 +411,7 @@ tech_writer = Agent(
     # Manager 또는 coordination agent
     manager_agent = Agent(
         role="Project Manager",
-        llm=LLM(model="gemini-2.5-flash-preview-05-20"),  # 조율을 위한 프리미엄
+        llm=LLM(model="gemini-3.7-flash"),  # 조율을 위한 프리미엄
         # ... 나머지 설정
     )
 
