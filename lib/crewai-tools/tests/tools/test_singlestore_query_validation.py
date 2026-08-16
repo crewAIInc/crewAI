@@ -147,3 +147,19 @@ def test_validate_query_rejects_sql_comments(query: str) -> None:
     ok, message = _tool()._validate_query(query)
     assert ok is False
     assert "comments" in message
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "SELECT * FROM users WHERE name = 'uses -- dashes'",
+        "SELECT id FROM t WHERE bio = 'has # hashtag'",
+        "SELECT * FROM t WHERE note = 'block /* comment */ end'",
+        "SELECT * FROM users WHERE name = 'it''s a -- test'",
+    ],
+)
+def test_validate_query_allows_comment_chars_in_quoted_strings(query: str) -> None:
+    """Comment-like characters inside single-quoted strings are data, not comments."""
+    ok, message = _tool()._validate_query(query)
+    assert ok is True
+    assert message == "Valid query"

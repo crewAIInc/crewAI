@@ -380,9 +380,11 @@ class SingleStoreSearchTool(BaseTool):
 
         # Reject SQL comments — they can separate keywords and bypass
         # the regex-based pattern checks below (e.g. INTO/**/S3,
-        # FOR/**/UPDATE).  A legitimate search query has no reason to
-        # contain comment syntax.
-        if "/*" in stripped or "--" in stripped or "#" in stripped:
+        # FOR/**/UPDATE).  Strip single-quoted string literals first
+        # so that comment-like characters inside data values (e.g.
+        # WHERE name = 'uses -- dashes') do not trigger false rejections.
+        _comment_safe = re.sub(r"'(?:[^']*(?:''[^']*)*)'", "''", stripped)
+        if "/*" in _comment_safe or "--" in _comment_safe or "#" in _comment_safe:
             return (
                 False,
                 "SQL comments are not supported in search queries.",
