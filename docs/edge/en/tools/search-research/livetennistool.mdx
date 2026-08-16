@@ -65,9 +65,10 @@ tool = LiveTennisTool()
 print(tool.run(action="live_matches", tour="atp"))
 
 # Find a player, then load their profile using the id from the search result
-players = json.loads(tool.run(action="search_players", search="alcaraz"))
-player_id = players["data"][0]["id"]
-profile = tool.run(action="player_profile", player_id=player_id)
+result = tool.run(action="search_players", search="alcaraz")
+players = json.loads(result).get("data", []) if result.startswith("{") else []
+if players:  # result is a readable error string when the call fails
+    profile = tool.run(action="player_profile", player_id=players[0]["id"])
 ```
 
 ## Error Handling
