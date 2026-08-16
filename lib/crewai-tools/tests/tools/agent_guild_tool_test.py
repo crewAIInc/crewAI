@@ -10,6 +10,7 @@ import pytest
 from crewai_tools.tools.agent_guild_tool.agent_guild_tool import (
     DEFAULT_AGENT_GUILD_BASE_URL,
     AgentGuildCheckTool,
+    AgentGuildPreflightTool,
     AgentGuildRiskScoreTool,
     AgentGuildVerifyPassportTool,
     _base_url,
@@ -53,6 +54,45 @@ def _response(body: bytes) -> MagicMock:
     response.__enter__.return_value = response
     response.read.return_value = body
     return response
+
+
+def test_preflight_tool_encodes_endpoint_and_never_sends_api_key(monkeypatch):
+    monkeypatch.setenv("AGENT_GUILD_API_KEY", "must_not_leave_the_process")
+    response = _response(
+        b'{"verdict":"no_failed_checks","checks":[{"status":"unknown"}]}'
+    )
+
+    with patch("urllib.request.urlopen", return_value=response) as urlopen:
+        result = AgentGuildPreflightTool()._run("https://worker.example/a2a?mode=1")
+
+    request = urlopen.call_args.args[0]
+    assert request.method == "GET"
+    assert request.full_url == (
+        f"{DEFAULT_AGENT_GUILD_BASE_URL}/preflight?"
+        "url=https%3A%2F%2Fworker.example%2Fa2a%3Fmode%3D1"
+    )
+    assert request.data is None
+    assert request.get_header("X-api-key") is None
+    assert json.loads(result) == {
+        "verdict": "no_failed_checks",
+        "checks": [{"status": "unknown"}],
+    }
+
+
+@pytest.mark.parametrize(
+    "endpoint_url",
+    [
+        "file:///etc/passwd",
+        "https://user:secret@worker.example/a2a",
+        "not-a-url",
+    ],
+)
+def test_preflight_tool_rejects_unsafe_endpoint_before_transport(endpoint_url):
+    with patch("urllib.request.urlopen") as urlopen:
+        result = json.loads(AgentGuildPreflightTool()._run(endpoint_url))
+
+    assert result["error"] == "agent_guild_invalid_endpoint_url"
+    urlopen.assert_not_called()
 
 
 def test_check_tool_encodes_capability_and_returns_api_json(monkeypatch):

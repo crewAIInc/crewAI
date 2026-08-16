@@ -9,6 +9,7 @@ from crewai_tools.aws.s3.reader_tool import S3ReaderTool
 from crewai_tools.aws.s3.writer_tool import S3WriterTool
 from crewai_tools.tools.agent_guild_tool.agent_guild_tool import (
     AgentGuildCheckTool,
+    AgentGuildPreflightTool,
     AgentGuildRiskScoreTool,
     AgentGuildVerifyPassportTool,
 )
@@ -230,10 +231,11 @@ from crewai_tools.tools.zapier_action_tool.zapier_action_tool import ZapierActio
 
 
 __all__ = [
+    "AIMindTool",
     "AgentGuildCheckTool",
+    "AgentGuildPreflightTool",
     "AgentGuildRiskScoreTool",
     "AgentGuildVerifyPassportTool",
-    "AIMindTool",
     "ApifyActorsTool",
     "ArxivPaperTool",
     "BedrockInvokeAgentTool",

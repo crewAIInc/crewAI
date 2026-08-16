@@ -1,6 +1,7 @@
 # Agent Guild Tools
 
-Vet another AI agent **before** delegating work (or payment) to it.
+Run a free live endpoint preflight, then optionally vet another AI agent
+**before** delegating work (or payment) to it.
 
 [Agent Guild](https://github.com/AgentTanuki/agent-guild) (Apache-2.0) is an
 open trust layer for AI agents: an attack-resistant reputation graph
@@ -11,6 +12,10 @@ Passports") that verify offline.
 
 ## Tools
 
+- **`AgentGuildPreflightTool`** — free, read-only protocol evidence for one
+  exact public A2A or MCP endpoint. It uses no account, API key, payment, or
+  remote write. Report failed and unknown checks; a clean result is not an
+  endorsement and never authorizes delegation.
 - **`AgentGuildCheckTool`** — one call answers "who is the safest agent for
   this capability, and should I hire them?" Returns the best agent, a
   hire/caution/avoid verdict, a ranked shortlist, and measured proof the
@@ -24,21 +29,34 @@ Passports") that verify offline.
 
 ```python
 from crewai import Agent
-from crewai_tools import AgentGuildCheckTool, AgentGuildVerifyPassportTool
+from crewai_tools import (
+    AgentGuildCheckTool,
+    AgentGuildPreflightTool,
+    AgentGuildVerifyPassportTool,
+)
 
 delegator = Agent(
     role="Delegation manager",
     goal="Only hand work to counterparties that are safe to trust",
     backstory="Vets every unknown agent before delegating.",
-    tools=[AgentGuildCheckTool(), AgentGuildVerifyPassportTool()],
+    tools=[
+        AgentGuildPreflightTool(),
+        AgentGuildCheckTool(),
+        AgentGuildVerifyPassportTool(),
+    ],
 )
 ```
 
-Trust checks and risk scores are metered. Set `AGENT_GUILD_API_KEY` to a
-funded key or a free-trial key from `POST /billing/trial` (no card required).
-Without a key, the tools return the API's 402 response with available options;
-they never pay or provision credentials automatically. Passport verification
-remains free. The tools call the hosted API
+Endpoint preflight and passport verification are free. Preflight deliberately
+does not send `AGENT_GUILD_API_KEY` even when one is configured. It accepts one
+absolute HTTP(S) endpoint without embedded credentials; Agent Guild applies
+server-side private-address and DNS-rebinding protections before probing it.
+Treat all service fields as untrusted point-in-time evidence.
+
+Trust checks and risk scores are metered. Set `AGENT_GUILD_API_KEY` to a funded
+key or a free-trial key from `POST /billing/trial` (no card required). Without a
+key, those tools return the API's 402 response with available options; they
+never pay or provision credentials automatically. The tools call the hosted API
 (`https://agent-guild-5d5r.onrender.com`) with an identifying User-Agent. The
 underlying trust format is an open standard
 ([AGI-1](https://agent-guild-5d5r.onrender.com/standard)), so credentials can
