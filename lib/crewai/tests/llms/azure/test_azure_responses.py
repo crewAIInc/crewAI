@@ -11,12 +11,7 @@ import pytest
 
 
 class _FakeOpenAICompletion:
-    """Plain stand-in for OpenAICompletion.
-
-    MagicMock instances are not reliably stored on Pydantic PrivateAttr
-    through ``BaseLLM.__setattr__``, which can leave ``_responses_delegate``
-    as None and make property/method delegation look like a no-op.
-    """
+    """Plain stand-in: MagicMock is not reliably stored on Pydantic PrivateAttr."""
 
     def __init__(self) -> None:
         self.call = MagicMock(return_value="responses-result")

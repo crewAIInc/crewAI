@@ -1,10 +1,4 @@
-"""urllib3/requests transport that pins TCP to a validated peer IP.
-
-Redirect hops are validated by :func:`~crewai_tools.security.safe_requests.safe_get`,
-not here. This adapter exists so each connection uses the sockaddr from the
-lookup that was just checked, and so environment proxies cannot hide the
-destination.
-"""
+"""urllib3/requests transport that pins TCP to a validated peer IP."""
 
 from __future__ import annotations
 
@@ -36,18 +30,13 @@ from crewai_tools.security.safe_path import (
 
 
 def _set_socket_options(sock: socket.socket, options: Any) -> None:
-    if not options:
-        return
-    for opt in options:
+    for opt in options or ():
         sock.setsockopt(*opt)
 
 
 def _connect_timeout(timeout: Any) -> float | None:
-    if timeout is None:
-        return socket.getdefaulttimeout()
     connect = getattr(timeout, "connect_timeout", timeout)
-    default_token = getattr(timeout, "DEFAULT_TIMEOUT", None)
-    if connect is None or connect is default_token:
+    if connect is None or connect is getattr(timeout, "DEFAULT_TIMEOUT", None):
         return socket.getdefaulttimeout()
     if isinstance(connect, (int, float)):
         return float(connect)
@@ -86,12 +75,7 @@ def create_validated_connection(
     source_address: tuple[str, int] | None = None,
     socket_options: Any = None,
 ) -> socket.socket:
-    """Open a TCP socket to *host* after validating and pinning the peer IP.
-
-    DNS is resolved once. If any address is private or reserved the
-    connection is refused. ``connect()`` is then called on a sockaddr from
-    that lookup, so a later DNS rebind cannot change the destination.
-    """
+    """Open a TCP socket to *host* after validating and pinning the peer IP."""
     if _is_escape_hatch_enabled():
         return urllib3_create_connection(
             (host, port),
@@ -114,9 +98,6 @@ def create_validated_connection(
         )
     except socket.gaierror as exc:
         raise ValueError(f"Could not resolve hostname: '{host}'") from exc
-
-    if not addrinfos:
-        raise OSError("getaddrinfo returns an empty list")
 
     for _family, _socktype, _proto, _canonname, sockaddr in addrinfos:
         ip_str = str(sockaddr[0])
@@ -164,8 +145,6 @@ def _open_validated_socket(conn: HTTPConnection) -> socket.socket:
             source_address=conn.source_address,
             socket_options=conn.socket_options,
         )
-    # The safe path converts gaierror to ValueError. This still fires when
-    # the escape hatch uses urllib3_create_connection, which re-raises it.
     except socket.gaierror as exc:
         raise NameResolutionError(conn.host, conn, exc) from exc
     except socket.timeout as exc:
@@ -213,13 +192,7 @@ class _SafePoolManager(PoolManager):
 
 
 class SSRFProtectedAdapter(HTTPAdapter):
-    """Transport adapter that pins TCP to a validated peer IP.
-
-    Redirect hops are validated by :func:`~crewai_tools.security.safe_requests.safe_get`,
-    not here. This adapter exists so each connection uses the sockaddr from
-    the lookup that was just checked, and so environment proxies cannot hide
-    the destination.
-    """
+    """HTTPAdapter that connects through :func:`create_validated_connection`."""
 
     def init_poolmanager(
         self,
@@ -254,7 +227,8 @@ class SSRFProtectedAdapter(HTTPAdapter):
         cert: Any = None,
         proxies: Any = None,
     ) -> requests.Response:
-        if proxies and not _is_escape_hatch_enabled():
+        unsafe = _is_escape_hatch_enabled()
+        if proxies and not unsafe:
             raise ValueError(
                 f"Proxies are not allowed for SSRF-safe requests. {_BYPASS_HINT}"
             )
@@ -264,5 +238,5 @@ class SSRFProtectedAdapter(HTTPAdapter):
             timeout=timeout,
             verify=verify,
             cert=cert,
-            proxies={} if not _is_escape_hatch_enabled() else proxies,
+            proxies=proxies if unsafe else {},
         )

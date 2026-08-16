@@ -114,14 +114,12 @@ class URLReadTool(BaseTool):
         automatically: every hop is revalidated, and credentials are dropped on
         cross-origin hops. Bodies over ``max_bytes`` are abandoned mid-stream.
 
-        The fetch pins TCP to the IP that passed validation, so a DNS
-        rebind between lookup and connect cannot retarget the socket.
-        That pinning applies only while safe-path enforcement is active;
-        ``CREWAI_TOOLS_ALLOW_UNSAFE_PATHS`` without
-        ``CREWAI_TOOLS_FORCE_SAFE_PATHS`` bypasses peer validation. The
-        returned text is still untrusted remote content flowing into an
-        agent's context -- a fetched page can attempt to instruct the
-        agent. Network egress policy and prompt-level handling cover that.
+        The fetch pins TCP to the IP that passed validation unless
+        ``CREWAI_TOOLS_ALLOW_UNSAFE_PATHS`` is set without
+        ``CREWAI_TOOLS_FORCE_SAFE_PATHS``. The returned text is still
+        untrusted remote content flowing into an agent's context -- a
+        fetched page can attempt to instruct the agent. Network egress
+        policy and prompt-level handling cover that.
 
     Args:
         max_bytes (int): Largest response body to accept, in decoded bytes.

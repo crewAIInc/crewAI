@@ -77,12 +77,7 @@ def _env_flag_enabled(name: str) -> bool:
 
 
 def _is_escape_hatch_enabled() -> bool:
-    """Check if the unsafe paths escape hatch is enabled.
-
-    ``CREWAI_TOOLS_FORCE_SAFE_PATHS`` wins: managed workers set it so a
-    tenant-supplied ``CREWAI_TOOLS_ALLOW_UNSAFE_PATHS`` cannot clear the
-    SSRF / path allow-list.
-    """
+    """True when ``ALLOW_UNSAFE_PATHS`` is set and ``FORCE_SAFE_PATHS`` is not."""
     if _env_flag_enabled(_FORCE_SAFE_PATHS_ENV):
         if _env_flag_enabled(_UNSAFE_PATHS_ENV):
             logger.warning(
@@ -207,11 +202,8 @@ def validate_url(url: str) -> str:
     DNS and checks that the target IP is not private or reserved (prevents
     SSRF to internal services and cloud metadata endpoints).
 
-    This checks the URL string it is handed. Callers that then fetch must
-    use :func:`crewai_tools.security.safe_requests.safe_get` (or a session
-    from :func:`crewai_tools.security.safe_requests.create_safe_session`)
-    so the connection is pinned to an authorised IP. Calling
-    ``requests.get`` after this function re-resolves DNS without that pin.
+    This checks the URL string only. Fetch with ``safe_get`` so the
+    connection is pinned to an authorised IP.
 
     Args:
         url: The URL to validate.

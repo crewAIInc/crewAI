@@ -284,7 +284,6 @@ def test_session_mounts_protected_adapter_and_ignores_env_proxies() -> None:
 def test_safe_session_does_not_follow_redirects_by_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """create_safe_session().get must not follow Location without safe_get."""
     session = create_safe_session()
     urls: list[str] = []
 
@@ -384,11 +383,6 @@ def test_assert_safe_peer_force_safe_overrides_escape_hatch(
 def test_create_validated_connection_pins_resolved_ip(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The socket is connected to the sockaddr from the lookup we just checked.
-
-    A second getaddrinfo (what urllib3 would do if we passed the hostname
-    through) returning a private IP must not be the address we connect to.
-    """
     lookups = {"n": 0}
     connected_to: list[tuple[str, int]] = []
 
@@ -468,11 +462,6 @@ def test_create_validated_connection_blocks_direct_loopback() -> None:
 def test_create_validated_connection_keeps_socket_when_called_from_except(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """An outer except must not make a successful connect look like a failure.
-
-    ``sys.exc_info()`` is the exception currently being handled, not "did
-    this connect fail?". urllib3 retries from inside ``except``.
-    """
     closed: list[bool] = []
 
     def fake_getaddrinfo(
@@ -576,12 +565,6 @@ class _TrackingSession:
 
     def close(self) -> None:
         self.closed = True
-
-    def __enter__(self) -> _TrackingSession:
-        return self
-
-    def __exit__(self, *args: Any) -> None:
-        self.close()
 
 
 def test_streamed_raw_get_keeps_session_open_until_response_close(

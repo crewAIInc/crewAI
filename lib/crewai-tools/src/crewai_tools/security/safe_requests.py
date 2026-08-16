@@ -1,23 +1,7 @@
 """SSRF-safe HTTP fetching for crewai-tools.
 
-:func:`safe_get` already validates the initial URL and each ``Location``
-before following it. That hop loop does not pin the TCP peer:
-``requests`` re-resolves DNS at connect time, so a host that looks public
-at validation and rebinds to an internal address still reaches the
-internal target. A proxy would also be the connected peer, so the
-destination IP would never be inspected.
-
-This module closes those remaining gaps at the connection layer:
-
-* Connections resolve DNS once, refuse any private/reserved address, and
-  ``connect()`` to the authorised sockaddr. The IP that was checked is the
-  IP the socket uses.
-* After connect, the real peer from ``getpeername()`` is checked again.
-* Environment proxies are disabled.
-
-Use :func:`safe_get` (or :func:`create_safe_session`) instead of calling
-``requests.get`` directly from any tool that fetches a user- or
-LLM-controlled URL.
+``safe_get`` validates each URL and redirect hop, then fetches through a
+session that pins TCP to the checked IP and ignores environment proxies.
 """
 
 from __future__ import annotations
@@ -75,12 +59,7 @@ def _strip_cross_origin_credentials(request_kwargs: dict[str, Any]) -> dict[str,
 
 
 class _SafeSession(requests.Session):
-    """Session that does not follow redirects unless the caller opts in.
-
-    :func:`safe_get` validates each ``Location`` itself. ``Session.get``
-    would otherwise default to ``allow_redirects=True`` and follow hops
-    without that check.
-    """
+    """Session that does not follow redirects unless the caller opts in."""
 
     def get(self, url: str | bytes, **kwargs: Any) -> requests.Response:
         kwargs.setdefault("allow_redirects", False)
@@ -98,12 +77,7 @@ class _SafeSession(requests.Session):
 
 
 def create_safe_session() -> requests.Session:
-    """Return a ``requests.Session`` that pins connections against SSRF.
-
-    The session pins TCP to a validated peer IP, ignores environment
-    proxies, and does not follow redirects. Redirect hops are the
-    caller's job via :func:`safe_get`.
-    """
+    """Return a session that pins TCP to a validated peer and does not follow redirects."""
     session = _SafeSession()
     session.trust_env = False
     session.proxies = {}
@@ -121,11 +95,7 @@ def _reject_proxies(kwargs: dict[str, Any]) -> None:
 
 
 def _attach_session(response: requests.Response, session: requests.Session) -> None:
-    """Close *session* when *response* is closed.
-
-    Streamed bodies are read after ``_raw_get`` returns, so the session that
-    owns the connection must outlive the ``get()`` call.
-    """
+    """Keep *session* alive until *response* is closed (needed for ``stream=True``)."""
     original_close = response.close
 
     def close_with_session() -> None:
@@ -138,7 +108,7 @@ def _attach_session(response: requests.Response, session: requests.Session) -> N
 
 
 def _raw_get(url: str, **kwargs: Any) -> requests.Response:
-    """GET through an SSRF-protected session. Patchable in tests."""
+    """GET through an SSRF-protected session."""
     session = create_safe_session()
     owns_session = True
     try:
@@ -159,9 +129,6 @@ def safe_get(url: str, *, max_redirects: int = 10, **kwargs: Any) -> requests.Re
     are the caller's to close. On failure they are closed here: a caller given
     an exception has no handle on them, and a streamed hop holds its connection
     until its body is read or closed.
-
-    Each hop is fetched through :class:`SSRFProtectedAdapter`, which pins
-    the TCP connection to an authorised IP.
     """
     current_url = validate_url(url)
     _reject_proxies(kwargs)
