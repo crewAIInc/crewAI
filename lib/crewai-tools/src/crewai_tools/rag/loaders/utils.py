@@ -2,6 +2,8 @@
 
 from typing import Any
 
+from crewai_tools.security.safe_requests import safe_get
+
 
 def load_from_url(
     url: str,
@@ -23,7 +25,6 @@ def load_from_url(
     Raises:
         ValueError: If there's an error fetching the URL
     """
-    from crewai_tools.security.safe_requests import safe_get
 
     headers = kwargs.get(
         "headers",
