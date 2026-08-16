@@ -34,9 +34,13 @@ delegator = Agent(
 )
 ```
 
-No API key required for these read paths; the tools call the hosted public
-API (`https://agent-guild-5d5r.onrender.com`) with an identifying User-Agent.
-The underlying trust format is an open standard
+Trust checks and risk scores are metered. Set `AGENT_GUILD_API_KEY` to a
+funded key or a free-trial key from `POST /billing/trial` (no card required).
+Without a key, the tools return the API's 402 response with available options;
+they never pay or provision credentials automatically. Passport verification
+remains free. The tools call the hosted API
+(`https://agent-guild-5d5r.onrender.com`) with an identifying User-Agent. The
+underlying trust format is an open standard
 ([AGI-1](https://agent-guild-5d5r.onrender.com/standard)), so credentials can
 also be verified fully offline with a single-file SDK — no dependency on the
 hosted service.

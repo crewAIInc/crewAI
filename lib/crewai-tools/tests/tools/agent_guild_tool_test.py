@@ -1,7 +1,11 @@
 """Focused tests for the Agent Guild tools."""
 
+import io
 import json
+import urllib.error
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from crewai_tools.tools.agent_guild_tool.agent_guild_tool import (
     DEFAULT_AGENT_GUILD_BASE_URL,
@@ -11,6 +15,12 @@ from crewai_tools.tools.agent_guild_tool.agent_guild_tool import (
     _base_url,
     _request,
 )
+
+
+@pytest.fixture(autouse=True)
+def clear_agent_guild_environment(monkeypatch):
+    monkeypatch.delenv("AGENT_GUILD_API_KEY", raising=False)
+    monkeypatch.delenv("AGENT_GUILD_BASE_URL", raising=False)
 
 
 def test_base_url_defaults_to_hosted_service(monkeypatch):
@@ -94,6 +104,48 @@ def test_verify_passport_tool_posts_credential_and_returns_api_json(monkeypatch)
     assert request.data == credential.encode("utf-8")
     assert request.get_header("Content-type") == "application/json"
     assert json.loads(result) == {"valid": True}
+
+
+def test_request_sends_configured_api_key(monkeypatch):
+    monkeypatch.setenv("AGENT_GUILD_API_KEY", "ak_test")
+    response = _response(b'{"verdict":"hire"}')
+
+    with patch("urllib.request.urlopen", return_value=response) as urlopen:
+        _request("/check?capability=code-review")
+
+    request = urlopen.call_args.args[0]
+    assert request.get_header("X-api-key") == "ak_test"
+
+
+def test_http_error_returns_api_body_unchanged():
+    error = urllib.error.HTTPError(
+        f"{DEFAULT_AGENT_GUILD_BASE_URL}/check",
+        402,
+        "Payment Required",
+        {},
+        io.BytesIO(b'{"detail":"payment required"}'),
+    )
+
+    with patch("urllib.request.urlopen", side_effect=error):
+        result = _request("/check?capability=code-review")
+
+    assert result == '{"detail":"payment required"}'
+
+
+def test_http_error_without_body_includes_status():
+    error = urllib.error.HTTPError(
+        f"{DEFAULT_AGENT_GUILD_BASE_URL}/check",
+        503,
+        "Service Unavailable",
+        {},
+        io.BytesIO(b""),
+    )
+
+    with patch("urllib.request.urlopen", side_effect=error):
+        result = json.loads(_request("/check?capability=code-review"))
+
+    assert result["error"] == "agent_guild_http_error"
+    assert result["status"] == 503
 
 
 def test_transport_error_redacts_configured_url_secrets(monkeypatch):
