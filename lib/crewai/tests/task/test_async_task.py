@@ -232,6 +232,55 @@ class TestAsyncTaskExecution:
         assert "Test error" in str(exc_info.value)
         assert task.end_time is not None
 
+    @pytest.mark.asyncio
+    @patch("crewai.Agent.execute_task")
+    async def test_sync_execute_runs_async_callback_inside_running_loop(
+        self, mock_execute: MagicMock, test_agent: Agent
+    ) -> None:
+        """Async task callback on the sync path must not crash inside a running loop."""
+        mock_execute.return_value = "Sync result"
+        callback_called = False
+
+        async def async_callback(output: TaskOutput) -> None:
+            nonlocal callback_called
+            callback_called = True
+
+        task = Task(
+            description="Test task description",
+            expected_output="Test expected output",
+            agent=test_agent,
+            callback=async_callback,
+        )
+
+        result = task.execute_sync()
+
+        assert callback_called
+        assert result.raw == "Sync result"
+
+    @patch("crewai.Agent.execute_task")
+    def test_sync_execute_runs_async_callback_without_running_loop(
+        self, mock_execute: MagicMock, test_agent: Agent
+    ) -> None:
+        """Async task callback on the sync path runs via asyncio.run when no loop is running."""
+        mock_execute.return_value = "Sync result"
+        callback_called = False
+
+        async def async_callback(output: TaskOutput) -> None:
+            nonlocal callback_called
+            callback_called = True
+
+        task = Task(
+            description="Test task description",
+            expected_output="Test expected output",
+            agent=test_agent,
+            callback=async_callback,
+        )
+
+        result = task.execute_sync()
+
+        assert callback_called
+        assert result.raw == "Sync result"
+
 
 class TestAsyncGuardrails:
     """Tests for async guardrail invocation."""
