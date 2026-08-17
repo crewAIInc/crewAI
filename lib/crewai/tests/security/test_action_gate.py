@@ -5,6 +5,7 @@ import os
 import shutil
 import sys
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
@@ -22,6 +23,7 @@ ActionGate = action_gate.ActionGate
 ActionLedger = action_gate.ActionLedger
 Disposition = action_gate.Disposition
 ToolTier = action_gate.ToolTier
+LedgerIntegrityError = action_gate.LedgerIntegrityError
 
 
 class TestActionGate(unittest.TestCase):
@@ -134,6 +136,171 @@ class TestActionGate(unittest.TestCase):
         with self.assertRaises(PermissionError) as ctx:
             drop_database(db="main")
         self.assertIn("ActionGate blocked tool", str(ctx.exception))
+
+
+class TestActionGateSecurityFixes(unittest.TestCase):
+    """Regression tests for a security review that found the token check,
+    tool classification, ledger tamper-evidence, concurrency safety, and
+    argument logging were all exploitable in the original implementation.
+    Each test below reproduces the original exploit and asserts it is
+    now blocked (or, for redaction, that the leak no longer occurs).
+    """
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.ledger_file = Path(self.temp_dir) / "action_ledger.jsonl"
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def _fresh_ledger_view(self, path):
+        """A read-only ActionLedger-shaped view for calling verify_chain()
+        without triggering __init__'s recovery (which raises on a
+        tampered file -- exactly what some of these tests are inducing)."""
+        inst = ActionLedger.__new__(ActionLedger)
+        inst.ledger_path = path
+        inst._thread_lock = threading.Lock()
+        return inst
+
+    # ---- Token check: a per-call token must be VERIFIED, not merely truthy
+
+    def test_arbitrary_caller_token_no_longer_authorizes_destructive_op(self):
+        ledger = ActionLedger(self.ledger_file)
+        gate = ActionGate(ledger=ledger, prove_token="real-secret-only-operator-knows")
+        decision = gate.evaluate(
+            "delete_production_database", {}, prove_token="literally-anything-works"
+        )
+        self.assertFalse(decision.allowed)
+        self.assertEqual(decision.disposition, Disposition.DENY)
+
+    def test_correct_explicit_token_still_authorizes(self):
+        ledger = ActionLedger(self.ledger_file)
+        gate = ActionGate(ledger=ledger, prove_token="real-secret-only-operator-knows")
+        decision = gate.evaluate(
+            "delete_production_database", {}, prove_token="real-secret-only-operator-knows"
+        )
+        self.assertTrue(decision.allowed)
+
+    def test_gates_own_configured_token_still_authorizes_without_override(self):
+        """The pre-existing, intended behavior: a gate deployed with its own
+        secret authorizes calls that don't pass a per-call override."""
+        ledger = ActionLedger(self.ledger_file)
+        gate = ActionGate(ledger=ledger, prove_token="ops-deployed-secret")
+        decision = gate.evaluate("delete_staging_cache", {})
+        self.assertTrue(decision.allowed)
+
+    def test_no_secret_configured_anywhere_means_nothing_can_be_proven(self):
+        ledger = ActionLedger(self.ledger_file)
+        gate = ActionGate(ledger=ledger, prove_token=None)
+        decision = gate.evaluate("delete_x", {}, prove_token="anything")
+        self.assertFalse(decision.allowed)
+
+    # ---- Tool classification: severity-ordered, whole-token matching
+
+    def test_destructive_tool_with_read_like_name_is_not_misclassified(self):
+        """Original bug: dict-insertion-order substring matching classified
+        this as READ (the 'search'/'get' pattern matched before 'terminate'
+        was reached), which bypassed ALL gating -- READ tools execute
+        unconditionally with no token check at all."""
+        ledger = ActionLedger(self.ledger_file)
+        gate = ActionGate(ledger=ledger, prove_token=None)
+        decision = gate.evaluate("search_and_terminate_instance", {})
+        self.assertEqual(decision.tier, ToolTier.DESTRUCTIVE)
+        self.assertFalse(decision.allowed)
+
+    def test_whole_token_matching_avoids_false_positive_substrings(self):
+        """'budget_report' contains the raw substring 'get' (inside 'bud-
+        GET') but is not a get_* tool. The original substring-'in' check
+        would have matched it as READ; whole-token matching must not."""
+        ledger = ActionLedger(self.ledger_file)
+        gate = ActionGate(ledger=ledger, prove_token=None)
+        self.assertIn("get", "budget_report")  # confirms the substring IS present
+        decision = gate.evaluate("budget_report", {})
+        self.assertNotEqual(decision.tier, ToolTier.READ)
+        # No real token matches either -> falls through to the safe default.
+        self.assertEqual(decision.tier, ToolTier.WRITE_MUTATING)
+
+    # ---- Ledger tamper-evidence: verify_chain() must actually verify
+
+    def test_verify_chain_passes_on_an_untampered_ledger(self):
+        ledger = ActionLedger(self.ledger_file)
+        gate = ActionGate(ledger=ledger, prove_token=None)
+        gate.evaluate("get_user", {"id": 1})
+        gate.evaluate("post_comment", {"text": "hello"})
+        ok, reason = ledger.verify_chain()
+        self.assertTrue(ok)
+        self.assertIsNone(reason)
+
+    def test_verify_chain_detects_a_tampered_entry(self):
+        ledger = ActionLedger(self.ledger_file)
+        gate = ActionGate(ledger=ledger, prove_token=None)
+        gate.evaluate("get_user", {"id": 1})
+        gate.evaluate("post_comment", {"text": "hello"})
+
+        lines = self.ledger_file.read_text(encoding="utf-8").strip().split("\n")
+        entry = json.loads(lines[0])
+        entry["arguments"]["id"] = 999  # tamper with a past, already-hashed entry
+        lines[0] = json.dumps(entry)
+        self.ledger_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        ok, reason = self._fresh_ledger_view(self.ledger_file).verify_chain()
+        self.assertFalse(ok)
+        self.assertIn("receipt_hash", reason)
+
+    def test_recovery_refuses_to_continue_on_a_tampered_ledger(self):
+        ledger = ActionLedger(self.ledger_file)
+        gate = ActionGate(ledger=ledger, prove_token=None)
+        gate.evaluate("get_user", {"id": 1})
+
+        lines = self.ledger_file.read_text(encoding="utf-8").strip().split("\n")
+        entry = json.loads(lines[0])
+        entry["prev_hash"] = "f" * 64  # tamper with the chain linkage itself
+        lines[0] = json.dumps(entry)
+        self.ledger_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        with self.assertRaises(LedgerIntegrityError):
+            ActionLedger(self.ledger_file)
+
+    # ---- Sensitive argument redaction
+
+    def test_sensitive_arguments_are_redacted_in_the_ledger_but_not_in_the_call(self):
+        ledger = ActionLedger(self.ledger_file)
+        gate = ActionGate(ledger=ledger, prove_token="secret")
+        boundary = ActionBoundary(gate)
+        received = {}
+
+        @boundary.guard
+        def get_account(username: str, password: str):
+            received["password"] = password  # the real function must see the real value
+            return "ok"
+
+        get_account(username="alice", password="hunter2-the-real-secret")
+
+        self.assertEqual(received["password"], "hunter2-the-real-secret")
+        logged = json.loads(self.ledger_file.read_text(encoding="utf-8").strip())
+        self.assertEqual(logged["arguments"]["password"], "***REDACTED***")
+        self.assertEqual(logged["arguments"]["username"], "alice")
+
+    # ---- Concurrency safety
+
+    def test_concurrent_writes_from_multiple_threads_do_not_fork_the_chain(self):
+        ledger = ActionLedger(self.ledger_file)
+        gate = ActionGate(ledger=ledger, prove_token=None)
+
+        def worker(n):
+            for i in range(20):
+                gate.evaluate(f"get_item_{n}_{i}", {"n": n, "i": i})
+
+        threads = [threading.Thread(target=worker, args=(t,)) for t in range(8)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        lines = self.ledger_file.read_text(encoding="utf-8").strip().split("\n")
+        self.assertEqual(len(lines), 160)
+        ok, reason = self._fresh_ledger_view(self.ledger_file).verify_chain()
+        self.assertTrue(ok, reason)
 
 
 if __name__ == "__main__":
