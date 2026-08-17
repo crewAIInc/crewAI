@@ -1346,6 +1346,41 @@ def test_agent_max_retry_limit():
         )
 
 
+def test_agent_max_retry_limit_is_per_task():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        max_retry_limit=1,
+    )
+
+    first_task = Task(
+        agent=agent,
+        description="Say the word: Hi",
+        expected_output="The word: Hi",
+    )
+    second_task = Task(
+        agent=agent,
+        description="Say the word: Bye",
+        expected_output="The word: Bye",
+    )
+
+    agent.create_agent_executor(task=first_task)
+
+    from crewai.experimental.agent_executor import AgentExecutor
+
+    with patch.object(AgentExecutor, "invoke") as invoke_mock:
+        invoke_mock.side_effect = [
+            Exception("transient failure"),
+            {"output": "Hi"},
+            Exception("transient failure"),
+            {"output": "Bye"},
+        ]
+
+        assert agent.execute_task(task=first_task) == "Hi"
+        assert agent.execute_task(task=second_task) == "Bye"
+
+
 def test_agent_with_llm():
     agent = Agent(
         role="test role",

@@ -19,6 +19,7 @@ from typing import (
     NoReturn,
     cast,
 )
+from uuid import UUID
 import warnings
 
 from pydantic import (
@@ -206,6 +207,7 @@ class Agent(BaseAgent):
     model_config = ConfigDict()
 
     _times_executed: int = PrivateAttr(default=0)
+    _retried_task_id: UUID | None = PrivateAttr(default=None)
     _mcp_resolver: MCPToolResolver | None = PrivateAttr(default=None)
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     max_execution_time: int | None = Field(
@@ -694,6 +696,9 @@ class Agent(BaseAgent):
         if self.max_rpm and self._rpm_controller:
             self._rpm_controller.stop_rpm_counter()
 
+        self._times_executed = 0
+        self._retried_task_id = None
+
         result = process_tool_results(self, result)
 
         output_for_event = result
@@ -740,6 +745,12 @@ class Agent(BaseAgent):
             raise e
         if isinstance(e, _passthrough_exceptions):
             raise
+        # max_retry_limit is a per-task budget, but retries recurse through
+        # execute_task, so the counter can only be cleared once a different
+        # task starts failing.
+        if self._retried_task_id != task.id:
+            self._retried_task_id = task.id
+            self._times_executed = 0
         self._times_executed += 1
         if self._times_executed > self.max_retry_limit:
             crewai_event_bus.emit(
