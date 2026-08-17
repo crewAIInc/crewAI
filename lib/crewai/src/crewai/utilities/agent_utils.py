@@ -847,9 +847,12 @@ def _estimate_token_count(text: str) -> int:
 _SUMMARIZATION_PROMPT_TOKEN_OVERHEAD: Final[int] = 512
 
 
-_message_content_text: Callable[[LLMMessage], str] = lambda msg: (  # noqa: E731
-    str(c) if (c := msg.get("content")) is not None else ""
-)
+def _message_content_text(msg: LLMMessage) -> str:
+    """Return the message content as text for token estimation."""
+    content = msg.get("content")
+    if content is None:
+        return ""
+    return str(content)
 
 
 def _split_text_by_token_limit(text: str, max_tokens: int) -> list[str]:
