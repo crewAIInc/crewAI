@@ -1066,7 +1066,9 @@ class Crew(FlowTrackable, BaseModel):
                 )
 
             for after_callback in self.after_kickoff_callbacks:
-                result = after_callback(result)
+                callback_result = after_callback(result)
+                if callback_result is not None:
+                    result = callback_result
 
             result = self._post_kickoff(result)
 
@@ -1283,7 +1285,9 @@ class Crew(FlowTrackable, BaseModel):
                 )
 
             for after_callback in self.after_kickoff_callbacks:
-                result = after_callback(result)
+                callback_result = after_callback(result)
+                if callback_result is not None:
+                    result = callback_result
 
             result = self._post_kickoff(result)
 

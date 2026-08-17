@@ -2177,6 +2177,78 @@ def test_task_callback_on_crew():
         assert isinstance(args[0], TaskOutput)
 
 
+def test_after_kickoff_callback_returning_none_preserves_result():
+    """A None-returning after_kickoff callback must not replace the crew result."""
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Give me a list of 5 interesting ideas to explore for an article.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher_agent,
+    )
+
+    callback_called = False
+
+    def logging_callback(result):
+        nonlocal callback_called
+        callback_called = True
+        # Intentionally does not return the result.
+
+    crew = Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[task],
+        after_kickoff_callbacks=[logging_callback],
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        result = crew.kickoff()
+
+        assert callback_called
+        assert result is not None
+        assert result.raw == "ok"
+
+
+def test_after_kickoff_callback_returning_result_still_replaces_result():
+    """A result-returning after_kickoff callback still replaces the crew result."""
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Give me a list of 5 interesting ideas to explore for an article.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher_agent,
+    )
+
+    def replacing_callback(result):
+        result.raw = "adjusted"
+        return result
+
+    crew = Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[task],
+        after_kickoff_callbacks=[replacing_callback],
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        result = crew.kickoff()
+
+        assert result is not None
+        assert result.raw == "adjusted"
+
+
 def test_task_callback_both_on_task_and_crew():
     mock_callback_on_task = MagicMock()
     mock_callback_on_crew = MagicMock()
