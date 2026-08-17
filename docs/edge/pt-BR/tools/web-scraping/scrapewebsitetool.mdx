@@ -16,6 +16,8 @@ mode: "wide"
 Uma ferramenta desenvolvida para extrair e ler o conteúdo de um site especificado. Ela é capaz de lidar com diversos tipos de páginas web fazendo requisições HTTP e analisando o conteúdo HTML recebido.
 Esta ferramenta pode ser especialmente útil para tarefas de raspagem de dados, coleta de dados ou extração de informações específicas de sites.
 
+As buscas passam pelo helper HTTP seguro contra SSRF do CrewAI: a URL solicitada e cada hop de redirecionamento são verificados contra faixas privadas e reservadas (incluindo metadados de nuvem), e a conexão TCP é fixada no IP que passou nessa verificação.
+
 ## Instalação
 
 Instale o pacote crewai_tools
