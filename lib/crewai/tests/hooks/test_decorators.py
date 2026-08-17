@@ -13,6 +13,10 @@ from crewai.hooks import (
     get_after_tool_call_hooks,
     get_before_llm_call_hooks,
     get_before_tool_call_hooks,
+    unregister_after_llm_call_hook,
+    unregister_after_tool_call_hook,
+    unregister_before_llm_call_hook,
+    unregister_before_tool_call_hook,
 )
 from crewai.hooks.llm_hooks import LLMCallHookContext
 from crewai.hooks.tool_hooks import ToolCallHookContext
@@ -306,6 +310,62 @@ class TestDecoratorAttributes:
         assert test_hook._filter_tools == ["delete_file"]
         assert hasattr(test_hook, "_filter_agents")
         assert test_hook._filter_agents == ["Dev"]
+
+
+class TestUnregisterFilteredHooks:
+    """Filtered decorators register a wrapper, which unregister must resolve."""
+
+    def test_unregister_before_llm_call_with_agent_filter(self):
+        """Test that a filtered @before_llm_call hook can be unregistered."""
+
+        @before_llm_call(agents=["Researcher"])
+        def filtered_hook(context):
+            pass
+
+        assert len(get_before_llm_call_hooks()) == 1
+        assert unregister_before_llm_call_hook(filtered_hook) is True
+        assert get_before_llm_call_hooks() == []
+
+    def test_unregister_after_llm_call_with_agent_filter(self):
+        """Test that a filtered @after_llm_call hook can be unregistered."""
+
+        @after_llm_call(agents=["Researcher"])
+        def filtered_hook(context):
+            return None
+
+        assert len(get_after_llm_call_hooks()) == 1
+        assert unregister_after_llm_call_hook(filtered_hook) is True
+        assert get_after_llm_call_hooks() == []
+
+    def test_unregister_before_tool_call_with_tool_filter(self):
+        """Test that a filtered @before_tool_call hook can be unregistered."""
+
+        @before_tool_call(tools=["delete_file"])
+        def filtered_hook(context):
+            return None
+
+        assert len(get_before_tool_call_hooks()) == 1
+        assert unregister_before_tool_call_hook(filtered_hook) is True
+        assert get_before_tool_call_hooks() == []
+
+    def test_unregister_after_tool_call_with_combined_filters(self):
+        """Test that a filtered @after_tool_call hook can be unregistered."""
+
+        @after_tool_call(tools=["web_search"], agents=["Researcher"])
+        def filtered_hook(context):
+            return None
+
+        assert len(get_after_tool_call_hooks()) == 1
+        assert unregister_after_tool_call_hook(filtered_hook) is True
+        assert get_after_tool_call_hooks() == []
+
+    def test_unregister_unknown_hook_returns_false(self):
+        """Test that unregistering a hook that was never registered is a no-op."""
+
+        def never_registered(context):
+            return None
+
+        assert unregister_before_tool_call_hook(never_registered) is False
 
 
 class TestMultipleDecorators:

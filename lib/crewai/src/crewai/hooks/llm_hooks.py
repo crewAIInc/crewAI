@@ -9,6 +9,7 @@ from crewai.hooks.dispatch import (
     HookAborted,
     InterceptionPoint,
     get_global_hook_list,
+    unregister,
 )
 from crewai.hooks.types import (
     AfterLLMCallHookCallable,
@@ -291,11 +292,7 @@ def unregister_before_llm_call_hook(
         >>> unregister_before_llm_call_hook(my_hook)
         True
     """
-    try:
-        _before_llm_call_hooks.remove(hook)
-        return True
-    except ValueError:
-        return False
+    return unregister(InterceptionPoint.PRE_MODEL_CALL, hook)
 
 
 def unregister_after_llm_call_hook(
@@ -317,11 +314,7 @@ def unregister_after_llm_call_hook(
         >>> unregister_after_llm_call_hook(my_hook)
         True
     """
-    try:
-        _after_llm_call_hooks.remove(hook)
-        return True
-    except ValueError:
-        return False
+    return unregister(InterceptionPoint.POST_MODEL_CALL, hook)
 
 
 def clear_before_llm_call_hooks() -> int:
