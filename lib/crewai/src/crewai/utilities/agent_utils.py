@@ -844,9 +844,6 @@ def _estimate_token_count(text: str) -> int:
     return len(text) // 4
 
 
-_SUMMARIZATION_PROMPT_TOKEN_OVERHEAD: Final[int] = 512
-
-
 def _message_content_text(msg: LLMMessage) -> str:
     """Return the message content as text for token estimation."""
     content = msg.get("content")
@@ -1088,11 +1085,7 @@ def summarize_messages(
         return
 
     max_tokens = llm.get_context_window_size()
-    if max_tokens > _SUMMARIZATION_PROMPT_TOKEN_OVERHEAD:
-        chunk_max_tokens = max_tokens - _SUMMARIZATION_PROMPT_TOKEN_OVERHEAD
-    else:
-        chunk_max_tokens = max(1, max_tokens)
-    chunks = _split_messages_into_chunks(non_system_messages, chunk_max_tokens)
+    chunks = _split_messages_into_chunks(non_system_messages, max_tokens)
 
     total_chunks = len(chunks)
 
