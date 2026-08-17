@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 from crewai.tools.structured_tool import CrewStructuredTool
@@ -219,6 +220,28 @@ async def test_ainvoke(basic_function):
 
     result = await tool.ainvoke(input={"param1": "test"})
     assert result == "test 0"
+
+
+def test_invoke_from_running_event_loop_does_not_raise():
+    """Test that invoke() works when called from within a running event loop.
+
+    Regression test for the RuntimeError raised by asyncio.run() when a
+    coroutine-returning tool is invoked from an async context (FastAPI
+    handler, Jupyter cell, etc.).
+    """
+
+    async def async_echo(value: str) -> str:
+        """Echo the value."""
+        await asyncio.sleep(0.01)
+        return f"echo: {value}"
+
+    tool = CrewStructuredTool.from_function(func=async_echo, name="echo_tool")
+
+    async def invoke_from_running_loop():
+        return tool.invoke(input={"value": "hi"})
+
+    result = asyncio.run(invoke_from_running_loop())
+    assert result == "echo: hi"
 
 
 def test_parse_args_dict(basic_function):
