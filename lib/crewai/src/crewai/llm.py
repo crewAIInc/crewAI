@@ -2448,6 +2448,18 @@ class LLM(BaseLLM):
             logging.error(f"Failed to get supported params: {e!s}")
             return True  # Default to True
 
+    def _context_window_model_name(self) -> str:
+        """Return the model id used for context-window lookup.
+
+        LiteLLM keeps provider-qualified names such as ``openai/gpt-5.6-luna``.
+        Strip a recognized provider prefix so those resolve through the same
+        mapping as the bare model id. Unrecognized prefixes are left intact.
+        """
+        prefix, separator, remainder = self.model.partition("/")
+        if separator and remainder and prefix.lower() in SUPPORTED_NATIVE_PROVIDERS:
+            return remainder
+        return self.model
+
     def get_context_window_size(self) -> int:
         """
         Returns the context window size, using 75% of the maximum to avoid
@@ -2471,8 +2483,9 @@ class LLM(BaseLLM):
         self.context_window_size = int(
             DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
         )
+        model_name = self._context_window_model_name()
         for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if self.model.startswith(key):
+            if model_name.startswith(key) or self.model.startswith(key):
                 self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
         return self.context_window_size
 
