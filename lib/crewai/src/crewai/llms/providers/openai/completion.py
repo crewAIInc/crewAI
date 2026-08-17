@@ -2670,6 +2670,7 @@ class OpenAICompletion(BaseLLM):
             "gpt-4o": 128000,
             "gpt-4o-mini": 200000,
             "gpt-5.4-mini": 200000,
+            "gpt-5.6": 1050000,
             "gpt-4-turbo": 128000,
             "gpt-4.1": 1047576,
             "gpt-4.1-mini-2025-04-14": 1047576,
@@ -2683,7 +2684,9 @@ class OpenAICompletion(BaseLLM):
             "o4-mini": 200000,
         }
 
-        for model_prefix, size in context_windows.items():
+        for model_prefix, size in sorted(
+            context_windows.items(), key=lambda x: len(x[0]), reverse=True
+        ):
             if self.model.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
