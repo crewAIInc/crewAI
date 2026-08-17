@@ -343,6 +343,22 @@ def test_context_window_validation():
     assert "must be between 1024 and 2097152" in str(excinfo.value)
 
 
+@pytest.mark.parametrize(
+    "model",
+    ["gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
+)
+def test_gpt56_family_uses_official_context_window(model: str) -> None:
+    """GPT-5.6 Sol, Terra, Luna, and the alias share a 1.05M window."""
+    llm = LLM(model=model, is_litellm=True)
+    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_gpt56_does_not_override_gpt54_mini_window() -> None:
+    """A more specific older prefix must keep its own window."""
+    llm = LLM(model="gpt-5.4-mini", is_litellm=True)
+    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
 @pytest.fixture
 def get_weather_tool_schema():
     return {
