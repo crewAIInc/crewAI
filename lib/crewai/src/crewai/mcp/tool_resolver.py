@@ -11,6 +11,8 @@ into a standalone MCPToolResolver. It handles three flavours of MCP reference:
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
+import concurrent.futures
 import contextvars
 import time
 from typing import TYPE_CHECKING, Any, Final, cast
@@ -40,6 +42,33 @@ MCP_MAX_RETRIES: Final[int] = 3
 
 _mcp_schema_cache: dict[str, Any] = {}
 _cache_ttl: Final[int] = 300  # 5 minutes
+
+
+def _run_coro_from_sync(factory: Callable[[], Any]) -> Any:
+    """Run an async zero-arg factory from sync code.
+
+    ``asyncio.run()`` raises ``RuntimeError`` when a loop is already running
+    (CrewAI Flows start one in ``flow.runtime``). In that case, run the
+    coroutine on a worker thread that owns its own event loop.
+    """
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(factory())
+
+    ctx = contextvars.copy_context()
+
+    def _in_thread() -> Any:
+        loop = asyncio.new_event_loop()
+        try:
+            asyncio.set_event_loop(loop)
+            return loop.run_until_complete(factory())
+        finally:
+            loop.close()
+            asyncio.set_event_loop(None)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        return executor.submit(ctx.run, _in_thread).result()
 
 
 class MCPToolResolver:
@@ -98,7 +127,7 @@ class MCPToolResolver:
                     await client.disconnect()
 
         try:
-            asyncio.run(_disconnect_all())
+            _run_coro_from_sync(_disconnect_all)
         except Exception as e:
             self._logger.log("error", f"Error during MCP client cleanup: {e}")
         finally:
@@ -354,31 +383,20 @@ class MCPToolResolver:
 
         try:
             try:
-                asyncio.get_running_loop()
-                import concurrent.futures
-
-                ctx = contextvars.copy_context()
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        ctx.run, asyncio.run, _setup_client_and_list_tools()
-                    )
-                    tools_list = future.result()
-            except RuntimeError:
-                try:
-                    tools_list = asyncio.run(_setup_client_and_list_tools())
-                except RuntimeError as e:
-                    error_msg = str(e).lower()
-                    if "cancel scope" in error_msg or "task" in error_msg:
-                        raise ConnectionError(
-                            "MCP connection failed due to event loop cleanup issues. "
-                            "This may be due to authentication errors or server unavailability."
-                        ) from e
-                    raise
-                except asyncio.CancelledError as e:
+                tools_list = _run_coro_from_sync(_setup_client_and_list_tools)
+            except RuntimeError as e:
+                error_msg = str(e).lower()
+                if "cancel scope" in error_msg or "task" in error_msg:
                     raise ConnectionError(
-                        "MCP connection was cancelled. This may indicate an authentication "
-                        "error or server unavailability."
+                        "MCP connection failed due to event loop cleanup issues. "
+                        "This may be due to authentication errors or server unavailability."
                     ) from e
+                raise
+            except asyncio.CancelledError as e:
+                raise ConnectionError(
+                    "MCP connection was cancelled. This may indicate an authentication "
+                    "error or server unavailability."
+                ) from e
 
             if mcp_config.tool_filter:
                 filtered_tools = []
@@ -458,7 +476,7 @@ class MCPToolResolver:
             return cast(list[BaseTool], tools), []
         except Exception as e:
             if discovery_client.connected:
-                asyncio.run(discovery_client.disconnect())
+                _run_coro_from_sync(discovery_client.disconnect)
 
             raise RuntimeError(f"Failed to get native MCP tools: {e}") from e
 
@@ -509,7 +527,11 @@ class MCPToolResolver:
                 return cached_data  # type: ignore[no-any-return]
 
         try:
-            schemas = asyncio.run(self._get_mcp_tool_schemas_async(server_params))
+
+            def _fetch() -> Any:
+                return self._get_mcp_tool_schemas_async(server_params)
+
+            schemas = _run_coro_from_sync(_fetch)
             _mcp_schema_cache[cache_key] = (schemas, current_time)
             return schemas
         except Exception as e:
