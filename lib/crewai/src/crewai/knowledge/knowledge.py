@@ -117,6 +117,8 @@ class Knowledge(BaseModel):
         **data: object,
     ) -> None:
         super().__init__(**data)
+        self.collection_name = collection_name
+        self.embedder = embedder
         if storage is not None:
             self.storage = storage
         else:
