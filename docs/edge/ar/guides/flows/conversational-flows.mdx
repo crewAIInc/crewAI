@@ -96,7 +96,7 @@ finally:
 5. **تنفيذ الرسم** — `@start` → `@router` → معالجات `@listen`.
 6. **نهاية التشغيل** — يُتخطى `flow_finished` والتتبع لكل جولة عند التأجيل؛ `Agent.kickoff()` / crews لا تغلق دفعة الأب.
 
-استدعِ **`append_assistant_message(reply)`** في المعالجات. سطر المستخدم محفوظ عبر `handle_turn` — لا تُضفه مرة أخرى.
+استدعِ **`append_assistant_message(reply)`** عندما لا تطابق الرد الظاهر قيمة الإرجاع، أو عند قصّ التاريخ. تُسجَّل أيضاً سلسلة الإرجاع العامة كمساعد وتُضمَّن في لقطة `@persist`، فتستعيدها نسخة Flow جديدة. سطر المستخدم محفوظ عبر `handle_turn` — لا تُضفه مرة أخرى.
 
 ## `ConversationalConfig` (افتراضيات على مستوى الصنف)
 
@@ -368,7 +368,7 @@ Routes:
 2. يُلحق رسالة المستخدم بـ `state.messages` ويضبط `current_user_message` / `last_user_message`. يُحافَظ على `last_intent` **من الجولة السابقة** كي يستخدمها LLM التوجيه كإشارة.
 3. يُشغّل `conversation_start` → `route_conversation` → معالج `@listen` المختار.
 4. يخزّن الموجّه قراره في `state.last_intent` (يكون مرئياً لسياق التوجيه في الجولة التالية).
-5. إذا أعاد معالجك سلسلة نصية ولم يستدعِ `append_assistant_message`، فإن `handle_turn` يُلحقها نيابةً عنك.
+5. إذا أعاد معالجك سلسلة نصية ولم يستدعِ `append_assistant_message`، فإن `handle_turn` يُلحقها نيابةً عنك ويحفظ `state.messages` المحدَّث حتى تشمل استعادة `@persist` جولة المساعد.
 
 استدعِ `handle_turn()` لرسائل الدردشة. استدعاء `kickoff(inputs={"id": ...})` مباشرةً يشغل الرسم بدون غلاف الجولة المحادثية.
 
