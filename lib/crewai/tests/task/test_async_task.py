@@ -1,5 +1,7 @@
 """Tests for async task execution."""
 
+import asyncio
+
 import pytest
 from pydantic import BaseModel
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -344,6 +346,49 @@ class TestAsyncTaskExecution:
 
         assert callback_called
         assert result.raw == "Sync result"
+
+    @pytest.mark.asyncio
+    @patch("crewai.Agent.execute_task")
+    async def test_sync_execute_rejects_loop_bound_task_callback(
+        self, mock_execute: MagicMock, test_agent: Agent
+    ) -> None:
+        """A callback returning a loop-bound asyncio.Task raises TypeError on the sync path."""
+        mock_execute.return_value = "Sync result"
+
+        def task_returning_callback(output: TaskOutput):
+            return asyncio.ensure_future(asyncio.sleep(0))
+
+        task = Task(
+            description="Test task description",
+            expected_output="Test expected output",
+            agent=test_agent,
+            callback=task_returning_callback,
+        )
+
+        with pytest.raises(TypeError, match="must return a coroutine"):
+            task.execute_sync()
+
+    @pytest.mark.asyncio
+    @patch("crewai.Agent.execute_task")
+    async def test_sync_execute_rejects_loop_bound_future_callback(
+        self, mock_execute: MagicMock, test_agent: Agent
+    ) -> None:
+        """A callback returning a loop-bound asyncio.Future raises TypeError on the sync path."""
+        mock_execute.return_value = "Sync result"
+        loop = asyncio.get_running_loop()
+
+        def future_creating_callback(output: TaskOutput):
+            return loop.create_future()
+
+        task = Task(
+            description="Test task description",
+            expected_output="Test expected output",
+            agent=test_agent,
+            callback=future_creating_callback,
+        )
+
+        with pytest.raises(TypeError, match="must return a coroutine"):
+            task.execute_sync()
 
 
 class TestAsyncGuardrails:

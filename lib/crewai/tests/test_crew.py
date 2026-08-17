@@ -2222,8 +2222,7 @@ def test_after_kickoff_callback_returning_none_preserves_result():
 def test_after_kickoff_callback_returning_result_still_replaces_result():
     """A result-returning after_kickoff callback still replaces the crew result."""
     def replacing_callback(result):
-        result.raw = "adjusted"
-        return result
+        return CrewOutput(raw="adjusted")
 
     crew = _make_after_kickoff_crew([replacing_callback])
 

@@ -270,8 +270,7 @@ class TestAsyncCrewKickoff:
         def after_callback(result: CrewOutput) -> CrewOutput:
             nonlocal callback_called
             callback_called = True
-            result.raw = "adjusted"
-            return result
+            return CrewOutput(raw="adjusted")
 
         task = Task(
             description="Test task",
