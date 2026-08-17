@@ -77,4 +77,4 @@ To let an agent read a directory tree outside the working directory, point `base
 file_read_tool = FileReadTool(base_dir='/data')
 ```
 
-As a last resort, setting `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true` disables path validation. This applies process-wide to every crewai-tools tool, including the SSRF protections on URL-fetching tools, so prefer `base_dir`.
+As a last resort, setting `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true` disables path validation. This applies process-wide to every crewai-tools tool, including the SSRF protections on URL-fetching tools, so prefer `base_dir`. Managed workers should set `CREWAI_TOOLS_FORCE_SAFE_PATHS=true` so a tenant cannot disable those checks by exporting the escape hatch.
