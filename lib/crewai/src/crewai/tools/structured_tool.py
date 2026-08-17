@@ -21,6 +21,7 @@ from pydantic import (
 )
 from typing_extensions import Self
 
+from crewai.tools.tool_failure import ToolFailure, ToolFailurePolicy
 from crewai.utilities.logger import Logger
 from crewai.utilities.pydantic_schema_utils import (
     create_model_from_schema,
@@ -56,6 +57,11 @@ def _infer_result_schema_from_callable(
 
 
 def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
+    # Rendered as prose so the agent sees what an error string would have
+    # given it; the structured object is consumed by the policy machinery.
+    if isinstance(raw_result, ToolFailure):
+        return raw_result.as_agent_message()
+
     original_tool = getattr(tool, "_original_tool", None)
     if original_tool is not None:
         return cast(str, original_tool.format_output_for_agent(raw_result))
@@ -205,6 +211,7 @@ class CrewStructuredTool(BaseModel):
     result_as_answer: bool = Field(default=False)
     max_usage_count: int | None = Field(default=None)
     current_usage_count: int = Field(default=0)
+    tool_failure_policy: ToolFailurePolicy | None = Field(default=None)
     cache_function: Any = Field(default=None, exclude=True)
     _logger: Logger = PrivateAttr(default_factory=Logger)
     _original_tool: Any = PrivateAttr(default=None)

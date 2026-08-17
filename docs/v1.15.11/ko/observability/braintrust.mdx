@@ -1,0 +1,236 @@
+---
+title: Braintrust
+description: OpenTelemetry 추적 및 평가를 포함한 CrewAI용 Braintrust 통합
+icon: magnifying-glass-chart
+mode: "wide"
+---
+
+# Braintrust 통합
+
+이 가이드는 **Braintrust**를 **CrewAI**와 OpenTelemetry를 사용하여 포괄적인 추적 및 평가와 함께 통합하는 방법을 보여줍니다. 이 가이드를 완료하면 CrewAI agent를 추적하고, 성능을 모니터링하며, Braintrust의 강력한 관찰성 플랫폼을 사용하여 출력을 평가할 수 있습니다.
+
+> **Braintrust란?** [Braintrust](https://www.braintrust.dev)는 내장된 실험 추적 및 성능 분석을 통해 AI 애플리케이션에 대한 포괄적인 추적, 평가 및 모니터링을 제공하는 AI 평가 및 관찰성 플랫폼입니다.
+
+## 시작하기
+
+CrewAI를 사용하고 포괄적인 관찰성 및 평가를 위해 OpenTelemetry를 통해 Braintrust와 통합하는 간단한 예제를 단계별로 안내합니다.
+
+### 1단계: 의존성 설치
+
+```bash
+uv add braintrust[otel] crewai crewai-tools opentelemetry-instrumentation-openai opentelemetry-instrumentation-crewai python-dotenv
+```
+
+### 2단계: 환경 변수 설정
+
+Braintrust API 키를 설정하고 추적을 Braintrust로 전송하도록 OpenTelemetry를 구성합니다. Braintrust API 키와 OpenAI API 키가 필요합니다.
+
+```python
+import os
+from getpass import getpass
+
+# Braintrust 자격 증명 가져오기
+BRAINTRUST_API_KEY = getpass("🔑 Braintrust API 키를 입력하세요: ")
+
+# 서비스용 API 키 가져오기
+OPENAI_API_KEY = getpass("🔑 OpenAI API 키를 입력하세요: ")
+
+# 환경 변수 설정
+os.environ["BRAINTRUST_API_KEY"] = BRAINTRUST_API_KEY
+os.environ["BRAINTRUST_PARENT"] = "project_name:crewai-demo"
+os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+```
+
+### 3단계: Braintrust와 함께 OpenTelemetry 초기화하기
+
+추적을 캡처하고 Braintrust로 전송하기 시작하도록 Braintrust OpenTelemetry 계측을 초기화합니다.
+
+```python
+import os
+from typing import Any, Dict
+
+from braintrust.otel import BraintrustSpanProcessor
+from crewai import Agent, Crew, Task
+from crewai.llm import LLM
+from opentelemetry import trace
+from opentelemetry.instrumentation.crewai import CrewAIInstrumentor
+from opentelemetry.instrumentation.openai import OpenAIInstrumentor
+from opentelemetry.sdk.trace import TracerProvider
+
+def setup_tracing() -> None:
+    """Braintrust와 함께 OpenTelemetry 추적 설정."""
+    current_provider = trace.get_tracer_provider()
+    if isinstance(current_provider, TracerProvider):
+        provider = current_provider
+    else:
+        provider = TracerProvider()
+        trace.set_tracer_provider(provider)
+
+    provider.add_span_processor(BraintrustSpanProcessor())
+    CrewAIInstrumentor().instrument(tracer_provider=provider)
+    OpenAIInstrumentor().instrument(tracer_provider=provider)
+
+
+setup_tracing()
+```
+
+### 4단계: CrewAI 애플리케이션 생성하기
+
+포괄적인 추적이 활성화된 CrewAI 애플리케이션을 생성합니다.
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai_tools import SerperDevTool
+
+def create_crew() -> Crew:
+    """포괄적인 추적을 위한 다중 agent가 있는 crew 생성."""
+    llm = LLM(model="gpt-4o-mini")
+    search_tool = SerperDevTool()
+
+    # 특정 역할을 가진 agent 정의
+    researcher = Agent(
+        role="시니어 연구 분석가",
+        goal="AI 및 데이터 과학의 최첨단 발전 사항 발견",
+        backstory="""당신은 최고 수준의 기술 싱크탱크에서 근무합니다.
+        새로운 트렌드를 식별하는 데 전문성이 있습니다.
+        복잡한 데이터를 분석하고 실행 가능한 인사이트로 제시하는 데 뛰어납니다.""",
+        verbose=True,
+        allow_delegation=False,
+        llm=llm,
+        tools=[search_tool],
+    )
+
+    writer = Agent(
+        role="기술 콘텐츠 전략가",
+        goal="기술 발전에 대한 매력적인 콘텐츠 작성",
+        backstory="""당신은 통찰력 있고 흥미로운 기사로 유명한 콘텐츠 전략가입니다.
+        복잡한 개념을 매력적인 스토리로 전환합니다.""",
+        verbose=True,
+        allow_delegation=True,
+        llm=llm,
+    )
+
+    # agent를 위한 작업 생성
+    research_task = Task(
+        description="""{topic} 분야의 최신 발전 상황에 대한 포괄적인 분석을 수행하세요.
+        주요 트렌드, 획기적 기술, 산업에 미칠 잠재적 영향을 식별하세요.""",
+        expected_output="주요 내용을 불릿 포인트로 정리한 전체 분석 보고서",
+        agent=researcher,
+    )
+
+    writing_task = Task(
+        description="""제공된 인사이트를 활용하여
+        가장 중요한 {topic} 발전 내용을 강조하는 흥미로운 블로그 글을 작성하세요.
+        글은 정보성 있고, 기술에 밝은 독자를 대상으로 하면서 읽기 쉽게 써야 합니다.
+        멋지게 들리도록 쓰되, 복잡한 단어는 피하여 AI처럼 들리지 않게 하세요.""",
+        expected_output="최소 4개의 단락으로 구성된 전체 블로그 글",
+        agent=writer,
+        context=[research_task],
+    )
+
+    # 순차 프로세스 방식으로 crew 인스턴스화
+    crew = Crew(
+        agents=[researcher, writer], 
+        tasks=[research_task, writing_task], 
+        verbose=True, 
+        process=Process.sequential
+    )
+
+    return crew
+
+def run_crew():
+    """crew를 실행하고 결과 반환."""
+    crew = create_crew()
+    result = crew.kickoff(inputs={"topic": "AI 발전"})
+    return result
+
+# crew 실행
+if __name__ == "__main__":
+    # 이 모듈에서 계측이 이미 초기화됨
+    result = run_crew()
+    print(result)
+```
+
+### 5단계: Braintrust에서 추적 보기
+
+crew를 실행한 후, Braintrust에서 다양한 관점으로 포괄적인 추적을 볼 수 있습니다:
+
+<Tabs>
+  <Tab title="추적(Trace)">
+    <Frame>
+      <img src="/images/braintrust-trace-view.png" alt="Braintrust Trace View"/>
+    </Frame>
+  </Tab>
+  
+  <Tab title="타임라인(Timeline)">
+    <Frame>
+      <img src="/images/braintrust-timeline-view.png" alt="Braintrust Timeline View"/>
+    </Frame>
+  </Tab>
+  
+  <Tab title="스레드(Thread)">
+    <Frame>
+      <img src="/images/braintrust-thread-view.png" alt="Braintrust Thread View"/>
+    </Frame>
+  </Tab>
+</Tabs>
+
+### 6단계: SDK를 통한 평가 (실험)
+
+Braintrust의 Eval SDK를 사용하여 평가를 실행할 수도 있습니다. 이는 버전을 비교하거나 출력을 오프라인으로 점수화하는 데 유용합니다. 아래는 위에서 생성한 crew를 사용하는 Python 예제입니다:
+
+```python
+from braintrust import Eval
+from autoevals import Levenshtein
+
+def evaluate_crew_task(input_data):
+    """crew를 평가하기 위해 감싸는 작업 함수."""
+    crew = create_crew()
+    result = crew.kickoff(inputs={"topic": input_data["topic"]})
+    return str(result)
+
+Eval(
+    "AI 연구 Crew",  # 프로젝트 이름
+    {
+        "data": lambda: [
+            {"topic": "artificial intelligence trends 2024"},
+            {"topic": "machine learning breakthroughs"},
+            {"topic": "AI ethics and governance"},
+        ],
+        "task": evaluate_crew_task,
+        "scores": [Levenshtein],
+    },
+)
+```
+
+API 키를 설정하고 실행:
+
+```bash
+export BRAINTRUST_API_KEY="YOUR_API_KEY"
+braintrust eval eval_crew.py
+```
+
+자세한 내용은 [Braintrust Eval SDK 가이드](https://www.braintrust.dev/docs/start/eval-sdk)를 참조하세요.
+
+### Braintrust 통합의 주요 기능
+
+- **포괄적인 추적**: 모든 agent 상호작용, 도구 사용 및 LLM 호출 추적
+- **성능 모니터링**: 실행 시간, 토큰 사용량 및 성공률 모니터링
+- **실험 추적**: 다른 crew 구성 및 모델 비교
+- **자동화된 평가**: crew 출력에 대한 사용자 정의 평가 메트릭 설정
+- **오류 추적**: crew 실행 전반에 걸친 실패 모니터링 및 디버깅
+- **비용 분석**: 토큰 사용량 및 관련 비용 추적
+
+### 버전 호환성 정보
+- Python 3.8+
+- CrewAI >= 0.86.0
+- Braintrust >= 0.1.0
+- OpenTelemetry SDK >= 1.31.0
+
+### 참고 자료
+- [Braintrust 문서](https://www.braintrust.dev/docs) - Braintrust 플랫폼 개요
+- [Braintrust CrewAI 통합](https://www.braintrust.dev/docs/integrations/crew-ai) - 공식 CrewAI 통합 가이드
+- [Braintrust Eval SDK](https://www.braintrust.dev/docs/start/eval-sdk) - SDK를 통한 실험 실행
+- [CrewAI 문서](https://docs.crewai.com/) - CrewAI 프레임워크 개요
+- [OpenTelemetry 문서](https://opentelemetry.io/docs/) - OpenTelemetry 가이드
+- [Braintrust GitHub](https://github.com/braintrustdata/braintrust) - Braintrust SDK 소스 코드

@@ -1,6 +1,10 @@
 """Telemetry utility functions.
 
 This module provides utility functions for telemetry operations.
+
+Assistant and runtime detection moved to ``crewai_core.runtime_env`` so the CLI
+can report the same context without importing ``crewai``; the four names are
+re-exported here because this is their established import path.
 """
 
 from __future__ import annotations
@@ -8,6 +12,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+from crewai_core.runtime_env import (
+    KNOWN_CODING_AGENTS as KNOWN_CODING_AGENTS,
+    KNOWN_RUNTIME_CONTEXTS as KNOWN_RUNTIME_CONTEXTS,
+    detect_coding_agent as detect_coding_agent,
+    detect_runtime_context as detect_runtime_context,
+)
 from opentelemetry.trace import Span, Status, StatusCode
 
 

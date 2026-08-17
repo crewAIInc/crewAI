@@ -2376,6 +2376,42 @@ def test_agent_from_repository_ignores_empty_skills(
 
 
 @patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_pins_skills_to_recorded_versions(
+    mock_get_agent, mock_get_auth_token
+):
+    """The repository records a version per skill; without the pin the runtime
+    resolves whatever is newest, so publishing a skill would silently change
+    every agent using it."""
+    from crewai.utilities.agent_utils import load_agent_from_repository
+
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "skills": [
+            "@acme/crewai-brand",
+            "@acme/already-pinned@3.0.0",
+            "@acme/unrecorded",
+        ],
+        "skill_versions": [
+            {"registry_ref": "@acme/crewai-brand", "version": "2.1.0"},
+            {"registry_ref": "@acme/already-pinned", "version": "1.0.0"},
+        ],
+    }
+    mock_get_agent.return_value = mock_get_response
+
+    attributes = load_agent_from_repository("test_agent")
+
+    assert attributes["skills"] == [
+        "@acme/crewai-brand@2.1.0",
+        "@acme/already-pinned@3.0.0",  # keeps the pin it already carried
+        "@acme/unrecorded",  # no recorded version to apply
+    ]
+    # Not an Agent field — it only exists to carry the pins.
+    assert "skill_versions" not in attributes
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository_with_invalid_tools(mock_get_agent, mock_get_auth_token):
     mock_get_response = MagicMock()
     mock_get_response.status_code = 200

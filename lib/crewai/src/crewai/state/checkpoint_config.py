@@ -38,6 +38,7 @@ CheckpointEventType = Literal[
     "flow_created",
     "flow_started",
     "flow_finished",
+    "flow_failed",
     "flow_paused",
     "method_execution_started",
     "method_execution_finished",

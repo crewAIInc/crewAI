@@ -17,18 +17,46 @@ from crewai.hooks.tool_hooks import (
     register_after_tool_call_hook,
 )
 from crewai.tools.base_tool import BaseTool
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.utilities.agent_utils import (
     _asummarize_chunks,
     _estimate_token_count,
+    _expand_oversized_message,
     _extract_summary_tags,
     _format_messages_for_summary,
+    _message_content_text,
+    _normalize_messages_for_chunking,
     _split_messages_into_chunks,
+    _split_text_by_token_limit,
+    format_message_for_llm,
     convert_tools_to_openai_schema,
     execute_single_native_tool_call,
+    extract_tool_call_info,
+    is_tool_call_list,
     NativeToolCallResult,
     parse_tool_call_args,
     summarize_messages,
 )
+from crewai.utilities.i18n import I18N_DEFAULT
+
+
+def _estimate_summarization_request_tokens(chunk: list[dict[str, Any]]) -> int:
+    """Estimate tokens for the full summarization LLM request for one chunk."""
+    conversation_text = _format_messages_for_summary(chunk)
+    summarization_messages = [
+        format_message_for_llm(
+            I18N_DEFAULT.slice("summarizer_system_message"), role="system"
+        ),
+        format_message_for_llm(
+            I18N_DEFAULT.slice("summarize_instruction").format(
+                conversation=conversation_text
+            ),
+        ),
+    ]
+    return sum(
+        _estimate_token_count(str(message.get("content", "")))
+        for message in summarization_messages
+    )
 
 
 class CalculatorInput(BaseModel):
@@ -671,6 +699,170 @@ class TestSplitMessagesIntoChunks:
         assert len(chunks) == 1
         assert len(chunks[0]) == 2
 
+    def test_splits_oversized_single_message(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "tool", "content": "X" * 1200, "name": "web_scraper"},
+        ]
+        max_tokens = 100
+        chunks = _split_messages_into_chunks(messages, max_tokens=max_tokens)
+        assert len(chunks) > 1
+        for chunk in chunks:
+            chunk_tokens = sum(
+                _estimate_token_count(_message_content_text(msg)) for msg in chunk
+            )
+            assert chunk_tokens <= max_tokens
+
+    def test_oversized_tool_in_conversation(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "user", "content": "Search"},
+            {"role": "tool", "content": "Y" * 1200, "name": "search"},
+            {"role": "assistant", "content": "Done"},
+        ]
+        max_tokens = 100
+        chunks = _split_messages_into_chunks(messages, max_tokens=max_tokens)
+        assert len(chunks) > 1
+        for chunk in chunks:
+            chunk_tokens = sum(
+                _estimate_token_count(_message_content_text(msg)) for msg in chunk
+            )
+            assert chunk_tokens <= max_tokens
+
+    def test_rendered_summarization_request_within_raw_context_window(self) -> None:
+        """Chunked payloads plus summarization prompt fit in the raw model limit.
+
+        get_context_window_size() already applies CONTEXT_WINDOW_USAGE_RATIO (85%).
+        The remaining 15% headroom should absorb summarizer system/instruction overhead.
+        """
+        chunk_budget = 50_000
+        raw_context_limit = int(chunk_budget / CONTEXT_WINDOW_USAGE_RATIO)
+        messages: list[dict[str, Any]] = [
+            {"role": "user", "content": "Fetch CRM data for the attendee."},
+            {"role": "tool", "content": "Z" * 200_000, "name": "hubspot_search"},
+            {"role": "assistant", "content": "Collected HubSpot results."},
+        ]
+
+        chunks = _split_messages_into_chunks(messages, max_tokens=chunk_budget)
+        assert len(chunks) > 1
+
+        for chunk in chunks:
+            request_tokens = _estimate_summarization_request_tokens(chunk)
+            assert request_tokens <= raw_context_limit
+
+
+class TestMessageContentText:
+    """Tests for _message_content_text helper."""
+
+    def test_string_content(self) -> None:
+        msg: dict[str, Any] = {"role": "user", "content": "hello"}
+        assert _message_content_text(msg) == "hello"
+
+    def test_none_content(self) -> None:
+        msg: dict[str, Any] = {"role": "assistant", "content": None}
+        assert _message_content_text(msg) == ""
+
+    def test_list_content_uses_str(self) -> None:
+        msg: dict[str, Any] = {
+            "role": "user",
+            "content": [{"type": "text", "text": "first"}],
+        }
+        assert _message_content_text(msg) == str(msg["content"])
+
+
+class TestSplitTextByTokenLimit:
+    """Tests for _split_text_by_token_limit helper."""
+
+    def test_empty_string(self) -> None:
+        assert _split_text_by_token_limit("", max_tokens=100) == []
+
+    def test_under_limit_returns_single_part(self) -> None:
+        assert _split_text_by_token_limit("hello", max_tokens=100) == ["hello"]
+
+    def test_split_preserves_content(self) -> None:
+        text = "a" * 600
+        parts = _split_text_by_token_limit(text, max_tokens=100)
+        assert len(parts) > 1
+        assert "".join(parts) == text
+
+    def test_each_part_estimated_under_limit(self) -> None:
+        text = "b" * 1200
+        max_tokens = 100
+        parts = _split_text_by_token_limit(text, max_tokens=max_tokens)
+        assert all(_estimate_token_count(part) <= max_tokens for part in parts)
+
+
+class TestExpandOversizedMessage:
+    """Tests for _expand_oversized_message helper."""
+
+    def test_returns_original_when_under_limit(self) -> None:
+        msg: dict[str, Any] = {"role": "user", "content": "hello"}
+        expanded = _expand_oversized_message(msg, max_tokens=100)
+        assert expanded == [msg]
+
+    def test_splits_tool_output_with_metadata(self) -> None:
+        msg: dict[str, Any] = {
+            "role": "tool",
+            "content": "Z" * 1200,
+            "name": "fetch_page",
+            "tool_call_id": "call_123",
+        }
+        expanded = _expand_oversized_message(msg, max_tokens=100)
+        assert len(expanded) > 1
+        assert all(part["role"] == "tool" for part in expanded)
+        assert all(part["name"] == "fetch_page" for part in expanded)
+        assert all(part["tool_call_id"] == "call_123" for part in expanded)
+        assert expanded[0]["content"].startswith("[Part 1/")
+
+    def test_preserves_non_content_fields(self) -> None:
+        mock_file = MagicMock()
+        msg: dict[str, Any] = {
+            "role": "user",
+            "content": "X" * 1200,
+            "files": {"report.pdf": mock_file},
+        }
+        expanded = _expand_oversized_message(msg, max_tokens=100)
+        assert len(expanded) > 1
+        assert all(part["role"] == "user" for part in expanded)
+        assert all(part["files"] == {"report.pdf": mock_file} for part in expanded)
+
+    def test_each_part_estimated_under_limit(self) -> None:
+        msg: dict[str, Any] = {"role": "user", "content": "Y" * 1200}
+        max_tokens = 100
+        expanded = _expand_oversized_message(msg, max_tokens=max_tokens)
+        assert len(expanded) > 1
+        assert all(
+            _estimate_token_count(_message_content_text(part)) <= max_tokens
+            for part in expanded
+        )
+
+
+class TestNormalizeMessagesForChunking:
+    """Tests for _normalize_messages_for_chunking helper."""
+
+    def test_excludes_system_messages(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": "System prompt"},
+            {"role": "user", "content": "Hello"},
+        ]
+        normalized = _normalize_messages_for_chunking(messages, max_tokens=1000)
+        assert len(normalized) == 1
+        assert normalized[0]["role"] == "user"
+
+    def test_expands_oversized_and_preserves_small_messages(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "user", "content": "Short"},
+            {"role": "tool", "content": "X" * 1200, "name": "search"},
+            {"role": "assistant", "content": "Done"},
+        ]
+        max_tokens = 100
+        normalized = _normalize_messages_for_chunking(messages, max_tokens=max_tokens)
+        assert normalized[0]["content"] == "Short"
+        assert normalized[-1]["content"] == "Done"
+        assert len(normalized) > 3
+        assert all(
+            _estimate_token_count(_message_content_text(msg)) <= max_tokens
+            for msg in normalized
+        )
+
 
 class TestEstimateTokenCount:
     """Tests for _estimate_token_count helper."""
@@ -703,7 +895,9 @@ class TestParallelSummarization:
         """
         msgs: list[dict[str, Any]] = []
         for i in range(n):
-            msgs.append({"role": "user", "content": f"msg-{i} " + "x" * 400})
+            prefix = f"msg-{i} "
+            padding = "x" * max(0, 400 - len(prefix))
+            msgs.append({"role": "user", "content": prefix + padding})
         return msgs
 
     def test_multiple_chunks_use_acall(self) -> None:
@@ -981,6 +1175,88 @@ class TestParallelSummarizationVCR:
         assert "report.pdf" in summary_msg["files"]
 
 
+class TestIsToolCallListResponsesApiShape:
+    """Regression tests: OpenAI Responses API tool-call dicts must be recognized.
+
+    Responses API function_call output items are flat dicts shaped
+    {"id", "name", "arguments"} - no nested "function" key, and "arguments"
+    instead of Anthropic/Bedrock-style "input".
+    """
+
+    def test_responses_api_dict_is_recognized_as_tool_call(self) -> None:
+        response = [
+            {
+                "id": "call_abc123",
+                "name": "fetch_page",
+                "arguments": '{"url": "https://example.com"}',
+            }
+        ]
+        assert is_tool_call_list(response) is True
+
+    def test_plain_text_answer_not_misclassified(self) -> None:
+        assert is_tool_call_list(["just a string, not a tool call"]) is False
+
+    def test_empty_list_returns_false(self) -> None:
+        assert is_tool_call_list([]) is False
+
+    def test_chat_completions_style_still_recognized(self) -> None:
+        response = [{"function": {"name": "fetch_page", "arguments": "{}"}}]
+        assert is_tool_call_list(response) is True
+
+    def test_bedrock_anthropic_style_still_recognized(self) -> None:
+        response = [{"name": "fetch_page", "input": {"url": "https://example.com"}}]
+        assert is_tool_call_list(response) is True
+
+
+class TestExtractToolCallInfoResponsesApiShape:
+    """Regression tests: extract_tool_call_info must parse Responses API dicts."""
+
+    def test_responses_api_dict_extracts_real_arguments(self) -> None:
+        tool_call = {
+            "id": "call_abc123",
+            "name": "fetch_page",
+            "arguments": '{"url": "https://example.com"}',
+        }
+        result = extract_tool_call_info(tool_call)
+        assert result is not None
+        call_id, func_name, func_args = result
+        assert call_id == "call_abc123"
+        assert func_name == "fetch_page"
+        assert func_args == '{"url": "https://example.com"}'
+
+    def test_responses_api_dict_does_not_return_empty_args(self) -> None:
+        tool_call = {
+            "id": "call_xyz",
+            "name": "fetch_page",
+            "arguments": '{"url": "https://example.com"}',
+        }
+        _, _, func_args = extract_tool_call_info(tool_call)
+        assert func_args != {}
+
+    def test_bedrock_anthropic_style_still_uses_input(self) -> None:
+        tool_call = {"name": "fetch_page", "input": {"url": "https://example.com"}}
+        _, func_name, func_args = extract_tool_call_info(tool_call)
+        assert func_name == "fetch_page"
+        assert func_args == {"url": "https://example.com"}
+
+    def test_chat_completions_style_still_uses_nested_function(self) -> None:
+        tool_call = {
+            "id": "call_1",
+            "function": {"name": "fetch_page", "arguments": "{}"},
+        }
+        _, func_name, func_args = extract_tool_call_info(tool_call)
+        assert func_name == "fetch_page"
+        assert func_args == "{}"
+
+    def test_non_dict_unrecognized_shape_returns_none(self) -> None:
+        assert extract_tool_call_info("just a string") is None
+
+    def test_unrecognized_dict_shape_returns_empty_name_and_args(self) -> None:
+        call_id, func_name, func_args = extract_tool_call_info({"unrelated": "data"})
+        assert func_name == ""
+        assert func_args == {}
+
+
 class TestParseToolCallArgs:
     """Unit tests for parse_tool_call_args."""
 
@@ -1031,7 +1307,14 @@ class TestParseToolCallArgs:
     def test_error_result_has_correct_keys(self) -> None:
         _, error = parse_tool_call_args("{bad json}", "tool", "call_7")
         assert error is not None
-        assert set(error.keys()) == {"call_id", "func_name", "result", "from_cache", "original_tool"}
+        assert set(error.keys()) == {
+            "call_id",
+            "func_name",
+            "result",
+            "from_cache",
+            "original_tool",
+            "tool_failure",
+        }
 
 
 class TestExecuteSingleNativeToolCall:
@@ -1256,3 +1539,81 @@ class TestExecuteSingleNativeToolCall:
         assert isinstance(result, NativeToolCallResult)
         assert result.result_as_answer is False
         assert "blocked by hook" in result.result
+
+
+class TestResolvePlusClient:
+    def test_builds_the_default_when_no_client_is_installed(self) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_client
+
+        default = MagicMock()
+
+        assert resolve_plus_client(lambda: default) is default
+
+    def test_prefers_an_installed_client(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A hosted runtime installs a client; the default must not be built,
+        since looking up a user credential raises when there isn't one."""
+        from crewai.utilities import agent_utils
+
+        installed = MagicMock()
+        monkeypatch.setattr(agent_utils, "_create_plus_client_hook", lambda: installed)
+        default = MagicMock(side_effect=AssertionError("must not be called"))
+
+        assert agent_utils.resolve_plus_client(default) is installed
+        default.assert_not_called()
+
+
+class TestResolvePlusResponse:
+    def test_passes_through_a_sync_response(self) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        response = MagicMock()
+
+        assert resolve_plus_response(response) is response
+
+    @pytest.mark.parametrize("inside_loop", [False, True])
+    def test_awaits_an_async_response(self, inside_loop: bool) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        response = MagicMock()
+
+        async def call() -> Any:
+            return response
+
+        if not inside_loop:
+            assert resolve_plus_response(call()) is response
+            return
+
+        async def main() -> Any:
+            return resolve_plus_response(call())
+
+        assert asyncio.run(main()) is response
+
+    def test_carries_context_vars_into_the_worker_thread(self) -> None:
+        """Inside a running loop the coroutine runs on another thread; a client
+        reading runtime state (the platform token, flow context) must still see
+        the caller's values rather than defaults."""
+        from crewai.context import get_platform_integration_token, platform_context
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        async def call() -> Any:
+            return get_platform_integration_token()
+
+        async def main() -> Any:
+            with platform_context("token-from-caller"):
+                return resolve_plus_response(call())
+
+        assert asyncio.run(main()) == "token-from-caller"
+
+    def test_rejects_an_awaitable_bound_to_a_loop(self) -> None:
+        from crewai.utilities.agent_utils import resolve_plus_response
+
+        async def main() -> None:
+            future: asyncio.Future[Any] = asyncio.get_running_loop().create_future()
+            future.set_result(MagicMock())
+
+            with pytest.raises(TypeError, match="must return a coroutine"):
+                resolve_plus_response(future)
+
+        asyncio.run(main())

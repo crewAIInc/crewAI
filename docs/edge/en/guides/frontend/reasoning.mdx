@@ -1,0 +1,68 @@
+---
+title: Reasoning
+description: Show the model's thinking in the chat automatically, with no component to build.
+icon: brain
+mode: "wide"
+---
+
+## Thinking, rendered for free
+
+When a reasoning-capable model thinks before it answers, CopilotKit renders that thinking right in the chat. This is the simplest generative-UI pattern in the whole section: there is nothing to build. No hook, no component, no props. Use a reasoning-capable model, keep the streaming wrapper your Flows already have, and the chat surface from the [Overview](/edge/en/guides/frontend/overview) does the rest.
+
+## Use a reasoning-capable model
+
+Reasoning is surfaced automatically by `copilotkit_stream`, which every Flow example already wraps the model call in. The bridge reads the model's reasoning deltas and emits them to the frontend. It is provider-agnostic and works over both of CrewAI's streaming transports, so the only thing you change is the model.
+
+```python
+# recipe_flow.py
+from crewai.flow.flow import Flow, start
+from ag_ui_crewai.sdk import copilotkit_stream, CopilotKitState
+from litellm import acompletion
+
+
+class RecipeFlow(Flow[CopilotKitState]):
+    @start()
+    async def chat(self):
+        response = await copilotkit_stream(
+            acompletion(
+                # any reasoning-capable model, e.g. deepseek-reasoner
+                model="deepseek/deepseek-reasoner",
+                messages=self.state.messages,
+                stream=True,
+            )
+        )
+        message = response.choices[0].message
+        self.state.messages.append(message)
+```
+
+Models that emit reasoning over the standard channel include DeepSeek `deepseek-reasoner`, Anthropic extended thinking (Claude), and Gemini thinking, among others. Swap the `model` for one of these and its thinking starts streaming through.
+
+This works the same for both Crews and Flows, since both run their model calls through `copilotkit_stream`.
+
+## Render it
+
+There is no frontend step. The `CopilotChat`, `CopilotSidebar`, or `CopilotPopup` surface you already mounted shows the reasoning as it streams, above the answer it produced.
+
+```tsx
+import { CopilotChat } from "@copilotkit/react-core/v2";
+
+<CopilotChat agentId="recipe" />
+```
+
+<Note>
+There is no `useReasoning` hook and no reasoning component to write. Reasoning is not something you wire up on the frontend; it renders automatically as long as the model emits it.
+</Note>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Generative UI" icon="wand-magic-sparkles" href="/edge/en/guides/frontend/generative-ui">
+    The full spectrum, from author-controlled to agent-invented UI.
+  </Card>
+  <Card title="Agentic Generative UI" icon="list-check" href="/edge/en/guides/frontend/agentic-generative-ui">
+    Render live agent state as the Flow works.
+  </Card>
+  <Card title="Frontend Overview" icon="browser" href="/edge/en/guides/frontend/overview">
+    Set up the chat surface and runtime.
+  </Card>
+</CardGroup>

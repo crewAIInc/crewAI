@@ -1,0 +1,143 @@
+---
+title: "Migrating from inputs.id to restore_from_state_id"
+description: "Move @persist flows off the deprecated inputs.id hydration onto the supported restore_from_state_id field"
+icon: "arrow-right-arrow-left"
+---
+
+<Warning>
+  Passing `id` inside `inputs` to hydrate a `@persist` flow is **deprecated** and
+  scheduled for removal in a future release. The replacement, `restore_from_state_id`,
+  is available in CrewAI **v1.14.5 and later** — the steps below apply once you
+  upgrade.
+</Warning>
+
+## Overview
+
+The documented way to hydrate a `@persist` flow from a previous execution is to pass
+that execution's UUID as `inputs.id`. CrewAI now exposes a dedicated field,
+`restore_from_state_id`, that performs the same hydration without overloading the
+`inputs` payload — and without coupling the hydration key to the new execution's
+identity.
+
+## Migration
+
+If you currently kickoff a `@persist` flow with `inputs={"id": ...}`:
+
+```python
+# Deprecated
+flow = CounterFlow()
+flow.kickoff(inputs={"id": "abcd1234-5678-90ef-ghij-klmnopqrstuv"})
+```
+
+Switch to `restore_from_state_id`:
+
+```python
+# Supported
+flow = CounterFlow()
+flow.kickoff(restore_from_state_id="abcd1234-5678-90ef-ghij-klmnopqrstuv")
+```
+
+The two modes have different lineage semantics:
+
+- `inputs={"id": <uuid>}` (deprecated) — **resume**: writes land under the supplied
+  id, extending the same `flow_uuid` history.
+- `restore_from_state_id=<uuid>` — **fork**: hydrates state from the snapshot, then
+  writes under a fresh `state.id`. The source flow's history is preserved.
+
+For most production scenarios — re-running a flow seeded from a previous state — fork
+is what you want. See [Mastering Flow State](/en/guides/flows/mastering-flow-state)
+for the full mental model.
+
+If you kickoff your flow over the CrewAI AMP REST API, see [AMP](#amp) below for the
+equivalent payload migration.
+
+## Why we are deprecating `inputs.id` for `@persist`
+
+`inputs.id` is currently the documented way to resume a `@persist` flow from a
+previous execution. The problem is that the same UUID does two jobs at once:
+
+1. **It selects which snapshot `@persist` hydrates from** — load the state saved
+   under that UUID.
+2. **It becomes the new execution's Flow Execution ID** (`state.id` in the SDK;
+   surfaced as `flow_id` in some contexts) — every `@persist` write from this
+   kickoff also lands under that same UUID.
+
+This dual role is the root cause of the issues this guide describes. Because the
+supplied UUID is also the new execution's id, two kickoffs that pass the same
+`inputs.id` are not two distinct executions — they share an id, share a persistence
+record, and (on AMP) share a row in the executions list. There is no way to say
+"hydrate from this snapshot, but record this run separately" without splitting the
+two responsibilities.
+
+`restore_from_state_id` is that split. It tells `@persist` which snapshot to hydrate
+from, while leaving the new execution free to receive a fresh `state.id`. The
+hydration source and the recorded run are no longer the same UUID — which is what
+most production scenarios actually want.
+
+## Removal timeline
+
+`inputs.id` for `@persist` hydration is scheduled for removal in a future release of
+CrewAI. There is no immediate hard cut-off — existing flows continue to work — but
+once you upgrade to v1.14.5 or later, new code should use `restore_from_state_id`, and
+existing flows should migrate at the next convenient opportunity.
+
+## AMP
+
+If you deploy your flow to CrewAI AMP, the migration extends to the kickoff payload
+sent to your deployed crew, and the visible symptoms of reusing `inputs.id` show up
+on the deployment dashboard. The two subsections below cover both.
+
+### Migrating the kickoff payload
+
+If you currently kickoff a deployed flow by embedding `id` in `inputs`:
+
+```bash
+# Deprecated
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_CREW_TOKEN" \
+  -d '{"inputs": {"id": "abcd1234-5678-90ef-ghij-klmnopqrstuv", "topic": "AI Agent Frameworks"}}' \
+  https://your-crew-url.crewai.com/kickoff
+```
+
+Move the UUID to the top-level `restoreFromStateId` field:
+
+```bash
+# Supported
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_CREW_TOKEN" \
+  -d '{
+        "inputs": {"topic": "AI Agent Frameworks"},
+        "restoreFromStateId": "abcd1234-5678-90ef-ghij-klmnopqrstuv"
+      }' \
+  https://your-crew-url.crewai.com/kickoff
+```
+
+`restoreFromStateId` sits next to `inputs` in the kickoff payload, not inside it. The
+`inputs` object now only carries values your flow actually consumes.
+
+### What happens when `inputs.id` is reused
+
+When AMP receives a kickoff for a flow whose `inputs.id` matches an existing
+execution, it resolves to the existing record rather than creating a new one. From
+the deployment dashboard you'll see:
+
+- **Execution status** — the new run's status overwrites the previous run's. A
+  finished execution can flip back to `running`, or a `completed` run can flip to
+  `error` if the new kickoff fails — either way the dashboard no longer reflects
+  the original run.
+- **Traces** — OTel traces stack across kickoffs because they share the same
+  execution id; the previous run's traces are either replaced by, or mixed with,
+  the new run's. A step-by-step replay no longer corresponds to a single execution.
+- **Executions list** — kickoffs that should appear as separate rows collapse into
+  a single entry, hiding history.
+
+Migrating to `restoreFromStateId` keeps every kickoff as its own execution — with
+its own status, traces, and row in the list — while still hydrating state from a
+previous run.
+
+<Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
+  Contact our support team if you're unsure which mode your flow needs or hit issues
+  during the migration.
+</Card>
