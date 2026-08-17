@@ -873,7 +873,6 @@ def _expand_oversized_message(msg: LLMMessage, max_tokens: int) -> list[LLMMessa
     # Reserve budget for the [Part i/n] prefix added to each sub-message.
     body_max_tokens = max(1, max_tokens - 5)
     parts = _split_text_by_token_limit(msg_text, body_max_tokens)
-    role = msg.get("role", "user")
     total_parts = len(parts)
     expanded: list[LLMMessage] = []
 
@@ -881,13 +880,7 @@ def _expand_oversized_message(msg: LLMMessage, max_tokens: int) -> list[LLMMessa
         part_content = (
             f"[Part {index}/{total_parts}]\n{part}" if total_parts > 1 else part
         )
-        sub_msg: LLMMessage = {"role": role, "content": part_content}
-        if role == "tool":
-            if "name" in msg:
-                sub_msg["name"] = msg["name"]
-            if "tool_call_id" in msg:
-                sub_msg["tool_call_id"] = msg["tool_call_id"]
-        expanded.append(sub_msg)
+        expanded.append({**msg, "content": part_content})
 
     return expanded
 

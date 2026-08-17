@@ -769,6 +769,18 @@ class TestExpandOversizedMessage:
         assert all(part["tool_call_id"] == "call_123" for part in expanded)
         assert expanded[0]["content"].startswith("[Part 1/")
 
+    def test_preserves_non_content_fields(self) -> None:
+        mock_file = MagicMock()
+        msg: dict[str, Any] = {
+            "role": "user",
+            "content": "X" * 1200,
+            "files": {"report.pdf": mock_file},
+        }
+        expanded = _expand_oversized_message(msg, max_tokens=100)
+        assert len(expanded) > 1
+        assert all(part["role"] == "user" for part in expanded)
+        assert all(part["files"] == {"report.pdf": mock_file} for part in expanded)
+
     def test_each_part_estimated_under_limit(self) -> None:
         msg: dict[str, Any] = {"role": "user", "content": "Y" * 1200}
         max_tokens = 100
