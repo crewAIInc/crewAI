@@ -844,6 +844,71 @@ def _estimate_token_count(text: str) -> int:
     return len(text) // 4
 
 
+_SUMMARIZATION_PROMPT_TOKEN_OVERHEAD: Final[int] = 512
+
+
+def _message_content_text(msg: LLMMessage) -> str:
+    """Return the message content as text for token estimation."""
+    content = msg.get("content")
+    if content is None:
+        return ""
+    if isinstance(content, list):
+        return str(content)
+    return str(content)
+
+
+def _split_text_by_token_limit(text: str, max_tokens: int) -> list[str]:
+    """Split text into parts each estimated to fit within max_tokens."""
+    if not text:
+        return []
+    if _estimate_token_count(text) <= max_tokens:
+        return [text]
+
+    # Inverse of _estimate_token_count (len // 4): each slice is at most max_tokens.
+    max_chars = max(1, max_tokens * 4)
+    return [text[i : i + max_chars] for i in range(0, len(text), max_chars)]
+
+
+def _expand_oversized_message(msg: LLMMessage, max_tokens: int) -> list[LLMMessage]:
+    """Split a message whose content alone exceeds max_tokens into sub-messages."""
+    msg_text = _message_content_text(msg)
+    if _estimate_token_count(msg_text) <= max_tokens:
+        return [msg]
+
+    # Reserve budget for the [Part i/n] prefix added to each sub-message.
+    body_max_tokens = max(1, max_tokens - 5)
+    parts = _split_text_by_token_limit(msg_text, body_max_tokens)
+    role = msg.get("role", "user")
+    total_parts = len(parts)
+    expanded: list[LLMMessage] = []
+
+    for index, part in enumerate(parts, start=1):
+        part_content = (
+            f"[Part {index}/{total_parts}]\n{part}" if total_parts > 1 else part
+        )
+        sub_msg: LLMMessage = {"role": role, "content": part_content}
+        if role == "tool":
+            if "name" in msg:
+                sub_msg["name"] = msg["name"]
+            if "tool_call_id" in msg:
+                sub_msg["tool_call_id"] = msg["tool_call_id"]
+        expanded.append(sub_msg)
+
+    return expanded
+
+
+def _normalize_messages_for_chunking(
+    messages: list[LLMMessage], max_tokens: int
+) -> list[LLMMessage]:
+    """Return non-system messages with oversized entries split to fit max_tokens."""
+    normalized: list[LLMMessage] = []
+    for msg in messages:
+        if msg.get("role") == "system":
+            continue
+        normalized.extend(_expand_oversized_message(msg, max_tokens))
+    return normalized
+
+
 def _format_messages_for_summary(messages: list[LLMMessage]) -> str:
     """Format messages with role labels for summarization.
 
@@ -904,8 +969,8 @@ def _split_messages_into_chunks(
 ) -> list[list[LLMMessage]]:
     """Split messages into chunks at message boundaries.
 
-    Excludes system messages from chunks. Each chunk stays under
-    max_tokens based on estimated token count.
+    Excludes system messages and expands oversized single messages before
+    chunking. Each chunk stays under max_tokens based on estimated token count.
 
     Args:
         messages: List of messages to split.
@@ -914,24 +979,16 @@ def _split_messages_into_chunks(
     Returns:
         List of message chunks.
     """
-    non_system = [m for m in messages if m.get("role") != "system"]
-    if not non_system:
+    normalized = _normalize_messages_for_chunking(messages, max_tokens)
+    if not normalized:
         return []
 
     chunks: list[list[LLMMessage]] = []
     current_chunk: list[LLMMessage] = []
     current_tokens = 0
 
-    for msg in non_system:
-        content = msg.get("content")
-        if content is None:
-            msg_text = ""
-        elif isinstance(content, list):
-            msg_text = str(content)
-        else:
-            msg_text = str(content)
-
-        msg_tokens = _estimate_token_count(msg_text)
+    for msg in normalized:
+        msg_tokens = _estimate_token_count(_message_content_text(msg))
 
         if current_chunk and (current_tokens + msg_tokens) > max_tokens:
             chunks.append(current_chunk)
@@ -1033,7 +1090,11 @@ def summarize_messages(
         return
 
     max_tokens = llm.get_context_window_size()
-    chunks = _split_messages_into_chunks(non_system_messages, max_tokens)
+    if max_tokens > _SUMMARIZATION_PROMPT_TOKEN_OVERHEAD:
+        chunk_max_tokens = max_tokens - _SUMMARIZATION_PROMPT_TOKEN_OVERHEAD
+    else:
+        chunk_max_tokens = max(1, max_tokens)
+    chunks = _split_messages_into_chunks(non_system_messages, chunk_max_tokens)
 
     total_chunks = len(chunks)
 
