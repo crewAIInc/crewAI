@@ -114,14 +114,12 @@ class URLReadTool(BaseTool):
         automatically: every hop is revalidated, and credentials are dropped on
         cross-origin hops. Bodies over ``max_bytes`` are abandoned mid-stream.
 
-        Two risks are not closed here. Validation resolves the hostname and
-        requests resolves it again when connecting, so a DNS entry that changes
-        between those lookups can still redirect the connection (DNS
-        rebinding); closing that requires pinning the connection to the
-        validated address. And the returned text is untrusted remote content
-        flowing into an agent's context -- a fetched page can attempt to
-        instruct the agent. Neither is addressable by input validation alone;
-        network egress policy and prompt-level handling cover them.
+        The fetch pins TCP to the IP that passed validation unless
+        ``CREWAI_TOOLS_ALLOW_UNSAFE_PATHS`` is set without
+        ``CREWAI_TOOLS_FORCE_SAFE_PATHS``. The returned text is still
+        untrusted remote content flowing into an agent's context -- a
+        fetched page can attempt to instruct the agent. Network egress
+        policy and prompt-level handling cover that.
 
     Args:
         max_bytes (int): Largest response body to accept, in decoded bytes.
