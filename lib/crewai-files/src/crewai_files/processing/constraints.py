@@ -319,6 +319,25 @@ _PROVIDER_CONSTRAINTS_MAP: dict[str, ProviderConstraints] = {
 }
 
 
+def _match_provider_prefix(prefix: str) -> ProviderConstraints | None:
+    """Match the routing prefix of a model identifier to a known provider.
+
+    Args:
+        prefix: Lowercased provider prefix, e.g. "bedrock" or "azure_openai".
+
+    Returns:
+        ProviderConstraints for the prefix, or None if it names no known provider.
+    """
+    if prefix in _PROVIDER_CONSTRAINTS_MAP:
+        return _PROVIDER_CONSTRAINTS_MAP[prefix]
+
+    for key, constraints in _PROVIDER_CONSTRAINTS_MAP.items():
+        if prefix.startswith(key):
+            return constraints
+
+    return None
+
+
 @lru_cache(maxsize=32)
 def get_constraints_for_provider(
     provider: str | ProviderConstraints,
@@ -336,8 +355,12 @@ def get_constraints_for_provider(
 
     provider_lower = provider.lower()
 
-    if provider_lower in _PROVIDER_CONSTRAINTS_MAP:
-        return _PROVIDER_CONSTRAINTS_MAP[provider_lower]
+    # Model identifiers are commonly "<provider>/<model>" and the model part can
+    # name a different provider (e.g. "bedrock/anthropic.claude-..."), so the
+    # routing prefix has to win over a substring match anywhere in the string.
+    matched = _match_provider_prefix(provider_lower.split("/", 1)[0])
+    if matched is not None:
+        return matched
 
     for key, constraints in _PROVIDER_CONSTRAINTS_MAP.items():
         if key in provider_lower:

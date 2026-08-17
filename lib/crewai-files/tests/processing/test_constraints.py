@@ -2,6 +2,7 @@
 
 from crewai_files.processing.constraints import (
     ANTHROPIC_CONSTRAINTS,
+    AZURE_CONSTRAINTS,
     BEDROCK_CONSTRAINTS,
     GEMINI_CONSTRAINTS,
     OPENAI_CONSTRAINTS,
@@ -231,3 +232,21 @@ class TestGetConstraintsForProvider:
 
         result = get_constraints_for_provider("gemini-pro")
         assert result == GEMINI_CONSTRAINTS
+
+    def test_routing_prefix_wins_over_model_id(self):
+        """Test the provider prefix beats a provider name inside the model id."""
+        result = get_constraints_for_provider(
+            "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0"
+        )
+        assert result == BEDROCK_CONSTRAINTS
+
+        result = get_constraints_for_provider("bedrock/us.anthropic.claude-sonnet-4")
+        assert result == BEDROCK_CONSTRAINTS
+
+        result = get_constraints_for_provider("azure/openai/gpt-4o")
+        assert result == AZURE_CONSTRAINTS
+
+    def test_get_by_partial_provider_prefix(self):
+        """Test a compound provider prefix matches its most specific provider."""
+        result = get_constraints_for_provider("azure_openai/gpt-4o")
+        assert result == AZURE_CONSTRAINTS
