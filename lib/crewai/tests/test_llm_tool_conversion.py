@@ -1,5 +1,7 @@
 from typing import Any
+from unittest.mock import MagicMock, patch
 
+from crewai import LLM
 from crewai.llms.providers.openai.completion import OpenAICompletion
 from crewai.llms.providers.utils.common import (
     extract_tool_info,
@@ -39,7 +41,7 @@ DICT_TOOL = {
 
 def test_extract_tool_info_rejects_plain_objects() -> None:
     with pytest.raises(ValueError, match="Tool must be a dictionary"):
-        extract_tool_info(object())  # type: ignore[arg-type]
+        extract_tool_info(object())
 
 
 def test_extract_tool_info_accepts_base_tool() -> None:
@@ -76,11 +78,42 @@ def test_safe_tool_conversion_accepts_base_tool() -> None:
 
 def test_openai_converts_base_tool_for_interference() -> None:
     llm = OpenAICompletion(model="gpt-4o-mini", api_key="test-key")
-    converted = llm._convert_tools_for_interference([EchoTool()])
+    converted = llm._convert_tools_for_interference([EchoTool()])  # type: ignore[list-item]
 
     assert converted[0]["type"] == "function"
     assert converted[0]["function"]["name"] == "echo"
     assert "text" in converted[0]["function"]["parameters"]["properties"]
+
+
+def test_llm_call_sends_converted_base_tool_schema() -> None:
+    llm = LLM(model="gpt-4o-mini", api_key="test-key")
+
+    with patch.object(llm._client.chat.completions, "create") as mock_create:
+        mock_create.return_value = MagicMock(
+            choices=[
+                MagicMock(message=MagicMock(content="ok", tool_calls=None))
+            ],
+            usage=MagicMock(prompt_tokens=1, completion_tokens=1, total_tokens=2),
+        )
+
+        result = llm.call(
+            messages=[{"role": "user", "content": "Who are you?"}],
+            tools=[EchoTool()],
+        )
+
+    assert result == "ok"
+    mock_create.assert_called_once()
+    sent_tools = mock_create.call_args.kwargs["tools"]
+    function = sent_tools[0]["function"]
+    parameters = function["parameters"]
+
+    assert sent_tools[0]["type"] == "function"
+    assert function["name"] == "echo"
+    assert function["description"] == "Echo the provided text."
+    assert parameters["type"] == "object"
+    assert "text" in parameters["properties"]
+    assert parameters["properties"]["text"]["type"] == "string"
+    assert "text" in parameters["required"]
 
 
 def test_anthropic_converts_base_tool_before_dict_checks() -> None:
@@ -88,7 +121,7 @@ def test_anthropic_converts_base_tool_before_dict_checks() -> None:
     from crewai.llms.providers.anthropic.completion import AnthropicCompletion
 
     llm = AnthropicCompletion(model="claude-sonnet-4-5", api_key="test-key")
-    converted = llm._convert_tools_for_interference([EchoTool()])
+    converted = llm._convert_tools_for_interference([EchoTool()])  # type: ignore[list-item]
 
     tool: dict[str, Any] = converted[0]
     assert tool["name"] == "echo"
