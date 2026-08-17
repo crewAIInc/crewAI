@@ -17,6 +17,7 @@ from crewai.hooks.tool_hooks import (
     register_after_tool_call_hook,
 )
 from crewai.tools.base_tool import BaseTool
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.utilities.agent_utils import (
     _asummarize_chunks,
     _estimate_token_count,
@@ -27,6 +28,7 @@ from crewai.utilities.agent_utils import (
     _normalize_messages_for_chunking,
     _split_messages_into_chunks,
     _split_text_by_token_limit,
+    format_message_for_llm,
     convert_tools_to_openai_schema,
     execute_single_native_tool_call,
     extract_tool_call_info,
@@ -35,6 +37,26 @@ from crewai.utilities.agent_utils import (
     parse_tool_call_args,
     summarize_messages,
 )
+from crewai.utilities.i18n import I18N_DEFAULT
+
+
+def _estimate_summarization_request_tokens(chunk: list[dict[str, Any]]) -> int:
+    """Estimate tokens for the full summarization LLM request for one chunk."""
+    conversation_text = _format_messages_for_summary(chunk)
+    summarization_messages = [
+        format_message_for_llm(
+            I18N_DEFAULT.slice("summarizer_system_message"), role="system"
+        ),
+        format_message_for_llm(
+            I18N_DEFAULT.slice("summarize_instruction").format(
+                conversation=conversation_text
+            ),
+        ),
+    ]
+    return sum(
+        _estimate_token_count(str(message.get("content", "")))
+        for message in summarization_messages
+    )
 
 
 class CalculatorInput(BaseModel):
@@ -704,6 +726,27 @@ class TestSplitMessagesIntoChunks:
                 _estimate_token_count(_message_content_text(msg)) for msg in chunk
             )
             assert chunk_tokens <= max_tokens
+
+    def test_rendered_summarization_request_within_raw_context_window(self) -> None:
+        """Chunked payloads plus summarization prompt fit in the raw model limit.
+
+        get_context_window_size() already applies CONTEXT_WINDOW_USAGE_RATIO (85%).
+        The remaining 15% headroom should absorb summarizer system/instruction overhead.
+        """
+        chunk_budget = 50_000
+        raw_context_limit = int(chunk_budget / CONTEXT_WINDOW_USAGE_RATIO)
+        messages: list[dict[str, Any]] = [
+            {"role": "user", "content": "Fetch CRM data for the attendee."},
+            {"role": "tool", "content": "Z" * 200_000, "name": "hubspot_search"},
+            {"role": "assistant", "content": "Collected HubSpot results."},
+        ]
+
+        chunks = _split_messages_into_chunks(messages, max_tokens=chunk_budget)
+        assert len(chunks) > 1
+
+        for chunk in chunks:
+            request_tokens = _estimate_summarization_request_tokens(chunk)
+            assert request_tokens <= raw_context_limit
 
 
 class TestMessageContentText:
