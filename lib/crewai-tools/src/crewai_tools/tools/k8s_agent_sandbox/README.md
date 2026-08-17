@@ -187,7 +187,9 @@ file_tool = K8sAgentSandboxFileTool(toolset=toolset)
 These tools hand the LLM arbitrary shell, Python, and filesystem access inside sandbox. The threat model to keep in mind:
 
 - **Prompt-injection is a code-execution vector.** If the agent ingests untrusted content (web pages, scraped documents, user-supplied files, emails, search results), a malicious instruction hidden in that content can coerce the agent into issuing commands to `K8sAgentSandboxExecTool` / `K8sAgentSandboxPythonTool`. Treat any pipeline that feeds untrusted text into an agent that also has these tools as equivalent to remote code execution — the LLM is the attacker's shell.
-- **Ephemeral mode (the default) is the main blast-radius control.** A fresh sandbox is created per call and killed at the end, so injected commands cannot persist state, exfiltrate long-lived secrets, or build up tooling across turns. Leave `persistent=False` unless you have a concrete reason to change it.
+- **Ephemeral mode (the default) is the main blast-radius control.** A fresh sandbox is created per call and killed at the end, so injected commands cannot persist state or build up tooling across turns. Leave `persistent=False` unless you have a concrete reason to change it.
+- **Cleanup bounds what survives a call, not what a call can do.** Everything the sandbox can reach while the command runs — mounted secrets, environment variables, cloud metadata endpoints, internal services — is readable and can be sent out before the sandbox is killed. Ephemeral mode does not make a single injected command harmless.
+- **Restrict what the sandbox can reach when it processes untrusted content.** Mount only the credentials a run genuinely needs and prefer short-lived ones, and apply network egress controls to the sandbox's namespace so one call cannot ship data anywhere it likes.
 - **Avoid this specific combination:**
   - untrusted content in the agent's context, **plus**
   - `persistent=True` or an explicit long-lived `claim_name`, **plus**
