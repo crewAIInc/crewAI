@@ -233,6 +233,9 @@ class TestGetConstraintsForProvider:
         result = get_constraints_for_provider("gemini-pro")
         assert result == GEMINI_CONSTRAINTS
 
+        result = get_constraints_for_provider("us.anthropic.claude-sonnet-4")
+        assert result == ANTHROPIC_CONSTRAINTS
+
     def test_routing_prefix_wins_over_model_id(self):
         """Test the provider prefix beats a provider name inside the model id."""
         result = get_constraints_for_provider(
@@ -250,3 +253,8 @@ class TestGetConstraintsForProvider:
         """Test a compound provider prefix matches its most specific provider."""
         result = get_constraints_for_provider("azure_openai/gpt-4o")
         assert result == AZURE_CONSTRAINTS
+
+    def test_unknown_prefix_does_not_fall_back_to_model_id(self):
+        """Test an unrecognized provider prefix returns None instead of guessing."""
+        assert get_constraints_for_provider("unknown/anthropic.claude-3") is None
+        assert get_constraints_for_provider("unknown/gpt-4o") is None

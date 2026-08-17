@@ -355,13 +355,18 @@ def get_constraints_for_provider(
 
     provider_lower = provider.lower()
 
-    # Model identifiers are commonly "<provider>/<model>" and the model part can
-    # name a different provider (e.g. "bedrock/anthropic.claude-..."), so the
-    # routing prefix has to win over a substring match anywhere in the string.
-    matched = _match_provider_prefix(provider_lower.split("/", 1)[0])
+    # For "<provider>/<model>" identifiers the routing prefix is the only
+    # authority, because the model part can name a different provider
+    # (e.g. "bedrock/anthropic.claude-..." is served by Bedrock, not Anthropic).
+    if "/" in provider_lower:
+        return _match_provider_prefix(provider_lower.split("/", 1)[0])
+
+    matched = _match_provider_prefix(provider_lower)
     if matched is not None:
         return matched
 
+    # A bare model id can still embed a provider name, as in the Bedrock
+    # inference profile id "us.anthropic.claude-sonnet-4".
     for key, constraints in _PROVIDER_CONSTRAINTS_MAP.items():
         if key in provider_lower:
             return constraints
