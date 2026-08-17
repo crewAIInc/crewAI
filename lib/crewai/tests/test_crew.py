@@ -2177,8 +2177,8 @@ def test_task_callback_on_crew():
         assert isinstance(args[0], TaskOutput)
 
 
-def test_after_kickoff_callback_returning_none_preserves_result():
-    """A None-returning after_kickoff callback must not replace the crew result."""
+def _make_after_kickoff_crew(after_kickoff_callbacks):
+    """Build a minimal single-agent crew with after_kickoff_callbacks set."""
     researcher_agent = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -2192,19 +2192,23 @@ def test_after_kickoff_callback_returning_none_preserves_result():
         agent=researcher_agent,
     )
 
+    return Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[task],
+        after_kickoff_callbacks=after_kickoff_callbacks,
+    )
+
+
+def test_after_kickoff_callback_returning_none_preserves_result():
+    """A None-returning after_kickoff callback must not replace the crew result."""
     callback_called = False
 
     def logging_callback(result):
         nonlocal callback_called
         callback_called = True
-        # Intentionally does not return the result.
 
-    crew = Crew(
-        agents=[researcher_agent],
-        process=Process.sequential,
-        tasks=[task],
-        after_kickoff_callbacks=[logging_callback],
-    )
+    crew = _make_after_kickoff_crew([logging_callback])
 
     with patch.object(Agent, "execute_task") as execute:
         execute.return_value = "ok"
@@ -2217,29 +2221,11 @@ def test_after_kickoff_callback_returning_none_preserves_result():
 
 def test_after_kickoff_callback_returning_result_still_replaces_result():
     """A result-returning after_kickoff callback still replaces the crew result."""
-    researcher_agent = Agent(
-        role="Researcher",
-        goal="Make the best research and analysis on content about AI and AI agents",
-        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
-        allow_delegation=False,
-    )
-
-    task = Task(
-        description="Give me a list of 5 interesting ideas to explore for an article.",
-        expected_output="Bullet point list of 5 important events.",
-        agent=researcher_agent,
-    )
-
     def replacing_callback(result):
         result.raw = "adjusted"
         return result
 
-    crew = Crew(
-        agents=[researcher_agent],
-        process=Process.sequential,
-        tasks=[task],
-        after_kickoff_callbacks=[replacing_callback],
-    )
+    crew = _make_after_kickoff_crew([replacing_callback])
 
     with patch.object(Agent, "execute_task") as execute:
         execute.return_value = "ok"

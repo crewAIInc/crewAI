@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from crewai.agent import Agent
+from crewai.crew import Crew
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.tasks.output_format import OutputFormat
@@ -275,6 +276,69 @@ class TestAsyncTaskExecution:
             agent=test_agent,
             callback=async_callback,
         )
+
+        result = task.execute_sync()
+
+        assert callback_called
+        assert result.raw == "Sync result"
+
+    @pytest.mark.asyncio
+    @patch("crewai.Agent.execute_task")
+    async def test_sync_execute_runs_async_crew_task_callback_inside_running_loop(
+        self, mock_execute: MagicMock, test_agent: Agent
+    ) -> None:
+        """Async crew.task_callback on the sync path must not crash inside a running loop."""
+        mock_execute.return_value = "Sync result"
+        callback_called = False
+
+        async def async_callback(output: TaskOutput) -> None:
+            nonlocal callback_called
+            callback_called = True
+
+        task = Task(
+            description="Test task description",
+            expected_output="Test expected output",
+            agent=test_agent,
+        )
+
+        crew = Crew(
+            agents=[test_agent],
+            tasks=[task],
+            task_callback=async_callback,
+            verbose=False,
+        )
+        task.agent.crew = crew  # type: ignore[union-attr]
+
+        result = task.execute_sync()
+
+        assert callback_called
+        assert result.raw == "Sync result"
+
+    @patch("crewai.Agent.execute_task")
+    def test_sync_execute_runs_async_crew_task_callback_without_running_loop(
+        self, mock_execute: MagicMock, test_agent: Agent
+    ) -> None:
+        """Async crew.task_callback on the sync path runs via asyncio.run when no loop is running."""
+        mock_execute.return_value = "Sync result"
+        callback_called = False
+
+        async def async_callback(output: TaskOutput) -> None:
+            nonlocal callback_called
+            callback_called = True
+
+        task = Task(
+            description="Test task description",
+            expected_output="Test expected output",
+            agent=test_agent,
+        )
+
+        crew = Crew(
+            agents=[test_agent],
+            tasks=[task],
+            task_callback=async_callback,
+            verbose=False,
+        )
+        task.agent.crew = crew  # type: ignore[union-attr]
 
         result = task.execute_sync()
 

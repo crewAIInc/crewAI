@@ -259,6 +259,45 @@ class TestAsyncCrewKickoff:
         assert result is not None
         assert result.raw == "Task result"
 
+    @pytest.mark.asyncio
+    @patch("crewai.task.Task.aexecute_sync", new_callable=AsyncMock)
+    async def test_akickoff_after_callback_returning_result_replaces_result(
+        self, mock_execute: AsyncMock, test_agent: Agent
+    ) -> None:
+        """A result-returning after_kickoff callback replaces the crew result."""
+        callback_called = False
+
+        def after_callback(result: CrewOutput) -> CrewOutput:
+            nonlocal callback_called
+            callback_called = True
+            result.raw = "adjusted"
+            return result
+
+        task = Task(
+            description="Test task",
+            expected_output="Test output",
+            agent=test_agent,
+        )
+        crew = Crew(
+            agents=[test_agent],
+            tasks=[task],
+            verbose=False,
+            after_kickoff_callbacks=[after_callback],
+        )
+
+        mock_output = TaskOutput(
+            description="Test task",
+            raw="Task result",
+            agent="Test Agent",
+        )
+        mock_execute.return_value = mock_output
+
+        result = await crew.akickoff()
+
+        assert callback_called
+        assert result is not None
+        assert result.raw == "adjusted"
+
 
 class TestAsyncCrewKickoffForEach:
     """Tests for async crew kickoff_for_each methods."""

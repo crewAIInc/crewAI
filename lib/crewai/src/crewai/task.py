@@ -123,11 +123,18 @@ def _run_awaitable_from_sync(value: Any) -> None:
     Mirrors the await-response pattern in utilities/agent_utils.py: when a
     loop is already running, asyncio.run() cannot be used, so the awaitable
     is executed in a worker thread with its own loop, carrying a copy of the
-    caller's context. Non-coroutine awaitables (Tasks/Futures) are wrapped in
-    a helper coroutine first.
+    caller's context. Coroutines are wrapped in a helper coroutine first;
+    Tasks/Futures already bound to a running loop are rejected with a
+    TypeError because they cannot be awaited from another loop.
     """
     if not inspect.isawaitable(value):
         return
+
+    if isinstance(value, asyncio.Future):
+        raise TypeError(
+            "Task callbacks must return a coroutine, not a Task or Future "
+            "already bound to a running loop."
+        )
 
     async def await_callback() -> Any:
         return await value
