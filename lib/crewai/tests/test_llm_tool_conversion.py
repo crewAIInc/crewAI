@@ -52,7 +52,7 @@ def test_extract_tool_info_accepts_base_tool() -> None:
     assert parameters["type"] == "object"
     assert "text" in parameters["properties"]
     assert parameters["properties"]["text"]["type"] == "string"
-    assert "text" in parameters["required"]
+    assert parameters["required"] == ["text"]
 
 
 def test_extract_tool_info_accepts_openai_dict() -> None:
@@ -73,7 +73,7 @@ def test_safe_tool_conversion_accepts_base_tool() -> None:
     assert parameters["type"] == "object"
     assert "text" in parameters["properties"]
     assert parameters["properties"]["text"]["type"] == "string"
-    assert "text" in parameters["required"]
+    assert parameters["required"] == ["text"]
 
 
 def test_openai_converts_base_tool_for_interference() -> None:
@@ -113,7 +113,7 @@ def test_llm_call_sends_converted_base_tool_schema() -> None:
     assert parameters["type"] == "object"
     assert "text" in parameters["properties"]
     assert parameters["properties"]["text"]["type"] == "string"
-    assert "text" in parameters["required"]
+    assert parameters["required"] == ["text"]
 
 
 def test_anthropic_converts_base_tool_before_dict_checks() -> None:
@@ -128,3 +128,4 @@ def test_anthropic_converts_base_tool_before_dict_checks() -> None:
     assert tool["description"] == "Echo the provided text."
     assert tool["input_schema"]["type"] == "object"
     assert "text" in tool["input_schema"]["properties"]
+    assert tool["input_schema"]["required"] == ["text"]
