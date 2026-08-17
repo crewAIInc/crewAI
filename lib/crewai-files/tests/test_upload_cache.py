@@ -187,6 +187,30 @@ class TestUploadCache:
         assert cleared == 2
         assert len(cache) == 0
 
+    def test_max_entries_enforced_after_clear(self):
+        """Test max_entries is still enforced once the cache is refilled."""
+        cache = UploadCache(max_entries=3)
+
+        for i in range(3):
+            cache.set_by_hash(
+                file_hash=f"hash-{i}",
+                content_type="image/png",
+                provider="gemini",
+                file_id=f"file-{i}",
+            )
+
+        cache.clear()
+
+        for i in range(4):
+            cache.set_by_hash(
+                file_hash=f"refill-{i}",
+                content_type="image/png",
+                provider="gemini",
+                file_id=f"refill-file-{i}",
+            )
+
+        assert len(cache) == 3
+
     def test_get_all_for_provider(self):
         """Test getting all cached uploads for a provider."""
         cache = UploadCache()
