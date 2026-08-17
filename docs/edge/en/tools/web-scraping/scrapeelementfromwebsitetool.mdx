@@ -9,7 +9,7 @@ mode: "wide"
 
 ## Description
 
-The `ScrapeElementFromWebsiteTool` is designed to extract specific elements from websites using CSS selectors. This tool allows CrewAI agents to scrape targeted content from web pages, making it useful for data extraction tasks where only specific parts of a webpage are needed.
+The `ScrapeElementFromWebsiteTool` is designed to extract specific elements from websites using CSS selectors. This tool allows CrewAI agents to scrape targeted content from web pages, making it useful for data extraction tasks where only specific parts of a webpage are needed. Fetches go through CrewAI's SSRF-safe HTTP helper: the requested URL and every redirect hop are checked against private and reserved ranges (including cloud metadata), and the TCP connection is pinned to an IP that passed that check.
 
 ## Installation
 
