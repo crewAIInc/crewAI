@@ -9,7 +9,7 @@ mode: "wide"
 
 ## Descrição
 
-A `ScrapeElementFromWebsiteTool` foi projetada para extrair elementos específicos de websites utilizando seletores CSS. Esta ferramenta permite que agentes CrewAI capturem conteúdos direcionados de páginas web, tornando-se útil para tarefas de extração de dados em que apenas partes específicas de uma página são necessárias.
+A `ScrapeElementFromWebsiteTool` foi projetada para extrair elementos específicos de websites utilizando seletores CSS. Esta ferramenta permite que agentes CrewAI capturem conteúdos direcionados de páginas web, tornando-se útil para tarefas de extração de dados em que apenas partes específicas de uma página são necessárias. As buscas passam pelo helper HTTP seguro contra SSRF do CrewAI: a URL solicitada e cada hop de redirecionamento são verificados contra faixas privadas e reservadas (incluindo metadados de nuvem), e a conexão TCP é fixada no IP que passou nessa verificação.
 
 ## Instalação
 
