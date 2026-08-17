@@ -491,14 +491,15 @@ class AnthropicCompletion(BaseLLM):
         anthropic_tools = []
 
         for tool in tools:
-            tool_type = tool.get("type", "")
-            if tool_type in TOOL_SEARCH_TOOL_TYPES:
-                anthropic_tools.append(tool)
-                continue
+            if isinstance(tool, dict):
+                tool_type = tool.get("type", "")
+                if tool_type in TOOL_SEARCH_TOOL_TYPES:
+                    anthropic_tools.append(tool)
+                    continue
 
-            if "input_schema" in tool and "name" in tool and "description" in tool:
-                anthropic_tools.append(tool)
-                continue
+                if "input_schema" in tool and "name" in tool and "description" in tool:
+                    anthropic_tools.append(tool)
+                    continue
 
             try:
                 name, description, parameters = safe_tool_conversion(tool, "Anthropic")
@@ -511,7 +512,7 @@ class AnthropicCompletion(BaseLLM):
                 "description": description,
             }
 
-            func_info = tool.get("function", {})
+            func_info = tool.get("function", {}) if isinstance(tool, dict) else {}
             strict_enabled = bool(func_info.get("strict"))
 
             if parameters and isinstance(parameters, dict):
