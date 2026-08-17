@@ -54,6 +54,7 @@ from crewai.flow.conversation import (
 from crewai.flow.dsl import listen, start
 from crewai.flow.dsl._utils import _method_action, _set_flow_method_definition
 from crewai.flow.flow_definition import FlowMethodDefinition
+from crewai.flow.types import FlowMethodName
 from crewai.utilities.types import LLMMessage
 
 
@@ -151,6 +152,9 @@ class _ConversationalMixin:
             pass
 
         def kickoff(self, *args: Any, **kwargs: Any) -> Any:
+            pass
+
+        def _persist_method_completion(self, method_name: FlowMethodName) -> None:
             pass
 
         @property
@@ -297,6 +301,8 @@ class _ConversationalMixin:
         Stashes the message + session_id as pending turn state, runs kickoff
         (which restores from persist and then applies the pending turn), and
         promotes the result to an assistant message when the handler didn't.
+        If that fallback appends, state is snapshotted again so ``@persist``
+        restores the assistant reply on a fresh Flow instance.
         """
         state = cast(ConversationState, self.state)
         sid = session_id or state.id
@@ -324,12 +330,7 @@ class _ConversationalMixin:
 
             object.__setattr__(self, "_assistant_reply_appended", False)
             result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
-            if (
-                result is not None
-                and not self._assistant_reply_appended
-                and self._is_public_turn_result(result)
-            ):
-                self.append_assistant_message(self._stringify_result(result))
+            self._append_public_turn_result_and_persist(result)
         except Exception as exc:
             failed_event = ConversationTurnFailedEvent(
                 type="conversation_turn_failed",
@@ -413,12 +414,7 @@ class _ConversationalMixin:
                     object.__setattr__(
                         self, "_streaming_conversation_turn", original_streaming_turn
                     )
-                if (
-                    result is not None
-                    and not self._assistant_reply_appended
-                    and self._is_public_turn_result(result)
-                ):
-                    self.append_assistant_message(self._stringify_result(result))
+                self._append_public_turn_result_and_persist(result)
             except HumanFeedbackPending as exc:
                 return exc
             except Exception as exc:
@@ -1133,6 +1129,32 @@ class _ConversationalMixin:
         if visible == "all" or (visible is not None and agent_name in visible):
             return "public"
         return "private"
+
+    def _append_public_turn_result_and_persist(self, result: Any) -> None:
+        """Copy a public handler return into history, then snapshot if needed.
+
+        Built-in routes already call ``append_assistant_message`` inside the
+        method, so this is a no-op for them. Custom ``@listen`` handlers that
+        only ``return`` a public string hit this path after ``kickoff()``,
+        which is after the per-method ``@persist`` snapshot. Persist again so
+        a fresh Flow instance restores the assistant reply.
+        """
+        if (
+            result is None
+            or self._assistant_reply_appended
+            or not self._is_public_turn_result(result)
+        ):
+            return
+        self.append_assistant_message(self._stringify_result(result))
+        self._persist_fallback_assistant_reply()
+
+    def _persist_fallback_assistant_reply(self) -> None:
+        """Write the current state using the same persist path as kickoff."""
+        last = self._method_outputs[-1] if self._method_outputs else None
+        method_name = last.get("method") if isinstance(last, dict) else None
+        if not isinstance(method_name, str) or not method_name:
+            return
+        self._persist_method_completion(FlowMethodName(method_name))
 
     def _is_public_turn_result(self, result: Any) -> bool:
         if not isinstance(result, str):
