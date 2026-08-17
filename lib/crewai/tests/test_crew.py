@@ -284,6 +284,57 @@ def test_crew_config_with_wrong_keys():
         Crew(process=Process.sequential, config=no_agents_config)
 
 
+def test_crew_config_unknown_agent_role_raises_helpful_value_error():
+    """A task referencing an unknown agent role raises a ValueError naming the role."""
+    config = {
+        "agents": [
+            {
+                "role": "Researcher",
+                "goal": "Research",
+                "backstory": "Expert researcher",
+            }
+        ],
+        "tasks": [
+            {
+                "description": "Write an article",
+                "expected_output": "An article",
+                "agent": "Writer",
+            }
+        ],
+    }
+    with pytest.raises(
+        ValueError,
+        match=re.escape("Task references agent role 'Writer' which doesn't match any agent"),
+    ) as exc_info:
+        Crew(process=Process.sequential, config=config)
+    assert "Researcher" in str(exc_info.value)
+
+
+def test_crew_config_dict_is_not_mutated_by_task_creation():
+    """Reusing the same config dict across two Crew constructions must not raise KeyError."""
+    config = {
+        "agents": [
+            {
+                "role": "Researcher",
+                "goal": "Research",
+                "backstory": "Expert researcher",
+            }
+        ],
+        "tasks": [
+            {
+                "description": "Write an article",
+                "expected_output": "An article",
+                "agent": "Researcher",
+            }
+        ],
+    }
+    first_crew = Crew(process=Process.sequential, config=config)
+    assert len(first_crew.tasks) == 1
+    assert first_crew.tasks[0].agent.role == "Researcher"
+    second_crew = Crew(process=Process.sequential, config=config)
+    assert len(second_crew.tasks) == 1
+
+
 @pytest.mark.vcr()
 def test_crew_creation(researcher, writer):
     tasks = [
