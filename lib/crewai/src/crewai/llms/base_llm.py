@@ -42,6 +42,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.llms._finish_reason_utils import is_truncation_finish_reason
 from crewai.types.streaming import StreamSession
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.pydantic_schema_utils import serialize_model_class
@@ -549,6 +550,24 @@ class BaseLLM(BaseModel, ABC):
         """
         return self.max_tokens
 
+    def _warn_if_truncated(self, finish_reason: str | None) -> None:
+        """Warn when the provider stopped generating because of the token cap.
+
+        A truncated response is otherwise indistinguishable from a complete one
+        downstream: the partial text (sometimes an empty string, for reasoning
+        models that spend the whole budget thinking) is returned as a
+        successful result. Retrying does not help, since the same cap truncates
+        at the same place, so the message names the cap that needs raising.
+        """
+        if not is_truncation_finish_reason(finish_reason):
+            return
+        logging.warning(
+            "Response truncated by the token cap (finish_reason=%r). "
+            "Consider increasing max_tokens (current: %s).",
+            finish_reason,
+            self._effective_max_tokens(),
+        )
+
     def _emit_call_started_event(
         self,
         messages: str | list[LLMMessage],
@@ -625,6 +644,8 @@ class BaseLLM(BaseModel, ABC):
     ) -> None:
         """Emit LLM call completed event."""
         from crewai.utilities.serialization import to_serializable
+
+        self._warn_if_truncated(finish_reason)
 
         crewai_event_bus.emit(
             self,

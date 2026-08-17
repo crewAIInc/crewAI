@@ -7,11 +7,36 @@ module centralises that introspection so every provider doesn't reinvent the
 defensive walk. Providers with genuinely different shapes — Anthropic
 (``stop_reason``), Bedrock (``stopReason``), Gemini (protobuf enum), OpenAI
 Responses (``status``) — keep their own helpers.
+
+It also owns :func:`is_truncation_finish_reason`, the single place that knows
+which of those provider-specific values mean "cut off by the token cap".
 """
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Final
+
+
+TRUNCATION_FINISH_REASONS: Final[frozenset[str]] = frozenset(
+    {
+        "length",  # OpenAI Chat Completions, Azure, LiteLLM, openai_compatible
+        "max_tokens",  # Anthropic, Bedrock, and Gemini's MAX_TOKENS
+        "max_output_tokens",  # OpenAI Responses incomplete_details.reason
+        "max_completion_tokens",
+    }
+)
+
+
+def is_truncation_finish_reason(finish_reason: str | None) -> bool:
+    """Whether a raw provider finish reason means the token cap cut the response off.
+
+    The vocabulary differs per provider (``length``, ``max_tokens``,
+    ``MAX_TOKENS``), so comparison is case-insensitive and lives here rather
+    than being repeated at every call site.
+    """
+    if not isinstance(finish_reason, str):
+        return False
+    return finish_reason.lower() in TRUNCATION_FINISH_REASONS
 
 
 def _as_str(value: Any) -> str | None:

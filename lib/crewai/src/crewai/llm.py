@@ -2172,6 +2172,8 @@ class LLM(BaseLLM):
                 OTel GenAI enum.
             response_id: Raw provider response identifier. Optional.
         """
+        self._warn_if_truncated(finish_reason)
+
         crewai_event_bus.emit(
             self,
             event=LLMCallCompletedEvent(
