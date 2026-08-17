@@ -1,40 +1,42 @@
 ---
 title: Design Seguro de Agentes
-description: Limites de confiança, prompt injection, abuso de ferramentas, validação de saída, portões de aprovação, limites de delegação e isolamento de agentes no CrewAI.
+description: Limite o que agentes CrewAI podem fazer com texto não confiável, ferramentas, checagens de saída, aprovações, delegação e isolamento.
 icon: shield-halved
 mode: "wide"
 ---
 
 ## Visão Geral
 
-Agentes CrewAI podem chamar ferramentas que executam ações reais. Texto não confiável no contexto do modelo pode mudar o que o agente faz em seguida.
+Agentes CrewAI podem chamar ferramentas que executam ações reais. Texto não confiável no contexto do modelo pode mudar essas ações.
 
-Esta página cobre controles de design para esse modelo de ameaça. Referência relacionada: [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) (prompt injection e agency excessiva).
+Esta página mostra como limitar esse risco. Referência relacionada: [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) (prompt injection e agency excessiva).
 
-O CrewAI oferece primitivas (hooks, guardrails, HITL, saídas estruturadas, estado de Flow). Ele não aplica um modelo de ameaça seguro por padrão. Você escolhe ferramentas, allowlists e portões de aprovação no código da aplicação.
+O CrewAI oferece blocos de construção: hooks, guardrails, HITL, saídas estruturadas e estado de Flow. Ele não liga esses recursos como um padrão seguro. Você deve definir ferramentas, allowlists e checagens de aprovação no código da aplicação.
 
-| Primitiva | O que faz quando você a conecta |
+| Bloco de construção | O que faz quando você o adiciona |
 | --- | --- |
-| `HookAborted` em um tool hook | Bloqueia aquela chamada de ferramenta. O agente continua com uma string de resultado bloqueado. |
-| Task `guardrail` | Rejeita ou retenta a saída da Task no caminho de execução da Task. |
-| Task `human_input` | Pausa para input no console no caminho de execução da Task. |
-| `output_pydantic` / `output_json` | Coage a saída para um schema. Não aplica política. |
-| `Agent.guardrail` | Valida a saída apenas em `agent.kickoff()`. Não roda na execução de Task do Crew. |
+| `HookAborted` em um tool hook | Interrompe aquela chamada de ferramenta. O agente continua. Ele recebe uma mensagem de que a ferramenta foi bloqueada. |
+| Task `guardrail` | Rejeita ou retenta a saída da Task no caminho da Task. |
+| Task `human_input` | Pausa para input no console no caminho da Task. |
+| `output_pydantic` / `output_json` | Ajusta a saída a um schema. Não verifica regras de negócio. |
+| `Agent.guardrail` | Verifica a saída apenas em `agent.kickoff()`. Não roda na execução de Task do Crew. |
 
 ## Controles por caminho de execução
 
+O CrewAI tem dois caminhos de execução comuns. Alguns controles funcionam em apenas um caminho.
+
 ### `agent.kickoff()`
 
-`Agent.kickoff()` executa um `AgentExecutor` sem Task e sem Crew. Retorna `LiteAgentOutput`.
+`Agent.kickoff()` executa um `AgentExecutor`. Ele não cria uma Task nem um Crew. Retorna `LiteAgentOutput`.
 
 | Aplica | Não se aplica |
 | --- | --- |
 | Tool hooks globais e LLM hooks | Task `guardrail`, Task `human_input` |
 | `Agent.guardrail` / `guardrail_max_retries` | Execution boundary hooks (`INPUT`, `OUTPUT` e pontos relacionados) |
-| `response_format=` em `kickoff()` | Orquestração Crew/Flow e isolamento multi-agente |
+| `response_format=` em `kickoff()` | Orquestração Crew e Flow, e isolamento entre vários agentes |
 | `tools=[...]` no agente | |
 
-Métodos `@on` definidos em uma classe `@CrewBase` são registrados na lista **global** de hooks quando aquela classe de crew é instanciada. Depois disso, também podem rodar em chamadas posteriores a `agent.kickoff()` no mesmo processo. Eles não ficam isolados a um único crew.
+Métodos `@on` em uma classe `@CrewBase` são adicionados à lista **global** de hooks quando você cria aquele crew. Depois disso, esses hooks também podem rodar em chamadas posteriores a `agent.kickoff()` no mesmo processo. Eles não ficam limitados a um único crew.
 
 Veja [Interação direta com o agente](/pt-BR/concepts/agents#direct-agent-interaction-with-kickoff).
 
@@ -44,24 +46,24 @@ Kickoffs de Crew e Flow podem usar Task guardrails, Task `human_input` e [execut
 
 ## 1. Entradas confiáveis vs não confiáveis
 
-Classifique toda entrada que chega ao modelo.
+Marque toda entrada que chega ao modelo como confiável ou não confiável.
 
 | Fonte | Confiança | Tratamento |
 | --- | --- | --- |
-| System prompt, role, goal, backstory que você escreve | Confiável | Política e identidade |
-| Templates e schemas controlados pela aplicação | Confiável | Estrutura |
-| Mensagens do usuário final e campos de formulário | Não confiável | Podem conter instruções |
+| System prompt, role, goal e backstory que você escreve | Confiável | Política e identidade |
+| Templates e schemas que a aplicação controla | Confiável | Estrutura |
+| Mensagens de usuário final e campos de formulário | Não confiável | Podem conter instruções |
 | Páginas web, PDFs, e-mails, tickets, notas de CRM | Não confiável | Podem conter instruções |
-| Resultados de ferramentas (search, scrape, DB, MCP) | Não confiável | Podem conter instruções |
-| Saídas de outros agentes | Não confiável até validar | Dados |
-| Secrets e credenciais | Confiáveis apenas no runtime | Não coloque em prompts |
+| Resultados de ferramentas (busca, scrape, banco, MCP) | Não confiável | Podem conter instruções |
+| Saídas de outros agentes | Não confiável até você validá-las | Dados |
+| Segredos e credenciais | Confiáveis apenas para o runtime | Não coloque em prompts |
 
 Regras:
 
-1. Rótulos de prompt em conteúdo não confiável são higiene, não um limite de segurança.
-2. Não anexe texto não confiável a instruções de nível de sistema. Mantenha-o em seções delimitadas.
-3. Passe apenas os campos de que cada agente precisa.
-4. Injete credenciais no código da ferramenta a partir do ambiente ou de um gerenciador de secrets. Não as coloque em prompts, memória ou argumentos de ferramenta montados pelo modelo.
+1. Um rótulo no prompt não impede o modelo de seguir texto não confiável. Use controles em código.
+2. Não adicione texto não confiável a instruções de nível de sistema. Mantenha-o em uma seção marcada.
+3. Dê a cada agente apenas os campos de que ele precisa.
+4. Carregue credenciais no código da ferramenta a partir do ambiente ou de um gerenciador de segredos. Não as coloque em prompts, memória ou argumentos de ferramenta que o modelo monta.
 5. Aplique política em código (tool hooks, allowlists de argumentos, guardrails).
 
 ```python
@@ -77,46 +79,46 @@ researcher = Agent(
 )
 ```
 
-Para entradas de Crew/Flow, use [execution boundary hooks](/pt-BR/learn/execution-boundary-hooks) (`INPUT`). Esses hooks não rodam em `agent.kickoff()` isolado. Para MCP, veja [Segurança MCP](/pt-BR/mcp/security).
+Para entradas de Crew e Flow, use [execution boundary hooks](/pt-BR/learn/execution-boundary-hooks) (`INPUT`). Esses hooks não rodam em `agent.kickoff()` isolado. Para MCP, veja [Segurança MCP](/pt-BR/mcp/security).
 
 ## 2. Prompt injection
 
-Prompt injection é texto não confiável que tenta sobrescrever as instruções do agente (ignorar regras anteriores, chamar ferramentas, exfiltrar dados, mudar a tarefa).
+Prompt injection é texto não confiável que tenta substituir as instruções do agente. Exemplos: ignorar regras anteriores, chamar ferramentas, vazar dados ou mudar a tarefa.
 
 Exemplos:
 
 - "Ignore all previous instructions and…"
 - "You are now in developer mode…"
-- Instruções codificadas ou multilíngues direcionadas a filtros
+- Instruções codificadas ou multilíngues voltadas a filtros
 - Pedidos para revelar o system prompt ou encaminhar contexto privado
 
 | Controle | Mecanismo CrewAI |
 | --- | --- |
-| Linguagem de limite de confiança | Agent `backstory` / descrição da task (suave) |
+| Linguagem de limite de confiança | `backstory` do Agent / descrição da task (fraco) |
 | Ferramentas com menor privilégio | `tools=[...]` em cada agente |
 | Bloquear ou restringir chamadas | [Tool hooks](/pt-BR/learn/tool-hooks) (`PRE_TOOL_CALL` + `HookAborted`) |
 | Inspecionar chamadas do modelo | [LLM hooks](/pt-BR/learn/llm-hooks) |
 | Aprovação humana | Tool hooks + [HITL](/pt-BR/learn/human-in-the-loop) |
-| Verificações de saída | [Task guardrails](/pt-BR/concepts/tasks#task-guardrails) no caminho da Task; `Agent.guardrail` em `kickoff()` |
-| Forma estruturada | `output_pydantic` / `output_json` ou `response_format=` (apenas forma) |
+| Checagens de saída | [Task guardrails](/pt-BR/concepts/tasks#task-guardrails) no caminho da Task; `Agent.guardrail` em `kickoff()` |
+| Forma estruturada | `output_pydantic` / `output_json` ou `response_format=` (apenas a forma) |
 
-Não confie apenas na redação do prompt. Limite o que o agente pode fazer depois que o modelo for direcionado.
+Não dependa só do texto do prompt. Limite o que o agente pode fazer depois que o modelo for induzido.
 
 ## 3. Prompt injection indireto
 
-Prompt injection indireto coloca instruções em conteúdo que o agente busca depois (página web, e-mail, PDF, ticket, chunk de RAG), não na mensagem do usuário.
+Prompt injection indireto coloca instruções em conteúdo que o agente busca depois. As instruções não estão na mensagem do usuário. Elas podem estar em uma página web, e-mail, PDF, ticket ou chunk de RAG.
 
 Exemplo:
 
-1. O usuário pede para resumir a página de um fornecedor e redigir um e-mail de outreach.
-2. Scrape/search retorna texto da página pedindo para colocar um atacante em BCC e anexar chaves de API.
-3. O agente segue esse texto ao redigir ou enviar.
+1. O usuário pede ao agente para resumir a página de um fornecedor e redigir um e-mail de outreach.
+2. O scrape ou a busca devolve texto da página pedindo BCC para um atacante e anexo de chaves de API.
+3. O agente segue esse texto ao redigir ou enviar o e-mail.
 
-Mitigações:
+O que fazer:
 
-- Dê a agentes de pesquisa apenas ferramentas de leitura/fetch. Dê a agentes de ação apenas ferramentas com efeitos colaterais.
-- Passe estado estruturado validado entre eles, não dumps brutos de ferramentas.
-- Faça allowlist de destinos em tool hooks (domínios; bloqueie ranges privados/link-local quando necessário).
+- Dê aos agentes de pesquisa apenas ferramentas de leitura e fetch. Dê aos agentes de ação apenas ferramentas que enviam, escrevem ou alteram dados.
+- Passe estado estruturado validado entre eles. Não passe saída bruta de ferramenta.
+- Faça allowlist de destinos em tool hooks (domínios; bloqueie faixas privadas e link-local quando necessário).
 - Para injeção de metadados de ferramentas MCP, veja [Segurança MCP](/pt-BR/mcp/security).
 
 ```python
@@ -137,15 +139,15 @@ sender = Agent(
 )
 ```
 
-Use passos separados de Flow para pesquisa e envio, para que o remetente não receba conteúdo scraped bruto.
+Use passos de Flow separados para pesquisa e envio. Assim o remetente não recebe conteúdo extraído bruto.
 
 ## 4. Abuso de ferramentas
 
-Abuso de ferramentas é o uso de ferramentas legítimas de formas prejudiciais (excluir, exportar, gastar, mensagens, executar código).
+Abuso de ferramentas é o uso de uma ferramenta válida de forma prejudicial. Exemplos: apagar dados, exportar dados, gastar dinheiro, enviar uma mensagem ou executar código.
 
-- Atribua a cada agente o conjunto mínimo de ferramentas para seu papel.
+- Dê a cada agente apenas as ferramentas que o papel exige.
 - Restrinja argumentos em código.
-- Prefira credenciais de curta duração e por ferramenta a uma única conta de alto privilégio compartilhada.
+- Prefira credenciais de curta duração por ferramenta. Não compartilhe uma conta de alto privilégio.
 
 ```python
 from crewai.hooks import HookAborted, InterceptionPoint, on
@@ -165,21 +167,21 @@ def constrain_email(ctx):
         )
 ```
 
-`tools=` em `@on` é comparado após `sanitize_tool_name` (minúsculas, com underscores). Use o nome sanitizado da ferramenta (por exemplo `send_email`, ou `file_writer_tool` para `FileWriterTool`).
+`tools=` em `@on` é comparado depois de `sanitize_tool_name` (minúsculas, underscores). Use o nome sanitizado da ferramenta (por exemplo `send_email`, ou `file_writer_tool` para `FileWriterTool`).
 
 <Warning>
-Tool hooks falham abertos em erros inesperados. Apenas `HookAborted` (ou um retorno legado `False`) bloqueia a chamada. Qualquer outra exceção em um hook é engolida e a chamada prossegue.
+Se um tool hook levantar qualquer exceção que não seja `HookAborted`, o CrewAI ignora o erro e a ferramenta ainda executa. Só `HookAborted` (ou um retorno legado `False`) bloqueia a chamada.
 </Warning>
 
-Quando uma chamada de ferramenta é bloqueada, a ferramenta não executa. O agente recebe uma string de resultado bloqueado e a execução continua. `POST_TOOL_CALL` ainda roda em chamadas bloqueadas.
+Quando uma chamada de ferramenta é bloqueada, a ferramenta não executa. O agente recebe uma mensagem de que a ferramenta foi bloqueada. A execução continua. `POST_TOOL_CALL` ainda roda em chamadas bloqueadas.
 
-Sanitize resultados com `POST_TOOL_CALL` se necessário. Isso é opt-in. Veja [Tool Hooks](/pt-BR/learn/tool-hooks).
+Use `POST_TOOL_CALL` para limpar resultados se precisar. Esse passo é opcional. Veja [Tool Hooks](/pt-BR/learn/tool-hooks).
 
 ## 5. Validação de saída
 
-Valide antes de handoff, persistência, efeitos colaterais ou respostas de API.
+Verifique a saída antes de entregá-la, armazená-la, causar um efeito colateral ou devolvê-la de uma API.
 
-`output_pydantic` / `output_json` verificam a forma do schema, não a política. Combine-os com um callable de guardrail quando precisar de intenção ou regras de negócio.
+`output_pydantic` e `output_json` verificam só a forma do schema. Eles não verificam política. Adicione um guardrail callable quando precisar de intenção ou regras de negócio.
 
 ### Caminho da Task (Crew)
 
@@ -212,21 +214,21 @@ Task(
 
 Veja [Task Guardrails](/pt-BR/concepts/tasks#task-guardrails).
 
-### Caminho de `agent.kickoff()`
+### Caminho `agent.kickoff()`
 
-Use `Agent.guardrail` / `guardrail_max_retries` e, opcionalmente, `response_format=` em `kickoff()`. `Agent.guardrail` não roda durante a execução de Task do Crew.
+Use `Agent.guardrail` / `guardrail_max_retries`. Você também pode passar `response_format=` em `kickoff()`. `Agent.guardrail` não roda durante a execução de Task do Crew.
 
-Verificações com string ou `LLMGuardrail` funcionam nos caminhos de Task e de kickoff. Execuções Crew/Flow também podem usar [execution boundary hooks](/pt-BR/learn/execution-boundary-hooks).
+Checagens de string ou `LLMGuardrail` funcionam no caminho da Task e no caminho de kickoff. Execuções de Crew e Flow também podem usar [execution boundary hooks](/pt-BR/learn/execution-boundary-hooks).
 
 ## 6. Portões de aprovação
 
-Exija aprovação humana ou de política externa para ações irreversíveis, caras ou visíveis externamente.
+Exija uma pessoa ou uma checagem de política externa antes de ações irreversíveis, caras ou públicas.
 
 | Risco | Exemplos | Portão |
 | --- | --- | --- |
 | Alto | Pagamentos, exclusões em produção, posts públicos | Sempre aprovar |
-| Médio | E-mails para usuários reais, escritas em arquivos, atualizações de tickets | Aprovar ou allowlist |
-| Baixo | Search, resumir, classificar | Automatizar com logging |
+| Médio | E-mails para usuários reais, escrita de arquivos, atualizações de tickets | Aprovar ou allowlist |
+| Baixo | Busca, resumo, classificação | Automatizar com logging |
 
 ```python
 from crewai.hooks import HookAborted, InterceptionPoint, on
@@ -237,24 +239,24 @@ def require_email_approval(ctx):
         prompt=f"Approve {ctx.tool_name}?",
         default_message=f"Args: {ctx.tool_input}\nType 'yes' to approve:",
     )
-    if response.lower() != "yes":
+    if response.strip().lower() != "yes":
         raise HookAborted(reason="denied by operator", source="approval-gate")
 ```
 
 Outras opções:
 
 - Task `human_input=True` — apenas no caminho de execução da Task / Crew. Veja [Input humano na execução](/pt-BR/learn/human-input-on-execution).
-- `ToolCallHookContext.request_human_input` — funciona em `agent.kickoff()` e em execuções de Crew. Usa um `input()` de console bloqueante por padrão.
+- `ToolCallHookContext.request_human_input` — funciona em `agent.kickoff()` e em execuções de Crew. Por padrão usa um `input()` de console bloqueante.
 - `@human_feedback` / webhooks HITL Enterprise — [Human-in-the-Loop](/pt-BR/learn/human-in-the-loop), [Human Feedback em Flows](/pt-BR/learn/human-feedback-in-flows).
 
-Aplique a aprovação em código, não apenas no prompt.
+Aplique a aprovação em código. Não dependa só do prompt.
 
 ## 7. Limitando a delegação
 
-- `allow_delegation` é `False` por padrão. Defina como `True` apenas quando a colaboração for necessária.
-- Não há ACL de delegação por alvo. Os limites são a associação ao crew e as `tools` de cada agente.
-- O processo hierárquico define `manager_agent.allow_delegation = True`. Mantenha ferramentas de alto risco em especialistas e atrás de hooks ou aprovações.
-- Para A2A, prefira `A2AClientConfig`. Deixe `trust_remote_completion_status=False` a menos que você pretenda confiar no status de conclusão remoto. Veja [Delegação de Agente A2A](/en/learn/a2a-agent-delegation).
+- `allow_delegation` é `False` por padrão. Defina como `True` apenas quando os agentes precisarem colaborar.
+- Você não pode permitir delegação para alguns agentes e bloqueá-la para outros. Os limites são a associação ao crew e as `tools` de cada agente.
+- O processo hierárquico define `manager_agent.allow_delegation = True`. Mantenha ferramentas de alto risco em agentes especialistas. Coloque essas ferramentas atrás de hooks ou aprovações.
+- Para A2A, prefira `A2AClientConfig`. Mantenha `trust_remote_completion_status=False` a menos que você queira confiar no status de conclusão remoto. Veja [Delegação de Agente A2A](/en/learn/a2a-agent-delegation).
 
 ```python
 analyst = Agent(
@@ -268,11 +270,11 @@ analyst = Agent(
 
 ## 8. Isolamento entre agentes
 
-1. Separe privilégios de leitura e escrita entre agentes (pesquisador vs ator).
+1. Separe acesso de leitura e escrita entre agentes. Exemplo: um pesquisador lê; um ator envia ou escreve.
 2. Use crews separados ou passos de Flow para ingestão não confiável e ação privilegiada.
-3. Passe estado estruturado validado entre passos, não dumps brutos de ferramentas.
-4. Restrinja knowledge com `knowledge_sources` por agente. Para memória: dê ao agente seu próprio `Memory` / `MemoryScope`, ou desabilite memória no **crew**. No caminho da Task, `memory=False` em um agente vira `None` e o agente cai na memória do crew se o crew tiver memória habilitada.
-5. Execute código em um sandbox externo como [ferramentas E2B](/en/tools/ai-ml/e2bsandboxtools) ou Modal. Trate a saída do sandbox como não confiável. `CodeInterpreterTool` foi removido; `allow_code_execution` está deprecated e não anexa mais uma ferramenta de código.
+3. Passe estado estruturado validado entre os passos. Não passe saída bruta de ferramenta.
+4. Limite knowledge com `knowledge_sources` por agente. Para memória, dê ao agente seu próprio `Memory` ou `MemoryScope`, ou desligue a memória no **crew**. No caminho da Task, `memory=False` em um agente vira `None`. O agente então usa a memória do crew se o crew tiver memória habilitada.
+5. Execute código em um sandbox externo como [ferramentas E2B](/en/tools/ai-ml/e2bsandboxtools) ou Modal. Trate a saída do sandbox como não confiável. `CodeInterpreterTool` foi removido. `allow_code_execution` está deprecated e não anexa mais uma ferramenta de código.
 6. Conecte-se apenas a servidores MCP em que você confia. Veja [Segurança MCP](/pt-BR/mcp/security).
 
 ```python
@@ -292,7 +294,7 @@ class SecureOutreachFlow(Flow[PipelineState]):
 
     @listen(research)
     def send(self):
-        # No fetch tools; side-effecting tool behind hooks or HITL
+        # No fetch tools; send or write tools sit behind hooks or HITL
         ...
 ```
 
