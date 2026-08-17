@@ -556,6 +556,9 @@ class Agent(BaseAgent):
         get_env_context()
 
         self.reset_tool_failures()
+        # Tool results are scoped to a single task; carrying them over lets a
+        # previous task's result_as_answer tool override this task's answer.
+        self.tools_results = []
 
         if self.tools_handler:
             self.tools_handler.last_used_tool = None

@@ -1289,6 +1289,47 @@ def test_agent_use_trained_data_skips_load_when_file_missing(tmp_path, monkeypat
     assert result == "What is 1 + 1?"
 
 
+def test_agent_result_as_answer_does_not_leak_into_the_next_task():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+    )
+
+    first_task = Task(
+        agent=agent,
+        description="Say the word: Hi",
+        expected_output="The word: Hi",
+    )
+    second_task = Task(
+        agent=agent,
+        description="Say the word: Bye",
+        expected_output="The word: Bye",
+    )
+
+    agent.create_agent_executor(task=first_task)
+
+    outputs = iter(["Hi", "Bye"])
+
+    def invoke(_inputs):
+        output = next(outputs)
+        if output == "Hi":
+            # Only the first task uses a tool declaring result_as_answer=True.
+            agent.tools_results.append(
+                {
+                    "result": "Howdy!",
+                    "tool_name": "get_greetings",
+                    "tool_args": {},
+                    "result_as_answer": True,
+                }
+            )
+        return {"output": output}
+
+    with patch.object(AgentExecutor, "invoke", side_effect=invoke):
+        assert agent.execute_task(task=first_task) == "Howdy!"
+        assert agent.execute_task(task=second_task) == "Bye"
+
+
 def test_agent_max_retry_limit():
     agent = Agent(
         role="test role",
