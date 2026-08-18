@@ -98,6 +98,7 @@ class _PreparedCreate:
 
     @property
     def cli_args(self) -> list[str]:
+        """Return the exact argument vector approved for task creation."""
         args = [
             "task",
             "create",
@@ -124,10 +125,12 @@ class _UnknownSettlementError(RuntimeError):
 
 
 def _format_usdc(value: Decimal) -> str:
+    """Format a validated USDC amount with the canonical six decimals."""
     return format(value.quantize(Decimal("0.000001")), "f")
 
 
 def _json_result(payload: dict[str, Any]) -> str:
+    """Serialize a stable, human-readable tool result."""
     return json.dumps(payload, indent=2, sort_keys=True, default=str)
 
 
@@ -252,6 +255,7 @@ class TaskMarketRequesterTool(BaseTool):
         task_visibility: TaskVisibility,
         submission_visibility: SubmissionVisibility,
     ) -> str:
+        """Validate inputs and prepare a non-spending, approval-bound preview."""
         if not description or not description.strip():
             raise ValueError("description is required for prepare_create.")
         if not deliverables or not all(item.strip() for item in deliverables):
@@ -351,6 +355,7 @@ class TaskMarketRequesterTool(BaseTool):
         )
 
     def _create(self, preview_id: str | None) -> str:
+        """Consume one fresh host approval and attempt task creation once."""
         with self._lock:
             if not preview_id or preview_id not in self._previews:
                 raise ValueError("A valid preview_id is required for create.")
@@ -424,6 +429,7 @@ class TaskMarketRequesterTool(BaseTool):
         )
 
     def _preflight(self, reward: Decimal) -> dict[str, str]:
+        """Fail closed unless network, legal state, and balance are safe."""
         address_data = self._cli(["address"]).get("data", {})
         deposit_data = self._cli(["deposit"]).get("data", {})
         balance_data = self._cli(["wallet", "balance"]).get("data", {})
@@ -463,6 +469,7 @@ class TaskMarketRequesterTool(BaseTool):
         return {"network": "Base mainnet", "wallet_address": wallet_address}
 
     def _read_task(self, task_id: str | None) -> str:
+        """Retrieve live task state without enabling a marketplace write."""
         exact_id = self._validate_task_id(task_id)
         return _json_result(
             {
@@ -473,6 +480,7 @@ class TaskMarketRequesterTool(BaseTool):
         )
 
     def _read_submissions(self, task_id: str | None) -> str:
+        """Retrieve submissions for human review without judging them."""
         exact_id = self._validate_task_id(task_id)
         return _json_result(
             {
@@ -485,11 +493,13 @@ class TaskMarketRequesterTool(BaseTool):
 
     @staticmethod
     def _validate_task_id(task_id: str | None) -> str:
+        """Return a structurally valid Taskmarket task identifier."""
         if not task_id or not TASK_ID_PATTERN.fullmatch(task_id):
             raise ValueError("task_id must be a 0x-prefixed 32-byte hexadecimal value.")
         return task_id
 
     def _cli(self, args: list[str], *, write: bool = False) -> dict[str, Any]:
+        """Run the fixed first-party CLI and validate its JSON envelope."""
         try:
             returncode, stdout, stderr = self._runner(
                 [self.cli_path, *args], self.command_timeout_seconds
@@ -516,6 +526,7 @@ class TaskMarketRequesterTool(BaseTool):
 
     @staticmethod
     def _parse_envelope(stdout: str, stderr: str) -> dict[str, Any]:
+        """Find the last Taskmarket JSON envelope in either output stream."""
         for stream in (stdout, stderr):
             for line in reversed(stream.splitlines()):
                 try:
@@ -528,6 +539,7 @@ class TaskMarketRequesterTool(BaseTool):
 
     @staticmethod
     def _default_runner(args: Sequence[str], timeout: float) -> tuple[int, str, str]:
+        """Execute an argument vector without a shell and capture its output."""
         executable = shutil.which(args[0])
         if executable is None:
             raise RuntimeError("First-party taskmarket CLI is not installed.")
