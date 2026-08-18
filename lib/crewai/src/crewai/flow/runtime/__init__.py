@@ -450,6 +450,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     def _initialize_runtime_extension_attrs(self) -> None:
         """Initialize optional runtime-extension attributes."""
 
+    def _extend_definition(self, definition: FlowDefinition) -> FlowDefinition:
+        """Let an optional runtime extension complete the definition.
+
+        Runs once ``_definition`` is resolved and before methods are bound, so
+        an extension can contribute the methods it owns.
+        """
+        return definition
+
     def _create_default_extension_state(self) -> Any | None:
         """Return a default state supplied by an optional runtime extension."""
         return None
@@ -784,6 +792,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self._definition = definition or type(self).flow_definition()
         if self.name and self.name != self._definition.name:
             self._definition = self._definition.model_copy(update={"name": self.name})
+        self._definition = self._extend_definition(self._definition)
         methods = (
             self._action_bound_methods()
             if definition is not None
