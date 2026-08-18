@@ -12,6 +12,7 @@ from crewai.llms.base_llm import BaseLLM, JsonResponseFormat, llm_call_context
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.llms.providers.utils.common import safe_tool_conversion
+from crewai.types.usage_metrics import _coerce_int
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -1965,12 +1966,15 @@ class AnthropicCompletion(BaseLLM):
         """Extract token usage and response metadata from Anthropic response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
-            input_tokens = getattr(usage, "input_tokens", 0)
-            output_tokens = getattr(usage, "output_tokens", 0)
-            cache_read_tokens = getattr(usage, "cache_read_input_tokens", 0) or 0
-            cache_creation_tokens = (
-                getattr(usage, "cache_creation_input_tokens", 0) or 0
+            input_tokens = _coerce_int(getattr(usage, "input_tokens", 0))
+            output_tokens = _coerce_int(getattr(usage, "output_tokens", 0))
+            cache_read_tokens = _coerce_int(
+                getattr(usage, "cache_read_input_tokens", 0)
             )
+            cache_creation_tokens = _coerce_int(
+                getattr(usage, "cache_creation_input_tokens", 0)
+            )
+            input_tokens = input_tokens + cache_read_tokens + cache_creation_tokens
             result: dict[str, Any] = {
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,

@@ -1,0 +1,344 @@
+---
+title: Agent-to-UI (A2UI) Protocol
+description: Enable agents to generate declarative UI surfaces for rich client rendering via the A2UI extension.
+icon: window-restore
+mode: "wide"
+---
+
+## A2UI Overview
+
+A2UI is a declarative UI protocol extension for [A2A](/en/learn/a2a-agent-delegation) that lets agents emit structured JSON messages describing interactive surfaces. Clients receive these messages and render them as rich UI components — forms, cards, lists, modals, and more — without the agent needing to know anything about the client's rendering stack.
+
+A2UI is built on the A2A extension mechanism and identified by the URI `https://a2ui.org/a2a-extension/a2ui/v0.8`.
+
+<Note>
+  A2UI requires the `a2a-sdk` package. Install with: `uv add 'crewai[a2a]'` or `pip install 'crewai[a2a]'`
+</Note>
+
+## How It Works
+
+1. The **server extension** scans agent output for A2UI JSON objects
+2. Valid messages are wrapped as `DataPart` entries with the `application/json+a2ui` MIME type
+3. The **client extension** augments the agent's system prompt with A2UI instructions and the component catalog
+4. The client tracks surface state (active surfaces and data models) across conversation turns
+
+## Server Setup
+
+Add `A2UIServerExtension` to your `A2AServerConfig` to enable A2UI output:
+
+```python Code
+from crewai import Agent
+from crewai.a2a import A2AServerConfig
+from crewai.a2a.extensions.a2ui import A2UIServerExtension
+
+agent = Agent(
+    role="Dashboard Agent",
+    goal="Present data through interactive UI surfaces",
+    backstory="Expert at building clear, actionable dashboards",
+    llm="gpt-4o",
+    a2a=A2AServerConfig(
+        url="https://your-server.com",
+        server_extensions=[A2UIServerExtension()],
+    ),
+)
+```
+
+### Server Extension Options
+
+<ParamField path="catalog_ids" type="list[str] | None" default="None">
+  Component catalog identifiers the server supports. When set, only these catalogs are advertised to clients.
+</ParamField>
+
+<ParamField path="accept_inline_catalogs" type="bool" default="False">
+  Whether to accept inline catalog definitions from clients in addition to named catalogs.
+</ParamField>
+
+## Client Setup
+
+Add `A2UIClientExtension` to your `A2AClientConfig` to enable A2UI rendering:
+
+```python Code
+from crewai import Agent
+from crewai.a2a import A2AClientConfig
+from crewai.a2a.extensions.a2ui import A2UIClientExtension
+
+agent = Agent(
+    role="UI Coordinator",
+    goal="Coordinate tasks and render agent responses as rich UI",
+    backstory="Expert at presenting agent output in interactive formats",
+    llm="gpt-4o",
+    a2a=A2AClientConfig(
+        endpoint="https://dashboard-agent.example.com/.well-known/agent-card.json",
+        client_extensions=[A2UIClientExtension()],
+    ),
+)
+```
+
+### Client Extension Options
+
+<ParamField path="catalog_id" type="str | None" default="None">
+  Preferred component catalog identifier. Defaults to `"standard (v0.8)"` when not set.
+</ParamField>
+
+<ParamField path="allowed_components" type="list[str] | None" default="None">
+  Restrict which components the agent may use. When `None`, all 18 standard catalog components are available.
+</ParamField>
+
+## Message Types
+
+A2UI defines four server-to-client message types. Each message targets a **surface** identified by `surfaceId`.
+
+<Tabs>
+  <Tab title="beginRendering">
+  Initializes a new surface with a root component and optional styles.
+
+  ```json
+  {
+    "beginRendering": {
+      "surfaceId": "dashboard-1",
+      "root": "main-column",
+      "catalogId": "standard (v0.8)",
+      "styles": {
+        "primaryColor": "#EB6658"
+      }
+    }
+  }
+  ```
+  </Tab>
+
+  <Tab title="surfaceUpdate">
+  Sends or updates one or more components on an existing surface.
+
+  ```json
+  {
+    "surfaceUpdate": {
+      "surfaceId": "dashboard-1",
+      "components": [
+        {
+          "id": "main-column",
+          "component": {
+            "Column": {
+              "children": { "explicitList": ["title", "content"] },
+              "alignment": "start"
+            }
+          }
+        },
+        {
+          "id": "title",
+          "component": {
+            "Text": {
+              "text": { "literalString": "Dashboard" },
+              "usageHint": "h1"
+            }
+          }
+        }
+      ]
+    }
+  }
+  ```
+  </Tab>
+
+  <Tab title="dataModelUpdate">
+  Updates the data model bound to a surface, enabling dynamic content.
+
+  ```json
+  {
+    "dataModelUpdate": {
+      "surfaceId": "dashboard-1",
+      "path": "/data/model",
+      "contents": [
+        {
+          "key": "userName",
+          "valueString": "Alice"
+        },
+        {
+          "key": "score",
+          "valueNumber": 42
+        }
+      ]
+    }
+  }
+  ```
+  </Tab>
+
+  <Tab title="deleteSurface">
+  Removes a surface and all its components.
+
+  ```json
+  {
+    "deleteSurface": {
+      "surfaceId": "dashboard-1"
+    }
+  }
+  ```
+  </Tab>
+</Tabs>
+
+## Component Catalog
+
+A2UI ships with 18 standard components organized into three categories:
+
+### Content
+
+| Component | Description | Required Fields |
+|-----------|-------------|-----------------|
+| **Text** | Renders text with optional heading/body hints | `text` (StringBinding) |
+| **Image** | Displays an image with fit and size options | `url` (StringBinding) |
+| **Icon** | Renders a named icon from a set of 47 icons | `name` (IconBinding) |
+| **Video** | Embeds a video player | `url` (StringBinding) |
+| **AudioPlayer** | Embeds an audio player with optional description | `url` (StringBinding) |
+
+### Layout
+
+| Component | Description | Required Fields |
+|-----------|-------------|-----------------|
+| **Row** | Horizontal flex container | `children` (ChildrenDef) |
+| **Column** | Vertical flex container | `children` (ChildrenDef) |
+| **List** | Scrollable list (vertical or horizontal) | `children` (ChildrenDef) |
+| **Card** | Elevated container for a single child | `child` (str) |
+| **Tabs** | Tabbed container | `tabItems` (list of TabItem) |
+| **Divider** | Visual separator (horizontal or vertical) | — |
+| **Modal** | Overlay triggered by an entry point | `entryPointChild`, `contentChild` (str) |
+
+### Interactive
+
+| Component | Description | Required Fields |
+|-----------|-------------|-----------------|
+| **Button** | Clickable button that triggers an action | `child` (str), `action` (Action) |
+| **CheckBox** | Boolean toggle with a label | `label` (StringBinding), `value` (BooleanBinding) |
+| **TextField** | Text input with type and validation options | `label` (StringBinding) |
+| **DateTimeInput** | Date and/or time picker | `value` (StringBinding) |
+| **MultipleChoice** | Selection from a list of options | `selections` (ArrayBinding), `options` (list) |
+| **Slider** | Numeric range slider | `value` (NumberBinding) |
+
+## Data Binding
+
+Components reference values through **bindings** rather than raw literals. This allows surfaces to update dynamically when the data model changes.
+
+There are two ways to bind a value:
+
+- **Literal values** — hardcoded directly in the component definition
+- **Path references** — point to a key in the surface's data model
+
+```json
+{
+  "surfaceUpdate": {
+    "surfaceId": "profile-1",
+    "components": [
+      {
+        "id": "greeting",
+        "component": {
+          "Text": {
+            "text": { "path": "/data/model/userName" },
+            "usageHint": "h2"
+          }
+        }
+      },
+      {
+        "id": "status",
+        "component": {
+          "Text": {
+            "text": { "literalString": "Online" },
+            "usageHint": "caption"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+In this example, `greeting` reads the user's name from the data model (updated via `dataModelUpdate`), while `status` uses a hardcoded literal.
+
+## Handling User Actions
+
+Interactive components like `Button` trigger `userAction` events that flow back to the server. Each action includes a `name`, the originating `surfaceId` and `sourceComponentId`, and an optional `context` with key-value pairs.
+
+```json
+{
+  "userAction": {
+    "name": "submitForm",
+    "surfaceId": "form-1",
+    "sourceComponentId": "submit-btn",
+    "timestamp": "2026-03-12T10:00:00Z",
+    "context": {
+      "selectedOption": "optionA"
+    }
+  }
+}
+```
+
+Action context values can also use path bindings to send current data model values back to the server:
+
+```json
+{
+  "Button": {
+    "child": "confirm-label",
+    "action": {
+      "name": "confirm",
+      "context": [
+        {
+          "key": "currentScore",
+          "value": { "path": "/data/model/score" }
+        }
+      ]
+    }
+  }
+}
+```
+
+## Validation
+
+Use `validate_a2ui_message` to validate server-to-client messages and `validate_a2ui_event` for client-to-server events:
+
+```python Code
+from crewai.a2a.extensions.a2ui import validate_a2ui_message
+from crewai.a2a.extensions.a2ui.validator import (
+    validate_a2ui_event,
+    A2UIValidationError,
+)
+
+# Validate a server message
+try:
+    msg = validate_a2ui_message({"beginRendering": {"surfaceId": "s1", "root": "r1"}})
+except A2UIValidationError as exc:
+    print(exc.errors)
+
+# Validate a client event
+try:
+    event = validate_a2ui_event({
+        "userAction": {
+            "name": "click",
+            "surfaceId": "s1",
+            "sourceComponentId": "btn-1",
+            "timestamp": "2026-03-12T10:00:00Z",
+        }
+    })
+except A2UIValidationError as exc:
+    print(exc.errors)
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Start Simple" icon="play">
+    Begin with a `beginRendering` message and a single `surfaceUpdate`. Add data binding and interactivity once the basic flow works.
+  </Card>
+
+  <Card title="Use Data Binding for Dynamic Content" icon="arrows-rotate">
+    Prefer path bindings over literal values for content that changes. Use `dataModelUpdate` to push new values without resending the full component tree.
+  </Card>
+
+  <Card title="Filter Components" icon="filter">
+    Use the `allowed_components` option on `A2UIClientExtension` to restrict which components the agent may emit, reducing prompt size and keeping output predictable.
+  </Card>
+
+  <Card title="Validate Messages" icon="check">
+    Use `validate_a2ui_message` and `validate_a2ui_event` to catch malformed payloads early, especially when building custom integrations.
+  </Card>
+</CardGroup>
+
+## Learn More
+
+- [A2A Agent Delegation](/en/learn/a2a-agent-delegation) — configure agents for remote delegation via the A2A protocol
+- [A2A Protocol Documentation](https://a2a-protocol.org) — official protocol specification
