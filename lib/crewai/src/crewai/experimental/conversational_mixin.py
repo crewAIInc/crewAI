@@ -140,6 +140,35 @@ def _config_from_definition(
     )
 
 
+def _builtin_method(handler: Callable[..., Any], **roles: Any) -> FlowMethodDefinition:
+    """One built-in conversational method, as the code ref the DSL already emits."""
+    return FlowMethodDefinition(do=_method_action(handler), **roles)
+
+
+def _builtin_methods() -> dict[str, FlowMethodDefinition]:
+    """The built-in methods a conversational flow needs to run a turn.
+
+    A Python flow inherits these methods; a declaration has nothing to inherit
+    from, so without them ``conversational: {}`` loads clean and then runs zero
+    methods and returns ``None``.
+    """
+    return {
+        "route_conversation": _builtin_method(
+            _ConversationalMixin.route_conversation, start=True, router=True
+        ),
+        "converse_turn": _builtin_method(
+            _ConversationalMixin.converse_turn, listen="converse"
+        ),
+        "end_conversation": _builtin_method(
+            _ConversationalMixin.end_conversation, listen="end"
+        ),
+        "answer_from_history_turn": _builtin_method(
+            _ConversationalMixin.answer_from_history_turn,
+            listen="answer_from_history",
+        ),
+    }
+
+
 def _conversation_start_router(func: Callable[..., Any]) -> Any:
     wrapper = start()(func)
     _set_flow_method_definition(
@@ -923,6 +952,28 @@ class _ConversationalMixin:
         if not hasattr(self, "_resolved_conversation_config"):
             object.__setattr__(self, "_resolved_conversation_config", None)
 
+    def _extend_definition(self, definition: FlowDefinition) -> FlowDefinition:
+        """Add the built-in conversational methods a declaration cannot inherit.
+
+        An entry the author supplied under the same name always wins, and a
+        Python flow already carries all four from the MRO walk, so this only
+        fills gaps.
+        """
+        conversational = definition.conversational
+        if conversational is None or not conversational.enabled:
+            return definition
+
+        missing = {
+            name: method
+            for name, method in _builtin_methods().items()
+            if name not in definition.methods
+        }
+        if not missing:
+            return definition
+        return definition.model_copy(
+            update={"methods": {**definition.methods, **missing}}
+        )
+
     def _create_default_extension_state(self) -> ConversationState | None:
         """Supply ``ConversationState`` only when nothing else declares state.
 
@@ -1174,15 +1225,37 @@ class _ConversationalMixin:
                 catalog[route_label] = self.builtin_route_descriptions[route_label]
                 continue
             handler_name = label_to_method.get(route_label)
-            description = ""
-            if handler_name:
-                method = getattr(type(self), handler_name, None)
-                doc = getattr(method, "__doc__", None)
-                if doc:
-                    description = doc.strip().split("\n", 1)[0].strip()
-            catalog[route_label] = description
+            catalog[route_label] = (
+                self._route_description(flow_definition, handler_name)
+                if handler_name
+                else ""
+            )
 
         return catalog
+
+    def _route_description(
+        self,
+        flow_definition: FlowDefinition,
+        handler_name: str,
+    ) -> str:
+        """Describe a route for the router LLM's catalog.
+
+        The declared ``description`` comes first so a declaration can say what
+        a route is for; the handler docstring backs it for Python flows whose
+        definition predates the DSL filling that field.
+        """
+        declared = flow_definition.methods[handler_name].description
+        if declared:
+            return declared.strip().split("\n", 1)[0].strip()
+
+        method = getattr(type(self), handler_name, None)
+        if method is None:
+            # A declarative flow has no class attribute to read, and
+            # ``None.__doc__`` is NoneType's own docstring — which would be
+            # handed to the router LLM as the route description.
+            return ""
+        doc = getattr(method, "__doc__", None)
+        return doc.strip().split("\n", 1)[0].strip() if doc else ""
 
     def _extract_router_intent(self, response: Any, intent_field: str) -> str | None:
         if isinstance(response, BaseModel):
