@@ -36,6 +36,7 @@ from crewai.memory.types import (
 from crewai.memory.utils import join_scope_paths
 from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
+from crewai.telemetry.otel import operation
 
 
 if TYPE_CHECKING:
@@ -471,43 +472,46 @@ class Memory(BaseModel):
 
         _source_type = "unified_memory"
         try:
-            crewai_event_bus.emit(
-                self,
-                MemorySaveStartedEvent(
-                    value=content,
-                    metadata=metadata,
-                    source_type=_source_type,
-                ),
-            )
-            start = time.perf_counter()
+            with operation(
+                "remember memory",
+                {"crewai.memory.source_type": _source_type},
+            ):
+                crewai_event_bus.emit(
+                    self,
+                    MemorySaveStartedEvent(
+                        value=content,
+                        metadata=metadata,
+                        source_type=_source_type,
+                    ),
+                )
+                start = time.perf_counter()
 
-            # Submit through the save pool for proper serialization,
-            future = self._submit_save(
-                self._encode_batch,
-                [content],
-                scope,
-                categories,
-                metadata,
-                importance,
-                source,
-                private,
-                effective_root,
-            )
-            records = future.result()
-            record = records[0] if records else None
+                future = self._submit_save(
+                    self._encode_batch,
+                    [content],
+                    scope,
+                    categories,
+                    metadata,
+                    importance,
+                    source,
+                    private,
+                    effective_root,
+                )
+                records = future.result()
+                record = records[0] if records else None
 
-            elapsed_ms = (time.perf_counter() - start) * 1000
-            crewai_event_bus.emit(
-                self,
-                MemorySaveCompletedEvent(
-                    value=content,
-                    metadata=metadata or {},
-                    agent_role=agent_role,
-                    save_time_ms=elapsed_ms,
-                    source_type=_source_type,
-                ),
-            )
-            return record
+                elapsed_ms = (time.perf_counter() - start) * 1000
+                crewai_event_bus.emit(
+                    self,
+                    MemorySaveCompletedEvent(
+                        value=content,
+                        metadata=metadata or {},
+                        agent_role=agent_role,
+                        save_time_ms=elapsed_ms,
+                        source_type=_source_type,
+                    ),
+                )
+                return record
         except Exception as e:
             crewai_event_bus.emit(
                 self,
@@ -720,88 +724,97 @@ class Memory(BaseModel):
 
         _source = "unified_memory"
         try:
-            crewai_event_bus.emit(
-                self,
-                MemoryQueryStartedEvent(
-                    query=query,
-                    limit=limit,
-                    score_threshold=None,
-                    source_type=_source,
-                ),
-            )
-            start = time.perf_counter()
-
-            if depth == "shallow":
-                embedding = embed_text(self._embedder, query)
-                if not embedding:
-                    results: list[MemoryMatch] = []
-                else:
-                    raw = self._storage.search(
-                        embedding,
-                        scope_prefix=effective_scope,
-                        categories=categories,
+            with operation(
+                "recall memory",
+                {
+                    "crewai.memory.depth": depth,
+                    "crewai.memory.source_type": _source,
+                },
+            ):
+                crewai_event_bus.emit(
+                    self,
+                    MemoryQueryStartedEvent(
+                        query=query,
                         limit=limit,
-                        min_score=0.0,
-                    )
-                    if not include_private:
-                        raw = [
-                            (r, s)
-                            for r, s in raw
-                            if not r.private or r.source == source
-                        ]
-                    results = []
-                    for r, s in raw:
-                        composite, reasons = compute_composite_score(r, s, self._config)
-                        results.append(
-                            MemoryMatch(
-                                record=r,
-                                score=composite,
-                                match_reasons=reasons,
-                            )
+                        score_threshold=None,
+                        source_type=_source,
+                    ),
+                )
+                start = time.perf_counter()
+
+                if depth == "shallow":
+                    embedding = embed_text(self._embedder, query)
+                    if not embedding:
+                        results: list[MemoryMatch] = []
+                    else:
+                        raw = self._storage.search(
+                            embedding,
+                            scope_prefix=effective_scope,
+                            categories=categories,
+                            limit=limit,
+                            min_score=0.0,
                         )
-                    results.sort(key=lambda m: m.score, reverse=True)
-            else:
-                from crewai.memory.recall_flow import RecallFlow
+                        if not include_private:
+                            raw = [
+                                (r, s)
+                                for r, s in raw
+                                if not r.private or r.source == source
+                            ]
+                        results = []
+                        for r, s in raw:
+                            composite, reasons = compute_composite_score(
+                                r, s, self._config
+                            )
+                            results.append(
+                                MemoryMatch(
+                                    record=r,
+                                    score=composite,
+                                    match_reasons=reasons,
+                                )
+                            )
+                        results.sort(key=lambda m: m.score, reverse=True)
+                else:
+                    from crewai.memory.recall_flow import RecallFlow
 
-                flow = RecallFlow(
-                    storage=self._storage,
-                    llm=self._llm,
-                    embedder=self._embedder,
-                    config=self._config,
+                    flow = RecallFlow(
+                        storage=self._storage,
+                        llm=self._llm,
+                        embedder=self._embedder,
+                        config=self._config,
+                    )
+                    flow.kickoff(
+                        inputs={
+                            "query": query,
+                            "scope": effective_scope,
+                            "categories": categories or [],
+                            "limit": limit,
+                            "source": source,
+                            "include_private": include_private,
+                        }
+                    )
+                    results = flow.state.final_results
+
+                if results:
+                    try:
+                        touch = getattr(self._storage, "touch_records", None)
+                        if touch is not None:
+                            touch([m.record.id for m in results])
+                    except Exception:  # noqa: S110
+                        pass  # Non-critical: don't fail recall because of touch
+
+                elapsed_ms = (time.perf_counter() - start) * 1000
+                crewai_event_bus.emit(
+                    self,
+                    MemoryQueryCompletedEvent(
+                        query=query,
+                        results=results,
+                        limit=limit,
+                        score_threshold=None,
+                        query_time_ms=elapsed_ms,
+                        source_type=_source,
+                    ),
                 )
-                flow.kickoff(
-                    inputs={
-                        "query": query,
-                        "scope": effective_scope,
-                        "categories": categories or [],
-                        "limit": limit,
-                        "source": source,
-                        "include_private": include_private,
-                    }
-                )
-                results = flow.state.final_results
-
-            if results:
-                try:
-                    touch = getattr(self._storage, "touch_records", None)
-                    if touch is not None:
-                        touch([m.record.id for m in results])
-                except Exception:  # noqa: S110
-                    pass  # Non-critical: don't fail recall because of touch
-
-            elapsed_ms = (time.perf_counter() - start) * 1000
-            crewai_event_bus.emit(
-                self,
-                MemoryQueryCompletedEvent(
-                    query=query,
-                    results=results,
-                    limit=limit,
-                    score_threshold=None,
-                    query_time_ms=elapsed_ms,
-                    source_type=_source,
-                ),
-            )
-            return results
+                return results
         except Exception as e:
             crewai_event_bus.emit(
                 self,

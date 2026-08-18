@@ -12,6 +12,7 @@ from crewai.agent import Agent
 from crewai.lite_agent_output import LiteAgentOutput
 from crewai.llms.base_llm import BaseLLM
 from crewai.tasks.task_output import TaskOutput
+from crewai.telemetry.otel import operation
 
 
 def _is_coroutine(
@@ -108,12 +109,18 @@ class LLMGuardrail:
         """
 
         try:
-            result = self._validate_output(task_output)
-            if not isinstance(result.pydantic, LLMGuardrailResult):
-                raise ValueError("The guardrail result is not a valid pydantic model")
+            with operation(
+                "guard llm",
+                {"crewai.guardrail.type": "llm"},
+            ):
+                result = self._validate_output(task_output)
+                if not isinstance(result.pydantic, LLMGuardrailResult):
+                    raise ValueError(
+                        "The guardrail result is not a valid pydantic model"
+                    )
 
-            if result.pydantic.valid:
-                return True, task_output.raw
-            return False, result.pydantic.feedback
+                if result.pydantic.valid:
+                    return True, task_output.raw
+                return False, result.pydantic.feedback
         except Exception as e:
             return False, f"Error while validating the task output: {e!s}"
