@@ -903,3 +903,30 @@ def test_tool_error_does_not_emit_finished_event():
     assert len(finished_events) == 0, (
         "ToolUsageFinishedEvent should NOT be emitted after ToolUsageErrorEvent"
     )
+
+
+def test_original_tool_calling_non_dict_arguments_raises_tool_usage_error():
+    mock_agent = MagicMock()
+    mock_agent.key = "test_key"
+    mock_agent.role = "test_role"
+
+    class TestTool(BaseTool):
+        name: str = "test_tool"
+        description: str = "A test tool"
+
+        def _run(self, input: dict) -> str:
+            return "test result"
+
+    test_tool = TestTool()
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[test_tool],
+        task=MagicMock(),
+        function_calling_llm=None,
+        agent=mock_agent,
+        action=MagicMock(tool="test_tool", tool_input="[1, 2, 3]"),
+    )
+
+    with pytest.raises(ToolUsageError):
+        tool_usage._original_tool_calling("test_string", raise_error=True)
+
