@@ -302,7 +302,7 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
     ),
     ModelSpec(
         "FlowConversationalRouterDefinition",
-        "Conversational",
+        "Conversational Router",
         "conversational.router",
         descriptions={
             "prompt": "Domain framing for the routing decision: persona, policy, voice. Do not list routes here; the catalog is built automatically.",

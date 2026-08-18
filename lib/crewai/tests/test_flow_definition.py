@@ -5,6 +5,7 @@ import importlib
 import inspect
 import logging
 from pathlib import Path
+import re
 from typing import Annotated, Literal
 
 import pytest
@@ -1477,6 +1478,40 @@ def test_skill_documents_flow_wiring():
     for example in FLOW_TEMPLATE_EXPRESSION_EXAMPLES["yaml"]:
         assert example["title"] in skill
         assert example["code"] in skill
+
+
+def test_skill_renders_both_conversational_sections():
+    """Both models must render; the router shares no section with its parent.
+
+    Non-union sections render only their first model, so grouping them would
+    drop the router and leave the link to it without a target.
+    """
+    skill = flow_definition.FlowDefinition.skill()
+
+    assert "### Conversational (`conversational`)" in skill
+    assert "### Conversational Router (`conversational.router`)" in skill
+
+    link = "[Conversational Router (`conversational.router`)]"
+    assert link in skill
+    anchor = re.search(re.escape(link) + r"\((#[^)]+)\)", skill).group(1)
+    assert anchor == "#conversational-router-conversationalrouter"
+
+
+def test_skill_documents_every_conversational_field():
+    skill = flow_definition.FlowDefinition.skill()
+    section = skill[skill.index("### Conversational (`conversational`)") :]
+
+    for field in flow_definition.FlowConversationalDefinition.model_fields:
+        assert f"`{field}`" in section, field
+    for field in flow_definition.FlowConversationalRouterDefinition.model_fields:
+        assert f"`{field}`" in section, field
+
+
+def test_skill_conversational_skip_suppresses_both_sections():
+    skill = flow_definition.FlowDefinition.skill(skips=["conversational"])
+
+    assert "### Conversational" not in skill
+    assert "conversational-router" not in skill
 
 
 def test_skill_can_render_json_examples():
