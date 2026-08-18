@@ -452,6 +452,67 @@ def test_flow_definition_uses_collapsed_conversational_router_start():
     assert methods["route_conversation"].router is True
 
 
+def test_declaring_the_conversational_block_opts_in_without_enabled():
+    definition = flow_definition.FlowDefinition.from_declaration(
+        contents={
+            "schema": "crewai.flow/v1",
+            "name": "JsonChat",
+            "conversational": {"llm": "gpt-4o-mini"},
+            "methods": {
+                "begin": {"do": {"call": "expression", "expr": "'x'"}, "start": True}
+            },
+        }
+    )
+
+    assert definition.conversational is not None
+    assert definition.conversational.enabled is True
+    assert definition.conversational.llm == "gpt-4o-mini"
+
+
+def test_conversational_block_can_be_explicitly_disabled():
+    definition = flow_definition.FlowDefinition.from_declaration(
+        contents={
+            "schema": "crewai.flow/v1",
+            "name": "JsonChat",
+            "conversational": {"enabled": False, "llm": "gpt-4o-mini"},
+            "methods": {
+                "begin": {"do": {"call": "expression", "expr": "'x'"}, "start": True}
+            },
+        }
+    )
+
+    assert definition.conversational is not None
+    assert definition.conversational.enabled is False
+    assert definition.conversational.llm == "gpt-4o-mini"
+
+
+def test_omitting_the_conversational_block_leaves_it_none():
+    definition = flow_definition.FlowDefinition.from_declaration(
+        contents={
+            "schema": "crewai.flow/v1",
+            "name": "PlainJson",
+            "methods": {
+                "begin": {"do": {"call": "expression", "expr": "'x'"}, "start": True}
+            },
+        }
+    )
+
+    assert definition.conversational is None
+
+
+def test_flow_definition_includes_conversational_from_decorator_alone():
+    @ConversationConfig(llm="gpt-4o-mini")
+    class DecoratedFlow(Flow):
+        pass
+
+    definition = DecoratedFlow.flow_definition()
+
+    assert definition.conversational is not None
+    assert definition.conversational.enabled is True
+    assert "route_conversation" in definition.methods
+    assert "converse_turn" in definition.methods
+
+
 def test_flow_definition_degrades_human_feedback_metadata(caplog):
     caplog.set_level(logging.WARNING, logger="crewai.flow.dsl._utils")
     marker = object()

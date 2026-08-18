@@ -2136,3 +2136,136 @@ class TestNestedCrewTracing:
                 "nested AgentExecutor flows inside a deferred parent Flow must "
                 "not finalize the parent trace batch"
             )
+
+
+class TestConversationalOptIn:
+    """``@ConversationConfig`` opts a Flow into conversational mode."""
+
+    def test_decorator_alone_enables_conversational_mode(self) -> None:
+        @ConversationConfig(llm="gpt-4o-mini")
+        class DecoratedFlow(Flow[ConversationState]):
+            @listen("order")
+            def handle_order(self) -> str:
+                """Order status questions."""
+                return "on the way"
+
+        definition = DecoratedFlow.flow_definition()
+
+        assert definition.conversational is not None
+        assert definition.conversational.enabled is True
+        assert definition.conversational.llm == "gpt-4o-mini"
+
+    def test_decorator_alone_registers_the_builtin_methods(self) -> None:
+        @ConversationConfig()
+        class DecoratedFlow(Flow[ConversationState]):
+            pass
+
+        methods = DecoratedFlow.flow_definition().methods
+
+        assert "route_conversation" in methods
+        assert methods["route_conversation"].start is True
+        assert methods["route_conversation"].router is True
+        assert "converse_turn" in methods
+        assert "end_conversation" in methods
+
+    def test_decorator_alone_runs_a_turn(self) -> None:
+        @ConversationConfig()
+        class DecoratedFlow(Flow[ConversationState]):
+            @listen("converse")
+            def converse_turn(self) -> str:
+                return "handled"
+
+        flow = DecoratedFlow()
+
+        assert flow.handle_turn("hello") == "handled"
+        assert [(m.role, m.content) for m in flow.state.messages] == [
+            ("user", "hello"),
+            ("assistant", "handled"),
+        ]
+
+    def test_decorator_alone_defers_trace_finalization(self) -> None:
+        @ConversationConfig()
+        class DecoratedFlow(Flow[ConversationState]):
+            pass
+
+        assert DecoratedFlow()._should_defer_trace_finalization() is True
+
+    def test_explicit_flag_without_a_config_still_opts_in(self) -> None:
+        class FlagOnlyFlow(Flow[ConversationState]):
+            conversational = True
+
+        definition = FlagOnlyFlow.flow_definition()
+
+        assert definition.conversational is not None
+        assert definition.conversational.enabled is True
+        assert FlagOnlyFlow()._is_conversational_enabled() is True
+
+    def test_flow_with_neither_stays_non_conversational(self) -> None:
+        class PlainFlow(Flow):
+            @start()
+            def begin(self) -> str:
+                return "begin"
+
+        definition = PlainFlow.flow_definition()
+
+        assert definition.conversational is None
+        assert set(definition.methods) == {"begin"}
+        assert PlainFlow.conversational is False
+
+    def test_decorator_does_not_leak_the_flag_onto_other_flows(self) -> None:
+        @ConversationConfig()
+        class DecoratedFlow(Flow[ConversationState]):
+            pass
+
+        class LaterPlainFlow(Flow):
+            @start()
+            def begin(self) -> str:
+                return "begin"
+
+        assert DecoratedFlow.conversational is True
+        assert LaterPlainFlow.conversational is False
+        assert Flow.conversational is False
+        assert LaterPlainFlow.flow_definition().conversational is None
+
+
+class TestHandleTurnGuard:
+    """``handle_turn`` fails loudly on a non-conversational Flow."""
+
+    def test_handle_turn_rejects_non_conversational_flows(self) -> None:
+        class PlainFlow(Flow[ConversationState]):
+            @start()
+            def begin(self) -> str:
+                return "begin"
+
+        with pytest.raises(
+            ValueError,
+            match="Flow.handle_turn\\(\\) is only available on conversational flows",
+        ):
+            PlainFlow().handle_turn("hello")
+
+    def test_handle_turn_guard_matches_chat_and_stream_turn(self) -> None:
+        class PlainFlow(Flow[ConversationState]):
+            @start()
+            def begin(self) -> str:
+                return "begin"
+
+        flow = PlainFlow()
+
+        for call in (
+            lambda: flow.handle_turn("hi"),
+            lambda: flow.stream_turn("hi"),
+            flow.chat,
+        ):
+            with pytest.raises(
+                ValueError, match="only available on conversational flows"
+            ):
+                call()
+
+    def test_guard_does_not_fire_on_a_conversational_flow(self) -> None:
+        @ConversationConfig()
+        class DecoratedFlow(Flow[ConversationState]):
+            @listen("converse")
+            def converse_turn(self) -> str:
+                return "ok"
+
+        assert DecoratedFlow().handle_turn("hi") == "ok"

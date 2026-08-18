@@ -293,11 +293,22 @@ class _ConversationalMixin:
            conversational ``Flow``. Signature and semantics may change before
            the feature graduates from ``crewai.experimental``.
 
-        Available only when ``conversational = True`` is set on the subclass.
-        Stashes the message + session_id as pending turn state, runs kickoff
-        (which restores from persist and then applies the pending turn), and
-        promotes the result to an assistant message when the handler didn't.
+        Available only when ``conversational = True`` is set on the subclass
+        (``@ConversationConfig`` sets it for you). Stashes the message +
+        session_id as pending turn state, runs kickoff (which restores from
+        persist and then applies the pending turn), and promotes the result to
+        an assistant message when the handler didn't.
+
+        Raises:
+            ValueError: If the flow is not conversational. Without this the
+                turn is a silent no-op: no route handlers are registered, the
+                message is never appended, and ``None`` comes back.
         """
+        if not self._is_conversational_enabled():
+            raise ValueError(
+                "Flow.handle_turn() is only available on conversational flows"
+            )
+
         state = cast(ConversationState, self.state)
         sid = session_id or state.id
         crewai_event_bus.emit(
