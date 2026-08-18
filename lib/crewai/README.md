@@ -159,47 +159,76 @@ The true power of CrewAI emerges when combining Crews and Flows. This synergy al
 
 ### Getting Started with Installation
 
-To get started with CrewAI, follow these simple steps:
+To get started with CrewAI, follow these simple steps. The full walkthrough lives in the [installation guide](https://docs.crewai.com/en/installation).
 
 ### 1. Installation
 
-Ensure you have Python >=3.10 <3.14 installed on your system. CrewAI uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
+CrewAI requires `Python >=3.10 and <3.14`. Check your version with:
 
-First, install CrewAI:
-
-```shell
-pip install crewai
+```bash
+python3 --version
 ```
 
-If you want to install the 'crewai' package along with its optional features that include additional tools for agents, you can do so by using the following command:
+CrewAI uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling. If you haven't installed `uv` yet, install it first.
+
+**macOS/Linux:**
 
 ```shell
-pip install 'crewai[tools]'
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-The command above installs the basic package and also adds extra components which require more dependencies to function.
+If your system doesn't have `curl`, you can use `wget`:
 
-### Troubleshooting Dependencies
+```shell
+wget -qO- https://astral.sh/uv/install.sh | sh
+```
 
-If you encounter issues during installation or usage, here are some common solutions:
+**Windows:**
 
-#### Common Issues
+```shell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
 
-1. **ModuleNotFoundError: No module named 'tiktoken'**
+If you run into any issues, refer to [UV's installation guide](https://docs.astral.sh/uv/getting-started/installation/).
 
-   - Install tiktoken explicitly: `pip install 'crewai[embeddings]'`
-   - If using embedchain or other tools: `pip install 'crewai[tools]'`
+Then install the CrewAI CLI:
 
-2. **Failed building wheel for tiktoken**
+```shell
+uv tool install crewai
+```
 
-   - Ensure Rust compiler is installed (see installation steps above)
-   - For Windows: Verify Visual C++ Build Tools are installed
-   - Try upgrading pip: `pip install --upgrade pip`
-   - If issues persist, use a pre-built wheel: `pip install tiktoken --prefer-binary`
+If you encounter a `PATH` warning, run:
 
-### 2. Setting Up Your Crew with the YAML Configuration
+```shell
+uv tool update-shell
+```
 
-To create a new CrewAI project, run the following CLI (Command Line Interface) command:
+If you encounter the `chroma-hnswlib==0.7.6` build error (`fatal error C1083: Cannot open include file: 'float.h'`) on Windows, install [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/) with *Desktop development with C++*.
+
+Verify the install:
+
+```shell
+uv tool list
+```
+
+You should see something like:
+
+```shell
+crewai v0.102.0
+- crewai
+```
+
+To upgrade the global CLI later:
+
+```shell
+uv tool install crewai --upgrade
+```
+
+This upgrades the **global `crewai` CLI tool** only. To upgrade the `crewai` version inside a project's virtual environment, see [Upgrading CrewAI in a project](https://docs.crewai.com/en/guides/migration/upgrading-crewai).
+
+### 2. Setting Up Your Crew
+
+`crewai create crew` creates a JSON-first crew project. Agents live in `agents/*.jsonc`, tasks and crew-level settings live in `crew.jsonc`, and `crewai run` loads that JSON definition directly.
 
 ```shell
 crewai create crew <project_name>
@@ -210,206 +239,132 @@ This command creates a new project folder with the following structure:
 ```
 my_project/
 ├── .gitignore
+├── .env
+├── agents/
+│   └── researcher.jsonc
+├── crew.jsonc
+├── knowledge/
 ├── pyproject.toml
 ├── README.md
-├── .env
-└── src/
-    └── my_project/
-        ├── __init__.py
-        ├── main.py
-        ├── crew.py
-        ├── tools/
-        │   ├── custom_tool.py
-        │   └── __init__.py
-        └── config/
-            ├── agents.yaml
-            └── tasks.yaml
+├── skills/
+└── tools/
 ```
 
-You can now start developing your crew by editing the files in the `src/my_project` folder. The `main.py` file is the entry point of the project, the `crew.py` file is where you define your crew, the `agents.yaml` file is where you define your agents, and the `tasks.yaml` file is where you define your tasks.
+If you need the older Python/YAML scaffold with `crew.py`, `config/agents.yaml`, and `config/tasks.yaml`, run:
+
+```shell
+crewai create crew <project_name> --classic
+```
+
+See [Using Annotations](https://docs.crewai.com/en/learn/using-annotations) for the classic pattern.
 
 #### To customize your project, you can:
 
-- Modify `src/my_project/config/agents.yaml` to define your agents.
-- Modify `src/my_project/config/tasks.yaml` to define your tasks.
-- Modify `src/my_project/crew.py` to add your own logic, tools, and specific arguments.
-- Modify `src/my_project/main.py` to add custom inputs for your agents and tasks.
+- Modify `agents/*.jsonc` to define each agent's role, goal, backstory, LLM, tools, and behavior.
+- Modify `crew.jsonc` to define tasks, process, and input defaults.
+- Add custom tools in `tools/` and reference them as `"custom:<name>"`.
+- Add optional knowledge files in `knowledge/` and skill files in `skills/`.
 - Add your environment variables into the `.env` file.
+
+Use `{placeholder}` values in agent and task text, then set defaults in `crew.jsonc` under `inputs`. When you run `crewai run`, the CLI prompts for any missing values.
 
 #### Example of a simple crew with a sequential process:
 
-Instantiate your crew:
-
 ```shell
 crewai create crew latest-ai-development
+cd latest_ai_development
 ```
 
-Modify the files as needed to fit your use case:
+Then edit the generated files:
 
-**agents.yaml**
+**agents/researcher.jsonc**
 
-```yaml
-# src/my_project/config/agents.yaml
-researcher:
-  role: >
-    {topic} Senior Data Researcher
-  goal: >
-    Uncover cutting-edge developments in {topic}
-  backstory: >
-    You're a seasoned researcher with a knack for uncovering the latest
-    developments in {topic}. Known for your ability to find the most relevant
-    information and present it in a clear and concise manner.
-
-reporting_analyst:
-  role: >
-    {topic} Reporting Analyst
-  goal: >
-    Create detailed reports based on {topic} data analysis and research findings
-  backstory: >
-    You're a meticulous analyst with a keen eye for detail. You're known for
-    your ability to turn complex data into clear and concise reports, making
-    it easy for others to understand and act on the information you provide.
+```jsonc
+{
+  "role": "{topic} Senior Data Researcher",
+  "goal": "Uncover cutting-edge developments in {topic}",
+  "backstory": "You're a seasoned researcher who finds relevant information and presents it clearly.",
+  "llm": "openai/gpt-4o",
+  "tools": ["SerperDevTool"],
+  "settings": {
+    "verbose": true
+  }
+}
 ```
 
-**tasks.yaml**
+**agents/reporting_analyst.jsonc**
 
-````yaml
-# src/my_project/config/tasks.yaml
-research_task:
-  description: >
-    Conduct a thorough research about {topic}
-    Make sure you find any interesting and relevant information given
-    the current year is 2025.
-  expected_output: >
-    A list with 10 bullet points of the most relevant information about {topic}
-  agent: researcher
-
-reporting_task:
-  description: >
-    Review the context you got and expand each topic into a full section for a report.
-    Make sure the report is detailed and contains any and all relevant information.
-  expected_output: >
-    A fully fledge reports with the mains topics, each with a full section of information.
-    Formatted as markdown without '```'
-  agent: reporting_analyst
-  output_file: report.md
-````
-
-**crew.py**
-
-```python
-# src/my_project/crew.py
-from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
-from crewai_tools import SerperDevTool
-from crewai.agents.agent_builder.base_agent import BaseAgent
-from typing import List
-
-@CrewBase
-class LatestAiDevelopmentCrew():
-	"""LatestAiDevelopment crew"""
-	agents: List[BaseAgent]
-	tasks: List[Task]
-
-	@agent
-	def researcher(self) -> Agent:
-		return Agent(
-			config=self.agents_config['researcher'],
-			verbose=True,
-			tools=[SerperDevTool()]
-		)
-
-	@agent
-	def reporting_analyst(self) -> Agent:
-		return Agent(
-			config=self.agents_config['reporting_analyst'],
-			verbose=True
-		)
-
-	@task
-	def research_task(self) -> Task:
-		return Task(
-			config=self.tasks_config['research_task'],
-		)
-
-	@task
-	def reporting_task(self) -> Task:
-		return Task(
-			config=self.tasks_config['reporting_task'],
-			output_file='report.md'
-		)
-
-	@crew
-	def crew(self) -> Crew:
-		"""Creates the LatestAiDevelopment crew"""
-		return Crew(
-			agents=self.agents, # Automatically created by the @agent decorator
-			tasks=self.tasks, # Automatically created by the @task decorator
-			process=Process.sequential,
-			verbose=True,
-		)
+```jsonc
+{
+  "role": "{topic} Reporting Analyst",
+  "goal": "Create detailed reports based on {topic} data analysis and research findings",
+  "backstory": "You're a meticulous analyst who turns complex data into clear, concise reports.",
+  "llm": "openai/gpt-4o",
+  "settings": {
+    "verbose": true
+  }
+}
 ```
 
-**main.py**
+**crew.jsonc**
 
-```python
-#!/usr/bin/env python
-# src/my_project/main.py
-import sys
-from latest_ai_development.crew import LatestAiDevelopmentCrew
-
-def run():
-    """
-    Run the crew.
-    """
-    inputs = {
-        'topic': 'AI Agents'
+```jsonc
+{
+  "name": "Latest AI Development",
+  "agents": ["researcher", "reporting_analyst"],
+  "tasks": [
+    {
+      "name": "research_task",
+      "description": "Conduct thorough research about {topic}. Find recent, relevant information.",
+      "expected_output": "A list with 10 bullet points of the most relevant information about {topic}.",
+      "agent": "researcher"
+    },
+    {
+      "name": "reporting_task",
+      "description": "Review the research and expand each topic into a full section for a report.",
+      "expected_output": "A markdown report with the main topics, each with a full section of information. No fenced code blocks around the whole document.",
+      "agent": "reporting_analyst",
+      "context": ["research_task"],
+      "output_file": "output/report.md",
+      "markdown": true
     }
-    LatestAiDevelopmentCrew().crew().kickoff(inputs=inputs)
+  ],
+  "process": "sequential",
+  "verbose": true,
+  "inputs": {
+    "topic": "AI Agents"
+  }
+}
 ```
 
 ### 3. Running Your Crew
 
-Before running your crew, make sure you have the following keys set as environment variables in your `.env` file:
+Before running your crew, set the required keys in your `.env` file:
 
-- An [OpenAI API key](https://platform.openai.com/account/api-keys) (or other LLM API key): `OPENAI_API_KEY=sk-...`
-- A [Serper.dev](https://serper.dev/) API key: `SERPER_API_KEY=YOUR_KEY_HERE`
+- Your model provider API key — see [LLM setup](https://docs.crewai.com/en/concepts/llms#setting-up-your-llm)
+- A [Serper.dev](https://serper.dev/) API key if you use web search: `SERPER_API_KEY=YOUR_KEY_HERE`
 
-Lock the dependencies and install them by using the CLI command but first, navigate to your project directory:
+Then install dependencies and run from the project directory:
 
 ```shell
-cd my_project
-crewai install (Optional)
-```
-
-To run your crew, execute the following command in the root of your project:
-
-```bash
+crewai install
 crewai run
 ```
 
-or
+If you need additional packages, use `uv add <package-name>`.
 
-```bash
-python src/my_project/main.py
-```
+You should see the output in the console, and `output/report.md` should be created in the project root.
 
-If an error happens due to the usage of poetry, please run the following command to update your crewai package:
+In addition to the sequential process, you can use the hierarchical process, which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results. [See more about the processes here](https://docs.crewai.com/en/concepts/processes).
 
-```bash
-crewai update
-```
-
-You should see the output in the console and the `report.md` file should be created in the root of your project with the full final report.
-
-In addition to the sequential process, you can use the hierarchical process, which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results. [See more about the processes here](https://docs.crewai.com/core-concepts/Processes/).
+For a Flow-first walkthrough, see the [Quickstart](https://docs.crewai.com/en/quickstart).
 
 ## Key Features
 
 CrewAI stands apart as a lean, standalone, high-performance multi-AI Agent framework delivering simplicity, flexibility, and precise control—free from the complexity and limitations found in other agent frameworks.
 
 - **Standalone & Lean**: Completely independent from other frameworks like LangChain, offering faster execution and lighter resource demands.
-- **Flexible & Precise**: Easily orchestrate autonomous agents through intuitive [Crews](https://docs.crewai.com/concepts/crews) or precise [Flows](https://docs.crewai.com/concepts/flows), achieving perfect balance for your needs.
+- **Flexible & Precise**: Easily orchestrate autonomous agents through intuitive [Crews](https://docs.crewai.com/en/concepts/crews) or precise [Flows](https://docs.crewai.com/en/concepts/flows), achieving perfect balance for your needs.
 - **Seamless Integration**: Effortlessly combine Crews (autonomy) and Flows (precision) to create complex, real-world automations.
 - **Deep Customization**: Tailor every aspect—from high-level workflows down to low-level internal prompts and agent behaviors.
 - **Reliable Performance**: Consistent results across simple tasks and complex, enterprise-level automations.
@@ -422,7 +377,7 @@ Choose CrewAI to easily build powerful, adaptable, and production-ready AI autom
 You can test different real life examples of AI crews in the [CrewAI-examples repo](https://github.com/crewAIInc/crewAI-examples?tab=readme-ov-file):
 
 - [Landing Page Generator](https://github.com/crewAIInc/crewAI-examples/tree/main/crews/landing_page_generator)
-- [Having Human input on the execution](https://docs.crewai.com/how-to/Human-Input-on-Execution)
+- [Having Human input on the execution](https://docs.crewai.com/en/learn/human-input-on-execution)
 - [Trip Planner](https://github.com/crewAIInc/crewAI-examples/tree/main/crews/trip_planner)
 - [Stock Analysis](https://github.com/crewAIInc/crewAI-examples/tree/main/crews/stock_analysis)
 
@@ -551,7 +506,7 @@ This example demonstrates how to:
 
 CrewAI supports using various LLMs through a variety of connection options. By default your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents to use a local model via the Ollama tool.
 
-Please refer to the [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring your agents' connections to models.
+Please refer to the [Connect CrewAI to LLMs](https://docs.crewai.com/en/learn/llm-connections) page for details on configuring your agents' connections to models.
 
 ## How CrewAI Compares
 
@@ -687,17 +642,13 @@ A: CrewAI is a standalone, lean, and fast Python framework built specifically fo
 
 ### Q: How do I install CrewAI?
 
-A: Install CrewAI using pip:
+A: Install the CrewAI CLI with [UV](https://docs.astral.sh/uv/):
 
 ```shell
-pip install crewai
+uv tool install crewai
 ```
 
-For additional tools, use:
-
-```shell
-pip install 'crewai[tools]'
-```
+Then create a project with `crewai create crew <project_name>`, run `crewai install`, and start it with `crewai run`. See the [installation guide](https://docs.crewai.com/en/installation) for details.
 
 ### Q: Does CrewAI depend on LangChain?
 
@@ -709,7 +660,7 @@ A: Yes. CrewAI excels at both simple and highly complex real-world scenarios, of
 
 ### Q: Can I use CrewAI with local AI models?
 
-A: Absolutely! CrewAI supports various language models, including local ones. Tools like Ollama and LM Studio allow seamless integration. Check the [LLM Connections documentation](https://docs.crewai.com/how-to/LLM-Connections/) for more details.
+A: Absolutely! CrewAI supports various language models, including local ones. Tools like Ollama and LM Studio allow seamless integration. Check the [LLM Connections documentation](https://docs.crewai.com/en/learn/llm-connections) for more details.
 
 ### Q: What makes Crews different from Flows?
 
