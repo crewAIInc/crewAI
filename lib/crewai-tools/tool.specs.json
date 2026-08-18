@@ -5850,6 +5850,232 @@
       }
     },
     {
+      "description": "Search IBM DB2 vector database for relevant documents. Uses a custom embedding function if supplied, otherwise OpenAI embeddings.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "OpenAI API key for embeddings.",
+          "name": "OPENAI_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "IBM DB2 connection string (e.g. 'DATABASE=mydb;HOSTNAME=localhost;PORT=50000;PROTOCOL=TCPIP;UID=user;PWD=pass;').",
+          "name": "DB2_CONNECTION_STRING",
+          "required": false
+        }
+      ],
+      "humanized_name": "DB2VectorSearchTool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Fortified IBM DB2 Vector Search Tool.\nIncludes SQL injection protection, dynamic relational support, and type-safe serialization.",
+        "properties": {
+          "connection": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Connection"
+          },
+          "connection_string": {
+            "description": "IBM DB2 connection string. Format: 'DATABASE=mydb;HOSTNAME=localhost;PORT=50000;PROTOCOL=TCPIP;UID=user;PWD=pass;' or just the database name for a local connection.",
+            "title": "Connection String",
+            "type": "string"
+          },
+          "cursor": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "custom_embedding_fn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional custom embedding function.",
+            "title": "Custom Embedding Fn"
+          },
+          "db2_dbi_package": {
+            "default": null,
+            "description": "IBM DB2 DBI package.",
+            "title": "Db2 Dbi Package"
+          },
+          "db2_package": {
+            "default": null,
+            "description": "IBM DB2 base package.",
+            "title": "Db2 Package"
+          },
+          "dbi_connection": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Dbi Connection"
+          },
+          "distance_metric": {
+            "default": "COSINE",
+            "title": "Distance Metric",
+            "type": "string"
+          },
+          "embedding_model": {
+            "default": "text-embedding-3-large",
+            "title": "Embedding Model",
+            "type": "string"
+          },
+          "limit": {
+            "default": 3,
+            "description": "Number of documents to return. Must be between 1 and 100.",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "max_distance": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum allowed distance for results. Cannot be negative.",
+            "title": "Max Distance"
+          },
+          "return_columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Return Columns",
+            "type": "array"
+          },
+          "table_name": {
+            "default": "documents",
+            "title": "Table Name",
+            "type": "string"
+          },
+          "vector_column": {
+            "default": "embedding",
+            "title": "Vector Column",
+            "type": "string"
+          }
+        },
+        "required": [
+          "connection_string"
+        ],
+        "title": "DB2VectorSearchTool",
+        "type": "object"
+      },
+      "name": "DB2VectorSearchTool",
+      "package_dependencies": [
+        "ibm_db",
+        "openai"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for DB2 vector search.",
+        "properties": {
+          "filter_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Column name used for metadata filtering. Must be used together with filter_value.",
+            "title": "Filter By"
+          },
+          "filter_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Value used for metadata filtering. Must be used together with filter_by.",
+            "title": "Filter Value"
+          },
+          "query": {
+            "description": "Query to search in IBM DB2 vector database - always required.",
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "DB2ToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to semantic search a query from a DOCX's content.",
       "env_vars": [],
       "humanized_name": "Search a DOCX's content",
@@ -26656,6 +26882,148 @@
           "query"
         ],
         "title": "TavilySearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that reads the content at a URL and returns it as text. To use this tool, provide a 'url' parameter with an http:// or https:// address. PDF, DOCX, HTML, JSON, XML, CSV and plain-text responses are converted to text; other binary types are rejected. URLs that resolve to private or internal network addresses are refused, as are responses over the tool's size limit. Optionally provide 'start_line' and 'line_count' to read only part of the content.",
+      "env_vars": [],
+      "humanized_name": "Read content from a URL",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Read the content at an arbitrary URL and return it as text.\n\nUnlike :class:`~crewai_tools.tools.file_read_tool.file_read_tool.FileReadTool`,\nwhich is confined to the local filesystem, this tool performs network\nrequests to addresses the caller -- often an LLM -- chooses at runtime. It\nis a separate tool for exactly that reason: granting it is granting network\negress, and that should be a deliberate choice rather than a flag on a\nfilesystem tool.\n\nResponses are decoded to text according to their content type. PDF and DOCX\nbodies have their text extracted, HTML is stripped to visible text, and\ntext-shaped types (plain text, Markdown, JSON, XML, YAML, CSV) are decoded\nas-is. Any other type is refused rather than returned as base64, keeping\nthis tool's output text-only.\n\nSecurity:\n    Requests go through :func:`~crewai_tools.security.safe_requests.safe_get_bounded`,\n    which resolves each hostname and rejects it when any resolved address is\n    private, loopback, link-local, or otherwise reserved -- covering cloud\n    metadata endpoints and internal services. Redirects are never followed\n    automatically: every hop is revalidated, and credentials are dropped on\n    cross-origin hops. Bodies over ``max_bytes`` are abandoned mid-stream.\n\n    The fetch pins TCP to the IP that passed validation unless\n    ``CREWAI_TOOLS_ALLOW_UNSAFE_PATHS`` is set without\n    ``CREWAI_TOOLS_FORCE_SAFE_PATHS``. The returned text is still\n    untrusted remote content flowing into an agent's context -- a\n    fetched page can attempt to instruct the agent. Network egress\n    policy and prompt-level handling cover that.\n\nArgs:\n    max_bytes (int): Largest response body to accept, in decoded bytes.\n        Defaults to 5 MiB.\n    timeout (float): Per-request timeout in seconds. Defaults to 30.\n    headers (Optional[dict[str, str]]): Extra request headers. Developer\n        supplied, not chosen by the model.\n    encoding (Optional[str]): Force a text encoding instead of honoring the\n        charset the server declares.\n    **kwargs: Additional keyword arguments passed to BaseTool.\n\nExample:\n    >>> tool = URLReadTool()\n    >>> content = tool.run(url=\"https://example.com/report.pdf\")\n    >>> head = tool.run(url=\"https://example.com/data.csv\", line_count=20)",
+        "properties": {
+          "encoding": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Encoding"
+          },
+          "headers": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Headers"
+          },
+          "max_bytes": {
+            "default": 5242880,
+            "title": "Max Bytes",
+            "type": "integer"
+          },
+          "timeout": {
+            "default": 30,
+            "title": "Timeout",
+            "type": "number"
+          }
+        },
+        "required": [],
+        "title": "URLReadTool",
+        "type": "object"
+      },
+      "name": "URLReadTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for URLReadTool.",
+        "properties": {
+          "line_count": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Number of lines to read. If None, reads the entire content",
+            "title": "Line Count"
+          },
+          "start_line": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 1,
+            "description": "Line number to start reading from (1-indexed)",
+            "title": "Start Line"
+          },
+          "url": {
+            "description": "The http:// or https:// URL to read. Addresses that resolve to private or internal networks are refused.",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "URLReadToolSchema",
         "type": "object"
       }
     },

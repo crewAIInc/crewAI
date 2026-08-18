@@ -1,0 +1,221 @@
+---
+title: "تكامل Maxim"
+description: "بدء مراقبة وتقييم ومراقبة الوكلاء"
+icon: "infinity"
+mode: "wide"
+---
+
+# نظرة عامة على Maxim
+
+يوفر Maxim AI مراقبة شاملة للوكلاء وتقييماً ومراقبة لتطبيقات CrewAI. مع تكامل Maxim بسطر واحد، يمكنك بسهولة تتبع وتحليل تفاعلات الوكلاء ومقاييس الأداء والمزيد.
+
+## الميزات
+
+### إدارة المطالبات
+
+تمكّنك قدرات إدارة المطالبات في Maxim من إنشاء وتنظيم وتحسين المطالبات لوكلاء CrewAI. بدلاً من ترميز التعليمات مباشرة، استفد من SDK الخاص بـ Maxim لاسترداد وتطبيق مطالبات مُدارة بالإصدارات ديناميكياً.
+
+<Tabs>
+  <Tab title="ساحة المطالبات">
+    أنشئ وصقل وجرّب وانشر مطالباتك عبر الساحة. نظّم مطالباتك باستخدام المجلدات والإصدارات، وجرّب مع حالات العالم الحقيقي عن طريق ربط الأدوات والسياق، وانشر بناءً على منطق مخصص.
+
+    <img src='https://raw.githubusercontent.com/akmadan/crewAI/docs_maxim_observability/docs/images/maxim_playground.png'> </img>
+  </Tab>
+  <Tab title="إصدارات المطالبات">
+    مع بناء الفرق لتطبيقات الذكاء الاصطناعي، يُعد جزء كبير من التجريب هو التكرار على هيكل المطالبات. للتعاون بفعالية وتنظيم التغييرات بوضوح، يسمح Maxim بإصدارات المطالبات ومقارنة التشغيلات عبر الإصدارات.
+
+    <img src='https://raw.githubusercontent.com/akmadan/crewAI/docs_maxim_observability/docs/images/maxim_versions.png'> </img>
+  </Tab>
+  <Tab title="مقارنة المطالبات">
+    التكرار على المطالبات أثناء تطوير تطبيق الذكاء الاصطناعي يحتاج تجارب عبر النماذج وهياكل المطالبات وغيرها. لمقارنة الإصدارات واتخاذ قرارات مستنيرة، تسمح ساحة المقارنة بعرض جنب إلى جنب للنتائج.
+
+    ## **لماذا تستخدم مقارنة المطالبات؟**
+
+    تجمع مقارنة المطالبات عدة مطالبات فردية في عرض واحد، مما يمكّن من نهج مبسط لسير عمل متنوع:
+
+    1. **مقارنة النماذج**: تقييم أداء نماذج مختلفة على نفس المطالبة.
+    2. **تحسين المطالبات**: مقارنة إصدارات مختلفة لتحديد الصياغة الأكثر فعالية.
+    3. **اتساق عبر النماذج**: ضمان مخرجات متسقة عبر نماذج مختلفة لنفس المطالبة.
+    4. **قياس الأداء**: تحليل مقاييس مثل زمن الاستجابة والتكلفة وعدد الرموز عبر نماذج ومطالبات مختلفة.
+  </Tab>
+</Tabs>
+
+### المراقبة والتقييمات
+
+يوفر Maxim AI مراقبة وتقييماً شاملاً لوكلاء CrewAI، مما يساعدك في فهم ما يحدث بالضبط أثناء كل تنفيذ.
+
+<Tabs>
+  <Tab title="تتبع الوكلاء">
+    تتبع دورة حياة وكيلك الكاملة، بما في ذلك استدعاءات الأدوات ومسارات الوكلاء وتدفقات القرار بسهولة.
+
+    <img src='https://raw.githubusercontent.com/akmadan/crewAI/docs_maxim_observability/docs/images/maxim_agent_tracking.png'> </img>
+  </Tab>
+  <Tab title="التحليلات + التقييمات">
+    شغّل تقييمات مفصلة على التتبعات الكاملة أو العقد الفردية مع دعم لـ:
+
+    - التفاعلات متعددة الخطوات وتحليل التتبع الدقيق
+    - تقييمات على مستوى الجلسة
+    - محاكاة لاختبار العالم الحقيقي
+
+    <img src='https://raw.githubusercontent.com/akmadan/crewAI/docs_maxim_observability/docs/images/maxim_trace_eval.png'> </img>
+
+    <CardGroup cols={3}>
+      <Card title="تقييمات تلقائية على السجلات" icon="e" href="https://www.getmaxim.ai/docs/observe/how-to/evaluate-logs/auto-evaluation">
+        <p>
+        تقييم السجلات الملتقطة تلقائياً من واجهة المستخدم بناءً على المرشحات والعينات
+        </p>
+      </Card>
+      <Card title="تقييمات بشرية على السجلات" icon="hand" href="https://www.getmaxim.ai/docs/observe/how-to/evaluate-logs/human-evaluation">
+        <p>
+        استخدام التقييم البشري أو التصنيف لتقييم جودة سجلاتك
+        </p>
+      </Card>
+      <Card title="تقييمات على مستوى العقد" icon="road" href="https://www.getmaxim.ai/docs/observe/how-to/evaluate-logs/node-level-evaluation">
+        <p>
+        تقييم أي مكون من تتبعك أو سجلك للحصول على رؤى حول سلوك وكيلك
+        </p>
+      </Card>
+    </CardGroup>
+    ---
+  </Tab>
+  <Tab title="التنبيهات">
+    عيّن حدوداً على **الأخطاء والتكلفة واستخدام الرموز وتغذية المستخدم الراجعة وزمن الاستجابة** واحصل على تنبيهات فورية عبر Slack أو PagerDuty.
+
+    <img src='https://raw.githubusercontent.com/akmadan/crewAI/docs_maxim_observability/docs/images/maxim_alerts_1.png'> </img>
+  </Tab>
+  <Tab title="لوحات المعلومات">
+    تصور التتبعات عبر الزمن ومقاييس الاستخدام وزمن الاستجابة ومعدلات الأخطاء بسهولة.
+
+    <img src='https://raw.githubusercontent.com/akmadan/crewAI/docs_maxim_observability/docs/images/maxim_dashboard_1.png'> </img>
+  </Tab>
+</Tabs>
+
+## البدء
+
+### المتطلبات الأساسية
+
+- إصدار Python >= 3.10
+- حساب Maxim ([سجّل هنا](https://getmaxim.ai/))
+- توليد مفتاح API من Maxim
+- مشروع CrewAI
+
+### التثبيت
+
+ثبّت Maxim SDK عبر pip:
+
+```python
+pip install maxim-py
+```
+
+أو أضفه إلى ملف `requirements.txt`:
+
+```
+maxim-py
+```
+
+### الإعداد الأساسي
+
+### 1. إعداد متغيرات البيئة
+
+```python
+### Environment Variables Setup
+
+# Create a `.env` file in your project root:
+
+# Maxim API Configuration
+MAXIM_API_KEY=your_api_key_here
+MAXIM_LOG_REPO_ID=your_repo_id_here
+```
+
+### 2. استيراد الحزم المطلوبة
+
+```python
+from crewai import Agent, Task, Crew, Process
+from maxim import Maxim
+from maxim.logger.crewai import instrument_crewai
+```
+
+### 3. تهيئة Maxim بمفتاح API
+
+```python {8}
+# Instrument CrewAI with just one line
+instrument_crewai(Maxim().logger())
+```
+
+### 4. إنشاء وتشغيل تطبيق CrewAI كالمعتاد
+
+```python
+# Create your agent
+researcher = Agent(
+    role='Senior Research Analyst',
+    goal='Uncover cutting-edge developments in AI',
+    backstory="You are an expert researcher at a tech think tank...",
+    verbose=True,
+    llm=llm
+)
+
+# Define the task
+research_task = Task(
+    description="Research the latest AI advancements...",
+    expected_output="",
+    agent=researcher
+)
+
+# Configure and run the crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    verbose=True
+)
+
+try:
+    result = crew.kickoff()
+finally:
+    maxim.cleanup()  # Ensure cleanup happens even if errors occur
+```
+
+هذا كل شيء! سيتم الآن تسجيل جميع تفاعلات وكلاء CrewAI وستكون متاحة في لوحة معلومات Maxim.
+
+تحقق من دفتر Google Colab هذا كمرجع سريع - [الدفتر](https://colab.research.google.com/drive/1ZKIZWsmgQQ46n8TH9zLsT1negKkJA6K8?usp=sharing)
+
+## عرض تتبعاتك
+
+بعد تشغيل تطبيق CrewAI:
+
+1. سجل الدخول إلى [لوحة معلومات Maxim](https://app.getmaxim.ai/login)
+2. انتقل إلى مستودعك
+3. اعرض تتبعات الوكلاء المفصلة، بما في ذلك:
+   - محادثات الوكلاء
+   - أنماط استخدام الأدوات
+   - مقاييس الأداء
+   - تحليلات التكاليف
+
+    <img src='https://raw.githubusercontent.com/akmadan/crewAI/docs_maxim_observability/docs/images/crewai_traces.gif'> </img>
+
+## استكشاف الأخطاء وإصلاحها
+
+### المشاكل الشائعة
+
+- **عدم ظهور تتبعات**: تأكد من صحة مفتاح API ومعرف المستودع
+- تأكد من استدعاء **`instrument_crewai()`** **_قبل_** تشغيل طاقمك
+- عيّن `debug=True` في استدعاء `instrument_crewai()` لإظهار أي أخطاء داخلية:
+
+  ```python
+  instrument_crewai(logger, debug=True)
+  ```
+- أعدّ وكلاءك مع `verbose=True` لالتقاط سجلات مفصلة
+- تحقق مرة أخرى من أن `instrument_crewai()` يُستدعى **قبل** إنشاء أو تنفيذ الوكلاء
+
+## الموارد
+
+<CardGroup cols="3">
+  <Card title="وثائق CrewAI" icon="book" href="https://docs.crewai.com/">
+    وثائق CrewAI الرسمية
+  </Card>
+  <Card title="وثائق Maxim" icon="book" href="https://getmaxim.ai/docs">
+    وثائق Maxim الرسمية
+  </Card>
+  <Card title="Maxim Github" icon="github" href="https://github.com/maximhq">
+    Maxim Github
+  </Card>
+</CardGroup>
