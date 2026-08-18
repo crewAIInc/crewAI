@@ -427,6 +427,70 @@ LLM router를 우회해 프로그램적으로 라우트를 선택하려면 `rout
 
 `ConversationConfig.visible_agent_outputs`로 특정 에이전트의 private 결과를 전역적으로 public으로 승격할 수 있습니다 (`"all"` 또는 이름 리스트).
 
+## JSON/YAML로 대화형 플로우 선언하기
+
+[선언적 플로우](/edge/en/concepts/cli)도 대화형이 될 수 있습니다. 최상위 `conversational` 블록을 추가하고, 라우트 레이블을 `listen`하는 메서드로 직접 라우트를 선언하세요:
+
+```yaml
+schema: crewai.flow/v1
+name: SupportFlow
+
+conversational:
+  system_prompt: You are a terse support assistant.
+  llm: gpt-4o-mini
+  router:
+    llm: gpt-4o-mini
+
+methods:
+  handle_order:
+    description: Order status, shipping and delivery questions.
+    listen: order
+    do:
+      call: agent
+      with:
+        role: Support specialist
+        goal: Answer order questions accurately
+        backstory: Knows the fulfilment pipeline.
+        input: "${state.current_user_message}"
+```
+
+블록을 선언하는 것 자체가 옵트인입니다 — `enabled`의 기본값은 `true`입니다. 설정은 유지하면서 채팅만 끄려면 `enabled: false`로 지정하세요.
+
+세 가지가 자동으로 제공됩니다:
+
+| 제공 항목 | 설명 |
+|----------|--------|
+| 내장 그래프 | `route_conversation`, `converse_turn`, `end_conversation`, `answer_from_history_turn`이 자동으로 추가됩니다. 같은 이름의 메서드를 선언하면 재정의됩니다. |
+| 대화 상태 | 선언에 `state` 블록이 없으면 `ConversationState`가 사용됩니다. 필드를 추가하려면 `ConversationState`를 상속한 Pydantic 모델을 `state`에 지정하세요. |
+| 라우트 카탈로그 | `listen` 레이블을 선언한 메서드들로부터 구성됩니다. 각 메서드의 `description`이 라우팅 모델이 라우트를 선택할 때 읽는 내용입니다. |
+
+클래스 기반 대화형 플로우와 동일한 턴 API로 Python에서 실행합니다:
+
+```python
+from crewai.flow import Flow
+
+flow = Flow.from_declaration(path="flow.yaml")
+
+try:
+    flow.handle_turn("Where is my order?", session_id="session-1")
+finally:
+    flow.finalize_session_traces()
+```
+
+### 라우트 이름 짓기
+
+라우트 레이블과 메서드 이름은 하나의 트리거 네임스페이스를 공유하므로, 핸들러 이름이 자신이 listen하는 라우트와 같으면 안 됩니다 — `create_video`가 `create_video`를 listen하면 플로우 생성 시 거부됩니다. `handle_*` 접두사를 사용하세요.
+
+### 선언으로 표현할 수 없는 것
+
+| 표현 불가 | 대신 사용 |
+|-----------------|-------------|
+| 살아 있는 `LLM` 인스턴스나 커스텀 `BaseLLM` | `gpt-4o-mini` 같은 모델 ID 문자열 |
+| 모델 클래스로서의 `router.response_format` | 생략하세요; 프레임워크가 생성합니다. ref나 스키마는 경고와 함께 무시됩니다 |
+| `route_turn()` / `can_answer_from_history()` 재정의 | 플로우를 Python으로 작성하거나, 메서드의 `do`를 `call: code` ref로 지정하세요 |
+
+`crewai run`에는 아직 채팅 루프가 없습니다: 단일 턴을 실행하는 대신 플로우가 대화형임을 알리고 종료합니다. 선언적 대화형 플로우는 Python에서 `handle_turn()`, `stream_turn()`, `chat()`으로 실행하세요.
+
 ## 턴 간 트레이싱
 
 `defer_trace_finalization=True` (`ConversationalConfig` 기본값):

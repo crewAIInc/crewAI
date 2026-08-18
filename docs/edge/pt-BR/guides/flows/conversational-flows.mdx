@@ -428,6 +428,70 @@ Dentro de um handler `@listen(label)`, escolha:
 
 `ConversationConfig.visible_agent_outputs` pode promover globalmente os resultados privados de agentes específicos para públicos (`"all"` ou lista de nomes).
 
+## Declarando um flow conversacional em JSON/YAML
+
+Um [flow declarativo](/edge/en/concepts/cli) também pode ser conversacional. Adicione um bloco `conversational` no nível raiz e declare suas próprias rotas como métodos que escutam (`listen`) um rótulo de rota:
+
+```yaml
+schema: crewai.flow/v1
+name: SupportFlow
+
+conversational:
+  system_prompt: You are a terse support assistant.
+  llm: gpt-4o-mini
+  router:
+    llm: gpt-4o-mini
+
+methods:
+  handle_order:
+    description: Order status, shipping and delivery questions.
+    listen: order
+    do:
+      call: agent
+      with:
+        role: Support specialist
+        goal: Answer order questions accurately
+        backstory: Knows the fulfilment pipeline.
+        input: "${state.current_user_message}"
+```
+
+Declarar o bloco já é o opt-in — `enabled` tem valor padrão `true`. Use `enabled: false` para manter a configuração e desligar o chat.
+
+Três coisas são fornecidas para você:
+
+| Fornecido | Detalhe |
+|----------|--------|
+| O grafo interno | `route_conversation`, `converse_turn`, `end_conversation` e `answer_from_history_turn` são adicionados automaticamente. Declare um método com um desses nomes para sobrescrevê-lo. |
+| Estado da conversa | `ConversationState` é usado quando a declaração não tem bloco `state`. Para adicionar campos, aponte `state` para um modelo Pydantic que estenda `ConversationState`. |
+| O catálogo de rotas | Construído a partir dos métodos que declaram um rótulo `listen`. O `description` de cada método é o que o modelo de roteamento lê ao escolher entre rotas. |
+
+Execute a partir do Python com as mesmas APIs de turno de um Flow conversacional baseado em classe:
+
+```python
+from crewai.flow import Flow
+
+flow = Flow.from_declaration(path="flow.yaml")
+
+try:
+    flow.handle_turn("Where is my order?", session_id="session-1")
+finally:
+    flow.finalize_session_traces()
+```
+
+### Nomeando rotas
+
+Rótulos de rota e nomes de métodos compartilham um único namespace de gatilhos, então um handler não pode ter o nome da rota que escuta — `create_video` escutando `create_video` é rejeitado na construção do flow. Use o prefixo `handle_*`.
+
+### O que uma declaração não consegue expressar
+
+| Não expressável | Use no lugar |
+|-----------------|-------------|
+| Uma instância `LLM` viva ou um `BaseLLM` customizado | Uma string de id de modelo, como `gpt-4o-mini` |
+| `router.response_format` como classe de modelo | Omita; o framework sintetiza uma. Um ref ou schema é ignorado com um aviso |
+| Overrides de `route_turn()` / `can_answer_from_history()` | Escreva o Flow em Python, ou aponte o `do` de um método para um ref `call: code` |
+
+O `crewai run` ainda não tem loop de chat: ele informa que o flow é conversacional e sai, em vez de rodar um único turno. Conduza um flow conversacional declarativo pelo Python com `handle_turn()`, `stream_turn()` ou `chat()`.
+
 ## Tracing entre turnos
 
 Com `defer_trace_finalization=True` (padrão em `ConversationalConfig`):
