@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
+from weakref import WeakKeyDictionary
 
 from crewai_core.printer import PRINTER
 
@@ -49,8 +51,9 @@ class LLMCallHookContext:
         crew: Reference to the crew instance (None for direct LLM calls or LiteAgent)
         llm: Reference to the LLM instance
         iterations: Current iteration count (0 for direct LLM calls)
-        response: LLM response string (only set for after_llm_call hooks).
-            Can be modified by returning a new string from after_llm_call hook.
+        request_id: Stable identifier shared by one model call's pre/post hooks.
+        response: LLM response value (only set for after_llm_call hooks).
+            Text responses can be modified by returning a new string.
     """
 
     executor: CrewAgentExecutor | AgentExecutor | LiteAgent | None
@@ -60,28 +63,31 @@ class LLMCallHookContext:
     crew: Any
     llm: BaseLLM | None | str | Any
     iterations: int
-    response: str | None
+    request_id: str | None
+    response: Any
 
     def __init__(
         self,
         executor: CrewAgentExecutor | AgentExecutor | LiteAgent | None = None,
-        response: str | None = None,
+        response: Any = None,
         messages: list[LLMMessage] | None = None,
         llm: BaseLLM | str | Any | None = None,  # TODO: look into
         agent: Any | None = None,
         task: Any | None = None,
         crew: Any | None = None,
+        request_id: str | None = None,
     ) -> None:
         """Initialize hook context with executor reference or direct parameters.
 
         Args:
             executor: The CrewAgentExecutor or LiteAgent instance (None for direct LLM calls)
-            response: Optional response string (for after_llm_call hooks)
+            response: Optional response value (for after_llm_call hooks)
             messages: Optional messages list (for direct LLM calls when executor is None)
             llm: Optional LLM instance (for direct LLM calls when executor is None)
             agent: Optional agent reference (for direct LLM calls when executor is None)
             task: Optional task reference (for direct LLM calls when executor is None)
             crew: Optional crew reference (for direct LLM calls when executor is None)
+            request_id: Optional model-call correlation identifier
         """
         if executor is not None:
             self.executor = executor
@@ -109,6 +115,7 @@ class LLMCallHookContext:
             self.crew = crew
             self.iterations = 0
 
+        self.request_id = request_id
         self.response = response
 
     def request_human_input(
@@ -153,6 +160,65 @@ class LLMCallHookContext:
             return response
         finally:
             event_listener.formatter.resume_live_updates()
+
+
+class PostModelCallBlockedError(RuntimeError):
+    """Terminal executor result for a governed post-model block."""
+
+    def __init__(
+        self,
+        blocked_response: str,
+        *,
+        reason: str,
+        request_id: str | None,
+        failure_kind: str,
+    ) -> None:
+        super().__init__(blocked_response)
+        self.blocked_response = blocked_response
+        self.reason = reason
+        self.request_id = request_id
+        self.failure_kind = failure_kind
+
+
+@dataclass(frozen=True, slots=True)
+class _PostModelBlock:
+    """Host-owned provenance for one governed post-model block."""
+
+    reason: str
+    failure_kind: str
+
+
+_post_model_blocks: WeakKeyDictionary[LLMCallHookContext, _PostModelBlock] = (
+    WeakKeyDictionary()
+)
+
+
+def mark_post_model_blocked(
+    context: LLMCallHookContext, *, reason: str, failure_kind: str
+) -> None:
+    """Record host-owned block provenance for the agent-hooks adapter."""
+    _post_model_blocks[context] = _PostModelBlock(
+        reason=reason,
+        failure_kind=failure_kind,
+    )
+
+
+def _consume_post_model_block(context: LLMCallHookContext) -> _PostModelBlock | None:
+    """Return and clear trusted governance block provenance for this response."""
+    return _post_model_blocks.pop(context, None)
+
+
+def raise_if_post_model_blocked(context: LLMCallHookContext) -> None:
+    """Raise the terminal result for a host-recorded post-model block."""
+    blocked = _consume_post_model_block(context)
+    if blocked is None:
+        return
+    raise PostModelCallBlockedError(
+        str(context.response),
+        reason=blocked.reason,
+        request_id=context.request_id,
+        failure_kind=blocked.failure_kind,
+    )
 
 
 # The legacy registries are aliased to the generic dispatcher's global hook

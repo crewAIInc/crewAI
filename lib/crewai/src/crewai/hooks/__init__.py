@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 from crewai.hooks.decorators import (
     after_llm_call,
     after_tool_call,
@@ -84,11 +86,47 @@ def clear_all_global_hooks() -> dict[str, tuple[int, int]]:
     }
 
 
+if TYPE_CHECKING:
+    from crewai.hooks.agent_hooks_engine import (
+        AgentHooksEngine as AgentHooksEngine,
+        active_engine as active_engine,
+        disable_agent_hooks as disable_agent_hooks,
+        use_agent_hooks as use_agent_hooks,
+    )
+
+
+_LAZY_ENGINE_EXPORTS = frozenset(
+    {
+        "AgentHooksEngine",
+        "HAS_AGENT_HOOKS",
+        "active_engine",
+        "disable_agent_hooks",
+        "use_agent_hooks",
+    }
+)
+
+
+def __getattr__(name: str) -> Any:
+    """Lazily expose the optional agent-hooks control engine front-end.
+
+    Keeps ``import crewai.hooks`` free of the optional agent-hooks dependency;
+    the engine module (and its probe import) loads only on first access.
+    """
+    if name in _LAZY_ENGINE_EXPORTS:
+        from crewai.hooks import agent_hooks_engine
+
+        return getattr(agent_hooks_engine, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 __all__ = [
+    "HAS_AGENT_HOOKS",
+    "AgentHooksEngine",
     "HookAborted",
     "InterceptionPoint",
     "LLMCallHookContext",
     "ToolCallHookContext",
+    "active_engine",
     "after_llm_call",
     "after_tool_call",
     "before_llm_call",
@@ -102,6 +140,7 @@ __all__ = [
     "clear_before_llm_call_hooks",
     "clear_before_tool_call_hooks",
     "clear_hooks",
+    "disable_agent_hooks",
     "dispatch",
     "get_after_llm_call_hooks",
     "get_after_tool_call_hooks",
@@ -119,4 +158,5 @@ __all__ = [
     "unregister_before_llm_call_hook",
     "unregister_before_tool_call_hook",
     "unregister_hook",
+    "use_agent_hooks",
 ]

@@ -11,6 +11,7 @@ import inspect
 import json
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
+import uuid
 
 from crewai_core.printer import PRINTER, ColoredText, Printer
 from crewai_core.settings import Settings
@@ -485,6 +486,7 @@ def _prepare_llm_call(
     executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
     messages: list[LLMMessage],
     printer: Printer,
+    request_id: str,
     verbose: bool = True,
 ) -> list[LLMMessage]:
     """Shared pre-call logic: run before hooks and resolve messages.
@@ -502,7 +504,9 @@ def _prepare_llm_call(
         ValueError: If a before hook blocks the call.
     """
     if executor_context is not None:
-        if not _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose):
+        if not _setup_before_llm_call_hooks(
+            executor_context, printer, request_id=request_id, verbose=verbose
+        ):
             raise ValueError("LLM call blocked by before_llm_call hook")
         messages = executor_context.messages
     return messages
@@ -512,6 +516,7 @@ def _validate_and_finalize_llm_response(
     answer: Any,
     executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
     printer: Printer,
+    request_id: str,
     verbose: bool = True,
 ) -> str | BaseModel | Any:
     """Shared post-call logic: validate response and run after hooks.
@@ -537,7 +542,11 @@ def _validate_and_finalize_llm_response(
         raise ValueError("Invalid response from LLM call - None or empty.")
 
     return _setup_after_llm_call_hooks(
-        executor_context, answer, printer, verbose=verbose
+        executor_context,
+        answer,
+        printer,
+        request_id=request_id,
+        verbose=verbose,
     )
 
 
@@ -577,7 +586,10 @@ def get_llm_response(
         Exception: If an error occurs.
         ValueError: If the response is None or empty.
     """
-    messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
+    request_id = str(uuid.uuid4())
+    messages = _prepare_llm_call(
+        executor_context, messages, printer, request_id, verbose=verbose
+    )
 
     answer = llm.call(
         messages,
@@ -590,7 +602,7 @@ def get_llm_response(
     )
 
     return _validate_and_finalize_llm_response(
-        answer, executor_context, printer, verbose=verbose
+        answer, executor_context, printer, request_id, verbose=verbose
     )
 
 
@@ -630,7 +642,10 @@ async def aget_llm_response(
         Exception: If an error occurs.
         ValueError: If the response is None or empty.
     """
-    messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
+    request_id = str(uuid.uuid4())
+    messages = _prepare_llm_call(
+        executor_context, messages, printer, request_id, verbose=verbose
+    )
 
     answer = await llm.acall(
         messages,
@@ -643,7 +658,7 @@ async def aget_llm_response(
     )
 
     return _validate_and_finalize_llm_response(
-        answer, executor_context, printer, verbose=verbose
+        answer, executor_context, printer, request_id, verbose=verbose
     )
 
 
@@ -787,6 +802,10 @@ def is_context_length_exceeded(exception: Exception) -> bool:
     Returns:
         bool: True if the exception is due to context length exceeding
     """
+    from crewai.hooks.llm_hooks import PostModelCallBlockedError
+
+    if isinstance(exception, PostModelCallBlockedError):
+        return False
     return LLMContextLengthExceededError(str(exception))._is_context_limit_error(
         str(exception)
     )
@@ -1484,6 +1503,10 @@ def check_native_tool_support(llm: Any, original_tools: list[BaseTool] | None) -
 
 def is_native_tool_calling_unsupported_error(error: BaseException) -> bool:
     """Return whether an error means native tool calling is unavailable."""
+    from crewai.hooks.llm_hooks import PostModelCallBlockedError
+
+    if isinstance(error, PostModelCallBlockedError):
+        return False
     message = str(error).lower()
     return any(pattern in message for pattern in _NATIVE_TOOL_UNSUPPORTED_PATTERNS)
 
@@ -1655,6 +1678,7 @@ def execute_single_native_tool_call(
         )
 
     call_id, func_name, func_args = info
+    governance_call_id = str(uuid.uuid4())
 
     parsed_args, parse_error = parse_tool_call_args(func_args, func_name, call_id)
     if parse_error is not None:
@@ -1698,18 +1722,9 @@ def execute_single_native_tool_call(
     output_tool = original_tool or structured_tool
 
     from_cache = False
-    input_str = json.dumps(args_dict) if args_dict else ""
     result = "Tool not found"
     raw_tool_result: Any = result
     tool_failure: ToolFailure | None = None
-
-    if tools_handler and tools_handler.cache and output_tool is not None:
-        cached_result = tools_handler.cache.read(tool=func_name, input=input_str)
-        if cached_result is not None:
-            raw_tool_result = cached_result
-            result = format_native_tool_output_for_agent(output_tool, cached_result)
-            tool_failure = detect_tool_failure(cached_result)
-            from_cache = True
 
     started_at = datetime.now()
     crewai_event_bus.emit(
@@ -1730,12 +1745,27 @@ def execute_single_native_tool_call(
     before_hook_context = ToolCallHookContext(
         tool_name=func_name,
         tool_input=args_dict,
-        tool=structured_tool,  # type: ignore[arg-type]
+        tool=structured_tool,
         agent=agent,
         task=task,
         crew=crew,
+        call_id=governance_call_id,
     )
     hook_blocked = run_before_tool_call_hooks(before_hook_context)
+
+    input_str = json.dumps(args_dict) if args_dict else ""
+    if (
+        not hook_blocked
+        and tools_handler
+        and tools_handler.cache
+        and output_tool is not None
+    ):
+        cached_result = tools_handler.cache.read(tool=func_name, input=input_str)
+        if cached_result is not None:
+            raw_tool_result = cached_result
+            result = format_native_tool_output_for_agent(output_tool, cached_result)
+            tool_failure = detect_tool_failure(cached_result)
+            from_cache = True
 
     error_event_emitted = False
     if hook_blocked:
@@ -1796,12 +1826,15 @@ def execute_single_native_tool_call(
     after_hook_context = ToolCallHookContext(
         tool_name=func_name,
         tool_input=args_dict,
-        tool=structured_tool,  # type: ignore[arg-type]
+        tool=structured_tool,
         agent=agent,
         task=task,
         crew=crew,
         tool_result=result,
         raw_tool_result=raw_tool_result,
+        call_id=governance_call_id,
+        is_error=hook_blocked or error_event_emitted or tool_failure is not None,
+        was_blocked=hook_blocked,
     )
     modified_result = run_after_tool_call_hooks(after_hook_context)
     if modified_result is not None:
@@ -1919,6 +1952,7 @@ def parse_tool_call_args(
 def _setup_before_llm_call_hooks(
     executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
     printer: Printer,
+    request_id: str | None = None,
     verbose: bool = True,
 ) -> bool:
     """Setup and invoke before_llm_call hooks for the executor context.
@@ -1933,25 +1967,32 @@ def _setup_before_llm_call_hooks(
     """
     if executor_context:
         from crewai.hooks.dispatch import (
+            AGENT_HOOKS_ABORT_SOURCE,
             HookAborted,
             InterceptionPoint,
             get_scoped_hooks,
+            governed_hook,
             run_hooks,
         )
         from crewai.hooks.llm_hooks import LLMCallHookContext, before_llm_call_reducer
 
-        # Executor snapshot first, then execution-scoped hooks — the same
-        # ordering dispatch() applies to global vs scoped hooks.
+        # Executor snapshot first, then execution-scoped hooks, then the
+        # agent-hooks control engine's authoritative adapter when installed —
+        # the same ordering dispatch() applies. Without appending the governor
+        # here an injected control engine would only run on the tool seams,
+        # leaving the pre-model-call point ungoverned on the agent executor path.
+        governed = governed_hook(InterceptionPoint.PRE_MODEL_CALL)
         hooks: list[Any] = [
             *executor_context.before_llm_call_hooks,
             *get_scoped_hooks(InterceptionPoint.PRE_MODEL_CALL),
+            *([governed] if governed is not None else []),
         ]
         if not hooks:
             return True
 
         original_messages = executor_context.messages
 
-        hook_context = LLMCallHookContext(executor_context)
+        hook_context = LLMCallHookContext(executor_context, request_id=request_id)
         try:
             run_hooks(
                 InterceptionPoint.PRE_MODEL_CALL,
@@ -1960,13 +2001,26 @@ def _setup_before_llm_call_hooks(
                 reducer=before_llm_call_reducer,
                 verbose=verbose,
             )
-        except HookAborted:
+        except HookAborted as aborted:
+            # Preserve the historical contract for anonymous hook blocks (a
+            # hook returning False, or a bare HookAborted): the dispatcher tags
+            # these with the hook callable as ``source``, so return False and
+            # let the caller emit its generic block message. A governance
+            # engine (e.g. an injected agent-hooks control engine) raises with
+            # a string ``source`` identifier — surface its full reason so
+            # customers see the policy decision. The sole caller
+            # (_prepare_llm_call) already documents raising ValueError on block.
+            if aborted.source is not AGENT_HOOKS_ABORT_SOURCE:
+                if verbose:
+                    printer.print(
+                        content="LLM call blocked by before_llm_call hook",
+                        color="yellow",
+                    )
+                return False
+            reason = aborted.reason or "LLM call blocked by before_llm_call hook"
             if verbose:
-                printer.print(
-                    content="LLM call blocked by before_llm_call hook",
-                    color="yellow",
-                )
-            return False
+                printer.print(content=reason, color="yellow")
+            raise ValueError(reason) from aborted
 
         if not isinstance(executor_context.messages, list):
             if verbose:
@@ -1988,42 +2042,111 @@ def _setup_before_llm_call_hooks(
 
 def _setup_after_llm_call_hooks(
     executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
-    answer: str | BaseModel,
+    answer: Any,
     printer: Printer,
+    request_id: str | None = None,
     verbose: bool = True,
-) -> str | BaseModel:
+) -> Any:
     """Setup and invoke after_llm_call hooks for the executor context.
 
     Args:
         executor_context: The executor context to setup the hooks for.
         answer: The LLM response (string or Pydantic model).
         printer: Printer instance for error logging.
+        request_id: Optional host-owned correlation identifier for the model
+            call, threaded onto the hook context so the pre/post model hooks
+            share one id.
         verbose: Whether to print output.
 
     Returns:
         The potentially modified response (string or Pydantic model).
     """
     if executor_context:
-        from crewai.hooks.dispatch import InterceptionPoint, get_scoped_hooks, run_hooks
-        from crewai.hooks.llm_hooks import LLMCallHookContext, after_llm_call_reducer
+        from crewai.hooks.dispatch import (
+            InterceptionPoint,
+            get_scoped_hooks,
+            governed_hook,
+            run_hooks,
+        )
+        from crewai.hooks.llm_hooks import (
+            LLMCallHookContext,
+            after_llm_call_reducer,
+            raise_if_post_model_blocked,
+        )
 
-        # Don't stringify structured tool-call payloads: the executor would
-        # treat the result as a final answer and skip tool execution (#6529).
-        # Hooks still run on the follow-up textual response.
+        if isinstance(answer, dict) or (
+            isinstance(answer, list) and is_tool_call_list(answer)
+        ):
+            governed = governed_hook(InterceptionPoint.POST_MODEL_CALL)
+            if governed is None:
+                return answer
+
+            if isinstance(answer, dict):
+                structured_response = answer
+            else:
+                tool_calls: list[dict[str, Any]] = []
+                for tool_call in answer:
+                    info = extract_tool_call_info(tool_call)
+                    if info is None:
+                        continue
+                    call_id, name, args = info
+                    if isinstance(args, str):
+                        try:
+                            parsed_args = json.loads(args)
+                        except json.JSONDecodeError:
+                            parsed_args = {"raw": args}
+                        args = (
+                            parsed_args
+                            if isinstance(parsed_args, dict)
+                            else {"value": parsed_args}
+                        )
+                    tool_calls.append({"id": call_id, "name": name, "args": args})
+
+                structured_response = {
+                    "content": "",
+                    "tool_calls": tool_calls,
+                    "finish_reason": "tool_calls",
+                }
+            hook_context = LLMCallHookContext(
+                executor_context,
+                response=structured_response,
+                request_id=request_id,
+            )
+            run_hooks(
+                InterceptionPoint.POST_MODEL_CALL,
+                hook_context,
+                [governed],
+                reducer=after_llm_call_reducer,
+                verbose=verbose,
+            )
+            raise_if_post_model_blocked(hook_context)
+            return (
+                answer
+                if hook_context.response is structured_response
+                else hook_context.response
+            )
+
+        # Other structured payloads stay untouched so executors can process
+        # provider-native responses without accidental stringification (#6529).
         if not isinstance(answer, (str, BaseModel)):
             return answer
 
-        # Executor snapshot first, then execution-scoped hooks — the same
-        # ordering dispatch() applies to global vs scoped hooks.
+        # Executor snapshot first, then execution-scoped hooks, then the
+        # agent-hooks control engine's authoritative adapter when installed —
+        # the same ordering dispatch() applies. A post-model-call deny returns a
+        # fail-closed replacement response (the engine does not raise here).
+        governed = governed_hook(InterceptionPoint.POST_MODEL_CALL)
         hooks: list[Any] = [
             *executor_context.after_llm_call_hooks,
             *get_scoped_hooks(InterceptionPoint.POST_MODEL_CALL),
+            *([governed] if governed is not None else []),
         ]
         if not hooks:
             return answer
 
         original_messages = executor_context.messages
 
+        pydantic_answer: BaseModel | None
         if isinstance(answer, BaseModel):
             pydantic_answer = answer
             hook_response: str = pydantic_answer.model_dump_json()
@@ -2032,7 +2155,9 @@ def _setup_after_llm_call_hooks(
             pydantic_answer = None
             hook_response = str(answer)
 
-        hook_context = LLMCallHookContext(executor_context, response=hook_response)
+        hook_context = LLMCallHookContext(
+            executor_context, response=hook_response, request_id=request_id
+        )
         run_hooks(
             InterceptionPoint.POST_MODEL_CALL,
             hook_context,
@@ -2058,17 +2183,29 @@ def _setup_after_llm_call_hooks(
             else:
                 executor_context.messages = []
 
+        raise_if_post_model_blocked(hook_context)
+
         if pydantic_answer is not None:
             if hook_response != original_json:
                 try:
                     model_class: type[BaseModel] = type(pydantic_answer)
                     answer = model_class.model_validate_json(hook_response)
                 except Exception as e:
-                    if verbose:
-                        printer.print(
-                            content=f"Warning: Hook modified response but failed to reparse as {type(pydantic_answer).__name__}: {e}. Using original model.",
-                            color="yellow",
-                        )
+                    if governed is None:
+                        if verbose:
+                            printer.print(
+                                content=(
+                                    "Warning: Hook modified response but failed to "
+                                    f"reparse as {type(pydantic_answer).__name__}: "
+                                    f"{e}. Using original model."
+                                ),
+                                color="yellow",
+                            )
+                        return pydantic_answer
+                    raise ValueError(
+                        f"Hook-modified response failed to reparse as "
+                        f"{type(pydantic_answer).__name__}: {e}"
+                    ) from e
         else:
             answer = hook_response
 

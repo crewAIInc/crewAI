@@ -32,7 +32,7 @@ from enum import Enum
 from functools import wraps
 import inspect
 import time
-from typing import Any
+from typing import Any, Final
 
 from crewai.utilities.string_utils import sanitize_tool_name
 
@@ -74,6 +74,15 @@ class HookAborted(Exception):  # noqa: N818 - public contract name from OSS-86
         super().__init__(reason)
         self.reason = reason
         self.source = source
+
+
+class _AgentHooksAbortSource:
+    """Identity marker for aborts raised by the optional control engine."""
+
+    __name__ = "agent-hooks"
+
+
+AGENT_HOOKS_ABORT_SOURCE: Final = _AgentHooksAbortSource()
 
 
 HookFn = Callable[[Any], Any]
@@ -288,6 +297,7 @@ def run_hooks(
     *,
     reducer: Reducer | None = None,
     verbose: bool = True,
+    final_hook: HookFn | None = None,
 ) -> Any:
     """Execute an explicit list of hooks against a context.
 
@@ -303,6 +313,10 @@ def run_hooks(
             :func:`_default_reducer` (payload replacement). May raise
             :class:`HookAborted`.
         verbose: Whether to print swallowed-hook-error warnings.
+        final_hook: Optional hook run after ``hooks``, even when ``hooks`` is
+            empty or an earlier hook aborts. A regular hook's ``HookAborted`` is
+            deferred until ``final_hook`` runs and then re-raised, unless
+            ``final_hook`` itself aborts first.
 
     Returns:
         The (possibly mutated) context.
@@ -311,7 +325,7 @@ def run_hooks(
         HookAborted: If a hook or the reducer aborts the operation. Telemetry is
             still emitted before propagating.
     """
-    if not hooks:
+    if not hooks and final_hook is None:
         return ctx
 
     active_reducer = reducer if reducer is not None else _default_reducer
@@ -320,11 +334,25 @@ def run_hooks(
     abort_reason: str | None = None
     abort_source: str | None = None
     modified = False
+    pending_abort: HookAborted | None = None
 
     try:
         for hook in list(hooks):
-            if _invoke_hook(point, hook, ctx, active_reducer, verbose):
-                modified = True
+            try:
+                if _invoke_hook(point, hook, ctx, active_reducer, verbose):
+                    modified = True
+            except HookAborted as aborted:  # noqa: PERF203 - abort stops this queue
+                pending_abort = aborted
+                break
+        if final_hook is not None:
+            try:
+                if _invoke_hook(point, final_hook, ctx, active_reducer, verbose):
+                    modified = True
+            except HookAborted as aborted:
+                if pending_abort is None:
+                    pending_abort = aborted
+        if pending_abort is not None:
+            raise pending_abort
         outcome = "modified" if modified else "proceeded"
         return ctx
     except HookAborted as aborted:
@@ -336,11 +364,58 @@ def run_hooks(
         _emit_telemetry(
             point,
             outcome,
-            len(hooks),
+            len(hooks) + (1 if final_hook is not None else 0),
             (time.perf_counter() - start) * 1000.0,
             abort_reason,
             abort_source,
         )
+
+
+# --- agent-hooks control engine (dependency-injected; optional) -------------
+# The engine is installed via set_governor() so this module never imports the
+# optional agent-hooks package. When active, dispatch() appends the engine's
+# per-point adapter as the authoritative final hook for the eight agent-hooks
+# lifecycle points; PRE_STEP / POST_STEP stay purely crewAI-native.
+GovernorFn = Callable[[InterceptionPoint], HookFn | None]
+_governor: GovernorFn | None = None
+
+
+def set_governor(governor: GovernorFn) -> None:
+    """Install the agent-hooks control engine as crewAI's governor.
+
+    Dependency-injected so this module never imports the optional agent-hooks
+    package. Idempotent replace: a second call supersedes the first.
+    """
+    global _governor
+    _governor = governor
+
+
+def clear_governor() -> None:
+    """Remove the active agent-hooks control engine, if any."""
+    global _governor
+    _governor = None
+
+
+def get_governor() -> GovernorFn | None:
+    """Return the active governor callable, or ``None``."""
+    return _governor
+
+
+def governed_hook(point: InterceptionPoint) -> HookFn | None:
+    """Return the governor's authoritative adapter for ``point``, or ``None``.
+
+    Seams that maintain their own ordered hook list outside :func:`dispatch`
+    (e.g. the agent executor's LLM-call seam, which runs an executor-local
+    snapshot of ``before_llm_call`` / ``after_llm_call`` hooks) use this to
+    append the agent-hooks control engine's per-point adapter exactly the way
+    :func:`dispatch` does, so an injected control engine governs those seams
+    too. Returns ``None`` when no engine is installed or the engine does not
+    govern ``point``.
+    """
+    governor = _governor
+    if governor is None:
+        return None
+    return governor(point)
 
 
 def dispatch(
@@ -353,12 +428,27 @@ def dispatch(
     """Dispatch a context to all hooks registered for a point.
 
     Resolves global then scoped hooks and runs them through :func:`run_hooks`.
-    No-op fast path when nothing is registered.
+    When an agent-hooks control engine is installed (see :func:`set_governor`),
+    its per-point adapter is appended as the authoritative final hook. No-op
+    fast path when nothing is registered and no engine governs the point.
     """
     hooks = _resolve_hooks(point)
-    if not hooks:
+    governor = _governor
+    governed: HookFn | None = None
+    if governor is not None:
+        governed = governor(point)
+        if governed is not None and point is not InterceptionPoint.EXECUTION_END:
+            hooks = [*hooks, governed]
+    if not hooks and governed is None:
         return ctx
-    return run_hooks(point, ctx, hooks, reducer=reducer, verbose=verbose)
+    return run_hooks(
+        point,
+        ctx,
+        hooks,
+        reducer=reducer,
+        verbose=verbose,
+        final_hook=(governed if point is InterceptionPoint.EXECUTION_END else None),
+    )
 
 
 def _wrap_with_filters(

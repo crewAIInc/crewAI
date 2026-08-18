@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+import uuid
 
 from crewai_core.printer import PRINTER
 
@@ -41,38 +42,47 @@ class ToolCallHookContext:
             IMPORTANT: Modify in-place (e.g., context.tool_input['key'] = value).
             Do NOT replace the dict (e.g., context.tool_input = {}), as this
             will not affect the actual tool execution.
-        tool: Reference to the CrewStructuredTool instance
+        tool: Reference to the CrewStructuredTool instance, when available
         agent: Agent executing the tool (may be None)
         task: Current task being executed (may be None)
         crew: Crew instance (may be None)
+        call_id: Stable identifier shared by the before/after contexts for one call.
         tool_result: Tool execution result (only set for after_tool_call hooks).
             Can be modified by returning a new string from after_tool_call hook.
         raw_tool_result: Raw Python tool execution result (only set for
             after_tool_call hooks). This is not modified by after hooks.
+        is_error: Whether the tool result represents a blocked or failed call.
+        was_blocked: Whether pre-tool policy prevented the invocation.
     """
 
     def __init__(
         self,
         tool_name: str,
         tool_input: dict[str, Any],
-        tool: CrewStructuredTool,
+        tool: CrewStructuredTool | None,
         agent: Agent | BaseAgent | LiteAgent | None = None,
         task: Task | None = None,
         crew: Crew | None = None,
         tool_result: str | None = None,
         raw_tool_result: Any | None = None,
+        call_id: str | None = None,
+        is_error: bool = False,
+        was_blocked: bool = False,
     ) -> None:
         """Initialize tool call hook context.
 
         Args:
             tool_name: Name of the tool being called
             tool_input: Tool input parameters (mutable)
-            tool: Tool instance reference
+            tool: Tool instance reference, when available
             agent: Optional agent executing the tool
             task: Optional current task
             crew: Optional crew instance
             tool_result: Optional tool result (for after hooks)
             raw_tool_result: Optional raw tool result (for after hooks)
+            call_id: Stable identifier for this invocation; generated when omitted
+            is_error: Whether the tool invocation was blocked or failed
+            was_blocked: Whether pre-tool policy prevented the invocation
         """
         self.tool_name = tool_name
         self.tool_input = tool_input
@@ -82,6 +92,9 @@ class ToolCallHookContext:
         self.crew = crew
         self.tool_result = tool_result
         self.raw_tool_result = raw_tool_result
+        self.call_id = call_id or str(uuid.uuid4())
+        self.is_error = is_error
+        self.was_blocked = was_blocked
 
     def request_human_input(
         self,
