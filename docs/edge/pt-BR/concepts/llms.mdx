@@ -728,6 +728,67 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="QwenCloud">
+    O [QwenCloud](https://www.qwencloud.com/) fornece acesso à família de modelos de linguagem de grande escala Qwen da Alibaba através de APIs compatíveis com OpenAI.
+
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    # Required
+    DASHSCOPE_API_KEY=<your-api-key>
+    ```
+
+    Obtenha sua chave de API na [página de chaves de API do QwenCloud](https://home.qwencloud.com/api-keys).
+
+    **Método 1 — Prefixo DashScope / LiteLLM (Recomendado):**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="dashscope/qwen-max",
+        temperature=0.7,
+        max_tokens=4096
+    )
+    ```
+
+    **Método 2 — Endpoint compatível com OpenAI:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/qwen-plus",
+        base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+        api_key="your-api-key",
+        temperature=0.7
+    )
+    ```
+
+    **Modelos disponíveis:**
+
+    | Modelo | Janela de Contexto | Melhor Para |
+    |---|---|---|
+    | `dashscope/qwen-max` | 32.768 | Raciocínio complexo |
+    | `dashscope/qwen-plus` | 131.072 | Tarefas de contexto longo |
+    | `dashscope/qwen-turbo` | 131.072 | Inferência rápida |
+    | `dashscope/qwen-long` | 1.000.000 | Documentos ultralongos |
+    | `dashscope/qwen2.5-72b-instruct` | 131.072 | Instruções detalhadas |
+
+    <Info>
+      Recursos do QwenCloud:
+      - APIs compatíveis com OpenAI e Anthropic
+      - Endpoint internacional (`dashscope-intl.aliyuncs.com`) e endpoint da China (`dashscope.aliyuncs.com`)
+      - Preços competitivos com modelos de alta capacidade
+      - Suporte a chamadas de função (function calling) para modelos Qwen
+    </Info>
+
+    Para a lista completa de modelos, consulte [Modelos QwenCloud](https://www.qwencloud.com/models).
+    Para detalhes de preços, consulte [Preços QwenCloud](https://docs.qwencloud.com/developer-guides/getting-started/pricing).
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
 </AccordionGroup>
 
 ## Respostas em streaming

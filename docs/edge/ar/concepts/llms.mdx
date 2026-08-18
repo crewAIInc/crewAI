@@ -1012,6 +1012,67 @@ mode: "wide"
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="QwenCloud">
+    يوفر [QwenCloud](https://www.qwencloud.com/) إمكانية الوصول إلى عائلة نماذج Qwen اللغوية الكبيرة من Alibaba عبر واجهات برمجة تطبيقات متوافقة مع OpenAI.
+
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    # Required
+    DASHSCOPE_API_KEY=<your-api-key>
+    ```
+
+    احصل على مفتاح API الخاص بك من [صفحة مفاتيح API في QwenCloud](https://home.qwencloud.com/api-keys).
+
+    **الطريقة 1 — بادئة DashScope / LiteLLM (موصى بها):**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="dashscope/qwen-max",
+        temperature=0.7,
+        max_tokens=4096
+    )
+    ```
+
+    **الطريقة 2 — نقطة نهاية متوافقة مع OpenAI:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/qwen-plus",
+        base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+        api_key="your-api-key",
+        temperature=0.7
+    )
+    ```
+
+    **النماذج المتاحة:**
+
+    | النموذج | نافذة السياق | الأفضل لـ |
+    |---|---|---|
+    | `dashscope/qwen-max` | 32,768 | الاستدلال المعقد |
+    | `dashscope/qwen-plus` | 131,072 | مهام السياق الطويل |
+    | `dashscope/qwen-turbo` | 131,072 | الاستنتاج السريع |
+    | `dashscope/qwen-long` | 1,000,000 | المستندات فائقة الطول |
+    | `dashscope/qwen2.5-72b-instruct` | 131,072 | اتباع التعليمات |
+
+    <Info>
+      ميزات QwenCloud:
+      - واجهات برمجة تطبيقات متوافقة مع OpenAI و Anthropic
+      - نقطة نهاية دولية (`dashscope-intl.aliyuncs.com`) ونقطة نهاية الصين (`dashscope.aliyuncs.com`)
+      - أسعار تنافسية مع نماذج عالية السعة
+      - دعم استدعاء الدوال لنماذج Qwen
+    </Info>
+
+    للحصول على قائمة النماذج الكاملة، راجع [نماذج QwenCloud](https://www.qwencloud.com/models).
+    لتفاصيل الأسعار، راجع [أسعار QwenCloud](https://docs.qwencloud.com/developer-guides/getting-started/pricing).
+
+    **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
 </AccordionGroup>
 
 ## بث الاستجابات
