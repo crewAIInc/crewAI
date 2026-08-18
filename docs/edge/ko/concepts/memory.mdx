@@ -760,7 +760,7 @@ memory = Memory(
 CrewAI는 통합 메모리의 영속화 및 조회를 위한 플러그형 스토리지 백엔드를 지원합니다.
 
 - **기본값**: LanceDB, `./.crewai/memory` 아래에 저장 (또는 환경 변수가 설정된 경우 `$CREWAI_STORAGE_DIR/memory`, 또는 `storage="path/to/dir"`로 전달한 경로).
-- **Dakera 영구 메모리**: [`crewai-dakera`](https://pypi.org/project/crewai-dakera/) ([소스 저장소](https://github.com/Dakera-AI/dakera-crewai)) 기반의 네트워크 영구 메모리 서버입니다. 서버측에서 콘텐츠 및 쿼리 임베딩과 하이브리드 벡터/BM25 검색을 처리하므로 로컬 임베딩 모델이 필요하지 않습니다.
+- **Dakera 영구 메모리**: [`crewai-dakera`](https://pypi.org/project/crewai-dakera/) ([소스 저장소](https://github.com/Dakera-AI/dakera-crewai)) 기반의 네트워크 영구 메모리 서버입니다. 서버측에서 콘텐츠 및 쿼리 임베딩과 하이브리드 벡터/BM25 검색 및 감쇠 가중치 회상을 처리하므로 로컬 임베딩 모델이 필요하지 않습니다.
 - **사용자 정의 백엔드**: `StorageBackend` 프로토콜을 구현하고(`crewai.memory.storage.backend` 참조) `Memory(storage=your_backend)`에 인스턴스를 전달합니다.
 
 ### Dakera 연동 예시
@@ -777,6 +777,10 @@ storage = DakeraStorage(
     api_key="your-api-key",
     agent_id="my-agent-id",  # 동일한 agent_id는 메모리 공유를 허용하며, 서로 다른 ID는 컨텍스트 네임스페이스를 격리합니다.
 )
+
+# Dakera 서버를 통해 직접 영구 메모리 저장 및 검색
+storage.save(value="Agent learned API rate limit is 60 req/min")
+results = storage.search(query="API rate limit", limit=5)
 ```
 
 **자체 호스팅 스토리지를 사용하는 이유**: Dakera와 같은 네트워크 서비스는 여러 크루, 에이전트 또는 분산 워커 노드가 로컬 파일 스토리지에만 의존하지 않고 중앙 영구 벡터 및 BM25 메모리 저장소를 공유할 수 있도록 합니다. 일치하는 `agent_id` 값은 세션 간 메모리를 공유하는 반면, 서로 다른 `agent_id` 값은 서버에서 메모리 컨텍스트 네임스페이스를 격리합니다.

@@ -764,7 +764,7 @@ memory = Memory(
 CrewAI supports pluggable storage backends for persisting and querying unified memory.
 
 - **Default**: LanceDB, stored under `./.crewai/memory` (or `$CREWAI_STORAGE_DIR/memory` if the environment variable is set, or the path passed as `storage="path/to/dir"`).
-- **Dakera Persistent Memory**: Network-based persistent memory server powered by [`crewai-dakera`](https://pypi.org/project/crewai-dakera/) ([Source Repository](https://github.com/Dakera-AI/dakera-crewai)). Handles both content and query embeddings server-side with hybrid vector/BM25 retrieval, eliminating the need for a local embedding model.
+- **Dakera Persistent Memory**: Network-based persistent memory server powered by [`crewai-dakera`](https://pypi.org/project/crewai-dakera/) ([Source Repository](https://github.com/Dakera-AI/dakera-crewai)). Handles both content and query embeddings server-side with hybrid vector/BM25 retrieval and decay-weighted recall, eliminating the need for a local embedding model.
 - **Custom Backend**: Implement the `StorageBackend` protocol (see `crewai.memory.storage.backend`) and pass an instance to `Memory(storage=your_backend)`.
 
 ### Dakera Integration Example
@@ -781,6 +781,10 @@ storage = DakeraStorage(
     api_key="your-api-key",
     agent_id="my-agent-id",  # Shared agent_id allows memory sharing; distinct IDs isolate context namespaces
 )
+
+# Save and search persistent memories directly via the Dakera server
+storage.save(value="Agent learned API rate limit is 60 req/min")
+results = storage.search(query="API rate limit", limit=5)
 ```
 
 **Why self-hosted storage**: Network services like Dakera allow multiple crews, agents, or distributed worker nodes to share a central persistent vector & BM25 memory store without relying solely on local file storage. Matching `agent_id` values share memories across sessions, while different `agent_id` values isolate memory context namespaces on the server.

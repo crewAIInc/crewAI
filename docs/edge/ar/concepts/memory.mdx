@@ -760,7 +760,7 @@ memory = Memory(
 يدعم CrewAI واجهات تخزين قابلة للتوصيل لحفظ الذاكرة الموحدة والاستعلام عنها.
 
 - **الافتراضي**: LanceDB، مخزّن تحت `./.crewai/memory` (أو `$CREWAI_STORAGE_DIR/memory` إذا تم تعيين متغير البيئة، أو المسار الذي تمرره كـ `storage="path/to/dir"`).
-- **ذاكرة Dakera الدائمة**: خادم ذاكرة دائمة قائم على الشبكة مدعوم بحزمة [`crewai-dakera`](https://pypi.org/project/crewai-dakera/) ([مستودع المصدر](https://github.com/Dakera-AI/dakera-crewai)). يتعامل مع تضمين المحتوى والاستعلامات على جانب الخادم مع استرجاع هجين (متجه/BM25)، مما يلغي الحاجة إلى نموذج تضمين محلي.
+- **ذاكرة Dakera الدائمة**: خادم ذاكرة دائمة قائم على الشبكة مدعوم بحزمة [`crewai-dakera`](https://pypi.org/project/crewai-dakera/) ([مستودع المصدر](https://github.com/Dakera-AI/dakera-crewai)). يتعامل مع تضمين المحتوى والاستعلامات على جانب الخادم مع استرجاع هجين (متجه/BM25) واسترجاع موزون بالاضمحلال، مما يلغي الحاجة إلى نموذج تضمين محلي.
 - **واجهة مخصصة**: نفّذ بروتوكول `StorageBackend` (انظر `crewai.memory.storage.backend`) ومرّر مثيلًا إلى `Memory(storage=your_backend)`.
 
 ### مثال على تكامل Dakera
@@ -777,6 +777,10 @@ storage = DakeraStorage(
     api_key="your-api-key",
     agent_id="my-agent-id",  # يسمح agent_id المشترك بمشاركة الذاكرة؛ بينما تعزل المعرفات المختلفة مساحات أسماء السياق
 )
+
+# حفظ الذكريات الدائمة والبحث فيها مباشرة عبر خادم Dakera
+storage.save(value="Agent learned API rate limit is 60 req/min")
+results = storage.search(query="API rate limit", limit=5)
 ```
 
 **لماذا التخزين المستضاف ذاتيًا**: تتيح خدمات الشبكة مثل Dakera للفرق المتعددة أو الوكلاء أو عقد العمل الموزعة المشاركة في مخزن ذاكرة دائم مركزي (متجهات و BM25) دون الاعتماد فقط على التخزين المحلي للملفات. تتيح قيم `agent_id` المتطابقة مشاركة الذكريات عبر الجلسات، بينما تعزل القيم المختلفة مساحات أسماء الذاكرة على الخادم.
