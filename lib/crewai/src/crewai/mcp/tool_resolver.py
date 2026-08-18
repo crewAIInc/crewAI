@@ -386,7 +386,7 @@ class MCPToolResolver:
                 tools_list = _run_coro_from_sync(_setup_client_and_list_tools)
             except RuntimeError as e:
                 error_msg = str(e).lower()
-                if "cancel scope" in error_msg or "task" in error_msg:
+                if "cancel scope" in error_msg:
                     raise ConnectionError(
                         "MCP connection failed due to event loop cleanup issues. "
                         "This may be due to authentication errors or server unavailability."
