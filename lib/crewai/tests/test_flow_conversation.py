@@ -2893,3 +2893,90 @@ class TestDeclarativeTurnMatrix:
             "bye",
         ]
         assert len(outputs) == 2
+
+
+class TestHandlerReplyPromotion:
+    """An agent or crew handler's reply reaches the transcript."""
+
+    class _AgentOutput:
+        """Shape of ``LiteAgentOutput`` / ``CrewOutput``: text lives on ``.raw``."""
+
+        def __init__(self, raw: str) -> None:
+            self.raw = raw
+
+        def __str__(self) -> str:
+            return f"<output {self.raw!r}>"
+
+    @staticmethod
+    def _chat(handler_result: Any) -> Flow[Any]:
+        @ConversationConfig()
+        class HandlerChat(Flow[ConversationState]):
+            @listen("converse")
+            def converse_turn(self) -> Any:
+                return handler_result
+
+        return HandlerChat()
+
+    def test_output_object_reply_reaches_history(self) -> None:
+        flow = self._chat(self._AgentOutput("Your order shipped Tuesday."))
+
+        flow.handle_turn("where is my order?")
+
+        assert [(m.role, m.content) for m in flow.state.messages] == [
+            ("user", "where is my order?"),
+            ("assistant", "Your order shipped Tuesday."),
+        ]
+
+    def test_string_reply_still_reaches_history(self) -> None:
+        flow = self._chat("A plain string reply.")
+
+        flow.handle_turn("hi")
+
+        assert flow.state.messages[-1].content == "A plain string reply."
+
+    def test_route_label_output_is_not_promoted(self) -> None:
+        flow = self._chat(self._AgentOutput("converse"))
+
+        flow.handle_turn("hi")
+
+        assert [m.role for m in flow.state.messages] == ["user"]
+
+    def test_output_matching_this_turns_intent_is_not_promoted(self) -> None:
+        @ConversationConfig()
+        class RoutedChat(Flow[ConversationState]):
+            def route_turn(self, context: dict[str, Any]) -> str:
+                return "order"
+
+            @listen("order")
+            def handle_order(self) -> Any:
+                # Echoing the route label is a routing artefact, not a reply.
+                return TestHandlerReplyPromotion._AgentOutput("order")
+
+        flow = RoutedChat()
+        flow.handle_turn("where is my order?")
+
+        assert flow.state.last_intent == "order"
+        assert [m.role for m in flow.state.messages] == ["user"]
+
+    def test_non_text_output_is_not_promoted(self) -> None:
+        flow = self._chat(self._AgentOutput(raw=None))  # type: ignore[arg-type]
+
+        flow.handle_turn("hi")
+
+        assert [m.role for m in flow.state.messages] == ["user"]
+
+    def test_handler_that_already_replied_is_not_double_promoted(self) -> None:
+        @ConversationConfig()
+        class ExplicitReplyChat(Flow[ConversationState]):
+            @listen("converse")
+            def converse_turn(self) -> Any:
+                self.append_assistant_message("explicit")
+                return TestHandlerReplyPromotion._AgentOutput("returned")
+
+        flow = ExplicitReplyChat()
+        flow.handle_turn("hi")
+
+        assert [(m.role, m.content) for m in flow.state.messages] == [
+            ("user", "hi"),
+            ("assistant", "explicit"),
+        ]
