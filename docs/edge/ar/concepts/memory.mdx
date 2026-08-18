@@ -757,8 +757,37 @@ memory = Memory(
 
 ## واجهة التخزين
 
+يدعم CrewAI واجهات تخزين قابلة للتوصيل لحفظ الذاكرة الموحدة والاستعلام عنها.
+
 - **الافتراضي**: LanceDB، مخزّن تحت `./.crewai/memory` (أو `$CREWAI_STORAGE_DIR/memory` إذا تم تعيين متغير البيئة، أو المسار الذي تمرره كـ `storage="path/to/dir"`).
+- **Dakera (ذاكرة دائمة مستضفة ذاتيًا)**: خادم ذاكرة دائمة قائم على الشبكة يدعم الذاكرة المشتركة بين الفرق، وعزل سياق الوكلاء المتعددين، والاسترجاع الموزون بالاضمحلال. قم بتثبيت `crewai-dakera` ومرّر `DakeraStorageBackend` إلى `Memory(storage=...)`.
 - **واجهة مخصصة**: نفّذ بروتوكول `StorageBackend` (انظر `crewai.memory.storage.backend`) ومرّر مثيلًا إلى `Memory(storage=your_backend)`.
+
+### مثال على تكامل Dakera
+
+```bash
+pip install crewai-dakera
+```
+
+```python
+from crewai import Crew, Memory
+from crewai_dakera import DakeraStorageBackend
+
+storage = DakeraStorageBackend(
+    base_url="http://localhost:3000",
+    api_key="dk_your_key",
+)
+
+memory = Memory(storage=storage)
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=memory,
+)
+```
+
+**لماذا التخزين المستضاف ذاتيًا**: على عكس التخزين المحلي فقط في الملفات، تتيح خدمات الشبكة مثل Dakera للفرق المتعددة أو الوكلاء أو عقد العمل الموزعة المشاركة في مخزن ذاكرة متجهية دائم مركزي.
 
 
 ## الاستكشاف
