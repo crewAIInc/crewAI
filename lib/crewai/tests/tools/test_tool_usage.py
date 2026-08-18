@@ -906,6 +906,11 @@ def test_tool_error_does_not_emit_finished_event():
 
 
 def test_original_tool_calling_non_dict_arguments_raises_tool_usage_error():
+    from crewai.utilities.i18n import I18N
+
+    i18n = I18N()
+    expected_error = f"{i18n.errors('tool_arguments_error')}"
+
     mock_agent = MagicMock()
     mock_agent.key = "test_key"
     mock_agent.role = "test_role"
@@ -927,6 +932,13 @@ def test_original_tool_calling_non_dict_arguments_raises_tool_usage_error():
         action=MagicMock(tool="test_tool", tool_input="[1, 2, 3]"),
     )
 
-    with pytest.raises(ToolUsageError):
+    with pytest.raises(ToolUsageError) as exc_info:
         tool_usage._original_tool_calling("test_string", raise_error=True)
+
+    assert str(exc_info.value) == expected_error
+
+    result = tool_usage._original_tool_calling("test_string", raise_error=False)
+    assert isinstance(result, ToolUsageError)
+    assert str(result) == expected_error
+
 
