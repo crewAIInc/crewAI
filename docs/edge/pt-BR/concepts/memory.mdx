@@ -775,11 +775,11 @@ from crewai_dakera import DakeraStorage
 storage = DakeraStorage(
     api_url="http://localhost:3300",
     api_key="your-api-key",
-    agent_id="my-agent-id",
+    agent_id="my-agent-id",  # O mesmo agent_id permite compartilhamento de memória; IDs distintos isolam os namespaces de contexto
 )
 ```
 
-**Por que armazenamento auto-hospedado**: Serviços de rede como o Dakera permitem que múltiplas crews, agentes ou nós de trabalho distribuídos compartilhem um repositório central de memória vetorial e BM25 persistente sem depender apenas do armazenamento de arquivos local.
+**Por que usar armazenamento auto-hospedado**: Serviços de rede como o Dakera permitem que múltiplas crews, agentes ou nós de trabalho distribuídos compartilhem um repositório central de memória vetorial e BM25 persistente sem depender apenas do armazenamento de arquivos local. Valores de `agent_id` correspondentes compartilham memórias entre sessões, enquanto valores de `agent_id` diferentes isolam namespaces de memória no servidor.
 
 
 ## Descoberta
