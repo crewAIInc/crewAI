@@ -6,6 +6,7 @@ import asyncio
 from collections.abc import Callable, Coroutine, Sequence
 import concurrent.futures
 import contextvars
+from datetime import datetime
 import inspect
 import json
 import os
@@ -263,7 +264,7 @@ class Agent(BaseAgent):
     )
     inject_date: bool = Field(
         default=False,
-        description="Whether to automatically inject the current date into the agent's prompt.",
+        description="Whether to automatically inject the current date into tasks.",
     )
     date_format: str = Field(
         default="%Y-%m-%d",
@@ -544,7 +545,7 @@ class Agent(BaseAgent):
     ) -> str:
         """Prepare common setup for task execution shared by sync and async paths.
 
-        Handles reasoning, prompt building, and memory retrieval.
+        Handles reasoning, date injection, prompt building, and memory retrieval.
 
         Args:
             task: Task to execute.
@@ -554,6 +555,8 @@ class Agent(BaseAgent):
             The task prompt after memory retrieval, ready for knowledge lookup.
         """
         get_env_context()
+
+        self._inject_date_to_task(task)
 
         self.reset_tool_failures()
 
@@ -1328,6 +1331,32 @@ class Agent(BaseAgent):
                 for tool in tools
             ]
         )
+
+    def _inject_date_to_task(self, task: Task) -> None:
+        """Inject the current date into the task description if inject_date is enabled."""
+        if self.inject_date:
+            try:
+                valid_format_codes = [
+                    "%Y",
+                    "%m",
+                    "%d",
+                    "%H",
+                    "%M",
+                    "%S",
+                    "%B",
+                    "%b",
+                    "%A",
+                    "%a",
+                ]
+                is_valid = any(code in self.date_format for code in valid_format_codes)
+
+                if not is_valid:
+                    raise ValueError(f"Invalid date format: {self.date_format}")
+
+                current_date = datetime.now().strftime(self.date_format)
+                task.description += f"\n\nCurrent Date: {current_date}"
+            except Exception as e:
+                self._logger.log("warning", f"Failed to inject date: {e!s}")
 
     def _validate_docker_installation(self) -> None:
         """Deprecated: No-op. CodeInterpreterTool is no longer available."""
