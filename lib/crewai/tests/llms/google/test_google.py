@@ -1223,3 +1223,19 @@ def test_gemini_no_thinking_tokens_defaults_to_zero():
     usage = llm._extract_token_usage(mock_response)
     assert usage["reasoning_tokens"] == 0
     assert usage["cached_prompt_tokens"] == 0
+
+def test_gemini_format_messages_appends_user_turn_when_ending_on_model():
+    """Test that _format_messages_for_gemini appends a user turn when history ends on assistant/model."""
+    llm = LLM(model="gemini/gemini-2.0-flash-001")
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there! How can I help?"},
+    ]
+
+    contents, _ = llm._format_messages_for_gemini(messages)
+
+    assert len(contents) == 3
+    assert contents[0].role == "user"
+    assert contents[1].role == "model"
+    assert contents[2].role == "user"
+    assert contents[2].parts[0].text == "Please continue."

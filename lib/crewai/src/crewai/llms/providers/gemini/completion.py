@@ -672,6 +672,15 @@ class GeminiCompletion(BaseLLM):
                 gemini_content = types.Content(role=gemini_role, parts=parts)
                 contents.append(gemini_content)
 
+        # Gemini API rejects requests ending on a model turn (requires a user turn)
+        if contents and contents[-1].role == "model":
+            contents.append(
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text="Please continue.")],
+                )
+            )
+
         return contents, system_instruction
 
     def _validate_and_emit_structured_output(
