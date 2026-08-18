@@ -50,6 +50,21 @@ class TestBaseTool:
         assert result == "Sync processed: hello"
 
     @pytest.mark.asyncio
+    async def test_tool_run_handles_coroutine_inside_running_loop(self) -> None:
+        class CoroutineReturningTool(BaseTool):
+            name: str = "coroutine_returning_tool"
+            description: str = "Returns a coroutine from its synchronous method"
+
+            def _run(self, value: str):
+                async def produce() -> str:
+                    await asyncio.sleep(0)
+                    return value
+
+                return produce()
+
+        assert CoroutineReturningTool().run(value="hello") == "hello"
+
+    @pytest.mark.asyncio
     async def test_sync_tool_arun_raises_not_implemented(self) -> None:
         """Test that sync tool arun() raises NotImplementedError."""
         tool = SyncTool()
@@ -140,6 +155,15 @@ class TestToolDecorator:
 
         result = await async_func.arun(value="test")
         assert result == "async: test"
+
+    @pytest.mark.asyncio
+    async def test_async_decorated_tool_run_inside_running_loop(self) -> None:
+        @tool("async_decorated_in_loop")
+        async def async_func(value: str) -> str:
+            await asyncio.sleep(0)
+            return value
+
+        assert async_func.run(value="test") == "test"
 
 
 class TestAsyncToolWithIO:

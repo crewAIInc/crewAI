@@ -28,6 +28,7 @@ from crewai.utilities.pydantic_schema_utils import (
     generate_model_description,
 )
 from crewai.utilities.string_utils import sanitize_tool_name
+from crewai.utilities.async_utils import run_coroutine_sync
 
 
 def _serialize_schema(v: type[BaseModel] | None) -> dict[str, Any] | None:
@@ -438,12 +439,12 @@ class CrewStructuredTool(BaseModel):
         self._increment_usage_count()
 
         if inspect.iscoroutinefunction(self.func):
-            return asyncio.run(self.func(**parsed_args, **kwargs))
+            return run_coroutine_sync(self.func(**parsed_args, **kwargs))
 
         result = self.func(**parsed_args, **kwargs)
 
         if asyncio.iscoroutine(result):
-            return asyncio.run(result)
+            return run_coroutine_sync(result)
 
         return result
 

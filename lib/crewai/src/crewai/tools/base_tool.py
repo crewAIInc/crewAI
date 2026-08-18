@@ -41,6 +41,7 @@ from crewai.tools.structured_tool import (
 from crewai.tools.tool_failure import ToolFailure, ToolFailurePolicy, ToolFailureReason
 from crewai.types.callback import SerializableCallable, _resolve_dotted_path
 from crewai.utilities.string_utils import sanitize_tool_name
+from crewai.utilities.async_utils import run_coroutine_sync
 
 
 P = ParamSpec("P")
@@ -338,7 +339,7 @@ class BaseTool(BaseModel, ABC):
         result = self._run(*args, **kwargs)
 
         if asyncio.iscoroutine(result):
-            result = asyncio.run(result)
+            result = run_coroutine_sync(result)
 
         return result
 
@@ -549,7 +550,7 @@ class Tool(BaseTool, Generic[P, R]):
         result = self.func(*args, **kwargs)
 
         if asyncio.iscoroutine(result):
-            result = asyncio.run(result)
+            result = run_coroutine_sync(result)
 
         return result  # type: ignore[return-value]
 
