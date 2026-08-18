@@ -1,0 +1,166 @@
+---
+title: 'مسترجع قاعدة معرفة Bedrock'
+description: 'استرجاع المعلومات من قواعد معرفة Amazon Bedrock باستخدام استعلامات اللغة الطبيعية'
+icon: aws
+mode: "wide"
+---
+
+# `BedrockKBRetrieverTool`
+
+تمكّن `BedrockKBRetrieverTool` وكلاء CrewAI من استرجاع المعلومات من قواعد معرفة Amazon Bedrock باستخدام استعلامات اللغة الطبيعية.
+
+## التثبيت
+
+```bash
+uv pip install 'crewai[tools]'
+```
+
+## المتطلبات
+
+- بيانات اعتماد AWS مُعدّة (إما من خلال متغيرات البيئة أو AWS CLI)
+- حزمتا `boto3` و`python-dotenv`
+- الوصول إلى قاعدة معرفة Amazon Bedrock
+
+## الاستخدام
+
+إليك كيفية استخدام الأداة مع وكيل CrewAI:
+
+```python {2, 4-17}
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.bedrock.knowledge_base.retriever_tool import BedrockKBRetrieverTool
+
+# Initialize the tool
+kb_tool = BedrockKBRetrieverTool(
+    knowledge_base_id="your-kb-id",
+    number_of_results=5
+)
+
+# Create a CrewAI agent that uses the tool
+researcher = Agent(
+    role='Knowledge Base Researcher',
+    goal='Find information about company policies',
+    backstory='I am a researcher specialized in retrieving and analyzing company documentation.',
+    tools=[kb_tool],
+    verbose=True
+)
+
+# Create a task for the agent
+research_task = Task(
+    description="Find our company's remote work policy and summarize the key points.",
+    agent=researcher
+)
+
+# Create a crew with the agent
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    verbose=2
+)
+
+# Run the crew
+result = crew.kickoff()
+print(result)
+```
+
+## معاملات الأداة
+
+| المعامل | النوع | مطلوب | القيمة الافتراضية | الوصف |
+|:---------|:-----|:---------|:---------|:-------------|
+| **knowledge_base_id** | `str` | نعم | None | المعرّف الفريد لقاعدة المعرفة (0-10 أحرف أبجدية رقمية) |
+| **number_of_results** | `int` | لا | 5 | الحد الأقصى لعدد النتائج المُعادة |
+| **retrieval_configuration** | `dict` | لا | None | إعدادات مخصصة لاستعلام قاعدة المعرفة |
+| **guardrail_configuration** | `dict` | لا | None | إعدادات تصفية المحتوى |
+| **next_token** | `str` | لا | None | رمز لتصفح الصفحات |
+
+## متغيرات البيئة
+
+```bash
+BEDROCK_KB_ID=your-knowledge-base-id  # Alternative to passing knowledge_base_id
+AWS_REGION=your-aws-region            # Defaults to us-east-1
+AWS_ACCESS_KEY_ID=your-access-key     # Required for AWS authentication
+AWS_SECRET_ACCESS_KEY=your-secret-key # Required for AWS authentication
+```
+
+## تنسيق الاستجابة
+
+تعيد الأداة النتائج بتنسيق JSON:
+
+```json
+{
+  "results": [
+    {
+      "content": "Retrieved text content",
+      "content_type": "text",
+      "source_type": "S3",
+      "source_uri": "s3://bucket/document.pdf",
+      "score": 0.95,
+      "metadata": {
+        "additional": "metadata"
+      }
+    }
+  ],
+  "nextToken": "pagination-token",
+  "guardrailAction": "NONE"
+}
+```
+
+## الاستخدام المتقدم
+
+### إعداد استرجاع مخصص
+
+```python
+kb_tool = BedrockKBRetrieverTool(
+    knowledge_base_id="your-kb-id",
+    retrieval_configuration={
+        "vectorSearchConfiguration": {
+            "numberOfResults": 10,
+            "overrideSearchType": "HYBRID"
+        }
+    }
+)
+
+policy_expert = Agent(
+    role='Policy Expert',
+    goal='Analyze company policies in detail',
+    backstory='I am an expert in corporate policy analysis with deep knowledge of regulatory requirements.',
+    tools=[kb_tool]
+)
+```
+
+## مصادر البيانات المدعومة
+
+- Amazon S3
+- Confluence
+- Salesforce
+- SharePoint
+- صفحات الويب
+- مواقع مستندات مخصصة
+- Amazon Kendra
+- قواعد بيانات SQL
+
+## حالات الاستخدام
+
+### تكامل المعرفة المؤسسية
+- تمكين وكلاء CrewAI من الوصول إلى المعرفة الخاصة بمؤسستك دون كشف البيانات الحساسة
+- السماح للوكلاء باتخاذ قرارات بناءً على سياسات وإجراءات ووثائق شركتك المحددة
+- إنشاء وكلاء يمكنهم الإجابة على الأسئلة بناءً على وثائقك الداخلية مع الحفاظ على أمان البيانات
+
+### المعرفة المتخصصة بالمجال
+- ربط وكلاء CrewAI بقواعد معرفة متخصصة بالمجال (قانونية، طبية، تقنية) دون إعادة تدريب النماذج
+- الاستفادة من مستودعات المعرفة الموجودة المُدارة بالفعل في بيئة AWS
+- الجمع بين تفكير CrewAI والمعلومات المتخصصة من قواعد معرفتك
+
+### اتخاذ القرارات المبنية على البيانات
+- تأسيس استجابات وكلاء CrewAI على بيانات شركتك الفعلية بدلاً من المعرفة العامة
+- ضمان تقديم الوكلاء لتوصيات بناءً على سياق أعمالك ووثائقك المحددة
+- تقليل التوهمات من خلال استرجاع معلومات واقعية من قواعد معرفتك
+
+### وصول معلوماتي قابل للتوسع
+- الوصول إلى تيرابايت من المعرفة المؤسسية دون تضمينها كلها في نماذجك
+- الاستعلام الديناميكي عن المعلومات ذات الصلة فقط اللازمة لمهام محددة
+- الاستفادة من البنية التحتية القابلة للتوسع من AWS للتعامل مع قواعد معرفة كبيرة بكفاءة
+
+### الامتثال والحوكمة
+- ضمان تقديم وكلاء CrewAI لاستجابات تتوافق مع وثائق شركتك المعتمدة
+- إنشاء مسارات قابلة للتدقيق لمصادر المعلومات المستخدمة من قبل وكلائك
+- الحفاظ على التحكم في مصادر المعلومات التي يمكن لوكلائك الوصول إليها

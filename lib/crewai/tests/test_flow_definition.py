@@ -1231,7 +1231,7 @@ def test_static_string_listener_is_allowed_by_contract():
 @pytest.mark.parametrize("listen", ["publish", {"or": ["publish", "revise"]}])
 @pytest.mark.parametrize("router_enabled", [False, True])
 def test_flow_definition_rejects_method_self_listen(listen, router_enabled):
-    with pytest.raises(ValueError, match="methods.publish.listen"):
+    with pytest.raises(ValueError, match="listen condition"):
         flow_definition.FlowDefinition.from_declaration(contents=
             {
                 "schema": "crewai.flow/v1",
@@ -1250,6 +1250,49 @@ def test_flow_definition_rejects_method_self_listen(listen, router_enabled):
                 },
             }
         )
+
+
+def test_flow_definition_rejects_conversational_route_handler_name_collision():
+    with pytest.raises(ValueError, match=r"listen condition 'create_video'"):
+        flow_definition.FlowDefinition.from_declaration(contents=
+            {
+                "schema": "crewai.flow/v1",
+                "name": "VideoFlow",
+                "conversational": {
+                    "enabled": True,
+                    "router": {
+                        "route_descriptions": {
+                            "create_video": "User wants a new video.",
+                        },
+                    },
+                },
+                "methods": {
+                    "begin": {
+                        "do": {"ref": "loaded_flows:VideoFlow.begin"},
+                        "start": True,
+                    },
+                    "create_video": {
+                        "do": {"ref": "loaded_flows:VideoFlow.create_video"},
+                        "listen": "create_video",
+                    },
+                },
+            }
+        )
+
+
+def test_build_flow_definition_wraps_validation_error_with_class_name():
+    class VideoFlow(Flow):
+        conversational = True
+
+        @listen("create_video")
+        def create_video(self):
+            return "made a video"
+
+    with pytest.raises(ValueError, match="Invalid flow definition for VideoFlow"):
+        VideoFlow.flow_definition()
+
+    with pytest.raises(ValueError, match="Invalid flow definition for VideoFlow"):
+        VideoFlow()
 
 
 def test_start_false_not_classified_as_start_method():
