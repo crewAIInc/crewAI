@@ -84,4 +84,5 @@ class TestResolveNativeFromRunningLoop:
             messages.append(str(cause))
             cause = cause.__cause__
         blob = "\n".join(messages)
+        assert "Session terminated" in blob
         assert "cannot be called from a running event loop" not in blob
