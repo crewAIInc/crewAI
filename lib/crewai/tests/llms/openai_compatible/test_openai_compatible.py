@@ -302,6 +302,22 @@ class TestLLMIntegration:
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.base_url == "https://api.eu.edenai.run/v3"
 
+    @pytest.mark.parametrize(
+        ("model", "expected"),
+        [
+            ("anthropic/claude-sonnet-5", True),
+            ("mistral/mistral-large-2512", True),
+            ("deepinfra/openai/gpt-oss-120b", True),
+            ("", False),
+            ("mistral", False),
+            ("mistral/", False),
+            ("/mistral-large-2512", False),
+        ],
+    )
+    def test_edenai_requires_a_vendor_and_a_model(self, model, expected):
+        """Eden AI references carry a vendor segment, so both halves are required."""
+        assert LLM._matches_provider_pattern(model, "edenai") is expected
+
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""
         with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-key"}):
