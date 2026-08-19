@@ -20595,6 +20595,89 @@
       }
     },
     {
+      "description": "Send a complete Google Search URL to Reserp and return the public JSON response unchanged. The caller controls retries and all orchestration.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Bearer API key for the Reserp Google Search API",
+          "name": "RESERP_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Search Google with Reserp",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Expose one public Reserp request as a CrewAI tool call.",
+        "properties": {},
+        "required": [],
+        "title": "ReserpSearchTool",
+        "type": "object"
+      },
+      "name": "ReserpSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Public Reserp request body.",
+        "properties": {
+          "url": {
+            "description": "Complete https://www.google.com/search URL containing a non-empty q parameter. Do not include Google's num parameter.",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "ReserpSearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to read a website content.",
       "env_vars": [],
       "humanized_name": "Read a website content",
