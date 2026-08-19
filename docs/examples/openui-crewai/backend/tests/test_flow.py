@@ -1,3 +1,5 @@
+"""Tests for CrewAI OpenUI message handling and prompt loading."""
+
 from pathlib import Path
 
 import pytest
@@ -6,6 +8,7 @@ from openui_crewai_example.flow import build_messages, load_system_prompt
 
 
 def test_build_messages_preserves_agent_interface_context() -> None:
+    """Preserve action context when prepending the OpenUI system prompt."""
     action_message = {
         "role": "user",
         "content": (
@@ -23,6 +26,7 @@ def test_build_messages_preserves_agent_interface_context() -> None:
 
 
 def test_build_messages_removes_invalid_empty_tool_calls() -> None:
+    """Remove empty tool calls without mutating the source message."""
     assistant_message = {
         "id": "assistant-1",
         "role": "assistant",
@@ -43,6 +47,7 @@ def test_build_messages_removes_invalid_empty_tool_calls() -> None:
 def test_load_system_prompt_uses_configured_path(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    """Load the generated system prompt from the configured path."""
     prompt_path = tmp_path / "system-prompt.txt"
     prompt_path.write_text("prompt from exact library", encoding="utf-8")
     monkeypatch.setenv("OPENUI_SYSTEM_PROMPT_PATH", str(prompt_path))
@@ -53,6 +58,7 @@ def test_load_system_prompt_uses_configured_path(
 def test_load_system_prompt_explains_how_to_generate_it(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    """Explain how to regenerate a missing OpenUI system prompt."""
     monkeypatch.setenv("OPENUI_SYSTEM_PROMPT_PATH", str(tmp_path / "missing.txt"))
 
     with pytest.raises(RuntimeError, match="npm run generate:prompt"):

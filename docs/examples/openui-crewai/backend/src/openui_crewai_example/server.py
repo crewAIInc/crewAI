@@ -22,7 +22,6 @@ app.add_middleware(
 @app.get("/health")
 async def health() -> dict[str, str]:
     """Return a lightweight readiness signal."""
-
     return {"status": "ok"}
 
 

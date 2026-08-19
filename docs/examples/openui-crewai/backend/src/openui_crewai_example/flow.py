@@ -18,7 +18,6 @@ DEFAULT_PROMPT_PATH = (
 
 def load_system_prompt() -> str:
     """Load the prompt generated from frontend/src/library.ts."""
-
     prompt_path = Path(os.getenv("OPENUI_SYSTEM_PROMPT_PATH", str(DEFAULT_PROMPT_PATH)))
     try:
         return prompt_path.read_text(encoding="utf-8")
@@ -31,7 +30,6 @@ def load_system_prompt() -> str:
 
 def message_for_llm(message: Any) -> Any:
     """Convert AG-UI messages to provider-safe chat-completion messages."""
-
     model_dump = getattr(message, "model_dump", None)
     if callable(model_dump):
         payload = model_dump(exclude_none=True)
@@ -49,7 +47,6 @@ def message_for_llm(message: Any) -> Any:
 
 def build_messages(system_prompt: str, messages: Sequence[Any]) -> list[Any]:
     """Prepend the generated prompt without rewriting interaction context."""
-
     return [
         {"role": "system", "content": system_prompt},
         *(message_for_llm(message) for message in messages),
@@ -61,6 +58,7 @@ class OpenUIFlow(Flow[CopilotKitState]):
 
     @start()
     async def chat(self) -> None:
+        """Stream one OpenUI response and persist its assistant message."""
         response = await copilotkit_stream(
             await acompletion(
                 model=os.getenv("OPENUI_MODEL", "openai/gpt-4.1-mini"),
