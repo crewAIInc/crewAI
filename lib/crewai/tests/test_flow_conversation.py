@@ -2420,6 +2420,66 @@ class TestDeclarativeConversationalFlow:
         assert "cannot carry a model class" in caplog.text
 
 
+class TestConversationalCapabilityAttribute:
+    """A declarative chat flow reports itself conversational to outside callers.
+
+    Consumers outside this package capability-check the ``conversational``
+    attribute, so it must agree with ``_is_conversational_enabled()``.
+    """
+
+    def test_declaration_marks_the_instance_conversational(self) -> None:
+        flow = Flow.from_declaration(contents=_conversational_declaration())
+
+        assert getattr(flow, "conversational") is True
+        assert flow._is_conversational_enabled() is True
+        assert callable(getattr(flow, "stream_turn", None))
+
+    def test_the_flag_does_not_leak_onto_the_class(self) -> None:
+        """The DSL projection reads it off the class to decide what to emit."""
+        Flow.from_declaration(contents=_conversational_declaration())
+
+        assert Flow.conversational is False
+
+        class LaterPlainFlow(Flow):
+            @start()
+            def begin(self) -> str:
+                return "begin"
+
+        assert LaterPlainFlow.conversational is False
+        assert LaterPlainFlow.flow_definition().conversational is None
+
+    def test_disabled_declaration_is_not_marked(self) -> None:
+        flow = Flow.from_declaration(
+            contents=_conversational_declaration(conversational={"enabled": False})
+        )
+
+        assert getattr(flow, "conversational") is False
+
+    def test_non_conversational_declaration_is_not_marked(self) -> None:
+        flow = Flow.from_declaration(
+            contents={
+                "schema": "crewai.flow/v1",
+                "name": "Plain",
+                "methods": {
+                    "begin": {
+                        "do": {"call": "expression", "expr": "'x'"},
+                        "start": True,
+                    }
+                },
+            }
+        )
+
+        assert getattr(flow, "conversational") is False
+
+    def test_class_based_flow_keeps_its_own_flag(self) -> None:
+        @ConversationConfig()
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        assert ClassChat.conversational is True
+        assert getattr(ClassChat(), "conversational") is True
+
+
 class TestBuiltinRouteResolution:
     """``route_turn`` and ``_effective_routes`` agree on what is built in."""
 

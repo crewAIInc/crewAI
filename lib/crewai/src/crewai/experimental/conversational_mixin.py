@@ -973,6 +973,15 @@ class _ConversationalMixin:
         if conversational is None or not conversational.enabled:
             return definition
 
+        # A declaration enables chat without the ``conversational = True``
+        # class attribute, so mark the instance. Callers outside this package
+        # capability-check that attribute, and it should agree with
+        # ``_is_conversational_enabled()``. Instance-only on purpose: the DSL
+        # projection reads it off the *class* to decide whether to emit a
+        # conversational block, and setting it there would make every later
+        # subclass look conversational.
+        object.__setattr__(self, "conversational", True)
+
         missing = {
             name: method
             for name, method in _builtin_methods().items()
