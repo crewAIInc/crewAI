@@ -1012,6 +1012,38 @@ mode: "wide"
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="Eden AI">
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    # Required
+    EDENAI_API_KEY=<your-api-key>
+
+    # اختياري، يوجّه الطلبات عبر بوابة Eden AI في الاتحاد الأوروبي بدلًا من البوابة العامة
+    EDENAI_BASE_URL=https://api.eu.edenai.run/v3
+    ```
+
+    مثال الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="edenai/mistral/mistral-large-2512",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      ميزات Eden AI:
+      - مفتاح واحد للوصول إلى عدة مزوّدين
+      - مقرّها في الاتحاد الأوروبي، مع نقطة نهاية أوروبية منفصلة لإقامة البيانات
+      - قدرات كل موديل معروضة عبر نقطة نهاية الكتالوج
+    </Info>
+
+    معرّفات الموديلات مكتوبة أصلًا بصيغة `vendor/model`، لذا يحتوي المرجع الكامل على ثلاثة أجزاء،
+    مثل `edenai/anthropic/claude-sonnet-5`. راجع
+    [كتالوج موديلات Eden AI](https://api.edenai.run/v3/models)، وهو عام ولا يحتاج إلى مصادقة،
+    للحصول على المعرّفات الحالية.
+  </Accordion>
+
 </AccordionGroup>
 
 ## بث الاستجابات

@@ -95,6 +95,14 @@ class TestProviderRegistry:
         assert config.api_key_env == "DASHSCOPE_API_KEY"
         assert config.api_key_required is True
 
+    def test_edenai_config(self):
+        """Test Eden AI provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["edenai"]
+        assert config.base_url == "https://api.edenai.run/v3"
+        assert config.api_key_env == "EDENAI_API_KEY"
+        assert config.base_url_env == "EDENAI_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -270,6 +278,29 @@ class TestLLMIntegration:
             llm = LLM(model="dashscope/qwen-turbo")
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "dashscope"
+
+    def test_llm_creates_openai_compatible_for_edenai(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for Eden AI."""
+        with patch.dict(os.environ, {"EDENAI_API_KEY": "test-key"}):
+            llm = LLM(model="edenai/anthropic/claude-sonnet-5")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "edenai"
+            # Eden AI ids are vendor/model, so the segment after the provider
+            # prefix is itself two parts and must survive intact.
+            assert llm.model == "anthropic/claude-sonnet-5"
+
+    def test_edenai_base_url_env_selects_the_eu_gateway(self):
+        """Test EDENAI_BASE_URL redirects Eden AI to its EU endpoint."""
+        with patch.dict(
+            os.environ,
+            {
+                "EDENAI_API_KEY": "test-key",
+                "EDENAI_BASE_URL": "https://api.eu.edenai.run/v3",
+            },
+        ):
+            llm = LLM(model="edenai/mistral/mistral-large-2512")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.base_url == "https://api.eu.edenai.run/v3"
 
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""
