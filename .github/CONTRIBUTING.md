@@ -162,15 +162,6 @@ uv sync
 
 Do not use `pip` directly.
 
-## Secure Coding
-
-Follow [docs/security/secure-coding-standard.md](../docs/security/secure-coding-standard.md).
-Use the approved helpers named there. Do not add prohibited APIs
-(`os.system`, `shell=True`, `eval`/`exec`, `pickle.load`, unsafe YAML, etc.)
-in new code.
-
-Report vulnerabilities through [.github/security.md](security.md), not GitHub issues.
-
 ## Reporting Issues
 
 Use the [GitHub issue templates](https://github.com/crewAIInc/crewAI/issues/new/choose):

@@ -13,9 +13,6 @@ Follow these guidelines when contributing:
 5. Suggest changes to the `docs/` folder when appropriate
 6. Follow software principles such as DRY and YAGNI.
 7. Keep diffs as minimal as possible.
-8. Follow [docs/security/secure-coding-standard.md](docs/security/secure-coding-standard.md)
-   for insecure-coding requirements. Prefer the approved helpers named there
-   over new implementations.
 
 ## Changing Docs
 
