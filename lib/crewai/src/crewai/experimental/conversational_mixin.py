@@ -225,6 +225,7 @@ class _ConversationalMixin:
         _pending_intent_llm: str | BaseLLM | None
         _turn_classified_intent: str | None
         _assistant_reply_appended: bool
+        _turn_recorded_results: list[Any]
         _resolved_conversation_config: ConversationConfig | None
 
         def _clear_or_listeners(self) -> None:
@@ -425,6 +426,7 @@ class _ConversationalMixin:
                 self._reset_turn_execution_state()
 
             object.__setattr__(self, "_assistant_reply_appended", False)
+            object.__setattr__(self, "_turn_recorded_results", [])
             result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
             if (
                 result is not None
@@ -502,6 +504,7 @@ class _ConversationalMixin:
                     self._reset_turn_execution_state()
 
                 object.__setattr__(self, "_assistant_reply_appended", False)
+                object.__setattr__(self, "_turn_recorded_results", [])
                 original_stream = bool(getattr(self, "stream", False))
                 original_streaming_turn = getattr(
                     self, "_streaming_conversation_turn", False
@@ -729,6 +732,11 @@ class _ConversationalMixin:
         state.agent_threads.setdefault(agent_name, []).append(
             AgentMessage(content=content, metadata=metadata or {})
         )
+        # Remember the object itself so the end-of-turn fallback does not
+        # re-publish a result the handler deliberately kept private. Identity,
+        # not content: a handler that records scratch work privately and then
+        # returns a user-facing summary still gets that summary promoted.
+        self._turn_recorded_results.append(result)
         if event_visibility == "public":
             self.append_assistant_message(content)
 
@@ -949,6 +957,8 @@ class _ConversationalMixin:
             object.__setattr__(self, "_turn_classified_intent", None)
         if not hasattr(self, "_assistant_reply_appended"):
             object.__setattr__(self, "_assistant_reply_appended", False)
+        if not isinstance(getattr(self, "_turn_recorded_results", None), list):
+            object.__setattr__(self, "_turn_recorded_results", [])
         if not hasattr(self, "_resolved_conversation_config"):
             object.__setattr__(self, "_resolved_conversation_config", None)
 
@@ -1349,6 +1359,12 @@ class _ConversationalMixin:
         ``CrewOutput`` rather than a string, so the text lives on ``.raw``.
         Without unwrapping it here their reply never reaches the transcript.
         """
+        if any(result is recorded for recorded in self._turn_recorded_results):
+            # Already routed by ``append_agent_result``, which honours
+            # ``visible_agent_outputs``. Promoting it here would publish a
+            # result the handler asked to keep private.
+            return False
+
         text = result
         raw = getattr(result, "raw", None)
         if not isinstance(text, str) and isinstance(raw, str):

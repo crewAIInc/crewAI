@@ -2895,6 +2895,108 @@ class TestDeclarativeTurnMatrix:
         assert len(outputs) == 2
 
 
+class TestPrivateAgentResultsStayPrivate:
+    """Unwrapping ``.raw`` must not defeat ``visible_agent_outputs``."""
+
+    class _Out:
+        """Shape of ``LiteAgentOutput`` / ``CrewOutput``."""
+
+        def __init__(self, raw: str) -> None:
+            self.raw = raw
+
+    def test_privately_recorded_result_is_not_republished(self) -> None:
+        """A handler that records privately and hands the object back.
+
+        ``append_agent_result`` defaults to private and does not set the
+        reply flag, so before this guard the end-of-turn fallback promoted the
+        very object the handler had just asked to keep out of the transcript.
+        """
+        recorded = self._Out("SECRET scratch work")
+
+        @ConversationConfig()
+        class PrivateChat(Flow[ConversationState]):
+            @listen("converse")
+            def converse_turn(self) -> Any:
+                self.append_agent_result("researcher", recorded)
+                return recorded
+
+        flow = PrivateChat()
+        flow.handle_turn("look something up")
+
+        assert [m.role for m in flow.state.messages] == ["user"]
+        assert flow.state.agent_threads["researcher"][0].content == (
+            "SECRET scratch work"
+        )
+
+    def test_a_summary_returned_alongside_a_private_result_is_published(self) -> None:
+        """Identity, not content: a different return value is still promoted."""
+
+        @ConversationConfig()
+        class SummarisingChat(Flow[ConversationState]):
+            @listen("converse")
+            def converse_turn(self) -> Any:
+                self.append_agent_result(
+                    "researcher", TestPrivateAgentResultsStayPrivate._Out("SECRET")
+                )
+                return "Here is the summary."
+
+        flow = SummarisingChat()
+        flow.handle_turn("look something up")
+
+        assert flow.state.messages[-1].content == "Here is the summary."
+
+    def test_visible_agent_outputs_still_publishes(self) -> None:
+        result = self._Out("PUBLIC RESULT")
+
+        @ConversationConfig(visible_agent_outputs="all")
+        class VisibleChat(Flow[ConversationState]):
+            @listen("converse")
+            def converse_turn(self) -> Any:
+                self.append_agent_result("researcher", result)
+                return result
+
+        flow = VisibleChat()
+        flow.handle_turn("go")
+
+        assert flow.state.messages[-1].content == "PUBLIC RESULT"
+        assert [m.role for m in flow.state.messages].count("assistant") == 1
+
+    def test_explicit_public_visibility_still_publishes(self) -> None:
+        result = self._Out("PUBLIC RESULT")
+
+        @ConversationConfig()
+        class PublicChat(Flow[ConversationState]):
+            @listen("converse")
+            def converse_turn(self) -> Any:
+                self.append_agent_result("researcher", result, visibility="public")
+                return result
+
+        flow = PublicChat()
+        flow.handle_turn("go")
+
+        assert flow.state.messages[-1].content == "PUBLIC RESULT"
+        assert [m.role for m in flow.state.messages].count("assistant") == 1
+
+    def test_recorded_results_do_not_leak_across_turns(self) -> None:
+        """The per-turn list resets, so turn 2 is judged on its own."""
+        shared = self._Out("reply text")
+
+        @ConversationConfig()
+        class TwoTurnChat(Flow[ConversationState]):
+            @listen("converse")
+            def converse_turn(self) -> Any:
+                return shared
+
+        flow = TwoTurnChat()
+        flow.handle_turn("one")
+        flow.handle_turn("two")
+
+        assert [m.content for m in flow.state.messages if m.role == "assistant"] == [
+            "reply text",
+            "reply text",
+        ]
+
+
 class TestHandlerReplyPromotion:
     """An agent or crew handler's reply reaches the transcript."""
 
