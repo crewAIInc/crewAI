@@ -611,3 +611,48 @@ def test_flow_method_types_from_definition() -> None:
     }
     # No definition → empty map, no error.
     assert run_declarative_flow_module._flow_method_types(SimpleNamespace()) == {}
+
+
+CONVERSATIONAL_FLOW_YAML = """schema: crewai.flow/v1
+name: SupportFlow
+conversational:
+  llm: gpt-4o-mini
+methods:
+  handle_order:
+    description: Order status questions.
+    listen: order
+    do:
+      call: expression
+      expr: "'shipped'"
+"""
+
+
+def test_run_declarative_flow_refuses_a_conversational_flow(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    definition_path = tmp_path / "flow.yaml"
+    definition_path.write_text(CONVERSATIONAL_FLOW_YAML, encoding="utf-8")
+
+    with pytest.raises(SystemExit):
+        run_declarative_flow_module.run_declarative_flow(str(definition_path))
+
+    err = capsys.readouterr().err
+    assert "has no chat loop yet" in err
+    assert "flow.chat()" in err
+
+
+def test_run_declarative_flow_still_runs_a_disabled_conversational_flow(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    definition_path = tmp_path / "flow.yaml"
+    definition_path.write_text(
+        CONVERSATIONAL_FLOW_YAML.replace(
+            "conversational:\n  llm: gpt-4o-mini",
+            "conversational:\n  enabled: false",
+        ).replace("    listen: order\n", "    start: true\n"),
+        encoding="utf-8",
+    )
+
+    run_declarative_flow_module.run_declarative_flow(str(definition_path))
+
+    assert capsys.readouterr().out == "shipped\n"
