@@ -38,7 +38,7 @@ class K8sAgentSandboxFileToolSchema(BaseModel):
     action: FileAction = Field(
         ...,
         description=dedent("""
-            The filesystem action to perform:"
+            The filesystem action to perform:
               - read: returns file contents.
               - write: create or replace a file with content.
               - append: append content to an existing file — use this for

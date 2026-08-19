@@ -25,7 +25,7 @@ All tools that are meant to share the same sandbox settings and sandbox lifecycl
 
 ### Toolset example
 
-This example expects that you have a cluster with the Agent Sandbox installed and all remaining prerequisites like sandbox router, sandbox template and a sandbox warmpool deployed. Learn more [here](https://github.com/kubernetes-sigs/agent-sandbox/tree/main#installation).
+This example expects that you have a cluster with the Agent Sandbox installed and all remaining prerequisites like sandbox router, sandbox template and a sandbox warmpool deployed. See the [Agent Sandbox installation guide](https://github.com/kubernetes-sigs/agent-sandbox/tree/main#installation).
 
 ```python
 from crewai_tools import (
@@ -67,10 +67,10 @@ All tool operations to a sandbox are synchronized with a lock to prevent races b
 
 ### Sandbox client settings
 
-By default the `K8sAgentSandboxToolset.create` creates a client in the "Local Tunnel" configuration. To specify another configurations,
+By default the `K8sAgentSandboxToolset.create` creates a client in the "Local Tunnel" configuration. To specify a different configuration,
 the `client_settings` keyword argument has to be used.
 
-The following example shows setting up the sandbox client to use the "Gateway" configuration (learn more about all configurations [here](https://github.com/kubernetes-sigs/agent-sandbox/tree/main/clients/python/agentic-sandbox-client#usage-examples)):
+The following example shows setting up the sandbox client to use the "Gateway" configuration (see the [sandbox client configuration guide](https://github.com/kubernetes-sigs/agent-sandbox/tree/main/clients/python/agentic-sandbox-client#usage-examples) for all of them):
 
 ```python
 from crewai_tools import (
