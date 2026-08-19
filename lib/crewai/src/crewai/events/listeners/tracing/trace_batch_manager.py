@@ -29,6 +29,7 @@ from crewai.events.listeners.tracing.utils import (
     should_auto_collect_first_time_traces,
 )
 from crewai.plus_api import PlusAPI
+from crewai.telemetry.telemetry import Telemetry
 from crewai.version import get_crewai_version
 
 
@@ -78,6 +79,7 @@ class TraceBatchManager:
         self.backend_initialized: bool = False
         self.trace_url: str | None = None
         self.ephemeral_trace_url: str | None = None
+        self._telemetry: Telemetry = Telemetry()
         try:
             self.plus_api = PlusAPI(
                 api_key=get_auth_token(),
@@ -408,6 +410,14 @@ class TraceBatchManager:
 
                 if response.status_code == 200:
                     self._batch_finalized = True
+                    # Emitted on finalize, not init: a batch that initializes but
+                    # fails to send never lands in AMP. Records only that a batch
+                    # arrived, never its contents.
+                    self._telemetry.feature_usage_span(
+                        "tracing:ephemeral_sent"
+                        if is_ephemeral
+                        else "tracing:authenticated_sent"
+                    )
                     access_code = response.json().get("access_code", None)
                     console = Console()
                     settings = Settings()

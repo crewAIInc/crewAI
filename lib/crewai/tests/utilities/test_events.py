@@ -373,6 +373,111 @@ def test_agent_emits_execution_error_event(base_agent, base_task):
         assert received_events[0].type == "agent_execution_error"
 
 
+def test_agent_retries_close_the_scope_of_every_attempt():
+    agent_started = []
+    agent_errored = []
+    task_started = []
+    task_failed = []
+
+    @crewai_event_bus.on(AgentExecutionStartedEvent)
+    def handle_agent_started(source, event):
+        agent_started.append(event)
+
+    @crewai_event_bus.on(AgentExecutionErrorEvent)
+    def handle_agent_error(source, event):
+        agent_errored.append(event)
+
+    @crewai_event_bus.on(TaskStartedEvent)
+    def handle_task_started(source, event):
+        task_started.append(event)
+
+    @crewai_event_bus.on(TaskFailedEvent)
+    def handle_task_failed(source, event):
+        task_failed.append(event)
+
+    from crewai.experimental.agent_executor import AgentExecutor
+
+    agent = Agent(
+        role="retrying_agent",
+        llm="gpt-4o-mini",
+        goal="Just say hi",
+        backstory="You are a helpful assistant that just says hi",
+        max_retry_limit=1,
+    )
+    task = Task(description="Just say hi", expected_output="hi", agent=agent)
+    crew = Crew(agents=[agent], tasks=[task])
+
+    with patch.object(AgentExecutor, "invoke", side_effect=Exception("boom")):
+        with pytest.raises(Exception):  # noqa: B017
+            crew.kickoff()
+
+    wait_for_event_handlers()
+
+    assert len(agent_started) == 2
+    assert {event.started_event_id for event in agent_errored} == {
+        event.event_id for event in agent_started
+    }
+    assert len(task_failed) == 1
+    assert task_failed[0].started_event_id == task_started[0].event_id
+
+
+def test_agent_retry_that_succeeds_closes_one_scope_per_attempt():
+    agent_started = []
+    agent_errored = []
+    agent_completed = []
+    task_started = []
+    task_completed = []
+
+    @crewai_event_bus.on(AgentExecutionStartedEvent)
+    def handle_agent_started(source, event):
+        agent_started.append(event)
+
+    @crewai_event_bus.on(AgentExecutionErrorEvent)
+    def handle_agent_error(source, event):
+        agent_errored.append(event)
+
+    @crewai_event_bus.on(AgentExecutionCompletedEvent)
+    def handle_agent_completed(source, event):
+        agent_completed.append(event)
+
+    @crewai_event_bus.on(TaskStartedEvent)
+    def handle_task_started(source, event):
+        task_started.append(event)
+
+    @crewai_event_bus.on(TaskCompletedEvent)
+    def handle_task_completed(source, event):
+        task_completed.append(event)
+
+    from crewai.experimental.agent_executor import AgentExecutor
+
+    agent = Agent(
+        role="retrying_agent",
+        llm="gpt-4o-mini",
+        goal="Just say hi",
+        backstory="You are a helpful assistant that just says hi",
+        max_retry_limit=2,
+    )
+    task = Task(description="Just say hi", expected_output="hi", agent=agent)
+    crew = Crew(agents=[agent], tasks=[task])
+
+    with patch.object(
+        AgentExecutor, "invoke", side_effect=[Exception("boom"), {"output": "hi"}]
+    ):
+        crew.kickoff()
+
+    wait_for_event_handlers()
+
+    assert len(agent_started) == 2
+    assert len(agent_errored) == 1
+    assert len(agent_completed) == 1
+    assert {
+        agent_errored[0].started_event_id,
+        agent_completed[0].started_event_id,
+    } == {event.event_id for event in agent_started}
+    assert len(task_completed) == 1
+    assert task_completed[0].started_event_id == task_started[0].event_id
+
+
 class SayHiTool(BaseTool):
     name: str = Field(default="say_hi", description="The name of the tool")
     description: str = Field(
@@ -505,7 +610,9 @@ def test_flow_emits_start_event(reset_event_listener_singleton):
         flow.kickoff()
 
     assert event_received.wait(timeout=5), "Timeout waiting for flow started event"
-    mock_telemetry.flow_execution_span.assert_called_once_with("TestFlow", ["begin"])
+    mock_telemetry.flow_execution_span.assert_called_once_with(
+        "TestFlow", ["begin"], "user", False, False
+    )
     assert len(received_events) == 1
     assert received_events[0].flow_name == "TestFlow"
     assert received_events[0].type == "flow_started"
@@ -628,9 +735,10 @@ def test_suppressed_flow_failure_matches_finished_event_emission():
     assert len(failed) == 1
 
 
-def test_abort_before_flow_started_emits_no_failed_event():
+def test_abort_at_execution_start_emits_started_then_failed_events():
     started: list[FlowStartedEvent] = []
     failed: list[FlowFailedEvent] = []
+    finished: list[FlowFinishedEvent] = []
 
     class BlockedFlow(Flow):
         @start()
@@ -654,14 +762,23 @@ def test_abort_before_flow_started_emits_no_failed_event():
             def handle_flow_failed(source, event):
                 failed.append(event)
 
+            @crewai_event_bus.on(FlowFinishedEvent)
+            def handle_flow_finished(source, event):
+                finished.append(event)
+
             with pytest.raises(HookAborted):
                 BlockedFlow().kickoff()
             wait_for_event_handlers()
     finally:
         clear_all()
 
-    assert started == []
-    assert failed == []
+    assert len(started) == 1
+    assert len(failed) == 1
+    assert finished == []
+    assert failed[0].flow_name == "BlockedFlow"
+    assert isinstance(failed[0].error, HookAborted)
+    assert failed[0].error.reason == "blocked by policy"
+    assert failed[0].started_event_id == started[0].event_id
 
 
 def test_resume_emits_failed_event_paired_with_resume_started_event(tmp_path):

@@ -15,7 +15,6 @@ from crewai_core import (
     user_data,
     version,
 )
-from opentelemetry.sdk.trace import TracerProvider
 import pytest
 
 
@@ -176,36 +175,28 @@ def test_configured_project_definition_rejects_empty_definition(
         )
 
 
-def test_core_telemetry_skips_duplicate_tracer_provider(
+def test_core_telemetry_never_installs_a_global_provider(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Telemetry must leave the process-wide TracerProvider untouched.
+
+    Installing it globally routed every OTel-instrumented library in the host
+    process - HTTP servers, Redis clients, ORMs - to CrewAI's collector.
+    """
     from crewai_core.telemetry import Telemetry
+    import opentelemetry.trace as ot
 
     Telemetry._instance = None
     monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
     monkeypatch.delenv("CREWAI_DISABLE_TELEMETRY", raising=False)
     monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
 
-    monkeypatch.setattr(
-        "crewai_core.telemetry.trace.get_tracer_provider",
-        lambda: TracerProvider(),
-    )
-
-    called = False
-
-    def fail_if_called(provider: object) -> None:
-        nonlocal called
-        called = True
-
-    monkeypatch.setattr(
-        "crewai_core.telemetry.trace.set_tracer_provider",
-        fail_if_called,
-    )
-
+    before = ot.get_tracer_provider()
     telemetry = Telemetry()
     telemetry.set_tracer()
+    after = ot.get_tracer_provider()
 
-    assert called is False
+    assert after is before
     assert telemetry.trace_set is True
 
 
@@ -223,8 +214,8 @@ def test_core_telemetry_records_feature_usage(
     span = Mock()
     tracer.start_span.return_value = span
     monkeypatch.setattr(
-        "crewai_core.telemetry.trace.get_tracer",
-        lambda _name: tracer,
+        "crewai_core.telemetry.TracerProvider",
+        lambda **_kwargs: Mock(get_tracer=Mock(return_value=tracer)),
     )
 
     telemetry = Telemetry()
@@ -250,8 +241,8 @@ def test_core_telemetry_records_flow_creation_version(
     span = Mock()
     tracer.start_span.return_value = span
     monkeypatch.setattr(
-        "crewai_core.telemetry.trace.get_tracer",
-        lambda _name: tracer,
+        "crewai_core.telemetry.TracerProvider",
+        lambda **_kwargs: Mock(get_tracer=Mock(return_value=tracer)),
     )
 
     telemetry = Telemetry()
