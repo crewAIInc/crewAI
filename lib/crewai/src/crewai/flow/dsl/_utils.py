@@ -370,6 +370,14 @@ def _build_method_definition(
             deep=True, update={"do": _method_action(method)}
         )
 
+    if method_definition.description is None:
+        # The router catalog describes a route from its handler's docstring.
+        # Projecting it makes that description survive serialization, so a
+        # declaration can carry one too.
+        docstring = getattr(method, "__doc__", None)
+        if docstring and docstring.strip():
+            method_definition.description = docstring.strip().split("\n", 1)[0].strip()
+
     human_feedback = _build_human_feedback_definition(method, f"{path}.human_feedback")
     if human_feedback is not None:
         method_definition.human_feedback = human_feedback

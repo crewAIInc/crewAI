@@ -491,6 +491,70 @@ Inside a `@listen(label)` handler, choose:
 
 `ConversationConfig.visible_agent_outputs` can promote specific agents' private results to public globally (`"all"`, or a list of agent names).
 
+## Declaring a conversational flow in JSON/YAML
+
+A [declarative Flow](/edge/en/concepts/cli) can be conversational too. Add a top-level `conversational` block and declare your own routes as methods that `listen` to a route label:
+
+```yaml
+schema: crewai.flow/v1
+name: SupportFlow
+
+conversational:
+  system_prompt: You are a terse support assistant.
+  llm: gpt-4o-mini
+  router:
+    llm: gpt-4o-mini
+
+methods:
+  handle_order:
+    description: Order status, shipping and delivery questions.
+    listen: order
+    do:
+      call: agent
+      with:
+        role: Support specialist
+        goal: Answer order questions accurately
+        backstory: Knows the fulfilment pipeline.
+        input: "${state.current_user_message}"
+```
+
+Declaring the block is the opt-in — `enabled` defaults to `true`. Set `enabled: false` to keep the configuration while turning chat off.
+
+Three things are supplied for you:
+
+| Supplied | Detail |
+|----------|--------|
+| The built-in graph | `route_conversation`, `converse_turn`, `end_conversation` and `answer_from_history_turn` are added automatically. Declare a method under one of those names to override it. |
+| Conversation state | `ConversationState` is used when the declaration has no `state` block. To add fields, point `state` at a Pydantic model that extends `ConversationState`. |
+| The route catalog | Built from the methods that declare a `listen` label. Each method's `description` is what the routing model reads when choosing between routes. |
+
+Run it from Python with the same turn APIs as a class-based conversational Flow:
+
+```python
+from crewai.flow import Flow
+
+flow = Flow.from_declaration(path="flow.yaml")
+
+try:
+    flow.handle_turn("Where is my order?", session_id="session-1")
+finally:
+    flow.finalize_session_traces()
+```
+
+### Naming routes
+
+Route labels and method names share one trigger namespace, so a handler must not be named after the route it listens to — `create_video` listening to `create_video` is rejected when the flow is built. Use a `handle_*` prefix.
+
+### What a declaration cannot express
+
+| Not expressible | Use instead |
+|-----------------|-------------|
+| A live `LLM` instance or a custom `BaseLLM` | A model id string, such as `gpt-4o-mini` |
+| `router.response_format` as a model class | Omit it; the framework synthesizes one. A ref or schema is ignored with a warning |
+| `route_turn()` / `can_answer_from_history()` overrides | Author the Flow in Python, or point a method's `do` at a `call: code` ref |
+
+`crewai run` has no chat loop yet: it reports that the flow is conversational and exits rather than running a single turn. Drive a declarative conversational flow from Python with `handle_turn()`, `stream_turn()` or `chat()`.
+
 ## Tracing across turns
 
 With `defer_trace_finalization=True` (default in `ConversationConfig`):

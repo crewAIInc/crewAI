@@ -31,6 +31,7 @@ class MCPNativeTool(BaseTool):
         tool_schema: dict[str, Any],
         server_name: str,
         original_tool_name: str | None = None,
+        server_reference: str | None = None,
     ) -> None:
         """Initialize native MCP tool.
 
@@ -40,6 +41,8 @@ class MCPNativeTool(BaseTool):
             tool_schema: Schema information for the tool.
             server_name: Name of the MCP server for prefixing.
             original_tool_name: Original name of the tool on the MCP server.
+            server_reference: Identifier the server was requested by, when it
+                was not requested by URL -- currently the AMP slug.
         """
         prefixed_name = f"{server_name}_{tool_name}"
 
@@ -60,11 +63,17 @@ class MCPNativeTool(BaseTool):
         self._client_factory = client_factory
         self._original_tool_name = original_tool_name or tool_name
         self._server_name = server_name
+        self._server_reference = server_reference
 
     @property
     def original_tool_name(self) -> str:
         """Get the original tool name."""
         return self._original_tool_name
+
+    @property
+    def server_reference(self) -> str | None:
+        """Get the identifier the server was requested by, if any."""
+        return self._server_reference
 
     @property
     def server_name(self) -> str:

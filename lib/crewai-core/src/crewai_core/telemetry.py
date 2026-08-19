@@ -18,7 +18,7 @@ from functools import cache
 import logging
 import os
 import threading
-from typing import Any, ClassVar, Final
+from typing import Any, ClassVar, Final, Literal
 
 from opentelemetry.context import Context
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -42,6 +42,9 @@ CREWAI_TELEMETRY_BASE_URL: Final[str] = "https://telemetry.crewai.com:4319"
 CREWAI_TELEMETRY_SERVICE_NAME: Final[str] = "crewAI-telemetry"
 
 TRACER_NAME: Final[str] = "crewai.telemetry"
+
+DeploySource = Literal["cli", "tui"]
+"""Where a deployment was initiated from: a direct CLI command, or the run TUI."""
 
 
 def close_span(span: Span) -> None:
@@ -290,43 +293,76 @@ class Telemetry:
     def deploy_signup_error_span(self) -> None:
         """Records when an error occurs during the deployment signup process."""
 
+        from crewai_core.version import get_crewai_version
+
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Deploy Signup Error")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
             close_span(span)
 
         self._safe_telemetry_procedure(_operation)
 
-    def start_deployment_span(self, uuid: str | None = None) -> None:
-        """Records the start of a deployment process."""
+    def start_deployment_span(
+        self, uuid: str | None = None, source: DeploySource = "cli"
+    ) -> None:
+        """Records redeploying an existing crew (``crewai deploy push``).
+
+        Also emits ``deploy:pushed`` so that deployments are countable from the
+        feature-usage aggregation regardless of where they were started from.
+
+        Args:
+            uuid: The deployment being pushed to.
+            source: Where the deployment was initiated from.
+        """
+
+        from crewai_core.version import get_crewai_version
 
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Start Deployment")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
+            self._add_attribute(span, "source", source)
             close_span(span)
 
         self._safe_telemetry_procedure(_operation)
+        self.feature_usage_span("deploy:pushed")
 
-    def create_crew_deployment_span(self) -> None:
-        """Records the creation of a new crew deployment."""
+    def create_crew_deployment_span(self, source: DeploySource = "cli") -> None:
+        """Records creating a new crew deployment (``crewai deploy create``).
+
+        Also emits ``deploy:created`` so that deployments are countable from the
+        feature-usage aggregation regardless of where they were started from.
+
+        Args:
+            source: Where the deployment was initiated from.
+        """
+
+        from crewai_core.version import get_crewai_version
 
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Create Crew Deployment")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
+            self._add_attribute(span, "source", source)
             close_span(span)
 
         self._safe_telemetry_procedure(_operation)
+        self.feature_usage_span("deploy:created")
 
     def get_crew_logs_span(
         self, uuid: str | None, log_type: str = "deployment"
     ) -> None:
         """Records the retrieval of crew logs."""
 
+        from crewai_core.version import get_crewai_version
+
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Get Crew Logs")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
             self._add_attribute(span, "log_type", log_type)
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
@@ -337,9 +373,12 @@ class Telemetry:
     def remove_crew_span(self, uuid: str | None = None) -> None:
         """Records the removal of a crew."""
 
+        from crewai_core.version import get_crewai_version
+
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Remove Crew")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
             close_span(span)
