@@ -579,9 +579,11 @@ class LLM(BaseLLM):
             return True
 
         if provider == "edenai":
-            # Eden AI ids are vendor/model, so the full reference is
-            # edenai/<vendor>/<model>. Any vendor id the gateway routes to is valid.
-            return True
+            # Eden AI ids are vendor/model, so a full reference is
+            # edenai/<vendor>/<model>. The vendor segment is whatever the gateway
+            # routes to, but both halves have to be present.
+            vendor, _, name = model_lower.partition("/")
+            return bool(vendor and name)
 
         if provider == "snowflake":
             return True
