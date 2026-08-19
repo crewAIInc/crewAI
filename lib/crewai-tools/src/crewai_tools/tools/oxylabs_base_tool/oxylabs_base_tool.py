@@ -60,7 +60,8 @@ class OxylabsBaseTool(BaseTool):
         if config is None:
             # Every subclass declares its own ``config`` model; an empty one of
             # that model is the "no options set" default.
-            config_model = type(self).model_fields["config"].annotation
+            config_field = type(self).model_fields.get("config")
+            config_model = config_field.annotation if config_field else None
             if config_model is None:
                 raise TypeError(
                     f"{type(self).__name__} must declare a 'config' model field"

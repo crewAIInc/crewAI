@@ -13,8 +13,12 @@ from crewai_tools import (
 from crewai_tools.tools.oxylabs_amazon_product_scraper_tool.oxylabs_amazon_product_scraper_tool import (
     OxylabsAmazonProductScraperConfig,
 )
+from crewai_tools.tools.oxylabs_base_tool.oxylabs_base_tool import OxylabsBaseTool
 from crewai_tools.tools.oxylabs_google_search_scraper_tool.oxylabs_google_search_scraper_tool import (
     OxylabsGoogleSearchScraperConfig,
+)
+from crewai_tools.tools.oxylabs_universal_scraper_tool.oxylabs_universal_scraper_tool import (
+    OxylabsUniversalScraperArgs,
 )
 from oxylabs import RealtimeClient
 from oxylabs.sources.response import Response as OxylabsResponse
@@ -233,3 +237,19 @@ def test_list_content_is_serialized_as_json(tool_class: type[BaseTool]):
 
     assert isinstance(result, str)
     assert json.loads(result) == [{"title": "Amazing product"}]
+
+
+def test_subclass_without_config_field_is_reported():
+    """The base class defaults ``config`` from the subclass's own model, so a
+    subclass that declares none must say so rather than raise ``KeyError``."""
+
+    class MissingConfig(OxylabsBaseTool):
+        name: str = "missing config"
+        description: str = "declares no config field"
+        args_schema: type[BaseModel] = OxylabsUniversalScraperArgs
+
+        def _run(self, url: str) -> str:
+            return ""
+
+    with pytest.raises(TypeError, match="must declare a 'config' model field"):
+        MissingConfig(username="username", password="password")
