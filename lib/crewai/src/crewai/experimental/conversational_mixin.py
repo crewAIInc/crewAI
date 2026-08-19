@@ -1343,9 +1343,19 @@ class _ConversationalMixin:
         return "private"
 
     def _is_public_turn_result(self, result: Any) -> bool:
-        if not isinstance(result, str):
+        """Whether a handler's return value should become the assistant reply.
+
+        Declarative ``agent`` and ``crew`` actions return ``LiteAgentOutput`` /
+        ``CrewOutput`` rather than a string, so the text lives on ``.raw``.
+        Without unwrapping it here their reply never reaches the transcript.
+        """
+        text = result
+        raw = getattr(result, "raw", None)
+        if not isinstance(text, str) and isinstance(raw, str):
+            text = raw
+        if not isinstance(text, str):
             return False
-        if result in {
+        if text in {
             "conversation",
             "converse",
             "end",
@@ -1353,7 +1363,7 @@ class _ConversationalMixin:
             "route_to_flow",
         }:
             return False
-        return result != cast(ConversationState, self.state).last_intent
+        return text != cast(ConversationState, self.state).last_intent
 
     @staticmethod
     def _coerce_user_message_text(user_message: str | dict[str, Any] | Any) -> str:
