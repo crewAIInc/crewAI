@@ -43,17 +43,6 @@ from crewai.flow.conversation import (
     prepare_conversational_turn,
 )
 
-# The built-in conversational graph lives on ``_ConversationalMixin`` and is
-# inherited by ``conversational = True`` subclasses. The definition-first start
-# migration intentionally stopped scanning inherited methods, so that graph no
-# longer registers. These end-to-end conversational tests are out of scope
-# until conversational mode is migrated onto the FlowDefinition.
-conversational_graph_broken = pytest.mark.skip(
-    reason="Experimental conversational registry behavior is out of scope for "
-    "the definition-first start migration."
-)
-
-
 class ConversationalFlow(Flow[ConversationState]):
     """Test base: a ``Flow[ConversationState]`` with conversational mode enabled.
 
@@ -309,7 +298,6 @@ class TestConversationalFlow:
         assert flow.state.events[0].agent_name == "researcher"
         assert flow.state.events[0].visibility == "public"
 
-    @conversational_graph_broken
     def test_private_agent_results_stay_out_of_shared_history(self) -> None:
         class PrivateFlow(ConversationalFlow):
             def route_turn(self, context: dict[str, Any]) -> str | None:
@@ -326,7 +314,6 @@ class TestConversationalFlow:
         assert flow.state.events[0].visibility == "private"
         assert flow.state.agent_threads["planner"][0].content == "private scratch"
 
-    @conversational_graph_broken
     def test_answer_from_history_uses_configured_llm_and_appends_reply(self) -> None:
         @ConversationConfig(answer_from_history_llm="gpt-4o-mini")
         class HistoryFlow(ConversationalFlow):
@@ -357,7 +344,6 @@ class TestConversationalFlow:
         assert flow.state.messages[-1].content == "summary from history"
         llm.call.assert_called_once()
 
-    @conversational_graph_broken
     def test_router_config_uses_structured_intent_response(self) -> None:
         class ResearchRoute(BaseModel):
             intent: Literal["research", "clarify"]
@@ -394,7 +380,6 @@ class TestConversationalFlow:
         assert llm.call.call_args.kwargs["response_format"] is ResearchRoute
         assert flow.state.messages[-1].content == "researched"
 
-    @conversational_graph_broken
     def test_router_config_falls_back_for_invalid_intent(self) -> None:
         class ResearchRoute(BaseModel):
             intent: str
@@ -453,7 +438,6 @@ class TestConversationalFlow:
             "end",
         }
 
-    @conversational_graph_broken
     def test_router_infers_custom_routes_without_internal_routes(self) -> None:
         class ResearchRoute(BaseModel):
             intent: Literal["research", "converse", "end"]
@@ -477,7 +461,6 @@ class TestConversationalFlow:
             "end",
         }
 
-    @conversational_graph_broken
     def test_router_config_uses_conversational_defaults(self) -> None:
         llm = MagicMock()
 
@@ -504,7 +487,6 @@ class TestConversationalFlow:
         )
         assert flow.state.messages[-1].content == "researched"
 
-    @conversational_graph_broken
     def test_builtin_converse_appends_assistant_message_and_uses_history(self) -> None:
         class ResearchRoute(BaseModel):
             intent: Literal["research", "converse", "end"]
@@ -552,7 +534,6 @@ class TestConversationalFlow:
         assert any(message["content"] == "prior findings" for message in messages)
         assert any(message["content"] == "summarize findings" for message in messages)
 
-    @conversational_graph_broken
     def test_conversational_turn_emits_message_and_route_events(self) -> None:
         class ResearchRoute(BaseModel):
             intent: Literal["research", "converse", "end"]
@@ -603,7 +584,6 @@ class TestConversationalFlow:
         assert routes[0].user_message == "just chat"
         assert routes[0].session_id == messages[0].session_id
 
-    @conversational_graph_broken
     def test_builtin_end_marks_conversation_ended(self) -> None:
         class ResearchRoute(BaseModel):
             intent: Literal["research", "converse", "end"]
@@ -632,7 +612,6 @@ class TestConversationalFlow:
         assert flow.state.ended is True
         assert flow.state.messages[-1].content == "Conversation ended."
 
-    @conversational_graph_broken
     def test_router_auto_enables_when_custom_routes_declared_and_no_explicit_config(
         self,
     ) -> None:
@@ -665,7 +644,6 @@ class TestConversationalFlow:
         # Router LLM should have been invoked.
         assert router_llm.call.call_count >= 1
 
-    @conversational_graph_broken
     def test_router_auto_enable_skipped_when_only_builtin_routes(self) -> None:
         """No custom routes → no auto-enable; falls through to converse."""
 
@@ -683,7 +661,6 @@ class TestConversationalFlow:
         # chat_llm was used by converse_turn, not as a router.
         assert chat_llm.call.call_count == 1
 
-    @conversational_graph_broken
     def test_router_auto_enable_skipped_when_default_intents_set(self) -> None:
         """Legacy ``default_intents`` opts out of router auto-enable."""
 
@@ -814,7 +791,6 @@ class TestConversationalFlow:
         assert bootstrap_calls == ["ran"]
         assert flow.state.messages[-1].content == "worked"
 
-    @conversational_graph_broken
     def test_handle_turn_reruns_graph_after_prior_turn_completed(self) -> None:
         """Multi-turn must not flip ``_is_execution_resuming`` and short-circuit.
 
@@ -870,7 +846,6 @@ class TestConversationalFlow:
         assert flow.state.messages[-1].content == "fresh research"
         assert flow._is_execution_resuming is False
 
-    @conversational_graph_broken
     def test_route_catalog_combines_docstrings_builtins_and_overrides(self) -> None:
         """Catalog precedence: route_descriptions > built-in > docstring."""
 
@@ -902,7 +877,6 @@ class TestConversationalFlow:
         assert "Ordinary chat" in catalog["converse"]
         assert "finished" in catalog["end"]
 
-    @conversational_graph_broken
     def test_route_catalog_falls_back_to_empty_when_no_docstring(self) -> None:
         @ConversationConfig(router=RouterConfig(routes=["BARE"]))
         class BareFlow(ConversationalFlow):
@@ -915,7 +889,6 @@ class TestConversationalFlow:
 
         assert catalog["BARE"] == ""
 
-    @conversational_graph_broken
     def test_router_messages_include_route_catalog(self) -> None:
         """The router system prompt must enumerate routes with descriptions."""
 
@@ -949,7 +922,6 @@ class TestConversationalFlow:
         assert "- converse: Ordinary chat" in system_message
         assert system_message.startswith("A research-focused assistant.")
 
-    @conversational_graph_broken
     def test_router_decision_persists_last_intent_and_passes_it_next_turn(
         self,
     ) -> None:
@@ -994,7 +966,6 @@ class TestConversationalFlow:
         ]
         assert '"last_intent": "research"' in second_call_user_content
 
-    @conversational_graph_broken
     def test_custom_route_still_runs_with_builtin_routes(self) -> None:
         class ResearchRoute(BaseModel):
             intent: Literal["research", "converse", "end"]
@@ -1041,7 +1012,6 @@ class TestConversationalFlow:
         assert flow.state.current_user_message is None
         assert flow.state.session_ready is False
 
-    @conversational_graph_broken
     def test_mixin_handle_turn_resolves_on_flow_subclass(self) -> None:
         """``Flow`` mixes in ``_ConversationalMixin`` — opt-in subclasses get its methods.
 
@@ -1074,7 +1044,6 @@ class TestConversationalFlow:
         flow.handle_turn("anything")
         assert flow.state.messages[-1].content == "worked"
 
-    @conversational_graph_broken
     def test_chat_runs_repl_over_handle_turn_and_finalizes(self) -> None:
         @ConversationConfig(defer_trace_finalization=False)
         class MyChat(ConversationalFlow):
@@ -1115,7 +1084,6 @@ class TestConversationalFlow:
         mock_finalize.assert_called_once_with()
         assert flow.defer_trace_finalization is False
 
-    @conversational_graph_broken
     def test_chat_stringifies_repl_output_like_conversation_helpers(self) -> None:
         class RawResult:
             raw = "raw assistant output"
