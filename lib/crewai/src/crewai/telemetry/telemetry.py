@@ -113,18 +113,25 @@ class Telemetry:
         return cls._instance
 
     def __init__(self) -> None:
-        if hasattr(self, "_initialized") and self._initialized:
+        if getattr(self, "_initialized", False):
             return
 
-        self.ready: bool = False
-        self.trace_set: bool = False
-        self._initialized: bool = True
-        self._coding_agent_reported: bool = False
-        self._coding_agent_lock = threading.Lock()
+        with self._lock:
+            if getattr(self, "_initialized", False):
+                return
 
-        if self._is_telemetry_disabled():
-            return
+            self.ready: bool = False
+            self.trace_set: bool = False
+            self._coding_agent_reported: bool = False
+            self._coding_agent_lock = threading.Lock()
+            self._initialized = True
 
+            if self._is_telemetry_disabled():
+                return
+
+            self._setup_telemetry()
+
+    def _setup_telemetry(self) -> None:
         try:
             self.resource = Resource(
                 attributes={SERVICE_NAME: CREWAI_TELEMETRY_SERVICE_NAME},
