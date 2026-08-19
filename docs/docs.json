@@ -129,6 +129,7 @@
                           "edge/en/guides/frontend/agentic-generative-ui",
                           "edge/en/guides/frontend/reasoning",
                           "edge/en/guides/frontend/a2ui",
+                          "edge/en/guides/frontend/openui",
                           "edge/en/guides/frontend/human-in-the-loop",
                           "edge/en/guides/frontend/shared-state",
                           "edge/en/guides/frontend/frontend-actions",
@@ -12975,6 +12976,13 @@
                         ]
                       },
                       {
+                        "group": "Frontend",
+                        "icon": "browser",
+                        "pages": [
+                          "edge/pt-BR/guides/frontend/openui"
+                        ]
+                      },
+                      {
                         "group": "Ferramentas",
                         "icon": "wrench",
                         "pages": [
@@ -24965,6 +24973,13 @@
                           "edge/ko/guides/flows/mastering-flow-state",
                           "edge/ko/guides/flows/conversational-flows",
                           "edge/ko/guides/flows/inputs-id-deprecation"
+                        ]
+                      },
+                      {
+                        "group": "프론트엔드",
+                        "icon": "browser",
+                        "pages": [
+                          "edge/ko/guides/frontend/openui"
                         ]
                       },
                       {
@@ -37366,6 +37381,13 @@
                           "edge/ar/guides/flows/mastering-flow-state",
                           "edge/ar/guides/flows/conversational-flows",
                           "edge/ar/guides/flows/inputs-id-deprecation"
+                        ]
+                      },
+                      {
+                        "group": "الواجهة الأمامية",
+                        "icon": "browser",
+                        "pages": [
+                          "edge/ar/guides/frontend/openui"
                         ]
                       },
                       {

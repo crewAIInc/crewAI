@@ -1,0 +1,230 @@
+---
+title: OpenUI
+description: OpenUI Lang을 사용하여 CrewAI Flow에서 모델이 생성한 차트, 폼, 인터랙티브 컴포넌트를 스트리밍합니다.
+icon: window-maximize
+mode: "wide"
+---
+
+## 에이전트가 인터랙티브 응답을 구성하도록 하기
+
+[OpenUI](https://www.openui.com/)는 [생성형 UI의 개방형 계층](/edge/en/guides/frontend/generative-ui#open-ended)입니다. 모델은 사용자가 제어하는 라이브러리의 컴포넌트를 조합하는 간결한 언어인 [OpenUI Lang](https://github.com/thesysdev/openui)을 작성합니다. 스트리밍 파서는 모델이 응답하는 동안 이 언어를 React 컴포넌트로 변환합니다.
+
+CrewAI와 자연스럽게 연결되는 지점은 AG-UI입니다. CrewAI Flow가 대화 상태와 LLM 턴을 담당하고, OpenUI의 `AgentInterface`가 해당 턴을 Flow로 보내 스트리밍 결과를 렌더링합니다. 후속 선택과 폼 제출도 같은 경로로 처리됩니다.
+
+<Note>
+이 가이드는 여러 턴의 대화와 상호작용 컨텍스트를 보존하기 위해 **Flow**를 사용합니다. CrewAI의 상태 기반 워크플로 모델은 [Flows](/edge/ko/concepts/flows)에서 확인하세요.
+</Note>
+
+## 아키텍처
+
+```text
+OpenUI AgentInterface
+  └─ agUIAdapter() ──► CrewAI AG-UI endpoint ──► CrewAI Flow ──► LLM
+          ▲                                                  │
+          └──── streamed, model-produced OpenUI Lang ────────┘
+```
+
+각 계층의 책임은 분리되어 있습니다.
+
+| 계층 | 책임 |
+| --- | --- |
+| **CrewAI** | Flow 수명 주기, 대화 상태, 모든 LLM 턴 |
+| **AG-UI** | 스트리밍 요청 및 이벤트 전송 |
+| **OpenUI** | 컴포넌트 라이브러리, 생성된 시스템 프롬프트, 파서, 렌더러, 테마, 후속 선택, 폼 |
+
+전체 실행 예제는 [`docs/examples/openui-crewai`](https://github.com/crewAIInc/crewAI/tree/main/docs/examples/openui-crewai)에 있습니다. CrewAI 1.15.16, `ag-ui-crewai` 0.3.0, `@openuidev/react-ui` 0.13.6, `@openuidev/react-lang` 0.2.11 버전을 고정합니다.
+
+## 통합 구현
+
+<Steps>
+
+<Step title="정확한 OpenUI 라이브러리 내보내기">
+
+렌더링 라이브러리와 프롬프트 옵션을 하나의 모듈에 유지하세요. OpenUI CLI는 이 export를 가져와 시스템 프롬프트를 생성하고, 프런트엔드는 같은 `library`를 가져와 응답을 렌더링합니다.
+
+```ts
+// frontend/src/library.ts
+import type { PromptOptions } from "@openuidev/react-lang";
+import {
+  openuiChatLibrary,
+  openuiChatPromptOptions,
+} from "@openuidev/react-ui/genui-lib";
+
+export const library = openuiChatLibrary;
+export const promptOptions: PromptOptions = {
+  ...openuiChatPromptOptions,
+  additionalRules: [
+    ...(openuiChatPromptOptions.additionalRules ?? []),
+    "Return only OpenUI Lang. Never wrap it in Markdown.",
+    "End analytical results with useful follow-up choices.",
+  ],
+};
+```
+
+개발 및 프로덕션 빌드 전에 프롬프트를 생성합니다.
+
+```json
+{
+  "scripts": {
+    "generate:prompt": "openui generate src/library.ts --out generated/system-prompt.txt",
+    "predev": "npm run generate:prompt",
+    "prebuild": "npm run generate:prompt"
+  }
+}
+```
+
+`generated/system-prompt.txt`와 `generated/system-prompt.spec.json`은 무시하세요. 이 파일들은 소스가 아니라 `library.ts`에서 파생된 빌드 산출물입니다.
+
+</Step>
+
+<Step title="모든 턴을 CrewAI Flow로 실행하기">
+
+생성된 프롬프트를 불러와 대화 앞에 추가하고, 기존 `ag-ui-crewai` 브리지로 모델 호출을 스트리밍합니다.
+
+```python
+import os
+from pathlib import Path
+
+from ag_ui_crewai.sdk import CopilotKitState, copilotkit_stream
+from crewai.flow.flow import Flow, start
+from litellm import acompletion
+
+PROMPT_PATH = Path("../frontend/generated/system-prompt.txt")
+
+def message_for_llm(message):
+    payload = (
+        message.model_dump(exclude_none=True)
+        if hasattr(message, "model_dump")
+        else dict(message)
+    )
+    if payload.get("role") == "assistant" and payload.get("tool_calls") == []:
+        payload.pop("tool_calls")
+    return payload
+
+class OpenUIFlow(Flow[CopilotKitState]):
+    @start()
+    async def chat(self):
+        response = await copilotkit_stream(
+            await acompletion(
+                model=os.getenv("OPENUI_MODEL", "openai/gpt-4.1-mini"),
+                messages=[
+                    {"role": "system", "content": PROMPT_PATH.read_text()},
+                    *(message_for_llm(message) for message in self.state.messages),
+                ],
+                stream=True,
+            )
+        )
+        self.state.messages.append(response.choices[0].message)
+```
+
+이 작은 정규화는 AG-UI에서는 허용되지만 OpenAI가 후속 턴에서 거부하는 빈 `tool_calls` 배열을 제거합니다. 메시지 내용은 다시 쓰지 않으므로 OpenUI의 후속 선택과 폼 컨텍스트가 모델에 그대로 전달됩니다.
+
+Flow를 AG-UI 엔드포인트로 노출합니다.
+
+```python
+from ag_ui_crewai.endpoint import add_crewai_flow_fastapi_endpoint
+from fastapi import FastAPI
+
+app = FastAPI(title="CrewAI + OpenUI")
+add_crewai_flow_fastapi_endpoint(app=app, flow=OpenUIFlow(), path="/openui")
+```
+
+프로바이더 키는 이 서버에만 보관하세요. React 클라이언트에는 `OPENAI_API_KEY`가 전달되지 않습니다.
+
+</Step>
+
+<Step title="AgentInterface로 스트림 렌더링하기">
+
+`agUIAdapter()`는 엔드포인트 프로토콜과 직접 일치하므로 별도의 프런트엔드 런타임이 필요하지 않습니다. `AgentInterface`에는 OpenUI 스트리밍 파서와 렌더러가 포함되어 있습니다. 여기서는 내부 `ThemeProvider`를 활성화하고 눈에 보이는 테마 재정의를 전달합니다.
+
+```tsx
+import { useMemo } from "react";
+import {
+  AgentInterface,
+  agUIAdapter,
+  createTheme,
+  fetchLLM,
+} from "@openuidev/react-ui";
+import { library } from "./library";
+
+const theme = createTheme({
+  interactiveAccentDefault: "oklch(57% 0.22 285)",
+});
+
+export function App() {
+  const llm = useMemo(
+    () => fetchLLM({
+      url: "http://localhost:8000/openui",
+      streamAdapter: agUIAdapter(),
+      body: { state: {}, forwardedProps: {} },
+    }),
+    [],
+  );
+
+  return (
+    <AgentInterface
+      llm={llm}
+      componentLibrary={library}
+      agentName="CrewAI + OpenUI"
+      theme={{ mode: "light", lightTheme: theme }}
+    />
+  );
+}
+```
+
+`state`와 `forwardedProps`는 현재 `ag-ui-crewai` 요청 모델의 필수 필드입니다. OpenUI의 범용 클라이언트에서는 AG-UI 스트림 어댑터를 교체하지 않고 이 필드를 추가할 수 있습니다.
+
+</Step>
+
+<Step title="예제 실행하기">
+
+```bash
+cd docs/examples/openui-crewai/frontend
+npm install
+npm run dev
+```
+
+두 번째 터미널에서 다음을 실행합니다.
+
+```bash
+cd docs/examples/openui-crewai/backend
+cp .env.example .env
+# Add OPENAI_API_KEY to .env
+uv sync
+uv run uvicorn openui_crewai_example.server:app --reload --port 8000
+```
+
+[http://localhost:5173](http://localhost:5173)을 여세요. 스타터를 사용해 차트를 렌더링하고 후속 선택을 클릭한 다음 검증이 적용된 프로젝트 견적 폼을 제출할 수 있습니다.
+
+</Step>
+
+</Steps>
+
+## 상호작용이 CrewAI로 돌아가는 방식
+
+`FollowUpBlock`과 폼 버튼은 OpenUI의 `@ToAssistant` 액션을 사용합니다. `AgentInterface`는 클릭을 새 사용자 메시지로 바꾸고 현재 폼 상태를 상호작용 컨텍스트에 포함합니다. `agUIAdapter()`는 이 메시지를 동일한 `/openui` 엔드포인트에 게시하므로 다음 응답은 브라우저 전용 콜백이나 모의 응답이 아니라 실제 CrewAI Flow의 새 턴입니다.
+
+이 왕복 경로 덕분에 통합을 워크플로에 활용할 수 있습니다. 생성된 화면이 결정이나 구조화된 입력을 수집한 뒤, Flow가 이를 추론하여 다음 화면을 생성할 수 있습니다.
+
+## 관련 문서
+
+<CardGroup cols={3}>
+  <Card title="생성형 UI" icon="wand-magic-sparkles" href="/edge/en/guides/frontend/generative-ui">
+    제어형, 선언형, 개방형 렌더링 방식을 비교합니다.
+  </Card>
+  <Card title="A2UI" icon="table-cells" href="/edge/en/guides/frontend/a2ui">
+    선언적이고 카탈로그로 제한된 화면에는 CopilotKit 카탈로그를 사용합니다.
+  </Card>
+  <Card title="Conversational Flows" icon="comments" href="/edge/en/guides/frontend/conversational-flows">
+    동일한 AG-UI 프로토콜 뒤에서 CrewAI가 관리하는 세션과 대화 기록을 사용합니다.
+  </Card>
+  <Card title="OpenUI" icon="window-maximize" href="https://www.openui.com">
+    컴포넌트 라이브러리와 OpenUI Lang을 살펴보세요.
+  </Card>
+  <Card title="AG-UI" icon="arrows-left-right" href="https://docs.ag-ui.com">
+    에이전트와 프런트엔드 사이의 스트리밍 프로토콜을 알아보세요.
+  </Card>
+  <Card title="Flows" icon="code-branch" href="/edge/ko/concepts/flows">
+    CrewAI가 상태를 가진 워크플로를 관리하는 방법을 알아보세요.
+  </Card>
+</CardGroup>
