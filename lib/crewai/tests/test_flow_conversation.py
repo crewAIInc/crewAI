@@ -2420,6 +2420,39 @@ class TestDeclarativeConversationalFlow:
         assert "cannot carry a model class" in caplog.text
 
 
+class TestRoutingArtefactLabels:
+    """A route label echoed by a handler is a routing artefact, not a reply."""
+
+    def test_class_based_set_matches_the_framework_labels(self) -> None:
+        @ConversationConfig()
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        assert ClassChat()._routing_artefact_labels() == {
+            "conversation",
+            "converse",
+            "end",
+            "answer_from_history",
+            "route_to_flow",
+        }
+
+    def test_a_declared_extra_builtin_route_is_covered(self) -> None:
+        """A literal list would miss it; deriving from the routes does not."""
+        flow = Flow.from_declaration(
+            contents=_conversational_declaration(
+                conversational={"builtin_routes": ["converse", "end", "greet"]}
+            )
+        )
+
+        assert "greet" in flow._routing_artefact_labels()
+        assert flow._is_public_turn_result("greet") is False
+
+    def test_ordinary_text_is_still_a_reply(self) -> None:
+        flow = Flow.from_declaration(contents=_conversational_declaration())
+
+        assert flow._is_public_turn_result("Your order shipped.") is True
+
+
 class TestConversationalCapabilityAttribute:
     """A declarative chat flow reports itself conversational to outside callers.
 
@@ -2941,12 +2974,13 @@ class TestDeclarativeTurnMatrix:
         prompts: list[str] = []
         outputs: list[str] = []
 
-        flow.chat(
-            input_fn=lambda prompt: (prompts.append(prompt), ["hi", "bye", "exit"][
-                len(prompts) - 1
-            ])[1],
-            output_fn=outputs.append,
-        )
+        replies = iter(["hi", "bye", "exit"])
+
+        def input_fn(prompt: str) -> str:
+            prompts.append(prompt)
+            return next(replies)
+
+        flow.chat(input_fn=input_fn, output_fn=outputs.append)
 
         assert [m.content for m in flow.state.messages if m.role == "user"] == [
             "hi",

@@ -1380,15 +1380,24 @@ class _ConversationalMixin:
             text = raw
         if not isinstance(text, str):
             return False
-        if text in {
-            "conversation",
-            "converse",
-            "end",
-            "answer_from_history",
-            "route_to_flow",
-        }:
+        if text in self._routing_artefact_labels():
             return False
         return text != cast(ConversationState, self.state).last_intent
+
+    def _routing_artefact_labels(self) -> set[str]:
+        """Strings that are a routing decision rather than something to say.
+
+        Derived from the effective routes so a declaration that customizes
+        ``builtin_routes`` is covered too; a literal list here would miss the
+        added labels. ``conversation`` and ``route_to_flow`` are not routes:
+        the first is a legacy label and the second is an outcome of the
+        answer-from-history check.
+        """
+        return (
+            self._effective_builtin_routes()
+            | self._effective_internal_routes()
+            | {"conversation", "route_to_flow"}
+        )
 
     @staticmethod
     def _coerce_user_message_text(user_message: str | dict[str, Any] | Any) -> str:
