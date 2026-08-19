@@ -2420,6 +2420,99 @@ class TestDeclarativeConversationalFlow:
         assert "cannot carry a model class" in caplog.text
 
 
+class TestRoutingArtefactLabels:
+    """A route label echoed by a handler is a routing artefact, not a reply."""
+
+    def test_class_based_set_matches_the_framework_labels(self) -> None:
+        @ConversationConfig()
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        assert ClassChat()._routing_artefact_labels() == {
+            "conversation",
+            "converse",
+            "end",
+            "answer_from_history",
+            "route_to_flow",
+        }
+
+    def test_a_declared_extra_builtin_route_is_covered(self) -> None:
+        """A literal list would miss it; deriving from the routes does not."""
+        flow = Flow.from_declaration(
+            contents=_conversational_declaration(
+                conversational={"builtin_routes": ["converse", "end", "greet"]}
+            )
+        )
+
+        assert "greet" in flow._routing_artefact_labels()
+        assert flow._is_public_turn_result("greet") is False
+
+    def test_ordinary_text_is_still_a_reply(self) -> None:
+        flow = Flow.from_declaration(contents=_conversational_declaration())
+
+        assert flow._is_public_turn_result("Your order shipped.") is True
+
+
+class TestConversationalCapabilityAttribute:
+    """A declarative chat flow reports itself conversational to outside callers.
+
+    Consumers outside this package capability-check the ``conversational``
+    attribute, so it must agree with ``_is_conversational_enabled()``.
+    """
+
+    def test_declaration_marks_the_instance_conversational(self) -> None:
+        flow = Flow.from_declaration(contents=_conversational_declaration())
+
+        assert getattr(flow, "conversational") is True
+        assert flow._is_conversational_enabled() is True
+        assert callable(getattr(flow, "stream_turn", None))
+
+    def test_the_flag_does_not_leak_onto_the_class(self) -> None:
+        """The DSL projection reads it off the class to decide what to emit."""
+        Flow.from_declaration(contents=_conversational_declaration())
+
+        assert Flow.conversational is False
+
+        class LaterPlainFlow(Flow):
+            @start()
+            def begin(self) -> str:
+                return "begin"
+
+        assert LaterPlainFlow.conversational is False
+        assert LaterPlainFlow.flow_definition().conversational is None
+
+    def test_disabled_declaration_is_not_marked(self) -> None:
+        flow = Flow.from_declaration(
+            contents=_conversational_declaration(conversational={"enabled": False})
+        )
+
+        assert getattr(flow, "conversational") is False
+
+    def test_non_conversational_declaration_is_not_marked(self) -> None:
+        flow = Flow.from_declaration(
+            contents={
+                "schema": "crewai.flow/v1",
+                "name": "Plain",
+                "methods": {
+                    "begin": {
+                        "do": {"call": "expression", "expr": "'x'"},
+                        "start": True,
+                    }
+                },
+            }
+        )
+
+        assert getattr(flow, "conversational") is False
+
+    def test_class_based_flow_keeps_its_own_flag(self) -> None:
+        @ConversationConfig()
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        assert ClassChat.conversational is True
+        assert getattr(ClassChat(), "conversational") is True
+
+
 class TestBuiltinRouteResolution:
     """``route_turn`` and ``_effective_routes`` agree on what is built in."""
 
@@ -2587,3 +2680,499 @@ class TestClassConfigStillWins:
 
         assert flow._conversation_config.llm is llm
         assert flow._conversation_config.system_prompt == "From the class."
+
+
+class TestMinimalDeclarativeChat:
+    """A declaration only has to name its own routes."""
+
+    @staticmethod
+    def _declaration(**overrides: Any) -> dict[str, Any]:
+        declaration: dict[str, Any] = {
+            "schema": "crewai.flow/v1",
+            "name": "MinimalChat",
+            "conversational": {},
+            "methods": {
+                "handle_order": {
+                    "do": {"call": "expression", "expr": "'Your order shipped.'"},
+                    "listen": "order",
+                    "description": "Order status questions.",
+                }
+            },
+        }
+        declaration.update(overrides)
+        return declaration
+
+    def test_minimal_declaration_runs_a_conversational_turn(self) -> None:
+        # No custom routes, so the router does not auto-enable and the turn
+        # goes straight to the built-in converse handler.
+        declaration = self._declaration(methods={})
+        flow = Flow.from_declaration(contents=declaration)
+        flow._conversation_config.llm = _ScriptedLLM(["Hello there."])
+
+        assert flow.handle_turn("hi") == "Hello there."
+        assert [(m.role, m.content) for m in flow.state.messages] == [
+            ("user", "hi"),
+            ("assistant", "Hello there."),
+        ]
+
+    def test_minimal_declaration_implies_conversation_state(self) -> None:
+        flow = Flow.from_declaration(contents=self._declaration())
+
+        assert isinstance(flow.state, ConversationState)
+
+    def test_minimal_declaration_routes_to_a_declared_handler(self) -> None:
+        flow = Flow.from_declaration(contents=self._declaration())
+        flow._conversation_config.router = RouterConfig(
+            llm=_ScriptedLLM(['{"intent": "order"}'])
+        )
+
+        assert flow.handle_turn("where is my order?") == "Your order shipped."
+        assert flow.state.last_intent == "order"
+
+    def test_method_description_reaches_the_router_catalog(self) -> None:
+        flow = Flow.from_declaration(contents=self._declaration())
+
+        catalog = flow._build_route_catalog(RouterConfig(routes=["order"]))
+
+        assert catalog["order"] == "Order status questions."
+
+
+class TestBuiltinMethodSynthesis:
+    """A declaration does not have to name the built-in methods."""
+
+    BUILTIN_METHODS = {
+        "route_conversation",
+        "converse_turn",
+        "end_conversation",
+        "answer_from_history_turn",
+    }
+
+    @staticmethod
+    def _declaration(**overrides: Any) -> dict[str, Any]:
+        declaration: dict[str, Any] = {
+            "schema": "crewai.flow/v1",
+            "name": "SynthChat",
+            "conversational": {},
+            "methods": {
+                "handle_order": {
+                    "do": {"call": "expression", "expr": "'shipped'"},
+                    "listen": "order",
+                }
+            },
+        }
+        declaration.update(overrides)
+        return declaration
+
+    def test_builtin_methods_are_synthesized_with_their_roles(self) -> None:
+        flow = Flow.from_declaration(contents=self._declaration())
+        methods = flow._definition.methods
+
+        assert self.BUILTIN_METHODS <= set(methods)
+        assert methods["route_conversation"].start is True
+        assert methods["route_conversation"].router is True
+        assert methods["converse_turn"].listen == "converse"
+        assert methods["end_conversation"].listen == "end"
+        assert methods["answer_from_history_turn"].listen == "answer_from_history"
+
+    def test_synthesized_refs_match_the_python_projection(self) -> None:
+        class ProjectedChat(Flow):
+            conversational = True
+
+        projected = ProjectedChat.flow_definition().methods
+        synthesized = Flow.from_declaration(
+            contents=self._declaration()
+        )._definition.methods
+
+        for name in self.BUILTIN_METHODS:
+            assert synthesized[name].do == projected[name].do
+
+    def test_author_supplied_entry_is_not_overridden(self) -> None:
+        declaration = self._declaration()
+        declaration["methods"]["converse_turn"] = {
+            "do": {"call": "expression", "expr": "'mine'"},
+            "listen": "converse",
+        }
+
+        flow = Flow.from_declaration(contents=declaration)
+
+        assert flow._definition.methods["converse_turn"].do.expr == "'mine'"
+
+    def test_disabled_block_synthesizes_nothing(self) -> None:
+        flow = Flow.from_declaration(
+            contents=self._declaration(conversational={"enabled": False})
+        )
+
+        assert set(flow._definition.methods) == {"handle_order"}
+
+    def test_non_conversational_flow_synthesizes_nothing(self) -> None:
+        flow = Flow.from_declaration(
+            contents={
+                "schema": "crewai.flow/v1",
+                "name": "Plain",
+                "methods": {
+                    "begin": {
+                        "do": {"call": "expression", "expr": "'x'"},
+                        "start": True,
+                    }
+                },
+            }
+        )
+
+        assert set(flow._definition.methods) == {"begin"}
+
+    def test_the_loaded_definition_itself_is_left_alone(self) -> None:
+        """Synthesis is a runtime concern; the contract stays as authored."""
+        from crewai.flow.flow_definition import FlowDefinition
+
+        definition = FlowDefinition.from_declaration(contents=self._declaration())
+
+        assert set(definition.methods) == {"handle_order"}
+
+
+class TestRouteDescriptions:
+    """Route descriptions survive into a declaration."""
+
+    def test_python_handler_docstring_is_projected(self) -> None:
+        class DocumentedChat(Flow):
+            conversational = True
+
+            @listen("research")
+            def handle_research(self) -> str:
+                """Fresh web research and current news."""
+                return "researched"
+
+        definition = DocumentedChat.flow_definition()
+
+        assert (
+            definition.methods["handle_research"].description
+            == "Fresh web research and current news."
+        )
+
+    def test_declared_description_reaches_the_catalog(self) -> None:
+        flow = Flow.from_declaration(
+            contents={
+                "schema": "crewai.flow/v1",
+                "name": "DescribedChat",
+                "conversational": {},
+                "methods": {
+                    "handle_order": {
+                        "do": {"call": "expression", "expr": "'shipped'"},
+                        "listen": "order",
+                        "description": "Order status questions.",
+                    }
+                },
+            }
+        )
+
+        catalog = flow._build_route_catalog(RouterConfig(routes=["order"]))
+
+        assert catalog["order"] == "Order status questions."
+
+    def test_missing_description_is_empty_not_nonetype_docstring(self) -> None:
+        flow = Flow.from_declaration(
+            contents={
+                "schema": "crewai.flow/v1",
+                "name": "UndescribedChat",
+                "conversational": {},
+                "methods": {
+                    "handle_order": {
+                        "do": {"call": "expression", "expr": "'shipped'"},
+                        "listen": "order",
+                    }
+                },
+            }
+        )
+
+        catalog = flow._build_route_catalog(RouterConfig(routes=["order"]))
+
+        assert catalog["order"] == ""
+
+    def test_python_docstring_still_describes_the_route(self) -> None:
+        class DocumentedChat(Flow):
+            conversational = True
+
+            @listen("research")
+            def handle_research(self) -> str:
+                """Fresh web research and current news."""
+                return "researched"
+
+        catalog = DocumentedChat()._build_route_catalog(
+            RouterConfig(routes=["research"])
+        )
+
+        assert catalog["research"] == "Fresh web research and current news."
+
+
+class TestDeclarativeTurnMatrix:
+    """A declaration-built flow across the turn entry points."""
+
+    @staticmethod
+    def _flow(reply: str = "Declared reply.") -> Flow[Any]:
+        flow = Flow.from_declaration(
+            contents={
+                "schema": "crewai.flow/v1",
+                "name": "MatrixChat",
+                "conversational": {},
+                "methods": {},
+            }
+        )
+        flow._conversation_config.llm = _ScriptedLLM([reply])
+        return flow
+
+    def test_sync_turn(self) -> None:
+        assert self._flow().handle_turn("hi") == "Declared reply."
+
+    def test_stream_turn_frames_match_the_class_based_path(self) -> None:
+        """A chat UI must see the same frame sequence either way."""
+
+        @ConversationConfig(llm=_ScriptedLLM(["streamed reply"]))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        class_frames = [f.type for f in ClassChat().stream_turn("hi").events]
+
+        flow = self._flow("streamed reply")
+        stream = flow.stream_turn("hi", session_id="session-1")
+        declared_frames = [f.type for f in stream.events]
+
+        assert declared_frames == class_frames
+        assert declared_frames[0] == "conversation_turn_started"
+        assert declared_frames[-1] == "conversation_turn_completed"
+        assert "conversation_message_added" in declared_frames
+        assert stream.result == "streamed reply"
+        assert flow.state.messages[-1].content == "streamed reply"
+
+    def test_turn_inside_a_running_event_loop(self) -> None:
+        """``kickoff`` takes its thread-pool path when a loop is already running."""
+        import asyncio
+
+        flow = self._flow("reply from the loop")
+
+        async def run() -> Any:
+            return flow.handle_turn("hi")
+
+        assert asyncio.run(run()) == "reply from the loop"
+        assert flow.state.messages[-1].content == "reply from the loop"
+
+    def test_follow_up_turn_keeps_history(self) -> None:
+        flow = self._flow()
+        flow._conversation_config.llm = _ScriptedLLM(["first", "second"])
+
+        flow.handle_turn("one")
+        flow.handle_turn("two")
+
+        assert [(m.role, m.content) for m in flow.state.messages] == [
+            ("user", "one"),
+            ("assistant", "first"),
+            ("user", "two"),
+            ("assistant", "second"),
+        ]
+
+    def test_chat_repl_drives_declared_turns(self) -> None:
+        flow = self._flow()
+        flow._conversation_config.llm = _ScriptedLLM(["hello", "goodbye"])
+        prompts: list[str] = []
+        outputs: list[str] = []
+
+        replies = iter(["hi", "bye", "exit"])
+
+        def input_fn(prompt: str) -> str:
+            prompts.append(prompt)
+            return next(replies)
+
+        flow.chat(input_fn=input_fn, output_fn=outputs.append)
+
+        assert [m.content for m in flow.state.messages if m.role == "user"] == [
+            "hi",
+            "bye",
+        ]
+        assert len(outputs) == 2
+
+
+class TestPrivateAgentResultsStayPrivate:
+    """Unwrapping ``.raw`` must not defeat ``visible_agent_outputs``."""
+
+    class _Out:
+        """Shape of ``LiteAgentOutput`` / ``CrewOutput``."""
+
+        def __init__(self, raw: str) -> None:
+            self.raw = raw
+
+    def test_privately_recorded_result_is_not_republished(self) -> None:
+        """A handler that records privately and hands the object back.
+
+        ``append_agent_result`` defaults to private and does not set the
+        reply flag, so before this guard the end-of-turn fallback promoted the
+        very object the handler had just asked to keep out of the transcript.
+        """
+        recorded = self._Out("SECRET scratch work")
+
+        @ConversationConfig()
+        class PrivateChat(Flow[ConversationState]):
+            @listen("converse")
+            def converse_turn(self) -> Any:
+                self.append_agent_result("researcher", recorded)
+                return recorded
+
+        flow = PrivateChat()
+        flow.handle_turn("look something up")
+
+        assert [m.role for m in flow.state.messages] == ["user"]
+        assert flow.state.agent_threads["researcher"][0].content == (
+            "SECRET scratch work"
+        )
+
+    def test_a_summary_returned_alongside_a_private_result_is_published(self) -> None:
+        """Identity, not content: a different return value is still promoted."""
+
+        @ConversationConfig()
+        class SummarisingChat(Flow[ConversationState]):
+            @listen("converse")
+            def converse_turn(self) -> Any:
+                self.append_agent_result(
+                    "researcher", TestPrivateAgentResultsStayPrivate._Out("SECRET")
+                )
+                return "Here is the summary."
+
+        flow = SummarisingChat()
+        flow.handle_turn("look something up")
+
+        assert flow.state.messages[-1].content == "Here is the summary."
+
+    def test_visible_agent_outputs_still_publishes(self) -> None:
+        result = self._Out("PUBLIC RESULT")
+
+        @ConversationConfig(visible_agent_outputs="all")
+        class VisibleChat(Flow[ConversationState]):
+            @listen("converse")
+            def converse_turn(self) -> Any:
+                self.append_agent_result("researcher", result)
+                return result
+
+        flow = VisibleChat()
+        flow.handle_turn("go")
+
+        assert flow.state.messages[-1].content == "PUBLIC RESULT"
+        assert [m.role for m in flow.state.messages].count("assistant") == 1
+
+    def test_explicit_public_visibility_still_publishes(self) -> None:
+        result = self._Out("PUBLIC RESULT")
+
+        @ConversationConfig()
+        class PublicChat(Flow[ConversationState]):
+            @listen("converse")
+            def converse_turn(self) -> Any:
+                self.append_agent_result("researcher", result, visibility="public")
+                return result
+
+        flow = PublicChat()
+        flow.handle_turn("go")
+
+        assert flow.state.messages[-1].content == "PUBLIC RESULT"
+        assert [m.role for m in flow.state.messages].count("assistant") == 1
+
+    def test_recorded_results_do_not_leak_across_turns(self) -> None:
+        """The per-turn list resets, so turn 2 is judged on its own."""
+        shared = self._Out("reply text")
+
+        @ConversationConfig()
+        class TwoTurnChat(Flow[ConversationState]):
+            @listen("converse")
+            def converse_turn(self) -> Any:
+                return shared
+
+        flow = TwoTurnChat()
+        flow.handle_turn("one")
+        flow.handle_turn("two")
+
+        assert [m.content for m in flow.state.messages if m.role == "assistant"] == [
+            "reply text",
+            "reply text",
+        ]
+
+
+class TestHandlerReplyPromotion:
+    """An agent or crew handler's reply reaches the transcript."""
+
+    class _AgentOutput:
+        """Shape of ``LiteAgentOutput`` / ``CrewOutput``: text lives on ``.raw``."""
+
+        def __init__(self, raw: str) -> None:
+            self.raw = raw
+
+        def __str__(self) -> str:
+            return f"<output {self.raw!r}>"
+
+    @staticmethod
+    def _chat(handler_result: Any) -> Flow[Any]:
+        @ConversationConfig()
+        class HandlerChat(Flow[ConversationState]):
+            @listen("converse")
+            def converse_turn(self) -> Any:
+                return handler_result
+
+        return HandlerChat()
+
+    def test_output_object_reply_reaches_history(self) -> None:
+        flow = self._chat(self._AgentOutput("Your order shipped Tuesday."))
+
+        flow.handle_turn("where is my order?")
+
+        assert [(m.role, m.content) for m in flow.state.messages] == [
+            ("user", "where is my order?"),
+            ("assistant", "Your order shipped Tuesday."),
+        ]
+
+    def test_string_reply_still_reaches_history(self) -> None:
+        flow = self._chat("A plain string reply.")
+
+        flow.handle_turn("hi")
+
+        assert flow.state.messages[-1].content == "A plain string reply."
+
+    def test_route_label_output_is_not_promoted(self) -> None:
+        flow = self._chat(self._AgentOutput("converse"))
+
+        flow.handle_turn("hi")
+
+        assert [m.role for m in flow.state.messages] == ["user"]
+
+    def test_output_matching_this_turns_intent_is_not_promoted(self) -> None:
+        @ConversationConfig()
+        class RoutedChat(Flow[ConversationState]):
+            def route_turn(self, context: dict[str, Any]) -> str:
+                return "order"
+
+            @listen("order")
+            def handle_order(self) -> Any:
+                # Echoing the route label is a routing artefact, not a reply.
+                return TestHandlerReplyPromotion._AgentOutput("order")
+
+        flow = RoutedChat()
+        flow.handle_turn("where is my order?")
+
+        assert flow.state.last_intent == "order"
+        assert [m.role for m in flow.state.messages] == ["user"]
+
+    def test_non_text_output_is_not_promoted(self) -> None:
+        flow = self._chat(self._AgentOutput(raw=None))  # type: ignore[arg-type]
+
+        flow.handle_turn("hi")
+
+        assert [m.role for m in flow.state.messages] == ["user"]
+
+    def test_handler_that_already_replied_is_not_double_promoted(self) -> None:
+        @ConversationConfig()
+        class ExplicitReplyChat(Flow[ConversationState]):
+            @listen("converse")
+            def converse_turn(self) -> Any:
+                self.append_assistant_message("explicit")
+                return TestHandlerReplyPromotion._AgentOutput("returned")
+
+        flow = ExplicitReplyChat()
+        flow.handle_turn("hi")
+
+        assert [(m.role, m.content) for m in flow.state.messages] == [
+            ("user", "hi"),
+            ("assistant", "explicit"),
+        ]

@@ -140,6 +140,35 @@ def _config_from_definition(
     )
 
 
+def _builtin_method(handler: Callable[..., Any], **roles: Any) -> FlowMethodDefinition:
+    """One built-in conversational method, as the code ref the DSL already emits."""
+    return FlowMethodDefinition(do=_method_action(handler), **roles)
+
+
+def _builtin_methods() -> dict[str, FlowMethodDefinition]:
+    """The built-in methods a conversational flow needs to run a turn.
+
+    A Python flow inherits these methods; a declaration has nothing to inherit
+    from, so without them ``conversational: {}`` loads clean and then runs zero
+    methods and returns ``None``.
+    """
+    return {
+        "route_conversation": _builtin_method(
+            _ConversationalMixin.route_conversation, start=True, router=True
+        ),
+        "converse_turn": _builtin_method(
+            _ConversationalMixin.converse_turn, listen="converse"
+        ),
+        "end_conversation": _builtin_method(
+            _ConversationalMixin.end_conversation, listen="end"
+        ),
+        "answer_from_history_turn": _builtin_method(
+            _ConversationalMixin.answer_from_history_turn,
+            listen="answer_from_history",
+        ),
+    }
+
+
 def _conversation_start_router(func: Callable[..., Any]) -> Any:
     wrapper = start()(func)
     _set_flow_method_definition(
@@ -196,6 +225,7 @@ class _ConversationalMixin:
         _pending_intent_llm: str | BaseLLM | None
         _turn_classified_intent: str | None
         _assistant_reply_appended: bool
+        _turn_recorded_results: list[Any]
         _resolved_conversation_config: ConversationConfig | None
 
         def _clear_or_listeners(self) -> None:
@@ -396,6 +426,7 @@ class _ConversationalMixin:
                 self._reset_turn_execution_state()
 
             object.__setattr__(self, "_assistant_reply_appended", False)
+            object.__setattr__(self, "_turn_recorded_results", [])
             result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
             if (
                 result is not None
@@ -473,6 +504,7 @@ class _ConversationalMixin:
                     self._reset_turn_execution_state()
 
                 object.__setattr__(self, "_assistant_reply_appended", False)
+                object.__setattr__(self, "_turn_recorded_results", [])
                 original_stream = bool(getattr(self, "stream", False))
                 original_streaming_turn = getattr(
                     self, "_streaming_conversation_turn", False
@@ -700,6 +732,11 @@ class _ConversationalMixin:
         state.agent_threads.setdefault(agent_name, []).append(
             AgentMessage(content=content, metadata=metadata or {})
         )
+        # Remember the object itself so the end-of-turn fallback does not
+        # re-publish a result the handler deliberately kept private. Identity,
+        # not content: a handler that records scratch work privately and then
+        # returns a user-facing summary still gets that summary promoted.
+        self._turn_recorded_results.append(result)
         if event_visibility == "public":
             self.append_assistant_message(content)
 
@@ -920,8 +957,41 @@ class _ConversationalMixin:
             object.__setattr__(self, "_turn_classified_intent", None)
         if not hasattr(self, "_assistant_reply_appended"):
             object.__setattr__(self, "_assistant_reply_appended", False)
+        if not isinstance(getattr(self, "_turn_recorded_results", None), list):
+            object.__setattr__(self, "_turn_recorded_results", [])
         if not hasattr(self, "_resolved_conversation_config"):
             object.__setattr__(self, "_resolved_conversation_config", None)
+
+    def _extend_definition(self, definition: FlowDefinition) -> FlowDefinition:
+        """Add the built-in conversational methods a declaration cannot inherit.
+
+        An entry the author supplied under the same name always wins, and a
+        Python flow already carries all four from the MRO walk, so this only
+        fills gaps.
+        """
+        conversational = definition.conversational
+        if conversational is None or not conversational.enabled:
+            return definition
+
+        # A declaration enables chat without the ``conversational = True``
+        # class attribute, so mark the instance. Callers outside this package
+        # capability-check that attribute, and it should agree with
+        # ``_is_conversational_enabled()``. Instance-only on purpose: the DSL
+        # projection reads it off the *class* to decide whether to emit a
+        # conversational block, and setting it there would make every later
+        # subclass look conversational.
+        object.__setattr__(self, "conversational", True)
+
+        missing = {
+            name: method
+            for name, method in _builtin_methods().items()
+            if name not in definition.methods
+        }
+        if not missing:
+            return definition
+        return definition.model_copy(
+            update={"methods": {**definition.methods, **missing}}
+        )
 
     def _create_default_extension_state(self) -> ConversationState | None:
         """Supply ``ConversationState`` only when nothing else declares state.
@@ -1174,15 +1244,37 @@ class _ConversationalMixin:
                 catalog[route_label] = self.builtin_route_descriptions[route_label]
                 continue
             handler_name = label_to_method.get(route_label)
-            description = ""
-            if handler_name:
-                method = getattr(type(self), handler_name, None)
-                doc = getattr(method, "__doc__", None)
-                if doc:
-                    description = doc.strip().split("\n", 1)[0].strip()
-            catalog[route_label] = description
+            catalog[route_label] = (
+                self._route_description(flow_definition, handler_name)
+                if handler_name
+                else ""
+            )
 
         return catalog
+
+    def _route_description(
+        self,
+        flow_definition: FlowDefinition,
+        handler_name: str,
+    ) -> str:
+        """Describe a route for the router LLM's catalog.
+
+        The declared ``description`` comes first so a declaration can say what
+        a route is for; the handler docstring backs it for Python flows whose
+        definition predates the DSL filling that field.
+        """
+        declared = flow_definition.methods[handler_name].description
+        if declared:
+            return declared.strip().split("\n", 1)[0].strip()
+
+        method = getattr(type(self), handler_name, None)
+        if method is None:
+            # A declarative flow has no class attribute to read, and
+            # ``None.__doc__`` is NoneType's own docstring — which would be
+            # handed to the router LLM as the route description.
+            return ""
+        doc = getattr(method, "__doc__", None)
+        return doc.strip().split("\n", 1)[0].strip() if doc else ""
 
     def _extract_router_intent(self, response: Any, intent_field: str) -> str | None:
         if isinstance(response, BaseModel):
@@ -1270,17 +1362,42 @@ class _ConversationalMixin:
         return "private"
 
     def _is_public_turn_result(self, result: Any) -> bool:
-        if not isinstance(result, str):
+        """Whether a handler's return value should become the assistant reply.
+
+        Declarative ``agent`` and ``crew`` actions return ``LiteAgentOutput`` /
+        ``CrewOutput`` rather than a string, so the text lives on ``.raw``.
+        Without unwrapping it here their reply never reaches the transcript.
+        """
+        if any(result is recorded for recorded in self._turn_recorded_results):
+            # Already routed by ``append_agent_result``, which honours
+            # ``visible_agent_outputs``. Promoting it here would publish a
+            # result the handler asked to keep private.
             return False
-        if result in {
-            "conversation",
-            "converse",
-            "end",
-            "answer_from_history",
-            "route_to_flow",
-        }:
+
+        text = result
+        raw = getattr(result, "raw", None)
+        if not isinstance(text, str) and isinstance(raw, str):
+            text = raw
+        if not isinstance(text, str):
             return False
-        return result != cast(ConversationState, self.state).last_intent
+        if text in self._routing_artefact_labels():
+            return False
+        return text != cast(ConversationState, self.state).last_intent
+
+    def _routing_artefact_labels(self) -> set[str]:
+        """Strings that are a routing decision rather than something to say.
+
+        Derived from the effective routes so a declaration that customizes
+        ``builtin_routes`` is covered too; a literal list here would miss the
+        added labels. ``conversation`` and ``route_to_flow`` are not routes:
+        the first is a legacy label and the second is an outcome of the
+        answer-from-history check.
+        """
+        return (
+            self._effective_builtin_routes()
+            | self._effective_internal_routes()
+            | {"conversation", "route_to_flow"}
+        )
 
     @staticmethod
     def _coerce_user_message_text(user_message: str | dict[str, Any] | Any) -> str:
