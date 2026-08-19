@@ -26,9 +26,21 @@ class FlowConversationalRouterDefinition(BaseModel):
 
 
 class FlowConversationalDefinition(BaseModel):
-    """Static conversational Flow configuration."""
+    """Static conversational Flow configuration.
 
-    enabled: bool = False
+    The block is absent (``FlowDefinition.conversational is None``) on flows
+    that are not conversational, so declaring it at all is the opt-in.
+    """
+
+    enabled: bool = Field(
+        default=True,
+        description=(
+            "Whether conversational mode is active. Declaring the conversational "
+            "block is the opt-in, so this defaults to true; set it to false to "
+            "keep the configuration while turning chat off."
+        ),
+        examples=[True],
+    )
     system_prompt: str | None = None
     llm: Any = None
     router: FlowConversationalRouterDefinition | None = None
