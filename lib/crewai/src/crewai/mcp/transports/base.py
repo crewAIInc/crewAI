@@ -30,12 +30,14 @@ class BaseTransport(ABC):
     with MCP servers.
     """
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, connect_timeout: float = 30.0, **kwargs: Any) -> None:
         """Initialize the transport.
 
         Args:
+            connect_timeout: Maximum seconds allowed for transport startup.
             **kwargs: Transport-specific configuration options.
         """
+        self.connect_timeout = connect_timeout
         self._read_stream: MCPReadStream | None = None
         self._write_stream: MCPWriteStream | None = None
         self._connected = False
