@@ -167,6 +167,11 @@ class CrewAgentExecutor(BaseAgentExecutor):
             self.llm.supports_stop_words() if isinstance(self.llm, BaseLLM) else False
         )
 
+    def _append_history(self, inputs: dict[str, Any]) -> None:
+        """Add prior turns, with their roles, before this turn's request."""
+        for message in inputs.get("history", []):
+            self.messages.append(dict(message))
+
     def _setup_messages(self, inputs: dict[str, Any]) -> None:
         """Set up messages for the agent execution.
 
@@ -194,15 +199,16 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     format_message_for_llm(system_prompt, role="system")
                 )
             )
-            # Prior turns sit between the system prompt and this turn's request,
-            # keeping their own roles.
-            for message in inputs.get("history", []):
-                self.messages.append(dict(message))
+            self._append_history(inputs)
             self.messages.append(
                 mark_cache_breakpoint(format_message_for_llm(user_prompt))
             )
         elif self.prompt is not None:
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
+            # Also here: with the system prompt disabled or a custom template
+            # this is the only branch, and skipping history would drop every
+            # turn but the last.
+            self._append_history(inputs)
             self.messages.append(
                 mark_cache_breakpoint(format_message_for_llm(user_prompt))
             )
