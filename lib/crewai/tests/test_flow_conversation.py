@@ -2495,23 +2495,34 @@ class TestDeclaredConversationalLLM:
         assert flow.handle_turn("hi") == "Hello."
         assert declared in seen
 
-    def test_a_declared_intent_llm_mapping_is_resolved(self) -> None:
-        """`_collapse_to_outcome` takes only str | BaseLLM, so it must be coerced."""
-        scripted = _ScriptedLLM(['{"outcome": "order"}'])
+    def test_a_declared_intent_llm_mapping_is_resolved(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """`_collapse_to_outcome` takes only str | BaseLLM, so it must be coerced.
+
+        Swapping the mapping for an LLM before the turn would skip the coercion
+        entirely, so the mapping stays declared and ``create_llm`` is patched.
+        """
+        declared = {"model": "openai/gpt-4o-mini", "max_tokens": 64}
+        intent_llm = _ScriptedLLM(['{"outcome": "order"}'])
+        converse_llm = _ScriptedLLM(["ok"])
+        seen: list[Any] = []
+
+        def fake_create_llm(value: Any) -> Any:
+            seen.append(value)
+            return intent_llm if value == declared else converse_llm
+
+        monkeypatch.setattr("crewai.utilities.llm_utils.create_llm", fake_create_llm)
         flow = Flow.from_declaration(
             contents=_conversational_declaration(
-                conversational={
-                    "default_intents": ["order"],
-                    "intent_llm": {"model": "openai/gpt-4o-mini", "max_tokens": 64},
-                }
+                conversational={"default_intents": ["order"], "intent_llm": declared}
             )
         )
-        flow._conversation_config.intent_llm = scripted
-        flow._conversation_config.llm = _ScriptedLLM(["ok"])
 
         # Before coercion this raised "Invalid llm type: <class 'dict'>".
         flow.handle_turn("where is my order?")
 
+        assert declared in seen
         assert [m.role for m in flow.state.messages][0] == "user"
 
 

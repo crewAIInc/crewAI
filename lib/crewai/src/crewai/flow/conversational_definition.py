@@ -52,8 +52,9 @@ class FlowConversationalDefinition(BaseModel):
     llm: Any = Field(
         default=None,
         description=(
-            "Model for the built-in converse handler, and the router's fallback "
-            "when the router declares none. A model-id string, a config mapping such as {model, max_tokens}, an LLMDefinition, or a live LLM instance when built in Python."
+            "Model for the built-in converse handler, and the last router "
+            "fallback: the router uses router.llm, then intent_llm, then this. "
+            "A model-id string, a config mapping such as {model, max_tokens}, an LLMDefinition, or a live LLM instance when built in Python."
         ),
         examples=["gpt-4o-mini", {"model": "openai/gpt-4o-mini", "max_tokens": 4096}],
     )
