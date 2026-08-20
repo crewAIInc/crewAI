@@ -23,7 +23,7 @@ from contextlib import contextmanager
 from enum import Enum
 import json
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, create_model
 
@@ -1071,12 +1071,6 @@ class _ConversationalMixin:
             # ``_compose_extension_state_model``.
             return None
         return _conversation_state_with_defaults(state_definition.default)
-        initial_state_t = getattr(self, "_initial_state_t", None)
-        if not hasattr(self, "_initial_state_t") or isinstance(
-            initial_state_t, TypeVar
-        ):
-            return ConversationState()
-        return None
 
     def _should_apply_pending_kickoff_context(self) -> bool:
         return (
