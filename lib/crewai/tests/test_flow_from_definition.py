@@ -4063,6 +4063,30 @@ def test_agent_action_strips_serialized_message_metadata():
     assert normalized == [{"role": "user", "content": "hi"}]
 
 
+def test_agent_action_keeps_a_none_content_tool_call_message():
+    """A tool-call turn has no content; dropping the key breaks the sequence."""
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    normalized = _normalize_agent_input(
+        [
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [{"id": "c1", "function": {"name": "lookup"}}],
+                "name": None,
+            }
+        ]
+    )
+
+    assert normalized == [
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [{"id": "c1", "function": {"name": "lookup"}}],
+        }
+    ]
+
+
 def test_agent_action_still_accepts_a_string():
     from crewai.flow.runtime._actions import _normalize_agent_input
 
