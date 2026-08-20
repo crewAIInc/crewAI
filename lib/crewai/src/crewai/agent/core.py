@@ -1524,12 +1524,21 @@ class Agent(BaseAgent):
             )
 
         all_files: dict[str, Any] = {}
+        history: list[LLMMessage] = []
         if isinstance(messages, str):
             formatted_messages = messages
+            recall_text = messages
         else:
-            formatted_messages = "\n".join(
-                str(msg.get("content", "")) for msg in messages if msg.get("content")
+            with_content = [msg for msg in messages if msg.get("content")]
+            # The last message is this turn's request; the ones before it are
+            # prior turns and keep their roles. Joining them all into one
+            # string told the model the assistant's own replies were the
+            # user's, so it could not tell who said what.
+            formatted_messages = (
+                str(with_content[-1].get("content", "")) if with_content else ""
             )
+            history = with_content[:-1]
+            recall_text = "\n".join(str(msg.get("content", "")) for msg in with_content)
             for msg in messages:
                 if msg.get("files"):
                     all_files.update(msg["files"])
@@ -1548,7 +1557,7 @@ class Agent(BaseAgent):
                     ),
                 )
                 start_time = time.time()
-                matches = agent_memory.recall(formatted_messages, limit=20)
+                matches = agent_memory.recall(recall_text, limit=20)
                 memory_block = ""
                 if matches:
                     memory_block = "Relevant memories:\n" + "\n".join(
@@ -1586,6 +1595,8 @@ class Agent(BaseAgent):
         }
         if all_files:
             inputs["files"] = all_files
+        if history:
+            inputs["history"] = history
 
         return executor, inputs, agent_info, parsed_tools
 

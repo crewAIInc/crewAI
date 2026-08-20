@@ -323,6 +323,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     format_message_for_llm(system_prompt, role="system")
                 )
             )
+            # Prior turns sit between the system prompt and this turn's request,
+            # keeping their own roles.
+            for message in inputs.get("history", []):
+                self.state.messages.append(dict(message))
             self.state.messages.append(
                 mark_cache_breakpoint(format_message_for_llm(user_prompt))
             )
