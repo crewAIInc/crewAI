@@ -58,6 +58,7 @@ from crewai.flow.conversational_definition import (
 from crewai.flow.dsl import listen, start
 from crewai.flow.dsl._utils import _method_action, _set_flow_method_definition
 from crewai.flow.flow_definition import FlowDefinition, FlowMethodDefinition
+from crewai.project.crew_definition import PythonReferenceDefinition
 from crewai.utilities.types import LLMMessage
 
 
@@ -83,25 +84,33 @@ def _iter_condition_labels(condition: Any) -> set[str]:
     return set()
 
 
+def _resolve_router_response_format(
+    declared: PythonReferenceDefinition | None,
+) -> type[BaseModel] | None:
+    """Import the model class a declaration names for the routing decision.
+
+    ``_router_response_format`` hands its result straight to
+    ``llm.call(response_format=...)``, which needs a real class. Resolved the
+    same way a crew agent's ``response_format`` is, so the declaration shape
+    and its failure messages match.
+    """
+    if declared is None:
+        return None
+
+    from crewai.project.json_loader import _resolve_model_class
+
+    return _resolve_model_class(
+        declared.model_dump(),
+        "conversational.router.response_format",
+        None,
+    )
+
+
 def _router_config_from_definition(
     definition: FlowConversationalRouterDefinition,
 ) -> RouterConfig:
     """Build a live ``RouterConfig`` from its serializable form."""
-    response_format = definition.response_format
-    if response_format is not None and not (
-        isinstance(response_format, type) and issubclass(response_format, BaseModel)
-    ):
-        # A declaration can only carry a ``module:qualname`` ref or a schema
-        # dict here, and ``_router_response_format`` hands its result straight
-        # to ``llm.call(response_format=...)``, which needs a real class.
-        # Dropping it falls back to the synthesized single-field model.
-        logger.warning(
-            "Ignoring conversational router response_format %r: a declaration "
-            "cannot carry a model class. The router will use its synthesized "
-            "response format instead.",
-            response_format,
-        )
-        response_format = None
+    response_format = _resolve_router_response_format(definition.response_format)
 
     return RouterConfig(
         prompt=definition.prompt,
