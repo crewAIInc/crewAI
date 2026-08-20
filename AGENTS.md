@@ -24,3 +24,5 @@ Follow these guidelines when contributing:
    may reference them.
 4. If you want to preview your changes locally, use `cd docs && mintlify dev`.
    To check for broken links, run `cd docs && mintlify broken-links`.
+5. After editing English docs, sync translations to `ar`, `ko`, and `pt-BR`
+   before finishing the task. Follow [DOCS_TRANSLATIONS.md](DOCS_TRANSLATIONS.md).

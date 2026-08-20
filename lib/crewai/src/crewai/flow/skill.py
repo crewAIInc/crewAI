@@ -11,7 +11,6 @@ from jinja2 import Environment, FileSystemLoader
 import yaml
 
 from crewai.flow.expressions import (
-    FLOW_TEMPLATE_EXPRESSION_CONTRACT,
     FLOW_TEMPLATE_EXPRESSION_EXAMPLES,
     FLOW_TEMPLATE_EXPRESSION_RULES,
 )
@@ -27,6 +26,8 @@ SKIP_BY_MODEL: dict[str, str] = {
     "FlowConfigDefinition": "config",
     "FlowHumanFeedbackDefinition": "hitl",
     "FlowPersistenceDefinition": "persistence",
+    "FlowConversationalDefinition": "conversational",
+    "FlowConversationalRouterDefinition": "conversational",
 }
 
 FIELD_TYPE_OVERRIDES: dict[tuple[str, str], str] = {
@@ -139,6 +140,8 @@ MODEL_TITLES = {
     "FlowConfigDefinition": "Config",
     "FlowPersistenceDefinition": "Persistence",
     "FlowHumanFeedbackDefinition": "Human Feedback",
+    "FlowConversationalDefinition": "Conversational",
+    "FlowConversationalRouterDefinition": "Conversational Router",
 }
 
 
@@ -186,7 +189,14 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         hidden=True,
     ),
     ModelSpec("FlowScriptActionDefinition", "Action", "methods.<name>.do[call=script]"),
-    ModelSpec("FlowToolActionDefinition", "Action", "methods.<name>.do[call=tool]"),
+    ModelSpec(
+        "FlowToolActionDefinition",
+        "Action",
+        "methods.<name>.do[call=tool]",
+        descriptions={
+            "with": "Tool input arguments. Insert Flow values with `${...}`.",
+        },
+    ),
     ModelSpec(
         "FlowCrewActionDefinition",
         "Action",
@@ -194,7 +204,7 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         examples=True,
         descriptions={
             "call": "Action discriminator. Use crew to run an inline Crew definition.",
-            "inputs": f"Actual kickoff inputs passed to the Crew. {FLOW_TEMPLATE_EXPRESSION_CONTRACT} The evaluated values are available to crew agent and task interpolation as `{{name}}` placeholders; reference each input the crew needs in agent or task text.",
+            "inputs": "Runtime inputs passed to the Crew. Insert Flow values with `${...}` and reference each input as `{name}` in agent or task text.",
         },
     ),
     ModelSpec(
@@ -262,7 +272,7 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         hidden=True,
         examples=True,
         descriptions={
-            "input": f"Input passed to the individual agent kickoff outside of a crew. Use one string. {FLOW_TEMPLATE_EXPRESSION_CONTRACT} When an agent needs multiple fields, write one string with labels and separators, for example `Ticket ID: ${{state.ticket_id}}; Message: ${{state.message}}`.",
+            "input": "Agent prompt template. Insert Flow values with `${...}`, for example `Ticket: ${state.ticket_id}`.",
             "llm": "Language model that runs this agent. Use an object when setting LLM options such as `max_tokens`.",
             "planning_config": "Agent planning configuration. Set `max_attempts` to limit planning refinement attempts before task execution.",
         },
@@ -273,6 +283,35 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         "FlowHumanFeedbackDefinition",
         "Human Feedback",
         "methods.<name>.human_feedback",
+    ),
+    ModelSpec(
+        "FlowConversationalDefinition",
+        "Conversational",
+        "conversational",
+        descriptions={
+            "enabled": "Whether conversational mode is active. Declaring the conversational block is the opt-in, so leave this out unless you are turning chat off with `false`.",
+            "llm": "Model id used by the built-in `converse` handler, and the router's fallback model.",
+            "system_prompt": "System message for the built-in `converse` handler. Omit for the framework default; use an empty string for none.",
+            "default_intents": "Outcome labels classified before routing. Requires `intent_llm`.",
+            "answer_from_history_llm": "Setting this enables the optional `answer_from_history` route, which answers from the transcript without invoking a route handler.",
+            "visible_agent_outputs": "Agent names whose recorded results are promoted to user-visible assistant messages, or `all`.",
+            "builtin_routes": "Route labels the framework handles itself. Do not add your own routes here; declare them as a method `listen` label.",
+            "internal_routes": "Route labels the framework handles that are excluded from the router's catalog.",
+        },
+        examples=True,
+    ),
+    ModelSpec(
+        "FlowConversationalRouterDefinition",
+        "Conversational Router",
+        "conversational.router",
+        descriptions={
+            "prompt": "Domain framing for the routing decision: persona, policy, voice. Do not list routes here; the catalog is built automatically.",
+            "routes": "Route labels the router may choose. Omit to infer them from the methods that declare a `listen` label.",
+            "route_descriptions": "Per-route text for the router's catalog. A method's `description` is used when a route has no entry here.",
+            "default_intent": "Route used when no routing model is configured or the call fails.",
+            "fallback_intent": "Route used when the model returns a label that is not in the catalog.",
+            "response_format": "Leave this out in a declaration. A declaration cannot carry a model class, so it is ignored with a warning and the framework synthesizes one.",
+        },
     ),
 )
 

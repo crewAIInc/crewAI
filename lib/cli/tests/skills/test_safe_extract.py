@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from crewai_cli.experimental.skills.main import _safe_extractall
+from crewai_cli.skills.main import _safe_extractall
 
 
 def _tar_from_members(build) -> tarfile.TarFile:

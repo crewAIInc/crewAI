@@ -87,9 +87,11 @@ class TavilyExtractorTool(BaseTool):
         """
         super().__init__(**kwargs)
         if TAVILY_AVAILABLE:
-            self.client = TavilyClient(api_key=self.api_key, proxies=self.proxies)
+            self.client = TavilyClient(
+                api_key=self.api_key, proxies=self.proxies, client_name="crewai"
+            )
             self.async_client = AsyncTavilyClient(
-                api_key=self.api_key, proxies=self.proxies
+                api_key=self.api_key, proxies=self.proxies, client_name="crewai"
             )
         else:
             try:

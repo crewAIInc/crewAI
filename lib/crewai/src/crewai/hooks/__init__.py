@@ -6,6 +6,17 @@ from crewai.hooks.decorators import (
     before_llm_call,
     before_tool_call,
 )
+from crewai.hooks.dispatch import (
+    HookAborted,
+    InterceptionPoint,
+    clear as clear_hooks,
+    clear_all as clear_all_hooks,
+    dispatch,
+    get_hooks,
+    on,
+    register as register_hook,
+    unregister as unregister_hook,
+)
 from crewai.hooks.llm_hooks import (
     LLMCallHookContext,
     clear_after_llm_call_hooks,
@@ -74,6 +85,8 @@ def clear_all_global_hooks() -> dict[str, tuple[int, int]]:
 
 
 __all__ = [
+    "HookAborted",
+    "InterceptionPoint",
     "LLMCallHookContext",
     "ToolCallHookContext",
     "after_llm_call",
@@ -83,20 +96,27 @@ __all__ = [
     "clear_after_llm_call_hooks",
     "clear_after_tool_call_hooks",
     "clear_all_global_hooks",
+    "clear_all_hooks",
     "clear_all_llm_call_hooks",
     "clear_all_tool_call_hooks",
     "clear_before_llm_call_hooks",
     "clear_before_tool_call_hooks",
+    "clear_hooks",
+    "dispatch",
     "get_after_llm_call_hooks",
     "get_after_tool_call_hooks",
     "get_before_llm_call_hooks",
     "get_before_tool_call_hooks",
+    "get_hooks",
+    "on",
     "register_after_llm_call_hook",
     "register_after_tool_call_hook",
     "register_before_llm_call_hook",
     "register_before_tool_call_hook",
+    "register_hook",
     "unregister_after_llm_call_hook",
     "unregister_after_tool_call_hook",
     "unregister_before_llm_call_hook",
     "unregister_before_tool_call_hook",
+    "unregister_hook",
 ]
