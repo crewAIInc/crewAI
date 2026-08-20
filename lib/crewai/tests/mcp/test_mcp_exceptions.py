@@ -12,6 +12,7 @@ from crewai.mcp.exceptions import (
     find_http_status,
     find_transport_failure,
     raise_connection_failure,
+    tool_execution_error_type,
 )
 
 
@@ -119,3 +120,24 @@ def test_raise_connection_failure_builds_auth_error_from_http_status():
 def test_raise_connection_failure_falls_back_to_connection_error():
     with pytest.raises(ConnectionError, match="host unreachable"):
         raise_connection_failure("host unreachable", ConnectionError("refused"))
+
+
+def test_tool_execution_error_type_maps_authentication_failures():
+    assert (
+        tool_execution_error_type(MCPAuthenticationError(401)) == "authentication"
+    )
+    assert tool_execution_error_type(_http_status_error(403)) == "authentication"
+
+
+def test_tool_execution_error_type_maps_timeout_and_validation():
+    assert tool_execution_error_type(asyncio.TimeoutError()) == "timeout"
+    assert (
+        tool_execution_error_type(ConnectionError("Operation timed out after 30 seconds"))
+        == "timeout"
+    )
+    assert tool_execution_error_type(ValueError("Resource not found")) == "validation"
+
+
+def test_tool_execution_error_type_maps_http_and_server_errors():
+    assert tool_execution_error_type(MCPHTTPError(500)) == "http_error"
+    assert tool_execution_error_type(ConnectionError("unexpected failure")) == "server_error"

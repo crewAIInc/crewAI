@@ -130,6 +130,35 @@ def error_type_for_status(status_code: int | None) -> str | None:
     return "authentication" if status_code in AUTH_STATUS_CODES else "http_error"
 
 
+def tool_execution_error_type(exc: BaseException) -> str:
+    """Map an exception to ``MCPToolExecutionFailedEvent.error_type``.
+
+    Args:
+        exc: The exception raised while executing an MCP tool.
+
+    Returns:
+        One of ``"timeout"``, ``"authentication"``, ``"validation"``,
+        ``"http_error"``, or ``"server_error"``.
+    """
+    if isinstance(exc, asyncio.TimeoutError):
+        return "timeout"
+    if isinstance(exc, ConnectionError) and (
+        "timeout" in str(exc).lower() or "timed out" in str(exc).lower()
+    ):
+        return "timeout"
+    if isinstance(exc, ValueError):
+        return "validation"
+    if isinstance(exc, MCPConnectionError) and exc.status_code is not None:
+        return error_type_for_status(exc.status_code) or "server_error"
+    status_code = find_http_status(exc)
+    if status_code is not None:
+        return error_type_for_status(status_code) or "server_error"
+    error_str = str(exc).lower()
+    if "authentication" in error_str or "unauthorized" in error_str:
+        return "authentication"
+    return "server_error"
+
+
 def raise_connection_failure(message: str, exc: BaseException) -> NoReturn:
     """Raise a typed MCP connection error when an HTTP status is known.
 

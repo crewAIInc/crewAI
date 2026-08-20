@@ -33,6 +33,7 @@ from crewai.mcp.exceptions import (
     error_type_for_status,
     find_http_status,
     find_transport_failure,
+    tool_execution_error_type,
 )
 from crewai.mcp.transports.base import BaseTransport
 from crewai.mcp.transports.http import HTTPTransport
@@ -534,12 +535,6 @@ class MCPClient:
             return tool_result
         except Exception as e:
             failed_at = datetime.now()
-            error_type = (
-                "timeout"
-                if isinstance(e, (asyncio.TimeoutError, ConnectionError))
-                and "timeout" in str(e).lower()
-                else "server_error"
-            )
             crewai_event_bus.emit(
                 self,
                 MCPToolExecutionFailedEvent(
@@ -549,7 +544,7 @@ class MCPClient:
                     tool_name=tool_name,
                     tool_args=cleaned_arguments,
                     error=str(e),
-                    error_type=error_type,
+                    error_type=tool_execution_error_type(e),
                     started_at=started_at,
                     failed_at=failed_at,
                 ),
@@ -731,9 +726,17 @@ class MCPClient:
                     raise ConnectionError(last_error) from e
 
             except Exception as e:
+                if isinstance(e, MCPConnectionError):
+                    raise
+
+                status_code = find_http_status(e)
+                if status_code is not None and (
+                    error_type_for_status(status_code) == "authentication"
+                ):
+                    raise error_for_status(status_code, detail=str(e)) from e
+
                 error_str = str(e).lower()
 
-                # Classify errors as retryable or non-retryable
                 if "authentication" in error_str or "unauthorized" in error_str:
                     raise ConnectionError(f"Authentication failed: {e}") from e
 
