@@ -1,6 +1,8 @@
 """HTTP and Streamable HTTP transport for MCP servers."""
 
 import asyncio
+import contextlib
+import logging
 import sys
 from typing import Any
 
@@ -12,8 +14,16 @@ if sys.version_info >= (3, 11):
 else:
     from exceptiongroup import BaseExceptionGroup
 
-from crewai.mcp.exceptions import raise_connection_failure
+from crewai.mcp.exceptions import (
+    error_for_status,
+    find_http_status,
+    find_transport_failure,
+    raise_connection_failure,
+)
 from crewai.mcp.transports.base import BaseTransport, TransportType
+
+
+logger = logging.getLogger(__name__)
 
 
 class HTTPTransport(BaseTransport):
@@ -105,56 +115,42 @@ class HTTPTransport(BaseTransport):
         return self
 
     async def disconnect(self) -> None:
-        """Close HTTP connection."""
+        """Close HTTP connection.
+
+        Raises:
+            MCPConnectionError: If the server refused the connection. The
+                refusal is reported here rather than to the coroutine that
+                was waiting, because the underlying task group only raises it
+                while unwinding.
+        """
         if not self._connected:
             return
 
+        self._clear_streams()
+        context, self._transport_context = self._transport_context, None
+        self._connected = False
+
+        if context is None:
+            return
+
         try:
-            # Clear streams first
-            self._clear_streams()
-            # await self._exit_stack.aclose()
-
-            # Exit transport context - this will clean up background tasks
-            # Give a small delay to allow background tasks to complete
-            if self._transport_context is not None:
-                try:
-                    # Wait a tiny bit for any pending operations
-                    await asyncio.sleep(0.1)
-                    await self._transport_context.__aexit__(None, None, None)
-                except (RuntimeError, asyncio.CancelledError) as e:
-                    # Ignore "exit cancel scope in different task" errors and cancellation
-                    # These happen when asyncio.run() closes the event loop
-                    # while background tasks are still running
-                    error_msg = str(e).lower()
-                    if "cancel scope" not in error_msg and "task" not in error_msg:
-                        # Only suppress cancel scope/task errors, re-raise others
-                        if isinstance(e, RuntimeError):
-                            raise
-                        # For CancelledError, just suppress it
-                except BaseExceptionGroup as eg:
-                    # Handle exception groups from anyio task groups
-                    # Suppress if they contain cancel scope errors
-                    should_suppress = False
-                    for exc in eg.exceptions:
-                        error_msg = str(exc).lower()
-                        if "cancel scope" in error_msg or "task" in error_msg:
-                            should_suppress = True
-                            break
-                    if not should_suppress:
-                        raise
-                except Exception as e:
-                    raise RuntimeError(
-                        f"Error during HTTP transport disconnect: {e}"
-                    ) from e
-
-            self._connected = False
-
-        except Exception as e:
-            # Log but don't raise - cleanup should be best effort
-            import logging
-
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Error during HTTP transport disconnect: {e}")
+            # Give pending background operations a moment to finish. Unwinding
+            # still has to happen if this is cancelled, since it is the only
+            # thing that reveals why the connection failed.
+            with contextlib.suppress(asyncio.CancelledError):
+                await asyncio.sleep(0.1)
+            await context.__aexit__(None, None, None)
+        except asyncio.CancelledError:
+            logger.debug("MCP HTTP transport teardown was cancelled")
+        except (Exception, BaseExceptionGroup) as e:
+            if (status_code := find_http_status(e)) is not None:
+                raise error_for_status(status_code) from e
+            if find_transport_failure(e) is not None:
+                raise
+            # Unwinding an anyio task group routinely reports cancel-scope and
+            # async-generator errors that describe the teardown itself rather
+            # than the failure that caused it.
+            logger.debug("Ignoring MCP HTTP transport teardown error: %s", e)
 
     async def __aenter__(self) -> Self:
         """Async context manager entry."""
