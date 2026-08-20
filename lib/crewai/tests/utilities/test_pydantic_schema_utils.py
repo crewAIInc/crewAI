@@ -303,6 +303,68 @@ class TestUnionTypes:
         assert Model(value="hello").value == "hello"
         assert Model(value=3.14).value == pytest.approx(3.14)
 
+    def test_type_array_nullable_string_with_format(self) -> None:
+        """type: ["string", "null"] -- the .NET/System.Text.Json-style way
+        of expressing an optional field, as opposed to Pydantic's own
+        anyOf-based form. Seen in real MCP tool schemas from non-Python
+        servers (e.g. Equibles' ListCompanyDocuments startDate/endDate
+        filters). The format="date-time" here (also straight from that
+        real schema) is applied by the existing FORMAT_TYPE_MAP logic once
+        the list-form type no longer raises, so the field lands as a real
+        datetime rather than str -- that's the pre-existing, correct
+        behavior for any date-time-formatted field, not something this fix
+        changes."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "startDate": {
+                    "description": "Optional start date filter in YYYY-MM-DD format",
+                    "type": ["string", "null"],
+                    "format": "date-time",
+                    "default": None,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(startDate="2026-01-01").startDate == datetime.datetime(
+            2026, 1, 1
+        )
+        assert Model(startDate=None).startDate is None
+        assert Model().startDate is None
+
+    def test_type_array_nullable_string_no_format(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "note": {"type": ["string", "null"]},
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(note="hello").note == "hello"
+        assert Model(note=None).note is None
+        assert Model().note is None
+
+    def test_type_array_multiple_non_null(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "value": {"type": ["string", "integer", "null"]},
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(value="hello").value == "hello"
+        assert Model(value=42).value == 42
+        assert Model(value=None).value is None
+
+    def test_type_array_single_element(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {"value": {"type": ["string"]}},
+            "required": ["value"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(value="hello").value == "hello"
+
 
 class TestAllOfMerging:
     def test_allof_merges_properties(self) -> None:
