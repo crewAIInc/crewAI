@@ -23,6 +23,12 @@ from crewai.mcp.config import (
     MCPServerSSE,
     MCPServerStdio,
 )
+from crewai.mcp.exceptions import (
+    MCPConnectionError,
+    error_for_status,
+    find_http_status,
+    raise_connection_failure,
+)
 from crewai.mcp.transports.http import HTTPTransport
 from crewai.mcp.transports.sse import SSETransport
 from crewai.mcp.transports.stdio import StdioTransport
@@ -354,6 +360,8 @@ class MCPToolResolver:
                 if discovery_client.connected:
                     await discovery_client.disconnect()
                     await asyncio.sleep(0.1)
+                if isinstance(e, MCPConnectionError):
+                    raise
                 raise RuntimeError(
                     f"Error during setup client and list tools: {e}"
                 ) from e
@@ -361,6 +369,12 @@ class MCPToolResolver:
         try:
             try:
                 asyncio.get_running_loop()
+            except RuntimeError:
+                running_loop = False
+            else:
+                running_loop = True
+
+            if running_loop:
                 import concurrent.futures
 
                 ctx = contextvars.copy_context()
@@ -368,23 +382,23 @@ class MCPToolResolver:
                     future = executor.submit(
                         ctx.run, asyncio.run, _setup_client_and_list_tools()
                     )
-                    tools_list = future.result()
-            except RuntimeError:
+                    try:
+                        tools_list = future.result()
+                    except asyncio.CancelledError as e:
+                        raise_connection_failure(
+                            f"Failed to get native MCP tools: {e}", e
+                        )
+                    except Exception as e:
+                        raise_connection_failure(
+                            f"Failed to get native MCP tools: {e}", e
+                        )
+            else:
                 try:
                     tools_list = asyncio.run(_setup_client_and_list_tools())
-                except RuntimeError as e:
-                    error_msg = str(e).lower()
-                    if "cancel scope" in error_msg or "task" in error_msg:
-                        raise ConnectionError(
-                            "MCP connection failed due to event loop cleanup issues. "
-                            "This may be due to authentication errors or server unavailability."
-                        ) from e
-                    raise
                 except asyncio.CancelledError as e:
-                    raise ConnectionError(
-                        "MCP connection was cancelled. This may indicate an authentication "
-                        "error or server unavailability."
-                    ) from e
+                    raise_connection_failure(f"Failed to get native MCP tools: {e}", e)
+                except Exception as e:
+                    raise_connection_failure(f"Failed to get native MCP tools: {e}", e)
 
             if mcp_config.tool_filter:
                 filtered_tools = []
@@ -463,11 +477,13 @@ class MCPToolResolver:
                     continue
 
             return cast(list[BaseTool], tools), []
+        except (MCPConnectionError, ConnectionError):
+            raise
         except Exception as e:
             if discovery_client.connected:
                 asyncio.run(discovery_client.disconnect())
 
-            raise RuntimeError(f"Failed to get native MCP tools: {e}") from e
+            raise_connection_failure(f"Failed to get native MCP tools: {e}", e)
 
     @staticmethod
     def _build_mcp_config_from_dict(
@@ -584,10 +600,15 @@ class MCPToolResolver:
             )
 
         except Exception as e:
+            status_code = find_http_status(e)
+            if status_code is not None:
+                failure = error_for_status(status_code, detail=str(e))
+                return None, str(failure), False
+            if isinstance(e, MCPConnectionError):
+                return None, str(e), False
+
             error_str = str(e).lower()
 
-            if "authentication" in error_str or "unauthorized" in error_str:
-                return None, f"Authentication failed for MCP server: {e!s}", False
             if "connection" in error_str or "network" in error_str:
                 return None, f"Network connection failed: {e!s}", True
             if "json" in error_str or "parsing" in error_str:
