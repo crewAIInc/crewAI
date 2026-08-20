@@ -1,5 +1,5 @@
 """
-lexmex_tool.py — LEX-MEX v1.0
+lexmex_tool.py — LEX-MEX v1.1
 ═══════════════════════════════════════════════════════════════════════
 Tool de CrewAI para consultar LEX-MEX (asesor jurídico de leyes
 federales mexicanas) desde cualquier Agent de un Crew.
@@ -23,6 +23,17 @@ Uso:
     import os
     os.environ["LEXMEX_API_KEY"] = "lmx_live_..."
     tool = LexMexTool()
+
+─── Changelog v1.1 ────────────────────────────────────────────────────
+- Seguridad: api_key ahora se excluye de la serialización del modelo
+  (Field(exclude=True, repr=False)) para que nunca quede persistida en
+  logs ni en estados de Crew guardados.
+- Seguridad: se eliminó el campo configurable `api_base`; el host
+  autenticado ahora es siempre la constante fija LEXMEX_API_BASE, para
+  que ningún caller pueda redirigir la API key a un host arbitrario
+  (hallazgo de CodeRabbit: API-key exfiltration risk).
+- Se agregó el header X-LexMex-Client para que el backend de LexMex
+  pueda distinguir tráfico proveniente de esta tool.
 """
 
 from __future__ import annotations
@@ -42,6 +53,7 @@ except ImportError as e:  # pragma: no cover
 
 
 LEXMEX_API_BASE = "https://lex-mex.xyz"
+LEXMEX_CLIENT_ID = "crewai-lexmex-tool/1.1.0"
 
 
 class LexMexInput(BaseModel):
@@ -76,8 +88,9 @@ class LexMexTool(BaseTool):
     )
     args_schema: Type[BaseModel] = LexMexInput
 
-    api_key: Optional[str] = None
-    api_base: str = LEXMEX_API_BASE
+    # Se excluye de la serialización (model_dump/repr) para que la key
+    # nunca quede persistida en logs, estados de Crew guardados, etc.
+    api_key: Optional[str] = Field(default=None, exclude=True, repr=False)
     timeout: int = 30
 
     def _resolved_key(self) -> str:
@@ -92,9 +105,12 @@ class LexMexTool(BaseTool):
 
     def _run(self, pregunta: str) -> str:
         resp = requests.post(
-            f"{self.api_base}/api/v1/consulta",
+            f"{LEXMEX_API_BASE}/api/v1/consulta",
             json={"pregunta": pregunta},
-            headers={"X-API-Key": self._resolved_key()},
+            headers={
+                "X-API-Key": self._resolved_key(),
+                "X-LexMex-Client": LEXMEX_CLIENT_ID,
+            },
             timeout=self.timeout,
         )
 
