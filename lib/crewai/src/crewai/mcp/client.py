@@ -298,6 +298,7 @@ class MCPClient:
             str(failure),
             error_type_for_status(status_code) or "network",
             started_at,
+            status_code=status_code,
         )
         return failure
 
@@ -315,11 +316,13 @@ class MCPClient:
                 if error.status_code is not None
                 else "network"
             )
+            status_code = error.status_code
             failure = error
         else:
             error_msg = f"Failed to connect to MCP server: {error}"
             error_type = "network"
-            failure = MCPConnectionError(error_msg)
+            status_code = find_http_status(error)
+            failure = MCPConnectionError(error_msg, status_code=status_code)
         server_name, server_url, transport_type = server_info
         self._emit_connection_failed(
             server_name,
@@ -328,6 +331,7 @@ class MCPClient:
             error_msg,
             error_type,
             started_at,
+            status_code=status_code,
         )
         return failure
 
@@ -339,6 +343,7 @@ class MCPClient:
         error: str,
         error_type: str,
         started_at: datetime,
+        status_code: int | None = None,
     ) -> None:
         """Emit connection failed event."""
         failed_at = datetime.now()
@@ -350,6 +355,7 @@ class MCPClient:
                 transport_type=transport_type,
                 error=error,
                 error_type=error_type,
+                status_code=status_code,
                 started_at=started_at,
                 failed_at=failed_at,
             ),

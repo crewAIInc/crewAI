@@ -85,6 +85,7 @@ async def test_connect_cancelled_with_auth_status_in_cleanup():
     assert exc_info.value.status_code == 401
     assert len(failed_events) == 1
     assert failed_events[0].error_type == "authentication"
+    assert failed_events[0].status_code == 401
     assert "401 Unauthorized" in failed_events[0].error
 
 
