@@ -135,8 +135,9 @@ def common_span_attributes() -> dict[str, str]:
     imports ``crewai``, still reports the same process-wide context.
 
     Returns:
-        Attributes to stamp on every span. ``project_id`` is omitted for
-        projects that do not declare one.
+        Attributes to stamp on every span. ``project_id`` is always present and
+        is the empty string for projects that do not declare one -- see the
+        comment at the assignment for why absent and empty must stay distinct.
     """
     attributes = {
         "coding_agent": detect_coding_agent(),
@@ -151,8 +152,13 @@ def common_span_attributes() -> dict[str, str]:
         logger.debug("Failed to read project id: %s", e)
         project_id = None
 
-    if project_id:
-        attributes["project_id"] = project_id
+    # Always set the key, even when empty. Absent and empty mean different things
+    # and only this distinction can tell them apart: absent means the client is too
+    # old to report a project id at all, empty means the client asked and the project
+    # declares none. Collapsing both into "absent" makes the share of clients that
+    # COULD have reported one unknowable, and that share is the denominator every
+    # attribution rate needs.
+    attributes["project_id"] = project_id or ""
 
     return attributes
 
