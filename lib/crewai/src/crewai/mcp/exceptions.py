@@ -14,6 +14,7 @@ import asyncio
 from collections.abc import Iterator
 from http import HTTPStatus
 import sys
+from typing import NoReturn
 
 
 if sys.version_info >= (3, 11):
@@ -127,6 +128,25 @@ def error_type_for_status(status_code: int | None) -> str | None:
     if status_code is None:
         return None
     return "authentication" if status_code in AUTH_STATUS_CODES else "http_error"
+
+
+def raise_connection_failure(message: str, exc: BaseException) -> NoReturn:
+    """Raise a typed MCP connection error when an HTTP status is known.
+
+    Args:
+        message: Fallback message when no HTTP status can be recovered.
+        exc: The exception observed while connecting.
+
+    Raises:
+        MCPConnectionError: When an HTTP status was observed on *exc*.
+        ConnectionError: When no HTTP status was observed.
+    """
+    if isinstance(exc, MCPConnectionError):
+        raise exc
+    status_code = find_http_status(exc)
+    if status_code is not None:
+        raise error_for_status(status_code, detail=str(exc)) from exc
+    raise ConnectionError(message) from exc
 
 
 def _leaves(exc: BaseException | None, seen: set[int]) -> Iterator[BaseException]:

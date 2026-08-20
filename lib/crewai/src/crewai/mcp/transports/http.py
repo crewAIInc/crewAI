@@ -2,7 +2,7 @@
 
 import asyncio
 import sys
-from typing import Any, NoReturn
+from typing import Any
 
 from typing_extensions import Self
 
@@ -12,22 +12,8 @@ if sys.version_info >= (3, 11):
 else:
     from exceptiongroup import BaseExceptionGroup
 
-from crewai.mcp.exceptions import (
-    MCPConnectionError,
-    error_for_status,
-    find_http_status,
-)
+from crewai.mcp.exceptions import raise_connection_failure
 from crewai.mcp.transports.base import BaseTransport, TransportType
-
-
-def _raise_connection_failure(message: str, exc: BaseException) -> NoReturn:
-    """Raise a typed MCP connection error when an HTTP status is known."""
-    if isinstance(exc, MCPConnectionError):
-        raise exc
-    status_code = find_http_status(exc)
-    if status_code is not None:
-        raise error_for_status(status_code, detail=str(exc)) from exc
-    raise ConnectionError(message) from exc
 
 
 class HTTPTransport(BaseTransport):
@@ -89,43 +75,34 @@ class HTTPTransport(BaseTransport):
 
         try:
             from mcp.client.streamable_http import streamablehttp_client
-
-            self._transport_context = streamablehttp_client(
-                self.url,
-                headers=self.headers if self.headers else None,
-                terminate_on_close=True,
-            )
-
-            try:
-                read, write, _ = await asyncio.wait_for(
-                    self._transport_context.__aenter__(), timeout=30.0
-                )
-            except asyncio.TimeoutError as e:
-                self._transport_context = None
-                raise ConnectionError(
-                    "Transport context entry timed out after 30 seconds. "
-                    "Server may be slow or unreachable."
-                ) from e
-            except Exception as e:
-                self._transport_context = None
-                _raise_connection_failure(f"Failed to enter transport context: {e}", e)
-            self._set_streams(read=read, write=write)
-            return self
-
         except ImportError as e:
             raise ImportError(
                 "MCP library not available. Please install with: pip install mcp"
             ) from e
-        except MCPConnectionError:
-            self._clear_streams()
-            if self._transport_context is not None:
-                self._transport_context = None
-            raise
+
+        self._transport_context = streamablehttp_client(
+            self.url,
+            headers=self.headers if self.headers else None,
+            terminate_on_close=True,
+        )
+
+        try:
+            read, write, _ = await asyncio.wait_for(
+                self._transport_context.__aenter__(), timeout=30.0
+            )
+        except asyncio.TimeoutError as e:
+            self._transport_context = None
+            raise ConnectionError(
+                "Transport context entry timed out after 30 seconds. "
+                "Server may be slow or unreachable."
+            ) from e
         except Exception as e:
             self._clear_streams()
-            if self._transport_context is not None:
-                self._transport_context = None
-            _raise_connection_failure(f"Failed to connect to MCP server: {e}", e)
+            self._transport_context = None
+            raise_connection_failure(f"Failed to connect to MCP server: {e}", e)
+
+        self._set_streams(read=read, write=write)
+        return self
 
     async def disconnect(self) -> None:
         """Close HTTP connection."""

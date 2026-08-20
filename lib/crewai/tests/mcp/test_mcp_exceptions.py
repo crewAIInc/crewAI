@@ -11,6 +11,7 @@ from crewai.mcp.exceptions import (
     error_type_for_status,
     find_http_status,
     find_transport_failure,
+    raise_connection_failure,
 )
 
 
@@ -97,3 +98,24 @@ def test_find_transport_failure_returns_underlying_http_error():
     cancelled.__context__ = auth_error
 
     assert find_transport_failure(cancelled) is auth_error
+
+
+def test_raise_connection_failure_reraises_typed_error():
+    auth_error = MCPAuthenticationError(401)
+
+    with pytest.raises(MCPAuthenticationError) as exc_info:
+        raise_connection_failure("unused", auth_error)
+
+    assert exc_info.value is auth_error
+
+
+def test_raise_connection_failure_builds_auth_error_from_http_status():
+    with pytest.raises(MCPAuthenticationError) as exc_info:
+        raise_connection_failure("unused", _http_status_error(401))
+
+    assert exc_info.value.status_code == 401
+
+
+def test_raise_connection_failure_falls_back_to_connection_error():
+    with pytest.raises(ConnectionError, match="host unreachable"):
+        raise_connection_failure("host unreachable", ConnectionError("refused"))
