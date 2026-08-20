@@ -17,6 +17,7 @@ and simultaneously guarantees nothing after it runs, so no test touches real use
 settings, spawns a subprocess, or reaches the network.
 """
 
+from pathlib import Path
 from unittest import mock
 
 from click.testing import CliRunner
@@ -66,32 +67,60 @@ def test_command_backfills_project_id(runner, name, argv):
     )
 
 
-def test_run_still_backfills():
+MINIMAL_PYPROJECT = """\
+[project]
+name = "demo"
+version = "0.1.0"
+
+[tool.crewai]
+"""
+
+
+def _in_a_project(runner):
+    """A cwd that `crewai run` accepts, so execution reaches the backfill call."""
+    return runner.isolated_filesystem()
+
+
+def test_run_still_backfills(runner):
     """`crewai run` was already correct and must stay that way.
 
-    Asserted at the source rather than by invoking it, because `run_crew` reads the
-    cwd and this only needs to pin that the call site still exists.
+    Asserted at runtime rather than by reading the source, so a reformat cannot
+    break it and a real regression cannot slip past it.
     """
-    from pathlib import Path
+    with _in_a_project(runner):
+        Path("pyproject.toml").write_text(MINIMAL_PYPROJECT, encoding="utf-8")
+        with mock.patch(
+            "crewai_cli.run_crew.get_or_create_project_id",
+            side_effect=_BackfillReached,
+        ) as backfill:
+            result = runner.invoke(crewai, ["run"])
 
-    import crewai_cli.run_crew as run_crew_module
-
-    source = Path(run_crew_module.__file__).read_text(encoding="utf-8")
-    assert "get_or_create_project_id()" in source
+    assert backfill.called, "`crewai run` stopped backfilling project_id"
+    assert isinstance(result.exception, _BackfillReached)
 
 
-def test_flow_kickoff_inherits_the_backfill_from_run():
-    """`crewai flow kickoff` delegates to run_crew, so it must NOT call it twice.
+def test_flow_kickoff_delegates_the_backfill_and_does_not_duplicate_it(runner):
+    """`crewai flow kickoff` must inherit the backfill from run_crew, not repeat it.
 
-    Pinned deliberately: adding a second call here would mint under a lock that
-    run_crew is about to take, which is wasted work rather than a correctness bug -
-    but it would also hide the delegation from anyone reading the command.
+    A second call would mint under a lock run_crew is about to take -- wasted work
+    rather than a correctness bug, but it would also hide the delegation from anyone
+    reading the command. Asserted by call counts on the two distinct import sites,
+    which is what makes "delegates" and "duplicates" distinguishable at runtime.
     """
-    from pathlib import Path
+    with _in_a_project(runner):
+        Path("pyproject.toml").write_text(MINIMAL_PYPROJECT, encoding="utf-8")
+        with (
+            mock.patch("crewai_cli.cli.get_or_create_project_id") as in_cli,
+            mock.patch(
+                "crewai_cli.run_crew.get_or_create_project_id",
+                side_effect=_BackfillReached,
+            ) as in_run_crew,
+        ):
+            runner.invoke(crewai, ["flow", "kickoff"])
 
-    import crewai_cli.cli as cli_module
-
-    source = Path(cli_module.__file__).read_text(encoding="utf-8")
-    kickoff = source.split('@flow.command(name="kickoff")')[1].split("@flow.command")[0]
-    assert "run_crew(" in kickoff
-    assert "get_or_create_project_id()" not in kickoff
+    assert in_run_crew.call_count == 1, (
+        "flow kickoff must reach run_crew's backfill exactly once"
+    )
+    assert not in_cli.called, (
+        "flow kickoff must not add its own backfill call; it delegates to run_crew"
+    )
