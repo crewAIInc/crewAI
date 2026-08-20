@@ -489,6 +489,79 @@ class TestFlowResumeWithFeedback:
             assert flow._is_execution_resuming is True
             assert flow.state.counter == 42
 
+    def test_resume_emits_flow_started_even_when_events_are_suppressed(self) -> None:
+        """A resumed flow must report starting, not only finishing.
+
+        ``suppress_flow_events`` used to gate the resume path's ``FlowStartedEvent``
+        while the matching ``FlowFinishedEvent`` stayed ungated, so a suppressed
+        resume emitted an unpaired finish -- a flow that finished without ever
+        starting. That breaks any started/finished pairing and every duration built
+        on it, and it silently removed the resumed leg from telemetry.
+
+        The flag is not the right gate for emission either: it asks for console
+        quiet (see ``_flow_origin`` in ``events/event_listener.py``, which notes it
+        "can legitimately be set on a caller's own flow"), and the listener already
+        honours it where it prints.
+        """
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.flow_events import (
+            FlowFinishedEvent,
+            FlowStartedEvent,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            persistence = SQLiteFlowPersistence(os.path.join(tmpdir, "flows.db"))
+
+            class TestState(BaseModel):
+                id: str = "resume-events-1"
+
+            class TestFlow(Flow[TestState]):
+                suppress_flow_events = True
+
+                @start()
+                def begin(self):
+                    return "started"
+
+            context = PendingFeedbackContext(
+                flow_id="resume-events-1",
+                flow_class="test.TestFlow",
+                method_name="begin",
+                method_output="content",
+                message="Review:",
+            )
+            persistence.save_pending_feedback(
+                flow_uuid="resume-events-1",
+                context=context,
+                state_data={"id": "resume-events-1"},
+            )
+
+            flow = TestFlow.from_pending("resume-events-1", persistence)
+
+            seen: list[str] = []
+            original_emit = crewai_event_bus.emit
+
+            def capture_emit(source: Any, event: Any) -> Any:
+                if isinstance(event, FlowStartedEvent):
+                    seen.append("started")
+                elif isinstance(event, FlowFinishedEvent):
+                    seen.append("finished")
+                return original_emit(source, event)
+
+            with patch.object(crewai_event_bus, "emit", side_effect=capture_emit):
+                try:
+                    flow.resume("looks good")
+                except Exception:
+                    # The flow body is irrelevant here; only the lifecycle pair is.
+                    pass
+
+            assert "started" in seen, (
+                "a suppressed resume emitted no flow_started, so its finish is "
+                "unpaired and the resumed leg is invisible in telemetry"
+            )
+            assert seen.count("finished") <= seen.count("started"), (
+                f"finishes must never outnumber starts, got {seen}"
+            )
+
     def test_resume_without_pending_raises_error(self) -> None:
         """Test that resume raises error without pending context."""
 

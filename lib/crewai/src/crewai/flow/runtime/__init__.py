@@ -1393,20 +1393,30 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             reset_emission_counter()
             reset_last_event_id()
 
-        if not self.suppress_flow_events:
-            future = crewai_event_bus.emit(
-                self,
-                FlowStartedEvent(
-                    type="flow_started",
-                    flow_name=self._definition.name,
-                    inputs=None,
-                ),
-            )
-            if future and isinstance(future, Future):
-                try:
-                    await asyncio.wrap_future(future)
-                except Exception:
-                    logger.warning("FlowStartedEvent handler failed", exc_info=True)
+        # Emitted unconditionally, matching both the kickoff path and the
+        # FlowFinishedEvent below. This used to sit behind suppress_flow_events,
+        # which produced an unpaired finish: the finish emit is not gated, so a
+        # resumed flow reported finishing without ever having started, breaking
+        # every started/finished pairing and duration built on it.
+        #
+        # suppress_flow_events is not the right gate for emission in any case. It
+        # asks for console quiet - see _flow_origin in events/event_listener.py,
+        # which says so and notes it "can legitimately be set on a caller's own
+        # flow" - and the listener already honours it where it prints. Suppressing
+        # the event instead removed the resumed leg from telemetry entirely.
+        future = crewai_event_bus.emit(
+            self,
+            FlowStartedEvent(
+                type="flow_started",
+                flow_name=self._definition.name,
+                inputs=None,
+            ),
+        )
+        if future and isinstance(future, Future):
+            try:
+                await asyncio.wrap_future(future)
+            except Exception:
+                logger.warning("FlowStartedEvent handler failed", exc_info=True)
 
         get_env_context()
 
