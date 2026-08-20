@@ -136,8 +136,10 @@ def common_span_attributes() -> dict[str, str]:
 
     Returns:
         Attributes to stamp on every span. ``project_id`` is always present and
-        is the empty string for projects that do not declare one -- see the
-        comment at the assignment for why absent and empty must stay distinct.
+        is the empty string whenever no id is available -- both for projects that
+        declare none and when the lookup itself failed, which are deliberately
+        indistinguishable here because neither yields an id. See the comment at
+        the assignment for why empty and *absent* must stay distinct.
     """
     attributes = {
         "coding_agent": detect_coding_agent(),
@@ -155,9 +157,11 @@ def common_span_attributes() -> dict[str, str]:
     # Always set the key, even when empty. Absent and empty mean different things
     # and only this distinction can tell them apart: absent means the client is too
     # old to report a project id at all, empty means the client asked and the project
-    # declares none. Collapsing both into "absent" makes the share of clients that
-    # COULD have reported one unknowable, and that share is the denominator every
-    # attribution rate needs.
+    # declares none -- or the lookup failed, which lands here too and is treated the
+    # same, since an unreadable pyproject.toml also means no id is available.
+    # Collapsing empty into "absent" makes the share of clients that COULD have
+    # reported one unknowable, and that share is the denominator every attribution
+    # rate needs.
     attributes["project_id"] = project_id or ""
 
     return attributes
