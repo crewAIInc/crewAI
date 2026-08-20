@@ -229,6 +229,19 @@ def test_extract_preserves_schema_without_mutating_it(request_mock: Mock) -> Non
     assert request_mock.call_args.kwargs["json"]["schema"] == original
 
 
+def test_extract_accepts_public_schema_argument(request_mock: Mock) -> None:
+    result = ContextExtractTool(api_key="test-key").run(
+        url="https://example.com/pricing",
+        schema={"type": "object", "properties": {}},
+    )
+
+    assert result == {"ok": True}
+    assert request_mock.call_args.kwargs["json"]["schema"] == {
+        "type": "object",
+        "properties": {},
+    }
+
+
 @pytest.mark.parametrize(
     ("lookup_type", "identifier", "expected"),
     [
