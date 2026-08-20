@@ -176,6 +176,19 @@ def _serialize_executor_class(value: Any) -> str:
     return value.__name__ if isinstance(value, type) else str(value)
 
 
+def _carries_payload(message: LLMMessage) -> bool:
+    """Whether a message says anything the provider needs.
+
+    Text is the usual case, but an assistant turn that only requests tool
+    calls, and the tool result that answers it, both matter to the sequence.
+    """
+    return bool(
+        message.get("content")
+        or message.get("tool_calls")
+        or message.get("tool_call_id")
+    )
+
+
 class Agent(BaseAgent):
     """Represents an agent in a system.
 
@@ -1529,19 +1542,26 @@ class Agent(BaseAgent):
             formatted_messages = messages
             recall_text = messages
         else:
-            with_content = [msg for msg in messages if msg.get("content")]
+            # A message with no text still carries meaning when it holds tool
+            # calls or is a tool result; dropping those leaves a `tool` message
+            # with no preceding `assistant` tool_calls, which providers reject.
+            carried = [msg for msg in messages if _carries_payload(msg)]
             # The last message is this turn's request; the ones before it are
             # prior turns and keep their roles. Joining them all into one
             # string told the model the assistant's own replies were the
             # user's, so it could not tell who said what.
             formatted_messages = (
-                str(with_content[-1].get("content", "")) if with_content else ""
+                str(carried[-1].get("content") or "") if carried else ""
             )
-            history = with_content[:-1]
-            recall_text = "\n".join(str(msg.get("content", "")) for msg in with_content)
-            for msg in messages:
-                if msg.get("files"):
-                    all_files.update(msg["files"])
+            history = carried[:-1]
+            recall_text = "\n".join(
+                str(msg.get("content", "")) for msg in carried if msg.get("content")
+            )
+            # Only this turn's attachments go on the current request; a history
+            # message keeps its own, so unioning them all would send prior
+            # attachments twice.
+            if carried and carried[-1].get("files"):
+                all_files.update(carried[-1]["files"])
 
         if input_files:
             all_files.update(input_files)

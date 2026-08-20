@@ -101,3 +101,65 @@ def test_an_empty_list_does_not_crash() -> None:
     seen = _kickoff([])
 
     assert [message["role"] for message in seen] == ["system", "user"]
+
+
+def test_a_tool_call_sequence_survives() -> None:
+    """A `tool` message needs its preceding assistant `tool_calls` message.
+
+    Filtering on truthy content dropped the assistant turn, leaving a sequence
+    providers reject.
+    """
+    seen = _kickoff(
+        [
+            {"role": "user", "content": "what is the weather?"},
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [{"id": "c1", "function": {"name": "weather"}}],
+            },
+            {"role": "tool", "tool_call_id": "c1", "content": "sunny"},
+            {"role": "user", "content": "and tomorrow?"},
+        ]
+    )
+
+    assert [message["role"] for message in seen] == [
+        "system",
+        "user",
+        "assistant",
+        "tool",
+        "user",
+    ]
+    assert seen[2]["tool_calls"][0]["id"] == "c1"
+    assert seen[3]["tool_call_id"] == "c1"
+
+
+def test_history_survives_with_the_system_prompt_disabled() -> None:
+    """That branch builds one combined prompt, so history had nowhere to go."""
+    llm = _Recorder()
+    Agent(
+        role="Support",
+        goal="help",
+        backstory="b",
+        llm=llm,
+        use_system_prompt=False,
+    ).kickoff(HISTORY)
+    seen = llm.seen[0]
+
+    assert [message["role"] for message in seen] == ["user", "assistant", "user"]
+    assert seen[0]["content"] == "my order id is 42"
+    assert "where is it?" in str(seen[-1]["content"])
+
+
+def test_prior_turn_attachments_are_not_resent_on_this_turn() -> None:
+    """History keeps its own files; unioning them all would send them twice."""
+    llm = _Recorder()
+    agent = Agent(role="S", goal="g", backstory="b", llm=llm)
+    _executor, inputs, _info, _tools = agent._prepare_kickoff(
+        [
+            {"role": "user", "content": "here it is", "files": {"a": "old"}},
+            {"role": "user", "content": "and now this", "files": {"b": "new"}},
+        ]
+    )
+
+    assert inputs["files"] == {"b": "new"}
+    assert inputs["history"][0]["files"] == {"a": "old"}
