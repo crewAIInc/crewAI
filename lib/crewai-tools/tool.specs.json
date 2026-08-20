@@ -5238,6 +5238,1269 @@
       }
     },
     {
+      "description": "Retrieve structured brand intelligence including logos, colors, company descriptions, social profiles, links, industry, and location.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Context.dev",
+          "name": "CONTEXT_API_KEY",
+          "required": true
+        },
+        {
+          "default": null,
+          "description": "Optional Context.dev API base URL",
+          "name": "CONTEXT_API_BASE",
+          "required": false
+        }
+      ],
+      "humanized_name": "Context.dev brand intelligence",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Retrieve structured brand intelligence through Context.dev.",
+        "properties": {},
+        "required": [],
+        "title": "ContextBrandTool",
+        "type": "object"
+      },
+      "name": "ContextBrandTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "maxLength": 2,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country hint for company-name or transaction lookups.",
+            "title": "Country"
+          },
+          "exchange": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Stock exchange for ticker lookups.",
+            "title": "Exchange"
+          },
+          "identifier": {
+            "description": "Domain, company name, work email, ticker, direct URL, or transaction descriptor.",
+            "minLength": 1,
+            "title": "Identifier",
+            "type": "string"
+          },
+          "lookup_type": {
+            "default": "domain",
+            "description": "How Context.dev should interpret the identifier.",
+            "enum": [
+              "domain",
+              "name",
+              "email",
+              "ticker",
+              "direct_url",
+              "transaction"
+            ],
+            "title": "Lookup Type",
+            "type": "string"
+          },
+          "max_speed": {
+            "default": false,
+            "description": "Return faster, less comprehensive brand data when true.",
+            "title": "Max Speed",
+            "type": "boolean"
+          },
+          "timeout_ms": {
+            "anyOf": [
+              {
+                "maximum": 300000,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum server processing time in milliseconds.",
+            "title": "Timeout Ms"
+          }
+        },
+        "required": [
+          "identifier"
+        ],
+        "title": "ContextBrandToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Crawl linked pages from a website and return their Markdown with Context.dev. Use this for multi-page research and documentation collection.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Context.dev",
+          "name": "CONTEXT_API_KEY",
+          "required": true
+        },
+        {
+          "default": null,
+          "description": "Optional Context.dev API base URL",
+          "name": "CONTEXT_API_BASE",
+          "required": false
+        }
+      ],
+      "humanized_name": "Context.dev website crawler",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Crawl linked website pages through Context.dev.",
+        "properties": {},
+        "required": [],
+        "title": "ContextCrawlTool",
+        "type": "object"
+      },
+      "name": "ContextCrawlTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "exclude_selectors": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Remove HTML subtrees matching these CSS selectors.",
+            "title": "Exclude Selectors"
+          },
+          "follow_subdomains": {
+            "default": false,
+            "description": "Follow links on subdomains of the starting domain.",
+            "title": "Follow Subdomains",
+            "type": "boolean"
+          },
+          "include_images": {
+            "default": false,
+            "description": "Include image references in each page's Markdown.",
+            "title": "Include Images",
+            "type": "boolean"
+          },
+          "include_links": {
+            "default": true,
+            "description": "Preserve hyperlinks in each page's Markdown.",
+            "title": "Include Links",
+            "type": "boolean"
+          },
+          "include_selectors": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Keep only HTML subtrees matching these CSS selectors.",
+            "title": "Include Selectors"
+          },
+          "max_depth": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum link depth; 0 limits the crawl to the starting page.",
+            "title": "Max Depth"
+          },
+          "max_pages": {
+            "default": 100,
+            "description": "Maximum number of pages to crawl, from 1 to 500.",
+            "maximum": 500,
+            "minimum": 1,
+            "title": "Max Pages",
+            "type": "integer"
+          },
+          "stop_after_ms": {
+            "anyOf": [
+              {
+                "maximum": 110000,
+                "minimum": 10000,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Soft crawl time budget in milliseconds.",
+            "title": "Stop After Ms"
+          },
+          "timeout_ms": {
+            "anyOf": [
+              {
+                "maximum": 300000,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum server processing time in milliseconds.",
+            "title": "Timeout Ms"
+          },
+          "url": {
+            "description": "Starting HTTP(S) URL for the crawl.",
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          },
+          "url_regex": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only follow and scrape URLs matching this regular expression.",
+            "title": "Url Regex"
+          },
+          "use_main_content_only": {
+            "default": false,
+            "description": "Remove navigation, headers, footers, and sidebars.",
+            "title": "Use Main Content Only",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "ContextCrawlToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Extract structured data from one or more website pages with Context.dev and return an object matching the supplied JSON Schema.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Context.dev",
+          "name": "CONTEXT_API_KEY",
+          "required": true
+        },
+        {
+          "default": null,
+          "description": "Optional Context.dev API base URL",
+          "name": "CONTEXT_API_BASE",
+          "required": false
+        }
+      ],
+      "humanized_name": "Context.dev structured web extraction",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Extract JSON Schema-constrained web data through Context.dev.",
+        "properties": {},
+        "required": [],
+        "title": "ContextExtractTool",
+        "type": "object"
+      },
+      "name": "ContextExtractTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "fact_check": {
+            "default": false,
+            "description": "Require every value to be grounded directly in page content.",
+            "title": "Fact Check",
+            "type": "boolean"
+          },
+          "follow_subdomains": {
+            "default": false,
+            "description": "Follow relevant links on subdomains of the starting domain.",
+            "title": "Follow Subdomains",
+            "type": "boolean"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional guidance for interpreting and prioritizing fields.",
+            "title": "Instructions"
+          },
+          "max_depth": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum link depth; 0 limits extraction to the starting page.",
+            "title": "Max Depth"
+          },
+          "max_pages": {
+            "default": 5,
+            "description": "Maximum number of pages to analyze, from 1 to 50.",
+            "maximum": 50,
+            "minimum": 1,
+            "title": "Max Pages",
+            "type": "integer"
+          },
+          "schema": {
+            "additionalProperties": true,
+            "description": "JSON Schema describing the structured data to return.",
+            "title": "Schema",
+            "type": "object"
+          },
+          "stop_after_ms": {
+            "anyOf": [
+              {
+                "maximum": 110000,
+                "minimum": 10000,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Soft extraction crawl time budget in milliseconds.",
+            "title": "Stop After Ms"
+          },
+          "timeout_ms": {
+            "anyOf": [
+              {
+                "maximum": 300000,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum server processing time in milliseconds.",
+            "title": "Timeout Ms"
+          },
+          "url": {
+            "description": "Starting HTTP(S) URL to crawl and extract data from.",
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "schema"
+        ],
+        "title": "ContextExtractToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Convert a local PDF, Office document, spreadsheet, presentation, image, code file, or text file into clean Markdown with Context.dev.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Context.dev",
+          "name": "CONTEXT_API_KEY",
+          "required": true
+        },
+        {
+          "default": null,
+          "description": "Optional Context.dev API base URL",
+          "name": "CONTEXT_API_BASE",
+          "required": false
+        }
+      ],
+      "humanized_name": "Context.dev document parser",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Parse a local document into Markdown through Context.dev.",
+        "properties": {},
+        "required": [],
+        "title": "ContextParseTool",
+        "type": "object"
+      },
+      "name": "ContextParseTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "extension": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional file extension hint such as pdf, docx, xlsx, or pptx.",
+            "title": "Extension"
+          },
+          "file_path": {
+            "description": "Path to the local document to convert into Markdown.",
+            "minLength": 1,
+            "title": "File Path",
+            "type": "string"
+          },
+          "include_images": {
+            "default": false,
+            "description": "Include image references in the Markdown output.",
+            "title": "Include Images",
+            "type": "boolean"
+          },
+          "include_links": {
+            "default": true,
+            "description": "Preserve hyperlinks in the Markdown output.",
+            "title": "Include Links",
+            "type": "boolean"
+          },
+          "ocr": {
+            "default": false,
+            "description": "Run OCR on selected PDF pages without usable text layers.",
+            "title": "Ocr",
+            "type": "boolean"
+          },
+          "pdf_end": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Last 1-based PDF page to parse.",
+            "title": "Pdf End"
+          },
+          "pdf_start": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "First 1-based PDF page to parse.",
+            "title": "Pdf Start"
+          },
+          "use_main_content_only": {
+            "default": false,
+            "description": "Extract only the main content from HTML-like files.",
+            "title": "Use Main Content Only",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "file_path"
+        ],
+        "title": "ContextParseToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Turn one known web page into clean, LLM-ready Markdown with Context.dev. Use search first when the exact URL is unknown.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Context.dev",
+          "name": "CONTEXT_API_KEY",
+          "required": true
+        },
+        {
+          "default": null,
+          "description": "Optional Context.dev API base URL",
+          "name": "CONTEXT_API_BASE",
+          "required": false
+        }
+      ],
+      "humanized_name": "Context.dev page scraper",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Scrape a known web page into Markdown through Context.dev.",
+        "properties": {},
+        "required": [],
+        "title": "ContextScrapeTool",
+        "type": "object"
+      },
+      "name": "ContextScrapeTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "maxLength": 2,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Two-letter ISO country code for residential proxy location.",
+            "title": "Country"
+          },
+          "exclude_selectors": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Remove HTML subtrees matching these CSS selectors.",
+            "title": "Exclude Selectors"
+          },
+          "include_html": {
+            "default": false,
+            "description": "Also return the source HTML used to produce the Markdown.",
+            "title": "Include Html",
+            "type": "boolean"
+          },
+          "include_images": {
+            "default": false,
+            "description": "Include image references in the Markdown output.",
+            "title": "Include Images",
+            "type": "boolean"
+          },
+          "include_links": {
+            "default": true,
+            "description": "Preserve hyperlinks in the Markdown output.",
+            "title": "Include Links",
+            "type": "boolean"
+          },
+          "include_selectors": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Keep only HTML subtrees matching these CSS selectors.",
+            "title": "Include Selectors"
+          },
+          "max_age_ms": {
+            "anyOf": [
+              {
+                "maximum": 2592000000,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum age of a cached result in milliseconds; use 0 for fresh data.",
+            "title": "Max Age Ms"
+          },
+          "timeout_ms": {
+            "anyOf": [
+              {
+                "maximum": 300000,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum server processing time in milliseconds.",
+            "title": "Timeout Ms"
+          },
+          "url": {
+            "description": "Full HTTP(S) URL to scrape into clean Markdown.",
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          },
+          "use_main_content_only": {
+            "default": false,
+            "description": "Remove navigation, headers, footers, and sidebars.",
+            "title": "Use Main Content Only",
+            "type": "boolean"
+          },
+          "wait_for_ms": {
+            "anyOf": [
+              {
+                "maximum": 30000,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Extra wait after page load for JavaScript-rendered content.",
+            "title": "Wait For Ms"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "ContextScrapeToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search the live web with Context.dev. Use this when the exact source URL is unknown or when current, cited sources are needed.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Context.dev",
+          "name": "CONTEXT_API_KEY",
+          "required": true
+        },
+        {
+          "default": null,
+          "description": "Optional Context.dev API base URL",
+          "name": "CONTEXT_API_BASE",
+          "required": false
+        }
+      ],
+      "humanized_name": "Context.dev web search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Search the live web through Context.dev.",
+        "properties": {},
+        "required": [],
+        "title": "ContextSearchTool",
+        "type": "object"
+      },
+      "name": "ContextSearchTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "maxLength": 2,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Two-letter ISO country code used to localize results.",
+            "title": "Country"
+          },
+          "exclude_domains": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exclude results from these domains.",
+            "title": "Exclude Domains"
+          },
+          "freshness": {
+            "anyOf": [
+              {
+                "enum": [
+                  "last_24_hours",
+                  "last_week",
+                  "last_month",
+                  "last_year"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional recency window for search results.",
+            "title": "Freshness"
+          },
+          "include_domains": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only return results from these domains.",
+            "title": "Include Domains"
+          },
+          "include_markdown": {
+            "default": false,
+            "description": "Scrape each ranked result and include its Markdown content.",
+            "title": "Include Markdown",
+            "type": "boolean"
+          },
+          "num_results": {
+            "default": 10,
+            "description": "Number of ranked results to return, from 10 to 100.",
+            "maximum": 100,
+            "minimum": 10,
+            "title": "Num Results",
+            "type": "integer"
+          },
+          "query": {
+            "description": "Web search query, including optional search operators.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "query_fanout": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Expand the query into parallel variants for broader recall.",
+            "title": "Query Fanout"
+          },
+          "timeout_ms": {
+            "anyOf": [
+              {
+                "maximum": 300000,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum server processing time in milliseconds.",
+            "title": "Timeout Ms"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "ContextSearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Discover or semantically search URLs from a website's sitemap with Context.dev without fetching every page body.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Context.dev",
+          "name": "CONTEXT_API_KEY",
+          "required": true
+        },
+        {
+          "default": null,
+          "description": "Optional Context.dev API base URL",
+          "name": "CONTEXT_API_BASE",
+          "required": false
+        }
+      ],
+      "humanized_name": "Context.dev sitemap discovery",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Discover and search website sitemap URLs through Context.dev.",
+        "properties": {},
+        "required": [],
+        "title": "ContextSitemapTool",
+        "type": "object"
+      },
+      "name": "ContextSitemapTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "domain": {
+            "description": "Domain whose sitemap URLs should be discovered.",
+            "minLength": 3,
+            "title": "Domain",
+            "type": "string"
+          },
+          "max_links": {
+            "default": 10000,
+            "description": "Maximum number of matching URLs to return.",
+            "maximum": 100000,
+            "minimum": 1,
+            "title": "Max Links",
+            "type": "integer"
+          },
+          "search": {
+            "anyOf": [
+              {
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Natural-language topic used to rank and filter sitemap URLs.",
+            "title": "Search"
+          },
+          "sitemap_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Explicit sitemap URL to crawl instead of auto-discovery.",
+            "title": "Sitemap Url"
+          },
+          "timeout_ms": {
+            "anyOf": [
+              {
+                "maximum": 300000,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum server processing time in milliseconds.",
+            "title": "Timeout Ms"
+          },
+          "url_regex": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only return URLs matching this regular expression.",
+            "title": "Url Regex"
+          }
+        },
+        "required": [
+          "domain"
+        ],
+        "title": "ContextSitemapToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "Create a new Contextual AI RAG agent with documents and datastore",
       "env_vars": [],
       "humanized_name": "Contextual AI Create Agent Tool",
