@@ -4039,6 +4039,71 @@ methods: {}
         FlowDefinition.from_declaration(contents=yaml_str)
 
 
+
+def test_agent_action_accepts_a_rendered_message_list():
+    """A chat handler can hand the agent the conversation, not just a string."""
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    rendered = [
+        {"role": "user", "content": "my order id is 42"},
+        {"role": "assistant", "content": "thanks, checking"},
+    ]
+
+    assert _normalize_agent_input(rendered) == rendered
+
+
+def test_agent_action_strips_serialized_message_metadata():
+    """A raw `${state.messages}` render carries None keys the event rejects."""
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    normalized = _normalize_agent_input(
+        [{"role": "user", "content": "hi", "name": None, "metadata": {}}]
+    )
+
+    assert normalized == [{"role": "user", "content": "hi"}]
+
+
+def test_agent_action_still_accepts_a_string():
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    assert _normalize_agent_input("just a prompt") == "just a prompt"
+
+
+def test_agent_action_rejects_a_shape_that_is_neither():
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    with pytest.raises(
+        ValueError, match="must render to a string or a list of messages"
+    ):
+        _normalize_agent_input(1234)
+
+
+def test_agent_definition_accepts_a_message_list_input():
+    from crewai.project.crew_definition import AgentDefinition
+
+    definition = AgentDefinition.model_validate(
+        {
+            "role": "R",
+            "goal": "G",
+            "backstory": "B",
+            "input": [{"role": "user", "content": "hi"}],
+        }
+    )
+
+    assert definition.input == [{"role": "user", "content": "hi"}]
+
+
+def test_agent_definition_rejects_a_non_message_input():
+    from crewai.project.crew_definition import AgentDefinition
+
+    with pytest.raises(
+        ValidationError, match="must be a string or a list of messages"
+    ):
+        AgentDefinition.model_validate(
+            {"role": "R", "goal": "G", "backstory": "B", "input": [1, 2]}
+        )
+
+
 def test_definition_method_missing_from_class_fails_loudly():
     class VanishingFlow(Flow):
         @start()
