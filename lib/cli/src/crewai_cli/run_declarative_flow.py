@@ -59,6 +59,10 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     JSON is layered on top as an override, missing required fields are prompted
     for interactively, and everything is validated against the schema before
     kickoff — so a bare ``crewai run`` on a configured flow just works.
+
+    A conversational declaration takes none of that: each turn's input is the
+    message typed into the chat, so ``--inputs`` is rejected and no
+    state-schema resolution runs.
     """
     # Load the project's .env before kickoff, mirroring the JSON-crew path
     # (run_crew._run_json_crew) so flow projects pick up API keys/config the
@@ -110,6 +114,11 @@ def _run_conversational_declarative_flow(
     drives ``handle_turn`` per message. A chat loop needs a terminal, so a
     headless run says what it would have needed rather than kicking off one
     turn and exiting as if that were the whole conversation.
+
+    Two flows do not reach that TUI: one passed ``--inputs``, which it has
+    nowhere to put, and one using ``@human_feedback``, which needs the
+    terminal ``flow.chat()`` REPL because the runtime collects feedback with a
+    blocking prompt Textual cannot service.
     """
     if provided:
         # The TUI calls ``handle_turn(message)``, which owns the kickoff inputs

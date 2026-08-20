@@ -680,11 +680,12 @@ def test_conversational_flow_rejects_inputs(
         lambda flow: pytest.fail("should have rejected --inputs before the TUI"),
     )
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(SystemExit) as exc_info:
         run_declarative_flow_module.run_declarative_flow(
             str(definition_path), '{"topic": "AI"}'
         )
 
+    assert exc_info.value.code == 1
     err = capsys.readouterr().err
     assert "`--inputs` is not supported for a conversational flow" in err
     assert "session_id" in err
