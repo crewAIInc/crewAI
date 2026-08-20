@@ -2420,6 +2420,59 @@ class TestDeclarativeConversationalFlow:
         assert "cannot carry a model class" in caplog.text
 
 
+class TestDeclaredConversationalLLM:
+    """A conversational block accepts the shapes a crew agent's `llm` accepts."""
+
+    @staticmethod
+    def _resolved(llm: Any) -> Any:
+        flow = Flow.from_declaration(
+            contents=_conversational_declaration(conversational={"llm": llm})
+        )
+        return flow._coerce_llm(flow._conversation_config.llm)
+
+    def test_model_id_string(self) -> None:
+        assert self._resolved("gpt-4o-mini").model == "gpt-4o-mini"
+
+    def test_config_mapping_carries_provider_settings(self) -> None:
+        resolved = self._resolved({"model": "openai/gpt-4o-mini", "max_tokens": 512})
+
+        assert resolved.model == "gpt-4o-mini"
+        assert resolved.max_tokens == 512
+
+    def test_config_mapping_passes_through_extra_settings(self) -> None:
+        resolved = self._resolved({"model": "openai/gpt-4o-mini", "temperature": 0.2})
+
+        assert resolved.temperature == 0.2
+
+    def test_a_live_llm_object_is_passed_through_untouched(self) -> None:
+        llm = _ScriptedLLM(["hi"])
+
+        @ConversationConfig(llm=llm)
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        assert ClassChat()._coerce_llm(llm) is llm
+
+    def test_a_mapping_without_a_model_key_says_so(self) -> None:
+        with pytest.raises(ValueError, match="must include 'model'"):
+            self._resolved({"max_tokens": 512})
+
+    def test_a_wrong_type_fails_now_not_at_call_time(self) -> None:
+        """`create_llm` would take an int as a model name and fail later."""
+        with pytest.raises(ValueError, match="expected a model-id string"):
+            self._resolved(1234)
+
+    def test_a_declared_mapping_runs_a_turn(self) -> None:
+        flow = Flow.from_declaration(
+            contents=_conversational_declaration(
+                conversational={"llm": {"model": "openai/gpt-4o-mini"}}
+            )
+        )
+        flow._conversation_config.llm = _ScriptedLLM(["Hello."])
+
+        assert flow.handle_turn("hi") == "Hello."
+
+
 class TestRoutingArtefactLabels:
     """A route label echoed by a handler is a routing artefact, not a reply."""
 

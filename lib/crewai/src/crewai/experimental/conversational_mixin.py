@@ -1424,14 +1424,33 @@ class _ConversationalMixin:
 
     @staticmethod
     def _coerce_llm(llm: str | BaseLLM | Any) -> Any:
-        from crewai.llm import LLM
-        from crewai.llms.base_llm import BaseLLM as BaseLLMClass
+        """Resolve a declared or live LLM the way a crew agent's ``llm`` resolves.
 
-        if isinstance(llm, str):
-            return LLM(model=llm)
+        ``create_llm`` is the shared helper the crew/agent declaration layer
+        uses, so a conversational block accepts the same shapes: a model-id
+        string, a config mapping (``{model, max_tokens, ...}``), an
+        ``LLMDefinition``, or a live ``LLM``/``BaseLLM`` passed straight
+        through.
+        """
+        from crewai.llms.base_llm import BaseLLM as BaseLLMClass
+        from crewai.project.crew_definition import LLMDefinition
+        from crewai.utilities.llm_utils import create_llm
+
         if isinstance(llm, BaseLLMClass) or callable(getattr(llm, "call", None)):
             return llm
-        raise ValueError(f"Invalid llm type: {type(llm)}. Expected str or BaseLLM.")
+        if isinstance(llm, LLMDefinition):
+            llm = llm.model_dump(exclude_none=True)
+        if not isinstance(llm, (str, Mapping)):
+            # ``create_llm`` would take an int or a list as a model name and
+            # build an LLM that only fails later, at call time, with a
+            # provider error. A declaration is hand-written, so a typo here
+            # should say so now.
+            raise ValueError(
+                f"Invalid llm {llm!r}: expected a model-id string, a config "
+                "mapping with a 'model' key, or an LLM instance."
+            )
+
+        return create_llm(dict(llm) if isinstance(llm, Mapping) else llm)
 
     @contextmanager
     def _conversation_streaming_enabled(self, llm: Any) -> Iterator[None]:
