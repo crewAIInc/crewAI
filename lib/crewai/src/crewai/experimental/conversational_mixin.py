@@ -993,17 +993,50 @@ class _ConversationalMixin:
             update={"methods": {**definition.methods, **missing}}
         )
 
-    def _create_default_extension_state(self) -> ConversationState | None:
-        """Supply ``ConversationState`` only when nothing else declares state.
+    def _compose_extension_state_model(
+        self, model_class: type[BaseModel]
+    ) -> type[BaseModel]:
+        """Add the conversational fields to a declared state model.
 
-        A declared ``state:`` block always wins. This hook is consulted before
-        ``_create_definition_state``, so returning a state here would discard
-        every field the declaration asked for.
+        A turn reads ``messages``, ``current_user_message``, ``last_intent``,
+        ``ended``, ``events`` and ``agent_threads`` off state, so a declared
+        model that lacks them fails on the first turn. Composing rather than
+        replacing keeps every field the declaration asked for. A model that
+        already extends ``ConversationState`` is returned untouched.
+        """
+        if not self._is_conversational_enabled():
+            return model_class
+        if issubclass(model_class, ConversationState):
+            return model_class
+
+        class ConversationalState(ConversationState, model_class):  # type: ignore[misc, valid-type]
+            pass
+
+        return ConversationalState
+
+    def _create_default_extension_state(self) -> ConversationState | None:
+        """Supply ``ConversationState`` when the declaration cannot carry it.
+
+        A declared ``pydantic`` or ``json_schema`` state is composed with the
+        conversational fields instead (see
+        ``_compose_extension_state_model``), so it keeps everything it asked
+        for. ``dict`` and ``unknown`` state cannot carry them at all, so this
+        supplies the real shape rather than letting the turn die on
+        ``state.id`` -- seeded from the declared defaults where they fit.
         """
         if not self._is_conversational_enabled():
             return None
-        if self._conversation_flow_definition().state is not None:
-            return None
+
+        state_definition = self._conversation_flow_definition().state
+        if state_definition is not None:
+            if state_definition.type in ("pydantic", "json_schema"):
+                return None
+            defaults = {
+                name: value
+                for name, value in (state_definition.default or {}).items()
+                if name in ConversationState.model_fields
+            }
+            return ConversationState(**defaults)
         initial_state_t = getattr(self, "_initial_state_t", None)
         if not hasattr(self, "_initial_state_t") or isinstance(
             initial_state_t, TypeVar
