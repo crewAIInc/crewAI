@@ -2495,6 +2495,49 @@ class TestDeclaredRouterResponseFormat:
 
         assert ClassChat()._conversation_config.router.response_format is MyRoute
 
+    def test_a_function_local_model_is_omitted_from_the_projection(self) -> None:
+        """A path through `<locals>` cannot be imported back, so never emit it."""
+
+        class LocalRoute(BaseModel):
+            intent: str
+
+        @ConversationConfig(router=RouterConfig(response_format=LocalRoute))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        definition = ClassChat.flow_definition()
+
+        assert definition.conversational.router.response_format is None
+        # The live class still drives the running flow; only the projection drops it.
+        assert ClassChat()._conversation_config.router.response_format is LocalRoute
+
+    def test_a_non_model_response_format_is_omitted_from_the_projection(self) -> None:
+        class NotAModel:
+            pass
+
+        @ConversationConfig(router=RouterConfig(response_format=NotAModel))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        assert ClassChat.flow_definition().conversational.router.response_format is None
+
+    def test_a_dropped_projection_reloads_with_the_synthesized_model(self) -> None:
+        class LocalRoute(BaseModel):
+            intent: str
+
+        @ConversationConfig(router=RouterConfig(response_format=LocalRoute))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        reloaded = Flow.from_declaration(
+            contents=ClassChat.flow_definition().to_dict()
+        )
+        synthesized = reloaded._router_response_format(
+            reloaded._conversation_config.router
+        )
+
+        assert list(synthesized.model_fields) == ["intent"]
+
     def test_a_live_class_projects_as_a_python_ref(self) -> None:
         @ConversationConfig(router=RouterConfig(response_format=ConversationState))
         class ClassChat(Flow[ConversationState]):
