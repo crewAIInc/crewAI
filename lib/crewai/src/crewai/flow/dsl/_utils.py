@@ -284,13 +284,24 @@ def _python_reference(value: Any) -> dict[str, str] | None:
     """
     if value is None:
         return None
-    if not isinstance(value, type):
+
+    reason: str | None = None
+    if not isinstance(value, type) or not issubclass(value, BaseModel):
+        reason = "is not a Pydantic model class"
+    elif "<locals>" in value.__qualname__:
+        # A dotted path through ``<locals>`` cannot be imported back, so the
+        # ref would only fail when something tried to reload it.
+        reason = "is defined inside a function and cannot be imported by path"
+
+    if reason is not None:
         logger.warning(
-            "Conversational router response_format %r is not a class; dropping it "
-            "from the definition.",
+            "Conversational router response_format %r %s; dropping it from the "
+            "definition. The router will use its synthesized response format.",
             value,
+            reason,
         )
         return None
+
     return {"python": f"{value.__module__}.{value.__qualname__}"}
 
 
