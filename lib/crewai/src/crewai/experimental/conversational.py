@@ -96,8 +96,17 @@ class ConversationConfig:
     defer_trace_finalization: bool = True
 
     def __call__(self, flow_cls: type[Any]) -> type[Any]:
-        """Use this config as a class decorator."""
+        """Use this config as a class decorator.
+
+        Decorating a Flow also opts it into conversational mode. Every field
+        here is consumed only by the conversational runtime, so a decorated Flow
+        that was not conversational would silently discard its whole config:
+        ``handle_turn()`` would return ``None`` without appending or raising.
+        Setting ``conversational = True`` explicitly is still supported and is
+        the way to opt in without a config.
+        """
         flow_cls.conversational_config = self
+        flow_cls.conversational = True
         return flow_cls
 
 

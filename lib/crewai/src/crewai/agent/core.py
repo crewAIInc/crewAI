@@ -728,28 +728,22 @@ class Agent(BaseAgent):
         Raises:
             Exception: If the error is from litellm, a passthrough, or retries are exhausted.
         """
-        if e.__class__.__module__.startswith("litellm"):
-            crewai_event_bus.emit(
-                self,
-                event=AgentExecutionErrorEvent(
-                    agent=self,
-                    task=task,
-                    error=str(e),
-                ),
-            )
-            raise e
         if isinstance(e, _passthrough_exceptions):
             raise
+        # A retry re-enters execute_task, which opens a new agent_execution_started
+        # scope, so every failed attempt has to close its own.
+        crewai_event_bus.emit(
+            self,
+            event=AgentExecutionErrorEvent(
+                agent=self,
+                task=task,
+                error=str(e),
+            ),
+        )
+        if e.__class__.__module__.startswith("litellm"):
+            raise e
         self._times_executed += 1
         if self._times_executed > self.max_retry_limit:
-            crewai_event_bus.emit(
-                self,
-                event=AgentExecutionErrorEvent(
-                    agent=self,
-                    task=task,
-                    error=str(e),
-                ),
-            )
             raise e
 
     def _handle_execution_error(
@@ -886,7 +880,8 @@ class Agent(BaseAgent):
             )
             raise e
         except Exception as e:
-            result = self._handle_execution_error(e, task, context, tools)
+            # The retry runs a whole execute_task of its own, result already finalized.
+            return self._handle_execution_error(e, task, context, tools)
 
         return self._finalize_task_execution(task, result)
 
@@ -1020,7 +1015,8 @@ class Agent(BaseAgent):
             )
             raise e
         except Exception as e:
-            result = await self._handle_execution_error_async(e, task, context, tools)
+            # The retry runs a whole aexecute_task of its own, result already finalized.
+            return await self._handle_execution_error_async(e, task, context, tools)
 
         return self._finalize_task_execution(task, result)
 
