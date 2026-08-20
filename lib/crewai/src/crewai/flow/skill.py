@@ -26,6 +26,8 @@ SKIP_BY_MODEL: dict[str, str] = {
     "FlowConfigDefinition": "config",
     "FlowHumanFeedbackDefinition": "hitl",
     "FlowPersistenceDefinition": "persistence",
+    "FlowConversationalDefinition": "conversational",
+    "FlowConversationalRouterDefinition": "conversational",
 }
 
 FIELD_TYPE_OVERRIDES: dict[tuple[str, str], str] = {
@@ -138,6 +140,8 @@ MODEL_TITLES = {
     "FlowConfigDefinition": "Config",
     "FlowPersistenceDefinition": "Persistence",
     "FlowHumanFeedbackDefinition": "Human Feedback",
+    "FlowConversationalDefinition": "Conversational",
+    "FlowConversationalRouterDefinition": "Conversational Router",
 }
 
 
@@ -279,6 +283,35 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         "FlowHumanFeedbackDefinition",
         "Human Feedback",
         "methods.<name>.human_feedback",
+    ),
+    ModelSpec(
+        "FlowConversationalDefinition",
+        "Conversational",
+        "conversational",
+        descriptions={
+            "enabled": "Whether conversational mode is active. Declaring the conversational block is the opt-in, so leave this out unless you are turning chat off with `false`.",
+            "llm": "Model id used by the built-in `converse` handler, and the router's fallback model.",
+            "system_prompt": "System message for the built-in `converse` handler. Omit for the framework default; use an empty string for none.",
+            "default_intents": "Outcome labels classified before routing. Requires `intent_llm`.",
+            "answer_from_history_llm": "Setting this enables the optional `answer_from_history` route, which answers from the transcript without invoking a route handler.",
+            "visible_agent_outputs": "Agent names whose recorded results are promoted to user-visible assistant messages, or `all`.",
+            "builtin_routes": "Route labels the framework handles itself. Do not add your own routes here; declare them as a method `listen` label.",
+            "internal_routes": "Route labels the framework handles that are excluded from the router's catalog.",
+        },
+        examples=True,
+    ),
+    ModelSpec(
+        "FlowConversationalRouterDefinition",
+        "Conversational Router",
+        "conversational.router",
+        descriptions={
+            "prompt": "Domain framing for the routing decision: persona, policy, voice. Do not list routes here; the catalog is built automatically.",
+            "routes": "Route labels the router may choose. Omit to infer them from the methods that declare a `listen` label.",
+            "route_descriptions": "Per-route text for the router's catalog. A method's `description` is used when a route has no entry here.",
+            "default_intent": "Route used when no routing model is configured or the call fails.",
+            "fallback_intent": "Route used when the model returns a label that is not in the catalog.",
+            "response_format": "Leave this out in a declaration. A declaration cannot carry a model class, so it is ignored with a warning and the framework synthesizes one.",
+        },
     ),
 )
 
