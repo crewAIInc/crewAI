@@ -137,7 +137,7 @@ def test_flow_kickoff_delegates_the_backfill_and_does_not_duplicate_it(runner):
                 side_effect=_StopAfterBackfill,
             ),
         ):
-            runner.invoke(crewai, ["flow", "kickoff"])
+            result = runner.invoke(crewai, ["flow", "kickoff"])
 
     assert in_run_crew.call_count == 1, (
         "flow kickoff must reach run_crew's backfill exactly once -- more than one "
@@ -145,4 +145,9 @@ def test_flow_kickoff_delegates_the_backfill_and_does_not_duplicate_it(runner):
     )
     assert not in_cli.called, (
         "flow kickoff must not add its own backfill call; it delegates to run_crew"
+    )
+    assert isinstance(result.exception, _StopAfterBackfill), (
+        "execution must have reached the boundary after run_crew's backfill. Without "
+        "this, both counts above would also pass if the path returned or raised "
+        "between the backfill and that boundary -- i.e. for the wrong reason"
     )
