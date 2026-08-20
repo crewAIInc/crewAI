@@ -2,7 +2,7 @@
 
 import asyncio
 import sys
-from typing import Any
+from typing import Any, NoReturn
 
 from typing_extensions import Self
 
@@ -12,7 +12,22 @@ if sys.version_info >= (3, 11):
 else:
     from exceptiongroup import BaseExceptionGroup
 
+from crewai.mcp.exceptions import (
+    MCPConnectionError,
+    error_for_status,
+    find_http_status,
+)
 from crewai.mcp.transports.base import BaseTransport, TransportType
+
+
+def _raise_connection_failure(message: str, exc: BaseException) -> NoReturn:
+    """Raise a typed MCP connection error when an HTTP status is known."""
+    if isinstance(exc, MCPConnectionError):
+        raise exc
+    status_code = find_http_status(exc)
+    if status_code is not None:
+        raise error_for_status(status_code, detail=str(exc)) from exc
+    raise ConnectionError(message) from exc
 
 
 class HTTPTransport(BaseTransport):
@@ -65,7 +80,8 @@ class HTTPTransport(BaseTransport):
             Self for method chaining.
 
         Raises:
-            ConnectionError: If connection fails.
+            MCPConnectionError: If the server refused the connection with an HTTP status.
+            ConnectionError: If connection fails for other reasons.
             ImportError: If MCP SDK not available.
         """
         if self._connected:
@@ -92,7 +108,7 @@ class HTTPTransport(BaseTransport):
                 ) from e
             except Exception as e:
                 self._transport_context = None
-                raise ConnectionError(f"Failed to enter transport context: {e}") from e
+                _raise_connection_failure(f"Failed to enter transport context: {e}", e)
             self._set_streams(read=read, write=write)
             return self
 
@@ -100,11 +116,16 @@ class HTTPTransport(BaseTransport):
             raise ImportError(
                 "MCP library not available. Please install with: pip install mcp"
             ) from e
+        except MCPConnectionError:
+            self._clear_streams()
+            if self._transport_context is not None:
+                self._transport_context = None
+            raise
         except Exception as e:
             self._clear_streams()
             if self._transport_context is not None:
                 self._transport_context = None
-            raise ConnectionError(f"Failed to connect to MCP server: {e}") from e
+            _raise_connection_failure(f"Failed to connect to MCP server: {e}", e)
 
     async def disconnect(self) -> None:
         """Close HTTP connection."""
