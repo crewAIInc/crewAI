@@ -119,6 +119,14 @@ def _run_conversational_declarative_flow(flow: Flow[Any]) -> None:
         )
         raise SystemExit(1)
 
+    if _flow_uses_human_feedback(flow):
+        # Same reason the STEPS TUI declines these: the runtime collects feedback
+        # with a blocking ``input()`` (flow/runtime/__init__.py), which Textual
+        # cannot service -- the prompt would never be shown and the run would
+        # hang. A terminal REPL can, so fall back to one.
+        flow.chat()
+        return
+
     from crewai_cli.kickoff_flow import _run_conversational_flow_tui
 
     _run_conversational_flow_tui(flow)

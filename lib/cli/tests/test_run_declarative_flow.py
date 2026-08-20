@@ -667,6 +667,38 @@ def test_conversational_flow_does_not_take_the_steps_tui(
     run_declarative_flow_module.run_declarative_flow(str(definition_path))
 
 
+def test_conversational_human_feedback_flow_avoids_the_tui(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Textual cannot service the runtime's blocking feedback prompt.
+
+    The STEPS TUI already declines these for that reason; a conversational one
+    must too, or the prompt is never shown and the run hangs.
+    """
+    definition_path = tmp_path / "flow.yaml"
+    definition_path.write_text(
+        CONVERSATIONAL_FLOW_YAML.replace(
+            "    listen: order\n",
+            "    listen: order\n    human_feedback:\n      message: Approve?\n",
+        ),
+        encoding="utf-8",
+    )
+
+    chatted: list[str] = []
+    monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._run_conversational_flow_tui",
+        lambda flow: pytest.fail("human-feedback flow reached the Textual TUI"),
+    )
+    monkeypatch.setattr(
+        "crewai.flow.flow.Flow.chat", lambda self, **kw: chatted.append("repl")
+    )
+
+    run_declarative_flow_module.run_declarative_flow(str(definition_path))
+
+    assert chatted == ["repl"]
+
+
 def test_conversational_flow_headless_explains_instead_of_one_turn(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
