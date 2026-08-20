@@ -308,6 +308,17 @@ class EventListener(BaseEventListener):
         def on_flow_created(_: Any, event: FlowCreatedEvent) -> None:
             self._telemetry.flow_creation_span(event.flow_name)
 
+        def _is_conversational(source: Any) -> bool:
+            """Whether this run is a turn of a conversational session.
+
+            Reads the flow's own accessor, which covers both the
+            ``conversational = True`` class attribute and a conversational
+            definition. Each turn is its own kickoff while the session reports
+            a single completion, so these spans run many-to-one.
+            """
+            checker = getattr(source, "_is_conversational_enabled", None)
+            return bool(checker()) if callable(checker) else False
+
         def _flow_origin(source: Any) -> str:
             """Separate flows CrewAI runs itself from the ones a caller wrote.
 
@@ -328,18 +339,21 @@ class EventListener(BaseEventListener):
                 else "user"
             )
 
-        def _report_flow_duration(source: Any, flow_name: str, outcome: str) -> None:
+        def _report_flow_duration(
+            source: Any,
+            flow_name: str,
+            outcome: str,
+            error_type: type[BaseException] | None = None,
+        ) -> None:
             """Emit the elapsed time for a flow that reached a terminal state.
 
             A flow can finish without this listener having seen it start - a
             conversational turn re-emits completion for a restored run - so a
             missing stamp means "no duration to report", not an error.
             """
-            # Cleared on every terminal path, not only on finish: a turn that
-            # fails without deferred finalization ends via FlowFailedEvent, and
-            # a flag left set there would mark the next run on this instance
-            # failed.
-            source._telemetry_turn_failed = False
+            # Reset point for the flag a deferred session accumulates across
+            # turns, so a later session on this instance starts clean.
+            source._telemetry_turn_error = None
             started_at = getattr(source, "_telemetry_started_at", None)
             if started_at is None:
                 return
@@ -349,6 +363,8 @@ class EventListener(BaseEventListener):
                 (time.monotonic() - started_at) * 1000,
                 outcome,
                 _flow_origin(source),
+                _is_conversational(source),
+                error_type=error_type,
             )
 
         @crewai_event_bus.on(FlowStartedEvent)
@@ -363,6 +379,7 @@ class EventListener(BaseEventListener):
                 list(source._methods.keys()),
                 _flow_origin(source),
                 resumed,
+                _is_conversational(source),
             )
             source._telemetry_started_at = time.monotonic()
             if not getattr(source, "suppress_flow_events", False):
@@ -371,12 +388,12 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
-            outcome = (
-                "failed"
-                if getattr(source, "_telemetry_turn_failed", False)
-                else "completed"
-            )
-            _report_flow_duration(source, event.flow_name, outcome)
+            # A deferred session closes here whatever happened, so the class
+            # stored by on_conversation_turn_failed is the only record of what
+            # went wrong - FlowFailedEvent never fires on that path.
+            turn_error = getattr(source, "_telemetry_turn_error", None)
+            outcome = "failed" if turn_error is not None else "completed"
+            _report_flow_duration(source, event.flow_name, outcome, turn_error)
 
             if not getattr(source, "suppress_flow_events", False):
                 self.formatter.handle_flow_status(
@@ -386,7 +403,9 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(FlowFailedEvent)
         def on_flow_failed(source: Any, event: FlowFailedEvent) -> None:
-            _report_flow_duration(source, event.flow_name, "failed")
+            # Class name only. The message is never read - it routinely carries
+            # prompts, model output and credentials.
+            _report_flow_duration(source, event.flow_name, "failed", type(event.error))
 
             if not getattr(source, "suppress_flow_events", False):
                 self.formatter.handle_flow_status(
@@ -406,9 +425,13 @@ class EventListener(BaseEventListener):
             source: Any, event: ConversationTurnFailedEvent
         ) -> None:
             self._telemetry.feature_usage_span("flow:conversation_turn_failed")
-            # A conversational session closes with FlowFinishedEvent whatever
-            # happened, so record the failure for on_flow_finished to read.
-            source._telemetry_turn_failed = True
+            # A deferred session closes with FlowFinishedEvent whatever happened,
+            # so record the failure for on_flow_finished to read. Without
+            # deferral the run already emitted FlowFailedEvent before
+            # handle_turn emits this one - it cleared the stamp, and flagging
+            # now would mark the next turn on this instance failed.
+            if getattr(source, "_telemetry_started_at", None) is not None:
+                source._telemetry_turn_error = type(event.error)
 
         @crewai_event_bus.on(FlowInputRequestedEvent)
         def on_flow_input_requested(_: Any, event: FlowInputRequestedEvent) -> None:
@@ -445,9 +468,12 @@ class EventListener(BaseEventListener):
             source: Any, event: MethodExecutionFailedEvent
         ) -> None:
             # The method name is not recorded: it is user-authored and would put
-            # arbitrary strings in telemetry.
+            # arbitrary strings in telemetry. The exception class name is, so a
+            # failure is diagnosable; the message never is.
             self._telemetry.flow_method_failed_span(
-                event.flow_name, _flow_origin(source)
+                event.flow_name,
+                _flow_origin(source),
+                error_type=type(event.error),
             )
 
             self.formatter.handle_method_status(

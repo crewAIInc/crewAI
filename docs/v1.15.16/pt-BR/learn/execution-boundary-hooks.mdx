@@ -1,0 +1,211 @@
+---
+title: Hooks de Fronteira de Execução
+description: Intercepte o início, as entradas, a saída e o fim de execuções de crews e flows com o decorator @on
+mode: "wide"
+---
+
+Os hooks de fronteira de execução interceptam as bordas mais externas de uma
+execução — antes de qualquer trabalho começar, quando as entradas são
+resolvidas, quando o resultado final está pronto e quando a execução termina.
+Eles disparam tanto para crews quanto para flows e são o lugar certo para
+verificações de política no nível da execução, reescrita de entradas e
+sanitização de saídas.
+
+## Visão Geral
+
+Quatro pontos de interceptação cobrem as fronteiras:
+
+| Ponto | Quando | `ctx.payload` |
+|-------|--------|---------------|
+| `EXECUTION_START` | Uma crew ou flow está prestes a começar | `dict` de entradas |
+| `INPUT` | Entradas resolvidas para a execução | `dict` de entradas |
+| `OUTPUT` | O resultado final está pronto | o objeto de saída |
+| `EXECUTION_END` | A execução terminou (sucesso ou falha) | o objeto de saída, ou `None` em caso de falha |
+
+Para uma crew, o payload de saída é um `CrewOutput`. Para um flow, é o
+resultado final do método do flow.
+
+## Assinatura do Hook
+
+```python
+from crewai.hooks import on, HookAborted, InterceptionPoint
+
+@on(InterceptionPoint.EXECUTION_START)
+def boundary_hook(ctx) -> Any | None:
+    # Mutate ctx.payload in place, or
+    # return a non-None value to replace it, or
+    # raise HookAborted(reason, source) to stop the run
+    return None
+```
+
+Hooks de fronteira seguem o contrato padrão: prosseguir (`return None`), mutar
+in place, substituir retornando um valor, ou abortar lançando `HookAborted`.
+Um abort em qualquer fronteira propaga para fora do `kickoff()` com seu
+motivo.
+
+## Esquema de Contexto
+
+Cada ponto recebe um contexto tipado. Todos os contextos compartilham os
+campos base:
+
+```python
+class InterceptionContext:
+    payload: Any            # The interceptable value (see table above)
+    agent: Any = None       # Not populated at execution boundaries
+    agent_role: str | None  # Not populated at execution boundaries
+    task: Any = None        # Not populated at execution boundaries
+    crew: Any = None        # The Crew instance (crew runs only)
+    flow: Any = None        # The Flow instance (flow runs only)
+```
+
+Os contextos de cada ponto adicionam um alias nomeado para o payload:
+
+```python
+class ExecutionStartContext(InterceptionContext):
+    inputs: dict            # Same dict as payload
+
+class InputContext(InterceptionContext):
+    inputs: dict            # Same dict as payload
+
+class OutputContext(InterceptionContext):
+    output: Any             # The output object
+
+class ExecutionEndContext(InterceptionContext):
+    output: Any                    # The output object (None when status == "failed")
+    status: str                    # "completed" or "failed"
+    error: BaseException | None    # The exception when status == "failed"
+```
+
+<Note>
+`ctx.inputs` é um alias para o dict de entradas **original**, então edições in
+place por qualquer um dos nomes são equivalentes. Se um hook anterior
+*substituiu* o payload retornando um novo dict, apenas `ctx.payload` é
+reassociado — sempre leia e escreva `ctx.payload` quando hooks puderem
+encadear.
+</Note>
+
+## Execuções de Crew vs. Execuções de Flow
+
+Hooks de fronteira disparam em ambos os runtimes, e a execução de uma crew
+roda internamente sobre um runtime de flow. Durante um `crew.kickoff()`, um
+hook de fronteira global portanto dispara para a fronteira da crew
+(`ctx.crew` definido, `ctx.flow` `None`) **e** para o flow interno
+(`ctx.flow` definido, `ctx.crew` `None`). Discrimine pelo runtime:
+
+```python
+@on(InterceptionPoint.OUTPUT)
+def crew_output_only(ctx):
+    if ctx.crew is None:
+        return None  # Skip the internal flow (or a bare flow)
+    ctx.payload.raw = ctx.payload.raw.strip()
+```
+
+## Casos de Uso Comuns
+
+### Verificação de Política no Início
+
+```python
+@on(InterceptionPoint.EXECUTION_START)
+def enforce_policy(ctx):
+    if ctx.crew is not None and not ctx.payload.get("authorized"):
+        raise HookAborted(reason="unauthorized execution", source="access-control")
+```
+
+### Reescrita de Entradas
+
+```python
+@on(InterceptionPoint.INPUT)
+def add_defaults(ctx):
+    if ctx.crew is None:
+        return None
+    ctx.payload.setdefault("locale", "en-US")
+    ctx.payload["topic"] = ctx.payload["topic"].strip().lower()
+```
+
+Entradas reescritas fluem para a interpolação de tasks, então a execução se
+comporta como se tivesse sido iniciada com o dict modificado.
+
+Prefira `INPUT` para reescrita e trate `EXECUTION_START` como o gate de
+allow/deny. Reescritas em `EXECUTION_START` continuam sendo honradas — em
+crews elas também alimentam os callbacks de `before_kickoff`; em flows elas
+se aplicam exatamente como uma reescrita de `INPUT`.
+
+### Sanitização de Saída
+
+```python
+import re
+
+@on(InterceptionPoint.OUTPUT)
+def redact_emails(ctx):
+    if ctx.crew is None:
+        return None
+    ctx.payload.raw = re.sub(
+        r"\b[\w.+-]+@[\w-]+\.[\w.]+\b", "[EMAIL-REDACTED]", ctx.payload.raw
+    )
+```
+
+`OUTPUT` roda antes de `EXECUTION_END`, e ambos veem o payload (possivelmente
+substituído) de hooks anteriores; o valor final reescrito é o que `kickoff()`
+retorna.
+
+### Observando Falhas
+
+`EXECUTION_END` dispara exatamente uma vez por execução, tanto em sucesso
+quanto em falha. Quando a execução lança uma exceção — um erro de task, uma
+exceção de método de flow ou um `HookAborted` de um ponto anterior — o hook
+recebe `status="failed"` com a exceção em `ctx.error`, e a exceção original
+ainda propaga para fora do `kickoff()` sem alterações:
+
+```python
+@on(InterceptionPoint.EXECUTION_END)
+def report_outcome(ctx):
+    if ctx.status == "failed":
+        notify_policy_engine(status="failed", error=repr(ctx.error))
+    else:
+        notify_policy_engine(status="completed")
+```
+
+Duas ressalvas: `EXECUTION_END` não dispara quando `EXECUTION_START` nunca foi
+despachado (um abort no início significa que a fronteira nunca abriu, então
+não há fim para parear), e lançar `HookAborted` de um dispatch de
+`EXECUTION_END` no caminho de falha é ignorado — não resta nada para abortar,
+e o erro original prevalece.
+
+## Ordenação
+
+Para uma execução de crew, a ordem de fronteira é:
+
+```
+EXECUTION_START → before_kickoff callbacks → INPUT → tasks execute → OUTPUT → EXECUTION_END
+```
+
+Para uma execução de flow, os hooks de fronteira resolvem as entradas antes
+de os eventos de ciclo de vida começarem:
+
+```
+EXECUTION_START → INPUT → FlowStartedEvent → flow methods execute → OUTPUT → EXECUTION_END → FlowFinishedEvent
+```
+
+`FlowStartedEvent` carrega as entradas resolvidas pelos hooks, e reescrever
+`inputs["id"]` em um hook de fronteira redireciona a restauração de estado.
+Um abort em `EXECUTION_START` ainda aparece como `FlowStartedEvent` seguido
+de `FlowFailedEvent`, emitidos no momento do abort com o payload como
+resolvido pelos hooks que rodaram antes dele.
+
+Hooks no mesmo ponto rodam em ordem de registro, hooks globais primeiro,
+depois hooks com escopo de crew. A telemetria (`HookDispatchedEvent`) é
+emitida por dispatch.
+
+## Gerenciando Hooks em Testes
+
+```python
+from crewai.hooks import clear_all_hooks
+
+clear_all_hooks()  # Clears every point, including boundaries
+```
+
+## Documentação Relacionada
+
+- [Visão Geral dos Hooks de Execução →](/edge/pt-BR/learn/execution-hooks)
+- [Hooks de Chamada LLM →](/edge/pt-BR/learn/llm-hooks)
+- [Hooks de Chamada de Ferramenta →](/edge/pt-BR/learn/tool-hooks)

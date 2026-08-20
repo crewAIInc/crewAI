@@ -1,10 +1,14 @@
+import ast
+import inspect
 import os
+from pathlib import Path
 import threading
 from unittest.mock import Mock, patch
 
 import pytest
 from crewai import Agent, Crew, Task
 from crewai.telemetry import Telemetry
+from crewai_core.telemetry import Telemetry as CoreTelemetry
 from opentelemetry.sdk.trace import TracerProvider
 
 
@@ -90,7 +94,7 @@ def test_flow_execution_span_records_crewai_version():
             "crewai.telemetry.telemetry.TracerProvider",
             return_value=Mock(get_tracer=Mock(return_value=tracer)),
         ),
-        patch("crewai.telemetry.telemetry.version", return_value="9.9.9"),
+        patch("crewai.telemetry.telemetry.version", return_value=_EMITTED_VERSION),
     ):
         telemetry = Telemetry()
         telemetry.flow_execution_span("ResearchFlow", ["start", "finish"])
@@ -308,6 +312,11 @@ def test_event_listener_tracks_hook_dispatched_events():
     )
 
 
+# The version _emit injects. Assertions compare against this exact value, so a
+# hard-coded literal in an emitter cannot satisfy them.
+_EMITTED_VERSION = "9.9.9"
+
+
 def _emit(method: str, *args, **kwargs):
     """Run one telemetry span method against a mocked tracer.
 
@@ -364,6 +373,17 @@ def test_flow_completed_records_duration_outcome_and_origin() -> None:
     span.set_attribute.assert_any_call("duration_ms", 12.5)
     span.set_attribute.assert_any_call("outcome", "failed")
     span.set_attribute.assert_any_call("origin", "user")
+    span.set_attribute.assert_any_call("conversational", "false")
+
+
+@pytest.mark.parametrize(("flag", "expected"), [(True, "true"), (False, "false")])
+def test_conversational_is_recorded_as_a_string(flag: bool, expected: str) -> None:
+    """Same reason as resumed: a bool arrives as key presence, not a value."""
+    _tracer, span = _emit(
+        "flow_execution_span", "ResearchFlow", ["start"], "user", False, flag
+    )
+
+    span.set_attribute.assert_any_call("conversational", expected)
 
 
 def test_paused_and_method_failed_record_flow_and_origin() -> None:
@@ -371,3 +391,123 @@ def test_paused_and_method_failed_record_flow_and_origin() -> None:
         _tracer, span = _emit(method, "ResearchFlow", "internal")
         span.set_attribute.assert_any_call("flow_name", "ResearchFlow")
         span.set_attribute.assert_any_call("origin", "internal")
+
+
+def _version_attr(span) -> str | None:
+    """The crewai_version value recorded on a mocked span, if any."""
+    for call in span.set_attribute.call_args_list:
+        if call.args and call.args[0] == "crewai_version":
+            return call.args[1]
+    return None
+
+
+@pytest.mark.parametrize(
+    ("method", "args"),
+    [
+        ("flow_plotting_span", ("ResearchFlow", ["step_a", "step_b"])),
+        ("deploy_signup_error_span", ()),
+        ("start_deployment_span", ("dep-123",)),
+        ("create_crew_deployment_span", ()),
+        ("get_crew_logs_span", ("dep-123", "deployment")),
+        ("remove_crew_span", ("dep-123",)),
+        ("human_feedback_span", ("requested", False)),
+    ],
+)
+def test_span_records_the_crewai_version(method: str, args: tuple) -> None:
+    """Version-filtered queries silently drop any span kind missing this.
+
+    Without it a release cannot be attributed for that span, so version-adoption
+    and per-release regression analysis are blind to it.
+    """
+    _tracer, span = _emit(method, *args)
+
+    # Exact equality with the value _emit injected: "looks like a version" would
+    # also accept a hard-coded literal in the emitter.
+    assert _version_attr(span) == _EMITTED_VERSION, (
+        f"{method} did not record the value returned by version('crewai')"
+    )
+
+
+def test_task_spans_record_the_crewai_version() -> None:
+    """Task Created and Task Execution are the highest-volume span kinds.
+
+    They are emitted together by task_started, and both were missing the
+    version - so every version-filtered task metric returned nothing.
+    """
+    agent = Agent(role="R", goal="G", backstory="B")
+    task = Task(description="D", expected_output="E", agent=agent)
+    crew = Crew(agents=[agent], tasks=[task])
+
+    tracer, span = _emit("task_started", crew, task)
+
+    emitted = [c.args[0] for c in tracer.start_span.call_args_list]
+    assert emitted == ["Task Created", "Task Execution"]
+
+    # The harness hands the same mock back for both start_span calls, so the
+    # attribute writes accumulate: one crewai_version per span emitted.
+    versions = [
+        c.args[1]
+        for c in span.set_attribute.call_args_list
+        if c.args and c.args[0] == "crewai_version"
+    ]
+    assert versions == [_EMITTED_VERSION, _EMITTED_VERSION], (
+        f"expected one version per task span, got {versions}"
+    )
+
+
+def _calls(node: ast.AST, attr: str, key: str | None = None) -> int:
+    """Count calls to ``.attr(...)`` beneath a node, optionally keyed on arg 2.
+
+    Used to compare how many spans a method opens against how many of them it
+    records ``crewai_version`` on.
+    """
+    total = 0
+    for sub in ast.walk(node):
+        if not isinstance(sub, ast.Call):
+            continue
+        func = sub.func
+        if not isinstance(func, ast.Attribute) or func.attr != attr:
+            continue
+        if key is None:
+            total += 1
+        elif len(sub.args) >= 2:
+            named = sub.args[1]
+            if isinstance(named, ast.Constant) and named.value == key:
+                total += 1
+    return total
+
+
+def test_every_span_records_the_crewai_version() -> None:
+    """Regression guard for span kinds added later, in BOTH emitters.
+
+    Enumerating the source rather than emitting all 32 spans: the point is to
+    fail when someone adds a new span without the version, which a fixed list of
+    behavioural cases cannot do.
+
+    Counts rather than merely detects. A method that opens two spans and records
+    the version on only one of them must fail - ``task_started`` is exactly that
+    shape, so "the method mentions crewai_version somewhere" is not enough.
+    """
+    shortfalls: list[str] = []
+    for cls in (Telemetry, CoreTelemetry):
+        path = Path(inspect.getfile(cls))
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            # The nested closure is reached via its enclosing method, whose name
+            # is the one a reader needs in the failure message.
+            if not isinstance(node, ast.FunctionDef) or node.name == "_operation":
+                continue
+            spans = _calls(node, "start_span")
+            if not spans:
+                continue
+            versions = _calls(node, "_add_attribute", "crewai_version")
+            if versions < spans:
+                shortfalls.append(
+                    f"{path.name}::{node.name} "
+                    f"({spans} span(s), {versions} version attribute(s))"
+                )
+
+    assert not shortfalls, (
+        "these methods open more spans than they record crewai_version on: "
+        + ", ".join(sorted(shortfalls))
+    )

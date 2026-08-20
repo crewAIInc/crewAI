@@ -72,6 +72,18 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     provided = parse_inputs_json(inputs) or {}
 
     flow = load_declarative_flow(definition)
+
+    if _flow_is_conversational(flow):
+        click.secho(
+            "  This flow declares `conversational`, and `crewai run` has no chat "
+            "loop yet — it would run a single turn and exit.\n"
+            "  Drive it from Python for now: `flow.chat()` for a terminal REPL, "
+            "or `flow.handle_turn(message, session_id=...)` per message.",
+            fg="yellow",
+            err=True,
+        )
+        raise SystemExit(1)
+
     resolved_inputs = _resolve_flow_inputs(flow, provided)
 
     # The TUI is the interactive default. Headless contexts run directly on the
@@ -154,6 +166,20 @@ def _run_declarative_flow_tui(
         _chain_deploy()
 
     return app._crew_result
+
+
+def _flow_is_conversational(flow: Flow[Any]) -> bool:
+    """True if the declaration turns on conversational mode.
+
+    Fails closed: a flow we cannot inspect runs the normal single-kickoff path
+    rather than being blocked from running at all.
+    """
+    try:
+        conversational = flow._definition.conversational
+    except AttributeError:
+        logger.debug("Could not inspect flow for conversational mode", exc_info=True)
+        return False
+    return conversational is not None and conversational.enabled
 
 
 def _flow_uses_human_feedback(flow: Flow[Any]) -> bool:

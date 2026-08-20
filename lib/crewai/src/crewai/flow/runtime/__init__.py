@@ -78,6 +78,11 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.events.types.llm_events import LLMCallCompletedEvent
+from crewai.execution import (
+    begin_execution,
+    end_execution,
+    get_execution_uuid,
+)
 from crewai.flow.async_feedback.types import (
     HumanFeedbackPending,
     HumanFeedbackProvider,
@@ -445,6 +450,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     def _initialize_runtime_extension_attrs(self) -> None:
         """Initialize optional runtime-extension attributes."""
 
+    def _extend_definition(self, definition: FlowDefinition) -> FlowDefinition:
+        """Let an optional runtime extension complete the definition.
+
+        Runs once ``_definition`` is resolved and before methods are bound, so
+        an extension can contribute the methods it owns.
+        """
+        return definition
+
     def _create_default_extension_state(self) -> Any | None:
         """Return a default state supplied by an optional runtime extension."""
         return None
@@ -727,7 +740,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     # conversational session emits FlowFinishedEvent from
     # finalize_session_traces() regardless of outcome, so without this a failed
     # session would be reported as a successful completion.
-    _telemetry_turn_failed: bool = PrivateAttr(default=False)
+    _telemetry_turn_error: type[BaseException] | None = PrivateAttr(default=None)
 
     _is_execution_resuming: bool = PrivateAttr(default=False)
     _restored_from_checkpoint: bool = PrivateAttr(default=False)
@@ -779,6 +792,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self._definition = definition or type(self).flow_definition()
         if self.name and self.name != self._definition.name:
             self._definition = self._definition.model_copy(update={"name": self.name})
+        self._definition = self._extend_definition(self._definition)
         methods = (
             self._action_bound_methods()
             if definition is not None
@@ -1342,6 +1356,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "No pending feedback context. Use from_pending() to restore a paused flow."
             )
 
+        execution_token = begin_execution(self._pending_feedback_context.execution_uuid)
+
         # Force `current_flow_id` to this flow's match id for the
         # duration of the resume so the usage listener's filter passes
         # even when resume runs under another flow's active context.
@@ -1368,6 +1384,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._detach_usage_aggregation_listener()
             if flow_id_token is not None:
                 current_flow_id.reset(flow_id_token)
+            end_execution(execution_token)
 
     async def _resume_async_body(
         self, feedback: str = "", hook_state: dict[str, bool] | None = None
@@ -2131,6 +2148,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if current_flow_request_id.get() is None:
             request_id_token = current_flow_request_id.set(self.flow_id)
 
+        execution_token = begin_execution()
+
         runtime_scope = crewai_event_bus._enter_runtime_scope()
 
         # Reentrant kickoffs on the same Flow share the outer call's
@@ -2486,6 +2505,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 current_flow_id.reset(flow_id_token)
             if flow_inputs_token is not None:
                 detach(flow_inputs_token)
+            end_execution(execution_token)
             detach(flow_token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
 
@@ -3532,6 +3552,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 llm=llm
                 if llm is None or isinstance(llm, (str, dict))
                 else _serialize_llm_for_context(llm),
+                execution_uuid=get_execution_uuid(),
             )
             feedback_value = await asyncio.to_thread(
                 provider.request_feedback, context, self

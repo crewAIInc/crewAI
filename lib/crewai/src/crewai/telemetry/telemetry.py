@@ -508,6 +508,7 @@ class Telemetry:
             tracer = self.provider.get_tracer(TRACER_NAME)
 
             created_span = tracer.start_span("Task Created")
+            self._add_attribute(created_span, "crewai_version", version("crewai"))
 
             add_crew_and_task_attributes(created_span, crew, task, self._add_attribute)
 
@@ -543,6 +544,7 @@ class Telemetry:
             close_span(created_span)
 
             span = tracer.start_span("Task Execution")
+            self._add_attribute(span, "crewai_version", version("crewai"))
 
             add_crew_and_task_attributes(span, crew, task, self._add_attribute)
 
@@ -749,6 +751,7 @@ class Telemetry:
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Deploy Signup Error")
+            self._add_attribute(span, "crewai_version", version("crewai"))
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
@@ -763,6 +766,7 @@ class Telemetry:
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Start Deployment")
+            self._add_attribute(span, "crewai_version", version("crewai"))
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
             close_span(span)
@@ -775,6 +779,7 @@ class Telemetry:
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Create Crew Deployment")
+            self._add_attribute(span, "crewai_version", version("crewai"))
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
@@ -792,6 +797,7 @@ class Telemetry:
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Get Crew Logs")
+            self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "log_type", log_type)
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
@@ -809,6 +815,7 @@ class Telemetry:
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Remove Crew")
+            self._add_attribute(span, "crewai_version", version("crewai"))
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
             close_span(span)
@@ -985,6 +992,7 @@ class Telemetry:
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Flow Plotting")
+            self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "flow_name", flow_name)
             self._add_attribute(span, "node_names", json.dumps(node_names))
             close_span(span)
@@ -997,6 +1005,7 @@ class Telemetry:
         node_names: list[str],
         origin: str = "user",
         resumed: bool = False,
+        conversational: bool = False,
     ) -> None:
         """Records the execution of a flow.
 
@@ -1011,6 +1020,10 @@ class Telemetry:
                 Resuming re-enters ``kickoff()``, so the same event fires again;
                 without this the second leg is indistinguishable from a fresh
                 run and a paused flow looks like two separate executions.
+            conversational: True for a turn of a conversational flow. Each turn
+                is its own kickoff but a session reports one completion, so
+                these spans run many-to-one and would otherwise drag any
+                completion rate computed across all flows.
         """
 
         def _operation() -> None:
@@ -1030,12 +1043,43 @@ class Telemetry:
             # extract wrongly. crew_memory reads 1 for 99.8% of crews for exactly
             # that reason, against a field that defaults to False.
             self._add_attribute(span, "resumed", "true" if resumed else "false")
+            self._add_attribute(
+                span, "conversational", "true" if conversational else "false"
+            )
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
 
+    @staticmethod
+    def _safe_error_type(error_type: type[BaseException] | None) -> str | None:
+        """The exception's class name, or None if the argument is not one.
+
+        Takes the exception *class* rather than a string so that ``str(error)``
+        cannot be passed at all: a message is never a type. Accepting a string
+        and filtering it with ``isidentifier()`` would not be enough, because a
+        single-word message such as ``"secret_token"`` is itself a valid
+        identifier. The identifier check is kept as a second gate on the
+        derived name.
+
+        Only a class name is ever recorded - never the message, which routinely
+        carries prompts, model output, file paths and credentials.
+        """
+        if (
+            isinstance(error_type, type)
+            and issubclass(error_type, BaseException)
+            and error_type.__name__.isidentifier()
+        ):
+            return error_type.__name__
+        return None
+
     def flow_completed_span(
-        self, flow_name: str, duration_ms: float, outcome: str, origin: str = "user"
+        self,
+        flow_name: str,
+        duration_ms: float,
+        outcome: str,
+        origin: str = "user",
+        conversational: bool = False,
+        error_type: type[BaseException] | None = None,
     ) -> None:
         """Records how long a flow ran and how it ended.
 
@@ -1056,7 +1100,13 @@ class Telemetry:
             outcome: Either ``"completed"`` or ``"failed"``.
             origin: ``"internal"`` for flows CrewAI itself runs (the agent
                 executor), ``"user"`` for flows the caller authored.
+            conversational: True when this closes a conversational session. One
+                of these answers many ``Flow Execution`` spans, one per turn.
+            error_type: Class of the exception that ended the run, for a
+                failed outcome. Only its name is recorded. See
+                :meth:`_safe_error_type`.
         """
+        safe_error_type = self._safe_error_type(error_type)
 
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
@@ -1066,6 +1116,11 @@ class Telemetry:
             self._add_attribute(span, "duration_ms", duration_ms)
             self._add_attribute(span, "outcome", outcome)
             self._add_attribute(span, "origin", origin)
+            self._add_attribute(
+                span, "conversational", "true" if conversational else "false"
+            )
+            if safe_error_type:
+                self._add_attribute(span, "error_type", safe_error_type)
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
@@ -1093,17 +1148,27 @@ class Telemetry:
 
         self._safe_telemetry_operation(_operation)
 
-    def flow_method_failed_span(self, flow_name: str, origin: str = "user") -> None:
+    def flow_method_failed_span(
+        self,
+        flow_name: str,
+        origin: str = "user",
+        error_type: type[BaseException] | None = None,
+    ) -> None:
         """Records that a method inside a flow raised.
 
         The method name is deliberately not recorded: it is user-authored and
-        would put arbitrary strings in telemetry.
+        would put arbitrary strings in telemetry. The exception's class name is
+        recorded, because knowing *what* fails is the whole point of the span
+        and a class name is a bare identifier, not free text.
 
         Args:
             flow_name: Name of the flow whose method failed.
             origin: ``"internal"`` or ``"user"`` - see
                 :meth:`flow_execution_span`.
+            error_type: Class of the exception raised. Only its name is
+                recorded. See :meth:`_safe_error_type`.
         """
+        safe_error_type = self._safe_error_type(error_type)
 
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
@@ -1111,6 +1176,8 @@ class Telemetry:
             self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "flow_name", flow_name)
             self._add_attribute(span, "origin", origin)
+            if safe_error_type:
+                self._add_attribute(span, "error_type", safe_error_type)
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
@@ -1152,6 +1219,7 @@ class Telemetry:
         def _operation() -> None:
             tracer = self.provider.get_tracer(TRACER_NAME)
             span = tracer.start_span("Human Feedback")
+            self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "event_type", event_type)
             self._add_attribute(span, "has_routing", has_routing)
             self._add_attribute(span, "num_outcomes", num_outcomes)

@@ -41,7 +41,7 @@ class TestDOCXLoader:
 
             assert result.metadata["tables"] == 2
 
-    @patch("requests.get")
+    @patch("crewai_tools.security.safe_requests._raw_get")
     @patch("docx.Document")
     @patch("tempfile.NamedTemporaryFile")
     @patch("os.unlink")
@@ -77,7 +77,7 @@ class TestDOCXLoader:
 
         mock_temp.write.assert_called_once_with(b"fake docx content")
 
-    @patch("requests.get")
+    @patch("crewai_tools.security.safe_requests._raw_get")
     @patch("docx.Document")
     def test_load_docx_from_url_with_custom_headers(self, mock_docx_class, mock_get):
         mock_get.return_value = Mock(
@@ -95,7 +95,7 @@ class TestDOCXLoader:
 
         assert mock_get.call_args[1]["headers"] == custom_headers
 
-    @patch("requests.get")
+    @patch("crewai_tools.security.safe_requests._raw_get")
     def test_load_docx_url_download_error(self, mock_get):
         mock_get.side_effect = Exception("Network error")
 
@@ -103,7 +103,7 @@ class TestDOCXLoader:
         with pytest.raises(ValueError, match="Error fetching content from URL"):
             loader.load(SourceContent("https://example.com/test.docx"))
 
-    @patch("requests.get")
+    @patch("crewai_tools.security.safe_requests._raw_get")
     def test_load_docx_url_http_error(self, mock_get):
         mock_get.return_value = Mock(
             raise_for_status=Mock(side_effect=Exception("404 Not Found"))
