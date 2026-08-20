@@ -91,7 +91,7 @@ class LexMexTool(BaseTool):
     # Se excluye de la serialización (model_dump/repr) para que la key
     # nunca quede persistida en logs, estados de Crew guardados, etc.
     api_key: Optional[str] = Field(default=None, exclude=True, repr=False)
-    timeout: int = 30
+    timeout: int = Field(default=30, gt=0, description="Request timeout in seconds.")
 
     def _resolved_key(self) -> str:
         key = self.api_key or os.getenv("LEXMEX_API_KEY")
