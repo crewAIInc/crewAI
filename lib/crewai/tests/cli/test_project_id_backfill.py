@@ -29,6 +29,15 @@ class _BackfillReached(Exception):
     """Raised by the patched backfill so the command stops at that point."""
 
 
+class _StopAfterBackfill(Exception):
+    """Raised at the first call AFTER the backfill, to stop without masking it.
+
+    Used where a call *count* is asserted. If the backfill itself raised, the count
+    would be capped at one by the mock rather than by the code under test, so a
+    duplicate call could never be observed.
+    """
+
+
 # (test id, argv). Args are the minimum click accepts; the command body is never
 # reached beyond the backfill call, so nothing here needs to be a valid target.
 COMMANDS = [
@@ -84,19 +93,26 @@ def _in_a_project(runner):
 def test_run_still_backfills(runner):
     """`crewai run` was already correct and must stay that way.
 
-    Asserted at runtime rather than by reading the source, so a reformat cannot
-    break it and a real regression cannot slip past it.
+    The backfill returns normally and execution is stopped at the next call in
+    run_crew instead, so the recorded call count is real rather than an artifact of
+    the mock raising on first use.
     """
     with _in_a_project(runner):
         Path("pyproject.toml").write_text(MINIMAL_PYPROJECT, encoding="utf-8")
-        with mock.patch(
-            "crewai_cli.run_crew.get_or_create_project_id",
-            side_effect=_BackfillReached,
-        ) as backfill:
+        with (
+            mock.patch("crewai_cli.run_crew.get_or_create_project_id") as backfill,
+            mock.patch(
+                "crewai_cli.run_crew.configured_project_json_crew",
+                side_effect=_StopAfterBackfill,
+            ),
+        ):
             result = runner.invoke(crewai, ["run"])
 
-    assert backfill.called, "`crewai run` stopped backfilling project_id"
-    assert isinstance(result.exception, _BackfillReached)
+    assert backfill.call_count == 1, "`crewai run` stopped backfilling project_id"
+    assert isinstance(result.exception, _StopAfterBackfill), (
+        "execution must have reached the boundary after the backfill, otherwise the "
+        "call count above proves nothing about ordering"
+    )
 
 
 def test_flow_kickoff_delegates_the_backfill_and_does_not_duplicate_it(runner):
@@ -104,22 +120,28 @@ def test_flow_kickoff_delegates_the_backfill_and_does_not_duplicate_it(runner):
 
     A second call would mint under a lock run_crew is about to take -- wasted work
     rather than a correctness bug, but it would also hide the delegation from anyone
-    reading the command. Asserted by call counts on the two distinct import sites,
-    which is what makes "delegates" and "duplicates" distinguishable at runtime.
+    reading the command.
+
+    Both backfill mocks return normally and execution is stopped at the first call
+    *after* the backfill in run_crew. That matters: if the backfill itself raised,
+    `call_count == 1` would be guaranteed by the mock rather than by the code, and a
+    duplicate call inside run_crew could never be observed at all.
     """
     with _in_a_project(runner):
         Path("pyproject.toml").write_text(MINIMAL_PYPROJECT, encoding="utf-8")
         with (
             mock.patch("crewai_cli.cli.get_or_create_project_id") as in_cli,
+            mock.patch("crewai_cli.run_crew.get_or_create_project_id") as in_run_crew,
             mock.patch(
-                "crewai_cli.run_crew.get_or_create_project_id",
-                side_effect=_BackfillReached,
-            ) as in_run_crew,
+                "crewai_cli.run_crew.configured_project_json_crew",
+                side_effect=_StopAfterBackfill,
+            ),
         ):
             runner.invoke(crewai, ["flow", "kickoff"])
 
     assert in_run_crew.call_count == 1, (
-        "flow kickoff must reach run_crew's backfill exactly once"
+        "flow kickoff must reach run_crew's backfill exactly once -- more than one "
+        "means it was duplicated somewhere on this path"
     )
     assert not in_cli.called, (
         "flow kickoff must not add its own backfill call; it delegates to run_crew"
