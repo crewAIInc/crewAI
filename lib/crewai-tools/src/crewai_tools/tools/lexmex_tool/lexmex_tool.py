@@ -34,6 +34,20 @@ Uso:
   (hallazgo de CodeRabbit: API-key exfiltration risk).
 - Se agregó el header X-LexMex-Client para que el backend de LexMex
   pueda distinguir tráfico proveniente de esta tool.
+
+─── Changelog v1.2 ────────────────────────────────────────────────────
+- Seguridad: se agregó `allow_redirects=False` a la llamada HTTP y se
+  rechaza cualquier respuesta 3xx, para que la X-API-Key nunca se
+  reenvíe a un host distinto de lex-mex.xyz vía redirect (hallazgo de
+  CodeRabbit: `requests` no limpia headers custom en redirects).
+- Robustez: se valida que la respuesta JSON sea un objeto, que
+  `respuesta` sea un string no vacío y que `fuentes` sea una lista
+  antes de formatear la salida, para no devolver un resultado
+  aparentemente exitoso ante un JSON malformado o incompleto.
+- Se suavizaron las afirmaciones absolutas de precisión legal en el
+  docstring/description ("no alucina", "cita exacta") por lenguaje que
+  describe la salida como información legal general y recomienda
+  verificarla con la fuente oficial o un abogado.
 """
 
 from __future__ import annotations
@@ -71,20 +85,27 @@ class LexMexInput(BaseModel):
 
 
 class LexMexTool(BaseTool):
-    """Consulta leyes federales mexicanas con respuestas citadas al DOF.
+    """Consulta leyes federales mexicanas con respuestas que citan fuente.
 
-    Motor RAG+LLM real de lex-mex.xyz — no alucina artículos, cita la
-    ley y el artículo exacto de donde saca cada respuesta. Requiere
-    API key de plan VIP o de créditos pay-as-you-go.
+    Motor RAG+LLM de lex-mex.xyz — devuelve información legal general
+    sobre derecho federal mexicano junto con la ley y el artículo en los
+    que se basó la respuesta. No sustituye asesoría legal profesional:
+    el usuario debe verificar la información con la fuente oficial
+    vigente (DOF / diputados.gob.mx) o con un abogado antes de tomar
+    decisiones legales. Requiere API key de plan VIP o de créditos
+    pay-as-you-go.
     """
 
     name: str = "Consulta legal LEX-MEX"
     description: str = (
-        "Útil para responder preguntas sobre leyes federales mexicanas "
-        "(laboral, civil, fiscal, penal, mercantil, etc.). Devuelve la "
-        "respuesta junto con las fuentes legales citadas (ley y "
-        "artículo) y un nivel de confianza. Input: una pregunta legal "
-        "en español, texto plano."
+        "Útil para obtener información legal general sobre leyes "
+        "federales mexicanas (laboral, civil, fiscal, penal, "
+        "mercantil, etc.). Devuelve la respuesta junto con las fuentes "
+        "legales en las que se basó (ley y artículo) y un nivel de "
+        "confianza. No sustituye asesoría legal profesional; verifica "
+        "la información con la fuente oficial o un abogado antes de "
+        "tomar decisiones. Input: una pregunta legal en español, texto "
+        "plano."
     )
     args_schema: Type[BaseModel] = LexMexInput
 
@@ -112,8 +133,15 @@ class LexMexTool(BaseTool):
                 "X-LexMex-Client": LEXMEX_CLIENT_ID,
             },
             timeout=self.timeout,
+            allow_redirects=False,
         )
 
+        if resp.is_redirect or resp.is_permanent_redirect or 300 <= resp.status_code < 400:
+            return (
+                "Error: LEX-MEX respondió con una redirección inesperada; "
+                "la consulta se abortó por seguridad (la API key no se reenvía "
+                "a hosts distintos de lex-mex.xyz)."
+            )
         if resp.status_code == 401:
             return "Error: API key de LEX-MEX inválida o revocada."
         if resp.status_code == 402:
@@ -121,16 +149,29 @@ class LexMexTool(BaseTool):
         if resp.status_code == 429:
             return "Error: límite diario de consultas de LEX-MEX alcanzado."
         resp.raise_for_status()
-        data = resp.json()
 
-        fuentes = data.get("fuentes") or []
+        try:
+            data = resp.json()
+        except ValueError:
+            return "Error: LEX-MEX devolvió una respuesta no válida (JSON malformado)."
+
+        if not isinstance(data, dict):
+            return "Error: LEX-MEX devolvió una respuesta con formato inesperado."
+
+        respuesta = data.get("respuesta")
+        if not isinstance(respuesta, str) or not respuesta.strip():
+            return "Error: LEX-MEX no devolvió una respuesta legal válida."
+
+        fuentes = data.get("fuentes")
+        if not isinstance(fuentes, list):
+            fuentes = []
         fuentes_txt = "; ".join(
             f.get("cita", str(f)) if isinstance(f, dict) else str(f)
             for f in fuentes
         ) or "sin fuentes citadas"
 
         return (
-            f"{data.get('respuesta', '')}\n\n"
+            f"{respuesta}\n\n"
             f"Fuentes: {fuentes_txt}\n"
             f"Confianza: {data.get('confianza', 'n/d')}"
         )
