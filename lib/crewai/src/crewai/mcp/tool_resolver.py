@@ -356,12 +356,21 @@ class MCPToolResolver:
                     self._logger.log("error", f"Error during disconnect: {e}")
 
                 return tools_list
-            except Exception as e:
+            except (asyncio.CancelledError, Exception) as e:
                 if discovery_client.connected:
-                    await discovery_client.disconnect()
-                    await asyncio.sleep(0.1)
+                    try:
+                        await discovery_client.disconnect()
+                        await asyncio.sleep(0.1)
+                    except Exception as disconnect_error:
+                        self._logger.log(
+                            "error", f"Error during disconnect: {disconnect_error}"
+                        )
                 if isinstance(e, MCPConnectionError):
                     raise
+                if isinstance(e, asyncio.CancelledError):
+                    raise_connection_failure(
+                        f"Error during setup client and list tools: {e}", e
+                    )
                 raise RuntimeError(
                     f"Error during setup client and list tools: {e}"
                 ) from e

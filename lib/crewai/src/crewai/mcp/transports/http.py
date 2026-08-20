@@ -106,7 +106,7 @@ class HTTPTransport(BaseTransport):
                 "Transport context entry timed out after 30 seconds. "
                 "Server may be slow or unreachable."
             ) from e
-        except Exception as e:
+        except (Exception, BaseExceptionGroup) as e:
             self._clear_streams()
             self._transport_context = None
             raise_connection_failure(f"Failed to connect to MCP server: {e}", e)

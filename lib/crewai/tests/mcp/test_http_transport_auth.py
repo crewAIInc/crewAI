@@ -1,5 +1,7 @@
 """Tests for HTTP transport authentication error handling."""
 
+import asyncio
+import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -7,6 +9,11 @@ import pytest
 
 from crewai.mcp.exceptions import MCPAuthenticationError, MCPHTTPError
 from crewai.mcp.transports.http import HTTPTransport
+
+if sys.version_info >= (3, 11):
+    from builtins import BaseExceptionGroup
+else:
+    from exceptiongroup import BaseExceptionGroup
 
 
 def _http_status_error(status_code: int) -> httpx.HTTPStatusError:
@@ -72,3 +79,25 @@ async def test_http_transport_connect_raises_http_error_for_non_auth_status():
 
     assert exc_info.value.status_code == 500
     assert "500 Internal Server Error" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_http_transport_connect_classifies_mixed_exception_group():
+    transport = HTTPTransport(url="https://mcp.example.com/mcp")
+    auth_error = _http_status_error(401)
+    cancelled = asyncio.CancelledError()
+    mixed_group = BaseExceptionGroup("task group failed", [auth_error, cancelled])
+
+    mock_context = MagicMock()
+    mock_context.__aenter__ = AsyncMock(side_effect=mixed_group)
+
+    with patch(
+        "mcp.client.streamable_http.streamablehttp_client",
+        return_value=mock_context,
+    ):
+        with pytest.raises(MCPAuthenticationError) as exc_info:
+            await transport.connect()
+
+    assert exc_info.value.status_code == 401
+    assert transport._transport_context is None
+    assert exc_info.value.__cause__ is mixed_group

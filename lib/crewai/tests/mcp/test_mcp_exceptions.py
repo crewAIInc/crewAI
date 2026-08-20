@@ -1,7 +1,13 @@
 import asyncio
+import sys
 
 import httpx
 import pytest
+
+if sys.version_info >= (3, 11):
+    from builtins import ExceptionGroup
+else:
+    from exceptiongroup import ExceptionGroup
 
 from crewai.mcp.exceptions import (
     MCPAuthenticationError,

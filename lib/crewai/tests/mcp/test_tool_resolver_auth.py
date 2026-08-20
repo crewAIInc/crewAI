@@ -1,7 +1,7 @@
 """Tests for MCPToolResolver authentication error handling."""
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
@@ -61,6 +61,32 @@ class TestResolveNativeAuthErrors:
 
         assert exc_info.value.status_code == 401
         assert "may indicate" not in str(exc_info.value).lower()
+
+    @patch("crewai.mcp.tool_resolver.asyncio.sleep", new_callable=AsyncMock)
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    def test_disconnect_runs_when_cancellation_occurs_after_connect(
+        self, mock_client_class, _mock_sleep, resolver, http_config
+    ):
+        mock_client = AsyncMock()
+        mock_client.connected = False
+
+        async def _connect():
+            mock_client.connected = True
+
+        cancelled = asyncio.CancelledError()
+        cancelled.__context__ = _http_status_error(401)
+
+        mock_client.connect = AsyncMock(side_effect=_connect)
+        mock_client.list_tools = AsyncMock(side_effect=cancelled)
+        mock_client.disconnect = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        with pytest.raises(MCPAuthenticationError) as exc_info:
+            resolver._resolve_native(http_config)
+
+        mock_client.disconnect.assert_awaited_once()
+        assert exc_info.value.status_code == 401
+        assert exc_info.value.__cause__ is cancelled
 
 
 class TestAttemptMcpDiscoveryAuthErrors:
