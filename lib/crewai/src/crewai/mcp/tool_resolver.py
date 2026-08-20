@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 import contextvars
 import time
-from typing import TYPE_CHECKING, Any, Final, NoReturn, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 from urllib.parse import urlparse
 
 from crewai.mcp.client import MCPClient
@@ -366,9 +366,6 @@ class MCPToolResolver:
                     f"Error during setup client and list tools: {e}"
                 ) from e
 
-        def _raise_native_failure(exc: BaseException) -> NoReturn:
-            raise_connection_failure(f"Failed to get native MCP tools: {exc}", exc)
-
         try:
             try:
                 asyncio.get_running_loop()
@@ -388,12 +385,14 @@ class MCPToolResolver:
                     try:
                         tools_list = future.result()
                     except (asyncio.CancelledError, Exception) as e:
-                        _raise_native_failure(e)
+                        raise_connection_failure(
+                            f"Failed to get native MCP tools: {e}", e
+                        )
             else:
                 try:
                     tools_list = asyncio.run(_setup_client_and_list_tools())
                 except (asyncio.CancelledError, Exception) as e:
-                    _raise_native_failure(e)
+                    raise_connection_failure(f"Failed to get native MCP tools: {e}", e)
 
             if mcp_config.tool_filter:
                 filtered_tools = []
