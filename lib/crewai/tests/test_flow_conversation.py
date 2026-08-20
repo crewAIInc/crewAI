@@ -2462,15 +2462,57 @@ class TestDeclaredConversationalLLM:
         with pytest.raises(ValueError, match="expected a model-id string"):
             self._resolved(1234)
 
-    def test_a_declared_mapping_runs_a_turn(self) -> None:
-        flow = Flow.from_declaration(
-            contents=_conversational_declaration(
-                conversational={"llm": {"model": "openai/gpt-4o-mini"}}
-            )
+    def test_an_llm_definition_resolves_with_its_settings(self) -> None:
+        from crewai.project.crew_definition import LLMDefinition
+
+        flow = Flow.from_declaration(contents=_conversational_declaration())
+        resolved = flow._coerce_llm(
+            LLMDefinition(model="openai/gpt-4o-mini", max_tokens=256)
         )
-        flow._conversation_config.llm = _ScriptedLLM(["Hello."])
+
+        assert resolved.model == "gpt-4o-mini"
+        assert resolved.max_tokens == 256
+
+    def test_a_declared_mapping_reaches_create_llm_during_a_turn(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Swapping the config out before the turn would not prove the path."""
+        declared = {"model": "openai/gpt-4o-mini", "max_tokens": 128}
+        scripted = _ScriptedLLM(["Hello."])
+        seen: list[Any] = []
+
+        def fake_create_llm(value: Any) -> Any:
+            seen.append(value)
+            return scripted
+
+        monkeypatch.setattr(
+            "crewai.utilities.llm_utils.create_llm", fake_create_llm
+        )
+        flow = Flow.from_declaration(
+            contents=_conversational_declaration(conversational={"llm": declared})
+        )
 
         assert flow.handle_turn("hi") == "Hello."
+        assert declared in seen
+
+    def test_a_declared_intent_llm_mapping_is_resolved(self) -> None:
+        """`_collapse_to_outcome` takes only str | BaseLLM, so it must be coerced."""
+        scripted = _ScriptedLLM(['{"outcome": "order"}'])
+        flow = Flow.from_declaration(
+            contents=_conversational_declaration(
+                conversational={
+                    "default_intents": ["order"],
+                    "intent_llm": {"model": "openai/gpt-4o-mini", "max_tokens": 64},
+                }
+            )
+        )
+        flow._conversation_config.intent_llm = scripted
+        flow._conversation_config.llm = _ScriptedLLM(["ok"])
+
+        # Before coercion this raised "Invalid llm type: <class 'dict'>".
+        flow.handle_turn("where is my order?")
+
+        assert [m.role for m in flow.state.messages][0] == "user"
 
 
 class TestRoutingArtefactLabels:

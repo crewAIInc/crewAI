@@ -706,7 +706,7 @@ class _ConversationalMixin:
         outcome = self._collapse_to_outcome(
             feedback,
             ("answer_from_history", "route_to_flow"),
-            config.answer_from_history_llm,
+            self._coerce_llm(config.answer_from_history_llm),
         )
         return outcome == "answer_from_history"
 
@@ -876,7 +876,11 @@ class _ConversationalMixin:
             feedback = f"{context_blob}\n\nLatest user message: {text}"
         else:
             feedback = text
-        return self._collapse_to_outcome(feedback, tuple(outcomes), llm)
+        # ``_collapse_to_outcome`` takes only ``str | BaseLLM``, so a declared
+        # config mapping has to be resolved before it gets there.
+        return self._collapse_to_outcome(
+            feedback, tuple(outcomes), self._coerce_llm(llm)
+        )
 
     @property
     def _conversation_config(self) -> ConversationConfig | None:
