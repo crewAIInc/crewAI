@@ -50,11 +50,12 @@ def test_happy_path(monkeypatch):
                 "confianza": "alta",
             }
 
-    def fake_post(url, json, headers, timeout):
+    def fake_post(url, json, headers, timeout, allow_redirects):
         captured["url"] = url
         captured["json"] = json
         captured["headers"] = headers
         captured["timeout"] = timeout
+        captured["allow_redirects"] = allow_redirects
         return FakeResponse()
 
     monkeypatch.setattr(
@@ -69,6 +70,7 @@ def test_happy_path(monkeypatch):
     assert captured["headers"]["X-API-Key"] == "lmx_live_test"
     assert captured["headers"]["X-LexMex-Client"] == "crewai-lexmex-tool/1.1.0"
     assert captured["timeout"] == 30
+    assert captured["allow_redirects"] is False
 
     assert "despido justificado" in resultado
     assert "LFT, art. 47" in resultado
