@@ -74,15 +74,8 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     flow = load_declarative_flow(definition)
 
     if _flow_is_conversational(flow):
-        click.secho(
-            "  This flow declares `conversational`, and `crewai run` has no chat "
-            "loop yet — it would run a single turn and exit.\n"
-            "  Drive it from Python for now: `flow.chat()` for a terminal REPL, "
-            "or `flow.handle_turn(message, session_id=...)` per message.",
-            fg="yellow",
-            err=True,
-        )
-        raise SystemExit(1)
+        _run_conversational_declarative_flow(flow)
+        return
 
     resolved_inputs = _resolve_flow_inputs(flow, provided)
 
@@ -106,6 +99,29 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
         )
         raise SystemExit(1) from exc
     click.echo(_format_result(result))
+
+
+def _run_conversational_declarative_flow(flow: Flow[Any]) -> None:
+    """Run a declarative chat flow on the conversational TUI.
+
+    The same TUI a Python conversational Flow gets from ``crewai run``; it
+    drives ``handle_turn`` per message. A chat loop needs a terminal, so a
+    headless run says what it would have needed rather than kicking off one
+    turn and exiting as if that were the whole conversation.
+    """
+    if not is_interactive():
+        click.secho(
+            "  This flow is conversational, which needs an interactive terminal.\n"
+            "  Drive it from Python instead: `flow.handle_turn(message, "
+            "session_id=...)` per message, or `flow.stream_turn(...)` to stream.",
+            fg="yellow",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    from crewai_cli.kickoff_flow import _run_conversational_flow_tui
+
+    _run_conversational_flow_tui(flow)
 
 
 def _run_declarative_flow_tui(

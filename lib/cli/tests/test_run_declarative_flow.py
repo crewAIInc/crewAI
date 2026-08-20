@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Any
 from types import SimpleNamespace
 
 import pytest
@@ -627,18 +628,59 @@ methods:
 """
 
 
-def test_run_declarative_flow_refuses_a_conversational_flow(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+def test_run_declarative_flow_opens_the_conversational_tui(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A declarative chat flow gets the same TUI a Python one does."""
+    definition_path = tmp_path / "flow.yaml"
+    definition_path.write_text(CONVERSATIONAL_FLOW_YAML, encoding="utf-8")
+
+    launched: list[Any] = []
+    monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._run_conversational_flow_tui", launched.append
+    )
+
+    run_declarative_flow_module.run_declarative_flow(str(definition_path))
+
+    assert len(launched) == 1
+    assert launched[0]._is_conversational_enabled() is True
+
+
+def test_conversational_flow_does_not_take_the_steps_tui(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The STEPS TUI renders method progress and cannot drive a chat turn."""
+    definition_path = tmp_path / "flow.yaml"
+    definition_path.write_text(CONVERSATIONAL_FLOW_YAML, encoding="utf-8")
+
+    monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._run_conversational_flow_tui", lambda flow: None
+    )
+    monkeypatch.setattr(
+        run_declarative_flow_module,
+        "_run_declarative_flow_tui",
+        lambda *a, **k: pytest.fail("conversational flow reached the STEPS TUI"),
+    )
+
+    run_declarative_flow_module.run_declarative_flow(str(definition_path))
+
+
+def test_conversational_flow_headless_explains_instead_of_one_turn(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     definition_path = tmp_path / "flow.yaml"
     definition_path.write_text(CONVERSATIONAL_FLOW_YAML, encoding="utf-8")
+
+    monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: False)
 
     with pytest.raises(SystemExit):
         run_declarative_flow_module.run_declarative_flow(str(definition_path))
 
     err = capsys.readouterr().err
-    assert "has no chat loop yet" in err
-    assert "flow.chat()" in err
+    assert "needs an interactive terminal" in err
+    assert "handle_turn" in err
 
 
 def test_run_declarative_flow_still_runs_a_disabled_conversational_flow(
