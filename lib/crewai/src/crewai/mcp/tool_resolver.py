@@ -362,6 +362,8 @@ class MCPToolResolver:
                         await discovery_client.disconnect()
                         await asyncio.sleep(0.1)
                     except Exception as disconnect_error:
+                        if isinstance(disconnect_error, MCPConnectionError):
+                            raise disconnect_error from e
                         self._logger.log(
                             "error", f"Error during disconnect: {disconnect_error}"
                         )
