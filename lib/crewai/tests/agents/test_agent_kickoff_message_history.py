@@ -163,3 +163,20 @@ def test_prior_turn_attachments_are_not_resent_on_this_turn() -> None:
 
     assert inputs["files"] == {"b": "new"}
     assert inputs["history"][0]["files"] == {"a": "old"}
+
+
+def test_an_attachment_only_final_message_is_the_request() -> None:
+    """Its files must reach `inputs["files"]`, not be filtered away."""
+    llm = _Recorder()
+    agent = Agent(role="S", goal="g", backstory="b", llm=llm)
+    _executor, inputs, _info, _tools = agent._prepare_kickoff(
+        [
+            {"role": "user", "content": "here is the earlier note"},
+            {"role": "user", "content": "", "files": {"scan": "bytes"}},
+        ]
+    )
+
+    assert inputs["files"] == {"scan": "bytes"}
+    assert [message["content"] for message in inputs["history"]] == [
+        "here is the earlier note"
+    ]
