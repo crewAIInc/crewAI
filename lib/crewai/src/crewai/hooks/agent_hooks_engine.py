@@ -60,9 +60,11 @@ import copy
 from dataclasses import dataclass
 import functools
 import importlib
+import inspect
 import json
 import logging
 import math
+import queue
 import threading
 import time
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar
@@ -107,6 +109,7 @@ Interceptor = Any
 logger = logging.getLogger(__name__)
 
 _T = TypeVar("_T")
+_ENGINE_STATE_LOCK = threading.RLock()
 
 
 def _probe_agent_hooks() -> tuple[bool, Exception | None]:
@@ -137,6 +140,14 @@ DEFAULT_TIMEOUT: Final[float] = 5.0
 
 #: Default maximum records retained in memory before oldest-first eviction.
 DEFAULT_MAX_RECORDS: Final[int] = 10_000
+
+#: Default wall-clock bound for one complete governance emission.
+DEFAULT_EMIT_TIMEOUT: Final[float] = 30.0
+
+# Synchronous user callbacks are non-preemptible once running. Bound both the
+# workers and pending work so repeated timeouts cannot create unbounded threads.
+_MAX_CALLBACK_WORKERS: Final[int] = 4
+_MAX_CALLBACK_WAITERS: Final[int] = 64
 
 #: Framework identifier stamped on every emitted ``AgentContext``.
 _FRAMEWORK: Final[str] = "crewai"
@@ -179,7 +190,7 @@ _POST_POINTS: Final[frozenset[InterceptionPoint]] = frozenset(
 _INSTALL_HINT: Final[str] = (
     "agent-hooks is not installed (or its native core failed to load). It is an "
     "optional dependency with a compiled core; install the pinned release:\n"
-    '    pip install "agent-hooks-sdk==0.1.0a3"\n'
+    '    pip install "agent-hooks-sdk==0.1.0a5"\n'
     "See https://github.com/responsibleai/agent-hooks for details."
 )
 
@@ -426,6 +437,201 @@ def _model_response_parts(response: Any) -> tuple[Any, list[Any], str]:
                 )
             return "", tool_calls, "tool_calls"
     return _json_safe(response), [], "stop"
+
+
+@dataclass(slots=True)
+class _CallbackWork:
+    """One callback retained by the bounded pool until it actually exits."""
+
+    callback: Callable[[], Any]
+    future: Future[Any]
+
+
+class _BoundedCallbackPool:
+    """Run non-preemptible callbacks with bounded workers and queue capacity."""
+
+    def __init__(
+        self,
+        max_workers: int = _MAX_CALLBACK_WORKERS,
+        max_waiters: int = _MAX_CALLBACK_WAITERS,
+    ) -> None:
+        if max_workers < 1:
+            raise ValueError("max_workers must be at least 1")
+        if max_waiters < 0:
+            raise ValueError("max_waiters must be non-negative")
+        self._queue: queue.Queue[_CallbackWork | None] = queue.Queue(
+            maxsize=max_workers + max_waiters
+        )
+        self._slots = threading.BoundedSemaphore(max_workers + max_waiters)
+        self._state_lock = threading.Lock()
+        self._state: Literal["open", "closing", "failed", "closed"] = "open"
+        self._threads = [
+            threading.Thread(
+                target=self._worker,
+                name=f"agent-hooks-callback-{index}",
+                daemon=True,
+            )
+            for index in range(max_workers)
+        ]
+        for thread in self._threads:
+            thread.start()
+
+    def submit(self, callback: Callable[[], Any]) -> Future[Any]:
+        """Submit one callback or fail closed when bounded admission is full."""
+        with self._state_lock:
+            if self._state != "open":
+                raise RuntimeError("agent-hooks callback pool is not open")
+            if not self._slots.acquire(blocking=False):
+                raise RuntimeError("agent-hooks callback admission queue is full")
+            future: Future[Any] = Future()
+            try:
+                self._queue.put_nowait(_CallbackWork(callback, future))
+            except Exception:
+                self._slots.release()
+                raise
+            return future
+
+    async def run_async(self, callback: Callable[[], Any]) -> Any:
+        """Await one bounded callback without blocking the emitter loop."""
+        return await asyncio.wrap_future(self.submit(callback))
+
+    def run_sync(self, callback: Callable[[], Any], timeout: float) -> Any:
+        """Wait at most ``timeout`` seconds while retaining capacity until exit."""
+        future = self.submit(callback)
+        try:
+            return future.result(timeout=timeout)
+        except FutureTimeoutError:
+            future.cancel()
+            raise
+
+    def close(self, timeout: float = 5.0) -> None:
+        """Cancel queued callbacks, stop workers, and expose blocked shutdown."""
+        with self._state_lock:
+            if self._state == "closed":
+                return
+            if self._state == "closing":
+                raise RuntimeError("agent-hooks callback pool is already closing")
+            if self._state == "open":
+                self._state = "closing"
+                while True:
+                    try:
+                        work = self._queue.get_nowait()
+                    except queue.Empty:
+                        break
+                    if work is not None:
+                        work.future.cancel()
+                        self._slots.release()
+                    self._queue.task_done()
+                for _ in self._threads:
+                    self._queue.put_nowait(None)
+
+        deadline = time.monotonic() + timeout
+        for thread in self._threads:
+            thread.join(timeout=max(0.0, deadline - time.monotonic()))
+        if any(thread.is_alive() for thread in self._threads):
+            with self._state_lock:
+                self._state = "failed"
+            raise RuntimeError("agent-hooks callback pool did not stop")
+        with self._state_lock:
+            self._state = "closed"
+
+    def _worker(self) -> None:
+        while True:
+            work = self._queue.get()
+            try:
+                if work is None:
+                    return
+                if not work.future.set_running_or_notify_cancel():
+                    continue
+                try:
+                    result = work.callback()
+                except BaseException as error:
+                    work.future.set_exception(error)
+                else:
+                    work.future.set_result(result)
+            finally:
+                if work is not None:
+                    self._slots.release()
+                self._queue.task_done()
+
+
+class _IsolatedInterceptor:
+    """Adapt an interceptor so its initial call cannot block the emitter loop."""
+
+    def __init__(self, interceptor: Interceptor, pool: _BoundedCallbackPool) -> None:
+        self._interceptor = interceptor
+        self._pool = pool
+
+    async def intercept(self, context: AgentContext) -> Any:
+        try:
+            result = await self._pool.run_async(
+                lambda: self._interceptor.intercept(context)
+            )
+            if inspect.isawaitable(result):
+                return await result
+        except asyncio.CancelledError:
+            raise
+        except BaseException as error:
+            raise RuntimeError(type(error).__name__) from error
+        return result
+
+
+class _IsolatedResolver:
+    """Adapt an approval resolver to the same bounded callback contract."""
+
+    def __init__(self, resolver: ApprovalResolver, pool: _BoundedCallbackPool) -> None:
+        self._resolver = resolver
+        self._pool = pool
+
+    async def resolve(self, request: Any) -> Any:
+        try:
+            result = await self._pool.run_async(lambda: self._resolver.resolve(request))
+            if inspect.isawaitable(result):
+                return await result
+        except asyncio.CancelledError:
+            raise
+        except BaseException as error:
+            raise RuntimeError(type(error).__name__) from error
+        return result
+
+
+class _IsolatedRecordSink:
+    """Deliver audit records through bounded work with observable failures."""
+
+    def __init__(
+        self,
+        sink: Callable[[InterceptionRecord], None],
+        pool: _BoundedCallbackPool,
+        timeout: float,
+    ) -> None:
+        self._sink = sink
+        self._pool = pool
+        self._timeout = timeout
+        self._failure_lock = threading.Lock()
+        self._failures = 0
+
+    @property
+    def failures(self) -> int:
+        with self._failure_lock:
+            return self._failures
+
+    def __call__(self, record: InterceptionRecord) -> None:
+        try:
+            result = self._pool.run_sync(lambda: self._sink(record), self._timeout)
+            if inspect.isawaitable(result):
+                close = getattr(result, "close", None)
+                if callable(close):
+                    close()
+                raise TypeError("record_sink must be synchronous")
+        except BaseException as error:
+            with self._failure_lock:
+                self._failures += 1
+            logger.error(
+                "agent-hooks record sink failed; failure_kind=record_sink_error "
+                "error_type=%s",
+                type(error).__name__,
+            )
+            raise RuntimeError("agent-hooks record sink failed") from error
 
 
 class _EmitterLoop:
@@ -696,7 +902,7 @@ class AgentHooksEngine:
         max_records: int = DEFAULT_MAX_RECORDS,
         points: Sequence[InterceptionPoint] | None = None,
         framework: str = _FRAMEWORK,
-        emit_timeout: float | None = None,
+        emit_timeout: float | None = DEFAULT_EMIT_TIMEOUT,
     ) -> None:
         """Build the underlying emitter and register the interceptors.
 
@@ -715,64 +921,108 @@ class AgentHooksEngine:
                 eviction. Evictions are counted by :attr:`records_dropped`.
             points: Lifecycle points to govern; defaults to :data:`DEFAULT_POINTS`.
             framework: Framework id stamped on every context.
-            emit_timeout: Optional wall-clock bound per emission; ``None``
-                relies on the emitter's own interceptor timeout.
+            emit_timeout: Wall-clock bound for one complete emission. ``None``
+                disables the outer bound, but callback admission remains bounded.
 
         Raises:
             ImportError: If agent-hooks is not installed.
         """
         _require()
         agent_hooks = importlib.import_module("agent_hooks")
+        callback_pool = _BoundedCallbackPool()
+        callback_timeout = timeout if timeout is not None else DEFAULT_TIMEOUT
+        record_sink_adapter = (
+            _IsolatedRecordSink(record_sink, callback_pool, callback_timeout)
+            if record_sink is not None
+            else None
+        )
 
-        emitter: Any = agent_hooks.InterceptionEmitter(
-            mode=mode if mode is not None else agent_hooks.EnforcementMode.ENFORCE,
-            resolver=resolver,
-            timeout=timeout,
-            composition=composition,
-            identity_provider=identity_provider,
-        )
-        for interceptor in interceptors:
-            emitter.register(interceptor)
-        if record_sink is not None:
-            emitter.set_record_sink(record_sink)
-        emitter.set_max_records(max_records)
+        isolated_identity = identity_provider
+        if identity_provider is not None and not isinstance(identity_provider, str):
+            provider = identity_provider
 
-        self._emitter: InterceptionEmitter = emitter
-        self._framework = framework
-        self._emit_timeout = emit_timeout
-        self._loop = _EmitterLoop()
-        self._builders: dict[str, AgentContextBuilder] = {}
-        self._active_sessions: dict[int, _OwnerSessions] = {}
-        self._session_context: contextvars.ContextVar[
-            dict[int, tuple[str, ...]] | None
-        ] = contextvars.ContextVar(
-            f"agent_hooks_sessions_{id(self)}",
-            default=None,
-        )
-        self._builders_lock = threading.Lock()
-        self._points: frozenset[InterceptionPoint] = frozenset(
-            points if points is not None else DEFAULT_POINTS
-        )
-        self._active = False
-        self._closed = False
-        self._close_failed = False
-        raw_adapters: dict[InterceptionPoint, Callable[[Any], Any]] = {
-            InterceptionPoint.PRE_TOOL_CALL: self._pre_tool_call,
-            InterceptionPoint.POST_TOOL_CALL: self._post_tool_call,
-            InterceptionPoint.PRE_MODEL_CALL: self._pre_model_call,
-            InterceptionPoint.POST_MODEL_CALL: self._post_model_call,
-            InterceptionPoint.INPUT: self._input,
-            InterceptionPoint.OUTPUT: self._output,
-            InterceptionPoint.EXECUTION_START: self._execution_start,
-            InterceptionPoint.EXECUTION_END: self._execution_end,
-        }
-        # Every adapter builds its context outside _decide()'s fail-closed
-        # guard, so wrap each so an unexpected build error fails closed instead
-        # of escaping to dispatch._invoke_hook (which would swallow it).
-        self._adapters: dict[InterceptionPoint, Callable[[Any], Any]] = {
-            point: self._wrap_fail_closed(point, adapter)
-            for point, adapter in raw_adapters.items()
-        }
+            def identity(context: AgentContext) -> Any:
+                try:
+                    return callback_pool.run_sync(
+                        lambda: provider.fn(context), callback_timeout
+                    )
+                except BaseException as error:
+                    raise RuntimeError(type(error).__name__) from error
+
+            isolated_identity = agent_hooks.IdentityProvider(
+                name=provider.name,
+                fn=identity,
+            )
+
+        try:
+            emitter: Any = agent_hooks.InterceptionEmitter(
+                mode=(
+                    mode if mode is not None else agent_hooks.EnforcementMode.ENFORCE
+                ),
+                resolver=(
+                    _IsolatedResolver(resolver, callback_pool)
+                    if resolver is not None
+                    else None
+                ),
+                timeout=timeout,
+                composition=composition,
+                identity_provider=isolated_identity,
+            )
+            for interceptor in interceptors:
+                emitter.register(_IsolatedInterceptor(interceptor, callback_pool))
+            if record_sink_adapter is not None:
+                emitter.set_record_sink(record_sink_adapter)
+            emitter.set_max_records(max_records)
+        except BaseException:
+            callback_pool.close()
+            raise
+
+        emitter_loop: _EmitterLoop | None = None
+        try:
+            emitter_loop = _EmitterLoop()
+            self._emitter: InterceptionEmitter = emitter
+            self._framework = framework
+            self._emit_timeout = emit_timeout
+            self._loop = emitter_loop
+            self._callback_pool = callback_pool
+            self._record_sink_adapter = record_sink_adapter
+            self._builders: dict[str, AgentContextBuilder] = {}
+            self._active_sessions: dict[int, _OwnerSessions] = {}
+            self._session_context: contextvars.ContextVar[
+                dict[int, tuple[str, ...]] | None
+            ] = contextvars.ContextVar(
+                f"agent_hooks_sessions_{id(self)}",
+                default=None,
+            )
+            self._builders_lock = threading.Lock()
+            self._points: frozenset[InterceptionPoint] = frozenset(
+                points if points is not None else DEFAULT_POINTS
+            )
+            self._active = False
+            self._closed = False
+            self._close_failed = False
+            raw_adapters: dict[InterceptionPoint, Callable[[Any], Any]] = {
+                InterceptionPoint.PRE_TOOL_CALL: self._pre_tool_call,
+                InterceptionPoint.POST_TOOL_CALL: self._post_tool_call,
+                InterceptionPoint.PRE_MODEL_CALL: self._pre_model_call,
+                InterceptionPoint.POST_MODEL_CALL: self._post_model_call,
+                InterceptionPoint.INPUT: self._input,
+                InterceptionPoint.OUTPUT: self._output,
+                InterceptionPoint.EXECUTION_START: self._execution_start,
+                InterceptionPoint.EXECUTION_END: self._execution_end,
+            }
+            # Every adapter builds its context outside _decide()'s fail-closed
+            # guard, so wrap each so an unexpected build error fails closed instead
+            # of escaping to dispatch._invoke_hook (which would swallow it).
+            self._adapters: dict[InterceptionPoint, Callable[[Any], Any]] = {
+                point: self._wrap_fail_closed(point, adapter)
+                for point, adapter in raw_adapters.items()
+            }
+        except BaseException:
+            if emitter_loop is not None:
+                emitter_loop.close()
+            callback_pool.close()
+            raise
 
     # -- lifecycle ------------------------------------------------------------
 
@@ -795,6 +1045,13 @@ class AgentHooksEngine:
         """Drain and return the buffered interception records."""
         return list(self._emitter.take_records())
 
+    @property
+    def record_sink_failures(self) -> int:
+        """Number of audit records the configured sink failed to accept."""
+        if self._record_sink_adapter is None:
+            return 0
+        return self._record_sink_adapter.failures
+
     def adapter_for(self, point: InterceptionPoint) -> Callable[[Any], Any] | None:
         """Return the governing adapter for ``point``, or ``None`` if not governed.
 
@@ -806,46 +1063,72 @@ class AgentHooksEngine:
         return self._adapters.get(point)
 
     def activate(self) -> AgentHooksEngine:
-        """Install this engine as crewAI's control governor (idempotent)."""
-        if self._closed or self._close_failed:
-            raise RuntimeError("a closed or failed agent-hooks engine cannot activate")
-        if not self._active:
+        """Atomically install this engine as crewAI's process governor."""
+        global _active_engine
+        with _ENGINE_STATE_LOCK:
+            if self._closed or self._close_failed:
+                raise RuntimeError(
+                    "a closed or failed agent-hooks engine cannot activate"
+                )
+            if _active_engine is self and self._active:
+                return self
+
             from crewai.hooks.dispatch import set_governor
 
+            previous = _active_engine
             set_governor(self.adapter_for)
+            _active_engine = self
             self._active = True
             logger.debug(
                 "agent-hooks engine activated on %d point(s)", len(self._points)
             )
+        if previous is not None and previous is not self:
+            previous.close()
         return self
 
     def deactivate(self) -> None:
         """Remove this engine as the governor if it is currently installed."""
-        if self._active:
+        global _active_engine
+        with _ENGINE_STATE_LOCK:
+            if not self._active:
+                return
             from crewai.hooks.dispatch import clear_governor, get_governor
 
             if get_governor() == self.adapter_for:
                 clear_governor()
+            if _active_engine is self:
+                _active_engine = None
             self._active = False
 
     def close(self) -> None:
         """Deactivate the engine and stop the background emitter loop (idempotent)."""
-        global _active_engine
-        if self._closed:
-            return
-        self.deactivate()
-        try:
-            self._loop.close()
-        except Exception:
-            self._close_failed = True
-            raise
-        with self._builders_lock:
-            self._builders.clear()
-            self._active_sessions.clear()
-        if _active_engine is self:
-            _active_engine = None
-        self._close_failed = False
-        self._closed = True
+        with _ENGINE_STATE_LOCK:
+            if self._closed:
+                return
+            self.deactivate()
+            loop_error: Exception | None = None
+            try:
+                self._loop.close()
+            except Exception as error:
+                loop_error = error
+            try:
+                self._callback_pool.close()
+            except Exception:
+                self._close_failed = True
+                if loop_error is not None:
+                    logger.exception(
+                        "agent-hooks callback shutdown also failed after loop error"
+                    )
+                    raise loop_error from None
+                raise
+            if loop_error is not None:
+                self._close_failed = True
+                raise loop_error
+            with self._builders_lock:
+                self._builders.clear()
+                self._active_sessions.clear()
+            self._close_failed = False
+            self._closed = True
 
     def __enter__(self) -> AgentHooksEngine:
         return self.activate()
@@ -1291,7 +1574,7 @@ def use_agent_hooks(
     max_records: int = DEFAULT_MAX_RECORDS,
     points: Sequence[InterceptionPoint] | None = None,
     framework: str = _FRAMEWORK,
-    emit_timeout: float | None = None,
+    emit_timeout: float | None = DEFAULT_EMIT_TIMEOUT,
 ) -> AgentHooksEngine:
     """Make agent-hooks crewAI's active control engine and return it.
 
@@ -1322,7 +1605,7 @@ def use_agent_hooks(
             eviction.
         points: Lifecycle points to govern (default :data:`DEFAULT_POINTS`).
         framework: Framework id stamped on every context.
-        emit_timeout: Optional wall-clock bound per emission.
+        emit_timeout: Wall-clock bound per emission; defaults to 30 seconds.
 
     Returns:
         The active :class:`AgentHooksEngine`. Call :meth:`AgentHooksEngine.close`
@@ -1331,9 +1614,6 @@ def use_agent_hooks(
     Raises:
         ImportError: If agent-hooks is not installed.
     """
-    global _active_engine
-    if _active_engine is not None:
-        _active_engine.close()
     engine = AgentHooksEngine(
         *interceptors,
         mode=mode,
@@ -1348,24 +1628,24 @@ def use_agent_hooks(
         emit_timeout=emit_timeout,
     )
     engine.activate()
-    _active_engine = engine
     return engine
 
 
 def disable_agent_hooks() -> None:
     """Deactivate and close the active agent-hooks control engine, if any."""
-    global _active_engine
-    if _active_engine is not None:
-        _active_engine.close()
-        _active_engine = None
+    with _ENGINE_STATE_LOCK:
+        if _active_engine is not None:
+            _active_engine.close()
 
 
 def active_engine() -> AgentHooksEngine | None:
     """Return the currently active :class:`AgentHooksEngine`, or ``None``."""
-    return _active_engine
+    with _ENGINE_STATE_LOCK:
+        return _active_engine
 
 
 __all__ = [
+    "DEFAULT_EMIT_TIMEOUT",
     "DEFAULT_MAX_RECORDS",
     "DEFAULT_POINTS",
     "DEFAULT_TIMEOUT",

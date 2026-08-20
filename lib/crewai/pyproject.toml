@@ -117,13 +117,9 @@ qdrant-edge = [
     "qdrant-edge-py>=0.6.0",
 ]
 agent-hooks = [
-    # Optional agent-hooks control engine. A prebuilt abi3 wheel is published for
-    # Linux x86_64 (Python 3.10+); other platforms would need a Rust toolchain to
-    # build from sdist, so the marker scopes the extra to where the wheel exists.
-    # CI runs on ubuntu-latest, so `uv sync --all-extras` installs it there and the
-    # governance tests run instead of skipping. The exact version is pinned in the
-    # committed uv.lock.
-    "agent-hooks-sdk==0.1.0a3; platform_system == 'Linux' and platform_machine == 'x86_64'",
+    # Optional agent-hooks control engine. The exact release is pinned in uv.lock;
+    # a5 publishes abi3 wheels for supported Linux, macOS, and Windows platforms.
+    "agent-hooks-sdk==0.1.0a5",
 ]
 
 

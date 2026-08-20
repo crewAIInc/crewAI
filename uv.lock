@@ -127,11 +127,15 @@ wheels = [
 
 [[package]]
 name = "agent-hooks-sdk"
-version = "0.1.0a3"
+version = "0.1.0a5"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/75/22/76c1497ba3e56d6d14bccd9c532e80e693d900d8996c8abc854fc452b779/agent_hooks_sdk-0.1.0a3.tar.gz", hash = "sha256:a527a42b23b748e298e9c6f5a80c824b04f57e52a100fd5ab7664e3b194feb62", size = 173376, upload-time = "2026-07-17T09:13:34.13Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/33/f4/191de0300a73b9a78f2914e0e497c96e6ac38db457e20f74fdd6251792c4/agent_hooks_sdk-0.1.0a5.tar.gz", hash = "sha256:4ae452b0a1d51540a1b74b0005b0a51f75fd4b80e9aca1a7403dece4dd6f9e46", size = 130183, upload-time = "2026-08-07T06:14:41.890Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ce/d1/6b862b959141fb9fb5693484b728817f9f25fdbc05c35ec2184505294ff1/agent_hooks_sdk-0.1.0a3-cp310-abi3-manylinux_2_34_x86_64.whl", hash = "sha256:882e7d109bf4c4818c68325d9199e99237ebf74475f792ed91b93f807e15ac48", size = 634755, upload-time = "2026-07-17T09:13:32.551Z" },
+    { url = "https://files.pythonhosted.org/packages/d7/50/a6bea9691ef69be1c9c70420e84f773ee721c7e60dafc76069564ba88cc9/agent_hooks_sdk-0.1.0a5-cp310-abi3-macosx_10_12_x86_64.whl", hash = "sha256:d63893d94ccfbdc6422dd217663ed88aedec0ffd560ecfa105187fa9bda79063", size = 598919, upload-time = "2026-08-07T06:14:35.276Z" },
+    { url = "https://files.pythonhosted.org/packages/14/ad/fe8885b3f3f203d48dba46034d3c92dfd207a9bc504d4ba1356bf57f9234/agent_hooks_sdk-0.1.0a5-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:fb1d714ed6baf884525a153821d909fb23c2fe27e63f61ae254f06ee6ec351d4", size = 570529, upload-time = "2026-08-07T06:14:36.612Z" },
+    { url = "https://files.pythonhosted.org/packages/2e/6d/169997cb8ad39fc295854ed25f21171e800298e73e5a12123d3b008149f7/agent_hooks_sdk-0.1.0a5-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:a0946af422eadeb3a192a7a856bc40e2b74435ab540dd3586c3cb7939157c91b", size = 626188, upload-time = "2026-08-07T06:14:37.980Z" },
+    { url = "https://files.pythonhosted.org/packages/5b/22/ab5cf6e7fd26e8157637eea4b72a903d1b98dad11872857f32ead29ddcd0/agent_hooks_sdk-0.1.0a5-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:a4b53cce9dabf1ee8ffffa4b5f6c6d34d269daa699d468e49fad286f0070d23f", size = 649025, upload-time = "2026-08-07T06:14:39.218Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/c2/d2bb3772abe3b04fc841bc6c667f49adf9ae037c945cbe0d6a8739d419c4/agent_hooks_sdk-0.1.0a5-cp310-abi3-win_amd64.whl", hash = "sha256:777a4cd3803710277e77d9c6abb6d1a2c9d6ce8977167fe47fc57b8e4ff8bc75", size = 479891, upload-time = "2026-08-07T06:14:40.697Z" },
 ]
 
 [[package]]
@@ -1375,7 +1379,7 @@ a2a = [
     { name = "httpx-sse" },
 ]
 agent-hooks = [
-    { name = "agent-hooks-sdk", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "agent-hooks-sdk" },
 ]
 anthropic = [
     { name = "anthropic" },
@@ -1436,7 +1440,7 @@ watson = [
 [package.metadata]
 requires-dist = [
     { name = "a2a-sdk", marker = "extra == 'a2a'", specifier = "~=0.3.10" },
-    { name = "agent-hooks-sdk", marker = "platform_machine == 'x86_64' and sys_platform == 'linux' and extra == 'agent-hooks'", specifier = "==0.1.0a3" },
+    { name = "agent-hooks-sdk", marker = "extra == 'agent-hooks'", specifier = "==0.1.0a5" },
     { name = "aiobotocore", marker = "extra == 'aws'", specifier = "~=3.8.0" },
     { name = "aiobotocore", marker = "extra == 'bedrock'", specifier = "~=3.8.0" },
     { name = "aiocache", extras = ["memcached", "redis"], marker = "extra == 'a2a'", specifier = "~=0.12.3" },

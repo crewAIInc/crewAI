@@ -18,8 +18,11 @@ import types
 from typing import Any
 
 from crewai.hooks.agent_hooks_engine import (
+    DEFAULT_EMIT_TIMEOUT,
     DEFAULT_MAX_RECORDS,
     HAS_AGENT_HOOKS,
+    AgentHooksEngine,
+    _BoundedCallbackPool,
     _EmitterLoop,
     _agent_ids,
     _blocked_result,
@@ -313,6 +316,46 @@ class TestHelpers:
 
 
 # --- emitter loop internals -------------------------------------------------
+
+
+class TestBoundedCallbackPool:
+    def test_blocking_callback_retains_capacity_until_exit(self):
+        pool = _BoundedCallbackPool(max_workers=1, max_waiters=0)
+        started = threading.Event()
+        release = threading.Event()
+
+        def block() -> None:
+            started.set()
+            release.wait()
+
+        future = pool.submit(block)
+        try:
+            assert started.wait(timeout=2.0)
+            with pytest.raises(RuntimeError, match="admission queue is full"):
+                pool.submit(lambda: None)
+        finally:
+            release.set()
+            future.result(timeout=2.0)
+            pool.close()
+
+    def test_failed_close_is_observable_and_retryable(self):
+        pool = _BoundedCallbackPool(max_workers=1, max_waiters=0)
+        started = threading.Event()
+        release = threading.Event()
+
+        def block() -> None:
+            started.set()
+            release.wait()
+
+        future = pool.submit(block)
+        assert started.wait(timeout=2.0)
+        with pytest.raises(RuntimeError, match="did not stop"):
+            pool.close(timeout=0.01)
+
+        release.set()
+        future.result(timeout=2.0)
+        pool.close(timeout=2.0)
+        assert all(not thread.is_alive() for thread in pool._threads)
 
 
 class TestEmitterLoop:
@@ -2068,6 +2111,57 @@ class TestEngineLifecycle:
         finally:
             engine.close()
 
+    def test_default_emit_timeout_is_finite(self):
+        engine = use_agent_hooks(_Allow())
+        try:
+            assert engine._emit_timeout == DEFAULT_EMIT_TIMEOUT
+        finally:
+            engine.close()
+
+    def test_blocking_sync_interceptor_times_out_closed(self):
+        started = threading.Event()
+        release = threading.Event()
+
+        class BlockingInterceptor:
+            def intercept(self, ctx: Any) -> Any:
+                from agent_hooks import Decision, Verdict
+
+                started.set()
+                release.wait()
+                return Verdict(decision=Decision.ALLOW)
+
+        engine = use_agent_hooks(
+            BlockingInterceptor(), timeout=0.05, emit_timeout=1.0
+        )
+        try:
+            assert run_before_tool_call_hooks(_tool_ctx()) is True
+            assert started.is_set()
+        finally:
+            release.set()
+            engine.close()
+
+    def test_blocking_record_sink_is_bounded_and_observable(self):
+        started = threading.Event()
+        release = threading.Event()
+
+        def sink(record: Any) -> None:
+            started.set()
+            release.wait()
+
+        engine = use_agent_hooks(
+            _Allow(),
+            timeout=0.05,
+            emit_timeout=1.0,
+            record_sink=sink,
+        )
+        try:
+            assert run_before_tool_call_hooks(_tool_ctx()) is False
+            assert started.is_set()
+            assert engine.record_sink_failures == 1
+        finally:
+            release.set()
+            engine.close()
+
     def test_activate_is_idempotent(self):
         engine = use_agent_hooks(_Allow())
         try:
@@ -2101,9 +2195,39 @@ class TestEngineLifecycle:
         second = use_agent_hooks(_Allow())
         try:
             assert get_governor() == second.adapter_for
+            assert first._closed is True
         finally:
             second.close()
             first.close()
+
+    def test_concurrent_activation_keeps_engine_and_governor_consistent(self):
+        first = AgentHooksEngine(_Allow())
+        second = AgentHooksEngine(_Allow())
+        ready = threading.Barrier(2)
+        errors: list[BaseException] = []
+
+        def activate(engine: AgentHooksEngine) -> None:
+            try:
+                ready.wait()
+                engine.activate()
+            except BaseException as error:
+                errors.append(error)
+
+        first_thread = threading.Thread(target=activate, args=(first,))
+        second_thread = threading.Thread(target=activate, args=(second,))
+        first_thread.start()
+        second_thread.start()
+        first_thread.join(timeout=2.0)
+        second_thread.join(timeout=2.0)
+
+        current = active_engine()
+        assert not first_thread.is_alive()
+        assert not second_thread.is_alive()
+        assert errors == []
+        assert current in (first, second)
+        assert current is not None
+        assert get_governor() == current.adapter_for
+        assert sum(not engine._closed for engine in (first, second)) == 1
 
     def test_evaluate_only_records_but_never_blocks(self):
         from agent_hooks import EnforcementMode
