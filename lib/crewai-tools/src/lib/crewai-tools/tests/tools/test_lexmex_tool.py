@@ -120,3 +120,26 @@ def test_rate_limited(monkeypatch):
 
     resultado = tool.run(pregunta="cualquier pregunta")
     assert "límite" in resultado.lower()
+
+
+def test_redirect_is_rejected_without_reading_body(monkeypatch):
+    """CodeRabbit: ante un 3xx, la tool debe cortar antes de llamar
+    .json() (defensa contra que alguien quite ese return a futuro y
+    la key termine yendo a un host fuera de lex-mex.xyz)."""
+    tool = LexMexTool(api_key="lmx_live_test")
+
+    class FakeRedirectResponse:
+        status_code = 302
+
+        def json(self):
+            raise AssertionError(
+                ".json() no debe llamarse ante una respuesta de redirect"
+            )
+
+    monkeypatch.setattr(
+        "crewai_tools.tools.lexmex_tool.lexmex_tool.requests.post",
+        lambda *a, **kw: FakeRedirectResponse(),
+    )
+
+    resultado = tool.run(pregunta="cualquier pregunta")
+    assert "redirección" in resultado.lower()
