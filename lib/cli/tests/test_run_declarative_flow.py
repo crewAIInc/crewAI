@@ -667,6 +667,46 @@ def test_conversational_flow_does_not_take_the_steps_tui(
     run_declarative_flow_module.run_declarative_flow(str(definition_path))
 
 
+def test_conversational_flow_rejects_inputs(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`--inputs` has nowhere to go: handle_turn owns the kickoff inputs."""
+    definition_path = tmp_path / "flow.yaml"
+    definition_path.write_text(CONVERSATIONAL_FLOW_YAML, encoding="utf-8")
+
+    monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._run_conversational_flow_tui",
+        lambda flow: pytest.fail("should have rejected --inputs before the TUI"),
+    )
+
+    with pytest.raises(SystemExit):
+        run_declarative_flow_module.run_declarative_flow(
+            str(definition_path), '{"topic": "AI"}'
+        )
+
+    err = capsys.readouterr().err
+    assert "`--inputs` is not supported for a conversational flow" in err
+    assert "session_id" in err
+
+
+def test_conversational_flow_without_inputs_still_opens_the_tui(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    definition_path = tmp_path / "flow.yaml"
+    definition_path.write_text(CONVERSATIONAL_FLOW_YAML, encoding="utf-8")
+
+    launched: list[Any] = []
+    monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: True)
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._run_conversational_flow_tui", launched.append
+    )
+
+    run_declarative_flow_module.run_declarative_flow(str(definition_path), None)
+
+    assert len(launched) == 1
+
+
 def test_conversational_human_feedback_flow_avoids_the_tui(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

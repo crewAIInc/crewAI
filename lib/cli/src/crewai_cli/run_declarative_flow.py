@@ -74,7 +74,7 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     flow = load_declarative_flow(definition)
 
     if _flow_is_conversational(flow):
-        _run_conversational_declarative_flow(flow)
+        _run_conversational_declarative_flow(flow, provided)
         return
 
     resolved_inputs = _resolve_flow_inputs(flow, provided)
@@ -101,7 +101,9 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     click.echo(_format_result(result))
 
 
-def _run_conversational_declarative_flow(flow: Flow[Any]) -> None:
+def _run_conversational_declarative_flow(
+    flow: Flow[Any], provided: dict[str, Any]
+) -> None:
     """Run a declarative chat flow on the conversational TUI.
 
     The same TUI a Python conversational Flow gets from ``crewai run``; it
@@ -109,6 +111,21 @@ def _run_conversational_declarative_flow(flow: Flow[Any]) -> None:
     headless run says what it would have needed rather than kicking off one
     turn and exiting as if that were the whole conversation.
     """
+    if provided:
+        # The TUI calls ``handle_turn(message)``, which owns the kickoff inputs
+        # (it passes ``{"id": session_id}`` itself). There is nowhere to put
+        # these without fighting it, so say so rather than accepting them and
+        # running a conversation that quietly ignored them.
+        click.secho(
+            "  `--inputs` is not supported for a conversational flow: each turn's "
+            "input is the message you type.\n"
+            "  Resuming a session by id is not wired up yet — use "
+            "`flow.handle_turn(message, session_id=...)` from Python for that.",
+            fg="red",
+            err=True,
+        )
+        raise SystemExit(1)
+
     if not is_interactive():
         click.secho(
             "  This flow is conversational, which needs an interactive terminal.\n"
