@@ -110,18 +110,18 @@ Registre hooks para uma instância específica de crew:
 ```python
 from crewai import CrewBase
 from crewai.project import crew
-from crewai.hooks import before_llm_call_crew, after_llm_call_crew
+from crewai.hooks import before_llm_call, after_llm_call
 
 @CrewBase
 class MyProjCrew:
-    @before_llm_call_crew
+    @before_llm_call
     def validate_inputs(self, context):
         # Aplica-se apenas a esta crew
         if context.iterations == 0:
             print(f"Iniciando tarefa: {context.task.description}")
         return None
     
-    @after_llm_call_crew
+    @after_llm_call
     def log_responses(self, context):
         # Logging específico da crew
         print(f"Comprimento da resposta: {len(context.response)}")

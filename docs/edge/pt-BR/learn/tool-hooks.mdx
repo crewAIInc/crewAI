@@ -110,11 +110,11 @@ Registre hooks para uma instância específica de crew:
 ```python
 from crewai import CrewBase
 from crewai.project import crew
-from crewai.hooks import before_tool_call_crew, after_tool_call_crew
+from crewai.hooks import before_tool_call, after_tool_call
 
 @CrewBase
 class MyProjCrew:
-    @before_tool_call_crew
+    @before_tool_call
     def validate_tool_inputs(self, context):
         # Aplica-se apenas a esta crew
         if context.tool_name == "web_search":
@@ -123,7 +123,7 @@ class MyProjCrew:
                 return False
         return None
     
-    @after_tool_call_crew
+    @after_tool_call
     def log_tool_results(self, context):
         # Logging de ferramenta específico da crew
         print(f"✅ {context.tool_name} concluída")

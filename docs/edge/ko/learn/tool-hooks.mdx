@@ -110,11 +110,11 @@ def sanitize_results(context):
 ```python
 from crewai import CrewBase
 from crewai.project import crew
-from crewai.hooks import before_tool_call_crew, after_tool_call_crew
+from crewai.hooks import before_tool_call, after_tool_call
 
 @CrewBase
 class MyProjCrew:
-    @before_tool_call_crew
+    @before_tool_call
     def validate_tool_inputs(self, context):
         # 이 크루에만 적용됩니다
         if context.tool_name == "web_search":
@@ -123,7 +123,7 @@ class MyProjCrew:
                 return False
         return None
     
-    @after_tool_call_crew
+    @after_tool_call
     def log_tool_results(self, context):
         # 크루별 도구 로깅
         print(f"✅ {context.tool_name} 완료됨")
