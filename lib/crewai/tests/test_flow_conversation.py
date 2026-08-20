@@ -8,7 +8,9 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from pydantic import BaseModel
+from pathlib import Path
+
+from pydantic import BaseModel, ValidationError
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
@@ -2404,20 +2406,106 @@ class TestDeclarativeConversationalFlow:
         assert ordered == ["bootstrap", "route_conversation"]
         assert sequential is True
 
-    def test_router_response_format_ref_is_dropped_with_a_warning(self, caplog) -> None:
-        caplog.set_level(
-            logging.WARNING, logger="crewai.experimental.conversational_mixin"
-        )
+    def test_router_response_format_takes_a_python_ref_not_a_module_ref(self) -> None:
+        """The contract declares the same `{"python": ...}` shape crews use.
+
+        A bare `module:qualname` ref used to be accepted and silently dropped;
+        it is now a load-time error, so a typo cannot look like it worked.
+        """
+        with pytest.raises(ValidationError, match="response_format"):
+            Flow.from_declaration(
+                contents=_conversational_declaration(
+                    conversational={
+                        "router": {"response_format": {"ref": "some.module:Schema"}}
+                    }
+                )
+            )
+
+
+class TestDeclaredRouterResponseFormat:
+    """A declaration can name the model the routing decision is parsed into."""
+
+    ROUTE_MODULE = (
+        "from typing import Literal\n"
+        "from pydantic import BaseModel\n"
+        "\n"
+        "class ConversationRoute(BaseModel):\n"
+        "    intent: Literal['order', 'converse']\n"
+    )
+
+    @staticmethod
+    def _declaration(router: dict[str, Any]) -> dict[str, Any]:
+        return _conversational_declaration(conversational={"router": router})
+
+    def test_a_declared_python_ref_is_resolved_to_the_class(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        (tmp_path / "routes.py").write_text(self.ROUTE_MODULE, encoding="utf-8")
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
         flow = Flow.from_declaration(
-            contents=_conversational_declaration(
-                conversational={
-                    "router": {"response_format": {"ref": "some.module:Schema"}}
-                }
+            contents=self._declaration(
+                {"response_format": {"python": "routes.ConversationRoute"}}
+            )
+        )
+        resolved = flow._conversation_config.router.response_format
+
+        assert resolved is not None
+        assert resolved.__name__ == "ConversationRoute"
+        assert "intent" in resolved.model_fields
+        assert flow._router_response_format(flow._conversation_config.router) is resolved
+
+    def test_omitting_it_still_synthesizes_one(self) -> None:
+        flow = Flow.from_declaration(contents=self._declaration({}))
+
+        synthesized = flow._router_response_format(flow._conversation_config.router)
+
+        assert flow._conversation_config.router.response_format is None
+        assert list(synthesized.model_fields) == ["intent"]
+
+    def test_a_ref_outside_the_project_root_is_refused(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Declarations may not reach outside the project to import code."""
+        monkeypatch.chdir(tmp_path)
+        flow = Flow.from_declaration(
+            contents=self._declaration(
+                {"response_format": {"python": "os.path.basename"}}
             )
         )
 
-        assert flow._conversation_config.router.response_format is None
-        assert "cannot carry a model class" in caplog.text
+        # Resolution is lazy: the declaration loads, the import is refused.
+        with pytest.raises(Exception, match="inside the project root"):
+            _ = flow._conversation_config
+
+    def test_a_ref_without_a_dot_is_rejected_at_load(self) -> None:
+        with pytest.raises(ValidationError):
+            Flow.from_declaration(
+                contents=self._declaration({"response_format": {"python": "nodots"}})
+            )
+
+    def test_a_live_class_on_a_python_flow_is_untouched(self) -> None:
+        class MyRoute(BaseModel):
+            intent: str
+
+        @ConversationConfig(router=RouterConfig(response_format=MyRoute))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        assert ClassChat()._conversation_config.router.response_format is MyRoute
+
+    def test_a_live_class_projects_as_a_python_ref(self) -> None:
+        @ConversationConfig(router=RouterConfig(response_format=ConversationState))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        projected = ClassChat.flow_definition().conversational.router.response_format
+
+        assert projected is not None
+        assert projected.python == (
+            "crewai.experimental.conversational.ConversationState"
+        )
 
 
 class TestRoutingArtefactLabels:

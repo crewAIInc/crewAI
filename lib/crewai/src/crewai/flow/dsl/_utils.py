@@ -276,6 +276,24 @@ def _build_persistence_definition(value: Any) -> FlowPersistenceDefinition | Non
     )
 
 
+def _python_reference(value: Any) -> dict[str, str] | None:
+    """Project a class as the dotted ``{"python": ...}`` ref the contract uses.
+
+    The same shape a crew agent's ``response_format`` is declared with, so a
+    projected definition reloads into a live class instead of an opaque ref.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, type):
+        logger.warning(
+            "Conversational router response_format %r is not a class; dropping it "
+            "from the definition.",
+            value,
+        )
+        return None
+    return {"python": f"{value.__module__}.{value.__qualname__}"}
+
+
 def _build_conversational_router_definition(
     router_config: Any,
     path: str,
@@ -286,9 +304,8 @@ def _build_conversational_router_definition(
     routes = getattr(router_config, "routes", None)
     return FlowConversationalRouterDefinition(
         prompt=getattr(router_config, "prompt", None),
-        response_format=_serialize_static_value(
-            getattr(router_config, "response_format", None),
-            f"{path}.response_format",
+        response_format=_python_reference(
+            getattr(router_config, "response_format", None)
         ),
         llm=_serialize_static_value(getattr(router_config, "llm", None), f"{path}.llm"),
         routes=[str(route) for route in routes] if routes is not None else None,
