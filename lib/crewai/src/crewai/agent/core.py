@@ -180,12 +180,14 @@ def _carries_payload(message: LLMMessage) -> bool:
     """Whether a message says anything the provider needs.
 
     Text is the usual case, but an assistant turn that only requests tool
-    calls, and the tool result that answers it, both matter to the sequence.
+    calls, the tool result that answers it, and a turn whose payload is an
+    attachment all matter.
     """
     return bool(
         message.get("content")
         or message.get("tool_calls")
         or message.get("tool_call_id")
+        or message.get("files")
     )
 
 
