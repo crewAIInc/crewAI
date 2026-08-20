@@ -349,6 +349,60 @@ def _emit(method: str, *args, **kwargs):
     return tracer, span
 
 
+def _stub_crew(memory):
+    """The minimum `crew_creation` reads: key, id, fingerprint, memory, process, tasks, agents."""
+    crew = Mock()
+    crew.key = "crew-key"
+    crew.id = "crew-id"
+    crew.fingerprint = None
+    crew.memory = memory
+    crew.process = "sequential"
+    crew.tasks = []
+    crew.agents = []
+    crew.share_crew = False
+    return crew
+
+
+class _MemoryLike:
+    """Stands in for Memory/MemoryScope/MemorySlice.
+
+    Defines no ``__bool__`` or ``__len__``, matching the real classes, so an instance
+    is always truthy -- which is what makes D2's "enabled by any means" work.
+    """
+
+
+@pytest.mark.parametrize(
+    ("memory", "expected"),
+    [
+        (True, "true"),
+        (False, "false"),
+        (None, "false"),
+        (_MemoryLike(), "true"),
+    ],
+    ids=["bool-true", "bool-false", "none", "memory-instance"],
+)
+def test_crew_memory_is_recorded_as_a_string(memory, expected: str) -> None:
+    """The same defect `resumed` was fixed for, applied to the attribute left behind.
+
+    A false boolean cannot survive this pipeline at all: measured across 218,400,577
+    spans, not one carries ``vBool=false``, because proto3 omits the bool zero value.
+    So "memory disabled" was structurally unrepresentable and presence had to stand in
+    for the value -- which is why crew_memory read 1 for 99.8% of crews against a field
+    defaulting to False.
+
+    The instance case pins D2: memory counts as enabled when set by any means, not only
+    when it is literally ``True``.
+    """
+    _tracer, span = _emit("crew_creation", _stub_crew(memory), None)
+
+    span.set_attribute.assert_any_call("crew_memory", expected)
+    for call in span.set_attribute.call_args_list:
+        assert call.args[1] is not True and call.args[1] is not False, (
+            "no attribute may be a bare boolean: false would vanish from the pipeline "
+            "entirely and true would be indistinguishable from a presence marker"
+        )
+
+
 @pytest.mark.parametrize(("resumed", "expected"), [(True, "true"), (False, "false")])
 def test_resumed_is_recorded_as_a_string(resumed: bool, expected: str) -> None:
     """A boolean is encoded as the presence of a key, not as a value.
