@@ -2493,6 +2493,27 @@ class TestDeclaredConversationalState:
         assert isinstance(flow.state, ConversationState)
         assert flow.state.last_intent == "order"
 
+    def test_dict_state_keeps_declared_defaults_it_does_not_own(self) -> None:
+        """Dropping them would break an action reading `state.topic`."""
+        flow = self._flow({"type": "dict", "default": {"topic": "ai", "limit": 3}})
+
+        assert flow.state.topic == "ai"
+        assert flow.state.limit == 3
+        assert isinstance(flow.state, ConversationState)
+
+    def test_unknown_state_is_treated_like_dict(self) -> None:
+        flow = self._flow({"type": "unknown", "ref": "x:Y", "default": {"topic": "ai"}})
+
+        assert flow.state.topic == "ai"
+        assert isinstance(flow.state, ConversationState)
+
+    def test_an_unbuildable_declared_model_still_gets_the_chat_shape(self) -> None:
+        """A bad ref fell back to a plain dict, so the turn died on `state.id`."""
+        flow = self._flow({"type": "pydantic", "ref": "no.such.module:Nope"})
+
+        assert isinstance(flow.state, ConversationState)
+        assert flow.state.id
+
     def test_declared_state_still_runs_a_turn(self) -> None:
         flow = self._flow(
             {

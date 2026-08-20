@@ -462,8 +462,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """
         return definition
 
-    def _create_default_extension_state(self) -> Any | None:
-        """Return a default state supplied by an optional runtime extension."""
+    def _create_default_extension_state(
+        self, *, ignore_declared_state: bool = False
+    ) -> Any | None:
+        """Return a default state supplied by an optional runtime extension.
+
+        ``ignore_declared_state`` is set when a declared ``state:`` block named
+        a model that could not be built, so the extension is asked again as if
+        nothing had been declared.
+        """
         return None
 
     def _compose_extension_state_model(
@@ -1736,6 +1743,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 self._definition.name,
                 state_definition.type,
             )
+            extension_state: dict[str, Any] | BaseModel | None = (
+                self._create_default_extension_state(ignore_declared_state=True)
+            )
+            if extension_state is not None:
+                return extension_state
         elif state_definition.type == "unknown":
             logger.warning(
                 "Flow %r declares state of unknown type; falling back to dict state",
