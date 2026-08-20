@@ -68,6 +68,8 @@ class ContextCrawlToolSchema(BaseModel):
 
 
 class ContextCrawlTool(ContextDevBaseTool):
+    """Crawl linked website pages through Context.dev."""
+
     name: str = "Context.dev website crawler"
     description: str = (
         "Crawl linked pages from a website and return their Markdown with "

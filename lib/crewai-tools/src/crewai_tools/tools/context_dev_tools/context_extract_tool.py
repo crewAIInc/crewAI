@@ -55,6 +55,8 @@ class ContextExtractToolSchema(BaseModel):
 
 
 class ContextExtractTool(ContextDevBaseTool):
+    """Extract JSON Schema-constrained web data through Context.dev."""
+
     name: str = "Context.dev structured web extraction"
     description: str = (
         "Extract structured data from one or more website pages with Context.dev "

@@ -1,0 +1,169 @@
+---
+title: Context.dev Tools
+description: Search, scrape, crawl, map, extract, parse, and retrieve brand intelligence with Context.dev.
+icon: globe
+mode: "wide"
+---
+
+# Context.dev tools
+
+[Context.dev](https://context.dev) gives CrewAI agents current web data through seven focused tools for search, scraping, crawling, sitemap discovery, structured extraction, document parsing, and brand intelligence.
+
+## Installation
+
+Install CrewAI with the tools package:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+Create an API key in Context.dev and export it:
+
+```shell
+export CONTEXT_API_KEY="your-context-api-key"
+```
+
+You can also pass `api_key` directly when constructing any tool.
+
+## Available tools
+
+| Tool | Use it for |
+| --- | --- |
+| `ContextSearchTool` | Live web search with domain, freshness, country, and optional page-content controls |
+| `ContextScrapeTool` | Converting one known URL into clean Markdown |
+| `ContextCrawlTool` | Collecting Markdown from multiple linked pages on a site |
+| `ContextSitemapTool` | Discovering URLs or finding sitemap pages relevant to a topic |
+| `ContextExtractTool` | Returning structured data that matches a JSON Schema |
+| `ContextParseTool` | Converting local documents and images into Markdown |
+| `ContextBrandTool` | Retrieving logos, colors, descriptions, social profiles, industry, and location |
+
+## Use tools with an agent
+
+```python
+from crewai import Agent
+from crewai_tools import ContextScrapeTool, ContextSearchTool
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Find current, source-backed information from the web",
+    backstory="You verify claims against primary sources.",
+    tools=[ContextSearchTool(), ContextScrapeTool()],
+)
+```
+
+## Search the live web
+
+```python
+from crewai_tools import ContextSearchTool
+
+search = ContextSearchTool()
+results = search.run(
+    query="Stripe product announcements",
+    include_domains=["stripe.com"],
+    freshness="last_month",
+    num_results=20,
+)
+```
+
+Set `include_markdown=True` when the agent needs page content along with ranked results. Leaving it disabled keeps searches faster and cheaper.
+
+## Scrape a page
+
+```python
+from crewai_tools import ContextScrapeTool
+
+scrape = ContextScrapeTool()
+page = scrape.run(
+    url="https://example.com/pricing",
+    use_main_content_only=True,
+    include_links=True,
+)
+```
+
+## Crawl a site
+
+```python
+from crewai_tools import ContextCrawlTool
+
+crawl = ContextCrawlTool()
+pages = crawl.run(
+    url="https://docs.example.com",
+    max_pages=50,
+    max_depth=3,
+    url_regex="/guides/",
+)
+```
+
+## Discover relevant URLs
+
+```python
+from crewai_tools import ContextSitemapTool
+
+sitemap = ContextSitemapTool()
+urls = sitemap.run(
+    domain="example.com",
+    search="API authentication guides",
+    max_links=25,
+)
+```
+
+## Extract structured data
+
+```python
+from crewai_tools import ContextExtractTool
+
+extract = ContextExtractTool()
+pricing = extract.run(
+    url="https://example.com/pricing",
+    schema={
+        "type": "object",
+        "properties": {
+            "plans": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "price": {"type": "string"},
+                    },
+                    "required": ["name", "price"],
+                },
+            }
+        },
+        "required": ["plans"],
+    },
+    fact_check=True,
+)
+```
+
+## Parse a local document
+
+```python
+from crewai_tools import ContextParseTool
+
+parse = ContextParseTool(base_dir="./documents")
+markdown = parse.run(
+    file_path="report.pdf",
+    pdf_start=1,
+    pdf_end=10,
+)
+```
+
+`base_dir` limits which local files an agent may read. Files are limited to 25 MiB.
+
+## Retrieve brand intelligence
+
+```python
+from crewai_tools import ContextBrandTool
+
+brand = ContextBrandTool()
+profile = brand.run(identifier="stripe.com", lookup_type="domain")
+```
+
+Brand lookups also support company names, work emails, stock tickers, direct URLs, and transaction descriptors.
+
+## Complete Context.dev catalog
+
+These native tools cover the most common agent workflows. Context.dev also exposes screenshots, visual style guides, fonts, industry classification, monitors, and asynchronous batches through its OAuth-enabled MCP server at `https://mcp.context.dev/mcp` for MCP hosts that support OAuth.
+
+See the [Context.dev documentation](https://docs.context.dev) for the complete API and MCP reference.

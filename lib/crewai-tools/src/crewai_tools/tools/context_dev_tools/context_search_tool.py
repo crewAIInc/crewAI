@@ -56,6 +56,8 @@ class ContextSearchToolSchema(BaseModel):
 
 
 class ContextSearchTool(ContextDevBaseTool):
+    """Search the live web through Context.dev."""
+
     name: str = "Context.dev web search"
     description: str = (
         "Search the live web with Context.dev. Use this when the exact source URL "

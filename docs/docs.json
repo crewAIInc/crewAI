@@ -237,6 +237,7 @@
                         "icon": "globe",
                         "pages": [
                           "edge/en/tools/web-scraping/overview",
+                          "edge/en/tools/web-scraping/contextdevtools",
                           "edge/en/tools/web-scraping/scrapewebsitetool",
                           "edge/en/tools/web-scraping/scrapeelementfromwebsitetool",
                           "edge/en/tools/web-scraping/scrapflyscrapetool",
@@ -13884,6 +13885,7 @@
                         "icon": "globe",
                         "pages": [
                           "edge/pt-BR/tools/web-scraping/overview",
+                          "edge/pt-BR/tools/web-scraping/contextdevtools",
                           "edge/pt-BR/tools/web-scraping/scrapewebsitetool",
                           "edge/pt-BR/tools/web-scraping/scrapeelementfromwebsitetool",
                           "edge/pt-BR/tools/web-scraping/scrapflyscrapetool",
@@ -26593,6 +26595,7 @@
                         "icon": "globe",
                         "pages": [
                           "edge/ko/tools/web-scraping/overview",
+                          "edge/ko/tools/web-scraping/contextdevtools",
                           "edge/ko/tools/web-scraping/scrapewebsitetool",
                           "edge/ko/tools/web-scraping/scrapeelementfromwebsitetool",
                           "edge/ko/tools/web-scraping/scrapflyscrapetool",
@@ -39732,6 +39735,7 @@
                         "icon": "globe",
                         "pages": [
                           "edge/ar/tools/web-scraping/overview",
+                          "edge/ar/tools/web-scraping/contextdevtools",
                           "edge/ar/tools/web-scraping/scrapewebsitetool",
                           "edge/ar/tools/web-scraping/scrapeelementfromwebsitetool",
                           "edge/ar/tools/web-scraping/scrapflyscrapetool",
