@@ -1299,6 +1299,11 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                             )
                         module = importlib.import_module(tool["module"])
                         tool_class = getattr(module, tool["name"])
+                        if not (inspect.isclass(tool_class) and issubclass(tool_class, BaseTool)):
+                            raise AgentRepositoryError(
+                                f"Tool {tool['name']!r} resolved from module {tool['module']!r} "
+                                f"is not a BaseTool subclass."
+                            )
 
                         tool_value = tool_class(**tool["init_params"])
 

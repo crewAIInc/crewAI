@@ -361,6 +361,5 @@ class PickleHandler:
                     "signature mismatch - file may have been tampered with"
                 )
 
-            import io
 
-            return pickle.load(io.BytesIO(payload))  # noqa: S301
+            return pickle.loads(payload)  # noqa: S301

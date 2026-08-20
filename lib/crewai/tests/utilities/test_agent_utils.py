@@ -1651,6 +1651,68 @@ class TestModuleAllowlist:
             with pytest.raises(AgentRepositoryError, match="not in the allowlist"):
                 load_agent_from_repository("test-agent")
 
+    def test_non_basetool_attribute_raises_repository_error(self):
+        """A tool name resolving to a non-BaseTool attribute should raise AgentRepositoryError."""
+        from unittest.mock import MagicMock, patch
+
+        from crewai.utilities.errors import AgentRepositoryError
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "name": "test-agent",
+            "tools": [
+                {
+                    "module": "crewai.tools",
+                    "name": "ToolExecutionFailedError",  # exception class, not a tool
+                    "init_params": {},
+                }
+            ],
+        }
+
+        with (
+            patch("crewai.utilities.agent_utils.resolve_plus_response", return_value=mock_response),
+            patch("crewai.utilities.agent_utils.resolve_plus_client"),
+        ):
+            from crewai.utilities.agent_utils import load_agent_from_repository
+
+            with pytest.raises(AgentRepositoryError, match="not a BaseTool subclass"):
+                load_agent_from_repository("test-agent")
+
+    def test_allowlisted_basetool_instantiation_succeeds(self):
+        """An allowlisted module + BaseTool subclass should pass the guard and instantiate."""
+        from unittest.mock import MagicMock, patch
+
+        class RepositoryTestTool(BaseTool):
+            name: str = "repository_test_tool"
+            description: str = "Loads from the repository for testing."
+
+            def _run(self, *args, **kwargs):
+                return "ok"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "name": "test-agent",
+            "tools": [
+                {
+                    "module": "crewai.tools",
+                    "name": "tool",
+                    "init_params": {},
+                }
+            ],
+        }
+
+        with (
+            patch("crewai.utilities.agent_utils.resolve_plus_response", return_value=mock_response),
+            patch("crewai.utilities.agent_utils.resolve_plus_client"),
+            patch("crewai.tools.tool", RepositoryTestTool),
+        ):
+            from crewai.utilities.agent_utils import load_agent_from_repository
+
+            result = load_agent_from_repository("test-agent")
+            assert result.get("name") == "test-agent"
+
     def test_agent_without_tools_loads_successfully(self):
         """An agent with no tools should load without tool-module validation."""
         from unittest.mock import MagicMock, patch
