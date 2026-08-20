@@ -2495,7 +2495,9 @@ class TestDeclaredRouterResponseFormat:
 
         assert ClassChat()._conversation_config.router.response_format is MyRoute
 
-    def test_a_function_local_model_is_omitted_from_the_projection(self) -> None:
+    def test_a_function_local_model_is_omitted_from_the_projection(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """A path through `<locals>` cannot be imported back, so never emit it."""
 
         class LocalRoute(BaseModel):
@@ -2505,13 +2507,18 @@ class TestDeclaredRouterResponseFormat:
         class ClassChat(Flow[ConversationState]):
             pass
 
-        definition = ClassChat.flow_definition()
+        with caplog.at_level(logging.WARNING, logger="crewai.flow.dsl._utils"):
+            definition = ClassChat.flow_definition()
 
         assert definition.conversational.router.response_format is None
+        # Silently dropping it would leave the author guessing, so warn.
+        assert "cannot be imported by path" in caplog.text
         # The live class still drives the running flow; only the projection drops it.
         assert ClassChat()._conversation_config.router.response_format is LocalRoute
 
-    def test_a_non_model_response_format_is_omitted_from_the_projection(self) -> None:
+    def test_a_non_model_response_format_is_omitted_from_the_projection(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         class NotAModel:
             pass
 
@@ -2519,7 +2526,11 @@ class TestDeclaredRouterResponseFormat:
         class ClassChat(Flow[ConversationState]):
             pass
 
-        assert ClassChat.flow_definition().conversational.router.response_format is None
+        with caplog.at_level(logging.WARNING, logger="crewai.flow.dsl._utils"):
+            definition = ClassChat.flow_definition()
+
+        assert definition.conversational.router.response_format is None
+        assert "is not a Pydantic model class" in caplog.text
 
     def test_a_dropped_projection_reloads_with_the_synthesized_model(self) -> None:
         class LocalRoute(BaseModel):
