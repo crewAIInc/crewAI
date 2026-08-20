@@ -1,0 +1,167 @@
+---
+title: أدوات Context.dev
+description: ابحث في الويب واستخرج المحتوى وازحف إلى المواقع واكتشف خرائطها وحلّل المستندات واسترجع بيانات العلامات التجارية باستخدام Context.dev.
+icon: globe
+mode: "wide"
+---
+
+# أدوات Context.dev
+
+توفّر [Context.dev](https://context.dev) بيانات ويب حديثة لوكلاء CrewAI عبر سبع أدوات مخصصة للبحث والاستخراج والزحف واكتشاف خرائط المواقع والاستخراج المنظم وتحليل المستندات وبيانات العلامات التجارية.
+
+## التثبيت
+
+```shell
+pip install 'crewai[tools]'
+```
+
+أنشئ مفتاح API في Context.dev ثم أضفه إلى متغيرات البيئة:
+
+```shell
+export CONTEXT_API_KEY="your-context-api-key"
+```
+
+يمكنك أيضًا تمرير `api_key` مباشرة عند إنشاء أي أداة.
+
+## الأدوات المتاحة
+
+| الأداة | الاستخدام |
+| --- | --- |
+| `ContextSearchTool` | بحث مباشر في الويب مع مرشحات النطاق والحداثة والبلد ومحتوى الصفحات |
+| `ContextScrapeTool` | تحويل عنوان URL معروف إلى Markdown نظيف |
+| `ContextCrawlTool` | جمع Markdown من صفحات متعددة مترابطة في الموقع |
+| `ContextSitemapTool` | اكتشاف عناوين URL أو إيجاد صفحات خريطة الموقع المرتبطة بموضوع |
+| `ContextExtractTool` | إرجاع بيانات منظمة تطابق JSON Schema |
+| `ContextParseTool` | تحويل المستندات والصور المحلية إلى Markdown |
+| `ContextBrandTool` | استرجاع الشعارات والألوان والأوصاف والحسابات الاجتماعية والقطاع والموقع |
+
+## الاستخدام مع Agent
+
+```python
+from crewai import Agent
+from crewai_tools import ContextScrapeTool, ContextSearchTool
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Find current, source-backed information from the web",
+    backstory="You verify claims against primary sources.",
+    tools=[ContextSearchTool(), ContextScrapeTool()],
+)
+```
+
+## البحث المباشر في الويب
+
+```python
+from crewai_tools import ContextSearchTool
+
+search = ContextSearchTool()
+results = search.run(
+    query="Stripe product announcements",
+    include_domains=["stripe.com"],
+    freshness="last_month",
+    num_results=20,
+)
+```
+
+استخدم `include_markdown=True` عندما يحتاج Agent إلى محتوى الصفحات بجانب النتائج. إبقاؤه معطّلًا يجعل البحث أسرع وأقل تكلفة.
+
+## استخراج صفحة
+
+```python
+from crewai_tools import ContextScrapeTool
+
+scrape = ContextScrapeTool()
+page = scrape.run(
+    url="https://example.com/pricing",
+    use_main_content_only=True,
+    include_links=True,
+)
+```
+
+## الزحف إلى موقع
+
+```python
+from crewai_tools import ContextCrawlTool
+
+crawl = ContextCrawlTool()
+pages = crawl.run(
+    url="https://docs.example.com",
+    max_pages=50,
+    max_depth=3,
+    url_regex="/guides/",
+)
+```
+
+## اكتشاف عناوين URL مرتبطة
+
+```python
+from crewai_tools import ContextSitemapTool
+
+sitemap = ContextSitemapTool()
+urls = sitemap.run(
+    domain="example.com",
+    search="API authentication guides",
+    max_links=25,
+)
+```
+
+## استخراج بيانات منظمة
+
+```python
+from crewai_tools import ContextExtractTool
+
+extract = ContextExtractTool()
+pricing = extract.run(
+    url="https://example.com/pricing",
+    schema={
+        "type": "object",
+        "properties": {
+            "plans": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "price": {"type": "string"},
+                    },
+                    "required": ["name", "price"],
+                },
+            }
+        },
+        "required": ["plans"],
+    },
+    fact_check=True,
+)
+```
+
+## تحليل مستند محلي
+
+```python
+from crewai_tools import ContextParseTool
+
+parse = ContextParseTool(base_dir="./documents")
+markdown = parse.run(
+    file_path="report.pdf",
+    pdf_start=1,
+    pdf_end=10,
+)
+```
+
+يقيّد `base_dir` الملفات المحلية التي يمكن للوكيل قراءتها، وبحد أقصى 25 MiB للملف.
+
+## استرجاع بيانات العلامة التجارية
+
+```python
+from crewai_tools import ContextBrandTool
+
+brand = ContextBrandTool()
+profile = brand.run(identifier="stripe.com", lookup_type="domain")
+```
+
+تدعم عمليات البحث عن العلامات التجارية أيضًا أسماء الشركات ورسائل البريد المهني ورموز الأسهم وعناوين URL المباشرة ووصف المعاملات.
+
+## كتالوج Context.dev الكامل
+
+تغطي الأدوات الأصلية أكثر مسارات العمل شيوعًا. توفّر Context.dev أيضًا لقطات الشاشة وأدلة الأنماط المرئية والخطوط وتصنيف القطاعات والمراقبة والدفعات غير المتزامنة عبر خادم MCP المدعوم بـ OAuth على `https://mcp.context.dev/mcp` للمضيفين الذين يدعمون OAuth.
+
+راجع [وثائق Context.dev](https://docs.context.dev) للاطلاع على مرجع API وMCP الكامل.

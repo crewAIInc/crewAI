@@ -51,6 +51,8 @@ class ContextParseToolSchema(BaseModel):
 
 
 class ContextParseTool(ContextDevBaseTool):
+    """Parse a local document into Markdown through Context.dev."""
+
     name: str = "Context.dev document parser"
     description: str = (
         "Convert a local PDF, Office document, spreadsheet, presentation, image, "

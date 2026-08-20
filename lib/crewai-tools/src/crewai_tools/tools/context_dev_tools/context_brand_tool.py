@@ -41,6 +41,8 @@ class ContextBrandToolSchema(BaseModel):
 
 
 class ContextBrandTool(ContextDevBaseTool):
+    """Retrieve structured brand intelligence through Context.dev."""
+
     name: str = "Context.dev brand intelligence"
     description: str = (
         "Retrieve structured brand intelligence including logos, colors, company "

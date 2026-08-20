@@ -65,6 +65,8 @@ class ContextScrapeToolSchema(BaseModel):
 
 
 class ContextScrapeTool(ContextDevBaseTool):
+    """Scrape a known web page into Markdown through Context.dev."""
+
     name: str = "Context.dev page scraper"
     description: str = (
         "Turn one known web page into clean, LLM-ready Markdown with Context.dev. "

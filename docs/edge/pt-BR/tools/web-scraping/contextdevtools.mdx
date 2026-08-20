@@ -1,0 +1,167 @@
+---
+title: Ferramentas Context.dev
+description: Pesquise, extraia, rastreie, mapeie, analise documentos e obtenha inteligência de marca com a Context.dev.
+icon: globe
+mode: "wide"
+---
+
+# Ferramentas Context.dev
+
+A [Context.dev](https://context.dev) fornece dados atuais da web aos agentes CrewAI por meio de sete ferramentas focadas em pesquisa, scraping, crawling, descoberta de sitemap, extração estruturada, análise de documentos e inteligência de marca.
+
+## Instalação
+
+```shell
+pip install 'crewai[tools]'
+```
+
+Crie uma chave de API na Context.dev e exporte-a:
+
+```shell
+export CONTEXT_API_KEY="your-context-api-key"
+```
+
+Também é possível passar `api_key` diretamente ao criar qualquer ferramenta.
+
+## Ferramentas disponíveis
+
+| Ferramenta | Uso |
+| --- | --- |
+| `ContextSearchTool` | Pesquisa ao vivo com filtros de domínio, atualização, país e conteúdo |
+| `ContextScrapeTool` | Conversão de uma URL conhecida em Markdown limpo |
+| `ContextCrawlTool` | Coleta de Markdown de várias páginas vinculadas |
+| `ContextSitemapTool` | Descoberta de URLs ou páginas de sitemap relevantes para um tema |
+| `ContextExtractTool` | Extração de dados que correspondem a um JSON Schema |
+| `ContextParseTool` | Conversão de documentos e imagens locais em Markdown |
+| `ContextBrandTool` | Logos, cores, descrições, perfis sociais, setor e localização |
+
+## Uso com um agente
+
+```python
+from crewai import Agent
+from crewai_tools import ContextScrapeTool, ContextSearchTool
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Find current, source-backed information from the web",
+    backstory="You verify claims against primary sources.",
+    tools=[ContextSearchTool(), ContextScrapeTool()],
+)
+```
+
+## Pesquisar na web ao vivo
+
+```python
+from crewai_tools import ContextSearchTool
+
+search = ContextSearchTool()
+results = search.run(
+    query="Stripe product announcements",
+    include_domains=["stripe.com"],
+    freshness="last_month",
+    num_results=20,
+)
+```
+
+Defina `include_markdown=True` quando o agente precisar do conteúdo das páginas junto com os resultados. Deixá-lo desativado mantém a pesquisa mais rápida e econômica.
+
+## Extrair uma página
+
+```python
+from crewai_tools import ContextScrapeTool
+
+scrape = ContextScrapeTool()
+page = scrape.run(
+    url="https://example.com/pricing",
+    use_main_content_only=True,
+    include_links=True,
+)
+```
+
+## Rastrear um site
+
+```python
+from crewai_tools import ContextCrawlTool
+
+crawl = ContextCrawlTool()
+pages = crawl.run(
+    url="https://docs.example.com",
+    max_pages=50,
+    max_depth=3,
+    url_regex="/guides/",
+)
+```
+
+## Descobrir URLs relevantes
+
+```python
+from crewai_tools import ContextSitemapTool
+
+sitemap = ContextSitemapTool()
+urls = sitemap.run(
+    domain="example.com",
+    search="API authentication guides",
+    max_links=25,
+)
+```
+
+## Extrair dados estruturados
+
+```python
+from crewai_tools import ContextExtractTool
+
+extract = ContextExtractTool()
+pricing = extract.run(
+    url="https://example.com/pricing",
+    schema={
+        "type": "object",
+        "properties": {
+            "plans": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "price": {"type": "string"},
+                    },
+                    "required": ["name", "price"],
+                },
+            }
+        },
+        "required": ["plans"],
+    },
+    fact_check=True,
+)
+```
+
+## Analisar um documento local
+
+```python
+from crewai_tools import ContextParseTool
+
+parse = ContextParseTool(base_dir="./documents")
+markdown = parse.run(
+    file_path="report.pdf",
+    pdf_start=1,
+    pdf_end=10,
+)
+```
+
+`base_dir` limita os arquivos locais que o agente pode ler. Os arquivos são limitados a 25 MiB.
+
+## Obter inteligência de marca
+
+```python
+from crewai_tools import ContextBrandTool
+
+brand = ContextBrandTool()
+profile = brand.run(identifier="stripe.com", lookup_type="domain")
+```
+
+As consultas de marca também aceitam nomes de empresas, emails corporativos, tickers, URLs diretas e descritores de transações.
+
+## Catálogo completo da Context.dev
+
+As ferramentas nativas cobrem os fluxos mais comuns. A Context.dev também oferece screenshots, guias visuais, fontes, classificação de setor, monitores e batches assíncronos por meio do servidor MCP com OAuth em `https://mcp.context.dev/mcp`, para hosts MCP compatíveis com OAuth.
+
+Consulte a [documentação da Context.dev](https://docs.context.dev) para a referência completa da API e do MCP.

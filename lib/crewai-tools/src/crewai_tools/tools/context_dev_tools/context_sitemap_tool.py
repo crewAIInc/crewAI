@@ -40,6 +40,8 @@ class ContextSitemapToolSchema(BaseModel):
 
 
 class ContextSitemapTool(ContextDevBaseTool):
+    """Discover and search website sitemap URLs through Context.dev."""
+
     name: str = "Context.dev sitemap discovery"
     description: str = (
         "Discover or semantically search URLs from a website's sitemap with "

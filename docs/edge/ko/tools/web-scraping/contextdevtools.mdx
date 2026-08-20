@@ -1,0 +1,167 @@
+---
+title: Context.dev 도구
+description: Context.dev로 웹 검색, 스크래핑, 크롤링, 사이트맵 탐색, 구조화 추출, 문서 파싱 및 브랜드 정보를 사용합니다.
+icon: globe
+mode: "wide"
+---
+
+# Context.dev 도구
+
+[Context.dev](https://context.dev)는 검색, 스크래핑, 크롤링, 사이트맵 탐색, 구조화 추출, 문서 파싱 및 브랜드 정보를 위한 일곱 가지 도구로 CrewAI Agent에 최신 웹 데이터를 제공합니다.
+
+## 설치
+
+```shell
+pip install 'crewai[tools]'
+```
+
+Context.dev API 키를 만든 후 환경 변수로 설정합니다.
+
+```shell
+export CONTEXT_API_KEY="your-context-api-key"
+```
+
+각 도구를 생성할 때 `api_key`를 직접 전달할 수도 있습니다.
+
+## 제공 도구
+
+| 도구 | 용도 |
+| --- | --- |
+| `ContextSearchTool` | 도메인, 최신성, 국가 및 페이지 콘텐츠 옵션을 포함한 실시간 웹 검색 |
+| `ContextScrapeTool` | 하나의 URL을 깔끔한 Markdown으로 변환 |
+| `ContextCrawlTool` | 사이트의 여러 연결 페이지에서 Markdown 수집 |
+| `ContextSitemapTool` | URL 탐색 또는 주제와 관련된 사이트맵 페이지 검색 |
+| `ContextExtractTool` | JSON Schema와 일치하는 구조화 데이터 반환 |
+| `ContextParseTool` | 로컬 문서와 이미지를 Markdown으로 변환 |
+| `ContextBrandTool` | 로고, 색상, 설명, 소셜 프로필, 산업 및 위치 정보 조회 |
+
+## Agent에서 사용
+
+```python
+from crewai import Agent
+from crewai_tools import ContextScrapeTool, ContextSearchTool
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Find current, source-backed information from the web",
+    backstory="You verify claims against primary sources.",
+    tools=[ContextSearchTool(), ContextScrapeTool()],
+)
+```
+
+## 실시간 웹 검색
+
+```python
+from crewai_tools import ContextSearchTool
+
+search = ContextSearchTool()
+results = search.run(
+    query="Stripe product announcements",
+    include_domains=["stripe.com"],
+    freshness="last_month",
+    num_results=20,
+)
+```
+
+검색 결과와 함께 페이지 콘텐츠가 필요하면 `include_markdown=True`를 설정합니다. 비활성화 상태는 검색을 더 빠르고 경제적으로 유지합니다.
+
+## 페이지 스크래핑
+
+```python
+from crewai_tools import ContextScrapeTool
+
+scrape = ContextScrapeTool()
+page = scrape.run(
+    url="https://example.com/pricing",
+    use_main_content_only=True,
+    include_links=True,
+)
+```
+
+## 사이트 크롤링
+
+```python
+from crewai_tools import ContextCrawlTool
+
+crawl = ContextCrawlTool()
+pages = crawl.run(
+    url="https://docs.example.com",
+    max_pages=50,
+    max_depth=3,
+    url_regex="/guides/",
+)
+```
+
+## 관련 URL 탐색
+
+```python
+from crewai_tools import ContextSitemapTool
+
+sitemap = ContextSitemapTool()
+urls = sitemap.run(
+    domain="example.com",
+    search="API authentication guides",
+    max_links=25,
+)
+```
+
+## 구조화 데이터 추출
+
+```python
+from crewai_tools import ContextExtractTool
+
+extract = ContextExtractTool()
+pricing = extract.run(
+    url="https://example.com/pricing",
+    schema={
+        "type": "object",
+        "properties": {
+            "plans": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "price": {"type": "string"},
+                    },
+                    "required": ["name", "price"],
+                },
+            }
+        },
+        "required": ["plans"],
+    },
+    fact_check=True,
+)
+```
+
+## 로컬 문서 파싱
+
+```python
+from crewai_tools import ContextParseTool
+
+parse = ContextParseTool(base_dir="./documents")
+markdown = parse.run(
+    file_path="report.pdf",
+    pdf_start=1,
+    pdf_end=10,
+)
+```
+
+`base_dir`은 Agent가 읽을 수 있는 로컬 파일 범위를 제한합니다. 파일 크기는 25 MiB 이하입니다.
+
+## 브랜드 정보 조회
+
+```python
+from crewai_tools import ContextBrandTool
+
+brand = ContextBrandTool()
+profile = brand.run(identifier="stripe.com", lookup_type="domain")
+```
+
+브랜드 조회는 회사명, 업무용 이메일, 주식 ticker, 직접 URL 및 거래 설명자도 지원합니다.
+
+## 전체 Context.dev 카탈로그
+
+기본 도구는 가장 일반적인 Agent 워크플로를 지원합니다. Context.dev는 OAuth를 지원하는 MCP 호스트를 위해 `https://mcp.context.dev/mcp`의 OAuth 기반 MCP 서버를 통해 스크린샷, 시각적 스타일 가이드, 폰트, 산업 분류, 모니터 및 비동기 batch도 제공합니다.
+
+전체 API 및 MCP 레퍼런스는 [Context.dev 문서](https://docs.context.dev)를 참조하세요.
