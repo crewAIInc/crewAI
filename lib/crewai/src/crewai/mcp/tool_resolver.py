@@ -12,9 +12,16 @@ from __future__ import annotations
 
 import asyncio
 import contextvars
+import sys
 import time
 from typing import TYPE_CHECKING, Any, Final, cast
 from urllib.parse import urlparse
+
+
+if sys.version_info >= (3, 11):
+    from builtins import BaseExceptionGroup
+else:
+    from exceptiongroup import BaseExceptionGroup
 
 from crewai.mcp.client import MCPClient
 from crewai.mcp.config import (
@@ -611,7 +618,7 @@ class MCPToolResolver:
                 True,
             )
 
-        except Exception as e:
+        except (Exception, BaseExceptionGroup) as e:
             status_code = find_http_status(e)
             if status_code is not None:
                 raise error_for_status(status_code, detail=str(e)) from e

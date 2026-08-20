@@ -138,3 +138,27 @@ async def test_http_transport_disconnect_recovers_auth_from_exit():
     assert exc_info.value.status_code == 401
     assert transport._transport_context is None
     assert not transport.connected
+
+
+@pytest.mark.asyncio
+async def test_http_transport_connect_timeout_recovers_auth_on_exit():
+    transport = HTTPTransport(url="https://mcp.example.com/mcp")
+    mock_context = MagicMock()
+    mock_context.__aexit__ = AsyncMock(side_effect=_http_status_error(401))
+
+    with (
+        patch(
+            "mcp.client.streamable_http.streamablehttp_client",
+            return_value=mock_context,
+        ),
+        patch(
+            "crewai.mcp.transports.http.asyncio.wait_for",
+            side_effect=asyncio.TimeoutError(),
+        ),
+    ):
+        with pytest.raises(MCPAuthenticationError) as exc_info:
+            await transport.connect()
+
+    mock_context.__aexit__.assert_awaited_once()
+    assert exc_info.value.status_code == 401
+    assert transport._transport_context is None

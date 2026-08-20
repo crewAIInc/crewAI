@@ -137,7 +137,11 @@ class HTTPTransport(BaseTransport):
                 self._transport_context.__aenter__(), timeout=30.0
             )
         except asyncio.TimeoutError as e:
-            await self._close_transport_context(e)
+            teardown_error = await self._close_transport_context(e)
+            if find_http_status(e, teardown_error) is not None:
+                raise_connection_failure(
+                    f"Failed to connect to MCP server: {e}", e, teardown_error
+                )
             raise ConnectionError(
                 "Transport context entry timed out after 30 seconds. "
                 "Server may be slow or unreachable."

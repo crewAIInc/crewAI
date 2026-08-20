@@ -1,6 +1,7 @@
 """Tests for MCPToolResolver authentication error handling."""
 
 import asyncio
+import sys
 from unittest.mock import AsyncMock, patch
 
 import httpx
@@ -9,6 +10,11 @@ import pytest
 from crewai.mcp.config import MCPServerHTTP
 from crewai.mcp.exceptions import MCPAuthenticationError
 from crewai.mcp.tool_resolver import MCPToolResolver
+
+if sys.version_info >= (3, 11):
+    from builtins import BaseExceptionGroup
+else:
+    from exceptiongroup import BaseExceptionGroup
 
 
 @pytest.fixture
@@ -130,3 +136,19 @@ class TestAttemptMcpDiscoveryAuthErrors:
         assert exc_info.value.status_code == 401
         assert "401 Unauthorized" in str(exc_info.value)
         assert "authentication failure" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_attempt_mcp_discovery_raises_auth_for_mixed_exception_group(self):
+        auth_error = _http_status_error(401)
+        cancelled = asyncio.CancelledError()
+        mixed_group = BaseExceptionGroup("task group failed", [auth_error, cancelled])
+
+        async def _fail(_server_url: str) -> dict[str, dict[str, object]]:
+            raise mixed_group
+
+        with pytest.raises(MCPAuthenticationError) as exc_info:
+            await MCPToolResolver._attempt_mcp_discovery(
+                _fail, "https://mcp.example.com/api"
+            )
+
+        assert exc_info.value.status_code == 401
