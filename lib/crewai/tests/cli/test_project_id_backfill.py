@@ -71,8 +71,36 @@ def test_command_backfills_project_id(runner, name, argv):
         f"only through this command never becomes attributable"
     )
     assert isinstance(result.exception, _BackfillReached), (
-        "the backfill must run before the command does any other work, so that a "
-        "command which later fails still leaves the project with an id"
+        "the backfill must be reached, not merely importable. This does NOT by itself "
+        "prove nothing ran before it -- see "
+        "test_backfill_precedes_command_specific_work for that, which pins the "
+        "ordering on one representative command"
+    )
+
+
+def test_backfill_precedes_command_specific_work(runner):
+    """The backfill runs before the command does anything of its own.
+
+    Placement is the point: a command that fails partway must still leave the project
+    with an id. The parametrized test above proves the backfill is *reached*, which is
+    not the same claim -- work could in principle happen first and still satisfy it.
+
+    Pinned on `login` because its first action is a call through a module-level name
+    (`Settings`) that can be patched without reaching into the command. One
+    representative command is deliberate: asserting this for all nine would mean
+    naming each command's current first action, which changes as commands evolve and
+    would make the suite track their internals rather than this ordering property.
+    """
+    with mock.patch(
+        "crewai_cli.cli.get_or_create_project_id", side_effect=_BackfillReached
+    ) as backfill, mock.patch("crewai_cli.cli.Settings") as settings:
+        result = runner.invoke(crewai, ["login"])
+
+    assert backfill.called
+    assert isinstance(result.exception, _BackfillReached)
+    assert not settings.called, (
+        "login touched its own first action before backfilling; a failure after that "
+        "point would leave the project without an id"
     )
 
 
