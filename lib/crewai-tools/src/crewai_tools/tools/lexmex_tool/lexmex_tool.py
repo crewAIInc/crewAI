@@ -48,6 +48,10 @@ Uso:
   docstring/description ("no alucina", "cita exacta") por lenguaje que
   describe la salida como información legal general y recomienda
   verificarla con la fuente oficial o un abogado.
+- Se simplificó la validación de redirects para depender únicamente de
+  `status_code` (evita requerir `is_redirect`/`is_permanent_redirect`,
+  que no todo doble de prueba expone) y se blindó `fuentes_txt` contra
+  valores `cita` no-string (p. ej. `null`), que antes rompían el join.
 """
 
 from __future__ import annotations
@@ -136,7 +140,7 @@ class LexMexTool(BaseTool):
             allow_redirects=False,
         )
 
-        if resp.is_redirect or resp.is_permanent_redirect or 300 <= resp.status_code < 400:
+        if 300 <= resp.status_code < 400:
             return (
                 "Error: LEX-MEX respondió con una redirección inesperada; "
                 "la consulta se abortó por seguridad (la API key no se reenvía "
@@ -166,7 +170,9 @@ class LexMexTool(BaseTool):
         if not isinstance(fuentes, list):
             fuentes = []
         fuentes_txt = "; ".join(
-            f.get("cita", str(f)) if isinstance(f, dict) else str(f)
+            f.get("cita")
+            if isinstance(f, dict) and isinstance(f.get("cita"), str)
+            else str(f)
             for f in fuentes
         ) or "sin fuentes citadas"
 
