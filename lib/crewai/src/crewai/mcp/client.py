@@ -372,6 +372,8 @@ class MCPClient:
         """
         try:
             await self._exit_stack.aclose()
+        except asyncio.CancelledError as e:
+            return e
         except (Exception, BaseExceptionGroup) as e:
             # Groups are caught explicitly because one holding only BaseExceptions
             # is not an Exception, yet can still carry the server's refusal.

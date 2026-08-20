@@ -277,6 +277,11 @@ class MCPToolResolver:
 
             return cast(list[BaseTool], tools)
 
+        except MCPConnectionError as e:
+            self._logger.log(
+                "warning", f"Failed to connect to MCP server {server_url}: {e}"
+            )
+            raise
         except Exception as e:
             self._logger.log(
                 "warning", f"Failed to connect to MCP server {server_url}: {e}"
@@ -540,6 +545,8 @@ class MCPToolResolver:
             schemas = asyncio.run(self._get_mcp_tool_schemas_async(server_params))
             _mcp_schema_cache[cache_key] = (schemas, current_time)
             return schemas
+        except MCPConnectionError:
+            raise
         except Exception as e:
             self._logger.log(
                 "warning", f"Failed to get MCP tool schemas from {server_url}: {e}"
@@ -607,10 +614,9 @@ class MCPToolResolver:
         except Exception as e:
             status_code = find_http_status(e)
             if status_code is not None:
-                failure = error_for_status(status_code, detail=str(e))
-                return None, str(failure), False
+                raise error_for_status(status_code, detail=str(e)) from e
             if isinstance(e, MCPConnectionError):
-                return None, str(e), False
+                raise
 
             error_str = str(e).lower()
 

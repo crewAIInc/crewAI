@@ -118,15 +118,15 @@ class TestResolveNativeAuthErrors:
 
 class TestAttemptMcpDiscoveryAuthErrors:
     @pytest.mark.asyncio
-    async def test_attempt_mcp_discovery_reports_authentication_failure_for_401(self):
+    async def test_attempt_mcp_discovery_raises_authentication_failure_for_401(self):
         async def _fail(_server_url: str) -> dict[str, dict[str, object]]:
             raise _http_status_error(401)
 
-        result, error, should_retry = await MCPToolResolver._attempt_mcp_discovery(
-            _fail, "https://mcp.example.com/api"
-        )
+        with pytest.raises(MCPAuthenticationError) as exc_info:
+            await MCPToolResolver._attempt_mcp_discovery(
+                _fail, "https://mcp.example.com/api"
+            )
 
-        assert result is None
-        assert should_retry is False
-        assert "401 Unauthorized" in error
-        assert "authentication failure" in error
+        assert exc_info.value.status_code == 401
+        assert "401 Unauthorized" in str(exc_info.value)
+        assert "authentication failure" in str(exc_info.value)

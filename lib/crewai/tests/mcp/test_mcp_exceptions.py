@@ -123,6 +123,16 @@ def test_raise_connection_failure_builds_auth_error_from_http_status():
     assert exc_info.value.status_code == 401
 
 
+def test_raise_connection_failure_prefers_teardown_http_status():
+    cancelled = asyncio.CancelledError()
+    auth_error = _http_status_error(401)
+
+    with pytest.raises(MCPAuthenticationError) as exc_info:
+        raise_connection_failure("unused", cancelled, auth_error)
+
+    assert exc_info.value.status_code == 401
+
+
 def test_raise_connection_failure_falls_back_to_connection_error():
     with pytest.raises(ConnectionError, match="host unreachable"):
         raise_connection_failure("host unreachable", ConnectionError("refused"))

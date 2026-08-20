@@ -101,3 +101,40 @@ async def test_http_transport_connect_classifies_mixed_exception_group():
     assert exc_info.value.status_code == 401
     assert transport._transport_context is None
     assert exc_info.value.__cause__ is mixed_group
+
+
+@pytest.mark.asyncio
+async def test_http_transport_connect_cancelled_on_enter_recovers_auth_on_exit():
+    transport = HTTPTransport(url="https://mcp.example.com/mcp")
+    cancelled = asyncio.CancelledError()
+    mock_context = MagicMock()
+    mock_context.__aenter__ = AsyncMock(side_effect=cancelled)
+    mock_context.__aexit__ = AsyncMock(side_effect=_http_status_error(401))
+
+    with patch(
+        "mcp.client.streamable_http.streamablehttp_client",
+        return_value=mock_context,
+    ):
+        with pytest.raises(MCPAuthenticationError) as exc_info:
+            await transport.connect()
+
+    mock_context.__aexit__.assert_awaited_once()
+    assert exc_info.value.status_code == 401
+    assert transport._transport_context is None
+
+
+@pytest.mark.asyncio
+async def test_http_transport_disconnect_recovers_auth_from_exit():
+    transport = HTTPTransport(url="https://mcp.example.com/mcp")
+    mock_context = MagicMock()
+    mock_context.__aexit__ = AsyncMock(side_effect=_http_status_error(401))
+    transport._transport_context = mock_context
+    transport._set_streams(MagicMock(), MagicMock())
+
+    with pytest.raises(MCPAuthenticationError) as exc_info:
+        await transport.disconnect()
+
+    mock_context.__aexit__.assert_awaited_once()
+    assert exc_info.value.status_code == 401
+    assert transport._transport_context is None
+    assert not transport.connected

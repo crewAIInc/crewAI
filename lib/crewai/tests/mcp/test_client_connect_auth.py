@@ -12,6 +12,7 @@ from crewai.events.types.mcp_events import MCPConnectionFailedEvent
 from crewai.mcp.client import MCPClient
 from crewai.mcp.exceptions import MCPAuthenticationError
 from crewai.mcp.transports.base import BaseTransport, TransportType
+from crewai.mcp.transports.http import HTTPTransport
 
 
 class MockTransport(BaseTransport):
@@ -152,3 +153,44 @@ async def test_connect_raises_authentication_error_for_typed_transport_failure()
 
     assert len(failed_events) == 1
     assert failed_events[0].error_type == "authentication"
+
+
+@pytest.mark.asyncio
+async def test_connect_cancelled_during_initialize_recovers_auth_on_transport_unwind():
+    transport = HTTPTransport(url="https://mcp.example.com/mcp")
+    client = MCPClient(transport)
+    auth_error = _http_status_error(401)
+    failed_events: list[MCPConnectionFailedEvent] = []
+
+    mock_streams = (MagicMock(), MagicMock(), None)
+    mock_context = MagicMock()
+    mock_context.__aenter__ = AsyncMock(return_value=mock_streams)
+    mock_context.__aexit__ = AsyncMock(side_effect=auth_error)
+
+    mock_session = MagicMock()
+    mock_session.initialize = AsyncMock(side_effect=asyncio.CancelledError())
+    mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session.__aexit__ = AsyncMock(return_value=None)
+
+    with (
+        patch(
+            "mcp.client.streamable_http.streamablehttp_client",
+            return_value=mock_context,
+        ),
+        patch("mcp.ClientSession", return_value=mock_session),
+        crewai_event_bus.scoped_handlers(),
+    ):
+        @crewai_event_bus.on(MCPConnectionFailedEvent)
+        def _capture(_: object, event: MCPConnectionFailedEvent) -> None:
+            failed_events.append(event)
+
+        with pytest.raises(MCPAuthenticationError) as exc_info:
+            await client.connect()
+
+        assert crewai_event_bus.flush(timeout=10)
+
+    mock_context.__aexit__.assert_awaited()
+    assert exc_info.value.status_code == 401
+    assert len(failed_events) == 1
+    assert failed_events[0].error_type == "authentication"
+    assert failed_events[0].status_code == 401

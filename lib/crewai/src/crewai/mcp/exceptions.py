@@ -159,23 +159,34 @@ def tool_execution_error_type(exc: BaseException) -> str:
     return "server_error"
 
 
-def raise_connection_failure(message: str, exc: BaseException) -> NoReturn:
+def raise_connection_failure(message: str, *errors: BaseException | None) -> NoReturn:
     """Raise a typed MCP connection error when an HTTP status is known.
 
     Args:
         message: Fallback message when no HTTP status can be recovered.
-        exc: The exception observed while connecting.
+        *errors: Exceptions observed while connecting or unwinding.
 
     Raises:
-        MCPConnectionError: When an HTTP status was observed on *exc*.
+        MCPConnectionError: When an HTTP status was observed.
         ConnectionError: When no HTTP status was observed.
     """
-    if isinstance(exc, MCPConnectionError):
-        raise exc
-    status_code = find_http_status(exc)
+    present = [error for error in errors if error is not None]
+    if not present:
+        raise ConnectionError(message)
+
+    for error in present:
+        if isinstance(error, MCPConnectionError):
+            raise error
+
+    primary = present[0]
+    status_code = find_http_status(*present)
     if status_code is not None:
-        raise error_for_status(status_code, detail=str(exc)) from exc
-    raise ConnectionError(message) from exc
+        raise error_for_status(status_code, detail=str(primary)) from primary
+    if isinstance(primary, asyncio.CancelledError):
+        failure = find_transport_failure(*present)
+        if failure is not None:
+            raise failure from primary
+    raise ConnectionError(message) from primary
 
 
 def _leaves(exc: BaseException | None, seen: set[int]) -> Iterator[BaseException]:
