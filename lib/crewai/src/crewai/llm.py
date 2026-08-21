@@ -763,6 +763,8 @@ class LLM(BaseLLM):
         """
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
+        else:
+            messages = [message.copy() for message in messages]
         if not skip_file_processing:
             messages = self._process_message_files(messages)
         formatted_messages = self._format_messages_for_provider(messages)
@@ -2006,6 +2008,8 @@ class LLM(BaseLLM):
 
             if isinstance(messages, str):
                 messages = [{"role": "user", "content": messages}]
+            else:
+                messages = [message.copy() for message in messages]
 
             messages = await self._aprocess_message_files(messages)
 
