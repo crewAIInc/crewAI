@@ -158,6 +158,10 @@ e2b = [
     "e2b-code-interpreter~=2.6.0",
 ]
 
+usdctofiat = [
+    "usdctofiat>=0.1.0",
+]
+
 
 [tool.uv]
 exclude-newer = "3 days"
