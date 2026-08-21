@@ -8,6 +8,7 @@ from crewai.llm import LLM
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
+from crewai.utilities.types import LLMMessage
 
 
 @pytest.fixture(autouse=True)
@@ -498,6 +499,61 @@ def test_gemini_message_formatting():
 
     assert formatted_contents[0].role == "user"
     assert formatted_contents[1].role == "model"
+
+
+@pytest.mark.parametrize(
+    "assistant_message",
+    [
+        {"role": "assistant", "content": "Partial response"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "call_1",
+                    "type": "function",
+                    "function": {"name": "search", "arguments": "{}"},
+                }
+            ],
+        },
+    ],
+)
+def test_gemini_message_formatting_appends_user_after_model(
+    assistant_message: LLMMessage,
+):
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    formatted_contents, _ = llm._format_messages_for_gemini(
+        [
+            {"role": "user", "content": "Continue the task"},
+            assistant_message,
+        ]
+    )
+
+    assert [content.role for content in formatted_contents] == [
+        "user",
+        "model",
+        "user",
+    ]
+    model_parts = formatted_contents[1].parts
+    if assistant_message.get("tool_calls"):
+        assert model_parts[0].function_call.name == "search"
+        assert model_parts[0].function_call.args == {}
+    else:
+        assert model_parts[0].text == "Partial response"
+    assert formatted_contents[-1].parts[0].text == "Please continue."
+
+
+def test_gemini_message_formatting_preserves_user_ending():
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    formatted_contents, _ = llm._format_messages_for_gemini(
+        [{"role": "user", "content": "Hello"}]
+    )
+
+    assert len(formatted_contents) == 1
+    assert formatted_contents[-1].role == "user"
+    assert formatted_contents[-1].parts[0].text == "Hello"
 
 
 def test_gemini_streaming_parameter():
