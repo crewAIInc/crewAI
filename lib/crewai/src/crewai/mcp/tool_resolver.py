@@ -361,6 +361,11 @@ class MCPToolResolver:
         try:
             try:
                 asyncio.get_running_loop()
+                loop_exists = True
+            except RuntimeError:
+                loop_exists = False
+
+            if loop_exists:
                 import concurrent.futures
 
                 ctx = contextvars.copy_context()
@@ -368,8 +373,14 @@ class MCPToolResolver:
                     future = executor.submit(
                         ctx.run, asyncio.run, _setup_client_and_list_tools()
                     )
-                    tools_list = future.result()
-            except RuntimeError:
+                    try:
+                        tools_list = future.result()
+                    except asyncio.CancelledError as e:
+                        raise ConnectionError(
+                            "MCP connection was cancelled. This may indicate an authentication "
+                            "error or server unavailability."
+                        ) from e
+            else:
                 try:
                     tools_list = asyncio.run(_setup_client_and_list_tools())
                 except RuntimeError as e:
@@ -467,6 +478,8 @@ class MCPToolResolver:
             if discovery_client.connected:
                 asyncio.run(discovery_client.disconnect())
 
+            if isinstance(e, ConnectionError):
+                raise
             raise RuntimeError(f"Failed to get native MCP tools: {e}") from e
 
     @staticmethod
