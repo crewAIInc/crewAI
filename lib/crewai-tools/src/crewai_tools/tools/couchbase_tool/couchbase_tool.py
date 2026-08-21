@@ -30,7 +30,7 @@ class CouchbaseToolSchema(BaseModel):
 
     query: str = Field(
         ...,
-        description="The query to search retrieve relevant information from the Couchbase database. Pass only the query, not the question.",
+        description="The query to search and retrieve relevant information from the Couchbase database. Pass only the query, not the question.",
     )
 
 
