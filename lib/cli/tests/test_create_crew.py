@@ -374,7 +374,7 @@ def test_env_vars_are_uppercased_in_env_file(
     create_crew("Test Crew")
 
     env_file_path = crew_path / ".env"
-    content = env_file_path.read_text()
+    content = env_file_path.read_text(encoding="utf-8")
     assert "MODEL=" in content
 
 
@@ -759,7 +759,7 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
     )
     assert not any(path.startswith("src/") for path in generated_paths)
 
-    pyproject = tomli.loads((tmp_path / "json_crew" / "pyproject.toml").read_text())
+    pyproject = tomli.loads((tmp_path / "json_crew" / "pyproject.toml").read_text(encoding="utf-8"))
     dependency = pyproject["project"]["dependencies"][0]
     assert dependency == get_crewai_tools_dependency()
     assert Version("1.15.0") in Requirement(dependency).specifier
@@ -772,7 +772,7 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
         "definition": "crew.jsonc",
     }
 
-    crew_template = (tmp_path / "json_crew" / "crew.jsonc").read_text()
+    crew_template = (tmp_path / "json_crew" / "crew.jsonc").read_text(encoding="utf-8")
     assert (
         '"guardrail": "Every factual claim needs context support."'
         in crew_template
@@ -816,7 +816,7 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
 
     agent_template = (
         tmp_path / "json_crew" / "agents" / "researcher.jsonc"
-    ).read_text()
+    ).read_text(encoding="utf-8")
     assert "You can use {placeholder} inputs in role, goal, or backstory" in (
         agent_template
     )
@@ -926,8 +926,8 @@ def test_json_create_dmn_mode_uses_non_interactive_defaults(tmp_path, monkeypatc
     assert (project_root / "agents" / "researcher.jsonc").exists()
     assert not (project_root / ".env").exists()
 
-    crew_template = (project_root / "crew.jsonc").read_text()
-    agent_template = (project_root / "agents" / "researcher.jsonc").read_text()
+    crew_template = (project_root / "crew.jsonc").read_text(encoding="utf-8")
+    agent_template = (project_root / "agents" / "researcher.jsonc").read_text(encoding="utf-8")
 
     assert '"memory": true' in crew_template
     assert '"description": "Research current AI trends and write a concise summary."' in (
