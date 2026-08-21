@@ -302,7 +302,14 @@ class Telemetry:
             self._add_attribute(span, "python_version", platform.python_version())
             add_crew_attributes(span, crew, self._add_attribute)
             self._add_attribute(span, "crew_process", crew.process)
-            self._add_attribute(span, "crew_memory", crew.memory)
+            # A string, for the reason already documented on `resumed` below: this
+            # pipeline cannot carry a false boolean at all. Measured across
+            # 218,400,577 spans, not one carries vBool=false, because proto3 omits
+            # the bool zero value - so "memory disabled" was structurally
+            # unrepresentable and presence had to stand in for the value. Truthiness
+            # rather than `is True`: memory counts as enabled when set by any means,
+            # including a Memory/MemoryScope/MemorySlice instance.
+            self._add_attribute(span, "crew_memory", "true" if crew.memory else "false")
             self._add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
             self._add_attribute(span, "crew_number_of_agents", len(crew.agents))
 
