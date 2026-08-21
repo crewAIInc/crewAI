@@ -455,3 +455,43 @@ def test_a_task_with_no_agent_still_reports_a_failure_type(failing_task):
     assert len(captured) == 1
     assert captured[0].error_type is not None
     assert issubclass(captured[0].error_type, BaseException)
+
+
+def test_the_event_stays_json_serializable_with_a_class_valued_error_type():
+    """A class is not a JSON type, so the field needs a serializer or the event breaks.
+
+    Without one, `model_dump(mode="json")` raises PydanticSerializationError for the
+    *whole* event, not just this field. Two real consumers depend on it: the checkpoint
+    listener dumps every event through EventRecord, and the tracing listener JSON-POSTs
+    events to AMP. So a task failure would take out checkpointing entirely.
+    """
+    from crewai.events.types.task_events import TaskFailedEvent
+
+    event = TaskFailedEvent(error="boom", error_type=ValueError, task=None)
+
+    assert event.model_dump(mode="json")["error_type"] == "ValueError"
+    assert "ValueError" in event.model_dump_json()
+
+
+def test_python_mode_keeps_the_live_class_for_telemetry():
+    """`when_used="json"` is load-bearing and must not be widened to every mode.
+
+    `event_listener` hands `event.error_type` to `Telemetry.task_failed`, which runs it
+    through `_safe_error_type` -- that requires the class object, not its name. If the
+    serializer applied in python mode too, telemetry would receive a string, silently
+    fail `isinstance(error_type, type)`, and record nothing.
+    """
+    from crewai.events.types.task_events import TaskFailedEvent
+
+    event = TaskFailedEvent(error="boom", error_type=ValueError, task=None)
+
+    assert event.model_dump(mode="python")["error_type"] is ValueError
+    assert event.error_type is ValueError
+
+
+def test_an_absent_error_type_serializes_as_null_not_as_a_string():
+    from crewai.events.types.task_events import TaskFailedEvent
+
+    event = TaskFailedEvent(error="boom", task=None)
+
+    assert event.model_dump(mode="json")["error_type"] is None

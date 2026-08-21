@@ -1,7 +1,19 @@
 from typing import Any, Literal
 
+from pydantic import field_serializer
+
 from crewai.events.base_events import BaseEvent
 from crewai.tasks.task_output import TaskOutput
+
+
+_ExceptionClass = type[BaseException]
+"""An exception class, e.g. ``ValueError``.
+
+Declared here rather than inline because ``TaskFailedEvent`` has a field named ``type``,
+which shadows the builtin for the rest of that class body: an inline
+``type[BaseException]`` after that field is bound raises ``TypeError`` at import, and mypy
+rejects it as "Variable ... is not valid as a type".
+"""
 
 
 def _set_task_fingerprint(event: BaseEvent, task: Any) -> None:
@@ -49,7 +61,7 @@ class TaskFailedEvent(BaseEvent):
     """Event emitted when a task fails"""
 
     error: str
-    error_type: type[BaseException] | None = None
+    error_type: _ExceptionClass | None = None
     """The exception's class, e.g. ``ValidationError``.
 
     The class and not its name, matching ``Telemetry._safe_error_type``: a message
@@ -67,6 +79,20 @@ class TaskFailedEvent(BaseEvent):
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         _set_task_fingerprint(self, self.task)
+
+    @field_serializer("error_type", when_used="json")
+    def _serialize_error_type(self, error_type: _ExceptionClass | None) -> str | None:
+        """The class name, so the event stays JSON-serializable.
+
+        A class is not a JSON type, so without this ``model_dump(mode="json")``
+        raises ``PydanticSerializationError`` for the whole event -- which breaks
+        checkpointing after a task failure and sends a ``repr`` to AMP.
+
+        ``when_used="json"`` is load-bearing: ``event_listener`` hands the live class
+        to ``Telemetry.task_failed``, which needs it for ``_safe_error_type``, and
+        python-mode dumps must keep it too.
+        """
+        return error_type.__name__ if error_type else None
 
 
 class TaskEvaluationEvent(BaseEvent):
