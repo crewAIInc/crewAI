@@ -645,7 +645,9 @@ asyncio.run(main())
 ```
 
 <Note>
-`kickoff()` 메서드는 내부적으로 `LiteAgent`를 사용하며, 모든 agent 설정(역할, 목표, 백스토리, 도구 등)을 유지하면서도 더 간단한 실행 흐름을 제공합니다.
+`kickoff()`는 `AgentExecutor`를 실행합니다. Task나 Crew를 만들지 않습니다.
+에이전트는 role, goal, backstory, tools를 유지합니다. 이 메서드는
+`LiteAgentOutput`을 반환합니다.
 </Note>
 
 ## 중요한 고려사항 및 모범 사례
