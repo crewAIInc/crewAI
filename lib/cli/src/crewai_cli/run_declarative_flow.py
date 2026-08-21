@@ -59,6 +59,10 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     JSON is layered on top as an override, missing required fields are prompted
     for interactively, and everything is validated against the schema before
     kickoff — so a bare ``crewai run`` on a configured flow just works.
+
+    A conversational declaration takes none of that: each turn's input is the
+    message typed into the chat, so ``--inputs`` is rejected and no
+    state-schema resolution runs.
     """
     # Load the project's .env before kickoff, mirroring the JSON-crew path
     # (run_crew._run_json_crew) so flow projects pick up API keys/config the
@@ -74,15 +78,8 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     flow = load_declarative_flow(definition)
 
     if _flow_is_conversational(flow):
-        click.secho(
-            "  This flow declares `conversational`, and `crewai run` has no chat "
-            "loop yet — it would run a single turn and exit.\n"
-            "  Drive it from Python for now: `flow.chat()` for a terminal REPL, "
-            "or `flow.handle_turn(message, session_id=...)` per message.",
-            fg="yellow",
-            err=True,
-        )
-        raise SystemExit(1)
+        _run_conversational_declarative_flow(flow, inputs is not None)
+        return
 
     resolved_inputs = _resolve_flow_inputs(flow, provided)
 
@@ -106,6 +103,62 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
         )
         raise SystemExit(1) from exc
     click.echo(_format_result(result))
+
+
+def _run_conversational_declarative_flow(
+    flow: Flow[Any], inputs_supplied: bool
+) -> None:
+    """Run a declarative chat flow on the conversational TUI.
+
+    The same TUI a Python conversational Flow gets from ``crewai run``; it
+    drives ``handle_turn`` per message. A chat loop needs a terminal, so a
+    headless run says what it would have needed rather than kicking off one
+    turn and exiting as if that were the whole conversation.
+
+    Two flows do not reach that TUI: one passed ``--inputs``, which it has
+    nowhere to put, and one using ``@human_feedback``, which needs the
+    terminal ``flow.chat()`` REPL because the runtime collects feedback with a
+    blocking prompt Textual cannot service.
+    """
+    if inputs_supplied:
+        # Whether ``--inputs`` was passed at all, not whether it parsed to
+        # anything: ``--inputs '{}'`` is a request for something unsupported and
+        # has to be answered, not silently accepted as no inputs.
+        # The TUI calls ``handle_turn(message)``, which owns the kickoff inputs
+        # (it passes ``{"id": session_id}`` itself). There is nowhere to put
+        # these without fighting it, so say so rather than accepting them and
+        # running a conversation that quietly ignored them.
+        click.secho(
+            "  `--inputs` is not supported for a conversational flow: each turn's "
+            "input is the message you type.\n"
+            "  Resuming a session by id is not wired up yet — use "
+            "`flow.handle_turn(message, session_id=...)` from Python for that.",
+            fg="red",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    if not is_interactive():
+        click.secho(
+            "  This flow is conversational, which needs an interactive terminal.\n"
+            "  Drive it from Python instead: `flow.handle_turn(message, "
+            "session_id=...)` per message, or `flow.stream_turn(...)` to stream.",
+            fg="yellow",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    if _flow_uses_human_feedback(flow):
+        # Same reason the STEPS TUI declines these: the runtime collects feedback
+        # with a blocking ``input()`` (flow/runtime/__init__.py), which Textual
+        # cannot service -- the prompt would never be shown and the run would
+        # hang. A terminal REPL can, so fall back to one.
+        flow.chat()
+        return
+
+    from crewai_cli.kickoff_flow import _run_conversational_flow_tui
+
+    _run_conversational_flow_tui(flow)
 
 
 def _run_declarative_flow_tui(
