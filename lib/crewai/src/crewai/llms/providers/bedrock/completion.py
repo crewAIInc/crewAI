@@ -2090,6 +2090,24 @@ class BedrockCompletion(BaseLLM):
         """Check if the model supports stop words."""
         return True
 
+    def _base_model_id(self) -> str:
+        """Strip the cross-region inference profile prefix from the model id.
+
+        AWS recommends invoking newer models through cross-region inference
+        profiles, whose ids carry a geographic prefix (e.g.
+        ``us.anthropic.claude-sonnet-4-...`` or ``eu.anthropic.claude-...``).
+        Lookups keyed on the bare model id must compare against the prefix-free
+        form so a profile id resolves to the same model as the base id.
+
+        Returns:
+            The model id with any cross-region prefix removed, lowercased.
+        """
+        model_lower = self.model.lower()
+        for prefix in ("us-gov.", "us.", "eu.", "apac."):
+            if model_lower.startswith(prefix):
+                return model_lower[len(prefix) :]
+        return model_lower
+
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
         from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
@@ -2114,8 +2132,11 @@ class BedrockCompletion(BaseLLM):
             "deepseek.r1": 32768,
         }
 
+        # Match against the prefix-free id so cross-region inference profiles
+        # (e.g. ``us.anthropic.claude-sonnet-4-...``) resolve like the base id.
+        base_model = self._base_model_id()
         for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
+            if base_model.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
         return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
@@ -2128,7 +2149,9 @@ class BedrockCompletion(BaseLLM):
         Returns:
             True if the model supports images.
         """
-        model_lower = self.model.lower()
+        # Match against the prefix-free id so cross-region inference profiles
+        # (``us.``/``eu.``/``apac.``) resolve like the base id.
+        base_model = self._base_model_id()
         vision_models = (
             "anthropic.claude-3",
             "anthropic.claude-sonnet-4",
@@ -2137,14 +2160,8 @@ class BedrockCompletion(BaseLLM):
             "amazon.nova-lite",
             "amazon.nova-pro",
             "amazon.nova-premier",
-            "us.amazon.nova-lite",
-            "us.amazon.nova-pro",
-            "us.amazon.nova-premier",
-            "us.anthropic.claude-sonnet-4",
-            "us.anthropic.claude-opus-4",
-            "us.anthropic.claude-haiku-4",
         )
-        return any(model_lower.startswith(m) for m in vision_models)
+        return any(base_model.startswith(m) for m in vision_models)
 
     def _is_nova_model(self) -> bool:
         """Check if the model is an Amazon Nova model.
