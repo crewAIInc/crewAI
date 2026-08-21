@@ -1,0 +1,229 @@
+---
+title: "Per-Agent Identity with Authgent"
+description: "Give each CrewAI agent its own identity and token with role-specific scopes for least-privilege access control between agents."
+icon: shield-halved
+mode: "wide"
+---
+
+## Overview
+
+[Authgent](https://github.com/authgent/authgent) provides an OAuth2-based authorization server designed for AI agent systems. It lets you assign each agent in your crew its own identity, issue scoped access tokens, and control what one agent can do on behalf of another through token exchange.
+
+In a multi-agent crew, not every agent needs full access to every resource. A researcher should search but not write; a writer should publish but not query databases. Authgent enforces these boundaries at the token level, so even if an agent is compromised or misdirected, its scope limits the damage.
+
+This guide shows you how to:
+- Register each crew member with its own identity and OAuth2 scopes
+- Authenticate agents and obtain role-scoped tokens
+- Pass tokens into tool calls for authenticated API access
+- Delegate between agents with scope narrowing (least privilege)
+- Revoke tokens when the crew finishes
+
+<Note>
+  **Prerequisites:** An [authgent-server](https://github.com/authgent/authgent) instance running (default `http://localhost:8000`) and the `authgent` Python SDK:
+
+  ```shell
+  pip install authgent
+  ```
+</Note>
+
+## How It Works
+
+<Steps>
+  <Step title="Register identities">
+    Call `register_agent()` for each crew role. Authgent returns a `client_id` and `client_secret` per agent bound to specific OAuth2 scopes.
+  </Step>
+  <Step title="Obtain tokens">
+    Each agent calls `get_token()` with its own credentials. The resulting JWT carries only the scopes assigned at registration.
+  </Step>
+  <Step title="Use tokens in tools">
+    Tool implementations read the agent's token and attach it as a `Bearer` header. Downstream services verify the scopes in the token.
+  </Step>
+  <Step title="Delegate (scope narrows)">
+    When work flows from one agent to another, `exchange_token()` produces a delegated token with a subset of the original scopes. The `act` claim proves which agent initiated the delegation.
+  </Step>
+  <Step title="Revoke on completion">
+    Call `revoke_token()` for every issued token and `aclose()` the client so no credentials outlive the crew.
+  </Step>
+</Steps>
+
+## Registering Agents with Scoped Identities
+
+Each crew role gets its own client registration with a scope that matches its responsibilities:
+
+```python Code
+import asyncio
+import os
+from authgent.client import AgentAuthClient
+
+SERVER = os.getenv("AUTHGENT_SERVER_URL", "http://localhost:8000")
+
+async def register_crew():
+    auth = AgentAuthClient(SERVER)
+    researcher = await auth.register_agent(
+        name="crew-researcher",
+        scopes=["search", "read"],
+    )
+    analyst = await auth.register_agent(
+        name="crew-analyst",
+        scopes=["read", "db:query"],
+    )
+    writer = await auth.register_agent(
+        name="crew-writer",
+        scopes=["write"],
+    )
+    await auth.aclose()
+    return researcher, analyst, writer
+
+# researcher.client_id, researcher.client_secret — unique per agent
+```
+
+## Authenticating Each Agent
+
+With credentials in hand, each agent obtains an access token. The token's scope is a subset of what was registered:
+
+```python Code
+async def authenticate_agents(auth, researcher, analyst, writer):
+    r_token = await auth.get_token(
+        client_id=researcher.client_id,
+        client_secret=researcher.client_secret,
+        scope="search read",
+    )
+    a_token = await auth.get_token(
+        client_id=analyst.client_id,
+        client_secret=analyst.client_secret,
+        scope="read db:query",
+    )
+    w_token = await auth.get_token(
+        client_id=writer.client_id,
+        client_secret=writer.client_secret,
+        scope="write",
+    )
+    return r_token, a_token, w_token
+```
+
+## Using Tokens in Tool Calls
+
+Your tool implementations carry the agent's token as a `Bearer` authorization header. Authgent verifies scopes on the server side — if a tool calls an API the agent's scope does not cover, the call is rejected:
+
+```python Code
+import httpx
+from crewai.tools import tool
+
+@tool("search_web")
+async def search_web(query: str, token: str) -> str:
+    """Search the web for information."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            "https://search-api.internal/search",
+            params={"q": query},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        return resp.text
+```
+
+<Note>
+  In a real CrewAI implementation, the token should be injected from a
+  [kickoff hook](/en/learn/before-and-after-kickoff-hooks) or token store
+  rather than exposed as a `tool` argument the LLM supplies directly.
+  This keeps the model from ever seeing the credential.
+</Note>
+
+## Delegating Between Agents (Scope Narrowing)
+
+When the researcher hands off to the analyst, the analyst should only receive the scopes it needs — not the researcher's full set. `exchange_token()` produces a delegated token where the scope narrows:
+
+```python Code
+async def delegate_from_researcher_to_analyst(auth, researcher_token, analyst_creds):
+    delegated = await auth.exchange_token(
+        subject_token=researcher_token.access_token,
+        audience="https://analyst-agent.internal",
+        scopes=["read"],
+        client_id=analyst_creds.client_id,
+        client_secret=analyst_creds.client_secret,
+    )
+
+    # The delegated token carries:
+    #   scope: "read"        — narrowed from researcher's "search read"
+    #   act.sub: researcher  — proves the researcher initiated delegation
+    return delegated
+```
+
+The `act` claim in the resulting JWT forms a verifiable delegation chain. A downstream service can inspect `act.sub` to discover who originally requested the work, and `scope` to confirm the analyst is authorised for the operation.
+
+## Cleaning Up
+
+Revoke all tokens when the crew completes so no stale credentials remain:
+
+```python Code
+async def cleanup(auth, tokens, credentials):
+    for token, creds in zip(tokens, credentials):
+        await auth.revoke_token(
+            token.access_token,
+            client_id=creds.client_id,
+            client_secret=creds.client_secret,
+        )
+    await auth.aclose()
+```
+
+<Note>
+  Sequential revocation in a single loop is intentionally simple for this
+  example. Larger crews with many agents may need concurrent revocation or
+  a batch strategy to avoid delaying crew teardown.
+</Note>
+
+## Full Example
+
+```python Code
+import asyncio
+import os
+import httpx
+from authgent.client import AgentAuthClient
+
+SERVER = os.getenv("AUTHGENT_SERVER_URL", "http://localhost:8000")
+
+async def main():
+    auth = AgentAuthClient(SERVER)
+
+    # 1. Register crew members with role-specific scopes
+    researcher = await auth.register_agent("crew-researcher", scopes=["search", "read"])
+    analyst    = await auth.register_agent("crew-analyst",    scopes=["read", "db:query"])
+    writer     = await auth.register_agent("crew-writer",     scopes=["write"])
+
+    # 2. Authenticate — each agent gets its own token
+    r_token = await auth.get_token(researcher.client_id, researcher.client_secret, scope="search read")
+    a_token = await auth.get_token(analyst.client_id,    analyst.client_secret,    scope="read db:query")
+    w_token = await auth.get_token(writer.client_id,     writer.client_secret,     scope="write")
+
+    # 3. Researcher calls a search tool
+    async with httpx.AsyncClient() as client:
+        await client.get("https://search-api.internal/search", params={"q": "CrewAI"},
+                         headers={"Authorization": f"Bearer {r_token.access_token}"})
+
+    # 4. Delegation: researcher → analyst, scope narrows to "read"
+    delegated = await auth.exchange_token(
+        subject_token=r_token.access_token,
+        audience="https://analyst-agent.internal",
+        scopes=["read"],
+        client_id=analyst.client_id,
+        client_secret=analyst.client_secret,
+    )
+
+    # 5. Cleanup — revoke all tokens
+    for token, creds in [(r_token, researcher), (a_token, analyst), (w_token, writer)]:
+        await auth.revoke_token(token.access_token, creds.client_id, creds.client_secret)
+    await auth.aclose()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+<Note>
+  In your CrewAI project, the token store and Authgent lifecycle would typically be managed inside a
+  [before/after kickoff hook](/en/learn/before-and-after-kickoff-hooks) so tokens are obtained before the crew starts and revoked afterward.
+</Note>
+
+## See Also
+
+- [Authgent CrewAI example](https://github.com/authgent/authgent/tree/main/examples/crewai) — full runnable demo with JWT introspection and audit
+- [Authgent SDK reference](https://github.com/authgent/authgent/blob/main/sdks/python/authgent/client.py)
+- [RFC 8693 — OAuth 2.0 Token Exchange](https://datatracker.ietf.org/doc/html/rfc8693)

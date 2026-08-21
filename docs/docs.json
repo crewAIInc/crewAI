@@ -393,6 +393,7 @@
                       "edge/en/learn/replay-tasks-from-latest-crew-kickoff",
                       "edge/en/learn/sequential-process",
                       "edge/en/learn/using-annotations",
+                      "edge/en/learn/per-agent-identity-authgent",
                       {
                         "group": "Execution Hooks",
                         "pages": [
