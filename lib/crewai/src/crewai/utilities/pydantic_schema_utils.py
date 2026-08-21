@@ -30,6 +30,8 @@ from typing import (
     TypedDict,
     Union,
     cast,
+    get_args,
+    get_origin,
 )
 import uuid
 
@@ -1042,7 +1044,27 @@ def _json_schema_to_pydantic_field(
                 elif len(allowed_schemes) == 1 and allowed_schemes[0] == "file":
                     pydantic_type = FileUrl
 
-        type_ = pydantic_type
+        # A JSON Schema "type" array (e.g. {"type": ["string", "null"],
+        # "format": "date-time"}) resolves `type_` to a Union above, not a
+        # bare `str` -- format constraints like date-time only make sense
+        # for the string member of that union. Blindly overwriting type_
+        # with pydantic_type here would silently drop the other members:
+        # a required ["string", "null"] field would stop accepting None
+        # (the format-mapped type has no null member of its own), and
+        # ["string", "integer"] would lose int support entirely. Replace
+        # only the str member within the union instead, leaving every
+        # other member (null, integer, etc.) untouched.
+        if type_ is str:
+            type_ = pydantic_type
+        elif get_origin(type_) is Union:
+            member_types = get_args(type_)
+            if str in member_types:
+                type_ = Union[  # noqa: UP007
+                    tuple(
+                        pydantic_type if member is str else member
+                        for member in member_types
+                    )
+                ]
 
     if isinstance(type_, type) and issubclass(type_, str):
         if "minLength" in json_schema:
@@ -1214,6 +1236,28 @@ def _json_schema_to_pydantic_type(
         )
 
     type_ = json_schema.get("type")
+
+    if isinstance(type_, list):
+        # JSON Schema also allows "type" to be an array, e.g.
+        # {"type": ["string", "null"]} -- the .NET/System.Text.Json-style
+        # way of expressing a nullable field. Pydantic's own schema
+        # generation instead uses anyOf/oneOf for this (handled above), so
+        # external tool schemas (e.g. from a non-Python MCP server) are the
+        # main source of this form. Treat each entry the same way anyOf's
+        # members are handled just above: build a Union of the
+        # corresponding Python types. A single-element list collapses to
+        # that one type, matching typing.Union's own behavior.
+        member_types = [
+            _json_schema_to_pydantic_type(
+                {**json_schema, "type": member},
+                root_schema,
+                name_=f"{name_ or 'Union'}Option{i}",
+                enrich_descriptions=enrich_descriptions,
+                in_progress=in_progress,
+            )
+            for i, member in enumerate(type_)
+        ]
+        return Union[tuple(member_types)]  # noqa: UP007
 
     if type_ == "string":
         return str
