@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -15,6 +15,13 @@ from pydantic import BaseModel, Field
 # For example, if the caller asks for 10 results and this is 2, we fetch 20
 # from the vector store and then trim down after scoring.
 _RECALL_OVERSAMPLE_FACTOR = 2
+
+
+def ensure_utc_aware(value: datetime) -> datetime:
+    """Return a UTC-aware datetime, treating naive values as legacy UTC."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 class MemoryRecord(BaseModel):
@@ -44,11 +51,11 @@ class MemoryRecord(BaseModel):
         description="Importance score from 0.0 to 1.0, affects retrieval ranking.",
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         description="When the memory was created.",
     )
     last_accessed: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         description="When the memory was last accessed.",
     )
     embedding: list[float] | None = Field(
@@ -361,7 +368,8 @@ def compute_composite_score(
         Tuple of (composite_score, match_reasons). match_reasons includes
         "semantic" always; "recency" if decay > 0.5; "importance" if record.importance > 0.5.
     """
-    age_seconds = (datetime.utcnow() - record.created_at).total_seconds()
+    created_at = ensure_utc_aware(record.created_at)
+    age_seconds = (datetime.now(timezone.utc) - created_at).total_seconds()
     age_days = max(age_seconds / 86400.0, 0.0)
     decay = 0.5 ** (age_days / config.recency_half_life_days)
 
