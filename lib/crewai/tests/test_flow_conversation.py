@@ -2420,6 +2420,112 @@ class TestDeclarativeConversationalFlow:
         assert "cannot carry a model class" in caplog.text
 
 
+class TestDeclaredConversationalLLM:
+    """A conversational block accepts the shapes a crew agent's `llm` accepts."""
+
+    @staticmethod
+    def _resolved(llm: Any) -> Any:
+        flow = Flow.from_declaration(
+            contents=_conversational_declaration(conversational={"llm": llm})
+        )
+        return flow._coerce_llm(flow._conversation_config.llm)
+
+    def test_model_id_string(self) -> None:
+        assert self._resolved("gpt-4o-mini").model == "gpt-4o-mini"
+
+    def test_config_mapping_carries_provider_settings(self) -> None:
+        resolved = self._resolved({"model": "openai/gpt-4o-mini", "max_tokens": 512})
+
+        assert resolved.model == "gpt-4o-mini"
+        assert resolved.max_tokens == 512
+
+    def test_config_mapping_passes_through_extra_settings(self) -> None:
+        resolved = self._resolved({"model": "openai/gpt-4o-mini", "temperature": 0.2})
+
+        assert resolved.temperature == 0.2
+
+    def test_a_live_llm_object_is_passed_through_untouched(self) -> None:
+        llm = _ScriptedLLM(["hi"])
+
+        @ConversationConfig(llm=llm)
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        assert ClassChat()._coerce_llm(llm) is llm
+
+    def test_a_mapping_without_a_model_key_says_so(self) -> None:
+        with pytest.raises(ValueError, match="must include 'model'"):
+            self._resolved({"max_tokens": 512})
+
+    def test_a_wrong_type_fails_now_not_at_call_time(self) -> None:
+        """`create_llm` would take an int as a model name and fail later."""
+        with pytest.raises(ValueError, match="expected a model-id string"):
+            self._resolved(1234)
+
+    def test_an_llm_definition_resolves_with_its_settings(self) -> None:
+        from crewai.project.crew_definition import LLMDefinition
+
+        flow = Flow.from_declaration(contents=_conversational_declaration())
+        resolved = flow._coerce_llm(
+            LLMDefinition(model="openai/gpt-4o-mini", max_tokens=256)
+        )
+
+        assert resolved.model == "gpt-4o-mini"
+        assert resolved.max_tokens == 256
+
+    def test_a_declared_mapping_reaches_create_llm_during_a_turn(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Swapping the config out before the turn would not prove the path."""
+        declared = {"model": "openai/gpt-4o-mini", "max_tokens": 128}
+        scripted = _ScriptedLLM(["Hello."])
+        seen: list[Any] = []
+
+        def fake_create_llm(value: Any) -> Any:
+            seen.append(value)
+            return scripted
+
+        monkeypatch.setattr(
+            "crewai.utilities.llm_utils.create_llm", fake_create_llm
+        )
+        flow = Flow.from_declaration(
+            contents=_conversational_declaration(conversational={"llm": declared})
+        )
+
+        assert flow.handle_turn("hi") == "Hello."
+        assert declared in seen
+
+    def test_a_declared_intent_llm_mapping_is_resolved(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """`_collapse_to_outcome` takes only str | BaseLLM, so it must be coerced.
+
+        Swapping the mapping for an LLM before the turn would skip the coercion
+        entirely, so the mapping stays declared and ``create_llm`` is patched.
+        """
+        declared = {"model": "openai/gpt-4o-mini", "max_tokens": 64}
+        intent_llm = _ScriptedLLM(['{"outcome": "order"}'])
+        converse_llm = _ScriptedLLM(["ok"])
+        seen: list[Any] = []
+
+        def fake_create_llm(value: Any) -> Any:
+            seen.append(value)
+            return intent_llm if value == declared else converse_llm
+
+        monkeypatch.setattr("crewai.utilities.llm_utils.create_llm", fake_create_llm)
+        flow = Flow.from_declaration(
+            contents=_conversational_declaration(
+                conversational={"default_intents": ["order"], "intent_llm": declared}
+            )
+        )
+
+        # Before coercion this raised "Invalid llm type: <class 'dict'>".
+        flow.handle_turn("where is my order?")
+
+        assert declared in seen
+        assert [m.role for m in flow.state.messages][0] == "user"
+
+
 class TestRoutingArtefactLabels:
     """A route label echoed by a handler is a routing artefact, not a reply."""
 
