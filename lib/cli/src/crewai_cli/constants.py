@@ -132,6 +132,7 @@ PROVIDERS: list[str] = [
 
 MODELS: dict[str, list[str]] = {
     "openai": [
+        "gpt-5.6-luna",
         "gpt-5.5",
         "gpt-5.5-pro",
         "gpt-5.4",
