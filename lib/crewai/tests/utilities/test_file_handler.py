@@ -1,4 +1,5 @@
 import os
+import pickle
 import unittest
 import uuid
 
@@ -32,6 +33,37 @@ class TestPickleHandler(unittest.TestCase):
         loaded_data = self.handler.load()
         assert loaded_data == data
 
+    def test_load_round_trips_training_data_artifact_shape(self):
+        data = {
+            "agent_id": {
+                "0": {
+                    "initial_output": "Initial output",
+                    "human_feedback": "Human feedback",
+                    "improved_output": "Improved output",
+                }
+            }
+        }
+
+        self.handler.save(data)
+
+        assert self.handler.load() == data
+
+    def test_load_round_trips_trained_agents_artifact_shape(self):
+        data = {
+            "researcher": {
+                "suggestions": [
+                    "Use precise terminology.",
+                    "Explain assumptions before giving the answer.",
+                ],
+                "quality": 8.0,
+                "final_summary": "The agent improved after applying feedback.",
+            }
+        }
+
+        self.handler.save(data)
+
+        assert self.handler.load() == data
+
     def test_load_empty_file(self):
         loaded_data = self.handler.load()
         assert loaded_data == {}
@@ -47,3 +79,27 @@ class TestPickleHandler(unittest.TestCase):
 
         assert str(exc.value) == "pickle data was truncated"
         assert "<class '_pickle.UnpicklingError'>" == str(exc.type)
+
+    def test_load_rejects_unsafe_pickle_globals(self):
+        marker = f"CREWAI_PICKLE_HANDLER_EXPLOITED_{uuid.uuid4().hex}"
+        previous_value = os.environ.get(marker)
+
+        class _Exploit:
+            def __reduce__(self):
+                return (exec, (f"import os; os.environ[{marker!r}] = '1'",))
+
+        with open(self.file_path, "wb") as file:
+            pickle.dump(_Exploit(), file, protocol=pickle.HIGHEST_PROTOCOL)
+            file.flush()
+            os.fsync(file.fileno())
+
+        try:
+            with pytest.raises(pickle.UnpicklingError, match="Refusing to unpickle"):
+                self.handler.load()
+
+            assert marker not in os.environ
+        finally:
+            if previous_value is None:
+                os.environ.pop(marker, None)
+            else:
+                os.environ[marker] = previous_value
