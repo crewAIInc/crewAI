@@ -12,6 +12,7 @@ deliberately absent: `crew_execution_span()` returns `None` unless `share_crew=T
 have exited immediately for the default population.
 """
 
+from contextlib import contextmanager
 from unittest.mock import Mock, patch
 import threading
 
@@ -358,18 +359,33 @@ class _ProducerFailure(Exception):
     """Distinctive class, so the test cannot pass on a hardcoded or defaulted value."""
 
 
-def _captured_task_failures():
-    """Subscribe to TaskFailedEvent on the real bus and collect the events."""
+@contextmanager
+def captured_task_failures():
+    """Every TaskFailedEvent the producer *emits*, captured at the emit boundary.
+
+    Patches ``crewai_event_bus.emit`` rather than subscribing a handler to it. What these
+    tests are about is what the producer in ``task.py`` constructs, and a subscriber makes
+    that claim depend on the bus choosing to dispatch -- which it does not always do.
+    ``task_failed`` is an "ending" event, and with an empty scope stack (there is no real
+    kickoff here) dispatch is conditional on event-context state that other tests in the
+    same worker process can leave behind. That is not a hypothetical: subscribing passed
+    this file in isolation and every randomized local run, then failed in CI inside a
+    621-test shard with zero events captured.
+
+    The emitted return value is unused by both producers, so returning None is faithful.
+    """
     from crewai.events.event_bus import crewai_event_bus
     from crewai.events.types.task_events import TaskFailedEvent
 
     captured = []
 
-    @crewai_event_bus.on(TaskFailedEvent)
-    def _collect(_source, event):
-        captured.append(event)
+    def _record(_source, event):
+        if isinstance(event, TaskFailedEvent):
+            captured.append(event)
+        return None
 
-    return captured
+    with patch.object(crewai_event_bus, "emit", side_effect=_record):
+        yield captured
 
 
 @pytest.fixture
@@ -396,11 +412,11 @@ def test_sync_producer_puts_the_exception_class_on_the_event(failing_task):
     from crewai import Agent
 
     task, _agent = failing_task
-    captured = _captured_task_failures()
 
-    with patch.object(Agent, "execute_task", side_effect=_ProducerFailure("boom")):
-        with pytest.raises(_ProducerFailure):
-            task._execute_core(None, None, None)
+    with captured_task_failures() as captured:
+        with patch.object(Agent, "execute_task", side_effect=_ProducerFailure("boom")):
+            with pytest.raises(_ProducerFailure):
+                task._execute_core(None, None, None)
 
     assert len(captured) == 1, "the producer must emit exactly one TaskFailedEvent"
     assert captured[0].error_type is _ProducerFailure
@@ -413,13 +429,13 @@ async def test_async_producer_puts_the_exception_class_on_the_event(failing_task
     from crewai import Agent
 
     task, _agent = failing_task
-    captured = _captured_task_failures()
 
     # aexecute_task, not execute_task: the async producer calls a different agent
     # method, which is precisely why it can regress independently of the sync one.
-    with patch.object(Agent, "aexecute_task", side_effect=_ProducerFailure("boom")):
-        with pytest.raises(_ProducerFailure):
-            await task._aexecute_core(None, None, None)
+    with captured_task_failures() as captured:
+        with patch.object(Agent, "aexecute_task", side_effect=_ProducerFailure("boom")):
+            with pytest.raises(_ProducerFailure):
+                await task._aexecute_core(None, None, None)
 
     assert len(captured) == 1
     assert captured[0].error_type is _ProducerFailure
@@ -431,10 +447,10 @@ def test_a_task_with_no_agent_still_reports_a_failure_type(failing_task):
     from crewai import Task
 
     task = Task(description="orphan", expected_output="nothing")
-    captured = _captured_task_failures()
 
-    with pytest.raises(Exception, match="has no agent assigned"):
-        task._execute_core(None, None, None)
+    with captured_task_failures() as captured:
+        with pytest.raises(Exception, match="has no agent assigned"):
+            task._execute_core(None, None, None)
 
     assert len(captured) == 1
     assert captured[0].error_type is not None
