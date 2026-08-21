@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Mapping
 import os
 from typing import Any, Literal, TypedDict
 from urllib.parse import urlparse
@@ -11,6 +12,7 @@ from typing_extensions import Self
 
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.hooks.base import BaseInterceptor
+from crewai.types.usage_metrics import _coerce_int
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -1335,19 +1337,35 @@ class AzureCompletion(BaseLLM):
         return extract_choices_finish_reason_and_id(response_or_update)
 
     @staticmethod
+    def _read_usage_field(source: Any, key: str) -> Any:
+        """Read ``key`` off an Azure usage object.
+
+        ``CompletionsUsage`` only declares prompt/completion/total as real
+        fields, so the detail dicts the service sends arrive as extra mapping
+        entries and attribute access returns ``None`` for them. Try the
+        attribute first, since other providers and mocks expose these as
+        attributes, then fall back to mapping access.
+        """
+        value = getattr(source, key, None)
+        if value is None and isinstance(source, Mapping):
+            value = source.get(key)
+        return value
+
+    @staticmethod
     def _extract_azure_token_usage(response: ChatCompletions) -> dict[str, Any]:
         """Extract token usage and response metadata from Azure response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
+            read = AzureCompletion._read_usage_field
             cached_tokens = 0
-            prompt_details = getattr(usage, "prompt_tokens_details", None)
+            prompt_details = read(usage, "prompt_tokens_details")
             if prompt_details:
-                cached_tokens = getattr(prompt_details, "cached_tokens", 0) or 0
+                cached_tokens = _coerce_int(read(prompt_details, "cached_tokens"))
             reasoning_tokens = 0
-            completion_details = getattr(usage, "completion_tokens_details", None)
+            completion_details = read(usage, "completion_tokens_details")
             if completion_details:
-                reasoning_tokens = (
-                    getattr(completion_details, "reasoning_tokens", 0) or 0
+                reasoning_tokens = _coerce_int(
+                    read(completion_details, "reasoning_tokens")
                 )
             result: dict[str, Any] = {
                 "prompt_tokens": getattr(usage, "prompt_tokens", 0),
