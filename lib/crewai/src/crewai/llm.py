@@ -1659,6 +1659,7 @@ class LLM(BaseLLM):
             if usage_info:
                 self._track_token_usage_internal(usage_info)
 
+            tool_calls_unhandled = False
             if accumulated_tool_args:
                 tool_calls_list: list[ChatCompletionDeltaToolCall] = [
                     ChatCompletionDeltaToolCall(
@@ -1684,6 +1685,7 @@ class LLM(BaseLLM):
                         )
                         if result is not None:
                             return result
+                        tool_calls_unhandled = True
                     else:
                         return tool_calls_list
 
@@ -1692,6 +1694,32 @@ class LLM(BaseLLM):
                 stream_finish_reason,
                 stream_response_id,
             )
+
+            # A tool call the helper declined to handle — an unknown tool, or
+            # arguments it could not parse — leaves the accumulated content as
+            # whatever preceded it, which is usually nothing. Converting that would
+            # invent a structured answer the model never gave, so the tool-call path
+            # keeps precedence here exactly as it does in _handle_streaming_response.
+            if response_model and self.is_litellm and not tool_calls_unhandled:
+                instructor_instance = InternalInstructor(
+                    content=full_response,
+                    model=response_model,
+                    llm=self,
+                )
+                result = instructor_instance.to_pydantic()
+                structured_response = result.model_dump_json()
+                self._handle_emit_call_events(
+                    response=structured_response,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params.get("messages"),
+                    usage=usage_dict,
+                    finish_reason=finish_reason,
+                    response_id=response_id_last,
+                )
+                return structured_response
+
             self._handle_emit_call_events(
                 response=full_response,
                 call_type=LLMCallType.LLM_CALL,
