@@ -1,6 +1,6 @@
 ---
 title: 파일 쓰기
-description: FileWriterTool은 파일에 내용을 쓰도록 설계되었습니다.
+description: 텍스트 내용을 파일에 씁니다.
 icon: file-pen
 mode: "wide"
 ---
@@ -9,13 +9,13 @@ mode: "wide"
 
 ## 설명
 
-`FileWriterTool`은 crewai_tools 패키지의 구성 요소로, 다양한 운영 체제(Windows, Linux, macOS)에서 파일에 내용을 작성하는 과정을 간소화하도록 설계되었습니다.
-이 도구는 보고서 생성, 로그 저장, 설정 파일 작성 등과 같은 시나리오에서 특히 유용합니다.
-운영 체제마다 다른 경로 처리를 지원하며, UTF-8 인코딩을 지원하고, 디렉토리가 존재하지 않으면 자동으로 생성하여, 다양한 플랫폼에서 출력 결과를 안정적으로 정리할 수 있도록 도와줍니다.
+`FileWriterTool`은 텍스트 내용을 파일에 씁니다. 없는 디렉터리는 자동으로
+만들어집니다. 기본 텍스트 인코딩은 UTF-8입니다.
+
+쓰기는 샌드박스 디렉터리로 제한됩니다. 기본적으로 이 디렉터리는 현재 작업
+디렉터리입니다. 변경하려면 `base_dir`을 전달하세요.
 
 ## 설치
-
-프로젝트에서 `FileWriterTool`을 사용하려면 crewai_tools 패키지를 설치하세요:
 
 ```shell
 pip install 'crewai[tools]'
@@ -23,15 +23,11 @@ pip install 'crewai[tools]'
 
 ## 예시
 
-`FileWriterTool`을(를) 시작하려면:
-
 ```python Code
 from crewai_tools import FileWriterTool
 
-# Initialize the tool
 file_writer_tool = FileWriterTool()
 
-# Write content to a file in a specified directory
 result = file_writer_tool.run(
     filename='example.txt',
     content='This is a test content.',
@@ -42,14 +38,49 @@ print(result)
 
 ## 인자
 
-- `filename`: 생성하거나 덮어쓸 파일의 이름입니다.
-- `content`: 파일에 쓸 내용입니다.
-- `directory` (선택 사항): 파일이 생성될 디렉터리의 경로입니다. 기본값은 현재 디렉터리(`.`)입니다. 디렉터리가 존재하지 않으면 생성됩니다.
+에이전트가 런타임에 제공하는 값:
 
-## 결론
+- `filename`: `directory`를 기준으로 쓸 파일 이름입니다. 하위 디렉터리를
+  포함할 수 있으며, 없는 하위 디렉터리는 생성됩니다.
+- `content`: 쓸 텍스트 내용입니다.
+- `directory` (선택 사항): 파일을 쓸 디렉터리입니다. 상대 경로는 도구의
+  허용 디렉터리(`base_dir`이 설정된 경우 그 값, 그렇지 않으면 현재 작업
+  디렉터리) 안에서 해석되며, 기본값은 해당 디렉터리의 루트(`./`)입니다.
+  없으면 생성됩니다.
+- `overwrite` (선택 사항): 기존 파일을 덮어쓸지 여부입니다. 불리언 또는
+  문자열 `y`/`yes`/`t`/`true`/`on`/`1` 및
+  `n`/`no`/`f`/`false`/`off`/`0`을 받습니다. 기본값은 `false`입니다.
+  `false`이고 파일이 이미 있으면 도구는 오류를 반환하고 파일을 수정하지
+  않습니다.
 
-`FileWriterTool`을 crew에 통합함으로써, 에이전트는 다양한 운영 체제에서 파일에 내용을 안정적으로 쓸 수 있습니다.
-이 도구는 출력 데이터를 저장하거나, 구조화된 파일 시스템을 생성하거나, 크로스 플랫폼 파일 작업을 처리해야 하는 작업에 필수적입니다.
-특히 표준 Python 파일 작업에서 파일 쓰기 이슈가 발생할 수 있는 Windows 사용자에게 권장됩니다.
+도구를 생성할 때 설정하는 값:
 
-제공된 설정 및 사용 가이드라인을 준수하면, 이 도구를 프로젝트에 통합하는 과정이 간단하며 모든 플랫폼에서 일관된 파일 쓰기 동작을 보장합니다.
+- `base_dir` (선택 사항): 쓰기가 머물 수 있는 디렉터리입니다. 기본값은
+  현재 작업 디렉터리입니다. 상대 경로는 도구가 생성될 때 해석되므로, 이후
+  작업 디렉터리를 바꿔도 샌드박스는 이동하지 않습니다.
+- `encoding` (선택 사항): 파일을 쓸 때 사용하는 텍스트 인코딩입니다.
+  기본값은 `utf-8`입니다.
+
+## 허용 경로
+
+런타임의 `directory`와 `filename` 값은 보통 LLM이 선택합니다. 도구는
+샌드박스를 벗어나는 경로를 거부합니다:
+
+- 해석된 `directory`는 `base_dir`(기본값은 현재 작업 디렉터리) 안에 있어야
+  합니다.
+- 해석된 파일 경로는 그 `directory` 안에 있어야 합니다.
+- 두 검사 전에 `..` 세그먼트, 절대 경로, 심볼릭 링크가 해석됩니다.
+
+다른 트리 아래에 쓰기를 허용하려면 `base_dir`을 설정하세요:
+
+```python Code
+file_writer_tool = FileWriterTool(base_dir='/var/output')
+```
+
+<Note>
+이전에는 절대 `directory`가 프로세스 권한이 있는 임의의 위치에 쓸 수
+있었습니다. 그 동작에 의존했다면 허용할 트리로 `base_dir`을 설정하세요.
+`CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true`를 설정하면 이전 동작이 복원되지만,
+모든 crewai-tools 도구에 대해 프로세스 전역으로 경로 및 URL 검사가
+비활성화됩니다. `base_dir`을 선호하세요.
+</Note>

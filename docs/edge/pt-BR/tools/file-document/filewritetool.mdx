@@ -1,6 +1,6 @@
 ---
 title: Escrita de Arquivo
-description: O `FileWriterTool` foi projetado para escrever conteúdo em arquivos.
+description: Escreve conteúdo de texto em um arquivo.
 icon: file-pen
 mode: "wide"
 ---
@@ -9,13 +9,13 @@ mode: "wide"
 
 ## Descrição
 
-O `FileWriterTool` é um componente do pacote crewai_tools, projetado para simplificar o processo de escrita de conteúdo em arquivos com compatibilidade multiplataforma (Windows, Linux, macOS).  
-É particularmente útil em cenários como geração de relatórios, salvamento de logs, criação de arquivos de configuração e mais.  
-Essa ferramenta lida com diferenças de caminhos entre sistemas operacionais, suporta codificação UTF-8 e cria diretórios automaticamente caso eles não existam, facilitando a organização da sua saída de forma confiável em diferentes plataformas.
+O `FileWriterTool` escreve conteúdo de texto em um arquivo. Diretórios
+ausentes são criados automaticamente. A codificação de texto padrão é UTF-8.
+
+As escritas ficam confinadas a um diretório sandbox. Por padrão, esse
+diretório é o diretório de trabalho atual. Passe `base_dir` para alterá-lo.
 
 ## Instalação
-
-Instale o pacote crewai_tools para utilizar o `FileWriterTool` em seus projetos:
 
 ```shell
 pip install 'crewai[tools]'
@@ -23,15 +23,11 @@ pip install 'crewai[tools]'
 
 ## Exemplo
 
-Para começar a usar o `FileWriterTool`:
-
 ```python Code
 from crewai_tools import FileWriterTool
 
-# Inicialize a ferramenta
 file_writer_tool = FileWriterTool()
 
-# Escreva conteúdo em um arquivo em um diretório especificado
 result = file_writer_tool.run(
     filename='example.txt',
     content='This is a test content.',
@@ -42,14 +38,50 @@ print(result)
 
 ## Argumentos
 
-- `filename`: O nome do arquivo que você deseja criar ou sobrescrever.
-- `content`: O conteúdo a ser escrito no arquivo.
-- `directory` (opcional): O caminho para o diretório onde o arquivo será criado. Por padrão, utiliza o diretório atual (`.`). Se o diretório não existir, ele será criado.
+O agente fornece estes em tempo de execução:
 
-## Conclusão
+- `filename`: Nome do arquivo a escrever, relativo a `directory`. Pode incluir
+  subdiretórios. Esses subdiretórios são criados se não existirem.
+- `content`: Conteúdo de texto a escrever.
+- `directory` (opcional): Diretório no qual escrever. Um caminho relativo é
+  resolvido dentro do diretório permitido da ferramenta (`base_dir` quando
+  definido; caso contrário, o diretório de trabalho atual) e tem como padrão a
+  raiz desse diretório (`./`). É criado se não existir.
+- `overwrite` (opcional): Se um arquivo existente deve ser substituído. Aceita
+  um booleano ou as strings `y`/`yes`/`t`/`true`/`on`/`1` e
+  `n`/`no`/`f`/`false`/`off`/`0`. O padrão é `false`. Quando é `false` e o
+  arquivo já existe, a ferramenta retorna um erro e não modifica o arquivo.
 
-Ao integrar o `FileWriterTool` aos seus crews, os agentes podem escrever conteúdo em arquivos de forma confiável em diferentes sistemas operacionais.  
-Esta ferramenta é essencial para tarefas que exigem salvamento de dados de saída, criação de sistemas de arquivos estruturados e manipulação de operações de arquivos multiplataforma.  
-É especialmente recomendada para usuários do Windows que possam enfrentar problemas ao escrever arquivos com as operações padrão do Python.
+Você define estes ao construir a ferramenta:
 
-Seguindo as orientações de configuração e uso fornecidas, incorporar essa ferramenta em projetos é simples e garante um comportamento consistente de escrita de arquivos em todas as plataformas.
+- `base_dir` (opcional): Diretório dentro do qual as escritas devem
+  permanecer. O padrão é o diretório de trabalho atual. Um caminho relativo é
+  resolvido quando a ferramenta é construída, então uma mudança posterior do
+  diretório de trabalho não move o sandbox.
+- `encoding` (opcional): Codificação de texto usada para escrever o arquivo.
+  O padrão é `utf-8`.
+
+## Caminhos permitidos
+
+Os valores de `directory` e `filename` em tempo de execução costumam ser
+escolhidos por um LLM. A ferramenta rejeita caminhos que escapam do sandbox:
+
+- O `directory` resolvido deve estar dentro de `base_dir` (o diretório de
+  trabalho atual por padrão).
+- O caminho do arquivo resolvido deve estar dentro desse `directory`.
+- Segmentos `..`, caminhos absolutos e symlinks são resolvidos antes das duas
+  verificações.
+
+Para permitir escritas em outra árvore, defina `base_dir`:
+
+```python Code
+file_writer_tool = FileWriterTool(base_dir='/var/output')
+```
+
+<Note>
+Anteriormente, um `directory` absoluto podia escrever em qualquer lugar em que
+o processo tivesse permissão. Se você dependia disso, defina `base_dir` para a
+árvore que deseja permitir. Definir `CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true`
+restaura o comportamento antigo, mas desativa verificações de caminho e URL em
+todo o processo para todas as ferramentas do crewai-tools. Prefira `base_dir`.
+</Note>
