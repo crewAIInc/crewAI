@@ -47,6 +47,22 @@ class _SimpleFlow(Flow):
         return "flow-result"
 
 
+class _InternalFlow(Flow):
+    is_crewai_internal = True
+
+    @start()
+    def begin(self):
+        return "ok"
+
+
+class _QuietFlow(Flow):
+    suppress_flow_events: bool = True
+
+    @start()
+    def begin(self):
+        return "ok"
+
+
 class _FailingFlow(Flow):
     @start()
     def begin(self):
@@ -130,6 +146,52 @@ class TestFlowExecutionBoundaries:
             _SimpleFlow().kickoff()
         assert exc.value.reason == "not allowed"
 
+    def test_internal_flow_does_not_fire_boundary_hooks(self):
+        fired: list[str] = []
+
+        for point in (
+            InterceptionPoint.EXECUTION_START,
+            InterceptionPoint.INPUT,
+            InterceptionPoint.OUTPUT,
+            InterceptionPoint.EXECUTION_END,
+        ):
+
+            @on(point)
+            def _probe(ctx, _point=point):
+                fired.append(_point.value)
+
+        assert _InternalFlow().kickoff(inputs={"query": "x"}) == "ok"
+        assert fired == []
+
+    def test_internal_flow_ignores_input_hook_abort(self):
+        @on(InterceptionPoint.INPUT)
+        def block(ctx):
+            raise HookAborted(reason="blocked", source="policy")
+
+        assert _InternalFlow().kickoff(inputs={"query": "x"}) == "ok"
+
+    def test_quiet_user_flow_still_fires_boundary_hooks(self):
+        fired: list[str] = []
+
+        for point in (
+            InterceptionPoint.EXECUTION_START,
+            InterceptionPoint.INPUT,
+            InterceptionPoint.OUTPUT,
+            InterceptionPoint.EXECUTION_END,
+        ):
+
+            @on(point)
+            def _probe(ctx, _point=point):
+                fired.append(_point.value)
+
+        assert _QuietFlow().kickoff(inputs={"seed": 1}) == "ok"
+        assert fired == [
+            "execution_start",
+            "input",
+            "output",
+            "execution_end",
+        ]
+
 
 class TestFlowStepPoints:
     """pre_step / post_step for flow methods (kind=flow_method)."""
@@ -160,6 +222,41 @@ class TestFlowStepPoints:
             return None
 
         assert _SimpleFlow().kickoff() == "rewritten"
+
+    def test_internal_flow_does_not_fire_step_hooks(self):
+        fired: list[str] = []
+
+        @on(InterceptionPoint.PRE_STEP)
+        def pre(ctx):
+            fired.append(f"pre:{ctx.step_name}")
+
+        @on(InterceptionPoint.POST_STEP)
+        def post(ctx):
+            fired.append(f"post:{ctx.step_name}")
+
+        assert _InternalFlow().kickoff() == "ok"
+        assert fired == []
+
+    def test_internal_flow_ignores_step_hook_abort(self):
+        @on(InterceptionPoint.PRE_STEP)
+        def block(ctx):
+            raise HookAborted(reason="blocked", source="policy")
+
+        assert _InternalFlow().kickoff() == "ok"
+
+    def test_quiet_user_flow_still_fires_step_hooks(self):
+        fired: list[str] = []
+
+        @on(InterceptionPoint.PRE_STEP)
+        def pre(ctx):
+            fired.append(f"pre:{ctx.step_name}")
+
+        @on(InterceptionPoint.POST_STEP)
+        def post(ctx):
+            fired.append(f"post:{ctx.step_name}")
+
+        assert _QuietFlow().kickoff() == "ok"
+        assert fired == ["pre:begin", "post:begin"]
 
 
 class TestTaskStepPoints:

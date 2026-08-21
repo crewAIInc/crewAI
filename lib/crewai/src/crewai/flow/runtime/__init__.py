@@ -1565,10 +1565,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         )
 
         from crewai.hooks.contexts import ExecutionEndContext, OutputContext
-        from crewai.hooks.dispatch import InterceptionPoint, dispatch
+        from crewai.hooks.dispatch import InterceptionPoint
 
         output_ctx = OutputContext(flow=self, output=final_result, payload=final_result)
-        dispatch(InterceptionPoint.OUTPUT, output_ctx)
+        self._dispatch_interception(InterceptionPoint.OUTPUT, output_ctx)
         final_result = output_ctx.payload
 
         end_ctx = ExecutionEndContext(
@@ -1578,7 +1578,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         # HookAborted does not trigger a second (failure) dispatch upstream.
         if hook_state is not None:
             hook_state["end_dispatched"] = True
-        dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
+        self._dispatch_interception(InterceptionPoint.EXECUTION_END, end_ctx)
         final_result = end_ctx.payload
 
         if self._event_futures:
@@ -2191,7 +2191,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 InterceptionContext,
                 OutputContext,
             )
-            from crewai.hooks.dispatch import HookAborted, InterceptionPoint, dispatch
+            from crewai.hooks.dispatch import HookAborted, InterceptionPoint
 
             # ``inputs`` aliases the same object as ``payload`` (not a fresh
             # ``{}`` from ``or``) so in-place edits survive read-back.
@@ -2201,8 +2201,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     inputs=inputs if inputs is not None else {},
                     payload=inputs,
                 )
-                dispatch(InterceptionPoint.EXECUTION_START, boundary_ctx)
-                execution_start_dispatched = True
+                if self._dispatch_interception(
+                    InterceptionPoint.EXECUTION_START, boundary_ctx
+                ):
+                    execution_start_dispatched = True
                 inputs = boundary_ctx.payload
 
                 boundary_ctx = InputContext(
@@ -2210,7 +2212,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     inputs=inputs if inputs is not None else {},
                     payload=inputs,
                 )
-                dispatch(InterceptionPoint.INPUT, boundary_ctx)
+                self._dispatch_interception(InterceptionPoint.INPUT, boundary_ctx)
                 inputs = boundary_ctx.payload
             except HookAborted:
                 # The deny surfaces as started -> failed. Read the payload back
@@ -2417,7 +2419,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             output_ctx = OutputContext(
                 flow=self, output=final_output, payload=final_output
             )
-            dispatch(InterceptionPoint.OUTPUT, output_ctx)
+            self._dispatch_interception(InterceptionPoint.OUTPUT, output_ctx)
             final_output = output_ctx.payload
 
             # EXECUTION_END runs before FlowFinishedEvent so a HookAborted
@@ -2429,7 +2431,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # Flag set before dispatching so an EXECUTION_END hook that raises
             # HookAborted does not trigger a second (failure) dispatch below.
             execution_end_dispatched = True
-            dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
+            self._dispatch_interception(InterceptionPoint.EXECUTION_END, end_ctx)
             final_output = end_ctx.payload
 
             if self._event_futures:
@@ -2520,6 +2522,17 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             detach(flow_token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
 
+    def _skip_interception(self) -> bool:
+        return getattr(type(self), "is_crewai_internal", False)
+
+    def _dispatch_interception(self, point: Any, ctx: Any) -> bool:
+        if self._skip_interception():
+            return False
+        from crewai.hooks.dispatch import dispatch
+
+        dispatch(point, ctx)
+        return True
+
     def _dispatch_execution_end_failure(self, error: BaseException) -> None:
         """Dispatch EXECUTION_END with status="failed" for an execution that raised.
 
@@ -2529,10 +2542,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         exception propagates unchanged.
         """
         from crewai.hooks.contexts import ExecutionEndContext
-        from crewai.hooks.dispatch import InterceptionPoint, dispatch
+        from crewai.hooks.dispatch import InterceptionPoint
 
         try:
-            dispatch(
+            self._dispatch_interception(
                 InterceptionPoint.EXECUTION_END,
                 ExecutionEndContext(flow=self, status="failed", error=error),
             )
@@ -2842,36 +2855,37 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if future:
                     self._event_futures.append(future)
 
-            from crewai.hooks.contexts import StepContext
-            from crewai.hooks.dispatch import InterceptionPoint, dispatch
+            if not self._skip_interception():
+                from crewai.hooks.contexts import StepContext
+                from crewai.hooks.dispatch import InterceptionPoint
 
-            pre_step_ctx = StepContext(
-                kind="flow_method",
-                step_name=str(method_name),
-                flow=self,
-                payload=dumped_params,
-            )
-            dispatch(InterceptionPoint.PRE_STEP, pre_step_ctx)
-
-            # Apply hook edits/replacement of the step params back onto the
-            # call. ``dumped_params`` maps positional args to ``_0, _1, ...``
-            # keys and keeps kwargs by name, so reverse that mapping here.
-            updated_params = pre_step_ctx.payload
-            if isinstance(updated_params, dict):
-                positional = sorted(
-                    (
-                        k
-                        for k in updated_params
-                        if k.startswith("_") and k[1:].isdigit()
-                    ),
-                    key=lambda k: int(k[1:]),
+                pre_step_ctx = StepContext(
+                    kind="flow_method",
+                    step_name=str(method_name),
+                    flow=self,
+                    payload=dumped_params,
                 )
-                args = tuple(updated_params[k] for k in positional)
-                kwargs = {
-                    k: v
-                    for k, v in updated_params.items()
-                    if not (k.startswith("_") and k[1:].isdigit())
-                }
+                self._dispatch_interception(InterceptionPoint.PRE_STEP, pre_step_ctx)
+
+                # Apply hook edits/replacement of the step params back onto the
+                # call. ``dumped_params`` maps positional args to ``_0, _1, ...``
+                # keys and keeps kwargs by name, so reverse that mapping here.
+                updated_params = pre_step_ctx.payload
+                if isinstance(updated_params, dict):
+                    positional = sorted(
+                        (
+                            k
+                            for k in updated_params
+                            if k.startswith("_") and k[1:].isdigit()
+                        ),
+                        key=lambda k: int(k[1:]),
+                    )
+                    args = tuple(updated_params[k] for k in positional)
+                    kwargs = {
+                        k: v
+                        for k, v in updated_params.items()
+                        if not (k.startswith("_") and k[1:].isdigit())
+                    }
 
             # Set method name in context so ask() can read it without
             # stack inspection.  Must happen before copy_context() so the
@@ -2900,15 +2914,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     method_name, method_definition.human_feedback, result
                 )
 
-            post_step_ctx = StepContext(
-                kind="flow_method",
-                step_name=str(method_name),
-                flow=self,
-                output=result,
-                payload=result,
-            )
-            dispatch(InterceptionPoint.POST_STEP, post_step_ctx)
-            result = post_step_ctx.payload
+            if not self._skip_interception():
+                from crewai.hooks.contexts import StepContext
+                from crewai.hooks.dispatch import InterceptionPoint
+
+                post_step_ctx = StepContext(
+                    kind="flow_method",
+                    step_name=str(method_name),
+                    flow=self,
+                    output=result,
+                    payload=result,
+                )
+                self._dispatch_interception(InterceptionPoint.POST_STEP, post_step_ctx)
+                result = post_step_ctx.payload
 
             self._method_outputs.append({"method": str(method_name), "output": result})
 
