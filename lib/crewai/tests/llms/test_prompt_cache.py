@@ -189,3 +189,37 @@ class TestNonAnthropicStripsMarker:
         formatted = llm._format_messages(messages)
         for m in formatted:
             assert CACHE_BREAKPOINT_KEY not in m
+
+
+class TestLiteLLMStripsMarker:
+    """The litellm fallback path (crewai.llm.LLM) does not go through
+    BaseLLM._format_messages, so it must strip the cache-breakpoint marker
+    itself — otherwise the unknown field leaks to litellm and providers with
+    strict message schemas (e.g. Mistral) reject the request. See #6789.
+    """
+
+    def test_provider_format_strips_marker(self) -> None:
+        from crewai.llm import LLM
+
+        llm = LLM(model="mistral/mistral-large-latest", is_litellm=True)
+        messages = [
+            mark_cache_breakpoint({"role": "system", "content": "stable system"}),
+            mark_cache_breakpoint({"role": "user", "content": "hi"}),
+        ]
+        formatted = llm._format_messages_for_provider(messages)
+        for m in formatted:
+            assert CACHE_BREAKPOINT_KEY not in m
+        # Caller's buffer keeps its markers for later ReAct-loop iterations.
+        assert messages[0][CACHE_BREAKPOINT_KEY] is True
+        assert messages[1][CACHE_BREAKPOINT_KEY] is True
+
+    def test_unmarked_messages_pass_through(self) -> None:
+        from crewai.llm import LLM
+
+        llm = LLM(model="mistral/mistral-large-latest", is_litellm=True)
+        messages = [
+            {"role": "system", "content": "no marker"},
+            {"role": "user", "content": "hi"},
+        ]
+        formatted = llm._format_messages_for_provider(messages)
+        assert formatted == messages
