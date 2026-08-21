@@ -25,7 +25,7 @@ from crewai.hooks.tool_hooks import (
 )
 from crewai.tools import BaseTool
 from crewai.tools.tool_calling import ToolCalling
-from crewai.tools.tool_usage import ToolUsage
+from crewai.tools.tool_usage import ToolUsage, ToolUsageError
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from pydantic import BaseModel, Field
 import pytest
@@ -557,6 +557,36 @@ def test_validate_tool_input_large_json_content():
 
     arguments = tool_usage._validate_tool_input(tool_input)
     assert arguments == expected_arguments
+
+
+def test_original_tool_calling_non_dict_arguments_raises_tool_usage_error():
+    """Regression test: a bare `raise` outside an except block would surface as
+    `RuntimeError: No active exception to re-raise` instead of ToolUsageError."""
+    tool = RandomNumberTool()
+    action = MagicMock()
+    action.tool = "Random Number Generator"
+    action.tool_input = '["not", "a", "dict"]'
+
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[tool],
+        task=MagicMock(),
+        function_calling_llm=None,
+        agent=MagicMock(),
+        action=action,
+    )
+
+    with (
+        patch.object(tool_usage, "_select_tool", return_value=tool),
+        patch.object(
+            tool_usage, "_validate_tool_input", return_value=["not", "a", "dict"]
+        ),
+    ):
+        with pytest.raises(ToolUsageError):
+            tool_usage._original_tool_calling(action.tool_input, raise_error=True)
+
+        result = tool_usage._original_tool_calling(action.tool_input)
+        assert isinstance(result, ToolUsageError)
 
 
 def test_tool_selection_error_event_direct():
