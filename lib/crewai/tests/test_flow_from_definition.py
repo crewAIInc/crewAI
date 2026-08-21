@@ -1332,6 +1332,55 @@ methods:
     }
 
 
+def test_agent_action_delivers_a_rendered_conversation_to_the_agent(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """The whole path: `${state.messages}` -> normalization -> `kickoff_async`."""
+    from crewai import Agent
+
+    received: list[Any] = []
+
+    async def fake_kickoff_async(self: Agent, messages: Any, **_kwargs: Any) -> str:
+        received.append(messages)
+        return "answered"
+
+    monkeypatch.setattr(Agent, "kickoff_async", fake_kickoff_async)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: HistoryAgentFlow
+methods:
+  answer:
+    do:
+      call: agent
+      with:
+        role: Analyst
+        goal: Answer questions
+        backstory: Knows things.
+        input: "${state.messages}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+    result = flow.kickoff(
+        inputs={
+            "messages": [
+                {"role": "user", "content": "my order id is 42", "name": None},
+                {"role": "assistant", "content": "thanks, checking"},
+            ]
+        }
+    )
+
+    assert result == "answered"
+    # A list, not a stringified blob, and the serialization noise is gone.
+    assert received == [
+        [
+            {"role": "user", "content": "my order id is 42"},
+            {"role": "assistant", "content": "thanks, checking"},
+        ]
+    ]
+
+
 def test_agent_action_runs_inside_each(monkeypatch: pytest.MonkeyPatch):
     from crewai import Agent
 
