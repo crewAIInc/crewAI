@@ -1433,6 +1433,41 @@ def test_azure_reasoning_tokens_and_cached_tokens():
     assert usage["reasoning_tokens"] == 60
 
 
+def test_azure_cached_and_reasoning_tokens_from_real_usage_model():
+    """The detail dicts arrive as mapping entries on a real ``CompletionsUsage``.
+
+    ``CompletionsUsage`` declares only prompt/completion/total as fields, so
+    ``prompt_tokens_details`` and ``completion_tokens_details`` come back from
+    the service as extra mapping entries and attribute access returns ``None``
+    for them. The other tests here build the usage object with ``MagicMock``,
+    where every attribute exists, so they pass either way.
+    """
+    from azure.ai.inference.models import CompletionsUsage
+
+    llm = LLM(model="azure/gpt-4")
+
+    usage = CompletionsUsage(
+        {
+            "prompt_tokens": 100,
+            "completion_tokens": 10,
+            "total_tokens": 110,
+            "prompt_tokens_details": {"cached_tokens": 75},
+            "completion_tokens_details": {"reasoning_tokens": 8},
+        }
+    )
+    assert getattr(usage, "prompt_tokens_details", None) is None
+    assert usage["prompt_tokens_details"] == {"cached_tokens": 75}
+
+    mock_response = MagicMock()
+    mock_response.usage = usage
+
+    extracted = llm._extract_azure_token_usage(mock_response)
+    assert extracted["prompt_tokens"] == 100
+    assert extracted["completion_tokens"] == 10
+    assert extracted["cached_prompt_tokens"] == 75
+    assert extracted["reasoning_tokens"] == 8
+
+
 def test_azure_no_detail_fields():
     """Test Azure extraction without detail fields."""
     llm = LLM(model="azure/gpt-4")
