@@ -25,7 +25,7 @@ from crewai.hooks.tool_hooks import (
 )
 from crewai.tools import BaseTool
 from crewai.tools.tool_calling import ToolCalling
-from crewai.tools.tool_usage import ToolUsage
+from crewai.tools.tool_usage import ToolUsage, ToolUsageError
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from pydantic import BaseModel, Field
 import pytest
@@ -465,6 +465,30 @@ def test_validate_tool_input_invalid_input():
 
     arguments = tool_usage._validate_tool_input(None)
     assert arguments == {}
+
+
+def test_original_tool_calling_raises_tool_usage_error_for_non_dict_arguments():
+    class TestTool(BaseTool):
+        name: str = "Test Tool"
+        description: str = "A test tool"
+
+        def _run(self) -> str:
+            return "test result"
+
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[TestTool()],
+        task=MagicMock(),
+        function_calling_llm=None,
+        agent=MagicMock(),
+        action=MagicMock(tool="test_tool", tool_input="[]"),
+    )
+    tool_usage._validate_tool_input = MagicMock(return_value=[])
+
+    with pytest.raises(ToolUsageError) as exc_info:
+        tool_usage._original_tool_calling("Action: test_tool", raise_error=True)
+
+    assert "not a valid key, value dictionary" in str(exc_info.value)
 
 
 def test_validate_tool_input_complex_structure():
