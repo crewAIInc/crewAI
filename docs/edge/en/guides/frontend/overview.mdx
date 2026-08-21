@@ -15,6 +15,9 @@ The two connect through the [AG-UI protocol](https://docs.ag-ui.com). The `ag-ui
   <Card title="Generative UI" icon="wand-magic-sparkles" href="/edge/en/guides/frontend/generative-ui">
     Render agent tool calls and state as your own React components.
   </Card>
+  <Card title="OpenUI" icon="window-maximize" href="/edge/en/guides/frontend/openui">
+    Stream model-authored charts, forms, and interactive responses through AG-UI.
+  </Card>
   <Card title="Human-in-the-Loop" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
     Pause the agent to collect user approval or input mid-run.
   </Card>
@@ -39,6 +42,10 @@ There are three pieces:
 ```
 React app  ──►  CopilotKit runtime (/api/copilotkit)  ──►  CrewAI server (AG-UI)  ──►  Crew / Flow
 ```
+
+<Tip>
+This page follows the CopilotKit runtime path. If you want the model to compose the whole response from an interactive component library, [OpenUI](/edge/en/guides/frontend/openui) connects its `AgentInterface` directly to the same CrewAI AG-UI endpoint, without the intermediate CopilotKit runtime.
+</Tip>
 
 <Note>
 This guide covers the **self-hosted** path: you run the CrewAI agent server yourself with `ag-ui-crewai`, and it works locally with no managed service. CopilotKit also offers a **managed** path (CopilotKit Cloud / Enterprise Intelligence) with hosted threads and an inspector — see the [CopilotKit CrewAI quickstart](https://docs.copilotkit.ai/crewai-crews/quickstart) if you want that instead. The frontend code in this section is the same either way; only how the agent is hosted and registered differs.
@@ -225,6 +232,9 @@ import { CopilotChat } from "@copilotkit/react-core/v2";
 <CardGroup cols={2}>
   <Card title="Generative UI" icon="wand-magic-sparkles" href="/edge/en/guides/frontend/generative-ui">
     Render tool calls and agent state as custom components.
+  </Card>
+  <Card title="OpenUI" icon="window-maximize" href="/edge/en/guides/frontend/openui">
+    Let the model compose streaming charts, forms, and follow-up actions.
   </Card>
   <Card title="Frontend Actions" icon="bolt" href="/edge/en/guides/frontend/frontend-actions">
     Let the agent call functions that run in the browser.

@@ -11,6 +11,10 @@ mode: "wide"
 
 You still own the components. The agent can only use what is in your catalog, so it can never render something you did not ship. What the agent decides is the **layout and the data** — how those building blocks come together into a panel, and what goes in them.
 
+<Tip>
+Choose [OpenUI](/edge/en/guides/frontend/openui) when you want the model to author the complete chat response as streaming OpenUI Lang and use OpenUI's `AgentInterface` as the frontend. Both approaches constrain the model to components you ship; A2UI integrates a catalog through the CopilotKit runtime, while OpenUI generates, parses, and renders OpenUI Lang over the CrewAI AG-UI stream.
+</Tip>
+
 <Note>
 A2UI works with [Flows](/en/concepts/flows). Both modes below — dynamic and fixed-schema — run as Flows served over AG-UI, exactly like the rest of this section.
 </Note>
@@ -114,7 +118,7 @@ Both modes share the same frontend: one catalog, registered once on the provider
 
 ## Related
 
-<CardGroup cols={3}>
+<CardGroup cols={2}>
   <Card title="Generative UI" icon="wand-magic-sparkles" href="/edge/en/guides/frontend/generative-ui">
     The full spectrum — A2UI is its declarative tier.
   </Card>
@@ -123,5 +127,8 @@ Both modes share the same frontend: one catalog, registered once on the provider
   </Card>
   <Card title="Agentic Generative UI" icon="list-check" href="/edge/en/guides/frontend/agentic-generative-ui">
     Render live agent state (controlled).
+  </Card>
+  <Card title="OpenUI" icon="window-maximize" href="/edge/en/guides/frontend/openui">
+    Let the model compose a complete interactive response (open-ended).
   </Card>
 </CardGroup>

@@ -1,0 +1,230 @@
+---
+title: OpenUI
+description: Transmita gráficos, formulários e componentes interativos gerados pelo modelo a partir de um Flow do CrewAI com OpenUI Lang.
+icon: window-maximize
+mode: "wide"
+---
+
+## Deixe o agente compor uma resposta interativa
+
+[OpenUI](https://www.openui.com/) é a [camada aberta da UI generativa](/edge/en/guides/frontend/generative-ui#open-ended): o modelo escreve [OpenUI Lang](https://github.com/thesysdev/openui), uma linguagem compacta para compor componentes de uma biblioteca sob seu controle. O parser de streaming transforma essa linguagem em componentes React enquanto o modelo ainda responde.
+
+A conexão natural com CrewAI é o AG-UI. Um Flow do CrewAI controla o estado da conversa e a chamada ao LLM; o `AgentInterface` do OpenUI envia o turno ao Flow e renderiza o resultado transmitido. O mesmo caminho processa opções de acompanhamento e envios de formulário.
+
+<Note>
+Este guia usa um **Flow** porque ele preserva a conversa com vários turnos e o contexto de interação. Consulte [Flows](/edge/pt-BR/concepts/flows) para conhecer o modelo de fluxo de trabalho com estado do CrewAI.
+</Note>
+
+## Arquitetura
+
+```text
+OpenUI AgentInterface
+  └─ agUIAdapter() ──► CrewAI AG-UI endpoint ──► CrewAI Flow ──► LLM
+          ▲                                                  │
+          └──── streamed, model-produced OpenUI Lang ────────┘
+```
+
+As responsabilidades permanecem separadas:
+
+| Camada | Responsabilidade |
+| --- | --- |
+| **CrewAI** | Ciclo de vida do Flow, estado da conversa e cada turno do LLM |
+| **AG-UI** | Transporte de solicitações e eventos em streaming |
+| **OpenUI** | Biblioteca de componentes, prompt de sistema gerado, parser, renderer, tema, acompanhamentos e formulários |
+
+O exemplo executável completo está em [`docs/examples/openui-crewai`](https://github.com/crewAIInc/crewAI/tree/main/docs/examples/openui-crewai). Ele fixa CrewAI 1.15.16, `ag-ui-crewai` 0.3.0, `@openuidev/react-ui` 0.13.6 e `@openuidev/react-lang` 0.2.11.
+
+## Crie a integração
+
+<Steps>
+
+<Step title="Exporte a biblioteca OpenUI exata">
+
+Mantenha a biblioteca de renderização e as opções de prompt em um único módulo. A CLI do OpenUI importa essas exportações para gerar o prompt de sistema, e o frontend importa a mesma `library` para renderizar a resposta.
+
+```ts
+// frontend/src/library.ts
+import type { PromptOptions } from "@openuidev/react-lang";
+import {
+  openuiChatLibrary,
+  openuiChatPromptOptions,
+} from "@openuidev/react-ui/genui-lib";
+
+export const library = openuiChatLibrary;
+export const promptOptions: PromptOptions = {
+  ...openuiChatPromptOptions,
+  additionalRules: [
+    ...(openuiChatPromptOptions.additionalRules ?? []),
+    "Return only OpenUI Lang. Never wrap it in Markdown.",
+    "End analytical results with useful follow-up choices.",
+  ],
+};
+```
+
+Gere o prompt antes das builds de desenvolvimento e produção:
+
+```json
+{
+  "scripts": {
+    "generate:prompt": "openui generate src/library.ts --out generated/system-prompt.txt",
+    "predev": "npm run generate:prompt",
+    "prebuild": "npm run generate:prompt"
+  }
+}
+```
+
+Ignore `generated/system-prompt.txt` e `generated/system-prompt.spec.json`. Eles são artefatos de build derivados de `library.ts`, não arquivos-fonte.
+
+</Step>
+
+<Step title="Execute cada turno por um Flow do CrewAI">
+
+Carregue o prompt gerado, coloque-o antes da conversa e transmita a chamada ao modelo com a ponte `ag-ui-crewai` estabelecida:
+
+```python
+import os
+from pathlib import Path
+
+from ag_ui_crewai.sdk import CopilotKitState, copilotkit_stream
+from crewai.flow.flow import Flow, start
+from litellm import acompletion
+
+PROMPT_PATH = Path("../frontend/generated/system-prompt.txt")
+
+def message_for_llm(message):
+    payload = (
+        message.model_dump(exclude_none=True)
+        if hasattr(message, "model_dump")
+        else dict(message)
+    )
+    if payload.get("role") == "assistant" and payload.get("tool_calls") == []:
+        payload.pop("tool_calls")
+    return payload
+
+class OpenUIFlow(Flow[CopilotKitState]):
+    @start()
+    async def chat(self):
+        response = await copilotkit_stream(
+            await acompletion(
+                model=os.getenv("OPENUI_MODEL", "openai/gpt-4.1-mini"),
+                messages=[
+                    {"role": "system", "content": PROMPT_PATH.read_text()},
+                    *(message_for_llm(message) for message in self.state.messages),
+                ],
+                stream=True,
+            )
+        )
+        self.state.messages.append(response.choices[0].message)
+```
+
+A pequena normalização remove um array `tool_calls` vazio que o AG-UI permite, mas que a OpenAI rejeita em um turno posterior. Ela não reescreve o conteúdo da mensagem; portanto, o contexto de acompanhamento e formulário do OpenUI chega ao modelo sem alterações.
+
+Exponha o Flow em um endpoint AG-UI:
+
+```python
+from ag_ui_crewai.endpoint import add_crewai_flow_fastapi_endpoint
+from fastapi import FastAPI
+
+app = FastAPI(title="CrewAI + OpenUI")
+add_crewai_flow_fastapi_endpoint(app=app, flow=OpenUIFlow(), path="/openui")
+```
+
+Mantenha as chaves do provedor neste servidor. O cliente React nunca recebe `OPENAI_API_KEY`.
+
+</Step>
+
+<Step title="Renderize o stream com AgentInterface">
+
+`agUIAdapter()` corresponde diretamente ao protocolo do endpoint, portanto este caminho não exige um runtime adicional no frontend. `AgentInterface` contém o parser de streaming e o renderer do OpenUI. Seu `ThemeProvider` interno está habilitado aqui e recebe substituições visíveis do tema.
+
+```tsx
+import { useMemo } from "react";
+import {
+  AgentInterface,
+  agUIAdapter,
+  createTheme,
+  fetchLLM,
+} from "@openuidev/react-ui";
+import { library } from "./library";
+
+const theme = createTheme({
+  interactiveAccentDefault: "oklch(57% 0.22 285)",
+});
+
+export function App() {
+  const llm = useMemo(
+    () => fetchLLM({
+      url: "http://localhost:8000/openui",
+      streamAdapter: agUIAdapter(),
+      body: { state: {}, forwardedProps: {} },
+    }),
+    [],
+  );
+
+  return (
+    <AgentInterface
+      llm={llm}
+      componentLibrary={library}
+      agentName="CrewAI + OpenUI"
+      theme={{ mode: "light", lightTheme: theme }}
+    />
+  );
+}
+```
+
+`state` e `forwardedProps` são campos obrigatórios no modelo de solicitação atual do `ag-ui-crewai`. O cliente genérico do OpenUI permite adicioná-los sem substituir seu adaptador de streaming AG-UI.
+
+</Step>
+
+<Step title="Execute o exemplo">
+
+```bash
+cd docs/examples/openui-crewai/frontend
+npm install
+npm run dev
+```
+
+Em um segundo terminal:
+
+```bash
+cd docs/examples/openui-crewai/backend
+cp .env.example .env
+# Add OPENAI_API_KEY to .env
+uv sync
+uv run uvicorn openui_crewai_example.server:app --reload --port 8000
+```
+
+Abra [http://localhost:5173](http://localhost:5173). Use os exemplos iniciais para renderizar um gráfico, clicar em uma opção de acompanhamento e enviar um formulário validado de estimativa de projeto.
+
+</Step>
+
+</Steps>
+
+## Como as interações retornam ao CrewAI
+
+`FollowUpBlock` e os botões de formulário usam a ação `@ToAssistant` do OpenUI. `AgentInterface` transforma o clique em uma nova mensagem do usuário e inclui o estado atual do formulário como contexto de interação. `agUIAdapter()` envia essa mensagem ao mesmo endpoint `/openui`; assim, a próxima resposta é outro turno real do Flow do CrewAI, não um callback executado apenas no navegador nem uma resposta simulada.
+
+Esse ciclo torna a integração útil para fluxos de trabalho: uma superfície gerada pode coletar uma decisão ou entrada estruturada e permitir que o Flow raciocine sobre ela para gerar a próxima superfície.
+
+## Relacionado
+
+<CardGroup cols={3}>
+  <Card title="UI generativa" icon="wand-magic-sparkles" href="/edge/en/guides/frontend/generative-ui">
+    Compare abordagens de renderização controladas, declarativas e abertas.
+  </Card>
+  <Card title="A2UI" icon="table-cells" href="/edge/en/guides/frontend/a2ui">
+    Use um catálogo do CopilotKit para superfícies declarativas e limitadas pelo catálogo.
+  </Card>
+  <Card title="Conversational Flows" icon="comments" href="/edge/en/guides/frontend/conversational-flows">
+    Use sessões e histórico de conversa gerenciados pelo CrewAI por meio do mesmo protocolo AG-UI.
+  </Card>
+  <Card title="OpenUI" icon="window-maximize" href="https://www.openui.com">
+    Explore a biblioteca de componentes e o OpenUI Lang.
+  </Card>
+  <Card title="AG-UI" icon="arrows-left-right" href="https://docs.ag-ui.com">
+    Saiba mais sobre o protocolo de streaming entre agentes e frontends.
+  </Card>
+  <Card title="Flows" icon="code-branch" href="/edge/pt-BR/concepts/flows">
+    Saiba como o CrewAI gerencia fluxos de trabalho com estado.
+  </Card>
+</CardGroup>

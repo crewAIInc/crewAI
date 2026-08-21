@@ -1,0 +1,9 @@
+backend/.venv/
+backend/.pytest_cache/
+backend/.ruff_cache/
+backend/__pycache__/
+backend/src/**/__pycache__/
+backend/tests/**/__pycache__/
+frontend/dist/
+frontend/generated/
+frontend/node_modules/

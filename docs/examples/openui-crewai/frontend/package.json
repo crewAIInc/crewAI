@@ -1,0 +1,31 @@
+{
+  "name": "openui-crewai-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "generate:prompt": "openui generate src/library.ts --out generated/system-prompt.txt",
+    "predev": "npm run generate:prompt",
+    "dev": "vite",
+    "prebuild": "npm run generate:prompt",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@openuidev/react-lang": "0.2.11",
+    "@openuidev/react-ui": "0.13.6",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "4.4.3",
+    "zustand": "4.5.7"
+  },
+  "devDependencies": {
+    "@openuidev/cli": "0.2.8",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@vitejs/plugin-react": "6.0.5",
+    "typescript": "5.9.3",
+    "vite": "8.2.1",
+    "vitest": "4.1.11"
+  }
+}

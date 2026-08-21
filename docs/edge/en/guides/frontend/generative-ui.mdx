@@ -9,13 +9,13 @@ mode: "wide"
 
 Generative UI means the agent's work shows up as real interface, not just text. When your Crew or Flow calls a tool, updates its state, or reasons about a problem, you decide what the user sees: a progress checklist, a recipe card, a chart, a whole assembled panel.
 
-CopilotKit renders generative UI along a **spectrum**, from fully author-controlled (you decide every pixel) to agent-invented (the agent assembles the surface):
+CrewAI frontends render generative UI along a **spectrum**, from fully author-controlled (you decide every pixel) to agent-invented (the agent assembles the surface):
 
 | Tier | Who decides the UI | CrewAI mechanism |
 | --- | --- | --- |
 | **[Controlled](#controlled)** | You — a fixed set of components the agent picks from | `useRenderTool`, `useAgent`, reasoning |
 | **[Declarative](#declarative)** | The agent — assembles a surface from *your* component catalog | [A2UI](/edge/en/guides/frontend/a2ui) |
-| **[Open-ended](#open-ended)** | An external tool/server invents the surface | MCP tools |
+| **[Open-ended](#open-ended)** | The model authors the response as a UI program, or an external tool supplies it | [OpenUI](/edge/en/guides/frontend/openui), MCP tools |
 
 The tiers compose freely; a single app usually mixes them.
 
@@ -85,7 +85,9 @@ The agent then builds surfaces from that catalog — either dynamically (it desi
 
 ## Open-ended
 
-At the far end, the surface is invented outside your app entirely. For CrewAI this comes through **MCP**: tools served by an MCP server the agent connects to render as tool calls in the chat, the same way backend tools do. This is the least constrained and the least predictable tier.
+At the far end, the model authors the response as a UI program instead of selecting one component or filling a fixed schema. With [OpenUI](/edge/en/guides/frontend/openui), a CrewAI Flow gives the model the exact component-library prompt and streams OpenUI Lang to `AgentInterface`. OpenUI parses and renders the response as charts, forms, follow-up choices, and other interactive components while it is still arriving. User actions return through the same Flow for another LLM turn.
+
+The component library still bounds what the model can render, but the model controls how those components compose into the response. **MCP** offers another open-ended path: tools served by an MCP server render as tool calls in the chat, the same way backend tools do.
 
 MCP tool calls surface as standard tool-call UI — render them with `useRenderTool` like any other tool. Full agent-invented "MCP App" surfaces are an emerging capability; see the [CopilotKit docs](https://docs.copilotkit.ai) for the current state.
 
@@ -100,6 +102,9 @@ MCP tool calls surface as standard tool-call UI — render them with `useRenderT
   </Card>
   <Card title="A2UI" icon="table-cells" href="/edge/en/guides/frontend/a2ui">
     Let the agent assemble surfaces from your catalog (declarative).
+  </Card>
+  <Card title="OpenUI" icon="window-maximize" href="/edge/en/guides/frontend/openui">
+    Stream model-authored charts, forms, and follow-ups (open-ended).
   </Card>
   <Card title="Reasoning" icon="brain" href="/edge/en/guides/frontend/reasoning">
     Render the agent's thinking.
