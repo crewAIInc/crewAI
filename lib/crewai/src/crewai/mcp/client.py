@@ -242,7 +242,9 @@ class MCPClient:
             cleanup_error = await self._cleanup_on_error()
             status_code = find_http_status(e, cleanup_error)
             if status_code is not None:
-                raise self._http_failure(status_code, server_info, started_at) from e
+                raise self._report_connection_failure(
+                    server_info, started_at, status_code=status_code
+                ) from e
             error_msg = f"MCP connection timed out after {self.connect_timeout} seconds. The server may be slow or unreachable."
             self._emit_connection_failed(
                 server_name,
@@ -259,10 +261,12 @@ class MCPClient:
             cleanup_error = await self._cleanup_on_error()
             status_code = find_http_status(e, cleanup_error)
             if status_code is not None:
-                raise self._http_failure(status_code, server_info, started_at) from e
+                raise self._report_connection_failure(
+                    server_info, started_at, status_code=status_code
+                ) from e
             if (failure := find_transport_failure(cleanup_error)) is not None:
-                raise self._connection_failure(
-                    failure, server_info, started_at
+                raise self._report_connection_failure(
+                    server_info, started_at, error=failure
                 ) from failure
             # Nothing failed, so this is a real cancellation: never swallow it.
             self._emit_connection_failed(
@@ -278,9 +282,13 @@ class MCPClient:
             cleanup_error = await self._cleanup_on_error()
             status_code = find_http_status(e, cleanup_error)
             if status_code is not None:
-                raise self._http_failure(status_code, server_info, started_at) from e
+                raise self._report_connection_failure(
+                    server_info, started_at, status_code=status_code
+                ) from e
             failure = find_transport_failure(e, cleanup_error) or e
-            raise self._connection_failure(failure, server_info, started_at) from e
+            raise self._report_connection_failure(
+                server_info, started_at, error=failure
+            ) from e
 
     def _report_connection_failure(
         self,
@@ -323,26 +331,6 @@ class MCPClient:
             status_code=status_code,
         )
         return failure
-
-    def _http_failure(
-        self,
-        status_code: int,
-        server_info: tuple[str, str | None, str | None],
-        started_at: datetime,
-    ) -> MCPConnectionError:
-        """Report a connection the server refused with an HTTP status."""
-        return self._report_connection_failure(
-            server_info, started_at, status_code=status_code
-        )
-
-    def _connection_failure(
-        self,
-        error: BaseException,
-        server_info: tuple[str, str | None, str | None],
-        started_at: datetime,
-    ) -> MCPConnectionError:
-        """Report a connection that failed for a reason other than an HTTP status."""
-        return self._report_connection_failure(server_info, started_at, error=error)
 
     def _emit_connection_failed(
         self,
