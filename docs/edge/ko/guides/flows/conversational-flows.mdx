@@ -489,7 +489,7 @@ finally:
 | 모델 클래스로서의 `router.response_format` | 생략하세요; 프레임워크가 생성합니다. ref나 스키마는 경고와 함께 무시됩니다 |
 | `route_turn()` / `can_answer_from_history()` 재정의 | 플로우를 Python으로 작성하거나, 메서드의 `do`를 `call: code` ref로 지정하세요 |
 
-`crewai run`은 선언적 대화형 플로우에 대해 채팅 TUI를 엽니다 — Python 대화형 Flow가 받는 것과 같은 TUI입니다. 채팅 루프에는 터미널이 필요하므로, 헤드리스 실행에서는 단일 턴을 실행하는 대신 그 사실을 알립니다; 그 환경에서는 Python에서 `handle_turn()` 또는 `stream_turn()`으로 실행하세요. `@human_feedback`도 사용하는 플로우는 터미널 REPL에서 실행됩니다. 런타임이 TUI가 처리할 수 없는 블로킹 프롬프트로 피드백을 수집하기 때문입니다.
+`crewai run`은 선언적 대화형 플로우에 대해 채팅 TUI를 엽니다 — Python 대화형 Flow가 받는 것과 같은 TUI입니다. 채팅 루프에는 터미널이 필요하므로, 헤드리스 실행에서는 단일 턴을 실행하는 대신 그 사실을 알립니다; 그 환경에서는 Python에서 `handle_turn()` 또는 `stream_turn()`으로 실행하세요. `@human_feedback`도 사용하는 플로우는 터미널 REPL에서 실행됩니다. 런타임이 TUI가 처리할 수 없는 블로킹 프롬프트로 피드백을 수집하기 때문입니다. 대화형 플로우에서는 `--inputs`를 받지 않습니다 — 각 턴의 입력은 여러분이 입력하는 메시지입니다 — 그리고 id로 세션을 재개하는 기능은 아직 CLI에 연결되지 않았습니다; 그것이 필요하면 Python에서 `flow.handle_turn(message, session_id=...)`을 사용하세요.
 
 ## 턴 간 트레이싱
 

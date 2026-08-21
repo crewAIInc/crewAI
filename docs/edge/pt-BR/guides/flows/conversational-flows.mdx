@@ -490,7 +490,7 @@ Rótulos de rota e nomes de métodos compartilham um único namespace de gatilho
 | `router.response_format` como classe de modelo | Omita; o framework sintetiza uma. Um ref ou schema é ignorado com um aviso |
 | Overrides de `route_turn()` / `can_answer_from_history()` | Escreva o Flow em Python, ou aponte o `do` de um método para um ref `call: code` |
 
-O `crewai run` abre a TUI de chat para um flow conversacional declarativo — a mesma que um Flow conversacional em Python recebe. Um loop de chat precisa de um terminal, então uma execução headless informa isso em vez de rodar um único turno; ali, conduza pelo Python com `handle_turn()` ou `stream_turn()`. Um flow que também usa `@human_feedback` roda em um REPL de terminal, porque o runtime coleta feedback com um prompt bloqueante que a TUI não consegue atender.
+O `crewai run` abre a TUI de chat para um flow conversacional declarativo — a mesma que um Flow conversacional em Python recebe. Um loop de chat precisa de um terminal, então uma execução headless informa isso em vez de rodar um único turno; ali, conduza pelo Python com `handle_turn()` ou `stream_turn()`. Um flow que também usa `@human_feedback` roda em um REPL de terminal, porque o runtime coleta feedback com um prompt bloqueante que a TUI não consegue atender. O `--inputs` não é aceito em um flow conversacional — a entrada de cada turno é a mensagem que você digita — e retomar uma sessão por id ainda não está ligado à CLI; use `flow.handle_turn(message, session_id=...)` no Python para isso.
 
 ## Tracing entre turnos
 

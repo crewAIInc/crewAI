@@ -78,7 +78,7 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
     flow = load_declarative_flow(definition)
 
     if _flow_is_conversational(flow):
-        _run_conversational_declarative_flow(flow, provided)
+        _run_conversational_declarative_flow(flow, inputs is not None)
         return
 
     resolved_inputs = _resolve_flow_inputs(flow, provided)
@@ -106,7 +106,7 @@ def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> N
 
 
 def _run_conversational_declarative_flow(
-    flow: Flow[Any], provided: dict[str, Any]
+    flow: Flow[Any], inputs_supplied: bool
 ) -> None:
     """Run a declarative chat flow on the conversational TUI.
 
@@ -120,7 +120,10 @@ def _run_conversational_declarative_flow(
     terminal ``flow.chat()`` REPL because the runtime collects feedback with a
     blocking prompt Textual cannot service.
     """
-    if provided:
+    if inputs_supplied:
+        # Whether ``--inputs`` was passed at all, not whether it parsed to
+        # anything: ``--inputs '{}'`` is a request for something unsupported and
+        # has to be answered, not silently accepted as no inputs.
         # The TUI calls ``handle_turn(message)``, which owns the kickoff inputs
         # (it passes ``{"id": session_id}`` itself). There is nowhere to put
         # these without fighting it, so say so rather than accepting them and
