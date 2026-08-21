@@ -1973,7 +1973,11 @@ class OpenAICompletion(BaseLLM):
                 if result is not None:
                     return result
 
-            content = message.content or ""
+            content = message.content if isinstance(message.content, str) else None
+            if content is None:
+                reasoning = getattr(message, "reasoning_content", None)
+                content = reasoning if isinstance(reasoning, str) else None
+            content = content or ""
 
             if self.response_format and isinstance(self.response_format, type):
                 try:
@@ -2240,10 +2244,17 @@ class OpenAICompletion(BaseLLM):
             if chunk_finish:
                 stream_finish_reason = chunk_finish
 
-            if chunk_delta.content:
-                full_response += chunk_delta.content
+            delta_text: str | None = None
+            if isinstance(chunk_delta.content, str):
+                delta_text = chunk_delta.content
+            elif isinstance(
+                getattr(chunk_delta, "reasoning_content", None), str
+            ):
+                delta_text = chunk_delta.reasoning_content
+            if delta_text:
+                full_response += delta_text
                 self._emit_stream_chunk_event(
-                    chunk=chunk_delta.content,
+                    chunk=delta_text,
                     from_task=from_task,
                     from_agent=from_agent,
                     response_id=response_id_stream,
@@ -2405,7 +2416,11 @@ class OpenAICompletion(BaseLLM):
                 if result is not None:
                     return result
 
-            content = message.content or ""
+            content = message.content if isinstance(message.content, str) else None
+            if content is None:
+                reasoning = getattr(message, "reasoning_content", None)
+                content = reasoning if isinstance(reasoning, str) else None
+            content = content or ""
 
             if self.response_format and isinstance(self.response_format, type):
                 try:
@@ -2580,10 +2595,17 @@ class OpenAICompletion(BaseLLM):
             if chunk_finish:
                 stream_finish_reason = chunk_finish
 
-            if chunk_delta.content:
-                full_response += chunk_delta.content
+            delta_text: str | None = None
+            if isinstance(chunk_delta.content, str):
+                delta_text = chunk_delta.content
+            elif isinstance(
+                getattr(chunk_delta, "reasoning_content", None), str
+            ):
+                delta_text = chunk_delta.reasoning_content
+            if delta_text:
+                full_response += delta_text
                 self._emit_stream_chunk_event(
-                    chunk=chunk_delta.content,
+                    chunk=delta_text,
                     from_task=from_task,
                     from_agent=from_agent,
                     response_id=response_id_stream,
