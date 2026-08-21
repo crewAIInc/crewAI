@@ -9,13 +9,27 @@ Lives here rather than in `lib/cli/tests/` because `lib/cli/tests/` is not run b
 workflow, while this directory is part of the required job.
 """
 
+from typing import Any
 from unittest.mock import patch
 
 from click.testing import CliRunner
 from crewai_core.telemetry import Telemetry
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor, SpanExportResult
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 import pytest
+
+
+class _NullExporter:
+    """Stands in for the OTLP exporter so no test attempts a real export."""
+
+    def export(self, spans: Any) -> SpanExportResult:
+        return SpanExportResult.SUCCESS
+
+    def shutdown(self) -> None:
+        pass
+
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        return True
 
 
 @pytest.fixture
@@ -24,20 +38,39 @@ def recorded_spans(monkeypatch):
 
     Telemetry has to be genuinely enabled: when it is disabled, `__init__` returns before
     building `self.provider` at all, so every assertion here would pass vacuously against
-    a non-recording span. The singleton is reset on both sides so neither the enabled
-    instance nor its provider leaks into another test -- the suite runs in random order.
+    a non-recording span.
+
+    Enabling it is exactly what makes the exporter swap mandatory. `__init__` wires a
+    `BatchSpanProcessor` around the real `SafeOTLPSpanExporter`, pointed at the production
+    collector, so without `_NullExporter` these synthetic `Project Created` spans -- with
+    invented `created_project_id` values -- are POSTed to it for real. `--block-network`
+    does not prevent that: it is function-scoped and only swaps `socket.connect`, which a
+    background batch thread outlives. Same reason `_register_shutdown_handlers` is
+    suppressed and the provider is shut down in `finally`: otherwise each test leaves an
+    atexit hook and an exporter thread behind.
+
+    Follows `telemetry_with_exporter` in tests/telemetry/test_tracer_isolation.py; the
+    patch target is `crewai_core` because that is where this Telemetry comes from.
     """
+    monkeypatch.setattr(Telemetry, "_instance", None)
+    monkeypatch.setattr(Telemetry, "_register_shutdown_handlers", lambda self: None)
     for var in ("OTEL_SDK_DISABLED", "CREWAI_DISABLE_TELEMETRY", "CREWAI_DISABLE_TRACKING"):
         monkeypatch.setenv(var, "false")
-    Telemetry._instance = None
+    monkeypatch.setattr(
+        "crewai_core.telemetry.SafeOTLPSpanExporter",
+        lambda **_kwargs: _NullExporter(),
+    )
 
     telemetry = Telemetry()
     assert telemetry.ready, "telemetry must be live or these assertions prove nothing"
     exporter = InMemorySpanExporter()
     telemetry.provider.add_span_processor(SimpleSpanProcessor(exporter))
-    yield telemetry, exporter
 
-    Telemetry._instance = None
+    try:
+        yield telemetry, exporter
+    finally:
+        telemetry.provider.shutdown()
+        Telemetry._instance = None
 
 
 def test_project_created_span_carries_kind_and_the_minted_id(recorded_spans):
