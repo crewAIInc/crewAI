@@ -930,13 +930,48 @@ def test_run_crew_runs_explicit_declarative_definition(monkeypatch, capsys):
     assert calls == [("flow.yaml", '{"topic":"AI"}')]
 
 
+def test_run_crew_rejects_pyproject_without_run_crew_script(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"project": {"name": "parent-project", "scripts": {}}},
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "configured_project_json_crew",
+        lambda *a, **k: None,
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_warn_if_old_poetry_project",
+        lambda *a, **k: None,
+    )
+    monkeypatch.setattr(run_crew_module, "get_crewai_project_type", lambda *a, **k: None)
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda *args, **kwargs: calls.append((args, kwargs)),
+    )
+
+    with pytest.raises(click.UsageError) as exc_info:
+        run_crew_module.run_crew()
+
+    assert "not a runnable CrewAI crew or flow project" in exc_info.value.message
+    assert "Run `crewai run` from the generated project directory" in exc_info.value.message
+    assert calls == []
+
 def test_run_crew_runs_classic_crew_project(monkeypatch, capsys):
     calls = []
 
     monkeypatch.setattr(
         run_crew_module,
         "read_toml",
-        lambda: {"tool": {"crewai": {"type": "crew"}}},
+        lambda: {
+            "project": {"scripts": {"run_crew": "demo.main:run"}},
+            "tool": {"crewai": {"type": "crew"}},
+        },
     )
     monkeypatch.setattr(
         run_crew_module,
