@@ -282,34 +282,21 @@ class MCPClient:
             failure = find_transport_failure(e, cleanup_error) or e
             raise self._connection_failure(failure, server_info, started_at) from e
 
-    def _http_failure(
+    def _report_connection_failure(
         self,
-        status_code: int,
         server_info: tuple[str, str | None, str | None],
         started_at: datetime,
+        *,
+        error: BaseException | None = None,
+        status_code: int | None = None,
     ) -> MCPConnectionError:
-        """Report a connection the server refused with an HTTP status."""
-        failure = error_for_status(status_code)
-        server_name, server_url, transport_type = server_info
-        self._emit_connection_failed(
-            server_name,
-            server_url,
-            transport_type,
-            str(failure),
-            error_type_for_status(status_code) or "network",
-            started_at,
-            status_code=status_code,
-        )
-        return failure
-
-    def _connection_failure(
-        self,
-        error: BaseException,
-        server_info: tuple[str, str | None, str | None],
-        started_at: datetime,
-    ) -> MCPConnectionError:
-        """Report a connection that failed for a reason other than an HTTP status."""
-        if isinstance(error, MCPConnectionError):
+        """Build a connection failure, emit the event, and return it to raise."""
+        if status_code is not None:
+            failure = error_for_status(status_code)
+            error_msg = str(failure)
+            error_type = error_type_for_status(status_code) or "network"
+        elif error is not None and isinstance(error, MCPConnectionError):
+            failure = error
             error_msg = str(error)
             error_type = (
                 error_type_for_status(error.status_code) or "network"
@@ -317,12 +304,14 @@ class MCPClient:
                 else "network"
             )
             status_code = error.status_code
-            failure = error
-        else:
+        elif error is not None:
             error_msg = f"Failed to connect to MCP server: {error}"
             error_type = "network"
             status_code = find_http_status(error)
             failure = MCPConnectionError(error_msg, status_code=status_code)
+        else:
+            raise ValueError("Either error or status_code must be provided")
+
         server_name, server_url, transport_type = server_info
         self._emit_connection_failed(
             server_name,
@@ -334,6 +323,26 @@ class MCPClient:
             status_code=status_code,
         )
         return failure
+
+    def _http_failure(
+        self,
+        status_code: int,
+        server_info: tuple[str, str | None, str | None],
+        started_at: datetime,
+    ) -> MCPConnectionError:
+        """Report a connection the server refused with an HTTP status."""
+        return self._report_connection_failure(
+            server_info, started_at, status_code=status_code
+        )
+
+    def _connection_failure(
+        self,
+        error: BaseException,
+        server_info: tuple[str, str | None, str | None],
+        started_at: datetime,
+    ) -> MCPConnectionError:
+        """Report a connection that failed for a reason other than an HTTP status."""
+        return self._report_connection_failure(server_info, started_at, error=error)
 
     def _emit_connection_failed(
         self,
