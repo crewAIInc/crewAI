@@ -89,6 +89,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DASHSCOPE_BASE_URL",
         api_key_required=True,
     ),
+    "edenai": ProviderConfig(
+        base_url="https://api.edenai.run/v3",
+        api_key_env="EDENAI_API_KEY",
+        base_url_env="EDENAI_BASE_URL",
+        api_key_required=True,
+    ),
 }
 
 
@@ -125,6 +131,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - hosted_vllm: vLLM server (https://github.com/vllm-project/vllm)
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
+        - edenai: Eden AI (https://www.edenai.co)
 
     Example:
         # Using provider prefix

@@ -728,6 +728,38 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="Eden AI">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    # Required
+    EDENAI_API_KEY=<your-api-key>
+
+    # Opcional, roteia as requisições pelo gateway da Eden AI na UE em vez do global
+    EDENAI_BASE_URL=https://api.eu.edenai.run/v3
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="edenai/mistral/mistral-large-2512",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Recursos do Eden AI:
+      - Uma única chave de API para muitos provedores
+      - Sediada na UE, com um endpoint europeu separado para residência de dados
+      - Capacidades por modelo expostas pelo endpoint do catálogo
+    </Info>
+
+    Os ids de modelo já estão no formato `vendor/model`, portanto uma referência completa tem
+    três segmentos, por exemplo `edenai/anthropic/claude-sonnet-5`. Consulte o
+    [catálogo de modelos da Eden AI](https://api.edenai.run/v3/models), que é público e não
+    exige autenticação, para os ids atuais.
+  </Accordion>
+
 </AccordionGroup>
 
 ## Respostas em streaming

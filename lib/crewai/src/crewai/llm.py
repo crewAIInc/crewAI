@@ -342,6 +342,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "cerebras",
     "dashscope",
     "snowflake",
+    "edenai",
 ]
 
 
@@ -447,6 +448,7 @@ class LLM(BaseLLM):
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
                 "snowflake": "snowflake",
+                "edenai": "edenai",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -576,6 +578,13 @@ class LLM(BaseLLM):
             # OpenRouter uses org/model format but accepts anything
             return True
 
+        if provider == "edenai":
+            # Eden AI ids are vendor/model, so a full reference is
+            # edenai/<vendor>/<model>. The vendor segment is whatever the gateway
+            # routes to, but both halves have to be present.
+            vendor, _, name = model_lower.partition("/")
+            return bool(vendor and name)
+
         if provider == "snowflake":
             return True
 
@@ -704,6 +713,7 @@ class LLM(BaseLLM):
             "hosted_vllm",
             "cerebras",
             "dashscope",
+            "edenai",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (

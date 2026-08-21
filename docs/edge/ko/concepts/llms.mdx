@@ -755,6 +755,37 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="Eden AI">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    # Required
+    EDENAI_API_KEY=<your-api-key>
+
+    # 선택 사항, 글로벌 게이트웨이 대신 Eden AI의 EU 게이트웨이로 요청을 보냅니다
+    EDENAI_BASE_URL=https://api.eu.edenai.run/v3
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="edenai/mistral/mistral-large-2512",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Eden AI 특징:
+      - 여러 상위 제공자에 대해 하나의 API 키
+      - EU 기반이며, 데이터 레지던시를 위한 별도의 EU 엔드포인트 제공
+      - 카탈로그 엔드포인트를 통해 모델별 기능 제공
+    </Info>
+
+    모델 ID는 이미 `vendor/model` 형식이므로 전체 참조는 세 부분으로 구성됩니다.
+    예: `edenai/anthropic/claude-sonnet-5`. 현재 사용 가능한 ID는 인증이 필요 없는 공개
+    [Eden AI 모델 카탈로그](https://api.edenai.run/v3/models)에서 확인하십시오.
+  </Accordion>
+
 </AccordionGroup>
 
 ## 스트리밍 응답
