@@ -792,3 +792,79 @@ class TestAuthoredDescriptionPreserved:
             assert "Tool Name: get_temperature" in rendered
             assert "Tool Arguments:" in rendered
             assert f"Tool Description: {self.AUTHORED}" in rendered
+
+def test_tool_requires_approval_approved():
+    """Test that the tool executes if the human approves."""
+    class DummyTestTool(BaseTool):
+        name: str = "dummy_tool"
+        description: str = "A dummy tool for testing"
+
+        def _run(self, question: str = "") -> str:
+            return "success_output"
+
+    tool = DummyTestTool(requires_human_approval=True) 
+    with patch.object(tool, '_request_human_approval', return_value=True):
+        with patch.object(tool, '_run', return_value="success_output") as mock_run:
+            result = tool.run(question="test")
+            assert result == "success_output"
+            mock_run.assert_called_once()
+
+
+def test_tool_requires_approval_rejected():
+    """Test that the tool hard-fails and DOES NOT execute if the human rejects."""
+    class DummyTestTool(BaseTool):
+        name: str = "dummy_tool"
+        description: str = "A dummy tool for testing"
+
+        def _run(self, question: str = "") -> str:
+            return "success_output"
+
+    tool = DummyTestTool(requires_human_approval=True)
+    with patch.object(tool, '_request_human_approval', return_value=False):
+        with patch.object(tool, '_run') as mock_run:
+            with pytest.raises(PermissionError, match="explicitly rejected by human"):
+                tool.run(question="test")
+            mock_run.assert_not_called()
+
+
+def test_tool_requires_approval_timeout():
+    """Test that timeouts fail closed securely."""
+    class DummyTestTool(BaseTool):
+        name: str = "dummy_tool"
+        description: str = "A dummy tool for testing"
+
+        def _run(self, question: str = "") -> str:
+            return "success_output"
+
+    tool = DummyTestTool(requires_human_approval=True)
+    with patch.object(tool, '_request_human_approval', side_effect=TimeoutError("Approval timed out")):
+        with patch.object(tool, '_run') as mock_run:
+            with pytest.raises(TimeoutError, match="Approval timed out"):
+                tool.run(question="test")
+            mock_run.assert_not_called()
+
+
+def test_tool_requires_approval_predicate():
+    """Test that requires_human_approval works as a callable predicate."""
+    class DummyTestTool(BaseTool):
+        name: str = "dummy_tool"
+        description: str = "A dummy tool for testing"
+
+        def _run(self, question: str = "") -> str:
+            return "success_output"
+
+    tool = DummyTestTool(requires_human_approval=lambda **kwargs: kwargs.get('question', '') == 'sensitive')
+    
+    with patch.object(tool, '_request_human_approval', return_value=True) as mock_approve:
+        with patch.object(tool, '_run', return_value="ok") as mock_run:
+            # Should NOT request approval (question != 'sensitive')
+            tool.run(question="normal")
+            mock_approve.assert_not_called()
+            mock_run.assert_called_once()
+            
+            mock_run.reset_mock()
+            
+            # SHOULD request approval (question == 'sensitive')
+            tool.run(question="sensitive")
+            mock_approve.assert_called_once()
+            mock_run.assert_called_once()

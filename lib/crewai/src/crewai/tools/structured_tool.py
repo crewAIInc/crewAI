@@ -28,6 +28,7 @@ from crewai.utilities.pydantic_schema_utils import (
     generate_model_description,
 )
 from crewai.utilities.string_utils import sanitize_tool_name
+import logging
 
 
 def _serialize_schema(v: type[BaseModel] | None) -> dict[str, Any] | None:
@@ -210,6 +211,7 @@ class CrewStructuredTool(BaseModel):
     func: Any = Field(default=None, exclude=True)
     result_as_answer: bool = Field(default=False)
     max_usage_count: int | None = Field(default=None)
+    requires_human_approval: Any = Field(default=False)
     current_usage_count: int = Field(default=0)
     tool_failure_policy: ToolFailurePolicy | None = Field(default=None)
     cache_function: Any = Field(default=None, exclude=True)
@@ -377,6 +379,45 @@ class CrewStructuredTool(BaseModel):
             hint = build_schema_hint(self.args_schema)
             raise ValueError(f"Arguments validation failed: {e}{hint}") from e
 
+    def _should_require_approval(self, *args: Any, **kwargs: Any) -> bool:
+            """Evaluates if human approval is needed, supporting both booleans and predicate functions."""
+            logger = logging.getLogger(__name__)
+            
+            approval_flag = getattr(self, "requires_human_approval", False)
+            if callable(approval_flag):
+                try:
+                    return approval_flag(*args, **kwargs)
+                except Exception as e:
+                    logger.error(f"Error in requires_human_approval predicate for {self.name}: {e}")
+                    return True
+            return bool(approval_flag)
+    
+    def _request_human_approval(self, *args: Any, **kwargs: Any) -> bool:
+        """Requests human approval, logs the audit trail, and handles timeouts securely."""
+        logger = logging.getLogger(__name__)
+            
+        print(f"Human approval required for tool: {self.name}")
+        print(f"Description: {self.description}")
+        print(f"Args: {args}, Kwargs: {kwargs}")
+            
+        audit_data = {
+            "tool": self.name,
+            "args": args,
+            "kwargs": kwargs,
+            "timestamp": time.time()
+            }
+            
+        try:
+            # Note: For async/Slack workflows, developers can subclass and override this specific block.
+            response = input("Approve execution? (yes/no): ").strip().lower()
+            approved = response in ["yes", "y", "approve"]
+            logger.info(f"Audit [HITL]: Tool={self.name}, Approved={approved}, Timestamp={audit_data['timestamp']}, Args={args}, Kwargs={kwargs}")
+            return approved
+        except Exception as e:
+            logger.error(f"Audit [HITL]: Tool={self.name}, Approved=False (Timeout/Error), Error={e}")
+            # Fail closed on timeout to prevent agent from retrying endlessly
+            raise TimeoutError(f"Approval timed out for '{self.name}'. Tool execution blocked.")    
+
     async def ainvoke(
         self,
         input: str | dict[str, Any],
@@ -401,6 +442,10 @@ class CrewStructuredTool(BaseModel):
             )
 
         self._increment_usage_count()
+
+        if self._should_require_approval(**parsed_args):
+            if not self._request_human_approval(**parsed_args):
+                raise PermissionError(f"Action '{self.name}' explicitly rejected by human.")
 
         try:
             if inspect.iscoroutinefunction(self.func):
@@ -436,6 +481,10 @@ class CrewStructuredTool(BaseModel):
             )
 
         self._increment_usage_count()
+
+        if self._should_require_approval(**parsed_args):
+            if not self._request_human_approval(**parsed_args):
+                raise PermissionError(f"Action '{self.name}' explicitly rejected by human.")
 
         if inspect.iscoroutinefunction(self.func):
             return asyncio.run(self.func(**parsed_args, **kwargs))
