@@ -138,6 +138,18 @@ paths:
                   example:
                     requestId: "user-request-12345"
                     source: "mobile-app"
+                restoreFromStateId:
+                  type: string
+                  format: uuid
+                  description: |
+                    State id of a previous `@persist` flow execution to hydrate from.
+                    The new run **forks** from the referenced snapshot: state is restored,
+                    then the execution proceeds under a fresh state id (the source run's
+                    history is preserved). If the referenced state id is unknown, the run
+                    silently starts as a fresh session — no error is returned. See the
+                    [inputs.id deprecation guide](/en/guides/flows/inputs-id-deprecation)
+                    for migration details and operational notes.
+                  example: "123e4567-e89b-42d3-a456-426614174000"
                 taskWebhookUrl:
                   type: string
                   format: uri
@@ -177,6 +189,12 @@ paths:
                     linkedin_url: "https://linkedin.com/in/johnsmith"
                   taskWebhookUrl: "https://api.example.com/webhooks/task"
                   crewWebhookUrl: "https://api.example.com/webhooks/crew"
+              flow_state_restore:
+                summary: Flow kickoff restored from a previous state
+                value:
+                  inputs:
+                    topic: "AI Agent Frameworks"
+                  restoreFromStateId: "123e4567-e89b-42d3-a456-426614174000"
       responses:
         "200":
           description: Crew execution started successfully
@@ -199,11 +217,26 @@ paths:
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "422":
-          description: Validation error - ensure all required inputs are provided
+          description: |
+            Validation error. Returned when required inputs are missing, or when
+            `inputs.id` is provided but is not a valid UUID.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ValidationError"
+              examples:
+                missing_inputs:
+                  summary: Required inputs missing
+                  value:
+                    error: "Validation Error"
+                    message: "Missing required inputs"
+                    details:
+                      missing_inputs: ["budget", "interests"]
+                invalid_inputs_id:
+                  summary: inputs.id is not a valid UUID
+                  value:
+                    error: "Validation Error"
+                    message: "'inputs.id' must be a valid UUID when provided; got 'test 1'."
         "500":
           $ref: "#/components/responses/ServerError"
 
