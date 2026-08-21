@@ -389,7 +389,11 @@ class MCPClient:
 
         try:
             await self._exit_stack.aclose()
-        except Exception as e:
+        except asyncio.CancelledError:
+            raise
+        except MCPConnectionError:
+            raise
+        except (Exception, BaseExceptionGroup) as e:
             raise RuntimeError(f"Error during MCP client disconnect: {e}") from e
         finally:
             self._session = None

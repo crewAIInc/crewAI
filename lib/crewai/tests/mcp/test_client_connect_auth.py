@@ -194,3 +194,21 @@ async def test_connect_cancelled_during_initialize_recovers_auth_on_transport_un
     assert len(failed_events) == 1
     assert failed_events[0].error_type == "authentication"
     assert failed_events[0].status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_disconnect_preserves_authentication_error_from_teardown():
+    transport = MockTransport()
+    client = MCPClient(transport)
+    auth_error = MCPAuthenticationError(401)
+    transport._connected = True
+    client._initialized = True
+
+    with patch.object(
+        client._exit_stack, "aclose", AsyncMock(side_effect=auth_error)
+    ):
+        with pytest.raises(MCPAuthenticationError) as exc_info:
+            await client.disconnect()
+
+    assert exc_info.value is auth_error
+    assert not client.connected
