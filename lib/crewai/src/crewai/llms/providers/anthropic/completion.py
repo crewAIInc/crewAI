@@ -46,6 +46,10 @@ TOOL_SEARCH_TOOL_TYPES: Final[tuple[str, ...]] = (
 
 ANTHROPIC_FILES_API_BETA: Final = "files-api-2025-04-14"
 ANTHROPIC_STRUCTURED_OUTPUTS_BETA: Final = "structured-outputs-2025-11-13"
+# Anthropic requires max_tokens. 4096 truncates large tool calls (e.g. a
+# full inline agent/crew spec) mid-JSON; trailing fields then fail validation
+# and every retry hits the same ceiling.
+DEFAULT_MAX_TOKENS: Final[int] = 32000
 
 NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
     tuple[
@@ -219,7 +223,7 @@ class AnthropicCompletion(BaseLLM):
     model: str = "claude-3-5-sonnet-20241022"
     timeout: float | None = None
     max_retries: int = 2
-    max_tokens: int = 4096
+    max_tokens: int = DEFAULT_MAX_TOKENS
     top_p: float | None = None
     stream: bool = False
     client_params: dict[str, Any] | None = None
@@ -295,7 +299,7 @@ class AnthropicCompletion(BaseLLM):
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Anthropic-specific fields."""
         config = super().to_config_dict()
-        if self.max_tokens != 4096:  # non-default
+        if self.max_tokens != DEFAULT_MAX_TOKENS:  # non-default
             config["max_tokens"] = self.max_tokens
         if self.max_retries != 2:  # non-default
             config["max_retries"] = self.max_retries
