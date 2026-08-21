@@ -553,7 +553,7 @@ Route labels and method names share one trigger namespace, so a handler must not
 | `router.response_format` as a model class | Omit it; the framework synthesizes one. A ref or schema is ignored with a warning |
 | `route_turn()` / `can_answer_from_history()` overrides | Author the Flow in Python, or point a method's `do` at a `call: code` ref |
 
-`crewai run` has no chat loop yet: it reports that the flow is conversational and exits rather than running a single turn. Drive a declarative conversational flow from Python with `handle_turn()`, `stream_turn()` or `chat()`.
+`crewai run` opens the chat TUI for a declarative conversational flow — the same one a Python conversational Flow gets. A chat loop needs a terminal, so a headless run says so instead of running a single turn; drive it from Python there with `handle_turn()` or `stream_turn()`. A flow that also uses `@human_feedback` runs on a terminal REPL, because the runtime collects feedback with a blocking prompt the TUI cannot service. `--inputs` is not accepted for a conversational flow — each turn's input is the message you type — and resuming a session by id is not wired into the CLI yet; use `flow.handle_turn(message, session_id=...)` from Python for that.
 
 ## Tracing across turns
 
