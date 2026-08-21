@@ -1,13 +1,52 @@
-from typing import Any, Literal
+import builtins
+from typing import Annotated, Any, Literal
 
-from pydantic import field_serializer
+from pydantic import BeforeValidator, field_serializer
 
 from crewai.events.base_events import BaseEvent
 from crewai.tasks.task_output import TaskOutput
 
 
-_ExceptionClass = type[BaseException]
-"""An exception class, e.g. ``ValueError``.
+def _resolve_exception_class(value: Any) -> Any:
+    """Turn a serialized class name back into the class, leaving anything else alone.
+
+    Needed because the JSON dump writes the class *name*. Without this, restoring a
+    checkpoint fails ``TaskFailedEvent`` validation and ``_resolve_event`` silently
+    degrades the whole event to a bare ``BaseEvent`` -- losing ``error`` as well, which
+    is a plain string that would otherwise have survived.
+
+    Resolution is against real exception classes only, so this does not reopen the hole
+    the class-typed field closes: a message such as ``"secret_token"`` resolves to
+    nothing, is returned unchanged, and is then rejected by the field's own type.
+
+    A name whose class is not imported in this process resolves to nothing and degrades
+    as before -- accepted, because inventing a class from an arbitrary string would be
+    exactly the injection risk this field exists to avoid.
+    """
+    if not isinstance(value, str):
+        return value
+
+    candidate = getattr(builtins, value, None)
+    if isinstance(candidate, type) and issubclass(candidate, BaseException):
+        return candidate
+
+    seen: set[type[BaseException]] = set()
+    stack: list[type[BaseException]] = [BaseException]
+    while stack:
+        cls = stack.pop()
+        if cls in seen:
+            continue
+        seen.add(cls)
+        if cls.__name__ == value:
+            return cls
+        stack.extend(cls.__subclasses__())
+    return value
+
+
+_ExceptionClass = Annotated[
+    type[BaseException], BeforeValidator(_resolve_exception_class)
+]
+"""An exception class, e.g. ``ValueError``, or the class name a JSON dump produced.
 
 Declared here rather than inline because ``TaskFailedEvent`` has a field named ``type``,
 which shadows the builtin for the rest of that class body: an inline

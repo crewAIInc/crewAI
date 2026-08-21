@@ -495,3 +495,55 @@ def test_an_absent_error_type_serializes_as_null_not_as_a_string():
     event = TaskFailedEvent(error="boom", task=None)
 
     assert event.model_dump(mode="json")["error_type"] is None
+
+
+def test_a_dumped_event_restores_as_itself_and_keeps_both_error_fields():
+    """The JSON dump must round-trip, or restoring a checkpoint loses the failure.
+
+    `_resolve_event` in state/event_record.py wraps `cls.model_validate` in a bare
+    `except Exception` and falls back to `BaseEvent`. So a class-name string the field
+    would not accept does not raise -- it silently degrades the whole event, taking
+    `error` with it even though `error` is a plain string that would have survived.
+    That is worse than the raise this serializer was added to prevent.
+    """
+    from crewai.events.types.task_events import TaskFailedEvent
+    from crewai.state.event_record import EventRecord
+
+    event = TaskFailedEvent(error="boom", error_type=ValueError, task=None)
+    record = EventRecord()
+    record.add(event)
+
+    restored = EventRecord.model_validate(record.model_dump(mode="json")).nodes[
+        event.event_id
+    ].event
+
+    assert type(restored).__name__ == "TaskFailedEvent", (
+        "the event degraded to a bare BaseEvent, so the whole failure was lost"
+    )
+    assert restored.error == "boom"
+    assert restored.error_type is ValueError
+
+
+def test_resolving_a_name_cannot_smuggle_in_a_message():
+    """Accepting the serialized name must not reopen the hole the class type closes.
+
+    Resolution is against real exception classes only, so an identifier-shaped message
+    resolves to nothing and is then rejected by the field's own type.
+    """
+    import pydantic
+    from crewai.events.types.task_events import TaskFailedEvent
+
+    for not_an_exception in ("secret_token", "sk_live_1234", "dict", "os"):
+        with pytest.raises(pydantic.ValidationError, match="subclass of BaseException"):
+            TaskFailedEvent(error="boom", error_type=not_an_exception, task=None)
+
+
+def test_a_non_builtin_exception_class_also_round_trips():
+    """Most failures here are not builtins -- provider and pydantic errors dominate."""
+    from crewai.events.types.task_events import TaskFailedEvent
+
+    event = TaskFailedEvent(error="boom", error_type=_ProducerFailure, task=None)
+    dumped = event.model_dump(mode="json")
+
+    assert dumped["error_type"] == "_ProducerFailure"
+    assert TaskFailedEvent.model_validate(dumped).error_type is _ProducerFailure
