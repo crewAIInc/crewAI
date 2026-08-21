@@ -1,0 +1,408 @@
+import base64
+import shlex
+import time
+
+import pytest
+from k8s_agent_sandbox.models import (
+    ExecutionResult,
+    FileEntry,
+)
+
+from crewai_tools.tools.k8s_agent_sandbox.file_tool import (
+    K8sAgentSandboxFileTool,
+    K8sAgentSandboxFileToolOutput,
+    FileEntryModel,
+)
+
+
+@pytest.fixture
+def k8s_file_tool(sample_toolset):
+    return K8sAgentSandboxFileTool(toolset=sample_toolset)
+
+
+class TestFileToolReadAction:
+    @pytest.mark.parametrize("binary", [False, True])
+    def test_success(self, k8s_file_tool, mock_sandbox, binary):
+        content = b"some-content"
+        mock_sandbox.files.read.return_value = content
+
+        result = k8s_file_tool.run(
+            action="read", path="some/path", binary=binary, timeout=120
+        )
+
+        if binary:
+            assert result == K8sAgentSandboxFileToolOutput(
+                content=base64.b64encode(content).decode("ascii"),
+                path="some/path",
+                encoding="base64",
+            )
+        else:
+            assert result == K8sAgentSandboxFileToolOutput(
+                content="some-content",
+                path="some/path",
+                encoding="utf-8",
+            )
+
+        mock_sandbox.files.read.assert_called_once_with("some/path", timeout=120)
+
+    def test_invalid_utf(self, k8s_file_tool, mock_sandbox):
+        content = b"Some malformed \xff content"
+        mock_sandbox.files.read.return_value = content
+        result = k8s_file_tool.run(action="read", path="some/path")
+
+        assert result == K8sAgentSandboxFileToolOutput(
+            content=base64.b64encode(content).decode("ascii"),
+            path="some/path",
+            encoding="base64",
+            note="File was not valid utf-8; returned as base64.",
+        )
+
+
+class TestFileToolWriteAction:
+    @pytest.mark.parametrize("binary", [False, True])
+    def test_success(self, k8s_file_tool, mock_sandbox, binary):
+        mock_sandbox.commands.run.return_value = ExecutionResult(
+            exit_code=0,
+            stdout="",
+            stderr="",
+        )
+
+        content_to_write = "Hello World!"
+
+        if binary:
+            content = base64.b64encode(content_to_write.encode("ascii"))
+        else:
+            content = content_to_write
+
+        result = k8s_file_tool.run(
+            action="write",
+            path="parent/file.txt",
+            content=content,
+            binary=binary,
+            timeout=120,
+        )
+
+        assert result == K8sAgentSandboxFileToolOutput(
+            bytes=12,
+            path="parent/file.txt",
+            status="written",
+        )
+
+        mock_sandbox.commands.run.assert_called_once_with(
+            "mkdir -p -- parent", timeout=120
+        )
+
+        assert mock_sandbox.files.write.call_args.args == (
+            "parent/file.txt",
+            b"Hello World!",
+        )
+        assert 0 <= mock_sandbox.files.write.call_args.kwargs["timeout"] <= 120
+
+    def test_missing_content(self, k8s_file_tool, mock_sandbox):
+        mock_sandbox.commands.run.return_value = ExecutionResult(
+            exit_code=0,
+            stdout="",
+            stderr="",
+        )
+
+        k8s_file_tool.run(
+            action="write",
+            path="parent/file.txt",
+        )
+
+        assert mock_sandbox.files.write.call_args.args == ("parent/file.txt", b"")
+
+    def test_invalid_base64_content(self, k8s_file_tool, mock_sandbox):
+        with pytest.raises(ValueError, match="valid base64"):
+            k8s_file_tool.run(
+                action="write",
+                path="parent/file.txt",
+                content="not-valid-base64!@#",
+                binary=True,
+            )
+
+        mock_sandbox.files.write.assert_not_called()
+        mock_sandbox.commands.run.assert_not_called()
+
+    def test_line_wrapped_base64_content(self, k8s_file_tool, mock_sandbox):
+        mock_sandbox.commands.run.return_value = ExecutionResult(
+            exit_code=0, stdout="", stderr=""
+        )
+        payload = b"x" * 100
+
+        k8s_file_tool.run(
+            action="write",
+            path="parent/file.txt",
+            content=base64.encodebytes(payload).decode("ascii"),
+            binary=True,
+        )
+
+        assert mock_sandbox.files.write.call_args.args == ("parent/file.txt", payload)
+
+    def test_mkdir_parent_error(self, k8s_file_tool, mock_sandbox):
+        mock_sandbox.commands.run.return_value = ExecutionResult(
+            exit_code=1,
+            stdout="",
+            stderr="some parent dir creation error",
+        )
+
+        content = "Hello World!"
+
+        with pytest.raises(Exception, match="some parent dir creation error"):
+            k8s_file_tool.run(
+                action="write",
+                path="parent/file.txt",
+                content=content,
+            )
+
+
+class TestFileToolAppendAction:
+    @pytest.mark.parametrize("binary", [False, True])
+    def test_success(self, k8s_file_tool, mock_sandbox, binary):
+        mock_sandbox.commands.run.return_value = ExecutionResult(
+            exit_code=0,
+            stdout="",
+            stderr="",
+        )
+
+        content_to_append = "some content"
+
+        if binary:
+            content = base64.b64encode(content_to_append.encode("ascii"))
+        else:
+            content = content_to_append
+
+        result = k8s_file_tool.run(
+            action="append",
+            path="parent/file.txt",
+            content=content,
+            binary=binary,
+            timeout=120,
+        )
+
+        assert result == K8sAgentSandboxFileToolOutput(
+            path="parent/file.txt",
+            status="appended",
+            appended_bytes=12,
+        )
+
+
+        assert "mkdir" in mock_sandbox.commands.run.call_args_list[0].args[0]
+
+        mock_sandbox.files.write.assert_called_once()
+        assert mock_sandbox.files.write.call_args.args[1] == b"some content"
+        tmp_file_path = mock_sandbox.files.write.call_args.args[0]
+        assert tmp_file_path.startswith("/tmp")
+        assert 0 <= mock_sandbox.files.write.call_args.kwargs["timeout"] <= 120
+
+        assert "cat /tmp" in mock_sandbox.commands.run.call_args_list[1].args[0]
+
+    @pytest.mark.parametrize("binary", [False, True])
+    def test_error(self, k8s_file_tool, mock_sandbox, binary):
+        mock_sandbox.commands.run.side_effect = [
+            ExecutionResult(exit_code=0, stdout="", stderr=""),
+            ExecutionResult(exit_code=1, stdout="", stderr="append error"),
+        ]
+
+        content_to_append = "some content"
+
+        if binary:
+            content = base64.b64encode(content_to_append.encode("ascii"))
+        else:
+            content = content_to_append
+
+        with pytest.raises(RuntimeError, match="append error"):
+            k8s_file_tool.run(
+                action="append",
+                path="parent/file.txt",
+                content=content,
+                binary=binary,
+                timeout=120,
+            )
+
+
+    def test_invalid_base64_content(self, k8s_file_tool, mock_sandbox):
+        with pytest.raises(ValueError, match="valid base64"):
+            k8s_file_tool.run(
+                action="append",
+                path="parent/file.txt",
+                content="not-valid-base64!@#",
+                binary=True,
+            )
+
+        mock_sandbox.files.write.assert_not_called()
+        mock_sandbox.commands.run.assert_not_called()
+
+    def test_staged_chunk_removed_when_the_command_raises(
+        self, k8s_file_tool, mock_sandbox
+    ):
+        mock_sandbox.commands.run.side_effect = [
+            ExecutionResult(exit_code=0, stdout="", stderr=""),  # mkdir
+            RuntimeError("connection lost"),  # cat
+            ExecutionResult(exit_code=0, stdout="", stderr=""),  # cleanup
+        ]
+
+        with pytest.raises(RuntimeError, match="connection lost"):
+            k8s_file_tool.run(
+                action="append",
+                path="parent/file.txt",
+                content="some content",
+                timeout=120,
+            )
+
+        tmp_file_path = mock_sandbox.files.write.call_args.args[0]
+        assert mock_sandbox.commands.run.call_args.args[0] == (
+            f"rm -f -- {shlex.quote(tmp_file_path)}"
+        )
+
+
+class TestFileToolListAction:
+    def test_success(self, k8s_file_tool, mock_sandbox):
+        modification_time = time.time()
+        mock_sandbox.files.list.return_value = [
+            FileEntry(
+                name="test.txt", size=1000000, type="file", mod_time=modification_time
+            ),
+            FileEntry(
+                name="subdir", size=4096, type="directory", mod_time=modification_time
+            ),
+        ]
+
+        result = k8s_file_tool.run(action="list", path="some/directory")
+
+        assert result == K8sAgentSandboxFileToolOutput(
+            entries=[
+                FileEntryModel(
+                    mod_time=modification_time,
+                    name="test.txt",
+                    size=1000000,
+                    type="file",
+                ),
+                FileEntryModel(
+                    mod_time=modification_time,
+                    name="subdir",
+                    size=4096,
+                    type="directory",
+                ),
+            ],
+            path="some/directory",
+        )
+
+
+class TestFileToolDeleteAction:
+    def test_success(self, k8s_file_tool, mock_sandbox):
+        file_path = "parent/file.txt"
+        mock_sandbox.commands.run.return_value = ExecutionResult(
+            exit_code=0, stdout="", stderr=""
+        )
+        result = k8s_file_tool.run(action="delete", path=file_path)
+
+        assert result == K8sAgentSandboxFileToolOutput(
+            path=file_path,
+            status="deleted",
+        )
+
+        mock_sandbox.commands.run.assert_called_once()
+        assert (
+            mock_sandbox.commands.run.call_args.args[0]
+            == f"rm -r -- {shlex.quote(file_path)}"
+        )
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/",
+            "/usr",
+            "/etc",
+            "/app",
+            "/app/some-path",
+            "..",
+            "../outside",
+            "parent/../../outside",
+        ],
+    )
+    def test_delete_outside_working_dir_error(
+        self,
+        k8s_file_tool,
+        mock_sandbox,
+        path,
+    ):
+        mock_sandbox.commands.run.return_value = ExecutionResult(
+            exit_code=0, stdout="", stderr=""
+        )
+
+        with pytest.raises(ValueError, match="working directory"):
+            k8s_file_tool.run(action="delete", path=path)
+
+        mock_sandbox.commands.run.assert_not_called()
+
+    def test_delete_working_dir_itself_error(self, k8s_file_tool, mock_sandbox):
+        mock_sandbox.commands.run.return_value = ExecutionResult(
+            exit_code=0, stdout="", stderr=""
+        )
+
+        with pytest.raises(RuntimeError, match="Invalid path"):
+            k8s_file_tool.run(action="delete", path=".")
+
+        mock_sandbox.commands.run.assert_not_called()
+
+
+class TestFileToolMkdirAction:
+    def test_success(self, k8s_file_tool, mock_sandbox):
+        mock_sandbox.commands.run.return_value = ExecutionResult(
+            exit_code=0, stdout="", stderr=""
+        )
+
+        result = k8s_file_tool.run(action="mkdir", path="parent/subfolder", timeout=120)
+
+        assert result == K8sAgentSandboxFileToolOutput(
+            path="parent/subfolder",
+            status="created",
+        )
+
+        mock_sandbox.commands.run.assert_called_once_with(
+            f"mkdir -p -- {shlex.quote('parent/subfolder')}",
+            timeout=120,
+        )
+
+
+class TestFileToolPathValidation:
+    @pytest.mark.parametrize(
+        "action", ["read", "write", "append", "list", "delete", "mkdir", "exists"]
+    )
+    @pytest.mark.parametrize("path", ["/etc/passwd", "../outside.txt", ""])
+    def test_path_must_stay_in_working_dir(
+        self, k8s_file_tool, mock_sandbox, action, path
+    ):
+        with pytest.raises(ValueError, match="working directory|cannot be empty"):
+            k8s_file_tool.run(action=action, path=path, content="some content")
+
+        mock_sandbox.commands.run.assert_not_called()
+        mock_sandbox.files.write.assert_not_called()
+        mock_sandbox.files.read.assert_not_called()
+
+    @pytest.mark.parametrize("action", ["delete", "mkdir"])
+    def test_dash_prefixed_path_is_not_parsed_as_option(
+        self, k8s_file_tool, mock_sandbox, action
+    ):
+        mock_sandbox.commands.run.return_value = ExecutionResult(
+            exit_code=0, stdout="", stderr=""
+        )
+
+        k8s_file_tool.run(action=action, path="-rf")
+
+        command = mock_sandbox.commands.run.call_args.args[0]
+        assert command.endswith("-- -rf")
+
+
+class TestFileToolExistsAction:
+    def test_success(self, k8s_file_tool, mock_sandbox):
+        mock_sandbox.files.exists.return_value = True
+
+        result = k8s_file_tool.run(action="exists", path="parent/file.txt", timeout=120)
+
+        assert result == K8sAgentSandboxFileToolOutput(exists=True, path="parent/file.txt")
+
+        mock_sandbox.files.exists.assert_called_once_with(
+            "parent/file.txt", timeout=120
+        )

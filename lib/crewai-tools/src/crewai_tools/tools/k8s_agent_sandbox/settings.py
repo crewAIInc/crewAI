@@ -1,0 +1,71 @@
+from typing import TYPE_CHECKING
+from dataclasses import (
+    dataclass,
+    field,
+)
+from threading import Lock
+
+if TYPE_CHECKING:
+    from k8s_agent_sandbox.models import (  # type: ignore[import-untyped]
+        SandboxConnectionConfig,
+        SandboxTracerConfig,
+    )
+    from k8s_agent_sandbox.sandbox_client import SandboxClient  # type: ignore[import-untyped]
+
+from .utils import lazy_import_k8s_agent_sandbox
+
+
+@dataclass
+class K8sAgentSandboxToolClientSettings:  # type: ignore[no-any-unimported]
+    """
+    The dataclass that stores data required to created an Agent Sandbox Client.
+    It basically has the same arguments as the `k8s_agent_sandbox.SandboxClient`
+    class.
+    """
+
+    connection_config: "SandboxConnectionConfig | None" = None  # type: ignore[no-any-unimported]
+    tracer_config: "SandboxTracerConfig | None" = None  # type: ignore[no-any-unimported]
+    cleanup: bool = False
+
+    _client: "SandboxClient | None" = field(default=None, init=False, repr=False)  # type: ignore[no-any-unimported]
+    _client_lock: Lock = field(
+        default_factory=Lock, init=False, repr=False, compare=False
+    )
+
+    @property
+    def client(self) -> "SandboxClient":  # type: ignore[no-any-unimported]
+        if self._client is not None:
+            return self._client
+
+        # The same settings can be shared by several lifecycle managers, so the
+        # client has to be created only once even when they race for it.
+        with self._client_lock:
+            if self._client is not None:
+                return self._client
+
+            # from k8s_agent_sandbox.sandbox_client import SandboxClient
+            kas_client_sandbox_module = lazy_import_k8s_agent_sandbox("sandbox_client")
+
+            client: "SandboxClient" = kas_client_sandbox_module.SandboxClient(  # type: ignore[no-any-unimported]
+                connection_config=self.connection_config,
+                tracer_config=self.tracer_config,
+                cleanup=self.cleanup,
+            )
+            self._client = client
+            return self._client
+
+
+@dataclass
+class K8sAgentSandboxToolSandboxSettings:
+    """
+    The dataclass that stores sandbox settings.
+
+    Args:
+        warmpool: Name of the warm pool where a sandbox should be created.
+        namespace: Name of the namespace where a sandbox should be created.
+        sandbox_timeout: The absolute TTL in seconds from creation after which the sandbox will be automatically killed.
+    """
+
+    warmpool: str
+    namespace: str
+    sandbox_timeout: int = 300

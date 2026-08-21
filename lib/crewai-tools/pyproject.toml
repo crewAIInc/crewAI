@@ -158,6 +158,9 @@ e2b = [
     "e2b-code-interpreter~=2.6.0",
 ]
 
+k8s_agent_sandbox = [
+    "k8s-agent-sandbox~=0.5.0",
+]
 
 [tool.uv]
 exclude-newer = "3 days"

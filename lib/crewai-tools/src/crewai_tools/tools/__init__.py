@@ -209,6 +209,15 @@ from crewai_tools.tools.youtube_video_search_tool.youtube_video_search_tool impo
     YoutubeVideoSearchTool,
 )
 from crewai_tools.tools.zapier_action_tool.zapier_action_tool import ZapierActionTools
+from crewai_tools.tools.k8s_agent_sandbox import (
+    K8sAgentSandboxToolClientSettings,
+    K8sAgentSandboxToolSandboxSettings,
+    K8sAgentSandboxToolset,
+    K8sAgentSandboxBaseTool,
+    K8sAgentSandboxExecTool,
+    K8sAgentSandboxPythonTool,
+    K8sAgentSandboxFileTool,
+)
 
 
 __all__ = [
@@ -263,6 +272,13 @@ __all__ = [
     "InvokeCrewAIAutomationTool",
     "JSONSearchTool",
     "JinaScrapeWebsiteTool",
+    "K8sAgentSandboxToolClientSettings",
+    "K8sAgentSandboxToolSandboxSettings",
+    "K8sAgentSandboxToolset",
+    "K8sAgentSandboxBaseTool",
+    "K8sAgentSandboxExecTool",
+    "K8sAgentSandboxFileTool",
+    "K8sAgentSandboxPythonTool",
     "LinkupSearchTool",
     "LlamaIndexTool",
     "MDXSearchTool",
