@@ -10,7 +10,7 @@ from uuid import uuid4
 import pytest
 from pathlib import Path
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, create_model
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
@@ -2305,6 +2305,13 @@ class _ScriptedLLM(BaseLLM):
         return 8192
 
 
+class _Outer:
+    """Holds a nested model, so its qualname is dotted without `<locals>`."""
+
+    class Route(BaseModel):
+        intent: str
+
+
 def _conversational_declaration(**overrides: Any) -> dict[str, Any]:
     """A declaration naming the built-in methods explicitly.
 
@@ -2531,6 +2538,46 @@ class TestDeclaredRouterResponseFormat:
 
         assert definition.conversational.router.response_format is None
         assert "is not a Pydantic model class" in caplog.text
+
+    def test_a_nested_model_is_omitted_from_the_projection(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """`module.Outer.Route` reloads `module.Outer` as a module that is absent."""
+
+        @ConversationConfig(router=RouterConfig(response_format=_Outer.Route))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        with caplog.at_level(logging.WARNING, logger="crewai.flow.dsl._utils"):
+            definition = ClassChat.flow_definition()
+
+        assert definition.conversational.router.response_format is None
+        assert "cannot be imported by its module path" in caplog.text
+        assert ClassChat()._conversation_config.router.response_format is _Outer.Route
+
+    def test_an_unbound_generated_model_is_omitted_from_the_projection(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A `create_model()` class no module attribute names cannot be reloaded."""
+        generated = create_model("GeneratedRoute", intent=(str, ...))
+
+        @ConversationConfig(router=RouterConfig(response_format=generated))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        with caplog.at_level(logging.WARNING, logger="crewai.flow.dsl._utils"):
+            definition = ClassChat.flow_definition()
+
+        assert definition.conversational.router.response_format is None
+        assert "cannot be imported by its module path" in caplog.text
+
+        reloaded = Flow.from_declaration(contents=definition.to_dict())
+        synthesized = reloaded._router_response_format(
+            reloaded._conversation_config.router
+        )
+
+        assert synthesized is not generated
+        assert list(synthesized.model_fields) == ["intent"]
 
     def test_a_dropped_projection_reloads_with_the_synthesized_model(self) -> None:
         class LocalRoute(BaseModel):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 from typing import Any, ParamSpec, TypeVar
 
 from pydantic import BaseModel, ValidationError
@@ -276,6 +277,19 @@ def _build_persistence_definition(value: Any) -> FlowPersistenceDefinition | Non
     )
 
 
+def _resolves_to_itself(cls: type[BaseModel]) -> bool:
+    """Whether ``module.qualname`` would actually import ``cls`` back.
+
+    The loader splits a ref on its last dot, so a nested class projects
+    ``module.Outer.Route`` and ``module.Outer`` is then looked up as a module
+    that does not exist. A ``create_model()`` class held only in a local or a
+    dict is not reachable under its qualname either. Checked against the
+    already-imported module so projecting never triggers an import.
+    """
+    module = sys.modules.get(cls.__module__)
+    return module is not None and getattr(module, cls.__qualname__, None) is cls
+
+
 def _python_reference(value: Any) -> dict[str, str] | None:
     """Project a class as the dotted ``{"python": ...}`` ref the contract uses.
 
@@ -292,6 +306,8 @@ def _python_reference(value: Any) -> dict[str, str] | None:
         # A dotted path through ``<locals>`` cannot be imported back, so the
         # ref would only fail when something tried to reload it.
         reason = "is defined inside a function and cannot be imported by path"
+    elif not _resolves_to_itself(value):
+        reason = "cannot be imported by its module path"
 
     if reason is not None:
         logger.warning(
