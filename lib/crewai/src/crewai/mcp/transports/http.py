@@ -102,7 +102,7 @@ class HTTPTransport(BaseTransport):
             raise failure from error
         if isinstance(error, asyncio.CancelledError):
             logger.debug("MCP HTTP transport teardown was cancelled")
-            return
+            raise error
         logger.debug("Ignoring MCP HTTP transport teardown error: %s", error)
 
     async def connect(self) -> Self:

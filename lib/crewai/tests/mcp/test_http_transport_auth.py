@@ -141,6 +141,23 @@ async def test_http_transport_disconnect_recovers_auth_from_exit():
 
 
 @pytest.mark.asyncio
+async def test_http_transport_disconnect_propagates_cancellation_without_http_status():
+    transport = HTTPTransport(url="https://mcp.example.com/mcp")
+    mock_context = MagicMock()
+    mock_context.__aexit__ = AsyncMock(side_effect=asyncio.CancelledError())
+
+    transport._transport_context = mock_context
+    transport._set_streams(MagicMock(), MagicMock())
+
+    with pytest.raises(asyncio.CancelledError):
+        await transport.disconnect()
+
+    mock_context.__aexit__.assert_awaited_once()
+    assert transport._transport_context is None
+    assert not transport.connected
+
+
+@pytest.mark.asyncio
 async def test_http_transport_connect_timeout_recovers_auth_on_exit():
     transport = HTTPTransport(url="https://mcp.example.com/mcp")
     mock_context = MagicMock()
