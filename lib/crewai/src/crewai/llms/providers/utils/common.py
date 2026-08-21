@@ -41,15 +41,24 @@ def validate_function_name(name: str, provider: str = "LLM") -> str:
     return name
 
 
-def extract_tool_info(tool: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
+def _parameters_from_args_schema(args_schema: Any) -> dict[str, Any]:
+    """Build a JSON Schema dict from a Pydantic args_schema class."""
+    if args_schema is None or not hasattr(args_schema, "model_json_schema"):
+        return {}
+    schema_output = generate_model_description(args_schema)
+    return schema_output.get("json_schema", {}).get("schema", {})
+
+
+def extract_tool_info(tool: Any) -> tuple[str, str, dict[str, Any]]:
     """Extract tool information from various schema formats.
 
-    Handles both OpenAI/standard format and direct format:
+    Handles:
+    - CrewAI BaseTool instances (name, description, args_schema)
     - OpenAI format: {"type": "function", "function": {"name": "...", ...}}
     - Direct format: {"name": "...", "description": "...", ...}
 
     Args:
-        tool: Tool dictionary in any supported format
+        tool: Tool dictionary or BaseTool instance
 
     Returns:
         Tuple of (name, description, parameters)
@@ -58,7 +67,12 @@ def extract_tool_info(tool: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
         ValueError: If tool format is invalid
     """
     if not isinstance(tool, dict):
-        raise ValueError("Tool must be a dictionary")
+        name = getattr(tool, "name", None)
+        description = getattr(tool, "description", None)
+        if not isinstance(name, str) or not name:
+            raise ValueError("Tool must be a dictionary")
+        parameters = _parameters_from_args_schema(getattr(tool, "args_schema", None))
+        return name, description if isinstance(description, str) else "", parameters
 
     if "function" in tool:
         function_info = tool["function"]
@@ -75,18 +89,16 @@ def extract_tool_info(tool: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
 
         # Fall back to args_schema for Pydantic-defined tools
         if not parameters and "args_schema" in tool:
-            if hasattr(tool["args_schema"], "model_json_schema"):
-                schema_output = generate_model_description(tool["args_schema"])
-                parameters = schema_output.get("json_schema", {}).get("schema", {})
+            parameters = _parameters_from_args_schema(tool["args_schema"])
 
     return name, description, parameters
 
 
-def log_tool_conversion(tool: dict[str, Any], provider: str) -> None:
+def log_tool_conversion(tool: Any, provider: str) -> None:
     """Log tool conversion for debugging.
 
     Args:
-        tool: The tool being converted
+        tool: The tool being converted (dictionary or BaseTool instance)
         provider: The provider name
     """
     try:
@@ -112,15 +124,14 @@ def sanitize_function_name(name: str) -> str:
     return sanitize_tool_name(name)
 
 
-def safe_tool_conversion(
-    tool: dict[str, Any], provider: str
-) -> tuple[str, str, dict[str, Any]]:
+def safe_tool_conversion(tool: Any, provider: str) -> tuple[str, str, dict[str, Any]]:
     """Safely extract and validate tool information.
 
     Combines extraction, validation, and logging for robust tool conversion.
 
     Args:
-        tool: Tool dictionary to convert
+        tool: Tool dictionary or BaseTool instance to convert.
+            BaseTool parameters come from ``args_schema``.
         provider: Provider name for error messages and logging
 
     Returns:
