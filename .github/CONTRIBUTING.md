@@ -29,13 +29,15 @@ uv run pre-commit install
 
 ## Repository Structure
 
-This is a uv workspace with four packages under `lib/`:
+This is a uv workspace with six packages under `lib/`:
 
 | Package | Path | Description |
 |---------|------|-------------|
 | `crewai` | `lib/crewai/` | Core framework |
 | `crewai-tools` | `lib/crewai-tools/` | Tool integrations |
 | `crewai-files` | `lib/crewai-files/` | File handling |
+| `cli` | `lib/cli/` | CLI tooling |
+| `crewai-core` | `lib/crewai-core/` | Core agent runtime |
 | `devtools` | `lib/devtools/` | Internal release tooling |
 
 Documentation lives in `docs/` with translations under `docs/{en,ar,ko,pt-BR}/`.
