@@ -96,7 +96,7 @@ Cada `handle_turn` executa este pipeline:
 5. **Execução do grafo** — `@start` → `@router` → handlers `@listen`.
 6. **Fim da execução** — `flow_finished` por turno e finalização de trace são **ignorados** com adiamento; `Agent.kickoff()` / crews aninhados também não fecham o batch pai.
 
-Os handlers devem chamar **`append_assistant_message(reply)`** para que o próximo turno inclua a resposta do assistente. A linha do usuário já é salva por `handle_turn` — não acrescente de novo nos handlers.
+Os handlers devem chamar **`append_assistant_message(reply)`** quando a resposta visível não for o valor de retorno, ou ao recortar o histórico. Um retorno de string pública também é gravado como assistente e entra no snapshot `@persist`, então uma nova instância de Flow o restaura. A linha do usuário já é salva por `handle_turn` — não acrescente de novo nos handlers.
 
 ## `ConversationalConfig` (padrões em nível de classe)
 
@@ -370,7 +370,7 @@ Você pode sobrescrever qualquer uma definindo um handler com o mesmo nome na su
 2. Anexa a mensagem do usuário em `state.messages`, define `current_user_message` / `last_user_message`. `last_intent` é **preservado do turno anterior** para que o LLM de routing possa usá-lo como sinal.
 3. Roda `conversation_start` → `route_conversation` → o handler `@listen` escolhido.
 4. O router grava sua decisão em `state.last_intent` (visível para o contexto de routing do próximo turno).
-5. Se seu handler retornou uma string e ainda não chamou `append_assistant_message`, `handle_turn` anexa para você.
+5. Se seu handler retornou uma string e ainda não chamou `append_assistant_message`, `handle_turn` anexa para você e persiste o `state.messages` atualizado para que a restauração `@persist` inclua o turno do assistente.
 
 Chame `handle_turn()` para mensagens de chat. Chamar `kickoff(inputs={"id": ...})` diretamente executa o grafo sem aplicar o wrapper de turno conversacional.
 
