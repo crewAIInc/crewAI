@@ -3,6 +3,7 @@ import inspect
 import os
 from pathlib import Path
 import threading
+import time
 from unittest.mock import Mock, patch
 
 import pytest
@@ -626,3 +627,51 @@ def test_every_span_records_the_crewai_version() -> None:
         "these methods open more spans than they record crewai_version on: "
         + ", ".join(sorted(shortfalls))
     )
+
+
+def test_telemetry_singleton_race_condition():
+    """
+    Verify that concurrent Telemetry() calls initialize telemetry exactly once.
+
+    Multiple threads may construct the singleton concurrently, but initialization
+    must be serialized so the telemetry setup runs only once.
+    """
+    NUM_THREADS = 5
+    calls = 0
+
+    def mocked_setup_telemetry(self):
+        nonlocal calls
+        # Sleep briefly to ensure concurrent threads pile up on the lock.
+        # This guarantees we test the contention without a 1.0s CI delay.
+        time.sleep(0.05)
+        calls += 1
+        # Mock the essential state changes
+        self.ready = True
+        self._initialized = True
+
+    # Setup mocks and thread execution
+    instances = []
+
+    def worker():
+        instances.append(Telemetry())
+
+    with patch.object(Telemetry, '_setup_telemetry', autospec=True) as mock_setup, \
+         patch.object(Telemetry, '_is_telemetry_disabled', return_value=False):
+        mock_setup.side_effect = mocked_setup_telemetry
+
+        threads = [threading.Thread(target=worker) for _ in range(NUM_THREADS)]
+
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        # Assertions
+
+        # A. All threads received the exact same Singleton object
+        assert len(instances) == NUM_THREADS
+        assert len({id(instance) for instance in instances}) == 1
+
+        # B. How many times did we run the expensive setup?
+        # The initialization lock guarantees that setup runs exactly once.
+        assert calls == 1, f"Expected 1 initialization, got {calls}"
