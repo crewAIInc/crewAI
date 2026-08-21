@@ -104,6 +104,33 @@ def test_anthropic_completion_initialization_parameters():
     assert llm.top_p == 0.9
 
 
+def test_anthropic_defaults_max_tokens_to_32000():
+    """Native Anthropic used to default to 4096, which truncates large tool calls."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    from crewai.llms.providers.anthropic.completion import (
+        DEFAULT_MAX_TOKENS,
+        AnthropicCompletion,
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+    assert llm.max_tokens == DEFAULT_MAX_TOKENS
+    assert llm.max_tokens == 32000
+    params = llm._prepare_completion_params(messages=[{"role": "user", "content": "hi"}])
+    assert params["max_tokens"] == 32000
+
+
+def test_anthropic_honors_explicit_max_tokens():
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022", max_tokens=8000)
+
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    assert isinstance(llm, AnthropicCompletion)
+    assert llm.max_tokens == 8000
+    params = llm._prepare_completion_params(messages=[{"role": "user", "content": "hi"}])
+    assert params["max_tokens"] == 8000
+
+
 def test_anthropic_specific_parameters():
     """
     Test Anthropic-specific parameters like stop_sequences and streaming
