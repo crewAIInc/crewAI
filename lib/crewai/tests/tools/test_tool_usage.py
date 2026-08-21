@@ -25,7 +25,7 @@ from crewai.hooks.tool_hooks import (
 )
 from crewai.tools import BaseTool
 from crewai.tools.tool_calling import ToolCalling
-from crewai.tools.tool_usage import ToolUsage
+from crewai.tools.tool_usage import ToolUsage, ToolUsageError
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from pydantic import BaseModel, Field
 import pytest
@@ -344,6 +344,37 @@ def test_validate_tool_input_with_special_characters():
 
     arguments = tool_usage._validate_tool_input(tool_input)
     assert arguments == expected_arguments
+
+
+def test_original_tool_calling_non_dict_arguments_raises_tool_usage_error():
+    """Regression test for #6430.
+
+    The non-dict arguments branch in `_original_tool_calling` used a bare
+    `raise` with no active exception, so hitting it with `raise_error=True`
+    crashed with `RuntimeError: No active exception to re-raise` instead of
+    raising a meaningful `ToolUsageError`.
+    """
+    tool = RandomNumberTool()
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[tool],
+        task=MagicMock(),
+        function_calling_llm=MagicMock(),
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    with (
+        patch.object(
+            tool_usage, "_validate_tool_input", return_value=["not", "a", "dict"]
+        ),
+        patch.object(tool_usage, "_select_tool", return_value=tool),
+    ):
+        with pytest.raises(ToolUsageError):
+            tool_usage._original_tool_calling("", raise_error=True)
+
+        result = tool_usage._original_tool_calling("")
+        assert isinstance(result, ToolUsageError)
 
 
 def test_validate_tool_input_none_input():
