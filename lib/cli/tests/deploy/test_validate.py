@@ -383,7 +383,11 @@ def test_classify_missing_openai_key_is_warning(tmp_path: Path) -> None:
     v._classify_import_error(
         "ImportError",
         "Error importing native provider: 1 validation error for OpenAICompletion\n"
-        "  Value error, OPENAI_API_KEY is required",
+        "  Value error, OPENAI_API_KEY is required. Set the OPENAI_API_KEY "
+        "environment variable or pass api_key to LLM(). On CrewAI AMP, "
+        "code-first deployments read API keys from deployment environment "
+        "variables — org-wide LLM Connections do not apply to code-first "
+        "deployments.",
         tb="",
     )
     assert len(v.results) == 1

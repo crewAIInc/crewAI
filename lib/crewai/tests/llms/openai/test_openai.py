@@ -618,6 +618,25 @@ def test_openai_get_client_params_no_base_url(monkeypatch):
     assert "base_url" not in client_params or client_params.get("base_url") is None
 
 
+def test_openai_missing_api_key_error_is_actionable(monkeypatch):
+    """
+    Test that the missing-API-key error explains how to fix it: set the
+    OPENAI_API_KEY environment variable or pass api_key, and clarifies that
+    org-wide LLM Connections do not apply to code-first CrewAI AMP deployments.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    llm = OpenAICompletion(model="gpt-4o")
+    with pytest.raises(ValueError) as exc_info:
+        llm._get_client_params()
+
+    message = str(exc_info.value)
+    assert "OPENAI_API_KEY environment variable" in message
+    assert "api_key" in message
+    assert "org-wide LLM Connections do not apply to code-first deployments" in message
+    assert "deployment environment variables" in message
+
+
 def test_openai_streaming_with_response_model():
     """
     Test that streaming with response_model works correctly and doesn't call invalid API methods.
