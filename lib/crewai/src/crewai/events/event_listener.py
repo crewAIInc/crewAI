@@ -915,6 +915,7 @@ class EventListener(BaseEventListener):
                 event.transport_type,
                 event.error,
                 event.error_type,
+                event.status_code,
             )
             self._telemetry.feature_usage_span("mcp:connection_failed")
 
