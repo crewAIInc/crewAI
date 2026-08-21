@@ -799,7 +799,7 @@ class Task(BaseModel):
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(
                 self,
-                TaskFailedEvent(error=str(e), error_type=type(e).__name__, task=self),
+                TaskFailedEvent(error=str(e), error_type=type(e), task=self),
             )
             raise e
         finally:
@@ -958,7 +958,7 @@ class Task(BaseModel):
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(
                 self,
-                TaskFailedEvent(error=str(e), error_type=type(e).__name__, task=self),
+                TaskFailedEvent(error=str(e), error_type=type(e), task=self),
             )
             raise e
         finally:

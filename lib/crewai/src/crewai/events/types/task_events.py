@@ -49,12 +49,17 @@ class TaskFailedEvent(BaseEvent):
     """Event emitted when a task fails"""
 
     error: str
-    error_type: str | None = None
-    """Exception class name (e.g. "ValidationError").
+    error_type: type[BaseException] | None = None
+    """The exception's class, e.g. ``ValidationError``.
+
+    The class and not its name, matching ``Telemetry._safe_error_type``: a message
+    is never a type, so ``str(error)`` cannot be passed here at all. A name would
+    not be safe on its own, because a single-word message such as
+    ``"secret_token"`` is itself a valid identifier.
 
     Kept separate from ``error`` so telemetry can record what kind of failure
-    occurred without ever touching the message, which routinely contains
-    prompts, model output, or credentials.
+    occurred without ever touching the message, which routinely contains prompts,
+    model output, file paths or credentials.
     """
     type: Literal["task_failed"] = "task_failed"
     task: Any | None = None

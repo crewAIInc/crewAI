@@ -12,8 +12,7 @@ deliberately absent: `crew_execution_span()` returns `None` unless `share_crew=T
 have exited immediately for the default population.
 """
 
-from unittest.mock import Mock
-import os
+from unittest.mock import Mock, patch
 import threading
 
 import pytest
@@ -137,23 +136,61 @@ def test_task_failed_closes_span_with_error(exporter):
     telemetry = Telemetry()
     telemetry.ready = True
 
-    telemetry.task_failed(tracer.start_span("Task Execution"), Mock(fingerprint=None), "ValueError")
+    telemetry.task_failed(
+        tracer.start_span("Task Execution"), Mock(fingerprint=None), ValueError
+    )
 
     finished = exp.get_finished_spans()[0]
     assert finished.status.status_code is StatusCode.ERROR
     assert finished.attributes["error_type"] == "ValueError"
 
 
-def test_task_failed_event_carries_the_class_name_and_not_the_message():
+def test_task_failed_event_carries_the_class_and_not_the_message():
     from crewai.events.types.task_events import TaskFailedEvent
 
     try:
         raise TimeoutError("request to gpt-4o timed out after 60s")
     except TimeoutError as e:
-        event = TaskFailedEvent(error=str(e), error_type=type(e).__name__, task=None)
+        event = TaskFailedEvent(error=str(e), error_type=type(e), task=None)
 
-    assert event.error_type == "TimeoutError"
-    assert "gpt-4o" not in event.error_type
+    assert event.error_type is TimeoutError
+    assert "gpt-4o" not in str(event.error_type)
+
+
+def test_a_message_cannot_be_passed_as_the_error_type_at_all():
+    """The field takes the exception *class*, so a message is rejected structurally.
+
+    An identifier check on a name is not sufficient on its own -- a one-word message
+    such as "secret_token" is a valid identifier -- which is exactly why
+    ``Telemetry._safe_error_type`` takes a class rather than a string. Making the event
+    field a class means pydantic refuses a message before any of our code runs.
+    """
+    import pydantic
+    from crewai.events.types.task_events import TaskFailedEvent
+
+    with pytest.raises(pydantic.ValidationError, match="subclass of BaseException"):
+        TaskFailedEvent(error="boom", error_type="secret_token", task=None)
+
+
+def test_task_failed_discards_anything_that_is_not_an_exception_class(exporter):
+    """A non-exception reaching task_failed records nothing, and still closes as ERROR."""
+    from crewai.telemetry.telemetry import Telemetry
+
+    exp, tracer = exporter
+    telemetry = Telemetry()
+    telemetry.ready = True
+
+    telemetry.task_failed(
+        tracer.start_span("Task Execution"),
+        Mock(fingerprint=None),
+        "secret_token",  # type: ignore[arg-type]  - deliberately wrong, as a caller might
+    )
+
+    span = exp.get_finished_spans()[0]
+    assert span.status.status_code is StatusCode.ERROR
+    assert "error_type" not in (span.attributes or {}), (
+        "an identifier-shaped message must not be recorded just because it parses"
+    )
 
 
 def test_error_type_defaults_to_none_for_backwards_compatibility():
@@ -203,7 +240,8 @@ def listener_with_a_recording_telemetry():
 
         def task_failed(self, span, task, error_type=None):
             self.calls.append("task_failed")
-            close_span_with_error(span, error_type)
+            # Mirrors the real method: the class is reduced to a safe name first.
+            close_span_with_error(span, Telemetry._safe_error_type(error_type))
 
         def task_ended(self, span, task, crew):
             self.calls.append("task_ended")
@@ -274,7 +312,7 @@ def test_on_task_failed_closes_the_span_as_error_either_way(
     listener.execution_spans[task] = tracer.start_span("Task Execution")
 
     handler = _handler_for(bus, TaskFailedEvent)
-    handler(task, TaskFailedEvent(error="boom", error_type="ValueError", task=task))
+    handler(task, TaskFailedEvent(error="boom", error_type=ValueError, task=task))
 
     assert recording.calls == ["task_failed"], (
         "a failure must route to task_failed; task_ended would close the span as OK"
@@ -314,3 +352,90 @@ def test_on_task_completed_still_routes_to_task_ended_and_closes_as_ok(
     assert len(finished) == 1
     assert finished[0].status.status_code is StatusCode.OK
     assert "error_type" not in (finished[0].attributes or {})
+
+
+class _ProducerFailure(Exception):
+    """Distinctive class, so the test cannot pass on a hardcoded or defaulted value."""
+
+
+def _captured_task_failures():
+    """Subscribe to TaskFailedEvent on the real bus and collect the events."""
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.task_events import TaskFailedEvent
+
+    captured = []
+
+    @crewai_event_bus.on(TaskFailedEvent)
+    def _collect(_source, event):
+        captured.append(event)
+
+    return captured
+
+
+@pytest.fixture
+def failing_task():
+    """A real Task whose agent raises, so the producer's except block is genuinely run."""
+    from crewai import Agent, Task
+
+    agent = Agent(
+        role="tester",
+        goal="fail",
+        backstory="exists only to raise",
+    )
+    task = Task(description="a task that fails", expected_output="nothing", agent=agent)
+    return task, agent
+
+
+def test_sync_producer_puts_the_exception_class_on_the_event(failing_task):
+    """`Task._execute_core` must populate error_type, not just `error`.
+
+    The tests above construct TaskFailedEvent directly, so a regression in the producer
+    itself -- the two emit sites in task.py -- would pass all of them. This drives the
+    real execution path instead.
+    """
+    from crewai import Agent
+
+    task, _agent = failing_task
+    captured = _captured_task_failures()
+
+    with patch.object(Agent, "execute_task", side_effect=_ProducerFailure("boom")):
+        with pytest.raises(_ProducerFailure):
+            task._execute_core(None, None, None)
+
+    assert len(captured) == 1, "the producer must emit exactly one TaskFailedEvent"
+    assert captured[0].error_type is _ProducerFailure
+    assert captured[0].error == "boom"
+
+
+@pytest.mark.asyncio
+async def test_async_producer_puts_the_exception_class_on_the_event(failing_task):
+    """The async producer is a separate emit site and regresses independently."""
+    from crewai import Agent
+
+    task, _agent = failing_task
+    captured = _captured_task_failures()
+
+    # aexecute_task, not execute_task: the async producer calls a different agent
+    # method, which is precisely why it can regress independently of the sync one.
+    with patch.object(Agent, "aexecute_task", side_effect=_ProducerFailure("boom")):
+        with pytest.raises(_ProducerFailure):
+            await task._aexecute_core(None, None, None)
+
+    assert len(captured) == 1
+    assert captured[0].error_type is _ProducerFailure
+    assert captured[0].error == "boom"
+
+
+def test_a_task_with_no_agent_still_reports_a_failure_type(failing_task):
+    """The no-agent branch raises inside the same try, so it must report too."""
+    from crewai import Task
+
+    task = Task(description="orphan", expected_output="nothing")
+    captured = _captured_task_failures()
+
+    with pytest.raises(Exception, match="has no agent assigned"):
+        task._execute_core(None, None, None)
+
+    assert len(captured) == 1
+    assert captured[0].error_type is not None
+    assert issubclass(captured[0].error_type, BaseException)

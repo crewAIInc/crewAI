@@ -133,9 +133,11 @@ def close_span_with_error(span: Span, error_type: str | None = None) -> None:
 
     Args:
         span: The span to close.
-        error_type: Exception class name (e.g. "ValidationError"). Anything
-            that is not a plain identifier is discarded rather than recorded,
-            so a message can never be passed in by mistake.
+        error_type: Exception class *name*, already derived from a class by
+            ``Telemetry._safe_error_type``. The identifier check here is a second
+            gate on that derived name, not the primary defence: callers pass a
+            class precisely because a one-word message such as "secret_token" is
+            itself a valid identifier and would survive this check alone.
     """
     span.set_status(Status(StatusCode.ERROR))
     if error_type and error_type.isidentifier():

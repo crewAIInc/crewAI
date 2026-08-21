@@ -600,7 +600,7 @@ class Telemetry:
         self._safe_telemetry_operation(_operation)
 
     def task_failed(
-        self, span: Span, task: Task, error_type: str | None = None
+        self, span: Span, task: Task, error_type: type[BaseException] | None = None
     ) -> None:
         """Records that a task execution failed and closes its span with ERROR.
 
@@ -615,15 +615,17 @@ class Telemetry:
         Args:
             span: The OpenTelemetry span tracking the task execution.
             task: The task that failed.
-            error_type: Exception class name. The error message is never
-                recorded - it routinely contains prompts and model output.
+            error_type: The exception's class, not its name and never the
+                message. Passed through :meth:`_safe_error_type`, which is why this
+                takes a class: a single-word message like "secret_token" would pass
+                an identifier check, but it is not a type.
         """
 
         def _operation() -> None:
             if hasattr(task, "fingerprint") and task.fingerprint:
                 self._add_attribute(span, "task_fingerprint", task.fingerprint.uuid_str)
 
-            close_span_with_error(span, error_type)
+            close_span_with_error(span, self._safe_error_type(error_type))
 
         self._safe_telemetry_operation(_operation)
 
