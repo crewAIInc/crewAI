@@ -128,7 +128,9 @@ xml = [
     "nltk>=3.10.0",
 ]
 oxylabs = [
-    "oxylabs==2.0.0"
+    # 3.x keeps the RealtimeClient surface these tools use and adds sources;
+    # allow it rather than pinning consumers to a single release.
+    "oxylabs>=2.0.0,<4",
 ]
 mongodb = [
     "pymongo>=4.13"

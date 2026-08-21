@@ -1773,7 +1773,7 @@ requires-dist = [
     { name = "nest-asyncio", marker = "extra == 'bedrock'", specifier = ">=1.6.0" },
     { name = "nest-asyncio", marker = "extra == 'contextual'", specifier = ">=1.6.0" },
     { name = "nltk", marker = "extra == 'xml'", specifier = ">=3.10.0" },
-    { name = "oxylabs", marker = "extra == 'oxylabs'", specifier = "==2.0.0" },
+    { name = "oxylabs", marker = "extra == 'oxylabs'", specifier = ">=2.0.0,<4" },
     { name = "patronus", marker = "extra == 'patronus'", specifier = ">=0.0.16" },
     { name = "playwright", marker = "extra == 'bedrock'", specifier = ">=1.52.0" },
     { name = "psycopg2-binary", marker = "extra == 'postgresql'", specifier = ">=2.9.10" },

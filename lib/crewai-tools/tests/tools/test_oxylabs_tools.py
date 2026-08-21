@@ -3,6 +3,7 @@ import os
 from unittest.mock import MagicMock
 
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.tool_failure import ToolFailure
 from crewai_tools import (
     OxylabsAmazonProductScraperTool,
     OxylabsAmazonSearchScraperTool,
@@ -12,8 +13,12 @@ from crewai_tools import (
 from crewai_tools.tools.oxylabs_amazon_product_scraper_tool.oxylabs_amazon_product_scraper_tool import (
     OxylabsAmazonProductScraperConfig,
 )
+from crewai_tools.tools.oxylabs_base_tool.oxylabs_base_tool import OxylabsBaseTool
 from crewai_tools.tools.oxylabs_google_search_scraper_tool.oxylabs_google_search_scraper_tool import (
     OxylabsGoogleSearchScraperConfig,
+)
+from crewai_tools.tools.oxylabs_universal_scraper_tool.oxylabs_universal_scraper_tool import (
+    OxylabsUniversalScraperArgs,
 )
 from oxylabs import RealtimeClient
 from oxylabs.sources.response import Response as OxylabsResponse
@@ -156,3 +161,95 @@ def test_tool_invocation(
     result = tool.run("Scraping Query 2")
     assert isinstance(result, str)
     assert "<!DOCTYPE html>" in result
+
+
+ALL_TOOL_CLASSES = [
+    OxylabsUniversalScraperTool,
+    OxylabsAmazonSearchScraperTool,
+    OxylabsGoogleSearchScraperTool,
+    OxylabsAmazonProductScraperTool,
+]
+
+
+def build_tool(tool_class: type[BaseTool], raw_response: dict) -> BaseTool:
+    """Build a tool whose every scrape entrypoint answers with ``raw_response``."""
+    api = MagicMock()
+    response = OxylabsResponse(raw_response)
+    api.universal.scrape_url.return_value = response
+    api.amazon.scrape_search.return_value = response
+    api.amazon.scrape_product.return_value = response
+    api.google.scrape_search.return_value = response
+
+    tool = tool_class(username="username", password="password")
+    # setting via __dict__ to bypass pydantic validation
+    tool.__dict__["oxylabs_api"] = api
+    return tool
+
+
+@pytest.mark.parametrize("tool_class", ALL_TOOL_CLASSES)
+def test_rejected_request_reports_failure(tool_class: type[BaseTool]):
+    """The SDK logs HTTP errors and returns an empty response instead of raising,
+    so a rejected request must be reported rather than indexed into."""
+    result = build_tool(tool_class, {}).run("Scraping Query")
+
+    assert isinstance(result, ToolFailure)
+    assert result.code == "empty_response"
+    assert "OXYLABS_USERNAME" in result.message
+
+
+@pytest.mark.parametrize("tool_class", ALL_TOOL_CLASSES)
+@pytest.mark.parametrize(
+    ("status_code", "retryable"),
+    [(404, False), (429, True), (503, True)],
+)
+def test_upstream_error_status_reports_failure(
+    tool_class: type[BaseTool], status_code: int, retryable: bool
+):
+    """A non-2xx result carries no page; returning its empty content would hand
+    the agent '[]' as though the scrape had succeeded."""
+    result = build_tool(
+        tool_class, {"results": [{"content": [], "status_code": status_code}]}
+    ).run("Scraping Query")
+
+    assert isinstance(result, ToolFailure)
+    assert result.code == str(status_code)
+    assert result.retryable is retryable
+
+
+@pytest.mark.parametrize("tool_class", ALL_TOOL_CLASSES)
+def test_missing_content_reports_failure(tool_class: type[BaseTool]):
+    result = build_tool(
+        tool_class, {"results": [{"content": None, "status_code": 200}]}
+    ).run("Scraping Query")
+
+    assert isinstance(result, ToolFailure)
+    assert result.code == "empty_content"
+
+
+@pytest.mark.parametrize("tool_class", ALL_TOOL_CLASSES)
+def test_list_content_is_serialized_as_json(tool_class: type[BaseTool]):
+    """``parsing_instructions`` can yield a list; str() on it would produce a
+    Python repr with single quotes rather than JSON."""
+    result = build_tool(
+        tool_class,
+        {"results": [{"content": [{"title": "Amazing product"}], "status_code": 200}]},
+    ).run("Scraping Query")
+
+    assert isinstance(result, str)
+    assert json.loads(result) == [{"title": "Amazing product"}]
+
+
+def test_subclass_without_config_field_is_reported():
+    """The base class defaults ``config`` from the subclass's own model, so a
+    subclass that declares none must say so rather than raise ``KeyError``."""
+
+    class MissingConfig(OxylabsBaseTool):
+        name: str = "missing config"
+        description: str = "declares no config field"
+        args_schema: type[BaseModel] = OxylabsUniversalScraperArgs
+
+        def _run(self, url: str) -> str:
+            return ""
+
+    with pytest.raises(TypeError, match="must declare a 'config' model field"):
+        MissingConfig(username="username", password="password")
