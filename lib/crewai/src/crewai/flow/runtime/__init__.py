@@ -1374,7 +1374,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         except Exception as e:
             if not hook_state["end_dispatched"]:
                 self._dispatch_execution_end_failure(e)
-            await self._emit_flow_failed(e, respect_suppression=True)
+            await self._emit_flow_failed(e)
             raise
         finally:
             # Match kickoff_async: drain pending handlers so the resumed
@@ -1591,10 +1591,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
             self._event_futures.clear()
 
-        if (
-            not self.suppress_flow_events
-            and not self._should_defer_trace_finalization()
-        ):
+        # Not gated on suppress_flow_events: that asks for console quiet, and the
+        # started event above is ungated, so gating here would emit a start with no
+        # terminal event. The defer check stays - it is a real reason to withhold the
+        # finish, because finalize_session_traces() emits it later instead.
+        if not self._should_defer_trace_finalization():
             # Background memory saves must finish (and emit their
             # completed/failed events) before flow-finished triggers
             # listener teardown/finalization; the flush then waits for those
@@ -2599,9 +2600,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         get_env_context()
         return flow_scope_open
 
-    async def _emit_flow_failed(
-        self, error: Exception, *, respect_suppression: bool = False
-    ) -> None:
+    async def _emit_flow_failed(self, error: BaseException) -> None:
         """Emit ``FlowFailedEvent`` and close out the trace batch for a failed run.
 
         Mirrors the terminal block of the success path: drain pending event
@@ -2611,14 +2610,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         Args:
             error: The exception that ended the execution.
-            respect_suppression: Skip the emission for suppressed flows. Only
-                the resume path gates its lifecycle events on
-                ``suppress_flow_events``; ``kickoff_async`` emits them either
-                way and lets listeners filter.
         """
         if self._should_defer_trace_finalization():
-            return
-        if respect_suppression and self.suppress_flow_events:
             return
 
         try:
