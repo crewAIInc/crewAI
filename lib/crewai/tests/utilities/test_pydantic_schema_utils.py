@@ -365,6 +365,43 @@ class TestUnionTypes:
         Model = create_model_from_schema(schema)
         assert Model(value="hello").value == "hello"
 
+    def test_type_array_required_nullable_string_with_format_still_accepts_none(
+        self,
+    ) -> None:
+        """A format (e.g. date-time) applied to a ["string", "null"] type
+        array must only remap the string member -- overwriting the whole
+        union with the format's mapped type (as a naive fix would) drops
+        the null member entirely, so a *required* nullable date field would
+        wrongly reject None even though "null" is right there in the
+        schema's own type array."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "startDate": {"type": ["string", "null"], "format": "date-time"},
+            },
+            "required": ["startDate"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(startDate=None).startDate is None
+        assert Model(startDate="2026-01-01").startDate == datetime.datetime(
+            2026, 1, 1
+        )
+
+    def test_type_array_format_does_not_clobber_non_string_member(self) -> None:
+        """A format on a ["string", "integer"] type array should only
+        affect the string member -- the integer member must stay a plain
+        int, not get coerced into whatever type the format maps to."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "value": {"type": ["string", "integer"], "format": "date-time"},
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(value=42).value == 42
+        assert isinstance(Model(value=42).value, int)
+        assert Model(value="2026-01-01").value == datetime.datetime(2026, 1, 1)
+
 
 class TestAllOfMerging:
     def test_allof_merges_properties(self) -> None:
