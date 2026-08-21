@@ -2146,17 +2146,6 @@ class BedrockCompletion(BaseLLM):
         )
         return any(model_lower.startswith(m) for m in vision_models)
 
-    def _is_nova_model(self) -> bool:
-        """Check if the model is an Amazon Nova model.
-
-        Only Nova models support S3 links for multimedia.
-
-        Returns:
-            True if the model is a Nova model.
-        """
-        model_lower = self.model.lower()
-        return "amazon.nova-" in model_lower
-
     def get_file_uploader(self) -> Any:
         """Get a Bedrock S3 file uploader using this LLM's AWS credentials.
 
@@ -2184,49 +2173,6 @@ class BedrockCompletion(BaseLLM):
             )
         except ImportError:
             return None
-
-    def _get_document_format(self, content_type: str) -> str | None:
-        """Map content type to Bedrock document format.
-
-        Args:
-            content_type: MIME type of the document.
-
-        Returns:
-            Bedrock format string or None if unsupported.
-        """
-        format_map = {
-            "application/pdf": "pdf",
-            "text/csv": "csv",
-            "text/plain": "txt",
-            "text/markdown": "md",
-            "text/html": "html",
-            "application/msword": "doc",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
-            "application/vnd.ms-excel": "xls",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
-        }
-        return format_map.get(content_type)
-
-    def _get_video_format(self, content_type: str) -> str | None:
-        """Map content type to Bedrock video format.
-
-        Args:
-            content_type: MIME type of the video.
-
-        Returns:
-            Bedrock format string or None if unsupported.
-        """
-        format_map = {
-            "video/mp4": "mp4",
-            "video/quicktime": "mov",
-            "video/x-matroska": "mkv",
-            "video/webm": "webm",
-            "video/x-flv": "flv",
-            "video/mpeg": "mpeg",
-            "video/x-ms-wmv": "wmv",
-            "video/3gpp": "three_gp",
-        }
-        return format_map.get(content_type)
 
     def format_text_content(self, text: str) -> dict[str, Any]:
         """Format text as a Bedrock content block.
