@@ -17,7 +17,10 @@ from crewai_core.settings import Settings
 from pydantic import BaseModel
 from rich.console import Console
 
-from crewai.agents.constants import FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
+from crewai.agents.constants import (
+    ACTION_INPUT_REGEX,
+    FINAL_ANSWER_ACTION,
+)
 from crewai.agents.parser import (
     AgentAction,
     AgentFinish,
@@ -660,13 +663,42 @@ def process_llm_response(
         Either an AgentAction or AgentFinish
     """
     if not use_stop_words:
-        try:
-            format_answer(answer)
-        except OutputParserError as e:
-            if FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE in e.error:
-                answer = answer.split("Observation:")[0].strip()
+        answer = _recover_real_tool_call(answer)
 
     return format_answer(answer)
+
+
+def _recover_real_tool_call(answer: str) -> str:
+    """Recover a real tool call from a fabricated observation continuation.
+
+    Models that ignore stop sequences sometimes generate past the real
+    ``Action``/``Action Input`` and fabricate the rest of the ReAct loop in a
+    single completion: a made-up ``Observation:`` followed by a ``Final
+    Answer:``.  When that happens the parser treats the fabricated ``Final
+    Answer`` as the agent's output and the real tool call never executes.
+
+    This detects that exact shape and drops everything from the fabricated
+    ``Final Answer:`` onward (including the made-up observation and any
+    follow-up thoughts), so the real ``Action`` is parsed and executed.
+
+    Args:
+        answer: The raw LLM response.
+
+    Returns:
+        The response with the fabricated continuation removed when the
+        ``Action -> Observation -> Final Answer`` fabrication shape is
+        detected; otherwise the response unchanged.
+    """
+    action_match = ACTION_INPUT_REGEX.search(answer)
+
+    if action_match is None:
+        return answer
+
+    final_answer_idx = answer.find(FINAL_ANSWER_ACTION, action_match.start())
+    if final_answer_idx == -1:
+        return answer
+
+    return answer[:final_answer_idx].strip()
 
 
 def handle_agent_action_core(
