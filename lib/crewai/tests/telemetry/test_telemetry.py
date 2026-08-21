@@ -455,6 +455,10 @@ def test_crew_inputs_payload_stays_gated_while_the_presence_signal_does_not():
         "the payload must remain inside the share_crew branch; only its presence is ungated"
     )
     for call in span.set_attribute.call_args_list:
+        assert "secret_topic" not in str(call.args[1]), (
+            "no input KEY may reach the span either -- key names are user data too, and a "
+            "regression emitting json.dumps(inputs.keys()) would pass a value-only check"
+        )
         assert "acquisition target" not in str(call.args[1]), (
             "no input value may reach the span for a non-sharing crew"
         )
