@@ -123,7 +123,7 @@ def sanitize_results(context):
 ```python
 @CrewBase
 class MyProjCrew:
-    @before_tool_call_crew
+    @before_tool_call
     def validate_tool_inputs(self, context):
         # Only applies to this crew
         if context.tool_name == "web_search":
@@ -132,7 +132,7 @@ class MyProjCrew:
                 return False
         return None
 
-    @after_tool_call_crew
+    @after_tool_call
     def log_tool_results(self, context):
         # Crew-specific tool logging
         print(f"✅ {context.tool_name} completed")

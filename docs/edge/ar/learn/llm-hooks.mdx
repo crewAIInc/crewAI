@@ -122,14 +122,14 @@ def sanitize_response(context):
 ```python
 @CrewBase
 class MyProjCrew:
-    @before_llm_call_crew
+    @before_llm_call
     def validate_inputs(self, context):
         # Only applies to this crew
         if context.iterations == 0:
             print(f"Starting task: {context.task.description}")
         return None
 
-    @after_llm_call_crew
+    @after_llm_call
     def log_responses(self, context):
         # Crew-specific response logging
         print(f"Response length: {len(context.response)}")

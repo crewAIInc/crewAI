@@ -86,17 +86,17 @@ Aplica hooks apenas a instâncias específicas de crew:
 ```python
 from crewai import CrewBase
 from crewai.project import crew
-from crewai.hooks import before_llm_call_crew, after_tool_call_crew
+from crewai.hooks import before_llm_call, after_tool_call
 
 @CrewBase
 class MyProjCrew:
-    @before_llm_call_crew
+    @before_llm_call
     def validate_inputs(self, context):
         # Aplica-se apenas a esta crew
         print(f"Chamada LLM em {self.__class__.__name__}")
         return None
 
-    @after_tool_call_crew
+    @after_tool_call
     def log_results(self, context):
         # Logging específico da crew
         print(f"Resultado da ferramenta: {context.tool_result[:50]}...")

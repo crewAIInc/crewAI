@@ -86,17 +86,17 @@ def log_tool_result(context):
 ```python
 from crewai import CrewBase
 from crewai.project import crew
-from crewai.hooks import before_llm_call_crew, after_tool_call_crew
+from crewai.hooks import before_llm_call, after_tool_call
 
 @CrewBase
 class MyProjCrew:
-    @before_llm_call_crew
+    @before_llm_call
     def validate_inputs(self, context):
         # 이 크루에만 적용됩니다
         print(f"{self.__class__.__name__}에서 LLM 호출")
         return None
 
-    @after_tool_call_crew
+    @after_tool_call
     def log_results(self, context):
         # 크루별 로깅
         print(f"도구 결과: {context.tool_result[:50]}...")
