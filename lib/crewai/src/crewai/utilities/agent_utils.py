@@ -48,6 +48,7 @@ from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
+from crewai.utilities.tool_errors import format_tool_error
 from crewai.utilities.types import LLMMessage
 
 
@@ -1765,7 +1766,7 @@ def execute_single_native_tool_call(
                 result = format_native_tool_output_for_agent(output_tool, raw_result)
                 tool_failure = detect_tool_failure(raw_result)
             except Exception as e:
-                result = f"Error executing tool: {e}"
+                result = format_tool_error(e)
                 raw_tool_result = result
                 tool_failure = failure_from_exception(e)
                 if task:
