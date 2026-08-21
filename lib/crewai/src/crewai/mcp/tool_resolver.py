@@ -605,11 +605,11 @@ class MCPToolResolver:
     async def _discover_mcp_tools(self, server_url: str) -> dict[str, dict[str, Any]]:
         """Discover tools from an MCP server (HTTPS / streamable-HTTP path)."""
         from mcp import ClientSession
-        from mcp.client.streamable_http import streamablehttp_client
 
+        from crewai.mcp._compat import open_streamable_http, tool_input_schema
         from crewai.utilities.string_utils import sanitize_tool_name
 
-        async with streamablehttp_client(server_url) as (read, write, _):
+        async with open_streamable_http(server_url) as (read, write):
             async with ClientSession(read, write) as session:
                 await asyncio.wait_for(
                     session.initialize(), timeout=MCP_CONNECTION_TIMEOUT
@@ -623,9 +623,10 @@ class MCPToolResolver:
                 schemas = {}
                 for tool in tools_result.tools:
                     args_schema = None
-                    if hasattr(tool, "inputSchema") and tool.inputSchema:
+                    schema = tool_input_schema(tool)
+                    if schema:
                         args_schema = self._json_schema_to_pydantic(
-                            sanitize_tool_name(tool.name), tool.inputSchema
+                            sanitize_tool_name(tool.name), schema
                         )
 
                     schemas[sanitize_tool_name(tool.name)] = {

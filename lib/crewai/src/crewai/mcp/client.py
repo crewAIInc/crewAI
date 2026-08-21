@@ -415,12 +415,16 @@ class MCPClient:
             timeout=self.discovery_timeout,
         )
 
+        from crewai.mcp._compat import tool_input_schema
+
         return [
             {
                 "name": sanitize_tool_name(tool.name),
                 "original_name": tool.name,
                 "description": getattr(tool, "description", ""),
-                "inputSchema": getattr(tool, "inputSchema", {}),
+                # Keep the dict key as inputSchema for crewAI's public tool-def shape;
+                # only the SDK attribute access is version-dependent.
+                "inputSchema": tool_input_schema(tool),
             }
             for tool in tools_result.tools
         ]
@@ -600,7 +604,9 @@ class MCPClient:
             timeout=self.execution_timeout,
         )
 
-        is_error = getattr(result, "isError", False) or False
+        from crewai.mcp._compat import call_tool_is_error
+
+        is_error = call_tool_is_error(result)
 
         if hasattr(result, "content") and result.content:
             if isinstance(result.content, list) and len(result.content) > 0:

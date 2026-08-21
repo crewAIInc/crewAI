@@ -51,7 +51,13 @@ try:
             """
             tool_name = sanitize_tool_name(mcp_tool.name)
             tool_description = mcp_tool.description or ""
-            args_model = create_model_from_schema(mcp_tool.inputSchema)
+            # mcp 1.x: inputSchema; mcp 2.x: input_schema (camelCase alias still parses)
+            input_schema = (
+                getattr(mcp_tool, "input_schema", None)
+                or getattr(mcp_tool, "inputSchema", None)
+                or {}
+            )
+            args_model = create_model_from_schema(input_schema)
 
             class CrewAIMCPTool(BaseTool):
                 name: str = tool_name
