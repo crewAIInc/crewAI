@@ -1,0 +1,98 @@
+---
+title: Ferramentas Xquik
+description: Pesquise e inspecione dados públicos do X/Twitter com a API REST da Xquik.
+icon: magnifying-glass-chart
+mode: "wide"
+---
+
+# Ferramentas Xquik
+
+## Descrição
+
+As ferramentas Xquik permitem que agentes CrewAI pesquisem e inspecionem dados públicos do X/Twitter por meio da API REST da Xquik. Elas são úteis para pesquisa social, monitoramento de mercado, descoberta de fontes, análise de tendências e contexto de contas.
+
+## Instalação
+
+Instale as ferramentas CrewAI:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+Defina sua chave de API da Xquik:
+
+```shell
+export XQUIK_API_KEY="your-api-key"
+```
+
+## Ferramentas Disponíveis
+
+- `XquikSearchTweetsTool`: pesquisa posts públicos com operadores de busca do X como `from:`, `has:media`, `lang:`, `since:` e `min_faves:`.
+- `XquikGetTweetTool`: busca um post por ID do tweet.
+- `XquikGetUserTool`: busca um perfil por nome de usuário ou ID de usuário.
+- `XquikGetUserTweetsTool`: lista posts recentes de um usuário com paginação por cursor.
+- `XquikGetTrendsTool`: obtém tópicos em alta por WOEID regional.
+
+## Exemplo
+
+```python Code
+from crewai_tools import XquikSearchTweetsTool
+
+tool = XquikSearchTweetsTool()
+
+results = tool.run(
+    search_query="from:crewai AI agents",
+    limit=10,
+    query_type="Latest",
+)
+```
+
+## Exemplo Com um Agente
+
+```python Code
+from crewai import Agent
+from crewai_tools import XquikGetTrendsTool, XquikSearchTweetsTool
+
+x_search = XquikSearchTweetsTool()
+x_trends = XquikGetTrendsTool()
+
+researcher = Agent(
+    role="Social Research Analyst",
+    goal="Find timely public X/Twitter signals for a research brief.",
+    backstory="You use public social data to identify relevant posts and trends.",
+    tools=[x_search, x_trends],
+)
+```
+
+## Parâmetros
+
+### `XquikSearchTweetsTool`
+
+- `search_query`: obrigatório. Consulta de busca do X.
+- `limit`: opcional. Número máximo de tweets retornados, de 1 a 200. O padrão é `20`.
+- `query_type`: opcional. `Latest` ou `Top`. O padrão é `Latest`.
+- `cursor`: opcional. Cursor de paginação de uma resposta anterior.
+- `since_time`: opcional. Timestamp ISO 8601 para limite inferior de tempo.
+- `until_time`: opcional. Timestamp ISO 8601 para limite superior de tempo.
+
+### `XquikGetTweetTool`
+
+- `tweet_id`: obrigatório. ID do tweet a buscar.
+
+### `XquikGetUserTool`
+
+- `user`: obrigatório. Nome de usuário do X, `@username` ou ID de usuário.
+
+### `XquikGetUserTweetsTool`
+
+- `user`: obrigatório. Nome de usuário do X, `@username` ou ID de usuário.
+- `cursor`: opcional. Cursor de paginação de uma resposta anterior.
+- `include_replies`: opcional. Inclui respostas. O padrão é `False`.
+- `include_parent_tweet`: opcional. Inclui tweets pai para respostas quando disponíveis. O padrão é `False`.
+
+### `XquikGetTrendsTool`
+
+- `woeid`: opcional. WOEID da região. Use `1` para mundial, `23424977` para EUA, `23424975` para Reino Unido ou `23424969` para Turquia.
+- `count`: opcional. Número de tendências retornadas, de 1 a 50. O padrão é `30`.
+
+Xquik is an independent third-party service. Not affiliated with X Corp. "Twitter" and "X" are trademarks of X Corp.
