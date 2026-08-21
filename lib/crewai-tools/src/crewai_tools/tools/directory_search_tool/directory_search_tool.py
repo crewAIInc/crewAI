@@ -25,7 +25,7 @@ class DirectorySearchToolSchema(FixedDirectorySearchToolSchema):
 class DirectorySearchTool(RagTool):
     name: str = "Search a directory's content"
     description: str = (
-        "A tool that can be used to semantic search a query from a directory's content."
+        "A tool that can be used to semantically search a query from a directory's content."
     )
     args_schema: type[BaseModel] = DirectorySearchToolSchema
 
