@@ -50,6 +50,14 @@ class TestProviderRegistry:
         assert "HTTP-Referer" in config.default_headers
         assert config.api_key_required is True
 
+    def test_requesty_config(self):
+        """Test Requesty provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["requesty"]
+        assert config.base_url == "https://router.requesty.ai/v1"
+        assert config.api_key_env == "REQUESTY_API_KEY"
+        assert config.base_url_env == "REQUESTY_BASE_URL"
+        assert config.api_key_required is True
+
     def test_deepseek_config(self):
         """Test DeepSeek provider configuration."""
         config = OPENAI_COMPATIBLE_PROVIDERS["deepseek"]
@@ -250,6 +258,16 @@ class TestLLMIntegration:
             assert llm.provider == "openrouter"
             # Model should include the full path after provider prefix
             assert llm.model == "anthropic/claude-3-opus"
+
+    def test_llm_creates_openai_compatible_for_requesty(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for Requesty."""
+        with patch.dict(os.environ, {"REQUESTY_API_KEY": "test-key"}):
+            llm = LLM(model="requesty/openai/gpt-4o-mini")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "requesty"
+            # Model should include the full path after provider prefix
+            assert llm.model == "openai/gpt-4o-mini"
+            assert llm.base_url == "https://router.requesty.ai/v1"
 
     def test_llm_creates_openai_compatible_for_hosted_vllm(self):
         """Test LLM factory creates OpenAICompatibleCompletion for hosted_vllm."""

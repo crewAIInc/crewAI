@@ -1,12 +1,13 @@
 """OpenAI-compatible providers implementation.
 
 This module provides a thin subclass of OpenAICompletion that supports
-various OpenAI-compatible APIs like OpenRouter, DeepSeek, Ollama, vLLM,
-Cerebras, and Dashscope (Alibaba/Qwen).
+various OpenAI-compatible APIs like OpenRouter, Requesty, DeepSeek, Ollama,
+vLLM, Cerebras, and Dashscope (Alibaba/Qwen).
 
 Usage:
     llm = LLM(model="deepseek/deepseek-chat")  # Uses DeepSeek API
     llm = LLM(model="openrouter/anthropic/claude-3-opus")  # Uses OpenRouter
+    llm = LLM(model="requesty/openai/gpt-4o-mini")  # Uses Requesty
     llm = LLM(model="ollama/llama3")  # Uses local Ollama
 """
 
@@ -48,6 +49,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         api_key_env="OPENROUTER_API_KEY",
         base_url_env="OPENROUTER_BASE_URL",
         default_headers={"HTTP-Referer": "https://crewai.com"},
+        api_key_required=True,
+    ),
+    "requesty": ProviderConfig(
+        base_url="https://router.requesty.ai/v1",
+        api_key_env="REQUESTY_API_KEY",
+        base_url_env="REQUESTY_BASE_URL",
         api_key_required=True,
     ),
     "deepseek": ProviderConfig(
@@ -119,6 +126,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
 
     Supported providers:
         - openrouter: OpenRouter (https://openrouter.ai)
+        - requesty: Requesty (https://requesty.ai)
         - deepseek: DeepSeek (https://deepseek.com)
         - ollama: Ollama local server (https://ollama.ai)
         - ollama_chat: Alias for ollama
