@@ -1443,7 +1443,7 @@ requires-dist = [
     { name = "crewai-files", marker = "extra == 'file-processing'", editable = "lib/crewai-files" },
     { name = "crewai-tools", marker = "extra == 'tools'", editable = "lib/crewai-tools" },
     { name = "docling", marker = "extra == 'docling'", specifier = "~=2.97.0" },
-    { name = "docling-core", extras = ["chunking"], marker = "extra == 'docling'", specifier = ">=2.74.1" },
+    { name = "docling-core", extras = ["chunking"], marker = "extra == 'docling'", specifier = ">=2.91.0" },
     { name = "google-genai", marker = "extra == 'google-genai'", specifier = "~=1.65.0" },
     { name = "httpx", specifier = "~=0.28.1" },
     { name = "httpx-auth", marker = "extra == 'a2a'", specifier = "~=0.23.1" },
@@ -2160,6 +2160,19 @@ wheels = [
 ]
 
 [[package]]
+name = "doclang"
+version = "0.7.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "lxml" },
+    { name = "typer" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f5/3a/005e4856ad8e9b9879414a4df4dbc56dc3663b96f9d8c920ef210e8931cf/doclang-0.7.3.tar.gz", hash = "sha256:ca50615357e46ebf9597bb9065b9112367103ec24bd539f8ae12649224cf50b0", size = 31569, upload-time = "2026-07-15T08:11:02.917Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a5/81/334ccc0f0cd7c3d75996b6b596e7f4c62c4c46a0ca042003315c28170159/doclang-0.7.3-py3-none-any.whl", hash = "sha256:9440c4ca9f7e061a7b8d33bdf15b1029be69a4c13cd8952dd6ce541884e4c685", size = 32267, upload-time = "2026-07-15T08:11:01.977Z" },
+]
+
+[[package]]
 name = "docling"
 version = "2.97.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2173,10 +2186,11 @@ wheels = [
 
 [[package]]
 name = "docling-core"
-version = "2.80.0"
+version = "2.91.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "defusedxml" },
+    { name = "doclang" },
     { name = "jsonref" },
     { name = "jsonschema" },
     { name = "latex2mathml" },
@@ -2189,9 +2203,9 @@ dependencies = [
     { name = "typer" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/38/d2/1b0460ee245029604f1541b954c125207eb82d23f67d04a606d79f9adf5c/docling_core-2.80.0.tar.gz", hash = "sha256:7a89dda4a2cd406d7e0c85b8b14867d4fb2c6f261f39ca94f678e191b634a3ed", size = 349214, upload-time = "2026-06-09T13:38:56.16Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e5/f5/5aaf6f1221242a4dd598b515786ffca796352a8d960a9c6a0deb614301f4/docling_core-2.91.0.tar.gz", hash = "sha256:dc40fe76524a2700f869265015a9ef86027888e73b5652f324b3b5c52a2df240", size = 344852, upload-time = "2026-08-06T14:23:07.919Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/46/c7/0610c9c764d31bd3fab4f976afd1a00bb1b614339a8504868d6605546c4b/docling_core-2.80.0-py3-none-any.whl", hash = "sha256:a8dcb87a445df08ac7608a0907d847a88aa7418c9da46608cb00fb9af06e279c", size = 296069, upload-time = "2026-06-09T13:38:54.361Z" },
+    { url = "https://files.pythonhosted.org/packages/9f/68/de7c0ba404d035afe78ae4e602290bb6c330b34cc53fd5f92c9950be4ac0/docling_core-2.91.0-py3-none-any.whl", hash = "sha256:4949a5dd77ae1daf4153c095897d3bdde1c870f2bbe401bf94d8834bef867998", size = 286832, upload-time = "2026-08-06T14:23:05.908Z" },
 ]
 
 [package.optional-dependencies]
