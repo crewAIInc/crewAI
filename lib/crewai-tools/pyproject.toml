@@ -92,6 +92,11 @@ qdrant-client = [
 apify = [
     "langchain-apify>=0.1.2,<1.0.0",
 ]
+azure-cosmosdb = [
+    "azure-cosmos>=4.15.0",
+    "azure-identity>=1.17.0",
+    "openai>=1.30.0",
+]
 
 databricks-sdk = [
     "databricks-sdk>=0.46.0",
