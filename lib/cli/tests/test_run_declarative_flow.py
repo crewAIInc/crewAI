@@ -771,9 +771,10 @@ def test_conversational_flow_headless_explains_instead_of_one_turn(
 
     monkeypatch.setattr(run_declarative_flow_module, "is_interactive", lambda: False)
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(SystemExit) as exc_info:
         run_declarative_flow_module.run_declarative_flow(str(definition_path))
 
+    assert exc_info.value.code == 1
     err = capsys.readouterr().err
     assert "needs an interactive terminal" in err
     assert "handle_turn" in err
