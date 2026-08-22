@@ -1,0 +1,59 @@
+---
+title: 1Claw Tools
+description: Give CrewAI agents secure, policy-scoped access to secrets, signing, and encrypted memory through 1Claw's HSM-backed vault
+icon: shield-halved
+mode: "wide"
+---
+
+# `1claw-crewai-tools`
+
+CrewAI agents need credentials and signing keys, but crew configs and shared `.env` files are not a safe place to store them. Hard-coded API keys end up in git, and shared env files break when you spin up parallel agents with different permissions.
+
+[`1claw-crewai-tools`](https://pypi.org/project/1claw-crewai-tools/) wraps the [1Claw](https://1claw.xyz) API as CrewAI-compatible tools. Each tool fetches secrets at runtime, signs transactions server-side, and writes to encrypted agent memory. Access is policy-scoped, so an agent only sees the vault paths a human explicitly granted, and secrets are never persisted in the model's context window.
+
+## Installation
+
+```bash
+pip install 1claw-crewai-tools
+```
+
+## Setup
+
+Set your agent's API key. The agent and vault IDs are auto-resolved from it:
+
+```bash
+export ONECLAW_AGENT_API_KEY="ocv_your_agent_key"
+```
+
+## Usage
+
+Load all tools (vault, memory, signing, automations) at once:
+
+```python
+import os
+from crewai import Agent, Crew, Process, Task
+from oneclaw_crewai import OneclawClient, get_all_tools
+
+client = OneclawClient(api_key=os.environ["ONECLAW_AGENT_API_KEY"])
+tools = get_all_tools(client)  # 11 tools
+
+researcher = Agent(
+    role="Blockchain Researcher",
+    goal="Check wallet balances and sign transactions",
+    backstory="You use 1Claw tools for all credential and signing operations.",
+    tools=tools,
+)
+```
+
+Or import a single tool:
+
+```python
+from oneclaw_crewai import OneclawVaultTool
+```
+
+## Notes
+
+- Secrets are fetched just-in-time and never written into crew configs, `.env` files, or the model context.
+- Access is policy-scoped and audited per call; grants are revocable without rotating keys.
+- Tools cover vault secrets, encrypted memory, multi-chain signing, and workflow automations.
+- Requires a [1Claw](https://1claw.xyz) account and an agent API key.
