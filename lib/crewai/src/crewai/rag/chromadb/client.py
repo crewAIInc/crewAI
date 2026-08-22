@@ -86,7 +86,7 @@ class ChromaDBClient(BaseClient):
             yield
             return
         lock_cm = store_lock(self._lock_name)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, lock_cm.__enter__)
         try:
             yield
