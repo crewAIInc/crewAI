@@ -397,6 +397,13 @@ class GeminiCompletion(BaseLLM):
                     self._format_messages_for_gemini(messages)
                 )
 
+                messages_for_hooks = self._convert_contents_to_dict(formatted_content)
+
+                if not self._invoke_before_llm_call_hooks(
+                    messages_for_hooks, from_agent
+                ):
+                    raise ValueError("LLM call blocked by before_llm_call hook")
+
                 config = self._prepare_generation_config(
                     system_instruction, tools, effective_response_model
                 )
