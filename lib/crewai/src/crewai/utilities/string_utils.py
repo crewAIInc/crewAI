@@ -133,7 +133,6 @@ def interpolate_only(
         )
 
     variables = _VARIABLE_PATTERN.findall(input_string)
-    result = input_string
 
     missing_vars = [var for var in variables if var not in inputs]
     if missing_vars:
@@ -141,10 +140,8 @@ def interpolate_only(
             f"Template variable '{missing_vars[0]}' not found in inputs dictionary"
         )
 
-    for var in variables:
-        if var in inputs:
-            placeholder = "{" + var + "}"
-            value = str(inputs[var])
-            result = result.replace(placeholder, value)
-
-    return result
+    # Substitute in a single pass so that braces appearing inside a value are
+    # not re-interpreted as placeholders (which would re-interpolate values).
+    return _VARIABLE_PATTERN.sub(
+        lambda match: str(inputs[match.group(1)]), input_string
+    )
