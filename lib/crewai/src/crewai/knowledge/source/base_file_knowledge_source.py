@@ -71,14 +71,20 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     def _save_documents(self) -> None:
         """Save the documents to the storage."""
         if self.storage is not None:
-            self.storage.save(self.chunks)
+            self.storage.save(
+                self.chunks,
+                metadata=self.metadata if self.metadata else None,
+            )
         else:
             raise ValueError("No storage found to save documents.")
 
     async def _asave_documents(self) -> None:
         """Save the documents to the storage asynchronously."""
         if self.storage is not None:
-            await self.storage.asave(self.chunks)
+            await self.storage.asave(
+                self.chunks,
+                metadata=self.metadata if self.metadata else None,
+            )
         else:
             raise ValueError("No storage found to save documents.")
 
