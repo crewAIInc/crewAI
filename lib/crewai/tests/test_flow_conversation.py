@@ -8,7 +8,9 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from pydantic import BaseModel
+from pathlib import Path
+
+from pydantic import BaseModel, ValidationError, create_model
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
@@ -2303,6 +2305,13 @@ class _ScriptedLLM(BaseLLM):
         return 8192
 
 
+class _Outer:
+    """Holds a nested model, so its qualname is dotted without `<locals>`."""
+
+    class Route(BaseModel):
+        intent: str
+
+
 def _conversational_declaration(**overrides: Any) -> dict[str, Any]:
     """A declaration naming the built-in methods explicitly.
 
@@ -2404,20 +2413,200 @@ class TestDeclarativeConversationalFlow:
         assert ordered == ["bootstrap", "route_conversation"]
         assert sequential is True
 
-    def test_router_response_format_ref_is_dropped_with_a_warning(self, caplog) -> None:
-        caplog.set_level(
-            logging.WARNING, logger="crewai.experimental.conversational_mixin"
-        )
+    def test_router_response_format_takes_a_python_ref_not_a_module_ref(self) -> None:
+        """The contract declares the same `{"python": ...}` shape crews use.
+
+        A bare `module:qualname` ref used to be accepted and silently dropped;
+        it is now a load-time error, so a typo cannot look like it worked.
+        """
+        with pytest.raises(ValidationError, match="response_format"):
+            Flow.from_declaration(
+                contents=_conversational_declaration(
+                    conversational={
+                        "router": {"response_format": {"ref": "some.module:Schema"}}
+                    }
+                )
+            )
+
+
+class TestDeclaredRouterResponseFormat:
+    """A declaration can name the model the routing decision is parsed into."""
+
+    ROUTE_MODULE = (
+        "from typing import Literal\n"
+        "from pydantic import BaseModel\n"
+        "\n"
+        "class ConversationRoute(BaseModel):\n"
+        "    intent: Literal['order', 'converse']\n"
+    )
+
+    @staticmethod
+    def _declaration(router: dict[str, Any]) -> dict[str, Any]:
+        return _conversational_declaration(conversational={"router": router})
+
+    def test_a_declared_python_ref_is_resolved_to_the_class(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        (tmp_path / "routes.py").write_text(self.ROUTE_MODULE, encoding="utf-8")
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
         flow = Flow.from_declaration(
-            contents=_conversational_declaration(
-                conversational={
-                    "router": {"response_format": {"ref": "some.module:Schema"}}
-                }
+            contents=self._declaration(
+                {"response_format": {"python": "routes.ConversationRoute"}}
+            )
+        )
+        resolved = flow._conversation_config.router.response_format
+
+        assert resolved is not None
+        assert resolved.__name__ == "ConversationRoute"
+        assert "intent" in resolved.model_fields
+        assert flow._router_response_format(flow._conversation_config.router) is resolved
+
+    def test_omitting_it_still_synthesizes_one(self) -> None:
+        flow = Flow.from_declaration(contents=self._declaration({}))
+
+        synthesized = flow._router_response_format(flow._conversation_config.router)
+
+        assert flow._conversation_config.router.response_format is None
+        assert list(synthesized.model_fields) == ["intent"]
+
+    def test_a_ref_outside_the_project_root_is_refused(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Declarations may not reach outside the project to import code."""
+        monkeypatch.chdir(tmp_path)
+        flow = Flow.from_declaration(
+            contents=self._declaration(
+                {"response_format": {"python": "os.path.basename"}}
             )
         )
 
-        assert flow._conversation_config.router.response_format is None
-        assert "cannot carry a model class" in caplog.text
+        # Resolution is lazy: the declaration loads, the import is refused.
+        with pytest.raises(Exception, match="inside the project root"):
+            _ = flow._conversation_config
+
+    def test_a_ref_without_a_dot_is_rejected_at_load(self) -> None:
+        with pytest.raises(ValidationError):
+            Flow.from_declaration(
+                contents=self._declaration({"response_format": {"python": "nodots"}})
+            )
+
+    def test_a_live_class_on_a_python_flow_is_untouched(self) -> None:
+        class MyRoute(BaseModel):
+            intent: str
+
+        @ConversationConfig(router=RouterConfig(response_format=MyRoute))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        assert ClassChat()._conversation_config.router.response_format is MyRoute
+
+    def test_a_function_local_model_is_omitted_from_the_projection(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A path through `<locals>` cannot be imported back, so never emit it."""
+
+        class LocalRoute(BaseModel):
+            intent: str
+
+        @ConversationConfig(router=RouterConfig(response_format=LocalRoute))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        with caplog.at_level(logging.WARNING, logger="crewai.flow.dsl._utils"):
+            definition = ClassChat.flow_definition()
+
+        assert definition.conversational.router.response_format is None
+        # Silently dropping it would leave the author guessing, so warn.
+        assert "cannot be imported by path" in caplog.text
+        # The live class still drives the running flow; only the projection drops it.
+        assert ClassChat()._conversation_config.router.response_format is LocalRoute
+
+    def test_a_non_model_response_format_is_omitted_from_the_projection(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        class NotAModel:
+            pass
+
+        @ConversationConfig(router=RouterConfig(response_format=NotAModel))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        with caplog.at_level(logging.WARNING, logger="crewai.flow.dsl._utils"):
+            definition = ClassChat.flow_definition()
+
+        assert definition.conversational.router.response_format is None
+        assert "is not a Pydantic model class" in caplog.text
+
+    def test_a_nested_model_is_omitted_from_the_projection(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """`module.Outer.Route` reloads `module.Outer` as a module that is absent."""
+
+        @ConversationConfig(router=RouterConfig(response_format=_Outer.Route))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        with caplog.at_level(logging.WARNING, logger="crewai.flow.dsl._utils"):
+            definition = ClassChat.flow_definition()
+
+        assert definition.conversational.router.response_format is None
+        assert "cannot be imported by its module path" in caplog.text
+        assert ClassChat()._conversation_config.router.response_format is _Outer.Route
+
+    def test_an_unbound_generated_model_is_omitted_from_the_projection(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A `create_model()` class no module attribute names cannot be reloaded."""
+        generated = create_model("GeneratedRoute", intent=(str, ...))
+
+        @ConversationConfig(router=RouterConfig(response_format=generated))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        with caplog.at_level(logging.WARNING, logger="crewai.flow.dsl._utils"):
+            definition = ClassChat.flow_definition()
+
+        assert definition.conversational.router.response_format is None
+        assert "cannot be imported by its module path" in caplog.text
+
+        reloaded = Flow.from_declaration(contents=definition.to_dict())
+        synthesized = reloaded._router_response_format(
+            reloaded._conversation_config.router
+        )
+
+        assert synthesized is not generated
+        assert list(synthesized.model_fields) == ["intent"]
+
+    def test_a_dropped_projection_reloads_with_the_synthesized_model(self) -> None:
+        class LocalRoute(BaseModel):
+            intent: str
+
+        @ConversationConfig(router=RouterConfig(response_format=LocalRoute))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        reloaded = Flow.from_declaration(
+            contents=ClassChat.flow_definition().to_dict()
+        )
+        synthesized = reloaded._router_response_format(
+            reloaded._conversation_config.router
+        )
+
+        assert list(synthesized.model_fields) == ["intent"]
+
+    def test_a_live_class_projects_as_a_python_ref(self) -> None:
+        @ConversationConfig(router=RouterConfig(response_format=ConversationState))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        projected = ClassChat.flow_definition().conversational.router.response_format
+
+        assert projected is not None
+        assert projected.python == (
+            "crewai.experimental.conversational.ConversationState"
+        )
 
 
 class TestDeclaredConversationalLLM:
