@@ -16,7 +16,7 @@ from crewai_core.lock_store import lock as store_lock
 import lancedb  # type: ignore[import-untyped]
 
 from crewai.memory.storage.backend import EmbeddingDimensionMismatchError
-from crewai.memory.types import MemoryRecord, ScopeInfo
+from crewai.memory.types import MemoryRecord, ScopeInfo, _normalize_dt, _utc_now
 
 
 _logger = logging.getLogger(__name__)
@@ -165,8 +165,8 @@ class LanceDBStorage:
                 "categories_str": "[]",
                 "metadata_str": "{}",
                 "importance": 0.5,
-                "created_at": datetime.utcnow().isoformat(),
-                "last_accessed": datetime.utcnow().isoformat(),
+                "created_at": _utc_now().isoformat(),
+                "last_accessed": _utc_now().isoformat(),
                 "source": "",
                 "private": False,
                 "vector": [0.0] * vector_dim,
@@ -264,11 +264,11 @@ class LanceDBStorage:
     def _row_to_record(self, row: dict[str, Any]) -> MemoryRecord:
         def _parse_dt(val: Any) -> datetime:
             if val is None:
-                return datetime.utcnow()
+                return _utc_now()
             if isinstance(val, datetime):
-                return val
+                return _normalize_dt(val)
             s = str(val)
-            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+            return _normalize_dt(datetime.fromisoformat(s.replace("Z", "+00:00")))
 
         return MemoryRecord(
             id=str(row["id"]),
@@ -349,7 +349,7 @@ class LanceDBStorage:
         if not record_ids or self._table is None:
             return
         with store_lock(self._lock_name):
-            now = datetime.utcnow().isoformat()
+            now = _utc_now().isoformat()
             safe_ids = [str(rid).replace("'", "''") for rid in record_ids]
             ids_expr = ", ".join(f"'{rid}'" for rid in safe_ids)
             self._do_write(

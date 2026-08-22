@@ -30,6 +30,8 @@ from crewai.memory.types import (
     MemoryMatch,
     MemoryRecord,
     ScopeInfo,
+    _normalize_dt,
+    _utc_now,
     compute_composite_score,
     embed_text,
 )
@@ -845,7 +847,7 @@ class Memory(BaseModel):
             scope_prefix=effective_scope,
             categories=categories,
             record_ids=record_ids,
-            older_than=older_than,
+            older_than=_normalize_dt(older_than),
             metadata_filter=metadata_filter,
         )
 
@@ -877,7 +879,7 @@ class Memory(BaseModel):
         existing = self._storage.get_record(record_id)
         if existing is None:
             raise ValueError(f"Record not found: {record_id}")
-        now = datetime.utcnow()
+        now = _utc_now()
         updates: dict[str, Any] = {"last_accessed": now}
         if content is not None:
             updates["content"] = content

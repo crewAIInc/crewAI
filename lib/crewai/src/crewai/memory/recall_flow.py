@@ -26,6 +26,7 @@ from crewai.memory.types import (
     MemoryConfig,
     MemoryMatch,
     MemoryRecord,
+    _normalize_dt,
     compute_composite_score,
     embed_texts,
 )
@@ -221,8 +222,15 @@ class RecallFlow(Flow[RecallState]):
 
             if analysis.time_filter:
                 try:
-                    self.state.time_cutoff = datetime.fromisoformat(
-                        analysis.time_filter
+                    # The LLM may emit a trailing "Z" (ISO 8601), which
+                    # ``fromisoformat`` rejects on Python < 3.11 and parses
+                    # to an *aware* datetime on 3.11+. Normalize both cases
+                    # to naive-UTC so the later ``created_at >= time_cutoff``
+                    # comparison never mixes naive and aware values.
+                    self.state.time_cutoff = _normalize_dt(
+                        datetime.fromisoformat(
+                            analysis.time_filter.replace("Z", "+00:00")
+                        )
                     )
                 except ValueError:
                     pass

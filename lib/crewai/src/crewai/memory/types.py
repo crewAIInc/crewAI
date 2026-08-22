@@ -2,11 +2,38 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def _utc_now() -> datetime:
+    """Current UTC time as a naive datetime (the canonical representation used
+    across the memory system).
+
+    Naive-UTC is the stored format everywhere (LanceDB rows, Qdrant payloads,
+    and all SQL string comparisons rely on it), so every timestamp that enters
+    the system must be normalized to it. ``datetime.utcnow()`` is deprecated
+    since Python 3.12; this helper avoids the deprecation warning while keeping
+    the same naive-UTC semantics.
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _normalize_dt(value: Any) -> Any:
+    """Convert an aware datetime to naive-UTC; pass everything else through.
+
+    Timezone-aware inputs (e.g. ``datetime.now(timezone.utc)``, or ISO strings
+    with a ``Z``/``+00:00`` suffix parsed by storage backends) previously mixed
+    with naive datetimes and raised ``TypeError`` on subtraction/comparison.
+    Normalizing here makes every ``MemoryRecord`` timestamp naive-UTC by
+    construction.
+    """
+    if isinstance(value, datetime) and value.tzinfo is not None:
+        return value.astimezone(timezone.utc).replace(tzinfo=None)
+    return value
 
 
 # When searching the vector store, we ask for more results than the caller
@@ -44,11 +71,11 @@ class MemoryRecord(BaseModel):
         description="Importance score from 0.0 to 1.0, affects retrieval ranking.",
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=_utc_now,
         description="When the memory was created.",
     )
     last_accessed: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=_utc_now,
         description="When the memory was last accessed.",
     )
     embedding: list[float] | None = Field(
@@ -71,6 +98,11 @@ class MemoryRecord(BaseModel):
             "or when include_private=True is passed."
         ),
     )
+
+    @field_validator("created_at", "last_accessed", mode="before")
+    @classmethod
+    def _normalize_datetime_fields(cls, v: Any) -> Any:
+        return _normalize_dt(v)
 
 
 class MemoryMatch(BaseModel):
@@ -361,7 +393,7 @@ def compute_composite_score(
         Tuple of (composite_score, match_reasons). match_reasons includes
         "semantic" always; "recency" if decay > 0.5; "importance" if record.importance > 0.5.
     """
-    age_seconds = (datetime.utcnow() - record.created_at).total_seconds()
+    age_seconds = (_utc_now() - record.created_at).total_seconds()
     age_days = max(age_seconds / 86400.0, 0.0)
     decay = 0.5 ** (age_days / config.recency_half_life_days)
 

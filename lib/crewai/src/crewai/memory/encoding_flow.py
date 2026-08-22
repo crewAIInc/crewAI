@@ -27,7 +27,7 @@ from crewai.memory.analyze import (
     analyze_for_consolidation,
     analyze_for_save,
 )
-from crewai.memory.types import MemoryConfig, MemoryRecord, embed_texts
+from crewai.memory.types import MemoryConfig, MemoryRecord, _utc_now, embed_texts
 from crewai.memory.utils import join_scope_paths
 
 
@@ -378,7 +378,7 @@ class EncodingFlow(Flow[EncodingState]):
         conflicts from two operations targeting the same record.
         """
         items = list(self.state.items)
-        now = datetime.utcnow()
+        now = _utc_now()
 
         # Multiple items may reference the same existing record (because their
         # similar_records overlap). Collect one action per record_id, first wins.
