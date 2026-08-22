@@ -11,7 +11,7 @@ Responses (``status``) — keep their own helpers.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Final
 
 
 def _as_str(value: Any) -> str | None:
@@ -53,3 +53,26 @@ def extract_choices_finish_reason_and_id(
             finish_reason = _as_str(raw_finish)
 
     return finish_reason, response_id
+
+
+TRUNCATION_FINISH_REASONS: Final[frozenset[str]] = frozenset({"length", "max_tokens"})
+"""Normalised finish-reason spellings that mean "stopped at the token cap".
+
+Every provider crewAI ships surfaces one of these, modulo case:
+``length`` (OpenAI, Azure, LiteLLM, and the ``openai_compatible``/Snowflake
+subclasses), ``max_tokens`` (Anthropic ``stop_reason``, Bedrock ``stopReason``)
+and ``MAX_TOKENS`` (the Gemini protobuf enum's ``.name``).
+"""
+
+
+def is_truncated_finish_reason(finish_reason: str | None) -> bool:
+    """Return whether ``finish_reason`` means the model hit its token cap.
+
+    Providers spell this differently, so callers should not compare against a
+    single literal. Anything unrecognised — including ``None`` and the
+    non-string values provider helpers may return — is reported as not
+    truncated, so this never turns an unknown reason into a false alarm.
+    """
+    if not isinstance(finish_reason, str):
+        return False
+    return finish_reason.strip().lower() in TRUNCATION_FINISH_REASONS

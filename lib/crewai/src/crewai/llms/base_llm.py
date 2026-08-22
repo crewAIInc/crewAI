@@ -42,6 +42,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.llms._finish_reason_utils import is_truncated_finish_reason
 from crewai.types.streaming import StreamSession
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.pydantic_schema_utils import serialize_model_class
@@ -618,6 +619,15 @@ class BaseLLM(BaseModel, ABC):
     ) -> None:
         """Emit LLM call completed event."""
         from crewai.utilities.serialization import to_serializable
+
+        if is_truncated_finish_reason(finish_reason):
+            logging.warning(
+                "Response from %s was truncated because it reached the token cap "
+                "(finish_reason=%r); the content is incomplete. Raise max_tokens "
+                "if the answer needs to be longer.",
+                self.model,
+                finish_reason,
+            )
 
         crewai_event_bus.emit(
             self,
