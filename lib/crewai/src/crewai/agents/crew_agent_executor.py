@@ -806,6 +806,138 @@ class CrewAgentExecutor(BaseAgentExecutor):
         self.messages.append(reasoning_message)
         return None
 
+    async def _ahandle_native_tool_calls(
+        self,
+        tool_calls: list[Any],
+        available_functions: dict[str, Callable[..., Any]],
+    ) -> AgentFinish | None:
+        """Async variant of ``_handle_native_tool_calls``.
+
+        Uses ``await tool.arun()`` instead of ``tool.run()`` so that async tools
+        are properly awaited inside a running event loop, avoiding the
+        ``RuntimeError: asyncio.run() cannot be called from a running event loop``
+        crash that occurs when ``_ainvoke_loop_native_tools`` calls the sync path.
+        """
+        if not tool_calls:
+            return None
+
+        parsed_calls = [
+            parsed
+            for tool_call in tool_calls
+            if (parsed := self._parse_native_tool_call(tool_call)) is not None
+        ]
+        if not parsed_calls:
+            return None
+
+        original_tools_by_name: dict[str, Any] = dict(self._tool_name_mapping)
+
+        if len(parsed_calls) > 1:
+            has_result_as_answer_in_batch = any(
+                bool(
+                    original_tools_by_name.get(func_name)
+                    and getattr(
+                        original_tools_by_name.get(func_name), "result_as_answer", False
+                    )
+                )
+                for _, func_name, _ in parsed_calls
+            )
+            has_max_usage_count_in_batch = any(
+                bool(
+                    original_tools_by_name.get(func_name)
+                    and getattr(
+                        original_tools_by_name.get(func_name),
+                        "max_usage_count",
+                        None,
+                    )
+                    is not None
+                )
+                for _, func_name, _ in parsed_calls
+            )
+
+            if has_result_as_answer_in_batch or has_max_usage_count_in_batch:
+                logger.debug(
+                    "Skipping parallel native execution because batch includes result_as_answer or max_usage_count tool"
+                )
+            else:
+                execution_plan: list[
+                    tuple[str, str, str | dict[str, Any], Any | None]
+                ] = []
+                for call_id, func_name, func_args in parsed_calls:
+                    original_tool = original_tools_by_name.get(func_name)
+                    execution_plan.append(
+                        (call_id, func_name, func_args, original_tool)
+                    )
+
+                self._append_assistant_tool_calls_message(
+                    [
+                        (call_id, func_name, func_args)
+                        for call_id, func_name, func_args, _ in execution_plan
+                    ]
+                )
+
+                # Use asyncio.gather instead of ThreadPoolExecutor so async tools
+                # are properly awaited rather than run through asyncio.run().
+                async def _run_one(
+                    call_id: str,
+                    func_name: str,
+                    func_args: str | dict[str, Any],
+                    original_tool: Any | None,
+                ) -> dict[str, Any] | None:
+                    return await self._aexecute_single_native_tool_call(
+                        call_id=call_id,
+                        func_name=func_name,
+                        func_args=func_args,
+                        available_functions=available_functions,
+                        original_tool=original_tool,
+                        should_execute=True,
+                    )
+
+                tasks = [
+                    _run_one(call_id, func_name, func_args, original_tool)
+                    for call_id, func_name, func_args, original_tool in execution_plan
+                ]
+                ordered_results = await asyncio.gather(*tasks)
+
+                for execution_result in ordered_results:
+                    if not execution_result:
+                        continue
+                    tool_finish = self._append_tool_result_and_check_finality(
+                        execution_result
+                    )
+                    if tool_finish:
+                        return tool_finish
+
+                reasoning_prompt = I18N_DEFAULT.slice("post_tool_reasoning")
+                reasoning_message: LLMMessage = {
+                    "role": "user",
+                    "content": reasoning_prompt,
+                }
+                self.messages.append(reasoning_message)
+                return None
+
+        call_id, func_name, func_args = parsed_calls[0]
+        self._append_assistant_tool_calls_message([(call_id, func_name, func_args)])
+
+        execution_result = await self._aexecute_single_native_tool_call(
+            call_id=call_id,
+            func_name=func_name,
+            func_args=func_args,
+            available_functions=available_functions,
+            original_tool=original_tools_by_name.get(func_name),
+            should_execute=True,
+        )
+        tool_finish = self._append_tool_result_and_check_finality(execution_result)
+        if tool_finish:
+            return tool_finish
+
+        reasoning_prompt = I18N_DEFAULT.slice("post_tool_reasoning")
+        reasoning_message = {
+            "role": "user",
+            "content": reasoning_prompt,
+        }
+        self.messages.append(reasoning_message)
+        return None
+
     def _parse_native_tool_call(
         self, tool_call: Any
     ) -> tuple[str, str, str | dict[str, Any]] | None:
@@ -875,6 +1007,73 @@ class CrewAgentExecutor(BaseAgentExecutor):
         original_tool: Any | None = None,
         should_execute: bool = True,
     ) -> dict[str, Any]:
+        """Execute a single native tool call synchronously."""
+
+        def sync_tool_runner(tool: Any, kwargs: dict[str, Any]) -> Any:
+            return available_functions[func_name](**kwargs)
+
+        return asyncio.run(
+            self._execute_single_native_tool_call_impl(
+                call_id=call_id,
+                func_name=func_name,
+                func_args=func_args,
+                available_functions=available_functions,
+                original_tool=original_tool,
+                should_execute=should_execute,
+                tool_runner=sync_tool_runner,
+            )
+        )
+
+    async def _aexecute_single_native_tool_call(
+        self,
+        *,
+        call_id: str,
+        func_name: str,
+        func_args: str | dict[str, Any],
+        available_functions: dict[str, Callable[..., Any]],
+        original_tool: Any | None = None,
+        should_execute: bool = True,
+    ) -> dict[str, Any]:
+        """Async variant of ``_execute_single_native_tool_call``.
+
+        Uses ``await tool.arun()`` instead of ``tool.run()`` so that async tools
+        are properly awaited inside a running event loop, avoiding the
+        ``RuntimeError: asyncio.run() cannot be called from a running event loop``
+        crash.
+        """
+
+        async def async_tool_runner(tool: Any, kwargs: dict[str, Any]) -> Any:
+            if hasattr(tool, "arun") and callable(tool.arun):
+                return await tool.arun(**kwargs)
+            return available_functions[func_name](**kwargs)
+
+        return await self._execute_single_native_tool_call_impl(
+            call_id=call_id,
+            func_name=func_name,
+            func_args=func_args,
+            available_functions=available_functions,
+            original_tool=original_tool,
+            should_execute=should_execute,
+            tool_runner=async_tool_runner,
+        )
+
+    async def _execute_single_native_tool_call_impl(
+        self,
+        *,
+        call_id: str,
+        func_name: str,
+        func_args: str | dict[str, Any],
+        available_functions: dict[str, Callable[..., Any]],
+        original_tool: Any | None,
+        should_execute: bool,
+        tool_runner: Callable[..., Any],
+    ) -> dict[str, Any]:
+        """Shared body for sync and async single-tool execution.
+
+        ``tool_runner`` is a callable ``(tool, kwargs) -> result`` that
+        executes the tool — sync for the sync path, async for the async path.
+        When ``tool_runner`` returns an awaitable, it is awaited.
+        """
         from datetime import datetime
         import json
 
@@ -973,7 +1172,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
             and output_tool is not None
         ):
             try:
-                raw_result = available_functions[func_name](**(args_dict or {}))
+                raw_result = tool_runner(output_tool, args_dict or {})
+                if asyncio.iscoroutine(raw_result):
+                    raw_result = await raw_result
                 raw_tool_result = raw_result
 
                 if self.tools_handler and self.tools_handler.cache:
@@ -1332,7 +1533,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     and answer
                     and self._is_tool_call_list(answer)
                 ):
-                    tool_finish = self._handle_native_tool_calls(
+                    tool_finish = await self._ahandle_native_tool_calls(
                         answer, available_functions
                     )
                     if tool_finish is not None:
