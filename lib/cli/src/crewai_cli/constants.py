@@ -258,11 +258,11 @@ MODELS: dict[str, list[str]] = {
         "nvidia_nim/baichuan-inc/baichuan2-13b-chat",
     ],
     "groq": [
+        "groq/llama-3.3-70b-versatile",
         "groq/llama-3.1-8b-instant",
-        "groq/llama-3.1-70b-versatile",
-        "groq/llama-3.1-405b-reasoning",
-        "groq/gemma2-9b-it",
-        "groq/gemma-7b-it",
+        "groq/meta-llama/llama-4-scout-17b-16e-instruct",
+        "groq/qwen/qwen3-32b",
+        "groq/allam-2-7b",
     ],
     "ollama": ["ollama/llama3.1", "ollama/mixtral"],
     "watson": [
