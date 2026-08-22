@@ -1396,7 +1396,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         except Exception as e:
             if not hook_state["end_dispatched"]:
                 self._dispatch_execution_end_failure(e)
-            await self._emit_flow_failed(e, respect_suppression=True)
+            await self._emit_flow_failed(e)
             raise
         finally:
             # Match kickoff_async: drain pending handlers so the resumed
@@ -1415,20 +1415,30 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             reset_emission_counter()
             reset_last_event_id()
 
-        if not self.suppress_flow_events:
-            future = crewai_event_bus.emit(
-                self,
-                FlowStartedEvent(
-                    type="flow_started",
-                    flow_name=self._definition.name,
-                    inputs=None,
-                ),
-            )
-            if future and isinstance(future, Future):
-                try:
-                    await asyncio.wrap_future(future)
-                except Exception:
-                    logger.warning("FlowStartedEvent handler failed", exc_info=True)
+        # Emitted unconditionally, matching both the kickoff path and the
+        # FlowFinishedEvent below. This used to sit behind suppress_flow_events,
+        # which produced an unpaired finish: the finish emit is not gated, so a
+        # resumed flow reported finishing without ever having started, breaking
+        # every started/finished pairing and duration built on it.
+        #
+        # suppress_flow_events is not the right gate for emission in any case. It
+        # asks for console quiet - see _flow_origin in events/event_listener.py,
+        # which says so and notes it "can legitimately be set on a caller's own
+        # flow" - and the listener already honours it where it prints. Suppressing
+        # the event instead removed the resumed leg from telemetry entirely.
+        future = crewai_event_bus.emit(
+            self,
+            FlowStartedEvent(
+                type="flow_started",
+                flow_name=self._definition.name,
+                inputs=None,
+            ),
+        )
+        if future and isinstance(future, Future):
+            try:
+                await asyncio.wrap_future(future)
+            except Exception:
+                logger.warning("FlowStartedEvent handler failed", exc_info=True)
 
         get_env_context()
 
@@ -1603,10 +1613,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
             self._event_futures.clear()
 
-        if (
-            not self.suppress_flow_events
-            and not self._should_defer_trace_finalization()
-        ):
+        # Not gated on suppress_flow_events: that asks for console quiet, and the
+        # started event above is ungated, so gating here would emit a start with no
+        # terminal event. The defer check stays - it is a real reason to withhold the
+        # finish, because finalize_session_traces() emits it later instead.
+        if not self._should_defer_trace_finalization():
             # Background memory saves must finish (and emit their
             # completed/failed events) before flow-finished triggers
             # listener teardown/finalization; the flush then waits for those
@@ -2618,9 +2629,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         get_env_context()
         return flow_scope_open
 
-    async def _emit_flow_failed(
-        self, error: Exception, *, respect_suppression: bool = False
-    ) -> None:
+    async def _emit_flow_failed(self, error: BaseException) -> None:
         """Emit ``FlowFailedEvent`` and close out the trace batch for a failed run.
 
         Mirrors the terminal block of the success path: drain pending event
@@ -2630,14 +2639,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         Args:
             error: The exception that ended the execution.
-            respect_suppression: Skip the emission for suppressed flows. Only
-                the resume path gates its lifecycle events on
-                ``suppress_flow_events``; ``kickoff_async`` emits them either
-                way and lets listeners filter.
         """
         if self._should_defer_trace_finalization():
-            return
-        if respect_suppression and self.suppress_flow_events:
             return
 
         try:

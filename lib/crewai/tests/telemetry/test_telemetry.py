@@ -403,6 +403,67 @@ def test_crew_memory_is_recorded_as_a_string(memory, expected: str) -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("inputs", "expected"),
+    [
+        ({"topic": "AI"}, "true"),
+        ({"a": 1, "b": 2}, "true"),
+        ({}, "false"),
+        (None, "false"),
+    ],
+    ids=["one-key", "two-keys", "empty-dict", "none"],
+)
+def test_crew_inputs_presence_is_recorded_ungated_as_a_string(inputs, expected: str):
+    """Whether a run was parameterised must be answerable for everyone, not just sharers.
+
+    The `crew_inputs` payload is share_crew-gated and stays that way (D13), so the only
+    signal in the warehouse was `has_crew_inputs`, derived from that gated key: 0 of
+    226,592 spans on 0.28.8 and ~0.02% overall, all opt-in sharers. That is a sample of
+    people who opted into sharing, not a measurement of users.
+
+    A string rather than an int or a bool, and here the encoding is the whole design.
+    Measured over a single day, 312,424,709 spans: `vInt64='0'` appears 0 times and
+    `vBool='false'` appears 0 times, while `vStr='0'` does appear. So an integer key
+    count would have silently dropped exactly the majority case -- 54.46% of sharers
+    pass `{}` -- and reproduced the bug this item exists to fix.
+
+    `{}` and `None` are both "false" on purpose: an empty dict parameterises nothing, so
+    truthiness is the question being asked.
+    """
+    crew = _stub_crew(True)
+    assert crew.share_crew is False, "the ungated path is the one under test"
+
+    _tracer, span = _emit("crew_creation", crew, inputs)
+
+    span.set_attribute.assert_any_call("crew_inputs_present", expected)
+
+
+def test_crew_inputs_payload_stays_gated_while_the_presence_signal_does_not():
+    """The split is the point: presence ships for everyone, content ships for nobody new.
+
+    Without this, widening the presence signal could be "fixed" later by simply
+    ungating `crew_inputs`, which would put user payloads into telemetry.
+    """
+    crew = _stub_crew(True)
+    assert crew.share_crew is False
+
+    _tracer, span = _emit("crew_creation", crew, {"secret_topic": "acquisition target"})
+
+    emitted = {call.args[0] for call in span.set_attribute.call_args_list}
+    assert "crew_inputs_present" in emitted
+    assert "crew_inputs" not in emitted, (
+        "the payload must remain inside the share_crew branch; only its presence is ungated"
+    )
+    for call in span.set_attribute.call_args_list:
+        assert "secret_topic" not in str(call.args[1]), (
+            "no input KEY may reach the span either -- key names are user data too, and a "
+            "regression emitting json.dumps(inputs.keys()) would pass a value-only check"
+        )
+        assert "acquisition target" not in str(call.args[1]), (
+            "no input value may reach the span for a non-sharing crew"
+        )
+
+
 @pytest.mark.parametrize(("resumed", "expected"), [(True, "true"), (False, "false")])
 def test_resumed_is_recorded_as_a_string(resumed: bool, expected: str) -> None:
     """A boolean is encoded as the presence of a key, not as a value.
