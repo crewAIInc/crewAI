@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+from typing import Any
+
+import pytest
 from a2a.types import AgentCard, AgentSkill
 
 from crewai import Agent
 from crewai.a2a.config import A2AClientConfig, A2AServerConfig
-from crewai.a2a.utils.agent_card import inject_a2a_server_methods
+from crewai.a2a.utils import agent_card as agent_card_module
+from crewai.a2a.utils.agent_card import (
+    afetch_agent_card,
+    fetch_agent_card,
+    inject_a2a_server_methods,
+)
 
 
 class TestInjectA2AServerMethods:
@@ -323,3 +331,70 @@ class TestAgentCardJsonStructure:
         assert "provider" not in json_data
         assert "documentationUrl" not in json_data
         assert "iconUrl" not in json_data
+
+
+def _minimal_card(name: str) -> AgentCard:
+    """An AgentCard whose name changes on every real fetch, so cache hits are visible."""
+    return AgentCard.model_validate(
+        {
+            "name": name,
+            "description": "probe",
+            "url": "http://example.com/",
+            "version": "1",
+            "protocol_version": "0.3.0",
+            "capabilities": {},
+            "default_input_modes": ["text/plain"],
+            "default_output_modes": ["text/plain"],
+            "skills": [],
+        }
+    )
+
+
+@pytest.fixture
+def counting_fetch(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Replace the network layer with a counter that returns a distinct card each call."""
+    calls: list[str] = []
+
+    async def _impl(endpoint: str, auth: Any, timeout: int) -> AgentCard:
+        calls.append(endpoint)
+        return _minimal_card(f"card-{len(calls)}")
+
+    monkeypatch.setattr(agent_card_module, "_afetch_agent_card_impl", _impl)
+    return calls
+
+
+class TestFetchAgentCardCaching:
+    """use_cache must mean the same thing on the sync and async entry points."""
+
+    def test_sync_use_cache_false_refetches(self, counting_fetch: list[str]) -> None:
+        """use_cache=False previously delegated to afetch_agent_card, which defaults to True."""
+        endpoint = "http://sync-uncached/.well-known/agent-card.json"
+
+        first = fetch_agent_card(endpoint, use_cache=False)
+        second = fetch_agent_card(endpoint, use_cache=False)
+
+        assert len(counting_fetch) == 2
+        assert (first.name, second.name) == ("card-1", "card-2")
+
+    def test_sync_use_cache_true_still_caches(self, counting_fetch: list[str]) -> None:
+        """Control: the cached path is unchanged, so the fix isn't just disabling the cache."""
+        endpoint = "http://sync-cached/.well-known/agent-card.json"
+
+        first = fetch_agent_card(endpoint, use_cache=True)
+        second = fetch_agent_card(endpoint, use_cache=True)
+
+        assert len(counting_fetch) == 1
+        assert first.name == second.name == "card-1"
+
+    @pytest.mark.asyncio
+    async def test_async_use_cache_false_refetches(
+        self, counting_fetch: list[str]
+    ) -> None:
+        """Control: the async side already honoured use_cache=False."""
+        endpoint = "http://async-uncached/.well-known/agent-card.json"
+
+        first = await afetch_agent_card(endpoint, use_cache=False)
+        second = await afetch_agent_card(endpoint, use_cache=False)
+
+        assert len(counting_fetch) == 2
+        assert (first.name, second.name) == ("card-1", "card-2")
