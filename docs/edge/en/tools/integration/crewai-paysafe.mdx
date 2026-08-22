@@ -1,0 +1,59 @@
+---
+title: PaySafe
+description: Scan x402 payments for safety before your CrewAI agent settles them, with automatic provenance tagging for prompt-injection detection.
+---
+
+# `crewai-paysafe`
+
+[PaySafe](https://paysafe-agent.com) is a payment security firewall for [x402](https://x402.org) micropayments. Agents that pay for APIs and data over x402 get drained in predictable ways: payments triggered by prompt-injected content, replayed authorizations, inflated prices, secrets leaking through payment metadata, lookalike tokens, and address poisoning. `crewai-paysafe` gives a CrewAI crew an allow / flag / block verdict on every payment before it settles — plus a tool-call hook that makes PaySafe's strongest detector work automatically.
+
+## Installation
+
+```bash
+pip install crewai-paysafe
+```
+
+## Two additions
+
+```python
+from crewai import Agent
+from paysafe_x402 import PaySafeClient
+from crewai_paysafe import paysafe_tools, register_paysafe_provenance
+
+paysafe = PaySafeClient(agent_id="my-agent")   # free API key auto-minted (100 free scans)
+register_paysafe_provenance(paysafe)           # call once at startup
+
+agent = Agent(
+    role="Purchasing agent",
+    goal="Buy data over x402 safely",
+    backstory="You screen every payment with PaySafe before settling.",
+    tools=paysafe_tools(paysafe),
+)
+```
+
+## Why the provenance registration matters
+
+PaySafe's strongest check catches payments whose *decision* came from content the agent just read (a prompt-injected page or tool result). `register_paysafe_provenance` installs a CrewAI **after-tool-call hook** that observes every tool output automatically, so the next scan is provenance-tagged and that check runs with real input — no prompt engineering required. PaySafe's own tool outputs are excluded so verdicts never pollute the signal. CrewAI's tool-call hooks are process-global; call this once.
+
+## The toolset
+
+- **`paysafe_scan_payment`** — call before settling any x402 payment (`direction="outgoing"`) or before paying a received 402 offer (`direction="incoming"`). Returns `allow` / `flag` / `block` with per-check reasons and an Ed25519-signed verdict.
+- **`paysafe_check_reputation`** — check community reports on a counterparty wallet before dealing with it.
+- **`paysafe_report_counterparty`** — report a bad counterparty (always free) to warn other agents.
+
+## Enforcement: payments that cannot execute when blocked
+
+```python
+from crewai_paysafe import guarded_payment
+
+safe_pay = guarded_payment(execute_x402_payment, paysafe)
+# raises PaySafeBlockedError on a block verdict — the executor is never called
+```
+
+Build your CrewAI payment tool's `_run` from `safe_pay`. For wallet-level enforcement (the signer itself refuses unscanned payments), see `PaySafeEnforcer` in the [paysafe-x402 SDK](https://pypi.org/project/paysafe-x402/).
+
+## Reference
+
+- Package: [crewai-paysafe on PyPI](https://pypi.org/project/crewai-paysafe/) · [source](https://github.com/corbinallison/paysafe/tree/main/integrations/crewai-paysafe)
+- Service: [PaySafe API](https://paysafe-agent.com/llms.txt) · [OpenAPI](https://paysafe-agent.com/openapi.json)
+- PaySafe is advisory and non-custodial — it never touches keys, wallets, or funds.
