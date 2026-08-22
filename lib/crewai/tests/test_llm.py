@@ -1207,3 +1207,24 @@ async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0].function.name == "search"
+
+
+@pytest.mark.parametrize(
+    ("model_name", "expected_provider"),
+    [
+        ("claude-sonnet-4-6", "anthropic"),
+        ("claude-opus-4-6", "anthropic"),
+        ("claude-opus-5", "anthropic"),
+        ("claude-3-7-sonnet-20250219", "anthropic"),
+        ("claude-custom-agent-v1", "anthropic"),
+        ("gemini-2.5-pro", "gemini"),
+        ("gemini-3-pro-preview", "gemini"),
+        ("gpt-4o", "openai"),
+        ("o3-mini", "openai"),
+    ],
+)
+def test_infer_provider_from_model(model_name: str, expected_provider: str):
+    """Test that LLM._infer_provider_from_model correctly resolves providers."""
+    inferred = LLM._infer_provider_from_model(model_name)
+    assert inferred == expected_provider
+

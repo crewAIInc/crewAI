@@ -659,6 +659,10 @@ class LLM(BaseLLM):
         if model in AZURE_MODELS:
             return "azure"
 
+        for provider in ["anthropic", "gemini", "bedrock", "azure", "openai"]:
+            if cls._matches_provider_pattern(model, provider):
+                return provider
+
         return "openai"
 
     @classmethod
