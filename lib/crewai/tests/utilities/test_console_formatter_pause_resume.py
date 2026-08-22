@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 from rich.live import Live
+from crewai.events.types.llm_events import LLMCallType
 from crewai.events.utils.console_formatter import ConsoleFormatter
 
 
@@ -110,3 +111,38 @@ class TestConsoleFormatterPauseResume:
             # Streaming again creates new session
             formatter.handle_llm_stream_chunk("chunk 2", call_type=None)
             assert formatter._streaming_live == mock_live_instance_2
+
+    def test_tool_call_stream_chunk_does_not_create_live_panel(self):
+        formatter = ConsoleFormatter(verbose=True)
+
+        with patch("crewai.events.utils.console_formatter.Live") as mock_live_class:
+            formatter.handle_llm_stream_chunk(
+                '{"city":"Paris"}', call_type=LLMCallType.TOOL_CALL
+            )
+
+        mock_live_class.assert_not_called()
+        assert formatter._streaming_live is None
+        assert formatter._is_streaming is False
+
+    def test_tool_call_stream_chunk_stops_existing_live_panel(self):
+        formatter = ConsoleFormatter(verbose=True)
+        mock_live = MagicMock(spec=Live)
+        formatter._streaming_live = mock_live
+
+        formatter.handle_llm_stream_chunk(
+            '{"city":"Paris"}', call_type=LLMCallType.TOOL_CALL
+        )
+
+        mock_live.stop.assert_called_once()
+        assert formatter._streaming_live is None
+
+    def test_tool_usage_started_pauses_existing_live_panel(self):
+        formatter = ConsoleFormatter(verbose=True)
+        mock_live = MagicMock(spec=Live)
+        formatter._streaming_live = mock_live
+
+        with patch.object(formatter, "print_panel"):
+            formatter.handle_tool_usage_started("get_weather", {"city": "Paris"})
+
+        mock_live.stop.assert_called_once()
+        assert formatter._streaming_live is None

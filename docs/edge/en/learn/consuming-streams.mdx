@@ -70,6 +70,38 @@ result = stream.result
 
 `frame.event` is the structured payload for the source event. Use it for metadata such as tool names, arguments, message roles, and runtime identifiers.
 
+## Print Streamed Tool Call Arguments
+
+When a model supports streamed tool calling, CrewAI emits partial tool-call arguments as `llm_stream_chunk` frames on the `llm` channel. These frames are different from tool execution events:
+
+- `llm` channel: the model is constructing the tool call.
+- `tools` channel: CrewAI is executing the tool.
+
+The current delta is stored in `frame.event["chunk"]`. The accumulated arguments are stored in `frame.event["tool_call"]["function"]["arguments"]`.
+
+```python
+with llm.stream_events("Get the weather in Paris.", tools=[weather_tool]) as stream:
+    for frame in stream.interleave(["llm", "tools"]):
+        if frame.channel == "llm" and frame.type == "llm_stream_chunk":
+            tool_call = frame.event.get("tool_call")
+            if tool_call:
+                function = tool_call["function"]
+                print(f"\nPreparing tool: {function['name']}")
+                print(f"Arguments so far: {function['arguments']}")
+            elif frame.content:
+                print(frame.content, end="", flush=True)
+
+        elif frame.channel == "tools" and frame.type == "tool_usage_started":
+            print(f"\nRunning tool: {frame.event.get('tool_name')}")
+
+        elif frame.channel == "tools" and frame.type == "tool_usage_finished":
+            print(f"\nTool finished: {frame.event.get('tool_name')}")
+
+result = stream.result
+```
+
+Some providers emit arguments in small JSON fragments. For display, prefer the accumulated argument string over the latest delta.
+
 ## Watch Flow Progress
 
 Flow lifecycle and method execution frames arrive on the `flow` channel:
