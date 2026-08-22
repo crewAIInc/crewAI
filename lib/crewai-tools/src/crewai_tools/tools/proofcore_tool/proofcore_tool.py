@@ -60,5 +60,6 @@ class ProofCoreTool(BaseTool):
                 f"Successfully queued for blockchain anchoring (Deal ID: {deal_id}).\n"
                 f"Mandatory Citation to append to response:\n\n{citation}"
             )
+          
         except Exception as e:
             return f"Error connecting to ProofCore Protocol API: {str(e)}"
