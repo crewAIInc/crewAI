@@ -755,6 +755,67 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="QwenCloud">
+    [QwenCloud](https://www.qwencloud.com/)는 OpenAI 호환 API를 통해 Alibaba의 Qwen 대형 언어 모델 제품군에 대한 액세스를 제공합니다.
+
+    `.env` 파일에 다음 환경 변수를 설정하세요:
+    ```toml Code
+    # Required
+    DASHSCOPE_API_KEY=<your-api-key>
+    ```
+
+    [QwenCloud API 키 페이지](https://home.qwencloud.com/api-keys)에서 API 키를 발급받으세요.
+
+    **방법 1 — DashScope / LiteLLM 접두사 (권장):**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="dashscope/qwen-max",
+        temperature=0.7,
+        max_tokens=4096
+    )
+    ```
+
+    **방법 2 — OpenAI 호환 엔드포인트:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/qwen-plus",
+        base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+        api_key="your-api-key",
+        temperature=0.7
+    )
+    ```
+
+    **사용 가능한 모델:**
+
+    | 모델 | 컨텍스트 윈도우 | 적합한 작업 |
+    |---|---|---|
+    | `dashscope/qwen-max` | 32,768 | 복잡한 추론 |
+    | `dashscope/qwen-plus` | 131,072 | 긴 문맥 작업 |
+    | `dashscope/qwen-turbo` | 131,072 | 빠른 추론 |
+    | `dashscope/qwen-long` | 10,000,000 | 초장문 문서 처리 |
+    | `dashscope/qwen2.5-72b-instruct` | 131,072 | 지시사항 준수 |
+
+    <Info>
+      QwenCloud 특징:
+      - OpenAI 호환 API 및 네이티브 DashScope 통합
+      - 글로벌 엔드포인트(`dashscope-intl.aliyuncs.com`) 및 중국 본토 엔드포인트(`dashscope.aliyuncs.com`) 지원
+      - 고성능 모델과 경쟁력 있는 가격
+      - Qwen 모델용 함수 호출(Function Calling) 지원
+    </Info>
+
+    전체 모델 목록은 [QwenCloud 모델](https://www.qwencloud.com/models)을 확인하세요.
+    요금 정보는 [QwenCloud 요금 안내](https://docs.qwencloud.com/developer-guides/getting-started/pricing)를 참고하세요.
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
 </AccordionGroup>
 
 ## 스트리밍 응답
