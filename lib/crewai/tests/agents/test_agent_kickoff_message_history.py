@@ -36,6 +36,14 @@ HISTORY = [
     {"role": "user", "content": "where is it?"},
 ]
 
+# What `build_agent_context()` yields on a later turn: the conversation, then
+# the agent's own private thread appended after the current user message.
+TRAILING_THREAD = [
+    {"role": "user", "content": "where is order 88213?"},
+    {"role": "assistant", "content": "let me look that up"},
+    {"role": "assistant", "content": "internal note: checked the warehouse"},
+]
+
 
 def _kickoff(payload: Any, agent_cls: type = Agent) -> list[dict[str, Any]]:
     llm = _Recorder()
@@ -70,6 +78,56 @@ def test_agent_and_lite_agent_agree() -> None:
     assert [m["role"] for m in _kickoff(HISTORY)] == [
         m["role"] for m in _kickoff(HISTORY, LiteAgent)
     ]
+
+
+def test_neither_agent_drops_a_message_when_the_tail_is_not_a_user_turn() -> None:
+    """The role-sequence check only agrees on a list ending in a user message.
+
+    `Agent` has a task slot in its prompt and `LiteAgent` does not, so when the
+    request is not the final message the two put it in different positions. What
+    must still hold either way is that nothing is dropped and nothing is
+    duplicated.
+    """
+    for agent_cls in (Agent, LiteAgent):
+        seen = _kickoff(TRAILING_THREAD, agent_cls)
+        body = [m for m in seen if m["role"] != "system"]
+
+        assert len(body) == len(TRAILING_THREAD)
+        assert sorted(m["role"] for m in body) == sorted(
+            m["role"] for m in TRAILING_THREAD
+        )
+        for message in TRAILING_THREAD:
+            assert any(message["content"] in str(m["content"]) for m in body)
+
+
+def test_the_request_is_the_last_user_message_not_the_last_message() -> None:
+    """A trailing agent scratch must not become the task.
+
+    `build_agent_context()` appends an agent's private thread after the current
+    user turn, so promoting the tail made the agent's own note the request and
+    demoted the real question to history.
+    """
+    seen = _kickoff(TRAILING_THREAD)
+
+    assert "where is order 88213?" in str(seen[-1]["content"])
+    assert "internal note" not in str(seen[-1]["content"])
+    assert [m["content"] for m in seen[1:-1]] == [
+        "let me look that up",
+        "internal note: checked the warehouse",
+    ]
+
+
+def test_a_conversation_with_no_user_message_still_has_a_request() -> None:
+    """Nothing to select, so the last message stands in as it always has."""
+    seen = _kickoff(
+        [
+            {"role": "assistant", "content": "earlier note"},
+            {"role": "assistant", "content": "summarize the above"},
+        ]
+    )
+
+    assert "summarize the above" in str(seen[-1]["content"])
+    assert [m["content"] for m in seen[1:-1]] == ["earlier note"]
 
 
 def test_a_plain_string_is_unchanged() -> None:
