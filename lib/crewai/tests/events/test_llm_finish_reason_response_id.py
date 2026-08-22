@@ -1,3 +1,4 @@
+import logging
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -12,7 +13,10 @@ from crewai.events.types.llm_events import (
     LLMStreamChunkEvent,
 )
 from crewai.llm import LLM
-from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
+from crewai.llms._finish_reason_utils import (
+    extract_choices_finish_reason_and_id,
+    is_truncated_finish_reason,
+)
 from crewai.llms.base_llm import BaseLLM
 
 
@@ -27,6 +31,15 @@ class _StubLLM(BaseLLM):
 
     def supports_function_calling(self) -> bool:
         return False
+
+
+def _truncation_warnings(caplog: pytest.LogCaptureFixture) -> list[str]:
+    """Only the truncation warnings, so unrelated WARNING records don't leak in."""
+    return [
+        r.getMessage()
+        for r in caplog.records
+        if r.levelno == logging.WARNING and "truncated" in r.getMessage()
+    ]
 
 
 @pytest.fixture
@@ -524,3 +537,74 @@ class TestExtractChoicesFinishReasonAndIdHelper:
         finish_reason, response_id = extract_choices_finish_reason_and_id(bad_input)
         assert finish_reason is None or isinstance(finish_reason, str)
         assert response_id is None or isinstance(response_id, str)
+
+
+class TestTruncationDetection:
+    """Every provider must flag a response cut short by the token cap.
+
+    Before this, only Bedrock did; OpenAI/Azure/Anthropic/Gemini and the
+    ``openai_compatible``/Snowflake subclasses returned the partial text as a
+    successful result with nothing to distinguish it from a complete answer.
+    """
+
+    @pytest.mark.parametrize(
+        "finish_reason",
+        [
+            "length",  # OpenAI, Azure, LiteLLM, openai_compatible, Snowflake
+            "max_tokens",  # Anthropic stop_reason, Bedrock stopReason
+            "MAX_TOKENS",  # Gemini protobuf enum .name
+            "Length",
+            "  max_tokens  ",
+        ],
+    )
+    def test_predicate_accepts_every_provider_spelling(self, finish_reason: str):
+        assert is_truncated_finish_reason(finish_reason) is True
+
+    @pytest.mark.parametrize(
+        "finish_reason",
+        [
+            "stop",
+            "end_turn",
+            "tool_use",
+            "content_filtered",
+            "stop_sequence",
+            "",
+            None,
+            42,
+            MagicMock(),
+        ],
+    )
+    def test_predicate_rejects_everything_else(self, finish_reason: Any):
+        assert is_truncated_finish_reason(finish_reason) is False
+
+    @pytest.mark.parametrize("finish_reason", ["length", "max_tokens", "MAX_TOKENS"])
+    def test_emitter_warns_once_on_truncation(
+        self, finish_reason: str, caplog: pytest.LogCaptureFixture, mock_emit
+    ):
+        llm = _StubLLM(model="test-model")
+        with caplog.at_level(logging.WARNING):
+            llm._emit_call_completed_event(
+                response="partial answer",
+                call_type=LLMCallType.LLM_CALL,
+                finish_reason=finish_reason,
+            )
+
+        warnings = _truncation_warnings(caplog)
+        assert len(warnings) == 1
+        assert finish_reason in warnings[0]
+        assert mock_emit.call_count == 1
+
+    @pytest.mark.parametrize("finish_reason", ["stop", "end_turn", None])
+    def test_emitter_stays_quiet_on_a_complete_response(
+        self, finish_reason: str | None, caplog: pytest.LogCaptureFixture, mock_emit
+    ):
+        llm = _StubLLM(model="test-model")
+        with caplog.at_level(logging.WARNING):
+            llm._emit_call_completed_event(
+                response="complete answer",
+                call_type=LLMCallType.LLM_CALL,
+                finish_reason=finish_reason,
+            )
+
+        assert _truncation_warnings(caplog) == []
+        assert mock_emit.call_count == 1
