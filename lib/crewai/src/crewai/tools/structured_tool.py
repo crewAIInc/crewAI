@@ -68,6 +68,11 @@ def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
 
     result_schema = getattr(tool, "result_schema", None)
     if not (isinstance(result_schema, type) and issubclass(result_schema, BaseModel)):
+        if isinstance(raw_result, (dict, list)):
+            try:
+                return json.dumps(raw_result, default=str)
+            except (TypeError, ValueError):
+                pass
         return str(raw_result)
 
     try:
@@ -85,11 +90,16 @@ def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
                 f"Failed to validate or serialize output from tool "
                 f"'{getattr(tool, 'name', '<unknown>')}' using result_schema "
                 f"'{result_schema.__name__}': {exc.__class__.__name__}. "
-                "Falling back to str(raw_result)."
+                "Falling back to JSON for dict/list, otherwise str(raw_result)."
             ),
             RuntimeWarning,
             stacklevel=2,
         )
+        if isinstance(raw_result, (dict, list)):
+            try:
+                return json.dumps(raw_result, default=str)
+            except (TypeError, ValueError):
+                pass
         return str(raw_result)
 
 
