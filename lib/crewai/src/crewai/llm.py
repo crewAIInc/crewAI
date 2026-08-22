@@ -2470,8 +2470,10 @@ class LLM(BaseLLM):
         self.context_window_size = int(
             DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
         )
+        model_name = self.model or ""
+        model_clean = model_name.split("/", 1)[1] if "/" in model_name else model_name
         for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if self.model.startswith(key):
+            if model_name.startswith(key) or model_clean.startswith(key):
                 self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
         return self.context_window_size
 
