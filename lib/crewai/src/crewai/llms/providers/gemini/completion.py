@@ -79,11 +79,15 @@ class GeminiCompletion(BaseLLM):
             seqs = [seqs]
         data["stop"] = seqs
 
-        data["api_key"] = (
+        api_key = (
             data.get("api_key")
             or os.getenv("GOOGLE_API_KEY")
             or os.getenv("GEMINI_API_KEY")
         )
+        if isinstance(api_key, str):
+            api_key = api_key.strip()
+        data["api_key"] = api_key
+
         data["project"] = data.get("project") or os.getenv("GOOGLE_CLOUD_PROJECT")
         data["location"] = (
             data.get("location") or os.getenv("GOOGLE_CLOUD_LOCATION") or "us-central1"
@@ -133,6 +137,8 @@ class GeminiCompletion(BaseLLM):
                 self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv(
                     "GEMINI_API_KEY"
                 )
+            if isinstance(self.api_key, str):
+                self.api_key = self.api_key.strip()
             if not self.project:
                 self.project = os.getenv("GOOGLE_CLOUD_PROJECT")
             self._client = self._initialize_client(self.use_vertexai)
