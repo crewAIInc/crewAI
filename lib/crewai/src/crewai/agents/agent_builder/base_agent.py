@@ -271,9 +271,26 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     _kickoff_event_id: str | None = PrivateAttr(default=None)
     _tool_failures: list[ToolFailureRecord] = PrivateAttr(default_factory=list)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
-    role: str = Field(description="Role of the agent")
-    goal: str = Field(description="Objective of the agent")
-    backstory: str = Field(description="Backstory of the agent")
+    role: str = Field(
+        description=(
+            "Role of the agent. "
+            "Stable public API: safe to read and write after construction. "
+            "DSPy optimizers and other instrumentation may update this field "
+            "to apply optimized instructions."
+        )
+    )
+    goal: str = Field(
+        description=(
+            "Objective of the agent. "
+            "Stable public API: safe to read and write after construction."
+        )
+    )
+    backstory: str = Field(
+        description=(
+            "Backstory of the agent. "
+            "Stable public API: safe to read and write after construction."
+        )
+    )
     config: dict[str, Any] | None = Field(
         description="Configuration for the agent", default=None, exclude=True
     )
