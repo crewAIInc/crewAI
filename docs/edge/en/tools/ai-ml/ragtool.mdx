@@ -460,7 +460,7 @@ The `embedding_model` parameter accepts a `crewai.rag.embeddings.types.ProviderS
 
     **Config Options:**
     - `model_name` (str): HuggingFace model ID. Default: `hkunlp/instructor-base`. Options: `hkunlp/instructor-xl`, `hkunlp/instructor-large`, `hkunlp/instructor-base`
-    - `device` (str): Device to run on. Default: `cpu`. Options: `cpu`, `cuda`, `mps`
+    - `device` (str): Device to run on. Default: `cpu`. Options: `cpu`, `cuda`, `mps`, `xpu`
     - `instruction` (str): Instruction prefix for embeddings
 
     **Environment Variables:**
@@ -485,7 +485,7 @@ The `embedding_model` parameter accepts a `crewai.rag.embeddings.types.ProviderS
 
     **Config Options:**
     - `model_name` (str): Sentence Transformers model name. Default: `all-MiniLM-L6-v2`. Options: `all-mpnet-base-v2`, `all-MiniLM-L6-v2`, `paraphrase-multilingual-MiniLM-L12-v2`
-    - `device` (str): Device to run on. Default: `cpu`. Options: `cpu`, `cuda`, `mps`
+    - `device` (str): Device to run on. Default: `cpu`. Options: `cpu`, `cuda`, `mps`, `xpu`
     - `normalize_embeddings` (bool): Whether to normalize embeddings. Default: `False`
 
     **Environment Variables:**
