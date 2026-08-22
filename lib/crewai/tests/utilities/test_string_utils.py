@@ -1,7 +1,40 @@
 from typing import Any, Dict, List, Union
 
 import pytest
-from crewai.utilities.string_utils import interpolate_only
+from crewai.utilities.string_utils import interpolate_only, sanitize_tool_name
+
+
+class TestSanitizeToolName:
+    """Tests for sanitize_tool_name, including memoization (perf)."""
+
+    def test_sanitization_rules_preserved(self):
+        assert sanitize_tool_name("Calculator Tool") == "calculator_tool"
+        assert sanitize_tool_name("getWeatherForecast") == "get_weather_forecast"
+        assert sanitize_tool_name("search!!the@@web") == "search_the_web"
+        # Over-length names are truncated with a stable hash suffix.
+        long = "a" * 100
+        result = sanitize_tool_name(long)
+        assert len(result) <= 64
+        assert sanitize_tool_name(long) == result  # deterministic
+
+    def test_is_memoized(self):
+        sanitize_tool_name.cache_clear()
+        name = "Some Repeatedly Sanitized Tool"
+        first = sanitize_tool_name(name)
+        for _ in range(50):
+            assert sanitize_tool_name(name) == first
+        info = sanitize_tool_name.cache_info()
+        # One miss (first call) and the rest served from cache.
+        assert info.misses == 1
+        assert info.hits == 50
+
+    def test_cache_respects_max_length_argument(self):
+        sanitize_tool_name.cache_clear()
+        name = "x" * 80
+        full = sanitize_tool_name(name)
+        short = sanitize_tool_name(name, max_length=16)
+        assert full != short
+        assert len(short) <= 16
 
 
 class TestInterpolateOnly:
