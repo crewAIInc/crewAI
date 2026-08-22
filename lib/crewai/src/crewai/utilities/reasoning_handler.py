@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from pydantic import BaseModel, Field
@@ -25,6 +26,40 @@ if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.agent.planning_config import PlanningConfig
     from crewai.task import Task
+
+
+_READY_MARKER: Final[re.Pattern[str]] = re.compile(
+    r"^\s*(NOT\s+)?READY\b", re.IGNORECASE | re.MULTILINE
+)
+
+
+def _detect_plan_ready(text: str) -> bool:
+    """Detect whether a text reasoning plan concludes with READY.
+
+    The reasoning prompts instruct the model to conclude with "READY" or
+    "NOT READY", but models (especially on the text-parsing path) often emit a
+    bare ``READY`` rather than the full "READY: I am ready to execute the task."
+    sentence, which the previous exact-substring check missed (#6204).
+
+    The verdict is only recognized when READY / NOT READY is the first
+    non-whitespace on its own line, mirroring how the prompt asks the model to
+    conclude. This avoids treating ordinary prose (e.g. "I am ready to begin")
+    as a verdict, while still accepting "READY", "READY.", "READY: ...", etc.
+    The LAST such marker wins, so a later line overrides an earlier one.
+
+    Args:
+        text: The raw model response.
+
+    Returns:
+        True if the concluding marker is READY, False for NOT READY or if no
+        marker is present.
+    """
+    # findall returns the optional ``(NOT\\s+)`` group: "" => READY, a non-empty
+    # value (e.g. "NOT ") => NOT READY.
+    markers: list[str] = _READY_MARKER.findall(text)
+    if not markers:
+        return False
+    return markers[-1].strip() == ""
 
 
 class ReasoningPlan(BaseModel):
@@ -409,7 +444,7 @@ class AgentReasoning:
             return (
                 response_str,
                 [],
-                "READY: I am ready to execute the task." in response_str,
+                _detect_plan_ready(response_str),
             )
 
         except Exception as e:
@@ -433,7 +468,7 @@ class AgentReasoning:
                 return (
                     fallback_str,
                     [],
-                    "READY: I am ready to execute the task." in fallback_str,
+                    _detect_plan_ready(fallback_str),
                 )
             except Exception as inner_e:
                 self.logger.error(f"Error during fallback text parsing: {inner_e!s}")
@@ -593,7 +628,7 @@ class AgentReasoning:
             return "No plan was generated.", False
 
         plan = response
-        ready = "READY: I am ready to execute the task." in response
+        ready = _detect_plan_ready(response)
 
         return plan, ready
 
