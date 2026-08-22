@@ -368,6 +368,34 @@ class LanceDBStorage:
             return None
         return self._row_to_record(rows[0])
 
+    @staticmethod
+    def _scope_prefix_clause(scope_prefix: str) -> str:
+        """Build a SQL predicate matching a scope subtree by path boundary.
+
+        A scope such as ``/team`` owns itself and every descendant under
+        ``/team/`` -- but *not* a lexicographic sibling like ``/team-b``.
+        The match is anchored on the ``/`` separator via a half-open range
+        ``[prefix + "/", prefix + "0")``: ``/`` is ``0x2F`` so the next code
+        point is ``0`` (``0x30``), and every descendant ``prefix + "/..."``
+        sorts before ``prefix + "0"``. A range (rather than ``LIKE
+        'prefix/%'``) keeps the scope path a literal -- ``LIKE`` would treat
+        ``%`` and ``_`` inside the path as wildcards and leak into unrelated
+        siblings (e.g. ``/team_x`` matching ``/teamAx``).
+
+        Args:
+            scope_prefix: The scope path to match (already non-root).
+
+        Returns:
+            A SQL boolean expression selecting the scope and its descendants.
+        """
+        prefix = scope_prefix.rstrip("/")
+        if not prefix.startswith("/"):
+            prefix = "/" + prefix
+        exact = prefix.replace("'", "''")
+        lower = (prefix + "/").replace("'", "''")
+        upper = (prefix + "0").replace("'", "''")
+        return f"(scope = '{exact}' OR (scope >= '{lower}' AND scope < '{upper}'))"
+
     def search(
         self,
         query_embedding: list[float],
@@ -385,9 +413,7 @@ class LanceDBStorage:
             )
         query = self._table.search(query_embedding)
         if scope_prefix is not None and scope_prefix.strip("/"):
-            prefix = scope_prefix.rstrip("/")
-            like_val = prefix + "%"
-            query = query.where(f"scope LIKE '{like_val}'")
+            query = query.where(self._scope_prefix_clause(scope_prefix))
         results = query.limit(
             limit * 3 if (categories or metadata_filter) else limit
         ).to_list()
@@ -448,10 +474,9 @@ class LanceDBStorage:
                 return before - int(self._table.count_rows())
             conditions = []
             if scope_prefix is not None and scope_prefix.strip("/"):
-                prefix = scope_prefix.rstrip("/")
-                if not prefix.startswith("/"):
-                    prefix = "/" + prefix
-                conditions.append(f"scope LIKE '{prefix}%' OR scope = '/'")
+                conditions.append(
+                    f"({self._scope_prefix_clause(scope_prefix)} OR scope = '/')"
+                )
             if older_than is not None:
                 conditions.append(f"created_at < '{older_than.isoformat()}'")
             if not conditions:
@@ -485,7 +510,7 @@ class LanceDBStorage:
             return []
         q = self._table.search()
         if scope_prefix is not None and scope_prefix.strip("/"):
-            q = q.where(f"scope LIKE '{scope_prefix.rstrip('/')}%'")
+            q = q.where(self._scope_prefix_clause(scope_prefix))
         if columns is not None:
             q = q.select(columns)
         result: list[dict[str, Any]] = q.limit(limit).to_list()
@@ -609,10 +634,9 @@ class LanceDBStorage:
                 return
             if self._table is None:
                 return
-            prefix = scope_prefix.rstrip("/")
-            if prefix:
+            if scope_prefix.rstrip("/"):
                 self._do_write(
-                    "delete", f"scope >= '{prefix}' AND scope < '{prefix}/\uffff'"
+                    "delete", self._scope_prefix_clause(scope_prefix)
                 )
 
     def optimize(self) -> None:
