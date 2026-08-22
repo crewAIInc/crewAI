@@ -215,6 +215,9 @@ def convert_to_model(
     if isinstance(result, BaseModel):
         if isinstance(result, model):
             return result.model_dump() if output_json else result
+        # When result is a different BaseModel subclass (e.g. after a guardrail
+        # retry), serialize to JSON so downstream json.loads / validation works
+        # without a TypeError.
         result = result.model_dump_json()
 
     if converter_cls:
