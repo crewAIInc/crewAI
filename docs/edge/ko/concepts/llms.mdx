@@ -702,6 +702,29 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     ```
   </Accordion>
 
+  <Accordion title="TrustedRouter">
+    TrustedRouter는 프라이버시가 중요한 에이전트 작업을 위한 어테스테이션 기반 OpenAI 호환 라우터로, 자동 모델 선택, 데이터 미보존 경로, 종단 간 암호화 경로를 제공합니다.
+
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    TRUSTEDROUTER_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="trustedrouter/auto",
+    )
+    ```
+
+    <Info>
+      라우팅 별칭:
+      - trustedrouter/auto (정상 경로를 자동으로 선택)
+      - trustedrouter/zdr (데이터 미보존 경로)
+      - trustedrouter/e2e (종단 간 암호화 경로)
+    </Info>
+  </Accordion>
+
   <Accordion title="Open Router">
     `.env` 파일에 다음 환경 변수를 설정하십시오:
     ```toml Code

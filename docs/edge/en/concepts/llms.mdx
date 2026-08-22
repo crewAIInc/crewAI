@@ -1102,6 +1102,29 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```
   </Accordion>
 
+  <Accordion title="TrustedRouter">
+    TrustedRouter is an attested OpenAI-compatible router for privacy-sensitive agent work, with automatic model selection, zero-data-retention routes, and end-to-end encrypted routes.
+
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    TRUSTEDROUTER_API_KEY=<your-api-key>
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    llm = LLM(
+        model="trustedrouter/auto",
+    )
+    ```
+
+    <Info>
+      Routing aliases:
+      - trustedrouter/auto (healthy routes, chosen automatically)
+      - trustedrouter/zdr (zero-data-retention routes)
+      - trustedrouter/e2e (end-to-end encrypted routes)
+    </Info>
+  </Accordion>
+
   <Accordion title="Open Router">
     Set the following environment variables in your `.env` file:
     ```toml Code
