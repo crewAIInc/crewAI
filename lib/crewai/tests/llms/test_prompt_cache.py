@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from crewai.llm import LLM
 from crewai.llms.cache import (
     CACHE_BREAKPOINT_KEY,
     mark_cache_breakpoint,
@@ -189,3 +190,36 @@ class TestNonAnthropicStripsMarker:
         formatted = llm._format_messages(messages)
         for m in formatted:
             assert CACHE_BREAKPOINT_KEY not in m
+
+
+class TestLiteLLMStripsMarker:
+    """Providers routed through the litellm ``LLM`` class (Groq, generic
+    OpenAI-compatible endpoints, etc.) do not go through ``BaseLLM._format_messages``.
+    Their messages are shaped by ``LLM._format_messages_for_provider``, which must
+    also strip the marker — otherwise the raw ``cache_breakpoint`` key reaches the
+    provider API and is rejected (e.g. Groq: "property 'cache_breakpoint' is
+    unsupported"). Regression test for #5886.
+    """
+
+    def test_groq_format_strips_marker_from_wire_payload(self) -> None:
+        llm = LLM(model="groq/llama-3.3-70b-versatile")
+        messages = [
+            mark_cache_breakpoint({"role": "system", "content": "stable"}),
+            mark_cache_breakpoint({"role": "user", "content": "hi"}),
+        ]
+        formatted = llm._format_messages_for_provider(messages)
+        for m in formatted:
+            assert CACHE_BREAKPOINT_KEY not in m
+
+    def test_litellm_format_does_not_mutate_caller_buffer(self) -> None:
+        """The executor reuses one messages buffer across tool-loop iterations,
+        so stripping must copy rather than mutate the caller's dicts.
+        """
+        llm = LLM(model="groq/llama-3.3-70b-versatile")
+        messages = [
+            mark_cache_breakpoint({"role": "system", "content": "stable"}),
+            mark_cache_breakpoint({"role": "user", "content": "hi"}),
+        ]
+        llm._format_messages_for_provider(messages)
+        assert messages[0][CACHE_BREAKPOINT_KEY] is True
+        assert messages[1][CACHE_BREAKPOINT_KEY] is True
