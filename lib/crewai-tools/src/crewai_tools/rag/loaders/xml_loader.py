@@ -1,5 +1,8 @@
 from typing import Any
-from xml.etree.ElementTree import ParseError, fromstring, parse
+from xml.etree.ElementTree import ParseError
+
+from defusedxml.ElementTree import fromstring
+from defusedxml.common import DefusedXmlException
 
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.loaders.utils import load_from_url
@@ -39,10 +42,7 @@ class XMLLoader(BaseLoader):
 
     def _parse_xml(self, content: str, source_ref: str) -> LoaderResult:
         try:
-            if content.strip().startswith("<"):
-                root = fromstring(content)  # noqa: S314
-            else:
-                root = parse(source_ref).getroot()  # noqa: S314
+            root = fromstring(content)
 
             text_parts = []
             for text_content in root.itertext():
@@ -51,6 +51,9 @@ class XMLLoader(BaseLoader):
 
             text = "\n".join(text_parts)
             metadata = {"format": "xml", "root_tag": root.tag}
+        except DefusedXmlException as e:
+            text = ""
+            metadata = {"format": "xml", "security_error": str(e)}
         except ParseError as e:
             text = content
             metadata = {"format": "xml", "parse_error": str(e)}
