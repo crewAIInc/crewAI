@@ -667,3 +667,92 @@ class TestTodoListIntegration:
         todo_list.mark_completed(3)
 
         assert can_execute(todo_list.items[3]) is True
+
+
+class TestCheckReady:
+    """Tests for AgentReasoning._check_ready and _parse_planning_response.
+
+    The ready-detection must accept both the full-sentence form produced by the
+    initial-plan prompt and the short 'READY' / 'NOT READY' form produced by
+    the refine-plan and planning prompts.  Previously only the full sentence
+    was recognised, so a refine-loop response of just 'READY' was treated as
+    'NOT READY', causing infinite re-planning (#6204).
+    """
+
+    def test_full_sentence_ready(self):
+        """Full-sentence form from reasoning.create_plan_prompt is accepted."""
+        response = "Step 1: do X\n\nREADY: I am ready to execute the task."
+        assert AgentReasoning._check_ready(response) is True
+
+    def test_short_form_ready(self):
+        """Short 'READY' at the end of a response (refine/planning prompts) is accepted."""
+        response = "Step 1: do X\nStep 2: do Y\n\n---\n\nREADY"
+        assert AgentReasoning._check_ready(response) is True
+
+    def test_short_form_ready_with_trailing_period(self):
+        """'READY.' (with punctuation) at the last line is accepted."""
+        response = "My plan.\n\nREADY."
+        assert AgentReasoning._check_ready(response) is True
+
+    def test_short_form_ready_markdown_bold(self):
+        """Markdown-emphasised '**READY**' is accepted (models often bold it)."""
+        response = "Step 1: do X\nStep 2: do Y\n\n**READY**"
+        assert AgentReasoning._check_ready(response) is True
+
+    def test_short_form_ready_markdown_heading(self):
+        """A markdown heading '## READY' is accepted."""
+        response = "Plan body.\n\n## READY"
+        assert AgentReasoning._check_ready(response) is True
+
+    def test_short_form_ready_after_separator_line(self):
+        """A trailing '---' separator after READY does not hide readiness."""
+        response = "Plan body.\n\n---\n\nREADY\n\n---"
+        assert AgentReasoning._check_ready(response) is True
+
+    def test_short_form_not_ready(self):
+        """Short 'NOT READY' is correctly treated as not ready."""
+        response = "My plan.\n\nNOT READY"
+        assert AgentReasoning._check_ready(response) is False
+
+    def test_short_form_not_ready_markdown_bold(self):
+        """Emphasised '**NOT READY**' is never matched as ready."""
+        response = "My plan.\n\n**NOT READY**"
+        assert AgentReasoning._check_ready(response) is False
+
+    def test_word_ready_in_body_only_is_not_ready(self):
+        """A plan body that mentions 'ready' but ends with NOT READY is not ready."""
+        response = "I am almost ready but a tool is missing.\n\nNOT READY"
+        assert AgentReasoning._check_ready(response) is False
+
+    def test_already_in_last_line_is_not_a_false_positive(self):
+        """A last line like 'ALREADY DONE' must not be read as 'READY'."""
+        response = "Plan.\n\nALREADY DONE"
+        assert AgentReasoning._check_ready(response) is False
+
+    def test_full_sentence_not_ready(self):
+        """Full-sentence NOT READY is correctly treated as not ready."""
+        response = "My plan.\n\nNOT READY: I need to refine because the tools are unclear."
+        assert AgentReasoning._check_ready(response) is False
+
+    def test_empty_response_not_ready(self):
+        """Empty response is not ready."""
+        assert AgentReasoning._check_ready("") is False
+
+    def test_parse_planning_response_short_ready(self):
+        """_parse_planning_response returns ready=True for short-form READY."""
+        response = "Do X.\nDo Y.\n\nREADY"
+        plan, ready = AgentReasoning._parse_planning_response(response)
+        assert ready is True
+        assert plan == response
+
+    def test_parse_planning_response_short_not_ready(self):
+        """_parse_planning_response returns ready=False for short-form NOT READY."""
+        response = "Do X.\n\nNOT READY"
+        plan, ready = AgentReasoning._parse_planning_response(response)
+        assert ready is False
+
+    def test_parse_planning_response_empty(self):
+        """_parse_planning_response returns ready=False for empty response."""
+        plan, ready = AgentReasoning._parse_planning_response("")
+        assert ready is False
+        assert plan == "No plan was generated."
