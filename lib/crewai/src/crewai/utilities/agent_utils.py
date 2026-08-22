@@ -51,6 +51,16 @@ from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.types import LLMMessage
 
 
+_ALLOWED_TOOL_MODULES: frozenset[str] = frozenset(
+    {
+        "crewai.tools",
+        "crewai_tools",
+        "crewai.tools.base_tool",
+        "crewai.tools.structured_tool",
+        "crewai.tools.tool_usage",
+    }
+)
+
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.agents.crew_agent_executor import CrewAgentExecutor
@@ -1282,8 +1292,18 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
                 attributes[key] = []
                 for tool in value:
                     try:
+                        if tool["module"] not in _ALLOWED_TOOL_MODULES:
+                            raise AgentRepositoryError(
+                                f"Tool module {tool['module']!r} is not in the allowlist. "
+                                f"Allowed modules: {', '.join(sorted(_ALLOWED_TOOL_MODULES))}"
+                            )
                         module = importlib.import_module(tool["module"])
                         tool_class = getattr(module, tool["name"])
+                        if not (inspect.isclass(tool_class) and issubclass(tool_class, BaseTool)):
+                            raise AgentRepositoryError(
+                                f"Tool {tool['name']!r} resolved from module {tool['module']!r} "
+                                f"is not a BaseTool subclass."
+                            )
 
                         tool_value = tool_class(**tool["init_params"])
 
