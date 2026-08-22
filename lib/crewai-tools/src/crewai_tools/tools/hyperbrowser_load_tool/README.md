@@ -39,4 +39,4 @@ tool = HyperbrowserLoadTool()
 `run` arguments:
 - `url`: The base URL to start scraping or crawling from.
 - `operation`: Optional. Specifies the operation to perform on the website. Either 'scrape' or 'crawl'. Defaults is 'scrape'.
-- `params`: Optional. Specifies the params for the operation. For more information on the supported params, visit https://docs.hyperbrowser.ai/reference/sdks/python/scrape#start-scrape-job-and-wait or https://docs.hyperbrowser.ai/reference/sdks/python/crawl#start-crawl-job-and-wait.
+- `params`: Optional. Specifies the params for the operation. For more information on the supported params, visit https://www.hyperbrowser.ai/docs/home or https://docs.hyperbrowser.ai.
