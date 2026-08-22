@@ -207,6 +207,38 @@ def test_run_does_not_call_asyncio_run_for_sync_tools():
         assert sync_result == "Processed test synchronously"
 
 
+def test_run_from_running_event_loop_does_not_raise():
+    """Test that run() works when called from within a running event loop.
+
+    Regression test for the RuntimeError raised by asyncio.run() when a
+    coroutine-returning tool is invoked from an async context (FastAPI
+    handler, Jupyter cell, etc.).
+    """
+
+    async def invoke_from_running_loop():
+        tool = AsyncTool()
+        return tool.run(input_text="test")
+
+    result = asyncio.run(invoke_from_running_loop())
+    assert result == "Processed test asynchronously"
+
+
+def test_tool_decorator_run_from_running_event_loop_does_not_raise():
+    """Test that the @tool decorator's run() works inside a running loop."""
+
+    @tool("echo_tool")
+    async def echo_tool(value: str) -> str:
+        """Echo the value."""
+        await asyncio.sleep(0.01)
+        return f"echo: {value}"
+
+    async def invoke_from_running_loop():
+        return echo_tool.run(value="hi")
+
+    result = asyncio.run(invoke_from_running_loop())
+    assert result == "echo: hi"
+
+
 @pytest.mark.vcr()
 def test_max_usage_count_is_respected():
     class IteratingTool(BaseTool):
