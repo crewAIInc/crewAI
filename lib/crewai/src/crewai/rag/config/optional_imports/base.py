@@ -14,7 +14,7 @@ class _MissingProvider:
     Raises RuntimeError when instantiated to indicate missing dependencies.
     """
 
-    provider: Literal["chromadb", "qdrant", "__missing__"] = field(
+    provider: Literal["chromadb", "milvus", "qdrant", "__missing__"] = field(
         default="__missing__"
     )
 
@@ -22,5 +22,5 @@ class _MissingProvider:
         """Raises error indicating the provider is not installed."""
         raise RuntimeError(
             f"provider '{self.provider}' requested but not installed. "
-            f"Install the extra: `uv add crewai'[{self.provider}]'`."
+            f'Install the extra: `uv add "crewai[{self.provider}]"`.'
         )
