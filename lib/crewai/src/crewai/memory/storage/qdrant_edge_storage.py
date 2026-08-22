@@ -37,7 +37,7 @@ from qdrant_edge import (
 )
 
 from crewai.memory.storage.backend import EmbeddingDimensionMismatchError
-from crewai.memory.types import MemoryRecord, ScopeInfo
+from crewai.memory.types import MemoryRecord, ScopeInfo, _normalize_dt, _utc_now
 
 
 _logger = logging.getLogger(__name__)
@@ -221,10 +221,12 @@ class QdrantEdgeStorage:
 
         def _parse_dt(val: Any) -> datetime:
             if val is None:
-                return datetime.now(timezone.utc).replace(tzinfo=None)
+                return _utc_now()
             if isinstance(val, datetime):
-                return val
-            return datetime.fromisoformat(str(val).replace("Z", "+00:00"))
+                return _normalize_dt(val)
+            return _normalize_dt(
+                datetime.fromisoformat(str(val).replace("Z", "+00:00"))
+            )
 
         return MemoryRecord(
             id=str(payload["record_id"]),
@@ -724,7 +726,7 @@ class QdrantEdgeStorage:
         """Update last_accessed to now for the given record IDs."""
         if not record_ids:
             return
-        now = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+        now = _utc_now().isoformat()
         point_ids: list[int | uuid.UUID | str] = [
             _uuid_to_point_id(rid) for rid in record_ids
         ]

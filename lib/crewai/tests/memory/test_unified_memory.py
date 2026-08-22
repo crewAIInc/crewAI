@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import threading
 from unittest.mock import MagicMock
@@ -594,6 +594,85 @@ def test_composite_score_custom_config() -> None:
     score, reasons = compute_composite_score(record, 0.73, config)
     assert score == pytest.approx(0.73, rel=1e-5)
     assert "semantic" in reasons
+
+
+# --- Timezone safety: naive-UTC is canonical, aware inputs are normalized ---
+
+
+def test_record_normalizes_aware_created_at() -> None:
+    """Aware datetimes (e.g. ``datetime.now(timezone.utc)``) must be stored as
+    naive-UTC; otherwise ``compute_composite_score`` raises TypeError on
+    subtraction."""
+    aware = datetime.now(timezone.utc)
+    record = MemoryRecord(content="x", created_at=aware, last_accessed=aware)
+    assert record.created_at.tzinfo is None
+    assert record.last_accessed.tzinfo is None
+    # Must not raise "can't subtract offset-naive and offset-aware datetimes".
+    score, _ = compute_composite_score(record, 0.9, MemoryConfig())
+    assert 0.0 <= score <= 1.5
+
+
+def test_record_normalizes_non_utc_offset() -> None:
+    """Non-UTC aware offsets are converted to UTC, not just stripped."""
+    offset_plus_8 = timezone(timedelta(hours=8))
+    record = MemoryRecord(
+        content="x", created_at=datetime(2026, 8, 1, 12, 0, tzinfo=offset_plus_8)
+    )
+    assert record.created_at == datetime(2026, 8, 1, 4, 0)
+    assert record.created_at.tzinfo is None
+
+
+def test_lancedb_parse_z_suffix_is_naive(tmp_path: Path) -> None:
+    """Rows whose timestamps carry a ``Z`` suffix (written by external tools)
+    must parse to naive-UTC, not aware — otherwise recall/forget crash."""
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    row = {
+        "id": "r1",
+        "content": "c",
+        "scope": "/",
+        "categories_str": "[]",
+        "metadata_str": "{}",
+        "importance": 0.5,
+        "created_at": "2026-08-01T12:00:00Z",
+        "last_accessed": "2026-08-01T12:00:00.123",
+        "vector": [0.0],
+        "source": "",
+        "private": False,
+    }
+    record = LanceDBStorage._row_to_record(None, row)
+    assert record.created_at.tzinfo is None
+    assert record.created_at == datetime(2026, 8, 1, 12, 0)
+
+
+def test_forget_normalizes_aware_older_than(tmp_path: Path) -> None:
+    """``Memory.forget(older_than=datetime.now(timezone.utc))`` must not raise
+    TypeError when combined with categories/metadata filters (the comparison
+    path previously mixed naive storage values with the aware cutoff)."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(
+        storage=str(tmp_path / "tz_db"),
+        llm=None,
+        embedder=lambda texts: [[0.1] * 3072 for _ in texts],
+    )
+    mem.remember("old fact", categories=["facts"])
+    # Aware cutoff: previously crashed inside LanceDBStorage.delete.
+    deleted = mem.forget(
+        categories=["facts"],
+        older_than=datetime.now(timezone.utc) + timedelta(days=1),
+    )
+    assert deleted == 1
+
+
+def test_recall_flow_time_filter_z_suffix() -> None:
+    """LLM-provided ``time_filter`` strings often end in ``Z``; parsing must
+    succeed (3.10 compat) and yield naive-UTC."""
+    from crewai.memory.types import _normalize_dt
+
+    parsed = _normalize_dt(datetime.fromisoformat("2026-08-01T00:00:00Z".replace("Z", "+00:00")))
+    assert parsed.tzinfo is None
+    assert parsed == datetime(2026, 8, 1, 0, 0)
 
 
 # --- LLM fallback ---
