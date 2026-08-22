@@ -1,22 +1,45 @@
 import logging
 import traceback
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 import warnings
 
 from pydantic import Field, PrivateAttr, model_validator
 from typing_extensions import Self
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
-from crewai.rag.chromadb.config import ChromaDBConfig
-from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
-from crewai.rag.config.utils import get_rag_client
 from crewai.rag.core.base_client import BaseClient
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.embeddings.types import ProviderSpec
-from crewai.rag.factory import create_client
 from crewai.rag.types import BaseRecord, SearchResult
 from crewai.utilities.logger import Logger
+
+
+if TYPE_CHECKING:
+    from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
+
+
+def create_client(config: Any) -> BaseClient:
+    """Create a RAG client for the given config.
+
+    Thin wrapper around crewai.rag.factory.create_client, imported lazily so
+    that `import crewai` does not pull in the chromadb/qdrant provider chain.
+    """
+    from crewai.rag.factory import create_client as _create_client
+
+    return _create_client(config)
+
+
+def get_rag_client() -> BaseClient:
+    """Get the global RAG client.
+
+    Thin wrapper around crewai.rag.config.utils.get_rag_client, imported
+    lazily so that `import crewai` does not pull in the chromadb/qdrant
+    provider chain.
+    """
+    from crewai.rag.config.utils import get_rag_client as _get_rag_client
+
+    return _get_rag_client()
 
 
 class KnowledgeStorage(BaseKnowledgeStorage):
@@ -43,10 +66,14 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         )
 
         if self.embedder:
+            # Imported lazily so that `import crewai` does not pull in the
+            # chromadb provider chain at import time.
+            from crewai.rag.chromadb.config import ChromaDBConfig
+
             embedding_function = build_embedder(self.embedder)  # type: ignore[arg-type]
             config = ChromaDBConfig(
                 embedding_function=cast(
-                    ChromaEmbeddingFunctionWrapper, embedding_function
+                    "ChromaEmbeddingFunctionWrapper", embedding_function
                 )
             )
             self._client = create_client(config)
