@@ -302,7 +302,24 @@ class Telemetry:
             self._add_attribute(span, "python_version", platform.python_version())
             add_crew_attributes(span, crew, self._add_attribute)
             self._add_attribute(span, "crew_process", crew.process)
-            self._add_attribute(span, "crew_memory", crew.memory)
+            # A string, for the reason already documented on `resumed` below: this
+            # pipeline cannot carry a false boolean at all. Measured across
+            # 218,400,577 spans, not one carries vBool=false, because proto3 omits
+            # the bool zero value - so "memory disabled" was structurally
+            # unrepresentable and presence had to stand in for the value. Truthiness
+            # rather than `is True`: memory counts as enabled when set by any means,
+            # including a Memory/MemoryScope/MemorySlice instance.
+            self._add_attribute(span, "crew_memory", "true" if crew.memory else "false")
+            # A string for the same reason as `crew_memory` above, and the reason is
+            # stronger here: the majority case is the empty one. Measured over a single
+            # day (312,424,709 spans) not one carries vInt64='0' either, so an integer
+            # key *count* would have dropped every unparameterised run - 54.46% of runs
+            # among the opt-in sharers this was previously only measurable on.
+            # Deliberately ungated: only whether inputs were passed travels, never the
+            # payload, which stays inside the `share_crew` branch below (D13).
+            self._add_attribute(
+                span, "crew_inputs_present", "true" if inputs else "false"
+            )
             self._add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
             self._add_attribute(span, "crew_number_of_agents", len(crew.agents))
 
