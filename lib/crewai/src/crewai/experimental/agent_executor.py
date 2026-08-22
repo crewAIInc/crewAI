@@ -307,6 +307,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         """Set state messages."""
         self._state.messages = value
 
+    def _append_history(self, inputs: dict[str, Any]) -> None:
+        """Add prior turns, with their roles, before this turn's request."""
+        for message in inputs.get("history", []):
+            self.state.messages.append(dict(message))
+
     def _setup_messages(self, inputs: dict[str, Any]) -> None:
         """Set up messages for the agent execution."""
         provider = get_provider()
@@ -323,11 +328,16 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     format_message_for_llm(system_prompt, role="system")
                 )
             )
+            self._append_history(inputs)
             self.state.messages.append(
                 mark_cache_breakpoint(format_message_for_llm(user_prompt))
             )
         elif isinstance(self.prompt, StandardPromptResult):
             user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
+            # Also here: with the system prompt disabled or a custom template
+            # this is the only branch, and skipping history would drop every
+            # turn but the last.
+            self._append_history(inputs)
             self.state.messages.append(
                 mark_cache_breakpoint(format_message_for_llm(user_prompt))
             )
