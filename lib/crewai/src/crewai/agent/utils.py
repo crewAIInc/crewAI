@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from crewai.agent.core import Agent
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
+    from crewai.utilities.i18n import I18N
 
 
 def handle_reasoning(agent: Agent, task: Task) -> None:
@@ -57,40 +58,48 @@ def handle_reasoning(agent: Agent, task: Task) -> None:
         agent._logger.log("error", f"Error during planning: {e!s}")
 
 
-def build_task_prompt_with_schema(task: Task, task_prompt: str) -> str:
+def build_task_prompt_with_schema(
+    task: Task, task_prompt: str, i18n: I18N | None = None
+) -> str:
     """Build task prompt with JSON/Pydantic schema instructions if applicable.
 
     Args:
         task: The task being executed.
         task_prompt: The initial task prompt.
+        i18n: Prompts to render with. Defaults to the built-in prompts.
 
     Returns:
         The task prompt potentially augmented with schema instructions.
     """
     from crewai.utilities.i18n import I18N_DEFAULT
 
+    prompts = i18n or I18N_DEFAULT
+
     if (task.output_json or task.output_pydantic) and not task.response_model:
         if task.output_json:
             schema_dict = generate_model_description(task.output_json)
             schema = json.dumps(schema_dict["json_schema"]["schema"], indent=2)
-            task_prompt += "\n" + I18N_DEFAULT.slice(
-                "formatted_task_instructions"
-            ).format(output_format=schema)
+            task_prompt += "\n" + prompts.slice("formatted_task_instructions").format(
+                output_format=schema
+            )
         elif task.output_pydantic:
             schema_dict = generate_model_description(task.output_pydantic)
             schema = json.dumps(schema_dict["json_schema"]["schema"], indent=2)
-            task_prompt += "\n" + I18N_DEFAULT.slice(
-                "formatted_task_instructions"
-            ).format(output_format=schema)
+            task_prompt += "\n" + prompts.slice("formatted_task_instructions").format(
+                output_format=schema
+            )
     return task_prompt
 
 
-def format_task_with_context(task_prompt: str, context: str | None) -> str:
+def format_task_with_context(
+    task_prompt: str, context: str | None, i18n: I18N | None = None
+) -> str:
     """Format task prompt with context if provided.
 
     Args:
         task_prompt: The task prompt.
         context: Optional context string.
+        i18n: Prompts to render with. Defaults to the built-in prompts.
 
     Returns:
         The task prompt formatted with context if provided.
@@ -98,8 +107,10 @@ def format_task_with_context(task_prompt: str, context: str | None) -> str:
     from crewai.utilities.i18n import I18N_DEFAULT
 
     if context:
-        return I18N_DEFAULT.slice("task_with_context").format(
-            task=task_prompt, context=context
+        return (
+            (i18n or I18N_DEFAULT)
+            .slice("task_with_context")
+            .format(task=task_prompt, context=context)
         )
     return task_prompt
 
