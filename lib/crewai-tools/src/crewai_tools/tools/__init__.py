@@ -185,6 +185,7 @@ from crewai_tools.tools.snowflake_search_tool import (
 )
 from crewai_tools.tools.spider_tool.spider_tool import SpiderTool
 from crewai_tools.tools.stagehand_tool.stagehand_tool import StagehandTool
+from crewai_tools.tools.taskmarket_tool.taskmarket_tool import TaskMarketTool
 from crewai_tools.tools.tavily_extractor_tool.tavily_extractor_tool import (
     TavilyExtractorTool,
 )
@@ -306,6 +307,7 @@ __all__ = [
     "SnowflakeSearchToolInput",
     "SpiderTool",
     "StagehandTool",
+    "TaskMarketTool",
     "TXTSearchTool",
     "TavilyExtractorTool",
     "TavilyGetResearchTool",
