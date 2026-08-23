@@ -141,7 +141,7 @@ def test_constructor_rejects_attribution_kwargs() -> None:
 
 
 def test_args_schema_requires_mode() -> None:
-    fields = UsdctoFiatCashoutTool.args_schema.model_fields
+    fields = UsdctoFiatCashoutTool().args_schema.model_fields
     assert "mode" in fields
     assert fields["mode"].is_required()
 
@@ -252,9 +252,11 @@ def test_estimate_watch_withdraw_deposits(tools) -> None:
 
 
 def test_withdraw_schema_is_split_from_watch() -> None:
-    assert UsdctoFiatWatchTool.args_schema is not UsdctoFiatWithdrawTool.args_schema
-    assert UsdctoFiatWithdrawTool.args_schema is UsdctoFiatWithdrawSchema
-    UsdctoFiatWatchTool.args_schema.model_validate(
+    watch_schema = UsdctoFiatWatchTool().args_schema
+    withdraw_schema = UsdctoFiatWithdrawTool().args_schema
+    assert watch_schema is not withdraw_schema
+    assert withdraw_schema is UsdctoFiatWithdrawSchema
+    watch_schema.model_validate(
         {"deposit_id": "fast:0xabc:composite"}
     )
     UsdctoFiatWithdrawSchema.model_validate({"deposit_id": "42"})
