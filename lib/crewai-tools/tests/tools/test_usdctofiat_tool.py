@@ -224,8 +224,33 @@ def test_cashout_mode_required_is_returned_as_json(tools) -> None:
             mode="", amount="100", currency="EUR", platform="revolut", payee="alice"
         )
     )
-    assert "mode is required" in payload["error"]
-    assert payload["code"] == "VALIDATION"
+    assert payload == {
+        "error": "USDCtoFiat operation failed.",
+        "code": "USDC_TO_FIAT_ERROR",
+    }
+
+
+def test_error_does_not_expose_exception_details(tools) -> None:
+    kit, offramp = tools
+    error = _ModeRequired()
+    error.args = ("https://user:secret@curator.example/private",)
+    error.details = {"indexer_url": "https://token@indexer.example"}
+    offramp.prepare.side_effect = error
+
+    payload = kit["cashout"]._run(
+        mode="fast",
+        amount="100",
+        currency="EUR",
+        platform="revolut",
+        payee="alice",
+    )
+
+    assert "secret" not in payload
+    assert "token" not in payload
+    assert json.loads(payload) == {
+        "error": "USDCtoFiat operation failed.",
+        "code": "USDC_TO_FIAT_ERROR",
+    }
 
 
 def test_estimate_watch_withdraw_deposits(tools) -> None:
@@ -281,4 +306,7 @@ def test_estimate_mode_required(tools) -> None:
     payload = json.loads(
         kit["estimate"]._run(mode="slow", amount="100", currency="EUR")
     )
-    assert "mode is required" in payload["error"]
+    assert payload == {
+        "error": "USDCtoFiat operation failed.",
+        "code": "USDC_TO_FIAT_ERROR",
+    }
