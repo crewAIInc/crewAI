@@ -99,9 +99,17 @@ class MemoryRecord(BaseModel):
         ),
     )
 
-    @field_validator("created_at", "last_accessed", mode="before")
+    @field_validator("created_at", "last_accessed", mode="after")
     @classmethod
-    def _normalize_datetime_fields(cls, v: Any) -> Any:
+    def _normalize_datetime_fields(cls, v: datetime) -> datetime:
+        """Normalize parsed timestamps to naive-UTC.
+
+        ``mode="after"`` so Pydantic first parses raw ISO strings (a ``Z``
+        suffix parses to an aware datetime) and the validator then receives a
+        ``datetime`` it can normalize; a ``mode="before"`` validator returned
+        strings untouched and let Pydantic re-parse ``Z``-suffixed strings
+        into aware datetimes, bypassing normalization.
+        """
         return _normalize_dt(v)
 
 

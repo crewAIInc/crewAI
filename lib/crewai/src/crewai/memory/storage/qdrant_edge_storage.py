@@ -617,6 +617,9 @@ class QdrantEdgeStorage:
             created = payload.get("created_at")
             if created:
                 dt = datetime.fromisoformat(str(created).replace("Z", "+00:00"))
+                # Normalize to naive-UTC so aware (Z-suffixed) and naive
+                # timestamps from mixed-vintage payloads compare safely.
+                dt = _normalize_dt(dt)
                 if oldest is None or dt < oldest:
                     oldest = dt
                 if newest is None or dt > newest:

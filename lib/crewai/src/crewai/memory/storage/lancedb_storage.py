@@ -552,6 +552,9 @@ class LanceDBStorage:
                     else created
                 )
                 if isinstance(dt, datetime):
+                    # Normalize to naive-UTC so aware (Z-suffixed) and naive
+                    # timestamps from mixed-vintage rows compare safely.
+                    dt = _normalize_dt(dt)
                     if oldest is None or dt < oldest:
                         oldest = dt
                     if newest is None or dt > newest:

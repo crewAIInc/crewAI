@@ -675,6 +675,82 @@ def test_recall_flow_time_filter_z_suffix() -> None:
     assert parsed == datetime(2026, 8, 1, 0, 0)
 
 
+def test_memory_record_z_suffix_string_normalized_via_after_validator() -> None:
+    """A ``Z``-suffixed ISO string passed directly to ``MemoryRecord`` must be
+    normalized to naive-UTC: Pydantic parses it into an aware datetime and the
+    ``mode="after"`` validator then converts it (the previous ``mode="before"``
+    validator returned strings untouched, so Pydantic's own parsing bypassed
+    normalization)."""
+    record = MemoryRecord(
+        content="direct string timestamp",
+        created_at="2026-08-01T00:00:00Z",
+        last_accessed="2026-08-02T03:04:05Z",
+    )
+    assert record.created_at.tzinfo is None
+    assert record.created_at == datetime(2026, 8, 1, 0, 0)
+    assert record.last_accessed.tzinfo is None
+    assert record.last_accessed == datetime(2026, 8, 2, 3, 4, 5)
+
+
+def test_lancedb_get_scope_info_mixed_timestamp_formats(tmp_path: Path) -> None:
+    """``get_scope_info`` must handle a scope mixing naive and Z-suffixed
+    (aware) stored timestamps without raising TypeError on comparisons, and
+    must return naive-UTC bounds."""
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(tmp_path / "mixed_db"), vector_dim=4)
+    # One naive-vintage record and one Z-suffixed (aware) record in same scope.
+    storage.save(
+        [
+            MemoryRecord(
+                content="naive vintage",
+                scope="/mix",
+                created_at=datetime(2026, 1, 1, 0, 0),
+                embedding=[0.1, 0.2, 0.3, 0.4],
+            )
+        ]
+    )
+    storage.save(
+        [
+            MemoryRecord(
+                content="aware vintage",
+                scope="/mix",
+                created_at="2026-07-01T00:00:00Z",
+                embedding=[0.4, 0.3, 0.2, 0.1],
+            )
+        ]
+    )
+    info = storage.get_scope_info("/mix")
+    assert info.record_count == 2
+    assert info.oldest_record is not None and info.oldest_record.tzinfo is None
+    assert info.newest_record is not None and info.newest_record.tzinfo is None
+    assert info.oldest_record == datetime(2026, 1, 1, 0, 0)
+    assert info.newest_record == datetime(2026, 7, 1, 0, 0)
+
+
+def test_qdrant_payload_to_record_z_suffix_normalized() -> None:
+    """``QdrantEdgeStorage._payload_to_record`` must normalize Z-suffixed
+    payload timestamps to naive-UTC."""
+    from crewai.memory.storage.qdrant_edge_storage import QdrantEdgeStorage
+
+    payload = {
+        "record_id": "q1",
+        "content": "from qdrant edge",
+        "scope": "/q",
+        "categories": [],
+        "created_at": "2026-08-01T05:00:00Z",
+        "last_accessed": "2026-08-01T06:00:00Z",
+        "importance": 0.5,
+        "source": "",
+        "private": False,
+    }
+    record = QdrantEdgeStorage._payload_to_record(payload)
+    assert record.created_at.tzinfo is None
+    assert record.created_at == datetime(2026, 8, 1, 5, 0)
+    assert record.last_accessed.tzinfo is None
+    assert record.last_accessed == datetime(2026, 8, 1, 6, 0)
+
+
 # --- LLM fallback ---
 
 
