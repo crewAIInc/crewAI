@@ -173,24 +173,22 @@ crewai log-tasks-outputs
 
 ### 6. Reset-memories
 
-Reset the crew memories (long, short, entity, latest_crew_kickoff_outputs).
+Reset the crew memories (memory, knowledge, agent_knowledge, kickoff_outputs).
 
 ```shell Terminal
 crewai reset-memories [OPTIONS]
 ```
 
-- `-l, --long`: Reset LONG TERM memory
-- `-s, --short`: Reset SHORT TERM memory
-- `-e, --entities`: Reset ENTITIES memory
-- `-k, --kickoff-outputs`: Reset LATEST KICKOFF TASK OUTPUTS
+- `-m, --memory`: Reset MEMORY
 - `-kn, --knowledge`: Reset KNOWLEDGE storage
 - `-akn, --agent-knowledge`: Reset AGENT KNOWLEDGE storage
+- `-k, --kickoff-outputs`: Reset LATEST KICKOFF TASK OUTPUTS
 - `-a, --all`: Reset ALL memories
 
 Example:
 
 ```shell Terminal
-crewai reset-memories --long --short
+crewai reset-memories --memory
 crewai reset-memories --all
 ```
 
@@ -203,7 +201,7 @@ crewai test [OPTIONS]
 ```
 
 - `-n, --n-iterations INTEGER`: Number of iterations to test the crew (default: 3)
-- `-m, --model TEXT`: LLM Model to run the tests on the Crew (default: "gpt-4o-mini")
+- `-m, --model TEXT`: LLM Model to run the tests on the Crew (default: "gpt-5.4-mini")
 
 Example:
 

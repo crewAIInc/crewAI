@@ -582,7 +582,7 @@ def memory(
     "--model",
     type=str,
     default="gpt-5.4-mini",
-    help="LLM Model to run the tests on the Crew. For now only accepting only OpenAI models.",
+    help="LLM Model to run the tests on the Crew. For now only accepting OpenAI models.",
 )
 @click.option(
     "-f",
