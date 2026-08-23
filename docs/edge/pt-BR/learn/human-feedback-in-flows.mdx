@@ -72,7 +72,7 @@ Quando este flow é executado, ele irá:
 | `llm` | `str \| BaseLLM` | Quando `emit` especificado | LLM usado para interpretar o feedback e mapear para um outcome |
 | `default_outcome` | `str` | Não | Outcome a usar se nenhum feedback for fornecido. Deve estar em `emit` |
 | `metadata` | `dict` | Não | Dados adicionais para integrações enterprise |
-| `provider` | `HumanFeedbackProvider` | Não | Provider customizado para feedback assíncrono/não-bloqueante. Veja [Feedback Humano Assíncrono](#feedback-humano-assíncrono-não-bloqueante) |
+| `provider` | `HumanFeedbackProvider` | Não | Provider customizado para feedback assíncrono/não-bloqueante. Veja [Feedback Humano Assíncrono](#feedback-humano-assíncrono-não-bloqueante---human-in-the-loop) |
 | `learn` | `bool` | Não | Habilitar aprendizado HITL: destila lições do feedback e pré-revisa saídas futuras. Padrão `False`. Veja [Aprendendo com Feedback](#aprendendo-com-feedback) |
 | `learn_limit` | `int` | Não | Máximo de lições passadas para recuperar na pré-revisão. Padrão `5` |
 
