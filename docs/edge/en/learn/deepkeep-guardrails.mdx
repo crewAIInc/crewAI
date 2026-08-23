@@ -1,0 +1,102 @@
+---
+title: DeepKeep Guardrails
+description: Enforce DeepKeep AI Firewall policies with CrewAI task guardrails and execution hooks
+mode: "wide"
+---
+
+DeepKeep AI Firewall integrates with CrewAI through native guardrails and
+execution hooks. Use it to validate task outputs, intercept model calls, and
+enforce policy around tool usage without adding vendor-specific code to CrewAI.
+
+## Installation
+
+```bash
+pip install crewai-tools-deepkeep
+```
+
+Configure your DeepKeep credentials:
+
+```bash
+export DEEPKEEP_API_KEY="dk_..."
+export DEEPKEEP_BASE_URL="https://your-deepkeep-base-url"
+```
+
+## Task Guardrails
+
+Use a task guardrail when you want CrewAI to validate a task result and retry
+the task if DeepKeep blocks the output.
+
+```python
+from crewai import Agent, Task
+from crewai_deepkeep import DeepKeepGuardrail
+
+agent = Agent(
+    role="Support Agent",
+    goal="Answer user questions safely",
+    backstory="You provide concise and policy-compliant responses.",
+)
+
+deepkeep = DeepKeepGuardrail(post_model="output-firewall-id")
+
+task = Task(
+    description="Answer the user's question.",
+    expected_output="A safe answer.",
+    agent=agent,
+    guardrail=deepkeep.check_output,
+    guardrail_max_retries=3,
+)
+```
+
+`DeepKeepGuardrail.check_output` returns CrewAI's standard guardrail tuple:
+
+```python
+(True, validated_or_modified_output)
+(False, "feedback for the agent retry")
+```
+
+## Execution Hooks
+
+Use hooks when you want policy checks at runtime boundaries, including LLM input,
+LLM output, tool input, and tool output.
+
+```python
+from crewai_deepkeep import DeepKeepHooks, install_deepkeep_hooks
+
+install_deepkeep_hooks(
+    DeepKeepHooks(
+        pre_model="input-firewall-id",
+        post_model="output-firewall-id",
+    )
+)
+```
+
+The helper registers checks for CrewAI's model and tool interception points.
+Blocking decisions abort the intercepted operation. Redaction or modification
+decisions replace the intercepted payload where CrewAI supports replacement.
+
+## Optional Agent Tools
+
+DeepKeep also provides agent-callable tools for workflows where moderation is an
+explicit agent action:
+
+```python
+from crewai_deepkeep.tools import DeepKeepModerateInputTool
+
+agent = Agent(
+    role="AI Security Reviewer",
+    goal="Review content before it is used by another agent.",
+    backstory="You call policy tools before approving content.",
+    tools=[DeepKeepModerateInputTool(model="input-firewall-id")],
+)
+```
+
+For production enforcement, prefer task guardrails and execution hooks because
+they run as part of CrewAI's control flow instead of relying on the agent to call
+a tool.
+
+## Related Documentation
+
+- [Tasks](/edge/en/concepts/tasks)
+- [Execution Hooks](/edge/en/learn/execution-hooks)
+- [LLM Call Hooks](/edge/en/learn/llm-hooks)
+- [Tool Call Hooks](/edge/en/learn/tool-hooks)

@@ -397,6 +397,7 @@
                         "group": "Execution Hooks",
                         "pages": [
                           "edge/en/learn/execution-hooks",
+                          "edge/en/learn/deepkeep-guardrails",
                           "edge/en/learn/llm-hooks",
                           "edge/en/learn/tool-hooks",
                           "edge/en/learn/execution-boundary-hooks",
@@ -13614,6 +13615,7 @@
                       "edge/pt-BR/learn/sequential-process",
                       "edge/pt-BR/learn/using-annotations",
                       "edge/pt-BR/learn/execution-hooks",
+                      "edge/pt-BR/learn/deepkeep-guardrails",
                       "edge/pt-BR/learn/llm-hooks",
                       "edge/pt-BR/learn/tool-hooks",
                       "edge/pt-BR/learn/execution-boundary-hooks"
@@ -25976,6 +25978,7 @@
                       "edge/ko/learn/sequential-process",
                       "edge/ko/learn/using-annotations",
                       "edge/ko/learn/execution-hooks",
+                      "edge/ko/learn/deepkeep-guardrails",
                       "edge/ko/learn/llm-hooks",
                       "edge/ko/learn/tool-hooks",
                       "edge/ko/learn/execution-boundary-hooks"
@@ -38746,6 +38749,7 @@
                       "edge/ar/learn/sequential-process",
                       "edge/ar/learn/using-annotations",
                       "edge/ar/learn/execution-hooks",
+                      "edge/ar/learn/deepkeep-guardrails",
                       "edge/ar/learn/llm-hooks",
                       "edge/ar/learn/tool-hooks",
                       "edge/ar/learn/execution-boundary-hooks"

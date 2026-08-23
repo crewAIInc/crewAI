@@ -1,0 +1,103 @@
+---
+title: DeepKeep Guardrails
+description: CrewAI Task guardrails와 execution hooks로 DeepKeep AI Firewall 정책을 적용합니다
+mode: "wide"
+---
+
+DeepKeep AI Firewall은 CrewAI의 기본 guardrails와 execution hooks를 통해
+통합됩니다. CrewAI에 벤더별 코드를 추가하지 않고 Task 출력 검증, 모델
+호출 차단, 도구 사용 주변의 정책 적용에 사용할 수 있습니다.
+
+## 설치
+
+```bash
+pip install crewai-tools-deepkeep
+```
+
+DeepKeep 자격 증명을 설정합니다:
+
+```bash
+export DEEPKEEP_API_KEY="dk_..."
+export DEEPKEEP_BASE_URL="https://your-deepkeep-base-url"
+```
+
+## Task Guardrails
+
+CrewAI가 Task 결과를 검증하고 DeepKeep이 출력을 차단하면 Task를 다시
+시도하게 하려면 Task guardrail을 사용합니다.
+
+```python
+from crewai import Agent, Task
+from crewai_deepkeep import DeepKeepGuardrail
+
+agent = Agent(
+    role="Support Agent",
+    goal="Answer user questions safely",
+    backstory="You provide concise and policy-compliant responses.",
+)
+
+deepkeep = DeepKeepGuardrail(post_model="output-firewall-id")
+
+task = Task(
+    description="Answer the user's question.",
+    expected_output="A safe answer.",
+    agent=agent,
+    guardrail=deepkeep.check_output,
+    guardrail_max_retries=3,
+)
+```
+
+`DeepKeepGuardrail.check_output`은 CrewAI의 표준 guardrail tuple을 반환합니다:
+
+```python
+(True, validated_or_modified_output)
+(False, "feedback for the agent retry")
+```
+
+## Execution Hooks
+
+LLM 입력, LLM 출력, 도구 입력, 도구 출력 등 런타임 경계에서 정책 검사를
+수행하려면 hooks를 사용합니다.
+
+```python
+from crewai_deepkeep import DeepKeepHooks, install_deepkeep_hooks
+
+install_deepkeep_hooks(
+    DeepKeepHooks(
+        pre_model="input-firewall-id",
+        post_model="output-firewall-id",
+    )
+)
+```
+
+이 helper는 CrewAI의 모델 및 도구 interception points에 대한 검사를
+등록합니다. 차단 결정은 intercept된 작업을 중단합니다. redaction 또는
+modification 결정은 CrewAI가 replacement를 지원하는 위치에서 intercept된
+payload를 교체합니다.
+
+## 선택적 Agent Tools
+
+DeepKeep은 moderation이 명시적인 Agent 작업인 워크플로를 위해 Agent가
+호출할 수 있는 tools도 제공합니다:
+
+```python
+from crewai_deepkeep.tools import DeepKeepModerateInputTool
+
+agent = Agent(
+    role="AI Security Reviewer",
+    goal="Review content before it is used by another agent.",
+    backstory="You call policy tools before approving content.",
+    tools=[DeepKeepModerateInputTool(model="input-firewall-id")],
+)
+```
+
+프로덕션 강제 적용에는 Task guardrails와 execution hooks를 선호하세요.
+이들은 Agent가 도구를 호출하는 것에 의존하지 않고 CrewAI의 제어 흐름의
+일부로 실행됩니다.
+
+## 관련 문서
+
+- [Tasks](/edge/ko/concepts/tasks)
+- [Execution Hooks](/edge/ko/learn/execution-hooks)
+- [LLM Call Hooks](/edge/ko/learn/llm-hooks)
+- [Tool Call Hooks](/edge/ko/learn/tool-hooks)
