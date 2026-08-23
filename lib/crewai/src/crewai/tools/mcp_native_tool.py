@@ -90,19 +90,16 @@ class MCPNativeTool(BaseTool):
             The tool's text result, or a :class:`ToolFailure` when the server
             answered with ``isError: true``.
         """
+        coro = self._run_async(**kwargs)
         try:
             try:
-                asyncio.get_running_loop()
-
-                import concurrent.futures
-
-                ctx = contextvars.copy_context()
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    coro = self._run_async(**kwargs)
-                    future = executor.submit(ctx.run, asyncio.run, coro)
-                    return future.result()
+                loop = asyncio.get_running_loop()
+                if loop.is_running():
+                    from concurrent.futures import ThreadPoolExecutor
+                    with ThreadPoolExecutor() as executor:
+                        return executor.submit(asyncio.run, coro).result()
             except RuntimeError:
-                return asyncio.run(self._run_async(**kwargs))
+                return asyncio.run(coro)
 
         except Exception as e:
             raise RuntimeError(

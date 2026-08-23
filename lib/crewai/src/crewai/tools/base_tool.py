@@ -336,10 +336,19 @@ class BaseTool(BaseModel, ABC):
             return limit_error
 
         result = self._run(*args, **kwargs)
-
         if asyncio.iscoroutine(result):
-            result = asyncio.run(result)
-
+            try:
+                loop = asyncio.get_running_loop()
+                if loop.is_running():
+                    # If we're already in a running loop, we should ideally await this.
+                    # But run() is a sync method. The best we can do is run it in a thread
+                    # with a new loop, or use nest_asyncio if available.
+                    # CrewAI seems to prefer running in a thread pool for these cases.
+                    from concurrent.futures import ThreadPoolExecutor
+                    with ThreadPoolExecutor() as executor:
+                        return executor.submit(asyncio.run, result).result()
+            except RuntimeError:
+                result = asyncio.run(result)
         return result
 
     async def arun(
