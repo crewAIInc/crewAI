@@ -1213,9 +1213,11 @@ def test_get_context_window_size_with_provider_prefix():
     """Verify context window size matches correctly when provider prefix is present."""
     llm_plain = LLM(model="gpt-4o", is_litellm=True)
     llm_prefixed = LLM(model="openai/gpt-4o", is_litellm=True)
+    llm_nested = LLM(model="openrouter/deepseek/deepseek-chat", is_litellm=True)
     llm_ollama = LLM(model="ollama/llama-3.1-70b-versatile", is_litellm=True)
 
     assert llm_plain.get_context_window_size() == int(128000 * CONTEXT_WINDOW_USAGE_RATIO)
     assert llm_prefixed.get_context_window_size() == int(128000 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert llm_nested.get_context_window_size() == int(128000 * CONTEXT_WINDOW_USAGE_RATIO)
     assert llm_ollama.get_context_window_size() == int(131072 * CONTEXT_WINDOW_USAGE_RATIO)
 
