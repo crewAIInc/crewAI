@@ -1223,3 +1223,85 @@ def test_gemini_no_thinking_tokens_defaults_to_zero():
     usage = llm._extract_token_usage(mock_response)
     assert usage["reasoning_tokens"] == 0
     assert usage["cached_prompt_tokens"] == 0
+
+
+def test_gemini_appends_trailing_user_turn_when_last_message_is_assistant():
+    """Test that _format_messages_for_gemini appends a synthetic user turn
+    when the conversation ends with an assistant/model message.
+
+    Gemini API rejects requests ending with a model turn (HTTP 400).
+    Agent loops (max_iterations exceeded, guardrail retries) can leave
+    an assistant message as the last entry, so the provider must guard
+    against this.
+    """
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    llm = GeminiCompletion(model="gemini-2.0-flash-001", api_key="test-key")
+
+    # Simulate a conversation that ends with an assistant message
+    # (e.g., after max_iterations exceeded re-invokes the LLM)
+    messages = [
+        {"role": "user", "content": "What is 2+2?"},
+        {"role": "assistant", "content": "The answer is 4."},
+    ]
+
+    contents, _ = llm._format_messages_for_gemini(messages)
+
+    # The last content should be a synthetic user turn
+    assert contents[-1].role == "user", (
+        "Expected trailing user turn after assistant message, "
+        f"got role={contents[-1].role}"
+    )
+
+
+def test_gemini_does_not_append_extra_user_turn_when_last_message_is_user():
+    """Test that _format_messages_for_gemini does NOT append a trailing user
+    turn when the conversation already ends with a user message.
+    """
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    llm = GeminiCompletion(model="gemini-2.0-flash-001", api_key="test-key")
+
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there!"},
+        {"role": "user", "content": "How are you?"},
+    ]
+
+    contents, _ = llm._format_messages_for_gemini(messages)
+
+    # The last content should remain the original user message, not a synthetic one
+    assert contents[-1].role == "user"
+    # Verify it's the original message, not an empty synthetic one
+    last_text = contents[-1].parts[0].text
+    assert last_text == "How are you?", (
+        f"Expected original user message, got: {last_text}"
+    )
+
+
+def test_gemini_appends_trailing_user_turn_after_tool_call():
+    """Test that _format_messages_for_gemini handles the case where
+    the last message is an assistant message with tool_calls (model role in Gemini).
+    """
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    llm = GeminiCompletion(model="gemini-2.0-flash-001", api_key="test-key")
+
+    # Simulate a conversation ending with an assistant tool call
+    messages = [
+        {"role": "user", "content": "Search for something"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [{"function": {"name": "search", "arguments": "{}"}}],
+        },
+    ]
+
+    contents, _ = llm._format_messages_for_gemini(messages)
+
+    # After the tool call (which becomes a model turn), a trailing user turn
+    # should be appended
+    assert contents[-1].role == "user", (
+        "Expected trailing user turn after assistant tool call, "
+        f"got role={contents[-1].role}"
+    )

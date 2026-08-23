@@ -672,6 +672,15 @@ class GeminiCompletion(BaseLLM):
                 gemini_content = types.Content(role=gemini_role, parts=parts)
                 contents.append(gemini_content)
 
+        # Gemini requires the conversation to end with a user turn.
+        # Agent loops (max_iterations exceeded, guardrail retries) can leave
+        # an assistant/model message as the last entry, which causes a 400:
+        # "Requests ending with a model turn are not supported".
+        if contents and contents[-1].role == "model":
+            contents.append(
+                types.Content(role="user", parts=[types.Part.from_text(text="")])
+            )
+
         return contents, system_instruction
 
     def _validate_and_emit_structured_output(
