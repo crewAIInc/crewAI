@@ -13,12 +13,13 @@ from __future__ import annotations
 
 import datetime
 from copy import deepcopy
-from typing import Any
+from typing import Any, Optional
 
 import pytest
 from pydantic import BaseModel
 
 from crewai.utilities.pydantic_schema_utils import (
+    _json_schema_to_pydantic_type,
     build_rich_field_description,
     convert_oneof_to_anyof,
     create_model_from_schema,
@@ -41,6 +42,18 @@ class TestSimpleTypes:
         Model = create_model_from_schema(schema)
         obj = Model(name="Alice")
         assert obj.name == "Alice"
+
+    def test_list_form_nullable_type(self) -> None:
+        """A draft-07 list-form type (e.g. ["string", "null"]) resolves to a
+        Union instead of raising "Unsupported JSON schema type".
+
+        MCP tool schemas commonly express a nullable field this way, which
+        previously crashed the schema conversion.
+        """
+        assert (
+            _json_schema_to_pydantic_type({"type": ["string", "null"]}, {})
+            == Optional[str]
+        )
 
     def test_integer_field(self) -> None:
         schema = {

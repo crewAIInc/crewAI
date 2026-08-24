@@ -1215,6 +1215,27 @@ def _json_schema_to_pydantic_type(
 
     type_ = json_schema.get("type")
 
+    if isinstance(type_, list):
+        # JSON Schema draft-07 allows ``type`` to be a list, e.g.
+        # ``{"type": ["string", "null"]}`` for a nullable string. Resolve each
+        # member against a copy of the schema and union the results, instead of
+        # falling through to the "unsupported type" error.
+        member_types = tuple(
+            _json_schema_to_pydantic_type(
+                {**json_schema, "type": member},
+                root_schema,
+                name_=name_,
+                enrich_descriptions=enrich_descriptions,
+                in_progress=in_progress,
+            )
+            for member in type_
+        )
+        if not member_types:
+            return Any
+        if len(member_types) == 1:
+            return member_types[0]
+        return Union[member_types]  # type: ignore[valid-type]
+
     if type_ == "string":
         return str
     if type_ == "integer":
