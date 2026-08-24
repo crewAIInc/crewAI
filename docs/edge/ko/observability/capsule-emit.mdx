@@ -1,22 +1,26 @@
 ---
 title: Agent Action Capsule (capsule-emit) 통합
-description: 크루 실행에 대한 서명된 검증 가능 증거 레코드 — 도구 호출마다 서명된 캡슐 하나, 제3자가 검증 가능.
+description: 크루 실행에 대한 봉인된 콘텐츠 주소화 증거 레코드 — 도구 호출마다 캡슐 하나, 변조 증거를 위한 투명성 로그 다이제스트 앵커링 포함.
 icon: file-shield
 mode: "wide"
 ---
 
 # Agent Action Capsule 개요
 
-[capsule-emit](https://github.com/action-state-group/capsule-emit)은 크루 실행의 각 도구 호출을 **Agent Action Capsule**로 봉인합니다: 서명되고 콘텐츠 주소화된 증거 레코드(계획 → 실행 → 확인)로, 이를 생성한 시스템에 접근하지 않고도 제3자가 검증할 수 있습니다.
+[capsule-emit](https://github.com/action-state-group/capsule-emit)은 크루 실행의 각 도구 호출을 **Agent Action Capsule**로 봉인합니다: 봉인되고 콘텐츠 주소화된 증거 레코드(계획 → 실행 → 확인)입니다. 캡슐은 크루가 실제로 수행한 일에 대한 감사·컴플라이언스 증거이며 — 추적을 보완합니다.
 
-이 페이지의 추적·모니터링 도구들이 *"무슨 일이 있었는지, 운영자를 위해"*에 답한다면, 캡슐은 *"무슨 일이 있었는지, 운영자를 신뢰하지 않는 상대에게 증명"*에 답합니다 — 디버깅이 아닌 감사·컴플라이언스 증거입니다. 추적을 대체하는 것이 아니라 보완합니다.
+의도적으로 구분된 두 검증 계층:
+
+- **오프라인 `verify()`**는 구조, 콘텐츠 주소화(모든 다이제스트가 레코드 자체 내용에서 재계산됨), 체인 일관성을 검사합니다 — 서비스도 자격 증명도 필요 없습니다.
+- **외부 당사자를 향한 변조 증거**는 앵커링 단계에서 나옵니다: 캡슐 다이제스트가 SCITT 투명성 로그에 등록되며, 로그의 영수증이 사후 변경을 외부인에게 드러나게 만듭니다. 퀵스타트는 데모의 밀폐성을 위해 이 단계를 로컬 스텁 서비스로 실행하며, 프로덕션 앵커링은 실제 로그를 가리킵니다.
 
 ### 기능
 
 - **리스너 하나로 모든 도구 호출 기록**: CrewAI의 표준 `BaseEventListener` 메커니즘으로 `CapsuleEventListener()`를 한 번만 등록 — 도구별 코드 변경 없음.
 - **계획 → 실행 → 확인 체인**: 도구 호출 시작 시 캡슐이 봉인되고 종료 시 다이제스트로 확인됩니다; 오류는 실패 레코드로 봉인됩니다.
-- **다이제스트 전용 프라이버시**: 도구 입출력은 SHA-256 다이제스트로 커밋 — 원본 콘텐츠는 로컬에 유지되며, 다이제스트만 SCITT 투명성 로그에 앵커링됩니다.
-- **오프라인 검증**: `verify()`가 레코드만으로 모든 캡슐을 재검사 — 서비스도 자격 증명도 필요 없습니다.
+- **다이제스트 전용 프라이버시**: 도구 입출력은 SHA-256 다이제스트로 커밋 — 원본 콘텐츠는 로컬에 유지되며, 다이제스트만 앵커링됩니다.
+- **오프라인 일관성 검사**: `verify()`가 레코드만으로 구조, 콘텐츠 주소화, 체인 링크를 재검사합니다.
+- **앵커링된 변조 증거**: SCITT 투명성 로그에 다이제스트 전용 등록; 영수증이 독립적 변조 증거의 핵심 단계입니다.
 - **크루 안전 보장**: 리스너는 `is_replaying()`을 준수하고 크루 실행에 예외를 발생시키지 않습니다; 앵커에 접속할 수 없어도 크루는 중단되지 않습니다.
 
 ## 설정 방법
@@ -41,10 +45,10 @@ mode: "wide"
       ```
       이제 각 도구 호출이 로컬 원장(기본값 `ledger.jsonl`)에 봉인된 레코드를 생성하며, 다이제스트는 구성된 SCITT 투명성 서비스에 앵커링됩니다.
     </Step>
-    <Step title="증거 검증">
+    <Step title="증거 확인">
       ```python
       from capsule_emit import verify_ledger
-      verify_ledger("ledger.jsonl")   # re-checks every capsule offline
+      verify_ledger("ledger.jsonl")   # structure + content addressing + chain, offline
       ```
     </Step>
 </Steps>
@@ -58,7 +62,20 @@ pip install "capsule-emit[crewai]"
 python examples/crewai-listener/demo.py
 ```
 
-예상 출력: 크루 실행 이벤트 시퀀스가 캡슐로 봉인됩니다 — 킥오프, 계획→확인 도구 호출 체인, 실패→오류 체인 — 마지막은 `verify: ALL OK`.
+샘플 출력 (capsule-emit 0.4.0, crewai 1.15.x):
+
+```text
+action                             effect     verdict   chained  verify()
+---------------------------------------------------------------------------
+crew_kickoff_started/1b68ae38-6137 -          executed  -        OK
+fetch_supplier/4817753c-2972-43b6- planned    executed  -        OK
+fetch_supplier/6f16fea8-ed7b-49f2- confirmed  executed  yes      OK
+write_po/05daa3c0-b099-4152-b320-f planned    executed  -        OK
+write_po/43ea7df6-106c-4b1b-87fe-2 failed     errored   yes      OK
+crew_kickoff_completed/3ea9a64d-53 -          executed  -        OK
+---------------------------------------------------------------------------
+6 capsules, verify: ALL OK
+```
 
 ## 기록되는 내용
 
