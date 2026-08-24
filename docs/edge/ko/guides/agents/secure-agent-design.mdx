@@ -11,7 +11,9 @@ CrewAI 에이전트는 실제 동작을 수행하는 도구를 호출할 수 있
 
 이 페이지는 그 위험을 제한하는 방법을 보여 줍니다. 관련 참고: [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) (프롬프트 인젝션 및 과도한 agency).
 
-CrewAI는 hooks, guardrails, HITL, 구조화된 출력, Flow state라는 구성 요소를 제공합니다. 이것들을 안전한 기본값으로 켜지는 않습니다. 도구, allowlist, 승인 검사는 애플리케이션 코드에서 설정해야 합니다.
+CrewAI는 hooks, guardrails, 구조화된 출력, Flow state라는 구성 요소를 제공합니다. 이것들을 안전한 기본값으로 켜지는 않습니다. 도구, allowlist, 승인 검사는 애플리케이션 코드에서 설정해야 합니다.
+
+Human-in-the-loop (HITL)는 승인이지 통제가 아닙니다. 사람이 수락, 거부, 의견을 남기도록 일시 중지합니다. 승인자를 인증하지 않고, 역할을 확인하지 않으며, 결정할 권한이 있었음을 증명하지 않습니다.
 
 이 페이지는 위협 모델과 실행 경로 동작을 다룹니다. 실행 제한(`max_rpm`, `max_iter`, `max_execution_time`), verbose, 에이전트 설정은 [에이전트](/ko/concepts/agents)와 [에이전트 맞춤화](/ko/learn/customizing-agents)를 참고하세요.
 
@@ -19,7 +21,7 @@ CrewAI는 hooks, guardrails, HITL, 구조화된 출력, Flow state라는 구성 
 | --- | --- |
 | tool hook의 `HookAborted` | 해당 도구 호출 하나만 중지합니다. 에이전트는 계속합니다. 도구가 차단되었다는 메시지를 받습니다. |
 | Task `guardrail` | Task 경로에서 Task 출력을 거부하거나 재시도합니다. |
-| Task `human_input` | Task 경로에서 콘솔 입력을 위해 일시 중지합니다. |
+| Task `human_input` | 승인: Task 경로에서 도구가 실행된 뒤 최종 답변을 검토합니다. 도구를 차단하지 않습니다. 누가 승인했는지는 검사하지 않습니다. |
 | `output_pydantic` / `output_json` | 출력을 스키마에 맞춥니다. 비즈니스 규칙은 검사하지 않습니다. |
 | `Agent.guardrail` | `agent.kickoff()`에서만 출력을 검사합니다. Crew Task 실행에서는 실행되지 않습니다. |
 
@@ -102,7 +104,7 @@ Crew와 Flow 입력에는 [execution boundary hooks](/ko/learn/execution-boundar
 | 최소 권한 도구 | 각 에이전트의 `tools=[...]` |
 | 호출 차단 또는 제한 | [Tool hooks](/ko/learn/tool-hooks) (`PRE_TOOL_CALL` + `HookAborted`) |
 | 모델 호출 검사 | [LLM hooks](/ko/learn/llm-hooks) |
-| 사람 승인 | Tool hooks + [HITL](/ko/learn/human-in-the-loop) |
+| 사람 승인 | [HITL](/ko/learn/human-in-the-loop) / `request_human_input` — 승인만. 통제가 아닙니다. 누가 승인했는지는 검사하지 않습니다. 호출을 차단하려면 tool hooks를 사용하세요. |
 | 출력 검사 | Task 경로의 [Task guardrails](/ko/concepts/tasks#task-guardrails); `kickoff()`의 `Agent.guardrail` |
 | 구조화된 형태 | `output_pydantic` / `output_json` 또는 `response_format=` (형태만) |
 
@@ -226,13 +228,19 @@ Task(
 
 ## 6. 승인 게이트
 
-되돌릴 수 없거나, 비용이 크거나, 공개되는 동작 전에는 사람 또는 외부 정책 검사를 요구하세요.
+HITL은 승인이지 통제가 아닙니다. 사람에게 수락 또는 거부를 요청합니다. 그 사람을 인증하지 않고, 역할을 확인하지 않으며, 권한이 있었음을 기록하지 않습니다. 기본 콘솔 `input()`은 키보드 앞에 있는 누구든 받습니다.
+
+되돌릴 수 없거나, 비용이 크거나, 공개되는 동작 전에는 승인을 요구하세요. 일시 중지는 코드에 두세요. 프롬프트에만 의존하지 마세요.
 
 | 위험 | 예 | 게이트 |
 | --- | --- | --- |
 | 높음 | 결제, 프로덕션 삭제, 공개 게시 | 항상 승인 |
 | 중간 | 실제 사용자에게 이메일, 파일 쓰기, 티켓 업데이트 | 승인 또는 allowlist |
 | 낮음 | 검색, 요약, 분류 | 로깅과 함께 자동화 |
+
+Task `human_input=True`는 에이전트가 도구를 실행하고 결과를 만든 **후**에 일시 중지합니다. 해당 출력이 수락되기 전에 최종 답변을 검토합니다. 도구 실행을 차단하지 **않습니다**. 그 Task의 에이전트는 사람이 실행을 보기 전에 파괴적인 도구를 호출할 수 있습니다. 실행 후 출력 검토로 충분할 때만 사용하세요. [실행 중 인간 입력](/ko/learn/human-input-on-execution)을 참고하세요.
+
+도구가 실행되기 **전**에 승인하려면 tool hook과 `HookAborted`를 사용하세요.
 
 ```python
 from crewai.hooks import HookAborted, InterceptionPoint, on
@@ -247,13 +255,13 @@ def require_email_approval(ctx):
         raise HookAborted(reason="denied by operator", source="approval-gate")
 ```
 
+`request_human_input`도 승인입니다. `yes`를 입력한 사람을 검증하지 않습니다. 신원 또는 정책 검사가 필요하면 직접 추가하세요.
+
 다른 옵션:
 
-- Task `human_input=True` — Task 실행 / Crew 경로만. [실행 중 인간 입력](/ko/learn/human-input-on-execution)을 참고하세요.
+- Task `human_input=True` — Task / Crew 경로에서만 실행 후 출력 검토.
 - `ToolCallHookContext.request_human_input` — `agent.kickoff()`와 Crew 실행에서 동작합니다. 기본적으로 차단형 콘솔 `input()`을 사용합니다.
-- `@human_feedback` / Enterprise HITL webhooks — [Human-in-the-Loop](/ko/learn/human-in-the-loop), [Flows의 Human Feedback](/ko/learn/human-feedback-in-flows).
-
-승인은 코드에서 강제하세요. 프롬프트에만 의존하지 마세요.
+- `@human_feedback` / Enterprise HITL webhooks — [Human-in-the-Loop](/ko/learn/human-in-the-loop), [Flows의 Human Feedback](/ko/learn/human-feedback-in-flows). 같은 한계: 이 API 밖에서 추가하지 않으면 CrewAI는 승인자를 검증하지 않습니다.
 
 ## 7. 위임 제한
 
@@ -328,7 +336,7 @@ class SecureOutreachFlow(Flow[PipelineState]):
     계속하기 전에 Task 출력을 검증합니다.
   </Card>
   <Card title="Human-in-the-Loop" icon="user-check" href="/ko/learn/human-in-the-loop">
-    고영향 동작에 대한 사람 검토.
+    승인과 실행 후 검토. 통제가 아닙니다. 누가 승인했는지는 검사하지 않습니다.
   </Card>
   <Card title="에이전트 맞춤화" icon="user-pen" href="/ko/learn/customizing-agents">
     실행 제한, verbose, 에이전트 설정.

@@ -11,7 +11,9 @@ Agentes CrewAI podem chamar ferramentas que executam ações reais. Texto não c
 
 Esta página mostra como limitar esse risco. Referência relacionada: [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) (prompt injection e agency excessiva).
 
-O CrewAI oferece blocos de construção: hooks, guardrails, HITL, saídas estruturadas e estado de Flow. Ele não liga esses recursos como um padrão seguro. Você deve definir ferramentas, allowlists e checagens de aprovação no código da aplicação.
+O CrewAI oferece blocos de construção: hooks, guardrails, saídas estruturadas e estado de Flow. Ele não liga esses recursos como um padrão seguro. Você deve definir ferramentas, allowlists e checagens de aprovação no código da aplicação.
+
+Human-in-the-loop (HITL) é aprovação, não um controle. Ele pausa para uma pessoa aceitar, rejeitar ou comentar. Não autentica o aprovador, não verifica o papel dele e não prova que ele tinha permissão para decidir.
 
 Esta página cobre o modelo de ameaça e o comportamento por caminho de execução. Para limites de execução (`max_rpm`, `max_iter`, `max_execution_time`), verbosidade e configurações do agente, veja [Agentes](/pt-BR/concepts/agents) e [Personalize Agentes](/pt-BR/learn/customizing-agents).
 
@@ -19,7 +21,7 @@ Esta página cobre o modelo de ameaça e o comportamento por caminho de execuç�
 | --- | --- |
 | `HookAborted` em um tool hook | Interrompe aquela chamada de ferramenta. O agente continua. Ele recebe uma mensagem de que a ferramenta foi bloqueada. |
 | Task `guardrail` | Rejeita ou retenta a saída da Task no caminho da Task. |
-| Task `human_input` | Pausa para input no console no caminho da Task. |
+| Task `human_input` | Aprovação: revisa a resposta final depois que as ferramentas rodaram no caminho da Task. Não bloqueia ferramentas. Não verifica quem aprovou. |
 | `output_pydantic` / `output_json` | Ajusta a saída a um schema. Não verifica regras de negócio. |
 | `Agent.guardrail` | Verifica a saída apenas em `agent.kickoff()`. Não roda na execução de Task do Crew. |
 
@@ -102,7 +104,7 @@ Exemplos:
 | Ferramentas com menor privilégio | `tools=[...]` em cada agente |
 | Bloquear ou restringir chamadas | [Tool hooks](/pt-BR/learn/tool-hooks) (`PRE_TOOL_CALL` + `HookAborted`) |
 | Inspecionar chamadas do modelo | [LLM hooks](/pt-BR/learn/llm-hooks) |
-| Aprovação humana | Tool hooks + [HITL](/pt-BR/learn/human-in-the-loop) |
+| Aprovação humana | [HITL](/pt-BR/learn/human-in-the-loop) / `request_human_input` — só aprovação. Não é um controle. Não verifica quem aprovou. Use tool hooks para bloquear a chamada. |
 | Checagens de saída | [Task guardrails](/pt-BR/concepts/tasks#task-guardrails) no caminho da Task; `Agent.guardrail` em `kickoff()` |
 | Forma estruturada | `output_pydantic` / `output_json` ou `response_format=` (apenas a forma) |
 
@@ -226,13 +228,19 @@ Checagens de string ou `LLMGuardrail` funcionam no caminho da Task e no caminho 
 
 ## 6. Portões de aprovação
 
-Exija uma pessoa ou uma checagem de política externa antes de ações irreversíveis, caras ou públicas.
+HITL é aprovação, não um controle. Pede a uma pessoa para aceitar ou rejeitar. Não autentica essa pessoa, não verifica o papel dela e não registra que ela estava autorizada. O `input()` padrão do console aceita quem estiver no teclado.
+
+Exija aprovação antes de ações irreversíveis, caras ou públicas. Coloque a pausa no código. Não dependa só do prompt.
 
 | Risco | Exemplos | Portão |
 | --- | --- | --- |
 | Alto | Pagamentos, exclusões em produção, posts públicos | Sempre aprovar |
 | Médio | E-mails para usuários reais, escrita de arquivos, atualizações de tickets | Aprovar ou allowlist |
 | Baixo | Busca, resumo, classificação | Automatizar com logging |
+
+Task `human_input=True` pausa **depois** que o agente executou as ferramentas e produziu um resultado. Ele revisa a resposta final antes que essa saída seja aceita. **Não** bloqueia a execução de ferramentas. Um agente nessa Task ainda pode chamar ferramentas destrutivas antes que qualquer humano veja a execução. Use só quando a revisão da saída após a execução for suficiente. Veja [Input humano na execução](/pt-BR/learn/human-input-on-execution).
+
+Para aprovação **antes** de uma ferramenta rodar, use um tool hook e `HookAborted`:
 
 ```python
 from crewai.hooks import HookAborted, InterceptionPoint, on
@@ -247,13 +255,13 @@ def require_email_approval(ctx):
         raise HookAborted(reason="denied by operator", source="approval-gate")
 ```
 
+`request_human_input` ainda é aprovação. Não valida quem digitou `yes`. Adicione sua própria checagem de identidade ou política se precisar.
+
 Outras opções:
 
-- Task `human_input=True` — apenas no caminho de execução da Task / Crew. Veja [Input humano na execução](/pt-BR/learn/human-input-on-execution).
+- Task `human_input=True` — revisão da saída após a execução só no caminho Task / Crew.
 - `ToolCallHookContext.request_human_input` — funciona em `agent.kickoff()` e em execuções de Crew. Por padrão usa um `input()` de console bloqueante.
-- `@human_feedback` / webhooks HITL Enterprise — [Human-in-the-Loop](/pt-BR/learn/human-in-the-loop), [Human Feedback em Flows](/pt-BR/learn/human-feedback-in-flows).
-
-Aplique a aprovação em código. Não dependa só do prompt.
+- `@human_feedback` / webhooks HITL Enterprise — [Human-in-the-Loop](/pt-BR/learn/human-in-the-loop), [Human Feedback em Flows](/pt-BR/learn/human-feedback-in-flows). O mesmo limite: o CrewAI não verifica o aprovador a menos que você adicione isso fora dessas APIs.
 
 ## 7. Limitando a delegação
 
@@ -328,7 +336,7 @@ Veja [Arquitetura de Produção](/pt-BR/concepts/production-architecture).
     Valide saídas de Task antes que elas continuem.
   </Card>
   <Card title="Human-in-the-Loop" icon="user-check" href="/pt-BR/learn/human-in-the-loop">
-    Revisão humana para ações de alto impacto.
+    Aprovação e revisão após a execução. Não é um controle. Não verifica quem aprovou.
   </Card>
   <Card title="Personalize Agentes" icon="user-pen" href="/pt-BR/learn/customizing-agents">
     Limites de execução, verbosidade e configurações do agente.

@@ -11,7 +11,9 @@ CrewAI agents can call tools that take real actions. Untrusted text in the model
 
 This page shows how to limit that risk. Related reference: [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) (prompt injection and excessive agency).
 
-CrewAI gives you building blocks: hooks, guardrails, human-in-the-loop (HITL), structured outputs, and Flow state. It does not turn these on as a secure default. You must set tools, allowlists, and approval checks in your application code.
+CrewAI gives you building blocks: hooks, guardrails, structured outputs, and Flow state. It does not turn these on as a secure default. You must set tools, allowlists, and approval checks in your application code.
+
+Human-in-the-loop (HITL) is approval, not a control. It pauses for a person to accept, reject, or comment. It does not authenticate the approver, check their role, or prove they were allowed to decide.
 
 This page covers threat model and execution-path behavior. For execution limits (`max_rpm`, `max_iter`, `max_execution_time`), verbosity, and agent settings, see [Agents](/en/concepts/agents) and [Customize Agents](/en/learn/customizing-agents).
 
@@ -19,7 +21,7 @@ This page covers threat model and execution-path behavior. For execution limits 
 | --- | --- |
 | `HookAborted` in a tool hook | Stops that one tool call. The agent continues. It receives a message that the tool was blocked. |
 | Task `guardrail` | Rejects or retries Task output on the Task path. |
-| Task `human_input` | Pauses for console input on the Task path. |
+| Task `human_input` | Approval: reviews the final answer after tools ran on the Task path. It does not block tools. It does not check who approved. |
 | `output_pydantic` / `output_json` | Fits output to a schema. It does not check business rules. |
 | `Agent.guardrail` | Checks output on `agent.kickoff()` only. It does not run on Crew Task execution. |
 
@@ -102,7 +104,7 @@ Examples:
 | Least-privilege tools | `tools=[...]` on each agent |
 | Block or constrain calls | [Tool hooks](/en/learn/tool-hooks) (`PRE_TOOL_CALL` + `HookAborted`) |
 | Inspect model calls | [LLM hooks](/en/learn/llm-hooks) |
-| Human approval | Tool hooks + [HITL](/en/learn/human-in-the-loop) |
+| Human approval | [HITL](/en/learn/human-in-the-loop) / `request_human_input` — approval only. Not a control. Does not check who approved. Use tool hooks to block the call. |
 | Output checks | [Task guardrails](/en/concepts/tasks#task-guardrails) on the Task path; `Agent.guardrail` on `kickoff()` |
 | Structured shape | `output_pydantic` / `output_json` or `response_format=` (shape only) |
 
@@ -226,13 +228,19 @@ String or `LLMGuardrail` checks work on both the Task path and the kickoff path.
 
 ## 6. Approval gates
 
-Require a human or an external policy check before irreversible, expensive, or public actions.
+HITL is approval, not a control. It asks a person to accept or reject. It does not authenticate that person, check their role, or record that they were authorized. Default console `input()` accepts whoever is at the keyboard.
+
+Require approval before irreversible, expensive, or public actions. Put the pause in code. Do not rely on the prompt alone.
 
 | Risk | Examples | Gate |
 | --- | --- | --- |
 | High | Payments, production deletes, public posts | Always approve |
 | Medium | Emails to real users, file writes, ticket updates | Approve or allowlist |
 | Low | Search, summarize, classify | Automate with logging |
+
+Task `human_input=True` pauses **after** the agent has run its tools and produced a result. It reviews the final answer before that output is accepted. It does **not** gate tool execution. An agent on that task can still call destructive tools before any human sees the run. Use it only when post-run output review is enough. See [Human input on execution](/en/learn/human-input-on-execution).
+
+For approval **before** a tool runs, use a tool hook and `HookAborted`:
 
 ```python
 from crewai.hooks import HookAborted, InterceptionPoint, on
@@ -247,13 +255,13 @@ def require_email_approval(ctx):
         raise HookAborted(reason="denied by operator", source="approval-gate")
 ```
 
+`request_human_input` is still approval. It does not validate who typed `yes`. Add your own identity or policy check if you need that.
+
 Other options:
 
-- Task `human_input=True` — Task execute / Crew path only. See [Human input on execution](/en/learn/human-input-on-execution).
+- Task `human_input=True` — post-run output review on the Task / Crew path only.
 - `ToolCallHookContext.request_human_input` — works on `agent.kickoff()` and Crew runs. By default it uses a blocking console `input()`.
-- `@human_feedback` / Enterprise HITL webhooks — [Human-in-the-Loop](/en/learn/human-in-the-loop), [Human Feedback in Flows](/en/learn/human-feedback-in-flows).
-
-Enforce approval in code. Do not rely on the prompt alone.
+- `@human_feedback` / Enterprise HITL webhooks — [Human-in-the-Loop](/en/learn/human-in-the-loop), [Human Feedback in Flows](/en/learn/human-feedback-in-flows). Same limit: CrewAI does not verify the approver unless you add that outside these APIs.
 
 ## 7. Limiting delegation
 
@@ -328,7 +336,7 @@ See [Production Architecture](/en/concepts/production-architecture).
     Validate task outputs before they continue.
   </Card>
   <Card title="Human-in-the-Loop" icon="user-check" href="/en/learn/human-in-the-loop">
-    Human review for high-impact actions.
+    Approval and post-run review. Not a control. Does not check who approved.
   </Card>
   <Card title="Customize Agents" icon="user-pen" href="/en/learn/customizing-agents">
     Execution limits, verbosity, and agent settings.

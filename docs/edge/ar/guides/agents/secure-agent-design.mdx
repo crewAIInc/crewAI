@@ -11,7 +11,9 @@ mode: "wide"
 
 توضّح هذه الصفحة كيفية الحد من هذا الخطر. مرجع ذو صلة: [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) (حقن المطالبات والوكالة المفرطة).
 
-يمنحكم CrewAI لبنات بناء: hooks وguardrails وHITL ومخرجات منظمة وحالة Flow. وهو لا يفعّلها كإعداد آمن افتراضي. يجب عليكم تعيين الأدوات وقوائم السماح وفحوصات الموافقة في كود التطبيق.
+يمنحكم CrewAI لبنات بناء: hooks وguardrails ومخرجات منظمة وحالة Flow. وهو لا يفعّلها كإعداد آمن افتراضي. يجب عليكم تعيين الأدوات وقوائم السماح وفحوصات الموافقة في كود التطبيق.
+
+Human-in-the-loop (HITL) موافقة، وليس عنصر تحكم. يتوقف ليقبل شخص أو يرفض أو يعلّق. وهو لا يصادق على الموافق، ولا يتحقق من دوره، ولا يثبت أنه مسموح له بالقرار.
 
 تغطي هذه الصفحة نموذج التهديد وسلوك مسار التنفيذ. لحدود التنفيذ (`max_rpm` و`max_iter` و`max_execution_time`) والتفصيل وإعدادات الـ Agent، راجع [Agents](/ar/concepts/agents) و[تخصيص الـ Agents](/ar/learn/customizing-agents).
 
@@ -19,7 +21,7 @@ mode: "wide"
 | --- | --- |
 | `HookAborted` في tool hook | يوقف استدعاء تلك الأداة فقط. يستمر الـ Agent. ويتلقى رسالة بأن الأداة حُظرت. |
 | Task `guardrail` | يرفض أو يعيد محاولة مخرج Task على مسار Task. |
-| Task `human_input` | يتوقف لإدخال وحدة التحكم على مسار Task. |
+| Task `human_input` | موافقة: يراجع الإجابة النهائية بعد تشغيل الأدوات على مسار Task. ولا يحظر الأدوات. ولا يتحقق ممن وافق. |
 | `output_pydantic` / `output_json` | يلائم المخرج مع مخطط. ولا يتحقق من قواعد العمل. |
 | `Agent.guardrail` | يتحقق من المخرج على `agent.kickoff()` فقط. ولا يعمل أثناء تنفيذ Task في Crew. |
 
@@ -102,7 +104,7 @@ researcher = Agent(
 | أدوات بأقل امتياز | `tools=[...]` على كل Agent |
 | حظر الاستدعاءات أو تقييدها | [Tool hooks](/ar/learn/tool-hooks) (`PRE_TOOL_CALL` + `HookAborted`) |
 | فحص استدعاءات النموذج | [LLM hooks](/ar/learn/llm-hooks) |
-| موافقة بشرية | Tool hooks + [HITL](/ar/learn/human-in-the-loop) |
+| موافقة بشرية | [HITL](/ar/learn/human-in-the-loop) / `request_human_input` — موافقة فقط. ليست عنصر تحكم. ولا تتحقق ممن وافق. استخدم tool hooks لحظر الاستدعاء. |
 | فحوصات المخرج | [Task guardrails](/ar/concepts/tasks#task-guardrails) على مسار Task؛ `Agent.guardrail` على `kickoff()` |
 | شكل منظم | `output_pydantic` / `output_json` أو `response_format=` (الشكل فقط) |
 
@@ -226,13 +228,19 @@ Task(
 
 ## 6. بوابات الموافقة
 
-اطلب تحققًا بشريًا أو من سياسة خارجية قبل الإجراءات غير القابلة للعكس أو المكلفة أو العلنية.
+HITL موافقة، وليس عنصر تحكم. يطلب من شخص القبول أو الرفض. وهو لا يصادق على ذلك الشخص، ولا يتحقق من دوره، ولا يسجّل أنه كان مخوّلًا. يقبل `input()` الافتراضي في وحدة التحكم من يكون على لوحة المفاتيح.
+
+اطلب موافقة قبل الإجراءات غير القابلة للعكس أو المكلفة أو العلنية. ضع التوقف في الكود. لا تعتمد على المطالبة وحدها.
 
 | الخطر | أمثلة | البوابة |
 | --- | --- | --- |
 | مرتفع | المدفوعات، الحذف في الإنتاج، المنشورات العامة | وافق دائمًا |
 | متوسط | رسائل إلى مستخدمين حقيقيين، كتابة ملفات، تحديث تذاكر | وافق أو استخدم قائمة سماح |
 | منخفض | البحث، التلخيص، التصنيف | أتمت مع التسجيل |
+
+يتوقف Task `human_input=True` **بعد** أن يشغّل الـ Agent أدواته وينتج نتيجة. ويراجع الإجابة النهائية قبل قبول ذلك المخرج. **ولا** يمنع تنفيذ الأدوات. يمكن للـ Agent في تلك الـ Task أن يستدعي أدوات مدمرة قبل أن يرى أي إنسان التشغيل. استخدمه فقط عندما تكفي مراجعة المخرج بعد التشغيل. راجع [الإدخال البشري أثناء التنفيذ](/ar/learn/human-input-on-execution).
+
+للموافقة **قبل** تشغيل أداة، استخدم tool hook و`HookAborted`:
 
 ```python
 from crewai.hooks import HookAborted, InterceptionPoint, on
@@ -247,13 +255,13 @@ def require_email_approval(ctx):
         raise HookAborted(reason="denied by operator", source="approval-gate")
 ```
 
+`request_human_input` ما زال موافقة. وهو لا يتحقق ممن كتب `yes`. أضف فحص هوية أو سياسة خاصًا بك إذا احتجت ذلك.
+
 خيارات أخرى:
 
-- Task `human_input=True` — مسار تنفيذ Task / Crew فقط. راجع [الإدخال البشري أثناء التنفيذ](/ar/learn/human-input-on-execution).
+- Task `human_input=True` — مراجعة المخرج بعد التشغيل على مسار Task / Crew فقط.
 - `ToolCallHookContext.request_human_input` — يعمل على `agent.kickoff()` وتشغيلات Crew. يستخدم افتراضيًا `input()` لوحدة تحكم حاجزًا.
-- `@human_feedback` / webhooks HITL للمؤسسات — [Human-in-the-Loop](/ar/learn/human-in-the-loop)، [Human Feedback في Flows](/ar/learn/human-feedback-in-flows).
-
-افرض الموافقة في الكود. لا تعتمد على المطالبة وحدها.
+- `@human_feedback` / webhooks HITL للمؤسسات — [Human-in-the-Loop](/ar/learn/human-in-the-loop)، [Human Feedback في Flows](/ar/learn/human-feedback-in-flows). الحد نفسه: CrewAI لا يتحقق من الموافق إلا إذا أضفت ذلك خارج هذه الواجهات.
 
 ## 7. تقييد التفويض
 
@@ -328,7 +336,7 @@ class SecureOutreachFlow(Flow[PipelineState]):
     تحقق من مخرجات Task قبل أن تستمر.
   </Card>
   <Card title="Human-in-the-Loop" icon="user-check" href="/ar/learn/human-in-the-loop">
-    مراجعة بشرية للإجراءات عالية التأثير.
+    موافقة ومراجعة بعد التشغيل. ليست عنصر تحكم. ولا تتحقق ممن وافق.
   </Card>
   <Card title="تخصيص الـ Agents" icon="user-pen" href="/ar/learn/customizing-agents">
     حدود التنفيذ والتفصيل وإعدادات الـ Agent.
