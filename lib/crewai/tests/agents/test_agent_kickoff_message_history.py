@@ -4,9 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
 from crewai import Agent
+from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.lite_agent import LiteAgent
 from crewai.llms.base_llm import BaseLLM
+from crewai.utilities.prompts import StandardPromptResult, SystemPromptResult
 
 
 class _Recorder(BaseLLM):
@@ -206,6 +210,54 @@ def test_history_survives_with_the_system_prompt_disabled() -> None:
     assert [message["role"] for message in seen] == ["user", "assistant", "user"]
     assert seen[0]["content"] == "my order id is 42"
     assert "where is it?" in str(seen[-1]["content"])
+
+
+@pytest.mark.parametrize("use_system_prompt", [True, False])
+def test_the_deprecated_executor_places_history_the_same_way(
+    use_system_prompt: bool,
+) -> None:
+    """`CrewAgentExecutor` carries its own `_setup_messages` twin.
+
+    `Agent.kickoff` builds an `AgentExecutor` unconditionally
+    (`agent/core.py`), so the deprecated executor is not reachable through
+    kickoff and is driven directly here. Both of its branches are covered:
+    history must land after any system prompt and before this turn's request.
+    """
+    agent = Agent(role="Support", goal="help", backstory="b", llm=_Recorder())
+    with pytest.warns(DeprecationWarning, match="CrewAgentExecutor is deprecated"):
+        executor = CrewAgentExecutor(
+            llm=agent.llm,
+            agent=agent,
+            prompt=SystemPromptResult(system="you are support", user="{input}")
+            if use_system_prompt
+            else StandardPromptResult(prompt="{input}"),
+            max_iter=5,
+            tools=[],
+            tools_names="",
+            stop_words=[],
+            tools_description="",
+            tools_handler=agent.tools_handler,
+            original_tools=[],
+        )
+
+    executor._setup_messages(
+        {
+            "input": "where is it?",
+            "tool_names": "",
+            "tools": "",
+            "history": HISTORY[:2],
+        }
+    )
+
+    roles = [message["role"] for message in executor.messages]
+    assert roles == (["system"] if use_system_prompt else []) + [
+        "user",
+        "assistant",
+        "user",
+    ]
+    assert executor.messages[-3]["content"] == "my order id is 42"
+    assert executor.messages[-2]["content"] == "thanks, checking"
+    assert "where is it?" in str(executor.messages[-1]["content"])
 
 
 def test_prior_turn_attachments_are_not_resent_on_this_turn() -> None:
