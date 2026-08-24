@@ -2664,23 +2664,25 @@ class OpenAICompletion(BaseLLM):
                     f"Context window for {key} must be between {min_context} and {max_context}"
                 )
 
-        # Context window sizes for OpenAI models
+        # Longest prefix first. Always insert new keys in that order so
+        # startswith prefers gpt-5.6 over gpt-5, gpt-4o-mini over gpt-4o, etc.
         context_windows = {
-            "gpt-4": 8192,
-            "gpt-4o": 128000,
-            "gpt-4o-mini": 200000,
-            "gpt-5.4-mini": 200000,
-            "gpt-4-turbo": 128000,
-            "gpt-4.1": 1047576,
             "gpt-4.1-mini-2025-04-14": 1047576,
             "gpt-4.1-nano-2025-04-14": 1047576,
-            "gpt-5": 1047576,
+            "gpt-5.4-mini": 200000,
+            "gpt-4-turbo": 128000,
+            "gpt-4o-mini": 200000,
             "gpt-5-mini": 1047576,
             "gpt-5-nano": 1047576,
             "o1-preview": 128000,
+            "gpt-5.6": 1050000,
             "o1-mini": 128000,
             "o3-mini": 200000,
             "o4-mini": 200000,
+            "gpt-4.1": 1047576,
+            "gpt-4o": 128000,
+            "gpt-5": 1047576,
+            "gpt-4": 8192,
         }
 
         for model_prefix, size in context_windows.items():

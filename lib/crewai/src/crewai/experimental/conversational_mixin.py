@@ -23,9 +23,9 @@ from contextlib import contextmanager
 from enum import Enum
 import json
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel, ConfigDict, Field, create_model
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.flow_events import (
@@ -138,6 +138,37 @@ def _config_from_definition(
         visible_agent_outputs=definition.visible_agent_outputs,
         defer_trace_finalization=definition.defer_trace_finalization,
     )
+
+
+def _conversation_state_with_defaults(
+    defaults: dict[str, Any] | None,
+) -> ConversationState:
+    """Build the chat state, keeping declared defaults the shape cannot hold.
+
+    A ``dict`` state's defaults are arbitrary keys, and dropping the ones that
+    are not conversational fields would break an action reading
+    ``state.topic``. They are carried as extras instead.
+    """
+    if not defaults:
+        return ConversationState()
+
+    known = {
+        name: value
+        for name, value in defaults.items()
+        if name in ConversationState.model_fields
+    }
+    extra = {
+        name: value
+        for name, value in defaults.items()
+        if name not in ConversationState.model_fields
+    }
+    if not extra:
+        return ConversationState(**known)
+
+    class ConversationStateWithDeclaredDefaults(ConversationState):
+        model_config = ConfigDict(extra="allow")
+
+    return ConversationStateWithDeclaredDefaults(**known, **extra)
 
 
 def _builtin_method(handler: Callable[..., Any], **roles: Any) -> FlowMethodDefinition:
@@ -997,23 +1028,53 @@ class _ConversationalMixin:
             update={"methods": {**definition.methods, **missing}}
         )
 
-    def _create_default_extension_state(self) -> ConversationState | None:
-        """Supply ``ConversationState`` only when nothing else declares state.
+    def _compose_extension_state_model(
+        self, model_class: type[BaseModel]
+    ) -> type[BaseModel]:
+        """Add the conversational fields to a declared state model.
 
-        A declared ``state:`` block always wins. This hook is consulted before
-        ``_create_definition_state``, so returning a state here would discard
-        every field the declaration asked for.
+        A turn reads ``messages``, ``current_user_message``, ``last_intent``,
+        ``ended``, ``events`` and ``agent_threads`` off state, so a declared
+        model that lacks them fails on the first turn. Composing rather than
+        replacing keeps every field the declaration asked for. A model that
+        already extends ``ConversationState`` is returned untouched.
+        """
+        if not self._is_conversational_enabled():
+            return model_class
+        if issubclass(model_class, ConversationState):
+            return model_class
+
+        class ConversationalState(ConversationState, model_class):  # type: ignore[misc, valid-type]
+            pass
+
+        return ConversationalState
+
+    def _create_default_extension_state(
+        self, *, ignore_declared_state: bool = False
+    ) -> ConversationState | None:
+        """Supply ``ConversationState`` when the declaration cannot carry it.
+
+        A declared ``pydantic`` or ``json_schema`` state is composed with the
+        conversational fields instead (see
+        ``_compose_extension_state_model``), so it keeps everything it asked
+        for. ``dict`` and ``unknown`` state cannot carry them at all, so this
+        supplies the real shape rather than letting the turn die on
+        ``state.id`` -- seeded from the declared defaults where they fit.
         """
         if not self._is_conversational_enabled():
             return None
-        if self._conversation_flow_definition().state is not None:
-            return None
-        initial_state_t = getattr(self, "_initial_state_t", None)
-        if not hasattr(self, "_initial_state_t") or isinstance(
-            initial_state_t, TypeVar
-        ):
+
+        state_definition = self._conversation_flow_definition().state
+        if state_definition is None:
             return ConversationState()
-        return None
+        if not ignore_declared_state and state_definition.type in (
+            "pydantic",
+            "json_schema",
+        ):
+            # Composed with the declared model instead; see
+            # ``_compose_extension_state_model``.
+            return None
+        return _conversation_state_with_defaults(state_definition.default)
 
     def _should_apply_pending_kickoff_context(self) -> bool:
         return (
