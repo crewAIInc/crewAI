@@ -1,0 +1,73 @@
+---
+title: Integração Agent Action Capsule (capsule-emit)
+description: Registros de evidência assinados e verificáveis para execuções de crew — uma cápsula assinada por chamada de ferramenta, verificável por terceiros.
+icon: file-shield
+mode: "wide"
+---
+
+# Visão Geral do Agent Action Capsule
+
+O [capsule-emit](https://github.com/action-state-group/capsule-emit) sela cada chamada de ferramenta em uma execução de crew como um **Agent Action Capsule**: um registro de evidência assinado e endereçado por conteúdo (planejado → executado → confirmado) que um terceiro pode verificar sem acesso ao sistema que o produziu.
+
+Enquanto as ferramentas de rastreamento e monitoramento desta página respondem *"o que aconteceu, para o operador"*, as cápsulas respondem *"prove o que aconteceu, para alguém que não confia no operador"* — evidência de auditoria e conformidade, não depuração. Complementar ao rastreamento, não um substituto.
+
+### Recursos
+
+- **Um listener, todas as chamadas de ferramenta**: registre `CapsuleEventListener()` uma única vez pelo mecanismo padrão `BaseEventListener` do CrewAI — sem alterações de código por ferramenta.
+- **Cadeias planejado → executado → confirmado**: uma cápsula é selada quando a chamada de ferramenta inicia e confirmada por digest quando termina; erros selam um registro de efeito falho.
+- **Privacidade somente por digest**: entradas/saídas das ferramentas são registradas como digests SHA-256 — o conteúdo bruto permanece local; apenas digests são ancorados em um log de transparência SCITT.
+- **Verificação offline**: `verify()` reverifica cada cápsula apenas a partir do registro — sem serviço, sem credenciais.
+- **Seguro para a crew por construção**: o listener respeita `is_replaying()` e nunca lança exceções na execução da crew; uma âncora inacessível não pode quebrar a crew.
+
+## Instruções de Configuração
+
+<Steps>
+    <Step title="Instale o capsule-emit com o extra do CrewAI">
+      ```shell
+      pip install "capsule-emit[crewai]"
+      ```
+    </Step>
+    <Step title="Registre o listener">
+      ```python
+      from capsule_emit.adapters.crewai_listener import CapsuleEventListener
+
+      # Register once, before kickoff — every tool call in the crew seals a capsule.
+      listener = CapsuleEventListener()
+      ```
+    </Step>
+    <Step title="Execute sua crew normalmente">
+      ```python
+      result = crew.kickoff()
+      ```
+      Cada chamada de ferramenta agora produz registros selados no ledger local (`ledger.jsonl` por padrão), com digests ancorados no serviço de transparência SCITT configurado.
+    </Step>
+    <Step title="Verifique a evidência">
+      ```python
+      from capsule_emit import verify_ledger
+      verify_ledger("ledger.jsonl")   # re-checks every capsule offline
+      ```
+    </Step>
+</Steps>
+
+## Quickstart executável
+
+Uma demonstração hermética de ponta a ponta acompanha o pacote (event bus real do CrewAI, serviço de transparência stub local, sem chave de LLM e sem serviço externo):
+
+```shell
+pip install "capsule-emit[crewai]"
+python examples/crewai-listener/demo.py
+```
+
+Saída esperada: uma sequência de eventos de execução de crew selada em cápsulas — kickoff, uma cadeia de chamada de ferramenta planejado→confirmado, uma cadeia falho→erro — terminando em `verify: ALL OK`.
+
+## O que é registrado
+
+| Campo | Conteúdo |
+|---|---|
+| `action_id` / nome da ferramenta | qual chamada de ferramenta esta cápsula registra |
+| digests de entrada/saída | compromissos SHA-256 — o conteúdo bruto nunca sai do seu ambiente |
+| `effect` | `planned`, `executed`, `confirmed` ou `errored` |
+| cadeia `confirms` | a cápsula executada cita a cápsula planejada por endereço de conteúdo |
+| recibo de âncora | registro somente por digest em um log de transparência SCITT (opcional, ativado por padrão) |
+
+O formato do registro é uma especificação aberta (`draft-mih-scitt-agent-action-capsule`, um Internet-Draft individual do IETF) com implementação de referência Apache-2.0.
