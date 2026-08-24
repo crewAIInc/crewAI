@@ -554,7 +554,7 @@ Route labels and method names share one trigger namespace, so a handler must not
 | Not expressible | Use instead |
 |-----------------|-------------|
 | A live `LLM` instance or a custom `BaseLLM` | A model id string or static configuration mapping |
-| `router.response_format` as a model class | Omit it; the framework synthesizes one. A ref or schema is ignored with a warning |
+| `router.response_format` as a live model class | Name the class with a python ref: `response_format: {python: my_project.schemas.ConversationRoute}`. Omit it and the framework synthesizes one |
 | A `route_turn()` override | Author the Flow in Python, or replace the declarative `route_conversation` method with a `call: code` / expression action |
 | A `can_answer_from_history()` override | Deprecated. Use `converse` or override `converse_turn()` in Python. |
 

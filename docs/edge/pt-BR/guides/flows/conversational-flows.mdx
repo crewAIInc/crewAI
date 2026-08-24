@@ -557,7 +557,7 @@ Rótulos de rota e nomes de métodos compartilham um único namespace de gatilho
 | Não expressável | Use no lugar |
 |-----------------|-------------|
 | Uma instância `LLM` viva ou um `BaseLLM` customizado | Um id de modelo em string ou mapping estático de configuração |
-| `router.response_format` como classe de modelo | Omita; o framework sintetiza uma. Um ref ou schema é ignorado com um aviso |
+| `router.response_format` como classe de modelo viva | Nomeie a classe com um ref python: `response_format: {python: my_project.schemas.ConversationRoute}`. Omita e o framework sintetiza uma |
 | Uma sobrescrita de `route_turn()` | Escreva o Flow em Python ou substitua o método declarativo `route_conversation` por uma ação `call: code` / expressão |
 | Uma sobrescrita de `can_answer_from_history()` | Descontinuado. Use `converse` ou sobrescreva `converse_turn()` no Python. |
 

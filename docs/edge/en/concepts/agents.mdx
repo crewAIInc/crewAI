@@ -623,6 +623,12 @@ messages = [
 result = researcher.kickoff(messages)
 ```
 
+The last `user` message is the request the agent answers. Every other message
+keeps its role and its position around that request, so a conversation that
+ends in assistant or tool messages still asks the user's question and still
+delivers those trailing turns after it. With no `user` message at all, the last
+message is treated as the request.
+
 ### Async Support
 
 An asynchronous version is available via `kickoff_async()` with the same parameters:

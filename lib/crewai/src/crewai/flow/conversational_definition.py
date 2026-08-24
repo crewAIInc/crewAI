@@ -11,12 +11,22 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from crewai.project.crew_definition import PythonReferenceDefinition
+
 
 class FlowConversationalRouterDefinition(BaseModel):
     """Static conversational router configuration."""
 
     prompt: str | None = None
-    response_format: Any = None
+    response_format: PythonReferenceDefinition | None = Field(
+        default=None,
+        description=(
+            "Optional Python reference to a Pydantic model for the routing "
+            "decision. Omit it and the framework synthesizes one from the "
+            "route labels."
+        ),
+        examples=[{"python": "my_project.schemas.ConversationRoute"}],
+    )
     llm: Any = Field(
         default=None,
         description=(

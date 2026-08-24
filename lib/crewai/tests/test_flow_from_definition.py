@@ -1332,6 +1332,55 @@ methods:
     }
 
 
+def test_agent_action_delivers_a_rendered_conversation_to_the_agent(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """The whole path: `${state.messages}` -> normalization -> `kickoff_async`."""
+    from crewai import Agent
+
+    received: list[Any] = []
+
+    async def fake_kickoff_async(self: Agent, messages: Any, **_kwargs: Any) -> str:
+        received.append(messages)
+        return "answered"
+
+    monkeypatch.setattr(Agent, "kickoff_async", fake_kickoff_async)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: HistoryAgentFlow
+methods:
+  answer:
+    do:
+      call: agent
+      with:
+        role: Analyst
+        goal: Answer questions
+        backstory: Knows things.
+        input: "${state.messages}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+    result = flow.kickoff(
+        inputs={
+            "messages": [
+                {"role": "user", "content": "my order id is 42", "name": None},
+                {"role": "assistant", "content": "thanks, checking"},
+            ]
+        }
+    )
+
+    assert result == "answered"
+    # A list, not a stringified blob, and the serialization noise is gone.
+    assert received == [
+        [
+            {"role": "user", "content": "my order id is 42"},
+            {"role": "assistant", "content": "thanks, checking"},
+        ]
+    ]
+
+
 def test_agent_action_runs_inside_each(monkeypatch: pytest.MonkeyPatch):
     from crewai import Agent
 
@@ -4037,6 +4086,95 @@ methods: {}
 """
     with pytest.raises(ValidationError, match="default"):
         FlowDefinition.from_declaration(contents=yaml_str)
+
+
+
+def test_agent_action_accepts_a_rendered_message_list():
+    """A chat handler can hand the agent the conversation, not just a string."""
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    rendered = [
+        {"role": "user", "content": "my order id is 42"},
+        {"role": "assistant", "content": "thanks, checking"},
+    ]
+
+    assert _normalize_agent_input(rendered) == rendered
+
+
+def test_agent_action_strips_serialized_message_metadata():
+    """A raw `${state.messages}` render carries None keys the event rejects."""
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    normalized = _normalize_agent_input(
+        [{"role": "user", "content": "hi", "name": None, "metadata": {}}]
+    )
+
+    assert normalized == [{"role": "user", "content": "hi"}]
+
+
+def test_agent_action_keeps_a_none_content_tool_call_message():
+    """A tool-call turn has no content; dropping the key breaks the sequence."""
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    normalized = _normalize_agent_input(
+        [
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [{"id": "c1", "function": {"name": "lookup"}}],
+                "name": None,
+            }
+        ]
+    )
+
+    assert normalized == [
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [{"id": "c1", "function": {"name": "lookup"}}],
+        }
+    ]
+
+
+def test_agent_action_still_accepts_a_string():
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    assert _normalize_agent_input("just a prompt") == "just a prompt"
+
+
+def test_agent_action_rejects_a_shape_that_is_neither():
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    with pytest.raises(
+        ValueError, match="must render to a string or a list of messages"
+    ):
+        _normalize_agent_input(1234)
+
+
+def test_agent_definition_accepts_a_message_list_input():
+    from crewai.project.crew_definition import AgentDefinition
+
+    definition = AgentDefinition.model_validate(
+        {
+            "role": "R",
+            "goal": "G",
+            "backstory": "B",
+            "input": [{"role": "user", "content": "hi"}],
+        }
+    )
+
+    assert definition.input == [{"role": "user", "content": "hi"}]
+
+
+def test_agent_definition_rejects_a_non_message_input():
+    from crewai.project.crew_definition import AgentDefinition
+
+    with pytest.raises(
+        ValidationError, match="must be a string or a list of messages"
+    ):
+        AgentDefinition.model_validate(
+            {"role": "R", "goal": "G", "backstory": "B", "input": [1, 2]}
+        )
 
 
 def test_definition_method_missing_from_class_fails_loudly():
