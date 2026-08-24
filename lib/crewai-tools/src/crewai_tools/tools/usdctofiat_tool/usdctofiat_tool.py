@@ -5,8 +5,8 @@ Docs: https://usdctofiat.xyz/developers
 
 Wraps ``usdctofiat.cashout(mode="fast"|"best")``, ``watch``,
 ``withdraw``/``close``, ``deposits``, and ``estimate``. Mode is required
-on every priced or mutating call. There is no constructor default to
-Fast or Best.
+for cashout and estimate calls. Withdraw remains deposit-id-only. There
+is no constructor default to Fast or Best.
 
 These tools never accept a wallet private key. Inject a signer callback,
 or call cashout without one to receive unsigned ``{to, data, value,
@@ -319,12 +319,11 @@ def _dumps(payload: Any) -> str:
     return json.dumps(payload, indent=2, default=str)
 
 
-def _error(exc: Exception) -> str:
-    payload: dict[str, Any] = {
-        "error": str(exc),
-        "code": getattr(exc, "code", type(exc).__name__),
-    }
-    details = getattr(exc, "details", None)
-    if details is not None:
-        payload["details"] = details
-    return _dumps(payload)
+def _error(_exc: Exception) -> str:
+    """Return a stable error without exposing provider details or URLs."""
+    return _dumps(
+        {
+            "error": "USDCtoFiat operation failed.",
+            "code": "USDC_TO_FIAT_ERROR",
+        }
+    )
