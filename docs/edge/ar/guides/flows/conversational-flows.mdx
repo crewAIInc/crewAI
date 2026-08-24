@@ -547,7 +547,7 @@ finally:
 | غير قابل للتعبير | استخدم بدلًا منه |
 |-----------------|-------------|
 | مثيل `LLM` حي أو `BaseLLM` مخصص | سلسلة معرّف نموذج أو خريطة إعدادات ثابتة |
-| `router.response_format` كصنف نموذج | احذفه؛ يولّد الإطار واحدًا. يُتجاهل المرجع أو المخطط مع تحذير |
+| `router.response_format` كصنف نموذج حيّ | سمِّ الصنف بمرجع python: `response_format: {python: my_project.schemas.ConversationRoute}`. احذفه ويولّد الإطار واحدًا |
 | تجاوز `route_turn()` | اكتب Flow بلغة Python، أو استبدل طريقة `route_conversation` التعريفية بإجراء `call: code` / expression |
 | تجاوز `can_answer_from_history()` | اكتب Flow بلغة Python؛ واضبط توجيه السجل القياسي عبر `conversational.answer_from_history_llm` |
 
