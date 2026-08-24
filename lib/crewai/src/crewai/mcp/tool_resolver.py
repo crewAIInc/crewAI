@@ -150,7 +150,9 @@ class MCPToolResolver:
             mcp_server_config = self._build_mcp_config_from_dict(config_dict)
 
             try:
-                tools, clients = self._resolve_native(mcp_server_config)
+                tools, clients = self._resolve_native(
+                    mcp_server_config, server_reference=slug
+                )
                 resolved_cache[slug] = (tools, clients)
                 all_clients.extend(clients)
             except Exception as e:
@@ -311,7 +313,7 @@ class MCPToolResolver:
         return transport, server_name
 
     def _resolve_native(
-        self, mcp_config: MCPServerConfig
+        self, mcp_config: MCPServerConfig, server_reference: str | None = None
     ) -> tuple[list[BaseTool], list[Any]]:
         """Resolve an ``MCPServerConfig`` into tools.
 
@@ -320,6 +322,10 @@ class MCPToolResolver:
         A ``client_factory`` closure is passed to each ``MCPNativeTool`` so
         every call -- even concurrent calls to the *same* tool -- gets its
         own ``MCPClient`` + transport with no shared mutable state.
+
+        *server_reference* is the AMP slug the server was requested by, when
+        there is one; the tool name is derived from the URL and cannot be
+        traced back to it.
         """
         from crewai.tools.base_tool import BaseTool
         from crewai.tools.mcp_native_tool import MCPNativeTool
@@ -449,6 +455,7 @@ class MCPToolResolver:
                         tool_schema=tool_schema,
                         server_name=server_name,
                         original_tool_name=original_tool_name,
+                        server_reference=server_reference,
                     )
                     tools.append(native_tool)
                 except Exception as e:

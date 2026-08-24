@@ -8,6 +8,7 @@ import logging
 import sys
 import time
 from typing import Any, NamedTuple, TypeVar
+from urllib.parse import urlparse
 
 from typing_extensions import Self
 
@@ -49,6 +50,10 @@ _T = TypeVar("_T")
 
 _mcp_schema_cache: dict[str, tuple[list[dict[str, Any]], float]] = {}
 _cache_ttl = 300  # 5 minutes
+
+
+def _server_name_from_url(url: str) -> str:
+    return urlparse(url).hostname or url
 
 
 class MCPClient:
@@ -122,12 +127,12 @@ class MCPClient:
             server_url = None
             transport_type = self.transport.transport_type.value
         elif isinstance(self.transport, HTTPTransport):
-            server_name = self.transport.url
             server_url = self.transport.url
+            server_name = _server_name_from_url(server_url)
             transport_type = self.transport.transport_type.value
         elif isinstance(self.transport, SSETransport):
-            server_name = self.transport.url
             server_url = self.transport.url
+            server_name = _server_name_from_url(server_url)
             transport_type = self.transport.transport_type.value
         else:
             server_name = "Unknown MCP Server"

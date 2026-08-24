@@ -247,7 +247,7 @@ override-dependencies = [
     "pyasn1>=0.6.4",
     "langsmith>=0.8.18,<1",
     "authlib>=1.6.12",
-    "pip>=26.1.2",
+    "pip>=26.2", # PYSEC-2026-3721 / CVE-2026-13346 — fixed in 26.2
     "aiohttp>=3.14.3",
     # [chunking] carried here because override-dependencies replace the whole
     # requirement; without it the docling extra's chunking deps get stripped.
