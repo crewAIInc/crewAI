@@ -380,8 +380,56 @@ class TestCKG:
             .add_constraint("tool_name_in", tools={"a"})
             .add_constraint("has_param", name="x")
         )
-        assert p._constraints[0]["predicate"] == "tool_name_in"
-        assert p._constraints[1]["predicate"] == "has_param"
+        # Assert on behaviour, not on the private _constraints list.
+        # Tool "a" with param "x" -> both constraints satisfied.
+        ctx_ok = ToolCallHookContext(tool_name="a", tool_input={"x": 1})
+        assert p.authorize(ctx_ok).authorized is True
+        # Tool "b" fails the tool_name_in constraint.
+        ctx_bad_tool = ToolCallHookContext(tool_name="b", tool_input={"x": 1})
+        assert p.authorize(ctx_bad_tool).authorized is False
+        # Tool "a" but missing param "x" fails has_param.
+        ctx_missing = ToolCallHookContext(tool_name="a", tool_input={})
+        assert p.authorize(ctx_missing).authorized is False
+
+    def test_unknown_predicate_rejected(self):
+        """A misspelled predicate must raise, not silently allow."""
+        p = CKGGuardrailProvider()
+        with pytest.raises(ValueError):
+            p.add_constraint("tool_name_ins", tools={"a"})
+
+    def test_identical_calls_produce_distinct_envelopes(self):
+        """Two executions with the same decision_id must both be retained."""
+        trail = AuditTrail()
+        claims = {"tool": "echo"}
+        did = compute_decision_id(claims)
+        trail.record_decision(
+            GuardrailDecisionV1(
+                decision_id=did, authorized=True, claims=claims
+            )
+        )
+        e1 = ActionEnvelopeV1(
+            decision_id=did,
+            tool_result_digest="aaa",
+            executed_at=1.0,
+            duration_ms=1.0,
+        )
+        e2 = ActionEnvelopeV1(
+            decision_id=did,
+            tool_result_digest="bbb",
+            executed_at=2.0,
+            duration_ms=2.0,
+        )
+        trail.record_envelope(e1)
+        trail.record_envelope(e2)
+        # Both envelopes preserved.
+        assert trail.envelope_count == 2
+        all_e = trail.get_envelopes(did)
+        assert len(all_e) == 2
+        assert e1 in all_e and e2 in all_e
+        # Default getter returns most recent.
+        assert trail.get_envelope(did) is e2
+        # Indexed access.
+        assert trail.get_envelope(did, 0) is e1
 
 
 # ===========================================================================
