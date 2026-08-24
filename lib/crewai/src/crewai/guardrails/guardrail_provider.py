@@ -287,6 +287,19 @@ class CKGGuardrailProvider(GuardrailProvider):
         }
     )
 
+    # Maps each predicate to the keyword arguments it requires.  A missing
+    # or empty argument is rejected at registration time so that a typo such
+    # as ``add_constraint("tool_name_in")`` (forgot ``tools=``) fails fast
+    # instead of raising ``KeyError`` later during ``authorize()``.
+    _PREDICATE_SCHEMA: Dict[str, Dict[str, type]] = {
+        "tool_name_in": {"tools": (set, list, frozenset, tuple)},
+        "tool_name_not_in": {"tools": (set, list, frozenset, tuple)},
+        "agent_role_in": {"roles": (set, list, frozenset, tuple)},
+        "param_matches": {"name": (str,), "value": object},
+        "has_param": {"name": (str,)},
+        "no_param": {"name": (str,)},
+    }
+
     def __init__(self):
         self._constraints: List[Dict[str, Any]] = []
 
@@ -302,14 +315,40 @@ class CKGGuardrailProvider(GuardrailProvider):
         - has_param(name: str)
         - no_param(name: str)
 
-        Raises ``ValueError`` for unknown predicates so that a misspelled
-        rule cannot be silently skipped.
+        Raises ``ValueError`` for unknown predicates or missing / empty
+        required arguments, so that a malformed rule fails fast at
+        registration time rather than crashing at authorization time.
         """
         if predicate not in self.SUPPORTED_PREDICATES:
             raise ValueError(
                 f"Unsupported guardrail predicate: {predicate!r}. "
                 f"Supported: {sorted(self.SUPPORTED_PREDICATES)}"
             )
+
+        schema = self._PREDICATE_SCHEMA[predicate]
+        for key, expected_types in schema.items():
+            if key not in kwargs:
+                raise ValueError(
+                    f"Predicate {predicate!r} requires argument {key!r}."
+                )
+            value = kwargs[key]
+            if expected_types is object:
+                # ``value`` may be anything (including None), just verify
+                # the key was explicitly provided (already checked above).
+                continue
+            if not isinstance(value, expected_types):
+                type_names = (
+                    t.__name__ for t in expected_types
+                ) if isinstance(expected_types, tuple) else expected_types.__name__
+                raise ValueError(
+                    f"Predicate {predicate!r} argument {key!r} must be one of "
+                    f"{list(type_names)}, got {type(value).__name__}."
+                )
+            if isinstance(value, (set, list, frozenset, tuple, str)) and len(value) == 0:
+                raise ValueError(
+                    f"Predicate {predicate!r} argument {key!r} must not be empty."
+                )
+
         self._constraints.append({"predicate": predicate, **kwargs})
         return self
 
@@ -580,23 +619,52 @@ def detect_missing_guardrail(crew_or_agent) -> List[Dict[str, Any]]:
     Corresponds to engine-v4 seed pattern AS-GUARDRAIL-MISS-001:
     flags agents/tools operating without any registered GuardrailProvider.
 
+    crewAI registers before-tool-call hooks globally via
+    :func:`crewai.hooks.tool_hooks.register_before_tool_call_hook` (they are
+    stored in a module-level list, not on individual agents).  To avoid
+    false positives from unrelated hooks, a crew is considered guarded only
+    when at least one registered hook carries the ``_guardrail_context``
+    marker attached by :func:`make_guardrail_hook`.
+
     Returns list of findings (empty = all guarded).
     """
     findings = []
 
     agents = getattr(crew_or_agent, "agents", [crew_or_agent])
 
+    # Pull the global hook list.  Import lazily so the module also works
+    # standalone (outside a crewAI installation) for testing.
+    try:
+        from crewai.hooks.tool_hooks import get_before_tool_call_hooks
+    except ImportError:  # pragma: no cover - exercised outside crewAI install
+            def get_before_tool_call_hooks():  # type: ignore[no-redef]
+                return []
+
+    global_hooks = get_before_tool_call_hooks()
+    has_guardrail_hook = any(
+        getattr(hook, "_guardrail_context", None) is not None
+        for hook in global_hooks
+    )
+
+    if has_guardrail_hook:
+        return findings
+
     for agent in agents:
         agent_name = getattr(agent, "role", getattr(agent, "name", "unknown"))
-        hooks = getattr(agent, "_before_tool_call_hooks", None)
-
-        if not hooks:
-            findings.append({
+        findings.append(
+            {
                 "severity": "CRITICAL",
                 "pattern": "AS-GUARDRAIL-MISS-001",
                 "agent": agent_name,
-                "message": f"Agent '{agent_name}' has no registered GuardrailProvider",
-                "remediation": "Register a GuardrailProvider via make_guardrail_hook()",
-            })
+                "message": (
+                    f"Agent '{agent_name}' has no registered GuardrailProvider "
+                    "(no global before_tool_call hook with _guardrail_context marker)"
+                ),
+                "remediation": (
+                    "Register a GuardrailProvider via "
+                    "register_before_tool_call_hook(make_guardrail_hook(ctx))"
+                ),
+            }
+        )
 
     return findings

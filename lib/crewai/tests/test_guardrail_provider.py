@@ -397,6 +397,42 @@ class TestCKG:
         with pytest.raises(ValueError):
             p.add_constraint("tool_name_ins", tools={"a"})
 
+    def test_missing_tools_argument_rejected(self):
+        """add_constraint('tool_name_in') without tools= must raise at registration."""
+        p = CKGGuardrailProvider()
+        with pytest.raises(ValueError, match="requires argument 'tools'"):
+            p.add_constraint("tool_name_in")
+
+    def test_missing_roles_argument_rejected(self):
+        p = CKGGuardrailProvider()
+        with pytest.raises(ValueError, match="requires argument 'roles'"):
+            p.add_constraint("agent_role_in")
+
+    def test_missing_name_argument_rejected(self):
+        p = CKGGuardrailProvider()
+        with pytest.raises(ValueError, match="requires argument 'name'"):
+            p.add_constraint("has_param")
+
+    def test_missing_value_argument_rejected(self):
+        p = CKGGuardrailProvider()
+        with pytest.raises(ValueError, match="requires argument 'value'"):
+            p.add_constraint("param_matches", name="mode")
+
+    def test_empty_tools_argument_rejected(self):
+        p = CKGGuardrailProvider()
+        with pytest.raises(ValueError, match="must not be empty"):
+            p.add_constraint("tool_name_in", tools=set())
+
+    def test_empty_name_argument_rejected(self):
+        p = CKGGuardrailProvider()
+        with pytest.raises(ValueError, match="must not be empty"):
+            p.add_constraint("has_param", name="")
+
+    def test_wrong_type_tools_argument_rejected(self):
+        p = CKGGuardrailProvider()
+        with pytest.raises(ValueError, match="must be one of"):
+            p.add_constraint("tool_name_in", tools="read_file")  # string not set
+
     def test_identical_calls_produce_distinct_envelopes(self):
         """Two executions with the same decision_id must both be retained."""
         trail = AuditTrail()
@@ -600,33 +636,86 @@ class TestDetectMissingGuardrail:
     def test_no_hooks_flags_critical(self):
         class FakeAgent:
             role = "researcher"
-            _before_tool_call_hooks = None
 
-        findings = detect_missing_guardrail(FakeAgent())
+        # No global hooks registered -> CRITICAL finding.
+        with _patch_global_hooks([]):
+            findings = detect_missing_guardrail(FakeAgent())
         assert len(findings) == 1
         assert findings[0]["severity"] == "CRITICAL"
         assert findings[0]["pattern"] == "AS-GUARDRAIL-MISS-001"
 
-    def test_with_hooks_no_finding(self):
+    def test_unrelated_hook_still_flags(self):
+        """An ordinary hook without _guardrail_context must NOT suppress the finding."""
         class FakeAgent:
             role = "researcher"
-            _before_tool_call_hooks = [lambda: None]
 
-        findings = detect_missing_guardrail(FakeAgent())
-        assert len(findings) == 0
+        def ordinary_hook(ctx):
+            return None
 
-    def test_crew_with_multiple_agents(self):
+        with _patch_global_hooks([ordinary_hook]):
+            findings = detect_missing_guardrail(FakeAgent())
+        assert len(findings) == 1
+        assert findings[0]["severity"] == "CRITICAL"
+
+    def test_with_guardrail_hook_no_finding(self):
+        """A hook carrying the _guardrail_context marker suppresses the finding."""
+        class FakeAgent:
+            role = "researcher"
+
+        def guardrail_hook(ctx):
+            return None
+        # Marker attached by make_guardrail_hook in production.
+        guardrail_hook._guardrail_context = object()
+
+        with _patch_global_hooks([guardrail_hook]):
+            findings = detect_missing_guardrail(FakeAgent())
+        assert findings == []
+
+    def test_crew_with_multiple_agents_no_guardrail(self):
         class Agent:
-            def __init__(self, role, has_hooks):
+            def __init__(self, role):
                 self.role = role
-                self._before_tool_call_hooks = [1] if has_hooks else None
 
         class Crew:
-            agents = [Agent("a", True), Agent("b", False), Agent("c", False)]
+            agents = [Agent("a"), Agent("b"), Agent("c")]
 
-        findings = detect_missing_guardrail(Crew())
-        assert len(findings) == 2
+        with _patch_global_hooks([]):
+            findings = detect_missing_guardrail(Crew())
+        # When no global guardrail hook exists, every agent is flagged.
+        assert len(findings) == 3
         assert all(f["severity"] == "CRITICAL" for f in findings)
+
+
+# ---------------------------------------------------------------------------
+# Helper to patch the global before-tool-call hook list used by
+# detect_missing_guardrail without requiring a full crewAI installation.
+# ---------------------------------------------------------------------------
+from contextlib import contextmanager
+
+@contextmanager
+def _patch_global_hooks(hooks):
+    """Inject ``hooks`` as the result of ``get_before_tool_call_hooks()``.
+
+    The import inside ``detect_missing_guardrail`` is lazy, so we patch at
+    the module level where crewAI would normally expose it.  When crewAI
+    is not installed we patch the fallback by injecting a fake module.
+    """
+    import sys
+    import types
+
+    fake_module = types.ModuleType("crewai.hooks.tool_hooks")
+    fake_module.get_before_tool_call_hooks = lambda: list(hooks)
+    fake_pkg = types.ModuleType("crewai")
+    fake_pkg.__path__ = []  # mark as package
+    fake_hooks_pkg = types.ModuleType("crewai.hooks")
+    fake_hooks_pkg.__path__ = []
+    sys.modules.setdefault("crewai", fake_pkg)
+    sys.modules.setdefault("crewai.hooks", fake_hooks_pkg)
+    sys.modules["crewai.hooks.tool_hooks"] = fake_module
+    try:
+        yield
+    finally:
+        sys.modules.pop("crewai.hooks.tool_hooks", None)
 
 
 # ===========================================================================
