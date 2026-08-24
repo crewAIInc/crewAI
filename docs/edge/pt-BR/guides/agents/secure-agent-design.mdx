@@ -21,7 +21,7 @@ Esta página cobre o modelo de ameaça e o comportamento por caminho de execuç�
 | --- | --- |
 | `HookAborted` em um tool hook | Interrompe aquela chamada de ferramenta. O agente continua. Ele recebe uma mensagem de que a ferramenta foi bloqueada. |
 | Task `guardrail` | Rejeita ou retenta a saída da Task no caminho da Task. |
-| Task `human_input` | Aprovação: revisa a resposta final depois que as ferramentas rodaram no caminho da Task. Não bloqueia ferramentas. Não verifica quem aprovou. |
+| Task `human_input` | Revisa a resposta final depois que as ferramentas rodaram no caminho da Task. Não bloqueia ferramentas. |
 | `output_pydantic` / `output_json` | Ajusta a saída a um schema. Não verifica regras de negócio. |
 | `Agent.guardrail` | Verifica a saída apenas em `agent.kickoff()`. Não roda na execução de Task do Crew. |
 
@@ -104,7 +104,7 @@ Exemplos:
 | Ferramentas com menor privilégio | `tools=[...]` em cada agente |
 | Bloquear ou restringir chamadas | [Tool hooks](/pt-BR/learn/tool-hooks) (`PRE_TOOL_CALL` + `HookAborted`) |
 | Inspecionar chamadas do modelo | [LLM hooks](/pt-BR/learn/llm-hooks) |
-| Aprovação humana | [HITL](/pt-BR/learn/human-in-the-loop) / `request_human_input` — só aprovação. Não é um controle. Não verifica quem aprovou. Use tool hooks para bloquear a chamada. |
+| Aprovação humana | [HITL](/pt-BR/learn/human-in-the-loop) / `request_human_input`. Use tool hooks para bloquear a chamada. |
 | Checagens de saída | [Task guardrails](/pt-BR/concepts/tasks#task-guardrails) no caminho da Task; `Agent.guardrail` em `kickoff()` |
 | Forma estruturada | `output_pydantic` / `output_json` ou `response_format=` (apenas a forma) |
 
@@ -336,7 +336,7 @@ Veja [Arquitetura de Produção](/pt-BR/concepts/production-architecture).
     Valide saídas de Task antes que elas continuem.
   </Card>
   <Card title="Human-in-the-Loop" icon="user-check" href="/pt-BR/learn/human-in-the-loop">
-    Aprovação e revisão após a execução. Não é um controle. Não verifica quem aprovou.
+    Revisão humana da saída da Task e das chamadas de ferramentas.
   </Card>
   <Card title="Personalize Agentes" icon="user-pen" href="/pt-BR/learn/customizing-agents">
     Limites de execução, verbosidade e configurações do agente.

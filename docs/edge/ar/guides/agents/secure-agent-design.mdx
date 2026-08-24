@@ -21,7 +21,7 @@ Human-in-the-loop (HITL) موافقة، وليس عنصر تحكم. يتوقف �
 | --- | --- |
 | `HookAborted` في tool hook | يوقف استدعاء تلك الأداة فقط. يستمر الـ Agent. ويتلقى رسالة بأن الأداة حُظرت. |
 | Task `guardrail` | يرفض أو يعيد محاولة مخرج Task على مسار Task. |
-| Task `human_input` | موافقة: يراجع الإجابة النهائية بعد تشغيل الأدوات على مسار Task. ولا يحظر الأدوات. ولا يتحقق ممن وافق. |
+| Task `human_input` | يراجع الإجابة النهائية بعد تشغيل الأدوات على مسار Task. ولا يحظر الأدوات. |
 | `output_pydantic` / `output_json` | يلائم المخرج مع مخطط. ولا يتحقق من قواعد العمل. |
 | `Agent.guardrail` | يتحقق من المخرج على `agent.kickoff()` فقط. ولا يعمل أثناء تنفيذ Task في Crew. |
 
@@ -104,7 +104,7 @@ researcher = Agent(
 | أدوات بأقل امتياز | `tools=[...]` على كل Agent |
 | حظر الاستدعاءات أو تقييدها | [Tool hooks](/ar/learn/tool-hooks) (`PRE_TOOL_CALL` + `HookAborted`) |
 | فحص استدعاءات النموذج | [LLM hooks](/ar/learn/llm-hooks) |
-| موافقة بشرية | [HITL](/ar/learn/human-in-the-loop) / `request_human_input` — موافقة فقط. ليست عنصر تحكم. ولا تتحقق ممن وافق. استخدم tool hooks لحظر الاستدعاء. |
+| موافقة بشرية | [HITL](/ar/learn/human-in-the-loop) / `request_human_input`. استخدم tool hooks لحظر الاستدعاء. |
 | فحوصات المخرج | [Task guardrails](/ar/concepts/tasks#task-guardrails) على مسار Task؛ `Agent.guardrail` على `kickoff()` |
 | شكل منظم | `output_pydantic` / `output_json` أو `response_format=` (الشكل فقط) |
 
@@ -336,7 +336,7 @@ class SecureOutreachFlow(Flow[PipelineState]):
     تحقق من مخرجات Task قبل أن تستمر.
   </Card>
   <Card title="Human-in-the-Loop" icon="user-check" href="/ar/learn/human-in-the-loop">
-    موافقة ومراجعة بعد التشغيل. ليست عنصر تحكم. ولا تتحقق ممن وافق.
+    مراجعة بشرية لمخرج Task واستدعاءات الأدوات.
   </Card>
   <Card title="تخصيص الـ Agents" icon="user-pen" href="/ar/learn/customizing-agents">
     حدود التنفيذ والتفصيل وإعدادات الـ Agent.

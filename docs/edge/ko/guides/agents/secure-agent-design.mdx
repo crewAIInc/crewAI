@@ -21,7 +21,7 @@ Human-in-the-loop (HITL)는 승인이지 통제가 아닙니다. 사람이 수�
 | --- | --- |
 | tool hook의 `HookAborted` | 해당 도구 호출 하나만 중지합니다. 에이전트는 계속합니다. 도구가 차단되었다는 메시지를 받습니다. |
 | Task `guardrail` | Task 경로에서 Task 출력을 거부하거나 재시도합니다. |
-| Task `human_input` | 승인: Task 경로에서 도구가 실행된 뒤 최종 답변을 검토합니다. 도구를 차단하지 않습니다. 누가 승인했는지는 검사하지 않습니다. |
+| Task `human_input` | Task 경로에서 도구가 실행된 뒤 최종 답변을 검토합니다. 도구를 차단하지 않습니다. |
 | `output_pydantic` / `output_json` | 출력을 스키마에 맞춥니다. 비즈니스 규칙은 검사하지 않습니다. |
 | `Agent.guardrail` | `agent.kickoff()`에서만 출력을 검사합니다. Crew Task 실행에서는 실행되지 않습니다. |
 
@@ -104,7 +104,7 @@ Crew와 Flow 입력에는 [execution boundary hooks](/ko/learn/execution-boundar
 | 최소 권한 도구 | 각 에이전트의 `tools=[...]` |
 | 호출 차단 또는 제한 | [Tool hooks](/ko/learn/tool-hooks) (`PRE_TOOL_CALL` + `HookAborted`) |
 | 모델 호출 검사 | [LLM hooks](/ko/learn/llm-hooks) |
-| 사람 승인 | [HITL](/ko/learn/human-in-the-loop) / `request_human_input` — 승인만. 통제가 아닙니다. 누가 승인했는지는 검사하지 않습니다. 호출을 차단하려면 tool hooks를 사용하세요. |
+| 사람 승인 | [HITL](/ko/learn/human-in-the-loop) / `request_human_input`. 호출을 차단하려면 tool hooks를 사용하세요. |
 | 출력 검사 | Task 경로의 [Task guardrails](/ko/concepts/tasks#task-guardrails); `kickoff()`의 `Agent.guardrail` |
 | 구조화된 형태 | `output_pydantic` / `output_json` 또는 `response_format=` (형태만) |
 
@@ -336,7 +336,7 @@ class SecureOutreachFlow(Flow[PipelineState]):
     계속하기 전에 Task 출력을 검증합니다.
   </Card>
   <Card title="Human-in-the-Loop" icon="user-check" href="/ko/learn/human-in-the-loop">
-    승인과 실행 후 검토. 통제가 아닙니다. 누가 승인했는지는 검사하지 않습니다.
+    Task 출력과 도구 호출에 대한 사람 검토.
   </Card>
   <Card title="에이전트 맞춤화" icon="user-pen" href="/ko/learn/customizing-agents">
     실행 제한, verbose, 에이전트 설정.
