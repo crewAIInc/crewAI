@@ -1670,10 +1670,11 @@ class Agent(BaseAgent):
                      If a list is provided, each dict should have 'role' and 'content' keys.
                      Messages can include a 'files' field with file inputs.
                      The last ``user`` message is the request the agent answers;
-                     every other message is prior context and keeps its role, so
-                     a list that trails off in assistant or tool messages still
-                     asks the user's question. With no ``user`` message the last
-                     one is the request.
+                     every other message keeps its role and its place around it,
+                     so a list that trails off in assistant or tool messages
+                     still asks the user's question and still delivers those
+                     turns after it. With no ``user`` message the last one is
+                     the request.
             response_format: Optional Pydantic model for structured output.
             input_files: Optional dict of named files to attach to the message.
                    Files can be paths, bytes, or File objects from crewai_files.
@@ -2049,10 +2050,11 @@ class Agent(BaseAgent):
                      If a list is provided, each dict should have 'role' and 'content' keys.
                      Messages can include a 'files' field with file inputs.
                      The last ``user`` message is the request the agent answers;
-                     every other message is prior context and keeps its role, so
-                     a list that trails off in assistant or tool messages still
-                     asks the user's question. With no ``user`` message the last
-                     one is the request.
+                     every other message keeps its role and its place around it,
+                     so a list that trails off in assistant or tool messages
+                     still asks the user's question and still delivers those
+                     turns after it. With no ``user`` message the last one is
+                     the request.
             response_format: Optional Pydantic model for structured output.
             input_files: Optional dict of named files to attach to the message.
                    Files can be paths, bytes, or File objects from crewai_files.
