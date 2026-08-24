@@ -166,6 +166,48 @@ def safety_check(context: ToolCallHookContext) -> bool | None:
     return None
 ```
 
+### 1.1 Segurança de comandos com HOL Guard
+
+Para ferramentas que executam comandos, um verificador de política determinístico
+externo pode decidir permitir ou bloquear antes da execução. Trate resultados
+ausentes, inválidos, expirados ou com código de saída diferente de zero como
+bloqueio para que o hook falhe de forma segura:
+
+```python
+import json
+import subprocess
+
+@on(InterceptionPoint.PRE_TOOL_CALL, tools=["run_shell_command"])
+def check_command_with_hol_guard(ctx: ToolCallHookContext) -> None:
+    command = ctx.tool_input.get("command")
+    if not isinstance(command, str) or not command.strip():
+        raise HookAborted(reason="command is missing", source="hol-guard")
+
+    returncode = 1
+    try:
+        result = subprocess.run(
+            ["hol-guard", "command", "test", command, "--json"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+        returncode = result.returncode
+        decision = json.loads(result.stdout).get("decision")
+    except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        decision = None
+
+    if returncode != 0 or decision != "allow":
+        raise HookAborted(
+            reason=f"HOL Guard rejected {ctx.tool_name}",
+            source="hol-guard",
+        )
+```
+
+O comando é passado como uma lista de argumentos, e não por um shell. Mantenha
+o verificador opcional, mas falhe de forma segura quando ele não estiver
+disponível; a ferramenta protegida nunca deve executar diante de uma decisão desconhecida.
+
 ### 2. Gate de Aprovação Humana
 
 ```python

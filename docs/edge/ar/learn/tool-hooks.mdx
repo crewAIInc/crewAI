@@ -173,6 +173,47 @@ def safety_check(context: ToolCallHookContext) -> bool | None:
     return None
 ```
 
+### 1.1 فحص أمان الأوامر باستخدام HOL Guard
+
+بالنسبة للأدوات التي تنفذ أوامر، يمكن لفاحص سياسة خارجي وحتمي اتخاذ قرار
+السماح أو الحظر قبل تشغيل الأداة. اعتبر النتائج المفقودة أو غير الصحيحة أو
+التي انتهت مهلتها أو التي أعادت رمز خروج غير صفري حظراً، حتى يفشل الخطاف
+بشكل آمن:
+
+```python
+import json
+import subprocess
+
+@on(InterceptionPoint.PRE_TOOL_CALL, tools=["run_shell_command"])
+def check_command_with_hol_guard(ctx: ToolCallHookContext) -> None:
+    command = ctx.tool_input.get("command")
+    if not isinstance(command, str) or not command.strip():
+        raise HookAborted(reason="command is missing", source="hol-guard")
+
+    returncode = 1
+    try:
+        result = subprocess.run(
+            ["hol-guard", "command", "test", command, "--json"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+        returncode = result.returncode
+        decision = json.loads(result.stdout).get("decision")
+    except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        decision = None
+
+    if returncode != 0 or decision != "allow":
+        raise HookAborted(
+            reason=f"HOL Guard rejected {ctx.tool_name}",
+            source="hol-guard",
+        )
+```
+
+يُمرر الأمر كقائمة معاملات وليس عبر shell. اجعل فاحص السياسة اختيارياً، لكن
+افشل بشكل آمن عند عدم توفره؛ يجب ألا تعمل الأداة المحمية عند وجود قرار غير معروف.
+
 ### 2. بوابة الموافقة البشرية
 
 ```python

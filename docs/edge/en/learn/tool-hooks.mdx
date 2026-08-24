@@ -149,6 +149,47 @@ def safety_check(ctx: ToolCallHookContext) -> None:
         raise HookAborted(reason=f"{ctx.tool_name} is destructive", source="safety-policy")
 ```
 
+### 1.1. Command Safety with HOL Guard
+
+For command-executing tools, an external deterministic policy checker can make
+the allow/block decision before the tool runs. Treat missing, malformed, timed
+out, or non-zero checker results as a block so the hook fails closed:
+
+```python
+import json
+import subprocess
+
+@on(InterceptionPoint.PRE_TOOL_CALL, tools=["run_shell_command"])
+def check_command_with_hol_guard(ctx: ToolCallHookContext) -> None:
+    command = ctx.tool_input.get("command")
+    if not isinstance(command, str) or not command.strip():
+        raise HookAborted(reason="command is missing", source="hol-guard")
+
+    returncode = 1
+    try:
+        result = subprocess.run(
+            ["hol-guard", "command", "test", command, "--json"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+        returncode = result.returncode
+        decision = json.loads(result.stdout).get("decision")
+    except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        decision = None
+
+    if returncode != 0 or decision != "allow":
+        raise HookAborted(
+            reason=f"HOL Guard rejected {ctx.tool_name}",
+            source="hol-guard",
+        )
+```
+
+The command is passed as an argument list rather than through a shell. Keep the
+policy checker optional and fail closed when it is unavailable; the protected
+tool should never run on an unknown decision.
+
 ### 2. Human Approval Gate
 
 ```python

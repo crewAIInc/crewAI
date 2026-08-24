@@ -166,6 +166,47 @@ def safety_check(context: ToolCallHookContext) -> bool | None:
     return None
 ```
 
+### 1.1 HOL Guard를 사용한 명령 안전성 검사
+
+명령을 실행하는 도구는 도구가 실행되기 전에 외부의 결정론적 정책 검사기로
+허용 또는 차단을 판단할 수 있습니다. 검사 결과가 없거나 잘못되었거나
+시간 초과 또는 0이 아닌 종료 코드인 경우 안전하게 차단하여 훅이 fail-closed
+방식으로 동작하도록 합니다.
+
+```python
+import json
+import subprocess
+
+@on(InterceptionPoint.PRE_TOOL_CALL, tools=["run_shell_command"])
+def check_command_with_hol_guard(ctx: ToolCallHookContext) -> None:
+    command = ctx.tool_input.get("command")
+    if not isinstance(command, str) or not command.strip():
+        raise HookAborted(reason="command is missing", source="hol-guard")
+
+    returncode = 1
+    try:
+        result = subprocess.run(
+            ["hol-guard", "command", "test", command, "--json"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+        returncode = result.returncode
+        decision = json.loads(result.stdout).get("decision")
+    except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        decision = None
+
+    if returncode != 0 or decision != "allow":
+        raise HookAborted(
+            reason=f"HOL Guard rejected {ctx.tool_name}",
+            source="hol-guard",
+        )
+```
+
+명령은 셸을 거치지 않고 인자 목록으로 전달합니다. 정책 검사기가 없으면
+fail-closed로 처리하여, 결정이 불명확할 때 보호된 도구가 실행되지 않도록 합니다.
+
 ### 2. 사람의 승인 게이트
 
 ```python
