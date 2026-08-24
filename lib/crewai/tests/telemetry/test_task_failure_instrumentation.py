@@ -14,6 +14,7 @@ have exited immediately for the default population.
 
 from contextlib import contextmanager
 from unittest.mock import Mock, patch
+import sys
 import threading
 
 import pytest
@@ -453,8 +454,7 @@ def test_a_task_with_no_agent_still_reports_a_failure_type(failing_task):
             task._execute_core(None, None, None)
 
     assert len(captured) == 1
-    assert captured[0].error_type is not None
-    assert issubclass(captured[0].error_type, BaseException)
+    assert captured[0].error_type is Exception
 
 
 def test_the_event_stays_json_serializable_with_a_class_valued_error_type():
@@ -469,7 +469,7 @@ def test_the_event_stays_json_serializable_with_a_class_valued_error_type():
 
     event = TaskFailedEvent(error="boom", error_type=ValueError, task=None)
 
-    assert event.model_dump(mode="json")["error_type"] == "ValueError"
+    assert event.model_dump(mode="json")["error_type"] == "builtins:ValueError"
     assert "ValueError" in event.model_dump_json()
 
 
@@ -545,5 +545,107 @@ def test_a_non_builtin_exception_class_also_round_trips():
     event = TaskFailedEvent(error="boom", error_type=_ProducerFailure, task=None)
     dumped = event.model_dump(mode="json")
 
-    assert dumped["error_type"] == "_ProducerFailure"
+    assert dumped["error_type"] == f"{__name__}:_ProducerFailure"
     assert TaskFailedEvent.model_validate(dumped).error_type is _ProducerFailure
+
+
+def test_two_exception_classes_sharing_a_name_cannot_be_confused():
+    """A same-named class must never be substituted for the one that was serialized.
+
+    Regression for the review finding on this PR: resolving by bare ``__name__`` through
+    ``BaseException.__subclasses__()`` returned whichever same-named class the walk
+    reached first, so an event serialized with one ``DupErr`` restored as a different
+    ``DupErr``. Both are created here exactly as the review reproduced it.
+    """
+    from crewai.events.types.task_events import TaskFailedEvent
+
+    first = type("DupErr", (Exception,), {})
+    second = type("DupErr", (Exception,), {})
+    assert first is not second and first.__name__ == second.__name__
+
+    # Reachable by attribute lookup, so resolution can succeed for the right one.
+    first.__module__ = __name__
+    first.__qualname__ = "_dup_first"
+    second.__module__ = __name__
+    second.__qualname__ = "_dup_second"
+    globals()["_dup_first"] = first
+    globals()["_dup_second"] = second
+    try:
+        dumped = TaskFailedEvent(
+            error="boom", error_type=first, task=None
+        ).model_dump(mode="json")
+
+        restored = TaskFailedEvent.model_validate(dumped).error_type
+
+        assert restored is first
+        assert restored is not second, (
+            "restored a different class that merely shares the name"
+        )
+    finally:
+        del globals()["_dup_first"]
+        del globals()["_dup_second"]
+
+
+def test_a_class_the_running_process_cannot_reach_degrades_to_none_not_to_the_wrong_class():
+    """An unresolvable identity must lose only ``error_type``, never bind to something else.
+
+    A locally defined class is unreachable by attribute lookup -- its ``__qualname__``
+    contains ``<locals>`` -- which is the same shape as a checkpoint written by a process
+    that had a module this one does not. The event must still restore, keeping ``error``.
+    """
+    from crewai.events.types.task_events import TaskFailedEvent
+
+    class LocallyDefined(Exception):
+        pass
+
+    dumped = TaskFailedEvent(
+        error="boom", error_type=LocallyDefined, task=None
+    ).model_dump(mode="json")
+    assert "<locals>" in dumped["error_type"]
+
+    restored = TaskFailedEvent.model_validate(dumped)
+
+    assert restored.error_type is None
+    assert restored.error == "boom", "the message must survive an unresolvable type"
+
+
+def test_a_qualified_identity_cannot_name_a_non_exception_or_force_an_import():
+    """Resolution is gated on being an exception class, and never imports.
+
+    ``os:getcwd`` resolves to a function, and ``json:JSONDecodeError`` is an exception
+    but reachable only if ``json`` is already loaded -- neither may be recorded, and no
+    module absent from ``sys.modules`` may be imported to satisfy a lookup.
+    """
+    from crewai.events.types.task_events import TaskFailedEvent
+
+    unloaded = "xml.dom.minidom"
+    # Restored in `finally`: leaving sys.modules mutated would make this suite
+    # order-dependent, and the runner shuffles tests.
+    previous = sys.modules.pop(unloaded, None)
+    try:
+        for identity in (
+            "os:getcwd",
+            "os:path",
+            f"{unloaded}:Node",
+            "nonexistent_mod:Boom",
+        ):
+            event = TaskFailedEvent(error="boom", error_type=identity, task=None)
+            assert event.error_type is None, identity
+
+        assert unloaded not in sys.modules, "resolution imported a module"
+    finally:
+        if previous is not None:
+            sys.modules[unloaded] = previous
+
+
+def test_a_message_containing_a_colon_is_never_stored():
+    """Messages routinely contain colons, and must not be mistaken for an identity."""
+    from crewai.events.types.task_events import TaskFailedEvent
+
+    for message in (
+        "AuthenticationError: invalid api key sk_live_1234",
+        "connection refused: 10.0.0.1:5432",
+        "secret_token:hunter2",
+    ):
+        event = TaskFailedEvent(error=message, error_type=message, task=None)
+        assert event.error_type is None, message
