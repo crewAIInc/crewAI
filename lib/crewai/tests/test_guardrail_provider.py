@@ -691,6 +691,10 @@ class TestDetectMissingGuardrail:
         import sys
         import types
 
+        # Save whatever was there before the test.
+        _names = ("crewai", "crewai.hooks", "crewai.hooks.tool_hooks")
+        _saved = {n: sys.modules.get(n) for n in _names}
+
         real_module = types.ModuleType("crewai.hooks.tool_hooks")
         real_module.get_before_tool_call_hooks = lambda: []
         real_hooks_pkg = types.ModuleType("crewai.hooks")
@@ -708,23 +712,37 @@ class TestDetectMissingGuardrail:
             assert sys.modules.get("crewai.hooks") is real_hooks_pkg
             assert sys.modules.get("crewai") is real_crewai_pkg
         finally:
-            sys.modules.pop("crewai.hooks.tool_hooks", None)
-            sys.modules.pop("crewai.hooks", None)
-            sys.modules.pop("crewai", None)
+            # Restore the pre-test state exactly.
+            for n in _names:
+                if _saved[n] is not None:
+                    sys.modules[n] = _saved[n]
+                else:
+                    sys.modules.pop(n, None)
 
     def test_patch_cleans_up_when_not_pre_installed(self):
         """When crewAI is not installed, _patch_global_hooks must remove
         the injected module entries on exit."""
         import sys
 
-        for key in ("crewai.hooks.tool_hooks", "crewai.hooks", "crewai"):
+        _names = ("crewai", "crewai.hooks", "crewai.hooks.tool_hooks")
+        _saved = {n: sys.modules.get(n) for n in _names}
+
+        for key in _names:
             sys.modules.pop(key, None)
 
-        with _patch_global_hooks([]):
-            assert "crewai.hooks.tool_hooks" in sys.modules
-        assert "crewai.hooks.tool_hooks" not in sys.modules
-        assert "crewai.hooks" not in sys.modules
-        assert "crewai" not in sys.modules
+        try:
+            with _patch_global_hooks([]):
+                assert "crewai.hooks.tool_hooks" in sys.modules
+            assert "crewai.hooks.tool_hooks" not in sys.modules
+            assert "crewai.hooks" not in sys.modules
+            assert "crewai" not in sys.modules
+        finally:
+            # Restore the pre-test state exactly.
+            for n in _names:
+                if _saved[n] is not None:
+                    sys.modules[n] = _saved[n]
+                else:
+                    sys.modules.pop(n, None)
 
 
 # ---------------------------------------------------------------------------
