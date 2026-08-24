@@ -270,9 +270,13 @@ class ScriptAction:
         # intentionally do not interpolate user input and runtime values are passed
         # as function arguments. This is still arbitrary trusted Python execution,
         # so it remains disabled by default behind `CREWAI_ALLOW_FLOW_SCRIPT_EXECUTION`
-        namespace: dict[str, Any] = {"__name__": filename}
-        exec(compile(module, filename, "exec"), namespace)  # nosec B102 # noqa: S102
-        return cast(Callable[..., Any], namespace["_flow_script"])
+        import types
+        compiled = compile(module, filename, "exec")
+        func_code = next(
+            c for c in compiled.co_consts
+            if isinstance(c, types.CodeType) and c.co_name == "_flow_script"
+        )
+        return cast(Callable[..., Any], types.FunctionType(func_code, {"__name__": filename}))
 
 
 class EachAction:
