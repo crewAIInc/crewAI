@@ -93,11 +93,12 @@ class MCPNativeTool(BaseTool):
         coro = self._run_async(**kwargs)
         try:
             try:
-                loop = asyncio.get_running_loop()
-                if loop.is_running():
-                    from concurrent.futures import ThreadPoolExecutor
-                    with ThreadPoolExecutor() as executor:
-                        return executor.submit(asyncio.run, coro).result()
+                asyncio.get_running_loop()
+                import contextvars
+                from concurrent.futures import ThreadPoolExecutor
+                ctx = contextvars.copy_context()
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    return executor.submit(ctx.run, asyncio.run, coro).result()
             except RuntimeError:
                 return asyncio.run(coro)
 
