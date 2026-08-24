@@ -2520,13 +2520,14 @@ class LLM(BaseLLM):
                 ]
 
             failure_callbacks_str = os.environ.get("LITELLM_FAILURE_CALLBACKS", "")
+            failure_callbacks: list[str | Callable[..., Any]] = []
             if failure_callbacks_str:
-                failure_callbacks: list[str | Callable[..., Any]] = [
+                failure_callbacks = [
                     cb.strip() for cb in failure_callbacks_str.split(",") if cb.strip()
                 ]
 
-                litellm.success_callback = success_callbacks  # type: ignore[assignment]
-                litellm.failure_callback = failure_callbacks  # type: ignore[assignment]
+            litellm.success_callback = success_callbacks  # type: ignore[assignment]
+            litellm.failure_callback = failure_callbacks  # type: ignore[assignment]
 
     def __copy__(self) -> LLM:
         """Create a shallow copy of the LLM instance."""

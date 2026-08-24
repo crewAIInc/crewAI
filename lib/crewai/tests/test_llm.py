@@ -34,6 +34,7 @@ def test_llm_callback_replacement():
         def _mock_response(content: str):
             mock_message = MagicMock()
             mock_message.content = content
+            mock_message.tool_calls = None
             mock_choice = MagicMock()
             mock_choice.message = mock_message
             mock_response = MagicMock()
@@ -42,6 +43,13 @@ def test_llm_callback_replacement():
                 "prompt_tokens": 10,
                 "completion_tokens": 10,
                 "total_tokens": 20,
+            }
+            mock_response.model_extra = {
+                "usage": {
+                    "prompt_tokens": 10,
+                    "completion_tokens": 10,
+                    "total_tokens": 20,
+                }
             }
             return mock_response
 
