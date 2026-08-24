@@ -649,3 +649,67 @@ def test_a_message_containing_a_colon_is_never_stored():
     ):
         event = TaskFailedEvent(error=message, error_type=message, task=None)
         assert event.error_type is None, message
+
+
+def test_resolution_does_not_trigger_a_lazy_module_getattr():
+    """A PEP 562 ``__getattr__`` must never run: it is an import in disguise.
+
+    Review finding on this PR. ``getattr(module, name)`` invokes a module-level
+    ``__getattr__`` on any miss, and such a hook typically calls
+    ``importlib.import_module`` -- ``crewai.events`` itself is one. So an attribute walk
+    would import a submodule named in the serialized string and run its top-level code,
+    which is exactly the import primitive this resolver must not be. Reading ``__dict__``
+    consults no hook.
+    """
+    import types
+
+    from crewai.events.types.task_events import TaskFailedEvent
+
+    invoked: list[str] = []
+    lazy = types.ModuleType("lazy_probe_pkg")
+
+    def _lazy_getattr(name: str) -> object:
+        invoked.append(name)  # stands in for importlib.import_module
+        raise AttributeError(name)
+
+    lazy.__getattr__ = _lazy_getattr  # type: ignore[attr-defined]
+    sys.modules["lazy_probe_pkg"] = lazy
+    try:
+        event = TaskFailedEvent(
+            error="boom", error_type="lazy_probe_pkg:Something", task=None
+        )
+    finally:
+        del sys.modules["lazy_probe_pkg"]
+
+    assert invoked == [], f"resolution ran the module's __getattr__: {invoked}"
+    assert event.error_type is None
+
+
+def test_a_raising_lazy_hook_cannot_degrade_the_event():
+    """A hook raising anything but AttributeError must not escape validation.
+
+    ``getattr(obj, name, None)`` only swallows ``AttributeError``. Anything else would
+    propagate out of the validator, and ``_resolve_event`` would catch it and degrade the
+    whole event to a bare ``BaseEvent`` -- dropping ``error`` again, which is the
+    regression this resolver was rewritten to prevent.
+    """
+    import types
+
+    from crewai.events.types.task_events import TaskFailedEvent
+
+    exploding = types.ModuleType("exploding_probe_pkg")
+
+    def _exploding_getattr(name: str) -> object:
+        raise RuntimeError("lazy loader exploded")
+
+    exploding.__getattr__ = _exploding_getattr  # type: ignore[attr-defined]
+    sys.modules["exploding_probe_pkg"] = exploding
+    try:
+        event = TaskFailedEvent(
+            error="boom", error_type="exploding_probe_pkg:Something", task=None
+        )
+    finally:
+        del sys.modules["exploding_probe_pkg"]
+
+    assert event.error_type is None
+    assert event.error == "boom", "the message must survive a hostile lazy hook"

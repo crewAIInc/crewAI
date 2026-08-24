@@ -21,10 +21,18 @@ def _resolve_exception_class(value: Any) -> Any:
     dynamically created classes can all share one. Reproduced by review with two distinct
     ``type("DupErr", (Exception,), {})`` classes: the event restored as the wrong one.
 
-    **Nothing is imported here.** The module has to be in ``sys.modules`` already.
-    Importing a module named in serialized data would execute its top-level code, which
-    is a worse defect than the collision it would fix -- this field exists to keep
-    untrusted strings out of telemetry, so it must not become an import primitive.
+    **Nothing is imported here, and the lookup is by dict rather than by attribute.**
+    The module has to be in ``sys.modules`` already. Importing a module named in
+    serialized data would execute its top-level code -- a worse defect than the collision
+    it would fix, in a field that exists to keep untrusted strings out of telemetry.
+
+    ``vars()`` rather than ``getattr()`` is what makes that true, and the difference is
+    not theoretical: a module with a PEP 562 ``__getattr__`` runs it on any attribute
+    miss, and ``crewai.events`` itself is such a module -- its hook calls
+    ``importlib.import_module``. So ``getattr`` here would import a submodule named in
+    the serialized string, and any non-``AttributeError`` the hook raised would escape
+    validation and degrade the whole event, dropping ``error`` with it. A ``__dict__``
+    lookup consults no hook and runs no user code.
 
     A serialized identity that does not resolve becomes ``None`` -- an unloaded module, a
     ``<locals>`` qualname unreachable by attribute lookup, or a target that is not a
@@ -53,7 +61,13 @@ def _resolve_exception_class(value: Any) -> Any:
     if resolved is None:
         return None
     for attribute in qualname.split("."):
-        resolved = getattr(resolved, attribute, None)
+        try:
+            namespace = vars(resolved)
+        except TypeError:
+            # No __dict__ to read: the qualname points at something that cannot
+            # hold a nested class, so there is nothing to resolve.
+            return None
+        resolved = namespace.get(attribute)
         if resolved is None:
             return None
 
