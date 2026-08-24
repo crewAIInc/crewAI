@@ -49,11 +49,15 @@ _PROVIDERS: list[tuple[str, str]] = [
 # live from the vendor's own API via ``model_catalog.get_provider_models``;
 # this list is the hand-verified backstop used when no API key is available.
 # Keep entries to real, current model ids — last verified against each vendor's
-# official model docs on 2026-07-05.
+# official model docs on 2026-08-17.
 _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
     "openai": [
         ("gpt-5.5", "GPT-5.5"),
         ("gpt-5.5-pro", "GPT-5.5 Pro"),
+        ("gpt-5.6-sol", "GPT-5.6 Sol"),
+        ("gpt-5.6-terra", "GPT-5.6 Terra"),
+        ("gpt-5.6-luna", "GPT-5.6 Luna"),
+        ("gpt-5.6", "GPT-5.6"),
         ("gpt-5.4", "GPT-5.4"),
         ("gpt-5.4-mini", "GPT-5.4 Mini"),
         ("gpt-5.2", "GPT-5.2"),
