@@ -685,6 +685,47 @@ class TestDetectMissingGuardrail:
         assert len(findings) == 3
         assert all(f["severity"] == "CRITICAL" for f in findings)
 
+    def test_patch_restores_pre_existing_sys_modules(self):
+        """If crewAI is already in sys.modules, _patch_global_hooks must
+        restore the original module objects rather than deleting them."""
+        import sys
+        import types
+
+        real_module = types.ModuleType("crewai.hooks.tool_hooks")
+        real_module.get_before_tool_call_hooks = lambda: []
+        real_hooks_pkg = types.ModuleType("crewai.hooks")
+        real_crewai_pkg = types.ModuleType("crewai")
+
+        sys.modules["crewai.hooks.tool_hooks"] = real_module
+        sys.modules["crewai.hooks"] = real_hooks_pkg
+        sys.modules["crewai"] = real_crewai_pkg
+        try:
+            with _patch_global_hooks([]):
+                # Inside the context, our fake module is active.
+                assert sys.modules["crewai.hooks.tool_hooks"] is not real_module
+            # After exit, original module objects are restored.
+            assert sys.modules.get("crewai.hooks.tool_hooks") is real_module
+            assert sys.modules.get("crewai.hooks") is real_hooks_pkg
+            assert sys.modules.get("crewai") is real_crewai_pkg
+        finally:
+            sys.modules.pop("crewai.hooks.tool_hooks", None)
+            sys.modules.pop("crewai.hooks", None)
+            sys.modules.pop("crewai", None)
+
+    def test_patch_cleans_up_when_not_pre_installed(self):
+        """When crewAI is not installed, _patch_global_hooks must remove
+        the injected module entries on exit."""
+        import sys
+
+        for key in ("crewai.hooks.tool_hooks", "crewai.hooks", "crewai"):
+            sys.modules.pop(key, None)
+
+        with _patch_global_hooks([]):
+            assert "crewai.hooks.tool_hooks" in sys.modules
+        assert "crewai.hooks.tool_hooks" not in sys.modules
+        assert "crewai.hooks" not in sys.modules
+        assert "crewai" not in sys.modules
+
 
 # ---------------------------------------------------------------------------
 # Helper to patch the global before-tool-call hook list used by
@@ -699,23 +740,31 @@ def _patch_global_hooks(hooks):
     The import inside ``detect_missing_guardrail`` is lazy, so we patch at
     the module level where crewAI would normally expose it.  When crewAI
     is not installed we patch the fallback by injecting a fake module.
+
+    Original ``sys.modules`` entries are saved and restored on exit so
+    that a real crewAI installation is not disrupted.
     """
     import sys
     import types
 
     fake_module = types.ModuleType("crewai.hooks.tool_hooks")
     fake_module.get_before_tool_call_hooks = lambda: list(hooks)
-    fake_pkg = types.ModuleType("crewai")
-    fake_pkg.__path__ = []  # mark as package
-    fake_hooks_pkg = types.ModuleType("crewai.hooks")
-    fake_hooks_pkg.__path__ = []
-    sys.modules.setdefault("crewai", fake_pkg)
-    sys.modules.setdefault("crewai.hooks", fake_hooks_pkg)
+    names = ("crewai", "crewai.hooks", "crewai.hooks.tool_hooks")
+    saved = {name: sys.modules.get(name) for name in names}
+    for name in ("crewai", "crewai.hooks"):
+        if saved[name] is None:
+            pkg = types.ModuleType(name)
+            pkg.__path__ = []  # mark as package
+            sys.modules[name] = pkg
     sys.modules["crewai.hooks.tool_hooks"] = fake_module
     try:
         yield
     finally:
-        sys.modules.pop("crewai.hooks.tool_hooks", None)
+        for name in names:
+            if saved[name] is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = saved[name]
 
 
 # ===========================================================================
