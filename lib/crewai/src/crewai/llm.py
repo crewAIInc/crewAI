@@ -365,6 +365,17 @@ class AccumulatedToolArgs(BaseModel):
     function: FunctionArgs = Field(default_factory=FunctionArgs)
 
 
+class StructuredOutputConversionError(Exception):
+    """Raised when converting a completed stream to ``response_model`` fails.
+
+    A conversion failure is distinct from a broken stream: the stream finished
+    successfully, the accumulated text just did not match the requested schema.
+    Raising a dedicated error keeps this out of the partial-response salvage
+    path (which returns the raw text on a mid-stream break), so a caller that
+    asked for a ``BaseModel``-shaped result gets an exception instead of prose.
+    """
+
+
 class LLM(BaseLLM):
     llm_type: Literal["litellm"] = "litellm"
     completion_cost: float | None = None
@@ -1043,8 +1054,16 @@ class LLM(BaseLLM):
                         model=response_model,
                         llm=self,
                     )
-                    result = instructor_instance.to_pydantic()
-                    structured_response = result.model_dump_json()
+                    try:
+                        result = instructor_instance.to_pydantic()
+                        structured_response = result.model_dump_json()
+                    except Exception as conversion_error:
+                        # The stream completed; the text simply did not match
+                        # response_model. Signal this distinctly so it is not
+                        # swallowed by the partial-response salvage path below.
+                        raise StructuredOutputConversionError(
+                            str(conversion_error)
+                        ) from conversion_error
                     usage_dict = self._usage_to_dict(usage_info)
                     self._handle_emit_call_events(
                         response=structured_response,
@@ -1089,6 +1108,10 @@ class LLM(BaseLLM):
             return full_response
 
         except LLMContextLengthExceededError:
+            raise
+        except StructuredOutputConversionError:
+            # response_model conversion of a completed stream failed; do not
+            # salvage the raw text as if the stream had broken.
             raise
         except Exception as e:
             error_msg = str(e)
