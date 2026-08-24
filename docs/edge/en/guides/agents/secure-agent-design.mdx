@@ -13,6 +13,8 @@ This page shows how to limit that risk. Related reference: [OWASP Top 10 for LLM
 
 CrewAI gives you building blocks: hooks, guardrails, human-in-the-loop (HITL), structured outputs, and Flow state. It does not turn these on as a secure default. You must set tools, allowlists, and approval checks in your application code.
 
+This page covers threat model and execution-path behavior. For execution limits (`max_rpm`, `max_iter`, `max_execution_time`), verbosity, and agent settings, see [Agents](/en/concepts/agents) and [Customize Agents](/en/learn/customizing-agents).
+
 | Building block | What it does when you add it |
 | --- | --- |
 | `HookAborted` in a tool hook | Stops that one tool call. The agent continues. It receives a message that the tool was blocked. |
@@ -78,6 +80,8 @@ researcher = Agent(
     allow_delegation=False,
 )
 ```
+
+The `backstory` text is a soft control. It does not stop the model from following untrusted text. Use tool hooks and allowlists below to enforce policy.
 
 For Crew and Flow inputs, use [execution boundary hooks](/en/learn/execution-boundary-hooks) (`INPUT`). Those hooks do not run on standalone `agent.kickoff()`. For MCP, see [MCP Security](/en/mcp/security).
 
@@ -289,13 +293,18 @@ class PipelineState(BaseModel):
 class SecureOutreachFlow(Flow[PipelineState]):
     @start()
     def research(self):
-        # Fetch tools only; write structured notes into state
-        ...
+        result = researcher.kickoff(
+            f"Extract factual notes about {self.state.topic}."
+        )
+        self.state.notes = [result.raw]
 
     @listen(research)
     def send(self):
-        # No fetch tools; send or write tools sit behind hooks or HITL
-        ...
+        approved = "\n".join(self.state.notes)
+        result = sender.kickoff(
+            f"Send outreach using only these notes:\n{approved}"
+        )
+        self.state.email_status = result.raw
 ```
 
 See [Production Architecture](/en/concepts/production-architecture).
@@ -320,5 +329,8 @@ See [Production Architecture](/en/concepts/production-architecture).
   </Card>
   <Card title="Human-in-the-Loop" icon="user-check" href="/en/learn/human-in-the-loop">
     Human review for high-impact actions.
+  </Card>
+  <Card title="Customize Agents" icon="user-pen" href="/en/learn/customizing-agents">
+    Execution limits, verbosity, and agent settings.
   </Card>
 </CardGroup>

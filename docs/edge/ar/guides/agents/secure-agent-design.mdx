@@ -13,6 +13,8 @@ mode: "wide"
 
 يمنحكم CrewAI لبنات بناء: hooks وguardrails وHITL ومخرجات منظمة وحالة Flow. وهو لا يفعّلها كإعداد آمن افتراضي. يجب عليكم تعيين الأدوات وقوائم السماح وفحوصات الموافقة في كود التطبيق.
 
+تغطي هذه الصفحة نموذج التهديد وسلوك مسار التنفيذ. لحدود التنفيذ (`max_rpm` و`max_iter` و`max_execution_time`) والتفصيل وإعدادات الـ Agent، راجع [Agents](/ar/concepts/agents) و[تخصيص الـ Agents](/ar/learn/customizing-agents).
+
 | لبنة البناء | ما تفعله عند إضافتها |
 | --- | --- |
 | `HookAborted` في tool hook | يوقف استدعاء تلك الأداة فقط. يستمر الـ Agent. ويتلقى رسالة بأن الأداة حُظرت. |
@@ -78,6 +80,8 @@ researcher = Agent(
     allow_delegation=False,
 )
 ```
+
+نص `backstory` عنصر تحكم ضعيف. وهو لا يمنع النموذج من اتباع النص غير الموثوق. استخدم tool hooks وقوائم السماح أدناه لفرض السياسة.
 
 لمدخلات Crew وFlow، استخدم [execution boundary hooks](/ar/learn/execution-boundary-hooks) (`INPUT`). هذه الـ hooks لا تعمل على `agent.kickoff()` المستقل. لـ MCP، راجع [أمان MCP](/ar/mcp/security).
 
@@ -289,13 +293,18 @@ class PipelineState(BaseModel):
 class SecureOutreachFlow(Flow[PipelineState]):
     @start()
     def research(self):
-        # Fetch tools only; write structured notes into state
-        ...
+        result = researcher.kickoff(
+            f"Extract factual notes about {self.state.topic}."
+        )
+        self.state.notes = [result.raw]
 
     @listen(research)
     def send(self):
-        # No fetch tools; send or write tools sit behind hooks or HITL
-        ...
+        approved = "\n".join(self.state.notes)
+        result = sender.kickoff(
+            f"Send outreach using only these notes:\n{approved}"
+        )
+        self.state.email_status = result.raw
 ```
 
 راجع [بنية الإنتاج](/ar/concepts/production-architecture).
@@ -320,5 +329,8 @@ class SecureOutreachFlow(Flow[PipelineState]):
   </Card>
   <Card title="Human-in-the-Loop" icon="user-check" href="/ar/learn/human-in-the-loop">
     مراجعة بشرية للإجراءات عالية التأثير.
+  </Card>
+  <Card title="تخصيص الـ Agents" icon="user-pen" href="/ar/learn/customizing-agents">
+    حدود التنفيذ والتفصيل وإعدادات الـ Agent.
   </Card>
 </CardGroup>

@@ -13,6 +13,8 @@ CrewAI 에이전트는 실제 동작을 수행하는 도구를 호출할 수 있
 
 CrewAI는 hooks, guardrails, HITL, 구조화된 출력, Flow state라는 구성 요소를 제공합니다. 이것들을 안전한 기본값으로 켜지는 않습니다. 도구, allowlist, 승인 검사는 애플리케이션 코드에서 설정해야 합니다.
 
+이 페이지는 위협 모델과 실행 경로 동작을 다룹니다. 실행 제한(`max_rpm`, `max_iter`, `max_execution_time`), verbose, 에이전트 설정은 [에이전트](/ko/concepts/agents)와 [에이전트 맞춤화](/ko/learn/customizing-agents)를 참고하세요.
+
 | 구성 요소 | 추가했을 때 하는 일 |
 | --- | --- |
 | tool hook의 `HookAborted` | 해당 도구 호출 하나만 중지합니다. 에이전트는 계속합니다. 도구가 차단되었다는 메시지를 받습니다. |
@@ -78,6 +80,8 @@ researcher = Agent(
     allow_delegation=False,
 )
 ```
+
+`backstory` 텍스트는 약한 통제입니다. 모델이 신뢰할 수 없는 텍스트를 따르는 것을 막지 않습니다. 정책은 아래 tool hooks와 allowlist로 강제하세요.
 
 Crew와 Flow 입력에는 [execution boundary hooks](/ko/learn/execution-boundary-hooks) (`INPUT`)를 사용하세요. 이 hooks는 단독 `agent.kickoff()`에서는 실행되지 않습니다. MCP는 [MCP 보안](/ko/mcp/security)을 참고하세요.
 
@@ -289,13 +293,18 @@ class PipelineState(BaseModel):
 class SecureOutreachFlow(Flow[PipelineState]):
     @start()
     def research(self):
-        # Fetch tools only; write structured notes into state
-        ...
+        result = researcher.kickoff(
+            f"Extract factual notes about {self.state.topic}."
+        )
+        self.state.notes = [result.raw]
 
     @listen(research)
     def send(self):
-        # No fetch tools; send or write tools sit behind hooks or HITL
-        ...
+        approved = "\n".join(self.state.notes)
+        result = sender.kickoff(
+            f"Send outreach using only these notes:\n{approved}"
+        )
+        self.state.email_status = result.raw
 ```
 
 [프로덕션 아키텍처](/ko/concepts/production-architecture)를 참고하세요.
@@ -320,5 +329,8 @@ class SecureOutreachFlow(Flow[PipelineState]):
   </Card>
   <Card title="Human-in-the-Loop" icon="user-check" href="/ko/learn/human-in-the-loop">
     고영향 동작에 대한 사람 검토.
+  </Card>
+  <Card title="에이전트 맞춤화" icon="user-pen" href="/ko/learn/customizing-agents">
+    실행 제한, verbose, 에이전트 설정.
   </Card>
 </CardGroup>
