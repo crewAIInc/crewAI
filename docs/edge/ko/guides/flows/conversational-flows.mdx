@@ -543,7 +543,7 @@ finally:
 | 표현 불가 | 대신 사용 |
 |-----------------|-------------|
 | 살아 있는 `LLM` 인스턴스나 커스텀 `BaseLLM` | 모델 id 문자열 또는 정적 설정 mapping |
-| 모델 클래스로서의 `router.response_format` | 생략하세요; 프레임워크가 생성합니다. ref나 스키마는 경고와 함께 무시됩니다 |
+| 살아 있는 모델 클래스로서의 `router.response_format` | python ref로 클래스를 지정하세요: `response_format: {python: my_project.schemas.ConversationRoute}`. 생략하면 프레임워크가 생성합니다 |
 | `route_turn()` 재정의 | Flow를 Python으로 작성하거나 선언적 `route_conversation` 메서드를 `call: code` / expression action으로 교체 |
 | `can_answer_from_history()` 재정의 | Flow를 Python으로 작성하고 표준 기록 라우팅은 `conversational.answer_from_history_llm`으로 설정 |
 
