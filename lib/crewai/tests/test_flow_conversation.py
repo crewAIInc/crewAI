@@ -2420,6 +2420,140 @@ class TestDeclarativeConversationalFlow:
         assert "cannot carry a model class" in caplog.text
 
 
+class DeclaredSchemaChatState(ConversationState):
+    """A ConversationState subclass, i.e. the already-supported state shape."""
+
+    ticket_id: str | None = None
+
+
+class TestDeclaredConversationalState:
+    """Any declared state shape works for a chat flow, keeping its own fields."""
+
+    @staticmethod
+    def _flow(state: dict[str, Any] | None) -> Flow[Any]:
+        declaration = _conversational_declaration(conversational={})
+        if state is None:
+            declaration.pop("state", None)
+        else:
+            declaration["state"] = state
+        return Flow.from_declaration(contents=declaration)
+
+    CONVERSATIONAL_FIELDS = (
+        "messages",
+        "current_user_message",
+        "last_intent",
+        "ended",
+        "events",
+        "agent_threads",
+    )
+
+    def test_inline_json_schema_state_gains_the_conversational_fields(self) -> None:
+        flow = self._flow(
+            {
+                "type": "json_schema",
+                "json_schema": {
+                    "type": "object",
+                    "properties": {
+                        "ticket_id": {"type": "string"},
+                        "turns": {"type": "integer"},
+                    },
+                },
+                "default": {"ticket_id": "T-1"},
+            }
+        )
+        fields = type(flow.state).model_fields
+
+        for name in self.CONVERSATIONAL_FIELDS:
+            assert name in fields, name
+        assert "ticket_id" in fields and "turns" in fields
+        assert flow.state.ticket_id == "T-1"
+        assert flow.state.id
+
+    def test_a_pydantic_ref_that_is_not_a_conversation_state_is_composed(self) -> None:
+        flow = self._flow({"type": "pydantic", "ref": "crewai.flow:ChatState"})
+        fields = type(flow.state).model_fields
+
+        for name in self.CONVERSATIONAL_FIELDS:
+            assert name in fields, name
+        assert "session_ready" in fields
+
+    def test_a_conversation_state_subclass_is_not_composed_twice(self) -> None:
+        flow = self._flow(
+            {"type": "pydantic", "ref": f"{__name__}:DeclaredSchemaChatState"}
+        )
+        mro = [cls.__name__ for cls in type(flow.state).__mro__]
+
+        assert mro.count("ConversationState") == 1
+        assert "ticket_id" in type(flow.state).model_fields
+
+    def test_dict_state_is_given_the_real_shape(self) -> None:
+        """A dict cannot carry the fields, so supply them rather than die."""
+        flow = self._flow({"type": "dict", "default": {"last_intent": "order"}})
+
+        assert isinstance(flow.state, ConversationState)
+        assert flow.state.last_intent == "order"
+
+    def test_dict_state_keeps_declared_defaults_it_does_not_own(self) -> None:
+        """Dropping them would break an action reading `state.topic`."""
+        flow = self._flow({"type": "dict", "default": {"topic": "ai", "limit": 3}})
+
+        assert flow.state.topic == "ai"
+        assert flow.state.limit == 3
+        assert isinstance(flow.state, ConversationState)
+
+    def test_unknown_state_is_treated_like_dict(self) -> None:
+        flow = self._flow({"type": "unknown", "ref": "x:Y", "default": {"topic": "ai"}})
+
+        assert flow.state.topic == "ai"
+        assert isinstance(flow.state, ConversationState)
+
+    def test_an_unbuildable_declared_model_still_gets_the_chat_shape(self) -> None:
+        """A bad ref fell back to a plain dict, so the turn died on `state.id`."""
+        flow = self._flow({"type": "pydantic", "ref": "no.such.module:Nope"})
+
+        assert isinstance(flow.state, ConversationState)
+        assert flow.state.id
+
+    def test_declared_state_still_runs_a_turn(self) -> None:
+        flow = self._flow(
+            {
+                "type": "json_schema",
+                "json_schema": {
+                    "type": "object",
+                    "properties": {"ticket_id": {"type": "string"}},
+                },
+            }
+        )
+        flow._conversation_config.llm = _ScriptedLLM(["Hello."])
+
+        assert flow.handle_turn("hi") == "Hello."
+        assert [m.role for m in flow.state.messages] == ["user", "assistant"]
+
+    def test_non_conversational_declaration_keeps_its_plain_state(self) -> None:
+        flow = Flow.from_declaration(
+            contents={
+                "schema": "crewai.flow/v1",
+                "name": "Plain",
+                "state": {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "type": "object",
+                        "properties": {"topic": {"type": "string"}},
+                    },
+                    "default": {"topic": "ai"},
+                },
+                "methods": {
+                    "begin": {
+                        "do": {"call": "expression", "expr": "state.topic"},
+                        "start": True,
+                    }
+                },
+            }
+        )
+
+        assert "messages" not in type(flow.state).model_fields
+        assert flow.state.topic == "ai"
+
 class TestDeclaredConversationalLLM:
     """A conversational block accepts the shapes a crew agent's `llm` accepts."""
 
@@ -2524,7 +2658,6 @@ class TestDeclaredConversationalLLM:
 
         assert declared in seen
         assert [m.role for m in flow.state.messages][0] == "user"
-
 
 class TestRoutingArtefactLabels:
     """A route label echoed by a handler is a routing artefact, not a reply."""
