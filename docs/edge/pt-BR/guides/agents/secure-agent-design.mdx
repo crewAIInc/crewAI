@@ -293,24 +293,36 @@ analyst = Agent(
 from crewai.flow.flow import Flow, listen, start
 from pydantic import BaseModel
 
+class OutreachNotes(BaseModel):
+    claims: list[str]
+    sources: list[str]
+
 class PipelineState(BaseModel):
     topic: str = ""
-    notes: list[str] = []
+    notes: OutreachNotes | None = None
     email_status: str = ""
 
 class SecureOutreachFlow(Flow[PipelineState]):
     @start()
     def research(self):
         result = researcher.kickoff(
-            f"Extract factual notes about {self.state.topic}."
+            f"Extract factual notes about {self.state.topic}.",
+            response_format=OutreachNotes,
         )
-        self.state.notes = [result.raw]
+        notes = result.pydantic
+        if not isinstance(notes, OutreachNotes) or not notes.claims or not notes.sources:
+            raise ValueError("Research must return validated OutreachNotes.")
+        self.state.notes = notes
 
     @listen(research)
     def send(self):
-        approved = "\n".join(self.state.notes)
+        notes = self.state.notes
+        if notes is None:
+            raise ValueError("No validated notes to send.")
         result = sender.kickoff(
-            f"Send outreach using only these notes:\n{approved}"
+            "Send outreach using only these claims and sources:\n"
+            f"claims={notes.claims}\n"
+            f"sources={notes.sources}"
         )
         self.state.email_status = result.raw
 ```
