@@ -316,9 +316,13 @@ class TestConversationalFlow:
         assert flow.state.agent_threads["planner"][0].content == "private scratch"
 
     def test_answer_from_history_uses_configured_llm_and_appends_reply(self) -> None:
-        @ConversationConfig(answer_from_history_llm="gpt-4o-mini")
-        class HistoryFlow(ConversationalFlow):
-            pass
+        with pytest.warns(
+            DeprecationWarning,
+            match="answer_from_history_prompt.*answer_from_history_llm",
+        ):
+            @ConversationConfig(answer_from_history_llm="gpt-4o-mini")
+            class HistoryFlow(ConversationalFlow):
+                pass
 
         flow = HistoryFlow()
         flow._state = ConversationState(

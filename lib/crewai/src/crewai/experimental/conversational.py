@@ -17,6 +17,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, TypeVar, cast
 from uuid import uuid4
+import warnings
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -27,6 +28,13 @@ ConversationMessageRole = Literal["user", "assistant", "system", "tool"]
 ConversationEventVisibility = Literal["private", "public"]
 
 F = TypeVar("F", bound=Callable[..., Any])
+
+ANSWER_FROM_HISTORY_DEPRECATION_MESSAGE = (
+    "`answer_from_history_prompt` and `answer_from_history_llm` are deprecated "
+    "and will be removed in a future release. Use `ConversationConfig.llm` "
+    "with the built-in `converse` route, or override `converse_turn()` for "
+    "custom history behavior."
+)
 
 
 def _conversational_only(func: F) -> F:
@@ -81,8 +89,12 @@ class ConversationConfig:
 
     ``system_prompt`` defaults to the ``slices.conversational_system_prompt``
     translation when left as ``None``. Pass an empty string to opt out of any
-    system prompt for ``converse_turn``. ``answer_from_history_prompt`` falls
-    back to ``slices.conversational_answer_from_history_prompt`` when ``None``.
+    system prompt for ``converse_turn``.
+
+    ``answer_from_history_prompt`` and ``answer_from_history_llm`` are
+    deprecated. The built-in ``converse`` route already answers from canonical
+    message history without tools; override ``converse_turn`` when a separate
+    history policy is required.
     """
 
     system_prompt: str | None = None
@@ -94,6 +106,18 @@ class ConversationConfig:
     answer_from_history_llm: Any | None = None
     visible_agent_outputs: Sequence[str] | Literal["all"] | None = None
     defer_trace_finalization: bool = True
+
+    def __post_init__(self) -> None:
+        """Warn when deprecated history-routing configuration is used."""
+        if (
+            self.answer_from_history_prompt is not None
+            or self.answer_from_history_llm is not None
+        ):
+            warnings.warn(
+                ANSWER_FROM_HISTORY_DEPRECATION_MESSAGE,
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
     def __call__(self, flow_cls: type[Any]) -> type[Any]:
         """Use this config as a class decorator.

@@ -239,7 +239,7 @@ def route_turn(self, context):
 
 ## `Flow` المحادثاتي (تجريبي)
 
-اشترك في رسم الدردشة المحادثاتي بتعيين `conversational = True` على صنف فرعي من `Flow` أو بتطبيق `@ConversationConfig(...)`. يوفر `Flow` الأساسي عندئذٍ `route_conversation` كنقطة البدء/الموجّه المدمجة، إضافة إلى مستمعي `converse_turn` و`end_conversation` و`answer_from_history_turn`. وهو يدير `state.messages`، ويمكنه تشغيل LLM للموجّه، ويبقي دفعة trace مفتوحة عبر الجولات. أنت تكتب **المسارات المخصصة**؛ والإطار يتولى الباقي.
+اشترك في رسم الدردشة المحادثاتي بتعيين `conversational = True` على صنف فرعي من `Flow` أو بتطبيق `@ConversationConfig(...)`. يوفر `Flow` الأساسي عندئذٍ `route_conversation` كنقطة البدء/الموجّه المدمجة، إضافة إلى مستمعي `converse_turn` و`end_conversation`. يظل المستمع المهمل `answer_from_history_turn` متاحاً للتوافق. يدير الإطار `state.messages`، ويمكنه تشغيل LLM للموجّه، ويبقي دفعة trace مفتوحة عبر الجولات. أنت تكتب **المسارات المخصصة**؛ والإطار يتولى الباقي.
 
 استخدمه عندما تريد دردشة متعددة الجولات مع موجّه قائم على LLM ومعالجات لكل مسار دون توصيل دورة الحياة يدوياً. استخدم `Flow[ChatState]` (النمط الأدنى مستوى في الأعلى) عندما تحتاج تحكماً كاملاً.
 
@@ -306,12 +306,20 @@ def kickoff() -> None:
 | `system_prompt` | `slices.conversational_system_prompt` من i18n | رسالة system يستخدمها `converse_turn` المدمج. مرر `""` للتعطيل التام. |
 | `llm` | `None` | LLM المحادثة (يستخدمه `converse_turn` وكاحتياطي للموجّه). |
 | `router` | `None` | تجاوزات `RouterConfig` اختيارية. مع وجود مستمعين مخصصين وLLM قابل للحل، يُفعّل التوجيه تلقائياً حتى عند إغفال هذا الحقل. |
-| `answer_from_history_prompt` | افتراضي الإطار | رسالة system للمسار الاختياري `answer_from_history`. |
-| `answer_from_history_llm` | `None` | يُفعّل الاختصار `answer_from_history` عند تعيينه. |
+| `answer_from_history_prompt` | افتراضي الإطار | **مهمل.** استخدم system prompt الخاص بـ `converse` أو تجاوز `converse_turn()`. |
+| `answer_from_history_llm` | `None` | **مهمل.** استخدم `llm`؛ إذ يتلقى `converse` السجل القانوني بالفعل. |
 | `intent_llm` | `None` | LLM لمسار التصنيف المسبق القديم `intents=`/`default_intents`. |
 | `default_intents` | `None` | تسميات النتائج للتصنيف المسبق القديم. |
 | `visible_agent_outputs` | `None` | `"all"` أو قائمة بأسماء الـ agents الذين تُرفع مخرجاتهم من `append_agent_result()` إلى رسائل عامة. |
 | `defer_trace_finalization` | `True` | يبقي دفعة trace واحدة مفتوحة عبر استدعاءات `handle_turn()`. |
+
+<Warning>
+  تم إهمال `answer_from_history_prompt` و`answer_from_history_llm` ومسار
+  `answer_from_history`، وستُزال في إصدار مستقبلي. فهي تكرر `converse`، الذي
+  يتولى بالفعل السجل القانوني، وتضيف استدعاء LLM للتحقق من أهلية الإجابة،
+  ويجري تجاوزها عندما يعيد الموجّه التلقائي المعتاد مساراً. تظل الإعدادات
+  الحالية تعمل وتُصدر `DeprecationWarning`.
+</Warning>
 
 عند عدم وجود مسارات مخصصة، تسقط الجولات إلى `converse`. ومع وجود مسارات مخصصة وLLM للمحادثة/الموجّه، ينشئ الإطار `RouterConfig` افتراضية؛ لا توفر واحدة صراحةً إلا لتخصيص المطالبة أو قائمة المسارات أو الأوصاف أو سلوك fallback. أما ضبط `default_intents` فيستخدم مسار التصنيف المسبق القديم.
 
@@ -352,7 +360,7 @@ router_config = RouterConfig(
 تُبنى رسالة الموجّه إلى LLM تلقائياً. لكل مسار يختار الإطار وصفاً بهذا الترتيب من الأولوية:
 
 1. `RouterConfig.route_descriptions[label]` — تجاوز صريح.
-2. `Flow.builtin_route_descriptions[label]` — نص جاهز من الإطار لـ `converse` و`end` و`answer_from_history` (مصاغ لـ LLM التوجيه).
+2. `Flow.builtin_route_descriptions[label]` — نص جاهز من الإطار لـ `converse` و`end` ولمسار التوافق المهمل `answer_from_history` (مصاغ لـ LLM التوجيه).
 3. قيمة `description` المعلنة للطريقة (تستخدمها التدفقات التعريفية وإسقاطات DSL).
 4. أول سطر غير فارغ من docstring معالج `@listen(label)`.
 5. فارغ (المسار يظهر في الفهرس بلا وصف).
@@ -408,7 +416,7 @@ def create_video(self) -> str:  # rejected at flow instantiation
 |--------|---------|-------|
 | `converse` | `converse_turn` | معالج الدردشة الافتراضي. يستدعي `ConversationConfig.llm` بـ system prompt + التاريخ القانوني للرسائل. |
 | `end` | `end_conversation` | يضبط `state.ended = True` ويُصدر رد إنهاء. |
-| `answer_from_history` | `answer_from_history_turn` | اختياري. بعد وجود رسالتين على الأقل، يُوجَّه إليه عندما يقرر `ConversationConfig.answer_from_history_llm` أن الرسالة الحالية يمكن الإجابة عنها من السجل. |
+| `answer_from_history` | `answer_from_history_turn` | **مسار توافق مهمل.** استخدم `converse`، الذي يتلقى السجل القانوني بالفعل. |
 
 يمكنك تجاوز أي من هذه بتعريف معالج بنفس الاسم في الصنف الفرعي.
 
@@ -475,7 +483,7 @@ class SupportFlow(Flow[ConversationState]):
         return super().route_turn(context)
 ```
 
-لتجاوز موجّه LLM بالكامل واختيار مسار برمجياً، أعد سلسلة نصية غير فارغة من `route_turn`. لا يؤدي إرجاع قيمة falsy من التجاوز إلى استدعاء `_route_with_config()`؛ بل يسقط التوجيه إلى النية المصنّفة مسبقاً لهذه الجولة، ثم إلى `answer_from_history` عندما تكون مؤهلة، وأخيراً إلى `converse`. تكون `last_intent` من الجولة السابقة متاحة في سياق الموجّه، لكنها لا تُعاد أبداً كـ fallback.
+لتجاوز موجّه LLM بالكامل واختيار مسار برمجياً، أعد سلسلة نصية غير فارغة من `route_turn`. لا يؤدي إرجاع قيمة falsy من التجاوز إلى استدعاء `_route_with_config()`؛ بل يسقط التوجيه إلى النية المصنّفة مسبقاً لهذه الجولة، ثم إلى مسار التوافق المهمل `answer_from_history` عند إعداده، وأخيراً إلى `converse`. تكون `last_intent` من الجولة السابقة متاحة في سياق الموجّه، لكنها لا تُعاد أبداً كـ fallback.
 
 ### `append_assistant_message` و`append_agent_result`
 
@@ -519,11 +527,11 @@ methods:
 
 | المُوفَّر | التفاصيل |
 |----------|--------|
-| الرسم البياني المدمج | تُضاف `route_conversation` و`converse_turn` و`end_conversation` و`answer_from_history_turn` تلقائيًا. عرّف طريقة بأحد هذه الأسماء لتجاوزها. |
+| الرسم البياني المدمج | تُضاف `route_conversation` و`converse_turn` و`end_conversation` تلقائيًا. يُحتفظ بـ `answer_from_history_turn` المهملة للتوافق. عرّف طريقة بأحد هذه الأسماء لتجاوزها. |
 | حالة المحادثة | تُستخدم `ConversationState` عند عدم وجود كتلة `state`. وتُركّب حالة Pydantic ذات `ref` أو `json_schema` تلقائياً مع الحقول المحادثية؛ ولا يلزم أن ترث من `ConversationState`. |
 | كتالوج المسارات | يُستنتج من الطرق غير الموجّهة التي تحمل تسميات `listen`، مع استبعاد المسارات الداخلية. تتبع الأوصاف ترتيب الأولوية أعلاه، ويمكن لـ `router.routes` الصريحة تقييد الخيارات. |
 
-تقبل حقول `llm` و`router.llm` و`intent_llm` و`answer_from_history_llm` التعريفية إما معرّف نموذج أو خريطة إعدادات مثل `{model: openai/gpt-4o-mini, max_tokens: 512}`. وتدعم كتلة `conversational` أيضاً `default_intents` و`answer_from_history_prompt` و`visible_agent_outputs` و`defer_trace_finalization` وحقول `RouterConfig` الموضحة أعلاه.
+تقبل حقول `llm` و`router.llm` و`intent_llm` التعريفية إما معرّف نموذج أو خريطة إعدادات مثل `{model: openai/gpt-4o-mini, max_tokens: 512}`. وتدعم كتلة `conversational` أيضاً `default_intents` و`visible_agent_outputs` و`defer_trace_finalization` وحقول `RouterConfig` الموضحة أعلاه. تظل تعريفات `answer_from_history_prompt` / `answer_from_history_llm` المهملة مقبولة للتوافق.
 
 شغّله من Python بنفس واجهات الجولة المستخدمة مع تدفق محادثاتي معرّف بصنف:
 
@@ -549,7 +557,7 @@ finally:
 | مثيل `LLM` حي أو `BaseLLM` مخصص | سلسلة معرّف نموذج أو خريطة إعدادات ثابتة |
 | `router.response_format` كصنف نموذج | احذفه؛ يولّد الإطار واحدًا. يُتجاهل المرجع أو المخطط مع تحذير |
 | تجاوز `route_turn()` | اكتب Flow بلغة Python، أو استبدل طريقة `route_conversation` التعريفية بإجراء `call: code` / expression |
-| تجاوز `can_answer_from_history()` | اكتب Flow بلغة Python؛ واضبط توجيه السجل القياسي عبر `conversational.answer_from_history_llm` |
+| تجاوز `can_answer_from_history()` | مهمل. استخدم `converse` أو تجاوز `converse_turn()` في Python. |
 
 يفتح `crewai run` واجهة المحادثة النصية للتدفق المحادثاتي التعريفي — نفس الواجهة التي يحصل عليها Flow محادثاتي مكتوب بلغة Python. تحتاج حلقة المحادثة إلى طرفية، ولذلك يخرج التشغيل بدون طرفية برمز غير صفري مع إرشادات بدلاً من تنفيذ جولة واحدة؛ شغّله من Python هناك عبر `handle_turn()` أو `stream_turn()`. وتعمل الطريقة التعريفية ذات كتلة `human_feedback:` (وفي Python: ‏`@human_feedback`) على REPL طرفي، لأن runtime يجمع الملاحظات بمطالبة حاجزة لا تستطيع TUI خدمتها. لا يُقبل `--inputs` مع Flow محادثاتي — فمدخل كل جولة هو الرسالة التي تكتبها — واستئناف جلسة حسب المعرّف غير موصول بواجهة CLI بعد؛ استخدم `flow.handle_turn(message, session_id=...)` من Python لذلك.
 

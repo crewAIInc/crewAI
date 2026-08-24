@@ -239,7 +239,7 @@ def route_turn(self, context):
 
 ## 대화형 `Flow` (실험적)
 
-`Flow` 서브클래스에 `conversational = True`를 지정하거나 `@ConversationConfig(...)`를 적용하면 대화형 채팅 그래프가 활성화됩니다. 베이스 `Flow`는 내장 start/router인 `route_conversation`과 `converse_turn`, `end_conversation`, `answer_from_history_turn` 리스너를 제공합니다. 또한 `state.messages`를 관리하고 router LLM을 구동할 수 있으며 턴 간 trace batch를 열린 상태로 유지합니다. 여러분은 **커스텀 라우트**를 작성하고 나머지는 프레임워크에 맡기면 됩니다.
+`Flow` 서브클래스에 `conversational = True`를 지정하거나 `@ConversationConfig(...)`를 적용하면 대화형 채팅 그래프가 활성화됩니다. 베이스 `Flow`는 내장 start/router인 `route_conversation`과 `converse_turn`, `end_conversation` 리스너를 제공합니다. 사용 중단된 `answer_from_history_turn` 리스너는 호환성을 위해 계속 제공됩니다. 또한 `state.messages`를 관리하고 router LLM을 구동할 수 있으며 턴 간 trace batch를 열린 상태로 유지합니다. 여러분은 **커스텀 라우트**를 작성하고 나머지는 프레임워크에 맡기면 됩니다.
 
 LLM 기반 라우터와 라우트별 핸들러로 멀티턴 챗을 만들고 싶지만 라이프사이클을 직접 배선하고 싶지 않을 때 사용하세요. 완전한 제어가 필요하면 위의 `Flow[ChatState]`로 내려가세요.
 
@@ -306,12 +306,20 @@ def kickoff() -> None:
 | `system_prompt` | i18n `slices.conversational_system_prompt` | 빌트인 `converse_turn`이 사용하는 system 메시지. 빈 문자열(`""`)을 전달하면 system 메시지를 끕니다. |
 | `llm` | `None` | 대화용 LLM (빌트인 `converse_turn`이 사용하고 router 폴백도 됨). |
 | `router` | `None` | 선택적 `RouterConfig` 재정의. 커스텀 listener와 결정 가능한 LLM이 있으면 생략해도 라우팅이 자동 활성화됩니다. |
-| `answer_from_history_prompt` | 프레임워크 기본값 | 선택적인 `answer_from_history` 라우트용 system 메시지. |
-| `answer_from_history_llm` | `None` | 설정되면 `answer_from_history` 단축 경로가 활성화됩니다. |
+| `answer_from_history_prompt` | 프레임워크 기본값 | **사용 중단됨.** `converse` system prompt를 사용하거나 `converse_turn()`을 재정의하세요. |
+| `answer_from_history_llm` | `None` | **사용 중단됨.** `llm`을 사용하세요. `converse`는 이미 정식 기록을 전달받습니다. |
 | `intent_llm` | `None` | 레거시 `intents=`/`default_intents` 사전 분류용 LLM. |
 | `default_intents` | `None` | 레거시 사전 분류용 outcome 레이블. |
 | `visible_agent_outputs` | `None` | `"all"` 또는 `append_agent_result()` 결과를 사용자에게 공개로 승격할 에이전트 이름 목록. |
 | `defer_trace_finalization` | `True` | `handle_turn()` 호출들 사이에서 하나의 trace 배치를 열어 둡니다. |
+
+<Warning>
+  `answer_from_history_prompt`, `answer_from_history_llm`, `answer_from_history`
+  라우트는 사용 중단되었으며 향후 릴리스에서 제거될 예정입니다. 이들은 이미
+  정식 기록을 처리하는 `converse`와 기능이 중복되고, 답변 가능 여부를 판단하는
+  LLM 호출을 추가하며, 일반 auto-router가 라우트를 반환하면 우회됩니다. 기존
+  설정은 계속 작동하며 `DeprecationWarning`을 발생시킵니다.
+</Warning>
 
 커스텀 라우트가 없으면 턴은 `converse`로 이어집니다. 커스텀 라우트와 대화/router LLM이 있으면 프레임워크가 기본 `RouterConfig`를 합성합니다. prompt, 라우트 목록, 설명, fallback 동작을 바꿔야 할 때만 명시적으로 제공하세요. `default_intents`를 설정하면 레거시 사전 분류 경로를 사용합니다.
 
@@ -351,7 +359,7 @@ router_config = RouterConfig(
 router에 전달되는 프롬프트는 자동으로 만들어집니다. 각 라우트의 설명은 다음 우선순위로 결정됩니다:
 
 1. `RouterConfig.route_descriptions[label]` — 명시적 오버라이드.
-2. `Flow.builtin_route_descriptions[label]` — `converse`, `end`, `answer_from_history`용 프레임워크 캐닝 텍스트 (router LLM용으로 다듬어진 문구).
+2. `Flow.builtin_route_descriptions[label]` — `converse`, `end`, 사용 중단된 `answer_from_history` 호환 라우트용 프레임워크 기본 텍스트 (router LLM용으로 다듬어진 문구).
 3. 메서드에 선언된 `description` — 선언적 flow와 DSL projection에서 사용.
 4. `@listen(label)` 핸들러 docstring의 첫 번째 비어 있지 않은 줄.
 5. 빈 문자열 — 설명 없이 라우트만 표시.
@@ -404,7 +412,7 @@ Routes:
 |--------|--------|------|
 | `converse` | `converse_turn` | 기본 챗 핸들러. system prompt + 정식 메시지 히스토리와 함께 `ConversationConfig.llm`을 호출합니다. |
 | `end` | `end_conversation` | `state.ended = True`로 설정하고 종료 응답을 보냅니다. |
-| `answer_from_history` | `answer_from_history_turn` | 선택적. 메시지가 두 개 이상 존재한 뒤 `ConversationConfig.answer_from_history_llm`이 현재 메시지를 기록만으로 답할 수 있다고 판단하면 이곳으로 라우팅됩니다. |
+| `answer_from_history` | `answer_from_history_turn` | **사용 중단된 호환 라우트.** 이미 정식 기록을 전달받는 `converse`를 사용하세요. |
 
 서브클래스에 같은 이름의 핸들러를 정의하면 어떤 것이든 오버라이드할 수 있습니다.
 
@@ -471,7 +479,7 @@ class SupportFlow(Flow[ConversationState]):
         return super().route_turn(context)
 ```
 
-LLM router를 완전히 우회하고 프로그램 방식으로 라우트를 선택하려면 `route_turn`에서 비어 있지 않은 문자열을 반환하세요. falsy 값을 반환해도 오버라이드에서 `_route_with_config()`가 호출되지는 않습니다. 대신 현재 턴의 사전 분류된 intent, 사용 가능한 경우 `answer_from_history`, 마지막으로 `converse` 순으로 fallback합니다. 이전 턴의 `last_intent`는 router 컨텍스트에서 사용할 수 있지만 fallback으로 다시 실행되지는 않습니다.
+LLM router를 완전히 우회하고 프로그램 방식으로 라우트를 선택하려면 `route_turn`에서 비어 있지 않은 문자열을 반환하세요. falsy 값을 반환해도 오버라이드에서 `_route_with_config()`가 호출되지는 않습니다. 대신 현재 턴의 사전 분류된 intent, 설정된 경우 사용 중단된 `answer_from_history` 호환 경로, 마지막으로 `converse` 순으로 fallback합니다. 이전 턴의 `last_intent`는 router 컨텍스트에서 사용할 수 있지만 fallback으로 다시 실행되지는 않습니다.
 
 ### `append_assistant_message`와 `append_agent_result`
 
@@ -515,11 +523,11 @@ methods:
 
 | 제공 항목 | 설명 |
 |----------|--------|
-| 내장 그래프 | `route_conversation`, `converse_turn`, `end_conversation`, `answer_from_history_turn`이 자동으로 추가됩니다. 같은 이름의 메서드를 선언하면 재정의됩니다. |
+| 내장 그래프 | `route_conversation`, `converse_turn`, `end_conversation`이 자동으로 추가됩니다. 사용 중단된 `answer_from_history_turn`은 호환성을 위해 유지됩니다. 같은 이름 중 하나로 메서드를 선언하면 재정의됩니다. |
 | 대화 상태 | `state` 블록이 없으면 `ConversationState`가 사용됩니다. Pydantic `ref` 또는 `json_schema` state는 대화형 필드와 자동으로 합성되며 `ConversationState`를 상속할 필요가 없습니다. |
 | 라우트 카탈로그 | 내부 라우트를 제외하고 `listen` 레이블이 있는 비-router 메서드에서 추론됩니다. 설명에는 위 우선순위가 적용되며 명시적인 `router.routes`로 선택지를 제한할 수 있습니다. |
 
-선언적 `llm`, `router.llm`, `intent_llm`, `answer_from_history_llm` 필드는 모델 id 또는 `{model: openai/gpt-4o-mini, max_tokens: 512}` 같은 설정 mapping을 받습니다. `conversational` 블록은 `default_intents`, `answer_from_history_prompt`, `visible_agent_outputs`, `defer_trace_finalization`과 위에 나온 `RouterConfig` 필드도 지원합니다.
+선언적 `llm`, `router.llm`, `intent_llm` 필드는 모델 id 또는 `{model: openai/gpt-4o-mini, max_tokens: 512}` 같은 설정 mapping을 받습니다. `conversational` 블록은 `default_intents`, `visible_agent_outputs`, `defer_trace_finalization`과 위에 나온 `RouterConfig` 필드도 지원합니다. 사용 중단된 `answer_from_history_prompt` / `answer_from_history_llm` 선언은 호환성을 위해 계속 허용됩니다.
 
 클래스 기반 대화형 플로우와 동일한 턴 API로 Python에서 실행합니다:
 
@@ -545,7 +553,7 @@ finally:
 | 살아 있는 `LLM` 인스턴스나 커스텀 `BaseLLM` | 모델 id 문자열 또는 정적 설정 mapping |
 | 모델 클래스로서의 `router.response_format` | 생략하세요; 프레임워크가 생성합니다. ref나 스키마는 경고와 함께 무시됩니다 |
 | `route_turn()` 재정의 | Flow를 Python으로 작성하거나 선언적 `route_conversation` 메서드를 `call: code` / expression action으로 교체 |
-| `can_answer_from_history()` 재정의 | Flow를 Python으로 작성하고 표준 기록 라우팅은 `conversational.answer_from_history_llm`으로 설정 |
+| `can_answer_from_history()` 재정의 | 사용 중단됨. `converse`를 사용하거나 Python에서 `converse_turn()`을 재정의하세요. |
 
 `crewai run`은 선언적 대화형 Flow에 대해 Python 대화형 Flow와 같은 채팅 TUI를 엽니다. 채팅 루프에는 터미널이 필요하므로 headless 실행은 단일 턴을 실행하는 대신 안내와 함께 0이 아닌 코드로 종료됩니다. 이런 환경에서는 Python의 `handle_turn()` 또는 `stream_turn()`으로 실행하세요. `human_feedback:` 블록이 있는 선언적 메서드(Python: `@human_feedback`)는 터미널 REPL에서 실행됩니다. 런타임이 TUI가 처리할 수 없는 블로킹 prompt로 feedback을 수집하기 때문입니다. 대화형 Flow에서는 `--inputs`를 받지 않습니다. 각 턴의 입력은 사용자가 입력하는 메시지이며 id로 세션을 재개하는 기능은 아직 CLI에 연결되지 않았습니다. 필요하면 Python에서 `flow.handle_turn(message, session_id=...)`을 사용하세요.
 
