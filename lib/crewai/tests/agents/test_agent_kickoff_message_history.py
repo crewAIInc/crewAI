@@ -112,10 +112,12 @@ def test_the_request_is_the_last_user_message_not_the_last_message() -> None:
     demoted the real question to history.
     """
     seen = _kickoff(TRAILING_THREAD)
+    request = seen[1]
 
-    assert "where is order 88213?" in str(seen[-1]["content"])
-    assert "internal note" not in str(seen[-1]["content"])
-    assert [m["content"] for m in seen[1:-1]] == [
+    assert "where is order 88213?" in str(request["content"])
+    assert "internal note" not in str(request["content"])
+    # The scratch turns follow the question, keeping the conversation's order.
+    assert [m["content"] for m in seen[2:]] == [
         "let me look that up",
         "internal note: checked the warehouse",
     ]
@@ -132,6 +134,39 @@ def test_a_conversation_with_no_user_message_still_has_a_request() -> None:
 
     assert "summarize the above" in str(seen[-1]["content"])
     assert [m["content"] for m in seen[1:-1]] == ["earlier note"]
+
+
+def test_a_conversation_ending_on_a_tool_result_keeps_its_order() -> None:
+    """The tool pair answers the question, so it must not precede it.
+
+    Splicing every non-request turn before the prompt hoisted a trailing
+    tool call and its result above the user message they belong to.
+    `LiteAgent` sends `user -> assistant -> tool`; so does this now.
+    """
+    conversation = [
+        {"role": "user", "content": "what is the weather in Lisbon?"},
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [{"id": "c1", "function": {"name": "get_weather"}}],
+        },
+        {"role": "tool", "tool_call_id": "c1", "content": "22C, clear"},
+    ]
+
+    seen = _kickoff(conversation)
+
+    assert [message["role"] for message in seen] == [
+        "system",
+        "user",
+        "assistant",
+        "tool",
+    ]
+    assert "what is the weather in Lisbon?" in str(seen[1]["content"])
+    assert seen[2]["tool_calls"][0]["id"] == "c1"
+    assert seen[3]["tool_call_id"] == "c1"
+
+    lite = _kickoff(conversation, LiteAgent)
+    assert [m["role"] for m in lite[: len(seen)]] == [m["role"] for m in seen]
 
 
 def test_a_plain_string_is_unchanged() -> None:
@@ -212,6 +247,30 @@ def test_history_survives_with_the_system_prompt_disabled() -> None:
     assert "where is it?" in str(seen[-1]["content"])
 
 
+def test_trailing_turns_survive_with_the_system_prompt_disabled() -> None:
+    """The combined-prompt branch needs the same after-request placement."""
+    llm = _Recorder()
+    Agent(
+        role="Support",
+        goal="help",
+        backstory="b",
+        llm=llm,
+        use_system_prompt=False,
+    ).kickoff(TRAILING_THREAD)
+    seen = llm.seen[0]
+
+    assert [message["role"] for message in seen] == [
+        "user",
+        "assistant",
+        "assistant",
+    ]
+    assert "where is order 88213?" in str(seen[0]["content"])
+    assert [m["content"] for m in seen[1:]] == [
+        "let me look that up",
+        "internal note: checked the warehouse",
+    ]
+
+
 @pytest.mark.parametrize("use_system_prompt", [True, False])
 def test_the_deprecated_executor_places_history_the_same_way(
     use_system_prompt: bool,
@@ -246,6 +305,7 @@ def test_the_deprecated_executor_places_history_the_same_way(
             "tool_names": "",
             "tools": "",
             "history": HISTORY[:2],
+            "trailing": [{"role": "assistant", "content": "checking now"}],
         }
     )
 
@@ -254,10 +314,12 @@ def test_the_deprecated_executor_places_history_the_same_way(
         "user",
         "assistant",
         "user",
+        "assistant",
     ]
-    assert executor.messages[-3]["content"] == "my order id is 42"
-    assert executor.messages[-2]["content"] == "thanks, checking"
-    assert "where is it?" in str(executor.messages[-1]["content"])
+    assert executor.messages[-4]["content"] == "my order id is 42"
+    assert executor.messages[-3]["content"] == "thanks, checking"
+    assert "where is it?" in str(executor.messages[-2]["content"])
+    assert executor.messages[-1]["content"] == "checking now"
 
 
 def test_prior_turn_attachments_are_not_resent_on_this_turn() -> None:

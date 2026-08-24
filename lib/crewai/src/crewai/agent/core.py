@@ -1557,6 +1557,7 @@ class Agent(BaseAgent):
 
         all_files: dict[str, Any] = {}
         history: list[LLMMessage] = []
+        trailing: list[LLMMessage] = []
         if isinstance(messages, str):
             formatted_messages = messages
             recall_text = messages
@@ -1572,7 +1573,13 @@ class Agent(BaseAgent):
             request_index = _request_index(carried)
             request = carried[request_index] if carried else None
             formatted_messages = str(request.get("content") or "") if request else ""
-            history = [msg for i, msg in enumerate(carried) if i != request_index]
+            # Split, rather than one history list: the promoted request keeps
+            # its position in the conversation. Sending everything before it
+            # would hoist a trailing tool pair above the question it answers,
+            # which is the wrong chronology even where a provider tolerates it.
+            if request is not None:
+                history = carried[:request_index]
+                trailing = carried[request_index + 1 :]
             recall_text = "\n".join(
                 str(msg.get("content", "")) for msg in carried if msg.get("content")
             )
@@ -1636,6 +1643,8 @@ class Agent(BaseAgent):
             inputs["files"] = all_files
         if history:
             inputs["history"] = history
+        if trailing:
+            inputs["trailing"] = trailing
 
         return executor, inputs, agent_info, parsed_tools
 
