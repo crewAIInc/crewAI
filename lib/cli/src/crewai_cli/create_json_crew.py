@@ -9,6 +9,7 @@ import sys
 from typing import Any
 
 import click
+from crewai_core.telemetry import Telemetry
 from rich.console import Console
 from rich.text import Text
 
@@ -975,7 +976,8 @@ def create_json_crew(
 
     # Minted at creation so the project has a stable identity from run one.
     # This is the default `crewai create crew` path, not just --classic.
-    get_or_create_project_id(folder_path / "pyproject.toml")
+    project_id = get_or_create_project_id(folder_path / "pyproject.toml")
+    Telemetry().project_created_span("json_crew", project_id)
     initialize_if_git_available(folder_path)
 
     click.echo()
