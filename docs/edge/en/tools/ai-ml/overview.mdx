@@ -50,16 +50,15 @@ These tools integrate with AI and machine learning services to enhance your agen
 - **AI Safety**: Implement content moderation and safety checks
 
 ```python
-from crewai_tools import DallETool, VisionTool, CodeInterpreterTool
+from crewai_tools import DallETool, VisionTool
 
 # Create AI tools
 image_generator = DallETool()
 vision_processor = VisionTool()
-code_executor = CodeInterpreterTool()
 
 # Add to your agent
 agent = Agent(
     role="AI Specialist",
-    tools=[image_generator, vision_processor, code_executor],
+    tools=[image_generator, vision_processor],
     goal="Create and analyze content using AI capabilities"
 )
