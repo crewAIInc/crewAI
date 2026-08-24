@@ -24,6 +24,9 @@ class _Recorder(BaseLLM):
         self.seen.append(list(messages) if isinstance(messages, list) else messages)
         return "ok"
 
+    async def acall(self, messages: Any, **kwargs: Any) -> str:
+        return self.call(messages, **kwargs)
+
     def supports_function_calling(self) -> bool:
         return False
 
@@ -48,6 +51,16 @@ TRAILING_THREAD = [
     {"role": "assistant", "content": "internal note: checked the warehouse"},
 ]
 
+
+TOOL_CONVERSATION = [
+    {"role": "user", "content": "what is the weather in Lisbon?"},
+    {
+        "role": "assistant",
+        "content": None,
+        "tool_calls": [{"id": "c1", "function": {"name": "get_weather"}}],
+    },
+    {"role": "tool", "tool_call_id": "c1", "content": "22C, clear"},
+]
 
 def _kickoff(payload: Any, agent_cls: type = Agent) -> list[dict[str, Any]]:
     llm = _Recorder()
@@ -143,17 +156,7 @@ def test_a_conversation_ending_on_a_tool_result_keeps_its_order() -> None:
     tool call and its result above the user message they belong to.
     `LiteAgent` sends `user -> assistant -> tool`; so does this now.
     """
-    conversation = [
-        {"role": "user", "content": "what is the weather in Lisbon?"},
-        {
-            "role": "assistant",
-            "content": None,
-            "tool_calls": [{"id": "c1", "function": {"name": "get_weather"}}],
-        },
-        {"role": "tool", "tool_call_id": "c1", "content": "22C, clear"},
-    ]
-
-    seen = _kickoff(conversation)
+    seen = _kickoff(TOOL_CONVERSATION)
 
     assert [message["role"] for message in seen] == [
         "system",
@@ -165,7 +168,7 @@ def test_a_conversation_ending_on_a_tool_result_keeps_its_order() -> None:
     assert seen[2]["tool_calls"][0]["id"] == "c1"
     assert seen[3]["tool_call_id"] == "c1"
 
-    lite = _kickoff(conversation, LiteAgent)
+    lite = _kickoff(TOOL_CONVERSATION, LiteAgent)
     assert [m["role"] for m in lite[: len(seen)]] == [m["role"] for m in seen]
 
 
@@ -352,3 +355,27 @@ def test_an_attachment_only_final_message_is_the_request() -> None:
     assert [message["content"] for message in inputs["history"]] == [
         "here is the earlier note"
     ]
+
+
+@pytest.mark.asyncio
+async def test_kickoff_async_orders_the_conversation_the_same_way() -> None:
+    """`kickoff_async` shares `_prepare_kickoff` and `_setup_messages`.
+
+    Sharing is not the same as being covered: the async executor entry
+    points reach `_setup_messages` separately, so the ordering is asserted
+    through the async path too.
+    """
+    llm = _Recorder()
+    await Agent(role="Support", goal="help", backstory="b", llm=llm).kickoff_async(
+        TOOL_CONVERSATION
+    )
+    seen = llm.seen[0]
+
+    assert [message["role"] for message in seen] == [
+        "system",
+        "user",
+        "assistant",
+        "tool",
+    ]
+    assert "what is the weather in Lisbon?" in str(seen[1]["content"])
+    assert seen[3]["tool_call_id"] == "c1"
