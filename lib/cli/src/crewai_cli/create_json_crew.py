@@ -52,6 +52,7 @@ _PROVIDERS: list[tuple[str, str]] = [
 # official model docs on 2026-07-05.
 _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
     "openai": [
+        ("gpt-5.6-luna", "GPT-5.6 Luna"),
         ("gpt-5.5", "GPT-5.5"),
         ("gpt-5.5-pro", "GPT-5.5 Pro"),
         ("gpt-5.4", "GPT-5.4"),

@@ -37,7 +37,7 @@ CrewAI 코드 내에는 사용할 모델을 지정할 수 있는 여러 위치�
     가장 간단하게 시작할 수 있는 방법입니다. `.env` 파일이나 앱 코드에서 환경 변수로 직접 모델을 설정할 수 있습니다. `crewai create`를 사용해 프로젝트를 부트스트랩했다면 이미 설정되어 있을 수 있습니다.
 
     ```bash .env
-    MODEL=provider/model-id  # e.g. openai/gpt-5.6-terra
+    MODEL=provider/model-id  # e.g. openai/gpt-5.6-luna
 
     # 반드시 여기에서 API 키도 설정하세요. 아래 제공자
     # 섹션을 참고하세요.
@@ -133,7 +133,7 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     from crewai import LLM
 
     llm = LLM(
-        model="openai/gpt-5.6-terra",
+        model="openai/gpt-5.6-luna",
         reasoning_effort="medium",
         max_completion_tokens=4000
     )
@@ -770,7 +770,7 @@ CrewAI는 LLM의 스트리밍 응답을 지원하여, 애플리케이션이 출�
 
     # 스트리밍이 활성화된 LLM 생성
     llm = LLM(
-        model="openai/gpt-5.6-terra",
+        model="openai/gpt-5.6-luna",
         stream=True  # 스트리밍 활성화
     )
     ```
@@ -820,7 +820,7 @@ CrewAI는 LLM의 스트리밍 응답을 지원하여, 애플리케이션이 출�
 
     my_listener = MyCustomListener()
 
-    llm = LLM(model="openai/gpt-5.6-terra", stream=True)
+    llm = LLM(model="openai/gpt-5.6-luna", stream=True)
 
     researcher = Agent(
         role="About User",
@@ -869,7 +869,7 @@ class Dog(BaseModel):
     breed: str
 
 
-llm = LLM(model="openai/gpt-5.6-terra", response_format=Dog)
+llm = LLM(model="openai/gpt-5.6-luna", response_format=Dog)
 
 response = llm.call(
     "Analyze the following messages and return the name, age, and breed. "
@@ -898,7 +898,7 @@ LLM 설정을 최대한 활용하는 방법을 알아보세요:
     # 3. 큰 컨텍스트에 대한 작업 분할
 
     llm = LLM(
-        model="openai/gpt-5.6-terra",
+        model="openai/gpt-5.6-luna",
         max_completion_tokens=4000,  # 응답 길이 제한
     )
     ```
@@ -923,7 +923,7 @@ LLM 설정을 최대한 활용하는 방법을 알아보세요:
         ```python
         # 모델을 적절한 설정으로 구성
         llm = LLM(
-            model="openai/gpt-5.6-terra",
+            model="openai/gpt-5.6-luna",
             reasoning_effort="medium",
             max_completion_tokens=4096,
             timeout=300

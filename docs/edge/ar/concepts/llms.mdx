@@ -38,7 +38,7 @@ mode: "wide"
     أبسط طريقة للبدء. عيّن النموذج في بيئتك مباشرة، من خلال ملف `.env` أو في كود تطبيقك. إذا استخدمت `crewai create` لبدء مشروعك، سيكون مُعيّنًا بالفعل.
 
     ```bash .env
-    MODEL=provider/model-id  # e.g. openai/gpt-5.6-terra
+    MODEL=provider/model-id  # e.g. openai/gpt-5.6-luna
 
     # Be sure to set your API keys here too. See the Provider
     # section below.
@@ -133,7 +133,7 @@ mode: "wide"
     from crewai import LLM
 
     llm = LLM(
-        model="openai/gpt-5.6-terra",
+        model="openai/gpt-5.6-luna",
         api_key="your-api-key",  # Or set OPENAI_API_KEY
         reasoning_effort="medium",
         max_completion_tokens=4000
@@ -145,7 +145,7 @@ mode: "wide"
     from crewai import LLM
 
     llm = LLM(
-        model="openai/gpt-5.6-terra",
+        model="openai/gpt-5.6-luna",
         api_key="your-api-key",
         base_url="https://api.openai.com/v1",  # Optional custom endpoint
         organization="org-...",  # Optional organization ID
@@ -169,7 +169,7 @@ mode: "wide"
         summary: str
 
     llm = LLM(
-        model="openai/gpt-5.6-terra",
+        model="openai/gpt-5.6-luna",
     )
     ```
 
@@ -1027,7 +1027,7 @@ mode: "wide"
 
     # Create an LLM with streaming enabled
     llm = LLM(
-        model="openai/gpt-5.6-terra",
+        model="openai/gpt-5.6-luna",
         stream=True  # Enable streaming
     )
     ```
@@ -1077,7 +1077,7 @@ mode: "wide"
 
     my_listener = MyCustomListener()
 
-    llm = LLM(model="openai/gpt-5.6-terra", stream=True)
+    llm = LLM(model="openai/gpt-5.6-luna", stream=True)
 
     researcher = Agent(
         role="About User",
@@ -1168,7 +1168,7 @@ class Dog(BaseModel):
     breed: str
 
 
-llm = LLM(model="openai/gpt-5.6-terra", response_format=Dog)
+llm = LLM(model="openai/gpt-5.6-luna", response_format=Dog)
 
 response = llm.call(
     "Analyze the following messages and return the name, age, and breed. "
@@ -1197,7 +1197,7 @@ print(response)
     # 3. Task splitting for large contexts
 
     llm = LLM(
-        model="openai/gpt-5.6-terra",
+        model="openai/gpt-5.6-luna",
         max_completion_tokens=4000,  # Limit response length
     )
     ```
@@ -1222,7 +1222,7 @@ print(response)
         ```python
         # Configure model with appropriate settings
         llm = LLM(
-            model="openai/gpt-5.6-terra",
+            model="openai/gpt-5.6-luna",
             reasoning_effort="medium",
             max_completion_tokens=4096,
             timeout=300

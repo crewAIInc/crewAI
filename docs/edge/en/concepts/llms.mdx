@@ -41,7 +41,7 @@ There are different places in CrewAI code where you can specify the model to use
     The simplest way to get started. Set the model in your environment directly, through an `.env` file or in your app code. If you used `crewai create` to bootstrap your project, it will be set already.
 
     ```bash .env
-    MODEL=provider/model-id  # e.g. openai/gpt-5.6-terra
+    MODEL=provider/model-id  # e.g. openai/gpt-5.6-luna
 
     # Be sure to set your API keys here too. See the Provider
     # section below.
@@ -142,7 +142,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="openai/gpt-5.6-terra",
+        model="openai/gpt-5.6-luna",
         api_key="your-api-key",  # Or set OPENAI_API_KEY
         reasoning_effort="medium",
         max_completion_tokens=4000
@@ -166,7 +166,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="openai/gpt-5.6-terra",
+        model="openai/gpt-5.6-luna",
         api_key="your-api-key",
         base_url="https://api.openai.com/v1",  # Optional custom endpoint
         organization="org-...",  # Optional organization ID
@@ -190,7 +190,7 @@ In this section, you'll find detailed examples that help you select, configure, 
         summary: str
 
     llm = LLM(
-        model="openai/gpt-5.6-terra",
+        model="openai/gpt-5.6-luna",
     )
     ```
 
@@ -1170,7 +1170,7 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
 
     # Create an LLM with streaming enabled
     llm = LLM(
-        model="openai/gpt-5.6-terra",
+        model="openai/gpt-5.6-luna",
         stream=True  # Enable streaming
     )
     ```
@@ -1220,7 +1220,7 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
 
     my_listener = MyCustomListener()
 
-    llm = LLM(model="openai/gpt-5.6-terra", stream=True)
+    llm = LLM(model="openai/gpt-5.6-luna", stream=True)
 
     researcher = Agent(
         role="About User",
@@ -1313,7 +1313,7 @@ class Dog(BaseModel):
     breed: str
 
 
-llm = LLM(model="openai/gpt-5.6-terra", response_format=Dog)
+llm = LLM(model="openai/gpt-5.6-luna", response_format=Dog)
 
 response = llm.call(
     "Analyze the following messages and return the name, age, and breed. "
@@ -1342,7 +1342,7 @@ Learn how to get the most out of your LLM configuration:
     # 3. Task splitting for large contexts
 
     llm = LLM(
-        model="openai/gpt-5.6-terra",
+        model="openai/gpt-5.6-luna",
         max_completion_tokens=4000,  # Limit response length
     )
     ```
@@ -1367,7 +1367,7 @@ Learn how to get the most out of your LLM configuration:
         ```python
         # Configure model with appropriate settings
         llm = LLM(
-            model="openai/gpt-5.6-terra",
+            model="openai/gpt-5.6-luna",
             reasoning_effort="medium",
             max_completion_tokens=4096,
             timeout=300
