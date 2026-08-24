@@ -23,6 +23,7 @@ from contextlib import contextmanager
 from enum import Enum
 import json
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, create_model
@@ -86,13 +87,16 @@ def _iter_condition_labels(condition: Any) -> set[str]:
 
 def _resolve_router_response_format(
     declared: PythonReferenceDefinition | None,
+    project_root: Path | None,
 ) -> type[BaseModel] | None:
     """Import the model class a declaration names for the routing decision.
 
     ``_router_response_format`` hands its result straight to
     ``llm.call(response_format=...)``, which needs a real class. Resolved the
     same way a crew agent's ``response_format`` is, so the declaration shape
-    and its failure messages match.
+    and its failure messages match -- including resolving the ref against the
+    declaration's own directory, so a flow loaded by path finds the model
+    sitting next to it rather than under whatever the cwd happens to be.
     """
     if declared is None:
         return None
@@ -102,15 +106,18 @@ def _resolve_router_response_format(
     return _resolve_model_class(
         declared.model_dump(),
         "conversational.router.response_format",
-        None,
+        project_root,
     )
 
 
 def _router_config_from_definition(
     definition: FlowConversationalRouterDefinition,
+    project_root: Path | None,
 ) -> RouterConfig:
     """Build a live ``RouterConfig`` from its serializable form."""
-    response_format = _resolve_router_response_format(definition.response_format)
+    response_format = _resolve_router_response_format(
+        definition.response_format, project_root
+    )
 
     return RouterConfig(
         prompt=definition.prompt,
@@ -126,17 +133,19 @@ def _router_config_from_definition(
 
 def _config_from_definition(
     definition: FlowConversationalDefinition,
+    project_root: Path | None,
 ) -> ConversationConfig:
     """Build a live ``ConversationConfig`` from its serializable form.
 
     Used for flows built from a declaration, which have no class-level
-    ``conversational_config`` to read.
+    ``conversational_config`` to read. ``project_root`` is the declaration
+    file's directory, used to resolve the Python refs it names.
     """
     return ConversationConfig(
         system_prompt=definition.system_prompt,
         llm=definition.llm,
         router=(
-            _router_config_from_definition(definition.router)
+            _router_config_from_definition(definition.router, project_root)
             if definition.router is not None
             else None
         ),
@@ -950,11 +959,12 @@ class _ConversationalMixin:
         if resolved is not None:
             return resolved
 
-        definition = self._conversation_definition
+        flow_definition = self._conversation_flow_definition()
+        definition = flow_definition.conversational
         if definition is None or not definition.enabled:
             return None
 
-        resolved = _config_from_definition(definition)
+        resolved = _config_from_definition(definition, flow_definition.source_dir)
         object.__setattr__(self, "_resolved_conversation_config", resolved)
         return resolved
 

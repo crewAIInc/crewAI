@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import logging
+import sys
 from typing import Any, ClassVar, Literal
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
 from pathlib import Path
+import yaml
 
 from pydantic import BaseModel, ValidationError, create_model
 
@@ -2462,6 +2464,42 @@ class TestDeclaredRouterResponseFormat:
         assert resolved.__name__ == "ConversationRoute"
         assert "intent" in resolved.model_fields
         assert flow._router_response_format(flow._conversation_config.router) is resolved
+
+    def test_a_ref_resolves_next_to_the_declaration_not_the_cwd(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A flow loaded by path finds the model sitting beside its YAML.
+
+        Resolution used to fall back to ``Path.cwd()``, so the same project
+        loaded from another directory could not import its own route model.
+        """
+        project = tmp_path / "project"
+        project.mkdir()
+        (project / "chat_routes.py").write_text(self.ROUTE_MODULE, encoding="utf-8")
+        declaration = project / "chat.yaml"
+        declaration.write_text(
+            yaml.safe_dump(
+                self._declaration(
+                    {"response_format": {"python": "chat_routes.ConversationRoute"}}
+                )
+            ),
+            encoding="utf-8",
+        )
+
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir()
+        monkeypatch.chdir(elsewhere)
+        monkeypatch.delitem(sys.modules, "chat_routes", raising=False)
+
+        try:
+            flow = Flow.from_declaration(path=declaration)
+            resolved = flow._conversation_config.router.response_format
+        finally:
+            sys.modules.pop("chat_routes", None)
+
+        assert resolved is not None
+        assert resolved.__name__ == "ConversationRoute"
+        assert "intent" in resolved.model_fields
 
     def test_omitting_it_still_synthesizes_one(self) -> None:
         flow = Flow.from_declaration(contents=self._declaration({}))
