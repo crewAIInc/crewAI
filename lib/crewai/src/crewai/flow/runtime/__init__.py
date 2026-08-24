@@ -185,6 +185,7 @@ def _condition_satisfied(condition: FlowDefinitionCondition, events: set[str]) -
 
 def _build_definition_state_model(
     state_definition: FlowStateDefinition,
+    compose: Callable[[type[BaseModel]], type[BaseModel]] | None = None,
 ) -> BaseModel | None:
     kwargs = dict(state_definition.default or {})
 
@@ -215,6 +216,9 @@ def _build_definition_state_model(
 
     if model_class is None:
         return None
+
+    if compose is not None:
+        model_class = compose(model_class)
 
     if not issubclass(model_class, FlowState):
 
@@ -450,9 +454,35 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     def _initialize_runtime_extension_attrs(self) -> None:
         """Initialize optional runtime-extension attributes."""
 
-    def _create_default_extension_state(self) -> Any | None:
-        """Return a default state supplied by an optional runtime extension."""
+    def _extend_definition(self, definition: FlowDefinition) -> FlowDefinition:
+        """Let an optional runtime extension complete the definition.
+
+        Runs once ``_definition`` is resolved and before methods are bound, so
+        an extension can contribute the methods it owns.
+        """
+        return definition
+
+    def _create_default_extension_state(
+        self, *, ignore_declared_state: bool = False
+    ) -> Any | None:
+        """Return a default state supplied by an optional runtime extension.
+
+        ``ignore_declared_state`` is set when a declared ``state:`` block named
+        a model that could not be built, so the extension is asked again as if
+        nothing had been declared.
+        """
         return None
+
+    def _compose_extension_state_model(
+        self, model_class: type[BaseModel]
+    ) -> type[BaseModel]:
+        """Let an optional runtime extension add bases to a declared state model.
+
+        Applied to the model built from ``state:`` before the engine wraps it
+        for its ``id`` field, so an extension can require its own fields
+        alongside whatever the declaration asked for.
+        """
+        return model_class
 
     def _should_apply_pending_kickoff_context(self) -> bool:
         """Whether an optional runtime extension has pending kickoff context."""
@@ -784,6 +814,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self._definition = definition or type(self).flow_definition()
         if self.name and self.name != self._definition.name:
             self._definition = self._definition.model_copy(update={"name": self.name})
+        self._definition = self._extend_definition(self._definition)
         methods = (
             self._action_bound_methods()
             if definition is not None
@@ -1365,7 +1396,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         except Exception as e:
             if not hook_state["end_dispatched"]:
                 self._dispatch_execution_end_failure(e)
-            await self._emit_flow_failed(e, respect_suppression=True)
+            await self._emit_flow_failed(e)
             raise
         finally:
             # Match kickoff_async: drain pending handlers so the resumed
@@ -1384,20 +1415,30 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             reset_emission_counter()
             reset_last_event_id()
 
-        if not self.suppress_flow_events:
-            future = crewai_event_bus.emit(
-                self,
-                FlowStartedEvent(
-                    type="flow_started",
-                    flow_name=self._definition.name,
-                    inputs=None,
-                ),
-            )
-            if future and isinstance(future, Future):
-                try:
-                    await asyncio.wrap_future(future)
-                except Exception:
-                    logger.warning("FlowStartedEvent handler failed", exc_info=True)
+        # Emitted unconditionally, matching both the kickoff path and the
+        # FlowFinishedEvent below. This used to sit behind suppress_flow_events,
+        # which produced an unpaired finish: the finish emit is not gated, so a
+        # resumed flow reported finishing without ever having started, breaking
+        # every started/finished pairing and duration built on it.
+        #
+        # suppress_flow_events is not the right gate for emission in any case. It
+        # asks for console quiet - see _flow_origin in events/event_listener.py,
+        # which says so and notes it "can legitimately be set on a caller's own
+        # flow" - and the listener already honours it where it prints. Suppressing
+        # the event instead removed the resumed leg from telemetry entirely.
+        future = crewai_event_bus.emit(
+            self,
+            FlowStartedEvent(
+                type="flow_started",
+                flow_name=self._definition.name,
+                inputs=None,
+            ),
+        )
+        if future and isinstance(future, Future):
+            try:
+                await asyncio.wrap_future(future)
+            except Exception:
+                logger.warning("FlowStartedEvent handler failed", exc_info=True)
 
         get_env_context()
 
@@ -1572,10 +1613,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
             self._event_futures.clear()
 
-        if (
-            not self.suppress_flow_events
-            and not self._should_defer_trace_finalization()
-        ):
+        # Not gated on suppress_flow_events: that asks for console quiet, and the
+        # started event above is ungated, so gating here would emit a start with no
+        # terminal event. The defer check stays - it is a real reason to withhold the
+        # finish, because finalize_session_traces() emits it later instead.
+        if not self._should_defer_trace_finalization():
             # Background memory saves must finish (and emit their
             # completed/failed events) before flow-finished triggers
             # listener teardown/finalization; the flush then waits for those
@@ -1701,7 +1743,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if state_definition is None:
             return {"id": str(uuid4())}
         if state_definition.type in ("pydantic", "json_schema"):
-            state = _build_definition_state_model(state_definition)
+            state = _build_definition_state_model(
+                state_definition, compose=self._compose_extension_state_model
+            )
             if state is not None:
                 return state
             logger.error(
@@ -1710,6 +1754,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 self._definition.name,
                 state_definition.type,
             )
+            extension_state: dict[str, Any] | BaseModel | None = (
+                self._create_default_extension_state(ignore_declared_state=True)
+            )
+            if extension_state is not None:
+                return extension_state
         elif state_definition.type == "unknown":
             logger.warning(
                 "Flow %r declares state of unknown type; falling back to dict state",
@@ -2580,9 +2629,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         get_env_context()
         return flow_scope_open
 
-    async def _emit_flow_failed(
-        self, error: Exception, *, respect_suppression: bool = False
-    ) -> None:
+    async def _emit_flow_failed(self, error: BaseException) -> None:
         """Emit ``FlowFailedEvent`` and close out the trace batch for a failed run.
 
         Mirrors the terminal block of the success path: drain pending event
@@ -2592,14 +2639,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         Args:
             error: The exception that ended the execution.
-            respect_suppression: Skip the emission for suppressed flows. Only
-                the resume path gates its lifecycle events on
-                ``suppress_flow_events``; ``kickoff_async`` emits them either
-                way and lets listeners filter.
         """
         if self._should_defer_trace_finalization():
-            return
-        if respect_suppression and self.suppress_flow_events:
             return
 
         try:

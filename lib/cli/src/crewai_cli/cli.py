@@ -17,6 +17,7 @@ from crewai_cli.user_data import (
 from crewai_cli.utils import (
     build_env_with_all_tool_credentials,
     enable_prompt_line_editing,
+    get_or_create_project_id,
     is_dmn_mode_enabled,
     read_toml,
     warn_deprecated,
@@ -331,6 +332,11 @@ def train(
     filename: str,
 ) -> None:
     """Train the crew."""
+    # Backfills a project_id for projects that have [tool.crewai] but no id yet.
+    # Safe in every command the user explicitly invoked: get_or_create_project_id
+    # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
+    # never rewrites an unrelated directory. Never called from the SDK during kickoff.
+    get_or_create_project_id()
     if deprecated_n_iterations is not None:
         warn_deprecated(kind="flag", old="--n_iterations", new="--n-iterations")
         n_iterations = deprecated_n_iterations
@@ -378,6 +384,11 @@ def replay(
         task_id: The ID of the task to replay from.
         trained_agents_file: Optional trained-agents pickle path.
     """
+    # Backfills a project_id for projects that have [tool.crewai] but no id yet.
+    # Safe in every command the user explicitly invoked: get_or_create_project_id
+    # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
+    # never rewrites an unrelated directory. Never called from the SDK during kickoff.
+    get_or_create_project_id()
     if deprecated_task_id is not None:
         warn_deprecated(kind="flag", old="--task_id", new="--task-id")
         task_id = deprecated_task_id
@@ -593,6 +604,11 @@ def test(
     trained_agents_file: str | None,
 ) -> None:
     """Test the crew and evaluate the results."""
+    # Backfills a project_id for projects that have [tool.crewai] but no id yet.
+    # Safe in every command the user explicitly invoked: get_or_create_project_id
+    # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
+    # never rewrites an unrelated directory. Never called from the SDK during kickoff.
+    get_or_create_project_id()
     if deprecated_n_iterations is not None:
         warn_deprecated(kind="flag", old="--n_iterations", new="--n-iterations")
         n_iterations = deprecated_n_iterations
@@ -669,6 +685,11 @@ def update() -> None:
 @crewai.command()
 def login() -> None:
     """Sign Up/Login to CrewAI AMP."""
+    # Backfills a project_id for projects that have [tool.crewai] but no id yet.
+    # Safe in every command the user explicitly invoked: get_or_create_project_id
+    # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
+    # never rewrites an unrelated directory. Never called from the SDK during kickoff.
+    get_or_create_project_id()
     Settings().clear_user_settings()
     AuthenticationCommand().login()
 
@@ -703,6 +724,11 @@ def deploy() -> None:
 )
 def deploy_create(yes: bool, skip_validate: bool) -> None:
     """Create a Crew deployment."""
+    # Backfills a project_id for projects that have [tool.crewai] but no id yet.
+    # Safe in every command the user explicitly invoked: get_or_create_project_id
+    # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
+    # never rewrites an unrelated directory. Never called from the SDK during kickoff.
+    get_or_create_project_id()
     deploy_cmd = DeployCommand()
     deploy_cmd.create_crew(yes, skip_validate=skip_validate)
 
@@ -723,6 +749,11 @@ def deploy_list() -> None:
 )
 def deploy_push(uuid: str | None, skip_validate: bool) -> None:
     """Deploy the Crew."""
+    # Backfills a project_id for projects that have [tool.crewai] but no id yet.
+    # Safe in every command the user explicitly invoked: get_or_create_project_id
+    # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
+    # never rewrites an unrelated directory. Never called from the SDK during kickoff.
+    get_or_create_project_id()
     deploy_cmd = DeployCommand()
     deploy_cmd.deploy(uuid=uuid, skip_validate=skip_validate)
 
@@ -927,6 +958,11 @@ def flow_plot() -> None:
 @click.argument("crew_name")
 def flow_add_crew(crew_name: str) -> None:
     """Add a crew to an existing flow."""
+    # Backfills a project_id for projects that have [tool.crewai] but no id yet.
+    # Safe in every command the user explicitly invoked: get_or_create_project_id
+    # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
+    # never rewrites an unrelated directory. Never called from the SDK during kickoff.
+    get_or_create_project_id()
     from crewai_cli.add_crew_to_flow import add_crew_to_flow
 
     click.echo(f"Adding crew {crew_name} to the flow")
@@ -1006,6 +1042,11 @@ def enterprise() -> None:
 @click.argument("enterprise_url")
 def enterprise_configure(enterprise_url: str) -> None:
     """Configure CrewAI AMP OAuth2 settings from the provided Enterprise URL."""
+    # Backfills a project_id for projects that have [tool.crewai] but no id yet.
+    # Safe in every command the user explicitly invoked: get_or_create_project_id
+    # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
+    # never rewrites an unrelated directory. Never called from the SDK during kickoff.
+    get_or_create_project_id()
     from crewai_cli.enterprise.main import EnterpriseConfigureCommand
 
     enterprise_command = EnterpriseConfigureCommand()
@@ -1130,6 +1171,11 @@ def traces() -> None:
 @traces.command("enable")
 def traces_enable() -> None:
     """Enable trace collection for crew/flow executions."""
+    # Backfills a project_id for projects that have [tool.crewai] but no id yet.
+    # Safe in every command the user explicitly invoked: get_or_create_project_id
+    # is a no-op without a pyproject.toml and refuses to create [tool.crewai], so it
+    # never rewrites an unrelated directory. Never called from the SDK during kickoff.
+    get_or_create_project_id()
     from rich.console import Console
     from rich.panel import Panel
 

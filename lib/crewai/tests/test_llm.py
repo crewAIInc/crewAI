@@ -11,7 +11,7 @@ from crewai.events.event_types import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, DEFAULT_CONTEXT_WINDOW_SIZE, LLM
 from crewai.llms.providers.anthropic.completion import AnthropicCompletion
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from pydantic import BaseModel
@@ -341,6 +341,49 @@ def test_context_window_validation():
             llm = LLM(model="test-model")
             llm.get_context_window_size()
     assert "must be between 1024 and 2097152" in str(excinfo.value)
+
+
+@pytest.mark.parametrize(
+    "model",
+    ["gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
+)
+def test_gpt56_family_uses_official_context_window(model: str) -> None:
+    """GPT-5.6 Sol, Terra, Luna, and the alias share a 1.05M window."""
+    llm = LLM(model=model, is_litellm=True)
+    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_gpt56_does_not_override_gpt54_mini_window() -> None:
+    """A more specific older prefix must keep its own window."""
+    llm = LLM(model="gpt-5.4-mini", is_litellm=True)
+    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        "openai/gpt-5.6",
+        "openai/gpt-5.6-sol",
+        "openai/gpt-5.6-terra",
+        "openai/gpt-5.6-luna",
+    ],
+)
+def test_gpt56_family_context_window_with_provider_prefix(model: str) -> None:
+    """LiteLLM keeps the provider prefix on self.model; lookup must still hit gpt-5.6."""
+    llm = LLM(model=model, is_litellm=True)
+    assert llm.model == model
+    assert llm._context_window_model_name() == model.partition("/")[2]
+    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_unrecognized_provider_prefix_is_not_stripped() -> None:
+    """Unknown prefixes stay on the lookup name and do not inherit the gpt-5.6 window."""
+    llm = LLM(model="acme/gpt-5.6-luna", is_litellm=True)
+    assert llm.model == "acme/gpt-5.6-luna"
+    assert llm._context_window_model_name() == "acme/gpt-5.6-luna"
+    assert llm.get_context_window_size() == int(
+        DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
+    )
 
 
 @pytest.fixture
