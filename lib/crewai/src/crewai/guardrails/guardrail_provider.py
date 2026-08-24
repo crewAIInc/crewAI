@@ -273,6 +273,20 @@ class CKGGuardrailProvider(GuardrailProvider):
     Constraints are AND-combined. Extensible via add_constraint().
     """
 
+    # Predicates accepted by :meth:`add_constraint`.  Any other name is
+    # rejected up-front so that a typo cannot turn a deny rule into a
+    # silent allow (fail-closed security semantics).
+    SUPPORTED_PREDICATES = frozenset(
+        {
+            "tool_name_in",
+            "tool_name_not_in",
+            "agent_role_in",
+            "param_matches",
+            "has_param",
+            "no_param",
+        }
+    )
+
     def __init__(self):
         self._constraints: List[Dict[str, Any]] = []
 
@@ -287,7 +301,15 @@ class CKGGuardrailProvider(GuardrailProvider):
         - param_matches(name: str, value: Any)
         - has_param(name: str)
         - no_param(name: str)
+
+        Raises ``ValueError`` for unknown predicates so that a misspelled
+        rule cannot be silently skipped.
         """
+        if predicate not in self.SUPPORTED_PREDICATES:
+            raise ValueError(
+                f"Unsupported guardrail predicate: {predicate!r}. "
+                f"Supported: {sorted(self.SUPPORTED_PREDICATES)}"
+            )
         self._constraints.append({"predicate": predicate, **kwargs})
         return self
 
@@ -338,6 +360,14 @@ class CKGGuardrailProvider(GuardrailProvider):
                     satisfied = False
                     failed_predicate = pred
 
+            else:
+                # Defensive: unknown predicate names are rejected at
+                # add_constraint time, but if a constraint somehow reaches
+                # evaluation through another path, fail closed rather than
+                # silently allowing the call.
+                satisfied = False
+                failed_predicate = pred
+
         if not satisfied:
             claims["failed_predicate"] = failed_predicate
 
@@ -364,19 +394,41 @@ class AuditTrail:
 
     def __init__(self):
         self._decisions: Dict[str, GuardrailDecisionV1] = {}
-        self._envelopes: Dict[str, ActionEnvelopeV1] = {}
+        # Each decision may have zero or more execution envelopes —
+        # two identical tool calls produce the same content-addressed
+        # decision_id but are distinct execution events that must both
+        # be preserved in the audit trail.
+        self._envelopes: Dict[str, List[ActionEnvelopeV1]] = {}
 
     def record_decision(self, decision: GuardrailDecisionV1) -> None:
         self._decisions[decision.decision_id] = decision
 
     def record_envelope(self, envelope: ActionEnvelopeV1) -> None:
-        self._envelopes[envelope.decision_id] = envelope
+        self._envelopes.setdefault(envelope.decision_id, []).append(envelope)
 
     def get_decision(self, decision_id: str) -> Optional[GuardrailDecisionV1]:
         return self._decisions.get(decision_id)
 
-    def get_envelope(self, decision_id: str) -> Optional[ActionEnvelopeV1]:
-        return self._envelopes.get(decision_id)
+    def get_envelope(
+        self, decision_id: str, index: int = -1
+    ) -> Optional[ActionEnvelopeV1]:
+        """Return the *index*-th envelope for *decision_id*.
+
+        The default ``index=-1`` returns the most recent envelope, which
+        matches the previous single-envelope behaviour for callers that
+        only expect one.
+        """
+        envelopes = self._envelopes.get(decision_id)
+        if not envelopes:
+            return None
+        try:
+            return envelopes[index]
+        except IndexError:
+            return None
+
+    def get_envelopes(self, decision_id: str) -> List[ActionEnvelopeV1]:
+        """Return all execution envelopes for *decision_id*."""
+        return list(self._envelopes.get(decision_id, []))
 
     def clear(self) -> None:
         self._decisions.clear()
@@ -388,7 +440,8 @@ class AuditTrail:
 
     @property
     def envelope_count(self) -> int:
-        return len(self._envelopes)
+        """Total number of recorded execution envelopes across all decisions."""
+        return sum(len(v) for v in self._envelopes.values())
 
 
 # ---------------------------------------------------------------------------
