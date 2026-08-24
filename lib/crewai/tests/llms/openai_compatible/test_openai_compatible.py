@@ -57,6 +57,14 @@ class TestProviderRegistry:
         assert config.api_key_env == "DEEPSEEK_API_KEY"
         assert config.api_key_required is True
 
+    def test_atlascloud_config(self):
+        """Test Atlas Cloud provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["atlascloud"]
+        assert config.base_url == "https://api.atlascloud.ai/v1"
+        assert config.api_key_env == "ATLASCLOUD_API_KEY"
+        assert config.base_url_env == "ATLASCLOUD_BASE_URL"
+        assert config.api_key_required is True
+
     def test_ollama_config(self):
         """Test Ollama provider configuration."""
         config = OPENAI_COMPATIBLE_PROVIDERS["ollama"]
@@ -142,6 +150,21 @@ class TestOpenAICompatibleCompletion:
                 model="deepseek-chat", provider="deepseek"
             )
             assert completion.api_key == "test-key-from-env"
+
+    def test_atlascloud_api_key_and_base_url_from_env(self):
+        """Test Atlas Cloud credentials and endpoint are read from the environment."""
+        with patch.dict(
+            os.environ,
+            {
+                "ATLASCLOUD_API_KEY": "atlas-test-key",
+                "ATLASCLOUD_BASE_URL": "https://atlas.example/v1",
+            },
+        ):
+            completion = OpenAICompatibleCompletion(
+                model="deepseek-ai/deepseek-v4-pro", provider="atlascloud"
+            )
+            assert completion.api_key == "atlas-test-key"
+            assert completion.base_url == "https://atlas.example/v1"
 
     def test_explicit_api_key_overrides_env(self):
         """Test explicit API key overrides environment variable."""
@@ -234,6 +257,14 @@ class TestLLMIntegration:
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "deepseek"
             assert llm.model == "deepseek-chat"
+
+    def test_llm_creates_openai_compatible_for_atlascloud(self):
+        """Test LLM factory preserves Atlas Cloud model paths."""
+        with patch.dict(os.environ, {"ATLASCLOUD_API_KEY": "test-key"}):
+            llm = LLM(model="atlascloud/deepseek-ai/deepseek-v4-pro")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "atlascloud"
+            assert llm.model == "deepseek-ai/deepseek-v4-pro"
 
     def test_llm_creates_openai_compatible_for_ollama(self):
         """Test LLM factory creates OpenAICompatibleCompletion for Ollama."""
