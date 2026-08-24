@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+import hmac
 import logging
 import os
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Literal
@@ -174,7 +175,7 @@ class SimpleTokenAuth(ServerAuthScheme):
                 detail="Authentication not configured",
             )
 
-        if token != expected:
+        if not hmac.compare_digest(token, expected):
             raise HTTPException(
                 status_code=HTTP_401_UNAUTHORIZED,
                 detail="Invalid or missing authentication credentials",
@@ -713,7 +714,7 @@ class APIKeyServerAuth(ServerAuthScheme):
         Raises:
             HTTPException: If authentication fails.
         """
-        if token != self.api_key.get_secret_value():
+        if not hmac.compare_digest(token, self.api_key.get_secret_value()):
             raise HTTPException(
                 status_code=HTTP_401_UNAUTHORIZED,
                 detail="Invalid API key",
