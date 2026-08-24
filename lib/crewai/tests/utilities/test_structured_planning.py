@@ -17,6 +17,7 @@ from crewai.utilities.reasoning_handler import (
     FUNCTION_SCHEMA,
     AgentReasoning,
     ReasoningPlan,
+    _detect_ready,
 )
 
 
@@ -258,6 +259,140 @@ class TestAgentReasoningWithMockedLLM:
         assert steps[1].step_number == 2
         assert steps[1].description == ""
         assert steps[2].step_number == 3
+
+
+class TestReadyVerdictDetection:
+    """Tests for READY/NOT READY verdict detection in planning responses.
+
+    Regression tests for issue #6204: a model that concluded its plan with a
+    bare ``READY`` was never detected as ready because detection required the
+    exact sentence ``READY: I am ready to execute the task.``
+    """
+
+    ISSUE_6204_TRACE = (
+        "Step 1: Research the market\n"
+        "Step 2: Write the report\n"
+        "\n"
+        "---\n"
+        "\n"
+        "READY"
+    )
+
+    def test_bare_ready_verdict_is_detected(self):
+        """A bare READY conclusion registers as ready (issue #6204)."""
+        assert _detect_ready(self.ISSUE_6204_TRACE) is True
+
+    def test_bare_not_ready_verdict_is_detected(self):
+        """A bare NOT READY conclusion registers as not ready."""
+        response = "Step 1: Research the topic\n\nNOT READY: I need more data."
+        assert _detect_ready(response) is False
+
+    def test_canonical_ready_sentence_still_detected(self):
+        """The canonical sentence keeps registering as ready."""
+        assert _detect_ready("READY: I am ready to execute the task.") is True
+
+    def test_canonical_not_ready_sentence_detected(self):
+        """The canonical NOT READY sentence keeps registering as not ready."""
+        response = (
+            "NOT READY: I need to refine my plan because the data is missing."
+        )
+        assert _detect_ready(response) is False
+
+    def test_ready_wins_when_concluded_last(self):
+        """A final READY verdict wins over an earlier NOT READY mention."""
+        response = (
+            "Draft plan:\n"
+            "1. Gather data\n"
+            "If tools fail, mark as NOT READY.\n"
+            "\n"
+            "All steps verified.\n"
+            "READY"
+        )
+        assert _detect_ready(response) is True
+
+    def test_not_ready_wins_when_concluded_last(self):
+        """A final NOT READY verdict wins over an earlier READY mention."""
+        response = "Initial plan was marked READY, but on review:\nNOT READY"
+        assert _detect_ready(response) is False
+
+    def test_case_insensitive_verdicts(self):
+        """Verdict detection ignores case and hyphen/space separators."""
+        assert _detect_ready("Plan complete\nready") is True
+        assert _detect_ready("Need more info\nnot ready") is False
+        assert _detect_ready("Not-Ready") is False
+        assert _detect_ready("all set - Ready") is True
+
+    def test_verdict_surrounded_by_prose_and_instructions(self):
+        """Echoed prompt instructions do not override a concluded verdict."""
+        response = (
+            "<PLAN CONTENTS>\n"
+            "\n"
+            "---\n"
+            "\n"
+            "READY\n"
+            "\n"
+            "You indicated you weren't ready. Refine your plan to address "
+            "the specific gap.\n"
+            "\n"
+            "Keep the plan minimal - only add steps that directly address "
+            "the issue.\n"
+            "\n"
+            "Conclude with READY or NOT READY as before."
+        )
+        assert _detect_ready(response) is True
+
+    def test_markdown_formatted_verdicts(self):
+        """Markdown emphasis, bullets and numbering around verdicts work."""
+        assert _detect_ready("**READY**") is True
+        assert _detect_ready("- **NOT READY**") is False
+        assert _detect_ready("1. READY") is True
+        assert _detect_ready("> 2) NOT READY") is False
+
+    def test_response_without_verdict_is_not_ready(self):
+        """A response without any verdict mention defaults to not ready."""
+        assert _detect_ready("") is False
+        assert _detect_ready("Just some plan text with no verdict.") is False
+        assert _detect_ready("Checking overall readiness of the outline.") is False
+
+    def test_parse_planning_response_detects_bare_ready(self):
+        """_parse_planning_response accepts a bare READY verdict."""
+        plan, ready = AgentReasoning._parse_planning_response(
+            self.ISSUE_6204_TRACE
+        )
+        assert ready is True
+        assert plan == self.ISSUE_6204_TRACE
+
+    def test_parse_planning_response_empty_response(self):
+        """Empty responses stay not ready."""
+        plan, ready = AgentReasoning._parse_planning_response("")
+        assert ready is False
+        assert plan == "No plan was generated."
+
+    def test_function_fallback_detects_non_json_ready_response(self):
+        """Non-JSON function-call fallback uses robust verdict detection."""
+        mock_agent = MagicMock()
+        mock_agent.role = "Test Agent"
+        mock_agent.goal = "Test goal"
+        mock_agent.backstory = "Test backstory"
+        mock_agent.planning_config = PlanningConfig()
+        mock_agent.llm.supports_function_calling.return_value = True
+        mock_agent.llm.call.return_value = self.ISSUE_6204_TRACE
+
+        handler = AgentReasoning(
+            agent=mock_agent,
+            task=None,
+            description="Test task",
+            expected_output="Test output",
+        )
+
+        plan, steps, ready = handler._call_with_function(
+            prompt="Test prompt",
+            plan_type="create_plan",
+        )
+
+        assert ready is True
+        assert steps == []
+        assert plan == self.ISSUE_6204_TRACE
 
 
 class TestTodoCreationFromPlan:
