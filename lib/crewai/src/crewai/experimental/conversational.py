@@ -116,7 +116,7 @@ class ConversationConfig:
             warnings.warn(
                 ANSWER_FROM_HISTORY_DEPRECATION_MESSAGE,
                 DeprecationWarning,
-                stacklevel=2,
+                stacklevel=3,
             )
 
     def __call__(self, flow_cls: type[Any]) -> type[Any]:

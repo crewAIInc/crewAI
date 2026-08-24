@@ -319,10 +319,12 @@ class TestConversationalFlow:
         with pytest.warns(
             DeprecationWarning,
             match="answer_from_history_prompt.*answer_from_history_llm",
-        ):
+        ) as warning_records:
             @ConversationConfig(answer_from_history_llm="gpt-4o-mini")
             class HistoryFlow(ConversationalFlow):
                 pass
+
+        assert warning_records[0].filename == __file__
 
         flow = HistoryFlow()
         flow._state = ConversationState(
