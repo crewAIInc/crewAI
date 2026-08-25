@@ -441,26 +441,28 @@ class CrewStructuredTool(BaseModel):
             coro = self.func(**parsed_args, **kwargs)
             try:
                 asyncio.get_running_loop()
-                import contextvars
-                from concurrent.futures import ThreadPoolExecutor
-                ctx = contextvars.copy_context()
-                with ThreadPoolExecutor(max_workers=1) as executor:
-                    return executor.submit(ctx.run, asyncio.run, coro).result()
             except RuntimeError:
                 return asyncio.run(coro)
+
+            import contextvars
+            from concurrent.futures import ThreadPoolExecutor
+            ctx = contextvars.copy_context()
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                return executor.submit(ctx.run, asyncio.run, coro).result()
 
         result = self.func(**parsed_args, **kwargs)
 
         if asyncio.iscoroutine(result):
             try:
                 asyncio.get_running_loop()
-                import contextvars
-                from concurrent.futures import ThreadPoolExecutor
-                ctx = contextvars.copy_context()
-                with ThreadPoolExecutor(max_workers=1) as executor:
-                    return executor.submit(ctx.run, asyncio.run, result).result()
             except RuntimeError:
                 return asyncio.run(result)
+
+            import contextvars
+            from concurrent.futures import ThreadPoolExecutor
+            ctx = contextvars.copy_context()
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                return executor.submit(ctx.run, asyncio.run, result).result()
 
         return result
 

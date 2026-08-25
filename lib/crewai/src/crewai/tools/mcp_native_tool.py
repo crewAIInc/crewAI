@@ -94,13 +94,14 @@ class MCPNativeTool(BaseTool):
         try:
             try:
                 asyncio.get_running_loop()
-                import contextvars
-                from concurrent.futures import ThreadPoolExecutor
-                ctx = contextvars.copy_context()
-                with ThreadPoolExecutor(max_workers=1) as executor:
-                    return executor.submit(ctx.run, asyncio.run, coro).result()
             except RuntimeError:
                 return asyncio.run(coro)
+
+            import contextvars
+            from concurrent.futures import ThreadPoolExecutor
+            ctx = contextvars.copy_context()
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                return executor.submit(ctx.run, asyncio.run, coro).result()
 
         except Exception as e:
             raise RuntimeError(
