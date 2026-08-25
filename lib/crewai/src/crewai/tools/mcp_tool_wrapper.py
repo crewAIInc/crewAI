@@ -162,17 +162,18 @@ class MCPToolWrapper(BaseTool):
     async def _execute_tool(self, **kwargs: Any) -> str:
         """Execute the actual MCP tool call."""
         from mcp import ClientSession
-        from mcp.client.streamable_http import streamablehttp_client
         from mcp.types import TextContent
+
+        from crewai.mcp._compat import open_streamable_http
 
         server_url = self.mcp_server_params["url"]
 
         try:
 
             async def _do_mcp_call() -> str:
-                async with streamablehttp_client(
+                async with open_streamable_http(
                     server_url, terminate_on_close=True
-                ) as (read, write, _):
+                ) as (read, write):
                     async with ClientSession(read, write) as session:
                         await session.initialize()
                         result = await session.call_tool(

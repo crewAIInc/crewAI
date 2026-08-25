@@ -72,27 +72,43 @@ class HTTPTransport(BaseTransport):
             return self
 
         try:
-            from mcp.client.streamable_http import streamablehttp_client
+            from contextlib import AsyncExitStack
 
-            self._transport_context = streamablehttp_client(
-                self.url,
-                headers=self.headers if self.headers else None,
-                terminate_on_close=True,
+            from crewai.mcp._compat import (
+                create_streamable_http_client,
+                unpack_transport_streams,
             )
 
+            stack = AsyncExitStack()
             try:
-                read, write, _ = await asyncio.wait_for(
-                    self._transport_context.__aenter__(), timeout=30.0
+                http_client = None
+                if self.headers:
+                    from mcp.shared._httpx_utils import create_mcp_http_client
+
+                    http_client = create_mcp_http_client(headers=self.headers)
+                    await stack.enter_async_context(http_client)
+
+                transport_cm = create_streamable_http_client(
+                    self.url,
+                    terminate_on_close=True,
+                    http_client=http_client,
+                )
+                streams = await asyncio.wait_for(
+                    stack.enter_async_context(transport_cm),
+                    timeout=30.0,
                 )
             except asyncio.TimeoutError as e:
-                self._transport_context = None
+                await stack.aclose()
                 raise ConnectionError(
                     "Transport context entry timed out after 30 seconds. "
                     "Server may be slow or unreachable."
                 ) from e
             except Exception as e:
-                self._transport_context = None
+                await stack.aclose()
                 raise ConnectionError(f"Failed to enter transport context: {e}") from e
+
+            read, write = unpack_transport_streams(streams)
+            self._transport_context = stack
             self._set_streams(read=read, write=write)
             return self
 
@@ -122,7 +138,11 @@ class HTTPTransport(BaseTransport):
                 try:
                     # Wait a tiny bit for any pending operations
                     await asyncio.sleep(0.1)
-                    await self._transport_context.__aexit__(None, None, None)
+                    aclose = getattr(self._transport_context, "aclose", None)
+                    if aclose is not None:
+                        await aclose()
+                    else:
+                        await self._transport_context.__aexit__(None, None, None)
                 except (RuntimeError, asyncio.CancelledError) as e:
                     # Ignore "exit cancel scope in different task" errors and cancellation
                     # These happen when asyncio.run() closes the event loop

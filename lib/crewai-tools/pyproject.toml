@@ -100,7 +100,7 @@ couchbase = [
     "couchbase>=4.6.0",
 ]
 mcp = [
-    "mcp>=1.28.1,<2",
+    "mcp>=1.28.1,<3",
     "mcpadapt>=0.1.9",
 ]
 stagehand = [
