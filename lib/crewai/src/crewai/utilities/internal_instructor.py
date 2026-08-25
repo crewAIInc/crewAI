@@ -164,8 +164,7 @@ class InternalInstructor(Generic[T]):
         if isinstance(self.llm, BaseLLM):
             # This reaches the provider client directly, so the hooks the LLM
             # layer would have dispatched are dispatched here instead.
-            if not self.llm._invoke_before_llm_call_hooks(messages, self.agent):
-                raise ValueError("LLM call blocked by before_llm_call hook")
+            self.llm._invoke_before_llm_call_hooks(messages, self.agent)
 
         return self._client.chat.completions.create(  # type: ignore[no-any-return]
             model=model_name, response_model=self.model, messages=messages

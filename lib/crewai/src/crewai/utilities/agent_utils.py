@@ -24,7 +24,7 @@ from crewai.agents.parser import (
     OutputParserError,
     parse,
 )
-from crewai.llms.base_llm import BaseLLM, call_stop_override
+from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, call_stop_override
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import (
@@ -512,7 +512,7 @@ def _prepare_llm_call(
         return
 
     if not _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose):
-        raise ValueError("LLM call blocked by before_llm_call hook")
+        raise LLMCallBlockedError("LLM call blocked by before_llm_call hook")
 
     with model_call_hooks_dispatched():
         yield executor_context.messages

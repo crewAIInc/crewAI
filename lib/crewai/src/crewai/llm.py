@@ -36,6 +36,7 @@ from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_i
 from crewai.llms.base_llm import (
     BaseLLM,
     JsonResponseFormat,
+    LLMCallBlockedError,
     get_current_call_id,
     llm_call_context,
 )
@@ -1883,9 +1884,8 @@ class LLM(BaseLLM):
                         message["role"] = msg_role
 
             try:
-                if not self._invoke_before_llm_call_hooks(messages, from_agent):
-                    raise ValueError("LLM call blocked by before_llm_call hook")
-            except (HookAborted, ValueError) as e:
+                self._invoke_before_llm_call_hooks(messages, from_agent)
+            except (HookAborted, LLMCallBlockedError) as e:
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
 
@@ -2029,9 +2029,8 @@ class LLM(BaseLLM):
                         message["role"] = msg_role
 
             try:
-                if not self._invoke_before_llm_call_hooks(messages, from_agent):
-                    raise ValueError("LLM call blocked by before_llm_call hook")
-            except (HookAborted, ValueError) as e:
+                self._invoke_before_llm_call_hooks(messages, from_agent)
+            except (HookAborted, LLMCallBlockedError) as e:
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
 

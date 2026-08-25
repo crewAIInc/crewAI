@@ -72,6 +72,15 @@ class JsonResponseFormat(TypedDict):
     type: Literal["json_object"]
 
 
+class LLMCallBlockedError(ValueError):
+    """A ``before_llm_call`` hook blocked the call by returning ``False``.
+
+    A ``ValueError`` so the fail-open handlers around internal model calls keep
+    absorbing it, and its own type so a provider can report it as the decision
+    it is instead of letting it read as a provider outage.
+    """
+
+
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
 _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
@@ -1021,17 +1030,19 @@ class BaseLLM(BaseModel, ABC):
             from_agent: The agent making the call, when there is one
 
         Returns:
-            True if LLM call should proceed, False if a hook blocked it by
-            returning ``False``.
+            True, so a provider may still guard the call with ``if not ...``.
+            A block is raised, never returned.
 
         Raises:
             HookAborted: If a hook raised it. The deny reaches the caller intact
                 instead of being flattened into a provider-style error.
+            LLMCallBlockedError: If a legacy hook blocked the call by returning
+                ``False``. A ``ValueError``, so the fail-open handlers around
+                internal model calls keep absorbing it.
 
         Example:
             >>> # In a native provider's call() method:
-            >>> if not self._invoke_before_llm_call_hooks(messages, from_agent):
-            ...     raise ValueError("LLM call blocked by hook")
+            >>> self._invoke_before_llm_call_hooks(messages, from_agent)
         """
         from crewai_core.printer import PRINTER
 
@@ -1063,12 +1074,14 @@ class BaseLLM(BaseModel, ABC):
                 hook_context,
                 reducer=before_llm_call_reducer,
             )
-        except LegacyHookBlocked:
+        except LegacyHookBlocked as blocked:
             PRINTER.print(
                 content="LLM call blocked by before_llm_call hook",
                 color="yellow",
             )
-            return False
+            raise LLMCallBlockedError(
+                "LLM call blocked by before_llm_call hook"
+            ) from blocked
 
         return True
 

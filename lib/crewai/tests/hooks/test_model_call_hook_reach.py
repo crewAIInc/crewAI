@@ -47,8 +47,7 @@ class StubProviderLLM(BaseLLM):
             if isinstance(messages, list)
             else [{"role": "user", "content": messages}]
         )
-        if not self._invoke_before_llm_call_hooks(formatted, from_agent):
-            raise ValueError("LLM call blocked by before_llm_call hook")
+        self._invoke_before_llm_call_hooks(formatted, from_agent)
         return "Thought: done\nFinal Answer: ok"
 
     def supports_function_calling(self) -> bool:

@@ -174,7 +174,9 @@ class LegacyHookBlocked(HookAborted):
 
     Distinguishes the boolean convention, which the LLM layer keeps surfacing as
     the documented ``ValueError``, from a hook that raised :class:`HookAborted`
-    itself and must reach the caller as the deny it is.
+    itself and must reach the caller as the deny it is. Raised by the reducer and
+    consumed inside the LLM layer, which re-raises it as
+    :class:`~crewai.llms.base_llm.LLMCallBlockedError`.
     """
 
 

@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.hooks.dispatch import HookAborted
-from crewai.llms.base_llm import BaseLLM, llm_call_context
+from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, llm_call_context
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -314,10 +314,7 @@ class GeminiCompletion(BaseLLM):
 
                 messages_for_hooks = self._convert_contents_to_dict(formatted_content)
 
-                if not self._invoke_before_llm_call_hooks(
-                    messages_for_hooks, from_agent
-                ):
-                    raise ValueError("LLM call blocked by before_llm_call hook")
+                self._invoke_before_llm_call_hooks(messages_for_hooks, from_agent)
 
                 config = self._prepare_generation_config(
                     system_instruction, tools, effective_response_model
@@ -342,7 +339,7 @@ class GeminiCompletion(BaseLLM):
                     effective_response_model,
                 )
 
-            except HookAborted as e:
+            except (HookAborted, LLMCallBlockedError) as e:
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
             except APIError as e:
@@ -403,10 +400,7 @@ class GeminiCompletion(BaseLLM):
 
                 messages_for_hooks = self._convert_contents_to_dict(formatted_content)
 
-                if not self._invoke_before_llm_call_hooks(
-                    messages_for_hooks, from_agent
-                ):
-                    raise ValueError("LLM call blocked by before_llm_call hook")
+                self._invoke_before_llm_call_hooks(messages_for_hooks, from_agent)
 
                 config = self._prepare_generation_config(
                     system_instruction, tools, effective_response_model
@@ -431,7 +425,7 @@ class GeminiCompletion(BaseLLM):
                     effective_response_model,
                 )
 
-            except HookAborted as e:
+            except (HookAborted, LLMCallBlockedError) as e:
                 self._emit_call_denied_event(e, from_task, from_agent)
                 raise
             except APIError as e:

@@ -247,3 +247,24 @@ def test_a_deny_is_not_reported_as_a_provider_failure(denying_llm):
 
     assert len(failures) == 1
     assert failures[0].error == "LLM call denied by policy: no model calls allowed"
+
+
+def test_the_boolean_convention_is_not_reported_as_a_provider_failure():
+    register_before_llm_call_hook(lambda _ctx: False)
+    failures: list[LLMCallFailedEvent] = []
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(LLMCallFailedEvent)
+        def _on_failed(_source: Any, event: LLMCallFailedEvent) -> None:
+            failures.append(event)
+
+        with pytest.raises(ValueError):
+            LLM(model="gpt-4o-mini").call([{"role": "user", "content": "hi"}])
+
+        wait_for_event_handlers()
+
+    assert len(failures) == 1
+    assert failures[0].error == (
+        "LLM call denied by hook: LLM call blocked by before_llm_call hook"
+    )
