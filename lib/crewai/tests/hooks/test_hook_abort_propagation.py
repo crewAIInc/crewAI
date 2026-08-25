@@ -21,6 +21,7 @@ from __future__ import annotations
 from typing import Any
 
 from crewai.agent import Agent
+from crewai.agent.planning_config import PlanningConfig
 from crewai.agents.planner_observer import PlannerObserver
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.knowledge_events import (
@@ -32,6 +33,7 @@ from crewai.events.types.observation_events import (
     StepObservationFailedEvent,
     StepObservationStartedEvent,
 )
+from crewai.experimental.agent_executor import AgentExecutor
 from crewai.hooks.dispatch import (
     HookAborted,
     InterceptionPoint,
@@ -98,6 +100,16 @@ def test_the_boolean_convention_still_blocks_with_the_documented_error():
 
     with pytest.raises(ValueError, match="LLM call blocked by before_llm_call hook"):
         LLM(model="gpt-4o-mini").call([{"role": "user", "content": "hi"}])
+
+
+def test_the_boolean_convention_is_still_absorbed_by_a_fail_open_handler():
+    # Unlike a raised abort, the boolean deny must keep degrading rather than
+    # failing the run — otherwise adopting this fix breaks existing hooks.
+    register_before_llm_call_hook(lambda _ctx: False)
+
+    analysis = analyze_query("a query", ["/"], None, LLM(model="gpt-4o-mini"))
+
+    assert analysis.recall_queries == ["a query"]
 
 
 @pytest.mark.parametrize(
@@ -204,6 +216,29 @@ def test_a_denied_step_observation_still_reports_the_failure_it_started(denying_
     assert len(failed) == 1
     assert failed[0].error == "no model calls allowed"
     assert failed[0].step_number == 1
+
+
+def test_a_denied_plan_stops_the_executor_instead_of_running_unplanned(denying_llm):
+    # the executor wraps planning in its own except Exception, so guarding the
+    # reasoning handler alone still left the agent proceeding with no plan
+    agent = Agent(
+        role="Planner",
+        goal="Plan work",
+        backstory="You plan.",
+        llm=denying_llm,
+        planning_config=PlanningConfig(
+            reasoning_effort="low",
+            max_attempts=1,
+            max_steps=2,
+            max_replans=0,
+            max_step_iterations=2,
+        ),
+    )
+    executor = AgentExecutor(agent=agent, llm=denying_llm, task=None)
+    executor._kickoff_input = "do the thing"
+
+    with pytest.raises(HookAborted):
+        executor.generate_plan()
 
 
 @pytest.mark.asyncio

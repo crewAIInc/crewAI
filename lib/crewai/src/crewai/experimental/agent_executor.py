@@ -395,6 +395,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             return
 
         try:
+            from crewai.hooks.dispatch import HookAborted
             from crewai.utilities.reasoning_handler import AgentReasoning
 
             if self.task:
@@ -420,6 +421,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             # Do NOT mutate task.description — it's a shared object that
             # accumulates plan text on re-invoke.
 
+        except HookAborted:
+            raise
         except Exception as e:
             if hasattr(self.agent, "_logger"):
                 self.agent._logger.log("error", f"Error during planning: {e!s}")
