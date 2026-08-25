@@ -36,7 +36,7 @@ mode: "wide"
       from capsule_emit.adapters.crewai_listener import CapsuleEventListener
 
       # Register once, before kickoff — every tool call in the crew seals a capsule.
-      listener = CapsuleEventListener()
+      listener = CapsuleEventListener(operator="acme-crew", developer="platform-team")
       ```
     </Step>
     <Step title="평소처럼 크루 실행">
@@ -48,10 +48,12 @@ mode: "wide"
     <Step title="증거 확인">
       ```python
       import json
-      from agent_action_capsule import verify
+      from agent_action_capsule import verify_store
 
       rows = [json.loads(line) for line in open("ledger.jsonl") if line.strip()]
-      ok = all(verify(row.get("capsule", row)).ok for row in rows)
+      assert rows, "empty ledger"
+      results = verify_store([row.get("capsule", row) for row in rows])
+      ok = all(r.ok for r in results)
       print(f"{len(rows)} capsules, verify: {'ALL OK' if ok else 'FAILURES'}")
       ```
     </Step>
