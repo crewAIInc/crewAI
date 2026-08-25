@@ -347,7 +347,11 @@ def debug_tool_result(context: ToolCallHookContext) -> None:
 
 ### 8. 외부 사전 실행 정책 게이트
 
-훅 내부의 로컬 규칙 대신 감사 가능한 중앙 정책이 필요하면 기존 `BaseTool`을 Agent에 추가하기 전에 래핑할 수 있습니다. 서드 파티 [`decionis-crewai`](https://pypi.org/project/decionis-crewai/) 어댑터는 실행 전에 도구 페이로드를 평가하면서 원래 도구 스키마를 유지합니다:
+훅 내부의 로컬 규칙 대신 감사 가능한 중앙 정책이 필요하면 기존 `BaseTool`을 Agent에 추가하기 전에 래핑할 수 있습니다. 배포된 서드 파티 [`decionis-crewai`](https://pypi.org/project/decionis-crewai/0.1.0/) 어댑터는 실행 전에 도구 페이로드를 평가하면서 원래 도구 스키마를 유지합니다. 먼저 문서화된 버전을 설치하세요:
+
+```bash
+pip install "decionis-crewai==0.1.0"
+```
 
 ```python
 from decionis import DecionisClient
@@ -362,7 +366,7 @@ guarded_tool = DecionisGuardedTool.wrap(
 agent = Agent(..., tools=[guarded_tool])
 ```
 
-거부 결정은 내부 도구 실행을 중단하고 서명된 결정 증거에 대한 참조를 반환합니다. 실행 동작을 변경하지 않고 결정을 관찰하려면 래퍼에서 `shadow_mode=True`를 사용하세요.
+`BLOCK`, `REVIEW_REQUIRED`, `ESCALATE` 및 정책 `ERROR` 결과는 내부 도구가 실행되기 전에 내보낸 `DecionisGuardRefusal` 예외를 발생시킵니다. 이 예외에는 서명된 결정 증거에 대한 참조가 포함됩니다. 실행 동작을 변경하지 않고 결정을 관찰하려면 래퍼에서 `shadow_mode=True`를 사용하세요.
 
 ## 훅 관리
 
