@@ -1,13 +1,13 @@
 ---
 title: Agent Action Capsule (capsule-emit) Integration
-description: Sealed, content-addressed evidence records for crew runs — one capsule per tool call, with digest anchoring to a transparency log for tamper-evidence.
+description: Sealed, content-addressed evidence records for crew runs — a two-record capsule chain per tool call, with digest anchoring to a transparency log for tamper-evidence.
 icon: file-shield
 mode: "wide"
 ---
 
 # Agent Action Capsule Overview
 
-[capsule-emit](https://github.com/action-state-group/capsule-emit) seals each tool call in a crew run as an **Agent Action Capsule**: a sealed, content-addressed evidence record (planned → executed → confirmed). Capsules are audit and compliance evidence for what a crew actually did — complementary to tracing.
+[capsule-emit](https://github.com/action-state-group/capsule-emit) records each tool call in a crew run as a chain of **Agent Action Capsules**: a *planned* capsule sealed when the call starts, then a *confirmed* (or *errored*) capsule sealed when it ends, chained to the planned one by capsule id. Capsules are audit and compliance evidence for what a crew actually did — complementary to tracing.
 
 Two verification layers, deliberately distinct:
 
@@ -17,7 +17,7 @@ Two verification layers, deliberately distinct:
 ### Features
 
 - **One listener, every tool call**: register `CapsuleEventListener()` once via CrewAI's standard `BaseEventListener` mechanism — no per-tool code changes.
-- **Planned → executed → confirmed chains**: a capsule is sealed when a tool call starts and confirmed by digest when it finishes; errors seal a failed-effect record.
+- **Planned → confirmed chains**: a planned capsule is sealed when a tool call starts; when it finishes, a second confirmed capsule is sealed and chained to it (`prior_capsule_id`); errors seal a chained failed-effect capsule instead.
 - **Digest-only privacy**: tool inputs/outputs are committed as SHA-256 digests — raw content stays local; only digests are anchored.
 - **Offline consistency checks**: `verify()` re-checks structure, content addressing, and chain links from the record alone.
 - **Anchored tamper-evidence**: digest-only registration with a SCITT transparency log; the receipt is the load-bearing step for independent tamper-evidence.
@@ -47,8 +47,12 @@ Two verification layers, deliberately distinct:
     </Step>
     <Step title="Check the evidence">
       ```python
-      from capsule_emit import verify_ledger
-      verify_ledger("ledger.jsonl")   # structure + content addressing + chain, offline
+      import json
+      from agent_action_capsule import verify
+
+      rows = [json.loads(line) for line in open("ledger.jsonl") if line.strip()]
+      ok = all(verify(row.get("capsule", row)).ok for row in rows)
+      print(f"{len(rows)} capsules, verify: {'ALL OK' if ok else 'FAILURES'}")
       ```
     </Step>
 </Steps>

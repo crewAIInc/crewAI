@@ -1,13 +1,13 @@
 ---
 title: Agent Action Capsule (capsule-emit) 통합
-description: 크루 실행에 대한 봉인된 콘텐츠 주소화 증거 레코드 — 도구 호출마다 캡슐 하나, 변조 증거를 위한 투명성 로그 다이제스트 앵커링 포함.
+description: 크루 실행에 대한 봉인된 콘텐츠 주소화 증거 레코드 — 도구 호출마다 두 개의 레코드로 이루어진 캡슐 체인, 변조 증거를 위한 투명성 로그 다이제스트 앵커링 포함.
 icon: file-shield
 mode: "wide"
 ---
 
 # Agent Action Capsule 개요
 
-[capsule-emit](https://github.com/action-state-group/capsule-emit)은 크루 실행의 각 도구 호출을 **Agent Action Capsule**로 봉인합니다: 봉인되고 콘텐츠 주소화된 증거 레코드(계획 → 실행 → 확인)입니다. 캡슐은 크루가 실제로 수행한 일에 대한 감사·컴플라이언스 증거이며 — 추적을 보완합니다.
+[capsule-emit](https://github.com/action-state-group/capsule-emit)은 크루 실행의 각 도구 호출을 **Agent Action Capsule** 체인으로 기록합니다: 호출 시작 시 *계획* 캡슐이 봉인되고, 종료 시 *확인*(또는 *오류*) 캡슐이 봉인되어 캡슐 id로 계획 캡슐에 연결됩니다. 캡슐은 크루가 실제로 수행한 일에 대한 감사·컴플라이언스 증거이며 — 추적을 보완합니다.
 
 의도적으로 구분된 두 검증 계층:
 
@@ -17,7 +17,7 @@ mode: "wide"
 ### 기능
 
 - **리스너 하나로 모든 도구 호출 기록**: CrewAI의 표준 `BaseEventListener` 메커니즘으로 `CapsuleEventListener()`를 한 번만 등록 — 도구별 코드 변경 없음.
-- **계획 → 실행 → 확인 체인**: 도구 호출 시작 시 캡슐이 봉인되고 종료 시 다이제스트로 확인됩니다; 오류는 실패 레코드로 봉인됩니다.
+- **계획 → 확인 체인**: 도구 호출 시작 시 계획 캡슐이 봉인되고, 종료 시 두 번째 확인 캡슐이 봉인되어 연결됩니다(`prior_capsule_id`); 오류는 연결된 실패 효과 캡슐을 봉인합니다.
 - **다이제스트 전용 프라이버시**: 도구 입출력은 SHA-256 다이제스트로 커밋 — 원본 콘텐츠는 로컬에 유지되며, 다이제스트만 앵커링됩니다.
 - **오프라인 일관성 검사**: `verify()`가 레코드만으로 구조, 콘텐츠 주소화, 체인 링크를 재검사합니다.
 - **앵커링된 변조 증거**: SCITT 투명성 로그에 다이제스트 전용 등록; 영수증이 독립적 변조 증거의 핵심 단계입니다.
@@ -47,8 +47,12 @@ mode: "wide"
     </Step>
     <Step title="증거 확인">
       ```python
-      from capsule_emit import verify_ledger
-      verify_ledger("ledger.jsonl")   # structure + content addressing + chain, offline
+      import json
+      from agent_action_capsule import verify
+
+      rows = [json.loads(line) for line in open("ledger.jsonl") if line.strip()]
+      ok = all(verify(row.get("capsule", row)).ok for row in rows)
+      print(f"{len(rows)} capsules, verify: {'ALL OK' if ok else 'FAILURES'}")
       ```
     </Step>
 </Steps>

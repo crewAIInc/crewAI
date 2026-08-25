@@ -1,13 +1,13 @@
 ---
 title: Integração Agent Action Capsule (capsule-emit)
-description: Registros de evidência selados e endereçados por conteúdo para execuções de crew — uma cápsula por chamada de ferramenta, com ancoragem de digests em um log de transparência para evidência de violação.
+description: Registros de evidência selados e endereçados por conteúdo para execuções de crew — uma cadeia de duas cápsulas por chamada de ferramenta, com ancoragem de digests em um log de transparência para evidência de violação.
 icon: file-shield
 mode: "wide"
 ---
 
 # Visão Geral do Agent Action Capsule
 
-O [capsule-emit](https://github.com/action-state-group/capsule-emit) sela cada chamada de ferramenta em uma execução de crew como um **Agent Action Capsule**: um registro de evidência selado e endereçado por conteúdo (planejado → executado → confirmado). Cápsulas são evidência de auditoria e conformidade do que a crew realmente fez — complementares ao rastreamento.
+O [capsule-emit](https://github.com/action-state-group/capsule-emit) registra cada chamada de ferramenta em uma execução de crew como uma cadeia de **Agent Action Capsules**: uma cápsula *planejada* selada quando a chamada inicia e, ao terminar, uma cápsula *confirmada* (ou *com erro*) selada e encadeada à planejada pelo id da cápsula. Cápsulas são evidência de auditoria e conformidade do que a crew realmente fez — complementares ao rastreamento.
 
 Duas camadas de verificação, deliberadamente distintas:
 
@@ -17,7 +17,7 @@ Duas camadas de verificação, deliberadamente distintas:
 ### Recursos
 
 - **Um listener, todas as chamadas de ferramenta**: registre `CapsuleEventListener()` uma única vez pelo mecanismo padrão `BaseEventListener` do CrewAI — sem alterações de código por ferramenta.
-- **Cadeias planejado → executado → confirmado**: uma cápsula é selada quando a chamada de ferramenta inicia e confirmada por digest quando termina; erros selam um registro de efeito falho.
+- **Cadeias planejado → confirmado**: uma cápsula planejada é selada quando a chamada de ferramenta inicia; ao terminar, uma segunda cápsula confirmada é selada e encadeada a ela (`prior_capsule_id`); erros selam uma cápsula de efeito falho encadeada.
 - **Privacidade somente por digest**: entradas/saídas das ferramentas são registradas como digests SHA-256 — o conteúdo bruto permanece local; apenas digests são ancorados.
 - **Checagens de consistência offline**: `verify()` reverifica estrutura, endereçamento por conteúdo e elos da cadeia apenas a partir do registro.
 - **Evidência de violação ancorada**: registro somente por digest em um log de transparência SCITT; o recibo é a etapa central da evidência de violação independente.
@@ -47,8 +47,12 @@ Duas camadas de verificação, deliberadamente distintas:
     </Step>
     <Step title="Confira a evidência">
       ```python
-      from capsule_emit import verify_ledger
-      verify_ledger("ledger.jsonl")   # structure + content addressing + chain, offline
+      import json
+      from agent_action_capsule import verify
+
+      rows = [json.loads(line) for line in open("ledger.jsonl") if line.strip()]
+      ok = all(verify(row.get("capsule", row)).ok for row in rows)
+      print(f"{len(rows)} capsules, verify: {'ALL OK' if ok else 'FAILURES'}")
       ```
     </Step>
 </Steps>
