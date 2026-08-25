@@ -345,6 +345,25 @@ def debug_tool_result(context: ToolCallHookContext) -> None:
     return None
 ```
 
+### 8. 외부 사전 실행 정책 게이트
+
+훅 내부의 로컬 규칙 대신 감사 가능한 중앙 정책이 필요하면 기존 `BaseTool`을 Agent에 추가하기 전에 래핑할 수 있습니다. 서드 파티 [`decionis-crewai`](https://pypi.org/project/decionis-crewai/) 어댑터는 실행 전에 도구 페이로드를 평가하면서 원래 도구 스키마를 유지합니다:
+
+```python
+from decionis import DecionisClient
+from decionis_crewai import DecionisGuardedTool
+
+guarded_tool = DecionisGuardedTool.wrap(
+    inner_tool=existing_tool,
+    client=DecionisClient(api_key="..."),
+    tenant_id="your-org-uuid",
+    workflow_key="tool_execution",
+)
+agent = Agent(..., tools=[guarded_tool])
+```
+
+거부 결정은 내부 도구 실행을 중단하고 서명된 결정 증거에 대한 참조를 반환합니다. 실행 동작을 변경하지 않고 결정을 관찰하려면 래퍼에서 `shadow_mode=True`를 사용하세요.
+
 ## 훅 관리
 
 ### 훅 등록 해제
@@ -495,4 +514,3 @@ register_after_tool_call_hook(my_after_hook)
 ## 결론
 
 도구 호출 훅은 CrewAI에서 도구 실행을 제어하고 모니터링하는 강력한 기능을 제공합니다. 이를 사용하여 안전 가드레일, 승인 게이트, 입력 검증, 결과 정제, 로깅 및 분석을 구현하세요. 적절한 오류 처리 및 타입 안전성과 결합하면, 훅을 통해 포괄적인 관찰성을 갖춘 안전하고 프로덕션 준비가 된 에이전트 시스템을 구축할 수 있습니다.
-

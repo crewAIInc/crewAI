@@ -239,6 +239,30 @@ def rate_limit_tools(ctx: ToolCallHookContext) -> None:
     history.append(now)
 ```
 
+### 7. External Pre-Execution Policy Gate
+
+When you need centrally managed, auditable policy instead of local rules inside
+hooks, wrap an existing `BaseTool` before adding it to an agent. The third-party
+[`decionis-crewai`](https://pypi.org/project/decionis-crewai/) adapter evaluates
+the tool payload before execution while preserving the original tool schema:
+
+```python
+from decionis import DecionisClient
+from decionis_crewai import DecionisGuardedTool
+
+guarded_tool = DecionisGuardedTool.wrap(
+    inner_tool=existing_tool,
+    client=DecionisClient(api_key="..."),
+    tenant_id="your-org-uuid",
+    workflow_key="tool_execution",
+)
+agent = Agent(..., tools=[guarded_tool])
+```
+
+Refusal decisions stop the inner tool and return a reference to signed decision
+evidence. Set `shadow_mode=True` on the wrapper to observe decisions without
+changing execution behavior.
+
 ## Hook Management
 
 ```python

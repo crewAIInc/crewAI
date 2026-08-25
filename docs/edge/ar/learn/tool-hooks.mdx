@@ -365,6 +365,25 @@ def debug_tool_result(context: ToolCallHookContext) -> None:
     return None
 ```
 
+### 9. بوابة سياسة خارجية قبل التنفيذ
+
+عندما تحتاج إلى سياسة مركزية قابلة للتدقيق بدلاً من قواعد محلية داخل الخطافات، لف أداة `BaseTool` موجودة قبل إضافتها إلى الوكيل. يقيّم محول [`decionis-crewai`](https://pypi.org/project/decionis-crewai/) الخارجي حمولة الأداة قبل التنفيذ مع الحفاظ على مخطط الأداة الأصلي:
+
+```python
+from decionis import DecionisClient
+from decionis_crewai import DecionisGuardedTool
+
+guarded_tool = DecionisGuardedTool.wrap(
+    inner_tool=existing_tool,
+    client=DecionisClient(api_key="..."),
+    tenant_id="your-org-uuid",
+    workflow_key="tool_execution",
+)
+agent = Agent(..., tools=[guarded_tool])
+```
+
+تمنع قرارات الرفض تنفيذ الأداة الداخلية وتعيد مرجعاً إلى دليل قرار موقّع. استخدم `shadow_mode=True` في الغلاف لمراقبة القرارات من دون تغيير سلوك التنفيذ.
+
 ## إدارة الخطافات
 
 ### إلغاء تسجيل الخطافات

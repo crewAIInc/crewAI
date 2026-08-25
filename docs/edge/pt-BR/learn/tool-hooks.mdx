@@ -345,6 +345,25 @@ def debug_tool_result(context: ToolCallHookContext) -> None:
     return None
 ```
 
+### 8. Gate de Política Externo Antes da Execução
+
+Quando você precisa de uma política central e auditável em vez de regras locais nos hooks, envolva uma `BaseTool` existente antes de adicioná-la ao agente. O adaptador de terceiros [`decionis-crewai`](https://pypi.org/project/decionis-crewai/) avalia o payload da ferramenta antes da execução e preserva o schema original:
+
+```python
+from decionis import DecionisClient
+from decionis_crewai import DecionisGuardedTool
+
+guarded_tool = DecionisGuardedTool.wrap(
+    inner_tool=existing_tool,
+    client=DecionisClient(api_key="..."),
+    tenant_id="your-org-uuid",
+    workflow_key="tool_execution",
+)
+agent = Agent(..., tools=[guarded_tool])
+```
+
+Decisões de recusa impedem a execução da ferramenta interna e retornam uma referência para a evidência de decisão assinada. Use `shadow_mode=True` no wrapper para observar decisões sem alterar o comportamento da execução.
+
 ## Gerenciamento de Hooks
 
 ### Desregistrando Hooks
@@ -495,4 +514,3 @@ register_after_tool_call_hook(my_after_hook)
 ## Conclusão
 
 Os Hooks de Chamada de Ferramenta fornecem capacidades poderosas para controlar e monitorar execução de ferramentas no CrewAI. Use-os para implementar guardrails de segurança, gates de aprovação, validação de entrada, sanitização de resultado, logging e análise. Combinados com tratamento adequado de erros e segurança de tipos, os hooks permitem sistemas de agentes seguros e prontos para produção com observabilidade abrangente.
-
