@@ -1665,6 +1665,7 @@ To enable tracing, do any one of these:
         transport_type: str | None = None,
         error: str = "",
         error_type: str | None = None,
+        status_code: int | None = None,
     ) -> None:
         """Handle MCP connection failed event."""
         if not self.verbose:
@@ -1682,6 +1683,10 @@ To enable tracing, do any one of these:
         if transport_type:
             content.append("Transport: ", style="white")
             content.append(f"{transport_type}\n", style="red")
+
+        if status_code is not None:
+            content.append("HTTP Status: ", style="white")
+            content.append(f"{status_code}\n", style="red")
 
         if error_type:
             content.append("Error Type: ", style="white")

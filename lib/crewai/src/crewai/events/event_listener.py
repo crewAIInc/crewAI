@@ -266,8 +266,12 @@ class EventListener(BaseEventListener):
         def on_task_failed(source: Any, event: TaskFailedEvent) -> None:
             span = self.execution_spans.pop(source, None)
             if span:
-                if source.agent and source.agent.crew:
-                    self._telemetry.task_ended(span, source, source.agent.crew)
+                # Routed to task_failed, not task_ended: the latter closes the span
+                # as OK, which is why a failed task was indistinguishable from a
+                # successful one. No longer conditional on source.agent.crew either -
+                # task_failed does not need a crew, and requiring one meant the span
+                # was popped and then never closed, so it was never exported at all.
+                self._telemetry.task_failed(span, source, event.error_type)
 
             task_name = get_task_name(source)
             self.formatter.handle_task_status(
@@ -915,6 +919,7 @@ class EventListener(BaseEventListener):
                 event.transport_type,
                 event.error,
                 event.error_type,
+                event.status_code,
             )
             self._telemetry.feature_usage_span("mcp:connection_failed")
 

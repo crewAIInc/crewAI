@@ -69,7 +69,14 @@ class FlowConversationalDefinition(BaseModel):
         examples=["gpt-4o-mini", {"model": "openai/gpt-4o-mini", "max_tokens": 4096}],
     )
     router: FlowConversationalRouterDefinition | None = None
-    answer_from_history_prompt: str | None = None
+    answer_from_history_prompt: str | None = Field(
+        default=None,
+        description=(
+            "Deprecated. Use system_prompt with the built-in converse route, "
+            "or override converse_turn in Python."
+        ),
+        json_schema_extra={"deprecated": True},
+    )
     default_intents: list[str] | None = None
     intent_llm: Any = Field(
         default=None,
@@ -81,10 +88,11 @@ class FlowConversationalDefinition(BaseModel):
     answer_from_history_llm: Any = Field(
         default=None,
         description=(
-            "Setting this enables the optional answer_from_history route. "
+            "Deprecated. Use llm with the built-in converse route. "
             "A model-id string, a config mapping such as {model, max_tokens}, an LLMDefinition, or a live LLM instance when built in Python."
         ),
         examples=["gpt-4o-mini"],
+        json_schema_extra={"deprecated": True},
     )
     visible_agent_outputs: list[str] | Literal["all"] | None = None
     defer_trace_finalization: bool = True
