@@ -55,6 +55,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.flow.flow import Flow, listen, or_, router, start
+from crewai.flow.flow_context import current_flow_id
 from crewai.flow.types import FlowMethodName
 from crewai.hooks.llm_hooks import (
     get_after_llm_call_hooks,
@@ -243,6 +244,20 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         self.tracing = current_tracing if current_tracing else None
         self._flow_post_init()
         return self
+
+    def _owns_execution_boundary(self) -> bool:
+        """Only a standalone ``Agent.kickoff()`` is a run of its own.
+
+        Crew-bound, the crew owns the run. Nested in a caller's flow, that flow
+        does: boundaries belong to the root, and the active flow id is the
+        caller's rather than this executor's.
+        """
+        if self.crew is not None:
+            return False
+        # Also set by context restores (threads, enterprise request headers),
+        # where a foreign id likewise means a run above this one.
+        active_flow_id = current_flow_id.get()
+        return active_flow_id is None or active_flow_id == self.flow_id
 
     def _check_native_tool_support(self) -> bool:
         """Check if LLM supports native function calling."""
