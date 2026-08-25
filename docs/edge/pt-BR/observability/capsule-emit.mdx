@@ -88,10 +88,10 @@ crew_kickoff_completed/3ea9a64d-53 -          executed  -        OK
 
 | Campo | Conteúdo |
 |---|---|
-| `action_id` / nome da ferramenta | qual chamada de ferramenta esta cápsula registra |
+| `action_id` / nome da ferramenta | qual chamada de ferramenta ou evento de ciclo de vida da crew (kickoff iniciado/concluído/falho) esta cápsula registra |
 | digests de entrada/saída | compromissos SHA-256 — o conteúdo bruto nunca sai do seu ambiente |
 | `effect` | `planned`, `executed`, `confirmed` ou `errored` |
 | cadeia `confirms` | a cápsula executada cita a cápsula planejada por endereço de conteúdo |
-| recibo de âncora | registro somente por digest em um log de transparência SCITT (opcional, ativado por padrão) |
+| envio de âncora | registro somente por digest enviado de forma assíncrona a um log de transparência SCITT (opcional, ativado por padrão); o status padrão é `submitted` — um recibo confirmado requer bloqueio com `anchor_wait` |
 
 O formato do registro é uma especificação aberta (`draft-mih-scitt-agent-action-capsule`, um Internet-Draft individual do IETF) com implementação de referência Apache-2.0.

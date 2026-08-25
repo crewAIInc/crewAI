@@ -88,10 +88,10 @@ crew_kickoff_completed/3ea9a64d-53 -          executed  -        OK
 
 | 필드 | 내용 |
 |---|---|
-| `action_id` / 도구 이름 | 이 캡슐이 기록하는 도구 호출 |
+| `action_id` / 도구 이름 | 이 캡슐이 기록하는 도구 호출 또는 크루 라이프사이클 이벤트(kickoff 시작/완료/실패) |
 | 입력/출력 다이제스트 | SHA-256 커밋 — 원본 콘텐츠는 환경 밖으로 나가지 않음 |
 | `effect` | `planned`, `executed`, `confirmed`, `errored` |
 | `confirms` 체인 | 실행 캡슐이 계획 캡슐을 콘텐츠 주소로 인용 |
-| 앵커 영수증 | SCITT 투명성 로그에 다이제스트 전용 등록(선택 사항, 기본 활성화) |
+| 앵커 제출 | SCITT 투명성 로그에 비동기로 제출되는 다이제스트 전용 등록(선택 사항, 기본 활성화); 기본 상태는 `submitted`이며 확인된 영수증은 `anchor_wait`로 대기해야 얻습니다 |
 
 레코드 형식은 공개 사양(`draft-mih-scitt-agent-action-capsule`, IETF 개인 인터넷 드래프트)이며 Apache-2.0 참조 구현이 있습니다.
