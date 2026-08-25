@@ -7,7 +7,7 @@ mode: "wide"
 
 # نظرة عامة على Agent Action Capsule
 
-يسجّل [capsule-emit](https://github.com/action-state-group/capsule-emit) كل استدعاء أداة في تشغيل الطاقم كسلسلة من **Agent Action Capsules**: كبسولة *مخططة* تُختم عند بدء الاستدعاء، ثم كبسولة *مؤكَّدة* (أو *خاطئة*) تُختم عند انتهائه وتُربط بالمخططة عبر معرّف الكبسولة. الكبسولات أدلة تدقيق وامتثال لما فعله الطاقم فعلياً — مكمّلة للتتبع.
+يسجّل [capsule-emit](https://github.com/action-state-group/capsule-emit) كل استدعاء أداة في تشغيل الطاقم كسلسلة من **Agent Action Capsules**: كبسولة *مخططة* تُختم عند بدء الاستدعاء، ثم كبسولة *مؤكَّدة* (أو *فاشلة*) تُختم عند انتهائه وتُربط بالمخططة عبر معرّف الكبسولة. الكبسولات أدلة تدقيق وامتثال لما فعله الطاقم فعلياً — مكمّلة للتتبع.
 
 طبقتا تحقق، متمايزتان عمداً:
 
@@ -36,7 +36,7 @@ mode: "wide"
       from capsule_emit.adapters.crewai_listener import CapsuleEventListener
 
       # Register once, before kickoff — every tool call in the crew seals a capsule.
-      listener = CapsuleEventListener()
+      listener = CapsuleEventListener(operator="acme-crew", developer="platform-team")
       ```
     </Step>
     <Step title="شغّل طاقمك كالمعتاد">
@@ -48,10 +48,12 @@ mode: "wide"
     <Step title="افحص الأدلة">
       ```python
       import json
-      from agent_action_capsule import verify
+      from agent_action_capsule import verify_store
 
       rows = [json.loads(line) for line in open("ledger.jsonl") if line.strip()]
-      ok = all(verify(row.get("capsule", row)).ok for row in rows)
+      assert rows, "empty ledger"
+      results = verify_store([row.get("capsule", row) for row in rows])
+      ok = all(r.ok for r in results)
       print(f"{len(rows)} capsules, verify: {'ALL OK' if ok else 'FAILURES'}")
       ```
     </Step>
