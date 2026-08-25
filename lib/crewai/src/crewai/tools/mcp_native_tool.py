@@ -90,19 +90,11 @@ class MCPNativeTool(BaseTool):
             The tool's text result, or a :class:`ToolFailure` when the server
             answered with ``isError: true``.
         """
+        from crewai.tools.base_tool import _run_coroutine_safely
+
         coro = self._run_async(**kwargs)
         try:
-            try:
-                asyncio.get_running_loop()
-            except RuntimeError:
-                return asyncio.run(coro)
-
-            import contextvars
-            from concurrent.futures import ThreadPoolExecutor
-            ctx = contextvars.copy_context()
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                return executor.submit(ctx.run, asyncio.run, coro).result()
-
+            return _run_coroutine_safely(coro)
         except Exception as e:
             raise RuntimeError(
                 f"Error executing MCP tool {self.original_tool_name}: {e!s}"

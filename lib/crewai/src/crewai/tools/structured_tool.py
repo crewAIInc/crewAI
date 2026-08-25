@@ -437,32 +437,15 @@ class CrewStructuredTool(BaseModel):
 
         self._increment_usage_count()
 
-        if inspect.iscoroutinefunction(self.func):
-            coro = self.func(**parsed_args, **kwargs)
-            try:
-                asyncio.get_running_loop()
-            except RuntimeError:
-                return asyncio.run(coro)
+        from crewai.tools.base_tool import _run_coroutine_safely
 
-            import contextvars
-            from concurrent.futures import ThreadPoolExecutor
-            ctx = contextvars.copy_context()
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                return executor.submit(ctx.run, asyncio.run, coro).result()
+        if inspect.iscoroutinefunction(self.func):
+            return _run_coroutine_safely(self.func(**parsed_args, **kwargs))
 
         result = self.func(**parsed_args, **kwargs)
 
         if asyncio.iscoroutine(result):
-            try:
-                asyncio.get_running_loop()
-            except RuntimeError:
-                return asyncio.run(result)
-
-            import contextvars
-            from concurrent.futures import ThreadPoolExecutor
-            ctx = contextvars.copy_context()
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                return executor.submit(ctx.run, asyncio.run, result).result()
+            return _run_coroutine_safely(result)
 
         return result
 

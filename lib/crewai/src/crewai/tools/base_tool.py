@@ -93,6 +93,27 @@ def _is_awaitable(value: R | Awaitable[R]) -> TypeIs[Awaitable[R]]:
     return asyncio.iscoroutine(value) or asyncio.isfuture(value)
 
 
+def _run_coroutine_safely(coro: Awaitable[R]) -> R:
+    """Execute a coroutine safely from both sync and async contexts.
+
+    If an event loop is already running, the coroutine is executed in a
+    separate thread with its own loop to avoid 'RuntimeError: asyncio.run()
+    cannot be called from a running event loop'. Context variables are
+    propagated to the new thread.
+    """
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)  # type: ignore[arg-type]
+
+    import contextvars
+    from concurrent.futures import ThreadPoolExecutor
+
+    ctx = contextvars.copy_context()
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        return executor.submit(ctx.run, asyncio.run, coro).result()  # type: ignore[arg-type]
+
+
 class EnvVar(BaseModel):
     name: str
     description: str
@@ -337,16 +358,7 @@ class BaseTool(BaseModel, ABC):
 
         result = self._run(*args, **kwargs)
         if asyncio.iscoroutine(result):
-            try:
-                asyncio.get_running_loop()
-            except RuntimeError:
-                return asyncio.run(result)
-
-            import contextvars
-            from concurrent.futures import ThreadPoolExecutor
-            ctx = contextvars.copy_context()
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                return executor.submit(ctx.run, asyncio.run, result).result()
+            return _run_coroutine_safely(result)
         return result
 
     async def arun(
@@ -556,7 +568,7 @@ class Tool(BaseTool, Generic[P, R]):
         result = self.func(*args, **kwargs)
 
         if asyncio.iscoroutine(result):
-            result = asyncio.run(result)
+            result = _run_coroutine_safely(result)
 
         return result  # type: ignore[return-value]
 
