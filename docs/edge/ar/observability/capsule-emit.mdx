@@ -1,13 +1,13 @@
 ---
 title: تكامل Agent Action Capsule (capsule-emit)
-description: سجلات أدلة مختومة ومعنونة بالمحتوى لتشغيلات الطاقم — كبسولة لكل استدعاء أداة، مع ترسيخ البصمات في سجل شفافية لإثبات العبث.
+description: سجلات أدلة مختومة ومعنونة بالمحتوى لتشغيلات الطاقم — سلسلة من كبسولتين لكل استدعاء أداة، مع ترسيخ البصمات في سجل شفافية لإثبات العبث.
 icon: file-shield
 mode: "wide"
 ---
 
 # نظرة عامة على Agent Action Capsule
 
-يقوم [capsule-emit](https://github.com/action-state-group/capsule-emit) بختم كل استدعاء أداة في تشغيل الطاقم كـ **Agent Action Capsule**: سجل أدلة مختوم ومعنون بالمحتوى (مخطط ← منفَّذ ← مؤكَّد). الكبسولات أدلة تدقيق وامتثال لما فعله الطاقم فعلياً — مكمّلة للتتبع.
+يسجّل [capsule-emit](https://github.com/action-state-group/capsule-emit) كل استدعاء أداة في تشغيل الطاقم كسلسلة من **Agent Action Capsules**: كبسولة *مخططة* تُختم عند بدء الاستدعاء، ثم كبسولة *مؤكَّدة* (أو *خاطئة*) تُختم عند انتهائه وتُربط بالمخططة عبر معرّف الكبسولة. الكبسولات أدلة تدقيق وامتثال لما فعله الطاقم فعلياً — مكمّلة للتتبع.
 
 طبقتا تحقق، متمايزتان عمداً:
 
@@ -17,7 +17,7 @@ mode: "wide"
 ### الميزات
 
 - **مستمع واحد، كل استدعاء أداة**: سجّل `CapsuleEventListener()` مرة واحدة عبر آلية `BaseEventListener` القياسية في CrewAI — دون تغييرات في كود الأدوات.
-- **سلاسل مخطط ← منفَّذ ← مؤكَّد**: تُختم كبسولة عند بدء استدعاء الأداة وتُؤكَّد بالبصمة عند انتهائه؛ الأخطاء تختم سجل تأثير فاشل.
+- **سلاسل مخطط ← مؤكَّد**: تُختم كبسولة مخططة عند بدء استدعاء الأداة؛ وعند انتهائه تُختم كبسولة مؤكَّدة ثانية وتُربط بها (`prior_capsule_id`)؛ الأخطاء تختم كبسولة تأثير فاشل مربوطة.
 - **خصوصية بالبصمات فقط**: تُلتزم مدخلات/مخرجات الأدوات كبصمات SHA-256 — المحتوى الخام يبقى محلياً؛ البصمات فقط تُرسَّخ.
 - **فحوص اتساق دون اتصال**: تعيد `verify()` فحص البنية والعنونة بالمحتوى وروابط السلسلة من السجل وحده.
 - **إثبات عبث مُرسَّخ**: تسجيل بالبصمات فقط في سجل شفافية SCITT؛ الإيصال هو الخطوة الحاملة لإثبات العبث المستقل.
@@ -47,8 +47,12 @@ mode: "wide"
     </Step>
     <Step title="افحص الأدلة">
       ```python
-      from capsule_emit import verify_ledger
-      verify_ledger("ledger.jsonl")   # structure + content addressing + chain, offline
+      import json
+      from agent_action_capsule import verify
+
+      rows = [json.loads(line) for line in open("ledger.jsonl") if line.strip()]
+      ok = all(verify(row.get("capsule", row)).ok for row in rows)
+      print(f"{len(rows)} capsules, verify: {'ALL OK' if ok else 'FAILURES'}")
       ```
     </Step>
 </Steps>
