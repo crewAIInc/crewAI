@@ -240,7 +240,7 @@ Não use `@human_feedback` para linhas de chat de follow-up, a menos que um huma
 
 ## `Flow` conversacional (experimental)
 
-Habilite o grafo de chat conversacional definindo `conversational = True` em uma subclasse de `Flow` ou aplicando `@ConversationConfig(...)`. O `Flow` base passa a fornecer `route_conversation` como start/router embutido, além dos listeners `converse_turn`, `end_conversation` e `answer_from_history_turn`. Ele gerencia `state.messages`, pode acionar um LLM de roteamento e mantém o batch de trace aberto entre turnos. Você escreve as **rotas customizadas**; o framework cuida do resto.
+Habilite o grafo de chat conversacional definindo `conversational = True` em uma subclasse de `Flow` ou aplicando `@ConversationConfig(...)`. O `Flow` base passa a fornecer `route_conversation` como start/router embutido, além dos listeners `converse_turn` e `end_conversation`. O listener descontinuado `answer_from_history_turn` permanece disponível para compatibilidade. O framework gerencia `state.messages`, pode acionar um LLM de roteamento e mantém o batch de trace aberto entre turnos. Você escreve as **rotas customizadas**; o framework cuida do resto.
 
 Use isto quando quiser um chat multi-turno com router e handlers por rota sem cablar o ciclo de vida na mão. Use `Flow[ChatState]` (o padrão de mais baixo nível acima) quando precisar de controle total.
 
@@ -307,12 +307,21 @@ Decorador de classe que anexa os defaults de chat por classe.
 | `system_prompt` | `slices.conversational_system_prompt` (i18n) | System message usado pelo `converse_turn` embutido. Passe `""` para desativar totalmente. |
 | `llm` | `None` | LLM de conversa (usado pelo `converse_turn` e como fallback do router). |
 | `router` | `None` | Sobrescritas opcionais de `RouterConfig`. Com listeners customizados e um LLM que possa ser resolvido, o roteamento é habilitado automaticamente mesmo quando este campo é omitido. |
-| `answer_from_history_prompt` | padrão do framework | System message para a rota opcional `answer_from_history`. |
-| `answer_from_history_llm` | `None` | Habilita o atalho `answer_from_history` quando definido. |
+| `answer_from_history_prompt` | padrão do framework | **Descontinuado.** Use o system prompt de `converse` ou sobrescreva `converse_turn()`. |
+| `answer_from_history_llm` | `None` | **Descontinuado.** Use `llm`; `converse` já recebe o histórico canônico. |
 | `intent_llm` | `None` | LLM para o caminho legado `intents=`/`default_intents`. |
 | `default_intents` | `None` | Labels de outcome para pré-classificação legada. |
 | `visible_agent_outputs` | `None` | `"all"` ou lista de nomes de agentes cujos `append_agent_result()` devem virar mensagens públicas. |
 | `defer_trace_finalization` | `True` | Mantém um único batch de trace aberto entre chamadas de `handle_turn()`. |
+
+<Warning>
+  `answer_from_history_prompt`, `answer_from_history_llm` e a rota
+  `answer_from_history` estão descontinuados e serão removidos em uma versão
+  futura. Eles duplicam `converse`, que já recebe o histórico canônico,
+  adicionam uma chamada de LLM para verificar elegibilidade e são ignorados
+  quando o auto-router normal retorna uma rota. As configurações existentes
+  continuam funcionando e emitem `DeprecationWarning`.
+</Warning>
 
 Sem rotas customizadas, os turnos caem em `converse`. Com rotas customizadas e um LLM de conversa/router, o framework sintetiza um `RouterConfig` padrão; forneça um explicitamente apenas para customizar seu prompt, lista de rotas, descrições ou comportamento de fallback. Definir `default_intents` usa o caminho legado de pré-classificação.
 
@@ -353,7 +362,7 @@ router_config = RouterConfig(
 O prompt do router é montado automaticamente. Para cada rota o framework escolhe a descrição nesta precedência:
 
 1. `RouterConfig.route_descriptions[label]` — override explícito.
-2. `Flow.builtin_route_descriptions[label]` — texto canônico do framework para `converse`, `end`, `answer_from_history` (otimizado para o LLM de routing).
+2. `Flow.builtin_route_descriptions[label]` — texto canônico do framework para `converse`, `end` e a rota de compatibilidade descontinuada `answer_from_history` (otimizado para o LLM de routing).
 3. O `description` declarado do método (usado por flows declarativos e projeções da DSL).
 4. Primeira linha não vazia da docstring do handler `@listen(label)`.
 5. Vazio (a rota aparece no catálogo sem descrição).
@@ -409,7 +418,7 @@ def create_video(self) -> str:  # rejected at flow instantiation
 |------|---------|-----------|
 | `converse` | `converse_turn` | Handler de chat padrão. Chama `ConversationConfig.llm` com o system prompt + histórico canônico. |
 | `end` | `end_conversation` | Define `state.ended = True` e emite uma resposta de encerramento. |
-| `answer_from_history` | `answer_from_history_turn` | Opcional. Depois que houver pelo menos duas mensagens, roteia para cá quando `ConversationConfig.answer_from_history_llm` determinar que a mensagem atual pode ser respondida pelo histórico. |
+| `answer_from_history` | `answer_from_history_turn` | **Rota de compatibilidade descontinuada.** Use `converse`, que já recebe o histórico canônico. |
 
 Você pode sobrescrever qualquer uma definindo um handler com o mesmo nome na subclasse.
 
@@ -476,7 +485,7 @@ class SupportFlow(Flow[ConversationState]):
         return super().route_turn(context)
 ```
 
-Para ignorar completamente o router LLM e escolher uma rota programaticamente, retorne uma string não vazia de `route_turn`. Um retorno falsy **não** invoca `_route_with_config()` a partir da sua sobrescrita; o roteamento segue para a intenção pré-classificada deste turno, depois para `answer_from_history` quando elegível e, por fim, para `converse`. O `last_intent` do turno anterior fica disponível no contexto do router, mas nunca é repetido como fallback.
+Para ignorar completamente o router LLM e escolher uma rota programaticamente, retorne uma string não vazia de `route_turn`. Um retorno falsy **não** invoca `_route_with_config()` a partir da sua sobrescrita; o roteamento segue para a intenção pré-classificada deste turno, depois para o caminho de compatibilidade descontinuado `answer_from_history` quando configurado e, por fim, para `converse`. O `last_intent` do turno anterior fica disponível no contexto do router, mas nunca é repetido como fallback.
 
 ### `append_assistant_message` e `append_agent_result`
 
@@ -520,11 +529,11 @@ Três coisas são fornecidas para você:
 
 | Fornecido | Detalhe |
 |----------|--------|
-| O grafo interno | `route_conversation`, `converse_turn`, `end_conversation` e `answer_from_history_turn` são adicionados automaticamente. Declare um método com um desses nomes para sobrescrevê-lo. |
+| O grafo interno | `route_conversation`, `converse_turn` e `end_conversation` são adicionados automaticamente. O `answer_from_history_turn` descontinuado é mantido para compatibilidade. Declare um método com um desses nomes para sobrescrevê-lo. |
 | Estado da conversa | `ConversationState` é usado quando não há bloco `state`. Um estado Pydantic definido por `ref` ou `json_schema` é composto automaticamente com os campos conversacionais; ele não precisa estender `ConversationState`. |
 | O catálogo de rotas | Inferido de métodos que não são routers e têm rótulos `listen`, excluindo rotas internas. As descrições seguem a precedência acima, e `router.routes` explícito pode limitar as opções. |
 
-Os campos declarativos `llm`, `router.llm`, `intent_llm` e `answer_from_history_llm` aceitam um id de modelo ou um mapping de configuração, como `{model: openai/gpt-4o-mini, max_tokens: 512}`. O bloco `conversational` também aceita `default_intents`, `answer_from_history_prompt`, `visible_agent_outputs`, `defer_trace_finalization` e os campos de `RouterConfig` mostrados acima.
+Os campos declarativos `llm`, `router.llm` e `intent_llm` aceitam um id de modelo ou um mapping de configuração, como `{model: openai/gpt-4o-mini, max_tokens: 512}`. O bloco `conversational` também aceita `default_intents`, `visible_agent_outputs`, `defer_trace_finalization` e os campos de `RouterConfig` mostrados acima. As declarações descontinuadas `answer_from_history_prompt` / `answer_from_history_llm` continuam sendo aceitas para compatibilidade.
 
 Execute a partir do Python com as mesmas APIs de turno de um Flow conversacional baseado em classe:
 
@@ -550,7 +559,7 @@ Rótulos de rota e nomes de métodos compartilham um único namespace de gatilho
 | Uma instância `LLM` viva ou um `BaseLLM` customizado | Um id de modelo em string ou mapping estático de configuração |
 | `router.response_format` como classe de modelo viva | Nomeie a classe com um ref python: `response_format: {python: my_project.schemas.ConversationRoute}`. Omita e o framework sintetiza uma |
 | Uma sobrescrita de `route_turn()` | Escreva o Flow em Python ou substitua o método declarativo `route_conversation` por uma ação `call: code` / expressão |
-| Uma sobrescrita de `can_answer_from_history()` | Escreva o Flow em Python; configure o roteamento padrão por histórico com `conversational.answer_from_history_llm` |
+| Uma sobrescrita de `can_answer_from_history()` | Descontinuado. Use `converse` ou sobrescreva `converse_turn()` no Python. |
 
 O `crewai run` abre a TUI de chat para um flow conversacional declarativo — a mesma que um Flow conversacional em Python recebe. Um loop de chat precisa de um terminal, então uma execução headless encerra com código diferente de zero e orientações, em vez de rodar um único turno; ali, conduza pelo Python com `handle_turn()` ou `stream_turn()`. Um método declarativo com um bloco `human_feedback:` (Python: `@human_feedback`) roda em um REPL de terminal, porque o runtime coleta feedback com um prompt bloqueante que a TUI não consegue atender. O `--inputs` não é aceito em um flow conversacional — a entrada de cada turno é a mensagem que você digita — e retomar uma sessão por id ainda não está ligado à CLI; use `flow.handle_turn(message, session_id=...)` no Python para isso.
 
