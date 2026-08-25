@@ -62,3 +62,27 @@ def test_warns_without_optional_context(caplog):
 
     assert emitted is True
     assert len(caplog.records) == 1
+
+
+def test_warning_names_whichever_cap_the_provider_actually_sent():
+    """Providers send different cap parameters, so the message must not assume one.
+
+    Gemini sends ``max_output_tokens`` and OpenAI/Azure reasoning models send
+    ``max_completion_tokens``. Naming the wrong setting sends the reader to a
+    knob that will not change anything.
+    """
+    import logging
+
+    from crewai.llms._finish_reason_utils import warn_if_truncated
+
+    for cap, model in [(2048, "gemini-2.5-flash"), (4096, "o3-mini"), (16, "claude-haiku-4-5")]:
+        records = []
+        handler = logging.Handler()
+        handler.emit = records.append  # type: ignore[method-assign]
+        logging.getLogger().addHandler(handler)
+        try:
+            assert warn_if_truncated("length", cap, model) is True
+        finally:
+            logging.getLogger().removeHandler(handler)
+        assert str(cap) in records[0].getMessage()
+        assert model in records[0].getMessage()

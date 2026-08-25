@@ -997,7 +997,7 @@ class OpenAICompletion(BaseLLM):
             finish_reason, response_id = self._extract_responses_finish_reason_and_id(
                 response
             )
-            warn_if_truncated(finish_reason, self.max_tokens, self.model)
+            warn_if_truncated(finish_reason, self.max_completion_tokens or self.max_tokens, self.model)
 
             if self.parse_tool_outputs:
                 parsed_result = self._extract_builtin_tool_outputs(response)
@@ -1145,7 +1145,7 @@ class OpenAICompletion(BaseLLM):
             finish_reason, response_id = self._extract_responses_finish_reason_and_id(
                 response
             )
-            warn_if_truncated(finish_reason, self.max_tokens, self.model)
+            warn_if_truncated(finish_reason, self.max_completion_tokens or self.max_tokens, self.model)
 
             if self.parse_tool_outputs:
                 parsed_result = self._extract_builtin_tool_outputs(response)
@@ -1951,7 +1951,7 @@ class OpenAICompletion(BaseLLM):
             finish_reason, response_id = self._extract_chat_finish_reason_and_id(
                 response
             )
-            warn_if_truncated(finish_reason, self.max_tokens, self.model)
+            warn_if_truncated(finish_reason, self.max_completion_tokens or self.max_tokens, self.model)
 
             # Without available_functions, return tool_calls so the caller (executor) handles execution
             if message.tool_calls and not available_functions:
@@ -2380,7 +2380,7 @@ class OpenAICompletion(BaseLLM):
             finish_reason, response_id = self._extract_chat_finish_reason_and_id(
                 response
             )
-            warn_if_truncated(finish_reason, self.max_tokens, self.model)
+            warn_if_truncated(finish_reason, self.max_completion_tokens or self.max_tokens, self.model)
 
             # Without available_functions, return tool_calls so the caller (executor) handles execution
             if message.tool_calls and not available_functions:
