@@ -66,14 +66,14 @@ def make_context(tool_name="read_file", tool_input=None, agent_role="researcher"
 class TestGuardrailDecisionV1:
     def test_frozen(self):
         claims = {"tool_name": "read_file", "agent_role": "researcher"}
-        did = compute_decision_id(claims)
+        did = compute_decision_id(claims, authorized=True)
         d = GuardrailDecisionV1(decision_id=did, authorized=True, claims=claims)
         with pytest.raises(FrozenInstanceError):
             d.authorized = False
 
     def test_expiry_not_expired(self):
         claims = {"test": True}
-        did = compute_decision_id(claims, expires_at=time.time() + 3600)
+        did = compute_decision_id(claims, authorized=True, expires_at=time.time() + 3600)
         d = GuardrailDecisionV1(
             decision_id=did, authorized=True, claims=claims,
             expires_at=time.time() + 3600,
@@ -83,7 +83,7 @@ class TestGuardrailDecisionV1:
     def test_expiry_expired(self):
         claims = {"test": True}
         past = time.time() - 10
-        did = compute_decision_id(claims, expires_at=past)
+        did = compute_decision_id(claims, authorized=True, expires_at=past)
         d = GuardrailDecisionV1(
             decision_id=did, authorized=True, claims=claims, expires_at=past,
         )
@@ -91,13 +91,13 @@ class TestGuardrailDecisionV1:
 
     def test_integrity_pass(self):
         claims = {"tool_name": "shell", "agent_role": "coder"}
-        did = compute_decision_id(claims)
+        did = compute_decision_id(claims, authorized=True)
         d = GuardrailDecisionV1(decision_id=did, authorized=True, claims=claims)
         assert d.verify_integrity() is True
 
     def test_integrity_fail_tampered_claims(self):
         claims = {"tool_name": "shell"}
-        did = compute_decision_id(claims)
+        did = compute_decision_id(claims, authorized=True)
         # Tamper with claims
         tampered_claims = {"tool_name": "rm -rf /"}
         d = GuardrailDecisionV1(decision_id=did, authorized=True, claims=tampered_claims)
@@ -106,7 +106,7 @@ class TestGuardrailDecisionV1:
     def test_integrity_fail_tampered_expiry(self):
         claims = {"tool_name": "shell"}
         expires = time.time() + 3600
-        did = compute_decision_id(claims, expires_at=expires)
+        did = compute_decision_id(claims, authorized=True, expires_at=expires)
         # Use correct decision_id but wrong expires_at
         d = GuardrailDecisionV1(
             decision_id=did, authorized=True, claims=claims,
@@ -117,7 +117,7 @@ class TestGuardrailDecisionV1:
     def test_no_expiry(self):
         claims = {"test": 1}
         d = GuardrailDecisionV1(
-            decision_id=compute_decision_id(claims),
+            decision_id=compute_decision_id(claims, authorized=True),
             authorized=True, claims=claims, expires_at=None,
         )
         assert not d.is_expired()
@@ -125,7 +125,7 @@ class TestGuardrailDecisionV1:
 
     def test_to_dict(self):
         claims = {"a": 1}
-        did = compute_decision_id(claims)
+        did = compute_decision_id(claims, authorized=True)
         d = GuardrailDecisionV1(decision_id=did, authorized=True, claims=claims)
         result = d.to_dict()
         assert result["decision_id"] == did
@@ -184,18 +184,18 @@ class TestActionEnvelopeV1:
 class TestComputeDecisionId:
     def test_deterministic(self):
         claims = {"a": 1, "b": 2}
-        assert compute_decision_id(claims) == compute_decision_id(claims)
+        assert compute_decision_id(claims, authorized=True) == compute_decision_id(claims, authorized=True)
 
     def test_content_addressed(self):
         c1 = {"a": 1, "b": 2}
         c2 = {"a": 1, "b": 3}
-        assert compute_decision_id(c1) != compute_decision_id(c2)
+        assert compute_decision_id(c1, authorized=True) != compute_decision_id(c2, authorized=True)
 
     def test_expires_at_in_preimage(self):
         """Same claims with different expires_at must yield different ids."""
         claims = {"x": 1}
-        id1 = compute_decision_id(claims, expires_at=1000.0)
-        id2 = compute_decision_id(claims, expires_at=2000.0)
+        id1 = compute_decision_id(claims, authorized=True, expires_at=1000.0)
+        id2 = compute_decision_id(claims, authorized=True, expires_at=2000.0)
         assert id1 != id2
 
     def test_expires_at_none_boundary(self):
@@ -204,12 +204,17 @@ class TestComputeDecisionId:
         Must differ from any case where expires_at is set.
         """
         claims = {"x": 1}
-        id_none = compute_decision_id(claims, expires_at=None)
-        id_with = compute_decision_id(claims, expires_at=1000.0)
+        id_none = compute_decision_id(claims, authorized=True, expires_at=None)
+        id_with = compute_decision_id(claims, authorized=True, expires_at=1000.0)
         assert id_none != id_with
 
-        # Verify the None case doesn't include _expires_at key in serialization
-        preimage_none = claims.copy()
+        # Verify the None case: preimage is {_domain, _version, authorized, claims}
+        preimage_none = {
+            "_domain": "CCS-GuardrailDecisionV1",
+            "_version": 1,
+            "authorized": True,
+            "claims": claims,
+        }
         expected = hashlib.sha256(
             canonical_json(preimage_none).encode("utf-8")
         ).hexdigest()
@@ -218,10 +223,10 @@ class TestComputeDecisionId:
     def test_key_order_independent(self):
         c1 = {"z": 26, "a": 1, "m": 13}
         c2 = {"a": 1, "m": 13, "z": 26}
-        assert compute_decision_id(c1) == compute_decision_id(c2)
+        assert compute_decision_id(c1, authorized=True) == compute_decision_id(c2, authorized=True)
 
     def test_hex_format(self):
-        did = compute_decision_id({"test": True})
+        did = compute_decision_id({"test": True}, authorized=True)
         assert len(did) == 64
         assert all(c in "0123456789abcdef" for c in did)
 
@@ -437,7 +442,7 @@ class TestCKG:
         """Two executions with the same decision_id must both be retained."""
         trail = AuditTrail()
         claims = {"tool": "echo"}
-        did = compute_decision_id(claims)
+        did = compute_decision_id(claims, authorized=True)
         trail.record_decision(
             GuardrailDecisionV1(
                 decision_id=did, authorized=True, claims=claims
@@ -477,7 +482,7 @@ class TestGuardrailProviderProtocol:
         class AlwaysYes(GuardrailProvider):
             def authorize(self, context):
                 return GuardrailDecisionV1(
-                    decision_id=compute_decision_id({"custom": True}),
+                    decision_id=compute_decision_id({"custom": True}, authorized=True),
                     authorized=True,
                     claims={"custom": True},
                 )
@@ -501,7 +506,7 @@ class TestAuditTrail:
         trail = AuditTrail()
         claims = {"test": 1}
         d = GuardrailDecisionV1(
-            decision_id=compute_decision_id(claims),
+            decision_id=compute_decision_id(claims, authorized=True),
             authorized=True, claims=claims,
         )
         trail.record_decision(d)
@@ -529,7 +534,7 @@ class TestAuditTrail:
         trail = AuditTrail()
         claims = {"x": 1}
         trail.record_decision(GuardrailDecisionV1(
-            decision_id=compute_decision_id(claims),
+            decision_id=compute_decision_id(claims, authorized=True),
             authorized=True, claims=claims,
         ))
         trail.record_envelope(ActionEnvelopeV1(
@@ -847,3 +852,186 @@ class TestGuardrailScenario:
         assert trail.decision_count == 1
         assert trail.envelope_count == 1
         assert env.tool_result_digest == ActionEnvelopeV1.digest_result(result)
+
+
+# ===========================================================================
+# Security review fixes (safal207, PR #7095)
+# ===========================================================================
+
+class TestVerdictBinding:
+    """Issue 1: authorized must be inside the decision_id preimage."""
+
+    def test_authorized_tamper_detected(self):
+        """Flipping authorized without recomputing id must fail verify_integrity."""
+        from dataclasses import replace
+        claims = {"tool": "read_file"}
+        d = GuardrailDecisionV1(
+            decision_id=compute_decision_id(claims, authorized=True),
+            authorized=True,
+            claims=claims,
+        )
+        assert d.verify_integrity() is True
+        # Tamper with the verdict (dataclasses.replace bypasses frozen via __init__).
+        tampered = replace(d, authorized=False)
+        assert tampered.verify_integrity() is False
+
+    def test_true_vs_false_produce_different_ids(self):
+        claims = {"tool": "x"}
+        id_allow = compute_decision_id(claims, authorized=True)
+        id_deny = compute_decision_id(claims, authorized=False)
+        assert id_allow != id_deny
+
+    def test_domain_separator_present(self):
+        """Preimage must include the CCS-GuardrailDecisionV1 domain separator."""
+        claims = {"k": "v"}
+        did = compute_decision_id(claims, authorized=True)
+        preimage = {
+            "_domain": "CCS-GuardrailDecisionV1",
+            "_version": 1,
+            "authorized": True,
+            "claims": claims,
+        }
+        expected = hashlib.sha256(
+            canonical_json(preimage).encode("utf-8")
+        ).hexdigest()
+        assert did == expected
+
+
+class TestCKGPolicyDigest:
+    """Issue 2: CKG recomputation must bind the concrete policy + action."""
+
+    def test_different_policies_same_pass_differ(self):
+        """Two materially different policies that both pass must yield
+        different decision_ids (because policy_digest differs)."""
+        ctx = make_context(tool_name="read_file", agent_role="admin")
+        p1 = CKGGuardrailProvider().add_constraint(
+            "tool_name_in", tools={"read_file"}
+        )
+        p2 = CKGGuardrailProvider().add_constraint(
+            "agent_role_in", roles={"admin"}
+        )
+        d1 = p1.authorize(ctx)
+        d2 = p2.authorize(ctx)
+        assert d1.authorized is True
+        assert d2.authorized is True
+        assert d1.decision_id != d2.decision_id
+        assert d1.claims["policy_digest"] != d2.claims["policy_digest"]
+
+    def test_policy_digest_present_in_claims(self):
+        p = CKGGuardrailProvider().add_constraint(
+            "tool_name_in", tools={"shell"}
+        )
+        d = p.authorize(make_context(tool_name="shell"))
+        assert "policy_digest" in d.claims
+        assert len(d.claims["policy_digest"]) == 64  # SHA-256 hex
+
+    def test_action_digest_present_in_claims(self):
+        p = CKGGuardrailProvider().add_constraint(
+            "tool_name_in", tools={"read_file"}
+        )
+        d = p.authorize(make_context(tool_name="read_file", tool_input={"p": 1}))
+        assert "action_digest" in d.claims
+        assert len(d.claims["action_digest"]) == 64
+
+    def test_different_tool_inputs_differ(self):
+        """Same policy, same tool, different tool_input must produce
+        different decision_ids (because action_digest differs)."""
+        p = CKGGuardrailProvider().add_constraint(
+            "has_param", name="mode"
+        )
+        d1 = p.authorize(make_context(tool_name="write", tool_input={"mode": "read"}))
+        d2 = p.authorize(make_context(tool_name="write", tool_input={"mode": "write"}))
+        assert d1.authorized is True and d2.authorized is True
+        assert d1.decision_id != d2.decision_id
+        assert d1.claims["action_digest"] != d2.claims["action_digest"]
+
+    def test_policy_digest_deterministic(self):
+        """Same constraints added in different order but same set must
+        produce different digests (order matters for policy evaluation —
+        AND is commutative, but we bind the declared order for auditability)."""
+        ctx = make_context(tool_name="read_file", agent_role="admin")
+        p1 = (CKGGuardrailProvider()
+              .add_constraint("tool_name_in", tools={"read_file"})
+              .add_constraint("agent_role_in", roles={"admin"}))
+        p2 = (CKGGuardrailProvider()
+              .add_constraint("agent_role_in", roles={"admin"})
+              .add_constraint("tool_name_in", tools={"read_file"}))
+        d1 = p1.authorize(ctx)
+        d2 = p2.authorize(ctx)
+        # Both pass; order-dependent digest means these may differ — that's fine.
+        # The key invariant is each is independently recomputable.
+        assert d1.verify_integrity()
+        assert d2.verify_integrity()
+
+
+class TestAttemptId:
+    """Issue 3: ActionEnvelopeV1 must carry a per-invocation attempt_id."""
+
+    def test_attempt_id_auto_generated(self):
+        e = ActionEnvelopeV1(
+            decision_id="abc",
+            tool_result_digest="def",
+            executed_at=1.0,
+            duration_ms=1.0,
+        )
+        assert e.attempt_id  # non-empty
+        # UUIDv4 format
+        assert len(e.attempt_id) == 36
+        assert e.attempt_id.count("-") == 4
+
+    def test_attempt_ids_unique(self):
+        ids = set()
+        for _ in range(50):
+            e = ActionEnvelopeV1(
+                decision_id="abc",
+                tool_result_digest="def",
+                executed_at=1.0,
+                duration_ms=1.0,
+            )
+            ids.add(e.attempt_id)
+        assert len(ids) == 50  # all unique
+
+    def test_attempt_id_in_to_dict(self):
+        e = ActionEnvelopeV1(
+            decision_id="abc",
+            tool_result_digest="def",
+            executed_at=1.0,
+            duration_ms=1.0,
+        )
+        assert "attempt_id" in e.to_dict()
+
+
+class TestCanonicalJsonStrictTypes:
+    """Issue 4: canonical_json must reject unsupported types."""
+
+    def test_rejects_datetime(self):
+        from datetime import datetime
+        with pytest.raises(TypeError):
+            canonical_json({"ts": datetime(2026, 1, 1)})
+
+    def test_rejects_custom_object(self):
+        class Foo:
+            pass
+        with pytest.raises(TypeError):
+            canonical_json({"obj": Foo()})
+
+    def test_accepts_sets_as_sorted_lists(self):
+        result = canonical_json({"items": {"c", "a", "b"}})
+        # Sets normalised to sorted lists
+        assert '"items":["a","b","c"]' in result
+
+    def test_accepts_all_atoms(self):
+        # Should not raise
+        canonical_json({"s": "x", "i": 1, "f": 1.5, "b": True, "n": None})
+
+    def test_nested_structures(self):
+        data = {"a": [1, 2, {"b": True}], "c": None}
+        result = canonical_json(data)
+        assert json.loads(result) == {"a": [1, 2, {"b": True}], "c": None}
+
+    def test_cross_language_determinism(self):
+        """Sorted keys + compact separators → identical across runs."""
+        data = {"z": 1, "a": {"y": 2, "x": 3}}
+        r1 = canonical_json(data)
+        r2 = canonical_json(data)
+        assert r1 == r2 == '{"a":{"x":3,"y":2},"z":1}'

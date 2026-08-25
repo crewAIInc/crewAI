@@ -21,6 +21,7 @@ CCS Spec: https://datatracker.ietf.org/doc/draft-correctover-ccs/
 import hashlib
 import json
 import time
+import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Set, TYPE_CHECKING
@@ -33,35 +34,116 @@ if TYPE_CHECKING:
 # Canonical JSON serialization
 # ---------------------------------------------------------------------------
 
+# Domain separator prepended to every decision_id preimage so that a hash
+# produced for one struct shape cannot be confused with another.
+_DECISION_DOMAIN_SEPARATOR = "CCS-GuardrailDecisionV1"
+_DECISION_SCHEMA_VERSION = 1
+
+# Types that are safe for cross-language canonical JSON recompute.  ``set``
+# and ``frozenset`` are *accepted* by the encoder but normalised to sorted
+# lists so the output is reproducible in Go/Rust/JS.  Any other type raises
+# ``TypeError`` rather than being silently stringified by ``default=str``.
+_CANONICAL_ATOMS = (str, int, float, bool, type(None))
+
+
+def _canonical_normalize(obj: Any) -> Any:
+    """Recursively normalise *obj* into a JSON-safe canonical form.
+
+    Sets/frozensets are converted to sorted lists.  Dicts are returned
+    as-is (``json.dumps(sort_keys=True)`` handles key ordering).  Every
+    leaf must be one of ``_CANONICAL_ATOMS``; unsupported types raise.
+    """
+    if isinstance(obj, _CANONICAL_ATOMS):
+        return obj
+    if isinstance(obj, (set, frozenset)):
+        return sorted(_canonical_normalize(x) for x in obj)
+    if isinstance(obj, (list, tuple)):
+        return [_canonical_normalize(x) for x in obj]
+    if isinstance(obj, dict):
+        return {k: _canonical_normalize(v) for k, v in obj.items()}
+    raise TypeError(
+        f"canonical_json does not support type {type(obj).__name__!r}; "
+        f"allowed: str, int, float, bool, None, list, tuple, set, frozenset, dict"
+    )
+
+
 def canonical_json(obj: Any) -> str:
-    """Deterministic JSON serialization: sorted keys, compact separators."""
-    return json.dumps(obj, sort_keys=True, separators=(",", ":"), default=str)
+    """Deterministic JSON serialization: sorted keys, compact separators.
+
+    Uses an explicit type allowlist so that unsupported Python types (e.g.
+    ``datetime``, custom classes) raise ``TypeError`` instead of leaking a
+    Python-specific ``str()`` representation into the canonical byte stream
+    — which would make the hash non-reproducible in other languages.
+    """
+    return json.dumps(
+        _canonical_normalize(obj),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
 
 
 # ---------------------------------------------------------------------------
 # decision_id computation
 # ---------------------------------------------------------------------------
 
-def compute_decision_id(claims: Dict[str, Any], expires_at: Optional[float] = None) -> str:
+def compute_decision_id(
+    claims: Dict[str, Any],
+    authorized: bool,
+    expires_at: Optional[float] = None,
+) -> str:
     """
     Content-addressed decision identifier.
 
-    Algorithm:
-    1. Build preimage: claims ∪ {"_expires_at": expires_at}
-       If expires_at is None, the preimage is claims alone
-       (no _expires_at key injected into the serialized payload).
-    2. Serialize: json.dumps(preimage, sort_keys=True, separators=(",", ":"))
-    3. Digest: SHA-256(canonical_bytes).hexdigest()
+    The preimage binds *five* fields, in this fixed order:
 
-    Same claims + same expires_at → same decision_id.
-    Tampering with either → verify_integrity() returns False.
+    1. ``_domain``    — ``"CCS-GuardrailDecisionV1"`` (cross-struct hash separation)
+    2. ``_version``   — schema version integer
+    3. ``authorized`` — the verdict itself
+    4. ``claims``     — provider-specific decision rationale
+    5. ``expires_at`` — optional expiration timestamp
+
+    Binding ``authorized`` into the hash means a verdict cannot be flipped
+    without invalidating ``decision_id``; ``verify_integrity()`` therefore
+    detects tampering with the verdict, not just the claims.
+
+    Same inputs → same decision_id.  Any mutation → verify_integrity() returns False.
     """
-    preimage = claims.copy()
+    preimage: Dict[str, Any] = {
+        "_domain": _DECISION_DOMAIN_SEPARATOR,
+        "_version": _DECISION_SCHEMA_VERSION,
+        "authorized": authorized,
+        "claims": claims,
+    }
     if expires_at is not None:
-        preimage["_expires_at"] = expires_at
+        preimage["expires_at"] = expires_at
 
     canonical_payload = canonical_json(preimage)
     return hashlib.sha256(canonical_payload.encode("utf-8")).hexdigest()
+
+
+def _policy_digest(constraints: List[Dict[str, Any]]) -> str:
+    """SHA-256 over the canonicalised constraint set.
+
+    Constraints are normalised (sets → sorted lists) so the digest is
+    stable across processes and independent of Python's hash seed.
+    """
+    canonical = canonical_json(constraints)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _action_digest(
+    tool_name: str,
+    agent_role: str,
+    tool_input: Dict[str, Any],
+) -> str:
+    """SHA-256 over the concrete invocation: tool + agent + normalised input."""
+    payload = {
+        "tool_name": tool_name,
+        "agent_role": agent_role,
+        "tool_input": tool_input,
+    }
+    return hashlib.sha256(canonical_json(payload).encode("utf-8")).hexdigest()
 
 
 # ---------------------------------------------------------------------------
@@ -74,10 +156,12 @@ class GuardrailDecisionV1:
     Pre-execution authorization decision.
 
     decision_id is content-addressed: SHA-256 of canonical JSON over
-    the claims dict (plus _expires_at if set). This enables:
+    the preimage ``{_domain, _version, authorized, claims, [expires_at]}``.
+    This enables:
     - O(1) audit dedup
     - Independent recompute verification without contacting the issuer
-    - Tamper detection: modifying claims or expires_at invalidates the id
+    - Tamper detection: modifying claims, authorized, or expires_at
+      invalidates the id
     """
     decision_id: str
     authorized: bool
@@ -92,10 +176,10 @@ class GuardrailDecisionV1:
 
     def verify_integrity(self) -> bool:
         """
-        Recompute decision_id from claims + expires_at and compare.
-        Returns False if claims or expires_at were tampered with.
+        Recompute decision_id from authorized + claims + expires_at and compare.
+        Returns False if any of the verdict, claims, or expires_at were tampered with.
         """
-        expected_id = compute_decision_id(self.claims, self.expires_at)
+        expected_id = compute_decision_id(self.claims, self.authorized, self.expires_at)
         return self.decision_id == expected_id
 
     def to_dict(self) -> Dict[str, Any]:
@@ -116,11 +200,17 @@ class ActionEnvelopeV1:
     Stores only the digest of the tool result (never raw value) to:
     - Prevent audit log bloat
     - Avoid leaking sensitive tool outputs into audit storage
+
+    ``attempt_id`` is a per-invocation UUIDv4.  ``decision_id`` is content
+    identity (same claims+policy+verdict+action → same id, useful for
+    deduplication); ``attempt_id`` distinguishes repeated executions of
+    the same authorised call.
     """
     decision_id: str
     tool_result_digest: str
     executed_at: float
     duration_ms: float
+    attempt_id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
     @staticmethod
     def digest_result(result: Any) -> str:
@@ -139,6 +229,7 @@ class ActionEnvelopeV1:
     def to_dict(self) -> Dict[str, Any]:
         return {
             "decision_id": self.decision_id,
+            "attempt_id": self.attempt_id,
             "tool_result_digest": self.tool_result_digest,
             "executed_at": self.executed_at,
             "duration_ms": self.duration_ms,
@@ -188,7 +279,7 @@ class AllowAllGuardrailProvider(GuardrailProvider):
             "agent_role": getattr(getattr(context, "agent", None), "role", "unknown"),
         }
         return GuardrailDecisionV1(
-            decision_id=compute_decision_id(claims),
+            decision_id=compute_decision_id(claims, authorized=True),
             authorized=True,
             claims=claims,
         )
@@ -204,7 +295,7 @@ class DenyAllGuardrailProvider(GuardrailProvider):
             "reason": "deny-all safety lock active",
         }
         return GuardrailDecisionV1(
-            decision_id=compute_decision_id(claims),
+            decision_id=compute_decision_id(claims, authorized=False),
             authorized=False,
             claims=claims,
         )
@@ -231,7 +322,7 @@ class ToolListGuardrailProvider(GuardrailProvider):
         tool_name = getattr(context, "tool_name", "unknown")
         agent_role = getattr(getattr(context, "agent", None), "role", "unknown")
 
-        claims = {
+        claims: Dict[str, Any] = {
             "provider": "ToolListGuardrailProvider",
             "tool_name": tool_name,
             "agent_role": agent_role,
@@ -251,7 +342,7 @@ class ToolListGuardrailProvider(GuardrailProvider):
             claims["policy"] = "default-allow"
 
         return GuardrailDecisionV1(
-            decision_id=compute_decision_id(claims),
+            decision_id=compute_decision_id(claims, authorized=authorized),
             authorized=authorized,
             claims=claims,
         )
@@ -271,6 +362,14 @@ class CKGGuardrailProvider(GuardrailProvider):
     - no_param: tool input must NOT contain specific param
 
     Constraints are AND-combined. Extensible via add_constraint().
+
+    The decision claims include ``policy_digest`` (SHA-256 over the
+    canonicalised constraint set) and ``action_digest`` (SHA-256 over
+    tool_name + agent_role + normalised tool_input).  This means two
+    materially different policies that both produce a passing call
+    yield *different* ``decision_id`` values, so an independent
+    verifier can reproduce why the concrete policy authorised the
+    concrete action, not merely that the hash is intact.
     """
 
     # Predicates accepted by :meth:`add_constraint`.  Any other name is
@@ -291,7 +390,7 @@ class CKGGuardrailProvider(GuardrailProvider):
     # or empty argument is rejected at registration time so that a typo such
     # as ``add_constraint("tool_name_in")`` (forgot ``tools=``) fails fast
     # instead of raising ``KeyError`` later during ``authorize()``.
-    _PREDICATE_SCHEMA: Dict[str, Dict[str, type]] = {
+    _PREDICATE_SCHEMA: Dict[str, Dict[str, Any]] = {
         "tool_name_in": {"tools": (set, list, frozenset, tuple)},
         "tool_name_not_in": {"tools": (set, list, frozenset, tuple)},
         "agent_role_in": {"roles": (set, list, frozenset, tuple)},
@@ -357,10 +456,17 @@ class CKGGuardrailProvider(GuardrailProvider):
         tool_input = getattr(context, "tool_input", {}) or {}
         agent_role = getattr(getattr(context, "agent", None), "role", "unknown")
 
-        claims = {
+        # Bind the concrete invocation (tool + agent + normalised input).
+        action_digest = _action_digest(tool_name, agent_role, tool_input)
+        # Bind the concrete policy (canonicalised constraint set).
+        policy_digest = _policy_digest(self._constraints)
+
+        claims: Dict[str, Any] = {
             "provider": "CKGGuardrailProvider",
             "tool_name": tool_name,
             "agent_role": agent_role,
+            "policy_digest": policy_digest,
+            "action_digest": action_digest,
         }
 
         satisfied = True
@@ -413,7 +519,7 @@ class CKGGuardrailProvider(GuardrailProvider):
         claims["constraints_count"] = len(self._constraints)
 
         return GuardrailDecisionV1(
-            decision_id=compute_decision_id(claims),
+            decision_id=compute_decision_id(claims, authorized=satisfied),
             authorized=satisfied,
             claims=claims,
         )
@@ -428,15 +534,16 @@ class AuditTrail:
     In-memory audit chain for decisions and action envelopes.
 
     Each decision can be independently verified via verify_integrity().
-    Each envelope links back to its decision via decision_id.
+    Each envelope links back to its decision via decision_id and carries
+    a unique attempt_id distinguishing repeated executions.
     """
 
     def __init__(self):
         self._decisions: Dict[str, GuardrailDecisionV1] = {}
         # Each decision may have zero or more execution envelopes —
         # two identical tool calls produce the same content-addressed
-        # decision_id but are distinct execution events that must both
-        # be preserved in the audit trail.
+        # decision_id but are distinct execution events (different
+        # attempt_id) that must both be preserved in the audit trail.
         self._envelopes: Dict[str, List[ActionEnvelopeV1]] = {}
 
     def record_decision(self, decision: GuardrailDecisionV1) -> None:
@@ -548,6 +655,9 @@ class GuardrailContext:
         """
         Record post-execution evidence envelope.
         Opt-in — not auto-registered; call manually or via after-hook.
+
+        Each envelope carries a fresh ``attempt_id`` (UUIDv4), so repeated
+        executions of the same authorised decision are distinguishable.
         """
         duration_ms = (time.time() - start_time) * 1000
         envelope = ActionEnvelopeV1(
