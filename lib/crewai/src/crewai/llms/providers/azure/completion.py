@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Self
 
+from crewai.hooks.dispatch import HookAborted
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
@@ -547,6 +548,9 @@ class AzureCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except HookAborted as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 return self._handle_api_error(e, from_task, from_agent)  # type: ignore[func-returns-value]
 
@@ -603,6 +607,11 @@ class AzureCompletion(BaseLLM):
 
                 formatted_messages = self._format_messages_for_azure(messages)
 
+                if not self._invoke_before_llm_call_hooks(
+                    formatted_messages, from_agent
+                ):
+                    raise ValueError("LLM call blocked by before_llm_call hook")
+
                 completion_params = self._prepare_completion_params(
                     formatted_messages, tools, effective_response_model
                 )
@@ -624,6 +633,9 @@ class AzureCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except HookAborted as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 self._handle_api_error(e, from_task, from_agent)
 

@@ -481,13 +481,17 @@ def enforce_rpm_limit(
         request_within_rpm_limit()
 
 
+@contextlib.contextmanager
 def _prepare_llm_call(
     executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
     messages: list[LLMMessage],
     printer: Printer,
     verbose: bool = True,
-) -> list[LLMMessage]:
+) -> Iterator[list[LLMMessage]]:
     """Shared pre-call logic: run before hooks and resolve messages.
+
+    Yields for the duration of the LLM call so the LLM layer knows the hooks
+    already ran with this executor's context and does not dispatch them twice.
 
     Args:
         executor_context: Optional executor context for hook invocation.
@@ -495,17 +499,23 @@ def _prepare_llm_call(
         printer: Printer instance for output.
         verbose: Whether to print output.
 
-    Returns:
+    Yields:
         The resolved messages list (may come from executor_context).
 
     Raises:
         ValueError: If a before hook blocks the call.
     """
-    if executor_context is not None:
-        if not _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose):
-            raise ValueError("LLM call blocked by before_llm_call hook")
-        messages = executor_context.messages
-    return messages
+    from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+
+    if executor_context is None:
+        yield messages
+        return
+
+    if not _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose):
+        raise ValueError("LLM call blocked by before_llm_call hook")
+
+    with model_call_hooks_dispatched():
+        yield executor_context.messages
 
 
 def _validate_and_finalize_llm_response(
@@ -577,17 +587,18 @@ def get_llm_response(
         Exception: If an error occurs.
         ValueError: If the response is None or empty.
     """
-    messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
-
-    answer = llm.call(
-        messages,
-        tools=tools,
-        callbacks=callbacks,
-        available_functions=available_functions,
-        from_task=from_task,
-        from_agent=from_agent,
-        response_model=response_model,
-    )
+    with _prepare_llm_call(
+        executor_context, messages, printer, verbose=verbose
+    ) as prepared_messages:
+        answer = llm.call(
+            prepared_messages,
+            tools=tools,
+            callbacks=callbacks,
+            available_functions=available_functions,
+            from_task=from_task,
+            from_agent=from_agent,
+            response_model=response_model,
+        )
 
     return _validate_and_finalize_llm_response(
         answer, executor_context, printer, verbose=verbose
@@ -630,17 +641,18 @@ async def aget_llm_response(
         Exception: If an error occurs.
         ValueError: If the response is None or empty.
     """
-    messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
-
-    answer = await llm.acall(
-        messages,
-        tools=tools,
-        callbacks=callbacks,
-        available_functions=available_functions,
-        from_task=from_task,
-        from_agent=from_agent,
-        response_model=response_model,
-    )
+    with _prepare_llm_call(
+        executor_context, messages, printer, verbose=verbose
+    ) as prepared_messages:
+        answer = await llm.acall(
+            prepared_messages,
+            tools=tools,
+            callbacks=callbacks,
+            available_functions=available_functions,
+            from_task=from_task,
+            from_agent=from_agent,
+            response_model=response_model,
+        )
 
     return _validate_and_finalize_llm_response(
         answer, executor_context, printer, verbose=verbose

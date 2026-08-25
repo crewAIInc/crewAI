@@ -10,6 +10,7 @@ from typing import Any, Literal, cast
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
+from crewai.hooks.dispatch import HookAborted
 from crewai.llms.base_llm import BaseLLM, llm_call_context
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
@@ -341,6 +342,9 @@ class GeminiCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except HookAborted as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except APIError as e:
                 error_msg = f"Google Gemini API error: {e.code} - {e.message}"
                 logging.error(error_msg)
@@ -397,6 +401,13 @@ class GeminiCompletion(BaseLLM):
                     self._format_messages_for_gemini(messages)
                 )
 
+                messages_for_hooks = self._convert_contents_to_dict(formatted_content)
+
+                if not self._invoke_before_llm_call_hooks(
+                    messages_for_hooks, from_agent
+                ):
+                    raise ValueError("LLM call blocked by before_llm_call hook")
+
                 config = self._prepare_generation_config(
                     system_instruction, tools, effective_response_model
                 )
@@ -420,6 +431,9 @@ class GeminiCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except HookAborted as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except APIError as e:
                 error_msg = f"Google Gemini API error: {e.code} - {e.message}"
                 logging.error(error_msg)

@@ -1440,7 +1440,17 @@ class Agent(BaseAgent):
                 ),
             )
             return rewritten_query
-        except HookAborted:
+        except HookAborted as e:
+            # A deny still owes the started event above its terminal event; only
+            # the fallback to no query is skipped.
+            crewai_event_bus.emit(
+                self,
+                event=KnowledgeQueryFailedEvent(
+                    error=str(e),
+                    from_task=task,
+                    from_agent=self,
+                ),
+            )
             raise
         except Exception as e:
             crewai_event_bus.emit(

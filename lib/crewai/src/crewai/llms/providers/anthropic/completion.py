@@ -8,6 +8,7 @@ from typing import Any, Final, Literal, Protocol, TypeGuard, TypedDict, cast
 from pydantic import BaseModel, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
+from crewai.hooks.dispatch import HookAborted
 from crewai.llms.base_llm import BaseLLM, JsonResponseFormat, llm_call_context
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
@@ -403,6 +404,9 @@ class AnthropicCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except HookAborted as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 error_msg = f"Anthropic API call failed: {e!s}"
                 logging.error(error_msg)
@@ -450,6 +454,11 @@ class AnthropicCompletion(BaseLLM):
                     self._format_messages_for_anthropic(messages)
                 )
 
+                if not self._invoke_before_llm_call_hooks(
+                    formatted_messages, from_agent
+                ):
+                    raise ValueError("LLM call blocked by before_llm_call hook")
+
                 completion_params = self._prepare_completion_params(
                     formatted_messages, system_message, tools, available_functions
                 )
@@ -473,6 +482,9 @@ class AnthropicCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except HookAborted as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 error_msg = f"Anthropic API call failed: {e!s}"
                 logging.error(error_msg)

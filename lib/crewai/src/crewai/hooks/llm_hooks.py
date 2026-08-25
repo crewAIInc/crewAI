@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any, cast
 
 from crewai_core.printer import PRINTER
@@ -173,6 +176,31 @@ class LegacyHookBlocked(HookAborted):
     the documented ``ValueError``, from a hook that raised :class:`HookAborted`
     itself and must reach the caller as the deny it is.
     """
+
+
+_model_call_hooks_dispatched: ContextVar[bool] = ContextVar(
+    "model_call_hooks_dispatched", default=False
+)
+
+
+@contextmanager
+def model_call_hooks_dispatched() -> Iterator[None]:
+    """Mark the window where the model-call hooks already ran for a pending call.
+
+    The executor dispatches with its own richer context (executor, task, crew)
+    and only then reaches the LLM. Without this marker the LLM layer would
+    dispatch a second time for the same call.
+    """
+    token = _model_call_hooks_dispatched.set(True)
+    try:
+        yield
+    finally:
+        _model_call_hooks_dispatched.reset(token)
+
+
+def model_call_hooks_already_dispatched() -> bool:
+    """Whether an enclosing caller already dispatched hooks for the current call."""
+    return _model_call_hooks_dispatched.get()
 
 
 def before_llm_call_reducer(context: LLMCallHookContext, result: object) -> bool:

@@ -417,6 +417,8 @@ def generate_input_description_with_ai(
     Returns:
         A concise description of the input.
     """
+    from crewai.hooks.dispatch import HookAborted
+
     context_texts = []
     placeholder_pattern = re.compile(r"\{(.+?)}")
 
@@ -452,8 +454,6 @@ def generate_input_description_with_ai(
     if not context:
         raise ValueError(f"No context found for input '{input_name}'.")
 
-    from crewai.hooks.dispatch import HookAborted
-
     prompt = (
         f"Based on the following context, write a concise description (15 words or less) of the input '{input_name}'.\n"
         "Provide only the description, without any extra text or labels. Do not include placeholders like '{topic}' in the description.\n"
@@ -484,6 +484,8 @@ def generate_crew_description_with_ai(crew: Crew, chat_llm: LLM | BaseLLM) -> st
     Returns:
         A concise description of the crew's purpose (15 words or less).
     """
+    from crewai.hooks.dispatch import HookAborted
+
     context_texts = []
     placeholder_pattern = re.compile(r"\{(.+?)}")
 
@@ -509,8 +511,6 @@ def generate_crew_description_with_ai(crew: Crew, chat_llm: LLM | BaseLLM) -> st
     context = "\n".join(context_texts)
     if not context:
         raise ValueError("No context found for generating crew description.")
-
-    from crewai.hooks.dispatch import HookAborted
 
     prompt = (
         "Based on the following context, write a concise, action-oriented description (15 words or less) of the crew's purpose.\n"

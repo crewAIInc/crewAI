@@ -660,6 +660,26 @@ class BaseLLM(BaseModel, ABC):
             ),
         )
 
+    def _emit_call_denied_event(
+        self,
+        denial: Exception,
+        from_task: Task | None = None,
+        from_agent: BaseAgent | None = None,
+    ) -> None:
+        """Report a hook deny as a deny rather than as a provider failure.
+
+        The call still owes its started event a terminal one, so the failed event
+        is emitted — with a message that names the decision instead of blaming
+        the provider for an outage that never happened.
+        """
+        source = getattr(denial, "source", None)
+        reason = getattr(denial, "reason", str(denial))
+        message = f"LLM call denied by {source or 'hook'}: {reason}"
+        logging.warning(message)
+        self._emit_call_failed_event(
+            error=message, from_task=from_task, from_agent=from_agent
+        )
+
     def _emit_stream_chunk_event(
         self,
         chunk: str,
@@ -990,14 +1010,15 @@ class BaseLLM(BaseModel, ABC):
         messages: list[LLMMessage],
         from_agent: BaseAgent | None = None,
     ) -> bool:
-        """Invoke before_llm_call hooks for direct LLM calls (no agent context).
+        """Invoke before_llm_call hooks for an LLM call reaching the provider.
 
         This method should be called by native provider implementations before
-        making the actual LLM call when from_agent is None (direct calls).
+        making the actual LLM call. It no-ops when an enclosing caller — the
+        executor — already dispatched the hooks for this same call.
 
         Args:
             messages: The messages being sent to the LLM
-            from_agent: The agent making the call (None for direct calls)
+            from_agent: The agent making the call, when there is one
 
         Returns:
             True if LLM call should proceed, False if a hook blocked it by
@@ -1009,14 +1030,9 @@ class BaseLLM(BaseModel, ABC):
 
         Example:
             >>> # In a native provider's call() method:
-            >>> if from_agent is None and not self._invoke_before_llm_call_hooks(
-            ...     messages, from_agent
-            ... ):
+            >>> if not self._invoke_before_llm_call_hooks(messages, from_agent):
             ...     raise ValueError("LLM call blocked by hook")
         """
-        if from_agent is not None:
-            return True
-
         from crewai_core.printer import PRINTER
 
         from crewai.hooks.dispatch import InterceptionPoint, dispatch
@@ -1024,7 +1040,11 @@ class BaseLLM(BaseModel, ABC):
             LLMCallHookContext,
             LegacyHookBlocked,
             before_llm_call_reducer,
+            model_call_hooks_already_dispatched,
         )
+
+        if model_call_hooks_already_dispatched():
+            return True
 
         # No early global-list guard: dispatch resolves global + execution-scoped
         # hooks and has its own no-op fast path, so scoped hooks still run here.
@@ -1032,7 +1052,7 @@ class BaseLLM(BaseModel, ABC):
             executor=None,
             messages=messages,
             llm=self,
-            agent=None,
+            agent=from_agent,
             task=None,
             crew=None,
         )
@@ -1058,34 +1078,36 @@ class BaseLLM(BaseModel, ABC):
         response: str,
         from_agent: BaseAgent | None = None,
     ) -> str:
-        """Invoke after_llm_call hooks for direct LLM calls (no agent context).
+        """Invoke after_llm_call hooks for an LLM call that reached the provider.
 
         This method should be called by native provider implementations after
-        receiving the LLM response when from_agent is None (direct calls).
+        receiving the LLM response. It no-ops when an enclosing caller — the
+        executor — already dispatched the hooks for this same call.
 
         Args:
             messages: The messages that were sent to the LLM
             response: The response from the LLM
-            from_agent: The agent that made the call (None for direct calls)
+            from_agent: The agent that made the call, when there is one
 
         Returns:
             The potentially modified response string
 
         Example:
             >>> # In a native provider's call() method:
-            >>> if from_agent is None and isinstance(result, str):
+            >>> if isinstance(result, str):
             ...     result = self._invoke_after_llm_call_hooks(
             ...         messages, result, from_agent
             ...     )
         """
-        if from_agent is not None or not isinstance(response, str):
-            return response
-
         from crewai.hooks.dispatch import InterceptionPoint, dispatch
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
             after_llm_call_reducer,
+            model_call_hooks_already_dispatched,
         )
+
+        if model_call_hooks_already_dispatched() or not isinstance(response, str):
+            return response
 
         # No early global-list guard: dispatch resolves global + execution-scoped
         # hooks and has its own no-op fast path, so scoped hooks still run here.
@@ -1093,7 +1115,7 @@ class BaseLLM(BaseModel, ABC):
             executor=None,
             messages=messages,
             llm=self,
-            agent=None,
+            agent=from_agent,
             task=None,
             crew=None,
             response=response,

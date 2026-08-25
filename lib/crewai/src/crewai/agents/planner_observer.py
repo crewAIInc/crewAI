@@ -190,7 +190,20 @@ class PlannerObserver:
 
             return observation
 
-        except HookAborted:
+        except HookAborted as e:
+            # A deny still owes the started event above its terminal event; only
+            # the conservative-replan fallback is skipped.
+            crewai_event_bus.emit(
+                self.agent,
+                event=StepObservationFailedEvent(
+                    agent_role=agent_role,
+                    step_number=completed_step.step_number,
+                    step_description=completed_step.description,
+                    error=str(e),
+                    from_task=self.task,
+                    from_agent=self.agent,
+                ),
+            )
             raise
         except Exception as e:
             logger.warning(
