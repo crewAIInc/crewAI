@@ -3847,6 +3847,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         from pydantic import BaseModel, Field
 
+        from crewai.hooks.dispatch import HookAborted
         from crewai.llm import LLM
         from crewai.llms.base_llm import BaseLLM as BaseLLMClass
         from crewai.utilities.i18n import I18N_DEFAULT
@@ -3902,6 +3903,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 logger.warning(f"Unexpected response type: {type(response)}")
                 return outcomes[0]
 
+        except HookAborted:
+            raise
         except Exception as e:
             logger.warning(
                 f"Structured output failed, falling back to simple prompting: {e}"
@@ -3933,6 +3936,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 )
                 return outcomes[0]
 
+            except HookAborted:
+                raise
             except Exception as fallback_err:
                 logger.warning(
                     f"Simple prompting also failed: {fallback_err}. "

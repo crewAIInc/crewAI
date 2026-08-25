@@ -646,6 +646,19 @@ class TestDirectLLMScopedHooks:
 
         with scoped_hooks():
             register_scoped(InterceptionPoint.PRE_MODEL_CALL, block)
+            with pytest.raises(HookAborted, match="blocked by scoped hook"):
+                llm._invoke_before_llm_call_hooks(
+                    [{"role": "user", "content": "hi"}], from_agent=None
+                )
+
+    def test_a_scoped_hook_returning_false_blocks_without_raising(self):
+        from crewai.hooks import InterceptionPoint
+        from crewai.hooks.dispatch import register_scoped, scoped_hooks
+
+        llm = self._stub_llm()
+
+        with scoped_hooks():
+            register_scoped(InterceptionPoint.PRE_MODEL_CALL, lambda _ctx: False)
             proceed = llm._invoke_before_llm_call_hooks(
                 [{"role": "user", "content": "hi"}], from_agent=None
             )

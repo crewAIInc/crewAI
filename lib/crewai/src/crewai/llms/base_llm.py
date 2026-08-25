@@ -1000,7 +1000,12 @@ class BaseLLM(BaseModel, ABC):
             from_agent: The agent making the call (None for direct calls)
 
         Returns:
-            True if LLM call should proceed, False if blocked by hook
+            True if LLM call should proceed, False if a hook blocked it by
+            returning ``False``.
+
+        Raises:
+            HookAborted: If a hook raised it. The deny reaches the caller intact
+                instead of being flattened into a provider-style error.
 
         Example:
             >>> # In a native provider's call() method:
@@ -1014,9 +1019,10 @@ class BaseLLM(BaseModel, ABC):
 
         from crewai_core.printer import PRINTER
 
-        from crewai.hooks.dispatch import HookAborted, InterceptionPoint, dispatch
+        from crewai.hooks.dispatch import InterceptionPoint, dispatch
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
+            LegacyHookBlocked,
             before_llm_call_reducer,
         )
 
@@ -1037,7 +1043,7 @@ class BaseLLM(BaseModel, ABC):
                 hook_context,
                 reducer=before_llm_call_reducer,
             )
-        except HookAborted:
+        except LegacyHookBlocked:
             PRINTER.print(
                 content="LLM call blocked by before_llm_call hook",
                 color="yellow",

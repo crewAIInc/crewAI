@@ -2491,6 +2491,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         Falls back to concatenation if the synthesis LLM call fails.
         """
+        from crewai.hooks.dispatch import HookAborted
+
         step_results: list[str] = [
             f"Step {todo.step_number} ({todo.description}):\n{todo.result}"
             for todo in self.state.todos.items
@@ -2552,6 +2554,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     )
                 return
 
+        except HookAborted:
+            raise
         except Exception as e:
             if self.agent and self.agent.verbose:
                 PRINTER.print(

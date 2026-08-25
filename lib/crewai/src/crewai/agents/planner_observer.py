@@ -132,6 +132,8 @@ class PlannerObserver:
             refinements are structured StepRefinement objects ready for
             direct application — no second LLM call needed.
         """
+        from crewai.hooks.dispatch import HookAborted
+
         agent_role = self.agent.role
 
         crewai_event_bus.emit(
@@ -188,6 +190,8 @@ class PlannerObserver:
 
             return observation
 
+        except HookAborted:
+            raise
         except Exception as e:
             logger.warning(
                 f"Observation LLM call failed: {e}. Defaulting to conservative replan."

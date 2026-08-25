@@ -166,14 +166,23 @@ _after_llm_call_hooks: list[AfterLLMCallHookType | AfterLLMCallHookCallable] = (
 )
 
 
+class LegacyHookBlocked(HookAborted):
+    """A ``before_llm_call`` hook blocked the call by returning ``False``.
+
+    Distinguishes the boolean convention, which the LLM layer keeps surfacing as
+    the documented ``ValueError``, from a hook that raised :class:`HookAborted`
+    itself and must reach the caller as the deny it is.
+    """
+
+
 def before_llm_call_reducer(context: LLMCallHookContext, result: object) -> bool:
     """Legacy calling convention for ``pre_model_call`` hooks.
 
-    A ``False`` return aborts the call (mapped to :class:`HookAborted`); messages
-    are modified in place, so no payload replacement occurs here.
+    A ``False`` return aborts the call (mapped to :class:`LegacyHookBlocked`);
+    messages are modified in place, so no payload replacement occurs here.
     """
     if result is False:
-        raise HookAborted(reason="before_llm_call hook returned False")
+        raise LegacyHookBlocked(reason="before_llm_call hook returned False")
     return False
 
 

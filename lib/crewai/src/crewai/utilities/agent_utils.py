@@ -1953,16 +1953,23 @@ def _setup_before_llm_call_hooks(
         verbose: Whether to print output.
 
     Returns:
-        True if LLM execution should proceed, False if blocked by a hook.
+        True if LLM execution should proceed, False if a hook blocked it by
+        returning ``False``.
+
+    Raises:
+        HookAborted: If a hook raised it, so the deny reaches the caller intact.
     """
     if executor_context:
         from crewai.hooks.dispatch import (
-            HookAborted,
             InterceptionPoint,
             get_scoped_hooks,
             run_hooks,
         )
-        from crewai.hooks.llm_hooks import LLMCallHookContext, before_llm_call_reducer
+        from crewai.hooks.llm_hooks import (
+            LLMCallHookContext,
+            LegacyHookBlocked,
+            before_llm_call_reducer,
+        )
 
         # Executor snapshot first, then execution-scoped hooks — the same
         # ordering dispatch() applies to global vs scoped hooks.
@@ -1984,7 +1991,7 @@ def _setup_before_llm_call_hooks(
                 reducer=before_llm_call_reducer,
                 verbose=verbose,
             )
-        except HookAborted:
+        except LegacyHookBlocked:
             if verbose:
                 printer.print(
                     content="LLM call blocked by before_llm_call hook",
