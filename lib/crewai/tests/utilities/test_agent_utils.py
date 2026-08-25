@@ -24,7 +24,7 @@ from crewai.utilities.agent_utils import (
     _expand_oversized_message,
     _extract_summary_tags,
     _format_messages_for_summary,
-    _message_content_text,
+    message_content_text,
     _normalize_messages_for_chunking,
     _split_messages_into_chunks,
     _split_text_by_token_limit,
@@ -708,7 +708,7 @@ class TestSplitMessagesIntoChunks:
         assert len(chunks) > 1
         for chunk in chunks:
             chunk_tokens = sum(
-                _estimate_token_count(_message_content_text(msg)) for msg in chunk
+                _estimate_token_count(message_content_text(msg)) for msg in chunk
             )
             assert chunk_tokens <= max_tokens
 
@@ -723,7 +723,7 @@ class TestSplitMessagesIntoChunks:
         assert len(chunks) > 1
         for chunk in chunks:
             chunk_tokens = sum(
-                _estimate_token_count(_message_content_text(msg)) for msg in chunk
+                _estimate_token_count(message_content_text(msg)) for msg in chunk
             )
             assert chunk_tokens <= max_tokens
 
@@ -750,22 +750,34 @@ class TestSplitMessagesIntoChunks:
 
 
 class TestMessageContentText:
-    """Tests for _message_content_text helper."""
+    """Tests for message_content_text helper."""
 
     def test_string_content(self) -> None:
         msg: dict[str, Any] = {"role": "user", "content": "hello"}
-        assert _message_content_text(msg) == "hello"
+        assert message_content_text(msg) == "hello"
 
     def test_none_content(self) -> None:
         msg: dict[str, Any] = {"role": "assistant", "content": None}
-        assert _message_content_text(msg) == ""
+        assert message_content_text(msg) == ""
 
-    def test_list_content_uses_str(self) -> None:
+    def test_list_content_yields_its_text(self) -> None:
+        """A parts list used to collapse to its Python repr."""
         msg: dict[str, Any] = {
             "role": "user",
-            "content": [{"type": "text", "text": "first"}],
+            "content": [{"type": "text", "text": "first"}, {"type": "text", "text": "second"}],
         }
-        assert _message_content_text(msg) == str(msg["content"])
+        assert message_content_text(msg) == "first second"
+
+    def test_list_content_without_text_is_named_not_repr(self) -> None:
+        msg: dict[str, Any] = {
+            "role": "user",
+            "content": [{"type": "image_url", "image_url": {"url": "https://x/y.png"}}],
+        }
+
+        text = message_content_text(msg)
+
+        assert text == "[multimodal content]"
+        assert "image_url" not in text
 
 
 class TestSplitTextByTokenLimit:
@@ -830,7 +842,7 @@ class TestExpandOversizedMessage:
         expanded = _expand_oversized_message(msg, max_tokens=max_tokens)
         assert len(expanded) > 1
         assert all(
-            _estimate_token_count(_message_content_text(part)) <= max_tokens
+            _estimate_token_count(message_content_text(part)) <= max_tokens
             for part in expanded
         )
 
@@ -859,7 +871,7 @@ class TestNormalizeMessagesForChunking:
         assert normalized[-1]["content"] == "Done"
         assert len(normalized) > 3
         assert all(
-            _estimate_token_count(_message_content_text(msg)) <= max_tokens
+            _estimate_token_count(message_content_text(msg)) <= max_tokens
             for msg in normalized
         )
 

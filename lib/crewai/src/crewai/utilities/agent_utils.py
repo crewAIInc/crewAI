@@ -844,11 +844,34 @@ def _estimate_token_count(text: str) -> int:
     return len(text) // 4
 
 
-def _message_content_text(msg: LLMMessage) -> str:
-    """Return the message content as text for token estimation."""
+def _content_parts_text(content: list[dict[str, Any]]) -> str:
+    """Text carried by a multimodal content-part list.
+
+    Non-text blocks (images, audio) have no text to give, so a list with
+    none of them is named rather than rendered -- ``str()`` on the list
+    would put a Python repr in front of the model.
+    """
+    text_parts = [
+        block.get("text", "")
+        for block in content
+        if isinstance(block, dict) and block.get("type") == "text"
+    ]
+    return " ".join(text_parts) if text_parts else "[multimodal content]"
+
+
+def message_content_text(msg: LLMMessage) -> str:
+    """Return the message content as text.
+
+    Used wherever a message has to collapse to a string -- token
+    estimation, memory, and the one turn promoted into the executor
+    prompt. Content is ``str | list[dict] | None``, and the list form is
+    the multimodal one.
+    """
     content = msg.get("content")
     if content is None:
         return ""
+    if isinstance(content, list):
+        return _content_parts_text(content)
     return str(content)
 
 
@@ -866,7 +889,7 @@ def _split_text_by_token_limit(text: str, max_tokens: int) -> list[str]:
 
 def _expand_oversized_message(msg: LLMMessage, max_tokens: int) -> list[LLMMessage]:
     """Split a message whose content alone exceeds max_tokens into sub-messages."""
-    msg_text = _message_content_text(msg)
+    msg_text = message_content_text(msg)
     if _estimate_token_count(msg_text) <= max_tokens:
         return [msg]
 
@@ -932,12 +955,7 @@ def _format_messages_for_summary(messages: list[LLMMessage]) -> str:
             else:
                 content = ""
         elif isinstance(content, list):
-            text_parts = [
-                block.get("text", "")
-                for block in content
-                if isinstance(block, dict) and block.get("type") == "text"
-            ]
-            content = " ".join(text_parts) if text_parts else "[multimodal content]"
+            content = _content_parts_text(content)
 
         if role == "assistant":
             label = "[ASSISTANT]:"
@@ -976,7 +994,7 @@ def _split_messages_into_chunks(
     current_tokens = 0
 
     for msg in normalized:
-        msg_tokens = _estimate_token_count(_message_content_text(msg))
+        msg_tokens = _estimate_token_count(message_content_text(msg))
 
         if current_chunk and (current_tokens + msg_tokens) > max_tokens:
             chunks.append(current_chunk)
