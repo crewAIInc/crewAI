@@ -1099,6 +1099,39 @@ def test_usage_info_streaming_with_call():
     assert llm._token_usage["successful_requests"] == 1
 
 
+def test_streaming_response_model_conversion_failure_raises():
+    """A completed stream that fails response_model conversion must raise,
+    not silently fall back to returning the raw prose (issue #6735)."""
+
+    class Answer(BaseModel):
+        city: str
+        population: int
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+
+    chunks = [
+        {
+            "id": "chatcmpl-test",
+            "choices": [{"delta": {"content": "Paris has 2.1M residents."}}],
+        },
+        {
+            "id": "chatcmpl-test",
+            "choices": [{"delta": {}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10},
+        },
+    ]
+
+    with (
+        patch("litellm.completion", return_value=iter(chunks)),
+        patch(
+            "crewai.utilities.internal_instructor.InternalInstructor.to_pydantic",
+            side_effect=ValueError("model output did not match schema"),
+        ),
+        pytest.raises(Exception, match="Failed to convert streaming response"),
+    ):
+        llm.call("What is the capital of France?", response_model=Answer)
+
+
 @pytest.mark.asyncio
 @pytest.mark.vcr(record_mode="once",decode_compressed_response=True,match_on=["method", "scheme", "host", "path", "body"])
 async def test_usage_info_non_streaming_with_acall():
