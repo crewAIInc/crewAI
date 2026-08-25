@@ -850,11 +850,17 @@ def _content_parts_text(content: list[dict[str, Any]]) -> str:
     Non-text blocks (images, audio) have no text to give, so a list with
     none of them is named rather than rendered -- ``str()`` on the list
     would put a Python repr in front of the model.
+
+    Blocks are ``dict[str, Any]`` and arrive from a model, so a ``text``
+    key that is not a string is possible; such a block carries no usable
+    text and is skipped rather than joined, which would raise.
     """
     text_parts = [
-        block.get("text", "")
+        block["text"]
         for block in content
-        if isinstance(block, dict) and block.get("type") == "text"
+        if isinstance(block, dict)
+        and block.get("type") == "text"
+        and isinstance(block.get("text"), str)
     ]
     return " ".join(text_parts) if text_parts else "[multimodal content]"
 

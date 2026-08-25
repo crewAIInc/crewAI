@@ -768,6 +768,29 @@ class TestMessageContentText:
         }
         assert message_content_text(msg) == "first second"
 
+    @pytest.mark.parametrize(
+        "bad_text", [123, None, {"nested": "x"}, ["a"]], ids=str
+    )
+    def test_a_non_string_text_block_does_not_raise(self, bad_text: Any) -> None:
+        """Blocks are `dict[str, Any]` from a model, so `text` may be anything."""
+        msg: dict[str, Any] = {
+            "role": "user",
+            "content": [{"type": "text", "text": bad_text}],
+        }
+
+        assert message_content_text(msg) == "[multimodal content]"
+
+    def test_a_usable_text_block_survives_a_malformed_sibling(self) -> None:
+        msg: dict[str, Any] = {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": {"nested": "x"}},
+                {"type": "text", "text": "real text"},
+            ],
+        }
+
+        assert message_content_text(msg) == "real text"
+
     def test_list_content_without_text_is_named_not_repr(self) -> None:
         msg: dict[str, Any] = {
             "role": "user",
