@@ -51,7 +51,8 @@ Two verification layers, deliberately distinct:
       from agent_action_capsule import verify_store
 
       rows = [json.loads(line) for line in open("ledger.jsonl") if line.strip()]
-      assert rows, "empty ledger"
+      if not rows:
+          raise SystemExit("empty ledger — nothing to verify")
       results = verify_store([row.get("capsule", row) for row in rows])
       ok = all(r.ok for r in results)
       print(f"{len(rows)} capsules, verify: {'ALL OK' if ok else 'FAILURES'}")
