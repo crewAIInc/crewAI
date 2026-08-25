@@ -88,10 +88,10 @@ crew_kickoff_completed/3ea9a64d-53 -          executed  -        OK
 
 | Field | Content |
 |---|---|
-| `action_id` / tool name | which tool call this capsule records |
+| `action_id` / tool name | which tool call or crew lifecycle event (kickoff started/completed/failed) this capsule records |
 | input / output digests | SHA-256 commitments — raw content never leaves your environment |
 | `effect` | `planned`, `executed`, `confirmed`, or `errored` |
 | `confirms` chain | the executed capsule cites the planned capsule by content address |
-| anchor receipt | digest-only registration with a SCITT transparency log (optional, on by default) |
+| anchor submission | digest-only registration submitted asynchronously to a SCITT transparency log (optional, on by default); default status is `submitted` — a confirmed receipt requires blocking with `anchor_wait` |
 
 The record format is an open specification (`draft-mih-scitt-agent-action-capsule`, an individual IETF Internet-Draft) with an Apache-2.0 reference implementation.
