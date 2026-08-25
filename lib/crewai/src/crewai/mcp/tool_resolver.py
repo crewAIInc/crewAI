@@ -11,6 +11,7 @@ into a standalone MCPToolResolver. It handles three flavours of MCP reference:
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import contextvars
 import time
 from typing import TYPE_CHECKING, Any, Final, cast
@@ -352,39 +353,33 @@ class MCPToolResolver:
                 return tools_list
             except Exception as e:
                 if discovery_client.connected:
-                    await discovery_client.disconnect()
-                    await asyncio.sleep(0.1)
+                    try:
+                        await discovery_client.disconnect()
+                        await asyncio.sleep(0.1)
+                    except Exception as disconnect_error:
+                        self._logger.log(
+                            "error", f"Error during disconnect: {disconnect_error}"
+                        )
                 raise RuntimeError(
                     f"Error during setup client and list tools: {e}"
                 ) from e
 
         try:
             try:
-                asyncio.get_running_loop()
-                import concurrent.futures
-
-                ctx = contextvars.copy_context()
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        ctx.run, asyncio.run, _setup_client_and_list_tools()
-                    )
-                    tools_list = future.result()
-            except RuntimeError:
-                try:
-                    tools_list = asyncio.run(_setup_client_and_list_tools())
-                except RuntimeError as e:
-                    error_msg = str(e).lower()
-                    if "cancel scope" in error_msg or "task" in error_msg:
-                        raise ConnectionError(
-                            "MCP connection failed due to event loop cleanup issues. "
-                            "This may be due to authentication errors or server unavailability."
-                        ) from e
-                    raise
-                except asyncio.CancelledError as e:
+                tools_list = self._run_coro_sync(_setup_client_and_list_tools())
+            except RuntimeError as e:
+                error_msg = str(e).lower()
+                if "cancel scope" in error_msg or "task" in error_msg:
                     raise ConnectionError(
-                        "MCP connection was cancelled. This may indicate an authentication "
-                        "error or server unavailability."
+                        "MCP connection failed due to event loop cleanup issues. "
+                        "This may be due to authentication errors or server unavailability."
                     ) from e
+                raise
+            except asyncio.CancelledError as e:
+                raise ConnectionError(
+                    "MCP connection was cancelled. This may indicate an authentication "
+                    "error or server unavailability."
+                ) from e
 
             if mcp_config.tool_filter:
                 filtered_tools = []
@@ -465,9 +460,28 @@ class MCPToolResolver:
             return cast(list[BaseTool], tools), []
         except Exception as e:
             if discovery_client.connected:
-                asyncio.run(discovery_client.disconnect())
+                try:
+                    self._run_coro_sync(discovery_client.disconnect())
+                except Exception as disconnect_error:
+                    self._logger.log(
+                        "error", f"Error during MCP client cleanup: {disconnect_error}"
+                    )
 
             raise RuntimeError(f"Failed to get native MCP tools: {e}") from e
+
+    @staticmethod
+    def _run_coro_sync(coro: Any) -> Any:
+        """Run ``coro`` synchronously without nesting ``asyncio.run`` on an active loop."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop is not None and loop.is_running():
+            ctx = contextvars.copy_context()
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                return executor.submit(ctx.run, asyncio.run, coro).result()
+        return asyncio.run(coro)
 
     @staticmethod
     def _build_mcp_config_from_dict(
