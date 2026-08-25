@@ -7,7 +7,7 @@ in CrewAI, including common functionality for native SDK implementations.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Generator
+from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 import contextvars
 from datetime import datetime
@@ -315,7 +315,7 @@ class BaseLLM(BaseModel, ABC):
     def call(
         self,
         messages: str | list[LLMMessage],
-        tools: list[dict[str, BaseTool]] | None = None,
+        tools: Sequence[Any] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
@@ -329,7 +329,7 @@ class BaseLLM(BaseModel, ABC):
                      Can be a string or list of message dictionaries.
                      If string, it will be converted to a single user message.
                      If list, each dict must have 'role' and 'content' keys.
-            tools: Optional list of tool schemas for function calling.
+            tools: Optional list of tool schemas or tool instances for function calling.
                   Each tool should define its name, description, and parameters.
             callbacks: Optional list of callback functions to be executed
                       during and after the LLM call.
@@ -352,7 +352,7 @@ class BaseLLM(BaseModel, ABC):
     def stream_events(
         self,
         messages: str | list[LLMMessage],
-        tools: list[dict[str, BaseTool]] | None = None,
+        tools: Sequence[Any] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
@@ -385,7 +385,7 @@ class BaseLLM(BaseModel, ABC):
     async def acall(
         self,
         messages: str | list[LLMMessage],
-        tools: list[dict[str, BaseTool]] | None = None,
+        tools: Sequence[Any] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
@@ -421,8 +421,8 @@ class BaseLLM(BaseModel, ABC):
         raise NotImplementedError
 
     def _convert_tools_for_interference(
-        self, tools: list[dict[str, BaseTool]]
-    ) -> list[dict[str, BaseTool]]:
+        self, tools: Sequence[Any]
+    ) -> Sequence[Any]:
         """Convert tools to a format that can be used for interference.
 
         Args:
@@ -552,7 +552,7 @@ class BaseLLM(BaseModel, ABC):
     def _emit_call_started_event(
         self,
         messages: str | list[LLMMessage],
-        tools: list[dict[str, BaseTool]] | None = None,
+        tools: Sequence[Any] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,

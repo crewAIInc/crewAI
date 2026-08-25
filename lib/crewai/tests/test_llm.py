@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from time import sleep
@@ -1250,3 +1251,85 @@ async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0].function.name == "search"
+
+
+def test_llm_call_accepts_basetool_instances():
+    """Verify that passing BaseTool instances to LLM.call() converts them
+    to tool schemas and executes available functions properly.
+    """
+    from crewai.tools import BaseTool
+
+    class MultiplyTool(BaseTool):
+        name: str = "multiply"
+        description: str = "Multiplies two numbers."
+
+        def _run(self, a: int, b: int) -> int:
+            return a * b
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+    tool = MultiplyTool()
+
+    with patch("crewai.llm.litellm.completion") as mock_completion:
+        mock_tool_call = MagicMock()
+        mock_tool_call.function.name = "multiply"
+        mock_tool_call.function.arguments = json.dumps({"a": 6, "b": 7})
+
+        mock_message = MagicMock()
+        mock_message.content = ""
+        mock_message.tool_calls = [mock_tool_call]
+
+        mock_choice = MagicMock(message=mock_message)
+        mock_response = MagicMock(choices=[mock_choice], usage={"total_tokens": 10})
+        mock_completion.return_value = mock_response
+
+        result = llm.call("What is 6 times 7?", tools=[tool])
+
+        assert result == 42
+        _, kwargs = mock_completion.call_args
+        assert "tools" in kwargs
+        assert len(kwargs["tools"]) == 1
+        assert kwargs["tools"][0]["function"]["name"] == "multiply"
+
+
+@pytest.mark.asyncio
+async def test_llm_acall_accepts_basetool_instances():
+    """Verify that passing BaseTool instances to LLM.acall() converts them
+    to tool schemas and executes available functions properly.
+    """
+    from crewai.tools import BaseTool
+
+    class AddTool(BaseTool):
+        name: str = "add"
+        description: str = "Adds two numbers."
+
+        def _run(self, a: int, b: int) -> int:
+            return a + b
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+    tool = AddTool()
+
+    with patch("crewai.llm.litellm.acompletion") as mock_acompletion:
+        mock_tool_call = MagicMock()
+        mock_tool_call.function.name = "add"
+        mock_tool_call.function.arguments = json.dumps({"a": 10, "b": 20})
+
+        mock_message = MagicMock()
+        mock_message.content = ""
+        mock_message.tool_calls = [mock_tool_call]
+
+        mock_choice = MagicMock(message=mock_message)
+        mock_response = MagicMock(choices=[mock_choice], usage={"total_tokens": 10})
+
+        async def _mock_acompletion(*args, **kwargs):
+            return mock_response
+
+        mock_acompletion.side_effect = _mock_acompletion
+
+        result = await llm.acall("What is 10 + 20?", tools=[tool])
+
+        assert result == 30
+        _, kwargs = mock_acompletion.call_args
+        assert "tools" in kwargs
+        assert len(kwargs["tools"]) == 1
+        assert kwargs["tools"][0]["function"]["name"] == "add"
+

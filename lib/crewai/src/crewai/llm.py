@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import datetime
 import json
 import logging
@@ -45,7 +45,10 @@ from crewai.llms.constants import (
     GEMINI_MODELS,
     OPENAI_MODELS,
 )
+from crewai.tools.base_tool import BaseTool
+from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities import InternalInstructor
+from crewai.utilities.agent_utils import convert_tools_to_openai_schema
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
@@ -65,7 +68,6 @@ except ImportError:
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.task import Task
-    from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
 
 load_dotenv()
@@ -1818,10 +1820,51 @@ class LLM(BaseLLM):
                 )
         return None
 
+    def _process_tools(
+        self,
+        tools: Sequence[Any] | None,
+        available_functions: dict[str, Any] | None,
+    ) -> tuple[list[dict[str, Any]] | None, dict[str, Any] | None]:
+        """Convert BaseTool or CrewStructuredTool instances to OpenAI schemas and functions.
+
+        If tools contains BaseTool or CrewStructuredTool objects, convert them
+        to OpenAI function schemas and populate available_functions. Existing
+        dict schemas and available_functions are preserved.
+        """
+        if not tools:
+            return tools, available_functions  # type: ignore[return-value]
+
+        has_tool_instances = any(
+            isinstance(t, (BaseTool, CrewStructuredTool)) for t in tools
+        )
+        if not has_tool_instances:
+            return list(tools), available_functions  # type: ignore[return-value]
+
+        tool_instances: list[BaseTool | CrewStructuredTool] = []
+        dict_tools: list[dict[str, Any]] = []
+
+        for t in tools:
+            if isinstance(t, (BaseTool, CrewStructuredTool)):
+                tool_instances.append(t)
+            elif isinstance(t, dict):
+                dict_tools.append(t)
+            else:
+                tool_instances.append(t)
+
+        converted_schemas, converted_funcs, _ = convert_tools_to_openai_schema(
+            tool_instances
+        )
+
+        merged_tools = dict_tools + converted_schemas
+        merged_functions = dict(available_functions or {})
+        merged_functions.update(converted_funcs)
+
+        return merged_tools, merged_functions
+
     def call(
         self,
         messages: str | list[LLMMessage],
-        tools: list[dict[str, BaseTool]] | None = None,
+        tools: Sequence[Any] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
@@ -1835,8 +1878,8 @@ class LLM(BaseLLM):
                      Can be a string or list of message dictionaries.
                      If string, it will be converted to a single user message.
                      If list, each dict must have 'role' and 'content' keys.
-            tools: Optional list of tool schemas for function calling.
-                  Each tool should define its name, description, and parameters.
+            tools: Optional list of tool schemas or tool instances for function calling.
+                  Can be tool schema dicts or BaseTool/CrewStructuredTool instances.
             callbacks: Optional list of callback functions to be executed
                       during and after the LLM call.
             available_functions: Optional dict mapping function names to callables
@@ -1855,6 +1898,8 @@ class LLM(BaseLLM):
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
         with llm_call_context():
+            tools, available_functions = self._process_tools(tools, available_functions)
+
             self._emit_call_started_event(
                 messages=messages,
                 tools=tools,
@@ -1960,7 +2005,7 @@ class LLM(BaseLLM):
     async def acall(
         self,
         messages: str | list[LLMMessage],
-        tools: list[dict[str, BaseTool]] | None = None,
+        tools: Sequence[Any] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
@@ -1974,8 +2019,8 @@ class LLM(BaseLLM):
                      Can be a string or list of message dictionaries.
                      If string, it will be converted to a single user message.
                      If list, each dict must have 'role' and 'content' keys.
-            tools: Optional list of tool schemas for function calling.
-                  Each tool should define its name, description, and parameters.
+            tools: Optional list of tool schemas or tool instances for function calling.
+                  Can be tool schema dicts or BaseTool/CrewStructuredTool instances.
             callbacks: Optional list of callback functions to be executed
                       during and after the LLM call.
             available_functions: Optional dict mapping function names to callables
@@ -1994,6 +2039,8 @@ class LLM(BaseLLM):
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
         with llm_call_context():
+            tools, available_functions = self._process_tools(tools, available_functions)
+
             self._emit_call_started_event(
                 messages=messages,
                 tools=tools,
