@@ -1262,7 +1262,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         instance._is_execution_resuming = True
         # Seed the match id so the resume-phase listener filters its own
         # LLM events (which run with `current_flow_id == instance.flow_id`)
-        # instead of dropping or absorbing unrelated ones.
+        # instead of dropping or absorbing unrelated ones. Must stay
+        # `instance.flow_id`: resume forces `current_flow_id` to this value and
+        # `_owns_execution_boundary` compares the two.
         instance._flow_match_id = instance.flow_id
 
         return instance
