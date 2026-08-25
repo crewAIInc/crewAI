@@ -22,6 +22,10 @@ from typing import Any
 
 from crewai.agent import Agent
 from crewai.agent.planning_config import PlanningConfig
+from crewai.agent.utils import (
+    ahandle_knowledge_retrieval,
+    handle_knowledge_retrieval,
+)
 from crewai.agents.planner_observer import PlannerObserver
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.knowledge_events import (
@@ -216,6 +220,55 @@ def test_a_denied_step_observation_still_reports_the_failure_it_started(denying_
     assert len(failed) == 1
     assert failed[0].error == "no model calls allowed"
     assert failed[0].step_number == 1
+
+
+def test_a_denied_knowledge_retrieval_does_not_fall_back_to_the_plain_prompt(
+    denying_llm,
+):
+    # the retrieval helper wraps the query rewrite in its own except Exception,
+    # so guarding the rewrite alone still let the task run without knowledge
+    agent = Agent(
+        role="Researcher",
+        goal="Answer questions",
+        backstory="You look things up.",
+        llm=denying_llm,
+    )
+    # only has to be truthy: the deny fires before any knowledge is queried
+    agent.knowledge = object()
+    task = Task(
+        description="What is the capital of France?",
+        expected_output="A city name.",
+        agent=agent,
+    )
+
+    with pytest.raises(HookAborted):
+        handle_knowledge_retrieval(
+            agent,
+            task,
+            "the task prompt",
+            {},
+            lambda *_args, **_kwargs: [],
+            lambda *_args, **_kwargs: [],
+        )
+
+
+@pytest.mark.asyncio
+async def test_a_denied_async_knowledge_retrieval_reaches_the_caller(denying_llm):
+    agent = Agent(
+        role="Researcher",
+        goal="Answer questions",
+        backstory="You look things up.",
+        llm=denying_llm,
+    )
+    agent.knowledge = object()
+    task = Task(
+        description="What is the capital of France?",
+        expected_output="A city name.",
+        agent=agent,
+    )
+
+    with pytest.raises(HookAborted):
+        await ahandle_knowledge_retrieval(agent, task, "the task prompt", {})
 
 
 def test_a_denied_plan_stops_the_executor_instead_of_running_unplanned(denying_llm):

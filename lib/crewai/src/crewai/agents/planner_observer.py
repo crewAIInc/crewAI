@@ -131,6 +131,10 @@ class PlannerObserver:
             StepObservation with the Planner's analysis. Any suggested
             refinements are structured StepRefinement objects ready for
             direct application — no second LLM call needed.
+
+        Raises:
+            HookAborted: A `pre_model_call` hook denied the observation call.
+                Every other failure degrades to a conservative observation.
         """
         from crewai.hooks.dispatch import HookAborted
 

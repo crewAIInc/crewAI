@@ -15,6 +15,7 @@ from crewai.events.types.knowledge_events import (
     KnowledgeRetrievalStartedEvent,
     KnowledgeSearchQueryFailedEvent,
 )
+from crewai.hooks.dispatch import HookAborted
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
@@ -185,6 +186,19 @@ def handle_knowledge_retrieval(
                     retrieved_knowledge=_combine_knowledge_context(agent),
                 ),
             )
+    except HookAborted as e:
+        # a deny still owes the started event above its terminal event; only the
+        # fallback to an unaugmented prompt is skipped
+        crewai_event_bus.emit(
+            agent,
+            event=KnowledgeSearchQueryFailedEvent(
+                query=agent.knowledge_search_query or "",
+                error=str(e),
+                from_task=task,
+                from_agent=agent,
+            ),
+        )
+        raise
     except Exception as e:
         crewai_event_bus.emit(
             agent,
@@ -381,6 +395,19 @@ async def ahandle_knowledge_retrieval(
                     retrieved_knowledge=_combine_knowledge_context(agent),
                 ),
             )
+    except HookAborted as e:
+        # a deny still owes the started event above its terminal event; only the
+        # fallback to an unaugmented prompt is skipped
+        crewai_event_bus.emit(
+            agent,
+            event=KnowledgeSearchQueryFailedEvent(
+                query=agent.knowledge_search_query or "",
+                error=str(e),
+                from_task=task,
+                from_agent=agent,
+            ),
+        )
+        raise
     except Exception as e:
         crewai_event_bus.emit(
             agent,
