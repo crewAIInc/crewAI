@@ -395,7 +395,11 @@ class _ConversationalMixin:
     @listen("answer_from_history")
     @_conversational_only
     def answer_from_history_turn(self) -> str | None:
-        """Answer directly from canonical conversation history when configured."""
+        """Deprecated history-only handler retained for compatibility.
+
+        Use the built-in ``converse`` route, which already receives canonical
+        conversation history, or override ``converse_turn``.
+        """
         config = self._conversation_config
         if config is None:
             return None
@@ -718,8 +722,8 @@ class _ConversationalMixin:
         permission gates before the LLM decision).
 
         Returning a falsy value means "no routing decision": the turn falls
-        through to the built-in defaults (``answer_from_history`` when
-        configured, else ``converse``). It never replays a previous turn's
+        through to the deprecated ``answer_from_history`` compatibility path
+        when configured, then ``converse``. It never replays a previous turn's
         intent.
         """
         config = self._conversation_config
@@ -740,7 +744,7 @@ class _ConversationalMixin:
         return self._route_with_config(router_config, context)
 
     def can_answer_from_history(self, context: dict[str, Any]) -> bool:
-        """Return whether this turn can be answered from message history."""
+        """Return whether the deprecated history-only route can answer."""
         config = self._conversation_config
         if config is None or config.answer_from_history_llm is None:
             return False
@@ -1196,7 +1200,7 @@ class _ConversationalMixin:
         return config.system_prompt or None
 
     def _resolve_answer_from_history_prompt(self) -> str:
-        """Return the effective ``answer_from_history`` prompt."""
+        """Return the deprecated history-only route's effective prompt."""
         from crewai.utilities.i18n import I18N_DEFAULT
 
         config = self._conversation_config

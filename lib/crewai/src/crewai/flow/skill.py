@@ -293,7 +293,7 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
             "llm": "Model id used by the built-in `converse` handler, and the router's fallback model.",
             "system_prompt": "System message for the built-in `converse` handler. Omit for the framework default; use an empty string for none.",
             "default_intents": "Outcome labels classified before routing. Requires `intent_llm`.",
-            "answer_from_history_llm": "Setting this enables the optional `answer_from_history` route, which answers from the transcript without invoking a route handler.",
+            "answer_from_history_llm": "Deprecated. Use `llm` with the built-in `converse` route, which already receives the transcript.",
             "visible_agent_outputs": "Agent names whose recorded results are promoted to user-visible assistant messages, or `all`.",
             "builtin_routes": "Route labels the framework handles itself. Do not add your own routes here; declare them as a method `listen` label.",
             "internal_routes": "Route labels the framework handles that are excluded from the router's catalog.",
