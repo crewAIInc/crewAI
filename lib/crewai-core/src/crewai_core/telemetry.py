@@ -32,7 +32,11 @@ from opentelemetry.trace import Span, Status, StatusCode
 from typing_extensions import Self
 
 from crewai_core.project import get_project_id
-from crewai_core.runtime_env import detect_coding_agent, detect_runtime_context
+from crewai_core.runtime_env import (
+    detect_coding_agent,
+    detect_cpu_band,
+    detect_runtime_context,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -144,6 +148,7 @@ def common_span_attributes() -> dict[str, str]:
     attributes = {
         "coding_agent": detect_coding_agent(),
         "runtime_context": detect_runtime_context(),
+        "cpu_band": detect_cpu_band(),
     }
 
     try:
