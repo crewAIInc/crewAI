@@ -41,6 +41,36 @@ class TestEmbeddingFactory:
         assert call_kwargs["model_name"] == "text-embedding-3-small"
 
     @patch("crewai.rag.embeddings.factory.import_and_validate_definition")
+    def test_build_embedder_openrouter(self, mock_import):
+        """Test building OpenRouter embedder."""
+        mock_provider_class = MagicMock()
+        mock_provider_instance = MagicMock()
+        mock_embedding_function = MagicMock()
+
+        mock_import.return_value = mock_provider_class
+        mock_provider_class.return_value = mock_provider_instance
+        mock_provider_instance.embedding_callable.return_value = mock_embedding_function
+
+        config = {
+            "provider": "openrouter",
+            "config": {
+                "api_key": "test-key",
+                "model_name": "openai/text-embedding-3-small",
+            },
+        }
+
+        build_embedder(config)
+
+        mock_import.assert_called_once_with(
+            "crewai.rag.embeddings.providers.openrouter.openrouter_provider.OpenRouterProvider"
+        )
+        mock_provider_class.assert_called_once()
+
+        call_kwargs = mock_provider_class.call_args.kwargs
+        assert call_kwargs["api_key"] == "test-key"
+        assert call_kwargs["model_name"] == "openai/text-embedding-3-small"
+
+    @patch("crewai.rag.embeddings.factory.import_and_validate_definition")
     def test_build_embedder_azure(self, mock_import):
         """Test building Azure embedder."""
         mock_provider_class = MagicMock()
