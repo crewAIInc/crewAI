@@ -130,6 +130,10 @@ xml = [
 oxylabs = [
     "oxylabs==2.0.0"
 ]
+youtube = [
+    "google-api-python-client>=2.100.0",
+    "google-auth>=2.25.0",
+]
 mongodb = [
     "pymongo>=4.13"
 ]
