@@ -97,6 +97,7 @@ from crewai.utilities.agent_utils import (
     get_tool_names,
     is_inside_event_loop,
     load_agent_from_repository,
+    message_content_text,
     parse_tools,
     render_text_description_and_args,
 )
@@ -1572,7 +1573,7 @@ class Agent(BaseAgent):
             # assistant's own replies were the user's.
             request_index = _request_index(carried)
             request = carried[request_index] if carried else None
-            formatted_messages = str(request.get("content") or "") if request else ""
+            formatted_messages = message_content_text(request) if request else ""
             # Split, rather than one history list: the promoted request keeps
             # its position in the conversation. Sending everything before it
             # would hoist a trailing tool pair above the question it answers,
@@ -1581,7 +1582,7 @@ class Agent(BaseAgent):
                 history = carried[:request_index]
                 trailing = carried[request_index + 1 :]
             recall_text = "\n".join(
-                str(msg.get("content", "")) for msg in carried if msg.get("content")
+                message_content_text(msg) for msg in carried if msg.get("content")
             )
             # Only the request's attachments go on the current turn; a history
             # message keeps its own, so unioning them all would send prior
@@ -1804,7 +1805,7 @@ class Agent(BaseAgent):
             else:
                 input_str = (
                     "\n".join(
-                        str(msg.get("content", ""))
+                        message_content_text(msg)
                         for msg in messages
                         if msg.get("content")
                     )
