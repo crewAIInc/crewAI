@@ -23,9 +23,10 @@ from contextlib import contextmanager
 from enum import Enum
 import json
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeVar, cast
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel, ConfigDict, Field, create_model
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.flow_events import (
@@ -58,6 +59,7 @@ from crewai.flow.conversational_definition import (
 from crewai.flow.dsl import listen, start
 from crewai.flow.dsl._utils import _method_action, _set_flow_method_definition
 from crewai.flow.flow_definition import FlowDefinition, FlowMethodDefinition
+from crewai.project.crew_definition import PythonReferenceDefinition
 from crewai.flow.types import FlowMethodName
 from crewai.utilities.types import LLMMessage
 
@@ -84,25 +86,39 @@ def _iter_condition_labels(condition: Any) -> set[str]:
     return set()
 
 
+def _resolve_router_response_format(
+    declared: PythonReferenceDefinition | None,
+    project_root: Path | None,
+) -> type[BaseModel] | None:
+    """Import the model class a declaration names for the routing decision.
+
+    ``_router_response_format`` hands its result straight to
+    ``llm.call(response_format=...)``, which needs a real class. Resolved the
+    same way a crew agent's ``response_format`` is, so the declaration shape
+    and its failure messages match -- including resolving the ref against the
+    declaration's own directory, so a flow loaded by path finds the model
+    sitting next to it rather than under whatever the cwd happens to be.
+    """
+    if declared is None:
+        return None
+
+    from crewai.project.json_loader import _resolve_model_class
+
+    return _resolve_model_class(
+        declared.model_dump(),
+        "conversational.router.response_format",
+        project_root,
+    )
+
+
 def _router_config_from_definition(
     definition: FlowConversationalRouterDefinition,
+    project_root: Path | None,
 ) -> RouterConfig:
     """Build a live ``RouterConfig`` from its serializable form."""
-    response_format = definition.response_format
-    if response_format is not None and not (
-        isinstance(response_format, type) and issubclass(response_format, BaseModel)
-    ):
-        # A declaration can only carry a ``module:qualname`` ref or a schema
-        # dict here, and ``_router_response_format`` hands its result straight
-        # to ``llm.call(response_format=...)``, which needs a real class.
-        # Dropping it falls back to the synthesized single-field model.
-        logger.warning(
-            "Ignoring conversational router response_format %r: a declaration "
-            "cannot carry a model class. The router will use its synthesized "
-            "response format instead.",
-            response_format,
-        )
-        response_format = None
+    response_format = _resolve_router_response_format(
+        definition.response_format, project_root
+    )
 
     return RouterConfig(
         prompt=definition.prompt,
@@ -118,17 +134,19 @@ def _router_config_from_definition(
 
 def _config_from_definition(
     definition: FlowConversationalDefinition,
+    project_root: Path | None,
 ) -> ConversationConfig:
     """Build a live ``ConversationConfig`` from its serializable form.
 
     Used for flows built from a declaration, which have no class-level
-    ``conversational_config`` to read.
+    ``conversational_config`` to read. ``project_root`` is the declaration
+    file's directory, used to resolve the Python refs it names.
     """
     return ConversationConfig(
         system_prompt=definition.system_prompt,
         llm=definition.llm,
         router=(
-            _router_config_from_definition(definition.router)
+            _router_config_from_definition(definition.router, project_root)
             if definition.router is not None
             else None
         ),
@@ -139,6 +157,37 @@ def _config_from_definition(
         visible_agent_outputs=definition.visible_agent_outputs,
         defer_trace_finalization=definition.defer_trace_finalization,
     )
+
+
+def _conversation_state_with_defaults(
+    defaults: dict[str, Any] | None,
+) -> ConversationState:
+    """Build the chat state, keeping declared defaults the shape cannot hold.
+
+    A ``dict`` state's defaults are arbitrary keys, and dropping the ones that
+    are not conversational fields would break an action reading
+    ``state.topic``. They are carried as extras instead.
+    """
+    if not defaults:
+        return ConversationState()
+
+    known = {
+        name: value
+        for name, value in defaults.items()
+        if name in ConversationState.model_fields
+    }
+    extra = {
+        name: value
+        for name, value in defaults.items()
+        if name not in ConversationState.model_fields
+    }
+    if not extra:
+        return ConversationState(**known)
+
+    class ConversationStateWithDeclaredDefaults(ConversationState):
+        model_config = ConfigDict(extra="allow")
+
+    return ConversationStateWithDeclaredDefaults(**known, **extra)
 
 
 def _builtin_method(handler: Callable[..., Any], **roles: Any) -> FlowMethodDefinition:
@@ -350,7 +399,11 @@ class _ConversationalMixin:
     @listen("answer_from_history")
     @_conversational_only
     def answer_from_history_turn(self) -> str | None:
-        """Answer directly from canonical conversation history when configured."""
+        """Deprecated history-only handler retained for compatibility.
+
+        Use the built-in ``converse`` route, which already receives canonical
+        conversation history, or override ``converse_turn``.
+        """
         config = self._conversation_config
         if config is None:
             return None
@@ -665,8 +718,8 @@ class _ConversationalMixin:
         permission gates before the LLM decision).
 
         Returning a falsy value means "no routing decision": the turn falls
-        through to the built-in defaults (``answer_from_history`` when
-        configured, else ``converse``). It never replays a previous turn's
+        through to the deprecated ``answer_from_history`` compatibility path
+        when configured, then ``converse``. It never replays a previous turn's
         intent.
         """
         config = self._conversation_config
@@ -687,7 +740,7 @@ class _ConversationalMixin:
         return self._route_with_config(router_config, context)
 
     def can_answer_from_history(self, context: dict[str, Any]) -> bool:
-        """Return whether this turn can be answered from message history."""
+        """Return whether the deprecated history-only route can answer."""
         config = self._conversation_config
         if config is None or config.answer_from_history_llm is None:
             return False
@@ -906,11 +959,12 @@ class _ConversationalMixin:
         if resolved is not None:
             return resolved
 
-        definition = self._conversation_definition
+        flow_definition = self._conversation_flow_definition()
+        definition = flow_definition.conversational
         if definition is None or not definition.enabled:
             return None
 
-        resolved = _config_from_definition(definition)
+        resolved = _config_from_definition(definition, flow_definition.source_dir)
         object.__setattr__(self, "_resolved_conversation_config", resolved)
         return resolved
 
@@ -993,23 +1047,53 @@ class _ConversationalMixin:
             update={"methods": {**definition.methods, **missing}}
         )
 
-    def _create_default_extension_state(self) -> ConversationState | None:
-        """Supply ``ConversationState`` only when nothing else declares state.
+    def _compose_extension_state_model(
+        self, model_class: type[BaseModel]
+    ) -> type[BaseModel]:
+        """Add the conversational fields to a declared state model.
 
-        A declared ``state:`` block always wins. This hook is consulted before
-        ``_create_definition_state``, so returning a state here would discard
-        every field the declaration asked for.
+        A turn reads ``messages``, ``current_user_message``, ``last_intent``,
+        ``ended``, ``events`` and ``agent_threads`` off state, so a declared
+        model that lacks them fails on the first turn. Composing rather than
+        replacing keeps every field the declaration asked for. A model that
+        already extends ``ConversationState`` is returned untouched.
+        """
+        if not self._is_conversational_enabled():
+            return model_class
+        if issubclass(model_class, ConversationState):
+            return model_class
+
+        class ConversationalState(ConversationState, model_class):  # type: ignore[misc, valid-type]
+            pass
+
+        return ConversationalState
+
+    def _create_default_extension_state(
+        self, *, ignore_declared_state: bool = False
+    ) -> ConversationState | None:
+        """Supply ``ConversationState`` when the declaration cannot carry it.
+
+        A declared ``pydantic`` or ``json_schema`` state is composed with the
+        conversational fields instead (see
+        ``_compose_extension_state_model``), so it keeps everything it asked
+        for. ``dict`` and ``unknown`` state cannot carry them at all, so this
+        supplies the real shape rather than letting the turn die on
+        ``state.id`` -- seeded from the declared defaults where they fit.
         """
         if not self._is_conversational_enabled():
             return None
-        if self._conversation_flow_definition().state is not None:
-            return None
-        initial_state_t = getattr(self, "_initial_state_t", None)
-        if not hasattr(self, "_initial_state_t") or isinstance(
-            initial_state_t, TypeVar
-        ):
+
+        state_definition = self._conversation_flow_definition().state
+        if state_definition is None:
             return ConversationState()
-        return None
+        if not ignore_declared_state and state_definition.type in (
+            "pydantic",
+            "json_schema",
+        ):
+            # Composed with the declared model instead; see
+            # ``_compose_extension_state_model``.
+            return None
+        return _conversation_state_with_defaults(state_definition.default)
 
     def _should_apply_pending_kickoff_context(self) -> bool:
         return (
@@ -1112,7 +1196,7 @@ class _ConversationalMixin:
         return config.system_prompt or None
 
     def _resolve_answer_from_history_prompt(self) -> str:
-        """Return the effective ``answer_from_history`` prompt."""
+        """Return the deprecated history-only route's effective prompt."""
         from crewai.utilities.i18n import I18N_DEFAULT
 
         config = self._conversation_config

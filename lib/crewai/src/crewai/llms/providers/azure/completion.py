@@ -1302,20 +1302,21 @@ class AzureCompletion(BaseLLM):
                     f"Context window for {key} must be between {min_context} and {max_context}"
                 )
 
+        # Longest prefix first. Always insert new keys in that order so
+        # startswith prefers gpt-5.6 over gpt-5, gpt-4o-mini over gpt-4o, etc.
         context_windows = {
-            "gpt-4": 8192,
-            "gpt-4o": 128000,
-            "gpt-4o-mini": 200000,
-            "gpt-5.4-mini": 200000,
-            "gpt-4-turbo": 128000,
-            "gpt-35-turbo": 16385,
-            "gpt-3.5-turbo": 16385,
             "text-embedding": 8191,
+            "gpt-3.5-turbo": 16385,
+            "gpt-5.4-mini": 200000,
+            "gpt-35-turbo": 16385,
+            "gpt-4o-mini": 200000,
+            "gpt-4-turbo": 128000,
+            "gpt-5.6": 1050000,
+            "gpt-4o": 128000,
+            "gpt-4": 8192,
         }
 
-        for model_prefix, size in sorted(
-            context_windows.items(), key=lambda x: len(x[0]), reverse=True
-        ):
+        for model_prefix, size in context_windows.items():
             if self.model.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
