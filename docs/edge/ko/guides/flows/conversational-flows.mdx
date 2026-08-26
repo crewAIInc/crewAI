@@ -121,7 +121,7 @@ result = stream.result
 5. **그래프 실행** — 사용자 정의 `@start` 메서드(있는 경우) → `route_conversation`(내장 start/router) → 선택된 `@listen` 핸들러. `route_conversation`은 재정의 가능한 `conversation_start()` 헬퍼도 호출합니다.
 6. **실행 종료** — 지연 활성화 시 턴별 `flow_finished` 및 trace 종료 **건너뜀**; 중첩 `Agent.kickoff()` / crew도 부모 batch를 닫지 않음.
 
-핸들러는 **`append_assistant_message(reply)`**를 호출해 다음 턴의 `conversation_messages`에 어시스턴트 응답이 포함되게 하세요. 사용자 입력은 `handle_turn`이 이미 저장합니다 — 핸들러에서 다시 추가하지 마세요.
+핸들러는 보이는 응답이 반환값과 다를 때, 또는 히스토리를 자를 때 **`append_assistant_message(reply)`**를 호출하세요. public 문자열 반환값도 assistant로 기록되며 `@persist` 스냅샷에 포함되므로, 새 Flow 인스턴스에서도 복원됩니다. 사용자 입력은 `handle_turn`이 이미 저장합니다 — 핸들러에서 다시 추가하지 마세요.
 
 ## 설정 개요
 
@@ -424,7 +424,7 @@ Routes:
 2. 사용자 메시지를 `state.messages`에 추가하고 `current_user_message` / `last_user_message`를 설정합니다. `last_intent`는 **이전 턴 값이 유지**되어 router LLM이 신호로 활용할 수 있습니다.
 3. 사용자 정의 `@start` 메서드(있는 경우)를 실행한 다음 내장 start/router인 `route_conversation`을 거쳐 선택된 `@listen` 핸들러를 실행합니다. `route_conversation`은 재정의 가능한 `conversation_start()` 헬퍼를 호출합니다.
 4. router는 결정을 `state.last_intent`에 저장합니다 (다음 턴의 router 컨텍스트에서 보입니다).
-5. 핸들러가 문자열을 반환했지만 `append_assistant_message`를 직접 호출하지 않았다면, `handle_turn`이 대신 추가해 줍니다.
+5. 핸들러가 문자열을 반환했지만 `append_assistant_message`를 직접 호출하지 않았다면, `handle_turn`이 대신 추가한 뒤 갱신된 `state.messages`를 persist합니다. `@persist` 복원 시 assistant 턴이 포함됩니다.
 
 채팅 메시지에는 `handle_turn()`을 호출하세요. `kickoff(inputs={"id": ...})`를 직접 호출하면 대화형 턴 래퍼 없이 flow 그래프가 실행됩니다.
 
