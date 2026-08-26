@@ -7,9 +7,9 @@ mode: "wide"
 
 # تكامل Arize Phoenix
 
-يوضح هذا الدليل كيفية دمج **Arize Phoenix** مع **CrewAI** باستخدام OpenTelemetry عبر حزمة [OpenInference](https://github.com/openinference/openinference) SDK. بنهاية هذا الدليل، ستتمكن من تتبع وكلاء CrewAI وتصحيح أخطاء وكلائك بسهولة.
+يوضح هذا الدليل كيفية دمج **Arize Phoenix** مع **CrewAI** باستخدام OpenTelemetry عبر حزمة [OpenInference](https://github.com/openinference/openinference) SDK. بنهاية هذا الدليل، ستتمكن من تتبع وكلاء CrewAI وتصحيح سلوك الوكلاء.
 
-> **ما هو Arize Phoenix؟** [Arize Phoenix](https://phoenix.arize.com) هو منصة مراقبة LLM توفر التتبع والتقييم لتطبيقات الذكاء الاصطناعي.
+> **ما هو Arize Phoenix؟** [Arize Phoenix](https://arize.com/phoenix/) هو خيار المراقبة والتقييم مفتوح المصدر من [Arize AI](https://arize.com/?utm_source=crewai-docs&utm_medium=partner&utm_campaign=partner-docs&utm_content=observability-arize-phoenix). استخدم Phoenix عندما تريد التشغيل محلياً أو الاستضافة الذاتية. استخدم [Arize AX](https://arize.com/products/ax/) لمنصة سحابية مُدارة أو ذاتية الاستضافة للمؤسسات لأنظمة الذكاء الاصطناعي في الإنتاج.
 
 [![شاهد عرض فيديو لتكاملنا مع Phoenix](https://storage.googleapis.com/arize-assets/fixtures/setup_crewai.png)](https://www.youtube.com/watch?v=Yc5q3l6F7Ww)
 
@@ -27,7 +27,7 @@ pip install openinference-instrumentation-crewai crewai crewai-tools arize-phoen
 
 ### الخطوة 2: إعداد متغيرات البيئة
 
-قم بإعداد مفاتيح API لـ Phoenix Cloud وإعداد OpenTelemetry لإرسال التتبعات إلى Phoenix. Phoenix Cloud هو إصدار مستضاف من Arize Phoenix، لكنه ليس مطلوباً لاستخدام هذا التكامل.
+قم بإعداد مفتاح API الخاص بـ Phoenix ونقطة نهاية OpenTelemetry لإرسال التتبعات إلى Phoenix. يعمل الإعداد نفسه مع نقطة نهاية Phoenix محلية أو ذاتية الاستضافة عن طريق تغيير عنوان المجمع.
 
 يمكنك الحصول على مفتاح Serper API المجاني [هنا](https://serper.dev/).
 
@@ -35,8 +35,8 @@ pip install openinference-instrumentation-crewai crewai crewai-tools arize-phoen
 import os
 from getpass import getpass
 
-# Get your Phoenix Cloud credentials
-PHOENIX_API_KEY = getpass("🔑 Enter your Phoenix Cloud API Key: ")
+# Get your Phoenix API key
+PHOENIX_API_KEY = getpass("🔑 Enter your Phoenix API key: ")
 
 # Get API keys for services
 OPENAI_API_KEY = getpass("🔑 Enter your OpenAI API key: ")
@@ -44,7 +44,7 @@ SERPER_API_KEY = getpass("🔑 Enter your Serper API key: ")
 
 # Set environment variables
 os.environ["PHOENIX_CLIENT_HEADERS"] = f"api_key={PHOENIX_API_KEY}"
-os.environ["PHOENIX_COLLECTOR_ENDPOINT"] = "https://app.phoenix.arize.com" # Phoenix Cloud, change this to your own endpoint if you are using a self-hosted instance
+os.environ["PHOENIX_COLLECTOR_ENDPOINT"] = "https://app.phoenix.arize.com" # Change this to your own endpoint if you are using a self-hosted instance
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 os.environ["SERPER_API_KEY"] = SERPER_API_KEY
 ```
@@ -131,7 +131,7 @@ print(result)
 
 بعد تشغيل الوكيل، يمكنك عرض التتبعات المولدة من تطبيق CrewAI في Phoenix. سترى خطوات مفصلة لتفاعلات الوكلاء واستدعاءات LLM، مما يساعدك في التصحيح والتحسين.
 
-سجل الدخول إلى حساب Phoenix Cloud الخاص بك وانتقل إلى المشروع الذي حددته في معامل `project_name`. سترى عرض زمني للتتبع مع جميع تفاعلات الوكلاء واستخدامات الأدوات واستدعاءات LLM.
+افتح مشروع Phoenix وانتقل إلى المشروع الذي حددته في معامل `project_name`. سترى عرض زمني للتتبع مع جميع تفاعلات الوكلاء واستخدامات الأدوات واستدعاءات LLM.
 
 ![مثال تتبع في Phoenix يوضح تفاعلات الوكلاء](https://storage.googleapis.com/arize-assets/fixtures/crewai_traces.png)
 
@@ -145,6 +145,9 @@ print(result)
 
 ### المراجع
 - [وثائق Phoenix](https://docs.arize.com/phoenix/) - نظرة عامة على منصة Phoenix.
+- [Arize AX](https://arize.com/products/ax/) - مراقبة وتقييم مُداران سحابياً أو ذاتيا الاستضافة للمؤسسات.
+- [دليل Arize لتقييم الوكلاء](https://arize.com/guides/ai-agent-handbook/agent-evaluation/) - سير عمل إنتاجي لتقييم سلوك الوكلاء من التتبعات.
+- [دليل Arize لتقييم LLM](https://arize.com/resources/llm-evaluation/) - طرق ومقاييس لتقييم تطبيقات LLM.
 - [وثائق CrewAI](https://docs.crewai.com/) - نظرة عامة على إطار عمل CrewAI.
 - [وثائق OpenTelemetry](https://opentelemetry.io/docs/) - دليل OpenTelemetry
 - [OpenInference GitHub](https://github.com/openinference/openinference) - الكود المصدري لـ OpenInference SDK.

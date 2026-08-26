@@ -55,6 +55,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.flow.flow import Flow, listen, or_, router, start
+from crewai.flow.flow_context import current_flow_id
 from crewai.flow.types import FlowMethodName
 from crewai.hooks.llm_hooks import (
     get_after_llm_call_hooks,
@@ -244,6 +245,20 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         self._flow_post_init()
         return self
 
+    def _owns_execution_boundary(self) -> bool:
+        """Only a standalone ``Agent.kickoff()`` is a run of its own.
+
+        Crew-bound, the crew owns the run. Nested in a caller's flow, that flow
+        does: boundaries belong to the root, and the active flow id is the
+        caller's rather than this executor's.
+        """
+        if self.crew is not None:
+            return False
+        # Also set by context restores (threads, enterprise request headers),
+        # where a foreign id likewise means a run above this one.
+        active_flow_id = current_flow_id.get()
+        return active_flow_id is None or active_flow_id == self.flow_id
+
     def _check_native_tool_support(self) -> bool:
         """Check if LLM supports native function calling."""
         return check_native_tool_support(self.llm, self.original_tools)
@@ -307,6 +322,21 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         """Set state messages."""
         self._state.messages = value
 
+    def _append_history(self, inputs: dict[str, Any]) -> None:
+        """Add prior turns, with their roles, before this turn's request."""
+        for message in inputs.get("history", []):
+            self.state.messages.append(dict(message))
+
+    def _append_trailing(self, inputs: dict[str, Any]) -> None:
+        """Add turns that followed the request, keeping them after it.
+
+        A conversation can end past its last user message -- an assistant
+        tool call and its result, or an agent's own scratch thread. Those
+        belong after the question they answer, not hoisted above it.
+        """
+        for message in inputs.get("trailing", []):
+            self.state.messages.append(dict(message))
+
     def _setup_messages(self, inputs: dict[str, Any]) -> None:
         """Set up messages for the agent execution."""
         provider = get_provider()
@@ -323,14 +353,21 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     format_message_for_llm(system_prompt, role="system")
                 )
             )
+            self._append_history(inputs)
             self.state.messages.append(
                 mark_cache_breakpoint(format_message_for_llm(user_prompt))
             )
+            self._append_trailing(inputs)
         elif isinstance(self.prompt, StandardPromptResult):
             user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
+            # Also here: with the system prompt disabled or a custom template
+            # this is the only branch, and skipping history would drop every
+            # turn but the last.
+            self._append_history(inputs)
             self.state.messages.append(
                 mark_cache_breakpoint(format_message_for_llm(user_prompt))
             )
+            self._append_trailing(inputs)
 
         provider.post_setup_messages(cast("ExecutorContext", self))
 

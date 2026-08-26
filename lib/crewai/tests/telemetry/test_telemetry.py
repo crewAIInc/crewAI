@@ -1,10 +1,14 @@
+import ast
+import inspect
 import os
+from pathlib import Path
 import threading
 from unittest.mock import Mock, patch
 
 import pytest
 from crewai import Agent, Crew, Task
 from crewai.telemetry import Telemetry
+from crewai_core.telemetry import Telemetry as CoreTelemetry
 from opentelemetry.sdk.trace import TracerProvider
 
 
@@ -90,7 +94,7 @@ def test_flow_execution_span_records_crewai_version():
             "crewai.telemetry.telemetry.TracerProvider",
             return_value=Mock(get_tracer=Mock(return_value=tracer)),
         ),
-        patch("crewai.telemetry.telemetry.version", return_value="9.9.9"),
+        patch("crewai.telemetry.telemetry.version", return_value=_EMITTED_VERSION),
     ):
         telemetry = Telemetry()
         telemetry.flow_execution_span("ResearchFlow", ["start", "finish"])
@@ -308,6 +312,11 @@ def test_event_listener_tracks_hook_dispatched_events():
     )
 
 
+# The version _emit injects. Assertions compare against this exact value, so a
+# hard-coded literal in an emitter cannot satisfy them.
+_EMITTED_VERSION = "9.9.9"
+
+
 def _emit(method: str, *args, **kwargs):
     """Run one telemetry span method against a mocked tracer.
 
@@ -340,6 +349,121 @@ def _emit(method: str, *args, **kwargs):
     return tracer, span
 
 
+def _stub_crew(memory):
+    """The minimum `crew_creation` reads: key, id, fingerprint, memory, process, tasks, agents."""
+    crew = Mock()
+    crew.key = "crew-key"
+    crew.id = "crew-id"
+    crew.fingerprint = None
+    crew.memory = memory
+    crew.process = "sequential"
+    crew.tasks = []
+    crew.agents = []
+    crew.share_crew = False
+    return crew
+
+
+class _MemoryLike:
+    """Stands in for Memory/MemoryScope/MemorySlice.
+
+    Defines no ``__bool__`` or ``__len__``, matching the real classes, so an instance
+    is always truthy -- which is what makes D2's "enabled by any means" work.
+    """
+
+
+@pytest.mark.parametrize(
+    ("memory", "expected"),
+    [
+        (True, "true"),
+        (False, "false"),
+        (None, "false"),
+        (_MemoryLike(), "true"),
+    ],
+    ids=["bool-true", "bool-false", "none", "memory-instance"],
+)
+def test_crew_memory_is_recorded_as_a_string(memory, expected: str) -> None:
+    """The same defect `resumed` was fixed for, applied to the attribute left behind.
+
+    A false boolean cannot survive this pipeline at all: measured across 218,400,577
+    spans, not one carries ``vBool=false``, because proto3 omits the bool zero value.
+    So "memory disabled" was structurally unrepresentable and presence had to stand in
+    for the value -- which is why crew_memory read 1 for 99.8% of crews against a field
+    defaulting to False.
+
+    The instance case pins D2: memory counts as enabled when set by any means, not only
+    when it is literally ``True``.
+    """
+    _tracer, span = _emit("crew_creation", _stub_crew(memory), None)
+
+    span.set_attribute.assert_any_call("crew_memory", expected)
+    for call in span.set_attribute.call_args_list:
+        assert call.args[1] is not True and call.args[1] is not False, (
+            "no attribute may be a bare boolean: false would vanish from the pipeline "
+            "entirely and true would be indistinguishable from a presence marker"
+        )
+
+
+@pytest.mark.parametrize(
+    ("inputs", "expected"),
+    [
+        ({"topic": "AI"}, "true"),
+        ({"a": 1, "b": 2}, "true"),
+        ({}, "false"),
+        (None, "false"),
+    ],
+    ids=["one-key", "two-keys", "empty-dict", "none"],
+)
+def test_crew_inputs_presence_is_recorded_ungated_as_a_string(inputs, expected: str):
+    """Whether a run was parameterised must be answerable for everyone, not just sharers.
+
+    The `crew_inputs` payload is share_crew-gated and stays that way (D13), so the only
+    signal in the warehouse was `has_crew_inputs`, derived from that gated key: 0 of
+    226,592 spans on 0.28.8 and ~0.02% overall, all opt-in sharers. That is a sample of
+    people who opted into sharing, not a measurement of users.
+
+    A string rather than an int or a bool, and here the encoding is the whole design.
+    Measured over a single day, 312,424,709 spans: `vInt64='0'` appears 0 times and
+    `vBool='false'` appears 0 times, while `vStr='0'` does appear. So an integer key
+    count would have silently dropped exactly the majority case -- 54.46% of sharers
+    pass `{}` -- and reproduced the bug this item exists to fix.
+
+    `{}` and `None` are both "false" on purpose: an empty dict parameterises nothing, so
+    truthiness is the question being asked.
+    """
+    crew = _stub_crew(True)
+    assert crew.share_crew is False, "the ungated path is the one under test"
+
+    _tracer, span = _emit("crew_creation", crew, inputs)
+
+    span.set_attribute.assert_any_call("crew_inputs_present", expected)
+
+
+def test_crew_inputs_payload_stays_gated_while_the_presence_signal_does_not():
+    """The split is the point: presence ships for everyone, content ships for nobody new.
+
+    Without this, widening the presence signal could be "fixed" later by simply
+    ungating `crew_inputs`, which would put user payloads into telemetry.
+    """
+    crew = _stub_crew(True)
+    assert crew.share_crew is False
+
+    _tracer, span = _emit("crew_creation", crew, {"secret_topic": "acquisition target"})
+
+    emitted = {call.args[0] for call in span.set_attribute.call_args_list}
+    assert "crew_inputs_present" in emitted
+    assert "crew_inputs" not in emitted, (
+        "the payload must remain inside the share_crew branch; only its presence is ungated"
+    )
+    for call in span.set_attribute.call_args_list:
+        assert "secret_topic" not in str(call.args[1]), (
+            "no input KEY may reach the span either -- key names are user data too, and a "
+            "regression emitting json.dumps(inputs.keys()) would pass a value-only check"
+        )
+        assert "acquisition target" not in str(call.args[1]), (
+            "no input value may reach the span for a non-sharing crew"
+        )
+
+
 @pytest.mark.parametrize(("resumed", "expected"), [(True, "true"), (False, "false")])
 def test_resumed_is_recorded_as_a_string(resumed: bool, expected: str) -> None:
     """A boolean is encoded as the presence of a key, not as a value.
@@ -364,6 +488,17 @@ def test_flow_completed_records_duration_outcome_and_origin() -> None:
     span.set_attribute.assert_any_call("duration_ms", 12.5)
     span.set_attribute.assert_any_call("outcome", "failed")
     span.set_attribute.assert_any_call("origin", "user")
+    span.set_attribute.assert_any_call("conversational", "false")
+
+
+@pytest.mark.parametrize(("flag", "expected"), [(True, "true"), (False, "false")])
+def test_conversational_is_recorded_as_a_string(flag: bool, expected: str) -> None:
+    """Same reason as resumed: a bool arrives as key presence, not a value."""
+    _tracer, span = _emit(
+        "flow_execution_span", "ResearchFlow", ["start"], "user", False, flag
+    )
+
+    span.set_attribute.assert_any_call("conversational", expected)
 
 
 def test_paused_and_method_failed_record_flow_and_origin() -> None:
@@ -371,3 +506,123 @@ def test_paused_and_method_failed_record_flow_and_origin() -> None:
         _tracer, span = _emit(method, "ResearchFlow", "internal")
         span.set_attribute.assert_any_call("flow_name", "ResearchFlow")
         span.set_attribute.assert_any_call("origin", "internal")
+
+
+def _version_attr(span) -> str | None:
+    """The crewai_version value recorded on a mocked span, if any."""
+    for call in span.set_attribute.call_args_list:
+        if call.args and call.args[0] == "crewai_version":
+            return call.args[1]
+    return None
+
+
+@pytest.mark.parametrize(
+    ("method", "args"),
+    [
+        ("flow_plotting_span", ("ResearchFlow", ["step_a", "step_b"])),
+        ("deploy_signup_error_span", ()),
+        ("start_deployment_span", ("dep-123",)),
+        ("create_crew_deployment_span", ()),
+        ("get_crew_logs_span", ("dep-123", "deployment")),
+        ("remove_crew_span", ("dep-123",)),
+        ("human_feedback_span", ("requested", False)),
+    ],
+)
+def test_span_records_the_crewai_version(method: str, args: tuple) -> None:
+    """Version-filtered queries silently drop any span kind missing this.
+
+    Without it a release cannot be attributed for that span, so version-adoption
+    and per-release regression analysis are blind to it.
+    """
+    _tracer, span = _emit(method, *args)
+
+    # Exact equality with the value _emit injected: "looks like a version" would
+    # also accept a hard-coded literal in the emitter.
+    assert _version_attr(span) == _EMITTED_VERSION, (
+        f"{method} did not record the value returned by version('crewai')"
+    )
+
+
+def test_task_spans_record_the_crewai_version() -> None:
+    """Task Created and Task Execution are the highest-volume span kinds.
+
+    They are emitted together by task_started, and both were missing the
+    version - so every version-filtered task metric returned nothing.
+    """
+    agent = Agent(role="R", goal="G", backstory="B")
+    task = Task(description="D", expected_output="E", agent=agent)
+    crew = Crew(agents=[agent], tasks=[task])
+
+    tracer, span = _emit("task_started", crew, task)
+
+    emitted = [c.args[0] for c in tracer.start_span.call_args_list]
+    assert emitted == ["Task Created", "Task Execution"]
+
+    # The harness hands the same mock back for both start_span calls, so the
+    # attribute writes accumulate: one crewai_version per span emitted.
+    versions = [
+        c.args[1]
+        for c in span.set_attribute.call_args_list
+        if c.args and c.args[0] == "crewai_version"
+    ]
+    assert versions == [_EMITTED_VERSION, _EMITTED_VERSION], (
+        f"expected one version per task span, got {versions}"
+    )
+
+
+def _calls(node: ast.AST, attr: str, key: str | None = None) -> int:
+    """Count calls to ``.attr(...)`` beneath a node, optionally keyed on arg 2.
+
+    Used to compare how many spans a method opens against how many of them it
+    records ``crewai_version`` on.
+    """
+    total = 0
+    for sub in ast.walk(node):
+        if not isinstance(sub, ast.Call):
+            continue
+        func = sub.func
+        if not isinstance(func, ast.Attribute) or func.attr != attr:
+            continue
+        if key is None:
+            total += 1
+        elif len(sub.args) >= 2:
+            named = sub.args[1]
+            if isinstance(named, ast.Constant) and named.value == key:
+                total += 1
+    return total
+
+
+def test_every_span_records_the_crewai_version() -> None:
+    """Regression guard for span kinds added later, in BOTH emitters.
+
+    Enumerating the source rather than emitting all 32 spans: the point is to
+    fail when someone adds a new span without the version, which a fixed list of
+    behavioural cases cannot do.
+
+    Counts rather than merely detects. A method that opens two spans and records
+    the version on only one of them must fail - ``task_started`` is exactly that
+    shape, so "the method mentions crewai_version somewhere" is not enough.
+    """
+    shortfalls: list[str] = []
+    for cls in (Telemetry, CoreTelemetry):
+        path = Path(inspect.getfile(cls))
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            # The nested closure is reached via its enclosing method, whose name
+            # is the one a reader needs in the failure message.
+            if not isinstance(node, ast.FunctionDef) or node.name == "_operation":
+                continue
+            spans = _calls(node, "start_span")
+            if not spans:
+                continue
+            versions = _calls(node, "_add_attribute", "crewai_version")
+            if versions < spans:
+                shortfalls.append(
+                    f"{path.name}::{node.name} "
+                    f"({spans} span(s), {versions} version attribute(s))"
+                )
+
+    assert not shortfalls, (
+        "these methods open more spans than they record crewai_version on: "
+        + ", ".join(sorted(shortfalls))
+    )

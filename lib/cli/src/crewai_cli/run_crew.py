@@ -512,14 +512,14 @@ def _chain_deploy() -> None:
         from crewai_cli.deploy.main import DeployCommand
 
         console.print("\nStarting deployment…\n", style="bold #FF5A50")
-        DeployCommand().create_crew(confirm=True, skip_validate=True)
+        DeployCommand().create_crew(confirm=True, skip_validate=True, source="tui")
     except AuthenticationRequiredError:
         from crewai_cli.authentication.main import AuthenticationCommand
 
         console.print()
         AuthenticationCommand().login()
         try:
-            DeployCommand().create_crew(confirm=True, skip_validate=True)
+            DeployCommand().create_crew(confirm=True, skip_validate=True, source="tui")
         except AuthenticationRequiredError:
             console.print(
                 "\nDeploy failed: authentication is still required.\n",

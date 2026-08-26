@@ -747,7 +747,7 @@ class OpenAICompletion(BaseLLM):
         )
 
     @staticmethod
-    def _to_responses_input(message: LLMMessage) -> list[Any]:
+    def _to_responses_input(message: LLMMessage) -> list[dict[str, Any] | LLMMessage]:
         """Translate a chat-format message into Responses ``input`` items.
 
         Tool calling is expressed differently by the two APIs. Chat Completions
@@ -765,18 +765,23 @@ class OpenAICompletion(BaseLLM):
         role = message.get("role")
 
         if role == "assistant" and message.get("tool_calls"):
-            items: list[Any] = []
+            items: list[dict[str, Any] | LLMMessage] = []
             content = message.get("content")
             if content:
                 items.append({"role": "assistant", "content": content})
             for call in message["tool_calls"]:
                 function = call.get("function", {})
+                args = function.get("arguments")
+                if args is None or args == "":
+                    args = "{}"
+                elif not isinstance(args, str):
+                    args = json.dumps(args)
                 items.append(
                     {
                         "type": "function_call",
                         "call_id": call.get("id", ""),
                         "name": function.get("name", ""),
-                        "arguments": function.get("arguments", "{}"),
+                        "arguments": args,
                     }
                 )
             return items
@@ -807,7 +812,7 @@ class OpenAICompletion(BaseLLM):
         - Internally-tagged tool format (flat structure)
         """
         instructions: str | None = self.instructions
-        input_messages: list[LLMMessage] = []
+        input_messages: list[dict[str, Any] | LLMMessage] = []
 
         for message in messages:
             if message.get("role") == "system":
@@ -821,7 +826,7 @@ class OpenAICompletion(BaseLLM):
                 input_messages.extend(self._to_responses_input(message))
 
         # Prepend reasoning items for ZDR (zero-data-retention) chaining when configured
-        final_input: list[Any] = []
+        final_input: list[dict[str, Any] | LLMMessage] = []
         if self.auto_chain_reasoning and self._last_reasoning_items:
             final_input.extend(self._last_reasoning_items)
         final_input.extend(input_messages if input_messages else messages)
@@ -2659,23 +2664,25 @@ class OpenAICompletion(BaseLLM):
                     f"Context window for {key} must be between {min_context} and {max_context}"
                 )
 
-        # Context window sizes for OpenAI models
+        # Longest prefix first. Always insert new keys in that order so
+        # startswith prefers gpt-5.6 over gpt-5, gpt-4o-mini over gpt-4o, etc.
         context_windows = {
-            "gpt-4": 8192,
-            "gpt-4o": 128000,
-            "gpt-4o-mini": 200000,
-            "gpt-5.4-mini": 200000,
-            "gpt-4-turbo": 128000,
-            "gpt-4.1": 1047576,
             "gpt-4.1-mini-2025-04-14": 1047576,
             "gpt-4.1-nano-2025-04-14": 1047576,
-            "gpt-5": 1047576,
+            "gpt-5.4-mini": 200000,
+            "gpt-4-turbo": 128000,
+            "gpt-4o-mini": 200000,
             "gpt-5-mini": 1047576,
             "gpt-5-nano": 1047576,
             "o1-preview": 128000,
+            "gpt-5.6": 1050000,
             "o1-mini": 128000,
             "o3-mini": 200000,
             "o4-mini": 200000,
+            "gpt-4.1": 1047576,
+            "gpt-4o": 128000,
+            "gpt-5": 1047576,
+            "gpt-4": 8192,
         }
 
         for model_prefix, size in context_windows.items():
