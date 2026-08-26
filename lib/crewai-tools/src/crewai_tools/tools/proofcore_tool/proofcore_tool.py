@@ -94,11 +94,16 @@ class ProofCoreVerifyTool(BaseTool):
                 return "ProofCore Verify Error: Malformed verification response (expected boolean 'valid')."
                 
             valid_status = "🟢 PASSED" if data["valid"] is True else "🔴 FAILED"
-          
+            
+            # 🛡 Бронированная защита от null в JSON
+            checks = data.get("checks") if isinstance(data.get("checks"), dict) else {}
+            anchor = data.get("anchor") if isinstance(data.get("anchor"), dict) else {}
+            anchor_status = anchor.get("status", "Unknown")
+
             return (
                 f"Verification Result: {valid_status}\n"
-                f"Checks: {data.get('checks', {})}\n"
-                f"Anchor Status: {data.get('anchor', {}).get('status', 'Unknown')}"
+                f"Checks: {checks}\n"
+                f"Anchor Status: {anchor_status}"
             )
         except Exception as e:
             return f"ProofCore Verify Error: {str(e)}"
