@@ -83,7 +83,20 @@ def _canonical_normalize(obj: Any) -> Any:
     if isinstance(obj, (list, tuple)):
         return [_canonical_normalize(x) for x in obj]
     if isinstance(obj, dict):
-        return {k: _canonical_normalize(v) for k, v in obj.items()}
+        normalized: dict = {}
+        for k, v in obj.items():
+            # Object keys must be strings.  Allowing Python's implicit
+            # coercion (e.g. int 1 -> "1") would collapse materially
+            # distinct Python inputs onto the same serialized object
+            # shape, producing an ambiguous canonical preimage.  Raised
+            # by Aleksey Safonov (safal207) in PR review.
+            if not isinstance(k, str):
+                raise TypeError(
+                    f"canonical_json: object keys must be strings, got "
+                    f"{type(k).__name__!r} (key {k!r})"
+                )
+            normalized[k] = _canonical_normalize(v)
+        return normalized
     raise TypeError(
         f"canonical_json does not support type {type(obj).__name__!r}; "
         f"allowed: str, int, float, bool, None, list, tuple, set, frozenset, dict"
@@ -789,21 +802,4 @@ def detect_missing_guardrail(crew_or_agent) -> List[Dict[str, Any]]:
         return findings
 
     for agent in agents:
-        agent_name = getattr(agent, "role", getattr(agent, "name", "unknown"))
-        findings.append(
-            {
-                "severity": "CRITICAL",
-                "pattern": "AS-GUARDRAIL-MISS-001",
-                "agent": agent_name,
-                "message": (
-                    f"Agent '{agent_name}' has no registered GuardrailProvider "
-                    "(no global before_tool_call hook with _guardrail_context marker)"
-                ),
-                "remediation": (
-                    "Register a GuardrailProvider via "
-                    "register_before_tool_call_hook(make_guardrail_hook(ctx))"
-                ),
-            }
-        )
-
-    return findings
+        agent_name = getattr(agent, "role", getattr(agent, "name
