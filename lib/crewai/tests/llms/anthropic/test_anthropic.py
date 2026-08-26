@@ -123,6 +123,36 @@ def test_default_anthropic_completion_uses_sonnet_4_6_context_window():
     assert llm.get_context_window_size() == int(1_000_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
+@pytest.mark.parametrize(
+    "model",
+    [
+        "claude-fable-5",
+        "claude-opus-5",
+        "claude-sonnet-5",
+        "claude-opus-4-8",
+        "claude-opus-4-7",
+        "claude-opus-4-6",
+        "claude-sonnet-4-6",
+    ],
+)
+def test_current_1m_anthropic_models_use_1m_context_window(model: str) -> None:
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model=model)
+    assert llm.get_context_window_size() == int(1_000_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+@pytest.mark.parametrize(
+    "model",
+    ["claude-opus-4-5", "claude-sonnet-4-5", "claude-haiku-4-5"],
+)
+def test_claude_4_5_family_uses_200k_context_window(model: str) -> None:
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model=model)
+    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
 def test_anthropic_defaults_max_tokens_to_model_limit():
     """Native Anthropic used to default to 4096, which truncates large tool calls."""
     llm = LLM(model="anthropic/claude-unknown-future")
@@ -507,11 +537,10 @@ def test_anthropic_context_window_size():
     """
     Test that Anthropic models return correct context window sizes
     """
-    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+    llm = LLM(model="anthropic/claude-haiku-4-5")
     context_size = llm.get_context_window_size()
 
-    assert context_size > 100000
-    assert context_size <= 200000  # But not exceed the actual limit
+    assert context_size == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_anthropic_message_formatting():

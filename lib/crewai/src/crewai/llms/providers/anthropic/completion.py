@@ -1953,17 +1953,18 @@ class AnthropicCompletion(BaseLLM):
         """Get the context window size for the model."""
         from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
 
+        # Current offered models. Unknown and retired IDs fall back to 200k.
         context_windows = {
+            "claude-fable-5": 1000000,
+            "claude-opus-5": 1000000,
+            "claude-sonnet-5": 1000000,
+            "claude-opus-4-8": 1000000,
+            "claude-opus-4-7": 1000000,
+            "claude-opus-4-6": 1000000,
             "claude-sonnet-4-6": 1000000,
-            "claude-3-5-sonnet": 200000,
-            "claude-3-5-haiku": 200000,
-            "claude-3-opus": 200000,
-            "claude-3-sonnet": 200000,
-            "claude-3-haiku": 200000,
-            "claude-3-7-sonnet": 200000,
-            "claude-2.1": 200000,
-            "claude-2": 100000,
-            "claude-instant": 100000,
+            "claude-opus-4-5": 200000,
+            "claude-sonnet-4-5": 200000,
+            "claude-haiku-4-5": 200000,
         }
 
         for model_prefix, size in context_windows.items():
