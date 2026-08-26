@@ -536,7 +536,8 @@ class LLM(BaseLLM):
 
         if provider == "anthropic" or provider == "claude":
             return any(
-                model_lower.startswith(prefix) for prefix in ["claude-", "anthropic."]
+                model_lower.startswith(prefix)
+                for prefix in ["claude-", "anthropic.", "anthropic--"]
             )
 
         if provider == "gemini" or provider == "google":
@@ -659,6 +660,11 @@ class LLM(BaseLLM):
 
         if model in AZURE_MODELS:
             return "azure"
+
+        # Pattern-based fallback for models not in constants
+        model_lower = model.lower()
+        if model_lower.startswith(("claude-", "anthropic.", "anthropic--")):
+            return "anthropic"
 
         return "openai"
 
