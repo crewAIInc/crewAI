@@ -74,6 +74,7 @@ from crewai.events.types.memory_events import (
 )
 from crewai.events.types.skill_events import SkillUsedEvent
 from crewai.experimental.agent_executor import AgentExecutor
+from crewai.hooks.dispatch import HookAborted
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent_output import LiteAgentOutput
@@ -139,7 +140,10 @@ if TYPE_CHECKING:
 
 # Deliberate stops, not transient errors: never swallowed into the
 # max_retry_limit loop.
-_passthrough_exceptions: tuple[type[Exception], ...] = (ToolExecutionFailedError,)
+_passthrough_exceptions: tuple[type[Exception], ...] = (
+    ToolExecutionFailedError,
+    HookAborted,
+)
 
 _EXECUTOR_CLASS_MAP: dict[str, type] = {
     "CrewAgentExecutor": CrewAgentExecutor,
@@ -659,8 +663,6 @@ class Agent(BaseAgent):
         Returns:
             The task prompt, potentially augmented with memory context.
         """
-        from crewai.hooks.dispatch import HookAborted
-
         if not self._is_any_available_memory():
             return task_prompt
 
@@ -1401,8 +1403,6 @@ class Agent(BaseAgent):
 
     def _get_knowledge_search_query(self, task_prompt: str, task: Task) -> str | None:
         """Generate a search query for the knowledge base based on the task description."""
-        from crewai.hooks.dispatch import HookAborted
-
         crewai_event_bus.emit(
             self,
             event=KnowledgeQueryStartedEvent(
@@ -1613,8 +1613,6 @@ class Agent(BaseAgent):
             all_files.update(input_files)
 
         if agent_memory is not None:
-            from crewai.hooks.dispatch import HookAborted
-
             try:
                 crewai_event_bus.emit(
                     self,
@@ -1820,8 +1818,6 @@ class Agent(BaseAgent):
         self, messages: str | list[LLMMessage], output_text: str
     ) -> None:
         """Save kickoff result to memory. No-op if agent has no memory."""
-        from crewai.hooks.dispatch import HookAborted
-
         agent_memory = getattr(self, "memory", None)
         if agent_memory is None:
             return
