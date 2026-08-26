@@ -959,6 +959,39 @@ mode: "wide"
     ```
   </Accordion>
 
+  <Accordion title="Volcengine Ark">
+    عيّن متغيرات البيئة التالية في ملف `.env`:
+    ```toml Code
+    # Required
+    ARK_API_KEY=<your-api-key>
+
+    # Optional: القيمة الافتراضية هي نقطة النهاية في الصين
+    ARK_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
+    ```
+
+    مثال على الاستخدام في مشروع CrewAI:
+    ```python Code
+    llm = LLM(
+        model="volcengine/doubao-seed-2-1-pro-260628",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      يوفّر Volcengine Ark نماذج Doubao من ByteDance إضافةً إلى نماذج DeepSeek و GLM
+      المستضافة، عبر واجهة برمجة تطبيقات متوافقة مع OpenAI.
+
+      يجب أن تتضمّن معرّفات النماذج رقم الإصدار الكامل. الأسماء المختصرة الظاهرة في
+      وحدة تحكم Ark (مثل `doubao-seed-2.1-pro`) تُرجع
+      `InvalidEndpointOrModel.NotFound`. و`doubao-seed-evolving` هو الاسم المستعار
+      المتجدد الوحيد الذي يعمل بدون لاحقة تاريخ. راجع
+      [قائمة النماذج](https://www.volcengine.com/docs/82379/1330310) للاطلاع على المعرّفات الحالية.
+
+      اضبط `ARK_BASE_URL` على `https://ark.ap-southeast.bytepluses.com/api/v3`
+      لاستخدام BytePlus خارج الصين.
+    </Info>
+  </Accordion>
+
   <Accordion title="Open Router">
     عيّن متغيرات البيئة التالية في ملف `.env`:
     ```toml Code

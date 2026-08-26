@@ -702,6 +702,39 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     ```
   </Accordion>
 
+  <Accordion title="Volcengine Ark">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    # Required
+    ARK_API_KEY=<your-api-key>
+
+    # Optional: 기본값은 중국 본토 엔드포인트입니다
+    ARK_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="volcengine/doubao-seed-2-1-pro-260628",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Volcengine Ark는 ByteDance의 Doubao 모델과 함께 호스팅되는 DeepSeek 및 GLM
+      모델을 OpenAI 호환 API로 제공합니다.
+
+      모델 ID는 전체 버전을 포함해야 합니다. Ark 콘솔에 표시되는 짧은 이름(예:
+      `doubao-seed-2.1-pro`)은 `InvalidEndpointOrModel.NotFound`를 반환합니다.
+      `doubao-seed-evolving`은 날짜 접미사 없이 사용할 수 있는 유일한 롤링
+      별칭입니다. 현재 ID는 [모델 목록](https://www.volcengine.com/docs/82379/1330310)을
+      확인하세요.
+
+      중국 본토 외부에서 BytePlus를 사용하려면 `ARK_BASE_URL`을
+      `https://ark.ap-southeast.bytepluses.com/api/v3`로 설정하세요.
+    </Info>
+  </Accordion>
+
   <Accordion title="Open Router">
     `.env` 파일에 다음 환경 변수를 설정하십시오:
     ```toml Code

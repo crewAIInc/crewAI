@@ -287,9 +287,13 @@ class TestLLMIntegration:
             assert llm.provider == "volcengine"
 
     def test_llm_creates_openai_compatible_for_volcengine_hosted_models(self):
-        """Ark also serves hosted DeepSeek and GLM models."""
+        """Ark also serves hosted DeepSeek, GLM and Kimi models."""
         with patch.dict(os.environ, {"ARK_API_KEY": "test-key"}):
-            for model in ("deepseek-v4-pro-ga-260813", "glm-5-2-260617"):
+            for model in (
+                "deepseek-v4-pro-ga-260813",
+                "glm-5-2-260617",
+                "kimi-k3-260727",
+            ):
                 llm = LLM(model=f"volcengine/{model}")
                 assert isinstance(llm, OpenAICompatibleCompletion)
                 assert llm.provider == "volcengine"
