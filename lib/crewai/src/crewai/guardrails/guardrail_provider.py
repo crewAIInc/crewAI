@@ -52,9 +52,32 @@ def _canonical_normalize(obj: Any) -> Any:
     Sets/frozensets are converted to sorted lists.  Dicts are returned
     as-is (``json.dumps(sort_keys=True)`` handles key ordering).  Every
     leaf must be one of ``_CANONICAL_ATOMS``; unsupported types raise.
+
+    Non-finite floats (``NaN``, ``+Infinity``, ``-Infinity``) are rejected
+    because they are not valid JSON numbers per RFC 8259 §6 and Python's
+    ``json.dumps`` defaults to ``allow_nan=True``, which emits the
+    JavaScript literals ``NaN``/``Infinity`` — a non-canonical,
+    language-specific leak into the signed preimage.  Raised by
+    Aleksey Safonov (safal207) in PR review.
     """
-    if isinstance(obj, _CANONICAL_ATOMS):
+    if isinstance(obj, bool):
+        # bool must be checked before int (bool is a subclass of int).
         return obj
+    if isinstance(obj, int):
+        return obj
+    if isinstance(obj, float):
+        import math as _math
+        if _math.isnan(obj) or _math.isinf(obj):
+            raise ValueError(
+                f"canonical_json: non-finite float {obj!r} is not a valid "
+                f"JSON number (RFC 8259 §6); use None, a string, or a finite "
+                f"number instead."
+            )
+        return obj
+    if isinstance(obj, str):
+        return obj
+    if obj is None:
+        return None
     if isinstance(obj, (set, frozenset)):
         return sorted(_canonical_normalize(x) for x in obj)
     if isinstance(obj, (list, tuple)):
@@ -74,12 +97,18 @@ def canonical_json(obj: Any) -> str:
     ``datetime``, custom classes) raise ``TypeError`` instead of leaking a
     Python-specific ``str()`` representation into the canonical byte stream
     — which would make the hash non-reproducible in other languages.
+
+    ``allow_nan=False`` is set defensively so that, even if a non-finite
+    float bypasses ``_canonical_normalize`` in a future refactor,
+    ``json.dumps`` raises ``ValueError`` rather than emitting the
+    non-standard ``NaN``/``Infinity`` tokens.
     """
     return json.dumps(
         _canonical_normalize(obj),
         sort_keys=True,
         separators=(",", ":"),
         ensure_ascii=False,
+        allow_nan=False,
     )
 
 
