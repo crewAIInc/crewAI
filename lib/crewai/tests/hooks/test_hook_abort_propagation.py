@@ -25,6 +25,7 @@ from crewai.agent.planning_config import PlanningConfig
 from crewai.agent.utils import (
     ahandle_knowledge_retrieval,
     handle_knowledge_retrieval,
+    handle_reasoning,
 )
 from crewai.agents.planner_observer import PlannerObserver
 from crewai.events.event_bus import crewai_event_bus
@@ -54,6 +55,8 @@ from crewai.memory.analyze import (
 )
 from crewai.memory.types import MemoryRecord
 from crewai.task import Task
+from crewai.tasks.llm_guardrail import LLMGuardrail
+from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.converter import Converter
 from crewai.utilities.planning_types import TodoItem
 import pytest
@@ -269,6 +272,109 @@ async def test_a_denied_async_knowledge_retrieval_reaches_the_caller(denying_llm
 
     with pytest.raises(HookAborted):
         await ahandle_knowledge_retrieval(agent, task, "the task prompt", {})
+
+
+def test_a_denied_plan_stops_the_legacy_planning_path(denying_llm):
+    agent = Agent(
+        role="Planner",
+        goal="Plan work",
+        backstory="You plan.",
+        llm=denying_llm,
+        planning=True,
+    )
+    task = Task(description="Do the thing", expected_output="A result.", agent=agent)
+
+    with pytest.raises(HookAborted):
+        handle_reasoning(agent, task)
+
+
+def test_a_denied_replan_does_not_keep_executing_the_stale_plan(denying_llm):
+    agent = Agent(
+        role="Planner",
+        goal="Plan work",
+        backstory="You plan.",
+        llm=denying_llm,
+        planning_config=PlanningConfig(
+            reasoning_effort="low",
+            max_attempts=1,
+            max_steps=2,
+            max_replans=1,
+            max_step_iterations=2,
+        ),
+    )
+    executor = AgentExecutor(agent=agent, llm=denying_llm, task=None)
+    executor._kickoff_input = "do the thing"
+
+    with pytest.raises(HookAborted):
+        executor._trigger_replan("the first plan failed")
+
+
+class _DenyingMemory:
+    """Stands in for unified memory whose model call was denied upstream."""
+
+    read_only = False
+    root_scope = None
+
+    def __init__(self, error: Exception):
+        self._error = error
+
+    def drain_writes(self) -> None:
+        pass
+
+    def recall(self, *_args: Any, **_kwargs: Any):
+        raise self._error
+
+    def extract_memories(self, *_args: Any, **_kwargs: Any):
+        raise self._error
+
+    def remember_many(self, *_args: Any, **_kwargs: Any) -> None:
+        pass
+
+
+def test_a_denied_memory_recall_does_not_run_the_task_without_memory():
+    agent = Agent(role="Doer", goal="Do", backstory="You do.")
+    agent.memory = _DenyingMemory(HookAborted(reason="no", source="policy"))
+    task = Task(description="Do the thing", expected_output="A result.", agent=agent)
+
+    with pytest.raises(HookAborted):
+        agent._retrieve_memory_context(task, "the task prompt")
+
+
+def test_an_ordinary_memory_recall_failure_still_degrades():
+    # the guard must single out a deny: a broken store has always been allowed
+    # to degrade to no memory, and turning that into a failed run is a break
+    agent = Agent(role="Doer", goal="Do", backstory="You do.")
+    agent.memory = _DenyingMemory(ValueError("vector store is down"))
+    task = Task(description="Do the thing", expected_output="A result.", agent=agent)
+
+    assert agent._retrieve_memory_context(task, "the prompt") == "the prompt"
+
+
+def test_a_denied_memory_save_does_not_report_a_clean_kickoff():
+    agent = Agent(role="Doer", goal="Do", backstory="You do.")
+    agent.memory = _DenyingMemory(HookAborted(reason="no", source="policy"))
+
+    with pytest.raises(HookAborted):
+        agent._save_kickoff_to_memory("the input", "the output")
+
+
+def test_an_ordinary_memory_save_failure_still_degrades():
+    agent = Agent(role="Doer", goal="Do", backstory="You do.")
+    agent.memory = _DenyingMemory(ValueError("vector store is down"))
+
+    agent._save_kickoff_to_memory("the input", "the output")
+
+
+def test_a_denied_guardrail_does_not_read_as_a_failed_validation(denying_llm):
+    # returning (False, "Error while validating...") would feed the agent a
+    # retry prompt built from a call the policy refused
+    guardrail = LLMGuardrail(description="Must be polite", llm=denying_llm)
+    task_output = TaskOutput(
+        description="Say hi", raw="hi", agent="Doer", expected_output="A greeting."
+    )
+
+    with pytest.raises(HookAborted):
+        guardrail(task_output)
 
 
 def test_a_denied_plan_stops_the_executor_instead_of_running_unplanned(denying_llm):

@@ -659,6 +659,8 @@ class Agent(BaseAgent):
         Returns:
             The task prompt, potentially augmented with memory context.
         """
+        from crewai.hooks.dispatch import HookAborted
+
         if not self._is_any_available_memory():
             return task_prompt
 
@@ -711,6 +713,9 @@ class Agent(BaseAgent):
                     error=str(e),
                 ),
             )
+            # a deny aborts the task; any other failure degrades to no memory
+            if isinstance(e, HookAborted):
+                raise
 
         return task_prompt
 
@@ -1608,6 +1613,8 @@ class Agent(BaseAgent):
             all_files.update(input_files)
 
         if agent_memory is not None:
+            from crewai.hooks.dispatch import HookAborted
+
             try:
                 crewai_event_bus.emit(
                     self,
@@ -1648,6 +1655,9 @@ class Agent(BaseAgent):
                         error=str(e),
                     ),
                 )
+                # a deny aborts the kickoff; any other failure degrades to no memory
+                if isinstance(e, HookAborted):
+                    raise
 
         inputs: dict[str, Any] = {
             "input": formatted_messages,
@@ -1810,6 +1820,8 @@ class Agent(BaseAgent):
         self, messages: str | list[LLMMessage], output_text: str
     ) -> None:
         """Save kickoff result to memory. No-op if agent has no memory."""
+        from crewai.hooks.dispatch import HookAborted
+
         agent_memory = getattr(self, "memory", None)
         if agent_memory is None:
             return
@@ -1829,6 +1841,8 @@ class Agent(BaseAgent):
             extracted = agent_memory.extract_memories(raw)
             if extracted:
                 agent_memory.remember_many(extracted)
+        except HookAborted:
+            raise
         except Exception as e:
             self._logger.log("error", f"Failed to save kickoff result to memory: {e}")
 

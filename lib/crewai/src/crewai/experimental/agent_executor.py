@@ -2655,6 +2655,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         previous_context = self._build_replan_context()
 
         try:
+            from crewai.hooks.dispatch import HookAborted
             from crewai.utilities.reasoning_handler import AgentReasoning
 
             if self.task:
@@ -2711,6 +2712,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                         color="green",
                     )
 
+        except HookAborted:
+            raise
         except Exception as e:
             if hasattr(self.agent, "_logger"):
                 self.agent._logger.log("error", f"Error during replanning: {e!s}")

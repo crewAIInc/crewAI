@@ -54,6 +54,8 @@ def handle_reasoning(agent: Agent, task: Task) -> None:
             planning_handler.handle_agent_reasoning()
         )
         task.description += f"\n\nPlanning:\n{planning_output.plan.plan}"
+    except HookAborted:
+        raise
     except Exception as e:
         agent._logger.log("error", f"Error during planning: {e!s}")
 
@@ -186,19 +188,6 @@ def handle_knowledge_retrieval(
                     retrieved_knowledge=_combine_knowledge_context(agent),
                 ),
             )
-    except HookAborted as e:
-        # a deny still owes the started event above its terminal event; only the
-        # fallback to an unaugmented prompt is skipped
-        crewai_event_bus.emit(
-            agent,
-            event=KnowledgeSearchQueryFailedEvent(
-                query=agent.knowledge_search_query or "",
-                error=str(e),
-                from_task=task,
-                from_agent=agent,
-            ),
-        )
-        raise
     except Exception as e:
         crewai_event_bus.emit(
             agent,
@@ -209,6 +198,9 @@ def handle_knowledge_retrieval(
                 from_agent=agent,
             ),
         )
+        # a deny aborts the task; any other failure degrades to no knowledge
+        if isinstance(e, HookAborted):
+            raise
     return task_prompt
 
 
@@ -395,19 +387,6 @@ async def ahandle_knowledge_retrieval(
                     retrieved_knowledge=_combine_knowledge_context(agent),
                 ),
             )
-    except HookAborted as e:
-        # a deny still owes the started event above its terminal event; only the
-        # fallback to an unaugmented prompt is skipped
-        crewai_event_bus.emit(
-            agent,
-            event=KnowledgeSearchQueryFailedEvent(
-                query=agent.knowledge_search_query or "",
-                error=str(e),
-                from_task=task,
-                from_agent=agent,
-            ),
-        )
-        raise
     except Exception as e:
         crewai_event_bus.emit(
             agent,
@@ -418,4 +397,7 @@ async def ahandle_knowledge_retrieval(
                 from_agent=agent,
             ),
         )
+        # a deny aborts the task; any other failure degrades to no knowledge
+        if isinstance(e, HookAborted):
+            raise
     return task_prompt
