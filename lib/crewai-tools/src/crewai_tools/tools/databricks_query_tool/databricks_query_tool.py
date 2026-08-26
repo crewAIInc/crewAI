@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import time
 from typing import TYPE_CHECKING, Any, TypeGuard, TypedDict
 
@@ -10,6 +11,13 @@ from pydantic import BaseModel, Field, model_validator
 
 if TYPE_CHECKING:
     from databricks.sdk import WorkspaceClient
+
+# True LIMIT/FETCH clause, not an identifier that merely contains "limit"
+# (e.g. table `limited_orders`). Databricks accepts LIMIT n, LIMIT ALL, and
+# FETCH FIRST n ROWS ONLY.
+_SQL_LIMIT_CLAUSE_RE = re.compile(
+    r"(?is)\b(?:LIMIT\s+(?:ALL|\d+)\b|FETCH\s+(?:FIRST|NEXT)\s+\d+\s+ROWS?\b)"
+)
 
 
 class ExecutionContext(TypedDict, total=False):
@@ -63,8 +71,8 @@ class DatabricksQueryToolSchema(BaseModel):
         if not self.query or not self.query.strip():
             raise ValueError("Query cannot be empty")
 
-        # Add a LIMIT clause to the query if row_limit is provided and query doesn't have one
-        if self.row_limit and "limit" not in self.query.lower():
+        # Add a LIMIT clause if row_limit is set and the query has no LIMIT/FETCH clause.
+        if self.row_limit and not _SQL_LIMIT_CLAUSE_RE.search(self.query):
             self.query = f"{self.query.rstrip(';')} LIMIT {self.row_limit};"
 
         return self
