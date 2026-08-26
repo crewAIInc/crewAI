@@ -90,10 +90,11 @@ class ProofCoreVerifyTool(BaseTool):
             res.raise_for_status()
             data = res.json()
             
-            if not isinstance(data, dict) or "valid" not in data:
-                return "ProofCore Verify Error: Malformed verification response."
+            if not isinstance(data, dict) or not isinstance(data.get("valid"), bool):
+                return "ProofCore Verify Error: Malformed verification response (expected boolean 'valid')."
                 
-            valid_status = "🟢 PASSED" if data.get('valid') else "🔴 FAILED"
+            valid_status = "🟢 PASSED" if data["valid"] is True else "🔴 FAILED"
+          
             return (
                 f"Verification Result: {valid_status}\n"
                 f"Checks: {data.get('checks', {})}\n"
