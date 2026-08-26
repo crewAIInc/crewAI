@@ -104,20 +104,34 @@ def test_anthropic_completion_initialization_parameters():
     assert llm.top_p == 0.9
 
 
-def test_anthropic_defaults_max_tokens_to_32000():
-    """Native Anthropic used to default to 4096, which truncates large tool calls."""
-    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
-
+def test_anthropic_completion_defaults_to_sonnet_4_6():
     from crewai.llms.providers.anthropic.completion import (
-        DEFAULT_MAX_TOKENS,
+        DEFAULT_MODEL,
         AnthropicCompletion,
     )
 
+    llm = AnthropicCompletion()
+    assert llm.model == DEFAULT_MODEL
+    assert llm.model == "claude-sonnet-4-6"
+    assert llm.max_tokens == 128000
+
+
+def test_anthropic_defaults_max_tokens_to_model_limit():
+    """Native Anthropic used to default to 4096, which truncates large tool calls."""
+    llm = LLM(model="anthropic/claude-unknown-future")
+
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
     assert isinstance(llm, AnthropicCompletion)
-    assert llm.max_tokens == DEFAULT_MAX_TOKENS
     assert llm.max_tokens == 32000
     params = llm._prepare_completion_params(messages=[{"role": "user", "content": "hi"}])
     assert params["max_tokens"] == 32000
+    assert "max_tokens" not in llm.to_config_dict()
+
+    sonnet45 = LLM(model="anthropic/claude-sonnet-4-5")
+    assert isinstance(sonnet45, AnthropicCompletion)
+    assert sonnet45.max_tokens == 64000
+    assert "max_tokens" not in sonnet45.to_config_dict()
 
 
 def test_anthropic_honors_explicit_max_tokens():
@@ -129,6 +143,7 @@ def test_anthropic_honors_explicit_max_tokens():
     assert llm.max_tokens == 8000
     params = llm._prepare_completion_params(messages=[{"role": "user", "content": "hi"}])
     assert params["max_tokens"] == 8000
+    assert llm.to_config_dict()["max_tokens"] == 8000
 
 
 def test_anthropic_specific_parameters():

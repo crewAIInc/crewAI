@@ -46,10 +46,32 @@ TOOL_SEARCH_TOOL_TYPES: Final[tuple[str, ...]] = (
 
 ANTHROPIC_FILES_API_BETA: Final = "files-api-2025-04-14"
 ANTHROPIC_STRUCTURED_OUTPUTS_BETA: Final = "structured-outputs-2025-11-13"
-# Anthropic requires max_tokens. 4096 truncates large tool calls (e.g. a
-# full inline agent/crew spec) mid-JSON; trailing fields then fail validation
-# and every retry hits the same ceiling.
-DEFAULT_MAX_TOKENS: Final[int] = 32000
+# Anthropic requires max_tokens. Offered models all accept at least 32000.
+# Longest prefix wins. Unknown IDs use 32000 so they stay in-range.
+_MAX_OUTPUT_TOKENS_BY_PREFIX: Final[tuple[tuple[str, int], ...]] = (
+    ("claude-fable-5", 128000),
+    ("claude-opus-5", 128000),
+    ("claude-sonnet-5", 128000),
+    ("claude-opus-4-8", 128000),
+    ("claude-opus-4-7", 128000),
+    ("claude-opus-4-6", 128000),
+    ("claude-sonnet-4-6", 128000),
+    ("claude-haiku-4-5", 64000),
+    ("claude-sonnet-4-5", 64000),
+    ("claude-opus-4-5", 64000),
+)
+_DEFAULT_MODEL_MAX_TOKENS: Final[int] = 32000
+DEFAULT_MODEL: Final[str] = "claude-sonnet-4-6"
+
+
+def _default_max_tokens_for_model(model: str) -> int:
+    """Return the model's documented Messages API max output tokens."""
+    name = model.rsplit("/", 1)[-1].lower()
+    for prefix, limit in _MAX_OUTPUT_TOKENS_BY_PREFIX:
+        if name.startswith(prefix):
+            return limit
+    return _DEFAULT_MODEL_MAX_TOKENS
+
 
 NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
     tuple[
@@ -57,8 +79,6 @@ NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
         Literal["claude-sonnet-4.5"],
         Literal["claude-opus-4-5"],
         Literal["claude-opus-4.5"],
-        Literal["claude-opus-4-1"],
-        Literal["claude-opus-4.1"],
         Literal["claude-haiku-4-5"],
         Literal["claude-haiku-4.5"],
     ]
@@ -67,8 +87,6 @@ NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
     "claude-sonnet-4.5",
     "claude-opus-4-5",
     "claude-opus-4.5",
-    "claude-opus-4-1",
-    "claude-opus-4.1",
     "claude-haiku-4-5",
     "claude-haiku-4.5",
 )
@@ -78,7 +96,7 @@ def _supports_native_structured_outputs(model: str) -> bool:
     """Check if the model supports native structured outputs.
 
     Native structured outputs are only available for Claude 4.5 models
-    (Sonnet 4.5, Opus 4.5, Opus 4.1, Haiku 4.5).
+    (Sonnet 4.5, Opus 4.5, Haiku 4.5).
     Other models require the tool-based fallback approach.
 
     Args:
@@ -220,10 +238,10 @@ class AnthropicCompletion(BaseLLM):
     """
 
     llm_type: Literal["anthropic"] = "anthropic"
-    model: str = "claude-3-5-sonnet-20241022"
+    model: str = DEFAULT_MODEL
     timeout: float | None = None
     max_retries: int = 2
-    max_tokens: int = DEFAULT_MAX_TOKENS
+    max_tokens: int = _DEFAULT_MODEL_MAX_TOKENS
     top_p: float | None = None
     stream: bool = False
     client_params: dict[str, Any] | None = None
@@ -249,7 +267,11 @@ class AnthropicCompletion(BaseLLM):
         if isinstance(seqs, str):
             seqs = [seqs]
         data["stop"] = seqs
+        if not data.get("model"):
+            data["model"] = DEFAULT_MODEL
         data["is_claude_3"] = "claude-3" in data.get("model", "").lower()
+        if data.get("max_tokens") is None:
+            data["max_tokens"] = _default_max_tokens_for_model(data["model"])
         # Normalize tool_search
         ts = data.get("tool_search")
         if ts is True:
@@ -299,7 +321,7 @@ class AnthropicCompletion(BaseLLM):
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Anthropic-specific fields."""
         config = super().to_config_dict()
-        if self.max_tokens != DEFAULT_MAX_TOKENS:  # non-default
+        if self.max_tokens != _default_max_tokens_for_model(self.model):
             config["max_tokens"] = self.max_tokens
         if self.max_retries != 2:  # non-default
             config["max_retries"] = self.max_retries
