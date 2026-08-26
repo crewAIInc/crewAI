@@ -270,18 +270,6 @@ class Telemetry:
         """
         self.trace_set = self.ready
 
-    def _safe_telemetry_operation(
-        self, operation: Callable[[], Span | None]
-    ) -> Span | None:
-        """Run a span-returning telemetry operation, swallowing failures."""
-        if not self._should_execute_telemetry():
-            return None
-        try:
-            return operation()
-        except Exception as e:
-            logger.debug("Telemetry operation failed: %s", e)
-            return None
-
     def _safe_telemetry_procedure(self, operation: Callable[[], None]) -> None:
         """Run a void telemetry procedure, swallowing failures."""
         if not self._should_execute_telemetry():
@@ -404,6 +392,35 @@ class Telemetry:
             span = tracer.start_span("Feature Usage")
             self._add_attribute(span, "crewai_version", get_crewai_version())
             self._add_attribute(span, "feature", feature)
+            close_span(span)
+
+        self._safe_telemetry_procedure(_operation)
+
+    def project_created_span(self, kind: str, project_id: str | None) -> None:
+        """Records that the CLI scaffolded a new project.
+
+        Acquisition was previously only observable from a project's first *run*, which
+        misses every project created and never run and dates the rest to the wrong day.
+
+        ``created_project_id`` rather than ``project_id``: the ``project_id`` stamped on
+        every span by ``CommonAttributesSpanProcessor`` is read from the *current
+        working directory* and cached for the life of the process, so at scaffold time it
+        describes the directory the command was run from - not the project just minted a
+        line earlier. Two different things must not share one attribute name.
+
+        Args:
+            kind: What was scaffolded - "crew", "json_crew" or "flow".
+            project_id: The id just minted for the new project. Empty string when
+                minting failed, matching the convention for the common attribute.
+        """
+        from crewai_core.version import get_crewai_version
+
+        def _operation() -> None:
+            tracer = self.provider.get_tracer(TRACER_NAME)
+            span = tracer.start_span("Project Created")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
+            self._add_attribute(span, "kind", kind)
+            self._add_attribute(span, "created_project_id", project_id or "")
             close_span(span)
 
         self._safe_telemetry_procedure(_operation)
