@@ -127,6 +127,7 @@ def test_default_anthropic_completion_uses_sonnet_4_6_context_window():
     "model",
     [
         "claude-fable-5",
+        "claude-mythos-5",
         "claude-opus-5",
         "claude-sonnet-5",
         "claude-opus-4-8",

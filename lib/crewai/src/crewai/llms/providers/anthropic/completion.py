@@ -1956,6 +1956,7 @@ class AnthropicCompletion(BaseLLM):
         # Current offered models. Unknown and retired IDs fall back to 200k.
         context_windows = {
             "claude-fable-5": 1000000,
+            "claude-mythos-5": 1000000,
             "claude-opus-5": 1000000,
             "claude-sonnet-5": 1000000,
             "claude-opus-4-8": 1000000,
