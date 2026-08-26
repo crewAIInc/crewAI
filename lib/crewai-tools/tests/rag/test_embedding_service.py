@@ -52,7 +52,7 @@ class TestEmbeddingService:
         """Test listing supported providers."""
         providers = EmbeddingService.list_supported_providers()
         expected_providers = [
-            "openai", "azure", "voyageai", "cohere", "google-generativeai",
+            "openai", "openrouter", "azure", "voyageai", "cohere", "google-generativeai",
             "amazon-bedrock", "huggingface", "jina", "ollama", "sentence-transformer",
             "instructor", "watsonx", "custom"
         ]
@@ -68,6 +68,10 @@ class TestEmbeddingService:
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-openai-key"}):
             api_key = service._get_default_api_key("openai")
             assert api_key == "test-openai-key"
+
+        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-openrouter-key"}):
+            api_key = service._get_default_api_key("openrouter")
+            assert api_key == "test-openrouter-key"
 
         with patch.dict(os.environ, {}, clear=True):
             api_key = service._get_default_api_key("openai")
@@ -326,3 +330,35 @@ class TestProviderConfigurations:
         assert call_args["provider"] == "google-generativeai"
         assert call_args["config"]["api_key"] == "test-key"
         assert call_args["config"]["model_name"] == "models/embedding-001"
+
+    @patch("crewai.rag.embeddings.factory.build_embedder")
+    def test_openrouter_config(self, mock_build_embedder):
+        """Test OpenRouter configuration mapping."""
+        mock_build_embedder.return_value = Mock()
+
+        service = EmbeddingService(
+            provider="openrouter",
+            model="openai/text-embedding-3-large",
+            api_key="test-key",
+            extra_config={"dimensions": 1536},
+        )
+
+        call_args = mock_build_embedder.call_args[0][0]
+        assert call_args["provider"] == "openrouter"
+        assert call_args["config"]["api_key"] == "test-key"
+        assert call_args["config"]["model_name"] == "openai/text-embedding-3-large"
+        assert call_args["config"]["dimensions"] == 1536
+
+    @patch("crewai.rag.embeddings.factory.build_embedder")
+    def test_create_openrouter_service(self, mock_build_embedder):
+        """Test create_openrouter_service helper method."""
+        mock_build_embedder.return_value = Mock()
+
+        service = EmbeddingService.create_openrouter_service(
+            model="openai/text-embedding-3-small",
+            api_key="test-key",
+        )
+
+        assert service.config.provider == "openrouter"
+        assert service.config.model == "openai/text-embedding-3-small"
+        assert service.config.api_key == "test-key"
