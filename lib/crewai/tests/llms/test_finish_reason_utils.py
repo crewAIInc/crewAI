@@ -24,6 +24,11 @@ from crewai.llms._finish_reason_utils import is_truncated, warn_if_truncated
     ],
 )
 def test_recognises_every_provider_spelling(finish_reason):
+    """Every vendor spells truncation differently and all of them must be caught.
+
+    A provider whose spelling is missed looks identical to a complete response,
+    which is the failure this helper exists to prevent.
+    """
     assert is_truncated(finish_reason) is True
 
 
@@ -32,10 +37,19 @@ def test_recognises_every_provider_spelling(finish_reason):
     ["stop", "STOP", "tool_calls", "content_filter", "end_turn", "", None, 42, object()],
 )
 def test_ignores_non_truncation_reasons(finish_reason):
+    """Normal completions and non-string values must not raise a false alarm.
+
+    A warning on every healthy turn is worse than no warning at all, because
+    readers learn to ignore it.
+    """
     assert is_truncated(finish_reason) is False
 
 
 def test_warns_once_and_names_the_budget(caplog):
+    """One warning per truncated response, naming the cap that caused it.
+
+    The cap has to appear or the reader cannot tell which setting to raise.
+    """
     with caplog.at_level(logging.WARNING):
         emitted = warn_if_truncated("length", max_tokens=16, model="gpt-4o-mini")
 
@@ -48,6 +62,7 @@ def test_warns_once_and_names_the_budget(caplog):
 
 
 def test_silent_on_a_complete_response(caplog):
+    """A complete response must log nothing at all."""
     with caplog.at_level(logging.WARNING):
         emitted = warn_if_truncated("stop", max_tokens=16, model="gpt-4o-mini")
 
