@@ -61,6 +61,17 @@ class InterceptionPoint(str, Enum):
     POST_STEP = "post_step"
 
 
+EXECUTION_BOUNDARY_POINTS: frozenset[InterceptionPoint] = frozenset(
+    {
+        InterceptionPoint.EXECUTION_START,
+        InterceptionPoint.INPUT,
+        InterceptionPoint.OUTPUT,
+        InterceptionPoint.EXECUTION_END,
+    }
+)
+"""The points that open and close a run, as opposed to steps within it."""
+
+
 class HookAborted(Exception):  # noqa: N818 - public contract name from OSS-86
     """Raised by a hook (or a legacy adapter) to abort the intercepted operation.
 

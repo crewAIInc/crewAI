@@ -349,6 +349,121 @@ def _emit(method: str, *args, **kwargs):
     return tracer, span
 
 
+def _stub_crew(memory):
+    """The minimum `crew_creation` reads: key, id, fingerprint, memory, process, tasks, agents."""
+    crew = Mock()
+    crew.key = "crew-key"
+    crew.id = "crew-id"
+    crew.fingerprint = None
+    crew.memory = memory
+    crew.process = "sequential"
+    crew.tasks = []
+    crew.agents = []
+    crew.share_crew = False
+    return crew
+
+
+class _MemoryLike:
+    """Stands in for Memory/MemoryScope/MemorySlice.
+
+    Defines no ``__bool__`` or ``__len__``, matching the real classes, so an instance
+    is always truthy -- which is what makes D2's "enabled by any means" work.
+    """
+
+
+@pytest.mark.parametrize(
+    ("memory", "expected"),
+    [
+        (True, "true"),
+        (False, "false"),
+        (None, "false"),
+        (_MemoryLike(), "true"),
+    ],
+    ids=["bool-true", "bool-false", "none", "memory-instance"],
+)
+def test_crew_memory_is_recorded_as_a_string(memory, expected: str) -> None:
+    """The same defect `resumed` was fixed for, applied to the attribute left behind.
+
+    A false boolean cannot survive this pipeline at all: measured across 218,400,577
+    spans, not one carries ``vBool=false``, because proto3 omits the bool zero value.
+    So "memory disabled" was structurally unrepresentable and presence had to stand in
+    for the value -- which is why crew_memory read 1 for 99.8% of crews against a field
+    defaulting to False.
+
+    The instance case pins D2: memory counts as enabled when set by any means, not only
+    when it is literally ``True``.
+    """
+    _tracer, span = _emit("crew_creation", _stub_crew(memory), None)
+
+    span.set_attribute.assert_any_call("crew_memory", expected)
+    for call in span.set_attribute.call_args_list:
+        assert call.args[1] is not True and call.args[1] is not False, (
+            "no attribute may be a bare boolean: false would vanish from the pipeline "
+            "entirely and true would be indistinguishable from a presence marker"
+        )
+
+
+@pytest.mark.parametrize(
+    ("inputs", "expected"),
+    [
+        ({"topic": "AI"}, "true"),
+        ({"a": 1, "b": 2}, "true"),
+        ({}, "false"),
+        (None, "false"),
+    ],
+    ids=["one-key", "two-keys", "empty-dict", "none"],
+)
+def test_crew_inputs_presence_is_recorded_ungated_as_a_string(inputs, expected: str):
+    """Whether a run was parameterised must be answerable for everyone, not just sharers.
+
+    The `crew_inputs` payload is share_crew-gated and stays that way (D13), so the only
+    signal in the warehouse was `has_crew_inputs`, derived from that gated key: 0 of
+    226,592 spans on 0.28.8 and ~0.02% overall, all opt-in sharers. That is a sample of
+    people who opted into sharing, not a measurement of users.
+
+    A string rather than an int or a bool, and here the encoding is the whole design.
+    Measured over a single day, 312,424,709 spans: `vInt64='0'` appears 0 times and
+    `vBool='false'` appears 0 times, while `vStr='0'` does appear. So an integer key
+    count would have silently dropped exactly the majority case -- 54.46% of sharers
+    pass `{}` -- and reproduced the bug this item exists to fix.
+
+    `{}` and `None` are both "false" on purpose: an empty dict parameterises nothing, so
+    truthiness is the question being asked.
+    """
+    crew = _stub_crew(True)
+    assert crew.share_crew is False, "the ungated path is the one under test"
+
+    _tracer, span = _emit("crew_creation", crew, inputs)
+
+    span.set_attribute.assert_any_call("crew_inputs_present", expected)
+
+
+def test_crew_inputs_payload_stays_gated_while_the_presence_signal_does_not():
+    """The split is the point: presence ships for everyone, content ships for nobody new.
+
+    Without this, widening the presence signal could be "fixed" later by simply
+    ungating `crew_inputs`, which would put user payloads into telemetry.
+    """
+    crew = _stub_crew(True)
+    assert crew.share_crew is False
+
+    _tracer, span = _emit("crew_creation", crew, {"secret_topic": "acquisition target"})
+
+    emitted = {call.args[0] for call in span.set_attribute.call_args_list}
+    assert "crew_inputs_present" in emitted
+    assert "crew_inputs" not in emitted, (
+        "the payload must remain inside the share_crew branch; only its presence is ungated"
+    )
+    for call in span.set_attribute.call_args_list:
+        assert "secret_topic" not in str(call.args[1]), (
+            "no input KEY may reach the span either -- key names are user data too, and a "
+            "regression emitting json.dumps(inputs.keys()) would pass a value-only check"
+        )
+        assert "acquisition target" not in str(call.args[1]), (
+            "no input value may reach the span for a non-sharing crew"
+        )
+
+
 @pytest.mark.parametrize(("resumed", "expected"), [(True, "true"), (False, "false")])
 def test_resumed_is_recorded_as_a_string(resumed: bool, expected: str) -> None:
     """A boolean is encoded as the presence of a key, not as a value.

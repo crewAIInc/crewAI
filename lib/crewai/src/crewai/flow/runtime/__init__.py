@@ -139,6 +139,8 @@ if TYPE_CHECKING:
     from crewai_files import FileInput
 
     from crewai.context import ExecutionContext
+    from crewai.hooks.contexts import InterceptionContext
+    from crewai.hooks.dispatch import InterceptionPoint
     from crewai.llms.base_llm import BaseLLM
 
 from crewai.flow.visualization import build_flow_structure, render_interactive
@@ -185,6 +187,7 @@ def _condition_satisfied(condition: FlowDefinitionCondition, events: set[str]) -
 
 def _build_definition_state_model(
     state_definition: FlowStateDefinition,
+    compose: Callable[[type[BaseModel]], type[BaseModel]] | None = None,
 ) -> BaseModel | None:
     kwargs = dict(state_definition.default or {})
 
@@ -215,6 +218,9 @@ def _build_definition_state_model(
 
     if model_class is None:
         return None
+
+    if compose is not None:
+        model_class = compose(model_class)
 
     if not issubclass(model_class, FlowState):
 
@@ -458,9 +464,27 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """
         return definition
 
-    def _create_default_extension_state(self) -> Any | None:
-        """Return a default state supplied by an optional runtime extension."""
+    def _create_default_extension_state(
+        self, *, ignore_declared_state: bool = False
+    ) -> Any | None:
+        """Return a default state supplied by an optional runtime extension.
+
+        ``ignore_declared_state`` is set when a declared ``state:`` block named
+        a model that could not be built, so the extension is asked again as if
+        nothing had been declared.
+        """
         return None
+
+    def _compose_extension_state_model(
+        self, model_class: type[BaseModel]
+    ) -> type[BaseModel]:
+        """Let an optional runtime extension add bases to a declared state model.
+
+        Applied to the model built from ``state:`` before the engine wraps it
+        for its ``id`` field, so an extension can require its own fields
+        alongside whatever the declaration asked for.
+        """
+        return model_class
 
     def _should_apply_pending_kickoff_context(self) -> bool:
         """Whether an optional runtime extension has pending kickoff context."""
@@ -1260,7 +1284,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         instance._is_execution_resuming = True
         # Seed the match id so the resume-phase listener filters its own
         # LLM events (which run with `current_flow_id == instance.flow_id`)
-        # instead of dropping or absorbing unrelated ones.
+        # instead of dropping or absorbing unrelated ones. Must stay
+        # `instance.flow_id`: resume forces `current_flow_id` to this value and
+        # `_owns_execution_boundary` compares the two.
         instance._flow_match_id = instance.flow_id
 
         return instance
@@ -1374,7 +1400,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         except Exception as e:
             if not hook_state["end_dispatched"]:
                 self._dispatch_execution_end_failure(e)
-            await self._emit_flow_failed(e, respect_suppression=True)
+            await self._emit_flow_failed(e)
             raise
         finally:
             # Match kickoff_async: drain pending handlers so the resumed
@@ -1393,20 +1419,30 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             reset_emission_counter()
             reset_last_event_id()
 
-        if not self.suppress_flow_events:
-            future = crewai_event_bus.emit(
-                self,
-                FlowStartedEvent(
-                    type="flow_started",
-                    flow_name=self._definition.name,
-                    inputs=None,
-                ),
-            )
-            if future and isinstance(future, Future):
-                try:
-                    await asyncio.wrap_future(future)
-                except Exception:
-                    logger.warning("FlowStartedEvent handler failed", exc_info=True)
+        # Emitted unconditionally, matching both the kickoff path and the
+        # FlowFinishedEvent below. This used to sit behind suppress_flow_events,
+        # which produced an unpaired finish: the finish emit is not gated, so a
+        # resumed flow reported finishing without ever having started, breaking
+        # every started/finished pairing and duration built on it.
+        #
+        # suppress_flow_events is not the right gate for emission in any case. It
+        # asks for console quiet - see _flow_origin in events/event_listener.py,
+        # which says so and notes it "can legitimately be set on a caller's own
+        # flow" - and the listener already honours it where it prints. Suppressing
+        # the event instead removed the resumed leg from telemetry entirely.
+        future = crewai_event_bus.emit(
+            self,
+            FlowStartedEvent(
+                type="flow_started",
+                flow_name=self._definition.name,
+                inputs=None,
+            ),
+        )
+        if future and isinstance(future, Future):
+            try:
+                await asyncio.wrap_future(future)
+            except Exception:
+                logger.warning("FlowStartedEvent handler failed", exc_info=True)
 
         get_env_context()
 
@@ -1555,20 +1591,23 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         )
 
         from crewai.hooks.contexts import ExecutionEndContext, OutputContext
-        from crewai.hooks.dispatch import InterceptionPoint, dispatch
+        from crewai.hooks.dispatch import InterceptionPoint
 
         output_ctx = OutputContext(flow=self, output=final_result, payload=final_result)
-        dispatch(InterceptionPoint.OUTPUT, output_ctx)
+        self._dispatch_interception(InterceptionPoint.OUTPUT, output_ctx)
         final_result = output_ctx.payload
 
         end_ctx = ExecutionEndContext(
             flow=self, output=final_result, payload=final_result
         )
         # Flag set before dispatching so an EXECUTION_END hook that raises
-        # HookAborted does not trigger a second (failure) dispatch upstream.
-        if hook_state is not None:
+        # HookAborted does not trigger a second (failure) dispatch upstream. A
+        # skipped dispatch leaves it false, matching the kickoff path.
+        if hook_state is not None and not self._skip_interception(
+            InterceptionPoint.EXECUTION_END
+        ):
             hook_state["end_dispatched"] = True
-        dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
+        self._dispatch_interception(InterceptionPoint.EXECUTION_END, end_ctx)
         final_result = end_ctx.payload
 
         if self._event_futures:
@@ -1581,10 +1620,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
             self._event_futures.clear()
 
-        if (
-            not self.suppress_flow_events
-            and not self._should_defer_trace_finalization()
-        ):
+        # Not gated on suppress_flow_events: that asks for console quiet, and the
+        # started event above is ungated, so gating here would emit a start with no
+        # terminal event. The defer check stays - it is a real reason to withhold the
+        # finish, because finalize_session_traces() emits it later instead.
+        if not self._should_defer_trace_finalization():
             # Background memory saves must finish (and emit their
             # completed/failed events) before flow-finished triggers
             # listener teardown/finalization; the flush then waits for those
@@ -1710,7 +1750,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if state_definition is None:
             return {"id": str(uuid4())}
         if state_definition.type in ("pydantic", "json_schema"):
-            state = _build_definition_state_model(state_definition)
+            state = _build_definition_state_model(
+                state_definition, compose=self._compose_extension_state_model
+            )
             if state is not None:
                 return state
             logger.error(
@@ -1719,6 +1761,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 self._definition.name,
                 state_definition.type,
             )
+            extension_state: dict[str, Any] | BaseModel | None = (
+                self._create_default_extension_state(ignore_declared_state=True)
+            )
+            if extension_state is not None:
+                return extension_state
         elif state_definition.type == "unknown":
             logger.warning(
                 "Flow %r declares state of unknown type; falling back to dict state",
@@ -2177,10 +2224,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 ExecutionEndContext,
                 ExecutionStartContext,
                 InputContext,
-                InterceptionContext,
                 OutputContext,
             )
-            from crewai.hooks.dispatch import HookAborted, InterceptionPoint, dispatch
+            from crewai.hooks.dispatch import HookAborted, InterceptionPoint
 
             # ``inputs`` aliases the same object as ``payload`` (not a fresh
             # ``{}`` from ``or``) so in-place edits survive read-back.
@@ -2190,8 +2236,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     inputs=inputs if inputs is not None else {},
                     payload=inputs,
                 )
-                dispatch(InterceptionPoint.EXECUTION_START, boundary_ctx)
-                execution_start_dispatched = True
+                execution_start_dispatched = self._dispatch_interception(
+                    InterceptionPoint.EXECUTION_START, boundary_ctx
+                )
                 inputs = boundary_ctx.payload
 
                 boundary_ctx = InputContext(
@@ -2199,7 +2246,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     inputs=inputs if inputs is not None else {},
                     payload=inputs,
                 )
-                dispatch(InterceptionPoint.INPUT, boundary_ctx)
+                self._dispatch_interception(InterceptionPoint.INPUT, boundary_ctx)
                 inputs = boundary_ctx.payload
             except HookAborted:
                 # The deny surfaces as started -> failed. Read the payload back
@@ -2406,7 +2453,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             output_ctx = OutputContext(
                 flow=self, output=final_output, payload=final_output
             )
-            dispatch(InterceptionPoint.OUTPUT, output_ctx)
+            self._dispatch_interception(InterceptionPoint.OUTPUT, output_ctx)
             final_output = output_ctx.payload
 
             # EXECUTION_END runs before FlowFinishedEvent so a HookAborted
@@ -2416,9 +2463,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 flow=self, output=final_output, payload=final_output
             )
             # Flag set before dispatching so an EXECUTION_END hook that raises
-            # HookAborted does not trigger a second (failure) dispatch below.
-            execution_end_dispatched = True
-            dispatch(InterceptionPoint.EXECUTION_END, end_ctx)
+            # HookAborted does not trigger a second (failure) dispatch below. A
+            # skipped dispatch leaves it false, so it means the same as
+            # ``execution_start_dispatched``.
+            execution_end_dispatched = not self._skip_interception(
+                InterceptionPoint.EXECUTION_END
+            )
+            self._dispatch_interception(InterceptionPoint.EXECUTION_END, end_ctx)
             final_output = end_ctx.payload
 
             if self._event_futures:
@@ -2509,6 +2560,46 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             detach(flow_token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
 
+    def _skip_interception(self, point: InterceptionPoint) -> bool:
+        """Whether ``point`` must not be dispatched for this flow.
+
+        Per point rather than per flow: an internal flow that is itself the
+        whole run still owns that run's execution boundary, even though its
+        methods are never a caller's steps.
+        """
+        if not type(self).is_crewai_internal:
+            return False
+        from crewai.hooks.dispatch import EXECUTION_BOUNDARY_POINTS
+
+        return (
+            point not in EXECUTION_BOUNDARY_POINTS
+            or not self._owns_execution_boundary()
+        )
+
+    def _owns_execution_boundary(self) -> bool:
+        """Whether this flow is the run the caller asked for.
+
+        A caller's flow always is. Internal machinery is not, unless it is the
+        entry point the caller invoked (``Agent.kickoff()``), which the classes
+        that can be one override; the rest need nothing.
+        """
+        return not type(self).is_crewai_internal
+
+    def _dispatch_interception(
+        self, point: InterceptionPoint, ctx: InterceptionContext
+    ) -> bool:
+        """Dispatch ``point`` unless this flow must not expose it.
+
+        Returns whether the dispatch happened, so callers can keep the
+        EXECUTION_START/EXECUTION_END pairing honest on a skipped flow.
+        """
+        if self._skip_interception(point):
+            return False
+        from crewai.hooks.dispatch import dispatch
+
+        dispatch(point, ctx)
+        return True
+
     def _dispatch_execution_end_failure(self, error: BaseException) -> None:
         """Dispatch EXECUTION_END with status="failed" for an execution that raised.
 
@@ -2518,10 +2609,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         exception propagates unchanged.
         """
         from crewai.hooks.contexts import ExecutionEndContext
-        from crewai.hooks.dispatch import InterceptionPoint, dispatch
+        from crewai.hooks.dispatch import InterceptionPoint
 
         try:
-            dispatch(
+            self._dispatch_interception(
                 InterceptionPoint.EXECUTION_END,
                 ExecutionEndContext(flow=self, status="failed", error=error),
             )
@@ -2589,9 +2680,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         get_env_context()
         return flow_scope_open
 
-    async def _emit_flow_failed(
-        self, error: Exception, *, respect_suppression: bool = False
-    ) -> None:
+    async def _emit_flow_failed(self, error: BaseException) -> None:
         """Emit ``FlowFailedEvent`` and close out the trace batch for a failed run.
 
         Mirrors the terminal block of the success path: drain pending event
@@ -2601,14 +2690,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         Args:
             error: The exception that ended the execution.
-            respect_suppression: Skip the emission for suppressed flows. Only
-                the resume path gates its lifecycle events on
-                ``suppress_flow_events``; ``kickoff_async`` emits them either
-                way and lets listeners filter.
         """
         if self._should_defer_trace_finalization():
-            return
-        if respect_suppression and self.suppress_flow_events:
             return
 
         try:
@@ -2840,35 +2923,38 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     self._event_futures.append(future)
 
             from crewai.hooks.contexts import StepContext
-            from crewai.hooks.dispatch import InterceptionPoint, dispatch
+            from crewai.hooks.dispatch import InterceptionPoint
 
-            pre_step_ctx = StepContext(
-                kind="flow_method",
-                step_name=str(method_name),
-                flow=self,
-                payload=dumped_params,
-            )
-            dispatch(InterceptionPoint.PRE_STEP, pre_step_ctx)
-
-            # Apply hook edits/replacement of the step params back onto the
-            # call. ``dumped_params`` maps positional args to ``_0, _1, ...``
-            # keys and keeps kwargs by name, so reverse that mapping here.
-            updated_params = pre_step_ctx.payload
-            if isinstance(updated_params, dict):
-                positional = sorted(
-                    (
-                        k
-                        for k in updated_params
-                        if k.startswith("_") and k[1:].isdigit()
-                    ),
-                    key=lambda k: int(k[1:]),
+            # Guarded here as well as inside the dispatch: a skipped flow must
+            # not pay for building the context or reversing the param mapping.
+            if not self._skip_interception(InterceptionPoint.PRE_STEP):
+                pre_step_ctx = StepContext(
+                    kind="flow_method",
+                    step_name=str(method_name),
+                    flow=self,
+                    payload=dumped_params,
                 )
-                args = tuple(updated_params[k] for k in positional)
-                kwargs = {
-                    k: v
-                    for k, v in updated_params.items()
-                    if not (k.startswith("_") and k[1:].isdigit())
-                }
+                self._dispatch_interception(InterceptionPoint.PRE_STEP, pre_step_ctx)
+
+                # Apply hook edits/replacement of the step params back onto the
+                # call. ``dumped_params`` maps positional args to ``_0, _1, ...``
+                # keys and keeps kwargs by name, so reverse that mapping here.
+                updated_params = pre_step_ctx.payload
+                if isinstance(updated_params, dict):
+                    positional = sorted(
+                        (
+                            k
+                            for k in updated_params
+                            if k.startswith("_") and k[1:].isdigit()
+                        ),
+                        key=lambda k: int(k[1:]),
+                    )
+                    args = tuple(updated_params[k] for k in positional)
+                    kwargs = {
+                        k: v
+                        for k, v in updated_params.items()
+                        if not (k.startswith("_") and k[1:].isdigit())
+                    }
 
             # Set method name in context so ask() can read it without
             # stack inspection.  Must happen before copy_context() so the
@@ -2897,15 +2983,16 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     method_name, method_definition.human_feedback, result
                 )
 
-            post_step_ctx = StepContext(
-                kind="flow_method",
-                step_name=str(method_name),
-                flow=self,
-                output=result,
-                payload=result,
-            )
-            dispatch(InterceptionPoint.POST_STEP, post_step_ctx)
-            result = post_step_ctx.payload
+            if not self._skip_interception(InterceptionPoint.POST_STEP):
+                post_step_ctx = StepContext(
+                    kind="flow_method",
+                    step_name=str(method_name),
+                    flow=self,
+                    output=result,
+                    payload=result,
+                )
+                self._dispatch_interception(InterceptionPoint.POST_STEP, post_step_ctx)
+                result = post_step_ctx.payload
 
             self._method_outputs.append({"method": str(method_name), "output": result})
 
