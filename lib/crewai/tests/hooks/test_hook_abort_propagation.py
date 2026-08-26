@@ -477,6 +477,30 @@ def test_a_deny_is_not_reported_as_a_provider_failure(denying_llm):
     assert failures[0].error == "LLM call denied by policy: no model calls allowed"
 
 
+def test_a_deny_names_the_hook_that_raised_it_rather_than_its_repr():
+    def gate_on_approved_models(_ctx: Any) -> None:
+        raise HookAborted(reason="model not approved", source=gate_on_approved_models)
+
+    on(InterceptionPoint.PRE_MODEL_CALL)(gate_on_approved_models)
+    failures: list[LLMCallFailedEvent] = []
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(LLMCallFailedEvent)
+        def _on_failed(_source: Any, event: LLMCallFailedEvent) -> None:
+            failures.append(event)
+
+        with pytest.raises(HookAborted):
+            LLM(model="gpt-4o-mini").call([{"role": "user", "content": "hi"}])
+
+        wait_for_event_handlers()
+
+    assert len(failures) == 1
+    assert failures[0].error == (
+        "LLM call denied by gate_on_approved_models: model not approved"
+    )
+
+
 def test_the_boolean_convention_is_not_reported_as_a_provider_failure():
     register_before_llm_call_hook(lambda _ctx: False)
     failures: list[LLMCallFailedEvent] = []

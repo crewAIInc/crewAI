@@ -681,7 +681,9 @@ class BaseLLM(BaseModel, ABC):
         is emitted — with a message that names the decision instead of blaming
         the provider for an outage that never happened.
         """
-        source = getattr(denial, "source", None)
+        from crewai.hooks.dispatch import source_name
+
+        source = source_name(getattr(denial, "source", None))
         reason = getattr(denial, "reason", str(denial))
         message = f"LLM call denied by {source or 'hook'}: {reason}"
         logging.warning(message)

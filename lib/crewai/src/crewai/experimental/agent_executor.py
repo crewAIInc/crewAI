@@ -57,6 +57,7 @@ from crewai.events.types.tool_usage_events import (
 from crewai.flow.flow import Flow, listen, or_, router, start
 from crewai.flow.flow_context import current_flow_id
 from crewai.flow.types import FlowMethodName
+from crewai.hooks.dispatch import HookAborted
 from crewai.hooks.llm_hooks import (
     get_after_llm_call_hooks,
     get_before_llm_call_hooks,
@@ -395,7 +396,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             return
 
         try:
-            from crewai.hooks.dispatch import HookAborted
             from crewai.utilities.reasoning_handler import AgentReasoning
 
             if self.task:
@@ -1298,6 +1298,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         # todo ↔ result (or exception) mapping.
         step_results: list[tuple[TodoItem, StepResult]] = []
         for todo, item in zip(ready, gathered, strict=True):
+            if isinstance(item, HookAborted):
+                raise item
             if isinstance(item, BaseException):
                 error_msg = f"Error: {item!s}"
                 todo.result = error_msg
@@ -2494,8 +2496,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         Falls back to concatenation if the synthesis LLM call fails.
         """
-        from crewai.hooks.dispatch import HookAborted
-
         step_results: list[str] = [
             f"Step {todo.step_number} ({todo.description}):\n{todo.result}"
             for todo in self.state.todos.items
@@ -2655,7 +2655,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         previous_context = self._build_replan_context()
 
         try:
-            from crewai.hooks.dispatch import HookAborted
             from crewai.utilities.reasoning_handler import AgentReasoning
 
             if self.task:

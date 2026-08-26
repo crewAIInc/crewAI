@@ -13,11 +13,15 @@ from __future__ import annotations
 from typing import Any
 
 from crewai.agent import Agent
+from crewai.agents.step_executor import StepExecutor
 from crewai.crew import Crew
+from crewai.experimental.agent_executor import AgentExecutor
 from crewai.hooks.dispatch import HookAborted, InterceptionPoint, clear_all, on
 from crewai.lite_agent import LiteAgent
 from crewai.llms.base_llm import BaseLLM
 from crewai.task import Task
+from crewai.utilities.planning_types import TodoItem
+from crewai.utilities.step_execution_context import StepExecutionContext
 from crewai.utilities.types import LLMMessage
 import pytest
 
@@ -97,6 +101,17 @@ class DenyingMemory:
 class StubKnowledge:
     def query(self, *args: Any, **kwargs: Any) -> list[Any]:
         return []
+
+
+class DenyingStepExecutor:
+    """Stands in for the per-step executor whose own model call was denied."""
+
+    def __init__(self) -> None:
+        self.executed = 0
+
+    def execute(self, *args: Any, **kwargs: Any) -> Any:
+        self.executed += 1
+        raise HookAborted(reason="no model calls allowed", source="policy")
 
 
 @pytest.fixture(autouse=True)
@@ -227,6 +242,52 @@ def test_a_denied_memory_save_stops_the_crew_instead_of_retrying_the_task():
         build_crew(agent).kickoff()
 
     assert memory.touched.count("extract_memories") == 1
+
+
+def build_step_executor(llm: StubProviderLLM) -> StepExecutor:
+    return StepExecutor(llm=llm, tools=[], agent=build_agent())
+
+
+def a_step() -> tuple[TodoItem, StepExecutionContext]:
+    return (
+        TodoItem(step_number=1, description="Say ok"),
+        StepExecutionContext(task_description="Say ok", task_goal="ok"),
+    )
+
+
+def test_a_denied_step_stops_the_plan_instead_of_reporting_a_failed_step():
+    attempts = deny_nth_model_call(1)
+    todo, context = a_step()
+
+    with pytest.raises(HookAborted):
+        build_step_executor(StubProviderLLM()).execute(todo, context)
+
+    assert len(attempts) == 1
+
+
+def test_an_ordinary_step_failure_still_reports_a_failed_step():
+    todo, context = a_step()
+
+    result = build_step_executor(StubProviderLLM(fail_first_call=True)).execute(
+        todo, context
+    )
+
+    assert result.success is False
+
+
+@pytest.mark.asyncio
+async def test_a_denied_parallel_step_reaches_the_caller():
+    agent = build_agent()
+    executor = AgentExecutor(agent=agent, llm=agent.llm, task=None)
+    executor.state.todos.items = [
+        TodoItem(step_number=1, description="first"),
+        TodoItem(step_number=2, description="second"),
+    ]
+    step_executor = DenyingStepExecutor()
+    object.__setattr__(executor, "_ensure_step_executor", lambda: step_executor)
+
+    with pytest.raises(HookAborted):
+        await executor.execute_todos_parallel()
 
 
 def test_an_ordinary_model_failure_is_still_retried():
