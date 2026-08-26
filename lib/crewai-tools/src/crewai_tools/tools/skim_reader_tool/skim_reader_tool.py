@@ -1,8 +1,8 @@
-"""CrewAI tool for Skim — the x402-native clean reader API for AI agents.
+"""CrewAI tool for Skim — the clean reader API for AI agents.
 
 Skim (https://skim402.com) turns any URL into clean, agent-ready Markdown plus
-structured metadata. Reads are paid per call over the x402 protocol ($0.002 in
-USDC on Base) using a wallet you control — no API keys, no signup.
+structured metadata. The recommended payment path is a card-plan API key
+(SKIM_API_KEY); x402 wallet pay-per-call remains available as an option.
 """
 
 from __future__ import annotations
@@ -44,8 +44,8 @@ def _yaml_scalar(value: Any) -> str:
 _TOOL_DESCRIPTION = (
     "Fetch any URL and return clean, agent-ready Markdown via Skim (skim402.com). "
     "Strips nav, ads, and boilerplate; preserves the article body plus structured "
-    "metadata (title, byline, published date, language, excerpt). Pays $0.002 per "
-    "call in USDC on Base over the x402 protocol — no API keys, no signup. Use this "
+    "metadata (title, byline, published date, language, excerpt). A card-plan API "
+    "key is the recommended setup; wallet/x402 payment is optional. Use this "
     "whenever you need to read web content: articles, docs, blog posts, GitHub "
     "READMEs, research papers, and similar pages."
 )
@@ -60,24 +60,23 @@ class SkimReaderToolSchema(BaseModel):
 
 
 class SkimReaderTool(BaseTool):
-    """Read any URL as clean Markdown via Skim, paying per call over x402.
+    """Read any URL as clean Markdown via Skim.
 
-    The tool lazily builds a payment-aware HTTP session the first time it runs,
-    using your Base wallet's private key to sign USDC authorizations on demand.
-    The key is used only to sign locally and never leaves your machine.
+    Card-plan authentication is recommended: set SKIM_API_KEY or pass api_key.
+    Get a free-plan key at https://skim402.com/pricing; no crypto is required.
+
+    Wallet payment is optional: set SKIM_WALLET_PRIVATE_KEY or pass private_key.
+    That path pays per call in USDC on Base over x402. If both credentials are
+    configured, the card-plan API key takes priority.
 
     Args:
-        private_key (SecretStr): Hex private key (with or without ``0x``) for the
-            Base wallet that pays for reads. Falls back to the
-            ``SKIM_WALLET_PRIVATE_KEY`` environment variable. Use a dedicated
-            wallet, never your personal one.
-        base_url (str): Skim API base URL. Defaults to ``https://skim402.com``.
-        max_price_usd (float): Hard per-call price cap in USD. The wallet refuses
-            to sign for anything above this. Defaults to ``0.01`` (Skim is
-            ``$0.002``).
-        include_metadata (bool): When ``True`` (default), prepend a YAML
-            frontmatter block of the page metadata to the returned Markdown.
-        timeout (float): Per-request timeout in seconds. Defaults to ``60``.
+        api_key (SecretStr): Card-plan API key. Falls back to SKIM_API_KEY.
+        private_key (SecretStr): Wallet key for optional x402 payment. Falls back
+            to SKIM_WALLET_PRIVATE_KEY and is ignored when api_key is set.
+        base_url (str): Skim API base URL. Defaults to https://skim402.com.
+        max_price_usd (float): Wallet lane only. Hard per-call price cap in USD.
+        include_metadata (bool): Prepend page metadata as YAML frontmatter.
+        timeout (float): Per-request timeout in seconds. Defaults to 60.
     """
 
     model_config = ConfigDict(
@@ -87,22 +86,29 @@ class SkimReaderTool(BaseTool):
     description: str = _TOOL_DESCRIPTION
     args_schema: type[BaseModel] = SkimReaderToolSchema
 
+    api_key: SecretStr | None = Field(default=None, exclude=True, repr=False)
     private_key: SecretStr | None = Field(default=None, exclude=True, repr=False)
     base_url: str = DEFAULT_BASE_URL
     max_price_usd: float = 0.01
     include_metadata: bool = True
     timeout: float = 60.0
 
-    package_dependencies: list[str] = Field(
-        default_factory=lambda: ["x402", "eth-account", "requests"]
-    )
+    package_dependencies: list[str] = Field(default_factory=lambda: ["requests"])
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
             EnvVar(
+                name="SKIM_API_KEY",
+                description=(
+                    "Recommended. Card-plan API key (sk402_...). Get a free-plan "
+                    "key at https://skim402.com/pricing; no crypto is required."
+                ),
+                required=False,
+            ),
+            EnvVar(
                 name="SKIM_WALLET_PRIVATE_KEY",
                 description=(
-                    "Hex private key for the Base wallet that pays for Skim reads. "
-                    "Used only to sign x402 payment authorizations locally."
+                    "Optional. Base wallet key for x402 pay-per-call when no "
+                    "SKIM_API_KEY is configured."
                 ),
                 required=False,
             ),
@@ -110,10 +116,23 @@ class SkimReaderTool(BaseTool):
     )
 
     _session: Any = PrivateAttr(default=None)
+    _card_lane: bool = PrivateAttr(default=False)
 
     def _get_session(self) -> Any:
-        """Build (and cache) a requests Session that auto-pays 402 responses."""
+        """Build and cache an HTTP session for card-key or wallet reads."""
         if self._session is not None:
+            return self._session
+
+        api_key = (
+            self.api_key.get_secret_value()
+            if self.api_key is not None
+            else os.environ.get("SKIM_API_KEY")
+        )
+        if api_key:
+            session = requests.Session()
+            session.headers["Authorization"] = f"Bearer {api_key}"
+            self._session = session
+            self._card_lane = True
             return self._session
 
         key = (
@@ -123,10 +142,9 @@ class SkimReaderTool(BaseTool):
         )
         if not key:
             raise ValueError(
-                "Skim requires payment via x402. Provide a Base wallet funded with "
-                "USDC by setting the SKIM_WALLET_PRIVATE_KEY environment variable, "
-                "or by passing private_key=... to SkimReaderTool(). The key never "
-                "leaves your machine — it only signs payment authorizations locally."
+                "Skim needs a payment method. Set SKIM_API_KEY (recommended card "
+                "plan; get a free-plan key at https://skim402.com/pricing) or "
+                "SKIM_WALLET_PRIVATE_KEY (optional x402 wallet payment)."
             )
 
         normalized = key[2:] if key.startswith("0x") else key
@@ -153,12 +171,13 @@ class SkimReaderTool(BaseTool):
             ).EthAccountSigner
         except ImportError as exc:
             raise ImportError(
-                "SkimReaderTool needs the x402 client with EVM support. Install it "
-                "with:  pip install 'x402[evm]' requests eth-account"
+                "Wallet payment needs the x402 client with EVM support. Install it "
+                "with: pip install 'crewai-tools[x402]'. Card-key users do not need "
+                "this optional extra."
             ) from exc
 
         account = account_factory.from_key("0x" + normalized)
-        cap_atomic = round(self.max_price_usd * 1_000_000)  # USDC has 6 decimals
+        cap_atomic = round(self.max_price_usd * 1_000_000)
         client = x402_client_sync()
         register_exact_evm_client(
             client,
@@ -166,24 +185,35 @@ class SkimReaderTool(BaseTool):
             policies=[max_amount(cap_atomic)],
         )
         self._session = wrap_with_payment(requests.Session(), client)
+        self._card_lane = False
         return self._session
 
     def _run(self, url: str) -> str:
+        """Fetch one validated URL and return clean Markdown."""
         url = validate_url(url)
         session = self._get_session()
-        endpoint = self.base_url.rstrip("/") + "/api/v1/read"
+        path = "/api/t/read" if self._card_lane else "/api/v1/read"
+        endpoint = self.base_url.rstrip("/") + path
 
         try:
-            res = session.post(
-                endpoint,
-                json={"url": url, "mode": "basic"},
-                timeout=self.timeout,
-            )
+            if self._card_lane:
+                res = session.get(endpoint, params={"url": url}, timeout=self.timeout)
+            else:
+                res = session.post(
+                    endpoint,
+                    json={"url": url, "mode": "basic"},
+                    timeout=self.timeout,
+                )
         except Exception as exc:
-            raise RuntimeError(
-                f"Skim request failed: {exc}. Common causes: the wallet has no USDC "
-                f"on Base, or the price exceeded max_price_usd (${self.max_price_usd})."
-            ) from exc
+            hint = (
+                "Check that your SKIM_API_KEY is valid and active."
+                if self._card_lane
+                else (
+                    "Common causes: the wallet has no USDC on Base, or the price "
+                    f"exceeded max_price_usd ({self.max_price_usd} USD)."
+                )
+            )
+            raise RuntimeError(f"Skim request failed: {exc}. {hint}") from exc
 
         if not getattr(res, "ok", res.status_code < 400):
             body = (res.text or "").strip()
@@ -202,12 +232,10 @@ class SkimReaderTool(BaseTool):
 
         if not isinstance(data, dict):
             raise RuntimeError(
-                "Skim returned an unexpected response shape (expected a JSON object). "
-                "This usually means the request did not reach the Skim API."
+                "Skim returned an unexpected response shape (expected a JSON object)."
             )
 
         markdown: str = data.get("markdown") or data.get("text") or ""
-
         metadata = data.get("metadata")
         if self.include_metadata and isinstance(metadata, dict):
             meta_lines = [

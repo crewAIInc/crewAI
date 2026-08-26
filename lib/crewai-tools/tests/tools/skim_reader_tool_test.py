@@ -1,8 +1,7 @@
 """Tests for SkimReaderTool.
 
-These tests are fully mocked: no network calls and no real x402 payments are
-made. The payment-aware session and the URL validator are stubbed so the tests
-are deterministic and offline.
+These tests are fully mocked: no network calls, card charges, or x402 payments
+are made. HTTP sessions and URL validation are stubbed for deterministic tests.
 """
 
 import pytest
@@ -26,12 +25,23 @@ class _FakeResponse:
 
 
 class _FakeSession:
+    """Record fake GET and POST requests without network access."""
+
     def __init__(self, response):
         self._response = response
         self.calls = []
+        self.headers = {}
+
+    def get(self, endpoint, params=None, timeout=None):
+        self.calls.append(
+            {"method": "GET", "endpoint": endpoint, "params": params, "timeout": timeout}
+        )
+        return self._response
 
     def post(self, endpoint, json=None, timeout=None):
-        self.calls.append({"endpoint": endpoint, "json": json, "timeout": timeout})
+        self.calls.append(
+            {"method": "POST", "endpoint": endpoint, "json": json, "timeout": timeout}
+        )
         return self._response
 
 
@@ -51,6 +61,7 @@ def test_defaults_and_schema():
     tool = SkimReaderTool()
     assert tool.name == "Skim web reader"
     assert tool.base_url == "https://skim402.com"
+    assert tool.api_key is None
     assert tool.max_price_usd == 0.01
     assert tool.include_metadata is True
     assert tool.timeout == 60.0
@@ -76,8 +87,47 @@ def test_run_returns_markdown_with_frontmatter():
     assert result.endswith("# Hello\n\nBody.")
     # Posts to the read endpoint in basic mode.
     call = tool._session.calls[0]
+    assert call["method"] == "POST"
     assert call["endpoint"] == "https://skim402.com/api/v1/read"
     assert call["json"] == {"url": "https://example.com", "mode": "basic"}
+    assert call["timeout"] == 60.0
+
+
+def test_get_session_prefers_card_api_key(monkeypatch):
+    """A card key builds a Bearer session without importing wallet packages."""
+    fake = _FakeSession(_FakeResponse(json_data={"markdown": "ok"}))
+    monkeypatch.setattr(skim_module.requests, "Session", lambda: fake)
+    monkeypatch.setattr(
+        skim_module.importlib,
+        "import_module",
+        lambda name: (_ for _ in ()).throw(AssertionError(name)),
+    )
+
+    tool = SkimReaderTool(
+        api_key="sk402_test_key",
+        private_key="0x" + "a" * 64,
+    )
+    session = tool._get_session()
+
+    assert session is fake
+    assert tool._card_lane is True
+    assert session.headers["Authorization"] == "Bearer sk402_test_key"
+
+
+def test_run_card_lane_uses_token_endpoint_get():
+    """Card-key reads use the credit endpoint, query params, and timeout."""
+    response = _FakeResponse(json_data={"markdown": "card result", "metadata": {}})
+    tool = _make_tool(response, api_key="sk402_test_key")
+    tool._card_lane = True
+
+    result = tool._run(url="https://example.com/card")
+
+    assert result == "card result"
+    call = tool._session.calls[0]
+    assert call["method"] == "GET"
+    assert call["endpoint"] == "https://skim402.com/api/t/read"
+    assert call["params"] == {"url": "https://example.com/card"}
+    assert call["timeout"] == 60.0
 
 
 def test_run_without_metadata():
@@ -107,14 +157,16 @@ def test_run_raises_on_error_status():
 
 
 def test_get_session_requires_a_key(monkeypatch):
+    monkeypatch.delenv("SKIM_API_KEY", raising=False)
     monkeypatch.delenv("SKIM_WALLET_PRIVATE_KEY", raising=False)
     tool = SkimReaderTool()
 
-    with pytest.raises(ValueError, match="SKIM_WALLET_PRIVATE_KEY"):
+    with pytest.raises(ValueError, match="SKIM_API_KEY"):
         tool._get_session()
 
 
 def test_get_session_rejects_malformed_key(monkeypatch):
+    monkeypatch.delenv("SKIM_API_KEY", raising=False)
     monkeypatch.setenv("SKIM_WALLET_PRIVATE_KEY", "not-a-valid-hex-key")
     tool = SkimReaderTool()
 
