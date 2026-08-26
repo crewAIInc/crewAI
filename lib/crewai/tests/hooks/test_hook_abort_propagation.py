@@ -34,6 +34,10 @@ from crewai.events.types.knowledge_events import (
     KnowledgeQueryStartedEvent,
 )
 from crewai.events.types.llm_events import LLMCallFailedEvent
+from crewai.events.types.llm_guardrail_events import (
+    LLMGuardrailCompletedEvent,
+    LLMGuardrailStartedEvent,
+)
 from crewai.events.types.observation_events import (
     StepObservationFailedEvent,
     StepObservationStartedEvent,
@@ -58,6 +62,7 @@ from crewai.task import Task
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.converter import Converter
+from crewai.utilities.guardrail import process_guardrail
 from crewai.utilities.planning_types import TodoItem
 import pytest
 from pydantic import BaseModel
@@ -375,6 +380,35 @@ def test_a_denied_guardrail_does_not_read_as_a_failed_validation(denying_llm):
 
     with pytest.raises(HookAborted):
         guardrail(task_output)
+
+
+def test_a_denied_guardrail_still_reports_the_validation_it_started(denying_llm):
+    guardrail = LLMGuardrail(description="Must be polite", llm=denying_llm)
+    task_output = TaskOutput(
+        description="Say hi", raw="hi", agent="Doer", expected_output="A greeting."
+    )
+    started: list[LLMGuardrailStartedEvent] = []
+    completed: list[LLMGuardrailCompletedEvent] = []
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(LLMGuardrailStartedEvent)
+        def _on_started(_source: Any, event: LLMGuardrailStartedEvent) -> None:
+            started.append(event)
+
+        @crewai_event_bus.on(LLMGuardrailCompletedEvent)
+        def _on_completed(_source: Any, event: LLMGuardrailCompletedEvent) -> None:
+            completed.append(event)
+
+        with pytest.raises(HookAborted):
+            process_guardrail(output=task_output, guardrail=guardrail, retry_count=0)
+
+        wait_for_event_handlers()
+
+    assert len(started) == 1
+    assert len(completed) == 1
+    assert completed[0].success is False
+    assert "no model calls allowed" in (completed[0].error or "")
 
 
 def test_a_denied_plan_stops_the_executor_instead_of_running_unplanned(denying_llm):
