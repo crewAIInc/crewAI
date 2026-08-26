@@ -342,6 +342,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "hosted_vllm",
     "cerebras",
     "dashscope",
+    "volcengine",
     "snowflake",
 ]
 
@@ -447,6 +448,7 @@ class LLM(BaseLLM):
                 "hosted_vllm": "hosted_vllm",
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
+                "volcengine": "volcengine",
                 "snowflake": "snowflake",
             }
 
@@ -572,6 +574,10 @@ class LLM(BaseLLM):
 
         if provider == "dashscope":
             return model_lower.startswith("qwen")
+
+        if provider == "volcengine":
+            # Ark serves Doubao plus hosted DeepSeek and GLM models
+            return model_lower.startswith(("doubao", "deepseek", "glm", "kimi"))
 
         if provider == "openrouter":
             # OpenRouter uses org/model format but accepts anything
@@ -705,6 +711,7 @@ class LLM(BaseLLM):
             "hosted_vllm",
             "cerebras",
             "dashscope",
+            "volcengine",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (

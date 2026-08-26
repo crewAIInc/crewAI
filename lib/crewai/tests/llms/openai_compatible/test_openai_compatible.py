@@ -95,6 +95,14 @@ class TestProviderRegistry:
         assert config.api_key_env == "DASHSCOPE_API_KEY"
         assert config.api_key_required is True
 
+    def test_volcengine_config(self):
+        """Test Volcengine Ark provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["volcengine"]
+        assert config.base_url == "https://ark.cn-beijing.volces.com/api/v3"
+        assert config.api_key_env == "ARK_API_KEY"
+        assert config.base_url_env == "ARK_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -270,6 +278,21 @@ class TestLLMIntegration:
             llm = LLM(model="dashscope/qwen-turbo")
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "dashscope"
+
+    def test_llm_creates_openai_compatible_for_volcengine(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for Volcengine Ark."""
+        with patch.dict(os.environ, {"ARK_API_KEY": "test-key"}):
+            llm = LLM(model="volcengine/doubao-seed-2-1-pro-260628")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "volcengine"
+
+    def test_llm_creates_openai_compatible_for_volcengine_hosted_models(self):
+        """Ark also serves hosted DeepSeek and GLM models."""
+        with patch.dict(os.environ, {"ARK_API_KEY": "test-key"}):
+            for model in ("deepseek-v4-pro-ga-260813", "glm-5-2-260617"):
+                llm = LLM(model=f"volcengine/{model}")
+                assert isinstance(llm, OpenAICompatibleCompletion)
+                assert llm.provider == "volcengine"
 
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""
