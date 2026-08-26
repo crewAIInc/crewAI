@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock
 import openai
 import pytest
 
-from crewai.llm import LLM
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
 from crewai.llms.providers.openai.completion import OpenAICompletion, ResponsesAPIResult
 from crewai.crew import Crew
 from crewai.agent import Agent
@@ -1839,6 +1839,30 @@ def test_openai_gpt5_still_applies_stop_words_client_side():
     assert "Observation:" not in result
     assert "Found results" not in result
     assert "I need to search" in result
+
+
+@pytest.mark.parametrize(
+    "model",
+    ["gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
+)
+def test_openai_gpt56_family_uses_official_context_window(model: str) -> None:
+    """Native OpenAI must not inherit the shorter gpt-5 window for GPT-5.6."""
+    llm = OpenAICompletion(model=model)
+    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_openai_prefixed_gpt56_luna_uses_official_context_window() -> None:
+    llm = LLM(model="openai/gpt-5.6-luna")
+    assert isinstance(llm, OpenAICompletion)
+    assert llm.model == "gpt-5.6-luna"
+    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_openai_gpt5_and_gpt54_mini_keep_their_windows() -> None:
+    gpt5 = OpenAICompletion(model="gpt-5")
+    gpt54_mini = OpenAICompletion(model="gpt-5.4-mini")
+    assert gpt5.get_context_window_size() == int(1_047_576 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert gpt54_mini.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_openai_stop_words_still_applied_to_regular_responses():

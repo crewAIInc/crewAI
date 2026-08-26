@@ -121,3 +121,25 @@ def close_span(span: Span) -> None:
     """
     span.set_status(Status(StatusCode.OK))
     span.end()
+
+
+def close_span_with_error(span: Span, error_type: str | None = None) -> None:
+    """Set span status to ERROR and end it.
+
+    Used for spans representing work that failed, so failures are
+    distinguishable from successes downstream. Only the exception's *type* is
+    recorded - never the message, which routinely contains prompts, model
+    output, or credentials.
+
+    Args:
+        span: The span to close.
+        error_type: Exception class *name*, already derived from a class by
+            ``Telemetry._safe_error_type``. The identifier check here is a second
+            gate on that derived name, not the primary defence: callers pass a
+            class precisely because a one-word message such as "secret_token" is
+            itself a valid identifier and would survive this check alone.
+    """
+    span.set_status(Status(StatusCode.ERROR))
+    if error_type and error_type.isidentifier():
+        span.set_attribute("error_type", error_type)
+    span.end()
