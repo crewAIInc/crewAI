@@ -121,7 +121,7 @@ Each `handle_turn` runs this pipeline:
 5. **Graph execution** — user-defined `@start` methods (if any) → `route_conversation` (the built-in start/router) → the selected `@listen` handler. `route_conversation` also calls the overridable `conversation_start()` helper.
 6. **End of run** — per-turn `flow_finished` and trace finalization are **skipped** when deferral is enabled; nested `Agent.kickoff()` / crews do not close the parent batch either.
 
-Handlers should call **`append_assistant_message(reply)`** so the next turn’s `conversation_messages` includes assistant text. The user line is already stored by `handle_turn` — do not append it again in handlers.
+Handlers should call **`append_assistant_message(reply)`** when the visible reply is not the return value, or when you trim history. A public string return is also recorded as assistant and included in the `@persist` snapshot, so a fresh Flow instance restores it. The user line is already stored by `handle_turn` — do not append it again in handlers.
 
 ## Configuration overview
 
@@ -427,7 +427,7 @@ You can override any of these by defining a same-named handler in your subclass.
 2. Appends the user message to `state.messages`, sets `current_user_message` / `last_user_message`. `last_intent` is **preserved from the prior turn** so the router LLM can use it as a signal.
 3. Runs user-defined `@start` methods (if any), then `route_conversation` as the built-in start/router, then the chosen `@listen` handler. `route_conversation` invokes the overridable `conversation_start()` helper.
 4. The router stores its decision in `state.last_intent` (visible to the next turn's router context).
-5. If your handler returned a string and didn't already call `append_assistant_message`, `handle_turn` appends it for you.
+5. If your handler returned a string and didn't already call `append_assistant_message`, `handle_turn` appends it for you and persists the updated `state.messages` so `@persist` restore includes the assistant turn.
 
 Call `handle_turn()` for chat messages. Calling `kickoff(inputs={"id": ...})` directly runs the flow graph without applying the conversational turn wrapper.
 
