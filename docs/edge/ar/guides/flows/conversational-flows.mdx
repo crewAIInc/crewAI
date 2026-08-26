@@ -121,7 +121,7 @@ result = stream.result
 5. **تنفيذ الرسم** — طرق `@start` التي يعرّفها المستخدم (إن وجدت) → `route_conversation` (نقطة البدء/الموجّه المدمجة) → معالج `@listen` المختار. تستدعي `route_conversation` أيضاً المساعد القابل للتجاوز `conversation_start()`.
 6. **نهاية التشغيل** — يُتخطى `flow_finished` لكل جولة وإنهاء التتبع عند تفعيل التأجيل؛ كما لا تغلق استدعاءات `Agent.kickoff()` المتداخلة أو crews دفعة الأب.
 
-ينبغي للمعالجات استدعاء **`append_assistant_message(reply)`** كي تتضمن `conversation_messages` في الجولة التالية نص المساعد. سطر المستخدم محفوظ بالفعل عبر `handle_turn` — لا تُضفه مرة أخرى في المعالجات.
+استدعِ **`append_assistant_message(reply)`** عندما لا تطابق الرد الظاهر قيمة الإرجاع، أو عند قصّ التاريخ. تُسجَّل أيضاً سلسلة الإرجاع العامة كمساعد وتُضمَّن في لقطة `@persist`، فتستعيدها نسخة Flow جديدة. سطر المستخدم محفوظ عبر `handle_turn` — لا تُضفه مرة أخرى.
 
 ## نظرة عامة على الإعداد
 
@@ -428,7 +428,7 @@ def create_video(self) -> str:  # rejected at flow instantiation
 2. يُلحق رسالة المستخدم بـ `state.messages` ويضبط `current_user_message` / `last_user_message`. يُحافَظ على `last_intent` **من الجولة السابقة** كي يستخدمها LLM التوجيه كإشارة.
 3. يُشغّل طرق `@start` التي يعرّفها المستخدم (إن وجدت)، ثم `route_conversation` كنقطة البدء/الموجّه المدمجة، ثم معالج `@listen` المختار. وتستدعي `route_conversation` المساعد القابل للتجاوز `conversation_start()`.
 4. يخزّن الموجّه قراره في `state.last_intent` (يكون مرئياً لسياق التوجيه في الجولة التالية).
-5. إذا أعاد معالجك سلسلة نصية ولم يستدعِ `append_assistant_message`، فإن `handle_turn` يُلحقها نيابةً عنك.
+5. إذا أعاد معالجك سلسلة نصية ولم يستدعِ `append_assistant_message`، فإن `handle_turn` يُلحقها نيابةً عنك ويحفظ `state.messages` المحدَّث حتى تشمل استعادة `@persist` جولة المساعد.
 
 استدعِ `handle_turn()` لرسائل الدردشة. استدعاء `kickoff(inputs={"id": ...})` مباشرةً يشغل الرسم بدون غلاف الجولة المحادثية.
 
