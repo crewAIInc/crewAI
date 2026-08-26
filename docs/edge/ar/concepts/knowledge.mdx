@@ -636,6 +636,20 @@ agent = Agent(
         }
     }
 )
+
+# Option 4: Use OpenRouter embeddings (supports models across providers)
+crew = Crew(
+    agents=[agent],
+    tasks=[...],
+    knowledge_sources=[knowledge_source],
+    embedder={
+        "provider": "openrouter",
+        "config": {
+            "api_key": "your-openrouter-api-key",
+            "model": "openai/text-embedding-3-small"
+        }
+    }
+)
 ```
 
 #### إعداد تضمينات Azure OpenAI
