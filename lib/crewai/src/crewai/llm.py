@@ -662,13 +662,17 @@ class LLM(BaseLLM):
         # Models absent from the constants lists (new releases, "latest"
         # aliases) still fall back to provider naming patterns, as this
         # method's docstring describes and the sibling
-        # _validate_model_in_constants already does. Only providers whose
-        # prefixes are unambiguous are checked here; bedrock ("." in name)
-        # and azure (gpt-/o-series) patterns overlap other providers and are
-        # left to the explicit-provider path.
-        for provider in ("anthropic", "gemini"):
-            if cls._matches_provider_pattern(model, provider):
-                return provider
+        # _validate_model_in_constants already does. bedrock ("." in name)
+        # and azure (gpt-/o-series) patterns overlap other providers, so
+        # they are left to the explicit-provider path.
+        # Only unambiguous prefixes fall through here: the "anthropic."
+        # prefix that _matches_provider_pattern also accepts is Bedrock's
+        # namespaced form and stays on the explicit "bedrock/" path.
+        if model.lower().startswith("claude-"):
+            return "anthropic"
+
+        if cls._matches_provider_pattern(model, "gemini"):
+            return "gemini"
 
         return "openai"
 

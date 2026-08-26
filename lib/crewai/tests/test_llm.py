@@ -994,6 +994,15 @@ def test_infer_provider_from_model_falls_back_to_patterns():
     assert LLM._infer_provider_from_model("claude-future-5") == "anthropic"
     assert LLM._infer_provider_from_model("gemma-3-latest") == "gemini"
 
+    # Bedrock's namespaced ids also match the "anthropic." prefix pattern, so
+    # they are deliberately left out of the fallback and keep resolving
+    # exactly as before -- they belong on the explicit "bedrock/" path.
+    assert (
+        LLM._infer_provider_from_model("anthropic.claude-opus-4-1-20250805-v1:0")
+        == "bedrock"
+    )
+    assert LLM._infer_provider_from_model("anthropic.claude-future-v1:0") == "openai"
+
     # No pattern match still defaults to openai.
     assert LLM._infer_provider_from_model("unknown-model") == "openai"
 
