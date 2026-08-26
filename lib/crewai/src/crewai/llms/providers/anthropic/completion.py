@@ -1954,6 +1954,7 @@ class AnthropicCompletion(BaseLLM):
         from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
 
         context_windows = {
+            "claude-sonnet-4-6": 1000000,
             "claude-3-5-sonnet": 200000,
             "claude-3-5-haiku": 200000,
             "claude-3-opus": 200000,

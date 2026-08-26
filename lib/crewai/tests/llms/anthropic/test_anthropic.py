@@ -4,7 +4,7 @@ import types
 from unittest.mock import AsyncMock, patch, MagicMock
 import pytest
 
-from crewai.llm import LLM
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
@@ -114,6 +114,13 @@ def test_anthropic_completion_defaults_to_sonnet_4_6():
     assert llm.model == DEFAULT_MODEL
     assert llm.model == "claude-sonnet-4-6"
     assert llm.max_tokens == 128000
+
+
+def test_default_anthropic_completion_uses_sonnet_4_6_context_window():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion()
+    assert llm.get_context_window_size() == int(1_000_000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_anthropic_defaults_max_tokens_to_model_limit():
