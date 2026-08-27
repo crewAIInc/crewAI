@@ -892,7 +892,7 @@ class TestStepExecutorCriticalFixes:
         self, step_executor
     ):
         """The planner should receive evidence from a successful native tool call."""
-        step_executor.llm.call.side_effect = [[Mock()], "  "]
+        step_executor.llm.call.side_effect = [[Mock()], ""]
 
         with (
             patch("crewai.agents.step_executor.is_tool_call_list", return_value=True),

@@ -577,6 +577,8 @@ class StepExecutor:
             )
 
             if not answer:
+                if accumulated_results:
+                    return accumulated_results[-1]
                 raise ValueError("Empty response from LLM")
 
             if isinstance(answer, BaseModel):
