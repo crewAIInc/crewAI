@@ -28,6 +28,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.tools.tool_failure import ToolExecutionFailedError
 from crewai.utilities.agent_utils import (
     build_text_tool_calling_fallback_message,
     build_tool_calls_assistant_message,
@@ -180,6 +181,11 @@ class StepExecutor:
                 tool_calls_made=tool_calls_made,
                 execution_time=elapsed,
             )
+        except ToolExecutionFailedError:
+            # A deliberate stop: StepResult(success=False) would let the plan
+            # carry on.
+            raise
+
         except Exception as e:
             if self._use_native_tools and is_native_tool_calling_unsupported_error(e):
                 try:
@@ -218,6 +224,11 @@ class StepExecutor:
                         tool_calls_made=tool_calls_made,
                         execution_time=elapsed,
                     )
+                except ToolExecutionFailedError:
+                    # Same as the outer handler, reached via the text-tooling
+                    # fallback.
+                    raise
+
                 except Exception as fallback_error:
                     e = fallback_error
 
@@ -352,7 +363,12 @@ class StepExecutor:
             formatted = process_llm_response(answer_str, use_stop_words)
 
             if isinstance(formatted, AgentFinish):
-                return str(formatted.output)
+                output = str(formatted.output)
+                return (
+                    output
+                    if output.strip() or not last_tool_result
+                    else last_tool_result
+                )
 
             if isinstance(formatted, AgentAction):
                 tool_calls_made.append(formatted.tool)
@@ -561,6 +577,8 @@ class StepExecutor:
             )
 
             if not answer:
+                if accumulated_results:
+                    return accumulated_results[-1]
                 raise ValueError("Empty response from LLM")
 
             if isinstance(answer, BaseModel):
@@ -573,7 +591,12 @@ class StepExecutor:
                 accumulated_results.append(result)
                 continue
 
-            return str(answer)
+            output = str(answer)
+            return (
+                output
+                if output.strip() or not accumulated_results
+                else accumulated_results[-1]
+            )
 
         return "\n".join(filter(None, accumulated_results))
 

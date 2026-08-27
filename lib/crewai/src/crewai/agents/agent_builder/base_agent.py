@@ -44,6 +44,11 @@ from crewai.security.security_config import SecurityConfig
 from crewai.skills.models import Skill
 from crewai.state.checkpoint_config import CheckpointConfig, _coerce_checkpoint
 from crewai.tools.base_tool import BaseTool, Tool
+from crewai.tools.tool_failure import (
+    ToolFailurePolicy,
+    ToolFailureRecord,
+    collect_tool_failures,
+)
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.config import process_config
 from crewai.utilities.i18n import I18N, get_i18n
@@ -264,6 +269,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     _original_backstory: str | None = PrivateAttr(default=None)
     _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
     _kickoff_event_id: str | None = PrivateAttr(default=None)
+    _tool_failures: list[ToolFailureRecord] = PrivateAttr(default_factory=list)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
@@ -297,6 +303,15 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     )
     max_iter: int = Field(
         default=25, description="Maximum iterations for an agent to execute a task"
+    )
+    tool_failure_policy: ToolFailurePolicy | None = Field(
+        default=None,
+        description=(
+            "How to react when a tool completes but reports that it failed. "
+            "'ignore' records nothing; 'warn' records and emits "
+            "ToolFailureDetectedEvent; 'raise' also aborts with "
+            "ToolExecutionFailedError. None inherits from the crew, then 'warn'."
+        ),
     )
     agent_executor: Annotated[
         SerializeAsAny[BaseAgentExecutor] | None,
@@ -651,6 +666,22 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             self._original_backstory or self.backstory,
         ]
         return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
+
+    @property
+    def last_tool_failures(self) -> list[ToolFailureRecord]:
+        """Tool failures recorded during the most recent execution.
+
+        Inside an execution this reports that execution's records, so a
+        shared agent running concurrent tasks does not leak between them.
+        Outside one it reports the most recent execution, like
+        ``last_messages``. Empty when nothing failed or the policy is
+        ``ignore``. Returns a copy.
+        """
+        return collect_tool_failures(self)
+
+    def reset_tool_failures(self) -> None:
+        """Clear recorded tool failures before a new execution begins."""
+        self._tool_failures = []
 
     @abstractmethod
     def execute_task(

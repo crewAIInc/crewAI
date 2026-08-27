@@ -28,6 +28,7 @@ class TestCrewAIPlatformActionToolVerify:
     def create_test_tool(self):
         return CrewAIPlatformActionTool(
             description="Test action tool",
+            app="test_app",
             action_name="test_action",
             action_schema=self.action_schema
         )

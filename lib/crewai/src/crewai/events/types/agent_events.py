@@ -12,6 +12,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.events.base_events import BaseEvent
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.utilities.types import LLMMessage
 
 
 class AgentExecutionStartedEvent(BaseEvent):
@@ -71,7 +72,7 @@ class LiteAgentExecutionStartedEvent(BaseEvent):
 
     agent_info: dict[str, Any]
     tools: Sequence[BaseTool | CrewStructuredTool] | None
-    messages: str | list[dict[str, str]]
+    messages: str | list[LLMMessage]
     type: Literal["lite_agent_execution_started"] = "lite_agent_execution_started"
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

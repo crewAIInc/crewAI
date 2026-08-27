@@ -1,0 +1,414 @@
+---
+title: "Listeners de Evento"
+description: "Acesse eventos do CrewAI para criar integrações e monitoramento personalizados"
+icon: spinner
+mode: "wide"
+---
+
+## Visão Geral
+
+O CrewAI oferece um sistema de eventos poderoso que permite escutar e reagir a diversos eventos que ocorrem durante a execução do seu Crew. Esse recurso possibilita a criação de integrações personalizadas, soluções de monitoramento, sistemas de log ou qualquer outra funcionalidade que precise ser acionada com base nos eventos internos do CrewAI.
+
+## Como Funciona
+
+O CrewAI utiliza uma arquitetura de event bus para emitir eventos ao longo do ciclo de vida da execução. O sistema de eventos é construído a partir dos seguintes componentes:
+
+1. **CrewAIEventsBus**: Um event bus singleton que gerencia o registro e emissão de eventos
+2. **BaseEvent**: Classe base para todos os eventos do sistema
+3. **BaseEventListener**: Classe base abstrata para criar listeners de evento personalizados
+
+Quando ações específicas ocorrem no CrewAI (como a inicialização de um Crew, um Agent concluindo uma tarefa ou o uso de uma ferramenta), o sistema emite os eventos correspondentes. Você pode registrar handlers para esses eventos para executar código personalizado quando eles acontecerem.
+
+<Note type="info" title="Aprimoramento Enterprise: Prompt Tracing">
+O CrewAI AMP fornece o recurso Prompt Tracing, que aproveita o sistema de eventos para rastrear, armazenar e visualizar todos os prompts, respostas e metadados associados. Isso proporciona poderosas capacidades de depuração e transparência nas operações dos seus agentes.
+
+![Prompt Tracing Dashboard](/images/enterprise/traces-overview.png)
+
+Com o Prompt Tracing você pode:
+
+- Visualizar o histórico completo de todos os prompts enviados ao seu LLM
+- Monitorar o uso de tokens e custos
+- Depurar falhas de raciocínio dos agentes
+- Compartilhar sequências de prompts com sua equipe
+- Comparar diferentes estratégias de prompts
+- Exportar rastreamentos para compliance e auditoria
+</Note>
+
+## Criando um Listener de Evento Personalizado
+
+Para criar um listener de evento personalizado, você precisa:
+
+1. Criar uma classe que herde de `BaseEventListener`
+2. Implementar o método `setup_listeners`
+3. Registrar handles para os eventos de seu interesse
+4. Instanciar seu listener no arquivo apropriado
+
+Veja um exemplo simples de uma classe de listener de evento personalizado:
+
+```python
+from crewai.events import (
+    CrewKickoffStartedEvent,
+    CrewKickoffCompletedEvent,
+    AgentExecutionCompletedEvent,
+)
+from crewai.events import BaseEventListener
+
+class MeuListenerPersonalizado(BaseEventListener):
+    def __init__(self):
+        super().__init__()
+
+    def setup_listeners(self, crewai_event_bus):
+        @crewai_event_bus.on(CrewKickoffStartedEvent)
+        def ao_iniciar_crew(source, event):
+            print(f"Crew '{event.crew_name}' iniciou a execução!")
+
+        @crewai_event_bus.on(CrewKickoffCompletedEvent)
+        def ao_finalizar_crew(source, event):
+            print(f"Crew '{event.crew_name}' finalizou a execução!")
+            print(f"Saída: {event.output}")
+
+        @crewai_event_bus.on(AgentExecutionCompletedEvent)
+        def ao_finalizar_execucao_agente(source, event):
+            print(f"Agente '{event.agent.role}' concluiu a tarefa")
+            print(f"Saída: {event.output}")
+```
+
+## Registrando Corretamente Seu Listener
+
+Apenas definir sua classe de listener não é suficiente. É necessário criar uma instância dela e garantir que ela seja importada na sua aplicação. Isso garante que:
+
+1. Os event handlers estejam registrados no event bus
+2. A instância do listener permaneça em memória (não seja coletada pelo garbage collector)
+3. O listener esteja ativo quando os eventos forem emitidos
+
+### Opção 1: Importar e Instanciar no Seu Crew ou Implementação de Flow
+
+O mais importante é criar uma instância do seu listener no arquivo onde seu Crew ou Flow está definido e executado:
+
+#### Para Aplicações Baseadas em Crew
+
+Crie e importe seu listener no início do arquivo de implementação do seu Crew:
+
+```python
+# No seu arquivo crew.py
+from crewai import Agent, Crew, Task
+from my_listeners import MyCustomListener
+
+# Crie uma instância do seu listener
+my_listener = MyCustomListener()
+
+class MyCustomCrew:
+    # Sua implementação do crew...
+
+    def crew(self):
+        return Crew(
+            agents=[...],
+            tasks=[...],
+            # ...
+        )
+```
+
+#### Para Aplicações Baseadas em Flow
+
+Crie e importe seu listener no início do arquivo de implementação do seu Flow:
+
+```python
+# Em seu arquivo main.py ou flow.py
+from crewai.flow import Flow, listen, start
+from my_listeners import MyCustomListener
+
+# Crie uma instância do seu listener
+my_listener = MyCustomListener()
+
+class MyCustomFlow(Flow):
+    # Sua implementação do flow...
+
+    @start()
+    def first_step(self):
+        # ...
+```
+
+Isso assegura que seu listener será carregado e estará ativo quando seu Crew ou Flow for executado.
+
+### Opção 2: Criar um Pacote para Seus Listeners
+
+Para uma abordagem mais estruturada, especialmente se houver múltiplos listeners:
+
+1. Crie um pacote para seus listeners:
+
+```
+my_project/
+  ├── listeners/
+  │   ├── __init__.py
+  │   ├── my_custom_listener.py
+  │   └── another_listener.py
+```
+
+2. Em `my_custom_listener.py`, defina sua classe de listener e crie uma instância:
+
+```python
+# my_custom_listener.py
+from crewai.events import BaseEventListener
+# ... importe events ...
+
+class MyCustomListener(BaseEventListener):
+    # ... implementação ...
+
+# Crie uma instância do seu listener
+my_custom_listener = MyCustomListener()
+```
+
+3. Em `__init__.py`, importe as instâncias dos listeners para garantir seu carregamento:
+
+```python
+# __init__.py
+from .my_custom_listener import my_custom_listener
+from .another_listener import another_listener
+
+# Opcionalmente exporte-os se precisar acessá-los em outros lugares
+__all__ = ['my_custom_listener', 'another_listener']
+```
+
+4. Importe seu pacote de listeners no arquivo do seu Crew ou Flow:
+
+```python
+# No seu arquivo crew.py ou flow.py
+import my_project.listeners  # Isso carrega todos os seus listeners
+
+class MyCustomCrew:
+    # Sua implementação do crew...
+```
+
+É assim que listeners de eventos de terceiros são registrados no código do CrewAI.
+
+## Tipos de Eventos Disponíveis
+
+O CrewAI fornece uma ampla variedade de eventos para escuta:
+
+### Eventos de Crew
+
+- **CrewKickoffStartedEvent**: Emitido quando um Crew inicia a execução
+- **CrewKickoffCompletedEvent**: Emitido quando um Crew conclui a execução
+- **CrewKickoffFailedEvent**: Emitido quando um Crew falha ao concluir a execução
+- **CrewTestStartedEvent**: Emitido ao iniciar o teste de um Crew
+- **CrewTestCompletedEvent**: Emitido ao concluir o teste de um Crew
+- **CrewTestFailedEvent**: Emitido ao falhar no teste de um Crew
+- **CrewTrainStartedEvent**: Emitido ao iniciar o treinamento de um Crew
+- **CrewTrainCompletedEvent**: Emitido ao concluir o treinamento de um Crew
+- **CrewTrainFailedEvent**: Emitido ao falhar no treinamento de um Crew
+- **CrewTestResultEvent**: Emitido quando um resultado de teste de Crew está disponível. Contém a pontuação de qualidade, duração da execução e modelo utilizado.
+
+### Eventos de Agent
+
+- **AgentExecutionStartedEvent**: Emitido quando um Agent inicia a execução de uma tarefa
+- **AgentExecutionCompletedEvent**: Emitido quando um Agent conclui a execução de uma tarefa
+- **AgentExecutionErrorEvent**: Emitido quando um Agent encontra um erro durante a execução
+- **LiteAgentExecutionStartedEvent**: Emitido quando um LiteAgent inicia a execução. Contém as informações do agente, ferramentas e mensagens.
+- **LiteAgentExecutionCompletedEvent**: Emitido quando um LiteAgent conclui a execução. Contém as informações do agente e a saída.
+- **LiteAgentExecutionErrorEvent**: Emitido quando um LiteAgent encontra um erro durante a execução. Contém as informações do agente e a mensagem de erro.
+- **AgentEvaluationStartedEvent**: Emitido quando uma avaliação de agente é iniciada. Contém o ID do agente, papel do agente, ID da tarefa opcional e número da iteração.
+- **AgentEvaluationCompletedEvent**: Emitido quando uma avaliação de agente é concluída. Contém o ID do agente, papel do agente, ID da tarefa opcional, número da iteração, categoria da métrica e pontuação.
+- **AgentEvaluationFailedEvent**: Emitido quando uma avaliação de agente falha. Contém o ID do agente, papel do agente, ID da tarefa opcional, número da iteração e mensagem de erro.
+
+### Eventos de Task
+
+- **TaskStartedEvent**: Emitido ao iniciar a execução de uma Task
+- **TaskCompletedEvent**: Emitido ao concluir a execução de uma Task
+- **TaskFailedEvent**: Emitido ao falhar na execução de uma Task
+- **TaskEvaluationEvent**: Emitido quando uma Task é avaliada
+
+### Eventos de Uso de Ferramentas
+
+- **ToolUsageStartedEvent**: Emitido ao iniciar a execução de uma ferramenta
+- **ToolUsageFinishedEvent**: Emitido ao concluir a execução de uma ferramenta
+- **ToolUsageErrorEvent**: Emitido quando ocorre erro na execução de uma ferramenta
+- **ToolValidateInputErrorEvent**: Emitido ao ocorrer erro de validação de entrada na ferramenta
+- **ToolExecutionErrorEvent**: Emitido quando ocorre erro na execução de uma ferramenta
+- **ToolSelectionErrorEvent**: Emitido ao ocorrer erro na seleção de uma ferramenta
+
+### Eventos de MCP
+
+- **MCPConnectionStartedEvent**: Emitido ao iniciar a conexão com um servidor MCP. Contém o nome do servidor, URL, tipo de transporte, timeout de conexão e se é uma tentativa de reconexão.
+- **MCPConnectionCompletedEvent**: Emitido ao conectar com sucesso a um servidor MCP. Contém o nome do servidor, duração da conexão em milissegundos e se foi uma reconexão.
+- **MCPConnectionFailedEvent**: Emitido quando a conexão com um servidor MCP falha. Contém o nome do servidor, mensagem de erro e tipo de erro (`timeout`, `authentication`, `network`, etc.).
+- **MCPToolExecutionStartedEvent**: Emitido ao iniciar a execução de uma ferramenta MCP. Contém o nome do servidor, nome da ferramenta e argumentos da ferramenta.
+- **MCPToolExecutionCompletedEvent**: Emitido quando a execução de uma ferramenta MCP é concluída com sucesso. Contém o nome do servidor, nome da ferramenta, resultado e duração da execução em milissegundos.
+- **MCPToolExecutionFailedEvent**: Emitido quando a execução de uma ferramenta MCP falha. Contém o nome do servidor, nome da ferramenta, mensagem de erro e tipo de erro (`timeout`, `validation`, `server_error`, etc.).
+- **MCPConfigFetchFailedEvent**: Emitido quando a obtenção da configuração de um servidor MCP falha (ex.: o MCP não está conectado na sua conta, erro de API ou falha de conexão após a configuração ser obtida). Contém o slug, mensagem de erro e tipo de erro (`not_connected`, `api_error`, `connection_failed`).
+
+### Eventos de Knowledge
+
+- **KnowledgeRetrievalStartedEvent**: Emitido ao iniciar recuperação de conhecimento
+- **KnowledgeRetrievalCompletedEvent**: Emitido ao concluir recuperação de conhecimento
+- **KnowledgeQueryStartedEvent**: Emitido ao iniciar consulta de conhecimento
+- **KnowledgeQueryCompletedEvent**: Emitido ao concluir consulta de conhecimento
+- **KnowledgeQueryFailedEvent**: Emitido ao falhar consulta de conhecimento
+- **KnowledgeSearchQueryFailedEvent**: Emitido ao falhar consulta de busca de conhecimento
+
+### Eventos de Guardrail do LLM
+
+- **LLMGuardrailStartedEvent**: Emitido ao iniciar validação dos guardrails. Contém detalhes do guardrail aplicado e tentativas.
+- **LLMGuardrailCompletedEvent**: Emitido ao concluir validação dos guardrails. Contém detalhes sobre sucesso/falha na validação, resultados e mensagens de erro, se houver.
+- **LLMGuardrailFailedEvent**: Emitido quando a validação do guardrail falha. Contém a mensagem de erro e o número de tentativas.
+
+### Eventos de Flow
+
+- **FlowCreatedEvent**: Emitido ao criar um Flow
+- **FlowStartedEvent**: Emitido ao iniciar a execução de um Flow
+- **FlowFinishedEvent**: Emitido ao concluir a execução de um Flow
+- **FlowPausedEvent**: Emitido quando um Flow é pausado aguardando feedback humano. Contém o nome do flow, ID do flow, nome do método, estado atual, mensagem exibida ao solicitar feedback e lista opcional de resultados possíveis para roteamento.
+- **FlowPlotEvent**: Emitido ao plotar um Flow
+- **MethodExecutionStartedEvent**: Emitido ao iniciar a execução de um método do Flow
+- **MethodExecutionFinishedEvent**: Emitido ao concluir a execução de um método do Flow
+- **MethodExecutionFailedEvent**: Emitido ao falhar na execução de um método do Flow
+- **MethodExecutionPausedEvent**: Emitido quando um método do Flow é pausado aguardando feedback humano. Contém o nome do flow, nome do método, estado atual, ID do flow, mensagem exibida ao solicitar feedback e lista opcional de resultados possíveis para roteamento.
+
+### Eventos de Human In The Loop
+
+- **FlowInputRequestedEvent**: Emitido quando um Flow solicita entrada do usuário via `Flow.ask()`. Contém o nome do flow, nome do método, a pergunta ou prompt exibido ao usuário e metadados opcionais (ex.: ID do usuário, canal, contexto da sessão).
+- **FlowInputReceivedEvent**: Emitido quando a entrada do usuário é recebida após `Flow.ask()`. Contém o nome do flow, nome do método, a pergunta original, a resposta do usuário (ou `None` se expirou), metadados opcionais da solicitação e metadados opcionais da resposta do provedor (ex.: quem respondeu, ID do thread, timestamps).
+- **HumanFeedbackRequestedEvent**: Emitido quando um método decorado com `@human_feedback` requer entrada de um revisor humano. Contém o nome do flow, nome do método, a saída do método exibida ao humano para revisão, a mensagem exibida ao solicitar feedback e lista opcional de resultados possíveis para roteamento.
+- **HumanFeedbackReceivedEvent**: Emitido quando um humano fornece feedback em resposta a um método decorado com `@human_feedback`. Contém o nome do flow, nome do método, o texto bruto do feedback fornecido pelo humano e a string de resultado consolidada (se emit foi especificado).
+
+### Eventos de LLM
+
+- **LLMCallStartedEvent**: Emitido ao iniciar uma chamada LLM
+- **LLMCallCompletedEvent**: Emitido ao concluir uma chamada LLM
+- **LLMCallFailedEvent**: Emitido ao falhar uma chamada LLM
+- **LLMStreamChunkEvent**: Emitido para cada chunk recebido durante respostas em streaming do LLM
+- **LLMThinkingChunkEvent**: Emitido quando um chunk de pensamento/raciocínio é recebido de um modelo de pensamento. Contém o texto do chunk e ID de resposta opcional.
+
+### Eventos de Memória
+
+- **MemoryQueryStartedEvent**: Emitido quando uma consulta de memória é iniciada. Contém a consulta, limite e threshold de pontuação opcional.
+- **MemoryQueryCompletedEvent**: Emitido quando uma consulta de memória é concluída com sucesso. Contém a consulta, resultados, limite, threshold de pontuação e tempo de execução da consulta.
+- **MemoryQueryFailedEvent**: Emitido quando uma consulta de memória falha. Contém a consulta, limite, threshold de pontuação e mensagem de erro.
+- **MemorySaveStartedEvent**: Emitido quando uma operação de salvamento de memória é iniciada. Contém o valor a ser salvo, metadados e papel do agente opcional.
+- **MemorySaveCompletedEvent**: Emitido quando uma operação de salvamento de memória é concluída com sucesso. Contém o valor salvo, metadados, papel do agente e tempo de salvamento.
+- **MemorySaveFailedEvent**: Emitido quando uma operação de salvamento de memória falha. Contém o valor, metadados, papel do agente e mensagem de erro.
+- **MemoryRetrievalStartedEvent**: Emitido quando a recuperação de memória para um prompt de tarefa é iniciada. Contém o ID da tarefa opcional.
+- **MemoryRetrievalCompletedEvent**: Emitido quando a recuperação de memória para um prompt de tarefa é concluída com sucesso. Contém o ID da tarefa, conteúdo da memória e tempo de execução da recuperação.
+- **MemoryRetrievalFailedEvent**: Emitido quando a recuperação de memória para um prompt de tarefa falha. Contém o ID da tarefa opcional e mensagem de erro.
+
+### Eventos de Raciocínio
+
+- **AgentReasoningStartedEvent**: Emitido quando um agente começa a raciocinar sobre uma tarefa. Contém o papel do agente, ID da tarefa e número da tentativa.
+- **AgentReasoningCompletedEvent**: Emitido quando um agente finaliza seu processo de raciocínio. Contém o papel do agente, ID da tarefa, o plano produzido e se o agente está pronto para prosseguir.
+- **AgentReasoningFailedEvent**: Emitido quando o processo de raciocínio falha. Contém o papel do agente, ID da tarefa e mensagem de erro.
+
+### Eventos de Observação
+
+- **StepObservationStartedEvent**: Emitido quando o Planner começa a observar o resultado de um passo. Disparado após cada execução de passo, antes da chamada LLM de observação. Contém o papel do agente, número do passo e descrição do passo.
+- **StepObservationCompletedEvent**: Emitido quando o Planner finaliza a observação do resultado de um passo. Contém se o passo foi concluído com sucesso, informações-chave aprendidas, se o plano restante ainda é válido, se é necessário um replanejamento completo e refinamentos sugeridos.
+- **StepObservationFailedEvent**: Emitido quando a chamada LLM de observação falha. O sistema continua o plano por padrão. Contém a mensagem de erro.
+- **PlanRefinementEvent**: Emitido quando o Planner refina descrições de passos futuros sem replanejamento completo. Contém o número de passos refinados e os refinamentos aplicados.
+- **PlanReplanTriggeredEvent**: Emitido quando o Planner dispara um replanejamento completo porque o plano restante foi considerado fundamentalmente incorreto. Contém o motivo do replanejamento, contagem de replanejamentos e número de passos concluídos preservados.
+- **GoalAchievedEarlyEvent**: Emitido quando o Planner detecta que o objetivo foi alcançado antecipadamente e os passos restantes serão ignorados. Contém o número de passos restantes e passos concluídos.
+
+### Eventos A2A (Agent-to-Agent)
+
+#### Eventos de Delegação
+
+- **A2ADelegationStartedEvent**: Emitido quando a delegação A2A é iniciada. Contém a URL do endpoint, descrição da tarefa, ID do agente, ID do contexto, se é multiturn, número do turno, metadados do agent card, versão do protocolo, informações do provedor e ID da skill opcional.
+- **A2ADelegationCompletedEvent**: Emitido quando a delegação A2A é concluída. Contém o status de conclusão (`completed`, `input_required`, `failed`, etc.), resultado, mensagem de erro, ID do contexto e metadados do agent card.
+- **A2AParallelDelegationStartedEvent**: Emitido quando a delegação paralela para múltiplos agentes A2A é iniciada. Contém a lista de endpoints e a descrição da tarefa.
+- **A2AParallelDelegationCompletedEvent**: Emitido quando a delegação paralela para múltiplos agentes A2A é concluída. Contém a lista de endpoints, contagem de sucessos, contagem de falhas e resumo dos resultados.
+
+#### Eventos de Conversação
+
+- **A2AConversationStartedEvent**: Emitido uma vez no início de uma conversação multiturn A2A, antes da primeira troca de mensagens. Contém o ID do agente, endpoint, ID do contexto, metadados do agent card, versão do protocolo e informações do provedor.
+- **A2AMessageSentEvent**: Emitido quando uma mensagem é enviada ao agente A2A. Contém o conteúdo da mensagem, número do turno, ID do contexto, ID da mensagem e se é multiturn.
+- **A2AResponseReceivedEvent**: Emitido quando uma resposta é recebida do agente A2A. Contém o conteúdo da resposta, número do turno, ID do contexto, ID da mensagem, status e se é a resposta final.
+- **A2AConversationCompletedEvent**: Emitido uma vez ao final de uma conversação multiturn A2A. Contém o status final (`completed` ou `failed`), resultado final, mensagem de erro, ID do contexto e número total de turnos.
+
+#### Eventos de Streaming
+
+- **A2AStreamingStartedEvent**: Emitido quando o modo streaming é iniciado para delegação A2A. Contém o ID da tarefa, ID do contexto, endpoint, número do turno e se é multiturn.
+- **A2AStreamingChunkEvent**: Emitido quando um chunk de streaming é recebido. Contém o texto do chunk, índice do chunk, se é o chunk final, ID da tarefa, ID do contexto e número do turno.
+
+#### Eventos de Polling e Push Notification
+
+- **A2APollingStartedEvent**: Emitido quando o modo polling é iniciado para delegação A2A. Contém o ID da tarefa, ID do contexto, intervalo de polling em segundos e endpoint.
+- **A2APollingStatusEvent**: Emitido em cada iteração de polling. Contém o ID da tarefa, ID do contexto, estado atual da tarefa, segundos decorridos e contagem de polls.
+- **A2APushNotificationRegisteredEvent**: Emitido quando um callback de push notification é registrado. Contém o ID da tarefa, ID do contexto, URL do callback e endpoint.
+- **A2APushNotificationReceivedEvent**: Emitido quando uma push notification é recebida do agente A2A remoto. Contém o ID da tarefa, ID do contexto e estado atual.
+- **A2APushNotificationSentEvent**: Emitido quando uma push notification é enviada para uma URL de callback. Contém o ID da tarefa, ID do contexto, URL do callback, estado, se a entrega foi bem-sucedida e mensagem de erro opcional.
+- **A2APushNotificationTimeoutEvent**: Emitido quando a espera por push notification expira. Contém o ID da tarefa, ID do contexto e duração do timeout em segundos.
+
+#### Eventos de Conexão e Autenticação
+
+- **A2AAgentCardFetchedEvent**: Emitido quando um agent card é obtido com sucesso. Contém o endpoint, nome do agente, metadados do agent card, versão do protocolo, informações do provedor, se foi do cache e tempo de busca em milissegundos.
+- **A2AAuthenticationFailedEvent**: Emitido quando a autenticação com um agente A2A falha. Contém o endpoint, tipo de autenticação tentada (ex.: `bearer`, `oauth2`, `api_key`), mensagem de erro e código de status HTTP.
+- **A2AConnectionErrorEvent**: Emitido quando ocorre um erro de conexão durante a comunicação A2A. Contém o endpoint, mensagem de erro, tipo de erro (ex.: `timeout`, `connection_refused`, `dns_error`), código de status HTTP e a operação sendo tentada.
+- **A2ATransportNegotiatedEvent**: Emitido quando o protocolo de transporte é negociado com um agente A2A. Contém o transporte negociado, URL negociada, fonte de seleção (`client_preferred`, `server_preferred`, `fallback`) e transportes suportados pelo cliente/servidor.
+- **A2AContentTypeNegotiatedEvent**: Emitido quando os tipos de conteúdo são negociados com um agente A2A. Contém os modos de entrada/saída do cliente/servidor, modos de entrada/saída negociados e se a negociação foi bem-sucedida.
+
+#### Eventos de Artefatos
+
+- **A2AArtifactReceivedEvent**: Emitido quando um artefato é recebido de um agente A2A remoto. Contém o ID da tarefa, ID do artefato, nome do artefato, descrição, tipo MIME, tamanho em bytes e se o conteúdo deve ser concatenado.
+
+#### Eventos de Tarefa do Servidor
+
+- **A2AServerTaskStartedEvent**: Emitido quando a execução de uma tarefa do servidor A2A é iniciada. Contém o ID da tarefa e ID do contexto.
+- **A2AServerTaskCompletedEvent**: Emitido quando a execução de uma tarefa do servidor A2A é concluída. Contém o ID da tarefa, ID do contexto e resultado.
+- **A2AServerTaskCanceledEvent**: Emitido quando a execução de uma tarefa do servidor A2A é cancelada. Contém o ID da tarefa e ID do contexto.
+- **A2AServerTaskFailedEvent**: Emitido quando a execução de uma tarefa do servidor A2A falha. Contém o ID da tarefa, ID do contexto e mensagem de erro.
+
+#### Eventos de Ciclo de Vida do Contexto
+
+- **A2AContextCreatedEvent**: Emitido quando um contexto A2A é criado. Contextos agrupam tarefas relacionadas em uma conversação ou workflow. Contém o ID do contexto e timestamp de criação.
+- **A2AContextExpiredEvent**: Emitido quando um contexto A2A expira devido ao TTL. Contém o ID do contexto, timestamp de criação, idade em segundos e contagem de tarefas.
+- **A2AContextIdleEvent**: Emitido quando um contexto A2A fica inativo (sem atividade pelo threshold configurado). Contém o ID do contexto, tempo de inatividade em segundos e contagem de tarefas.
+- **A2AContextCompletedEvent**: Emitido quando todas as tarefas em um contexto A2A são concluídas. Contém o ID do contexto, total de tarefas e duração em segundos.
+- **A2AContextPrunedEvent**: Emitido quando um contexto A2A é podado (deletado). Contém o ID do contexto, contagem de tarefas e idade em segundos.
+
+## Estrutura dos Handlers de Evento
+
+Cada handler de evento recebe dois parâmetros:
+
+1. **source**: O objeto que emitiu o evento
+2. **event**: A instância do evento, contendo dados específicos do evento
+
+A estrutura do objeto de evento depende do tipo do evento, mas todos herdam de `BaseEvent` e incluem:
+
+- **timestamp**: O horário em que o evento foi emitido
+- **type**: Identificador do tipo do evento
+
+Campos adicionais variam pelo tipo de evento. Por exemplo, `CrewKickoffCompletedEvent` inclui os campos `crew_name` e `output`.
+
+## Uso Avançado: Handlers Escopados
+
+Para lidar temporariamente com eventos (útil para testes ou operações específicas), você pode usar o context manager `scoped_handlers`:
+
+```python
+from crewai.events import crewai_event_bus, CrewKickoffStartedEvent
+
+with crewai_event_bus.scoped_handlers():
+    @crewai_event_bus.on(CrewKickoffStartedEvent)
+    def temp_handler(source, event):
+        print("Este handler só existe neste contexto")
+
+    # Faça algo que emita eventos
+
+# Fora do contexto, o handler temporário é removido
+```
+
+## Casos de Uso
+
+Listeners de evento podem ser usados para várias finalidades:
+
+1. **Log e Monitoramento**: Monitore a execução do seu Crew e registre eventos importantes
+2. **Analytics**: Colete dados sobre o desempenho e comportamento do seu Crew
+3. **Depuração**: Configure listeners temporários para debugar problemas específicos
+4. **Integração**: Conecte o CrewAI a sistemas externos como plataformas de monitoramento, bancos de dados ou serviços de notificação
+5. **Comportamento Personalizado**: Dispare ações personalizadas com base em eventos específicos
+
+## Boas Práticas
+
+1. **Mantenha Handlers Leves**: Handlers de eventos devem ser leves e evitar operações bloqueantes
+2. **Tratamento de Erros**: Implemente tratamento de erros adequado nos event handlers para evitar que exceções afetem a execução principal
+3. **Limpeza**: Se seu listener alocar recursos, garanta o devido fechamento/liberação
+4. **Escuta Seletiva**: Escute apenas eventos que realmente precisa tratar
+5. **Testes**: Teste seus listeners de evento isoladamente para garantir que se comportam conforme esperado
+
+Aproveitando o sistema de eventos do CrewAI, é possível estender a funcionalidade e integrá-lo facilmente à sua infraestrutura existente.

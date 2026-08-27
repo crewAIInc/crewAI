@@ -94,6 +94,24 @@ class FlowFinishedEvent(FlowEvent):
     state: dict[str, Any] | BaseModel
 
 
+class FlowFailedEvent(FlowEvent):
+    """Event emitted when a flow execution fails.
+
+    Attributes:
+        flow_name: Name of the flow that failed.
+        error: The exception that ended the execution.
+    """
+
+    error: Exception
+    type: Literal["flow_failed"] = "flow_failed"
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_serializer("error")
+    def _serialize_error(self, error: Exception) -> str:
+        return str(error)
+
+
 class FlowPausedEvent(FlowEvent):
     """Event emitted when a flow is paused waiting for human feedback.
 
