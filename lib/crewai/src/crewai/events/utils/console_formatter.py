@@ -118,7 +118,6 @@ To update, run: uv sync --upgrade-package crewai"""
             TraceCollectionListener,
         )
         from crewai.events.listeners.tracing.utils import (
-            has_user_declined_tracing,
             is_tracing_enabled_in_context,
             should_suppress_tracing_messages,
         )
@@ -133,15 +132,7 @@ To update, run: uv sync --upgrade-package crewai"""
             return
 
         if not is_tracing_enabled_in_context():
-            if has_user_declined_tracing():
-                message = """Info: Tracing is disabled.
-
-To enable tracing, do any one of these:
-• Set tracing=True in your Crew/Flow code
-• Set CREWAI_TRACING_ENABLED=true in your project's .env file
-• Run: crewai traces enable"""
-            else:
-                message = """Info: Tracing is disabled.
+            message = """Info: Tracing is disabled.
 
 To enable tracing, do any one of these:
 • Set tracing=True in your Crew/Flow code
