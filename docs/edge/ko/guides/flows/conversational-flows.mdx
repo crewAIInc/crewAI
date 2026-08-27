@@ -5,14 +5,6 @@ icon: comments
 mode: "wide"
 ---
 
-<Warning>
-  **실험적 기능입니다.** 대화형 `Flow` API 표면
-  (`conversational = True`, `handle_turn`, `stream_turn`, `ConversationConfig`,
-  `RouterConfig`, `ConversationState`, 내장 그래프)은 `crewai.experimental`
-  하위에 있으며 정식 기능이 되기 전에 변경될 수 있습니다. 특정 동작에
-  의존한다면 CrewAI 버전을 고정하세요.
-</Warning>
-
 ## 개요
 
 대화형 앱은 각 사용자 입력을 **동일한 세션 id**로 **새 flow 실행**으로 처리합니다. CrewAI는 메시지 기록, 선택적 의도 라우팅, 지연 트레이싱, 구조화된 턴 스트리밍, 로컬 `flow.chat()` REPL을 위한 헬퍼를 제공합니다.
@@ -48,7 +40,7 @@ from uuid import uuid4
 
 from crewai import Flow
 from crewai.flow import listen
-from crewai.experimental.conversational import (
+from crewai.flow import (
     ConversationConfig,
     ConversationState,
 )
@@ -129,7 +121,7 @@ result = stream.result
 
 ## 하위 수준 `ChatState` 헬퍼
 
-`ChatState`, 레거시 `ConversationalConfig`, `crewai.flow.conversation` 헬퍼는 고급 오케스트레이션, 테스트, 커스텀 래퍼에서 계속 import할 수 있습니다. 이들은 실험적 `ConversationState` / `ConversationConfig` API와 별개이며 `Flow.kickoff()`에 `user_message=` 또는 `session_id=` 키워드 인자를 추가하지 않습니다.
+`ChatState`, 레거시 `ConversationalConfig`, `crewai.flow.conversation` 헬퍼는 고급 오케스트레이션, 테스트, 커스텀 래퍼에서 계속 import할 수 있습니다. 이들은 `ConversationState` / `ConversationConfig` API와 별개이며 `Flow.kickoff()`에 `user_message=` 또는 `session_id=` 키워드 인자를 추가하지 않습니다.
 
 ```python
 from crewai.flow import ChatState
@@ -151,7 +143,7 @@ class MyChatState(ChatState):
 
 `ConversationalInputs`는 `kickoff(inputs={...})`용 `TypedDict`: `id`, `user_message`, `last_intent`.
 
-실험적 `ConversationState`는 `messages`를 `ConversationMessage` 객체로 저장하며 `current_user_message`, `ended`, `events`, `agent_threads`도 제공합니다. 정식 기록을 LLM에 전달할 때는 `conversation_messages`를 사용하세요.
+`ConversationState`는 `messages`를 `ConversationMessage` 객체로 저장하며 `current_user_message`, `ended`, `events`, `agent_threads`도 제공합니다. 정식 기록을 LLM에 전달할 때는 `conversation_messages`를 사용하세요.
 
 ## `Flow` 대화 API
 
@@ -193,7 +185,7 @@ class MyChatState(ChatState):
 
 ### 모듈 헬퍼 (`crewai.flow.conversation`)
 
-테스트 또는 커스텀 오케스트레이션을 위해 `crewai.flow.conversation`에서 import할 수 있습니다. 이 헬퍼들은 레거시 `ConversationalConfig` 형태를 사용합니다. 또한 `prepare_conversational_turn()`은 `last_intent`를 지우지만, 실험적 `handle_turn()`은 router 컨텍스트로 보존합니다.
+테스트 또는 커스텀 오케스트레이션을 위해 `crewai.flow.conversation`에서 import할 수 있습니다. 이 헬퍼들은 레거시 `ConversationalConfig` 형태를 사용합니다. 또한 `prepare_conversational_turn()`은 `last_intent`를 지우지만, `handle_turn()`은 router 컨텍스트로 보존합니다.
 
 | 함수 | 설명 |
 |------|------|
@@ -237,7 +229,7 @@ def route_turn(self, context):
 
 후속 채팅 줄에 `@human_feedback`를 쓰지 마세요. 특정 스텝 출력을 사람이 승인해야 할 때만 사용하세요.
 
-## 대화형 `Flow` (실험적)
+## 대화형 `Flow`
 
 `Flow` 서브클래스에 `conversational = True`를 지정하거나 `@ConversationConfig(...)`를 적용하면 대화형 채팅 그래프가 활성화됩니다. 베이스 `Flow`는 내장 start/router인 `route_conversation`과 `converse_turn`, `end_conversation` 리스너를 제공합니다. 사용 중단된 `answer_from_history_turn` 리스너는 호환성을 위해 계속 제공됩니다. 또한 `state.messages`를 관리하고 router LLM을 구동할 수 있으며 턴 간 trace batch를 열린 상태로 유지합니다. 여러분은 **커스텀 라우트**를 작성하고 나머지는 프레임워크에 맡기면 됩니다.
 
@@ -248,7 +240,7 @@ LLM 기반 라우터와 라우트별 핸들러로 멀티턴 챗을 만들고 싶
 ```python
 from crewai import Flow
 from crewai.flow import listen
-from crewai.experimental.conversational import (
+from crewai.flow import (
     ConversationConfig,
     ConversationState,
 )
@@ -333,7 +325,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from crewai import LLM
-from crewai.experimental.conversational import RouterConfig
+from crewai.flow import RouterConfig
 
 
 class MyRoute(BaseModel):
@@ -468,7 +460,7 @@ flow.chat(
 from typing import Any
 
 from crewai import Flow
-from crewai.experimental.conversational import ConversationState
+from crewai.flow import ConversationState
 
 
 class SupportFlow(Flow[ConversationState]):
@@ -576,7 +568,7 @@ flow.chat(session_id=session_id)
 
 ### 대화형 `Flow` trace 수명 주기
 
-실험적 [대화형 `Flow`](#대화형-flow-실험적)는 동일한 tracing 수명 주기를 따릅니다. `defer_trace_finalization` 기본값이 `True`이므로 각 `handle_turn()`은 세션 trace를 열린 상태로 유지합니다. 지연된 턴은 턴별 `flow_failed`도 억제합니다. 턴 오류나 세션 중단이 발생하면 세션을 명시적으로 finalize하세요. 그러면 턴별 `FlowFailed` 이벤트 대신 세션 수준 `FlowFinished` 이벤트로 batch가 닫힙니다. REPL/루프는 항상 `try/finally`로 감싸고 종료 시 `flow.finalize_session_traces()`를 호출하세요. 호출하지 않으면 trace batch가 열린 채 남아 최종 대화가 export되지 않을 수 있습니다.
+[대화형 `Flow`](#대화형-flow)는 동일한 tracing 수명 주기를 따릅니다. `defer_trace_finalization` 기본값이 `True`이므로 각 `handle_turn()`은 세션 trace를 열린 상태로 유지합니다. 지연된 턴은 턴별 `flow_failed`도 억제합니다. 턴 오류나 세션 중단이 발생하면 세션을 명시적으로 finalize하세요. 그러면 턴별 `FlowFailed` 이벤트 대신 세션 수준 `FlowFinished` 이벤트로 batch가 닫힙니다. REPL/루프는 항상 `try/finally`로 감싸고 종료 시 `flow.finalize_session_traces()`를 호출하세요. 호출하지 않으면 trace batch가 열린 채 남아 최종 대화가 export되지 않을 수 있습니다.
 
 ## 스트리밍
 
@@ -609,7 +601,7 @@ from crewai.flow import (
     start,
 )
 from crewai.flow.conversation import prepare_conversational_turn
-from crewai.experimental.conversational import (
+from crewai.flow import (
     ConversationConfig,
     ConversationState,
     RouterConfig,

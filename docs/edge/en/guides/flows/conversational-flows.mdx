@@ -5,14 +5,6 @@ icon: comments
 mode: "wide"
 ---
 
-<Warning>
-  **This is an experimental feature.** The conversational `Flow` surface
-  (`conversational = True`, `handle_turn`, `stream_turn`, `ConversationConfig`,
-  `RouterConfig`, `ConversationState`, and the built-in graph) lives under
-  `crewai.experimental` and may change before it graduates. Pin your CrewAI
-  version if you depend on specific behavior.
-</Warning>
-
 ## Overview
 
 Conversational apps treat each user line as a **new flow run** with the **same session id**. CrewAI adds helpers for message history, optional intent routing, deferred tracing, structured turn streaming, and a local `flow.chat()` REPL.
@@ -48,7 +40,7 @@ from uuid import uuid4
 
 from crewai import Flow
 from crewai.flow import listen
-from crewai.experimental.conversational import (
+from crewai.flow import (
     ConversationConfig,
     ConversationState,
 )
@@ -129,7 +121,7 @@ Decorating a `Flow` subclass with `ConversationConfig` both attaches the chat de
 
 ## Lower-level `ChatState` helpers
 
-`ChatState`, the legacy `ConversationalConfig`, and `crewai.flow.conversation` helpers are still importable for advanced orchestration, tests, or custom wrappers. They are separate from the experimental `ConversationState` / `ConversationConfig` API and do not add `user_message=` or `session_id=` keyword arguments to `Flow.kickoff()`.
+`ChatState`, the legacy `ConversationalConfig`, and `crewai.flow.conversation` helpers are still importable for advanced orchestration, tests, or custom wrappers. They are separate from the `ConversationState` / `ConversationConfig` API and do not add `user_message=` or `session_id=` keyword arguments to `Flow.kickoff()`.
 
 ```python
 from crewai.flow import ChatState
@@ -151,7 +143,7 @@ class MyChatState(ChatState):
 
 `ConversationalInputs` is a `TypedDict` for conventional `kickoff(inputs={...})` keys: `id`, `user_message`, `last_intent`.
 
-The experimental `ConversationState` stores `messages` as `ConversationMessage` objects and additionally provides `current_user_message`, `ended`, `events`, and `agent_threads`. Use `conversation_messages` when passing its canonical history to an LLM.
+`ConversationState` stores `messages` as `ConversationMessage` objects and additionally provides `current_user_message`, `ended`, `events`, and `agent_threads`. Use `conversation_messages` when passing its canonical history to an LLM.
 
 ## `Flow` conversational API
 
@@ -193,7 +185,7 @@ The experimental `ConversationState` stores `messages` as `ConversationMessage` 
 
 ### Module helpers (`crewai.flow.conversation`)
 
-Importable from `crewai.flow.conversation` for tests or custom orchestration. These helpers use the legacy `ConversationalConfig` shape; `prepare_conversational_turn()` also clears `last_intent`, unlike experimental `handle_turn()`, which preserves it as router context.
+Importable from `crewai.flow.conversation` for tests or custom orchestration. These helpers use the legacy `ConversationalConfig` shape; `prepare_conversational_turn()` also clears `last_intent`, unlike `handle_turn()`, which preserves it as router context.
 
 | Function | Description |
 |----------|-------------|
@@ -237,7 +229,7 @@ Each `handle_turn()` completes one graph run, and the conversation continues wit
 
 Do **not** use `@human_feedback` for follow-up chat lines unless a human must approve a specific step output before it is shown.
 
-## Conversational `Flow` (experimental)
+## Conversational `Flow`
 
 Opt into the conversational chat graph by setting `conversational = True` on a `Flow` subclass or applying `@ConversationConfig(...)`. The base `Flow` then supplies `route_conversation` as the built-in start/router plus the `converse_turn` and `end_conversation` listeners. The deprecated `answer_from_history_turn` listener remains available for compatibility. The framework manages `state.messages`, can drive a router LLM, and keeps the trace batch open across turns. You write the **custom routes**; the framework owns the rest.
 
@@ -248,7 +240,7 @@ Use this when you want a multi-turn chat with a router and per-route handlers wi
 ```python
 from crewai import Flow
 from crewai.flow import listen
-from crewai.experimental.conversational import (
+from crewai.flow import (
     ConversationConfig,
     ConversationState,
 )
@@ -333,7 +325,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from crewai import LLM
-from crewai.experimental.conversational import RouterConfig
+from crewai.flow import RouterConfig
 
 
 class MyRoute(BaseModel):
@@ -471,7 +463,7 @@ To run side effects (event bus setup, telemetry) on every routing decision, over
 from typing import Any
 
 from crewai import Flow
-from crewai.experimental.conversational import ConversationState
+from crewai.flow import ConversationState
 
 
 class SupportFlow(Flow[ConversationState]):
@@ -581,7 +573,7 @@ the session ends.
 
 ### Conversational `Flow` trace lifecycle
 
-The experimental [conversational `Flow`](#conversational-flow-experimental) uses the same tracing lifecycle: `defer_trace_finalization` defaults to `True`, so each `handle_turn()` keeps the session trace open. Deferred turns also suppress per-turn `flow_failed`; on a turn error or session abort, finalize the session explicitly. This closes the batch with the session-level `FlowFinished` event rather than a per-turn `FlowFailed` event. Always wrap your REPL/loop in `try/finally` and call `flow.finalize_session_traces()` on exit. Without it, the trace batch stays open and the final conversation may never export.
+The [conversational `Flow`](#conversational-flow) uses the same tracing lifecycle: `defer_trace_finalization` defaults to `True`, so each `handle_turn()` keeps the session trace open. Deferred turns also suppress per-turn `flow_failed`; on a turn error or session abort, finalize the session explicitly. This closes the batch with the session-level `FlowFinished` event rather than a per-turn `FlowFailed` event. Always wrap your REPL/loop in `try/finally` and call `flow.finalize_session_traces()` on exit. Without it, the trace batch stays open and the final conversation may never export.
 
 ## Streaming
 
@@ -614,7 +606,7 @@ from crewai.flow import (
     start,
 )
 from crewai.flow.conversation import prepare_conversational_turn
-from crewai.experimental.conversational import (
+from crewai.flow import (
     ConversationConfig,
     ConversationState,
     RouterConfig,

@@ -5,14 +5,6 @@ icon: comments
 mode: "wide"
 ---
 
-<Warning>
-  **هذه ميزة تجريبية.** يقع سطح `Flow` المحادثاتي
-  (`conversational = True` و`handle_turn` و`stream_turn` و`ConversationConfig`
-  و`RouterConfig` و`ConversationState` والرسم المدمج) ضمن
-  `crewai.experimental`، وقد يتغير قبل أن يصبح مستقراً. ثبّت إصدار CrewAI
-  إذا كنت تعتمد على سلوك محدد.
-</Warning>
-
 ## نظرة عامة
 
 تعامل التطبيقات المحادثية مع كل سطر من المستخدم كـ **تشغيل flow جديد** بنفس **معرّف الجلسة**. توفر CrewAI مساعدات لسجل الرسائل، وتوجيه النية الاختياري، وتأجيل التتبع، والبث المنظّم للجولات، إضافة إلى REPL محلي عبر `flow.chat()`.
@@ -48,7 +40,7 @@ from uuid import uuid4
 
 from crewai import Flow
 from crewai.flow import listen
-from crewai.experimental.conversational import (
+from crewai.flow import (
     ConversationConfig,
     ConversationState,
 )
@@ -129,7 +121,7 @@ result = stream.result
 
 ## مساعدات `ChatState` منخفضة المستوى
 
-تظل `ChatState` و`ConversationalConfig` القديمة ومساعدات `crewai.flow.conversation` قابلة للاستيراد للتنسيق المتقدم أو الاختبارات أو الأغلفة المخصصة. وهي منفصلة عن واجهتي `ConversationState` / `ConversationConfig` التجريبيتين، ولا تضيف وسيطي `user_message=` أو `session_id=` إلى `Flow.kickoff()`.
+تظل `ChatState` و`ConversationalConfig` القديمة ومساعدات `crewai.flow.conversation` قابلة للاستيراد للتنسيق المتقدم أو الاختبارات أو الأغلفة المخصصة. وهي منفصلة عن واجهتي `ConversationState` / `ConversationConfig`، ولا تضيف وسيطي `user_message=` أو `session_id=` إلى `Flow.kickoff()`.
 
 ```python
 from crewai.flow import ChatState
@@ -151,7 +143,7 @@ class MyChatState(ChatState):
 
 `ConversationalInputs` هو `TypedDict` لمفاتيح `kickoff(inputs={...})` الاصطلاحية: `id` و`user_message` و`last_intent`.
 
-تخزن `ConversationState` التجريبية `messages` ككائنات `ConversationMessage`، وتوفر أيضاً `current_user_message` و`ended` و`events` و`agent_threads`. استخدم `conversation_messages` عند تمرير سجلها القانوني إلى LLM.
+تخزن `ConversationState` رسائل `messages` ككائنات `ConversationMessage`، وتوفر أيضاً `current_user_message` و`ended` و`events` و`agent_threads`. استخدم `conversation_messages` عند تمرير سجلها القانوني إلى LLM.
 
 ## API المحادثة على `Flow`
 
@@ -193,7 +185,7 @@ class MyChatState(ChatState):
 
 ### مساعدات الوحدة (`crewai.flow.conversation`)
 
-يمكن استيرادها من `crewai.flow.conversation` للاختبارات أو التنسيق المخصص. تستخدم هذه المساعدات بنية `ConversationalConfig` القديمة؛ كما تمسح `prepare_conversational_turn()` قيمة `last_intent`، بخلاف `handle_turn()` التجريبية التي تحتفظ بها كسياق للموجّه.
+يمكن استيرادها من `crewai.flow.conversation` للاختبارات أو التنسيق المخصص. تستخدم هذه المساعدات بنية `ConversationalConfig` القديمة؛ كما تمسح `prepare_conversational_turn()` قيمة `last_intent`، بخلاف `handle_turn()` التي تحتفظ بها كسياق للموجّه.
 
 | الدالة | الوصف |
 |--------|--------|
@@ -237,7 +229,7 @@ def route_turn(self, context):
 
 لا تستخدم `@human_feedback` لأسطر المتابعة في الدردشة إلا عند الحاجة لموافقة بشرية على مخرجات خطوة محددة.
 
-## `Flow` المحادثاتي (تجريبي)
+## `Flow` المحادثاتي
 
 اشترك في رسم الدردشة المحادثاتي بتعيين `conversational = True` على صنف فرعي من `Flow` أو بتطبيق `@ConversationConfig(...)`. يوفر `Flow` الأساسي عندئذٍ `route_conversation` كنقطة البدء/الموجّه المدمجة، إضافة إلى مستمعي `converse_turn` و`end_conversation`. يظل المستمع المهمل `answer_from_history_turn` متاحاً للتوافق. يدير الإطار `state.messages`، ويمكنه تشغيل LLM للموجّه، ويبقي دفعة trace مفتوحة عبر الجولات. أنت تكتب **المسارات المخصصة**؛ والإطار يتولى الباقي.
 
@@ -248,7 +240,7 @@ def route_turn(self, context):
 ```python
 from crewai import Flow
 from crewai.flow import listen
-from crewai.experimental.conversational import (
+from crewai.flow import (
     ConversationConfig,
     ConversationState,
 )
@@ -333,7 +325,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from crewai import LLM
-from crewai.experimental.conversational import RouterConfig
+from crewai.flow import RouterConfig
 
 
 class MyRoute(BaseModel):
@@ -472,7 +464,7 @@ flow.chat(
 from typing import Any
 
 from crewai import Flow
-from crewai.experimental.conversational import ConversationState
+from crewai.flow import ConversationState
 
 
 class SupportFlow(Flow[ConversationState]):
@@ -580,7 +572,7 @@ flow.chat(session_id=session_id)
 
 ### دورة حياة trace لـ `Flow` المحادثاتي
 
-يستخدم [`Flow` المحادثاتي](#flow-المحادثاتي-تجريبي) التجريبي دورة حياة التتبع نفسها: القيمة الافتراضية لـ `defer_trace_finalization` هي `True`، ولذلك يبقي كل `handle_turn()` trace الجلسة مفتوحاً. تمنع الجولات المؤجلة أيضاً إصدار `flow_failed` لكل جولة؛ وعند حدوث خطأ في جولة أو إلغاء الجلسة، أنهِ الجلسة صراحةً. يغلق ذلك الدفعة بحدث `FlowFinished` على مستوى الجلسة بدلاً من حدث `FlowFailed` لكل جولة. لُف REPL/الحلقة دائماً بـ `try/finally` واستدعِ `flow.finalize_session_traces()` عند الخروج. بدون ذلك، تبقى دفعة trace مفتوحة وقد لا تُصدَّر المحادثة النهائية أبداً.
+يستخدم [`Flow` المحادثاتي](#flow-المحادثاتي) دورة حياة التتبع نفسها: القيمة الافتراضية لـ `defer_trace_finalization` هي `True`، ولذلك يبقي كل `handle_turn()` trace الجلسة مفتوحاً. تمنع الجولات المؤجلة أيضاً إصدار `flow_failed` لكل جولة؛ وعند حدوث خطأ في جولة أو إلغاء الجلسة، أنهِ الجلسة صراحةً. يغلق ذلك الدفعة بحدث `FlowFinished` على مستوى الجلسة بدلاً من حدث `FlowFailed` لكل جولة. لُف REPL/الحلقة دائماً بـ `try/finally` واستدعِ `flow.finalize_session_traces()` عند الخروج. بدون ذلك، تبقى دفعة trace مفتوحة وقد لا تُصدَّر المحادثة النهائية أبداً.
 
 ## البث
 
@@ -613,7 +605,7 @@ from crewai.flow import (
     start,
 )
 from crewai.flow.conversation import prepare_conversational_turn
-from crewai.experimental.conversational import (
+from crewai.flow import (
     ConversationConfig,
     ConversationState,
     RouterConfig,
