@@ -1370,9 +1370,16 @@ class GeminiCompletion(BaseLLM):
             "gemma-3-27b": 128000,
         }
 
-        for model_prefix, size in context_windows.items():
-            if self.model.startswith(model_prefix):
-                return int(size * CONTEXT_WINDOW_USAGE_RATIO)
+        # Longest matching prefix wins, so a specific entry (e.g.
+        # "gemini-2.0-flash-thinking") is never shadowed by a shorter one
+        # (e.g. "gemini-2.0-flash") listed earlier in the table.
+        matched_prefix = max(
+            (prefix for prefix in context_windows if self.model.startswith(prefix)),
+            key=len,
+            default=None,
+        )
+        if matched_prefix is not None:
+            return int(context_windows[matched_prefix] * CONTEXT_WINDOW_USAGE_RATIO)
 
         return int(1048576 * CONTEXT_WINDOW_USAGE_RATIO)  # 1M tokens default
 

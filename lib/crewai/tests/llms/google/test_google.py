@@ -475,6 +475,20 @@ def test_gemini_context_window_size():
     assert context_size_1_5 > 1000000
 
 
+def test_gemini_context_window_size_prefers_longest_matching_prefix():
+    """
+    "gemini-2.0-flash-thinking" must win over the shorter "gemini-2.0-flash"
+    prefix that appears earlier in the lookup table, regardless of table order.
+    """
+    llm_thinking = LLM(model="google/gemini-2.0-flash-thinking-exp-01-21")
+    context_size_thinking = llm_thinking.get_context_window_size()
+    assert context_size_thinking == int(32768 * 0.85)
+
+    llm_flash = LLM(model="google/gemini-2.0-flash-001")
+    context_size_flash = llm_flash.get_context_window_size()
+    assert context_size_flash > context_size_thinking
+
+
 def test_gemini_message_formatting():
     """
     Test that messages are properly formatted for Gemini API
