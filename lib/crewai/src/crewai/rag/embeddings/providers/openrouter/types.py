@@ -9,11 +9,12 @@ class OpenRouterProviderConfig(TypedDict, total=False):
     """Configuration for OpenRouter provider."""
 
     api_key: str
+    model: str
     model_name: Annotated[str, "openai/text-embedding-3-small"]
     api_base: str
-    default_headers: dict[str, Any]
-    dimensions: int
-    organization_id: str
+    default_headers: dict[str, Any] | None
+    dimensions: int | None
+    organization_id: str | None
 
 
 class OpenRouterProviderSpec(TypedDict, total=False):
