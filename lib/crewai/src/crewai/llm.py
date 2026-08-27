@@ -170,6 +170,7 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "gpt-4o": 128000,
     "gpt-4o-mini": 200000,
     "gpt-5.4-mini": 200000,
+    "gpt-5.6": 1050000,  # sol, terra, luna, and the gpt-5.6 alias
     "gpt-4-turbo": 128000,
     "gpt-4.1": 1047576,  # Based on official docs
     "gpt-4.1-mini-2025-04-14": 1047576,
@@ -2225,14 +2226,14 @@ class LLM(BaseLLM):
                 )
             return messages
 
-        provider = self.provider or self.model
+        formatter = self._multimodal_formatter_name()
 
         for msg in messages:
             files = msg.get("files")
             if not files:
                 continue
 
-            content_blocks = format_multimodal_content(files, provider)
+            content_blocks = format_multimodal_content(files, formatter)
             if not content_blocks:
                 msg.pop("files", None)
                 continue
@@ -2249,6 +2250,13 @@ class LLM(BaseLLM):
             msg.pop("files", None)
 
         return messages
+
+    def _multimodal_formatter_name(self) -> str:
+        # Identity (`self.provider`) stays e.g. anthropic. LiteLLM's completion()
+        # API is OpenAI-shaped and translates blocks to the vendor on the wire.
+        if self.is_litellm:
+            return "openai"
+        return self.provider or self.model
 
     async def _aprocess_message_files(
         self, messages: list[LLMMessage]
@@ -2276,14 +2284,14 @@ class LLM(BaseLLM):
                 )
             return messages
 
-        provider = self.provider or self.model
+        formatter = self._multimodal_formatter_name()
 
         for msg in messages:
             files = msg.get("files")
             if not files:
                 continue
 
-            content_blocks = await aformat_multimodal_content(files, provider)
+            content_blocks = await aformat_multimodal_content(files, formatter)
             if not content_blocks:
                 msg.pop("files", None)
                 continue
@@ -2440,6 +2448,18 @@ class LLM(BaseLLM):
             logging.error(f"Failed to get supported params: {e!s}")
             return True  # Default to True
 
+    def _context_window_model_name(self) -> str:
+        """Return the model id used for context-window lookup.
+
+        LiteLLM keeps provider-qualified names such as ``openai/gpt-5.6-luna``.
+        Strip a recognized provider prefix so those resolve through the same
+        mapping as the bare model id. Unrecognized prefixes are left intact.
+        """
+        prefix, separator, remainder = self.model.partition("/")
+        if separator and remainder and prefix.lower() in SUPPORTED_NATIVE_PROVIDERS:
+            return remainder
+        return self.model
+
     def get_context_window_size(self) -> int:
         """
         Returns the context window size, using 75% of the maximum to avoid
@@ -2463,8 +2483,9 @@ class LLM(BaseLLM):
         self.context_window_size = int(
             DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
         )
+        model_name = self._context_window_model_name()
         for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if self.model.startswith(key):
+            if model_name.startswith(key) or self.model.startswith(key):
                 self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
         return self.context_window_size
 

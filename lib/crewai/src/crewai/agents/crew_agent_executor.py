@@ -46,8 +46,8 @@ from crewai.hooks.llm_hooks import (
 )
 from crewai.hooks.tool_hooks import (
     ToolCallHookContext,
-    get_after_tool_call_hooks,
-    get_before_tool_call_hooks,
+    run_after_tool_call_hooks,
+    run_before_tool_call_hooks,
 )
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
@@ -167,6 +167,21 @@ class CrewAgentExecutor(BaseAgentExecutor):
             self.llm.supports_stop_words() if isinstance(self.llm, BaseLLM) else False
         )
 
+    def _append_history(self, inputs: dict[str, Any]) -> None:
+        """Add prior turns, with their roles, before this turn's request."""
+        for message in inputs.get("history", []):
+            self.messages.append(dict(message))
+
+    def _append_trailing(self, inputs: dict[str, Any]) -> None:
+        """Add turns that followed the request, keeping them after it.
+
+        A conversation can end past its last user message -- an assistant
+        tool call and its result, or an agent's own scratch thread. Those
+        belong after the question they answer, not hoisted above it.
+        """
+        for message in inputs.get("trailing", []):
+            self.messages.append(dict(message))
+
     def _setup_messages(self, inputs: dict[str, Any]) -> None:
         """Set up messages for the agent execution.
 
@@ -194,14 +209,21 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     format_message_for_llm(system_prompt, role="system")
                 )
             )
+            self._append_history(inputs)
             self.messages.append(
                 mark_cache_breakpoint(format_message_for_llm(user_prompt))
             )
+            self._append_trailing(inputs)
         elif self.prompt is not None:
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
+            # Also here: with the system prompt disabled or a custom template
+            # this is the only branch, and skipping history would drop every
+            # turn but the last.
+            self._append_history(inputs)
             self.messages.append(
                 mark_cache_breakpoint(format_message_for_llm(user_prompt))
             )
+            self._append_trailing(inputs)
 
         provider.post_setup_messages(cast(ExecutorContext, cast(object, self)))
 
@@ -951,7 +973,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         track_delegation_if_needed(func_name, args_dict or {}, self.task)
 
-        hook_blocked = False
         before_hook_context = ToolCallHookContext(
             tool_name=func_name,
             tool_input=args_dict or {},
@@ -960,19 +981,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             task=self.task,
             crew=self.crew,
         )
-        before_hooks = get_before_tool_call_hooks()
-        try:
-            for hook in before_hooks:
-                hook_result = hook(before_hook_context)
-                if hook_result is False:
-                    hook_blocked = True
-                    break
-        except Exception as hook_error:
-            if self.agent.verbose:
-                PRINTER.print(
-                    content=f"Error in before_tool_call hook: {hook_error}",
-                    color="red",
-                )
+        hook_blocked = run_before_tool_call_hooks(before_hook_context)
 
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
@@ -1033,19 +1042,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
             tool_result=result,
             raw_tool_result=raw_tool_result,
         )
-        after_hooks = get_after_tool_call_hooks()
-        try:
-            for after_hook in after_hooks:
-                after_hook_result = after_hook(after_hook_context)
-                if after_hook_result is not None:
-                    result = after_hook_result
-                    after_hook_context.tool_result = result
-        except Exception as hook_error:
-            if self.agent.verbose:
-                PRINTER.print(
-                    content=f"Error in after_tool_call hook: {hook_error}",
-                    color="red",
-                )
+        modified_result = run_after_tool_call_hooks(after_hook_context)
+        if modified_result is not None:
+            result = modified_result
 
         if not error_event_emitted:
             crewai_event_bus.emit(

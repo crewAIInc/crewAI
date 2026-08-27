@@ -274,7 +274,10 @@ class BaseLLM(BaseModel, ABC):
             data["stop"] = list(stop)
 
         if not data.get("provider"):
-            data["provider"] = "openai"
+            model = data.get("model") or ""
+            data["provider"] = (
+                cls._extract_provider(model) if isinstance(model, str) else "openai"
+            )
 
         known_fields = set(cls.model_fields.keys())
         extras = {k: v for k, v in data.items() if k not in known_fields}
@@ -506,6 +509,10 @@ class BaseLLM(BaseModel, ABC):
             True if the LLM supports images, PDFs, audio, or video.
         """
         return False
+
+    def _multimodal_formatter_name(self) -> str:
+        # Content-block schema key for crewai_files. Identity stays on self.provider.
+        return self.provider or self.model
 
     def format_text_content(self, text: str) -> dict[str, Any]:
         """Format text as a content block for the LLM.
@@ -866,7 +873,7 @@ class BaseLLM(BaseModel, ABC):
                 )
             return messages
 
-        provider = getattr(self, "provider", None) or getattr(self, "model", "openai")
+        formatter = self._multimodal_formatter_name()
         api = getattr(self, "api", None)
 
         for msg in messages:
@@ -878,7 +885,7 @@ class BaseLLM(BaseModel, ABC):
             text = existing_content if isinstance(existing_content, str) else None
 
             content_blocks = format_multimodal_content(
-                files, provider, api=api, prefer_upload=self.prefer_upload, text=text
+                files, formatter, api=api, prefer_upload=self.prefer_upload, text=text
             )
             if not content_blocks:
                 msg.pop("files", None)
@@ -1007,15 +1014,14 @@ class BaseLLM(BaseModel, ABC):
 
         from crewai_core.printer import PRINTER
 
+        from crewai.hooks.dispatch import HookAborted, InterceptionPoint, dispatch
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
-            get_before_llm_call_hooks,
+            before_llm_call_reducer,
         )
 
-        before_hooks = get_before_llm_call_hooks()
-        if not before_hooks:
-            return True
-
+        # No early global-list guard: dispatch resolves global + execution-scoped
+        # hooks and has its own no-op fast path, so scoped hooks still run here.
         hook_context = LLMCallHookContext(
             executor=None,
             messages=messages,
@@ -1024,24 +1030,19 @@ class BaseLLM(BaseModel, ABC):
             task=None,
             crew=None,
         )
-        verbose = getattr(from_agent, "verbose", True) if from_agent else True
 
         try:
-            for hook in before_hooks:
-                result = hook(hook_context)
-                if result is False:
-                    if verbose:
-                        PRINTER.print(
-                            content="LLM call blocked by before_llm_call hook",
-                            color="yellow",
-                        )
-                    return False
-        except Exception as e:
-            if verbose:
-                PRINTER.print(
-                    content=f"Error in before_llm_call hook: {e}",
-                    color="yellow",
-                )
+            dispatch(
+                InterceptionPoint.PRE_MODEL_CALL,
+                hook_context,
+                reducer=before_llm_call_reducer,
+            )
+        except HookAborted:
+            PRINTER.print(
+                content="LLM call blocked by before_llm_call hook",
+                color="yellow",
+            )
+            return False
 
         return True
 
@@ -1074,17 +1075,14 @@ class BaseLLM(BaseModel, ABC):
         if from_agent is not None or not isinstance(response, str):
             return response
 
-        from crewai_core.printer import PRINTER
-
+        from crewai.hooks.dispatch import InterceptionPoint, dispatch
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
-            get_after_llm_call_hooks,
+            after_llm_call_reducer,
         )
 
-        after_hooks = get_after_llm_call_hooks()
-        if not after_hooks:
-            return response
-
+        # No early global-list guard: dispatch resolves global + execution-scoped
+        # hooks and has its own no-op fast path, so scoped hooks still run here.
         hook_context = LLMCallHookContext(
             executor=None,
             messages=messages,
@@ -1094,20 +1092,11 @@ class BaseLLM(BaseModel, ABC):
             crew=None,
             response=response,
         )
-        verbose = getattr(from_agent, "verbose", True) if from_agent else True
-        modified_response = response
 
-        try:
-            for hook in after_hooks:
-                result = hook(hook_context)
-                if result is not None and isinstance(result, str):
-                    modified_response = result
-                    hook_context.response = modified_response
-        except Exception as e:
-            if verbose:
-                PRINTER.print(
-                    content=f"Error in after_llm_call hook: {e}",
-                    color="yellow",
-                )
+        dispatch(
+            InterceptionPoint.POST_MODEL_CALL,
+            hook_context,
+            reducer=after_llm_call_reducer,
+        )
 
-        return modified_response
+        return hook_context.response if hook_context.response is not None else response

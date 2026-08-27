@@ -1102,7 +1102,7 @@ methods:
     )
 
 
-def test_tool_action_renders_text_custom_expression_inputs():
+def test_tool_action_renders_interpolated_inputs():
     yaml_str = f"""
 schema: crewai.flow/v1
 name: ToolFlow
@@ -1112,8 +1112,8 @@ methods:
       call: tool
       ref: {__name__}:StaticSearchTool
       with:
-        search_query: "${{'Ticket ID: ' + text(state, 'ticket.id') + '; Subject: ' + text(state, 'ticket.subject') + '; Priority: ' + text(state, 'priority', 'unknown') + '; Message: ' + text(state, 'messages.0.body')}}"
-        prefix: "${{text(state, 'ticket')}}"
+        search_query: "Ticket ID: ${{state.ticket.id}}; Subject: ${{state.ticket.subject}}; Message: ${{state.messages[0].body}}"
+        prefix: "${{state.prefix}}"
     start: true
 """
 
@@ -1124,9 +1124,10 @@ methods:
             inputs={
                 "ticket": {"id": 123, "subject": None},
                 "messages": [{"body": "Initial report"}],
+                "prefix": "ticket",
             }
         )
-        == '{"id": 123, "subject": null}:Ticket ID: 123; Subject: ; Priority: unknown; Message: Initial report'
+        == "ticket:Ticket ID: 123; Subject: ; Message: Initial report"
     )
 
 
@@ -1319,7 +1320,7 @@ methods:
         role: Analyst
         goal: Answer questions
         backstory: Knows things.
-        input: "Ticket ID: ${text(state, 'ticket.id')}; Subject: ${text(state, 'ticket.subject')}"
+        input: "Ticket ID: ${state.ticket.id}; Subject: ${state.ticket.subject}"
     start: true
 """
 
@@ -1329,6 +1330,55 @@ methods:
         "agent": "Analyst",
         "input": "Ticket ID: 123; Subject: ",
     }
+
+
+def test_agent_action_delivers_a_rendered_conversation_to_the_agent(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """The whole path: `${state.messages}` -> normalization -> `kickoff_async`."""
+    from crewai import Agent
+
+    received: list[Any] = []
+
+    async def fake_kickoff_async(self: Agent, messages: Any, **_kwargs: Any) -> str:
+        received.append(messages)
+        return "answered"
+
+    monkeypatch.setattr(Agent, "kickoff_async", fake_kickoff_async)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: HistoryAgentFlow
+methods:
+  answer:
+    do:
+      call: agent
+      with:
+        role: Analyst
+        goal: Answer questions
+        backstory: Knows things.
+        input: "${state.messages}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+    result = flow.kickoff(
+        inputs={
+            "messages": [
+                {"role": "user", "content": "my order id is 42", "name": None},
+                {"role": "assistant", "content": "thanks, checking"},
+            ]
+        }
+    )
+
+    assert result == "answered"
+    # A list, not a stringified blob, and the serialization noise is gone.
+    assert received == [
+        [
+            {"role": "user", "content": "my order id is 42"},
+            {"role": "assistant", "content": "thanks, checking"},
+        ]
+    ]
 
 
 def test_agent_action_runs_inside_each(monkeypatch: pytest.MonkeyPatch):
@@ -2909,37 +2959,6 @@ def test_explicit_cel_fields_accept_expression_markers():
     assert Flow.from_declaration(contents=definition).kickoff(inputs={"score": 90}) == "qualified"
 
 
-def test_expression_action_runs_text_custom_expression():
-    definition = FlowDefinition.from_declaration(contents=
-        {
-            "schema": "crewai.flow/v1",
-            "name": "ExpressionFlow",
-            "methods": {
-                "summarize": {
-                    "start": True,
-                    "do": {
-                        "call": "expression",
-                        "expr": (
-                            "'Ticket ID: ' + text(state, 'ticket.id') + "
-                            "'; Tags: ' + text(state, 'tags')"
-                        ),
-                    },
-                }
-            },
-        }
-    )
-
-    assert (
-        Flow.from_declaration(contents=definition).kickoff(
-            inputs={
-                "ticket": {"id": 123},
-                "tags": ["urgent", "billing"],
-            }
-        )
-        == 'Ticket ID: 123; Tags: ["urgent", "billing"]'
-    )
-
-
 def test_expression_local_context_recurses_into_dataclass_values():
     from crewai.flow.expressions import Expression
 
@@ -2980,6 +2999,52 @@ def test_expression_template_empty_context_overrides_stored_context():
     assert expression.render_template() == {"score": 90}
     with pytest.raises(ExpressionError):
         expression.render_template({})
+
+
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "{'a': 1/0}",
+        "{'a': 1, 'b': state.missing}",
+        "{'a': {'b': 1/0}}",
+        "{'a': [1/0]}",
+    ],
+)
+def test_expression_raises_for_cel_eval_error_returned_as_data(expression):
+    """celpy returns a map literal holding a CELEvalError instead of raising it."""
+    from crewai.flow.expressions import Expression, ExpressionError
+
+    with pytest.raises(ExpressionError, match="failed to evaluate CEL expression"):
+        Expression(expression, context={"state": {"score": 90}}).evaluate()
+
+
+def test_expression_nested_cel_eval_error_reports_underlying_cause():
+    from crewai.flow.expressions import Expression, ExpressionError
+
+    expression = Expression("{'a': 1/0}", context={"state": {}})
+
+    with pytest.raises(ExpressionError, match="modulus or divide by zero"):
+        expression.evaluate()
+
+
+def test_expression_keeps_short_circuited_cel_errors():
+    """Errors that CEL logic intentionally silences must still evaluate."""
+    from crewai.flow.expressions import Expression
+
+    context = {"state": {"tags": ["a", "b"]}}
+
+    assert Expression("{'ok': false && 1/0 == 1}", context=context).evaluate() == {
+        "ok": False
+    }
+    assert Expression("{'ok': true || 1/0 == 1}", context=context).evaluate() == {
+        "ok": True
+    }
+    assert (
+        Expression(
+            "state.tags.exists(t, t == 'a' || 1/0 == 1)", context=context
+        ).evaluate()
+        is True
+    )
 
 
 def test_expression_action_can_route_like_if_else():
@@ -4021,6 +4086,95 @@ methods: {}
 """
     with pytest.raises(ValidationError, match="default"):
         FlowDefinition.from_declaration(contents=yaml_str)
+
+
+
+def test_agent_action_accepts_a_rendered_message_list():
+    """A chat handler can hand the agent the conversation, not just a string."""
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    rendered = [
+        {"role": "user", "content": "my order id is 42"},
+        {"role": "assistant", "content": "thanks, checking"},
+    ]
+
+    assert _normalize_agent_input(rendered) == rendered
+
+
+def test_agent_action_strips_serialized_message_metadata():
+    """A raw `${state.messages}` render carries None keys the event rejects."""
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    normalized = _normalize_agent_input(
+        [{"role": "user", "content": "hi", "name": None, "metadata": {}}]
+    )
+
+    assert normalized == [{"role": "user", "content": "hi"}]
+
+
+def test_agent_action_keeps_a_none_content_tool_call_message():
+    """A tool-call turn has no content; dropping the key breaks the sequence."""
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    normalized = _normalize_agent_input(
+        [
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [{"id": "c1", "function": {"name": "lookup"}}],
+                "name": None,
+            }
+        ]
+    )
+
+    assert normalized == [
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [{"id": "c1", "function": {"name": "lookup"}}],
+        }
+    ]
+
+
+def test_agent_action_still_accepts_a_string():
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    assert _normalize_agent_input("just a prompt") == "just a prompt"
+
+
+def test_agent_action_rejects_a_shape_that_is_neither():
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    with pytest.raises(
+        ValueError, match="must render to a string or a list of messages"
+    ):
+        _normalize_agent_input(1234)
+
+
+def test_agent_definition_accepts_a_message_list_input():
+    from crewai.project.crew_definition import AgentDefinition
+
+    definition = AgentDefinition.model_validate(
+        {
+            "role": "R",
+            "goal": "G",
+            "backstory": "B",
+            "input": [{"role": "user", "content": "hi"}],
+        }
+    )
+
+    assert definition.input == [{"role": "user", "content": "hi"}]
+
+
+def test_agent_definition_rejects_a_non_message_input():
+    from crewai.project.crew_definition import AgentDefinition
+
+    with pytest.raises(
+        ValidationError, match="must be a string or a list of messages"
+    ):
+        AgentDefinition.model_validate(
+            {"role": "R", "goal": "G", "backstory": "B", "input": [1, 2]}
+        )
 
 
 def test_definition_method_missing_from_class_fails_loudly():
