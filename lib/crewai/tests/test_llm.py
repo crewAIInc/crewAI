@@ -1248,3 +1248,35 @@ async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0].function.name == "search"
+
+
+# Regression test for https://github.com/crewAIInc/crewAI/issues/7129
+# GeminiCompletion.get_context_window_size() iterated the prefix dict in
+# insertion order, so ``gemini-2.0-flash`` shadowed the longer
+# ``gemini-2.0-flash-thinking`` prefix and any thinking model resolved to the
+# 1M-token flash context instead of the documented 32K.
+@pytest.mark.parametrize(
+    ("model", "expected_raw_size"),
+    [
+        ("gemini-2.0-flash-thinking", 32768),
+        ("gemini-2.0-flash-thinking-exp-0121", 32768),
+        ("gemini-2.0-flash", 1048576),
+        ("gemini-2.0-flash-lite", 1048576),
+        ("gemini-2.5-flash", 1048576),
+        ("gemini-1.5-pro", 2097152),
+        ("gemini-1.5-flash-8b", 1048576),
+        ("gemini-3-pro-preview", 1048576),
+    ],
+)
+def test_gemini_completion_context_window_prefix_precedence(
+    model: str, expected_raw_size: int
+) -> None:
+    """A longer Gemini prefix must take precedence over a shorter overlapping one."""
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    instance = GeminiCompletion.__new__(GeminiCompletion)
+    instance.model = model
+
+    assert instance.get_context_window_size() == int(
+        expected_raw_size * CONTEXT_WINDOW_USAGE_RATIO
+    )
