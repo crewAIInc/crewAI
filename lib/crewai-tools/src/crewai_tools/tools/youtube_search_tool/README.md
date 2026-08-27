@@ -17,7 +17,7 @@ A tool for searching YouTube videos using the YouTube Data API v3.
 pip install "crewai-tools[youtube]"
 
 # Or install dependencies manually
-pip install google-api-python-client>=2.100.0 google-auth>=2.25.0
+pip install "google-api-python-client>=2.100.0" "google-auth>=2.25.0"
 ```
 
 ## Configuration
