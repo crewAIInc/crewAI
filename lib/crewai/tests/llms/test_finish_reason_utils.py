@@ -101,3 +101,39 @@ def test_warning_names_whichever_cap_the_provider_actually_sent():
             logging.getLogger().removeHandler(handler)
         assert str(cap) in records[0].getMessage()
         assert model in records[0].getMessage()
+
+
+def test_recognises_the_responses_api_spelling():
+    """The Responses API reports ``max_output_tokens``, not ``length``.
+
+    That path exposes ``status`` rather than a finish reason, so the cause comes
+    from ``incomplete_details.reason``. Missing this spelling meant the warning
+    never fired on the Responses API at all.
+    """
+    from crewai.llms._finish_reason_utils import is_truncated
+
+    assert is_truncated("max_output_tokens") is True
+    assert is_truncated("maxOutputTokens") is True
+    assert is_truncated("content_filter") is False
+
+
+def test_responses_truncation_reason_reads_incomplete_details():
+    """Only an incomplete response yields a reason, and both shapes are accepted."""
+    from types import SimpleNamespace
+
+    from crewai.llms.providers.openai.completion import OpenAICompletion
+
+    read = OpenAICompletion._responses_truncation_reason
+
+    incomplete = SimpleNamespace(
+        status="incomplete", incomplete_details=SimpleNamespace(reason="max_output_tokens")
+    )
+    assert read(incomplete) == "max_output_tokens"
+
+    as_dict = SimpleNamespace(
+        status="incomplete", incomplete_details={"reason": "max_output_tokens"}
+    )
+    assert read(as_dict) == "max_output_tokens"
+
+    assert read(SimpleNamespace(status="completed", incomplete_details=None)) is None
+    assert read(SimpleNamespace(status="incomplete", incomplete_details=None)) is None

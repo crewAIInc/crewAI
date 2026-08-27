@@ -854,7 +854,7 @@ class GeminiCompletion(BaseLLM):
             Final response content or function call result
         """
         finish_reason, response_id = self._extract_finish_reason_and_id(response)
-        warn_if_truncated(finish_reason, self.max_output_tokens, self.model)
+        warn_if_truncated(finish_reason, self._effective_max_tokens(), self.model)
 
         if response.candidates and (self.tools or available_functions):
             candidate = response.candidates[0]

@@ -1046,7 +1046,7 @@ class AnthropicCompletion(BaseLLM):
         self._track_token_usage_internal(usage)
 
         finish_reason, response_id = self._extract_finish_reason_and_id(response)
-        warn_if_truncated(finish_reason, self.max_tokens, self.model)
+        warn_if_truncated(finish_reason, self._effective_max_tokens(), self.model)
 
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
@@ -1595,7 +1595,7 @@ class AnthropicCompletion(BaseLLM):
         self._track_token_usage_internal(usage)
 
         finish_reason, response_id = self._extract_finish_reason_and_id(response)
-        warn_if_truncated(finish_reason, self.max_tokens, self.model)
+        warn_if_truncated(finish_reason, self._effective_max_tokens(), self.model)
 
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
