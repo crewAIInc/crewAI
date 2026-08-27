@@ -88,6 +88,11 @@ class EmbeddingService:
     @staticmethod
     def _get_default_api_key(provider: str) -> str | None:
         """Get default API key from environment variables."""
+        if provider == "openrouter":
+            return os.getenv("EMBEDDINGS_OPENROUTER_API_KEY") or os.getenv(
+                "OPENROUTER_API_KEY"
+            )
+
         env_key_map = {
             "azure": "AZURE_OPENAI_API_KEY",
             "amazon-bedrock": "AWS_ACCESS_KEY_ID",  # or AWS_PROFILE
@@ -98,7 +103,6 @@ class EmbeddingService:
             "jina": "JINA_API_KEY",
             "ollama": None,  # Ollama typically runs locally without API key
             "openai": "OPENAI_API_KEY",
-            "openrouter": "OPENROUTER_API_KEY",
             "roboflow": "ROBOFLOW_API_KEY",
             "voyageai": "VOYAGE_API_KEY",
             "watsonx": "WATSONX_API_KEY",
@@ -146,11 +150,13 @@ class EmbeddingService:
                 **self.config.extra_config,
             }
         elif self.config.provider == "openrouter":
-            base_config["config"] = {
-                "api_key": self.config.api_key,
+            openrouter_config: dict[str, Any] = {
                 "model_name": self.config.model,
                 **self.config.extra_config,
             }
+            if self.config.api_key is not None:
+                openrouter_config["api_key"] = self.config.api_key
+            base_config["config"] = openrouter_config
         elif self.config.provider == "azure":
             base_config["config"] = {
                 "api_key": self.config.api_key,
