@@ -69,9 +69,28 @@ class TestEmbeddingService:
             api_key = service._get_default_api_key("openai")
             assert api_key == "test-openai-key"
 
-        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-openrouter-key"}):
+        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-openrouter-key"}, clear=True):
             api_key = service._get_default_api_key("openrouter")
             assert api_key == "test-openrouter-key"
+
+        with patch.dict(
+            os.environ,
+            {"EMBEDDINGS_OPENROUTER_API_KEY": "test-embeddings-openrouter-key"},
+            clear=True,
+        ):
+            api_key = service._get_default_api_key("openrouter")
+            assert api_key == "test-embeddings-openrouter-key"
+
+        with patch.dict(
+            os.environ,
+            {
+                "EMBEDDINGS_OPENROUTER_API_KEY": "priority-key",
+                "OPENROUTER_API_KEY": "fallback-key",
+            },
+            clear=True,
+        ):
+            api_key = service._get_default_api_key("openrouter")
+            assert api_key == "priority-key"
 
         with patch.dict(os.environ, {}, clear=True):
             api_key = service._get_default_api_key("openai")
@@ -362,3 +381,26 @@ class TestProviderConfigurations:
         assert service.config.provider == "openrouter"
         assert service.config.model == "openai/text-embedding-3-small"
         assert service.config.api_key == "test-key"
+
+    @patch("crewai.rag.embeddings.factory.build_embedder")
+    def test_openrouter_initialization_with_embeddings_env_key_only(
+        self, mock_build_embedder
+    ):
+        """Test OpenRouter initialization when only EMBEDDINGS_OPENROUTER_API_KEY is set."""
+        mock_build_embedder.return_value = Mock()
+
+        with patch.dict(
+            os.environ,
+            {"EMBEDDINGS_OPENROUTER_API_KEY": "test-embed-key"},
+            clear=True,
+        ):
+            service = EmbeddingService(
+                provider="openrouter",
+                model="openai/text-embedding-3-small",
+            )
+
+            assert service.config.api_key == "test-embed-key"
+            mock_build_embedder.assert_called_once()
+            call_args = mock_build_embedder.call_args[0][0]
+            assert call_args["provider"] == "openrouter"
+            assert call_args["config"]["api_key"] == "test-embed-key"
