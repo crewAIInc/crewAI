@@ -68,6 +68,9 @@ class YouTubeSearchTool(BaseTool):
             ValueError: If API key is not configured or invalid
             RuntimeError: If the API request fails
         """
+        # Cap max_results to 50 to comply with YouTube API limits
+        max_results = min(max_results, 50) 
+      
         # Get API key from environment
         api_key = os.getenv("YOUTUBE_API_KEY")
         if not api_key:
