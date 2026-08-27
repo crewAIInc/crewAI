@@ -21,7 +21,9 @@ from typing import Any
 # ``incomplete_details.reason == "max_output_tokens"`` rather than a finish reason
 # at all. Compared case-insensitively with separators stripped so one predicate
 # covers all of them.
-_TRUNCATION_REASONS = frozenset({"length", "maxtokens", "modellength", "maxoutputtokens"})
+_TRUNCATION_REASONS = frozenset(
+    {"length", "maxtokens", "modellength", "maxoutputtokens"}
+)
 
 
 def _as_str(value: Any) -> str | None:
