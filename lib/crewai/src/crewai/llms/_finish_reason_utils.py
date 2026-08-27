@@ -15,11 +15,13 @@ import logging
 from typing import Any
 
 
-# Providers spell "I ran out of output budget" differently: OpenAI/Azure use
+# Providers spell "I ran out of output budget" differently: OpenAI/Azure Chat use
 # ``length``, Anthropic ``max_tokens``, Bedrock ``max_tokens`` via ``stopReason``,
-# Gemini ``MAX_TOKENS``. Compared case-insensitively with separators stripped so
-# one predicate covers all of them.
-_TRUNCATION_REASONS = frozenset({"length", "maxtokens", "modellength"})
+# Gemini ``MAX_TOKENS``, and the OpenAI Responses API reports
+# ``incomplete_details.reason == "max_output_tokens"`` rather than a finish reason
+# at all. Compared case-insensitively with separators stripped so one predicate
+# covers all of them.
+_TRUNCATION_REASONS = frozenset({"length", "maxtokens", "modellength", "maxoutputtokens"})
 
 
 def _as_str(value: Any) -> str | None:
