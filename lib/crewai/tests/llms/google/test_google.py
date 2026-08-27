@@ -500,6 +500,21 @@ def test_gemini_message_formatting():
     assert formatted_contents[1].role == "model"
 
 
+def test_gemini_message_formatting_appends_user_after_assistant():
+    """Gemini histories must not end with a model turn."""
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    formatted_contents, _ = llm._format_messages_for_gemini(
+        [
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Partial response"},
+        ]
+    )
+
+    assert [content.role for content in formatted_contents] == ["user", "model", "user"]
+    assert formatted_contents[-1].parts[0].text == "Please continue."
+
+
 def test_gemini_streaming_parameter():
     """
     Test that streaming parameter is properly handled

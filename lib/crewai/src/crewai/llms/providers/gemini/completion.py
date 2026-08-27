@@ -672,6 +672,16 @@ class GeminiCompletion(BaseLLM):
                 gemini_content = types.Content(role=gemini_role, parts=parts)
                 contents.append(gemini_content)
 
+        # Gemini requires requests to end with a user turn. Agent retries can
+        # re-invoke the model after an assistant response was appended.
+        if contents and contents[-1].role == "model":
+            contents.append(
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text="Please continue.")],
+                )
+            )
+
         return contents, system_instruction
 
     def _validate_and_emit_structured_output(
