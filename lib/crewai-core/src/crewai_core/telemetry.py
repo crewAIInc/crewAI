@@ -350,6 +350,39 @@ class Telemetry:
         self._safe_telemetry_procedure(_operation)
         self.feature_usage_span("deploy:created")
 
+    def crew_deployment_created_span(
+        self, uuid: str | None = None, source: DeploySource = "cli"
+    ) -> None:
+        """Records that a crew deployment was confirmed created, with its uuid.
+
+        Distinct from :meth:`create_crew_deployment_span`, which fires *before*
+        the API call and so counts creation **attempts**. The uuid cannot be on
+        that span: the call that creates the deployment is the call that returns
+        the uuid, so it does not exist yet. Attribution therefore needs a second
+        span, emitted once the response has validated.
+
+        Emits no feature count on purpose. ``create_crew_deployment_span``
+        already emits ``deploy:created``; a second emit would double the
+        deployment count that origin-independent aggregation depends on.
+
+        Args:
+            uuid: The deployment that was created.
+            source: Where the deployment was initiated from.
+        """
+
+        from crewai_core.version import get_crewai_version
+
+        def _operation() -> None:
+            tracer = self.provider.get_tracer(TRACER_NAME)
+            span = tracer.start_span("Crew Deployment Created")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
+            if uuid:
+                self._add_attribute(span, "uuid", uuid)
+            self._add_attribute(span, "source", source)
+            close_span(span)
+
+        self._safe_telemetry_procedure(_operation)
+
     def get_crew_logs_span(
         self, uuid: str | None, log_type: str = "deployment"
     ) -> None:
