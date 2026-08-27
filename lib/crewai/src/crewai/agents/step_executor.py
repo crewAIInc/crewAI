@@ -363,7 +363,12 @@ class StepExecutor:
             formatted = process_llm_response(answer_str, use_stop_words)
 
             if isinstance(formatted, AgentFinish):
-                return str(formatted.output)
+                output = str(formatted.output)
+                return (
+                    output
+                    if output.strip() or not last_tool_result
+                    else last_tool_result
+                )
 
             if isinstance(formatted, AgentAction):
                 tool_calls_made.append(formatted.tool)
@@ -584,7 +589,12 @@ class StepExecutor:
                 accumulated_results.append(result)
                 continue
 
-            return str(answer)
+            output = str(answer)
+            return (
+                output
+                if output.strip() or not accumulated_results
+                else accumulated_results[-1]
+            )
 
         return "\n".join(filter(None, accumulated_results))
 
