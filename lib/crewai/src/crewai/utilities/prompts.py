@@ -102,11 +102,6 @@ class Prompts(BaseModel):
                 slices.append("tools")
         else:
             slices.append("no_tools")
-        system: str = (
-            self._build_prompt(slices)
-            + self._build_skill_block()
-            + self._build_date_block()
-        )
 
         task_slice: COMPONENTS
         if self.use_native_tool_calling:
@@ -115,30 +110,38 @@ class Prompts(BaseModel):
             task_slice = "task"
         else:
             task_slice = "task_no_tools"
-        slices.append(task_slice)
 
-        if (
-            not self.system_template
-            and not self.prompt_template
-            and self.use_system_prompt
-        ):
-            return SystemPromptResult(
-                system=system,
-                user=self._build_prompt([task_slice]),
-                prompt=self._build_prompt(slices)
-                + self._build_skill_block()
-                + self._build_date_block(),
+        blocks: str = self._build_skill_block() + self._build_date_block()
+        prompt: str = (
+            self._build_prompt(
+                components=slices + [task_slice],
+                system_template=self.system_template,
+                prompt_template=self.prompt_template,
+                response_template=self.response_template,
             )
-        return StandardPromptResult(
-            prompt=self._build_prompt(
-                slices,
-                self.system_template,
-                self.prompt_template,
-                self.response_template,
-            )
-            + self._build_skill_block()
-            + self._build_date_block()
+            + blocks
         )
+
+        if self.use_system_prompt:
+            return SystemPromptResult(
+                system=(
+                    self._build_prompt(
+                        components=slices,
+                        system_template=self.system_template,
+                        prompt_template=None,
+                        response_template=None,
+                    )
+                    + blocks
+                ),
+                user=self._build_prompt(
+                    components=[task_slice],
+                    system_template=None,
+                    prompt_template=self.prompt_template,
+                    response_template=self.response_template,
+                ),
+                prompt=prompt,
+            )
+        return StandardPromptResult(prompt=prompt)
 
     def _build_date_block(self) -> str:
         """Render the current date when the agent has ``inject_date`` enabled.
@@ -226,32 +229,39 @@ class Prompts(BaseModel):
         Returns:
             The constructed prompt string.
         """
-        prompt: str
-        if not system_template or not prompt_template:
-            prompt_parts: list[str] = [
-                I18N_DEFAULT.slice(component) for component in components
-            ]
-            prompt = "".join(prompt_parts)
+        system = system_template or "{{ .System }}"
+        system = system.replace(
+            "{{ .System }}",
+            "".join(
+                [
+                    I18N_DEFAULT.slice(component)
+                    for component in components
+                    if not "task" in component
+                ]
+            ),
+        )
+
+        prompt = prompt_template or "{{ .Prompt }}"
+        prompt = prompt.replace(
+            "{{ .Prompt }}",
+            "".join(
+                [
+                    I18N_DEFAULT.slice(component)
+                    for component in components
+                    if "task" in component  # only tasks
+                ]
+            ),
+        )
+
+        if response_template:
+            response = response_template.split("{{ .Response }}")[0]
+            prompt = f"{system}\n{prompt}\n{response}"
         else:
-            template_parts: list[str] = [
-                I18N_DEFAULT.slice(component)
-                for component in components
-                if component != "task"
-            ]
-            system: str = system_template.replace(
-                "{{ .System }}", "".join(template_parts)
-            )
-            prompt = prompt_template.replace(
-                "{{ .Prompt }}", "".join(I18N_DEFAULT.slice("task"))
-            )
-            if response_template:
-                response: str = response_template.split("{{ .Response }}")[0]
-                prompt = f"{system}\n{prompt}\n{response}"
-            else:
-                prompt = f"{system}\n{prompt}"
+            prompt = f"{system}\n{prompt}"
 
         return (
             prompt.replace("{goal}", self.agent.goal)
             .replace("{role}", self.agent.role)
             .replace("{backstory}", self.agent.backstory)
+            .strip()
         )

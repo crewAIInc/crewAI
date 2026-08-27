@@ -138,52 +138,143 @@ def test_agent_copy_does_not_emit_i18n_deprecation_warning():
 
 
 def test_agent_with_only_system_template():
-    """Test that an agent with only system_template works without errors."""
     agent = Agent(
         role="Test Role",
         goal="Test Goal",
         backstory="Test Backstory",
         allow_delegation=False,
-        system_template="You are a test agent...",
-        # prompt_template is intentionally missing
+        system_template="system {role}",
     )
 
     assert agent.role == "Test Role"
     assert agent.goal == "Test Goal"
     assert agent.backstory == "Test Backstory"
+
+    prompt, stop_words, rpm_limit_fn = agent._build_execution_prompt([])
+
+    assert f"system {agent.role}" in prompt.prompt
+
+
+def test_agent_with_only_system_template_in_systempromptresult():
+    agent = Agent(
+        role="Test Role",
+        goal="Test Goal",
+        backstory="Test Backstory",
+        allow_delegation=False,
+        use_system_prompt=True,  # Use separate system/user messages
+        system_template="system {role}",
+    )
+
+    assert agent.role == "Test Role"
+    assert agent.goal == "Test Goal"
+    assert agent.backstory == "Test Backstory"
+
+    prompt, stop_words, rpm_limit_fn = agent._build_execution_prompt([])
+
+    assert f"system {agent.role}" in prompt.system
 
 
 def test_agent_with_only_prompt_template():
-    """Test that an agent with only system_template works without errors."""
     agent = Agent(
         role="Test Role",
         goal="Test Goal",
         backstory="Test Backstory",
         allow_delegation=False,
-        prompt_template="You are a test agent...",
-        # prompt_template is intentionally missing
+        prompt_template="prompt {goal}",
     )
 
     assert agent.role == "Test Role"
     assert agent.goal == "Test Goal"
     assert agent.backstory == "Test Backstory"
 
+    prompt, stop_words, rpm_limit_fn = agent._build_execution_prompt([])
 
-def test_agent_with_missing_response_template():
-    """Test that an agent with system_template and prompt_template but no response_template works without errors."""
+    assert f"prompt {agent.goal}" in prompt.prompt
+
+
+def test_agent_with_only_prompt_template_in_systempromptresult():
     agent = Agent(
         role="Test Role",
         goal="Test Goal",
         backstory="Test Backstory",
         allow_delegation=False,
-        system_template="You are a test agent...",
-        prompt_template="This is a test prompt...",
-        # response_template is intentionally missing
+        use_system_prompt=True,  # Use separate system/user messages
+        prompt_template="prompt {goal}",
     )
 
     assert agent.role == "Test Role"
     assert agent.goal == "Test Goal"
     assert agent.backstory == "Test Backstory"
+
+    prompt, stop_words, rpm_limit_fn = agent._build_execution_prompt([])
+
+    assert f"prompt {agent.goal}" in prompt.user
+
+
+def test_agent_with_all_templates_in_standardpromptresult():
+    agent = Agent(
+        role="Test Role",
+        goal="Test Goal",
+        backstory="Test Backstory",
+        allow_delegation=False,
+        use_system_prompt=False,  # Use separate system/user messages
+        system_template="system {role}",
+        prompt_template="prompt {goal}",
+        response_template="response {backstory}{{ .Response }}stop",
+    )
+
+    assert agent.role == "Test Role"
+    assert agent.goal == "Test Goal"
+    assert agent.backstory == "Test Backstory"
+
+    prompt, stop_words, rpm_limit_fn = agent._build_execution_prompt([])
+
+    assert prompt.prompt == f"system {agent.role}\nprompt {agent.goal}\nresponse {agent.backstory}"
+    assert "stop" in stop_words
+
+
+def test_agent_with_all_templates_in_systempromptresult():
+    agent = Agent(
+        role="Test Role",
+        goal="Test Goal",
+        backstory="Test Backstory",
+        allow_delegation=False,
+        use_system_prompt=True,  # Use separate system/user messages
+        system_template="system {role}",
+        prompt_template="prompt {goal}",
+        response_template="response {backstory}{{ .Response }}stop",
+    )
+
+    assert agent.role == "Test Role"
+    assert agent.goal == "Test Goal"
+    assert agent.backstory == "Test Backstory"
+
+    prompt, stop_words, rpm_limit_fn = agent._build_execution_prompt([])
+
+    assert prompt.system == f"system {agent.role}"
+    assert prompt.user == f"prompt {agent.goal}\nresponse {agent.backstory}"
+    assert prompt.prompt == f"{prompt.system}\n{prompt.user}"
+    assert "stop" in stop_words
+
+
+def test_agent_only_systempromptresult():
+    agent = Agent(
+        role="Test Role",
+        goal="Test Goal",
+        backstory="Test Backstory",
+        allow_delegation=False,
+        use_system_prompt=True,  # Use separate system/user messages
+    )
+
+    assert agent.role == "Test Role"
+    assert agent.goal == "Test Goal"
+    assert agent.backstory == "Test Backstory"
+
+    prompt, stop_words, rpm_limit_fn = agent._build_execution_prompt([])
+
+    assert agent.goal in prompt.system
+    assert agent.backstory in prompt.system
+    assert "{input}" in prompt.user
 
 
 def test_agent_default_values():
