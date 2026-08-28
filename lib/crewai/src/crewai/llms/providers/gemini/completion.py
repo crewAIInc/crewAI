@@ -674,7 +674,11 @@ class GeminiCompletion(BaseLLM):
 
         # Gemini requires requests to end with a user turn. Agent retries can
         # re-invoke the model after an assistant response was appended.
-        if contents and contents[-1].role == "model":
+        if (
+            contents
+            and contents[-1].role == "model"
+            and not any(part.function_call is not None for part in contents[-1].parts)
+        ):
             contents.append(
                 types.Content(
                     role="user",

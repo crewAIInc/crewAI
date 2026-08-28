@@ -515,6 +515,32 @@ def test_gemini_message_formatting_appends_user_after_assistant():
     assert formatted_contents[-1].parts[0].text == "Please continue."
 
 
+def test_gemini_message_formatting_preserves_trailing_assistant_tool_call():
+    """Gemini tool-call histories must not receive a continuation user turn."""
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    formatted_contents, _ = llm._format_messages_for_gemini(
+        [
+            {"role": "user", "content": "What's the weather?"},
+            {
+                "role": "assistant",
+                "content": "",
+                "tool_calls": [
+                    {
+                        "function": {
+                            "name": "get_weather",
+                            "arguments": {"location": "London"},
+                        }
+                    }
+                ],
+            },
+        ]
+    )
+
+    assert [content.role for content in formatted_contents] == ["user", "model"]
+    assert formatted_contents[-1].parts[-1].function_call.name == "get_weather"
+
+
 def test_gemini_streaming_parameter():
     """
     Test that streaming parameter is properly handled
