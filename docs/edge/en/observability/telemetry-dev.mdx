@@ -31,6 +31,9 @@ export OTEL_EXPORTER_OTLP_ENDPOINT="https://ingest.telemetry.dev"
 export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer%20$TELEMETRY_DEV_API_KEY"
 export OTEL_SERVICE_NAME="your-crewai-service"
 export OTEL_RESOURCE_ATTRIBUTES="deployment.environment.name=production"
+# OpenLIT captures full prompts/completions in spans by default;
+# opt out if your telemetry backend should not receive message content:
+export OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT="false"
 
 # For example, if your crew uses OpenAI:
 export OPENAI_API_KEY="sk-..."
