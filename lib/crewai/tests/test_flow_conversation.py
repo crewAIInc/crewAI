@@ -27,19 +27,23 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.events.types.llm_events import LLMCallStartedEvent, LLMStreamChunkEvent
-from crewai.experimental import (
+from crewai.flow import (
+    ChatState,
     ConversationConfig,
     ConversationMessage,
     ConversationState,
+    Flow,
     RouterConfig,
+    listen,
+    start,
 )
-from crewai.flow import Flow, ChatState, listen, start
 from crewai.flow.async_feedback import HumanFeedbackPending, PendingFeedbackContext
 from crewai.flow.flow_context import (
     current_flow_defer_trace_finalization,
     current_flow_id,
     current_flow_name,
 )
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
 from crewai.llms.base_llm import BaseLLM
 from crewai.flow.conversation import (
     append_message,
@@ -1027,10 +1031,10 @@ class TestConversationalFlow:
         """``Flow`` mixes in ``_ConversationalMixin`` — opt-in subclasses get its methods.
 
         The conversational graph + ``handle_turn`` live on the mixin in
-        ``crewai.experimental.conversational_mixin``; this test confirms
+        ``crewai.flow.conversational_mixin``; this test confirms
         MRO resolution wires them onto a ``Flow`` subclass that opts in.
         """
-        from crewai.experimental.conversational_mixin import _ConversationalMixin
+        from crewai.flow.conversational_mixin import _ConversationalMixin
 
         @ConversationConfig()
         class MyChat(Flow):
@@ -1597,6 +1601,121 @@ class TestHandleTurnReplyFallback:
             if message.role == "assistant"
         ]
         assert assistant_messages == ["computed reply"]
+
+
+class TestPersistCustomListenReplies:
+    """Custom ``@listen`` returns must land in ``@persist`` snapshots.
+
+    The fallback appends after ``kickoff()``, so the per-method snapshot is
+    user-only unless we persist again. Fresh Flow instances restore the
+    latest row; without that second snapshot the assistant turn disappears.
+    """
+
+    SESSION = "persist-custom-listen-session"
+
+    @staticmethod
+    def _roles(messages: Any) -> list[tuple[Any, Any]]:
+        rows: list[tuple[Any, Any]] = []
+        for message in messages:
+            if hasattr(message, "role"):
+                rows.append((message.role, message.content))
+            else:
+                rows.append((message["role"], message["content"]))
+        return rows
+
+    def test_custom_listen_return_persists_across_fresh_instances(
+        self, tmp_path: Any
+    ) -> None:
+        store = SQLiteFlowPersistence(str(tmp_path / "custom-listen.db"))
+
+        @persist(store)
+        class ResearchBot(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "research"
+
+            @listen("research")
+            def run_research(self) -> str:
+                return f"researched: {self.state.current_user_message}"
+
+        bot_a = ResearchBot()
+        bot_a.handle_turn("what is CrewAI?", session_id=self.SESSION)
+
+        saved = store.load_state(self.SESSION)
+        assert saved is not None
+        assert self._roles(saved["messages"]) == [
+            ("user", "what is CrewAI?"),
+            ("assistant", "researched: what is CrewAI?"),
+        ]
+
+        bot_b = ResearchBot()
+        bot_b.handle_turn("tell me more", session_id=self.SESSION)
+
+        assert self._roles(bot_b.state.messages) == [
+            ("user", "what is CrewAI?"),
+            ("assistant", "researched: what is CrewAI?"),
+            ("user", "tell me more"),
+            ("assistant", "researched: tell me more"),
+        ]
+
+    def test_builtin_converse_does_not_double_append_with_persist(
+        self, tmp_path: Any
+    ) -> None:
+        store = SQLiteFlowPersistence(str(tmp_path / "converse.db"))
+        chat_llm = MagicMock()
+        chat_llm.call.return_value = "hello back"
+
+        @ConversationConfig(llm=chat_llm)
+        @persist(store)
+        class ChatBot(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return None
+
+        bot_a = ChatBot()
+        bot_a.handle_turn("hi", session_id=self.SESSION)
+
+        assert self._roles(bot_a.state.messages) == [
+            ("user", "hi"),
+            ("assistant", "hello back"),
+        ]
+
+        bot_b = ChatBot()
+        bot_b.handle_turn("again", session_id=self.SESSION)
+
+        assert self._roles(bot_b.state.messages) == [
+            ("user", "hi"),
+            ("assistant", "hello back"),
+            ("user", "again"),
+            ("assistant", "hello back"),
+        ]
+
+    def test_custom_listen_return_emits_one_user_and_one_assistant_message_event(
+        self, tmp_path: Any
+    ) -> None:
+        store = SQLiteFlowPersistence(str(tmp_path / "trace.db"))
+
+        @persist(store)
+        class ResearchBot(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "research"
+
+            @listen("research")
+            def run_research(self) -> str:
+                return "researched"
+
+        events: list[ConversationMessageAddedEvent] = []
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(ConversationMessageAddedEvent)
+            def capture(_: Any, event: ConversationMessageAddedEvent) -> None:
+                events.append(event)
+
+            ResearchBot().handle_turn("hello", session_id=self.SESSION)
+            crewai_event_bus.flush()
+
+        assert [(event.role, event.content) for event in events] == [
+            ("user", "hello"),
+            ("assistant", "researched"),
+        ]
 
 
 class TestFalsyRouteTurnFallback:
@@ -2282,7 +2401,7 @@ class TestHandleTurnGuard:
         assert DecoratedFlow().handle_turn("hi") == "ok"
 
 
-_MIXIN = "crewai.experimental.conversational_mixin:_ConversationalMixin"
+_MIXIN = "crewai.flow.conversational_mixin:_ConversationalMixin"
 
 
 class DeclaredChatState(ConversationState):
@@ -2331,7 +2450,7 @@ def _conversational_declaration(**overrides: Any) -> dict[str, Any]:
         "name": "DeclaredChat",
         "state": {
             "type": "pydantic",
-            "ref": "crewai.experimental.conversational:ConversationState",
+            "ref": "crewai.flow.conversational:ConversationState",
         },
         "conversational": {},
         "methods": {
@@ -2648,9 +2767,7 @@ class TestDeclaredRouterResponseFormat:
         projected = ClassChat.flow_definition().conversational.router.response_format
 
         assert projected is not None
-        assert projected.python == (
-            "crewai.experimental.conversational.ConversationState"
-        )
+        assert projected.python == "crewai.flow.conversational.ConversationState"
 
 
 class DeclaredSchemaChatState(ConversationState):
