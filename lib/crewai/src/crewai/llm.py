@@ -729,7 +729,6 @@ class LLM(BaseLLM):
         self.is_litellm = True
         if _ensure_litellm():
             litellm.drop_params = True
-            self.set_callbacks(self.callbacks or [])
             self.set_env_callbacks()
         return self
 
@@ -1877,15 +1876,22 @@ class LLM(BaseLLM):
             if not self._invoke_before_llm_call_hooks(messages, from_agent):
                 raise ValueError("LLM call blocked by before_llm_call hook")
 
+            effective_callbacks = callbacks if callbacks is not None else self.callbacks
+
+            # --- 5) Set up callbacks if provided
             with suppress_warnings():
-                if callbacks and len(callbacks) > 0:
-                    self.set_callbacks(callbacks)
                 try:
                     params = self._prepare_completion_params(messages, tools)
+                    if effective_callbacks and len(effective_callbacks) > 0:
+                        # Avoid mutating LiteLLM global callback lists. Pass callbacks per request
+                        # so concurrent LLM instances don't race on shared global state.
+                        params["callbacks"] = effective_callbacks
+
+                    # --- 7) Make the completion call and handle response
                     if self._effective_stream():
                         result = self._handle_streaming_response(
                             params=params,
-                            callbacks=callbacks,
+                            callbacks=effective_callbacks,
                             available_functions=available_functions,
                             from_task=from_task,
                             from_agent=from_agent,
@@ -1894,7 +1900,7 @@ class LLM(BaseLLM):
                     else:
                         result = self._handle_non_streaming_response(
                             params=params,
-                            callbacks=callbacks,
+                            callbacks=effective_callbacks,
                             available_functions=available_functions,
                             from_task=from_task,
                             from_agent=from_agent,
@@ -2016,18 +2022,22 @@ class LLM(BaseLLM):
                         msg_role: Literal["assistant"] = "assistant"
                         message["role"] = msg_role
 
+            effective_callbacks = callbacks if callbacks is not None else self.callbacks
+
             with suppress_warnings():
-                if callbacks and len(callbacks) > 0:
-                    self.set_callbacks(callbacks)
                 try:
                     params = self._prepare_completion_params(
                         messages, tools, skip_file_processing=True
                     )
+                    if effective_callbacks and len(effective_callbacks) > 0:
+                        # Avoid mutating LiteLLM global callback lists. Pass callbacks per request
+                        # so concurrent LLM instances don't race on shared global state.
+                        params["callbacks"] = effective_callbacks
 
                     if self._effective_stream():
                         return await self._ahandle_streaming_response(
                             params=params,
-                            callbacks=callbacks,
+                            callbacks=effective_callbacks,
                             available_functions=available_functions,
                             from_task=from_task,
                             from_agent=from_agent,
@@ -2036,7 +2046,7 @@ class LLM(BaseLLM):
 
                     return await self._ahandle_non_streaming_response(
                         params=params,
-                        callbacks=callbacks,
+                        callbacks=effective_callbacks,
                         available_functions=available_functions,
                         from_task=from_task,
                         from_agent=from_agent,
@@ -2490,32 +2500,6 @@ class LLM(BaseLLM):
         return self.context_window_size
 
     @staticmethod
-    def set_callbacks(callbacks: list[Any]) -> None:
-        """
-        Attempt to keep a single set of callbacks in litellm by removing old
-        duplicates and adding new ones.
-
-        Note: This only affects the litellm fallback path. Native providers
-        don't use litellm callbacks - they emit events via base_llm.py.
-        """
-        if not _ensure_litellm():
-            # When litellm is not available, callbacks are still stored
-            # but not registered with litellm globals
-            return
-
-        with suppress_warnings():
-            callback_types = [type(callback) for callback in callbacks]
-            for callback in litellm.success_callback[:]:
-                if type(callback) in callback_types:
-                    litellm.success_callback.remove(callback)
-
-            for callback in litellm._async_success_callback[:]:
-                if type(callback) in callback_types:
-                    litellm._async_success_callback.remove(callback)
-
-            litellm.callbacks = callbacks
-
-    @staticmethod
     def set_env_callbacks() -> None:
         """Sets the success and failure callbacks for the LiteLLM library from environment variables.
 
@@ -2550,13 +2534,14 @@ class LLM(BaseLLM):
                 ]
 
             failure_callbacks_str = os.environ.get("LITELLM_FAILURE_CALLBACKS", "")
+            failure_callbacks: list[str | Callable[..., Any]] = []
             if failure_callbacks_str:
-                failure_callbacks: list[str | Callable[..., Any]] = [
+                failure_callbacks = [
                     cb.strip() for cb in failure_callbacks_str.split(",") if cb.strip()
                 ]
 
-                litellm.success_callback = success_callbacks  # type: ignore[assignment]
-                litellm.failure_callback = failure_callbacks  # type: ignore[assignment]
+            litellm.success_callback = success_callbacks  # type: ignore[assignment]
+            litellm.failure_callback = failure_callbacks  # type: ignore[assignment]
 
     def __copy__(self) -> LLM:
         """Create a shallow copy of the LLM instance."""
