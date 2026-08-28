@@ -61,11 +61,13 @@ class TestFlushWithMixedHandlers:
 
     def test_emit_returns_future_for_mixed_handlers(self) -> None:
         """emit() still returns the async future for mixed handler types (contract)."""
+        release_sync = threading.Event()
+
         with crewai_event_bus.scoped_handlers():
 
             @crewai_event_bus.on(_FlushProbeEvent)
             def slow_sync(_: Any, event: _FlushProbeEvent) -> None:
-                time.sleep(0.4)
+                release_sync.wait(timeout=5.0)
 
             @crewai_event_bus.on(_FlushProbeEvent)
             async def quick_async(_: Any, event: _FlushProbeEvent) -> None:
@@ -73,6 +75,13 @@ class TestFlushWithMixedHandlers:
 
             future = crewai_event_bus.emit("source", _FlushProbeEvent(type="flush-probe"))
 
-            assert future is not None
-            assert future.result(timeout=2.0) is None
+            # The async handler is instantaneous, so the returned future must
+            # complete without waiting for the gated sync handler. If emit()
+            # regressed to returning the sync future, this would time out.
+            try:
+                assert future is not None
+                assert future.result(timeout=1.0) is None
+            finally:
+                release_sync.set()
+
             assert crewai_event_bus.flush(timeout=5.0) is True
