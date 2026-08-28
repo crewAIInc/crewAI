@@ -1,8 +1,8 @@
 """Static conversational Flow definition models.
 
 This module is part of the serializable Flow Definition contract. It should
-only contain static data shapes. Experimental conversational runtime behavior
-continues to live in ``crewai.experimental.conversational_mixin``.
+only contain static data shapes. Conversational runtime behavior lives in
+``crewai.flow.conversational_mixin``.
 """
 
 from __future__ import annotations
