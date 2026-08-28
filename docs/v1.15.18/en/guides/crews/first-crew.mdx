@@ -1,0 +1,162 @@
+---
+title: Build Your First Crew
+description: Step-by-step tutorial to create a collaborative AI team with JSON-first crew configuration.
+icon: users-gear
+mode: "wide"
+---
+
+## Build a Research Crew
+
+In this guide, you will create a two-agent research crew that gathers information about a topic and writes a markdown report. New crew projects are JSON-first: agents are defined in `agents/*.jsonc`, tasks and crew settings are defined in `crew.jsonc`, and `crewai run` loads the JSON definition directly.
+
+### Prerequisites
+
+Before starting, make sure you have:
+
+1. Installed CrewAI following the [installation guide](/en/installation)
+2. Set up your LLM API key following the [LLM setup guide](/en/concepts/llms#setting-up-your-llm)
+3. A [Serper.dev](https://serper.dev/) API key if you want the researcher to use web search
+
+## Step 1: Create a New Crew
+
+```bash
+crewai create crew research_crew
+cd research_crew
+```
+
+The CLI creates a JSON-first project:
+
+```text
+research_crew/
+├── .gitignore
+├── .env
+├── agents/
+│   └── researcher.jsonc
+├── crew.jsonc
+├── knowledge/
+├── pyproject.toml
+├── README.md
+├── skills/
+└── tools/
+```
+
+<Tip>
+Need the older `crew.py`, `config/agents.yaml`, and `config/tasks.yaml` layout? Create it with `crewai create crew research_crew --classic`.
+</Tip>
+
+## Step 2: Define Your Agents
+
+Replace the generated `agents/researcher.jsonc` file and add `agents/analyst.jsonc`. The file names are the names you reference from `crew.jsonc`.
+
+```jsonc agents/researcher.jsonc
+{
+  "role": "Senior Research Specialist for {topic}",
+  "goal": "Find comprehensive and accurate information about {topic}, with a focus on recent developments and key insights.",
+  "backstory": "You are an experienced research specialist who organizes complex information into clear, useful notes.",
+  // Replace with your model, for example "openai/gpt-4o".
+  "llm": "provider/model-id",
+  "tools": ["SerperDevTool"],
+  "settings": {
+    "verbose": true,
+    "allow_delegation": false
+  }
+}
+```
+
+```jsonc agents/analyst.jsonc
+{
+  "role": "Report Analyst for {topic}",
+  "goal": "Turn research findings into a clear, well-structured report.",
+  "backstory": "You are a careful analyst with strong technical writing skills and a talent for extracting useful insights.",
+  // Replace with your model, for example "openai/gpt-4o".
+  "llm": "provider/model-id",
+  "settings": {
+    "verbose": true,
+    "allow_delegation": false
+  }
+}
+```
+
+Replace `provider/model-id` with the model you use, for example `openai/gpt-4o`, `anthropic/claude-sonnet-4-6`, or `gemini/gemini-2.0-flash-001`.
+
+## Step 3: Define Tasks and Crew Settings
+
+Replace `crew.jsonc` with:
+
+```jsonc crew.jsonc
+{
+  "name": "Research Crew",
+  "agents": ["researcher", "analyst"],
+  "tasks": [
+    {
+      "name": "research_task",
+      "description": "Conduct thorough research on {topic}. Focus on key concepts, recent developments, major challenges, notable applications, and future outlook.",
+      "expected_output": "A comprehensive research document with organized sections, specific facts, and useful examples about {topic}.",
+      "agent": "researcher"
+    },
+    {
+      "name": "analysis_task",
+      "description": "Analyze the research findings and create a polished report on {topic}. Include an executive summary, key insights, trend analysis, and recommendations.",
+      "expected_output": "A professional markdown report with clear headings, a concise summary, main findings, and recommendations.",
+      "agent": "analyst",
+      "context": ["research_task"],
+      "output_file": "output/report.md",
+      "markdown": true
+    }
+  ],
+  "process": "sequential",
+  "verbose": true,
+  "memory": true,
+  "inputs": {
+    "topic": "Artificial Intelligence in Healthcare"
+  }
+}
+```
+
+`context` points to prior task names, so the analyst receives the research task output. The `inputs` object provides default values for `{topic}`. If you remove a default, `crewai run` prompts for it.
+
+## Step 4: Set Environment Variables
+
+Open `.env` and add the keys your model and tools need:
+
+```sh
+SERPER_API_KEY=your_serper_api_key
+# Add your model provider API key here too.
+```
+
+See the [LLM setup guide](/en/concepts/llms#setting-up-your-llm) for provider-specific keys.
+
+## Step 5: Install and Run
+
+```bash
+crewai install
+crewai run
+```
+
+`crewai run` detects `crew.jsonc`, loads the agents from `agents/`, prompts for missing placeholders, and runs the crew. When the run finishes, open `output/report.md`.
+
+## How It Works
+
+1. `crew.jsonc` defines the crew, task order, process, memory, and runtime inputs.
+2. `agents/researcher.jsonc` and `agents/analyst.jsonc` define the agents.
+3. The researcher runs first.
+4. The analyst runs second with `context: ["research_task"]`.
+5. The final task writes `output/report.md`.
+
+## Extending Your Crew
+
+You can add:
+
+- More agents by creating new `agents/<name>.jsonc` files and listing them in `crew.jsonc`
+- More tasks by appending objects to the `tasks` array
+- Built-in tools by adding tool class names such as `"FileReadTool"` or `"SerperDevTool"`
+- Custom tools with `"custom:<name>"`, which loads `tools/<name>.py`
+- Hierarchical execution with `"process": "hierarchical"` and a `manager_llm` or `manager_agent`
+
+<Warning>
+Only run JSON crew projects from sources you trust. `custom:<name>` tools and `{"python": "module.attribute"}` references execute local Python code when the crew loads.
+</Warning>
+
+<Check>
+You now have a working JSON-first crew that researches a topic and writes a report.
+</Check>
