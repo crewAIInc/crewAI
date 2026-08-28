@@ -57,6 +57,7 @@ from crewai.events.types.tool_usage_events import (
 from crewai.flow.flow import Flow, listen, or_, router, start
 from crewai.flow.flow_context import current_flow_id
 from crewai.flow.types import FlowMethodName
+from crewai.hooks.dispatch import HookAborted
 from crewai.hooks.llm_hooks import (
     get_after_llm_call_hooks,
     get_before_llm_call_hooks,
@@ -420,6 +421,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             # Do NOT mutate task.description — it's a shared object that
             # accumulates plan text on re-invoke.
 
+        except HookAborted:
+            raise
         except Exception as e:
             if hasattr(self.agent, "_logger"):
                 self.agent._logger.log("error", f"Error during planning: {e!s}")
@@ -1295,6 +1298,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         # todo ↔ result (or exception) mapping.
         step_results: list[tuple[TodoItem, StepResult]] = []
         for todo, item in zip(ready, gathered, strict=True):
+            if isinstance(item, HookAborted):
+                raise item
             if isinstance(item, BaseException):
                 error_msg = f"Error: {item!s}"
                 todo.result = error_msg
@@ -2552,6 +2557,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     )
                 return
 
+        except HookAborted:
+            raise
         except Exception as e:
             if self.agent and self.agent.verbose:
                 PRINTER.print(
@@ -2704,6 +2711,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                         color="green",
                     )
 
+        except HookAborted:
+            raise
         except Exception as e:
             if hasattr(self.agent, "_logger"):
                 self.agent._logger.log("error", f"Error during replanning: {e!s}")
