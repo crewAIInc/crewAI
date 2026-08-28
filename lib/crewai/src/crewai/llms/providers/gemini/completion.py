@@ -9,6 +9,7 @@ from typing import Any, Literal, cast
 
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
+from crewai import __version__
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM, llm_call_context
 from crewai.llms.hooks.base import BaseInterceptor
@@ -181,10 +182,23 @@ class GeminiCompletion(BaseLLM):
             When vertexai=True is set, it routes to aiplatform.googleapis.com which rejects
             API keys. Use Gemini API endpoint for API key authentication instead.
         """
-        client_params = {}
+        client_params: dict[str, Any] = {}
 
         if self.client_params:
             client_params.update(self.client_params)
+
+        http_options = client_params.get("http_options")
+        if http_options is None:
+            http_options = types.HttpOptions()
+        elif isinstance(http_options, dict):
+            http_options = types.HttpOptions(**http_options)
+
+        if not http_options.headers:
+            http_options.headers = {"user-agent": f"crewai/{__version__}"}
+        elif "user-agent" not in http_options.headers:
+            http_options.headers["user-agent"] = f"crewai/{__version__}"
+
+        client_params["http_options"] = http_options
 
         has_api_key = bool(self.api_key)
         has_project = bool(self.project)
@@ -215,7 +229,7 @@ class GeminiCompletion(BaseLLM):
             # See: https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey
             if use_vertexai:
                 client_params["vertexai"] = True
-                client_params["http_options"] = types.HttpOptions(api_version="v1")
+                client_params["http_options"].api_version = "v1"
             else:
                 # This ensures we use the Gemini API (generativelanguage.googleapis.com)
                 client_params["vertexai"] = False
