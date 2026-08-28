@@ -79,7 +79,7 @@ There are different places in CrewAI code where you can specify the model to use
     from crewai import LLM
 
     # Basic configuration
-    llm = LLM(model="provider/model-id")  # e.g. gemini/gemini-3.6-flash
+    llm = LLM(model="provider/model-id")  # e.g. gemini/gemini-3.7-flash
 
     # Advanced configuration with detailed parameters
     llm = LLM(
@@ -481,7 +481,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-3.6-flash",
+        model="gemini/gemini-3.7-flash",
         api_key="your-api-key",  # Or set GOOGLE_API_KEY/GEMINI_API_KEY
     )
     ```
@@ -491,7 +491,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-3.6-flash",
+        model="gemini/gemini-3.7-flash",
         api_key="your-api-key",
         max_output_tokens=8192,
         stop_sequences=["END", "STOP"],
@@ -518,7 +518,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-3.6-flash"
+        model="gemini/gemini-3.7-flash"
     )
     ```
 
@@ -535,7 +535,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-3.6-flash",
+        model="gemini/gemini-3.7-flash",
         project="your-gcp-project-id",
         location="us-central1"  # GCP region
     )
@@ -581,7 +581,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-3.6-flash"
+        model="gemini/gemini-3.7-flash"
     )
     ```
 
