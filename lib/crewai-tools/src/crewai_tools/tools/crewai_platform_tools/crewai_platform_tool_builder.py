@@ -8,6 +8,9 @@ from typing import Any
 from crewai.tools import BaseTool
 import requests
 
+from crewai_tools.tools.crewai_platform_tools.application_selector import (
+    ApplicationSelector,
+)
 from crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool import (
     CrewAIPlatformActionTool,
 )
@@ -27,7 +30,7 @@ class CrewaiPlatformToolBuilder:
         self,
         apps: list[str],
     ) -> None:
-        self._apps = apps
+        self._apps = [ApplicationSelector(app) for app in apps]
         self._actions_schema: dict[str, dict[str, Any]] = {}
         self._tools: list[BaseTool] | None = None
 
@@ -42,18 +45,22 @@ class CrewaiPlatformToolBuilder:
         """Fetch action schemas from the platform API."""
         actions_url = f"{get_platform_api_base_url()}/actions"
         headers = {"Authorization": f"Bearer {get_platform_integration_token()}"}
+        apps = [
+            f"{app.name}/{app.action}" if app.action is not None else app.name
+            for app in self._apps
+        ]
 
         try:
             response = requests.get(
                 actions_url,
                 headers=headers,
                 timeout=30,
-                params={"apps": ",".join(self._apps)},
+                params={"apps": ",".join(apps)},
                 verify=os.environ.get("CREWAI_FACTORY", "false").lower() != "true",
             )
             response.raise_for_status()
         except Exception as e:
-            logger.error(f"Failed to fetch platform tools for apps {self._apps}: {e}")
+            logger.error(f"Failed to fetch platform tools for apps {apps}: {e}")
             return
 
         raw_data = response.json()
