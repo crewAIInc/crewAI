@@ -1,0 +1,94 @@
+---
+title: "نظرة عامة"
+description: "إجراء عمليات بحث على الويب، والعثور على المستودعات، والبحث عن المعلومات عبر الإنترنت"
+icon: "face-smile"
+mode: "wide"
+---
+
+تتيح هذه الأدوات لوكلائك البحث في الويب، والبحث في المواضيع، والعثور على المعلومات عبر منصات متعددة بما في ذلك محركات البحث و GitHub و YouTube.
+
+## **الأدوات المتاحة**
+
+<CardGroup cols={2}>
+  <Card title="أداة Serper Dev" icon="google" href="/ar/tools/search-research/serperdevtool">
+    تكامل مع Google search API لقدرات بحث شاملة على الويب.
+  </Card>
+
+  <Card title="أداة بحث Brave" icon="shield" href="/ar/tools/search-research/bravesearchtool">
+    بحث يركز على الخصوصية مع فهرس بحث Brave المستقل.
+  </Card>
+
+  <Card title="أداة بحث Exa" icon="magnifying-glass" href="/ar/tools/search-research/exasearchtool">
+    بحث مدعوم بالذكاء الاصطناعي للعثور على محتوى محدد وذي صلة.
+  </Card>
+
+  <Card title="أداة بحث LinkUp" icon="link" href="/ar/tools/search-research/linkupsearchtool">
+    بحث في الويب في الوقت الحقيقي مع فهرسة محتوى حديث.
+  </Card>
+
+  <Card title="أداة بحث GitHub" icon="github" href="/ar/tools/search-research/githubsearchtool">
+    البحث في مستودعات GitHub والكود والمشكلات والتوثيق.
+  </Card>
+
+  <Card title="أداة البحث في المواقع" icon="globe" href="/ar/tools/search-research/websitesearchtool">
+    البحث داخل مواقع ونطاقات محددة.
+  </Card>
+
+  <Card title="أداة البحث في توثيق الكود" icon="code" href="/ar/tools/search-research/codedocssearchtool">
+    البحث في توثيق الكود والموارد التقنية.
+  </Card>
+
+  <Card title="بحث قنوات YouTube" icon="youtube" href="/ar/tools/search-research/youtubechannelsearchtool">
+    البحث في قنوات YouTube عن محتوى ومنشئين محددين.
+  </Card>
+
+  <Card title="بحث فيديو YouTube" icon="play" href="/ar/tools/search-research/youtubevideosearchtool">
+    العثور على مقاطع فيديو YouTube وتحليلها حسب الموضوع أو الكلمة المفتاحية أو المعايير.
+  </Card>
+
+  <Card title="أداة بحث Tavily" icon="magnifying-glass" href="/ar/tools/search-research/tavilysearchtool">
+    بحث شامل على الويب باستخدام Tavily search API المدعوم بالذكاء الاصطناعي.
+  </Card>
+
+  <Card title="أداة استخراج Tavily" icon="file-text" href="/ar/tools/search-research/tavilyextractortool">
+    استخراج محتوى منظم من صفحات الويب باستخدام Tavily API.
+  </Card>
+
+  <Card title="أداة أوراق Arxiv" icon="box-archive" href="/ar/tools/search-research/arxivpapertool">
+    البحث في arXiv وتنزيل ملفات PDF اختيارياً.
+  </Card>
+
+  <Card title="بحث Google عبر SerpApi" icon="search" href="/ar/tools/search-research/serpapi-googlesearchtool">
+    بحث Google عبر SerpApi مع نتائج منظمة.
+  </Card>
+
+  <Card title="تسوق Google عبر SerpApi" icon="cart-shopping" href="/ar/tools/search-research/serpapi-googleshoppingtool">
+    استعلامات Google Shopping عبر SerpApi.
+  </Card>
+</CardGroup>
+
+## **حالات الاستخدام الشائعة**
+
+- **أبحاث السوق**: البحث عن اتجاهات الصناعة وتحليل المنافسين
+- **اكتشاف المحتوى**: العثور على مقالات وفيديوهات وموارد ذات صلة
+- **بحث الكود**: البحث في المستودعات والتوثيق عن حلول
+- **توليد العملاء المحتملين**: البحث عن الشركات والأفراد
+- **البحث الأكاديمي**: العثور على مقالات علمية وأوراق تقنية
+
+```python
+from crewai_tools import SerperDevTool, GitHubSearchTool, YoutubeVideoSearchTool, TavilySearchTool, TavilyExtractorTool
+
+# Create research tools
+web_search = SerperDevTool()
+code_search = GitHubSearchTool()
+video_research = YoutubeVideoSearchTool()
+tavily_search = TavilySearchTool()
+content_extractor = TavilyExtractorTool()
+
+# Add to your agent
+agent = Agent(
+    role="Research Analyst",
+    tools=[web_search, code_search, video_research, tavily_search, content_extractor],
+    goal="Gather comprehensive information on any topic"
+)
+```
