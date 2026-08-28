@@ -554,12 +554,19 @@ class GeminiCompletion(BaseLLM):
         - System messages are separate system_instruction
         - Content is organized as Content objects with Parts
         - Roles are 'user' and 'model' (not 'assistant')
+        - History may not end on a model turn; a "Please continue." user turn
+          is appended when it does
 
         Args:
             messages: Input messages
 
         Returns:
             Tuple of (formatted_contents, system_instruction)
+
+        Raises:
+            ValueError: If the history ends on a model turn with an unresolved
+                function call, which requires a function response rather than a
+                continuation prompt.
         """
         base_formatted = super()._format_messages(messages)
 
@@ -676,7 +683,8 @@ class GeminiCompletion(BaseLLM):
             # Gemini's generateContent API rejects a request whose history ends
             # on a model turn (agent loops can produce this, e.g. after
             # max-iteration handling or a guardrail retry).
-            if any(part.function_call for part in contents[-1].parts):
+            last_parts = contents[-1].parts or []
+            if any(part.function_call for part in last_parts):
                 raise ValueError(
                     "Gemini message history ends on an unresolved function call "
                     "-- a function response must be provided before calling the "
