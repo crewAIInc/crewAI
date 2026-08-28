@@ -52,6 +52,7 @@ def telemetry():
 
 @pytest.fixture
 def crew() -> Crew:
+    """A minimal one-agent, one-task crew for the span assertions below."""
     agent = Agent(role="r", goal="g", backstory="b")
     return Crew(
         agents=[agent],
@@ -60,6 +61,7 @@ def crew() -> Crew:
 
 
 def _span(exporter: InMemorySpanExporter, name: str):
+    """The single exported span with ``name``, failing loudly if it is not unique."""
     matches = [s for s in exporter.get_finished_spans() if s.name == name]
     assert len(matches) == 1, [s.name for s in exporter.get_finished_spans()]
     return matches[0]
@@ -69,6 +71,7 @@ class TestTheSpanItself:
     def test_it_records_the_outcome_and_an_explicit_duration(
         self, telemetry, crew: Crew
     ) -> None:
+        """A completed run reports outcome and an explicit duration_ms."""
         instance, exporter = telemetry
 
         instance.crew_completed_span(crew, 1234.5, "completed")
@@ -130,6 +133,7 @@ class TestTheListenerWiring:
     singleton `EventListener._telemetry` -- swapping that leaks across tests."""
 
     def _run(self, crew: Crew, *events) -> None:
+        """Emit ``events`` through a scoped bus with a freshly wired listener."""
         with crewai_event_bus.scoped_handlers():
             EventListener().setup_listeners(crewai_event_bus)
             for event in events:
@@ -137,6 +141,7 @@ class TestTheListenerWiring:
                 assert crewai_event_bus.flush(), "event bus did not drain"
 
     def test_kickoff_stamps_a_start_time(self, crew: Crew) -> None:
+        """Kickoff records a start time; a terminal event consumes and clears it."""
         assert crew._telemetry_started_at is None
 
         self._run(crew, CrewKickoffStartedEvent(crew_name="c", inputs=None))
