@@ -114,17 +114,21 @@ async def test_azure_async_conversation():
     assert isinstance(result, str)
 
 
-@pytest.mark.vcr()
 @pytest.mark.asyncio
-async def test_azure_async_streaming_returns_usage_metrics():
+async def test_azure_async_streaming_returns_usage_metrics(
+    mock_azure_async_streaming_client,
+):
     """
     Test that Azure async streaming calls return proper token usage metrics.
     """
+    llm = LLM(model="azure/gpt-4o-mini", stream=True)
+    mock_azure_async_streaming_client(llm, "The capital of Germany is Berlin.")
+
     agent = Agent(
         role="Research Assistant",
         goal="Find information about the capital of Germany",
         backstory="You are a helpful research assistant.",
-        llm=LLM(model="azure/gpt-4o-mini", stream=True),
+        llm=llm,
         verbose=True,
     )
 

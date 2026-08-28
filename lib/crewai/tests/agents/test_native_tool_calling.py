@@ -12,7 +12,7 @@ import os
 import threading
 import time
 from collections import Counter
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from pydantic import BaseModel, Field
@@ -257,7 +257,12 @@ class TestOpenAINativeToolCalling:
         """Test OpenAI agent kickoff with mocked LLM call."""
         llm = LLM(model="gpt-5-nano")
 
-        with patch.object(llm, "call", return_value="The answer is 120.") as mock_call:
+        with patch.object(
+            llm,
+            "acall",
+            new_callable=AsyncMock,
+            return_value="The answer is 120.",
+        ) as mock_acall:
             agent = Agent(
                 role="Math Assistant",
                 goal="Calculate math",
@@ -276,7 +281,7 @@ class TestOpenAINativeToolCalling:
             crew = Crew(agents=[agent], tasks=[task])
             result = crew.kickoff()
 
-            assert mock_call.called
+            mock_acall.assert_awaited()
             assert result is not None
 
     @pytest.mark.vcr()
@@ -494,7 +499,12 @@ class TestAnthropicNativeToolCalling:
         """Test Anthropic agent kickoff with mocked LLM call."""
         llm = LLM(model="anthropic/claude-3-5-haiku-20241022")
 
-        with patch.object(llm, "call", return_value="The answer is 120.") as mock_call:
+        with patch.object(
+            llm,
+            "acall",
+            new_callable=AsyncMock,
+            return_value="The answer is 120.",
+        ) as mock_acall:
             agent = Agent(
                 role="Math Assistant",
                 goal="Calculate math",
@@ -513,7 +523,7 @@ class TestAnthropicNativeToolCalling:
             crew = Crew(agents=[agent], tasks=[task])
             result = crew.kickoff()
 
-            assert mock_call.called
+            mock_acall.assert_awaited()
             assert result is not None
 
     @pytest.mark.vcr()
@@ -605,7 +615,12 @@ class TestGeminiNativeToolCalling:
         """Test Gemini agent kickoff with mocked LLM call."""
         llm = LLM(model="gemini/gemini-2.5-flash")
 
-        with patch.object(llm, "call", return_value="The answer is 120.") as mock_call:
+        with patch.object(
+            llm,
+            "acall",
+            new_callable=AsyncMock,
+            return_value="The answer is 120.",
+        ) as mock_acall:
             agent = Agent(
                 role="Math Assistant",
                 goal="Calculate math",
@@ -624,7 +639,7 @@ class TestGeminiNativeToolCalling:
             crew = Crew(agents=[agent], tasks=[task])
             result = crew.kickoff()
 
-            assert mock_call.called
+            mock_acall.assert_awaited()
             assert result is not None
 
     @pytest.mark.vcr()
@@ -726,7 +741,12 @@ class TestAzureNativeToolCalling:
             base_url="https://test.openai.azure.com",
         )
 
-        with patch.object(llm, "call", return_value="The answer is 120.") as mock_call:
+        with patch.object(
+            llm,
+            "acall",
+            new_callable=AsyncMock,
+            return_value="The answer is 120.",
+        ) as mock_acall:
             agent = Agent(
                 role="Math Assistant",
                 goal="Calculate math",
@@ -745,7 +765,7 @@ class TestAzureNativeToolCalling:
             crew = Crew(agents=[agent], tasks=[task])
             result = crew.kickoff()
 
-            assert mock_call.called
+            mock_acall.assert_awaited()
             assert result is not None
 
     @pytest.mark.vcr()

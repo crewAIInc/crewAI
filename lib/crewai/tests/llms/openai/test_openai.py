@@ -2,7 +2,7 @@ import os
 import sys
 import types
 from typing import Any
-from unittest.mock import patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 import openai
 import pytest
 
@@ -276,11 +276,16 @@ def test_openai_completion_call():
 
 def test_openai_completion_called_during_crew_execution():
     """
-    Test that OpenAICompletion.call is actually invoked when running a crew
+    Test that OpenAICompletion.acall is actually invoked when running a crew
     """
     openai_llm = LLM(model="openai/gpt-4o")
 
-    with patch.object(openai_llm, 'call', return_value="Tokyo has 14 million people.") as mock_call:
+    with patch.object(
+        openai_llm,
+        "acall",
+        new_callable=AsyncMock,
+        return_value="Tokyo has 14 million people.",
+    ) as mock_acall:
 
         agent = Agent(
             role="Research Assistant",
@@ -298,18 +303,22 @@ def test_openai_completion_called_during_crew_execution():
         crew = Crew(agents=[agent], tasks=[task])
         result = crew.kickoff()
 
-        assert mock_call.called
+        mock_acall.assert_awaited()
         assert "14 million" in str(result)
 
 
 def test_openai_completion_call_arguments():
     """
-    Test that OpenAICompletion.call is invoked with correct arguments
+    Test that OpenAICompletion.acall is invoked with correct arguments
     """
     openai_llm = LLM(model="openai/gpt-4o")
 
-    with patch.object(openai_llm, 'call') as mock_call:
-        mock_call.return_value = "Task completed successfully."
+    with patch.object(
+        openai_llm,
+        "acall",
+        new_callable=AsyncMock,
+        return_value="Task completed successfully.",
+    ) as mock_acall:
 
         agent = Agent(
             role="Test Agent",
@@ -327,12 +336,12 @@ def test_openai_completion_call_arguments():
         crew = Crew(agents=[agent], tasks=[task])
         crew.kickoff()
 
-        assert mock_call.called
+        mock_acall.assert_awaited()
 
-        call_args = mock_call.call_args
-        assert call_args is not None
+        await_args = mock_acall.await_args
+        assert await_args is not None
 
-        messages = call_args[0][0]
+        messages = await_args.args[0]
         assert isinstance(messages, (str, list))
 
         if isinstance(messages, str):
@@ -344,12 +353,16 @@ def test_openai_completion_call_arguments():
 
 def test_multiple_openai_calls_in_crew():
     """
-    Test that OpenAICompletion.call is invoked multiple times for multiple tasks
+    Test that OpenAICompletion.acall is invoked multiple times for multiple tasks
     """
     openai_llm = LLM(model="openai/gpt-4o")
 
-    with patch.object(openai_llm, 'call') as mock_call:
-        mock_call.return_value = "Task completed."
+    with patch.object(
+        openai_llm,
+        "acall",
+        new_callable=AsyncMock,
+        return_value="Task completed.",
+    ) as mock_acall:
 
         agent = Agent(
             role="Multi-task Agent",
@@ -376,17 +389,17 @@ def test_multiple_openai_calls_in_crew():
         )
         crew.kickoff()
 
-        assert mock_call.call_count >= 2  # At least one call per task
+        assert mock_acall.await_count >= 2  # At least one call per task
 
-        for call in mock_call.call_args_list:
-            assert len(call[0]) > 0
-            messages = call[0][0]
+        for await_args in mock_acall.await_args_list:
+            assert len(await_args.args) > 0
+            messages = await_args.args[0]
             assert messages is not None
 
 
 def test_openai_completion_with_tools():
     """
-    Test that OpenAICompletion.call is invoked with tools when agent has tools
+    Test that OpenAICompletion.acall is invoked with tools when agent has tools
     """
     from crewai.tools import tool
 
@@ -397,8 +410,12 @@ def test_openai_completion_with_tools():
 
     openai_llm = LLM(model="openai/gpt-4o")
 
-    with patch.object(openai_llm, 'call') as mock_call:
-        mock_call.return_value = "Task completed with tools."
+    with patch.object(
+        openai_llm,
+        "acall",
+        new_callable=AsyncMock,
+        return_value="Task completed with tools.",
+    ) as mock_acall:
 
         agent = Agent(
             role="Tool User",
@@ -417,14 +434,14 @@ def test_openai_completion_with_tools():
         crew = Crew(agents=[agent], tasks=[task])
         crew.kickoff()
 
-        assert mock_call.called
+        mock_acall.assert_awaited()
 
-        call_args = mock_call.call_args
-        call_kwargs = call_args[1] if len(call_args) > 1 else {}
+        await_args = mock_acall.await_args
+        assert await_args is not None
 
-        if 'tools' in call_kwargs:
-            assert call_kwargs['tools'] is not None
-            assert len(call_kwargs['tools']) > 0
+        if "tools" in await_args.kwargs:
+            assert await_args.kwargs["tools"] is not None
+            assert len(await_args.kwargs["tools"]) > 0
 
 @pytest.mark.vcr()
 def test_openai_completion_call_returns_usage_metrics():

@@ -420,14 +420,22 @@ def test_agent_custom_max_iterations():
     )
 
     original_call = agent.llm.call
-    call_count = 0
+    original_acall = agent.llm.acall
+    sync_call_count = 0
+    async_call_count = 0
 
     def counting_call(*args, **kwargs):
-        nonlocal call_count
-        call_count += 1
+        nonlocal sync_call_count
+        sync_call_count += 1
         return original_call(*args, **kwargs)
 
+    async def counting_acall(*args, **kwargs):
+        nonlocal async_call_count
+        async_call_count += 1
+        return await original_acall(*args, **kwargs)
+
     agent.llm.call = counting_call
+    agent.llm.acall = counting_acall
 
     task = Task(
         description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
@@ -442,7 +450,8 @@ def test_agent_custom_max_iterations():
     assert isinstance(result, str)
     assert len(result) > 0
     # one inside the reasoning loop and one for the forced final answer.
-    assert call_count == 2
+    assert async_call_count == 1
+    assert sync_call_count == 1
 
 
 @pytest.mark.vcr()
@@ -2093,15 +2102,15 @@ def test_litellm_auth_error_handling():
     )
 
     with (
-        patch.object(LLM, "call") as mock_llm_call,
+        patch.object(LLM, "acall", new_callable=AsyncMock) as mock_llm_acall,
         pytest.raises(LiteLLMAuthenticationError, match="Invalid API key"),
     ):
-        mock_llm_call.side_effect = LiteLLMAuthenticationError(
+        mock_llm_acall.side_effect = LiteLLMAuthenticationError(
             message="Invalid API key", llm_provider="openai", model="gpt-4"
         )
         agent.execute_task(task)
 
-    mock_llm_call.assert_called_once()
+    mock_llm_acall.assert_awaited_once()
 
 
 def test_crew_agent_executor_litellm_auth_error():
@@ -2178,16 +2187,16 @@ def test_litellm_anthropic_error_handling():
     )
 
     with (
-        patch.object(LLM, "call") as mock_llm_call,
+        patch.object(LLM, "acall", new_callable=AsyncMock) as mock_llm_acall,
         pytest.raises(AnthropicError, match="Test Anthropic error"),
     ):
-        mock_llm_call.side_effect = AnthropicError(
+        mock_llm_acall.side_effect = AnthropicError(
             status_code=500,
             message="Test Anthropic error",
         )
         agent.execute_task(task)
 
-    mock_llm_call.assert_called_once()
+    mock_llm_acall.assert_awaited_once()
 
 
 @pytest.mark.vcr()

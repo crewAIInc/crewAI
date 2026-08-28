@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from crewai_files import FileBytes, ImageFile
 from crewai_files.cache.upload_cache import CachedUpload, UploadCache
+import pytest
 
 
 # Minimal valid PNG
@@ -111,6 +112,20 @@ class TestUploadCache:
         result = cache.get(file, "gemini")
 
         assert result is None
+
+    @pytest.mark.asyncio
+    @pytest.mark.timeout(2)
+    async def test_sync_wrapper_inside_running_event_loop(self):
+        """Sync cache methods complete when called by async provider code."""
+        cache = UploadCache()
+        file = ImageFile(source=FileBytes(data=MINIMAL_PNG, filename="test.png"))
+
+        cache.set(file=file, provider="anthropic", file_id="file-123")
+
+        result = cache.get(file, "anthropic")
+
+        assert result is not None
+        assert result.file_id == "file-123"
 
     def test_get_different_provider(self):
         """Test getting with different provider returns None."""
