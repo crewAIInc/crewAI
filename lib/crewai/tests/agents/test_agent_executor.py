@@ -855,6 +855,62 @@ class TestStepExecutorCriticalFixes:
         assert finished_events[-1].plan_step_number == 2
         assert finished_events[-1].plan_step_description == "Count words"
 
+    def test_text_step_preserves_tool_result_when_final_answer_is_empty(
+        self, step_executor
+    ):
+        """The planner should receive evidence from a successful text tool call."""
+        action = AgentAction(
+            thought="Need a tool",
+            tool="count_words",
+            tool_input='{"text":"hello world"}',
+            text="Action: count_words",
+        )
+        finish = AgentFinish(thought="", output="", text="Final Answer:")
+        step_executor.llm.call.side_effect = ["tool call", "final answer"]
+
+        with (
+            patch(
+                "crewai.agents.step_executor.process_llm_response",
+                side_effect=[action, finish],
+            ),
+            patch.object(
+                step_executor,
+                "_execute_text_tool_with_events",
+                return_value="2 words",
+            ),
+        ):
+            result = step_executor._execute_text_parsed(
+                [],
+                TodoItem(step_number=1, description="Count words"),
+                [],
+                max_step_iterations=2,
+            )
+
+        assert result == "2 words"
+
+    def test_native_step_preserves_tool_result_when_final_answer_is_empty(
+        self, step_executor
+    ):
+        """The planner should receive evidence from a successful native tool call."""
+        step_executor.llm.call.side_effect = [[Mock()], ""]
+
+        with (
+            patch("crewai.agents.step_executor.is_tool_call_list", return_value=True),
+            patch.object(
+                step_executor,
+                "_execute_native_tool_calls",
+                return_value="2 words",
+            ),
+        ):
+            result = step_executor._execute_native(
+                [],
+                TodoItem(step_number=1, description="Count words"),
+                [],
+                max_step_iterations=2,
+            )
+
+        assert result == "2 words"
+
     def test_step_executor_falls_back_when_native_tools_are_rejected(
         self, step_executor
     ):
