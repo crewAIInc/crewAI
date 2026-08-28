@@ -33,7 +33,9 @@ def create_flow(name: str, *, declarative: bool = False) -> None:
         _create_python_flow(name, class_name, folder_name, project_root)
 
     # Minted at creation so the project has a stable identity from run one.
-    get_or_create_project_id(project_root / "pyproject.toml")
+    project_id = get_or_create_project_id(project_root / "pyproject.toml")
+    # After the mint, unlike flow_creation_span above, which fires before the id exists.
+    telemetry.project_created_span("flow", project_id)
     initialize_if_git_available(project_root)
 
     click.secho(f"Flow {name} created successfully!", fg="green", bold=True)
