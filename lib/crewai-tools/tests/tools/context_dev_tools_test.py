@@ -197,7 +197,7 @@ def test_scrape_serializes_query_parameters(request_mock: Mock) -> None:
 
 
 def test_crawl_sends_camel_case_body(request_mock: Mock) -> None:
-    ContextCrawlTool(api_key="test-key")._run(
+    ContextCrawlTool(api_key="test-key").run(
         url="https://docs.example.com",
         max_pages=25,
         max_depth=3,
@@ -214,7 +214,7 @@ def test_crawl_sends_camel_case_body(request_mock: Mock) -> None:
 
     body = request_mock.call_args.kwargs["json"]
     assert body == {
-        "url": "https://docs.example.com",
+        "url": "https://docs.example.com/",
         "maxPages": 25,
         "maxDepth": 3,
         "urlRegex": "/guides/",
@@ -280,6 +280,9 @@ def test_extract_accepts_public_schema_argument(request_mock: Mock) -> None:
     )
 
     assert result == {"ok": True}
+    assert request_mock.call_args.kwargs["json"]["url"] == (
+        "https://example.com/pricing"
+    )
     assert request_mock.call_args.kwargs["json"]["schema"] == {
         "type": "object",
         "properties": {},
@@ -544,3 +547,30 @@ def test_http_url_inputs_require_valid_schemes(
 ) -> None:
     with pytest.raises(ValidationError):
         schema(**values)
+
+
+@pytest.mark.parametrize(
+    ("schema", "values", "field"),
+    [
+        (ContextScrapeToolSchema, {"url": "https://example.com"}, "url"),
+        (ContextCrawlToolSchema, {"url": "https://example.com"}, "url"),
+        (
+            ContextExtractToolSchema,
+            {"url": "https://example.com", "schema": {"type": "object"}},
+            "url",
+        ),
+        (
+            ContextSitemapToolSchema,
+            {"domain": "example.com", "sitemap_url": "https://example.com/map.xml"},
+            "sitemap_url",
+        ),
+    ],
+)
+def test_http_url_inputs_serialize_as_strings(
+    schema: type[BaseModel],
+    values: dict[str, object],
+    field: str,
+) -> None:
+    dumped = schema(**values).model_dump()
+
+    assert isinstance(dumped[field], str)

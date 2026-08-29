@@ -2,13 +2,17 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import AnyHttpUrl, BaseModel, Field
+from pydantic import BaseModel, Field
 
-from crewai_tools.tools.context_dev_tools.base import ContextDevBaseTool, compact
+from crewai_tools.tools.context_dev_tools.base import (
+    ContextDevBaseTool,
+    ContextHttpUrl,
+    compact,
+)
 
 
 class ContextCrawlToolSchema(BaseModel):
-    url: AnyHttpUrl = Field(
+    url: ContextHttpUrl = Field(
         description="Starting HTTP(S) URL for the crawl.",
     )
     max_pages: int = Field(

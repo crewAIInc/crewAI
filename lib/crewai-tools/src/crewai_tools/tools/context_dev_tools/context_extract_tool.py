@@ -2,15 +2,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field
 
-from crewai_tools.tools.context_dev_tools.base import ContextDevBaseTool, compact
+from crewai_tools.tools.context_dev_tools.base import (
+    ContextDevBaseTool,
+    ContextHttpUrl,
+    compact,
+)
 
 
 class ContextExtractToolSchema(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    url: AnyHttpUrl = Field(
+    url: ContextHttpUrl = Field(
         description="Starting HTTP(S) URL to crawl and extract data from.",
     )
     response_schema: dict[str, Any] = Field(

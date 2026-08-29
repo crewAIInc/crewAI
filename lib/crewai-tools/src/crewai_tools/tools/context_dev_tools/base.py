@@ -3,11 +3,11 @@ from __future__ import annotations
 from collections.abc import Mapping
 import os
 import time
-from typing import Any
+from typing import Annotated, Any
 from urllib.parse import urlparse
 
 from crewai.tools import BaseTool, EnvVar
-from pydantic import Field, SecretStr
+from pydantic import AnyHttpUrl, Field, PlainSerializer, SecretStr, UrlConstraints
 import requests
 
 
@@ -16,6 +16,11 @@ DEFAULT_CONTEXT_TIMEOUT_SECONDS = 180.0
 MAX_CONTEXT_REQUEST_ATTEMPTS = 3
 MAX_CONTEXT_RETRY_DELAY_SECONDS = 10.0
 OMITTED_RESPONSE_FIELDS = {"debug", "key_metadata", "request_id", "trace_id"}
+ContextHttpUrl = Annotated[
+    AnyHttpUrl,
+    UrlConstraints(host_required=True),
+    PlainSerializer(str, return_type=str),
+]
 
 
 def compact(values: Mapping[str, Any]) -> dict[str, Any]:

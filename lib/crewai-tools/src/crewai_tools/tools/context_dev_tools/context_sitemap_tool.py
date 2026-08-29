@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import AnyHttpUrl, BaseModel, Field
+from pydantic import BaseModel, Field
 
-from crewai_tools.tools.context_dev_tools.base import ContextDevBaseTool, compact
+from crewai_tools.tools.context_dev_tools.base import (
+    ContextDevBaseTool,
+    ContextHttpUrl,
+    compact,
+)
 
 
 class ContextSitemapToolSchema(BaseModel):
@@ -27,7 +31,7 @@ class ContextSitemapToolSchema(BaseModel):
         default=None,
         description="Only return URLs matching this regular expression.",
     )
-    sitemap_url: AnyHttpUrl | None = Field(
+    sitemap_url: ContextHttpUrl | None = Field(
         default=None,
         description="Explicit sitemap URL to crawl instead of auto-discovery.",
     )
