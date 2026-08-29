@@ -1,9 +1,14 @@
 """Tests for ChromaDB utility functions."""
 
+from chromadb.api.types import QueryResult
+import pytest
+
 from crewai.rag.chromadb.types import PreparedDocuments
 from crewai.rag.chromadb.utils import (
     MAX_COLLECTION_LENGTH,
     MIN_COLLECTION_LENGTH,
+    _convert_chromadb_results_to_search_results,
+    _convert_distance_to_score,
     _create_batch_slice,
     _is_ipv4_pattern,
     _prepare_documents_for_chromadb,
@@ -300,3 +305,47 @@ class TestCreateBatchSlice:
         assert batch_ids == ["id2"]
         assert batch_texts == ["doc2"]
         assert batch_metadatas == [{"b": 2}]
+
+
+class TestConvertDistanceToScore:
+    """Test suite for distance to score conversion."""
+
+    def test_convert_distance_cosine(self) -> None:
+        """Test cosine distances map to [0, 1]."""
+        assert _convert_distance_to_score(0.0, "cosine") == 1.0
+        assert _convert_distance_to_score(1.0, "cosine") == 0.5
+        assert _convert_distance_to_score(2.0, "cosine") == 0.0
+
+    def test_convert_distance_l2(self) -> None:
+        """Test l2 distances map to [0, 1]."""
+        assert _convert_distance_to_score(0.0, "l2") == 1.0
+        assert _convert_distance_to_score(1.0, "l2") == 0.5
+
+    def test_convert_distance_ip(self) -> None:
+        """Test inner product distances map to [0, 1] like cosine."""
+        assert _convert_distance_to_score(0.0, "ip") == 1.0
+        assert _convert_distance_to_score(1.0, "ip") == 0.5
+        assert _convert_distance_to_score(2.0, "ip") == 0.0
+
+    def test_convert_distance_unknown_metric(self) -> None:
+        """Test an unsupported metric still raises."""
+        with pytest.raises(ValueError, match="Unsupported distance metric"):
+            _convert_distance_to_score(1.0, "hamming")  # type: ignore[arg-type]
+
+    def test_search_results_with_ip_collection(self) -> None:
+        """Test results from an inner product collection are scored, not rejected."""
+        results: QueryResult = {
+            "ids": [["doc1", "doc2"]],
+            "documents": [["content1", "content2"]],
+            "metadatas": [[{"a": 1}, {"b": 2}]],
+            "distances": [[0.0, 1.0]],
+        }
+
+        search_results = _convert_chromadb_results_to_search_results(
+            results=results,
+            include=["metadatas", "documents", "distances"],
+            distance_metric="ip",
+        )
+
+        assert [result["id"] for result in search_results] == ["doc1", "doc2"]
+        assert [result["score"] for result in search_results] == [1.0, 0.5]

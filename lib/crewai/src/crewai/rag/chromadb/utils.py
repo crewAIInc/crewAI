@@ -180,7 +180,9 @@ def _convert_distance_to_score(
     Returns:
         Similarity score in range [0, 1] where 1 is most similar.
     """
-    if distance_metric == "cosine":
+    if distance_metric in ("cosine", "ip"):
+        # ChromaDB reports both as 1 - dot(a, b), which is in [0, 2] for
+        # unit-normalized embeddings.
         score = 1.0 - 0.5 * distance
         return max(0.0, min(1.0, score))
     if distance_metric == "l2":
