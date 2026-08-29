@@ -2031,6 +2031,18 @@ class Crew(FlowTrackable, BaseModel):
             None,
         )
 
+    def _validate_replay_tasks(self, stored_outputs: list[Any], start_index: int) -> None:
+        """Ensure stored outputs still correspond to the tasks that will receive them."""
+        if len(self.tasks) <= start_index:
+            raise ValueError("Cannot replay because the current crew does not match the stored task outputs.")
+
+        for index, stored_output in enumerate(stored_outputs[: start_index + 1]):
+            task = self.tasks[index]
+            if task.expected_output != stored_output["expected_output"]:
+                raise ValueError(
+                    "Cannot replay because the current crew does not match the stored task outputs."
+                )
+
     def replay(self, task_id: str, inputs: dict[str, Any] | None = None) -> CrewOutput:
         """Replay the crew execution from a specific task."""
         stored_outputs = self._task_output_handler.load()
@@ -2041,6 +2053,8 @@ class Crew(FlowTrackable, BaseModel):
 
         if start_index is None:
             raise ValueError(f"Task with id {task_id} not found in the crew's tasks.")
+
+        self._validate_replay_tasks(stored_outputs, start_index)
 
         replay_inputs = (
             inputs if inputs is not None else stored_outputs[start_index]["inputs"]

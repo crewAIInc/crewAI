@@ -3062,6 +3062,47 @@ def test_replay_feature(researcher, writer):
         assert mock_execute_task.call_count == 3
 
 
+def test_replay_rejects_changed_task_order(researcher):
+    """Replay must not restore a saved output onto a different current task."""
+    research = Task(
+        description="Research the topic",
+        expected_output="Research notes",
+        agent=researcher,
+    )
+    write = Task(
+        description="Write the article",
+        expected_output="An article",
+        agent=researcher,
+    )
+    plan = Task(
+        description="Plan the article",
+        expected_output="An outline",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[plan, research, write])
+
+    stored_outputs = [
+        {
+            "task_id": str(research.id),
+            "expected_output": research.expected_output,
+            "output": {"description": research.description},
+            "inputs": {},
+        },
+        {
+            "task_id": str(write.id),
+            "expected_output": write.expected_output,
+            "output": {"description": write.description},
+            "inputs": {},
+        },
+    ]
+    with patch(
+        "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
+        return_value=stored_outputs,
+    ):
+        with pytest.raises(ValueError, match="current crew does not match"):
+            crew.replay(str(write.id))
+
+
 @pytest.mark.vcr()
 def test_crew_replay_error(researcher, writer):
     task = Task(
