@@ -147,7 +147,7 @@ Planning agents benefit from reasoning models that can handle complex strategic 
 from crewai import Agent, Task, Crew, LLM
 
 # High-capability reasoning model for strategic planning
-manager_llm = LLM(model="gemini-2.5-flash-preview-05-20", temperature=0.1)
+manager_llm = LLM(model="gemini-3.7-flash")
 
 # Creative model for content generation
 content_llm = LLM(model="claude-3-5-sonnet-20241022", temperature=0.7)
@@ -412,7 +412,7 @@ Rather than repeating the strategic framework, here's a tactical checklist for i
     # Manager or coordination agents
     manager_agent = Agent(
         role="Project Manager",
-        llm=LLM(model="gemini-2.5-flash-preview-05-20"),  # Premium for coordination
+        llm=LLM(model="gemini-3.7-flash"),  # Premium for coordination
         # ... rest of config
     )
 
