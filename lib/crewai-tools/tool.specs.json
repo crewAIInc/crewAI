@@ -29479,6 +29479,565 @@
       }
     },
     {
+      "description": "Get trending X/Twitter hashtags and topics by region WOEID. Returns trend names, queries, ranks, and descriptions when available.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Xquik",
+          "name": "XQUIK_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Xquik Get Trends",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Get regional X/Twitter trends with Xquik.",
+        "properties": {
+          "base_url": {
+            "default": "https://xquik.com/api/v1",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 30,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "XquikGetTrendsTool",
+        "type": "object"
+      },
+      "name": "XquikGetTrendsTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for XquikGetTrendsTool.",
+        "properties": {
+          "count": {
+            "default": 30,
+            "description": "Number of trending topics to return, from 1 to 50.",
+            "maximum": 50,
+            "minimum": 1,
+            "title": "Count",
+            "type": "integer"
+          },
+          "woeid": {
+            "default": 1,
+            "description": "Region WOEID. Use 1 for worldwide, 23424977 for US, 23424975 for UK, or 23424969 for Turkey.",
+            "minimum": 1,
+            "title": "Woeid",
+            "type": "integer"
+          }
+        },
+        "title": "XquikGetTrendsToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Look up one X/Twitter post by ID. Returns full text, author, metrics, media, and creation time when available.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Xquik",
+          "name": "XQUIK_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Xquik Get Tweet",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Look up one X/Twitter post with Xquik.",
+        "properties": {
+          "base_url": {
+            "default": "https://xquik.com/api/v1",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 30,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "XquikGetTweetTool",
+        "type": "object"
+      },
+      "name": "XquikGetTweetTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for XquikGetTweetTool.",
+        "properties": {
+          "tweet_id": {
+            "description": "Tweet ID to look up.",
+            "title": "Tweet Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tweet_id"
+        ],
+        "title": "XquikGetTweetToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Look up an X/Twitter user by username or user ID. Returns profile metadata, follower counts, and verification data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Xquik",
+          "name": "XQUIK_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Xquik Get User",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Look up one X/Twitter user profile with Xquik.",
+        "properties": {
+          "base_url": {
+            "default": "https://xquik.com/api/v1",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 30,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "XquikGetUserTool",
+        "type": "object"
+      },
+      "name": "XquikGetUserTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for XquikGetUserTool.",
+        "properties": {
+          "user": {
+            "description": "X username, @username, or user ID.",
+            "title": "User",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user"
+        ],
+        "title": "XquikGetUserToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "List recent posts from an X/Twitter user by username or user ID. Supports cursor pagination and optional replies.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Xquik",
+          "name": "XQUIK_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Xquik Get User Tweets",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "List recent posts from one X/Twitter user with Xquik.",
+        "properties": {
+          "base_url": {
+            "default": "https://xquik.com/api/v1",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 30,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "XquikGetUserTweetsTool",
+        "type": "object"
+      },
+      "name": "XquikGetUserTweetsTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for XquikGetUserTweetsTool.",
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Pagination cursor from a previous response.",
+            "title": "Cursor"
+          },
+          "include_parent_tweet": {
+            "default": false,
+            "description": "Include parent tweets for replies when available.",
+            "title": "Include Parent Tweet",
+            "type": "boolean"
+          },
+          "include_replies": {
+            "default": false,
+            "description": "Include reply tweets in the returned page.",
+            "title": "Include Replies",
+            "type": "boolean"
+          },
+          "user": {
+            "description": "X username, @username, or user ID.",
+            "title": "User",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user"
+        ],
+        "title": "XquikGetUserTweetsToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search public X/Twitter posts with X query operators. Returns structured tweet, author, metric, and pagination data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Xquik",
+          "name": "XQUIK_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Xquik Search Tweets",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Search public X/Twitter posts with Xquik.",
+        "properties": {
+          "base_url": {
+            "default": "https://xquik.com/api/v1",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 30,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "XquikSearchTweetsTool",
+        "type": "object"
+      },
+      "name": "XquikSearchTweetsTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for XquikSearchTweetsTool.",
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Pagination cursor from a previous response.",
+            "title": "Cursor"
+          },
+          "limit": {
+            "default": 20,
+            "description": "Maximum tweets to return, from 1 to 200.",
+            "maximum": 200,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "query_type": {
+            "default": "Latest",
+            "description": "Sort order for the search results.",
+            "enum": [
+              "Latest",
+              "Top"
+            ],
+            "title": "Query Type",
+            "type": "string"
+          },
+          "search_query": {
+            "description": "X search query. Supports operators such as from:, has:media, lang:, since:, and min_faves:.",
+            "title": "Search Query",
+            "type": "string"
+          },
+          "since_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "ISO 8601 timestamp. Only return tweets after this time.",
+            "title": "Since Time"
+          },
+          "until_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "ISO 8601 timestamp. Only return tweets before this time.",
+            "title": "Until Time"
+          }
+        },
+        "required": [
+          "search_query"
+        ],
+        "title": "XquikSearchTweetsToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to semantic search a query from a Youtube Channels content.",
       "env_vars": [],
       "humanized_name": "Search a Youtube Channels content",
