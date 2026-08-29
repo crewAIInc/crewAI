@@ -7,7 +7,7 @@ Follow these guidelines when contributing:
 
 1. Follow Python best practices and idiomatic patterns.
 2. Maintain existing code structure and organization.
-3. Write unit tests for new functionality focusing on behaivor and not
+3. Write unit tests for new functionality focusing on behavior and not
    implementation.
 4. Document public APIs and complex logic.
 5. Suggest changes to the `docs/` folder when appropriate
