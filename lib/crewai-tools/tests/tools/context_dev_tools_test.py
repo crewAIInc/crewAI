@@ -22,6 +22,12 @@ from crewai_tools.tools.context_dev_tools.base import DEFAULT_CONTEXT_API_BASE
 from crewai_tools.tools.context_dev_tools.context_brand_tool import (
     ContextBrandToolSchema,
 )
+from crewai_tools.tools.context_dev_tools.context_crawl_tool import (
+    ContextCrawlToolSchema,
+)
+from crewai_tools.tools.context_dev_tools.context_extract_tool import (
+    ContextExtractToolSchema,
+)
 from crewai_tools.tools.context_dev_tools.context_scrape_tool import (
     ContextScrapeToolSchema,
 )
@@ -521,6 +527,11 @@ def test_brand_rejects_incompatible_options(values: dict[str, object]) -> None:
     ("schema", "values"),
     [
         (ContextScrapeToolSchema, {"url": "example.com"}),
+        (ContextCrawlToolSchema, {"url": "ftp://example.com"}),
+        (
+            ContextExtractToolSchema,
+            {"url": "example.com", "schema": {"type": "object"}},
+        ),
         (
             ContextSitemapToolSchema,
             {"domain": "example.com", "sitemap_url": "not a url"},

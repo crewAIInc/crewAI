@@ -5600,6 +5600,7 @@
           },
           "url": {
             "description": "Starting HTTP(S) URL for the crawl.",
+            "format": "uri",
             "minLength": 1,
             "title": "Url",
             "type": "string"
@@ -5807,6 +5808,7 @@
           },
           "url": {
             "description": "Starting HTTP(S) URL to crawl and extract data from.",
+            "format": "uri",
             "minLength": 1,
             "title": "Url",
             "type": "string"

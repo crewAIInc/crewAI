@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field
 
 from crewai_tools.tools.context_dev_tools.base import ContextDevBaseTool, compact
 
@@ -10,8 +10,7 @@ from crewai_tools.tools.context_dev_tools.base import ContextDevBaseTool, compac
 class ContextExtractToolSchema(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    url: str = Field(
-        min_length=1,
+    url: AnyHttpUrl = Field(
         description="Starting HTTP(S) URL to crawl and extract data from.",
     )
     response_schema: dict[str, Any] = Field(
