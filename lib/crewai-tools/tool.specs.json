@@ -5303,7 +5303,20 @@
           }
         },
         "description": "Retrieve structured brand intelligence through Context.dev.",
-        "properties": {},
+        "properties": {
+          "api_base": {
+            "description": "Context.dev API base URL.",
+            "title": "Api Base",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 180.0,
+            "description": "HTTP request timeout in seconds.",
+            "exclusiveMinimum": 0,
+            "title": "Timeout",
+            "type": "number"
+          }
+        },
         "required": [],
         "title": "ContextBrandTool",
         "type": "object"
@@ -5457,7 +5470,20 @@
           }
         },
         "description": "Crawl linked website pages through Context.dev.",
-        "properties": {},
+        "properties": {
+          "api_base": {
+            "description": "Context.dev API base URL.",
+            "title": "Api Base",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 180.0,
+            "description": "HTTP request timeout in seconds.",
+            "exclusiveMinimum": 0,
+            "title": "Timeout",
+            "type": "number"
+          }
+        },
         "required": [],
         "title": "ContextCrawlTool",
         "type": "object"
@@ -5671,7 +5697,20 @@
           }
         },
         "description": "Extract JSON Schema-constrained web data through Context.dev.",
-        "properties": {},
+        "properties": {
+          "api_base": {
+            "description": "Context.dev API base URL.",
+            "title": "Api Base",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 180.0,
+            "description": "HTTP request timeout in seconds.",
+            "exclusiveMinimum": 0,
+            "title": "Timeout",
+            "type": "number"
+          }
+        },
         "required": [],
         "title": "ContextExtractTool",
         "type": "object"
@@ -5847,7 +5886,33 @@
           }
         },
         "description": "Parse a local document into Markdown through Context.dev.",
-        "properties": {},
+        "properties": {
+          "api_base": {
+            "description": "Context.dev API base URL.",
+            "title": "Api Base",
+            "type": "string"
+          },
+          "base_dir": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Directory that runtime file paths must stay inside.",
+            "title": "Base Dir"
+          },
+          "timeout": {
+            "default": 180.0,
+            "description": "HTTP request timeout in seconds.",
+            "exclusiveMinimum": 0,
+            "title": "Timeout",
+            "type": "number"
+          }
+        },
         "required": [],
         "title": "ContextParseTool",
         "type": "object"
@@ -6003,7 +6068,20 @@
           }
         },
         "description": "Scrape a known web page into Markdown through Context.dev.",
-        "properties": {},
+        "properties": {
+          "api_base": {
+            "description": "Context.dev API base URL.",
+            "title": "Api Base",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 180.0,
+            "description": "HTTP request timeout in seconds.",
+            "exclusiveMinimum": 0,
+            "title": "Timeout",
+            "type": "number"
+          }
+        },
         "required": [],
         "title": "ContextScrapeTool",
         "type": "object"
@@ -6113,6 +6191,7 @@
           },
           "url": {
             "description": "Full HTTP(S) URL to scrape into clean Markdown.",
+            "format": "uri",
             "minLength": 1,
             "title": "Url",
             "type": "string"
@@ -6212,7 +6291,20 @@
           }
         },
         "description": "Search the live web through Context.dev.",
-        "properties": {},
+        "properties": {
+          "api_base": {
+            "description": "Context.dev API base URL.",
+            "title": "Api Base",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 180.0,
+            "description": "HTTP request timeout in seconds.",
+            "exclusiveMinimum": 0,
+            "title": "Timeout",
+            "type": "number"
+          }
+        },
         "required": [],
         "title": "ContextSearchTool",
         "type": "object"
@@ -6412,7 +6504,20 @@
           }
         },
         "description": "Discover and search website sitemap URLs through Context.dev.",
-        "properties": {},
+        "properties": {
+          "api_base": {
+            "description": "Context.dev API base URL.",
+            "title": "Api Base",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 180.0,
+            "description": "HTTP request timeout in seconds.",
+            "exclusiveMinimum": 0,
+            "title": "Timeout",
+            "type": "number"
+          }
+        },
         "required": [],
         "title": "ContextSitemapTool",
         "type": "object"
@@ -6454,6 +6559,8 @@
           "sitemap_url": {
             "anyOf": [
               {
+                "format": "uri",
+                "minLength": 1,
                 "type": "string"
               },
               {

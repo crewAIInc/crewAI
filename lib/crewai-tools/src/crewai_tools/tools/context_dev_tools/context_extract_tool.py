@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from crewai_tools.tools.context_dev_tools.base import ContextDevBaseTool, compact
 
 
 class ContextExtractToolSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     url: str = Field(
         min_length=1,
         description="Starting HTTP(S) URL to crawl and extract data from.",

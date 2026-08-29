@@ -11,6 +11,80 @@ from crewai_tools.tools.context_dev_tools.base import ContextDevBaseTool, compac
 
 
 MAX_PARSE_FILE_BYTES = 25 * 1024 * 1024
+SUPPORTED_PARSE_EXTENSIONS = frozenset(
+    {
+        "atom",
+        "bash",
+        "bmp",
+        "cjs",
+        "css",
+        "csv",
+        "doc",
+        "docx",
+        "fish",
+        "gif",
+        "htm",
+        "html",
+        "java",
+        "jpe",
+        "jpeg",
+        "jpg",
+        "js",
+        "json",
+        "jsonl",
+        "jsx",
+        "less",
+        "markdown",
+        "md",
+        "mjs",
+        "ndjson",
+        "pbm",
+        "pdf",
+        "pgm",
+        "php",
+        "png",
+        "pnm",
+        "pot",
+        "potm",
+        "potx",
+        "ppm",
+        "pps",
+        "ppsm",
+        "ppsx",
+        "ppt",
+        "pptm",
+        "pptx",
+        "py",
+        "rb",
+        "rss",
+        "rtf",
+        "sass",
+        "scss",
+        "sh",
+        "srt",
+        "styl",
+        "svg",
+        "text",
+        "tif",
+        "tiff",
+        "ts",
+        "tsv",
+        "tsx",
+        "txt",
+        "webp",
+        "xls",
+        "xlsb",
+        "xlsm",
+        "xlsx",
+        "xltm",
+        "xltx",
+        "xhtml",
+        "xml",
+        "yaml",
+        "yml",
+        "zsh",
+    }
+)
 
 
 class ContextParseToolSchema(BaseModel):
@@ -61,7 +135,6 @@ class ContextParseTool(ContextDevBaseTool):
     args_schema: type[BaseModel] = ContextParseToolSchema
     base_dir: str | None = Field(
         default=None,
-        exclude=True,
         description="Directory that runtime file paths must stay inside.",
     )
 
@@ -85,15 +158,19 @@ class ContextParseTool(ContextDevBaseTool):
         if pdf_start is not None and pdf_end is not None and pdf_end < pdf_start:
             raise ValueError("pdf_end must be greater than or equal to pdf_start.")
 
+        resolved_extension = (
+            extension or Path(safe_file_path).suffix.lstrip(".")
+        ).lower()
+        if resolved_extension and resolved_extension not in SUPPORTED_PARSE_EXTENSIONS:
+            raise ValueError(f"Unsupported document extension: {resolved_extension}.")
+
         pdf_options = compact({"start": pdf_start, "end": pdf_end})
         return self._request(
             "POST",
             "/parse",
             params=compact(
                 {
-                    "extension": extension
-                    or Path(safe_file_path).suffix.lstrip(".")
-                    or None,
+                    "extension": resolved_extension or None,
                     "includeLinks": include_links,
                     "includeImages": include_images,
                     "useMainContentOnly": use_main_content_only,

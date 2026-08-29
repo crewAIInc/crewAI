@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from crewai_tools.tools.context_dev_tools.base import ContextDevBaseTool, compact
 
@@ -38,6 +38,16 @@ class ContextBrandToolSchema(BaseModel):
         le=300000,
         description="Maximum server processing time in milliseconds.",
     )
+
+    @model_validator(mode="after")
+    def validate_lookup_options(self) -> ContextBrandToolSchema:
+        if self.country is not None and self.lookup_type not in {"name", "transaction"}:
+            raise ValueError("country requires lookup_type 'name' or 'transaction'.")
+        if self.exchange is not None and self.lookup_type != "ticker":
+            raise ValueError("exchange requires lookup_type 'ticker'.")
+        if self.max_speed and self.lookup_type == "direct_url":
+            raise ValueError("max_speed is not supported for lookup_type 'direct_url'.")
+        return self
 
 
 class ContextBrandTool(ContextDevBaseTool):

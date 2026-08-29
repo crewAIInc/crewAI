@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import AnyHttpUrl, BaseModel, Field
 
 from crewai_tools.tools.context_dev_tools.base import ContextDevBaseTool, compact
 
 
 class ContextScrapeToolSchema(BaseModel):
-    url: str = Field(
-        min_length=1,
+    url: AnyHttpUrl = Field(
         description="Full HTTP(S) URL to scrape into clean Markdown.",
     )
     include_links: bool = Field(
