@@ -78,6 +78,7 @@ class ContextExtractTool(ContextDevBaseTool):
         stop_after_ms: int | None = None,
         timeout_ms: int | None = None,
     ) -> Any:
+        """Extract website data into the requested JSON Schema."""
         return self._request(
             "POST",
             "/web/extract",

@@ -161,6 +161,7 @@ class ContextDevBaseTool(BaseTool):
     def _send_with_retries(
         self, request_kwargs: Mapping[str, Any]
     ) -> requests.Response:
+        """Send a request with bounded retries for rate limits and server errors."""
         for attempt in range(MAX_CONTEXT_REQUEST_ATTEMPTS):
             try:
                 response = requests.request(timeout=self.timeout, **request_kwargs)

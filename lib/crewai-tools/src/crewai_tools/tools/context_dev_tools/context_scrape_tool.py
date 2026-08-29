@@ -87,6 +87,7 @@ class ContextScrapeTool(ContextDevBaseTool):
         country: str | None = None,
         timeout_ms: int | None = None,
     ) -> Any:
+        """Scrape one web page and return its extracted content."""
         return self._request(
             "GET",
             "/web/scrape/markdown",

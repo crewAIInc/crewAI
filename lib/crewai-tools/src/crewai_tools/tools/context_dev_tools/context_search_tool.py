@@ -78,6 +78,7 @@ class ContextSearchTool(ContextDevBaseTool):
         include_markdown: bool = False,
         timeout_ms: int | None = None,
     ) -> Any:
+        """Search the live web and return ranked source results."""
         return self._request(
             "POST",
             "/web/search",

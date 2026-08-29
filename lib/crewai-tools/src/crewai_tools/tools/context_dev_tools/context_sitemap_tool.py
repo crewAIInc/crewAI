@@ -58,6 +58,7 @@ class ContextSitemapTool(ContextDevBaseTool):
         sitemap_url: str | None = None,
         timeout_ms: int | None = None,
     ) -> Any:
+        """Discover or search URLs from a website sitemap."""
         return self._request(
             "GET",
             "/web/scrape/sitemap",

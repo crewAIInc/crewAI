@@ -149,6 +149,7 @@ class ContextParseTool(ContextDevBaseTool):
         pdf_start: int | None = None,
         pdf_end: int | None = None,
     ) -> Any:
+        """Upload an allowed local document and return Markdown."""
         safe_file_path = validate_file_path(file_path, self.base_dir)
         file_size = os.path.getsize(safe_file_path)
         if file_size > MAX_PARSE_FILE_BYTES:

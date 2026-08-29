@@ -92,6 +92,7 @@ class ContextCrawlTool(ContextDevBaseTool):
         stop_after_ms: int | None = None,
         timeout_ms: int | None = None,
     ) -> Any:
+        """Crawl linked pages and return their extracted content."""
         return self._request(
             "POST",
             "/web/crawl",

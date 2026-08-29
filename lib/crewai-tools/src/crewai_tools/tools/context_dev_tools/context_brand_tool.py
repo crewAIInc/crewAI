@@ -41,6 +41,7 @@ class ContextBrandToolSchema(BaseModel):
 
     @model_validator(mode="after")
     def validate_lookup_options(self) -> ContextBrandToolSchema:
+        """Reject options that the selected lookup type cannot apply."""
         if self.country is not None and self.lookup_type not in {"name", "transaction"}:
             raise ValueError("country requires lookup_type 'name' or 'transaction'.")
         if self.exchange is not None and self.lookup_type != "ticker":
@@ -71,6 +72,7 @@ class ContextBrandTool(ContextDevBaseTool):
         exchange: str | None = None,
         timeout_ms: int | None = None,
     ) -> Any:
+        """Retrieve a brand profile using the selected identifier type."""
         identifier_field = {
             "domain": "domain",
             "name": "name",
