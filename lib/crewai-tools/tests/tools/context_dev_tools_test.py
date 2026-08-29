@@ -6,6 +6,8 @@ from typing import Literal
 from unittest.mock import Mock, patch
 
 import pytest
+from pydantic import BaseModel, ValidationError
+import requests
 
 from crewai_tools import (
     ContextBrandTool,
@@ -15,6 +17,16 @@ from crewai_tools import (
     ContextScrapeTool,
     ContextSearchTool,
     ContextSitemapTool,
+)
+from crewai_tools.tools.context_dev_tools.base import DEFAULT_CONTEXT_API_BASE
+from crewai_tools.tools.context_dev_tools.context_brand_tool import (
+    ContextBrandToolSchema,
+)
+from crewai_tools.tools.context_dev_tools.context_scrape_tool import (
+    ContextScrapeToolSchema,
+)
+from crewai_tools.tools.context_dev_tools.context_sitemap_tool import (
+    ContextSitemapToolSchema,
 )
 
 
@@ -28,7 +40,9 @@ def successful_response(payload: object) -> Mock:
 
 
 @pytest.fixture
-def request_mock() -> Generator[Mock, None, None]:
+def request_mock(monkeypatch: pytest.MonkeyPatch) -> Generator[Mock, None, None]:
+    monkeypatch.delenv("CONTEXT_API_BASE", raising=False)
+    monkeypatch.delenv("CONTEXT_API_KEY", raising=False)
     with patch(
         "crewai_tools.tools.context_dev_tools.base.requests.request"
     ) as mocked_request:
@@ -58,6 +72,30 @@ def test_context_tools_are_exported_with_described_inputs() -> None:
             property_schema.get("description")
             for property_schema in schema["properties"].values()
         )
+
+
+def test_context_tools_expose_non_secret_constructor_options() -> None:
+    tool_classes = [
+        ContextSearchTool,
+        ContextScrapeTool,
+        ContextCrawlTool,
+        ContextSitemapTool,
+        ContextExtractTool,
+        ContextParseTool,
+        ContextBrandTool,
+    ]
+
+    for tool_class in tool_classes:
+        properties = tool_class(api_key="test-key").model_json_schema(
+            mode="serialization"
+        )["properties"]
+        assert {"api_base", "timeout"} <= properties.keys()
+        assert "api_key" not in properties
+
+    parse_properties = ContextParseTool(api_key="test-key").model_json_schema(
+        mode="serialization"
+    )["properties"]
+    assert "base_dir" in parse_properties
 
 
 def test_missing_api_key_fails_before_network_request(
@@ -242,6 +280,15 @@ def test_extract_accepts_public_schema_argument(request_mock: Mock) -> None:
     }
 
 
+def test_extract_accepts_response_schema_field_name(request_mock: Mock) -> None:
+    result = ContextExtractTool(api_key="test-key").run(
+        url="https://example.com/pricing",
+        response_schema={"type": "object", "properties": {}},
+    )
+
+    assert result == {"ok": True}
+
+
 @pytest.mark.parametrize(
     ("lookup_type", "identifier", "expected"),
     [
@@ -330,6 +377,35 @@ def test_parse_rejects_invalid_page_range(tmp_path: Path, request_mock: Mock) ->
     request_mock.assert_not_called()
 
 
+def test_parse_normalizes_uppercase_extension(
+    tmp_path: Path,
+    request_mock: Mock,
+) -> None:
+    document = tmp_path / "sample.PDF"
+    document.write_bytes(b"%PDF-test")
+
+    ContextParseTool(api_key="test-key", base_dir=str(tmp_path))._run(
+        file_path="sample.PDF"
+    )
+
+    assert request_mock.call_args.kwargs["params"][0] == ("extension", "pdf")
+
+
+def test_parse_rejects_unsupported_extension(
+    tmp_path: Path,
+    request_mock: Mock,
+) -> None:
+    document = tmp_path / "sample.unknown"
+    document.write_bytes(b"test")
+
+    with pytest.raises(ValueError, match="Unsupported document extension"):
+        ContextParseTool(api_key="test-key", base_dir=str(tmp_path))._run(
+            file_path="sample.unknown"
+        )
+
+    request_mock.assert_not_called()
+
+
 def test_api_error_uses_server_message(request_mock: Mock) -> None:
     response = Mock()
     response.ok = False
@@ -354,3 +430,106 @@ def test_internal_metadata_is_removed_from_response(request_mock: Mock) -> None:
     result = ContextScrapeTool(api_key="test-key")._run(url="https://example.com")
 
     assert result == {"data": {"title": "Example"}}
+
+
+def test_empty_api_base_environment_uses_default(
+    monkeypatch: pytest.MonkeyPatch,
+    request_mock: Mock,
+) -> None:
+    monkeypatch.setenv("CONTEXT_API_BASE", "  ")
+
+    ContextScrapeTool(api_key="test-key")._run(url="https://example.com")
+
+    assert request_mock.call_args.kwargs["url"].startswith(DEFAULT_CONTEXT_API_BASE)
+
+
+@pytest.mark.parametrize(
+    "api_base",
+    ["ftp://example.com", "http://example.com", "https://"],
+)
+def test_api_base_rejects_unsafe_or_invalid_urls(
+    api_base: str,
+    request_mock: Mock,
+) -> None:
+    with pytest.raises(ValueError, match="API base"):
+        ContextScrapeTool(api_key="test-key", api_base=api_base)._run(
+            url="https://example.com"
+        )
+
+    request_mock.assert_not_called()
+
+
+def test_api_base_allows_loopback_http(request_mock: Mock) -> None:
+    ContextScrapeTool(
+        api_key="test-key",
+        api_base="http://127.0.0.1:8081/v1",
+    )._run(url="https://example.com")
+
+    assert request_mock.call_args.kwargs["url"].startswith(
+        "http://127.0.0.1:8081/v1"
+    )
+
+
+def test_request_exception_has_stable_error_prefix(request_mock: Mock) -> None:
+    request_mock.side_effect = requests.RequestException("network down")
+
+    with pytest.raises(RuntimeError, match="Failed to reach Context.dev"):
+        ContextScrapeTool(api_key="test-key")._run(url="https://example.com")
+
+
+def test_non_json_success_returns_response_text(request_mock: Mock) -> None:
+    response = successful_response(None)
+    response.text = "plain response"
+    response.json.side_effect = ValueError
+    request_mock.return_value = response
+
+    result = ContextScrapeTool(api_key="test-key")._run(url="https://example.com")
+
+    assert result == "plain response"
+
+
+def test_transient_response_is_retried(request_mock: Mock) -> None:
+    retry_response = Mock(
+        ok=False,
+        status_code=429,
+        text="rate limited",
+        headers={"Retry-After": "0"},
+    )
+    retry_response.json.return_value = {"error": "rate limited"}
+    request_mock.side_effect = [retry_response, successful_response({"ok": True})]
+
+    result = ContextScrapeTool(api_key="test-key")._run(url="https://example.com")
+
+    assert result == {"ok": True}
+    assert request_mock.call_count == 2
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        {"lookup_type": "domain", "country": "de"},
+        {"lookup_type": "name", "exchange": "NASDAQ"},
+        {"lookup_type": "direct_url", "max_speed": True},
+    ],
+)
+def test_brand_rejects_incompatible_options(values: dict[str, object]) -> None:
+    with pytest.raises(ValidationError):
+        ContextBrandToolSchema(identifier="example", **values)
+
+
+@pytest.mark.parametrize(
+    ("schema", "values"),
+    [
+        (ContextScrapeToolSchema, {"url": "example.com"}),
+        (
+            ContextSitemapToolSchema,
+            {"domain": "example.com", "sitemap_url": "not a url"},
+        ),
+    ],
+)
+def test_http_url_inputs_require_valid_schemes(
+    schema: type[BaseModel],
+    values: dict[str, str],
+) -> None:
+    with pytest.raises(ValidationError):
+        schema(**values)
