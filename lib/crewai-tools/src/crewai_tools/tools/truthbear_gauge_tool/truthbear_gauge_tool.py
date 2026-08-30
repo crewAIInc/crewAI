@@ -42,6 +42,8 @@ def _get_json(path: str, params: Optional[dict] = None) -> tuple:
         except json.JSONDecodeError:
             payload = {"raw": body[:2000]}
         return exc.code, payload
+    except urllib.error.URLError as exc:
+        return 0, {"transport_error": str(exc.reason)}
 
 
 class TruthBearCoverageInput(BaseModel):

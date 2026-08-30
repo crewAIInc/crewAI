@@ -142,3 +142,13 @@ def test_record_passes_through_a_paid_success(mock_urlopen):
     )
     assert result["record_hash"] == "a" * 64
     assert "payment_required" not in result
+
+
+@patch("urllib.request.urlopen")
+def test_coverage_transport_error(mock_urlopen):
+    """DNS / connection / TLS failures must return a structured error, not crash."""
+    mock_urlopen.side_effect = urllib.error.URLError("Name or service not known")
+    result = json.loads(TruthBearCoverageTool().run(signal_id="hydrology.river-level"))
+    assert result.get("error") is True
+    assert result["http_status"] == 0
+    assert "transport_error" in result["detail"]
