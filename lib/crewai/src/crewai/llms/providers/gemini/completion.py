@@ -1372,7 +1372,9 @@ class GeminiCompletion(BaseLLM):
             "gemma-3-1b": 32000,
         }
 
-        for model_prefix, size in context_windows.items():
+        for model_prefix, size in sorted(
+            context_windows.items(), key=lambda item: len(item[0]), reverse=True
+        ):
             if self.model.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
