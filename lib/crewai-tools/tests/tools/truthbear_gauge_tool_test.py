@@ -16,6 +16,7 @@ def _ok(payload):
     """Mock a successful urlopen context manager returning `payload` as JSON."""
     response = MagicMock()
     response.read.return_value = json.dumps(payload).encode("utf-8")
+    response.status = 200
     ctx = MagicMock()
     ctx.__enter__.return_value = response
     return ctx
@@ -120,6 +121,16 @@ def test_record_returns_402_challenge_intact(mock_urlopen):
     assert accepts["payTo"].startswith("0x")
     # the tool must not have swallowed the challenge into a generic error string
     assert "error" not in result
+
+
+@patch("urllib.request.urlopen")
+def test_coverage_server_error_is_not_found_false(mock_urlopen):
+    """A 500 from /gauge/coverage must not be misreported as found:false."""
+    mock_urlopen.side_effect = _http_error(500, {"error": "internal server error"})
+    result = json.loads(TruthBearCoverageTool().run(signal_id="hydrology.river-level"))
+    assert result.get("error") is True
+    assert result["http_status"] == 500
+    assert "found" not in result
 
 
 @patch("urllib.request.urlopen")

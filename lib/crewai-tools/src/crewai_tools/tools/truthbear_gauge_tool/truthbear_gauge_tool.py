@@ -26,23 +26,22 @@ BASE_URL = "https://aeml-x402.zeabur.app"
 REQUEST_TIMEOUT = 20
 
 
-def _get_json(path: str, params: Optional[dict] = None) -> dict:
-    """Fetch JSON from a GAUGE API endpoint, returning x402 challenges intact."""
+def _get_json(path: str, params: Optional[dict] = None) -> tuple:
+    """Return (http_status, payload_dict).  Callers decide what each status means."""
     url = f"{BASE_URL}{path}"
     if params:
         url = f"{url}?{urllib.parse.urlencode(params)}"
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+            return resp.status, json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
         try:
             payload = json.loads(body)
         except json.JSONDecodeError:
             payload = {"raw": body[:2000]}
-        # In x402 a 402 is not a failure, it is the price quote. Return it intact.
-        return {"http_status": exc.code, **payload}
+        return exc.code, payload
 
 
 class TruthBearCoverageInput(BaseModel):
@@ -80,7 +79,12 @@ class TruthBearCoverageTool(BaseTool):
         params = {"summary": "1"}
         if signal_id:
             params["signal_id"] = signal_id
-        data = _get_json("/gauge/coverage", params)
+        status, data = _get_json("/gauge/coverage", params)
+        if status != 200:
+            return json.dumps(
+                {"error": True, "http_status": status, "detail": data},
+                ensure_ascii=False,
+            )
         signals = data.get("signals") or []
         if signal_id and not signals:
             return json.dumps(
@@ -138,7 +142,13 @@ class TruthBearCatalogTool(BaseTool):
             params["signal_id"] = args.signal_id
         if args.industry:
             params["industry"] = args.industry
-        return json.dumps(_get_json("/gauge/catalog", params), ensure_ascii=False)
+        status, data = _get_json("/gauge/catalog", params)
+        if status != 200:
+            return json.dumps(
+                {"error": True, "http_status": status, "detail": data},
+                ensure_ascii=False,
+            )
+        return json.dumps(data, ensure_ascii=False)
 
 
 class TruthBearRecordInput(BaseModel):
@@ -172,14 +182,19 @@ class TruthBearRecordTool(BaseTool):
     def _run(self, signal_id: str, entity: str) -> str:
         """Fetch the record and return data or an x402 payment challenge."""
         args = TruthBearRecordInput(signal_id=signal_id, entity=entity)
-        data = _get_json("/gauge", {"signal_id": args.signal_id, "entity": args.entity})
-        if data.get("http_status") == 402:
+        status, data = _get_json("/gauge", {"signal_id": args.signal_id, "entity": args.entity})
+        if status == 402:
             return json.dumps(
                 {
                     "payment_required": True,
                     "note": "Settle this x402 challenge with your own wallet, then retry the same URL.",
-                    "challenge": {k: v for k, v in data.items() if k != "http_status"},
+                    "challenge": data,
                 },
+                ensure_ascii=False,
+            )
+        if status != 200:
+            return json.dumps(
+                {"error": True, "http_status": status, "detail": data},
                 ensure_ascii=False,
             )
         return json.dumps(data, ensure_ascii=False)

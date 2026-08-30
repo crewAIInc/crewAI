@@ -24,7 +24,7 @@ The service is **descriptive only**: no forecast, no recommendation, no adjudica
 | Tool | Cost | Purpose |
 | ---- | ---- | ------- |
 | `TruthBearCoverageTool` | free | Does a signal line exist, how many objects it covers, how fresh those readings are, and whether the source agency is on schedule or overdue |
-| `TruthBearCatalogTool` | free | Which entity ids are valid for a signal line — `signal_id` and `entity` must be used as a pair |
+| `TruthBearCatalogTool` | free | Which entity ids are valid for a signal line — filter by `signal_id` or `industry` (one required) |
 | `TruthBearRecordTool` | paid (x402) | Requests one official record; returns the HTTP 402 payment challenge untouched |
 
 ---

@@ -1,6 +1,6 @@
 # 🐻 Truth Bear GAUGE Tools — Usage Examples
 
-### 🔧 Tool Initialization
+## 🔧 Tool Initialization
 
 ```python
 from crewai_tools import (
@@ -12,7 +12,7 @@ from crewai_tools import (
 
 ---
 
-### Example 1: Check a signal line before spending anything
+## Example 1: Check a signal line before spending anything
 
 ```python
 tool = TruthBearCoverageTool()
@@ -42,7 +42,7 @@ print(tool.run(signal_id="hydrology.river-level"))
 
 ---
 
-### Example 2: An unknown signal is reported, not raised
+## Example 2: An unknown signal is reported, not raised
 
 ```python
 tool = TruthBearCoverageTool()
@@ -59,9 +59,9 @@ print(tool.run(signal_id="not.a.real.signal"))
 
 ---
 
-### Example 3: Find a valid entity for a signal line
+## Example 3: Find a valid entity for a signal line
 
-`signal_id` and `entity` must be used as a pair, so look the entity up first.
+The record tool requires `signal_id` and `entity` as a pair, so use this catalog lookup (filtered by `signal_id` or `industry`) to find valid entities first.
 
 ```python
 tool = TruthBearCatalogTool()
@@ -80,7 +80,7 @@ tool.run()          # ValueError: Provide either signal_id or industry -
 
 ---
 
-### Example 4: Request a paid record — the tool never pays
+## Example 4: Request a paid record — the tool never pays
 
 ```python
 tool = TruthBearRecordTool()
@@ -111,7 +111,7 @@ Settle that challenge with your own x402 client and retry the same URL to receiv
 
 ---
 
-### Example 5: Inside a Crew
+## Example 5: Inside a Crew
 
 ```python
 from crewai import Agent, Crew, Task
