@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 import hashlib
 import json
+from math import exp
 from typing import Literal, TypeGuard, cast
 
 from chromadb.api import AsyncClientAPI, ClientAPI
@@ -172,6 +173,7 @@ def _convert_distance_to_score(
 
     Notes:
         Assuming all embedding are unit-normalized for now, including custom embeddings.
+        Inner product is the exception, since its distance is unbounded when they are not.
 
     Args:
         distance: The distance value from ChromaDB.
@@ -180,11 +182,16 @@ def _convert_distance_to_score(
     Returns:
         Similarity score in range [0, 1] where 1 is most similar.
     """
-    if distance_metric in ("cosine", "ip"):
-        # ChromaDB reports both as 1 - dot(a, b), which is in [0, 2] for
-        # unit-normalized embeddings.
+    if distance_metric == "cosine":
         score = 1.0 - 0.5 * distance
         return max(0.0, min(1.0, score))
+    if distance_metric == "ip":
+        # ChromaDB reports inner product distance as 1 - dot(a, b), which is
+        # unbounded unless the embeddings happen to be unit-normalized, so the
+        # raw inner product is squashed by a strictly increasing map that keeps
+        # the ranking of every distance instead of clamping.
+        inner_product = 1.0 - distance
+        return 1.0 / (1.0 + exp(-inner_product))
     if distance_metric == "l2":
         score = 1.0 / (1.0 + distance)
         return max(0.0, min(1.0, score))

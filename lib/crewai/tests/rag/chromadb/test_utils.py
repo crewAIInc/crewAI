@@ -322,10 +322,17 @@ class TestConvertDistanceToScore:
         assert _convert_distance_to_score(1.0, "l2") == 0.5
 
     def test_convert_distance_ip(self) -> None:
-        """Test inner product distances map to [0, 1] like cosine."""
-        assert _convert_distance_to_score(0.0, "ip") == 1.0
+        """Test inner product distances map to (0, 1) around a zero product."""
         assert _convert_distance_to_score(1.0, "ip") == 0.5
-        assert _convert_distance_to_score(2.0, "ip") == 0.0
+        assert _convert_distance_to_score(0.0, "ip") == pytest.approx(0.7310585786)
+        assert _convert_distance_to_score(2.0, "ip") == pytest.approx(0.2689414213)
+
+    def test_convert_distance_ip_keeps_unbounded_products_distinct(self) -> None:
+        """Test unnormalized inner products are ranked instead of clamped."""
+        score_of_two = _convert_distance_to_score(-1.0, "ip")
+        score_of_eight = _convert_distance_to_score(-7.0, "ip")
+
+        assert 0.0 < score_of_two < score_of_eight < 1.0
 
     def test_convert_distance_unknown_metric(self) -> None:
         """Test an unsupported metric still raises."""
@@ -348,4 +355,6 @@ class TestConvertDistanceToScore:
         )
 
         assert [result["id"] for result in search_results] == ["doc1", "doc2"]
-        assert [result["score"] for result in search_results] == [1.0, 0.5]
+        assert [result["score"] for result in search_results] == pytest.approx(
+            [0.7310585786, 0.5]
+        )
