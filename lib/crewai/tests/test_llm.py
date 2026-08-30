@@ -1248,3 +1248,18 @@ async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0].function.name == "search"
+
+
+def test_gemini_format_messages_trailing_model_turn_appends_user_turn():
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    llm = GeminiCompletion(model="gemini/gemini-2.0-flash", api_key="dummy-key")
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Let me think..."},
+    ]
+    contents, system_instruction = llm._format_messages_for_gemini(messages)
+    assert len(contents) == 3
+    assert contents[-1].role == "user"
+    assert contents[-1].parts[0].text == "Please continue."
+
