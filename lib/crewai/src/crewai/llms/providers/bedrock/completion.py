@@ -11,7 +11,8 @@ from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Required
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM, llm_call_context
+from crewai.hooks.dispatch import HookAborted
+from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, llm_call_context
 from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -377,10 +378,7 @@ class BedrockCompletion(BaseLLM):
                     messages
                 )
 
-                if not self._invoke_before_llm_call_hooks(
-                    formatted_messages, from_agent
-                ):
-                    raise ValueError("LLM call blocked by before_llm_call hook")
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
 
                 body: BedrockConverseRequestBody = {
                     "inferenceConfig": self._get_inference_config(),
@@ -447,6 +445,9 @@ class BedrockCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 if is_context_length_exceeded(e):
                     logging.error(f"Context window exceeded: {e}")
@@ -509,6 +510,8 @@ class BedrockCompletion(BaseLLM):
                 formatted_messages, system_message = self._format_messages_for_converse(
                     messages
                 )
+
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
 
                 body: BedrockConverseRequestBody = {
                     "inferenceConfig": self._get_inference_config(),
@@ -575,6 +578,9 @@ class BedrockCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 if is_context_length_exceeded(e):
                     logging.error(f"Context window exceeded: {e}")

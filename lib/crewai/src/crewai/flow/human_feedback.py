@@ -253,6 +253,8 @@ def _pre_review_with_lessons(
     learn_source: str,
     learn_strict: bool,
 ) -> Any:
+    from crewai.hooks.dispatch import HookAborted
+
     try:
         mem = flow_instance.memory
         if mem is None:
@@ -282,6 +284,8 @@ def _pre_review_with_lessons(
             return PreReviewResult.model_validate(response).improved_output
         reviewed = llm_inst.call(messages)
         return reviewed if isinstance(reviewed, str) else str(reviewed)
+    except HookAborted:
+        raise
     except Exception:
         if learn_strict:
             logger.warning(
@@ -308,6 +312,8 @@ def _distill_and_store_lessons(
     learn_source: str,
     learn_strict: bool,
 ) -> None:
+    from crewai.hooks.dispatch import HookAborted
+
     try:
         mem = flow_instance.memory
         if mem is None:
@@ -344,6 +350,8 @@ def _distill_and_store_lessons(
 
         if lessons:
             mem.remember_many(lessons, source=learn_source)  # type: ignore[union-attr]
+    except HookAborted:
+        raise
     except Exception:
         if learn_strict:
             logger.warning(
