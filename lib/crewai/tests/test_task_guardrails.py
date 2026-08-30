@@ -10,8 +10,10 @@ from crewai.events.event_types import (
 )
 from crewai.llm import LLM
 from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
-from crewai.tasks.llm_guardrail import LLMGuardrail
+from crewai.tasks.llm_guardrail import LLMGuardrail, LLMGuardrailResult
 from crewai.tasks.task_output import TaskOutput
+from crewai.utilities.guardrail import process_guardrail
+from crewai.utilities.guardrail_types import GuardrailExecutionError
 
 
 def create_smart_task(**kwargs):
@@ -309,8 +311,8 @@ def test_guardrail_when_an_error_occurs(sample_agent, task_output):
             side_effect=Exception("Unexpected error"),
         ),
         pytest.raises(
-            Exception,
-            match="Error while validating the task output: Unexpected error",
+            GuardrailExecutionError,
+            match="The LLM guardrail could not run: Unexpected error",
         ),
     ):
         task = create_smart_task(
@@ -321,6 +323,64 @@ def test_guardrail_when_an_error_occurs(sample_agent, task_output):
             guardrail_max_retries=0,
         )
         task.execute_sync(agent=sample_agent)
+
+
+def test_llm_guardrail_outage_raises_execution_error():
+    """An infrastructure failure must not read as a validation verdict.
+
+    The LLM call behind the guardrail raising (provider outage, expired key,
+    rate limit) used to come back as ``(False, "Error while validating...")``,
+    the same shape as a genuine violation, so callers retried the agent on it
+    and finally reported a validation failure that never happened.
+    """
+    guardrail = LLMGuardrail(description="must be under 100 words", llm=Mock(spec=LLM))
+    out = TaskOutput(description="d", agent="a", raw="the agent's answer")
+    outage = RuntimeError("litellm.APIConnectionError: provider unavailable")
+
+    with patch.object(LLMGuardrail, "_validate_output", side_effect=outage):
+        with pytest.raises(GuardrailExecutionError) as exc_info:
+            guardrail(out)
+
+    assert "provider unavailable" in str(exc_info.value)
+    assert exc_info.value.__cause__ is outage
+
+
+def test_llm_guardrail_violation_still_returns_verdict():
+    """A guardrail that runs and judges the output invalid keeps its shape."""
+    guardrail = LLMGuardrail(description="must be under 100 words", llm=Mock(spec=LLM))
+    out = TaskOutput(description="d", agent="a", raw="the agent's answer")
+
+    class FakeOut:
+        pydantic = LLMGuardrailResult(valid=False, feedback="too long by 40 words")
+
+    with patch.object(LLMGuardrail, "_validate_output", return_value=FakeOut()):
+        assert guardrail(out) == (False, "too long by 40 words")
+
+
+def test_process_guardrail_propagates_execution_error_with_terminal_event():
+    """process_guardrail re-raises GuardrailExecutionError and still closes the
+    started event, the same way it does for a hook abort."""
+    out = TaskOutput(description="d", agent="a", raw="the agent's answer")
+    completed: list[LLMGuardrailCompletedEvent] = []
+
+    @crewai_event_bus.on(LLMGuardrailCompletedEvent)
+    def handle_completed(source, event):
+        completed.append(event)
+
+    def failing_guardrail(output):
+        raise GuardrailExecutionError("boom")
+
+    task = Task(description="d", expected_output="o")
+
+    with pytest.raises(GuardrailExecutionError):
+        process_guardrail(
+            output=out, guardrail=failing_guardrail, retry_count=0, event_source=task
+        )
+
+    crewai_event_bus.flush(timeout=10.0)
+    assert len(completed) == 1
+    assert completed[0].success is False
+    assert completed[0].error == "boom"
 
 
 def test_hallucination_guardrail_integration():

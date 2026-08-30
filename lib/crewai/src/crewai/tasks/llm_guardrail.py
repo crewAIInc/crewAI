@@ -103,13 +103,18 @@ class LLMGuardrail:
 
         Returns:
             Tuple[bool, Any]: A tuple containing:
-                - bool: True if validation passed, False otherwise
-                - Any: The validation result or error message
+                - bool: True if validation passed, False if the guardrail ran
+                  and judged the output invalid
+                - Any: The raw output when valid, the guardrail's feedback
+                  when invalid
 
         Raises:
             HookAborted: A `pre_model_call` hook denied the validation call.
+            GuardrailExecutionError: The guardrail could not run (e.g. the
+                LLM call failed). Not a statement about the output.
         """
         from crewai.hooks.dispatch import HookAborted
+        from crewai.utilities.guardrail_types import GuardrailExecutionError
 
         try:
             result = self._validate_output(task_output)
@@ -122,4 +127,6 @@ class LLMGuardrail:
         except HookAborted:
             raise
         except Exception as e:
-            return False, f"Error while validating the task output: {e!s}"
+            raise GuardrailExecutionError(
+                f"The LLM guardrail could not run: {e!s}"
+            ) from e

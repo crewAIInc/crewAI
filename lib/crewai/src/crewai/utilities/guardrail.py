@@ -6,7 +6,7 @@ import warnings
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import Self
 
-from crewai.utilities.guardrail_types import GuardrailCallable
+from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailExecutionError
 
 
 def serialize_guardrail_for_json(
@@ -145,6 +145,8 @@ def process_guardrail(
         TypeError: If output is not a TaskOutput or LiteAgentOutput
         ValueError: If guardrail is None
         HookAborted: A `pre_model_call` hook denied an LLM-backed guardrail.
+        GuardrailExecutionError: The guardrail could not run; propagated so
+            callers do not mistake it for a validation verdict.
     """
     from crewai.lite_agent_output import LiteAgentOutput
     from crewai.tasks.task_output import TaskOutput
@@ -174,6 +176,23 @@ def process_guardrail(
     except HookAborted as e:
         # a deny ends the validation, so the started event above still needs a
         # terminal one before it leaves
+        crewai_event_bus.emit(
+            event_source,
+            LLMGuardrailCompletedEvent(
+                success=False,
+                result=None,
+                error=str(e),
+                retry_count=retry_count,
+                guardrail_type=started_event.guardrail_type,
+                guardrail_name=started_event.guardrail_name,
+                from_agent=from_agent,
+                from_task=from_task,
+            ),
+        )
+        raise
+    except GuardrailExecutionError as e:
+        # the guardrail could not run at all; the started event still needs a
+        # terminal one, and the error must not become a validation verdict
         crewai_event_bus.emit(
             event_source,
             LLMGuardrailCompletedEvent(
