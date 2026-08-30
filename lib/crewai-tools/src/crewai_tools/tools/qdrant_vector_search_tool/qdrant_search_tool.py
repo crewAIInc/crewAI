@@ -43,7 +43,6 @@ class QdrantVectorSearchTool(BaseTool):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    # --- Metadata ---
     name: str = "QdrantVectorSearchTool"
     description: str = "Search Qdrant vector DB for relevant documents."
     args_schema: type[BaseModel] = QdrantToolSchema
@@ -68,7 +67,6 @@ class QdrantVectorSearchTool(BaseTool):
 
     @model_validator(mode="after")
     def _setup_qdrant(self) -> QdrantVectorSearchTool:
-        # Import the qdrant_package if it's a string
         if isinstance(self.qdrant_package, str):
             self.qdrant_package = importlib.import_module(self.qdrant_package)
 

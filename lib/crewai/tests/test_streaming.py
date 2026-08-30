@@ -11,11 +11,15 @@ from crewai import Agent, Crew, Task
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import LLMStreamChunkEvent, ToolCall, FunctionCall
 from crewai.flow.flow import Flow, start
+from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.types.streaming import (
+    AsyncStreamSession,
     CrewStreamingOutput,
     FlowStreamingOutput,
     StreamChunk,
     StreamChunkType,
+    StreamFrame,
+    StreamSession,
     ToolCallChunk,
 )
 
@@ -252,7 +256,6 @@ class TestCrewKickoffStreaming:
 
         streaming = CrewStreamingOutput(sync_iterator=gen())
 
-        # Iterate all chunks
         _ = list(streaming)
 
         # Simulate what _finalize_streaming does
@@ -405,7 +408,6 @@ class TestCrewKickoffStreamingAsync:
 
         streaming = CrewStreamingOutput(async_iterator=async_gen())
 
-        # Iterate all chunks
         async for _ in streaming:
             pass
 
@@ -419,8 +421,8 @@ class TestCrewKickoffStreamingAsync:
 class TestFlowKickoffStreaming:
     """Tests for Flow(stream=True).kickoff() method."""
 
-    def test_kickoff_streaming_returns_streaming_output(self) -> None:
-        """Test that flow kickoff with stream=True returns FlowStreamingOutput."""
+    def test_kickoff_streaming_returns_stream_session(self) -> None:
+        """Test that flow kickoff with stream=True returns StreamSession."""
 
         class SimpleFlow(Flow[dict[str, Any]]):
             @start()
@@ -430,7 +432,7 @@ class TestFlowKickoffStreaming:
         flow = SimpleFlow()
         flow.stream = True
         streaming = flow.kickoff()
-        assert isinstance(streaming, FlowStreamingOutput)
+        assert isinstance(streaming, StreamSession)
 
     def test_flow_kickoff_streaming_captures_chunks(self) -> None:
         """Test that flow streaming captures LLM chunks from crew execution."""
@@ -471,7 +473,7 @@ class TestFlowKickoffStreaming:
 
         with patch.object(Flow, "kickoff", mock_kickoff_fn):
             streaming = flow.kickoff()
-            assert isinstance(streaming, FlowStreamingOutput)
+            assert isinstance(streaming, StreamSession)
             chunks = list(streaming)
 
         assert len(chunks) >= 2
@@ -502,19 +504,38 @@ class TestFlowKickoffStreaming:
 
         with patch.object(Flow, "kickoff", mock_kickoff_fn):
             streaming = flow.kickoff()
-            assert isinstance(streaming, FlowStreamingOutput)
+            assert isinstance(streaming, StreamSession)
             _ = list(streaming)
 
         result = streaming.result
         assert result == "flow result"
+
+    def test_streaming_kickoff_passes_checkpoint_config_to_stream_events(self) -> None:
+        """stream=True preserves checkpoint config when routing to stream_events."""
+
+        class TestFlow(Flow[dict[str, Any]]):
+            @start()
+            def generate(self) -> str:
+                return "flow result"
+
+        flow = TestFlow()
+        flow.stream = True
+        checkpoint = CheckpointConfig()
+
+        with patch.object(flow, "stream_events", wraps=flow.stream_events) as spy:
+            streaming = flow.kickoff(from_checkpoint=checkpoint)
+            list(streaming)
+
+        assert spy.call_args.kwargs["from_checkpoint"] is checkpoint
+        assert streaming.result == "flow result"
 
 
 class TestFlowKickoffStreamingAsync:
     """Tests for Flow(stream=True).kickoff_async() method."""
 
     @pytest.mark.asyncio
-    async def test_kickoff_streaming_async_returns_streaming_output(self) -> None:
-        """Test that flow kickoff_async with stream=True returns FlowStreamingOutput."""
+    async def test_kickoff_streaming_async_returns_stream_session(self) -> None:
+        """Test that flow kickoff_async with stream=True returns AsyncStreamSession."""
 
         class SimpleFlow(Flow[dict[str, Any]]):
             @start()
@@ -524,7 +545,7 @@ class TestFlowKickoffStreamingAsync:
         flow = SimpleFlow()
         flow.stream = True
         streaming = await flow.kickoff_async()
-        assert isinstance(streaming, FlowStreamingOutput)
+        assert isinstance(streaming, AsyncStreamSession)
 
     @pytest.mark.asyncio
     async def test_flow_kickoff_streaming_async_captures_chunks(self) -> None:
@@ -569,8 +590,8 @@ class TestFlowKickoffStreamingAsync:
 
         with patch.object(Flow, "kickoff_async", mock_kickoff_fn):
             streaming = await flow.kickoff_async()
-            assert isinstance(streaming, FlowStreamingOutput)
-            chunks: list[StreamChunk] = []
+            assert isinstance(streaming, AsyncStreamSession)
+            chunks: list[StreamFrame] = []
             async for chunk in streaming:
                 chunks.append(chunk)
 
@@ -603,12 +624,35 @@ class TestFlowKickoffStreamingAsync:
 
         with patch.object(Flow, "kickoff_async", mock_kickoff_fn):
             streaming = await flow.kickoff_async()
-            assert isinstance(streaming, FlowStreamingOutput)
+            assert isinstance(streaming, AsyncStreamSession)
             async for _ in streaming:
                 pass
 
         result = streaming.result
         assert result == "async flow result"
+
+    @pytest.mark.asyncio
+    async def test_streaming_kickoff_async_passes_checkpoint_config_to_astream(
+        self,
+    ) -> None:
+        """stream=True preserves checkpoint config when routing to astream."""
+
+        class TestFlow(Flow[dict[str, Any]]):
+            @start()
+            async def generate(self) -> str:
+                return "async flow result"
+
+        flow = TestFlow()
+        flow.stream = True
+        checkpoint = CheckpointConfig()
+
+        with patch.object(flow, "astream", wraps=flow.astream) as spy:
+            streaming = await flow.kickoff_async(from_checkpoint=checkpoint)
+            async for _ in streaming:
+                pass
+
+        assert spy.call_args.kwargs["from_checkpoint"] is checkpoint
+        assert streaming.result == "async flow result"
 
 
 class TestStreamingEdgeCases:

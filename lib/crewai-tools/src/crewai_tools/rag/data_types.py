@@ -37,7 +37,6 @@ class DataType(str, Enum):
             DataType.TEXT: ("text_chunker", "TextChunker"),
             DataType.DOCX: ("text_chunker", "DocxChunker"),
             DataType.MDX: ("text_chunker", "MdxChunker"),
-            # Structured formats
             DataType.CSV: ("structured_chunker", "CsvChunker"),
             DataType.JSON: ("structured_chunker", "JsonChunker"),
             DataType.XML: ("structured_chunker", "XmlChunker"),
@@ -136,7 +135,8 @@ class DataTypes:
 
             if "docs" in url.netloc or ("docs" in url.path and url.scheme != "file"):
                 return DataType.DOCS_SITE
-            if "github.com" in url.netloc:
+            hostname = (url.hostname or "").lower()
+            if hostname == "github.com" or hostname.endswith(".github.com"):
                 return DataType.GITHUB
 
             return DataType.WEBSITE

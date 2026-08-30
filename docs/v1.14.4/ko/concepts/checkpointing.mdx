@@ -1,0 +1,229 @@
+---
+title: Checkpointing
+description: 실행 상태를 자동으로 저장하여 크루, 플로우, 에이전트가 실패 후 재개할 수 있습니다.
+icon: floppy-disk
+mode: "wide"
+---
+
+<Warning>
+체크포인팅은 초기 릴리스 단계입니다. API는 향후 버전에서 변경될 수 있습니다.
+</Warning>
+
+## 개요
+
+체크포인팅은 실행 중 자동으로 실행 상태를 저장합니다. 크루, 플로우 또는 에이전트가 실행 도중 실패하면 마지막 체크포인트에서 복원하여 이미 완료된 작업을 다시 실행하지 않고 재개할 수 있습니다.
+
+## 빠른 시작
+
+```python
+from crewai import Crew, CheckpointConfig
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=True,  # 기본값 사용: ./.checkpoints, task_completed 이벤트
+)
+result = crew.kickoff()
+```
+
+각 태스크가 완료된 후 `./.checkpoints/`에 체크포인트 파일이 기록됩니다.
+
+## 설정
+
+`CheckpointConfig`를 사용하여 세부 설정을 제어합니다:
+
+```python
+from crewai import Crew, CheckpointConfig
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=CheckpointConfig(
+        location="./my_checkpoints",
+        on_events=["task_completed", "crew_kickoff_completed"],
+        max_checkpoints=5,
+    ),
+)
+```
+
+### CheckpointConfig 필드
+
+| 필드 | 타입 | 기본값 | 설명 |
+|:-----|:-----|:-------|:-----|
+| `location` | `str` | `"./.checkpoints"` | 체크포인트 파일 경로 |
+| `on_events` | `list[str]` | `["task_completed"]` | 체크포인트를 트리거하는 이벤트 타입 |
+| `provider` | `BaseProvider` | `JsonProvider()` | 스토리지 백엔드 |
+| `max_checkpoints` | `int \| None` | `None` | 보관할 최대 파일 수; 오래된 것부터 삭제 |
+
+### 상속 및 옵트아웃
+
+Crew, Flow, Agent의 `checkpoint` 필드는 `CheckpointConfig`, `True`, `False`, `None`을 받습니다:
+
+| 값 | 동작 |
+|:---|:-----|
+| `None` (기본값) | 부모에서 상속. 에이전트는 크루의 설정을 상속합니다. |
+| `True` | 기본값으로 활성화. |
+| `False` | 명시적 옵트아웃. 부모 상속을 중단합니다. |
+| `CheckpointConfig(...)` | 사용자 정의 설정. |
+
+```python
+crew = Crew(
+    agents=[
+        Agent(role="Researcher", ...),                  # 크루의 checkpoint 상속
+        Agent(role="Writer", ..., checkpoint=False),     # 옵트아웃, 체크포인트 없음
+    ],
+    tasks=[...],
+    checkpoint=True,
+)
+```
+
+## 체크포인트에서 재개
+
+```python
+# 복원 및 재개
+crew = Crew.from_checkpoint("./my_checkpoints/20260407T120000_abc123.json")
+result = crew.kickoff()  # 마지막으로 완료된 태스크부터 재개
+```
+
+복원된 크루는 이미 완료된 태스크를 건너뛰고 첫 번째 미완료 태스크부터 재개합니다.
+
+## Crew, Flow, Agent에서 사용 가능
+
+### Crew
+
+```python
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, write_task, review_task],
+    checkpoint=CheckpointConfig(location="./crew_cp"),
+)
+```
+
+기본 트리거: `task_completed` (완료된 태스크당 하나의 체크포인트).
+
+### Flow
+
+```python
+from crewai.flow.flow import Flow, start, listen
+from crewai import CheckpointConfig
+
+class MyFlow(Flow):
+    @start()
+    def step_one(self):
+        return "data"
+
+    @listen(step_one)
+    def step_two(self, data):
+        return process(data)
+
+flow = MyFlow(
+    checkpoint=CheckpointConfig(
+        location="./flow_cp",
+        on_events=["method_execution_finished"],
+    ),
+)
+result = flow.kickoff()
+
+# 재개
+flow = MyFlow.from_checkpoint("./flow_cp/20260407T120000_abc123.json")
+result = flow.kickoff()
+```
+
+### Agent
+
+```python
+agent = Agent(
+    role="Researcher",
+    goal="Research topics",
+    backstory="Expert researcher",
+    checkpoint=CheckpointConfig(
+        location="./agent_cp",
+        on_events=["lite_agent_execution_completed"],
+    ),
+)
+result = agent.kickoff(messages=[{"role": "user", "content": "Research AI trends"}])
+```
+
+## 스토리지 프로바이더
+
+CrewAI는 두 가지 체크포인트 스토리지 프로바이더를 제공합니다.
+
+### JsonProvider (기본값)
+
+각 체크포인트를 별도의 JSON 파일로 저장합니다.
+
+```python
+from crewai import Crew, CheckpointConfig
+from crewai.state import JsonProvider
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=CheckpointConfig(
+        location="./my_checkpoints",
+        provider=JsonProvider(),
+        max_checkpoints=5,
+    ),
+)
+```
+
+### SqliteProvider
+
+모든 체크포인트를 단일 SQLite 데이터베이스 파일에 저장합니다.
+
+```python
+from crewai import Crew, CheckpointConfig
+from crewai.state import SqliteProvider
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=CheckpointConfig(
+        location="./.checkpoints.db",
+        provider=SqliteProvider(),
+    ),
+)
+```
+
+
+## 이벤트 타입
+
+`on_events` 필드는 이벤트 타입 문자열의 조합을 받습니다. 일반적인 선택:
+
+| 사용 사례 | 이벤트 |
+|:----------|:-------|
+| 각 태스크 완료 후 (Crew) | `["task_completed"]` |
+| 각 플로우 메서드 완료 후 | `["method_execution_finished"]` |
+| 에이전트 실행 완료 후 | `["agent_execution_completed"]`, `["lite_agent_execution_completed"]` |
+| 크루 완료 시에만 | `["crew_kickoff_completed"]` |
+| 모든 LLM 호출 후 | `["llm_call_completed"]` |
+| 모든 이벤트 | `["*"]` |
+
+<Warning>
+`["*"]` 또는 `llm_call_completed`와 같은 고빈도 이벤트를 사용하면 많은 체크포인트 파일이 생성되어 성능에 영향을 줄 수 있습니다. `max_checkpoints`를 사용하여 디스크 사용량을 제한하세요.
+</Warning>
+
+## 수동 체크포인팅
+
+완전한 제어를 위해 자체 이벤트 핸들러를 등록하고 `state.checkpoint()`를 직접 호출할 수 있습니다:
+
+```python
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.llm_events import LLMCallCompletedEvent
+
+# 동기 핸들러
+@crewai_event_bus.on(LLMCallCompletedEvent)
+def on_llm_done(source, event, state):
+    path = state.checkpoint("./my_checkpoints")
+    print(f"체크포인트 저장: {path}")
+
+# 비동기 핸들러
+@crewai_event_bus.on(LLMCallCompletedEvent)
+async def on_llm_done_async(source, event, state):
+    path = await state.acheckpoint("./my_checkpoints")
+    print(f"체크포인트 저장: {path}")
+```
+
+`state` 인수는 핸들러가 3개의 매개변수를 받을 때 이벤트 버스가 자동으로 전달하는 `RuntimeState`입니다. [Event Listeners](/ko/concepts/event-listener) 문서에 나열된 모든 이벤트 타입에 핸들러를 등록할 수 있습니다.
+
+체크포인팅은 best-effort입니다: 체크포인트 기록이 실패하면 오류가 로그에 기록되지만 실행은 중단 없이 계속됩니다.

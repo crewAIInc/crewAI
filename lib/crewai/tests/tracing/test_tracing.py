@@ -1,4 +1,5 @@
 import os
+from threading import Thread
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -15,6 +16,7 @@ from crewai.events.listeners.tracing.trace_listener import (
 )
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.flow.flow import Flow, start
+from crewai.telemetry.telemetry import Telemetry
 from tests.utils import wait_for_event_handlers
 
 
@@ -36,7 +38,7 @@ class TestTraceListenerSetup:
         # Need to patch all the places where get_auth_token is imported/used
         with (
             patch(
-                "crewai.cli.authentication.token.get_auth_token",
+                "crewai.auth.token.get_auth_token",
                 return_value="mock_token_12345",
             ),
             patch(
@@ -57,13 +59,11 @@ class TestTraceListenerSetup:
         from crewai.events.event_listener import EventListener
         from crewai.events.listeners.tracing.utils import _tracing_enabled
 
-        # Reset the tracing enabled contextvar
         try:
             _tracing_enabled.set(None)
         except (LookupError, AttributeError):
             pass
 
-        # Clear event bus handlers BEFORE creating any new singletons
         with crewai_event_bus._rwlock.w_locked():
             crewai_event_bus._sync_handlers = {}
             crewai_event_bus._async_handlers = {}
@@ -79,18 +79,15 @@ class TestTraceListenerSetup:
             if "_listeners_setup" in instance_dict:
                 del TraceCollectionListener._instance._listeners_setup
 
-        # Reset class attributes
         TraceCollectionListener._instance = None
         TraceCollectionListener._initialized = False
         TraceCollectionListener._listeners_setup = False
 
-        # Reset EventListener singleton
         if hasattr(EventListener, "_instance"):
             EventListener._instance = None
 
         yield
 
-        # Clean up after test
         with crewai_event_bus._rwlock.w_locked():
             crewai_event_bus._sync_handlers = {}
             crewai_event_bus._async_handlers = {}
@@ -106,7 +103,6 @@ class TestTraceListenerSetup:
             if "_listeners_setup" in instance_dict:
                 del TraceCollectionListener._instance._listeners_setup
 
-        # Reset class attributes
         TraceCollectionListener._instance = None
         TraceCollectionListener._initialized = False
         TraceCollectionListener._listeners_setup = False
@@ -280,7 +276,6 @@ class TestTraceListenerSetup:
 
             from crewai.events.event_bus import crewai_event_bus
 
-            # Create and setup trace listener explicitly
             trace_listener = TraceCollectionListener()
             trace_listener.setup_listeners(crewai_event_bus)
 
@@ -301,12 +296,10 @@ class TestTraceListenerSetup:
                 ]
                 assert len(completion_events) >= 1
 
-                # Verify the first completion event has proper structure
                 completion_event = completion_events[0]
                 assert "crew_name" in completion_event.event_data
                 assert completion_event.event_data["crew_name"] == "crew"
 
-                # Verify all events have proper structure
                 for call in add_event_mock.call_args_list:
                     event = call.args[0]
                     assert isinstance(event, TraceEvent)
@@ -500,7 +493,6 @@ class TestTraceListenerSetup:
             crewai_event_bus._handler_dependencies = {}
             crewai_event_bus._execution_plan_cache = {}
 
-        # Reset EventListener singleton
         if hasattr(EventListener, "_instance"):
             EventListener._instance = None
 
@@ -516,7 +508,6 @@ class TestTraceListenerSetup:
             crewai_event_bus._handler_dependencies = {}
             crewai_event_bus._execution_plan_cache = {}
 
-        # Reset EventListener singleton
         if hasattr(EventListener, "_instance"):
             EventListener._instance = None
 
@@ -844,11 +835,9 @@ class TestTraceListenerSetup:
 
     def test_trace_batch_marked_as_failed_on_finalize_error(self):
         """Test that trace batch is marked as failed when finalization returns non-200 status"""
-        # Test the error handling logic directly in TraceBatchManager
         with patch("crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context", return_value=True):
             batch_manager = TraceBatchManager()
 
-            # Initialize a batch
             batch_manager.current_batch = batch_manager.initialize_batch(
                 user_context={"privacy_level": "standard"},
                 execution_metadata={
@@ -859,7 +848,6 @@ class TestTraceListenerSetup:
             batch_manager.trace_batch_id = "test_batch_id_12345"
             batch_manager.backend_initialized = True
 
-            # Mock the API responses
             with (
                 patch.object(
                     batch_manager.plus_api,
@@ -876,13 +864,127 @@ class TestTraceListenerSetup:
                     "mark_trace_batch_as_failed",
                 ) as mock_mark_failed,
             ):
-                # Call finalize_batch directly
                 batch_manager.finalize_batch()
 
-                # Verify that mark_trace_batch_as_failed was called with the error message
                 mock_mark_failed.assert_called_once_with(
                     "test_batch_id_12345", "Internal Server Error"
                 )
+                assert batch_manager.current_batch is not None
+                assert batch_manager.trace_batch_id == "test_batch_id_12345"
+                assert batch_manager._batch_finalized is False
+
+    def test_finalize_batch_clears_buffer_after_successful_send(self) -> None:
+        """Successful send must not restore a stale event buffer (duplicate events)."""
+        from crewai.events.listeners.tracing.types import TraceEvent
+
+        with patch(
+            "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+            return_value=True,
+        ):
+            batch_manager = TraceBatchManager()
+            batch_manager.current_batch = batch_manager.initialize_batch(
+                user_context={"privacy_level": "standard"},
+                execution_metadata={
+                    "execution_type": "flow",
+                    "flow_name": "TestFlow",
+                },
+            )
+            batch_manager.trace_batch_id = "batch-clear-test"
+            batch_manager.backend_initialized = True
+            batch_manager.event_buffer = [
+                TraceEvent(
+                    type="llm_call_started",
+                    timestamp="2026-01-01T00:00:00",
+                    event_id="evt-1",
+                    emission_sequence=1,
+                )
+            ]
+
+            with (
+                patch.object(
+                    batch_manager.plus_api,
+                    "send_trace_events",
+                    return_value=MagicMock(status_code=200),
+                ),
+                patch.object(
+                    batch_manager.plus_api,
+                    "finalize_trace_batch",
+                    return_value=MagicMock(status_code=200, json=MagicMock(return_value={})),
+                ),
+            ):
+                batch_manager.finalize_batch()
+
+            assert batch_manager.event_buffer == []
+
+    def test_finalize_backend_batch_uses_captured_batch_id_for_ephemeral_panel(
+        self,
+    ) -> None:
+        """Finalization output must not render None if manager state is reset."""
+        batch_manager = TraceBatchManager()
+        batch_manager.trace_batch_id = "ephemeral-batch-id"
+        batch_manager.is_current_batch_ephemeral = True
+
+        def clear_batch_id_during_response() -> dict[str, str]:
+            batch_manager.trace_batch_id = None
+            return {"access_code": "TRACE-test"}
+
+        with (
+            patch.object(
+                batch_manager.plus_api,
+                "finalize_ephemeral_trace_batch",
+                return_value=MagicMock(
+                    status_code=200,
+                    json=clear_batch_id_during_response,
+                ),
+            ),
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.should_auto_collect_first_time_traces",
+                return_value=False,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.Console.print"
+            ) as mock_print,
+        ):
+            assert batch_manager._finalize_backend_batch() is True
+
+        panel = mock_print.call_args.args[0]
+        panel_text = str(panel.renderable)
+        assert "session ID: ephemeral-batch-id" in panel_text
+        assert "ephemeral_trace_batches/ephemeral-batch-id" in panel_text
+        assert "session ID: None" not in panel_text
+        assert "ephemeral_trace_batches/None" not in panel_text
+
+    def test_finalize_backend_batch_is_serialized(self) -> None:
+        """Concurrent finalizers must only call the backend once."""
+        batch_manager = TraceBatchManager()
+        batch_manager.trace_batch_id = "ephemeral-batch-id"
+        batch_manager.is_current_batch_ephemeral = True
+        response = MagicMock(status_code=200, json=MagicMock(return_value={}))
+
+        with (
+            patch.object(
+                batch_manager.plus_api,
+                "finalize_ephemeral_trace_batch",
+                return_value=response,
+            ) as mock_finalize,
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.should_auto_collect_first_time_traces",
+                return_value=True,
+            ),
+        ):
+            results: list[bool] = []
+
+            def finalize() -> None:
+                results.append(batch_manager._finalize_backend_batch())
+
+            threads = [Thread(target=finalize), Thread(target=finalize)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+
+        assert results == [True, True]
+        mock_finalize.assert_called_once()
 
     def test_ephemeral_batch_includes_anon_id(self):
         """Test that ephemeral batch initialization sends anon_id from get_user_id()"""
@@ -1044,7 +1146,7 @@ class TestTraceBatchIdClearedOnFailure:
         """_send_events_to_backend must return early when trace_batch_id is None."""
         bm = self._make_batch_manager()
         bm.trace_batch_id = None
-        bm.event_buffer = [MagicMock()]  # has events
+        bm.event_buffer = [MagicMock()]
 
         with patch.object(
             bm.plus_api, "send_ephemeral_trace_events"
@@ -1297,7 +1399,7 @@ class TestFirstTimeHandlerBackendInitGuard:
             patch.object(
                 bm.plus_api,
                 "initialize_ephemeral_trace_batch",
-                return_value=None,  # server call fails
+                return_value=None,
             ),
             patch.object(bm, "_send_events_to_backend") as mock_send,
             patch.object(bm, "_finalize_backend_batch") as mock_finalize,
@@ -1397,7 +1499,7 @@ class TestAuthFailbackToEphemeral:
             execution_metadata={"execution_type": "crew", "crew_name": "test"},
         )
         bm.trace_batch_id = bm.current_batch.batch_id
-        bm.is_current_batch_ephemeral = False  # authenticated path
+        bm.is_current_batch_ephemeral = False
         return bm
 
     def test_401_non_ephemeral_falls_back_to_ephemeral(self):
@@ -1680,3 +1782,175 @@ class TestTraceBatchManagerDuplicateInitMerge:
         assert meta.get("execution_type") == "flow"
         assert meta.get("flow_name") == "ResearchFlow"
         assert meta.get("crew_name") == "Unknown Crew"
+
+
+class TestTraceBatchSentTelemetry:
+    """A finalized trace batch reports that it reached AMP.
+
+    The signal is what links an OSS project to its AMP traces, so it must fire
+    on exactly the runs that landed and on no others.
+    """
+
+    def _make_manager(self, *, ephemeral: bool) -> TraceBatchManager:
+        with patch(
+            "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
+            return_value="mock_token",
+        ):
+            bm = TraceBatchManager()
+        bm.trace_batch_id = "batch-id"
+        bm.is_current_batch_ephemeral = ephemeral
+        bm._telemetry = MagicMock()
+        return bm
+
+    def _finalize(self, bm: TraceBatchManager, *, status_code: int = 200) -> bool:
+        endpoint = (
+            "finalize_ephemeral_trace_batch"
+            if bm.is_current_batch_ephemeral
+            else "finalize_trace_batch"
+        )
+        with (
+            patch.object(
+                bm.plus_api,
+                endpoint,
+                return_value=MagicMock(
+                    status_code=status_code,
+                    json=MagicMock(return_value={"access_code": "TRACE-test"}),
+                    text="error body",
+                ),
+            ),
+            patch.object(bm, "_mark_batch_as_failed"),
+            patch("crewai.events.listeners.tracing.trace_batch_manager.Console.print"),
+        ):
+            return bm._finalize_backend_batch()
+
+    def _features(self, bm: TraceBatchManager) -> list[str]:
+        return [c.args[0] for c in bm._telemetry.feature_usage_span.call_args_list]
+
+    def test_ephemeral_batch_reports_ephemeral_sent(self) -> None:
+        bm = self._make_manager(ephemeral=True)
+        assert self._finalize(bm) is True
+        assert self._features(bm) == ["tracing:ephemeral_sent"]
+
+    def test_authenticated_batch_reports_authenticated_sent(self) -> None:
+        bm = self._make_manager(ephemeral=False)
+        assert self._finalize(bm) is True
+        assert self._features(bm) == ["tracing:authenticated_sent"]
+
+    def test_rejected_batch_reports_nothing(self) -> None:
+        """A 500 means the batch never landed, so it must not be counted."""
+        bm = self._make_manager(ephemeral=True)
+        assert self._finalize(bm, status_code=500) is False
+        assert self._features(bm) == []
+
+    def test_batch_without_id_reports_nothing(self) -> None:
+        bm = self._make_manager(ephemeral=True)
+        bm.trace_batch_id = None
+        assert self._finalize(bm) is True
+        assert self._features(bm) == []
+
+    def test_already_finalized_batch_reports_nothing(self) -> None:
+        """Finalization is idempotent; the signal must not double-count."""
+        bm = self._make_manager(ephemeral=True)
+        bm._batch_finalized = True
+        assert self._finalize(bm) is True
+        assert self._features(bm) == []
+
+    def test_finalization_raising_reports_nothing(self) -> None:
+        bm = self._make_manager(ephemeral=True)
+        with (
+            patch.object(
+                bm.plus_api,
+                "finalize_ephemeral_trace_batch",
+                side_effect=RuntimeError("network down"),
+            ),
+            patch.object(bm, "_mark_batch_as_failed"),
+        ):
+            assert bm._finalize_backend_batch() is False
+        assert self._features(bm) == []
+
+    def test_batch_that_fell_back_to_ephemeral_reports_ephemeral(self) -> None:
+        """A 401 at init flips the batch to ephemeral; finalize must agree."""
+        bm = self._make_manager(ephemeral=False)
+        bm.current_batch = TraceBatch(
+            user_context={"privacy_level": "standard"},
+            execution_metadata={"execution_type": "crew"},
+        )
+        with (
+            patch.object(
+                bm.plus_api,
+                "initialize_trace_batch",
+                return_value=MagicMock(status_code=401),
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                return_value=MagicMock(
+                    status_code=200,
+                    json=MagicMock(return_value={"ephemeral_trace_id": "eph-id"}),
+                ),
+            ),
+        ):
+            bm._initialize_backend_batch({}, {}, skip_context_check=True)
+
+        assert bm.is_current_batch_ephemeral is True
+        assert self._finalize(bm) is True
+        assert self._features(bm) == ["tracing:ephemeral_sent"]
+
+    def test_first_time_handler_path_reports_ephemeral_sent(self) -> None:
+        """The first-time flow finalizes through its own caller, not finalize_batch."""
+        bm = self._make_manager(ephemeral=True)
+        bm.current_batch = TraceBatch(
+            user_context={"privacy_level": "standard"},
+            execution_metadata={"execution_type": "crew", "crew_name": "test"},
+        )
+        bm.backend_initialized = True
+
+        handler = FirstTimeTraceHandler()
+        handler.is_first_time = True
+        handler.collected_events = True
+        handler.batch_manager = bm
+
+        with (
+            patch.object(bm, "_send_events_to_backend", return_value=200),
+            patch.object(
+                bm.plus_api,
+                "finalize_ephemeral_trace_batch",
+                return_value=MagicMock(
+                    status_code=200,
+                    json=MagicMock(return_value={"access_code": "TRACE-test"}),
+                ),
+            ),
+            patch("crewai.events.listeners.tracing.trace_batch_manager.Console.print"),
+            patch.object(handler, "_show_local_trace_message"),
+        ):
+            handler._initialize_backend_and_send_events()
+
+        assert self._features(bm) == ["tracing:ephemeral_sent"]
+
+    def test_broken_telemetry_does_not_break_finalization(self) -> None:
+        """Telemetry is best-effort: a failing exporter must not fail the batch."""
+        bm = self._make_manager(ephemeral=True)
+        bm._telemetry = Telemetry()
+        broken_provider = MagicMock()
+        broken_provider.get_tracer.side_effect = RuntimeError("exporter down")
+
+        with (
+            # `provider` exists only when telemetry initialized, so create it here
+            # to reach the failure this test is about.
+            patch.object(bm._telemetry, "provider", broken_provider, create=True),
+            patch.object(bm._telemetry, "_should_execute_telemetry", return_value=True),
+        ):
+            assert self._finalize(bm) is True
+
+        # Proves the assertion above is not vacuous: the span was really attempted.
+        broken_provider.get_tracer.assert_called_once()
+
+    def test_disabled_telemetry_does_not_break_finalization(self) -> None:
+        """Opted-out users have no provider at all; finalize must still succeed."""
+        bm = self._make_manager(ephemeral=True)
+        bm._telemetry = Telemetry()
+
+        with patch.object(
+            bm._telemetry, "_should_execute_telemetry", return_value=False
+        ):
+            assert self._finalize(bm) is True

@@ -62,7 +62,6 @@ class AIMindTool(BaseTool):
 
         minds_client = Client(api_key=self.api_key)
 
-        # Convert the datasources to DatabaseConfig objects.
         datasources = []
         for datasource in self.datasources:
             config = DatabaseConfig(
@@ -74,7 +73,6 @@ class AIMindTool(BaseTool):
             )
             datasources.append(config)
 
-        # Generate a random name for the Mind.
         name = f"{AIMindToolConstants.MIND_NAME_PREFIX}_{secrets.token_hex(5)}"
 
         mind = minds_client.minds.create(
@@ -84,7 +82,6 @@ class AIMindTool(BaseTool):
         self.mind_name = mind.name
 
     def _run(self, query: str) -> str | None:
-        # Run the query on the AI-Mind.
         # The Minds API is OpenAI compatible and therefore, the OpenAI client can be used.
         openai_client = OpenAI(
             base_url=AIMindToolConstants.MINDS_API_BASE_URL, api_key=self.api_key

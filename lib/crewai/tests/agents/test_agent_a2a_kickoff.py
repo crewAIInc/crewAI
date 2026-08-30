@@ -75,7 +75,7 @@ class TestAgentA2AKickoff:
         assert result is not None
         assert result.raw is not None
         assert isinstance(result.raw, str)
-        assert len(result.raw) > 50  # Should have a meaningful response
+        assert len(result.raw) > 50
 
     @pytest.mark.vcr()
     def test_agent_kickoff_returns_lite_agent_output(
@@ -99,14 +99,12 @@ class TestAgentA2AKickoff:
         self, researcher_agent: Agent
     ) -> None:
         """Test that agent handles multi-turn A2A conversations."""
-        # This should trigger multiple turns of conversation
         result = researcher_agent.kickoff(
             "Ask the remote A2A agent about recent developments in AI agent communication protocols."
         )
 
         assert result is not None
         assert result.raw is not None
-        # The response should contain information about A2A or agent protocols
         assert isinstance(result.raw, str)
 
     @pytest.mark.vcr()
@@ -119,7 +117,6 @@ class TestAgentA2AKickoff:
             verbose=False,
         )
 
-        # This should work without A2A delegation
         result = agent.kickoff("Say hello")
 
         assert result is not None

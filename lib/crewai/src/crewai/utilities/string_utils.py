@@ -99,7 +99,6 @@ def interpolate_only(
         ValueError: If a value contains unsupported types or a template variable is missing
     """
 
-    # Validation function for recursive type checking
     def _validate_type(validate_value: Any) -> None:
         if validate_value is None:
             return
@@ -118,7 +117,6 @@ def interpolate_only(
             "Only str, int, float, bool, dict, and list are allowed."
         )
 
-    # Validate all input values
     for key, value in inputs.items():
         try:
             _validate_type(value)
@@ -137,14 +135,12 @@ def interpolate_only(
     variables = _VARIABLE_PATTERN.findall(input_string)
     result = input_string
 
-    # Check if all variables exist in inputs
     missing_vars = [var for var in variables if var not in inputs]
     if missing_vars:
         raise KeyError(
             f"Template variable '{missing_vars[0]}' not found in inputs dictionary"
         )
 
-    # Replace each variable with its value
     for var in variables:
         if var in inputs:
             placeholder = "{" + var + "}"

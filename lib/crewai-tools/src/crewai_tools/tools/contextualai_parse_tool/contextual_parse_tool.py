@@ -96,7 +96,6 @@ class ContextualAIParseTool(BaseTool):
 
                 sleep(5)
 
-            # Get parse results
             results_url = f"{base_url}/parse/jobs/{job_id}/results"
             result = requests.get(
                 results_url,

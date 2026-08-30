@@ -90,8 +90,10 @@ class TavilyResearchTool(BaseTool):
         super().__init__(**kwargs)
         if TAVILY_AVAILABLE:
             api_key = os.getenv("TAVILY_API_KEY")
-            self._client = TavilyClient(api_key=api_key)
-            self._async_client = AsyncTavilyClient(api_key=api_key)
+            self._client = TavilyClient(api_key=api_key, client_name="crewai")
+            self._async_client = AsyncTavilyClient(
+                api_key=api_key, client_name="crewai"
+            )
         else:
             try:
                 import subprocess

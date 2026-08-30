@@ -347,9 +347,7 @@ class TestAllOfMerging:
         assert obj.item.id == 1
 
 
-# ---------------------------------------------------------------------------
 # $ref resolution
-# ---------------------------------------------------------------------------
 
 
 class TestRefResolution:
@@ -374,9 +372,7 @@ class TestRefResolution:
         assert obj.item.name == "Widget"
 
 
-# ---------------------------------------------------------------------------
 # model_name parameter
-# ---------------------------------------------------------------------------
 
 
 class TestModelName:
@@ -410,9 +406,7 @@ class TestModelName:
         assert Model.__name__ == "DynamicModel"
 
 
-# ---------------------------------------------------------------------------
 # enrich_descriptions
-# ---------------------------------------------------------------------------
 
 
 class TestEnrichDescriptions:
@@ -477,9 +471,7 @@ class TestEnrichDescriptions:
         assert "Maximum: 10" in nested_field.description
 
 
-# ---------------------------------------------------------------------------
 # Edge cases
-# ---------------------------------------------------------------------------
 
 
 class TestEdgeCases:
@@ -507,9 +499,7 @@ class TestEdgeCases:
             create_model_from_schema(schema)
 
 
-# ---------------------------------------------------------------------------
 # build_rich_field_description
-# ---------------------------------------------------------------------------
 
 
 class TestBuildRichFieldDescription:
@@ -548,7 +538,6 @@ class TestBuildRichFieldDescription:
         assert "Examples:" in desc
         assert "'foo'" in desc
         assert "'baz'" in desc
-        # Only first 3 shown
         assert "'extra'" not in desc
 
     def test_combined_constraints(self) -> None:
@@ -564,9 +553,7 @@ class TestBuildRichFieldDescription:
         assert "Format: int32" in desc
 
 
-# ---------------------------------------------------------------------------
 # Schema transformation functions
-# ---------------------------------------------------------------------------
 
 
 class TestResolveRefs:
@@ -884,9 +871,7 @@ class TestEndToEndMCPSchema:
         assert obj.filters.categories == ["news", "tech"]
 
 
-# ---------------------------------------------------------------------------
 # Recursive / circular $ref schemas (GH-5490)
-# ---------------------------------------------------------------------------
 
 RECURSIVE_NODE_SCHEMA: dict = {
     "$defs": {
@@ -948,7 +933,49 @@ class TestResolveRefsRecursive:
         assert resolved["properties"]["x"]["type"] == "integer"
 
 
-class TestSanitizeRecursiveSchemas:
+class TestSanitizeStrictSchemas:
+    def test_openai_strict_preserves_property_named_title(self) -> None:
+        from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_openai_strict
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "title": {"title": "Title", "type": "string"},
+                "url": {"title": "Url", "type": "string"},
+            },
+            "required": ["title", "url"],
+        }
+
+        san = sanitize_tool_params_for_openai_strict(deepcopy(schema))
+
+        assert "title" in san["properties"]
+        assert set(san["required"]) == set(san["properties"].keys())
+        assert "title" not in san["properties"]["title"]
+
+    def test_openai_strict_preserves_nested_property_named_title(self) -> None:
+        from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_openai_strict
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "payload": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"title": "Nested Title", "type": "string"},
+                    },
+                    "required": ["title"],
+                },
+            },
+            "required": ["payload"],
+        }
+
+        san = sanitize_tool_params_for_openai_strict(deepcopy(schema))
+        payload = san["properties"]["payload"]
+
+        assert "title" in payload["properties"]
+        assert payload["required"] == ["title"]
+        assert "title" not in payload["properties"]["title"]
+
     def test_anthropic_strict_preserves_recursive_type(self) -> None:
         from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_anthropic_strict
 

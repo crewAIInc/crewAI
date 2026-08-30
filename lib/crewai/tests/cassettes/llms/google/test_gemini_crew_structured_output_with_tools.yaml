@@ -23,17 +23,8 @@ interactions:
       numbers together and return the sum.", "name": "add_numbers", "parameters_json_schema":
       {"properties": {"a": {"title": "A", "type": "integer"}, "b": {"title": "B",
       "type": "integer"}}, "required": ["a", "b"], "type": "object", "additionalProperties":
-      false}}, {"description": "Use this tool to provide your final structured response.
-      Call this tool when you have gathered all necessary information and are ready
-      to provide the final answer in the required format.", "name": "structured_output",
-      "parameters_json_schema": {"properties": {"operation": {"description": "The
-      mathematical operation performed", "title": "Operation", "type": "string"},
-      "result": {"description": "The result of the calculation", "title": "Result",
-      "type": "integer"}, "explanation": {"description": "Brief explanation of the
-      calculation", "title": "Explanation", "type": "string"}}, "required": ["operation",
-      "result", "explanation"], "title": "CalculationResult", "type": "object", "additionalProperties":
-      false, "propertyOrdering": ["operation", "result", "explanation"]}}]}], "generationConfig":
-      {"stopSequences": ["\nObservation:"]}}'
+      false}}]}], "generationConfig": {"stopSequences": ["\nObservation:"], "thinkingConfig":
+      {"include_thoughts": true}}}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -44,41 +35,67 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2763'
+      - '2016'
       content-type:
       - application/json
       host:
       - generativelanguage.googleapis.com
       x-goog-api-client:
-      - google-genai-sdk/1.49.0 gl-python/3.13.12
+      - google-genai-sdk/1.65.0 gl-python/3.13.3
       x-goog-api-key:
       - X-GOOG-API-KEY-XXX
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"functionCall\": {\n              \"name\": \"add_numbers\",\n
+        [\n          {\n            \"text\": \"**My Calculation Process**\\n\\nAlright,
+        the user wants me to compute 15 + 27. Simple enough. I have a tool specifically
+        designed for this: `add_numbers(a: int, b: int)`. This is ideal; I'll utilize
+        that.\\n\\nSo, first step: I need to call the `add_numbers` tool. The inputs
+        are straightforward: `a` should be 15 and `b` should be 27. I'll execute that
+        call immediately.\\n\\nOnce I have the result \u2013 the sum \u2013 in hand,
+        I need to format the output. The user is specific about the structure; it
+        needs to be a JSON object conforming to that OpenAPI schema. Specifically,
+        the JSON should include: an \\\"operation\\\" field set to \\\"Addition\\\",
+        a \\\"result\\\" field populated with the calculated sum, and an \\\"explanation\\\"
+        field giving some context, which should be \\\"Added 15 and 27 together.\\\"\\n\\nTherefore,
+        my workflow is: call the tool with the provided numbers, get the sum, and
+        then construct the final JSON object in the required format.\\n\",\n            \"thought\":
+        true\n          },\n          {\n            \"text\": \"**My Reasoning for
+        Calculating 15 + 27**\\n\\nOkay, the user wants me to compute 15 plus 27.
+        No problem; that's straightforward. I've got a dedicated `add_numbers` tool
+        for this, which is exactly the right approach. Let's see...I need to call
+        that tool, providing `a=15` and `b=27` as input parameters. Once I receive
+        the sum, I can move on to formatting the result.\\n\\nNow, the important part:
+        the output needs to be a JSON object, specifically structured as dictated
+        by the OpenAPI schema. I need to make sure I include the \\\"operation\\\",
+        \\\"result\\\", and \\\"explanation\\\" fields. \\\"operation\\\" will be
+        \\\"Addition\\\", the \\\"result\\\" will naturally be the sum I get from
+        the tool, and the \\\"explanation\\\" will simply be \\\"Added 15 and 27 together.\\\"
+        That should cover everything, and the user should get a perfectly formatted
+        response.\\n\",\n            \"thought\": true\n          },\n          {\n
+        \           \"functionCall\": {\n              \"name\": \"add_numbers\",\n
         \             \"args\": {\n                \"a\": 15,\n                \"b\":
-        27\n              }\n            }\n          }\n        ],\n        \"role\":
-        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\":
-        4.3579145442760951e-06\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
-        377,\n    \"candidatesTokenCount\": 7,\n    \"totalTokenCount\": 384,\n    \"promptTokensDetails\":
-        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 377\n
-        \     }\n    ],\n    \"candidatesTokensDetails\": [\n      {\n        \"modality\":
-        \"TEXT\",\n        \"tokenCount\": 7\n      }\n    ]\n  },\n  \"modelVersion\":
-        \"gemini-2.0-flash-001\",\n  \"responseId\": \"vVefaYDSOouXjMcPicLCsQY\"\n}\n"
+        27\n              }\n            },\n            \"thoughtSignature\": \"CtkGAQw51sf8m1RivBZ7Zp+ZkaqxDdZzSlzepmvlCKak9gl6edIuej/pHxR5dg3qZf89XmHvQ6HigZyzqHcYbSvcRHVGbpNkTr62FC0g10oK5ZEp/r1otLIcgXoVgyFGguJPe/NsfWSX3Uc7ZaYgV0Q2MHBsjUmEHicPH0Pj4Xmbe2I1pK/9DPrzSQqZW3duhLBlBIF9RwZUiltPH6mK+k71l8bN/ebsbbZM18FMXf0wg/7lf3OjvY2wdLDNUD/F2M7T8yfi7NelPWorjIuTGOVWlVRsdGW0QEzuVoyYY7OfbBJC+XsmTumYt+vqgIR3jcQZlA5/3yJdj3e/3mrNmzGt+8VvkjUnu3pz0IUkq2SoTG0+6Y/ajsUI0YA/BFiAXHjrRhH1Nx3ihGWT7E7VzpU/E1ZPFMJIOPLRSpRv8G6ITnjZGthozTZtKLgoHCF7kx4Ni8eVdOh2Us6kY7tYpVabM1dmw0gextEEt+fBMoI+qZGkXdL1YW6SEtQBHh3BGKX8khcrqNvqPZDFzSG0iieMJq7abbEYAIc8zRkeGlWEdX6ES6e+njnFN7JX0Nc32GzOjmpgx9gRhYe+wKonqBQ9RwLLNK+lFuflLTrU3D8jMiPCJyvoRsjdjEc+2JtHXo14ibOVXvZ6oYCHsTEB7f+90/qzcrITESyDBD/rmiT/SqgitBa44MZE9CZ9Ml+BW0xd9FfCy4oLy8w4vszVFDw9Eotr4pEzdCeDeWjMn35taJnWf6jUeF0z/0iyHjbi7XRubJXxI2YuKQ+HRCKX1RFaJWLhmxO4JNBDBqfYZqsO/FefqxjWi2pRzE8U/Upp8Tv/hy1FoN9Abs8W6lPoqgOyEiOcpVkM+u0CgUbf87I1X2EiPpuJF4D9dHlEJqumiPqIGazSLnrjW1qqbM5UpQQuPoTC7q+G092CEnNJBIwrufddZPDfD9rqINpmMa+7OswldKViVaCWR3VsgrSXJj7lVRntCyE2atWxTvtQVnR/JLDdyc98CAUChtAPnC4K/K3OVI4jffQQsHmfeOnTyg0n2VnZ6Yhgo0lMdE4IfMrNOWOuNvHodeHisD2yXjvTCgScO8B3s+EJTvenHMert3nRgjNRmFZ0cRNSjbTeG0UlB9s7Uy0uyrn5ODkKIgEMOdbH9yJU53jInG9boFeMXb1qif47Pc72taZkl6ZaMK4=\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
+        function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        383,\n    \"candidatesTokenCount\": 22,\n    \"totalTokenCount\": 658,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 383\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 253,\n    \"serviceTier\": \"standard\"\n
+        \ },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\": \"qagPas37Ba2R-8YPzYzI8AY\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Wed, 25 Feb 2026 20:12:46 GMT
+      - Fri, 22 May 2026 00:51:56 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=718
+      - gfet4t7; dur=3892
       Transfer-Encoding:
       - chunked
       Vary:
@@ -89,6 +106,8 @@ interactions:
       - X-CONTENT-TYPE-XXX
       X-Frame-Options:
       - X-FRAME-OPTIONS-XXX
+      X-Gemini-Service-Tier:
+      - standard
       X-XSS-Protection:
       - '0'
     status:
@@ -112,27 +131,17 @@ interactions:
       the schema format.\n\nDo not include the OpenAPI schema in the final output.
       Ensure the final output does not include any code block markers like ```json
       or ```python."}], "role": "user"}, {"parts": [{"functionCall": {"args": {"a":
-      15, "b": 27}, "name": "add_numbers"}}], "role": "model"}, {"parts": [{"functionResponse":
-      {"name": "add_numbers", "response": {"result": 42}}}], "role": "user"}, {"parts":
-      [{"text": "Analyze the tool result. If requirements are met, provide the Final
-      Answer. Otherwise, call the next tool. Deliver only the answer without meta-commentary."}],
-      "role": "user"}], "systemInstruction": {"parts": [{"text": "You are Calculator.
-      You are a calculator assistant that uses tools to compute results.\nYour personal
-      goal is: Perform calculations using available tools"}], "role": "user"}, "tools":
-      [{"functionDeclarations": [{"description": "Add two numbers together and return
-      the sum.", "name": "add_numbers", "parameters_json_schema": {"properties": {"a":
-      {"title": "A", "type": "integer"}, "b": {"title": "B", "type": "integer"}},
-      "required": ["a", "b"], "type": "object", "additionalProperties": false}}, {"description":
-      "Use this tool to provide your final structured response. Call this tool when
-      you have gathered all necessary information and are ready to provide the final
-      answer in the required format.", "name": "structured_output", "parameters_json_schema":
-      {"properties": {"operation": {"description": "The mathematical operation performed",
-      "title": "Operation", "type": "string"}, "result": {"description": "The result
-      of the calculation", "title": "Result", "type": "integer"}, "explanation": {"description":
-      "Brief explanation of the calculation", "title": "Explanation", "type": "string"}},
-      "required": ["operation", "result", "explanation"], "title": "CalculationResult",
-      "type": "object", "additionalProperties": false, "propertyOrdering": ["operation",
-      "result", "explanation"]}}]}], "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+      15, "b": 27}, "name": "add_numbers"}, "thoughtSignature": "CtkGAQw51sf8m1RivBZ7Zp-ZkaqxDdZzSlzepmvlCKak9gl6edIuej_pHxR5dg3qZf89XmHvQ6HigZyzqHcYbSvcRHVGbpNkTr62FC0g10oK5ZEp_r1otLIcgXoVgyFGguJPe_NsfWSX3Uc7ZaYgV0Q2MHBsjUmEHicPH0Pj4Xmbe2I1pK_9DPrzSQqZW3duhLBlBIF9RwZUiltPH6mK-k71l8bN_ebsbbZM18FMXf0wg_7lf3OjvY2wdLDNUD_F2M7T8yfi7NelPWorjIuTGOVWlVRsdGW0QEzuVoyYY7OfbBJC-XsmTumYt-vqgIR3jcQZlA5_3yJdj3e_3mrNmzGt-8VvkjUnu3pz0IUkq2SoTG0-6Y_ajsUI0YA_BFiAXHjrRhH1Nx3ihGWT7E7VzpU_E1ZPFMJIOPLRSpRv8G6ITnjZGthozTZtKLgoHCF7kx4Ni8eVdOh2Us6kY7tYpVabM1dmw0gextEEt-fBMoI-qZGkXdL1YW6SEtQBHh3BGKX8khcrqNvqPZDFzSG0iieMJq7abbEYAIc8zRkeGlWEdX6ES6e-njnFN7JX0Nc32GzOjmpgx9gRhYe-wKonqBQ9RwLLNK-lFuflLTrU3D8jMiPCJyvoRsjdjEc-2JtHXo14ibOVXvZ6oYCHsTEB7f-90_qzcrITESyDBD_rmiT_SqgitBa44MZE9CZ9Ml-BW0xd9FfCy4oLy8w4vszVFDw9Eotr4pEzdCeDeWjMn35taJnWf6jUeF0z_0iyHjbi7XRubJXxI2YuKQ-HRCKX1RFaJWLhmxO4JNBDBqfYZqsO_FefqxjWi2pRzE8U_Upp8Tv_hy1FoN9Abs8W6lPoqgOyEiOcpVkM-u0CgUbf87I1X2EiPpuJF4D9dHlEJqumiPqIGazSLnrjW1qqbM5UpQQuPoTC7q-G092CEnNJBIwrufddZPDfD9rqINpmMa-7OswldKViVaCWR3VsgrSXJj7lVRntCyE2atWxTvtQVnR_JLDdyc98CAUChtAPnC4K_K3OVI4jffQQsHmfeOnTyg0n2VnZ6Yhgo0lMdE4IfMrNOWOuNvHodeHisD2yXjvTCgScO8B3s-EJTvenHMert3nRgjNRmFZ0cRNSjbTeG0UlB9s7Uy0uyrn5ODkKIgEMOdbH9yJU53jInG9boFeMXb1qif47Pc72taZkl6ZaMK4="}],
+      "role": "model"}, {"parts": [{"functionResponse": {"name": "add_numbers", "response":
+      {"result": 42}}}], "role": "user"}], "systemInstruction": {"parts": [{"text":
+      "You are Calculator. You are a calculator assistant that uses tools to compute
+      results.\nYour personal goal is: Perform calculations using available tools"}],
+      "role": "user"}, "tools": [{"functionDeclarations": [{"description": "Add two
+      numbers together and return the sum.", "name": "add_numbers", "parameters_json_schema":
+      {"properties": {"a": {"title": "A", "type": "integer"}, "b": {"title": "B",
+      "type": "integer"}}, "required": ["a", "b"], "type": "object", "additionalProperties":
+      false}}]}], "generationConfig": {"stopSequences": ["\nObservation:"], "thinkingConfig":
+      {"include_thoughts": true}}}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -143,42 +152,50 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3166'
+      - '3441'
       content-type:
       - application/json
       host:
       - generativelanguage.googleapis.com
       x-goog-api-client:
-      - google-genai-sdk/1.49.0 gl-python/3.13.12
+      - google-genai-sdk/1.65.0 gl-python/3.13.3
       x-goog-api-key:
       - X-GOOG-API-KEY-XXX
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"functionCall\": {\n              \"name\": \"structured_output\",\n
-        \             \"args\": {\n                \"result\": 42,\n                \"explanation\":
-        \"15 + 27 = 42\",\n                \"operation\": \"addition\"\n              }\n
-        \           }\n          }\n        ],\n        \"role\": \"model\"\n      },\n
-        \     \"finishReason\": \"STOP\",\n      \"avgLogprobs\": -0.07498827245500353\n
-        \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 421,\n    \"candidatesTokenCount\":
-        18,\n    \"totalTokenCount\": 439,\n    \"promptTokensDetails\": [\n      {\n
-        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 421\n      }\n    ],\n
-        \   \"candidatesTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
-        \       \"tokenCount\": 18\n      }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash-001\",\n
-        \ \"responseId\": \"vlefac7bJb6TjMcPzYWh0Ag\"\n}\n"
+        [\n          {\n            \"text\": \"**My Calculation and OpenAPI Formatting**\\n\\nOkay,
+        so I've just crunched the numbers, 15 plus 27, and the answer, as expected,
+        is 42. Now comes the formatting, the part I truly appreciate. It's time to
+        translate this into the precise structure that the OpenAPI schema dictates.\\n\\nLet's
+        see\u2026 I need to populate three key fields: `operation`, `result`, and
+        `explanation`. This is straightforward. For `operation`, I'll enter \\\"Addition,\\\"
+        because, well, that's what I did! For `result`, the answer I painstakingly
+        produced, 42. And for `explanation`, a concise note, \\\"Added 15 and 27 together.\\\"
+        Perfect. That should do the trick. Now I can move on to the next task.\\n\",\n
+        \           \"thought\": true\n          },\n          {\n            \"text\":
+        \"{\\n  \\\"operation\\\": \\\"Addition\\\",\\n  \\\"result\\\": 42,\\n  \\\"explanation\\\":
+        \\\"Added 15 and 27 together.\\\"\\n}\",\n            \"thoughtSignature\":
+        \"CrcDAQw51sd+vh7cJvN7WGZKQIJGL6Xtr/+CNnL2r9YWGHv5EBrOm/Qdzr4eK0eyrJhuJGBZg5V5XakEuLMULUvth7stE+FTz16F5Vzx2yKMuM5Ictv/DlI7s4Z5WFaI5HJVJTojOhW9K/1TM8y48+eStJre8Qyz3tOvFg1DPEau6JCk+1uoRil2RoZHxFQpd0LaDhl4sKZkRr1e5c2gtfZiK3NHR3ipbRejIOGjDQah4+q4D6ASTiHZxHCBIjAP4HH8DF40oylF6mQR1WHWezKzvkZ0sz3ydPGExM5+lFOE8z1NUpqH2kJ3PfzdrbX2VccIT+5pWz9NsIW8N1JYbPvb7xKENh7mTI+tmCtuAiO9DTwWUf450OHNWdrHQPxn3MMT10+4RMzKBeDAjEFVZ6M68CyUDTJ0uDtqJZ6SXs3ZdmmLGQY1lAk29r0eklaMJLk226uMUKCXlHKwyDbJVH3+SwGkgU+Am81AiekV5ZWQjfe3gUN8ojOLSNvpAfaf/K8ZvR4uGCEMs2pJ2sqI6sCIE9w9+u2biTattqWtcO+wmPXZ/CwU/ASXHlBqt55cvB2XyFTXO7kQGw==\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        421,\n    \"candidatesTokenCount\": 36,\n    \"totalTokenCount\": 560,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 421\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 103,\n    \"serviceTier\": \"standard\"\n
+        \ },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\": \"ragPaseeA6nT_uMP653cmAc\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Wed, 25 Feb 2026 20:12:47 GMT
+      - Fri, 22 May 2026 00:51:59 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=774
+      - gfet4t7; dur=2377
       Transfer-Encoding:
       - chunked
       Vary:
@@ -189,6 +206,8 @@ interactions:
       - X-CONTENT-TYPE-XXX
       X-Frame-Options:
       - X-FRAME-OPTIONS-XXX
+      X-Gemini-Service-Tier:
+      - standard
       X-XSS-Protection:
       - '0'
     status:

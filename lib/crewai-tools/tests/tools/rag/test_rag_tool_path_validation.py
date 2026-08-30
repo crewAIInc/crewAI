@@ -27,9 +27,7 @@ def tool(mock_rag_client: MagicMock) -> RagTool:
         return RagTool()
 
 
-# ---------------------------------------------------------------------------
 # Positional arg validation (existing behaviour, regression guard)
-# ---------------------------------------------------------------------------
 
 class TestPositionalArgValidation:
     def test_blocks_traversal_in_positional_arg(self, tool):
@@ -40,10 +38,6 @@ class TestPositionalArgValidation:
         with pytest.raises(ValueError, match="Blocked unsafe"):
             tool.add("file:///etc/passwd")
 
-
-# ---------------------------------------------------------------------------
-# Keyword arg validation (the newly fixed gap)
-# ---------------------------------------------------------------------------
 
 class TestKwargPathValidation:
     def test_blocks_traversal_via_path_kwarg(self, tool):

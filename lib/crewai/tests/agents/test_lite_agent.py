@@ -19,7 +19,6 @@ from crewai.tools import BaseTool
 from crewai.types.usage_metrics import UsageMetrics
 
 
-# A simple test tool
 class SecretLookupTool(BaseTool):
     name: str = "secret_lookup"
     description: str = "A tool to lookup secrets"
@@ -28,7 +27,6 @@ class SecretLookupTool(BaseTool):
         return "SUPERSECRETPASSWORD123"
 
 
-# Define Mock Search Tool
 class WebSearchTool(BaseTool):
     """Tool for searching the web for information."""
 
@@ -37,7 +35,6 @@ class WebSearchTool(BaseTool):
 
     def _run(self, query: str) -> str:
         """Search the web for information about a topic."""
-        # This is a mock implementation
         if "tokyo" in query.lower():
             return "Tokyo's population in 2023 was approximately 21 million people in the city proper, and 37 million in the greater metropolitan area."
         if "climate change" in query.lower() and "coral" in query.lower():
@@ -45,7 +42,6 @@ class WebSearchTool(BaseTool):
         return f"Found information about {query}: This is a simulated search result for demonstration purposes."
 
 
-# Define Mock Calculator Tool
 class CalculatorTool(BaseTool):
     """Tool for performing calculations."""
 
@@ -55,7 +51,6 @@ class CalculatorTool(BaseTool):
     def _run(self, expression: str) -> str:
         """Calculate the result of a mathematical expression."""
         try:
-            # Using eval with restricted builtins for test purposes only
             result = eval(expression, {"__builtins__": {}})  # noqa: S307
             return f"The result of {expression} is {result}"
         except Exception as e:
@@ -75,7 +70,6 @@ class ResearchResult(BaseModel):
 @pytest.mark.parametrize("verbose", [True, False])
 def test_agent_kickoff_preserves_parameters(verbose):
     """Test that Agent.kickoff() uses the correct parameters from the Agent."""
-    # Create a test agent with specific parameters
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Final Answer: Test response"
     mock_llm.stop = []
@@ -104,10 +98,8 @@ def test_agent_kickoff_preserves_parameters(verbose):
         verbose=verbose,
     )
 
-    # Call kickoff and verify it works
     result = agent.kickoff("Test query")
 
-    # Verify the agent was configured correctly
     assert agent.role == "Test Agent"
     assert agent.goal == "Test Goal"
     assert agent.backstory == "Test Backstory"
@@ -117,7 +109,6 @@ def test_agent_kickoff_preserves_parameters(verbose):
     assert agent.max_iter == max_iter
     assert agent.verbose == verbose
 
-    # Verify kickoff returned a result
     assert result is not None
     assert result.raw is not None
 
@@ -125,7 +116,6 @@ def test_agent_kickoff_preserves_parameters(verbose):
 @pytest.mark.vcr()
 def test_lite_agent_with_tools():
     """Test that Agent can use tools."""
-    # Create a LiteAgent with tools
     llm = LLM(model="gpt-4o-mini")
     agent = Agent(
         role="Research Assistant",
@@ -157,7 +147,6 @@ def test_lite_agent_with_tools():
 
     agent.kickoff("What are the effects of climate change on coral reefs?")
 
-    # Verify tool usage events were emitted
     assert event_received.wait(timeout=5), "Timeout waiting for tool usage events"
     assert len(received_events) > 0, "Tool usage events should be emitted"
     event = received_events[0]
@@ -269,7 +258,6 @@ async def test_lite_agent_returns_usage_metrics_async():
         "What is the population of Tokyo? Return your structured output in JSON format with the following fields: summary, confidence"
     )
     assert isinstance(result, LiteAgentOutput)
-    # Check for population data in various formats (text or numeric)
     assert (
         "21 million" in result.raw
         or "37 million" in result.raw
@@ -651,7 +639,6 @@ def test_agent_kickoff_with_platform_tools(mock_get, mock_post):
     }
     mock_get.return_value = mock_response
 
-    # Mock the platform tool execution
     mock_post_response = Mock()
     mock_post_response.ok = True
     mock_post_response.json.return_value = {
@@ -680,7 +667,6 @@ def test_agent_kickoff_with_platform_tools(mock_get, mock_post):
 @pytest.mark.vcr()
 def test_agent_kickoff_with_mcp_tools(mock_get_mcp_tools):
     """Test that Agent.kickoff() properly integrates MCP tools with LiteAgent"""
-    # Setup mock MCP tools - create a proper BaseTool instance
     class MockMCPTool(BaseTool):
         name: str = "exa_search"
         description: str = "Search the web using Exa"
@@ -690,7 +676,6 @@ def test_agent_kickoff_with_mcp_tools(mock_get_mcp_tools):
 
     mock_get_mcp_tools.return_value = [MockMCPTool()]
 
-    # Create agent with MCP servers
     agent = Agent(
         role="Test Agent",
         goal="Test goal",
@@ -700,20 +685,14 @@ def test_agent_kickoff_with_mcp_tools(mock_get_mcp_tools):
         verbose=True
     )
 
-    # Execute kickoff
     result = agent.kickoff("Search for information about AI")
 
-    # Verify the result is a LiteAgentOutput
     assert isinstance(result, LiteAgentOutput)
     assert result.raw is not None
 
-    # Verify MCP tools were retrieved
     mock_get_mcp_tools.assert_called_once_with(["https://mcp.exa.ai/mcp?api_key=test_exa_key&profile=research"])
 
 
-# ============================================================================
-# Tests for LiteAgent inside Flow (magic auto-async pattern)
-# ============================================================================
 
 from crewai.flow.flow import listen
 
@@ -726,7 +705,6 @@ def test_lite_agent_inside_flow_sync():
     from within a Flow automatically detects the event loop and returns a
     coroutine that the Flow framework awaits. Users don't need to use async/await.
     """
-    # Track execution
     execution_log = []
 
     class TestFlow(Flow):
@@ -748,7 +726,6 @@ def test_lite_agent_inside_flow_sync():
     flow = TestFlow()
     result = flow.kickoff()
 
-    # Verify the flow executed successfully
     assert "flow_started" in execution_log
     assert "agent_completed" in execution_log
     assert result is not None
@@ -851,7 +828,6 @@ def test_lite_agent_standalone_still_works():
         verbose=False,
     )
 
-    # This should work normally - no Flow, no event loop
     result = agent.kickoff(messages="What is 5+5? Reply with just the number.")
 
     assert result is not None
@@ -1031,7 +1007,7 @@ def test_prepare_kickoff_param_files_override_message_files():
     )
 
     assert "files" in inputs
-    assert inputs["files"]["same.png"] is param_file  # param takes precedence
+    assert inputs["files"]["same.png"] is param_file
 
 
 def test_lite_agent_verbose_false_suppresses_printer_output():
@@ -1066,11 +1042,9 @@ def test_lite_agent_verbose_false_suppresses_printer_output():
 
     assert result is not None
     assert isinstance(result, LiteAgentOutput)
-    # Verify the printer was never called when verbose=False
     mock_printer.print.assert_not_called()
 
 
-# --- LiteAgent memory integration ---
 
 
 @pytest.mark.filterwarnings("ignore:LiteAgent is deprecated")
@@ -1122,6 +1096,7 @@ def test_lite_agent_memory_true_resolves_to_default_memory():
     )
     assert agent._memory is not None
     assert isinstance(agent._memory, Memory)
+    assert agent._memory.llm is agent.llm
 
 
 @pytest.mark.filterwarnings("ignore:LiteAgent is deprecated")
@@ -1163,3 +1138,160 @@ def test_lite_agent_memory_instance_recall_and_save_called():
     mock_memory.remember_many.assert_called_once_with(
         ["Fact one.", "Fact two."], agent_role="Test"
     )
+
+
+class _FixedUsageLLM(BaseLLM):
+    """Offline BaseLLM that records fixed usage (100/10 tokens) per call."""
+
+    def __init__(self):
+        super().__init__(model="fixed-usage-model")
+
+    def call(
+        self,
+        messages,
+        tools=None,
+        callbacks=None,
+        available_functions=None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    ) -> str:
+        self._track_token_usage_internal(
+            {"prompt_tokens": 100, "completion_tokens": 10, "total_tokens": 110}
+        )
+        return "Thought: I know the answer.\nFinal Answer: fake answer"
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def supports_stop_words(self) -> bool:
+        return False
+
+    def get_context_window_size(self) -> int:
+        return 4096
+
+
+class TestKickoffUsageMetricsArePerCall:
+    """Regression tests for EPD-177: kickoff results used to expose the LLM
+    instance's cumulative lifetime counters, so counts accumulated across
+    calls and pooled across agents sharing one LLM object.
+    """
+
+    def _make_agent(self, role: str, llm: BaseLLM) -> Agent:
+        return Agent(
+            role=role,
+            goal="Answer questions.",
+            backstory="Test agent.",
+            llm=llm,
+            verbose=False,
+        )
+
+    def test_agents_sharing_one_llm_report_per_call_usage(self):
+        shared = _FixedUsageLLM()
+        r1 = self._make_agent("agent one", shared).kickoff("question one")
+        r2 = self._make_agent("agent two", shared).kickoff("question two")
+
+        assert r1.usage_metrics is not None
+        assert r1.usage_metrics["prompt_tokens"] > 0
+        # The second agent's call must not include the first agent's tokens.
+        assert r2.usage_metrics == r1.usage_metrics
+
+        # The shared LLM instance still exposes cumulative lifetime totals.
+        lifetime = shared.get_token_usage_summary()
+        assert lifetime.prompt_tokens == (
+            r1.usage_metrics["prompt_tokens"] + r2.usage_metrics["prompt_tokens"]
+        )
+        assert lifetime.successful_requests == (
+            r1.usage_metrics["successful_requests"]
+            + r2.usage_metrics["successful_requests"]
+        )
+
+    def test_repeated_kickoffs_on_same_agent_report_per_call_usage(self):
+        agent = self._make_agent("agent", _FixedUsageLLM())
+        r1 = agent.kickoff("question one")
+        r2 = agent.kickoff("question two")
+
+        assert r1.usage_metrics is not None
+        assert r1.usage_metrics["prompt_tokens"] > 0
+        assert r2.usage_metrics == r1.usage_metrics
+
+    @pytest.mark.asyncio
+    async def test_async_kickoff_reports_per_call_usage(self):
+        shared = _FixedUsageLLM()
+        r1 = await self._make_agent("agent one", shared).kickoff_async("question one")
+        r2 = await self._make_agent("agent two", shared).kickoff_async("question two")
+
+        assert r1.usage_metrics is not None
+        assert r1.usage_metrics["prompt_tokens"] > 0
+        assert r2.usage_metrics == r1.usage_metrics
+
+    def test_guardrail_retry_usage_includes_all_attempts(self):
+        """A guardrail retry re-invokes the LLM within the same kickoff, so
+        the result must report the whole call's usage — every attempt — not
+        just the last one."""
+        baseline = (
+            self._make_agent("baseline", _FixedUsageLLM())
+            .kickoff("question one")
+            .usage_metrics
+        )
+
+        attempts: list[str] = []
+
+        def flaky_guardrail(output):
+            attempts.append(output.raw)
+            if len(attempts) == 1:
+                return (False, "Please try again.")
+            return (True, output.raw)
+
+        agent = Agent(
+            role="agent",
+            goal="Answer questions.",
+            backstory="Test agent.",
+            llm=_FixedUsageLLM(),
+            guardrail=flaky_guardrail,
+            verbose=False,
+        )
+        result = agent.kickoff("question one")
+
+        assert len(attempts) == 2
+        assert result.usage_metrics["successful_requests"] == (
+            2 * baseline["successful_requests"]
+        )
+        assert result.usage_metrics["prompt_tokens"] == 2 * baseline["prompt_tokens"]
+        assert result.usage_metrics["total_tokens"] == 2 * baseline["total_tokens"]
+
+
+class TestUsageMetricsDeltaSince:
+    def test_field_wise_difference(self):
+        baseline = UsageMetrics(
+            total_tokens=110,
+            prompt_tokens=100,
+            completion_tokens=10,
+            successful_requests=1,
+        )
+        current = UsageMetrics(
+            total_tokens=330,
+            prompt_tokens=300,
+            completion_tokens=30,
+            cached_prompt_tokens=5,
+            reasoning_tokens=7,
+            cache_creation_tokens=3,
+            successful_requests=3,
+        )
+
+        delta = current.delta_since(baseline)
+
+        assert delta == UsageMetrics(
+            total_tokens=220,
+            prompt_tokens=200,
+            completion_tokens=20,
+            cached_prompt_tokens=5,
+            reasoning_tokens=7,
+            cache_creation_tokens=3,
+            successful_requests=2,
+        )
+
+    def test_clamps_negative_differences_to_zero(self):
+        baseline = UsageMetrics(total_tokens=100, prompt_tokens=90, successful_requests=2)
+        delta = UsageMetrics().delta_since(baseline)
+        assert delta == UsageMetrics()

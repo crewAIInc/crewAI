@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
-from crewai.hooks import clear_all_llm_call_hooks, unregister_after_llm_call_hook, unregister_before_llm_call_hook
-import pytest
-
+from crewai.hooks import (
+    clear_all_llm_call_hooks,
+    unregister_after_llm_call_hook,
+    unregister_before_llm_call_hook,
+)
 from crewai.hooks.llm_hooks import (
     LLMCallHookContext,
     get_after_llm_call_hooks,
@@ -14,6 +16,7 @@ from crewai.hooks.llm_hooks import (
     register_after_llm_call_hook,
     register_before_llm_call_hook,
 )
+import pytest
 
 
 @pytest.fixture
@@ -32,20 +35,16 @@ def mock_executor():
 @pytest.fixture(autouse=True)
 def clear_hooks():
     """Clear global hooks before and after each test."""
-    # Import the private variables to clear them
     from crewai.hooks import llm_hooks
 
-    # Store original hooks
     original_before = llm_hooks._before_llm_call_hooks.copy()
     original_after = llm_hooks._after_llm_call_hooks.copy()
 
-    # Clear hooks
     llm_hooks._before_llm_call_hooks.clear()
     llm_hooks._after_llm_call_hooks.clear()
 
     yield
 
-    # Restore original hooks
     llm_hooks._before_llm_call_hooks.clear()
     llm_hooks._after_llm_call_hooks.clear()
     llm_hooks._before_llm_call_hooks.extend(original_before)
@@ -79,11 +78,9 @@ class TestLLMCallHookContext:
         """Test that modifying context.messages modifies executor.messages."""
         context = LLMCallHookContext(executor=mock_executor)
 
-        # Add a message through context
         new_message = {"role": "user", "content": "New message"}
         context.messages.append(new_message)
 
-        # Check that executor.messages is also modified
         assert new_message in mock_executor.messages
         assert len(mock_executor.messages) == 2
 
@@ -142,7 +139,6 @@ class TestBeforeLLMCallHooks:
         hooks1 = get_before_llm_call_hooks()
         hooks2 = get_before_llm_call_hooks()
 
-        # They should be equal but not the same object
         assert hooks1 == hooks2
         assert hooks1 is not hooks2
 
@@ -216,7 +212,6 @@ class TestAfterLLMCallHooks:
         hooks1 = get_after_llm_call_hooks()
         hooks2 = get_after_llm_call_hooks()
 
-        # They should be equal but not the same object
         assert hooks1 == hooks2
         assert hooks1 is not hooks2
 
@@ -268,16 +263,48 @@ class TestLLMHooksIntegration:
         context = LLMCallHookContext(executor=mock_executor, response="Original")
         hooks = get_after_llm_call_hooks()
 
-        # Simulate chaining (how it would be used in practice)
         result = context.response
         for hook in hooks:
-            # Update context for next hook
             context.response = result
             modified = hook(context)
             if modified is not None:
                 result = modified
 
         assert result == "Original [hook1] [hook2]"
+
+    def test_after_hooks_do_not_clobber_native_tool_call_responses(
+        self, mock_executor
+    ):
+        """A registered after hook must not break native tool execution.
+
+        Regression for crewAIInc/crewAI#6529: `_setup_after_llm_call_hooks`
+        stringified structured tool-call payloads, so the executor treated the
+        raw tool call as the final answer and never executed the tool. Non-str,
+        non-BaseModel responses now pass through untouched; hooks still fire on
+        textual responses.
+        """
+        from crewai.utilities.agent_utils import _setup_after_llm_call_hooks
+
+        observed = []
+
+        def observer(context):
+            observed.append(context.response)
+            return None
+
+        register_after_llm_call_hook(observer)
+        mock_executor.after_llm_call_hooks = get_after_llm_call_hooks()
+
+        tool_calls = [Mock()]  # structured native tool-call payload
+        result = _setup_after_llm_call_hooks(
+            mock_executor, tool_calls, printer=Mock(), verbose=False
+        )
+        assert result is tool_calls
+
+        text = _setup_after_llm_call_hooks(
+            mock_executor, "final answer", printer=Mock(), verbose=False
+        )
+        assert text == "final answer"
+        assert observed == ["final answer"]
 
     def test_unregister_before_hook(self):
         """Test that before hooks can be unregistered."""
@@ -310,17 +337,115 @@ class TestLLMHooksIntegration:
         hooks = get_before_llm_call_hooks()
         assert len(hooks) == 0
 
+    def test_raising_before_hook_does_not_skip_later_hooks(self, mock_executor):
+        """Fail-open is per-hook: a crashing hook must not disable its neighbors.
+
+        Regression guard for the dispatcher migration: previously the
+        ``except Exception`` wrapped the whole hook loop, so a raising hook
+        silently skipped every hook registered after it. Now swallowing is
+        per-hook — later hooks still run and the LLM call still proceeds.
+        """
+        from crewai.utilities.agent_utils import _setup_before_llm_call_hooks
+
+        ran: list[str] = []
+
+        def crashing_hook(context):
+            ran.append("crashing")
+            raise ValueError("bug in user hook")
+
+        def later_hook(context):
+            ran.append("later")
+
+        register_before_llm_call_hook(crashing_hook)
+        register_before_llm_call_hook(later_hook)
+        mock_executor.before_llm_call_hooks = get_before_llm_call_hooks()
+
+        proceed = _setup_before_llm_call_hooks(
+            mock_executor, printer=Mock(), verbose=False
+        )
+
+        assert ran == ["crashing", "later"]
+        assert proceed is True
+
+    def test_scoped_hooks_fire_on_agent_executor_llm_seams(self, mock_executor):
+        """register_scoped hooks must run on the executor model seams.
+
+        Regression: `_setup_before/after_llm_call_hooks` only ran the
+        executor's snapshot lists, so execution-scoped hooks never fired on
+        PRE/POST_MODEL_CALL during normal agent execution (while tool seams,
+        which go through `dispatch`, merged them). Scoped hooks run after the
+        snapshot, matching dispatch's global-then-scoped ordering.
+        """
+        from crewai.hooks import InterceptionPoint
+        from crewai.hooks.dispatch import register_scoped, scoped_hooks
+        from crewai.utilities.agent_utils import (
+            _setup_after_llm_call_hooks,
+            _setup_before_llm_call_hooks,
+        )
+
+        order: list[str] = []
+
+        def snapshot_hook(context):
+            order.append("snapshot")
+
+        mock_executor.before_llm_call_hooks = [snapshot_hook]
+        mock_executor.after_llm_call_hooks = []
+
+        with scoped_hooks():
+            register_scoped(
+                InterceptionPoint.PRE_MODEL_CALL,
+                lambda ctx: order.append("scoped_pre"),
+            )
+            register_scoped(
+                InterceptionPoint.POST_MODEL_CALL,
+                lambda ctx: order.append("scoped_post"),
+            )
+
+            proceed = _setup_before_llm_call_hooks(
+                mock_executor, printer=Mock(), verbose=False
+            )
+            answer = _setup_after_llm_call_hooks(
+                mock_executor, "answer", printer=Mock(), verbose=False
+            )
+
+        assert order == ["snapshot", "scoped_pre", "scoped_post"]
+        assert proceed is True
+        assert answer == "answer"
+
+    def test_intentional_block_still_short_circuits_later_hooks(self, mock_executor):
+        """A hook returning False blocks the call and skips later hooks (unchanged)."""
+        from crewai.utilities.agent_utils import _setup_before_llm_call_hooks
+
+        ran: list[str] = []
+
+        def blocking_hook(context):
+            ran.append("blocking")
+            return False
+
+        def later_hook(context):
+            ran.append("later")
+
+        register_before_llm_call_hook(blocking_hook)
+        register_before_llm_call_hook(later_hook)
+        mock_executor.before_llm_call_hooks = get_before_llm_call_hooks()
+
+        proceed = _setup_before_llm_call_hooks(
+            mock_executor, printer=Mock(), verbose=False
+        )
+
+        assert ran == ["blocking"]
+        assert proceed is False
+
     @pytest.mark.vcr()
     def test_lite_agent_hooks_integration_with_real_llm(self):
         """Test that LiteAgent executes before/after LLM call hooks and prints messages correctly."""
         import os
+
         from crewai.lite_agent import LiteAgent
 
-        # Skip if no API key available
         if not os.environ.get("OPENAI_API_KEY"):
             pytest.skip("OPENAI_API_KEY not set - skipping real LLM test")
 
-        # Track hook invocations
         hook_calls = {"before": [], "after": []}
 
         def before_llm_call_hook(context: LLMCallHookContext) -> bool:
@@ -330,7 +455,6 @@ class TestLLMHooksIntegration:
             print(f"[BEFORE HOOK] Message count: {len(context.messages)}")
             print(f"[BEFORE HOOK] Messages: {context.messages}")
 
-            # Track the call
             hook_calls["before"].append({
                 "iterations": context.iterations,
                 "message_count": len(context.messages),
@@ -338,7 +462,7 @@ class TestLLMHooksIntegration:
                 "has_crew": context.crew is not None,
             })
 
-            return True  # Allow execution
+            return True
 
         def after_llm_call_hook(context: LLMCallHookContext) -> str | None:
             """Log and verify after hook execution."""
@@ -347,24 +471,20 @@ class TestLLMHooksIntegration:
             print(f"[AFTER HOOK] Response: {context.response[:100] if context.response else 'None'}...")
             print(f"[AFTER HOOK] Final message count: {len(context.messages)}")
 
-            # Track the call
             hook_calls["after"].append({
                 "iterations": context.iterations,
                 "has_response": context.response is not None,
                 "response_length": len(context.response) if context.response else 0,
             })
 
-            # Optionally modify response
             if context.response:
                 return f"[HOOKED] {context.response}"
             return None
 
-        # Register hooks
         register_before_llm_call_hook(before_llm_call_hook)
         register_after_llm_call_hook(after_llm_call_hook)
 
         try:
-            # Create LiteAgent
             lite_agent = LiteAgent(
                 role="Test Assistant",
                 goal="Answer questions briefly",
@@ -372,31 +492,25 @@ class TestLLMHooksIntegration:
                 verbose=True,
             )
 
-            # Verify hooks are loaded
             assert len(lite_agent.before_llm_call_hooks) > 0, "Before hooks not loaded"
             assert len(lite_agent.after_llm_call_hooks) > 0, "After hooks not loaded"
 
-            # Execute with a simple prompt
             result = lite_agent.kickoff("Say 'Hello World' and nothing else")
 
 
-            # Verify hooks were called
             assert len(hook_calls["before"]) > 0, "Before hook was never called"
             assert len(hook_calls["after"]) > 0, "After hook was never called"
 
-            # Verify context had correct attributes for LiteAgent (used in flows)
             # LiteAgent doesn't have task/crew context, unlike agents in CrewBase
             before_call = hook_calls["before"][0]
             assert before_call["has_task"] is False, "Task should be None for LiteAgent in flows"
             assert before_call["has_crew"] is False, "Crew should be None for LiteAgent in flows"
             assert before_call["message_count"] > 0, "Should have messages"
 
-            # Verify after hook received response
             after_call = hook_calls["after"][0]
             assert after_call["has_response"] is True, "After hook should have response"
             assert after_call["response_length"] > 0, "Response should not be empty"
 
-            # Verify response was modified by after hook
             # Note: The hook modifies the raw LLM response, but LiteAgent then parses it
             # to extract the "Final Answer" portion. We check the messages to see the modification.
             assert len(result.messages) > 2, "Should have assistant message in messages"
@@ -406,7 +520,6 @@ class TestLLMHooksIntegration:
 
 
         finally:
-            # Clean up hooks
             unregister_before_llm_call_hook(before_llm_call_hook)
             unregister_after_llm_call_hook(after_llm_call_hook)
 
@@ -414,13 +527,12 @@ class TestLLMHooksIntegration:
     def test_direct_llm_call_hooks_integration(self):
         """Test that hooks work for direct llm.call() without agents."""
         import os
+
         from crewai.llm import LLM
 
-        # Skip if no API key available
         if not os.environ.get("OPENAI_API_KEY"):
             pytest.skip("OPENAI_API_KEY not set - skipping real LLM test")
 
-        # Track hook invocations
         hook_calls = {"before": [], "after": []}
 
         def before_hook(context: LLMCallHookContext) -> bool:
@@ -432,7 +544,6 @@ class TestLLMHooksIntegration:
             print(f"[BEFORE HOOK] Iterations: {context.iterations}")
             print(f"[BEFORE HOOK] Message count: {len(context.messages)}")
 
-            # Track the call
             hook_calls["before"].append({
                 "agent": context.agent,
                 "task": context.task,
@@ -441,40 +552,34 @@ class TestLLMHooksIntegration:
                 "message_count": len(context.messages),
             })
 
-            return True  # Allow execution
+            return True
 
         def after_hook(context: LLMCallHookContext) -> str | None:
             """Log and verify after hook execution."""
             print(f"\n[AFTER HOOK] Agent: {context.agent}")
             print(f"[AFTER HOOK] Response: {context.response[:100] if context.response else 'None'}...")
 
-            # Track the call
             hook_calls["after"].append({
                 "has_response": context.response is not None,
                 "response_length": len(context.response) if context.response else 0,
             })
 
-            # Modify response
             if context.response:
                 return f"[HOOKED] {context.response}"
             return None
 
-        # Register hooks
         register_before_llm_call_hook(before_hook)
         register_after_llm_call_hook(after_hook)
 
         try:
-            # Create LLM and make direct call
             llm = LLM(model="gpt-4o-mini")
             result = llm.call([{"role": "user", "content": "Say hello"}])
 
             print(f"\n[TEST] Final result: {result}")
 
-            # Verify hooks were called
             assert len(hook_calls["before"]) > 0, "Before hook was never called"
             assert len(hook_calls["after"]) > 0, "After hook was never called"
 
-            # Verify context had correct attributes for direct LLM calls
             before_call = hook_calls["before"][0]
             assert before_call["agent"] is None, "Agent should be None for direct LLM calls"
             assert before_call["task"] is None, "Task should be None for direct LLM calls"
@@ -482,15 +587,102 @@ class TestLLMHooksIntegration:
             assert before_call["llm"] is True, "LLM should be present"
             assert before_call["message_count"] > 0, "Should have messages"
 
-            # Verify after hook received response
             after_call = hook_calls["after"][0]
             assert after_call["has_response"] is True, "After hook should have response"
             assert after_call["response_length"] > 0, "Response should not be empty"
 
-            # Verify response was modified by after hook
             assert "[HOOKED]" in result, "Response should be modified by after hook"
 
         finally:
-            # Clean up hooks
             unregister_before_llm_call_hook(before_hook)
             unregister_after_llm_call_hook(after_hook)
+
+
+class TestDirectLLMScopedHooks:
+    """Direct (agent-less) LLM calls must honor execution-scoped hooks.
+
+    Regression: the direct-call helpers used to short-circuit when the global
+    hook list was empty, so hooks registered only for the current
+    ``scoped_hooks()`` context never ran on this path.
+    """
+
+    @staticmethod
+    def _stub_llm():
+        from crewai.llms.base_llm import BaseLLM
+
+        class _StubLLM(BaseLLM):
+            def call(self, *args: object, **kwargs: object) -> str:
+                return ""
+
+        return _StubLLM(model="stub")
+
+    def test_scoped_before_hook_runs_on_direct_call(self):
+        from crewai.hooks import InterceptionPoint
+        from crewai.hooks.dispatch import register_scoped, scoped_hooks
+
+        llm = self._stub_llm()
+        seen: list[int] = []
+
+        with scoped_hooks():
+            register_scoped(
+                InterceptionPoint.PRE_MODEL_CALL,
+                lambda ctx: seen.append(len(ctx.messages)),
+            )
+            proceed = llm._invoke_before_llm_call_hooks(
+                [{"role": "user", "content": "hi"}], from_agent=None
+            )
+
+        assert proceed is True
+        assert seen == [1]
+
+    def test_scoped_before_hook_can_block_direct_call(self):
+        from crewai.hooks import InterceptionPoint
+        from crewai.hooks.dispatch import HookAborted, register_scoped, scoped_hooks
+
+        llm = self._stub_llm()
+
+        def block(ctx: LLMCallHookContext) -> None:
+            raise HookAborted(reason="blocked by scoped hook")
+
+        with scoped_hooks():
+            register_scoped(InterceptionPoint.PRE_MODEL_CALL, block)
+            with pytest.raises(HookAborted, match="blocked by scoped hook"):
+                llm._invoke_before_llm_call_hooks(
+                    [{"role": "user", "content": "hi"}], from_agent=None
+                )
+
+    def test_a_scoped_hook_returning_false_blocks_the_call(self):
+        from crewai.hooks import InterceptionPoint
+        from crewai.hooks.dispatch import register_scoped, scoped_hooks
+        from crewai.llms.base_llm import LLMCallBlockedError
+
+        llm = self._stub_llm()
+
+        with scoped_hooks():
+            register_scoped(InterceptionPoint.PRE_MODEL_CALL, lambda _ctx: False)
+            with pytest.raises(LLMCallBlockedError) as blocked:
+                llm._invoke_before_llm_call_hooks(
+                    [{"role": "user", "content": "hi"}], from_agent=None
+                )
+
+        # a ValueError so the fail-open handlers around internal calls still absorb it
+        assert isinstance(blocked.value, ValueError)
+
+    def test_scoped_after_hook_modifies_direct_response(self):
+        from crewai.hooks import InterceptionPoint
+        from crewai.hooks.dispatch import register_scoped, scoped_hooks
+
+        llm = self._stub_llm()
+
+        def redact(ctx: LLMCallHookContext) -> str:
+            return ctx.response.replace("SECRET", "[REDACTED]")
+
+        with scoped_hooks():
+            register_scoped(InterceptionPoint.POST_MODEL_CALL, redact)
+            result = llm._invoke_after_llm_call_hooks(
+                [{"role": "user", "content": "hi"}],
+                "contains SECRET",
+                from_agent=None,
+            )
+
+        assert result == "contains [REDACTED]"

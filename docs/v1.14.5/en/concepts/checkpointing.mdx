@@ -1,0 +1,305 @@
+---
+title: Checkpointing
+description: Automatically save execution state so crews, flows, and agents can resume after failures.
+icon: floppy-disk
+mode: "wide"
+---
+
+<Warning>
+Checkpointing is in early release. APIs may change in future versions.
+</Warning>
+
+## Overview
+
+Checkpointing automatically saves execution state during a run. If a crew, flow, or agent fails mid-execution, you can restore from the last checkpoint and resume without re-running completed work.
+
+## Quick Start
+
+```python
+from crewai import Crew, CheckpointConfig
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=True,  # uses defaults: ./.checkpoints, on task_completed
+)
+result = crew.kickoff()
+```
+
+Checkpoint files are written to `./.checkpoints/` after each completed task.
+
+## Configuration
+
+Use `CheckpointConfig` for full control:
+
+```python
+from crewai import Crew, CheckpointConfig
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=CheckpointConfig(
+        location="./my_checkpoints",
+        on_events=["task_completed", "crew_kickoff_completed"],
+        max_checkpoints=5,
+    ),
+)
+```
+
+### CheckpointConfig Fields
+
+| Field | Type | Default | Description |
+|:------|:-----|:--------|:------------|
+| `location` | `str` | `"./.checkpoints"` | Storage destination — a directory for `JsonProvider`, a database file path for `SqliteProvider` |
+| `on_events` | `list[str]` | `["task_completed"]` | Event types that trigger a checkpoint |
+| `provider` | `BaseProvider` | `JsonProvider()` | Storage backend |
+| `max_checkpoints` | `int \| None` | `None` | Max checkpoints to keep. Oldest are pruned after each write. Pruning is handled by the provider. |
+| `restore_from` | `Path \| str \| None` | `None` | Path to a checkpoint to restore from. Used when passing config via a kickoff method's `from_checkpoint` parameter. |
+
+### Inheritance and Opt-Out
+
+The `checkpoint` field on Crew, Flow, and Agent accepts `CheckpointConfig`, `True`, `False`, or `None`:
+
+| Value | Behavior |
+|:------|:---------|
+| `None` (default) | Inherit from parent. An agent inherits its crew's config. |
+| `True` | Enable with defaults. |
+| `False` | Explicit opt-out. Stops inheritance from parent. |
+| `CheckpointConfig(...)` | Custom configuration. |
+
+```python
+crew = Crew(
+    agents=[
+        Agent(role="Researcher", ...),                  # inherits crew's checkpoint
+        Agent(role="Writer", ..., checkpoint=False),     # opted out, no checkpoints
+    ],
+    tasks=[...],
+    checkpoint=True,
+)
+```
+
+## Resuming from a Checkpoint
+
+Pass a `CheckpointConfig` with `restore_from` to any kickoff method. The crew restores from that checkpoint, skips completed tasks, and resumes.
+
+```python
+from crewai import Crew, CheckpointConfig
+
+crew = Crew(agents=[...], tasks=[...])
+result = crew.kickoff(
+    from_checkpoint=CheckpointConfig(
+        restore_from="./my_checkpoints/20260407T120000_abc123.json",
+    ),
+)
+```
+
+Remaining `CheckpointConfig` fields apply to the new run, so checkpointing continues after the restore.
+
+You can also use the classmethod directly:
+
+```python
+config = CheckpointConfig(restore_from="./my_checkpoints/20260407T120000_abc123.json")
+crew = Crew.from_checkpoint(config)
+result = crew.kickoff()
+```
+
+## Forking from a Checkpoint
+
+`fork()` restores a checkpoint and starts a new execution branch. Useful for exploring alternative paths from the same point.
+
+```python
+from crewai import Crew, CheckpointConfig
+
+config = CheckpointConfig(restore_from="./my_checkpoints/20260407T120000_abc123.json")
+crew = Crew.fork(config, branch="experiment-a")
+result = crew.kickoff(inputs={"strategy": "aggressive"})
+```
+
+Each fork gets a unique lineage ID so checkpoints from different branches don't collide. The `branch` label is optional and auto-generated if omitted.
+
+## Works on Crew, Flow, and Agent
+
+### Crew
+
+```python
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, write_task, review_task],
+    checkpoint=CheckpointConfig(location="./crew_cp"),
+)
+```
+
+Default trigger: `task_completed` (one checkpoint per finished task).
+
+### Flow
+
+```python
+from crewai.flow.flow import Flow, start, listen
+from crewai import CheckpointConfig
+
+class MyFlow(Flow):
+    @start()
+    def step_one(self):
+        return "data"
+
+    @listen(step_one)
+    def step_two(self, data):
+        return process(data)
+
+flow = MyFlow(
+    checkpoint=CheckpointConfig(
+        location="./flow_cp",
+        on_events=["method_execution_finished"],
+    ),
+)
+result = flow.kickoff()
+
+# Resume
+config = CheckpointConfig(restore_from="./flow_cp/20260407T120000_abc123.json")
+flow = MyFlow.from_checkpoint(config)
+result = flow.kickoff()
+```
+
+### Agent
+
+```python
+agent = Agent(
+    role="Researcher",
+    goal="Research topics",
+    backstory="Expert researcher",
+    checkpoint=CheckpointConfig(
+        location="./agent_cp",
+        on_events=["lite_agent_execution_completed"],
+    ),
+)
+result = agent.kickoff(messages=[{"role": "user", "content": "Research AI trends"}])
+```
+
+## Storage Providers
+
+CrewAI ships with two checkpoint storage providers.
+
+### JsonProvider (default)
+
+Writes each checkpoint as a separate JSON file. Simple, human-readable, easy to inspect.
+
+```python
+from crewai import Crew, CheckpointConfig
+from crewai.state import JsonProvider
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=CheckpointConfig(
+        location="./my_checkpoints",
+        provider=JsonProvider(),       # this is the default
+        max_checkpoints=5,             # prunes oldest files
+    ),
+)
+```
+
+Files are named `<timestamp>_<uuid>.json` inside the location directory.
+
+### SqliteProvider
+
+Stores all checkpoints in a single SQLite database file. Better for high-frequency checkpointing and avoids many small files.
+
+```python
+from crewai import Crew, CheckpointConfig
+from crewai.state import SqliteProvider
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=CheckpointConfig(
+        location="./.checkpoints.db",
+        provider=SqliteProvider(),
+        max_checkpoints=50,
+    ),
+)
+```
+
+WAL journal mode is enabled for concurrent read access.
+
+## Event Types
+
+The `on_events` field accepts any combination of event type strings. Common choices:
+
+| Use Case | Events |
+|:---------|:-------|
+| After each task (Crew) | `["task_completed"]` |
+| After each flow method | `["method_execution_finished"]` |
+| After agent execution | `["agent_execution_completed"]`, `["lite_agent_execution_completed"]` |
+| On crew completion only | `["crew_kickoff_completed"]` |
+| After every LLM call | `["llm_call_completed"]` |
+| On everything | `["*"]` |
+
+<Warning>
+Using `["*"]` or high-frequency events like `llm_call_completed` will write many checkpoint files and may impact performance. Use `max_checkpoints` to limit disk usage.
+</Warning>
+
+## Manual Checkpointing
+
+For full control, register your own event handler and call `state.checkpoint()` directly:
+
+```python
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.llm_events import LLMCallCompletedEvent
+
+# Sync handler
+@crewai_event_bus.on(LLMCallCompletedEvent)
+def on_llm_done(source, event, state):
+    path = state.checkpoint("./my_checkpoints")
+    print(f"Saved checkpoint: {path}")
+
+# Async handler
+@crewai_event_bus.on(LLMCallCompletedEvent)
+async def on_llm_done_async(source, event, state):
+    path = await state.acheckpoint("./my_checkpoints")
+    print(f"Saved checkpoint: {path}")
+```
+
+The `state` argument is the `RuntimeState` passed automatically by the event bus when your handler accepts 3 parameters. You can register handlers on any event type listed in the [Event Listeners](/en/concepts/event-listener) documentation.
+
+Checkpointing is best-effort: if a checkpoint write fails, the error is logged but execution continues uninterrupted.
+
+## CLI
+
+The `crewai checkpoint` command gives you a TUI for browsing, inspecting, resuming, and forking checkpoints. It auto-detects whether your checkpoints are JSON files or a SQLite database.
+
+```bash
+# Launch the TUI — auto-detects .checkpoints/ or .checkpoints.db
+crewai checkpoint
+
+# Point at a specific location
+crewai checkpoint --location ./my_checkpoints
+crewai checkpoint --location ./.checkpoints.db
+```
+
+<Frame>
+  <img src="/images/checkpointing.png" alt="Checkpoint TUI" />
+</Frame>
+
+The left panel is a tree view. Checkpoints are grouped by branch, and forks nest under the checkpoint they diverged from. Select a checkpoint to see its metadata, entity state, and task progress in the detail panel. Hit **Resume** to pick up where it left off, or **Fork** to start a new branch from that point.
+
+### Editing inputs and task outputs
+
+When a checkpoint is selected, the detail panel shows:
+
+- **Inputs** — if the original kickoff had inputs (e.g. `{topic}`), they appear as editable fields pre-filled with the original values. Change them before resuming or forking.
+- **Task outputs** — completed tasks show their output in editable text areas. Edit a task's output to change the context that downstream tasks receive. When you modify a task output and hit Fork, all subsequent tasks are invalidated and re-run with the new context.
+
+This is useful for "what if" exploration — fork from a checkpoint, tweak a task's result, and see how it changes downstream behavior.
+
+### Subcommands
+
+```bash
+# List all checkpoints
+crewai checkpoint list ./my_checkpoints
+
+# Inspect a specific checkpoint
+crewai checkpoint info ./my_checkpoints/20260407T120000_abc123.json
+
+# Inspect latest in a SQLite database
+crewai checkpoint info ./.checkpoints.db
+```

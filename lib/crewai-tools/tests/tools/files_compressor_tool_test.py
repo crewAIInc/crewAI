@@ -17,7 +17,7 @@ def test_input_path_does_not_exist(mock_exists, tool):
 
 @patch("os.path.exists", return_value=True)
 @patch("os.getcwd", return_value="/mocked/cwd")
-@patch.object(FileCompressorTool, "_compress_zip")  # Mock actual compression
+@patch.object(FileCompressorTool, "_compress_zip")
 @patch.object(FileCompressorTool, "_prepare_output", return_value=True)
 def test_generate_output_path_default(
     mock_prepare, mock_compress, mock_cwd, mock_exists, tool

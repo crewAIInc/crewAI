@@ -346,6 +346,20 @@ def get_constraints_for_provider(
     return None
 
 
+def uses_openai_responses_api(provider: str, api: str | None = None) -> bool:
+    """Return whether provider/API should use OpenAI Responses file support."""
+    if api != "responses":
+        return False
+
+    provider_lower = provider.lower()
+    return (
+        "openai" in provider_lower
+        or provider_lower == "gpt"
+        or provider_lower.startswith("gpt-")
+        or "/gpt-" in provider_lower
+    )
+
+
 def get_supported_content_types(provider: str, api: str | None = None) -> list[str]:
     """Get supported MIME type prefixes for a provider.
 
@@ -356,9 +370,9 @@ def get_supported_content_types(provider: str, api: str | None = None) -> list[s
     Returns:
         List of supported MIME type prefixes (e.g., ["image/", "application/pdf"]).
     """
-    lookup_key = provider
-    if api == "responses" and "openai" in provider.lower():
-        lookup_key = "openai_responses"
+    lookup_key = (
+        "openai_responses" if uses_openai_responses_api(provider, api) else provider
+    )
 
     constraints = get_constraints_for_provider(lookup_key)
     if not constraints:

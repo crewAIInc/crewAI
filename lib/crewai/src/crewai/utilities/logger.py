@@ -1,8 +1,7 @@
 from datetime import datetime
 
+from crewai_core.printer import PRINTER, ColoredText, PrinterColor
 from pydantic import BaseModel, Field
-
-from crewai.utilities.printer import PRINTER, ColoredText, PrinterColor
 
 
 class Logger(BaseModel):

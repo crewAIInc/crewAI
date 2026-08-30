@@ -157,7 +157,6 @@ async def test_mixed_handlers_with_dependencies():
         if future:
             await asyncio.wrap_future(future)
 
-        # Verify execution order
         assert execution_order[0] == "setup"
         assert "finalize" in execution_order
         assert execution_order.index("finalize") > execution_order.index("sync_process")
@@ -187,7 +186,6 @@ async def test_independent_handlers_run_concurrently():
         if future:
             await asyncio.wrap_future(future)
 
-        # Both handlers should have executed
         assert len(execution_order) == 2
         assert "handler_a" in execution_order
         assert "handler_b" in execution_order
@@ -198,7 +196,6 @@ async def test_circular_dependency_detection():
     """Test that circular dependencies are detected and raise an error."""
     from crewai.events.handler_graph import CircularDependencyError, build_execution_plan
 
-    # Create circular dependency: handler_a -> handler_b -> handler_c -> handler_a
     def handler_a(source, event: DependsTestEvent):
         pass
 
@@ -208,15 +205,13 @@ async def test_circular_dependency_detection():
     def handler_c(source, event: DependsTestEvent):
         pass
 
-    # Build a dependency graph with a cycle
     handlers = [handler_a, handler_b, handler_c]
     dependencies = {
         handler_a: [Depends(handler_b)],
         handler_b: [Depends(handler_c)],
-        handler_c: [Depends(handler_a)],  # Creates the cycle
+        handler_c: [Depends(handler_a)],
     }
 
-    # Should raise CircularDependencyError about circular dependency
     with pytest.raises(CircularDependencyError, match="Circular dependency"):
         build_execution_plan(handlers, dependencies)
 
@@ -255,11 +250,9 @@ async def test_depends_equality():
     dep_a2 = Depends(handler_a)
     dep_b = Depends(handler_b)
 
-    # Same handler should be equal
     assert dep_a1 == dep_a2
     assert hash(dep_a1) == hash(dep_a2)
 
-    # Different handlers should not be equal
     assert dep_a1 != dep_b
     assert hash(dep_a1) != hash(dep_b)
 
@@ -282,5 +275,4 @@ async def test_aemit_ignores_dependencies():
         event = DependsTestEvent(value=1)
         await crewai_event_bus.aemit("test_source", event)
 
-        # Only async handler should execute
         assert execution_order == ["async_handler"]

@@ -8,7 +8,6 @@ os.environ["OPENAI_API_KEY"] = "Your Key"
 
 multion_browse_tool = MultiOnTool(api_key="Your Key")
 
-# Create a new agent
 Browser = Agent(
     role="Browser Agent",
     goal="control web browsers using natural language ",
@@ -17,7 +16,6 @@ Browser = Agent(
     verbose=True,
 )
 
-# Define tasks
 browse = Task(
     description="Summarize the top 3 trending AI News headlines",
     expected_output="A summary of the top 3 trending AI News headlines",

@@ -16,9 +16,6 @@ from sqlalchemy import create_engine, text  # noqa: E402
 
 from crewai_tools.tools.nl2sql.nl2sql_tool import NL2SQLTool  # noqa: E402
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 SQLITE_URI = "sqlite://"  # in-memory
 
@@ -34,11 +31,6 @@ def _make_tool(allow_dml: bool = False, **kwargs) -> NL2SQLTool:
         patch.object(NL2SQLTool, "_fetch_all_available_columns", return_value=[]),
     ):
         return NL2SQLTool(db_uri=SQLITE_URI, allow_dml=allow_dml, **kwargs)
-
-
-# ---------------------------------------------------------------------------
-# Read-only enforcement (allow_dml=False)
-# ---------------------------------------------------------------------------
 
 
 class TestReadOnlyMode:
@@ -88,11 +80,6 @@ class TestReadOnlyMode:
         tool._validate_query("DESCRIBE users")
 
 
-# ---------------------------------------------------------------------------
-# DML enabled (allow_dml=True)
-# ---------------------------------------------------------------------------
-
-
 class TestDMLEnabled:
     def test_insert_allowed_when_dml_enabled(self):
         tool = _make_tool(allow_dml=True)
@@ -132,9 +119,7 @@ class TestDMLEnabled:
             os.unlink(db_path)
 
 
-# ---------------------------------------------------------------------------
 # Parameterised query — SQL injection prevention
-# ---------------------------------------------------------------------------
 
 
 class TestParameterisedQueries:
@@ -176,11 +161,6 @@ class TestParameterisedQueries:
 
         assert injection not in captured["sql"]
         assert captured["params"]["table_name"] == injection
-
-
-# ---------------------------------------------------------------------------
-# session.commit() not called for read-only queries
-# ---------------------------------------------------------------------------
 
 
 class TestNoCommitForReadOnly:
@@ -229,11 +209,6 @@ class TestNoCommitForReadOnly:
         mock_session.commit.assert_called_once()
 
 
-# ---------------------------------------------------------------------------
-# Environment-variable escape hatch
-# ---------------------------------------------------------------------------
-
-
 class TestEnvVarEscapeHatch:
     def test_env_var_enables_dml(self):
         with patch.dict(os.environ, {"CREWAI_NL2SQL_ALLOW_DML": "true"}):
@@ -264,11 +239,6 @@ class TestEnvVarEscapeHatch:
             tool._validate_query("DROP TABLE sensitive_data")
 
 
-# ---------------------------------------------------------------------------
-# _run() propagates ValueError from _validate_query
-# ---------------------------------------------------------------------------
-
-
 class TestRunValidation:
     def test_run_raises_on_blocked_query(self):
         tool = _make_tool(allow_dml=False)
@@ -281,9 +251,7 @@ class TestRunValidation:
         assert result == [{"n": 1}]
 
 
-# ---------------------------------------------------------------------------
 # Multi-statement / semicolon injection prevention
-# ---------------------------------------------------------------------------
 
 
 class TestSemicolonInjection:
@@ -316,11 +284,6 @@ class TestSemicolonInjection:
         tool = _make_tool(allow_dml=False)
         with pytest.raises(ValueError, match="read-only mode"):
             tool._validate_query("DROP TABLE users")
-
-
-# ---------------------------------------------------------------------------
-# Writable CTEs (WITH … DELETE/INSERT/UPDATE)
-# ---------------------------------------------------------------------------
 
 
 class TestWritableCTE:
@@ -372,11 +335,6 @@ class TestWritableCTE:
         tool._validate_query(
             "WITH cte AS (SELECT set, reset FROM config) SELECT * FROM cte"
         )
-
-
-# ---------------------------------------------------------------------------
-# EXPLAIN ANALYZE executes the underlying query
-# ---------------------------------------------------------------------------
 
 
     def test_cte_with_write_main_query_blocked(self):
@@ -460,11 +418,6 @@ class TestExplainAnalyze:
         tool._validate_query("EXPLAIN (VERBOSE) SELECT * FROM users")
 
 
-# ---------------------------------------------------------------------------
-# Multi-statement commit covers ALL statements (not just the first)
-# ---------------------------------------------------------------------------
-
-
 class TestMultiStatementCommit:
     def test_select_then_insert_triggers_commit(self):
         """SELECT 1; INSERT … — commit must happen because INSERT is a write."""
@@ -533,11 +486,6 @@ class TestMultiStatementCommit:
             mock_session.commit.assert_called_once()
 
 
-# ---------------------------------------------------------------------------
-# Extended _WRITE_COMMANDS coverage
-# ---------------------------------------------------------------------------
-
-
 class TestExtendedWriteCommands:
     @pytest.mark.parametrize(
         "stmt",
@@ -562,11 +510,6 @@ class TestExtendedWriteCommands:
             tool._validate_query(stmt)
 
 
-# ---------------------------------------------------------------------------
-# EXPLAIN ANALYZE VERBOSE handling
-# ---------------------------------------------------------------------------
-
-
 class TestExplainAnalyzeVerbose:
     def test_explain_analyze_verbose_select_allowed(self):
         """EXPLAIN ANALYZE VERBOSE SELECT should be allowed (read-only)."""
@@ -585,11 +528,6 @@ class TestExplainAnalyzeVerbose:
         tool._validate_query("EXPLAIN VERBOSE SELECT * FROM users")
 
 
-# ---------------------------------------------------------------------------
-# CTE with string literal parens
-# ---------------------------------------------------------------------------
-
-
 class TestCTEStringLiteralParens:
     def test_cte_string_paren_does_not_bypass(self):
         """Parens inside string literals should not confuse the paren walker."""
@@ -605,11 +543,6 @@ class TestCTEStringLiteralParens:
         tool._validate_query(
             "WITH cte AS (SELECT '(' FROM t) SELECT * FROM cte"
         )
-
-
-# ---------------------------------------------------------------------------
-# EXPLAIN ANALYZE commit logic
-# ---------------------------------------------------------------------------
 
 
 class TestExplainAnalyzeCommit:
@@ -636,9 +569,7 @@ class TestExplainAnalyzeCommit:
             mock_session.commit.assert_called_once()
 
 
-# ---------------------------------------------------------------------------
 # AS( inside string literals must not confuse CTE detection
-# ---------------------------------------------------------------------------
 
 
 class TestCTEStringLiteralAS:
@@ -658,9 +589,7 @@ class TestCTEStringLiteralAS:
         )
 
 
-# ---------------------------------------------------------------------------
 # Unknown command after CTE should be blocked
-# ---------------------------------------------------------------------------
 
 
 class TestCTEUnknownCommand:

@@ -15,6 +15,7 @@ from crewai.events.types.knowledge_events import (
     KnowledgeRetrievalStartedEvent,
     KnowledgeSearchQueryFailedEvent,
 )
+from crewai.hooks.dispatch import HookAborted
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
@@ -53,6 +54,8 @@ def handle_reasoning(agent: Agent, task: Task) -> None:
             planning_handler.handle_agent_reasoning()
         )
         task.description += f"\n\nPlanning:\n{planning_output.plan.plan}"
+    except HookAborted:
+        raise
     except Exception as e:
         agent._logger.log("error", f"Error during planning: {e!s}")
 
@@ -195,6 +198,9 @@ def handle_knowledge_retrieval(
                 from_agent=agent,
             ),
         )
+        # a deny aborts the task; any other failure degrades to no knowledge
+        if isinstance(e, HookAborted):
+            raise
     return task_prompt
 
 
@@ -211,30 +217,6 @@ def _combine_knowledge_context(agent: Agent) -> str:
     crew_ctx = agent.crew_knowledge_context or ""
     separator = "\n" if agent_ctx and crew_ctx else ""
     return agent_ctx + separator + crew_ctx
-
-
-def append_skill_context(agent: Agent, task_prompt: str) -> str:
-    """Append activated skill context sections to the task prompt.
-
-    Args:
-        agent: The agent with optional skills.
-        task_prompt: The current task prompt.
-
-    Returns:
-        The task prompt with skill context appended.
-    """
-    if not agent.skills:
-        return task_prompt
-
-    from crewai.skills.loader import format_skill_context
-    from crewai.skills.models import Skill
-
-    skill_sections = [
-        format_skill_context(s) for s in agent.skills if isinstance(s, Skill)
-    ]
-    if skill_sections:
-        task_prompt += "\n\n" + "\n\n".join(skill_sections)
-    return task_prompt
 
 
 def apply_training_data(agent: Agent, task_prompt: str) -> str:
@@ -415,4 +397,7 @@ async def ahandle_knowledge_retrieval(
                 from_agent=agent,
             ),
         )
+        # a deny aborts the task; any other failure degrades to no knowledge
+        if isinstance(e, HookAborted):
+            raise
     return task_prompt

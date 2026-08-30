@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import Field
 
@@ -8,6 +8,7 @@ from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 class StringKnowledgeSource(BaseKnowledgeSource):
     """A knowledge source that stores and queries plain text content using embeddings."""
 
+    source_type: Literal["string"] = "string"
     content: str = Field(...)
     collection_name: str | None = Field(default=None)
 

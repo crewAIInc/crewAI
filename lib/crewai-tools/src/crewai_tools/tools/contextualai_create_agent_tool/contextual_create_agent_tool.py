@@ -53,7 +53,6 @@ class ContextualAICreateAgentTool(BaseTool):
         try:
             import os
 
-            # Create datastore
             datastore = self.contextual_client.datastores.create(name=datastore_name)
             datastore_id = datastore.id
 
@@ -71,7 +70,6 @@ class ContextualAICreateAgentTool(BaseTool):
                     )
                     document_ids.append(ingestion_result.id)
 
-            # Create agent
             agent = self.contextual_client.agents.create(
                 name=agent_name,
                 description=agent_description,

@@ -102,7 +102,7 @@ class TestBuildMCPConfigFromDict:
 
 
 class TestFetchAmpMCPConfigs:
-    @patch("crewai.cli.plus_api.PlusAPI")
+    @patch("crewai.plus_api.PlusAPI")
     @patch("crewai_tools.tools.crewai_platform_tools.misc.get_platform_integration_token", return_value="test-api-key")
     def test_fetches_configs_successfully(self, mock_get_token, mock_plus_api_class, resolver):
         mock_response = MagicMock()
@@ -133,7 +133,7 @@ class TestFetchAmpMCPConfigs:
         mock_plus_api_class.assert_called_once_with(api_key="test-api-key")
         mock_plus_api.get_mcp_configs.assert_called_once_with(["notion", "github"])
 
-    @patch("crewai.cli.plus_api.PlusAPI")
+    @patch("crewai.plus_api.PlusAPI")
     @patch("crewai_tools.tools.crewai_platform_tools.misc.get_platform_integration_token", return_value="test-api-key")
     def test_omits_missing_slugs(self, mock_get_token, mock_plus_api_class, resolver):
         mock_response = MagicMock()
@@ -150,7 +150,7 @@ class TestFetchAmpMCPConfigs:
         assert "notion" in result
         assert "missing-server" not in result
 
-    @patch("crewai.cli.plus_api.PlusAPI")
+    @patch("crewai.plus_api.PlusAPI")
     @patch("crewai_tools.tools.crewai_platform_tools.misc.get_platform_integration_token", return_value="test-api-key")
     def test_returns_empty_on_http_error(self, mock_get_token, mock_plus_api_class, resolver):
         mock_response = MagicMock()
@@ -163,7 +163,7 @@ class TestFetchAmpMCPConfigs:
 
         assert result == {}
 
-    @patch("crewai.cli.plus_api.PlusAPI")
+    @patch("crewai.plus_api.PlusAPI")
     @patch("crewai_tools.tools.crewai_platform_tools.misc.get_platform_integration_token", return_value="test-api-key")
     def test_returns_empty_on_network_error(self, mock_get_token, mock_plus_api_class, resolver):
         import httpx
@@ -267,6 +267,51 @@ class TestGetMCPToolsAmpIntegration:
         mock_fetch.assert_called_once_with(["notion"])
         assert len(tools) == 1
         assert tools[0].name == "mcp_notion_so_sse_search"
+
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    @patch.object(MCPToolResolver, "_fetch_amp_mcp_configs")
+    def test_tools_carry_the_slug_they_were_requested_by(
+        self, mock_fetch, mock_client_class, agent, mock_tool_definitions
+    ):
+        mock_fetch.return_value = {
+            "notion": {
+                "type": "sse",
+                "url": "https://mcp.notion.so/sse",
+                "headers": {"Authorization": "Bearer token"},
+            },
+        }
+
+        mock_client = AsyncMock()
+        mock_client.list_tools = AsyncMock(return_value=mock_tool_definitions)
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        tools = agent.get_mcp_tools(["notion"])
+
+        # The name is derived from the URL, so the slug is only recoverable here.
+        assert {tool.name for tool in tools} == {
+            "mcp_notion_so_sse_search",
+            "mcp_notion_so_sse_create_page",
+        }
+        assert all(tool.server_reference == "notion" for tool in tools)
+
+    @patch("crewai.mcp.tool_resolver.MCPClient")
+    def test_tools_from_a_url_have_no_slug(
+        self, mock_client_class, agent, mock_tool_definitions
+    ):
+        mock_client = AsyncMock()
+        mock_client.list_tools = AsyncMock(return_value=mock_tool_definitions)
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        tools = agent.get_mcp_tools([MCPServerSSE(url="https://mcp.notion.so/sse")])
+
+        assert tools
+        assert all(tool.server_reference is None for tool in tools)
 
     @patch("crewai.mcp.tool_resolver.MCPClient")
     @patch.object(MCPToolResolver, "_fetch_amp_mcp_configs")

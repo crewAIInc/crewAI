@@ -155,12 +155,10 @@ class ExecuteCodeTool(BaseTool):
         thread_id: str = "default",
     ) -> str:
         try:
-            # Get or create code interpreter
             code_interpreter = self.toolkit._get_or_create_interpreter(
                 thread_id=thread_id
             )
 
-            # Execute code
             response = code_interpreter.invoke(
                 method="executeCode",
                 params={
@@ -204,12 +202,10 @@ class ExecuteCommandTool(BaseTool):
 
     def _run(self, command: str, thread_id: str = "default") -> str:
         try:
-            # Get or create code interpreter
             code_interpreter = self.toolkit._get_or_create_interpreter(
                 thread_id=thread_id
             )
 
-            # Execute command
             response = code_interpreter.invoke(
                 method="executeCommand", params={"command": command}
             )
@@ -237,12 +233,10 @@ class ReadFilesTool(BaseTool):
 
     def _run(self, paths: list[str], thread_id: str = "default") -> str:
         try:
-            # Get or create code interpreter
             code_interpreter = self.toolkit._get_or_create_interpreter(
                 thread_id=thread_id
             )
 
-            # Read files
             response = code_interpreter.invoke(
                 method="readFiles", params={"paths": paths}
             )
@@ -270,7 +264,6 @@ class ListFilesTool(BaseTool):
 
     def _run(self, directory_path: str = "", thread_id: str = "default") -> str:
         try:
-            # Get or create code interpreter
             code_interpreter = self.toolkit._get_or_create_interpreter(
                 thread_id=thread_id
             )
@@ -303,12 +296,10 @@ class DeleteFilesTool(BaseTool):
 
     def _run(self, paths: list[str], thread_id: str = "default") -> str:
         try:
-            # Get or create code interpreter
             code_interpreter = self.toolkit._get_or_create_interpreter(
                 thread_id=thread_id
             )
 
-            # Remove files
             response = code_interpreter.invoke(
                 method="removeFiles", params={"paths": paths}
             )
@@ -336,12 +327,10 @@ class WriteFilesTool(BaseTool):
 
     def _run(self, files: list[dict[str, str]], thread_id: str = "default") -> str:
         try:
-            # Get or create code interpreter
             code_interpreter = self.toolkit._get_or_create_interpreter(
                 thread_id=thread_id
             )
 
-            # Write files
             response = code_interpreter.invoke(
                 method="writeFiles", params={"content": files}
             )
@@ -371,12 +360,10 @@ class StartCommandTool(BaseTool):
 
     def _run(self, command: str, thread_id: str = "default") -> str:
         try:
-            # Get or create code interpreter
             code_interpreter = self.toolkit._get_or_create_interpreter(
                 thread_id=thread_id
             )
 
-            # Start command execution
             response = code_interpreter.invoke(
                 method="startCommandExecution", params={"command": command}
             )
@@ -404,12 +391,10 @@ class GetTaskTool(BaseTool):
 
     def _run(self, task_id: str, thread_id: str = "default") -> str:
         try:
-            # Get or create code interpreter
             code_interpreter = self.toolkit._get_or_create_interpreter(
                 thread_id=thread_id
             )
 
-            # Get task status
             response = code_interpreter.invoke(
                 method="getTask", params={"taskId": task_id}
             )
@@ -437,12 +422,10 @@ class StopTaskTool(BaseTool):
 
     def _run(self, task_id: str, thread_id: str = "default") -> str:
         try:
-            # Get or create code interpreter
             code_interpreter = self.toolkit._get_or_create_interpreter(
                 thread_id=thread_id
             )
 
-            # Stop task
             response = code_interpreter.invoke(
                 method="stopTask", params={"taskId": task_id}
             )
@@ -555,7 +538,6 @@ class CodeInterpreterToolkit:
             f"Started code interpreter with session_id:{code_interpreter.session_id} for thread:{thread_id}"
         )
 
-        # Store the interpreter
         self._code_interpreters[thread_id] = code_interpreter
         return code_interpreter
 
@@ -582,7 +564,6 @@ class CodeInterpreterToolkit:
             thread_id: Optional thread ID to clean up. If None, cleans up all sessions.
         """
         if thread_id:
-            # Clean up a specific thread's session
             if thread_id in self._code_interpreters:
                 try:
                     self._code_interpreters[thread_id].stop()
@@ -595,7 +576,6 @@ class CodeInterpreterToolkit:
                         f"Error stopping code interpreter for thread {thread_id}: {e}"
                     )
         else:
-            # Clean up all sessions
             thread_ids = list(self._code_interpreters.keys())
             for tid in thread_ids:
                 try:

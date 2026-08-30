@@ -192,7 +192,6 @@ class SeleniumScrapingTool(BaseTool):
         if not url:
             raise ValueError("URL cannot be empty")
 
-        # Validate URL format
         if not re.match(r"^https?://", url):
             raise ValueError("URL must start with http:// or https://")
 

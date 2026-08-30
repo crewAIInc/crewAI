@@ -43,7 +43,6 @@ class AgentReasoningOutput(BaseModel):
     plan: ReasoningPlan = Field(description="The reasoning plan for the task.")
 
 
-# Aliases for backward compatibility
 PlanningPlan = ReasoningPlan
 AgentPlanningOutput = AgentReasoningOutput
 
@@ -138,7 +137,6 @@ class AgentReasoning:
         """
         self.agent = agent
         self.task = task
-        # Use task attributes if available, otherwise use provided values
         self._description = description or (
             task.description if task else "Complete the requested task"
         )
@@ -169,10 +167,10 @@ class AgentReasoning:
 
         if self.agent.planning_config is not None:
             return self.agent.planning_config
-        # Fallback for backward compatibility
-        return PlanningConfig(
-            max_attempts=getattr(self.agent, "max_reasoning_attempts", None),
-        )
+        max_attempts = getattr(self.agent, "max_reasoning_attempts", None)
+        if max_attempts is not None:
+            return PlanningConfig(max_attempts=max_attempts)
+        return PlanningConfig()
 
     def _resolve_llm(self) -> LLM:
         """Resolve which LLM to use for planning.
@@ -195,7 +193,6 @@ class AgentReasoning:
         """
         task_id = str(self.task.id) if self.task else "kickoff"
 
-        # Emit a planning started event (attempt 1)
         try:
             crewai_event_bus.emit(
                 self.agent,
@@ -207,7 +204,6 @@ class AgentReasoning:
                 ),
             )
         except Exception:  # noqa: S110
-            # Ignore event bus errors to avoid breaking execution
             pass
 
         try:
@@ -228,7 +224,6 @@ class AgentReasoning:
 
             return output
         except Exception as e:
-            # Emit planning failed event
             try:
                 crewai_event_bus.emit(
                     self.agent,
@@ -301,7 +296,6 @@ class AgentReasoning:
         while not ready and (max_attempts is None or attempt < max_attempts):
             attempt += 1
 
-            # Emit event for each refinement attempt
             try:
                 crewai_event_bus.emit(
                     self.agent,
@@ -327,9 +321,8 @@ class AgentReasoning:
                     plan_type="refine_plan",
                 )
                 plan, ready = self._parse_planning_response(str(response))
-                steps = []  # No structured steps from text parsing
+                steps = []
 
-            # Emit completed event for this refinement attempt
             try:
                 crewai_event_bus.emit(
                     self.agent,
@@ -369,10 +362,11 @@ class AgentReasoning:
         """
         self.logger.debug(f"Using function calling for {plan_type} planning")
 
+        from crewai.hooks.dispatch import HookAborted
+
         try:
             system_prompt = self._get_system_prompt()
 
-            # Prepare a simple callable that just returns the tool arguments as JSON
             def _create_reasoning_plan(
                 plan: str,
                 steps: list[dict[str, Any]] | None = None,
@@ -394,7 +388,6 @@ class AgentReasoning:
             try:
                 result = json.loads(response)
                 if "plan" in result and "ready" in result:
-                    # Parse steps from the response
                     steps: list[PlanStep] = []
                     raw_steps = result.get("steps", [])
                     try:
@@ -421,6 +414,8 @@ class AgentReasoning:
                 "READY: I am ready to execute the task." in response_str,
             )
 
+        except HookAborted:
+            raise
         except Exception as e:
             self.logger.warning(
                 f"Error during function calling: {e!s}. Falling back to text parsing."
@@ -444,6 +439,8 @@ class AgentReasoning:
                     [],
                     "READY: I am ready to execute the task." in fallback_str,
                 )
+            except HookAborted:
+                raise
             except Exception as inner_e:
                 self.logger.error(f"Error during fallback text parsing: {inner_e!s}")
                 return (
@@ -487,11 +484,9 @@ class AgentReasoning:
         if self.config.system_prompt is not None:
             return self.config.system_prompt
 
-        # Try new "planning" section first, fall back to "reasoning" for compatibility
         try:
             return I18N_DEFAULT.retrieve("planning", "system_prompt")
         except (KeyError, AttributeError):
-            # Fallback to reasoning section for backward compatibility
             return I18N_DEFAULT.retrieve("reasoning", "initial_plan").format(
                 role=self.agent.role,
                 goal=self.agent.goal,
@@ -514,7 +509,6 @@ class AgentReasoning:
         """
         available_tools = self._format_available_tools()
 
-        # Use custom prompt if provided
         if self.config.plan_prompt is not None:
             return self.config.plan_prompt.format(
                 role=self.agent.role,
@@ -526,7 +520,6 @@ class AgentReasoning:
                 max_steps=self.config.max_steps,
             )
 
-        # Try new "planning" section first
         try:
             return I18N_DEFAULT.retrieve("planning", "create_plan_prompt").format(
                 description=self.description,
@@ -535,7 +528,6 @@ class AgentReasoning:
                 max_steps=self.config.max_steps,
             )
         except (KeyError, AttributeError):
-            # Fallback to reasoning section for backward compatibility
             return I18N_DEFAULT.retrieve("reasoning", "create_plan_prompt").format(
                 role=self.agent.role,
                 goal=self.agent.goal,
@@ -552,7 +544,6 @@ class AgentReasoning:
             Comma-separated list of tool names.
         """
         try:
-            # Try task tools first, then agent tools
             tools = []
             if self.task:
                 tools = self.task.tools or []
@@ -573,7 +564,6 @@ class AgentReasoning:
         Returns:
             The refine prompt.
         """
-        # Use custom prompt if provided
         if self.config.refine_prompt is not None:
             return self.config.refine_prompt.format(
                 role=self.agent.role,
@@ -583,13 +573,11 @@ class AgentReasoning:
                 max_steps=self.config.max_steps,
             )
 
-        # Try new "planning" section first
         try:
             return I18N_DEFAULT.retrieve("planning", "refine_plan_prompt").format(
                 current_plan=current_plan,
             )
         except (KeyError, AttributeError):
-            # Fallback to reasoning section for backward compatibility
             return I18N_DEFAULT.retrieve("reasoning", "refine_plan_prompt").format(
                 role=self.agent.role,
                 goal=self.agent.goal,
@@ -616,7 +604,6 @@ class AgentReasoning:
         return plan, ready
 
 
-# Alias for backward compatibility
 AgentPlanning = AgentReasoning
 
 

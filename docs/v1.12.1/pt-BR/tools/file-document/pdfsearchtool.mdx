@@ -1,0 +1,104 @@
+---
+title: Busca RAG em PDF
+description: O `PDFSearchTool` é projetado para pesquisar arquivos PDF e retornar os resultados mais relevantes.
+icon: file-pdf
+mode: "wide"
+---
+
+# `PDFSearchTool`
+
+<Note>
+    Ainda estamos trabalhando para melhorar as ferramentas, então pode haver comportamentos inesperados ou mudanças futuras.
+</Note>
+
+## Descrição
+
+O PDFSearchTool é uma ferramenta RAG projetada para buscas semânticas dentro do conteúdo de PDFs. Ela permite inserir uma consulta de busca e um documento PDF, aproveitando técnicas avançadas de busca para encontrar conteúdos relevantes de forma eficiente.
+Essa capacidade a torna especialmente útil para extrair informações específicas de arquivos PDF grandes rapidamente.
+
+## Instalação
+
+Para começar a usar o PDFSearchTool, primeiro, garanta que o pacote crewai_tools está instalado com o seguinte comando:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplo
+Veja como utilizar o PDFSearchTool para buscar dentro de um documento PDF:
+
+```python Code
+from crewai_tools import PDFSearchTool
+
+# Inicialize a ferramenta permitindo buscas em qualquer conteúdo PDF caso o caminho seja informado durante a execução
+tool = PDFSearchTool()
+
+# OU
+
+# Inicialize a ferramenta com um caminho PDF específico para buscas exclusivas naquele documento
+tool = PDFSearchTool(pdf='path/to/your/document.pdf')
+```
+
+## Argumentos
+
+- `pdf`: **Opcional** O caminho do PDF para busca. Pode ser fornecido na inicialização ou nos argumentos do método `run`. Caso seja fornecido na inicialização, a ferramenta confinará suas buscas ao documento especificado.
+
+## Modelo e embeddings personalizados
+
+Por padrão, a ferramenta utiliza OpenAI para embeddings e sumarização. Para personalizar, use um dicionário de configuração conforme abaixo. Observação: um banco vetorial (vectordb) é necessário, pois os embeddings gerados precisam ser armazenados e consultados.
+
+```python Code
+from crewai_tools import PDFSearchTool
+from chromadb.config import Settings  # Persistência no Chroma
+
+tool = PDFSearchTool(
+    config={
+        # Obrigatório: provedor de embeddings + configuração
+        "embedding_model": {
+            # Provedores suportados: "openai", "azure", "google-generativeai", "google-vertex",
+            # "voyageai", "cohere", "huggingface", "jina", "sentence-transformer",
+            # "text2vec", "ollama", "openclip", "instructor", "onnx", "roboflow", "watsonx", "custom"
+            "provider": "openai",
+            "config": {
+                # "model" é mapeado internamente para "model_name".
+                "model": "text-embedding-3-small",
+                # Opcional: chave da API (se ausente, usa variáveis de ambiente do provedor)
+                # "api_key": "sk-...",
+
+                # Exemplos específicos por provedor
+                # --- Google ---
+                # (defina provider="google-generativeai")
+                # "model": "models/embedding-001",
+                # "task_type": "retrieval_document",
+
+                # --- Cohere ---
+                # (defina provider="cohere")
+                # "model": "embed-english-v3.0",
+
+                # --- Ollama (local) ---
+                # (defina provider="ollama")
+                # "model": "nomic-embed-text",
+            },
+        },
+
+        # Obrigatório: configuração do banco vetorial
+        "vectordb": {
+            "provider": "chromadb",  # ou "qdrant"
+            "config": {
+                # Exemplo Chroma:
+                # "settings": Settings(
+                #     persist_directory="/content/chroma",
+                #     allow_reset=True,
+                #     is_persistent=True,
+                # ),
+
+                # Exemplo Qdrant:
+                # from qdrant_client.models import VectorParams, Distance
+                # "vectors_config": VectorParams(size=384, distance=Distance.COSINE),
+
+                # Observação: o nome da coleção é controlado pela ferramenta (padrão: "rag_tool_collection").
+            }
+        },
+    }
+)
+```

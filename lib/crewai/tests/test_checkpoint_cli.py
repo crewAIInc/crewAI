@@ -12,7 +12,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from crewai.cli.checkpoint_cli import (
+from crewai_cli.checkpoint_cli import (
     _parse_checkpoint_json,
     _parse_duration,
     _prune_json,

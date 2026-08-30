@@ -1,0 +1,321 @@
+---
+title: ابنِ أول Crew لك
+description: دليل تفصيلي لإنشاء فريق AI تعاوني يعمل معًا لحل المشكلات المعقدة.
+icon: users-gear
+mode: "wide"
+---
+
+## إطلاق قوة الذكاء الاصطناعي التعاوني
+
+تخيل أن لديك فريقًا من Agents الذكاء الاصطناعي المتخصصة تعمل معًا بسلاسة لحل مشكلات معقدة، كل منها يساهم بمهاراته الفريدة لتحقيق هدف مشترك. هذه هي قوة CrewAI - إطار عمل يمكّنك من إنشاء أنظمة ذكاء اصطناعي تعاونية يمكنها إنجاز مهام تفوق بكثير ما يمكن لـ AI واحد تحقيقه بمفرده.
+
+في هذا الدليل، سنمشي عبر إنشاء Crew بحث يساعدنا في البحث والتحليل حول موضوع ما، ثم إنشاء تقرير شامل. يوضح هذا المثال العملي كيف يمكن لـ Agents الذكاء الاصطناعي التعاون لإنجاز مهام معقدة، لكنه مجرد البداية لما هو ممكن مع CrewAI.
+
+### ما ستبنيه وتتعلمه
+
+بنهاية هذا الدليل، ستكون قد:
+
+1. **أنشأت فريق بحث AI متخصص** بأدوار ومسؤوليات مميزة
+2. **نسّقت التعاون** بين عدة Agents ذكاء اصطناعي
+3. **أتممت سير عمل معقد** يتضمن جمع المعلومات والتحليل وإنشاء التقارير
+4. **بنيت مهارات أساسية** يمكنك تطبيقها على مشاريع أكثر طموحًا
+
+### المتطلبات المسبقة
+
+قبل البدء، تأكد من:
+
+1. تثبيت CrewAI باتباع [دليل التثبيت](/ar/installation)
+2. إعداد مفتاح API لنموذج LLM في بيئتك، باتباع [دليل إعداد LLM](/ar/concepts/llms#setting-up-your-llm)
+3. فهم أساسي لـ Python
+
+## الخطوة 1: إنشاء مشروع CrewAI جديد
+
+أولاً، لننشئ مشروع CrewAI جديد باستخدام CLI. سينشئ هذا الأمر هيكل مشروع كامل بجميع الملفات الضرورية.
+
+```bash
+crewai create crew research_crew
+cd research_crew
+```
+
+سينتج هيكل مشروع بالبنية الأساسية المطلوبة لـ Crew. ينشئ CLI تلقائيًا:
+
+- مجلد مشروع بالملفات اللازمة
+- ملفات تهيئة للـ Agents والمهام
+- تطبيق Crew أساسي
+- سكريبت رئيسي لتشغيل الـ Crew
+
+<Frame caption="نظرة عامة على إطار عمل CrewAI">
+  <img src="/images/crews.png" alt="نظرة عامة على إطار عمل CrewAI" />
+</Frame>
+
+## الخطوة 2: استكشاف هيكل المشروع
+
+لنخصص لحظة لفهم هيكل المشروع الذي أنشأه CLI.
+
+```
+research_crew/
+├── .gitignore
+├── pyproject.toml
+├── README.md
+├── .env
+└── src/
+    └── research_crew/
+        ├── __init__.py
+        ├── main.py
+        ├── crew.py
+        ├── tools/
+        │   ├── custom_tool.py
+        │   └── __init__.py
+        └── config/
+            ├── agents.yaml
+            └── tasks.yaml
+```
+
+يتبع هذا الهيكل أفضل الممارسات لمشاريع Python ويسهّل تنظيم الكود. فصل ملفات التهيئة (YAML) عن كود التنفيذ (Python) يسهّل تعديل سلوك Crew دون تغيير الكود الأساسي.
+
+## الخطوة 3: تهيئة الـ Agents
+
+الآن يأتي الجزء الممتع - تعريف Agents الذكاء الاصطناعي! في CrewAI، الـ Agents هي كيانات متخصصة بأدوار وأهداف وخلفيات محددة تشكّل سلوكها.
+
+لـ Crew البحث لدينا، سننشئ Agent اثنين:
+1. **باحث** يتفوق في إيجاد وتنظيم المعلومات
+2. **محلل** يمكنه تفسير نتائج البحث وإنشاء تقارير ثاقبة
+
+لنعدّل ملف `agents.yaml`. تأكد من تعيين `llm` للمزود الذي تستخدمه.
+
+```yaml
+# src/research_crew/config/agents.yaml
+researcher:
+  role: >
+    Senior Research Specialist for {topic}
+  goal: >
+    Find comprehensive and accurate information about {topic}
+    with a focus on recent developments and key insights
+  backstory: >
+    You are an experienced research specialist with a talent for
+    finding relevant information from various sources. You excel at
+    organizing information in a clear and structured manner, making
+    complex topics accessible to others.
+  llm: provider/model-id  # e.g. openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
+
+analyst:
+  role: >
+    Data Analyst and Report Writer for {topic}
+  goal: >
+    Analyze research findings and create a comprehensive, well-structured
+    report that presents insights in a clear and engaging way
+  backstory: >
+    You are a skilled analyst with a background in data interpretation
+    and technical writing. You have a talent for identifying patterns
+    and extracting meaningful insights from research data, then
+    communicating those insights effectively through well-crafted reports.
+  llm: provider/model-id  # e.g. openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
+```
+
+لاحظ كيف أن لكل Agent دور وهدف وخلفية مميزة. هذه العناصر ليست وصفية فحسب - بل تشكّل بنشاط كيف يتعامل الـ Agent مع مهامه.
+
+## الخطوة 4: تعريف المهام
+
+مع تعريف الـ Agents، نحتاج الآن لمنحهم مهام محددة. لنعدّل ملف `tasks.yaml`:
+
+```yaml
+# src/research_crew/config/tasks.yaml
+research_task:
+  description: >
+    Conduct thorough research on {topic}. Focus on:
+    1. Key concepts and definitions
+    2. Historical development and recent trends
+    3. Major challenges and opportunities
+    4. Notable applications or case studies
+    5. Future outlook and potential developments
+
+    Make sure to organize your findings in a structured format with clear sections.
+  expected_output: >
+    A comprehensive research document with well-organized sections covering
+    all the requested aspects of {topic}. Include specific facts, figures,
+    and examples where relevant.
+  agent: researcher
+
+analysis_task:
+  description: >
+    Analyze the research findings and create a comprehensive report on {topic}.
+    Your report should:
+    1. Begin with an executive summary
+    2. Include all key information from the research
+    3. Provide insightful analysis of trends and patterns
+    4. Offer recommendations or future considerations
+    5. Be formatted in a professional, easy-to-read style with clear headings
+  expected_output: >
+    A polished, professional report on {topic} that presents the research
+    findings with added analysis and insights. The report should be well-structured
+    with an executive summary, main sections, and conclusion.
+  agent: analyst
+  context:
+    - research_task
+  output_file: output/report.md
+```
+
+لاحظ حقل `context` في مهمة التحليل - هذه ميزة قوية تتيح للمحلل الوصول إلى مخرجات مهمة البحث.
+
+## الخطوة 5: تهيئة الـ Crew
+
+الآن حان الوقت لجمع كل شيء معًا. لنعدّل ملف `crew.py`:
+
+```python
+# src/research_crew/crew.py
+from crewai import Agent, Crew, Process, Task
+from crewai.project import CrewBase, agent, crew, task
+from crewai_tools import SerperDevTool
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from typing import List
+
+@CrewBase
+class ResearchCrew():
+    """Research crew for comprehensive topic analysis and reporting"""
+
+    agents: List[BaseAgent]
+    tasks: List[Task]
+
+    @agent
+    def researcher(self) -> Agent:
+        return Agent(
+            config=self.agents_config['researcher'], # type: ignore[index]
+            verbose=True,
+            tools=[SerperDevTool()]
+        )
+
+    @agent
+    def analyst(self) -> Agent:
+        return Agent(
+            config=self.agents_config['analyst'], # type: ignore[index]
+            verbose=True
+        )
+
+    @task
+    def research_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['research_task'] # type: ignore[index]
+        )
+
+    @task
+    def analysis_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['analysis_task'], # type: ignore[index]
+            output_file='output/report.md'
+        )
+
+    @crew
+    def crew(self) -> Crew:
+        """Creates the research crew"""
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True,
+        )
+```
+
+## الخطوة 6: إعداد السكريبت الرئيسي
+
+```python
+#!/usr/bin/env python
+# src/research_crew/main.py
+import os
+from research_crew.crew import ResearchCrew
+
+# Create output directory if it doesn't exist
+os.makedirs('output', exist_ok=True)
+
+def run():
+    """
+    Run the research crew.
+    """
+    inputs = {
+        'topic': 'Artificial Intelligence in Healthcare'
+    }
+
+    # Create and run the crew
+    result = ResearchCrew().crew().kickoff(inputs=inputs)
+
+    # Print the result
+    print("\n\n=== FINAL REPORT ===\n\n")
+    print(result.raw)
+
+    print("\n\nReport has been saved to output/report.md")
+
+if __name__ == "__main__":
+    run()
+```
+
+## الخطوة 7: إعداد متغيرات البيئة
+
+أنشئ ملف `.env` في جذر مشروعك بمفاتيح API:
+
+```sh
+SERPER_API_KEY=your_serper_api_key
+# Add your provider's API key here too.
+```
+
+راجع [دليل إعداد LLM](/ar/concepts/llms#setting-up-your-llm) لتفاصيل تهيئة المزود المفضل لديك. يمكنك الحصول على مفتاح Serper API من [Serper.dev](https://serper.dev/).
+
+## الخطوة 8: تثبيت التبعيات
+
+```bash
+crewai install
+```
+
+## الخطوة 9: تشغيل الـ Crew
+
+الآن اللحظة المثيرة - حان وقت تشغيل Crew ومشاهدة التعاون بين الـ AI!
+
+```bash
+crewai run
+```
+
+عند تشغيل هذا الأمر، سترى Crew يعمل. سيجمع الباحث معلومات حول الموضوع المحدد، ثم سينشئ المحلل تقريرًا شاملاً بناءً على ذلك البحث.
+
+## الخطوة 10: مراجعة المخرجات
+
+بمجرد إتمام Crew عمله، ستجد التقرير النهائي في ملف `output/report.md`. سيتضمن التقرير:
+
+1. ملخص تنفيذي
+2. معلومات مفصلة عن الموضوع
+3. تحليل ورؤى
+4. توصيات أو اعتبارات مستقبلية
+
+## استكشاف أوامر CLI الأخرى
+
+يوفر CrewAI عدة أوامر CLI مفيدة للعمل مع Crews:
+
+```bash
+# View all available commands
+crewai --help
+
+# Run the crew
+crewai run
+
+# Test the crew
+crewai test
+
+# Reset crew memories
+crewai reset-memories
+
+# Replay from a specific task
+crewai replay -t <task_id>
+```
+
+## ما بعد أول Crew: فن الممكن
+
+ما بنيته في هذا الدليل مجرد البداية. يمكنك توسيع Crew البحث الأساسي بإضافة Agents متخصصة أخرى وأدوات وقدرات إضافية وسير عمل أكثر تعقيدًا. يمكن تطبيق نفس الأنماط لإنشاء Crews لإنشاء المحتوى وخدمة العملاء وتطوير المنتجات وتحليل البيانات.
+
+## الخطوات التالية
+
+1. جرّب تهيئات وشخصيات Agent مختلفة
+2. جرب هياكل مهام وسير عمل أكثر تعقيدًا
+3. طبّق أدوات مخصصة لمنح الـ Agents قدرات جديدة
+4. طبّق Crew على مواضيع أو مجالات مشكلات مختلفة
+5. استكشف [CrewAI Flows](/ar/guides/flows/first-flow) لسير عمل أكثر تقدمًا مع البرمجة الإجرائية
+
+<Check>
+تهانينا! لقد بنيت بنجاح أول CrewAI Crew يمكنه البحث والتحليل في أي موضوع تقدمه. هذه التجربة الأساسية أهّلتك بالمهارات لإنشاء أنظمة AI متطورة بشكل متزايد يمكنها معالجة مشكلات معقدة متعددة المراحل من خلال الذكاء التعاوني.
+</Check>

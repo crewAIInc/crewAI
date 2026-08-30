@@ -12,7 +12,7 @@ class AzureProviderConfig(TypedDict, total=False):
     api_base: str
     api_type: Annotated[str, "azure"]
     api_version: str
-    model_name: Annotated[str, "text-embedding-ada-002"]
+    model_name: Annotated[str, "text-embedding-3-large"]
     default_headers: dict[str, Any]
     dimensions: int
     deployment_id: Required[str]

@@ -147,14 +147,12 @@ class TestAgentReasoningWithMockedLLM:
         agent.backstory = "Test backstory"
         agent.verbose = False
         agent.planning_config = PlanningConfig()
-        # Mock the llm attribute
         agent.llm = MagicMock()
         agent.llm.supports_function_calling.return_value = True
         return agent
 
     def test_parse_steps_from_function_response(self, mock_agent):
         """Test that steps are correctly parsed from LLM function response."""
-        # Mock the LLM response with structured steps
         mock_response = json.dumps({
             "plan": "Research and analyze",
             "steps": [
@@ -183,7 +181,6 @@ class TestAgentReasoningWithMockedLLM:
             expected_output="Test output",
         )
 
-        # Call the function parsing method
         plan, steps, ready = handler._call_with_function(
             prompt="Test prompt",
             plan_type="create_plan",
@@ -235,7 +232,7 @@ class TestAgentReasoningWithMockedLLM:
             "plan": "Plan with step missing fields",
             "steps": [
                 {"step_number": 1, "description": "Valid step", "tool_to_use": None, "depends_on": []},
-                {"step_number": 2},  # Missing description, tool_to_use, depends_on
+                {"step_number": 2},
                 {"step_number": 3, "description": "Another valid", "tool_to_use": None, "depends_on": []},
             ],
             "ready": True,
@@ -255,12 +252,11 @@ class TestAgentReasoningWithMockedLLM:
             plan_type="create_plan",
         )
 
-        # All 3 steps should be parsed, with defaults for missing fields
         assert len(steps) == 3
         assert steps[0].step_number == 1
         assert steps[0].description == "Valid step"
         assert steps[1].step_number == 2
-        assert steps[1].description == ""  # Default value
+        assert steps[1].description == ""
         assert steps[2].step_number == 3
 
 
@@ -290,7 +286,6 @@ class TestTodoCreationFromPlan:
             ),
         ]
 
-        # Convert steps to todos (mirroring agent_executor._create_todos_from_plan)
         todos = []
         for step in steps:
             todo = TodoItem(
@@ -308,16 +303,13 @@ class TestTodoCreationFromPlan:
         assert todo_list.pending_count == 3
         assert todo_list.completed_count == 0
 
-        # Verify todo properties match step properties
         assert todo_list.items[0].description == "Research competitors"
         assert todo_list.items[0].tool_to_use == "search_tool"
         assert todo_list.items[1].depends_on == [1]
         assert todo_list.items[2].depends_on == [1, 2]
 
 
-# =============================================================================
 # Provider-Specific Integration Tests (VCR recorded)
-# =============================================================================
 
 
 # Common test tools used across provider tests
@@ -335,7 +327,6 @@ def create_research_tools():
         Returns:
             Search results as a string.
         """
-        # Simulated search results for testing
         return f"Search results for '{query}': Found 3 relevant articles about the topic including market analysis, competitor data, and industry trends."
 
     @tool
@@ -348,7 +339,6 @@ def create_research_tools():
         Returns:
             The extracted content from the website.
         """
-        # Simulated website content for testing
         return f"Content from {url}: This article discusses key insights about the topic including market size ($50B), growth rate (15% YoY), and major players in the industry."
 
     @tool
@@ -396,10 +386,8 @@ class TestOpenAIStructuredPlanning:
 
         result = agent.kickoff(RESEARCH_TASK)
 
-        # Verify result exists
         assert result is not None
         assert result.raw is not None
-        # The result should contain some report-like content
         assert len(str(result.raw)) > 50
 
 
@@ -433,10 +421,8 @@ class TestAnthropicStructuredPlanning:
 
         result = agent.kickoff(RESEARCH_TASK)
 
-        # Verify result exists
         assert result is not None
         assert result.raw is not None
-        # The result should contain some report-like content
         assert len(str(result.raw)) > 50
 
 
@@ -470,10 +456,8 @@ class TestGeminiStructuredPlanning:
 
         result = agent.kickoff(RESEARCH_TASK)
 
-        # Verify result exists
         assert result is not None
         assert result.raw is not None
-        # The result should contain some report-like content
         assert len(str(result.raw)) > 50
 
 
@@ -510,16 +494,12 @@ class TestAzureStructuredPlanning:
 
         result = agent.kickoff(RESEARCH_TASK)
 
-        # Verify result exists
         assert result is not None
         assert result.raw is not None
-        # The result should contain some report-like content
         assert len(str(result.raw)) > 50
 
 
-# =============================================================================
 # Unit Tests with Mocked LLM Providers
-# =============================================================================
 
 
 class TestStructuredPlanningWithMockedProviders:
@@ -616,7 +596,6 @@ class TestTodoListIntegration:
             ),
         ]
 
-        # Convert to todos (like agent_executor._create_todos_from_plan)
         todos = [
             TodoItem(
                 step_number=step.step_number,
@@ -629,7 +608,6 @@ class TestTodoListIntegration:
         ]
         todo_list = TodoList(items=todos)
 
-        # Verify initial state
         assert todo_list.pending_count == 3
         assert todo_list.is_complete is False
 
@@ -639,7 +617,6 @@ class TestTodoListIntegration:
             assert todo_list.current_todo.step_number == i
             todo_list.mark_completed(i, result=f"Step {i} completed")
 
-        # Verify final state
         assert todo_list.is_complete is True
         assert todo_list.completed_count == 3
         assert all(item.result is not None for item in todo_list.items)
@@ -671,7 +648,6 @@ class TestTodoListIntegration:
                     return False
             return True
 
-        # Step 1 has no dependencies
         assert can_execute(todo_list.items[0]) is True
 
         # Steps 2 and 3 depend on 1 (not yet done)
@@ -681,16 +657,13 @@ class TestTodoListIntegration:
         # Complete step 1
         todo_list.mark_completed(1)
 
-        # Now steps 2 and 3 can execute
         assert can_execute(todo_list.items[1]) is True
         assert can_execute(todo_list.items[2]) is True
 
-        # Step 4 still can't (depends on 2 and 3)
         assert can_execute(todo_list.items[3]) is False
 
         # Complete steps 2 and 3
         todo_list.mark_completed(2)
         todo_list.mark_completed(3)
 
-        # Now step 4 can execute
         assert can_execute(todo_list.items[3]) is True

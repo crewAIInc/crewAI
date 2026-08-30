@@ -837,7 +837,6 @@ class TestTriggeredByEventId:
         assert listener_b_started is not None
         assert listener_c_started is not None
 
-        # All parallel listeners should point to the same triggering event
         assert listener_a_started.triggered_by_event_id == trigger_finished.event_id
         assert listener_b_started.triggered_by_event_id == trigger_finished.event_id
         assert listener_c_started.triggered_by_event_id == trigger_finished.event_id
@@ -995,23 +994,19 @@ class TestTriggeredByEventId:
                 else:
                     second_run_events.append(event)
 
-            # First kickoff
             capturing_second = False
             flow1 = ReusableFlow()
             await flow1.akickoff()
             crewai_event_bus.flush()
 
-            # Second kickoff
             capturing_second = True
             flow2 = ReusableFlow()
             await flow2.akickoff()
             crewai_event_bus.flush()
 
-        # Should have events from both runs
         assert len(first_run_events) >= 4  # 2 started + 2 finished
         assert len(second_run_events) >= 4
 
-        # Check first run's triggered_by chain
         first_started = [e for e in first_run_events if isinstance(e, MethodExecutionStartedEvent)]
         first_finished = [e for e in first_run_events if isinstance(e, MethodExecutionFinishedEvent)]
 
@@ -1025,7 +1020,6 @@ class TestTriggeredByEventId:
         assert first_process_started is not None
         assert first_process_started.triggered_by_event_id == first_begin_finished.event_id
 
-        # Check second run's triggered_by chain
         second_started = [e for e in second_run_events if isinstance(e, MethodExecutionStartedEvent)]
         second_finished = [e for e in second_run_events if isinstance(e, MethodExecutionFinishedEvent)]
 
@@ -1039,10 +1033,8 @@ class TestTriggeredByEventId:
         assert second_process_started is not None
         assert second_process_started.triggered_by_event_id == second_begin_finished.event_id
 
-        # Verify the two runs have different event_ids (not reusing)
         assert first_begin_finished.event_id != second_begin_finished.event_id
 
-        # Verify each run has its own independent previous_event_id chain
         # (chains reset at each top-level execution)
         first_sorted = sorted(first_run_events, key=lambda e: e.emission_sequence or 0)
         for event in first_sorted[1:]:
@@ -1094,19 +1086,16 @@ class TestTriggeredByEventId:
             def capture_finished(source, event):
                 events.append(event)
 
-            # Run two flows in parallel
             flow_a = ParallelTestFlow("flow_a")
             flow_b = ParallelTestFlow("flow_b")
             await asyncio.gather(flow_a.akickoff(), flow_b.akickoff())
             crewai_event_bus.flush()
 
-        # Should have events from both flows (4 events each = 8 total)
         assert len(events) >= 8
 
         started_events = [e for e in events if isinstance(e, MethodExecutionStartedEvent)]
         finished_events = [e for e in events if isinstance(e, MethodExecutionFinishedEvent)]
 
-        # Find flow_a's events by checking the result contains "flow_a"
         flow_a_begin_finished = [
             e for e in finished_events
             if e.method_name == "begin" and "flow_a" in str(e.result)
@@ -1124,20 +1113,16 @@ class TestTriggeredByEventId:
         assert len(flow_a_begin_finished) >= 1
         assert len(flow_b_begin_finished) >= 1
 
-        # Each flow's process should be triggered by its own begin
-        # Find which process events were triggered by which begin events
         for process_event in flow_a_process_started:
             trigger_id = process_event.triggered_by_event_id
             assert trigger_id is not None
 
-            # The triggering event should be a begin finished event
             triggering_event = next(
                 (e for e in finished_events if e.event_id == trigger_id), None
             )
             assert triggering_event is not None
             assert triggering_event.method_name == "begin"
 
-        # Verify previous_event_id forms a valid chain across all events
         all_sorted = sorted(events, key=lambda e: e.emission_sequence or 0)
         for event in all_sorted[1:]:
             assert event.previous_event_id is not None
@@ -1236,7 +1221,7 @@ class TestTriggeredByEventId:
             try:
                 await flow.akickoff()
             except ValueError:
-                pass  # Expected
+                pass
             crewai_event_bus.flush()
 
         # Even with exception, events should have proper previous_event_id chain
@@ -1259,7 +1244,7 @@ class TestTriggeredByEventId:
 
         class SyncFlow(Flow):
             @start()
-            def sync_start(self):  # Synchronous method
+            def sync_start(self):
                 return "sync_done"
 
             @listen(sync_start)
@@ -1336,7 +1321,6 @@ class TestTriggeredByEventId:
         assert start_one is not None
         assert start_two is not None
 
-        # Both start methods should have no triggered_by (they're entry points)
         assert start_one.triggered_by_event_id is None
         assert start_two.triggered_by_event_id is None
 
@@ -1441,7 +1425,6 @@ class TestTriggeredByEventId:
         started_events = [e for e in events if isinstance(e, MethodExecutionStartedEvent)]
         finished_events = [e for e in events if isinstance(e, MethodExecutionFinishedEvent)]
 
-        # Verify each level triggers the next
         for i in range(5):
             prev_finished = next(
                 (e for e in finished_events if e.method_name == f"level_{i}"), None
@@ -1518,7 +1501,6 @@ class TestTriggeredByEventId:
         # path_b should NOT be executed since router returned "path_a"
         assert handle_path_b_started is None
 
-        # The selected path should be triggered by the router
         assert handle_path_a_started.triggered_by_event_id == router_finished.event_id
 
 
@@ -1589,7 +1571,6 @@ class TestCrewEventsInFlowTriggeredBy:
         # final should be triggered by middle_method
         assert final_started.triggered_by_event_id == middle_finished.event_id
 
-        # All events should have proper previous_event_id chain
         all_sorted = sorted(events, key=lambda e: e.emission_sequence or 0)
         for event in all_sorted[1:]:
             assert event.previous_event_id is not None
@@ -1624,7 +1605,7 @@ class TestCrewEventsInFlowTriggeredBy:
                 events.append(event)
 
             flow = SyncKickoffFlow()
-            flow.kickoff()  # Synchronous kickoff
+            flow.kickoff()
             crewai_event_bus.flush()
 
         started_events = [e for e in events if isinstance(e, MethodExecutionStartedEvent)]
@@ -1643,7 +1624,6 @@ class TestCrewEventsInFlowTriggeredBy:
         # Listener should be triggered by start_method
         assert listener_started.triggered_by_event_id == start_finished.event_id
 
-        # Verify previous_event_id chain
         all_sorted = sorted(events, key=lambda e: e.emission_sequence or 0)
         for event in all_sorted[1:]:
             assert event.previous_event_id is not None

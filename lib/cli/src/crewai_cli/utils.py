@@ -1,0 +1,197 @@
+from __future__ import annotations
+
+from collections.abc import Mapping
+import os
+from pathlib import Path
+import re
+import shutil
+from typing import Any, Literal
+
+import click
+from crewai_core.project import (
+    get_or_create_project_id as get_or_create_project_id,
+    get_project_description as get_project_description,
+    get_project_id as get_project_id,
+    get_project_name as get_project_name,
+    get_project_version as get_project_version,
+    parse_toml as parse_toml,
+    read_toml as read_toml,
+)
+from crewai_core.tool_credentials import (
+    build_env_with_all_tool_credentials as build_env_with_all_tool_credentials,
+    build_env_with_tool_repository_credentials as build_env_with_tool_repository_credentials,
+)
+from rich.console import Console
+
+from crewai_cli.version import get_crewai_tools_dependency
+
+
+__all__ = [
+    "build_env_with_all_tool_credentials",
+    "build_env_with_tool_repository_credentials",
+    "copy_template",
+    "enable_prompt_line_editing",
+    "fetch_and_json_env_file",
+    "get_or_create_project_id",
+    "get_project_description",
+    "get_project_id",
+    "get_project_name",
+    "get_project_version",
+    "is_dmn_mode_enabled",
+    "load_env_vars",
+    "parse_toml",
+    "read_toml",
+    "render_template",
+    "tree_copy",
+    "tree_find_and_replace",
+    "warn_deprecated",
+    "write_env_file",
+]
+
+
+def warn_deprecated(
+    *,
+    kind: Literal["command", "flag"],
+    old: str,
+    new: str,
+) -> None:
+    """Print a yellow deprecation warning for a legacy CLI command or flag."""
+    label = "command" if kind == "command" else "flag"
+    click.secho(
+        f"Warning: The {label} '{old}' is deprecated. Use '{new}' instead.",
+        fg="yellow",
+    )
+
+
+console = Console()
+_TEMPLATE_TOKEN_RE = re.compile(r"{{([a-zA-Z_][a-zA-Z0-9_]*)}}")
+
+
+def is_dmn_mode_enabled() -> bool:
+    """Return True when the enterprise non-interactive mode is enabled."""
+    value = os.environ.get("CREWAI_DMN")
+    if value is None:
+        return False
+    return value.strip().lower() not in {"", "0", "false", "no", "off"}
+
+
+def enable_prompt_line_editing() -> None:
+    """Enable cursor movement/history editing for Click text prompts when available."""
+    try:
+        import readline
+    except ImportError:
+        return
+
+    try:
+        readline.parse_and_bind("set editing-mode emacs")
+    except Exception:  # pragma: no cover - readline backends vary by platform
+        return
+
+
+def copy_template(
+    src: Path, dst: Path, name: str, class_name: str, folder_name: str
+) -> None:
+    """Copy a file from src to dst."""
+    content = render_template(
+        src,
+        {
+            "name": name,
+            "crew_name": class_name,
+            "folder_name": folder_name,
+            "crewai_tools_dependency": get_crewai_tools_dependency(),
+        },
+    )
+
+    with open(dst, "w") as file:
+        file.write(content)
+
+    click.secho(f"  - Created {dst}", fg="green")
+
+
+def render_template(src: Path, replacements: Mapping[str, str]) -> str:
+    """Render a template file using ``{{placeholder}}`` replacements."""
+    content = src.read_text(encoding="utf-8")
+    return _TEMPLATE_TOKEN_RE.sub(
+        lambda match: replacements.get(match.group(1), match.group(0)),
+        content,
+    )
+
+
+def fetch_and_json_env_file(env_file_path: str = ".env") -> dict[str, Any]:
+    """Fetch the environment variables from a .env file and return them as a dictionary."""
+    try:
+        with open(env_file_path, "r") as f:
+            env_content = f.read()
+
+        env_dict = {}
+        for line in env_content.splitlines():
+            if line.strip() and not line.strip().startswith("#"):
+                key, value = line.split("=", 1)
+                env_dict[key.strip()] = value.strip()
+
+        return env_dict
+
+    except FileNotFoundError:
+        console.print(f"Error: {env_file_path} not found.", style="bold red")
+    except Exception as e:
+        console.print(f"Error reading the .env file: {e}", style="bold red")
+
+    return {}
+
+
+def tree_copy(source: Path, destination: Path) -> None:
+    """Copies the entire directory structure from the source to the destination."""
+    for item in os.listdir(source):
+        source_item = os.path.join(source, item)
+        destination_item = os.path.join(destination, item)
+        if os.path.isdir(source_item):
+            shutil.copytree(source_item, destination_item)
+        else:
+            shutil.copy2(source_item, destination_item)
+
+
+def tree_find_and_replace(directory: Path, find: str, replace: str) -> None:
+    """Recursively searches through a directory, replacing a target string in
+    both file contents and filenames with a specified replacement string.
+    """
+    for path, dirs, files in os.walk(os.path.abspath(directory), topdown=False):
+        for filename in files:
+            filepath = os.path.join(path, filename)
+
+            with open(filepath, "r", encoding="utf-8", errors="ignore") as file:
+                contents = file.read()
+            with open(filepath, "w") as file:
+                file.write(contents.replace(find, replace))
+
+            if find in filename:
+                new_filename = filename.replace(find, replace)
+                new_filepath = os.path.join(path, new_filename)
+                os.rename(filepath, new_filepath)
+
+        for dirname in dirs:
+            if find in dirname:
+                new_dirname = dirname.replace(find, replace)
+                new_dirpath = os.path.join(path, new_dirname)
+                old_dirpath = os.path.join(path, dirname)
+                os.rename(old_dirpath, new_dirpath)
+
+
+def load_env_vars(folder_path: Path) -> dict[str, Any]:
+    """Loads environment variables from a .env file in the specified folder path."""
+    env_file_path = folder_path / ".env"
+    env_vars = {}
+    if env_file_path.exists():
+        with open(env_file_path, "r") as file:
+            for line in file:
+                key, _, value = line.strip().partition("=")
+                if key and value:
+                    env_vars[key] = value
+    return env_vars
+
+
+def write_env_file(folder_path: Path, env_vars: dict[str, Any]) -> None:
+    """Writes environment variables to a .env file in the specified folder."""
+    env_file_path = folder_path / ".env"
+    with open(env_file_path, "w") as file:
+        for key, value in env_vars.items():
+            file.write(f"{key.upper()}={value}\n")

@@ -137,7 +137,6 @@ class CrewEvaluator:
             avg_score = task_averages[task_index]
             agents = list(task.processed_by_agents)
 
-            # Add the task row with the first agent
             table.add_row(
                 f"Task {task_index + 1}",
                 *[f"{score:.1f}" for score in task_scores],
@@ -145,15 +144,12 @@ class CrewEvaluator:
                 f"- {agents[0]}" if agents else "",
             )
 
-            # Add rows for additional agents
             for agent in agents[1:]:
                 table.add_row("", "", "", "", "", f"- {agent}")
 
-            # Add a blank separator row if it's not the last task
             if task_index < len(self.crew.tasks) - 1:
                 table.add_row("", "", "", "", "", "")
 
-        # Add Crew and Execution Time rows
         crew_scores = [
             sum(self.tasks_scores[run]) / len(self.tasks_scores[run])
             for run in range(1, len(self.tasks_scores) + 1)

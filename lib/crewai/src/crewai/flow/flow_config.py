@@ -68,5 +68,4 @@ class FlowConfig:
         self._input_provider = provider
 
 
-# Singleton instance
 flow_config = FlowConfig()

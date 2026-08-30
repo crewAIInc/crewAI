@@ -31,13 +31,10 @@ class MCPToolWrapper(BaseTool):
             tool_schema: Schema information for the tool
             server_name: Name of the MCP server for prefixing
         """
-        # Create tool name with server prefix to avoid conflicts
         prefixed_name = f"{server_name}_{tool_name}"
 
-        # Handle args_schema properly - BaseTool expects a BaseModel subclass
         args_schema = tool_schema.get("args_schema")
 
-        # Only pass args_schema if it's provided
         kwargs = {
             "name": prefixed_name,
             "description": tool_schema.get(
@@ -50,7 +47,6 @@ class MCPToolWrapper(BaseTool):
 
         super().__init__(**kwargs)
 
-        # Set instance attributes after super().__init__
         self._mcp_server_params = mcp_server_params
         self._original_tool_name = tool_name
         self._server_name = server_name
@@ -99,20 +95,16 @@ class MCPToolWrapper(BaseTool):
         last_error = None
 
         for attempt in range(MCP_MAX_RETRIES):
-            # Execute single attempt outside try-except loop structure
             result, error, should_retry = await self._execute_single_attempt(
                 operation_func, **kwargs
             )
 
-            # Success case - return immediately
             if result is not None:
                 return result
 
-            # Non-retryable error - return immediately
             if not should_retry:
                 return error
 
-            # Retryable error - continue with backoff
             last_error = error
             if attempt < MCP_MAX_RETRIES - 1:
                 wait_time = 2**attempt  # Exponential backoff
@@ -147,7 +139,6 @@ class MCPToolWrapper(BaseTool):
         except Exception as e:
             error_str = str(e).lower()
 
-            # Classify errors as retryable or non-retryable
             if "authentication" in error_str or "unauthorized" in error_str:
                 return None, f"Authentication failed for MCP server: {e!s}", False
             if "not found" in error_str:

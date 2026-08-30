@@ -11,7 +11,10 @@ from crewai_files.formatting.anthropic import AnthropicFormatter
 from crewai_files.formatting.bedrock import BedrockFormatter
 from crewai_files.formatting.gemini import GeminiFormatter
 from crewai_files.formatting.openai import OpenAIFormatter, OpenAIResponsesFormatter
-from crewai_files.processing.constraints import get_constraints_for_provider
+from crewai_files.processing.constraints import (
+    get_constraints_for_provider,
+    uses_openai_responses_api,
+)
 from crewai_files.processing.processor import FileProcessor
 from crewai_files.resolution.resolver import FileResolver, FileResolverConfig
 from crewai_files.uploaders.factory import ProviderType
@@ -114,17 +117,17 @@ def format_multimodal_content(
     content_blocks: list[dict[str, Any]] = []
     provider_type = _normalize_provider(provider)
 
-    # Add text block first if provided
     if text:
         content_blocks.append(_format_text_block(text, provider_type, api))
 
     if not files:
         return content_blocks
 
-    # Use API-specific constraints for OpenAI
-    constraints_key: str = provider_type
-    if api == "responses" and "openai" in provider_type.lower():
-        constraints_key = "openai_responses"
+    constraints_key = (
+        "openai_responses"
+        if uses_openai_responses_api(provider_type, api)
+        else provider_type
+    )
 
     processor = FileProcessor(constraints=constraints_key)
     processed_files = processor.process_files(files)
@@ -186,10 +189,11 @@ async def aformat_multimodal_content(
     if not files:
         return content_blocks
 
-    # Use API-specific constraints for OpenAI
-    constraints_key: str = provider_type
-    if api == "responses" and "openai" in provider_type.lower():
-        constraints_key = "openai_responses"
+    constraints_key = (
+        "openai_responses"
+        if uses_openai_responses_api(provider_type, api)
+        else provider_type
+    )
 
     processor = FileProcessor(constraints=constraints_key)
     processed_files = await processor.aprocess_files(files)

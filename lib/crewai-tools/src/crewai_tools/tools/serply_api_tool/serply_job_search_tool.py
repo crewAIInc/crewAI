@@ -61,7 +61,6 @@ class SerplyJobSearchTool(RagTool):
         elif search_query is not None:
             query_payload["q"] = search_query
 
-        # build the url
         url = f"{self.request_url}{urlencode(query_payload)}"
 
         response = requests.request("GET", url, headers=self.headers, timeout=30)

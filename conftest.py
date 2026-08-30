@@ -5,12 +5,105 @@ from collections.abc import Generator
 import gzip
 import os
 from pathlib import Path
+import re
 import tempfile
 from typing import Any
 
 from dotenv import load_dotenv
 import pytest
-from vcr.request import Request  # type: ignore[import-untyped]
+
+
+def _patch_vcrpy_aiohttp_compat() -> None:
+    """Keep vcrpy's aiohttp stub working under aiohttp 3.14.0.
+
+    aiohttp 3.14.0 (pulled in to fix GHSA-jg22-mg44-37j8 and GHSA-hg6j-4rv6-33pg):
+      * removed ``aiohttp.streams.AsyncStreamReaderMixin`` (folded into ``StreamReader``),
+        which vcrpy's ``MockStream`` still subclasses -- vcr's patch machinery then raises
+        ``AttributeError`` at collection time; and
+      * added a required ``stream_writer`` keyword-only arg to ``ClientResponse.__init__``,
+        which vcrpy's ``MockClientResponse`` does not pass -- raising ``TypeError`` at
+        cassette playback.
+
+    Restore the mixin, then rebuild ``MockClientResponse``'s ``super().__init__`` call from
+    the live ``ClientResponse`` signature (defaulting every required keyword-only arg to
+    ``None``, mirroring vcrpy's original call) so it also survives future aiohttp additions.
+    """
+    import asyncio
+    import inspect
+
+    from aiohttp import streams
+    from aiohttp.client_reqrep import ClientResponse
+
+    if not hasattr(streams, "AsyncStreamReaderMixin"):
+
+        class AsyncStreamReaderMixin:
+            __slots__ = ()
+
+            def __aiter__(self) -> streams.AsyncStreamIterator[bytes]:
+                return streams.AsyncStreamIterator(self.readline)  # type: ignore[attr-defined]
+
+            def iter_chunked(self, n: int) -> streams.AsyncStreamIterator[bytes]:
+                return streams.AsyncStreamIterator(lambda: self.read(n))  # type: ignore[attr-defined]
+
+            def iter_any(self) -> streams.AsyncStreamIterator[bytes]:
+                return streams.AsyncStreamIterator(self.readany)  # type: ignore[attr-defined]
+
+            def iter_chunks(self) -> streams.ChunkTupleAsyncStreamIterator:
+                return streams.ChunkTupleAsyncStreamIterator(self)  # type: ignore[arg-type]
+
+        streams.AsyncStreamReaderMixin = AsyncStreamReaderMixin  # type: ignore[attr-defined]
+
+    # Importing the stub builds MockStream/MockClientResponse, so it must run after the
+    # mixin is restored above.
+    import vcr.stubs.aiohttp_stubs as aiohttp_stubs  # type: ignore[import-untyped]
+
+    if getattr(aiohttp_stubs.MockClientResponse, "_crewai_aiohttp_patched", False):
+        return
+
+    keyword_only = [
+        name
+        for name, param in inspect.signature(ClientResponse.__init__).parameters.items()
+        if param.kind is inspect.Parameter.KEYWORD_ONLY
+    ]
+
+    class _NullStreamWriter:
+        # aiohttp 3.14.0 reads stream_writer.output_size in the "request already
+        # sent" branch (writer is None), so None is not enough -- supply a stub.
+        output_size = 0
+
+    fallback_loop: list[asyncio.AbstractEventLoop] = []
+
+    def _resolve_loop() -> asyncio.AbstractEventLoop:
+        # MockClientResponse is normally built inside aiohttp's running loop, so
+        # prefer that. In a sync context there is no running loop; avoid
+        # asyncio.get_event_loop(), which on 3.12+ emits a DeprecationWarning
+        # (and can RuntimeError) when no current loop is set. Use one cached
+        # loop instead -- the mock only stores it and calls loop.get_debug().
+        try:
+            return asyncio.get_running_loop()
+        except RuntimeError:
+            if not fallback_loop:
+                fallback_loop.append(asyncio.new_event_loop())
+            return fallback_loop[0]
+
+    def _mock_client_response_init(
+        self: Any, method: str, url: Any, request_info: Any = None
+    ) -> None:
+        kwargs: dict[str, Any] = dict.fromkeys(keyword_only)
+        kwargs["request_info"] = request_info
+        if "loop" in kwargs:
+            kwargs["loop"] = _resolve_loop()
+        if "stream_writer" in kwargs:
+            kwargs["stream_writer"] = _NullStreamWriter()
+        ClientResponse.__init__(self, method, url, **kwargs)
+
+    aiohttp_stubs.MockClientResponse.__init__ = _mock_client_response_init
+    aiohttp_stubs.MockClientResponse._crewai_aiohttp_patched = True
+
+
+_patch_vcrpy_aiohttp_compat()
+
+from vcr.request import Request  # type: ignore[import-untyped]  # noqa: E402
 
 
 try:
@@ -20,21 +113,42 @@ except ModuleNotFoundError:
 
 
 env_test_path = Path(__file__).parent / ".env.test"
-load_dotenv(env_test_path, override=True)
-load_dotenv(override=True)
+
+load_dotenv(env_test_path, override=False)
+load_dotenv(override=False)
+
+BEDROCK_HOST_PLACEHOLDER = "bedrock-runtime.vcr.amazonaws.com"
+_BEDROCK_HOST_RE = re.compile(r"^bedrock-runtime\.[a-z0-9-]+\.amazonaws\.com$")
 
 
-def _patched_make_vcr_request(httpx_request: Any, **kwargs: Any) -> Any:
+def _normalize_bedrock_host(host: str) -> str:
+    if _BEDROCK_HOST_RE.match(host):
+        return BEDROCK_HOST_PLACEHOLDER
+    return host
+
+
+def bedrock_host_matcher(r1: Request, r2: Request) -> bool:  # type: ignore[no-any-unimported]
+    """Match Bedrock requests across AWS regions (CI uses us-east-1, local may use us-west-2)."""
+    return _normalize_bedrock_host(r1.host or "") == _normalize_bedrock_host(
+        r2.host or ""
+    )
+
+
+def _patched_make_vcr_request(
+    httpx_request: Any, real_request_body: Any = None, **kwargs: Any
+) -> Any:
     """Patched version of VCR's _make_vcr_request that handles binary content.
 
     The original implementation fails on binary request bodies (like file uploads)
     because it assumes all content can be decoded as UTF-8.
     """
-    raw_body = httpx_request.read()
-    try:
-        body = raw_body.decode("utf-8")
-    except UnicodeDecodeError:
-        body = base64.b64encode(raw_body).decode("ascii")
+    raw_body = real_request_body if real_request_body is not None else httpx_request.read()
+    body: Any = raw_body
+    if isinstance(raw_body, bytes):
+        try:
+            body = raw_body.decode("utf-8")
+        except UnicodeDecodeError:
+            body = base64.b64encode(raw_body).decode("ascii")
     uri = str(httpx_request.url)
     headers = dict(httpx_request.headers)
     return Request(httpx_request.method, uri, body, headers)
@@ -54,12 +168,13 @@ _original_from_serialized_response = getattr(
 )
 
 if _original_from_serialized_response is not None:
+    _from_serialized: Any = _original_from_serialized_response
 
     def _patched_from_serialized_response(
         request: Any, serialized_response: Any, history: Any = None
     ) -> Any:
         """Patched version that ensures response._content is properly set."""
-        response = _original_from_serialized_response(request, serialized_response, history)
+        response = _from_serialized(request, serialized_response, history)
         # Explicitly set _content to avoid ResponseNotRead errors
         # The content was passed to the constructor but the mocked read() prevents
         # proper initialization of the internal state
@@ -187,6 +302,7 @@ HEADERS_TO_FILTER = {
     "anthropic-ratelimit-tokens-remaining": "ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX",
     "anthropic-ratelimit-tokens-reset": "ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX",
     "x-amz-date": "X-AMZ-DATE-XXX",
+    "x-amz-security-token": "X-AMZ-SECURITY-TOKEN-XXX",
     "amz-sdk-invocation-id": "AMZ-SDK-INVOCATION-ID-XXX",
     "accept-encoding": "ACCEPT-ENCODING-XXX",
     "x-amzn-requestid": "X-AMZN-REQUESTID-XXX",
@@ -211,6 +327,10 @@ def _filter_request_headers(request: Request) -> Request:  # type: ignore[no-any
         placeholder_host = "fake-azure-endpoint.openai.azure.com"
         request.uri = request.uri.replace(original_host, placeholder_host)
 
+    # Normalize Bedrock regional endpoints so cassettes work in any AWS region.
+    if request.host and _BEDROCK_HOST_RE.match(request.host):
+        request.uri = request.uri.replace(request.host, BEDROCK_HOST_PLACEHOLDER)
+
     return request
 
 
@@ -226,6 +346,11 @@ def _filter_response_headers(response: dict[str, Any]) -> dict[str, Any] | None:
     content_length = headers.get("content-length", headers.get("Content-Length", []))
 
     if body == "" or body == b"" or content_length == ["0"]:
+        return None
+
+    status_code = response.get("status", {}).get("code")
+    if isinstance(status_code, int) and status_code >= 400:
+        # Avoid persisting auth/model errors when re-recording without valid AWS creds.
         return None
 
     for encoding_header in ["Content-Encoding", "content-encoding"]:
@@ -255,7 +380,8 @@ def vcr_cassette_dir(request: Any) -> str:
 
     for parent in test_file.parents:
         if (
-            parent.name in ("crewai", "crewai-tools", "crewai-files")
+            parent.name
+            in ("crewai", "crewai-tools", "crewai-files", "cli", "crewai-core")
             and parent.parent.name == "lib"
         ):
             package_root = parent
@@ -275,6 +401,11 @@ def vcr_cassette_dir(request: Any) -> str:
     cassette_dir.mkdir(parents=True, exist_ok=True)
 
     return str(cassette_dir)
+
+
+def pytest_recording_configure(vcr: Any, config: Any) -> None:
+    """Register custom VCR matchers for each test cassette session."""
+    vcr.register_matcher("bedrock_host", bedrock_host_matcher)
 
 
 @pytest.fixture(scope="module")

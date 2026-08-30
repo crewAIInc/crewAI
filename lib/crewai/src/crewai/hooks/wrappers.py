@@ -71,7 +71,6 @@ class BeforeLLMCallHookMethod:
         """
         if obj is None:
             return self
-        # Return bound method
         return lambda context: self._meth(obj, context)
 
 

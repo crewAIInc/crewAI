@@ -55,10 +55,11 @@ from crewai_tools import DaytonaExecTool, DaytonaFileTool
 exec_tool = DaytonaExecTool(persistent=True)
 file_tool = DaytonaFileTool(persistent=True)
 
-# Agent writes a script, then runs it — both share the same sandbox instance
-# because they each keep their own persistent sandbox. If you need the *same*
-# sandbox across two tools, create one tool, grab the sandbox id via
-# `tool._persistent_sandbox.id`, and pass it to the other via `sandbox_id=...`.
+# Agent writes a script, then runs it — but each tool keeps its OWN persistent
+# sandbox. To share the *same* sandbox across two tools, create and use the
+# first tool, then read its `active_sandbox_id` and pass it to the second:
+#   exec_tool.run(command="pip install httpx")
+#   file_tool = DaytonaFileTool(sandbox_id=exec_tool.active_sandbox_id)
 ```
 
 ### Attach to an existing sandbox
@@ -99,9 +100,14 @@ tool = DaytonaExecTool(
 - `timeout: int | None` — seconds.
 
 ### `DaytonaFileTool`
-- `action: "read" | "write" | "list" | "delete" | "mkdir" | "info"`
-- `path: str` — absolute path inside the sandbox.
-- `content: str | None` — required for `write`.
+- `action`: one of `read`, `write`, `append`, `list`, `delete`, `mkdir`, `info`, `exists`, `move`, `find`, `search`, `chmod`, `replace`.
+- `path: str | None` — absolute path inside the sandbox. Required for all actions except `replace`.
+- `content: str | None` — required for `append`; optional for `write`.
 - `binary: bool` — if `True`, `content` is base64 on write / returned as base64 on read.
 - `recursive: bool` — for `delete`, removes directories recursively.
-- `mode: str` — for `mkdir`, octal permission string (default `"0755"`).
+- `mode: str | None` — for `mkdir` (defaults to `"0755"`) or for `chmod` (e.g. `"755"`).
+- `destination: str | None` — required for `move`.
+- `pattern: str | None` — required for `find` (content grep), `search` (filename glob), and `replace`.
+- `replacement: str | None` — required for `replace`.
+- `paths: list[str] | None` — required for `replace`; list of files to operate on.
+- `owner: str | None` / `group: str | None` — for `chmod`. Pass at least one of `mode`, `owner`, or `group`.

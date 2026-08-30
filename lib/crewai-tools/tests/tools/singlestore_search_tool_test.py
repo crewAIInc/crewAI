@@ -38,7 +38,6 @@ def clean_db_url(docker_server_url) -> Generator[str, None, None]:
         curr.close()
         conn.close()
     except Exception:
-        # Ignore cleanup errors
         pass
 
 
@@ -48,7 +47,6 @@ def sample_table_setup(clean_db_url):
     conn = connect(host=clean_db_url, database="test_crewai")
     curr = conn.cursor()
 
-    # Create sample tables
     curr.execute(
         """
         CREATE TABLE employees (
@@ -98,7 +96,6 @@ class TestSingleStoreSearchTool:
 
     def test_tool_creation_with_connection_params(self, sample_table_setup):
         """Test tool creation with individual connection parameters."""
-        # Parse URL components for individual parameters
         url_parts = sample_table_setup.split("@")[1].split(":")
         host = url_parts[0]
         port = int(url_parts[1].split("/")[0])
@@ -141,7 +138,6 @@ class TestSingleStoreSearchTool:
             database="test_crewai",
         )
 
-        # Check that description includes specific tables
         assert "employees" in tool.description
         assert "departments" not in tool.description
 
@@ -166,7 +162,6 @@ class TestSingleStoreSearchTool:
 
         tool = SingleStoreSearchTool(host=sample_table_setup, database="test_crewai")
 
-        # Check description contains table definitions
         assert "employees(" in tool.description
         assert "departments(" in tool.description
         assert "id int" in tool.description.lower()
@@ -300,7 +295,6 @@ class TestSingleStoreSearchTool:
             pool_size=2,
         )
 
-        # Execute multiple queries to test pool usage
         results = []
         for _ in range(5):
             result = tool._run("SELECT COUNT(*) FROM employees")
@@ -317,7 +311,6 @@ class TestSingleStoreSearchTool:
         valid_input = SingleStoreSearchToolSchema(search_query="SELECT * FROM test")
         assert valid_input.search_query == "SELECT * FROM test"
 
-        # Test that description is present
         schema_dict = SingleStoreSearchToolSchema.model_json_schema()
         assert "search_query" in schema_dict["properties"]
         assert "description" in schema_dict["properties"]["search_query"]

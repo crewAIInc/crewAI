@@ -89,7 +89,6 @@ class ConsoleProvider:
             HumanFeedbackRequestedEvent,
         )
 
-        # Emit feedback requested event
         crewai_event_bus.emit(
             flow,
             HumanFeedbackRequestedEvent(
@@ -102,7 +101,6 @@ class ConsoleProvider:
             ),
         )
 
-        # Pause live updates during human input
         formatter = event_listener.formatter
         formatter.pause_live_updates()
 
@@ -110,14 +108,12 @@ class ConsoleProvider:
             console = formatter.console
 
             if self.verbose:
-                # Display output with formatting using Rich console
                 console.print("\n" + "═" * 50, style="bold cyan")
                 console.print("  OUTPUT FOR REVIEW", style="bold cyan")
                 console.print("═" * 50 + "\n", style="bold cyan")
                 console.print(context.method_output)
                 console.print("\n" + "═" * 50 + "\n", style="bold cyan")
 
-            # Show message and prompt for feedback
             console.print(context.message, style="yellow")
             console.print(
                 "(Press Enter to skip, or type your feedback)\n", style="cyan"
@@ -125,7 +121,6 @@ class ConsoleProvider:
 
             feedback = input("Your feedback: ").strip()
 
-            # Emit feedback received event
             crewai_event_bus.emit(
                 flow,
                 HumanFeedbackReceivedEvent(
@@ -139,7 +134,6 @@ class ConsoleProvider:
 
             return feedback
         finally:
-            # Resume live updates
             formatter.resume_live_updates()
 
     def request_input(
@@ -170,7 +164,6 @@ class ConsoleProvider:
         """
         from crewai.events.event_listener import event_listener
 
-        # Pause live updates during human input
         formatter = event_listener.formatter
         formatter.pause_live_updates()
 
@@ -191,5 +184,4 @@ class ConsoleProvider:
 
             return response
         finally:
-            # Resume live updates
             formatter.resume_live_updates()

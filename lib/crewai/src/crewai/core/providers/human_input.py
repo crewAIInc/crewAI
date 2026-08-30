@@ -211,8 +211,6 @@ class SyncHumanInputProvider(HumanInputProvider):
             formatted_answer, feedback, context
         )
 
-    # ── Sync helpers ──────────────────────────────────────────────────
-
     @staticmethod
     def _handle_training_feedback(
         initial_answer: AgentFinish,
@@ -265,8 +263,6 @@ class SyncHumanInputProvider(HumanInputProvider):
 
         return answer
 
-    # ── Async helpers ─────────────────────────────────────────────────
-
     @staticmethod
     async def _handle_training_feedback_async(
         initial_answer: AgentFinish,
@@ -318,8 +314,6 @@ class SyncHumanInputProvider(HumanInputProvider):
                 feedback = await self._prompt_input_async(context.crew)
 
         return answer
-
-    # ── I/O ───────────────────────────────────────────────────────────
 
     @staticmethod
     def _prompt_input(crew: Crew | None) -> str:

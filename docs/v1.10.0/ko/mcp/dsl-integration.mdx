@@ -1,0 +1,234 @@
+---
+title: MCP DSL 통합
+description: CrewAI의 간단한 DSL 구문을 사용하여 mcps 필드로 MCP 서버를 에이전트와 직접 통합하는 방법을 알아보세요.
+icon: code
+mode: "wide"
+---
+
+## 개요
+
+CrewAI의 MCP DSL(Domain Specific Language) 통합은 에이전트를 MCP(Model Context Protocol) 서버에 연결하는 **가장 간단한 방법**을 제공합니다. 에이전트에 `mcps` 필드만 추가하면 CrewAI가 모든 복잡성을 자동으로 처리합니다.
+
+<Info>
+  이는 대부분의 MCP 사용 사례에 **권장되는 접근 방식**입니다. 수동 연결 관리가
+  필요한 고급 시나리오의 경우
+  [MCPServerAdapter](/ko/mcp/overview#advanced-mcpserveradapter)를 참조하세요.
+</Info>
+
+## 기본 사용법
+
+`mcps` 필드를 사용하여 에이전트에 MCP 서버를 추가하세요:
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="연구 보조원",
+    goal="연구 및 분석 업무 지원",
+    backstory="고급 연구 도구에 접근할 수 있는 전문가 보조원",
+    mcps=[
+        "https://mcp.exa.ai/mcp?api_key=your_key&profile=research"
+    ]
+)
+
+# MCP 도구들이 이제 자동으로 사용 가능합니다!
+# 수동 연결 관리나 도구 구성이 필요 없습니다
+```
+
+## 지원되는 참조 형식
+
+### 외부 MCP 원격 서버
+
+```python
+# 기본 HTTPS 서버
+"https://api.example.com/mcp"
+
+# 인증이 포함된 서버
+"https://mcp.exa.ai/mcp?api_key=your_key&profile=your_profile"
+
+# 사용자 정의 경로가 있는 서버
+"https://services.company.com/api/v1/mcp"
+```
+
+### 특정 도구 선택
+
+`#` 구문을 사용하여 서버에서 특정 도구를 선택하세요:
+
+```python
+# 날씨 서버에서 예보 도구만 가져오기
+"https://weather.api.com/mcp#get_forecast"
+
+# Exa에서 검색 도구만 가져오기
+"https://mcp.exa.ai/mcp?api_key=your_key#web_search_exa"
+```
+
+### CrewAI AMP 마켓플레이스
+
+CrewAI AMP 마켓플레이스의 도구에 액세스하세요:
+
+```python
+# 모든 도구가 포함된 전체 서비스
+"crewai-amp:financial-data"
+
+# AMP 서비스의 특정 도구
+"crewai-amp:research-tools#pubmed_search"
+
+# 다중 AMP 서비스
+mcps=[
+    "crewai-amp:weather-insights",
+    "crewai-amp:market-analysis",
+    "crewai-amp:social-media-monitoring"
+]
+```
+
+## 완전한 예제
+
+다음은 여러 MCP 서버를 사용하는 완전한 예제입니다:
+
+```python
+from crewai import Agent, Task, Crew, Process
+
+# 다중 MCP 소스를 가진 에이전트 생성
+multi_source_agent = Agent(
+    role="다중 소스 연구 분석가",
+    goal="다중 데이터 소스를 사용한 종합적인 연구 수행",
+    backstory="""웹 검색, 날씨 데이터, 금융 정보,
+    학술 연구 도구에 접근할 수 있는 전문가 연구원""",
+    mcps=[
+        # 외부 MCP 서버
+        "https://mcp.exa.ai/mcp?api_key=your_exa_key&profile=research",
+        "https://weather.api.com/mcp#get_current_conditions",
+
+        # CrewAI AMP 마켓플레이스
+        "crewai-amp:financial-insights",
+        "crewai-amp:academic-research#pubmed_search",
+        "crewai-amp:market-intelligence#competitor_analysis"
+    ]
+)
+
+# 종합적인 연구 작업 생성
+research_task = Task(
+    description="""AI 에이전트가 비즈니스 생산성에 미치는 영향을 연구하세요.
+    원격 근무에 대한 현재 날씨 영향, 금융 시장 트렌드,
+    AI 에이전트 프레임워크에 대한 최근 학술 발표를 포함하세요.""",
+    expected_output="""다음을 다루는 종합 보고서:
+    1. AI 에이전트 비즈니스 영향 분석
+    2. 원격 근무를 위한 날씨 고려사항
+    3. AI 관련 금융 시장 트렌드
+    4. 학술 연구 인용 및 통찰
+    5. 경쟁 환경 분석""",
+    agent=multi_source_agent
+)
+
+# crew 생성 및 실행
+research_crew = Crew(
+    agents=[multi_source_agent],
+    tasks=[research_task],
+    process=Process.sequential,
+    verbose=True
+)
+
+result = research_crew.kickoff()
+print(f"{len(multi_source_agent.mcps)}개의 MCP 데이터 소스로 연구 완료")
+```
+
+## 주요 기능
+
+- 🔄 **자동 도구 발견**: 도구들이 자동으로 발견되고 통합됩니다
+- 🏷️ **이름 충돌 방지**: 서버 이름이 도구 이름에 접두사로 붙습니다
+- ⚡ **성능 최적화**: 스키마 캐싱과 온디맨드 연결
+- 🛡️ **오류 복원력**: 사용할 수 없는 서버의 우아한 처리
+- ⏱️ **타임아웃 보호**: 내장 타임아웃으로 연결 중단 방지
+- 📊 **투명한 통합**: 기존 CrewAI 기능과 완벽한 연동
+
+## 오류 처리
+
+MCP DSL 통합은 복원력 있게 설계되었습니다:
+
+```python
+agent = Agent(
+    role="복원력 있는 에이전트",
+    goal="서버 문제에도 불구하고 작업 계속",
+    backstory="장애를 우아하게 처리하는 에이전트",
+    mcps=[
+        "https://reliable-server.com/mcp",        # 작동할 것
+        "https://unreachable-server.com/mcp",     # 우아하게 건너뛸 것
+        "https://slow-server.com/mcp",            # 우아하게 타임아웃될 것
+        "crewai-amp:working-service"              # 작동할 것
+    ]
+)
+# 에이전트는 작동하는 서버의 도구를 사용하고 실패한 서버에 대한 경고를 로그에 남깁니다
+```
+
+## 성능 기능
+
+### 자동 캐싱
+
+도구 스키마는 성능 향상을 위해 5분간 캐시됩니다:
+
+```python
+# 첫 번째 에이전트 생성 - 서버에서 도구 발견
+agent1 = Agent(role="첫 번째", goal="테스트", backstory="테스트",
+               mcps=["https://api.example.com/mcp"])
+
+# 두 번째 에이전트 생성 (5분 이내) - 캐시된 도구 스키마 사용
+agent2 = Agent(role="두 번째", goal="테스트", backstory="테스트",
+               mcps=["https://api.example.com/mcp"])  # 훨씬 빠릅니다!
+```
+
+### 온디맨드 연결
+
+도구 연결은 실제로 사용될 때만 설정됩니다:
+
+```python
+# 에이전트 생성은 빠름 - 아직 MCP 연결을 만들지 않음
+agent = Agent(
+    role="온디맨드 에이전트",
+    goal="도구를 효율적으로 사용",
+    backstory="필요할 때만 연결하는 효율적인 에이전트",
+    mcps=["https://api.example.com/mcp"]
+)
+
+# MCP 연결은 도구가 실제로 실행될 때만 만들어집니다
+# 이는 연결 오버헤드를 최소화하고 시작 성능을 개선합니다
+```
+
+## 모범 사례
+
+### 1. 가능하면 특정 도구 사용
+
+```python
+# 좋음 - 필요한 도구만 가져오기
+mcps=["https://weather.api.com/mcp#get_forecast"]
+
+# 덜 효율적 - 서버의 모든 도구 가져오기
+mcps=["https://weather.api.com/mcp"]
+```
+
+### 2. 인증을 안전하게 처리
+
+```python
+import os
+
+# 환경 변수에 API 키 저장
+exa_key = os.getenv("EXA_API_KEY")
+exa_profile = os.getenv("EXA_PROFILE")
+
+agent = Agent(
+    role="안전한 에이전트",
+    goal="MCP 도구를 안전하게 사용",
+    backstory="보안을 고려하는 에이전트",
+    mcps=[f"https://mcp.exa.ai/mcp?api_key={exa_key}&profile={exa_profile}"]
+)
+```
+
+### 3. 서버 장애 계획
+
+```python
+# 항상 백업 옵션 포함
+mcps=[
+    "https://primary-api.com/mcp",       # 주요 선택
+    "https://backup-api.com/mcp",        # 백업 옵션
+    "crewai-amp:reliable-service"        # AMP 폴백
+]
+```

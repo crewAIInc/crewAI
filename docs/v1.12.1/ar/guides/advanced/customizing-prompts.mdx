@@ -1,0 +1,317 @@
+---
+title: تخصيص المطالبات
+description: تعمّق في تخصيص المطالبات على المستوى المنخفض في CrewAI، مما يتيح حالات استخدام مخصصة ومعقدة لنماذج ولغات مختلفة.
+icon: message-pen
+mode: "wide"
+---
+
+## لماذا نخصص المطالبات؟
+
+على الرغم من أن مطالبات CrewAI الافتراضية تعمل بشكل جيد في كثير من السيناريوهات، إلا أن التخصيص على المستوى المنخفض يفتح الباب أمام سلوك أكثر مرونة وقوة للـ Agent. إليك لماذا قد ترغب في الاستفادة من هذا التحكم العميق:
+
+1. **التحسين لنماذج LLM محددة** – تزدهر النماذج المختلفة (مثل GPT-4 وClaude وLlama) مع تنسيقات مطالبات مصممة لبنيتها الفريدة.
+2. **تغيير اللغة** – بناء Agents تعمل حصريًا بلغات غير الإنجليزية مع التعامل مع الفروق الدقيقة بدقة.
+3. **التخصص في مجالات معقدة** – تكييف المطالبات لصناعات متخصصة للغاية مثل الرعاية الصحية والمالية والقانون.
+4. **ضبط النبرة والأسلوب** – جعل الـ Agents أكثر رسمية أو عفوية أو إبداعية أو تحليلية.
+5. **دعم حالات استخدام مخصصة للغاية** – استخدام هياكل وتنسيقات مطالبات متقدمة لتلبية متطلبات معقدة خاصة بالمشروع.
+
+يستكشف هذا الدليل كيفية الوصول إلى مطالبات CrewAI على مستوى أعمق، مما يمنحك تحكمًا دقيقًا في كيفية تفكير الـ Agents وتفاعلها.
+
+## فهم نظام المطالبات في CrewAI
+
+تحت الغطاء، يستخدم CrewAI نظام مطالبات معياري يمكنك تخصيصه على نطاق واسع:
+
+- **قوالب الـ Agent** – تحكم في نهج كل Agent تجاه دوره المعيّن.
+- **شرائح المطالبات** – تتحكم في السلوكيات المتخصصة مثل المهام واستخدام الأدوات وهيكل المخرجات.
+- **معالجة الأخطاء** – توجيه كيفية استجابة الـ Agents للإخفاقات والاستثناءات وحالات انتهاء المهلة.
+- **مطالبات خاصة بالأدوات** – تعريف تعليمات مفصلة لكيفية استدعاء الأدوات أو استخدامها.
+
+اطلع على [قوالب المطالبات الأصلية في مستودع CrewAI](https://github.com/crewAIInc/crewAI/blob/main/src/crewai/translations/en.json) لمعرفة كيفية تنظيم هذه العناصر. من هناك، يمكنك تجاوزها أو تكييفها حسب الحاجة لفتح سلوكيات متقدمة.
+
+## فهم تعليمات النظام الافتراضية
+
+<Warning>
+**مشكلة شفافية الإنتاج**: يحقن CrewAI تلقائيًا تعليمات افتراضية في مطالباتك قد لا تكون على علم بها. يشرح هذا القسم ما يحدث تحت الغطاء وكيفية الحصول على تحكم كامل.
+</Warning>
+
+عندما تعرّف Agent بـ `role` و`goal` و`backstory`، يضيف CrewAI تلقائيًا تعليمات نظام إضافية تتحكم في التنسيق والسلوك. فهم هذه الحقن الافتراضية أمر بالغ الأهمية لأنظمة الإنتاج التي تحتاج شفافية كاملة في المطالبات.
+
+### ما يحقنه CrewAI تلقائيًا
+
+بناءً على تهيئة الـ Agent، يضيف CrewAI تعليمات افتراضية مختلفة:
+
+#### للـ Agents بدون أدوات
+```text
+"I MUST use these formats, my job depends on it!"
+```
+
+#### للـ Agents مع أدوات
+```text
+"IMPORTANT: Use the following format in your response:
+
+Thought: you should always think about what to do
+Action: the action to take, only one name of [tool_names]
+Action Input: the input to the action, just a simple JSON object...
+```
+
+#### للمخرجات المنظمة (JSON/Pydantic)
+```text
+"Ensure your final answer contains only the content in the following format: {output_format}
+Ensure the final output does not include any code block markers like ```json or ```python."
+```
+
+### عرض مطالبة النظام الكاملة
+
+لمعرفة المطالبة المرسلة بالضبط إلى LLM، يمكنك فحص المطالبة المولّدة:
+
+```python
+from crewai import Agent, Crew, Task
+from crewai.utilities.prompts import Prompts
+
+# Create your agent
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze data and provide insights",
+    backstory="You are an expert data analyst with 10 years of experience.",
+    verbose=True
+)
+
+# Create a sample task
+task = Task(
+    description="Analyze the sales data and identify trends",
+    expected_output="A detailed analysis with key insights and trends",
+    agent=agent
+)
+
+# Create the prompt generator
+prompt_generator = Prompts(
+    agent=agent,
+    has_tools=len(agent.tools) > 0,
+    use_system_prompt=agent.use_system_prompt
+)
+
+# Generate and inspect the actual prompt
+generated_prompt = prompt_generator.task_execution()
+
+# Print the complete system prompt that will be sent to the LLM
+if "system" in generated_prompt:
+    print("=== SYSTEM PROMPT ===")
+    print(generated_prompt["system"])
+    print("\n=== USER PROMPT ===")
+    print(generated_prompt["user"])
+else:
+    print("=== COMPLETE PROMPT ===")
+    print(generated_prompt["prompt"])
+
+# You can also see how the task description gets formatted
+print("\n=== TASK CONTEXT ===")
+print(f"Task Description: {task.description}")
+print(f"Expected Output: {task.expected_output}")
+```
+
+### تجاوز التعليمات الافتراضية
+
+لديك عدة خيارات للحصول على تحكم كامل في المطالبات:
+
+#### الخيار 1: القوالب المخصصة (مُوصى به)
+```python
+from crewai import Agent
+
+# Define your own system template without default instructions
+custom_system_template = """You are {role}. {backstory}
+Your goal is: {goal}
+
+Respond naturally and conversationally. Focus on providing helpful, accurate information."""
+
+custom_prompt_template = """Task: {input}
+
+Please complete this task thoughtfully."""
+
+agent = Agent(
+    role="Research Assistant",
+    goal="Help users find accurate information",
+    backstory="You are a helpful research assistant.",
+    system_template=custom_system_template,
+    prompt_template=custom_prompt_template,
+    use_system_prompt=True  # Use separate system/user messages
+)
+```
+
+#### الخيار 2: ملف مطالبات مخصص
+أنشئ ملف `custom_prompts.json` لتجاوز شرائح مطالبات محددة:
+
+```json
+{
+  "slices": {
+    "no_tools": "\nProvide your best answer in a natural, conversational way.",
+    "tools": "\nYou have access to these tools: {tools}\n\nUse them when helpful, but respond naturally.",
+    "formatted_task_instructions": "Format your response as: {output_format}"
+  }
+}
+```
+
+ثم استخدمه في Crew:
+
+```python
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    prompt_file="custom_prompts.json",
+    verbose=True
+)
+```
+
+#### الخيار 3: تعطيل مطالبات النظام لنماذج o1
+```python
+agent = Agent(
+    role="Analyst",
+    goal="Analyze data",
+    backstory="Expert analyst",
+    use_system_prompt=False  # Disables system prompt separation
+)
+```
+
+### التصحيح باستخدام أدوات المراقبة
+
+لشفافية الإنتاج، استخدم منصات المراقبة لمتابعة جميع المطالبات وتفاعلات LLM. يتيح لك ذلك رؤية المطالبات المرسلة بالضبط (بما في ذلك التعليمات الافتراضية) إلى نماذج LLM.
+
+راجع [توثيق المراقبة](/ar/observability/overview) للحصول على أدلة تكامل مفصلة مع منصات متعددة بما في ذلك Langfuse وMLflow وWeights & Biases وحلول التسجيل المخصصة.
+
+### أفضل الممارسات للإنتاج
+
+1. **افحص المطالبات المولّدة دائمًا** قبل النشر في الإنتاج
+2. **استخدم قوالب مخصصة** عندما تحتاج تحكمًا كاملاً في محتوى المطالبات
+3. **دمج أدوات المراقبة** للمتابعة المستمرة للمطالبات (راجع [توثيق المراقبة](/ar/observability/overview))
+4. **اختبر مع نماذج LLM مختلفة** حيث قد تعمل التعليمات الافتراضية بشكل مختلف عبر النماذج
+5. **وثّق تخصيصات المطالبات** لشفافية الفريق
+
+<Tip>
+التعليمات الافتراضية موجودة لضمان سلوك Agent متسق، لكنها قد تتعارض مع المتطلبات الخاصة بالمجال. استخدم خيارات التخصيص أعلاه للحفاظ على تحكم كامل في سلوك Agent في أنظمة الإنتاج.
+</Tip>
+
+## أفضل الممارسات لإدارة ملفات المطالبات
+
+عند الانخراط في تخصيص المطالبات على المستوى المنخفض، اتبع هذه الإرشادات للحفاظ على التنظيم وسهولة الصيانة:
+
+1. **احتفظ بالملفات منفصلة** – خزّن المطالبات المخصصة في ملفات JSON مخصصة خارج قاعدة الكود الرئيسية.
+2. **التحكم في الإصدارات** – تتبع التغييرات داخل المستودع مع ضمان توثيق واضح لتعديلات المطالبات بمرور الوقت.
+3. **التنظيم حسب النموذج أو اللغة** – استخدم تسميات مثل `prompts_llama.json` أو `prompts_es.json` لتحديد التهيئات المتخصصة بسرعة.
+4. **توثيق التغييرات** – قدم تعليقات أو حافظ على ملف يوضح غرض ونطاق تخصيصاتك.
+5. **قلل التعديلات** – تجاوز فقط الشرائح المحددة التي تحتاج حقًا لتعديلها مع الحفاظ على الوظائف الافتراضية لكل شيء آخر.
+
+## أبسط طريقة لتخصيص المطالبات
+
+إحدى الطرق المباشرة هي إنشاء ملف JSON للمطالبات التي تريد تجاوزها ثم توجيه Crew إلى ذلك الملف:
+
+1. أنشئ ملف JSON بشرائح المطالبات المحدّثة.
+2. أشر إلى ذلك الملف عبر معامل `prompt_file` في Crew.
+
+يدمج CrewAI بعد ذلك تخصيصاتك مع الإعدادات الافتراضية، فلا تحتاج لإعادة تعريف كل مطالبة. إليك الطريقة:
+
+### مثال: تخصيص أساسي للمطالبات
+
+أنشئ ملف `custom_prompts.json` بالمطالبات التي تريد تعديلها. تأكد من إدراج جميع المطالبات عالية المستوى التي يجب أن يحتويها، وليس فقط تغييراتك:
+
+```json
+{
+  "slices": {
+    "format": "When responding, follow this structure:\n\nTHOUGHTS: Your step-by-step thinking\nACTION: Any tool you're using\nRESULT: Your final answer or conclusion"
+  }
+}
+```
+
+ثم ادمجه هكذا:
+
+```python
+from crewai import Agent, Crew, Task, Process
+
+# Create agents and tasks as normal
+researcher = Agent(
+    role="Research Specialist",
+    goal="Find information on quantum computing",
+    backstory="You are a quantum physics expert",
+    verbose=True
+)
+
+research_task = Task(
+    description="Research quantum computing applications",
+    expected_output="A summary of practical applications",
+    agent=researcher
+)
+
+# Create a crew with your custom prompt file
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    prompt_file="path/to/custom_prompts.json",
+    verbose=True
+)
+
+# Run the crew
+result = crew.kickoff()
+```
+
+بهذه التعديلات البسيطة، تحصل على تحكم منخفض المستوى في كيفية تواصل الـ Agents وحل المهام.
+
+## التحسين لنماذج محددة
+
+تزدهر النماذج المختلفة مع مطالبات منظمة بطرق مختلفة. إجراء تعديلات أعمق يمكن أن يعزز الأداء بشكل كبير من خلال مواءمة مطالباتك مع خصائص النموذج.
+
+### مثال: قالب مطالبات Llama 3.3
+
+على سبيل المثال، عند التعامل مع Llama 3.3 من Meta، قد يعكس التخصيص على المستوى الأعمق الهيكل الموصى به الموضح في:
+https://www.llama.com/docs/model-cards-and-prompt-formats/llama3_1/#prompt-template
+
+إليك مثالاً يوضح كيف يمكنك ضبط Agent للاستفادة من Llama 3.3 في الكود:
+
+```python
+from crewai import Agent, Crew, Task, Process
+from crewai_tools import DirectoryReadTool, FileReadTool
+
+# Define templates for system, user (prompt), and assistant (response) messages
+system_template = """<|begin_of_text|><|start_header_id|>system<|end_header_id|>{{ .System }}<|eot_id|>"""
+prompt_template = """<|start_header_id|>user<|end_header_id|>{{ .Prompt }}<|eot_id|>"""
+response_template = """<|start_header_id|>assistant<|end_header_id|>{{ .Response }}<|eot_id|>"""
+
+# Create an Agent using Llama-specific layouts
+principal_engineer = Agent(
+    role="Principal Engineer",
+    goal="Oversee AI architecture and make high-level decisions",
+    backstory="You are the lead engineer responsible for critical AI systems",
+    verbose=True,
+    llm="groq/llama-3.3-70b-versatile",  # Using the Llama 3 model
+    system_template=system_template,
+    prompt_template=prompt_template,
+    response_template=response_template,
+    tools=[DirectoryReadTool(), FileReadTool()]
+)
+
+# Define a sample task
+engineering_task = Task(
+    description="Review AI implementation files for potential improvements",
+    expected_output="A summary of key findings and recommendations",
+    agent=principal_engineer
+)
+
+# Create a Crew for the task
+llama_crew = Crew(
+    agents=[principal_engineer],
+    tasks=[engineering_task],
+    process=Process.sequential,
+    verbose=True
+)
+
+# Execute the crew
+result = llama_crew.kickoff()
+print(result.raw)
+```
+
+من خلال هذه التهيئة العميقة، يمكنك ممارسة تحكم شامل منخفض المستوى في سير العمل القائمة على Llama دون الحاجة إلى ملف JSON منفصل.
+
+## الخلاصة
+
+يفتح تخصيص المطالبات على المستوى المنخفض في CrewAI الباب أمام حالات استخدام مخصصة ومعقدة للغاية. من خلال إنشاء ملفات مطالبات منظمة (أو قوالب مضمّنة مباشرة)، يمكنك استيعاب نماذج ولغات ومجالات متخصصة متنوعة. يضمن هذا المستوى من المرونة أنك تستطيع صياغة سلوك الذكاء الاصطناعي الذي تحتاجه بالضبط، مع العلم أن CrewAI لا يزال يوفر إعدادات افتراضية موثوقة عندما لا تتجاوزها.
+
+<Check>
+لديك الآن الأساس لتخصيصات المطالبات المتقدمة في CrewAI. سواء كنت تتكيف مع هياكل خاصة بالنموذج أو قيود خاصة بالمجال، يتيح لك هذا النهج المنخفض المستوى تشكيل تفاعلات الـ Agent بطرق متخصصة للغاية.
+</Check>

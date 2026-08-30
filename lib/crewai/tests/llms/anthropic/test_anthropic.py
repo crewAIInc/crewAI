@@ -1,10 +1,10 @@
 import os
 import sys
 import types
-from unittest.mock import patch, MagicMock
+from unittest.mock import AsyncMock, patch, MagicMock
 import pytest
 
-from crewai.llm import LLM
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
@@ -51,19 +51,15 @@ def test_anthropic_completion_module_is_imported():
     """
     module_name = "crewai.llms.providers.anthropic.completion"
 
-    # Remove module from cache if it exists
     if module_name in sys.modules:
         del sys.modules[module_name]
 
-    # Create LLM instance - this should trigger the import
     LLM(model="anthropic/claude-3-5-sonnet-20241022")
 
-    # Verify the module was imported
     assert module_name in sys.modules
     completion_mod = sys.modules[module_name]
     assert isinstance(completion_mod, types.ModuleType)
 
-    # Verify the class exists in the module
     assert hasattr(completion_mod, 'AnthropicCompletion')
 
 
@@ -72,7 +68,6 @@ def test_native_anthropic_raises_error_when_initialization_fails():
     Test that LLM raises ImportError when native Anthropic completion fails to initialize.
     This ensures we don't silently fall back when there's a configuration issue.
     """
-    # Mock the _get_native_provider to return a failing class
     with patch('crewai.llm.LLM._get_native_provider') as mock_get_provider:
 
         class FailingCompletion:
@@ -109,6 +104,86 @@ def test_anthropic_completion_initialization_parameters():
     assert llm.top_p == 0.9
 
 
+def test_anthropic_completion_defaults_to_sonnet_4_6():
+    from crewai.llms.providers.anthropic.completion import (
+        DEFAULT_MODEL,
+        AnthropicCompletion,
+    )
+
+    llm = AnthropicCompletion()
+    assert llm.model == DEFAULT_MODEL
+    assert llm.model == "claude-sonnet-4-6"
+    assert llm.max_tokens == 128000
+
+
+def test_default_anthropic_completion_uses_sonnet_4_6_context_window():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion()
+    assert llm.get_context_window_size() == int(1_000_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        "claude-fable-5",
+        "claude-mythos-5",
+        "claude-opus-5",
+        "claude-sonnet-5",
+        "claude-opus-4-8",
+        "claude-opus-4-7",
+        "claude-opus-4-6",
+        "claude-sonnet-4-6",
+    ],
+)
+def test_current_1m_anthropic_models_use_1m_context_window(model: str) -> None:
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model=model)
+    assert llm.get_context_window_size() == int(1_000_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+@pytest.mark.parametrize(
+    "model",
+    ["claude-opus-4-5", "claude-sonnet-4-5", "claude-haiku-4-5"],
+)
+def test_claude_4_5_family_uses_200k_context_window(model: str) -> None:
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model=model)
+    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_anthropic_defaults_max_tokens_to_model_limit():
+    """Native Anthropic used to default to 4096, which truncates large tool calls."""
+    llm = LLM(model="anthropic/claude-unknown-future")
+
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    assert isinstance(llm, AnthropicCompletion)
+    assert llm.max_tokens == 32000
+    params = llm._prepare_completion_params(messages=[{"role": "user", "content": "hi"}])
+    assert params["max_tokens"] == 32000
+    assert "max_tokens" not in llm.to_config_dict()
+
+    sonnet45 = LLM(model="anthropic/claude-sonnet-4-5")
+    assert isinstance(sonnet45, AnthropicCompletion)
+    assert sonnet45.max_tokens == 64000
+    assert "max_tokens" not in sonnet45.to_config_dict()
+
+
+def test_anthropic_honors_explicit_max_tokens():
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022", max_tokens=8000)
+
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    assert isinstance(llm, AnthropicCompletion)
+    assert llm.max_tokens == 8000
+    params = llm._prepare_completion_params(messages=[{"role": "user", "content": "hi"}])
+    assert params["max_tokens"] == 8000
+    assert llm.to_config_dict()["max_tokens"] == 8000
+
+
 def test_anthropic_specific_parameters():
     """
     Test Anthropic-specific parameters like stop_sequences and streaming
@@ -135,7 +210,6 @@ def test_anthropic_completion_call():
     """
     llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
 
-    # Mock the call method on the instance
     with patch.object(llm, 'call', return_value="Hello! I'm Claude, ready to help.") as mock_call:
         result = llm.call("Hello, how are you?")
 
@@ -147,13 +221,10 @@ def test_anthropic_completion_called_during_crew_execution():
     """
     Test that AnthropicCompletion.call is actually invoked when running a crew
     """
-    # Create the LLM instance first
     anthropic_llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
 
-    # Mock the call method on the specific instance
     with patch.object(anthropic_llm, 'call', return_value="Tokyo has 14 million people.") as mock_call:
 
-        # Create agent with explicit LLM configuration
         agent = Agent(
             role="Research Assistant",
             goal="Find population info",
@@ -170,7 +241,6 @@ def test_anthropic_completion_called_during_crew_execution():
         crew = Crew(agents=[agent], tasks=[task])
         result = crew.kickoff()
 
-        # Verify mock was called
         assert mock_call.called
         assert "14 million" in str(result)
 
@@ -179,10 +249,8 @@ def test_anthropic_completion_call_arguments():
     """
     Test that AnthropicCompletion.call is invoked with correct arguments
     """
-    # Create LLM instance first
     anthropic_llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
 
-    # Mock the instance method
     with patch.object(anthropic_llm, 'call') as mock_call:
         mock_call.return_value = "Task completed successfully."
 
@@ -190,7 +258,7 @@ def test_anthropic_completion_call_arguments():
             role="Test Agent",
             goal="Complete a simple task",
             backstory="You are a test agent.",
-            llm=anthropic_llm  # Use same instance
+            llm=anthropic_llm
         )
 
         task = Task(
@@ -202,18 +270,14 @@ def test_anthropic_completion_call_arguments():
         crew = Crew(agents=[agent], tasks=[task])
         crew.kickoff()
 
-        # Verify call was made
         assert mock_call.called
 
-        # Check the arguments passed to the call method
         call_args = mock_call.call_args
         assert call_args is not None
 
-        # The first argument should be the messages
-        messages = call_args[0][0]  # First positional argument
+        messages = call_args[0][0]
         assert isinstance(messages, (str, list))
 
-        # Verify that the task description appears in the messages
         if isinstance(messages, str):
             assert "hello world" in messages.lower()
         elif isinstance(messages, list):
@@ -225,10 +289,8 @@ def test_multiple_anthropic_calls_in_crew():
     """
     Test that AnthropicCompletion.call is invoked multiple times for multiple tasks
     """
-    # Create LLM instance first
     anthropic_llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
 
-    # Mock the instance method
     with patch.object(anthropic_llm, 'call') as mock_call:
         mock_call.return_value = "Task completed."
 
@@ -236,7 +298,7 @@ def test_multiple_anthropic_calls_in_crew():
             role="Multi-task Agent",
             goal="Complete multiple tasks",
             backstory="You can handle multiple tasks.",
-            llm=anthropic_llm  # Use same instance
+            llm=anthropic_llm
         )
 
         task1 = Task(
@@ -257,12 +319,10 @@ def test_multiple_anthropic_calls_in_crew():
         )
         crew.kickoff()
 
-        # Verify multiple calls were made
         assert mock_call.call_count >= 2  # At least one call per task
 
-        # Verify each call had proper arguments
         for call in mock_call.call_args_list:
-            assert len(call[0]) > 0  # Has positional arguments
+            assert len(call[0]) > 0
             messages = call[0][0]
             assert messages is not None
 
@@ -278,10 +338,8 @@ def test_anthropic_completion_with_tools():
         """A sample tool for testing"""
         return f"Tool result for: {query}"
 
-    # Create LLM instance first
     anthropic_llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
 
-    # Mock the instance method
     with patch.object(anthropic_llm, 'call') as mock_call:
         mock_call.return_value = "Task completed with tools."
 
@@ -289,7 +347,7 @@ def test_anthropic_completion_with_tools():
             role="Tool User",
             goal="Use tools to complete tasks",
             backstory="You can use tools.",
-            llm=anthropic_llm,  # Use same instance
+            llm=anthropic_llm,
             tools=[sample_tool]
         )
 
@@ -373,9 +431,9 @@ def test_anthropic_client_params_override_defaults():
     Test that client_params can override default client parameters
     """
     override_client_params = {
-        "timeout": 120,  # Override the timeout parameter
-        "max_retries": 10,  # Override the max_retries parameter
-        "default_headers": {"X-Override": "true"}  # Valid custom parameter
+        "timeout": 120,
+        "max_retries": 10,
+        "default_headers": {"X-Override": "true"}
     }
 
     with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
@@ -480,12 +538,10 @@ def test_anthropic_context_window_size():
     """
     Test that Anthropic models return correct context window sizes
     """
-    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+    llm = LLM(model="anthropic/claude-haiku-4-5")
     context_size = llm.get_context_window_size()
 
-    # Should return a reasonable context window size (Claude 3.5 has 200k tokens)
-    assert context_size > 100000  # Should be substantial
-    assert context_size <= 200000  # But not exceed the actual limit
+    assert context_size == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_anthropic_message_formatting():
@@ -494,7 +550,6 @@ def test_anthropic_message_formatting():
     """
     llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
 
-    # Test message formatting
     test_messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello"},
@@ -509,18 +564,16 @@ def test_anthropic_message_formatting():
 
     # Remaining messages should start with user
     assert formatted_messages[0]["role"] == "user"
-    assert len(formatted_messages) >= 3  # Should have user, assistant, user messages
+    assert len(formatted_messages) >= 3
 
 
 def test_anthropic_streaming_parameter():
     """
     Test that streaming parameter is properly handled
     """
-    # Test non-streaming
     llm_no_stream = LLM(model="anthropic/claude-3-5-sonnet-20241022", stream=False)
     assert llm_no_stream.stream == False
 
-    # Test streaming
     llm_stream = LLM(model="anthropic/claude-3-5-sonnet-20241022", stream=True)
     assert llm_stream.stream == True
 
@@ -531,7 +584,6 @@ def test_anthropic_tool_conversion():
     """
     llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
 
-    # Mock tool in CrewAI format
     crewai_tools = [{
         "type": "function",
         "function": {
@@ -547,7 +599,6 @@ def test_anthropic_tool_conversion():
         }
     }]
 
-    # Test tool conversion
     anthropic_tools = llm._convert_tools_for_interference(crewai_tools)
 
     assert len(anthropic_tools) == 1
@@ -577,15 +628,18 @@ def test_anthropic_token_usage_tracking():
     with patch.object(llm._client.messages, 'create') as mock_create:
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="test response")]
-        mock_response.usage = MagicMock(input_tokens=50, output_tokens=25)
+        mock_response.usage = MagicMock(
+            input_tokens=50,
+            output_tokens=25,
+            cache_read_input_tokens=0,
+            cache_creation_input_tokens=0,
+        )
         mock_create.return_value = mock_response
 
         result = llm.call("Hello")
 
-        # Verify the response
         assert result == "test response"
 
-        # Verify token usage was extracted
         usage = llm._extract_anthropic_token_usage(mock_response)
         assert usage["input_tokens"] == 50
         assert usage["output_tokens"] == 25
@@ -596,17 +650,14 @@ def test_anthropic_stop_sequences_sync():
     """Test that stop and stop_sequences attributes stay synchronized."""
     llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
 
-    # Test setting stop as a list
     llm.stop = ["\nObservation:", "\nThought:"]
     assert llm.stop_sequences == ["\nObservation:", "\nThought:"]
     assert llm.stop == ["\nObservation:", "\nThought:"]
 
-    # Test setting stop as a string
     llm.stop = "\nFinal Answer:"
     assert llm.stop_sequences == ["\nFinal Answer:"]
     assert llm.stop == ["\nFinal Answer:"]
 
-    # Test setting stop as None
     llm.stop = None
     assert llm.stop_sequences == []
     assert llm.stop == []
@@ -676,7 +727,6 @@ def test_anthropic_thinking_blocks_preserved_across_turns():
 
     assert isinstance(llm, AnthropicCompletion)
 
-    # Capture all messages.create calls to verify thinking blocks are included
     original_create = llm._client.messages.create
     captured_calls = []
 
@@ -685,45 +735,36 @@ def test_anthropic_thinking_blocks_preserved_across_turns():
         return original_create(**kwargs)
 
     with patch.object(llm._client.messages, 'create', side_effect=capture_and_call):
-        # First call - establishes context and generates thinking blocks
         messages = [{"role": "user", "content": "What is 2+2?"}]
         first_result = llm.call(messages)
 
-        # Verify first call completed
         assert first_result is not None
         assert isinstance(first_result, str)
         assert len(first_result) > 0
 
-        # Verify thinking blocks were stored after first response
         assert len(llm._previous_thinking_blocks) > 0, "No thinking blocks stored after first call"
         first_thinking = llm._previous_thinking_blocks[0]
         assert first_thinking["type"] == "thinking"
         assert "thinking" in first_thinking
         assert "signature" in first_thinking
 
-        # Store the thinking block content for comparison
         stored_thinking_content = first_thinking["thinking"]
         stored_signature = first_thinking["signature"]
 
-        # Second call - should include thinking blocks from first call
         messages.append({"role": "assistant", "content": first_result})
         messages.append({"role": "user", "content": "Now what is 3+3?"})
         second_result = llm.call(messages)
 
-        # Verify second call completed
         assert second_result is not None
         assert isinstance(second_result, str)
 
-        # Verify at least 2 API calls were made
         assert len(captured_calls) >= 2, f"Expected at least 2 API calls, got {len(captured_calls)}"
 
-        # Verify second call includes thinking blocks in assistant message
         second_call_messages = captured_calls[1]["messages"]
 
         # Should have: user message + assistant message (with thinking blocks) + follow-up user message
         assert len(second_call_messages) >= 2
 
-        # Find the assistant message in the second call
         assistant_message = None
         for msg in second_call_messages:
             if msg["role"] == "assistant" and isinstance(msg.get("content"), list):
@@ -733,14 +774,12 @@ def test_anthropic_thinking_blocks_preserved_across_turns():
         assert assistant_message is not None, "Assistant message with list content not found in second call"
         assert isinstance(assistant_message["content"], list)
 
-        # Verify thinking block is included in assistant message content
         thinking_found = False
         for block in assistant_message["content"]:
             if isinstance(block, dict) and block.get("type") == "thinking":
                 thinking_found = True
                 assert "thinking" in block
                 assert "signature" in block
-                # Verify it matches what was stored from the first call
                 assert block["thinking"] == stored_thinking_content
                 assert block["signature"] == stored_signature
                 break
@@ -786,13 +825,10 @@ def test_anthropic_function_calling():
     assert result is not None
     assert isinstance(result, str)
     assert len(result) > 0
-    # Verify the response includes information about Tokyo's weather
     assert "tokyo" in result.lower() or "72" in result
 
 
-# =============================================================================
 # Agent Kickoff Structured Output Tests
-# =============================================================================
 
 
 @pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
@@ -813,7 +849,6 @@ def test_anthropic_tool_execution_with_available_functions():
 
     llm = LLM(model="anthropic/claude-3-5-haiku-20241022")
 
-    # Simple tool that returns a formatted string
     def create_reasoning_plan(plan: str, steps: list, ready: bool) -> str:
         """Create a reasoning plan with steps."""
         return json.dumps({"plan": plan, "steps": steps, "ready": ready})
@@ -850,11 +885,9 @@ def test_anthropic_tool_execution_with_available_functions():
         available_functions={"create_reasoning_plan": create_reasoning_plan}
     )
 
-    # Verify result is valid JSON from the tool
     assert result is not None
     assert isinstance(result, str)
 
-    # Parse the result to verify it's valid JSON
     parsed_result = json.loads(result)
     assert "plan" in parsed_result
     assert "steps" in parsed_result
@@ -910,7 +943,6 @@ def test_anthropic_tool_execution_returns_tool_result_directly():
     # Tool should have been called exactly once
     assert call_count == 1, f"Expected tool to be called once, got {call_count}"
 
-    # Result should be the direct tool output
     assert result == "8", f"Expected '8' but got '{result}'"
 
 
@@ -975,7 +1007,7 @@ def test_anthropic_agent_kickoff_structured_output_with_tools():
         role="Calculator",
         goal="Perform calculations using available tools",
         backstory="You are a calculator assistant that uses tools to compute results.",
-        llm=LLM(model="anthropic/claude-3-5-haiku-20241022"),
+        llm=LLM(model="anthropic/claude-sonnet-4-6"),
         tools=[add_numbers],
         verbose=True,
     )
@@ -1008,13 +1040,11 @@ def test_anthropic_cached_prompt_tokens():
     def _ephemeral_user(text: str):
         return [{"type": "text", "text": text, "cache_control": {"type": "ephemeral"}}]
 
-    # First call: creates the cache
     llm.call([
         {"role": "system", "content": system_msg},
         {"role": "user", "content": _ephemeral_user("Say hello in one word.")},
     ])
 
-    # Second call: same system prompt should hit the cache
     llm.call([
         {"role": "system", "content": system_msg},
         {"role": "user", "content": _ephemeral_user("Say goodbye in one word.")},
@@ -1025,7 +1055,6 @@ def test_anthropic_cached_prompt_tokens():
     assert usage.prompt_tokens > 0
     assert usage.completion_tokens > 0
     assert usage.successful_requests == 2
-    # The second call should have cached prompt tokens
     assert usage.cached_prompt_tokens > 0
 
 
@@ -1042,13 +1071,11 @@ def test_anthropic_streaming_cached_prompt_tokens():
     def _ephemeral_user(text: str):
         return [{"type": "text", "text": text, "cache_control": {"type": "ephemeral"}}]
 
-    # First call: creates the cache
     llm.call([
         {"role": "system", "content": system_msg},
         {"role": "user", "content": _ephemeral_user("Say hello in one word.")},
     ])
 
-    # Second call: same system prompt should hit the cache
     llm.call([
         {"role": "system", "content": system_msg},
         {"role": "user", "content": _ephemeral_user("Say goodbye in one word.")},
@@ -1057,7 +1084,6 @@ def test_anthropic_streaming_cached_prompt_tokens():
     usage = llm.get_token_usage_summary()
     assert usage.total_tokens > 0
     assert usage.successful_requests == 2
-    # The second call should have cached prompt tokens
     assert usage.cached_prompt_tokens > 0
 
 
@@ -1095,7 +1121,6 @@ def test_anthropic_cached_prompt_tokens_with_tools():
     def _ephemeral_user(text: str):
         return [{"type": "text", "text": text, "cache_control": {"type": "ephemeral"}}]
 
-    # First call with tool: creates the cache
     llm.call(
         [
             {"role": "system", "content": system_msg},
@@ -1105,7 +1130,6 @@ def test_anthropic_cached_prompt_tokens_with_tools():
         available_functions={"get_weather": get_weather},
     )
 
-    # Second call with same system prompt + tools: should hit the cache
     llm.call(
         [
             {"role": "system", "content": system_msg},
@@ -1119,11 +1143,9 @@ def test_anthropic_cached_prompt_tokens_with_tools():
     assert usage.total_tokens > 0
     assert usage.prompt_tokens > 0
     assert usage.successful_requests == 2
-    # The second call should have cached prompt tokens
     assert usage.cached_prompt_tokens > 0
 
 
-# ---- Tool Search Tool Tests ----
 
 
 def test_tool_search_true_injects_bm25_and_defer_loading():
@@ -1165,15 +1187,12 @@ def test_tool_search_true_injects_bm25_and_defer_loading():
     )
 
     tools = params["tools"]
-    # Should have 3 tools: tool_search + 2 regular
     assert len(tools) == 3
 
-    # First tool should be the bm25 tool search tool
     assert tools[0]["type"] == "tool_search_tool_bm25_20251119"
     assert tools[0]["name"] == "tool_search_tool_bm25"
     assert "input_schema" not in tools[0]
 
-    # All regular tools should have defer_loading=True
     for t in tools[1:]:
         assert t.get("defer_loading") is True, f"Tool {t['name']} missing defer_loading"
 
@@ -1293,7 +1312,6 @@ def test_tool_search_no_duplicate_when_manually_provided():
         t for t in tools
         if t.get("type", "").startswith("tool_search_tool")
     ]
-    # Should only have 1 tool search tool (the user's manual one)
     assert len(search_tools) == 1
     assert search_tools[0]["type"] == "tool_search_tool_regex_20251119"
 
@@ -1377,13 +1395,11 @@ def test_tool_search_via_llm_class():
         AnthropicToolSearchConfig,
     )
 
-    # Test with True
     llm = LLM(model="anthropic/claude-sonnet-4-5", tool_search=True)
     assert isinstance(llm, AnthropicCompletion)
     assert llm.tool_search is not None
     assert llm.tool_search.type == "bm25"
 
-    # Test with config
     llm2 = LLM(
         model="anthropic/claude-sonnet-4-5",
         tool_search=AnthropicToolSearchConfig(type="regex"),
@@ -1391,7 +1407,6 @@ def test_tool_search_via_llm_class():
     assert llm2.tool_search is not None
     assert llm2.tool_search.type == "regex"
 
-    # Test without (default)
     llm3 = LLM(model="anthropic/claude-sonnet-4-5")
     assert llm3.tool_search is None
 
@@ -1427,6 +1442,248 @@ _MANY_TOOLS = [
 ]
 
 
+def _dict_tool_use_response():
+    mock_response = MagicMock()
+    mock_response.content = [
+        {
+            "type": "tool_use",
+            "id": "toolu_123",
+            "name": "search_web",
+            "input": {"query": "CrewAI"},
+        }
+    ]
+    mock_response.usage = MagicMock(input_tokens=10, output_tokens=2)
+    mock_response.stop_reason = "tool_use"
+    mock_response.id = "msg_123"
+    return mock_response
+
+
+class _SyncAnthropicStream:
+    def __init__(self, events, final_message):
+        self.events = events
+        self.final_message = final_message
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def __iter__(self):
+        return iter(self.events)
+
+    def get_final_message(self):
+        return self.final_message
+
+
+class _AsyncAnthropicStream:
+    def __init__(self, events, final_message):
+        self.events = list(events)
+        self.final_message = final_message
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *_args):
+        return False
+
+    def __aiter__(self):
+        self._iter = iter(self.events)
+        return self
+
+    async def __anext__(self):
+        try:
+            return next(self._iter)
+        except StopIteration:
+            raise StopAsyncIteration
+
+    async def get_final_message(self):
+        return self.final_message
+
+
+def _dict_tool_use_stream_events():
+    return [
+        types.SimpleNamespace(
+            type="content_block_start",
+            index=0,
+            content_block={
+                "type": "tool_use",
+                "id": "toolu_123",
+                "name": "search_web",
+                "input": {},
+            },
+        ),
+        types.SimpleNamespace(
+            type="content_block_delta",
+            index=0,
+            delta=types.SimpleNamespace(
+                type="input_json_delta",
+                partial_json='{"query":"CrewAI"}',
+            ),
+        ),
+    ]
+
+
+def test_anthropic_tool_use_dict_blocks_are_returned_as_tool_calls():
+    """Preview Anthropic models may return dict-shaped tool_use blocks."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5")
+    mock_response = _dict_tool_use_response()
+
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = mock_response
+    llm._client = mock_client
+
+    result = llm.call("Search for CrewAI", tools=_MANY_TOOLS)
+
+    assert result == mock_response.content
+
+
+def test_anthropic_dict_tool_use_blocks_require_id():
+    """Incomplete dict-shaped tool_use blocks are not valid tool calls."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5")
+    mock_response = _dict_tool_use_response()
+    del mock_response.content[0]["id"]
+
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = mock_response
+    llm._client = mock_client
+
+    result = llm.call("Search for CrewAI", tools=_MANY_TOOLS)
+
+    assert result == ""
+
+
+def test_anthropic_object_tool_use_blocks_require_id():
+    """Incomplete object-shaped tool_use blocks are not valid tool calls."""
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5")
+    mock_response = MagicMock()
+    mock_response.content = [
+        types.SimpleNamespace(
+            type="tool_use",
+            name="search_web",
+            input={"query": "CrewAI"},
+        )
+    ]
+    mock_response.usage = MagicMock(input_tokens=10, output_tokens=2)
+    mock_response.stop_reason = "tool_use"
+    mock_response.id = "msg_123"
+
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = mock_response
+    llm._client = mock_client
+
+    result = llm.call("Search for CrewAI", tools=_MANY_TOOLS)
+
+    assert result == ""
+
+
+@pytest.mark.asyncio
+async def test_anthropic_acall_returns_dict_tool_use_blocks_as_tool_calls():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5")
+    mock_response = _dict_tool_use_response()
+
+    mock_client = MagicMock()
+    mock_client.messages.create = AsyncMock(return_value=mock_response)
+    llm._async_client = mock_client
+
+    result = await llm.acall("Search for CrewAI", tools=_MANY_TOOLS)
+
+    assert result == mock_response.content
+
+
+def test_anthropic_streaming_returns_dict_tool_use_blocks_as_tool_calls():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5", stream=True)
+    mock_response = _dict_tool_use_response()
+    mock_client = MagicMock()
+    mock_client.messages.stream.return_value = _SyncAnthropicStream(
+        _dict_tool_use_stream_events(), mock_response
+    )
+    llm._client = mock_client
+    llm._emit_stream_chunk_event = MagicMock()
+
+    result = llm.call("Search for CrewAI", tools=_MANY_TOOLS)
+
+    assert result == mock_response.content
+    assert any(
+        call.kwargs.get("tool_call", {}).get("id") == "toolu_123"
+        for call in llm._emit_stream_chunk_event.call_args_list
+    )
+
+
+@pytest.mark.asyncio
+async def test_anthropic_async_streaming_returns_dict_tool_use_blocks_as_tool_calls():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5", stream=True)
+    mock_response = _dict_tool_use_response()
+    mock_client = MagicMock()
+    mock_client.messages.stream.return_value = _AsyncAnthropicStream(
+        _dict_tool_use_stream_events(), mock_response
+    )
+    llm._async_client = mock_client
+    llm._emit_stream_chunk_event = MagicMock()
+
+    result = await llm.acall("Search for CrewAI", tools=_MANY_TOOLS)
+
+    assert result == mock_response.content
+    assert any(
+        call.kwargs.get("tool_call", {}).get("id") == "toolu_123"
+        for call in llm._emit_stream_chunk_event.call_args_list
+    )
+
+
+def test_anthropic_dict_tool_use_blocks_execute_available_function():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5")
+    mock_response = _dict_tool_use_response()
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = mock_response
+    llm._client = mock_client
+
+    result = llm.call(
+        "Search for CrewAI",
+        tools=_MANY_TOOLS,
+        available_functions={"search_web": lambda query: f"found {query}"},
+    )
+
+    assert result == "found CrewAI"
+
+
+def test_anthropic_dict_tool_use_blocks_work_in_follow_up_conversation():
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = AnthropicCompletion(model="claude-fable-5")
+    initial_response = _dict_tool_use_response()
+    final_response = MagicMock()
+    final_response.content = [types.SimpleNamespace(text="Final answer")]
+    final_response.usage = MagicMock(input_tokens=4, output_tokens=3)
+    final_response.stop_reason = "end_turn"
+    final_response.id = "msg_final"
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = final_response
+    llm._client = mock_client
+
+    result = llm._handle_tool_use_conversation(
+        initial_response,
+        initial_response.content,
+        params={"messages": []},
+        available_functions={"search_web": lambda query: f"found {query}"},
+    )
+
+    assert result == "Final answer"
+
+
 @pytest.mark.vcr()
 def test_tool_search_discovers_and_calls_tool():
     """Tool search should discover the right tool and return a tool_use block."""
@@ -1440,7 +1697,6 @@ def test_tool_search_discovers_and_calls_tool():
     # Should return tool_use blocks (list) since no available_functions provided
     assert isinstance(result, list)
     assert len(result) >= 1
-    # The discovered tool should be get_weather
     tool_names = [getattr(block, "name", None) for block in result]
     assert "get_weather" in tool_names
 
@@ -1481,9 +1737,9 @@ def test_anthropic_cache_creation_tokens_extraction():
     mock_response.model = None
 
     usage = llm._extract_anthropic_token_usage(mock_response)
-    assert usage["input_tokens"] == 100
+    assert usage["input_tokens"] == 150
     assert usage["output_tokens"] == 50
-    assert usage["total_tokens"] == 150
+    assert usage["total_tokens"] == 200
     assert usage["cached_prompt_tokens"] == 30
     assert usage["cache_creation_tokens"] == 20
 

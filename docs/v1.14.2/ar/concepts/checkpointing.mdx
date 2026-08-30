@@ -1,0 +1,229 @@
+---
+title: Checkpointing
+description: حفظ حالة التنفيذ تلقائيا حتى تتمكن الطواقم والتدفقات والوكلاء من الاستئناف بعد الفشل.
+icon: floppy-disk
+mode: "wide"
+---
+
+<Warning>
+الـ Checkpointing في اصدار مبكر. قد تتغير واجهات البرمجة في الاصدارات المستقبلية.
+</Warning>
+
+## نظرة عامة
+
+يقوم الـ Checkpointing بحفظ حالة التنفيذ تلقائيا اثناء التشغيل. اذا فشل طاقم او تدفق او وكيل اثناء التنفيذ، يمكنك الاستعادة من اخر نقطة حفظ والاستئناف دون اعادة تنفيذ العمل المكتمل.
+
+## البداية السريعة
+
+```python
+from crewai import Crew, CheckpointConfig
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=True,  # يستخدم الافتراضيات: ./.checkpoints, عند task_completed
+)
+result = crew.kickoff()
+```
+
+تتم كتابة ملفات نقاط الحفظ في `./.checkpoints/` بعد اكتمال كل مهمة.
+
+## التكوين
+
+استخدم `CheckpointConfig` للتحكم الكامل:
+
+```python
+from crewai import Crew, CheckpointConfig
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=CheckpointConfig(
+        location="./my_checkpoints",
+        on_events=["task_completed", "crew_kickoff_completed"],
+        max_checkpoints=5,
+    ),
+)
+```
+
+### حقول CheckpointConfig
+
+| الحقل | النوع | الافتراضي | الوصف |
+|:------|:------|:----------|:------|
+| `location` | `str` | `"./.checkpoints"` | مسار ملفات نقاط الحفظ |
+| `on_events` | `list[str]` | `["task_completed"]` | انواع الاحداث التي تطلق نقطة حفظ |
+| `provider` | `BaseProvider` | `JsonProvider()` | واجهة التخزين |
+| `max_checkpoints` | `int \| None` | `None` | الحد الاقصى للملفات؛ يتم حذف الاقدم اولا |
+
+### الوراثة والانسحاب
+
+يقبل حقل `checkpoint` في Crew و Flow و Agent قيم `CheckpointConfig` او `True` او `False` او `None`:
+
+| القيمة | السلوك |
+|:-------|:-------|
+| `None` (افتراضي) | يرث من الاصل. الوكيل يرث اعدادات الطاقم. |
+| `True` | تفعيل بالاعدادات الافتراضية. |
+| `False` | انسحاب صريح. يوقف الوراثة من الاصل. |
+| `CheckpointConfig(...)` | اعدادات مخصصة. |
+
+```python
+crew = Crew(
+    agents=[
+        Agent(role="Researcher", ...),                  # يرث checkpoint من الطاقم
+        Agent(role="Writer", ..., checkpoint=False),     # منسحب، بدون نقاط حفظ
+    ],
+    tasks=[...],
+    checkpoint=True,
+)
+```
+
+## الاستئناف من نقطة حفظ
+
+```python
+# استعادة واستئناف
+crew = Crew.from_checkpoint("./my_checkpoints/20260407T120000_abc123.json")
+result = crew.kickoff()  # يستأنف من اخر مهمة مكتملة
+```
+
+يتخطى الطاقم المستعاد المهام المكتملة ويستأنف من اول مهمة غير مكتملة.
+
+## يعمل على Crew و Flow و Agent
+
+### Crew
+
+```python
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, write_task, review_task],
+    checkpoint=CheckpointConfig(location="./crew_cp"),
+)
+```
+
+المشغل الافتراضي: `task_completed` (نقطة حفظ واحدة لكل مهمة مكتملة).
+
+### Flow
+
+```python
+from crewai.flow.flow import Flow, start, listen
+from crewai import CheckpointConfig
+
+class MyFlow(Flow):
+    @start()
+    def step_one(self):
+        return "data"
+
+    @listen(step_one)
+    def step_two(self, data):
+        return process(data)
+
+flow = MyFlow(
+    checkpoint=CheckpointConfig(
+        location="./flow_cp",
+        on_events=["method_execution_finished"],
+    ),
+)
+result = flow.kickoff()
+
+# استئناف
+flow = MyFlow.from_checkpoint("./flow_cp/20260407T120000_abc123.json")
+result = flow.kickoff()
+```
+
+### Agent
+
+```python
+agent = Agent(
+    role="Researcher",
+    goal="Research topics",
+    backstory="Expert researcher",
+    checkpoint=CheckpointConfig(
+        location="./agent_cp",
+        on_events=["lite_agent_execution_completed"],
+    ),
+)
+result = agent.kickoff(messages=[{"role": "user", "content": "Research AI trends"}])
+```
+
+## مزودات التخزين
+
+يتضمن CrewAI مزودي تخزين لنقاط الحفظ.
+
+### JsonProvider (افتراضي)
+
+يكتب كل نقطة حفظ كملف JSON منفصل.
+
+```python
+from crewai import Crew, CheckpointConfig
+from crewai.state import JsonProvider
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=CheckpointConfig(
+        location="./my_checkpoints",
+        provider=JsonProvider(),
+        max_checkpoints=5,
+    ),
+)
+```
+
+### SqliteProvider
+
+يخزن جميع نقاط الحفظ في ملف قاعدة بيانات SQLite واحد.
+
+```python
+from crewai import Crew, CheckpointConfig
+from crewai.state import SqliteProvider
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=CheckpointConfig(
+        location="./.checkpoints.db",
+        provider=SqliteProvider(),
+    ),
+)
+```
+
+
+## انواع الاحداث
+
+يقبل حقل `on_events` اي مجموعة من سلاسل انواع الاحداث. الخيارات الشائعة:
+
+| حالة الاستخدام | الاحداث |
+|:---------------|:--------|
+| بعد كل مهمة (Crew) | `["task_completed"]` |
+| بعد كل طريقة في التدفق | `["method_execution_finished"]` |
+| بعد تنفيذ الوكيل | `["agent_execution_completed"]`, `["lite_agent_execution_completed"]` |
+| عند اكتمال الطاقم فقط | `["crew_kickoff_completed"]` |
+| بعد كل استدعاء LLM | `["llm_call_completed"]` |
+| على كل شيء | `["*"]` |
+
+<Warning>
+استخدام `["*"]` او احداث عالية التردد مثل `llm_call_completed` سيكتب العديد من ملفات نقاط الحفظ وقد يؤثر على الاداء. استخدم `max_checkpoints` للحد من استخدام المساحة.
+</Warning>
+
+## نقاط الحفظ اليدوية
+
+للتحكم الكامل، سجل معالج الاحداث الخاص بك واستدع `state.checkpoint()` مباشرة:
+
+```python
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.llm_events import LLMCallCompletedEvent
+
+# معالج متزامن
+@crewai_event_bus.on(LLMCallCompletedEvent)
+def on_llm_done(source, event, state):
+    path = state.checkpoint("./my_checkpoints")
+    print(f"تم حفظ نقطة الحفظ: {path}")
+
+# معالج غير متزامن
+@crewai_event_bus.on(LLMCallCompletedEvent)
+async def on_llm_done_async(source, event, state):
+    path = await state.acheckpoint("./my_checkpoints")
+    print(f"تم حفظ نقطة الحفظ: {path}")
+```
+
+وسيط `state` هو `RuntimeState` الذي يتم تمريره تلقائيا بواسطة ناقل الاحداث عندما يقبل المعالج 3 معاملات. يمكنك تسجيل معالجات على اي نوع حدث مدرج في وثائق [Event Listeners](/ar/concepts/event-listener).
+
+الـ Checkpointing يعمل بافضل جهد: اذا فشلت كتابة نقطة حفظ، يتم تسجيل الخطأ ولكن التنفيذ يستمر دون انقطاع.

@@ -135,10 +135,8 @@ class NavigateTool(BrowserBaseTool):
     def _run(self, url: str, thread_id: str = "default", **kwargs: Any) -> str:
         """Use the sync tool."""
         try:
-            # Get page for this thread
             page = self.get_sync_page(thread_id)
 
-            # Validate URL scheme
             parsed_url = urlparse(url)
             if parsed_url.scheme not in ("http", "https"):
                 raise ValueError("URL scheme must be 'http' or 'https'")
@@ -153,10 +151,8 @@ class NavigateTool(BrowserBaseTool):
     async def _arun(self, url: str, thread_id: str = "default", **kwargs: Any) -> str:
         """Use the async tool."""
         try:
-            # Get page for this thread
             page = await self.get_async_page(thread_id)
 
-            # Validate URL scheme
             parsed_url = urlparse(url)
             if parsed_url.scheme not in ("http", "https"):
                 raise ValueError("URL scheme must be 'http' or 'https'")
@@ -191,7 +187,6 @@ class ClickTool(BrowserBaseTool):
     def _run(self, selector: str, thread_id: str = "default", **kwargs: Any) -> str:
         """Use the sync tool."""
         try:
-            # Get the current page
             page = self.get_sync_page(thread_id)
 
             # Click on the element
@@ -218,7 +213,6 @@ class ClickTool(BrowserBaseTool):
     ) -> str:
         """Use the async tool."""
         try:
-            # Get the current page
             page = await self.get_async_page(thread_id)
 
             # Click on the element
@@ -251,7 +245,6 @@ class NavigateBackTool(BrowserBaseTool):
     def _run(self, thread_id: str = "default", **kwargs: Any) -> str:
         """Use the sync tool."""
         try:
-            # Get the current page
             page = self.get_sync_page(thread_id)
 
             # Navigate back
@@ -266,7 +259,6 @@ class NavigateBackTool(BrowserBaseTool):
     async def _arun(self, thread_id: str = "default", **kwargs: Any) -> str:
         """Use the async tool."""
         try:
-            # Get the current page
             page = await self.get_async_page(thread_id)
 
             # Navigate back
@@ -289,7 +281,6 @@ class ExtractTextTool(BrowserBaseTool):
     def _run(self, thread_id: str = "default", **kwargs: Any) -> str:
         """Use the sync tool."""
         try:
-            # Import BeautifulSoup
             try:
                 from bs4 import BeautifulSoup
             except ImportError:
@@ -298,10 +289,8 @@ class ExtractTextTool(BrowserBaseTool):
                     " Please install it with 'pip install beautifulsoup4'."
                 )
 
-            # Get the current page
             page = self.get_sync_page(thread_id)
 
-            # Extract text
             content = page.content()
             soup = BeautifulSoup(content, "html.parser")
             return soup.get_text(separator="\n").strip()
@@ -311,7 +300,6 @@ class ExtractTextTool(BrowserBaseTool):
     async def _arun(self, thread_id: str = "default", **kwargs: Any) -> str:
         """Use the async tool."""
         try:
-            # Import BeautifulSoup
             try:
                 from bs4 import BeautifulSoup
             except ImportError:
@@ -320,10 +308,8 @@ class ExtractTextTool(BrowserBaseTool):
                     " Please install it with 'pip install beautifulsoup4'."
                 )
 
-            # Get the current page
             page = await self.get_async_page(thread_id)
 
-            # Extract text
             content = await page.content()
             soup = BeautifulSoup(content, "html.parser")
             return soup.get_text(separator="\n").strip()
@@ -341,7 +327,6 @@ class ExtractHyperlinksTool(BrowserBaseTool):
     def _run(self, thread_id: str = "default", **kwargs: Any) -> str:
         """Use the sync tool."""
         try:
-            # Import BeautifulSoup
             try:
                 from bs4 import BeautifulSoup, Tag
             except ImportError:
@@ -350,10 +335,8 @@ class ExtractHyperlinksTool(BrowserBaseTool):
                     " Please install it with 'pip install beautifulsoup4'."
                 )
 
-            # Get the current page
             page = self.get_sync_page(thread_id)
 
-            # Extract hyperlinks
             content = page.content()
             soup = BeautifulSoup(content, "html.parser")
             links = []
@@ -374,7 +357,6 @@ class ExtractHyperlinksTool(BrowserBaseTool):
     async def _arun(self, thread_id: str = "default", **kwargs: Any) -> str:
         """Use the async tool."""
         try:
-            # Import BeautifulSoup
             try:
                 from bs4 import BeautifulSoup, Tag
             except ImportError:
@@ -383,10 +365,8 @@ class ExtractHyperlinksTool(BrowserBaseTool):
                     " Please install it with 'pip install beautifulsoup4'."
                 )
 
-            # Get the current page
             page = await self.get_async_page(thread_id)
 
-            # Extract hyperlinks
             content = await page.content()
             soup = BeautifulSoup(content, "html.parser")
             links = []
@@ -415,10 +395,8 @@ class GetElementsTool(BrowserBaseTool):
     def _run(self, selector: str, thread_id: str = "default", **kwargs: Any) -> str:
         """Use the sync tool."""
         try:
-            # Get the current page
             page = self.get_sync_page(thread_id)
 
-            # Get elements
             elements = page.query_selector_all(selector)
             if not elements:
                 return f"No elements found with selector '{selector}'"
@@ -437,10 +415,8 @@ class GetElementsTool(BrowserBaseTool):
     ) -> str:
         """Use the async tool."""
         try:
-            # Get the current page
             page = await self.get_async_page(thread_id)
 
-            # Get elements
             elements = await page.query_selector_all(selector)
             if not elements:
                 return f"No elements found with selector '{selector}'"
@@ -465,10 +441,8 @@ class CurrentWebPageTool(BrowserBaseTool):
     def _run(self, thread_id: str = "default", **kwargs: Any) -> str:
         """Use the sync tool."""
         try:
-            # Get the current page
             page = self.get_sync_page(thread_id)
 
-            # Get information
             url = page.url
             title = page.title()
             return f"URL: {url}\nTitle: {title}"
@@ -478,10 +452,8 @@ class CurrentWebPageTool(BrowserBaseTool):
     async def _arun(self, thread_id: str = "default", **kwargs: Any) -> str:
         """Use the async tool."""
         try:
-            # Get the current page
             page = await self.get_async_page(thread_id)
 
-            # Get information
             url = page.url
             title = await page.title()
             return f"URL: {url}\nTitle: {title}"

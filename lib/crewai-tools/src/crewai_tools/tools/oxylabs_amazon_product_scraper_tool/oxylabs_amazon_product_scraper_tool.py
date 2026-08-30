@@ -107,7 +107,6 @@ class OxylabsAmazonProductScraperTool(BaseTool):
             username, password = self._get_credentials_from_env()
 
         if OXYLABS_AVAILABLE:
-            # import RealtimeClient to make it accessible for the current scope
             from oxylabs import RealtimeClient
 
             kwargs["oxylabs_api"] = RealtimeClient(

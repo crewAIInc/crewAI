@@ -1,0 +1,361 @@
+---
+title: الوكلاء
+description: دليل تفصيلي حول إنشاء وإدارة الوكلاء ضمن إطار عمل CrewAI.
+icon: robot
+mode: "wide"
+---
+
+## نظرة عامة على الوكيل
+
+في إطار عمل CrewAI، الـ `Agent` هو وحدة مستقلة يمكنها:
+
+- أداء مهام محددة
+- اتخاذ قرارات بناءً على دوره وهدفه
+- استخدام الأدوات لتحقيق الأهداف
+- التواصل والتعاون مع وكلاء آخرين
+- الاحتفاظ بذاكرة التفاعلات
+- تفويض المهام عند السماح بذلك
+
+<Tip>
+  فكّر في الوكيل كعضو فريق متخصص بمهارات وخبرات ومسؤوليات محددة.
+  على سبيل المثال، قد يتفوق وكيل `Researcher` في جمع وتحليل المعلومات،
+  بينما قد يكون وكيل `Writer` أفضل في إنشاء المحتوى.
+</Tip>
+
+<Note type="info" title="تحسين المؤسسات: منشئ الوكلاء المرئي">
+يتضمن CrewAI AMP منشئ وكلاء مرئي يبسّط إنشاء وتهيئة الوكلاء بدون كتابة كود. صمم وكلاءك بصريًا واختبرهم في الوقت الفعلي.
+
+![Visual Agent Builder Screenshot](/images/enterprise/crew-studio-interface.png)
+
+يُمكّن منشئ الوكلاء المرئي من:
+
+- تهيئة وكلاء بديهية بواجهات نماذج
+- اختبار والتحقق في الوقت الفعلي
+- مكتبة قوالب مع أنواع وكلاء مهيأة مسبقًا
+- تخصيص سهل لخصائص وسلوكيات الوكيل
+</Note>
+
+## خصائص الوكيل
+
+| الخاصية                               | المعامل                | النوع                                  | الوصف                                                                                              |
+| :-------------------------------------- | :----------------------- | :------------------------------------ | :------------------------------------------------------------------------------------------------------- |
+| **الدور**                                | `role`                   | `str`                                 | يحدد وظيفة الوكيل وخبرته ضمن الطاقم.                                              |
+| **الهدف**                                | `goal`                   | `str`                                 | الهدف الفردي الذي يوجه عملية اتخاذ القرار لدى الوكيل.                                        |
+| **الخلفية**                           | `backstory`              | `str`                                 | يوفر سياقًا وشخصية للوكيل، مما يثري التفاعلات.                                   |
+| **LLM** _(اختياري)_                    | `llm`                    | `Union[str, LLM, Any]`                | نموذج اللغة الذي يشغّل الوكيل. افتراضيًا النموذج المحدد في `OPENAI_MODEL_NAME` أو "gpt-4". |
+| **الأدوات** _(اختياري)_                  | `tools`                  | `List[BaseTool]`                      | القدرات أو الوظائف المتاحة للوكيل. افتراضيًا قائمة فارغة.                             |
+| **LLM استدعاء الدوال** _(اختياري)_   | `function_calling_llm`   | `Optional[Any]`                       | نموذج لغة لاستدعاء الأدوات، يتجاوز LLM الطاقم إذا حُدد.                                      |
+| **الحد الأقصى للتكرارات** _(اختياري)_         | `max_iter`               | `int`                                 | الحد الأقصى للتكرارات قبل أن يقدم الوكيل أفضل إجابته. الافتراضي 20.                         |
+| **الحد الأقصى لـ RPM** _(اختياري)_                | `max_rpm`                | `Optional[int]`                       | الحد الأقصى للطلبات في الدقيقة لتجنب حدود المعدل.                                                        |
+| **الحد الأقصى لوقت التنفيذ** _(اختياري)_     | `max_execution_time`     | `Optional[int]`                       | الحد الأقصى للوقت (بالثواني) لتنفيذ المهمة.                                                            |
+| **الوضع المفصل** _(اختياري)_                | `verbose`                | `bool`                                | تفعيل سجلات التنفيذ المفصلة للتصحيح. الافتراضي False.                                          |
+| **السماح بالتفويض** _(اختياري)_       | `allow_delegation`       | `bool`                                | السماح للوكيل بتفويض المهام لوكلاء آخرين. الافتراضي False.                                     |
+| **دالة الخطوة** _(اختياري)_          | `step_callback`          | `Optional[Any]`                       | دالة تُستدعى بعد كل خطوة للوكيل، تتجاوز دالة الطاقم.                                          |
+| **التخزين المؤقت** _(اختياري)_                  | `cache`                  | `bool`                                | تفعيل التخزين المؤقت لاستخدام الأدوات. الافتراضي True.                                                          |
+| **قالب النظام** _(اختياري)_        | `system_template`        | `Optional[str]`                       | قالب أمر نظام مخصص للوكيل.                                                             |
+| **قالب الأمر** _(اختياري)_        | `prompt_template`        | `Optional[str]`                       | قالب أمر مخصص للوكيل.                                                                    |
+| **قالب الاستجابة** _(اختياري)_      | `response_template`      | `Optional[str]`                       | قالب استجابة مخصص للوكيل.                                                                  |
+| **السماح بتنفيذ الكود** _(اختياري)_   | `allow_code_execution`   | `Optional[bool]`                      | تفعيل تنفيذ الكود للوكيل. الافتراضي False.                                                   |
+| **الحد الأقصى لإعادة المحاولة** _(اختياري)_        | `max_retry_limit`        | `int`                                 | الحد الأقصى لإعادات المحاولة عند حدوث خطأ. الافتراضي 2.                                            |
+| **احترام نافذة السياق** _(اختياري)_ | `respect_context_window` | `bool`                                | إبقاء الرسائل تحت حجم نافذة السياق عبر التلخيص. الافتراضي True.                                 |
+| **وضع تنفيذ الكود** _(اختياري)_    | `code_execution_mode`    | `Literal["safe", "unsafe"]`           | وضع تنفيذ الكود: 'safe' (باستخدام Docker) أو 'unsafe' (مباشر). الافتراضي 'safe'.                  |
+| **متعدد الوسائط** _(اختياري)_             | `multimodal`             | `bool`                                | ما إذا كان الوكيل يدعم القدرات متعددة الوسائط. الافتراضي False.                                    |
+| **حقن التاريخ** _(اختياري)_            | `inject_date`            | `bool`                                | ما إذا كان يتم حقن التاريخ الحالي تلقائيًا في المهام. الافتراضي False.                           |
+| **تنسيق التاريخ** _(اختياري)_            | `date_format`            | `str`                                 | سلسلة تنسيق التاريخ عند تفعيل inject_date. الافتراضي "%Y-%m-%d" (تنسيق ISO).                  |
+| **الاستدلال** _(اختياري)_              | `reasoning`              | `bool`                                | ما إذا كان يجب على الوكيل التأمل وإنشاء خطة قبل تنفيذ المهمة. الافتراضي False.            |
+| **الحد الأقصى لمحاولات الاستدلال** _(اختياري)_ | `max_reasoning_attempts` | `Optional[int]`                       | الحد الأقصى لمحاولات الاستدلال قبل تنفيذ المهمة. إذا None، سيحاول حتى الاستعداد.           |
+| **المُضمّن** _(اختياري)_               | `embedder`               | `Optional[Dict[str, Any]]`            | تهيئة المُضمّن المستخدم من قبل الوكيل.                                                        |
+| **مصادر المعرفة** _(اختياري)_      | `knowledge_sources`      | `Optional[List[BaseKnowledgeSource]]` | مصادر المعرفة المتاحة للوكيل.                                                                |
+| **استخدام أمر النظام** _(اختياري)_      | `use_system_prompt`      | `Optional[bool]`                      | ما إذا كان يُستخدم أمر النظام (لدعم نموذج o1). الافتراضي True.                                    |
+
+## إنشاء الوكلاء
+
+هناك طريقتان لإنشاء الوكلاء في CrewAI: باستخدام **تهيئة YAML (موصى بها)** أو تعريفهم **مباشرة في الكود**.
+
+### تهيئة YAML (موصى بها)
+
+توفر تهيئة YAML طريقة أنظف وأكثر قابلية للصيانة لتعريف الوكلاء. نوصي بشدة باستخدام هذا النهج في مشاريع CrewAI.
+
+بعد إنشاء مشروع CrewAI كما هو موضح في قسم [التثبيت](/ar/installation)، انتقل إلى ملف `src/latest_ai_development/config/agents.yaml` وعدّل القالب ليتوافق مع متطلباتك.
+
+<Note>
+ستُستبدل المتغيرات في ملفات YAML (مثل `{topic}`) بقيم من مدخلاتك عند تشغيل الطاقم:
+```python Code
+crew.kickoff(inputs={'topic': 'AI Agents'})
+```
+</Note>
+
+إليك مثالًا على كيفية تهيئة الوكلاء باستخدام YAML:
+
+```yaml agents.yaml
+# src/latest_ai_development/config/agents.yaml
+researcher:
+  role: >
+    {topic} Senior Data Researcher
+  goal: >
+    Uncover cutting-edge developments in {topic}
+  backstory: >
+    You're a seasoned researcher with a knack for uncovering the latest
+    developments in {topic}. Known for your ability to find the most relevant
+    information and present it in a clear and concise manner.
+
+reporting_analyst:
+  role: >
+    {topic} Reporting Analyst
+  goal: >
+    Create detailed reports based on {topic} data analysis and research findings
+  backstory: >
+    You're a meticulous analyst with a keen eye for detail. You're known for
+    your ability to turn complex data into clear and concise reports, making
+    it easy for others to understand and act on the information you provide.
+```
+
+لاستخدام تهيئة YAML في الكود، أنشئ فئة طاقم ترث من `CrewBase`:
+
+```python Code
+# src/latest_ai_development/crew.py
+from crewai import Agent, Crew, Process
+from crewai.project import CrewBase, agent, crew
+from crewai_tools import SerperDevTool
+
+@CrewBase
+class LatestAiDevelopmentCrew():
+  """LatestAiDevelopment crew"""
+
+  agents_config = "config/agents.yaml"
+
+  @agent
+  def researcher(self) -> Agent:
+    return Agent(
+      config=self.agents_config['researcher'], # type: ignore[index]
+      verbose=True,
+      tools=[SerperDevTool()]
+    )
+
+  @agent
+  def reporting_analyst(self) -> Agent:
+    return Agent(
+      config=self.agents_config['reporting_analyst'], # type: ignore[index]
+      verbose=True
+    )
+```
+
+<Note>
+  يجب أن تتطابق الأسماء المستخدمة في ملفات YAML (`agents.yaml`) مع أسماء
+  الطرق في كود Python.
+</Note>
+
+### تعريف مباشر في الكود
+
+يمكنك إنشاء الوكلاء مباشرة في الكود بإنشاء فئة `Agent`. إليك مثالًا شاملًا يوضح جميع المعاملات المتاحة:
+
+```python Code
+from crewai import Agent
+from crewai_tools import SerperDevTool
+
+# إنشاء وكيل بجميع المعاملات المتاحة
+agent = Agent(
+    role="Senior Data Scientist",
+    goal="Analyze and interpret complex datasets to provide actionable insights",
+    backstory="With over 10 years of experience in data science and machine learning, "
+              "you excel at finding patterns in complex datasets.",
+    llm="gpt-4",
+    function_calling_llm=None,
+    verbose=False,
+    allow_delegation=False,
+    max_iter=20,
+    max_rpm=None,
+    max_execution_time=None,
+    max_retry_limit=2,
+    allow_code_execution=False,
+    code_execution_mode="safe",
+    respect_context_window=True,
+    use_system_prompt=True,
+    multimodal=False,
+    inject_date=False,
+    date_format="%Y-%m-%d",
+    reasoning=False,
+    max_reasoning_attempts=None,
+    tools=[SerperDevTool()],
+    knowledge_sources=None,
+    embedder=None,
+    system_template=None,
+    prompt_template=None,
+    response_template=None,
+    step_callback=None,
+)
+```
+
+دعنا نستعرض بعض تركيبات المعاملات الرئيسية لحالات الاستخدام الشائعة:
+
+#### وكيل بحث أساسي
+
+```python Code
+research_agent = Agent(
+    role="Research Analyst",
+    goal="Find and summarize information about specific topics",
+    backstory="You are an experienced researcher with attention to detail",
+    tools=[SerperDevTool()],
+    verbose=True
+)
+```
+
+#### وكيل تطوير الكود
+
+```python Code
+dev_agent = Agent(
+    role="Senior Python Developer",
+    goal="Write and debug Python code",
+    backstory="Expert Python developer with 10 years of experience",
+    allow_code_execution=True,
+    code_execution_mode="safe",
+    max_execution_time=300,
+    max_retry_limit=3
+)
+```
+
+#### وكيل تحليل طويل المدى
+
+```python Code
+analysis_agent = Agent(
+    role="Data Analyst",
+    goal="Perform deep analysis of large datasets",
+    backstory="Specialized in big data analysis and pattern recognition",
+    memory=True,
+    respect_context_window=True,
+    max_rpm=10,
+    function_calling_llm="gpt-4o-mini"
+)
+```
+
+### تفاصيل المعاملات
+
+#### المعاملات الحرجة
+
+- `role` و `goal` و `backstory` مطلوبة وتشكّل سلوك الوكيل
+- `llm` يحدد نموذج اللغة المستخدم (افتراضي: GPT-4 من OpenAI)
+
+#### الذاكرة والسياق
+
+- `memory`: تفعيل للحفاظ على سجل المحادثة
+- `respect_context_window`: يمنع مشاكل حد الرموز
+- `knowledge_sources`: إضافة قواعد معرفة خاصة بالمجال
+
+#### التحكم في التنفيذ
+
+- `max_iter`: الحد الأقصى للمحاولات قبل تقديم أفضل إجابة
+- `max_execution_time`: المهلة بالثواني
+- `max_rpm`: تحديد معدل استدعاءات API
+- `max_retry_limit`: إعادات المحاولة عند الخطأ
+
+#### تنفيذ الكود
+
+- `allow_code_execution`: يجب أن يكون True لتشغيل الكود
+- `code_execution_mode`:
+  - `"safe"`: يستخدم Docker (موصى به للإنتاج)
+  - `"unsafe"`: تنفيذ مباشر (استخدم فقط في بيئات موثوقة)
+
+<Note>
+  يشغّل هذا صورة Docker افتراضية. إذا أردت تهيئة صورة Docker،
+  راجع أداة Code Interpreter في قسم الأدوات. أضف أداة
+  مفسر الكود كأداة في معامل أداة الوكيل.
+</Note>
+
+#### الميزات المتقدمة
+
+- `multimodal`: تفعيل القدرات متعددة الوسائط لمعالجة النص والمحتوى المرئي
+- `reasoning`: تمكين الوكيل من التأمل وإنشاء خطط قبل تنفيذ المهام
+- `inject_date`: حقن التاريخ الحالي تلقائيًا في أوصاف المهام
+
+#### القوالب
+
+- `system_template`: يحدد السلوك الأساسي للوكيل
+- `prompt_template`: ينظم تنسيق الإدخال
+- `response_template`: ينسّق استجابات الوكيل
+
+<Note>
+  عند استخدام القوالب المخصصة، تأكد من تعريف كل من `system_template` و
+  `prompt_template`. `response_template` اختياري لكن يُوصى به
+  لتنسيق مخرجات متسق.
+</Note>
+
+## أدوات الوكيل
+
+يمكن تجهيز الوكلاء بأدوات متنوعة لتعزيز قدراتهم. يدعم CrewAI أدوات من:
+
+- [مجموعة أدوات CrewAI](https://github.com/joaomdmoura/crewai-tools)
+- [أدوات LangChain](https://python.langchain.com/docs/integrations/tools)
+
+إليك كيفية إضافة أدوات لوكيل:
+
+```python Code
+from crewai import Agent
+from crewai_tools import SerperDevTool, WikipediaTools
+
+# إنشاء الأدوات
+search_tool = SerperDevTool()
+wiki_tool = WikipediaTools()
+
+# إضافة أدوات للوكيل
+researcher = Agent(
+    role="AI Technology Researcher",
+    goal="Research the latest AI developments",
+    tools=[search_tool, wiki_tool],
+    verbose=True
+)
+```
+
+## التفاعل المباشر مع الوكيل عبر `kickoff()`
+
+يمكن استخدام الوكلاء مباشرة بدون المرور بمهمة أو سير عمل طاقم باستخدام طريقة `kickoff()`. يوفر هذا طريقة أبسط للتفاعل مع وكيل عندما لا تحتاج إلى إمكانيات تنسيق الطاقم الكاملة.
+
+```python Code
+from crewai import Agent
+from crewai_tools import SerperDevTool
+
+# إنشاء وكيل
+researcher = Agent(
+    role="AI Technology Researcher",
+    goal="Research the latest AI developments",
+    tools=[SerperDevTool()],
+    verbose=True
+)
+
+# استخدام kickoff() للتفاعل مباشرة مع الوكيل
+result = researcher.kickoff("What are the latest developments in language models?")
+
+# الوصول إلى الاستجابة الخام
+print(result.raw)
+```
+
+## اعتبارات مهمة وأفضل الممارسات
+
+### الأمان وتنفيذ الكود
+
+- عند استخدام `allow_code_execution`، كن حذرًا مع مدخلات المستخدم وتحقق منها دائمًا
+- استخدم `code_execution_mode: "safe"` (Docker) في بيئات الإنتاج
+- فكّر في تعيين حدود `max_execution_time` مناسبة لمنع الحلقات اللانهائية
+
+### تحسين الأداء
+
+- استخدم `respect_context_window: true` لمنع مشاكل حد الرموز
+- عيّن `max_rpm` مناسبًا لتجنب تحديد المعدل
+- فعّل `cache: true` لتحسين الأداء للمهام المتكررة
+- اضبط `max_iter` و `max_retry_limit` بناءً على تعقيد المهمة
+
+### إدارة الذاكرة والسياق
+
+- استفد من `knowledge_sources` للمعلومات الخاصة بالمجال
+- هيّئ `embedder` عند استخدام نماذج تضمين مخصصة
+- استخدم القوالب المخصصة للتحكم الدقيق في سلوك الوكيل
+
+### التعاون بين الوكلاء
+
+- فعّل `allow_delegation: true` عندما يحتاج الوكلاء للعمل معًا
+- استخدم `step_callback` لمراقبة وتسجيل تفاعلات الوكلاء
+- فكّر في استخدام نماذج LLM مختلفة لأغراض مختلفة
+
+### توافق النموذج
+
+- عيّن `use_system_prompt: false` للنماذج القديمة التي لا تدعم رسائل النظام
+- تأكد من أن `llm` المختار يدعم الميزات التي تحتاجها

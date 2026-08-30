@@ -129,6 +129,20 @@ class FileResolver:
         """
         return constraints is not None and constraints.supports_url_references
 
+    @classmethod
+    def _should_resolve_as_url_reference(
+        cls,
+        file: FileInput,
+        provider: ProviderType,
+        constraints: ProviderConstraints | None,
+    ) -> bool:
+        """Check if the provider can accept the current URL source directly."""
+        if not cls._is_url_source(file) or not cls._supports_url(constraints):
+            return False
+
+        provider_lower = provider.lower()
+        return "bedrock" not in provider_lower and "aws" not in provider_lower
+
     @staticmethod
     def _resolve_as_url(file: FileInput) -> UrlReference:
         """Resolve a URL source as UrlReference.
@@ -159,7 +173,7 @@ class FileResolver:
         """
         constraints = get_constraints_for_provider(provider)
 
-        if self._is_url_source(file) and self._supports_url(constraints):
+        if self._should_resolve_as_url_reference(file, provider, constraints):
             return self._resolve_as_url(file)
 
         context = self._build_file_context(file)
@@ -245,7 +259,6 @@ class FileResolver:
         type_constraint = self._get_type_constraint(content_type, constraints)
 
         if type_constraint is not None:
-            # Check if file exceeds type-specific inline limit
             if file_size > type_constraint.max_size_bytes:
                 logger.debug(
                     f"File {file.filename} ({file_size}B) exceeds {content_type} "
@@ -425,7 +438,7 @@ class FileResolver:
         """
         constraints = get_constraints_for_provider(provider)
 
-        if self._is_url_source(file) and self._supports_url(constraints):
+        if self._should_resolve_as_url_reference(file, provider, constraints):
             return self._resolve_as_url(file)
 
         context = self._build_file_context(file)

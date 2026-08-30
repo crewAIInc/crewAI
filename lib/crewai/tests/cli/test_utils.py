@@ -1,105 +1,14 @@
 import os
-import shutil
-import tempfile
 from pathlib import Path
+import tempfile
 
+from crewai.utilities import project_utils as utils
 import pytest
-from crewai.cli import utils
-
-
-@pytest.fixture
-def temp_tree():
-    root_dir = tempfile.mkdtemp()
-
-    create_file(os.path.join(root_dir, "file1.txt"), "Hello, world!")
-    create_file(os.path.join(root_dir, "file2.txt"), "Another file")
-    os.mkdir(os.path.join(root_dir, "empty_dir"))
-    nested_dir = os.path.join(root_dir, "nested_dir")
-    os.mkdir(nested_dir)
-    create_file(os.path.join(nested_dir, "nested_file.txt"), "Nested content")
-
-    yield root_dir
-
-    shutil.rmtree(root_dir)
 
 
 def create_file(path, content):
     with open(path, "w") as f:
         f.write(content)
-
-
-def test_tree_find_and_replace_file_content(temp_tree):
-    utils.tree_find_and_replace(temp_tree, "world", "universe")
-    with open(os.path.join(temp_tree, "file1.txt"), "r") as f:
-        assert f.read() == "Hello, universe!"
-
-
-def test_tree_find_and_replace_file_name(temp_tree):
-    old_path = os.path.join(temp_tree, "file2.txt")
-    new_path = os.path.join(temp_tree, "file2_renamed.txt")
-    os.rename(old_path, new_path)
-    utils.tree_find_and_replace(temp_tree, "renamed", "modified")
-    assert os.path.exists(os.path.join(temp_tree, "file2_modified.txt"))
-    assert not os.path.exists(new_path)
-
-
-def test_tree_find_and_replace_directory_name(temp_tree):
-    utils.tree_find_and_replace(temp_tree, "empty", "renamed")
-    assert os.path.exists(os.path.join(temp_tree, "renamed_dir"))
-    assert not os.path.exists(os.path.join(temp_tree, "empty_dir"))
-
-
-def test_tree_find_and_replace_nested_content(temp_tree):
-    utils.tree_find_and_replace(temp_tree, "Nested", "Updated")
-    with open(os.path.join(temp_tree, "nested_dir", "nested_file.txt"), "r") as f:
-        assert f.read() == "Updated content"
-
-
-def test_tree_find_and_replace_no_matches(temp_tree):
-    utils.tree_find_and_replace(temp_tree, "nonexistent", "replacement")
-    assert set(os.listdir(temp_tree)) == {
-        "file1.txt",
-        "file2.txt",
-        "empty_dir",
-        "nested_dir",
-    }
-
-
-def test_tree_copy_full_structure(temp_tree):
-    dest_dir = tempfile.mkdtemp()
-    try:
-        utils.tree_copy(temp_tree, dest_dir)
-        assert set(os.listdir(dest_dir)) == set(os.listdir(temp_tree))
-        assert os.path.isfile(os.path.join(dest_dir, "file1.txt"))
-        assert os.path.isfile(os.path.join(dest_dir, "file2.txt"))
-        assert os.path.isdir(os.path.join(dest_dir, "empty_dir"))
-        assert os.path.isdir(os.path.join(dest_dir, "nested_dir"))
-        assert os.path.isfile(os.path.join(dest_dir, "nested_dir", "nested_file.txt"))
-    finally:
-        shutil.rmtree(dest_dir)
-
-
-def test_tree_copy_preserve_content(temp_tree):
-    dest_dir = tempfile.mkdtemp()
-    try:
-        utils.tree_copy(temp_tree, dest_dir)
-        with open(os.path.join(dest_dir, "file1.txt"), "r") as f:
-            assert f.read() == "Hello, world!"
-        with open(os.path.join(dest_dir, "nested_dir", "nested_file.txt"), "r") as f:
-            assert f.read() == "Nested content"
-    finally:
-        shutil.rmtree(dest_dir)
-
-
-def test_tree_copy_to_existing_directory(temp_tree):
-    dest_dir = tempfile.mkdtemp()
-    try:
-        create_file(os.path.join(dest_dir, "existing_file.txt"), "I was here first")
-        utils.tree_copy(temp_tree, dest_dir)
-        assert os.path.isfile(os.path.join(dest_dir, "existing_file.txt"))
-        assert os.path.isfile(os.path.join(dest_dir, "file1.txt"))
-    finally:
-        shutil.rmtree(dest_dir)
 
 
 @pytest.fixture
@@ -298,7 +207,6 @@ def temp_crew_project():
         with open(os.path.join("src", "crew.py"), "w") as f:
             f.write(crew_content)
 
-        # Create a src/templates directory that should be ignored
         os.makedirs(os.path.join("src", "templates"), exist_ok=True)
         with open(os.path.join("src", "templates", "crew.py"), "w") as f:
             f.write("# This should be ignored")
@@ -365,7 +273,6 @@ def test_get_crews_ignores_template_directories(
     assert not template_crew_detected
 
 
-# Tests for extract_tools_metadata
 
 
 def test_extract_tools_metadata_empty_project(temp_project_dir):
@@ -524,10 +431,8 @@ __all__ = ['MyTool']
     assert len(metadata) == 1
     init_params = metadata[0]["init_params_schema"]
     assert "properties" in init_params
-    # Custom params should be included
     assert "api_endpoint" in init_params["properties"]
     assert "timeout" in init_params["properties"]
-    # Base params should be filtered out
     assert "name" not in init_params["properties"]
     assert "description" not in init_params["properties"]
 
@@ -558,7 +463,6 @@ __all__ = ['FirstTool', 'SecondTool']
 
 def test_extract_tools_metadata_multiple_init_files(temp_project_dir):
     """Test that extract_tools_metadata extracts metadata from multiple __init__.py files."""
-    # Create tool in root __init__.py
     create_init_file(
         temp_project_dir,
         """from crewai.tools import BaseTool
@@ -571,7 +475,6 @@ __all__ = ['RootTool']
 """,
     )
 
-    # Create nested package with another tool
     nested_dir = temp_project_dir / "nested"
     nested_dir.mkdir()
     create_init_file(
@@ -628,7 +531,6 @@ class MyTool(BaseTool):
 __all__ = ['MyTool']
 """,
     )
-    # Should not raise, just return empty list
     metadata = utils.extract_tools_metadata(dir_path=str(temp_project_dir))
     assert metadata == []
 
@@ -647,6 +549,5 @@ class MyTool(BaseTool):
 __all__ = ['MyTool']
 """,
     )
-    # Should not raise, just return empty list
     metadata = utils.extract_tools_metadata(dir_path=str(temp_project_dir))
     assert metadata == []

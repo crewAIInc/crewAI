@@ -1,0 +1,108 @@
+---
+title: PDF RAG Search
+description: The `PDFSearchTool` is designed to search PDF files and return the most relevant results.
+icon: file-pdf
+mode: "wide"
+---
+
+# `PDFSearchTool`
+
+<Note>
+    We are still working on improving tools, so there might be unexpected behavior or changes in the future.
+</Note>
+
+## Description
+
+The PDFSearchTool is a RAG tool designed for semantic searches within PDF content. It allows for inputting a search query and a PDF document, leveraging advanced search techniques to find relevant content efficiently. 
+This capability makes it especially useful for extracting specific information from large PDF files quickly.
+
+## Installation
+
+To get started with the PDFSearchTool, first, ensure the crewai_tools package is installed with the following command:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Example
+Here's how to use the PDFSearchTool to search within a PDF document:
+
+```python Code
+from crewai_tools import PDFSearchTool
+
+# Initialize the tool allowing for any PDF content search if the path is provided during execution
+tool = PDFSearchTool()
+
+# OR
+
+# Initialize the tool with a specific PDF path for exclusive search within that document
+tool = PDFSearchTool(pdf='path/to/your/document.pdf')
+```
+
+## Arguments
+
+- `pdf`: **Optional** The PDF path for the search. Can be provided at initialization or within the `run` method's arguments. If provided at initialization, the tool confines its search to the specified document.
+
+## Custom model and embeddings
+
+By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows. Note: a vector database is required because generated embeddings must be stored and queried from a vectordb.
+
+```python Code
+from crewai_tools import PDFSearchTool
+
+# - embedding_model (required): choose provider + provider-specific config
+# - vectordb (required): choose vector DB and pass its config
+
+tool = PDFSearchTool(
+    config={
+        "embedding_model": {
+            # Supported providers: "openai", "azure", "google-generativeai", "google-vertex",
+            # "voyageai", "cohere", "huggingface", "jina", "sentence-transformer",
+            # "text2vec", "ollama", "openclip", "instructor", "onnx", "roboflow", "watsonx", "custom"
+            "provider": "openai",  # or: "google-generativeai", "cohere", "ollama", ...
+            "config": {
+                # Model identifier for the chosen provider. "model" will be auto-mapped to "model_name" internally.
+                "model": "text-embedding-3-small",
+                # Optional: API key. If omitted, the tool will use provider-specific env vars
+                # (e.g., OPENAI_API_KEY or EMBEDDINGS_OPENAI_API_KEY for OpenAI).
+                # "api_key": "sk-...",
+
+                # Provider-specific examples:
+                # --- Google Generative AI ---
+                # (Set provider="google-generativeai" above)
+                # "model_name": "gemini-embedding-001",
+                # "task_type": "RETRIEVAL_DOCUMENT",
+                # "title": "Embeddings",
+
+                # --- Cohere ---
+                # (Set provider="cohere" above)
+                # "model": "embed-english-v3.0",
+
+                # --- Ollama (local) ---
+                # (Set provider="ollama" above)
+                # "model": "nomic-embed-text",
+            },
+        },
+        "vectordb": {
+                    "provider": "chromadb",  # or "qdrant"
+                    "config": {
+                        # For ChromaDB: pass "settings" (chromadb.config.Settings) or rely on defaults.
+                        # Example (uncomment and import):
+                        # from chromadb.config import Settings
+                        # "settings": Settings(
+                        #     persist_directory="/content/chroma",
+                        #     allow_reset=True,
+                        #     is_persistent=True,
+                        # ),
+
+                        # For Qdrant: pass "vectors_config" (qdrant_client.models.VectorParams).
+                        # Example (uncomment and import):
+                        # from qdrant_client.models import VectorParams, Distance
+                        # "vectors_config": VectorParams(size=384, distance=Distance.COSINE),
+
+                        # Note: collection name is controlled by the tool (default: "rag_tool_collection"), not set here.
+                    }
+        },
+    }
+)
+```

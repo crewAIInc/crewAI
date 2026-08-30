@@ -1,0 +1,290 @@
+---
+title: الأدوات
+description: فهم واستخدام الأدوات ضمن إطار عمل CrewAI لتعاون الوكلاء وتنفيذ المهام.
+icon: screwdriver-wrench
+mode: "wide"
+---
+
+## نظرة عامة
+
+تُمكّن أدوات CrewAI الوكلاء بقدرات تتراوح من البحث على الويب وتحليل البيانات إلى التعاون وتفويض المهام بين الزملاء.
+توضح هذه الوثائق كيفية إنشاء هذه الأدوات ودمجها والاستفادة منها ضمن إطار عمل CrewAI، بما في ذلك التركيز على أدوات التعاون.
+
+<Note type="info" title="الأدوات هي أحد أنواع قدرات الوكيل الخمسة">
+  الأدوات تمنح الوكلاء **دوال قابلة للاستدعاء** لاتخاذ إجراءات. تعمل جنبًا إلى جنب مع [MCP](/ar/mcp/overview) (خوادم أدوات عن بُعد) و[التطبيقات](/ar/concepts/agent-capabilities) (تكاملات المنصة) و[المهارات](/ar/concepts/skills) (خبرة المجال) و[المعرفة](/ar/concepts/knowledge) (حقائق مُسترجعة). راجع نظرة عامة على [قدرات الوكيل](/ar/concepts/agent-capabilities) لفهم متى تستخدم كل نوع.
+</Note>
+
+## ما هي الأداة؟
+
+الأداة في CrewAI هي مهارة أو وظيفة يمكن للوكلاء استخدامها لأداء إجراءات مختلفة.
+يشمل ذلك أدوات من [مجموعة أدوات CrewAI](https://github.com/joaomdmoura/crewai-tools) و[أدوات LangChain](https://python.langchain.com/docs/integrations/tools)،
+مما يُمكّن كل شيء من عمليات البحث البسيطة إلى التفاعلات المعقدة والعمل الجماعي الفعال بين الوكلاء.
+
+<Note type="info" title="تحسين المؤسسات: مستودع الأدوات">
+يوفر CrewAI AMP مستودع أدوات شامل مع تكاملات جاهزة لأنظمة الأعمال الشائعة وواجهات API. انشر الوكلاء مع أدوات المؤسسة في دقائق بدلاً من أيام.
+
+يتضمن مستودع أدوات المؤسسة:
+
+- موصلات جاهزة لأنظمة المؤسسة الشائعة
+- واجهة إنشاء أدوات مخصصة
+- إمكانيات التحكم في الإصدارات والمشاركة
+- ميزات الأمان والامتثال
+</Note>
+
+## الخصائص الرئيسية للأدوات
+
+- **المنفعة**: مصممة لمهام مثل البحث على الويب وتحليل البيانات وإنشاء المحتوى وتعاون الوكلاء.
+- **التكامل**: تعزز قدرات الوكلاء من خلال دمج الأدوات بسلاسة في سير عملهم.
+- **القابلية للتخصيص**: توفر المرونة لتطوير أدوات مخصصة أو استخدام الأدوات الموجودة، لتلبية الاحتياجات المحددة للوكلاء.
+- **معالجة الأخطاء**: تتضمن آليات معالجة أخطاء قوية لضمان التشغيل السلس.
+- **آلية التخزين المؤقت**: تتميز بتخزين مؤقت ذكي لتحسين الأداء وتقليل العمليات المتكررة.
+- **الدعم غير المتزامن**: تتعامل مع الأدوات المتزامنة وغير المتزامنة، مما يُمكّن العمليات غير الحاجبة.
+
+## استخدام أدوات CrewAI
+
+لتعزيز قدرات وكلائك بأدوات CrewAI، ابدأ بتثبيت حزمة الأدوات الإضافية:
+
+```bash
+pip install 'crewai[tools]'
+```
+
+إليك مثالًا يوضح استخدامها:
+
+```python Code
+import os
+from crewai import Agent, Task, Crew
+# استيراد أدوات crewAI
+from crewai_tools import (
+    DirectoryReadTool,
+    FileReadTool,
+    SerperDevTool,
+    WebsiteSearchTool
+)
+
+# إعداد مفاتيح API
+os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API key
+os.environ["OPENAI_API_KEY"] = "Your Key"
+
+# إنشاء الأدوات
+docs_tool = DirectoryReadTool(directory='./blog-posts')
+file_tool = FileReadTool()
+search_tool = SerperDevTool()
+web_rag_tool = WebsiteSearchTool()
+
+# إنشاء الوكلاء
+researcher = Agent(
+    role='Market Research Analyst',
+    goal='Provide up-to-date market analysis of the AI industry',
+    backstory='An expert analyst with a keen eye for market trends.',
+    tools=[search_tool, web_rag_tool],
+    verbose=True
+)
+
+writer = Agent(
+    role='Content Writer',
+    goal='Craft engaging blog posts about the AI industry',
+    backstory='A skilled writer with a passion for technology.',
+    tools=[docs_tool, file_tool],
+    verbose=True
+)
+
+# تعريف المهام
+research = Task(
+    description='Research the latest trends in the AI industry and provide a summary.',
+    expected_output='A summary of the top 3 trending developments in the AI industry with a unique perspective on their significance.',
+    agent=researcher
+)
+
+write = Task(
+    description='Write an engaging blog post about the AI industry, based on the research analyst\'s summary. Draw inspiration from the latest blog posts in the directory.',
+    expected_output='A 4-paragraph blog post formatted in markdown with engaging, informative, and accessible content, avoiding complex jargon.',
+    agent=writer,
+    output_file='blog-posts/new_post.md'
+)
+
+# تجميع طاقم مع تفعيل التخطيط
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research, write],
+    verbose=True,
+    planning=True,
+)
+
+# تنفيذ المهام
+crew.kickoff()
+```
+
+## أدوات CrewAI المتاحة
+
+- **معالجة الأخطاء**: جميع الأدوات مبنية بقدرات معالجة الأخطاء، مما يسمح للوكلاء بإدارة الاستثناءات بسلاسة ومتابعة مهامهم.
+- **آلية التخزين المؤقت**: جميع الأدوات تدعم التخزين المؤقت، مما يُمكّن الوكلاء من إعادة استخدام النتائج المحصلة سابقًا بكفاءة، مما يقلل الحمل على الموارد الخارجية ويسرّع وقت التنفيذ. يمكنك أيضًا تحديد تحكم أدق في آلية التخزين المؤقت باستخدام خاصية `cache_function` على الأداة.
+
+إليك قائمة بالأدوات المتاحة وأوصافها:
+
+| الأداة                             | الوصف                                                                                    |
+| :------------------------------- | :--------------------------------------------------------------------------------------------- |
+| **ApifyActorsTool**              | أداة تدمج Apify Actors مع سير عملك لمهام استخراج البيانات من الويب والأتمتة. |
+| **BrowserbaseLoadTool**          | أداة للتفاعل مع المتصفحات واستخراج البيانات منها.                             |
+| **CodeDocsSearchTool**           | أداة RAG محسّنة للبحث في وثائق الكود والمستندات التقنية ذات الصلة. |
+| **CodeInterpreterTool**          | أداة لتفسير كود Python.                                                           |
+| **ComposioTool**                 | تُمكّن استخدام أدوات Composio.                                                                 |
+| **CSVSearchTool**                | أداة RAG مصممة للبحث في ملفات CSV، مخصصة للتعامل مع البيانات المنظمة.        |
+| **DALL-E Tool**                  | أداة لإنشاء الصور باستخدام DALL-E API.                                             |
+| **DirectorySearchTool**          | أداة RAG للبحث في المجلدات، مفيدة للتنقل في أنظمة الملفات.       |
+| **DOCXSearchTool**               | أداة RAG للبحث في مستندات DOCX، مثالية لمعالجة ملفات Word.          |
+| **DirectoryReadTool**            | تسهّل قراءة ومعالجة هياكل المجلدات ومحتوياتها.                 |
+| **EXASearchTool**                | أداة مصممة لإجراء عمليات بحث شاملة عبر مصادر بيانات متنوعة.                |
+| **FileReadTool**                 | تُمكّن قراءة واستخراج البيانات من الملفات، مع دعم تنسيقات ملفات متنوعة.               |
+| **FirecrawlSearchTool**          | أداة للبحث في صفحات الويب باستخدام Firecrawl وإرجاع النتائج.                              |
+| **FirecrawlCrawlWebsiteTool**    | أداة لزحف صفحات الويب باستخدام Firecrawl.                                                  |
+| **FirecrawlScrapeWebsiteTool**   | أداة لاستخراج محتوى عناوين URL لصفحات الويب باستخدام Firecrawl.                   |
+| **GithubSearchTool**             | أداة RAG للبحث في مستودعات GitHub، مفيدة لبحث الكود والوثائق. |
+| **SerperDevTool**                | أداة متخصصة لأغراض التطوير، مع وظائف محددة قيد التطوير.  |
+| **TXTSearchTool**                | أداة RAG مركّزة على البحث في ملفات النص (.txt)، مناسبة للبيانات غير المنظمة.      |
+| **JSONSearchTool**               | أداة RAG مصممة للبحث في ملفات JSON، تخدم التعامل مع البيانات المنظمة.     |
+| **LlamaIndexTool**               | تُمكّن استخدام أدوات LlamaIndex.                                                           |
+| **MDXSearchTool**                | أداة RAG مخصصة للبحث في ملفات Markdown (MDX)، مفيدة للوثائق.       |
+| **PDFSearchTool**                | أداة RAG للبحث في مستندات PDF، مثالية لمعالجة المستندات الممسوحة ضوئيًا.    |
+| **PGSearchTool**                 | أداة RAG محسّنة للبحث في قواعد بيانات PostgreSQL، مناسبة لاستعلامات قواعد البيانات. |
+| **Vision Tool**                  | أداة لإنشاء الصور باستخدام DALL-E API.                                             |
+| **RagTool**                      | أداة RAG للأغراض العامة قادرة على التعامل مع مصادر وأنواع بيانات متنوعة.                 |
+| **ScrapeElementFromWebsiteTool** | تُمكّن استخراج عناصر محددة من المواقع، مفيدة لاستخراج البيانات المستهدف.         |
+| **ScrapeWebsiteTool**            | تسهّل استخراج المواقع بالكامل، مثالية لجمع البيانات الشامل.                 |
+| **WebsiteSearchTool**            | أداة RAG للبحث في محتوى المواقع، محسّنة لاستخراج بيانات الويب.                   |
+| **XMLSearchTool**                | أداة RAG مصممة للبحث في ملفات XML، مناسبة لتنسيقات البيانات المنظمة.      |
+| **YoutubeChannelSearchTool**     | أداة RAG للبحث في قنوات YouTube، مفيدة لتحليل محتوى الفيديو.           |
+| **YoutubeVideoSearchTool**       | أداة RAG للبحث في مقاطع فيديو YouTube، مثالية لاستخراج بيانات الفيديو.          |
+
+## إنشاء أدواتك الخاصة
+
+<Tip>
+  يمكن للمطورين إنشاء `أدوات مخصصة` مصممة خصيصًا لاحتياجات وكلائهم أو
+  استخدام الخيارات الجاهزة.
+</Tip>
+
+هناك طريقتان رئيسيتان لإنشاء أداة CrewAI:
+
+### الوراثة من `BaseTool`
+
+```python Code
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+class MyToolInput(BaseModel):
+    """Input schema for MyCustomTool."""
+    argument: str = Field(..., description="Description of the argument.")
+
+class MyCustomTool(BaseTool):
+    name: str = "Name of my tool"
+    description: str = "What this tool does. It's vital for effective utilization."
+    args_schema: Type[BaseModel] = MyToolInput
+
+    def _run(self, argument: str) -> str:
+        # منطق أداتك هنا
+        return "Tool's result"
+```
+
+## دعم الأدوات غير المتزامنة
+
+يدعم CrewAI الأدوات غير المتزامنة، مما يتيح لك تنفيذ أدوات تجري عمليات غير حاجبة مثل طلبات الشبكة وعمليات الإدخال/الإخراج على الملفات أو عمليات async أخرى بدون حجب مسار التنفيذ الرئيسي.
+
+### إنشاء أدوات غير متزامنة
+
+يمكنك إنشاء أدوات غير متزامنة بطريقتين:
+
+#### 1. استخدام مزيّن `tool` مع دوال Async
+
+```python Code
+from crewai.tools import tool
+
+@tool("fetch_data_async")
+async def fetch_data_async(query: str) -> str:
+    """Asynchronously fetch data based on the query."""
+    # محاكاة عملية غير متزامنة
+    await asyncio.sleep(1)
+    return f"Data retrieved for {query}"
+```
+
+#### 2. تنفيذ طرق Async في فئات الأدوات المخصصة
+
+```python Code
+from crewai.tools import BaseTool
+
+class AsyncCustomTool(BaseTool):
+    name: str = "async_custom_tool"
+    description: str = "An asynchronous custom tool"
+
+    async def _run(self, query: str = "") -> str:
+        """Asynchronously run the tool"""
+        # تنفيذك غير المتزامن هنا
+        await asyncio.sleep(1)
+        return f"Processed {query} asynchronously"
+```
+
+### استخدام الأدوات غير المتزامنة
+
+تعمل الأدوات غير المتزامنة بسلاسة في كل من سير عمل الطاقم القياسي وسير عمل التدفق:
+
+```python Code
+# في طاقم قياسي
+agent = Agent(role="researcher", tools=[async_custom_tool])
+
+# في تدفق
+class MyFlow(Flow):
+    @start()
+    async def begin(self):
+        crew = Crew(agents=[agent])
+        result = await crew.kickoff_async()
+        return result
+```
+
+يتعامل إطار عمل CrewAI تلقائيًا مع تنفيذ الأدوات المتزامنة وغير المتزامنة، لذا لا تحتاج للقلق بشأن كيفية استدعائها بشكل مختلف.
+
+### استخدام مزيّن `tool`
+
+```python Code
+from crewai.tools import tool
+@tool("Name of my tool")
+def my_tool(question: str) -> str:
+    """Clear description for what this tool is useful for, your agent will need this information to use it."""
+    # منطق الدالة هنا
+    return "Result from your custom tool"
+```
+
+### آلية التخزين المؤقت المخصصة
+
+<Tip>
+  يمكن للأدوات اختياريًا تنفيذ `cache_function` لضبط سلوك
+  التخزين المؤقت. تحدد هذه الدالة متى يتم تخزين النتائج مؤقتًا بناءً على شروط
+  محددة، مما يوفر تحكمًا دقيقًا في منطق التخزين المؤقت.
+</Tip>
+
+```python Code
+from crewai.tools import tool
+
+@tool
+def multiplication_tool(first_number: int, second_number: int) -> str:
+    """Useful for when you need to multiply two numbers together."""
+    return first_number * second_number
+
+def cache_func(args, result):
+    # في هذه الحالة، نخزّن النتيجة مؤقتًا فقط إذا كانت من مضاعفات 2
+    cache = result % 2 == 0
+    return cache
+
+multiplication_tool.cache_function = cache_func
+
+writer1 = Agent(
+        role="Writer",
+        goal="You write lessons of math for kids.",
+        backstory="You're an expert in writing and you love to teach kids but you know nothing of math.",
+        tools=[multiplication_tool],
+        allow_delegation=False,
+    )
+    #...
+```
+
+## الخلاصة
+
+الأدوات محورية في توسيع قدرات وكلاء CrewAI، مما يمكّنهم من تنفيذ مجموعة واسعة من المهام والتعاون بفعالية.
+عند بناء حلول مع CrewAI، استفد من كل من الأدوات المخصصة والموجودة لتمكين وكلائك وتعزيز نظام الذكاء الاصطناعي البيئي. فكّر في استخدام معالجة الأخطاء وآليات التخزين المؤقت ومرونة معاملات الأدوات لتحسين أداء وقدرات وكلائك.

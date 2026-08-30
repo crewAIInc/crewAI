@@ -69,12 +69,12 @@ class TestChromaDBUtils:
     def test_sanitize_collection_name_properties(self) -> None:
         """Test that sanitized collection names always meet ChromaDB requirements."""
         test_cases: list[str] = [
-            "A" * 100,  # Very long name
+            "A" * 100,
             "_start_with_underscore",
             "end_with_underscore_",
             "contains@special#characters",
-            "192.168.1.1",  # IPv4 address
-            "a" * 2,  # Too short
+            "192.168.1.1",
+            "a" * 2,
         ]
         for test_case in test_cases:
             sanitized = _sanitize_collection_name(test_case)

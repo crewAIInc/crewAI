@@ -4,9 +4,8 @@ interactions:
       personal goal is: test goal"},{"role":"user","content":"\nCurrent Task: The
       final answer is 42. But don''t give it yet, instead keep using the `get_final_answer`
       tool.\n\nThis is the expected criteria for your final answer: The final answer\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nThis
-      is VERY important to you, your job depends on it!"}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"get_final_answer","description":"Get
-      the final answer but don''t give it yet, just re-use this\ntool non-stop.","parameters":{"properties":{},"type":"object"}}}]}'
+      MUST return the actual complete content as the final answer, not a summary."}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"get_final_answer","description":"Get
+      the final answer but don''t give it yet, just re-use this\ntool non-stop.","strict":true,"parameters":{"properties":{},"type":"object","additionalProperties":false,"required":[]}}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -19,7 +18,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '716'
+      - '715'
       content-type:
       - application/json
       host:
@@ -33,7 +32,7 @@ interactions:
       x-stainless-os:
       - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.83.0
+      - 2.32.0
       x-stainless-read-timeout:
       - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
@@ -46,34 +45,34 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D0tOle0pg0F6zmEmkzpoufrjhkjn5\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1769105323,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+      string: "{\n  \"id\": \"chatcmpl-Dd0fdKJb6WSBc7P3rJxJVnCq2vvRD\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1778189741,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-        \           \"id\": \"call_BM9xxRm0ADf91mYTDZ4kKExm\",\n            \"type\":
+        \           \"id\": \"call_csVoybNhrmr6ORevkL4wQfVy\",\n            \"type\":
         \"function\",\n            \"function\": {\n              \"name\": \"get_final_answer\",\n
         \             \"arguments\": \"{}\"\n            }\n          }\n        ],\n
         \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
         null,\n      \"finish_reason\": \"tool_calls\"\n    }\n  ],\n  \"usage\":
-        {\n    \"prompt_tokens\": 140,\n    \"completion_tokens\": 11,\n    \"total_tokens\":
-        151,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\":
+        {\n    \"prompt_tokens\": 127,\n    \"completion_tokens\": 11,\n    \"total_tokens\":
+        138,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\":
         0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
         0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n
         \     \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_f7311f7f0a\"\n}\n"
     headers:
-      CF-RAY:
-      - CF-RAY-XXX
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9f835b12bbeaeb2a-SJC
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Thu, 22 Jan 2026 18:08:44 GMT
+      - Thu, 07 May 2026 21:35:41 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - SET-COOKIE-XXX
       Strict-Transport-Security:
       - STS-XXX
       Transfer-Encoding:
@@ -84,18 +83,16 @@ interactions:
       - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '373'
+      - '570'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '651'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
@@ -120,10 +117,7 @@ interactions:
       personal goal is: test goal"},{"role":"user","content":"\nCurrent Task: The
       final answer is 42. But don''t give it yet, instead keep using the `get_final_answer`
       tool.\n\nThis is the expected criteria for your final answer: The final answer\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nThis
-      is VERY important to you, your job depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_BM9xxRm0ADf91mYTDZ4kKExm","type":"function","function":{"name":"get_final_answer","arguments":"{}"}}]},{"role":"tool","tool_call_id":"call_BM9xxRm0ADf91mYTDZ4kKExm","content":"42"},{"role":"user","content":"Analyze
-      the tool result. If requirements are met, provide the Final Answer. Otherwise,
-      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":"Now
+      MUST return the actual complete content as the final answer, not a summary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_csVoybNhrmr6ORevkL4wQfVy","type":"function","function":{"name":"get_final_answer","arguments":"{}"}}]},{"role":"tool","tool_call_id":"call_csVoybNhrmr6ORevkL4wQfVy","name":"get_final_answer","content":"42"},{"role":"assistant","content":"Now
       it''s time you MUST give your absolute best final answer. You''ll ignore all
       previous instructions, stop using any tools, and just return your absolute BEST
       Final answer."}],"model":"gpt-4.1-mini"}'
@@ -139,7 +133,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1118'
+      - '902'
       content-type:
       - application/json
       cookie:
@@ -155,7 +149,7 @@ interactions:
       x-stainless-os:
       - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.83.0
+      - 2.32.0
       x-stainless-read-timeout:
       - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
@@ -168,26 +162,28 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D0tOmVwqqvewf7s2CNMsKBksanbID\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1769105324,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+      string: "{\n  \"id\": \"chatcmpl-Dd0fed0I3y5RVgM0YZTzjD6hdh8Tr\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1778189742,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"42\",\n        \"refusal\": null,\n
         \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 190,\n    \"completion_tokens\":
-        1,\n    \"total_tokens\": 191,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 142,\n    \"completion_tokens\":
+        1,\n    \"total_tokens\": 143,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
         0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_31316814ed\"\n}\n"
     headers:
-      CF-RAY:
-      - CF-RAY-XXX
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - 9f835b1e3c58eb2a-SJC
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Thu, 22 Jan 2026 18:08:44 GMT
+      - Thu, 07 May 2026 21:35:42 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -200,18 +196,14 @@ interactions:
       - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '166'
+      - '478'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '180'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:

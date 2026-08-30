@@ -3,10 +3,10 @@
 from typing import Any, cast
 
 from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
+from crewai_core.printer import PRINTER
 from typing_extensions import Unpack
 
 from crewai.rag.embeddings.providers.ibm.types import WatsonXProviderConfig
-from crewai.utilities.printer import PRINTER
 
 
 class WatsonXEmbeddingFunction(EmbeddingFunction[Documents]):

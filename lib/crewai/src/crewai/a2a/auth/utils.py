@@ -168,7 +168,7 @@ def validate_auth_against_agent_card(
 
     first_security_req = agent_card.security[0] if agent_card.security else {}
 
-    for scheme_name in first_security_req.keys():
+    for scheme_name in first_security_req:
         security_scheme_wrapper = agent_card.security_schemes.get(scheme_name)
         if not security_scheme_wrapper:
             continue

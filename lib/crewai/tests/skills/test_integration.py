@@ -4,10 +4,15 @@ from pathlib import Path
 
 import pytest
 
-from crewai import Agent
-from crewai.agent.utils import append_skill_context
-from crewai.skills.loader import activate_skill, discover_skills, format_skill_context
+from crewai import Agent, Crew, Task
+from crewai.crews.utils import _resolve_crew_skills
+from crewai.skills.loader import (
+    activate_skill,
+    discover_skills,
+    format_skill_context,
+)
 from crewai.skills.models import INSTRUCTIONS, METADATA
+from crewai.utilities.prompts import Prompts
 
 
 def _create_skill_dir(parent: Path, name: str, body: str = "Body.") -> Path:
@@ -34,7 +39,7 @@ class TestSkillDiscoveryAndActivation:
         assert activated.instructions == "Use this skill."
 
         context = format_skill_context(activated)
-        assert "## Skill: my-skill" in context
+        assert '<skill name="my-skill">' in context
         assert "Use this skill." in context
 
     def test_filter_by_skill_names(self, tmp_path: Path) -> None:
@@ -94,7 +99,109 @@ class TestSkillDiscoveryAndActivation:
         assert agent.skills[0].disclosure_level == METADATA
         assert agent.skills[0].instructions is None
 
-        prompt = append_skill_context(agent, "Plan a 10-day Japan itinerary.")
-        assert "## Skill: travel" in prompt
-        assert "Skill travel" in prompt
-        assert "Use this skill for travel planning." not in prompt
+        result = Prompts(agent=agent, has_tools=False, use_system_prompt=True).task_execution()
+        system = getattr(result, "system", "") or result.prompt
+        assert '<skill name="travel">' in system
+        assert "Skill travel" in system
+        # METADATA-level skills must not leak full instructions into the prompt
+        assert "Use this skill for travel planning." not in system
+
+    def test_agent_accepts_inline_skill_string(self) -> None:
+        agent = Agent(
+            role="Reviewer",
+            goal="Review changes.",
+            backstory="An experienced reviewer.",
+            skills=[
+                "---\n"
+                "name: inline-review\n"
+                "description: Inline review guidance\n"
+                "---\n"
+                "Focus on behavior and missing tests."
+            ],
+        )
+
+        assert agent.skills is not None
+        assert [skill.name for skill in agent.skills] == ["inline-review"]
+        assert [skill.disclosure_level for skill in agent.skills] == [INSTRUCTIONS]
+        assert [skill.instructions for skill in agent.skills] == [
+            "Focus on behavior and missing tests."
+        ]
+
+        result = Prompts(agent=agent, has_tools=False, use_system_prompt=True).task_execution()
+        system = getattr(result, "system", "") or result.prompt
+        assert '<skill name="inline-review">' in system
+        assert "Focus on behavior and missing tests." in system
+
+    def test_agent_treats_plain_skill_string_as_path(self, tmp_path: Path) -> None:
+        _create_skill_dir(tmp_path, "path-skill", body="Use the path skill.")
+
+        agent = Agent(
+            role="Reviewer",
+            goal="Review changes.",
+            backstory="An experienced reviewer.",
+            skills=[str(tmp_path)],
+        )
+
+        assert agent.skills is not None
+        assert [skill.name for skill in agent.skills] == ["path-skill"]
+        assert [skill.disclosure_level for skill in agent.skills] == [METADATA]
+        assert [skill.instructions for skill in agent.skills] == [None]
+
+    def test_crew_resolves_inline_skill_string(self) -> None:
+        agent = Agent(
+            role="Reviewer",
+            goal="Review changes.",
+            backstory="An experienced reviewer.",
+        )
+        task = Task(
+            description="Review the diff.",
+            expected_output="Findings.",
+            agent=agent,
+        )
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            skills=[
+                "---\n"
+                "name: crew-inline-review\n"
+                "description: Crew-level inline review guidance\n"
+                "---\n"
+                "Apply this to every agent."
+            ],
+        )
+
+        skills = _resolve_crew_skills(crew)
+
+        assert skills is not None
+        assert [skill.name for skill in skills] == ["crew-inline-review"]
+        assert [skill.instructions for skill in skills] == ["Apply this to every agent."]
+
+    def test_crew_preserves_preloaded_metadata_skill(self, tmp_path: Path) -> None:
+        _create_skill_dir(
+            tmp_path,
+            "crew-preloaded",
+            body="Apply this crew-level guidance to every agent.",
+        )
+        metadata_skill = discover_skills(tmp_path)[0]
+        agent = Agent(
+            role="Reviewer",
+            goal="Review changes.",
+            backstory="An experienced reviewer.",
+        )
+        task = Task(
+            description="Review the diff.",
+            expected_output="Findings.",
+            agent=agent,
+        )
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            skills=[metadata_skill],
+        )
+
+        skills = _resolve_crew_skills(crew)
+
+        assert skills is not None
+        assert [skill.name for skill in skills] == ["crew-preloaded"]
+        assert [skill.disclosure_level for skill in skills] == [METADATA]
+        assert [skill.instructions for skill in skills] == [None]
