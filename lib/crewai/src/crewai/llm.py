@@ -2343,6 +2343,8 @@ class LLM(BaseLLM):
         Raises:
             TypeError: If messages is None or contains invalid message format.
         """
+        from crewai.llms.cache import CACHE_BREAKPOINT_KEY
+
         if messages is None:
             raise TypeError("Messages cannot be None")
 
@@ -2352,9 +2354,18 @@ class LLM(BaseLLM):
                     "Invalid message format. Each message must be a dict with 'role' and 'content' keys"
                 )
 
+        # Strip cache_breakpoint markers before sending to LiteLLM.
+        # These markers are used internally by native providers that support
+        # prompt caching (e.g., Anthropic), but most providers (including
+        # Mistral) reject unknown message keys.
+        cleaned_messages = [
+            {k: v for k, v in msg.items() if k != CACHE_BREAKPOINT_KEY}
+            for msg in messages
+        ]
+
         if "o1" in self.model.lower():
             formatted_messages = []
-            for msg in messages:
+            for msg in cleaned_messages:
                 if msg["role"] == "system":
                     formatted_messages.append(
                         {"role": "assistant", "content": msg["content"]}
@@ -2365,27 +2376,27 @@ class LLM(BaseLLM):
 
         # Handle Mistral models - they require the last message to have a role of 'user' or 'tool'
         if "mistral" in self.model.lower():
-            if messages and messages[-1]["role"] == "assistant":
-                return [*messages, {"role": "user", "content": "Please continue."}]  # type: ignore[list-item]
-            return messages  # type: ignore[return-value]
+            if cleaned_messages and cleaned_messages[-1]["role"] == "assistant":
+                return [*cleaned_messages, {"role": "user", "content": "Please continue."}]  # type: ignore[list-item]
+            return cleaned_messages  # type: ignore[return-value]
 
         # TODO: Remove this code after merging PR https://github.com/BerriAI/litellm/pull/10917
         # Ollama doesn't supports last message to be 'assistant'
         if (
             "ollama" in self.model.lower()
-            and messages
-            and messages[-1]["role"] == "assistant"
+            and cleaned_messages
+            and cleaned_messages[-1]["role"] == "assistant"
         ):
-            return [*messages, {"role": "user", "content": ""}]  # type: ignore[list-item]
+            return [*cleaned_messages, {"role": "user", "content": ""}]  # type: ignore[list-item]
 
         if not self.is_anthropic:
-            return messages  # type: ignore[return-value]
+            return cleaned_messages  # type: ignore[return-value]
 
         # Anthropic requires messages to start with 'user' role
-        if not messages or messages[0]["role"] == "system":
-            return [{"role": "user", "content": "."}, *messages]  # type: ignore[list-item]
+        if not cleaned_messages or cleaned_messages[0]["role"] == "system":
+            return [{"role": "user", "content": "."}, *cleaned_messages]  # type: ignore[list-item]
 
-        return messages  # type: ignore[return-value]
+        return cleaned_messages  # type: ignore[return-value]
 
     def _get_custom_llm_provider(self) -> str | None:
         """
