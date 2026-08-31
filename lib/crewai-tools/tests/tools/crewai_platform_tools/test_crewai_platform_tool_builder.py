@@ -60,7 +60,7 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
     @patch(
-        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
     def test_fetch_actions_success(self, mock_get):
         mock_api_response = {
@@ -120,7 +120,7 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
     @patch(
-        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
     def test_create_tools(self, mock_get):
         mock_api_response = {
@@ -217,7 +217,7 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
         builder = CrewaiPlatformToolBuilder(apps=[])
 
         with patch(
-            "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+            "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
         ) as mock_get:
             mock_response = Mock()
             mock_response.raise_for_status.return_value = None
@@ -237,7 +237,7 @@ class TestCrewaiPlatformToolBuilderVerify(unittest.TestCase):
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"}, clear=True)
     @patch(
-        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
     def test_fetch_actions_with_ssl_verification_default(self, mock_get):
         """Test that _fetch_actions uses SSL verification by default when CREWAI_FACTORY is not set"""
@@ -255,7 +255,7 @@ class TestCrewaiPlatformToolBuilderVerify(unittest.TestCase):
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token", "CREWAI_FACTORY": "false"}, clear=True)
     @patch(
-        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
     def test_fetch_actions_with_ssl_verification_factory_false(self, mock_get):
         """Test that _fetch_actions uses SSL verification when CREWAI_FACTORY is 'false'"""
@@ -273,7 +273,7 @@ class TestCrewaiPlatformToolBuilderVerify(unittest.TestCase):
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token", "CREWAI_FACTORY": "FALSE"}, clear=True)
     @patch(
-        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
     def test_fetch_actions_with_ssl_verification_factory_false_uppercase(self, mock_get):
         """Test that _fetch_actions uses SSL verification when CREWAI_FACTORY is 'FALSE' (case-insensitive)"""
@@ -291,7 +291,7 @@ class TestCrewaiPlatformToolBuilderVerify(unittest.TestCase):
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token", "CREWAI_FACTORY": "true"}, clear=True)
     @patch(
-        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
     def test_fetch_actions_without_ssl_verification_factory_true(self, mock_get):
         """Test that _fetch_actions disables SSL verification when CREWAI_FACTORY is 'true'"""
@@ -309,7 +309,7 @@ class TestCrewaiPlatformToolBuilderVerify(unittest.TestCase):
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token", "CREWAI_FACTORY": "TRUE"}, clear=True)
     @patch(
-        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
     def test_fetch_actions_without_ssl_verification_factory_true_uppercase(self, mock_get):
         """Test that _fetch_actions disables SSL verification when CREWAI_FACTORY is 'TRUE' (case-insensitive)"""
@@ -328,7 +328,7 @@ class TestCrewaiPlatformToolBuilderVerify(unittest.TestCase):
 
 @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
 @patch(
-    "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
 )
 def test_connection_ids_are_parsed_but_not_sent(mock_get):
     mock_response = Mock()
