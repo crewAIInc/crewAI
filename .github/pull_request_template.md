@@ -3,9 +3,8 @@
 Fixes #
 
 <!--
-First-time contributors must link an existing issue in this repo.
-Use a closing keyword: Fixes #123, Closes #123, or Resolves #123.
-PRs without a linked issue are closed automatically.
+First-time contributors must mention an existing open issue in this repo
+(for example #123). PRs without a linked open issue are closed automatically.
 -->
 
 ## Summary
