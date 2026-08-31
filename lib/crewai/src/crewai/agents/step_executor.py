@@ -28,6 +28,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.hooks.dispatch import HookAborted
 from crewai.tools.tool_failure import ToolExecutionFailedError
 from crewai.utilities.agent_utils import (
     build_text_tool_calling_fallback_message,
@@ -181,7 +182,7 @@ class StepExecutor:
                 tool_calls_made=tool_calls_made,
                 execution_time=elapsed,
             )
-        except ToolExecutionFailedError:
+        except (ToolExecutionFailedError, HookAborted):
             # A deliberate stop: StepResult(success=False) would let the plan
             # carry on.
             raise
@@ -224,7 +225,7 @@ class StepExecutor:
                         tool_calls_made=tool_calls_made,
                         execution_time=elapsed,
                     )
-                except ToolExecutionFailedError:
+                except (ToolExecutionFailedError, HookAborted):
                     # Same as the outer handler, reached via the text-tooling
                     # fallback.
                     raise

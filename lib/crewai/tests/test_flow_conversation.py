@@ -27,20 +27,23 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.events.types.llm_events import LLMCallStartedEvent, LLMStreamChunkEvent
-from crewai.experimental import (
+from crewai.flow import (
+    ChatState,
     ConversationConfig,
     ConversationMessage,
     ConversationState,
+    Flow,
     RouterConfig,
+    listen,
+    start,
 )
-from crewai.flow import Flow, ChatState, listen, start
-from crewai.flow.persistence import SQLiteFlowPersistence, persist
 from crewai.flow.async_feedback import HumanFeedbackPending, PendingFeedbackContext
 from crewai.flow.flow_context import (
     current_flow_defer_trace_finalization,
     current_flow_id,
     current_flow_name,
 )
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
 from crewai.llms.base_llm import BaseLLM
 from crewai.flow.conversation import (
     append_message,
@@ -1028,10 +1031,10 @@ class TestConversationalFlow:
         """``Flow`` mixes in ``_ConversationalMixin`` — opt-in subclasses get its methods.
 
         The conversational graph + ``handle_turn`` live on the mixin in
-        ``crewai.experimental.conversational_mixin``; this test confirms
+        ``crewai.flow.conversational_mixin``; this test confirms
         MRO resolution wires them onto a ``Flow`` subclass that opts in.
         """
-        from crewai.experimental.conversational_mixin import _ConversationalMixin
+        from crewai.flow.conversational_mixin import _ConversationalMixin
 
         @ConversationConfig()
         class MyChat(Flow):
@@ -2398,7 +2401,7 @@ class TestHandleTurnGuard:
         assert DecoratedFlow().handle_turn("hi") == "ok"
 
 
-_MIXIN = "crewai.experimental.conversational_mixin:_ConversationalMixin"
+_MIXIN = "crewai.flow.conversational_mixin:_ConversationalMixin"
 
 
 class DeclaredChatState(ConversationState):
@@ -2447,7 +2450,7 @@ def _conversational_declaration(**overrides: Any) -> dict[str, Any]:
         "name": "DeclaredChat",
         "state": {
             "type": "pydantic",
-            "ref": "crewai.experimental.conversational:ConversationState",
+            "ref": "crewai.flow.conversational:ConversationState",
         },
         "conversational": {},
         "methods": {
@@ -2764,9 +2767,7 @@ class TestDeclaredRouterResponseFormat:
         projected = ClassChat.flow_definition().conversational.router.response_format
 
         assert projected is not None
-        assert projected.python == (
-            "crewai.experimental.conversational.ConversationState"
-        )
+        assert projected.python == "crewai.flow.conversational.ConversationState"
 
 
 class DeclaredSchemaChatState(ConversationState):
