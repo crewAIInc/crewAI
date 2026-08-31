@@ -133,6 +133,15 @@ class _JSONProjectValidationError(ValueError):
         super().__init__("\n".join(errors))
 
 
+class _JSONProjectEnvironmentError(RuntimeError):
+    """JSON validation could not run in the project's environment."""
+
+    hint = (
+        "Install `uv` if needed, run `uv sync` in the project directory, "
+        "then retry with `uv run crewai deploy validate`."
+    )
+
+
 def _find_json_project_file(directory: Path, stem: str) -> Path | None:
     for extension in (".jsonc", ".json"):
         candidate = directory / f"{stem}{extension}"
@@ -147,7 +156,10 @@ def _validate_json_project_in_project_env(
     """Validate a JSON crew with the full CrewAI package from its project env."""
     uv_path = shutil.which("uv")
     if uv_path is None:
-        raise RuntimeError("Cannot validate JSON crew: `uv` is not installed")
+        raise _JSONProjectEnvironmentError(
+            "The `uv` executable is required to validate JSON crews from a "
+            "standalone CLI installation."
+        )
 
     try:
         proc = subprocess.run(  # noqa: S603 - fixed command plus trusted paths
@@ -167,7 +179,13 @@ def _validate_json_project_in_project_env(
             check=False,
         )
     except subprocess.TimeoutExpired as exc:
-        raise RuntimeError("JSON crew validation timed out after 120s") from exc
+        raise _JSONProjectEnvironmentError(
+            "JSON crew validation timed out after 120s."
+        ) from exc
+    except OSError as exc:
+        raise _JSONProjectEnvironmentError(
+            f"Could not start JSON crew validation: {exc}"
+        ) from exc
 
     payload: dict[str, Any] | None = None
     for line in reversed(proc.stdout.splitlines()):
@@ -181,7 +199,9 @@ def _validate_json_project_in_project_env(
 
     if payload is None:
         detail = (proc.stderr or proc.stdout or "").strip()
-        raise RuntimeError(detail or "JSON crew validation produced no result")
+        raise _JSONProjectEnvironmentError(
+            detail or "JSON crew validation produced no result."
+        )
 
     if not payload.get("ok"):
         errors = payload.get("errors")
@@ -189,13 +209,15 @@ def _validate_json_project_in_project_env(
             raise _JSONProjectValidationError(errors)
         error_type = payload.get("error_type", "Error")
         error = payload.get("error", "JSON crew validation failed")
-        raise RuntimeError(f"{error_type}: {error}")
+        raise _JSONProjectEnvironmentError(f"{error_type}: {error}")
 
     agent_names = payload.get("agent_names")
     if not isinstance(agent_names, list) or not all(
         isinstance(name, str) for name in agent_names
     ):
-        raise RuntimeError("JSON crew validation returned invalid agent names")
+        raise _JSONProjectEnvironmentError(
+            "JSON crew validation returned invalid agent names."
+        )
     return agent_names
 
 
@@ -348,6 +370,15 @@ class DeployValidator:
                 f"{crew_path.name} has invalid JSON crew configuration",
                 detail="\n".join(e.errors),
                 hint="Fix the JSON crew, agent, and task references before deploying.",
+            )
+            return self.results
+        except _JSONProjectEnvironmentError as e:
+            self._add(
+                Severity.ERROR,
+                "json_validation_environment_failed",
+                "Could not validate the JSON crew in the project environment",
+                detail=str(e),
+                hint=e.hint,
             )
             return self.results
         except Exception as e:
