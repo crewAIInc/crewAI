@@ -2358,8 +2358,8 @@ class LLM(BaseLLM):
         # These markers are used internally by native providers that support
         # prompt caching (e.g., Anthropic), but most providers (including
         # Mistral) reject unknown message keys.
-        cleaned_messages = [
-            {k: v for k, v in msg.items() if k != CACHE_BREAKPOINT_KEY}
+        cleaned_messages: list[LLMMessage] = [
+            {k: v for k, v in msg.items() if k != CACHE_BREAKPOINT_KEY}  # type: ignore[misc]
             for msg in messages
         ]
 
@@ -2377,7 +2377,10 @@ class LLM(BaseLLM):
         # Handle Mistral models - they require the last message to have a role of 'user' or 'tool'
         if "mistral" in self.model.lower():
             if cleaned_messages and cleaned_messages[-1]["role"] == "assistant":
-                return [*cleaned_messages, {"role": "user", "content": "Please continue."}]  # type: ignore[list-item]
+                return [
+                    *cleaned_messages,
+                    {"role": "user", "content": "Please continue."},
+                ]  # type: ignore[list-item]
             return cleaned_messages  # type: ignore[return-value]
 
         # TODO: Remove this code after merging PR https://github.com/BerriAI/litellm/pull/10917
