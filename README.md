@@ -53,6 +53,10 @@
   </a>
 </p>
 
+<p align="center">
+  <b>English</b> · <a href="README.zh.md">简体中文</a>
+</p>
+
 ### Fast and Flexible Multi-Agent Automation Framework
 
 > CrewAI is an open-source Python framework with high-level abstractions and low-level APIs for building production-ready multi-agent workflows.
