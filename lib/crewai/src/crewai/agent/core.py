@@ -74,6 +74,7 @@ from crewai.events.types.memory_events import (
 )
 from crewai.events.types.skill_events import SkillUsedEvent
 from crewai.experimental.agent_executor import AgentExecutor
+from crewai.hooks.dispatch import HookAborted
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent_output import LiteAgentOutput
@@ -139,7 +140,10 @@ if TYPE_CHECKING:
 
 # Deliberate stops, not transient errors: never swallowed into the
 # max_retry_limit loop.
-_passthrough_exceptions: tuple[type[Exception], ...] = (ToolExecutionFailedError,)
+_passthrough_exceptions: tuple[type[Exception], ...] = (
+    ToolExecutionFailedError,
+    HookAborted,
+)
 
 _EXECUTOR_CLASS_MAP: dict[str, type] = {
     "CrewAgentExecutor": CrewAgentExecutor,
@@ -711,6 +715,9 @@ class Agent(BaseAgent):
                     error=str(e),
                 ),
             )
+            # a deny aborts the task; any other failure degrades to no memory
+            if isinstance(e, HookAborted):
+                raise
 
         return task_prompt
 
@@ -1438,6 +1445,18 @@ class Agent(BaseAgent):
                 ),
             )
             return rewritten_query
+        except HookAborted as e:
+            # A deny still owes the started event above its terminal event; only
+            # the fallback to no query is skipped.
+            crewai_event_bus.emit(
+                self,
+                event=KnowledgeQueryFailedEvent(
+                    error=str(e),
+                    from_task=task,
+                    from_agent=self,
+                ),
+            )
+            raise
         except Exception as e:
             crewai_event_bus.emit(
                 self,
@@ -1634,6 +1653,9 @@ class Agent(BaseAgent):
                         error=str(e),
                     ),
                 )
+                # a deny aborts the kickoff; any other failure degrades to no memory
+                if isinstance(e, HookAborted):
+                    raise
 
         inputs: dict[str, Any] = {
             "input": formatted_messages,
@@ -1815,6 +1837,8 @@ class Agent(BaseAgent):
             extracted = agent_memory.extract_memories(raw)
             if extracted:
                 agent_memory.remember_many(extracted)
+        except HookAborted:
+            raise
         except Exception as e:
             self._logger.log("error", f"Failed to save kickoff result to memory: {e}")
 

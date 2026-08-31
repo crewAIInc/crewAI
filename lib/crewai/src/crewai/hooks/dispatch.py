@@ -209,7 +209,7 @@ def _resolve_hooks(point: InterceptionPoint) -> list[HookFn]:
     return global_hooks
 
 
-def _source_name(source: Any) -> str | None:
+def source_name(source: Any) -> str | None:
     """Best-effort readable name for a hook source."""
     if source is None:
         return None
@@ -341,7 +341,7 @@ def run_hooks(
     except HookAborted as aborted:
         outcome = "aborted"
         abort_reason = aborted.reason
-        abort_source = _source_name(aborted.source)
+        abort_source = source_name(aborted.source)
         raise
     finally:
         _emit_telemetry(

@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Self
 
+from crewai.hooks.dispatch import HookAborted
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
@@ -42,7 +43,12 @@ try:
     )
 
     from crewai.events.types.llm_events import LLMCallType
-    from crewai.llms.base_llm import BaseLLM, call_stream_override, llm_call_context
+    from crewai.llms.base_llm import (
+        BaseLLM,
+        LLMCallBlockedError,
+        call_stream_override,
+        llm_call_context,
+    )
 
 except ImportError:
     raise ImportError(
@@ -521,10 +527,7 @@ class AzureCompletion(BaseLLM):
 
                 formatted_messages = self._format_messages_for_azure(messages)
 
-                if not self._invoke_before_llm_call_hooks(
-                    formatted_messages, from_agent
-                ):
-                    raise ValueError("LLM call blocked by before_llm_call hook")
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
 
                 completion_params = self._prepare_completion_params(
                     formatted_messages, tools, effective_response_model
@@ -547,6 +550,9 @@ class AzureCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 return self._handle_api_error(e, from_task, from_agent)  # type: ignore[func-returns-value]
 
@@ -603,6 +609,8 @@ class AzureCompletion(BaseLLM):
 
                 formatted_messages = self._format_messages_for_azure(messages)
 
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
+
                 completion_params = self._prepare_completion_params(
                     formatted_messages, tools, effective_response_model
                 )
@@ -624,6 +632,9 @@ class AzureCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 self._handle_api_error(e, from_task, from_agent)
 

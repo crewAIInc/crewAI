@@ -1,0 +1,110 @@
+name: First-time contributor issue required
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened]
+
+permissions:
+  pull-requests: write
+  issues: read
+
+concurrency:
+  group: ftc-require-issue-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  require-issue:
+    if: >
+      github.event.pull_request.user.type != 'Bot' &&
+      contains(fromJSON('["FIRST_TIME_CONTRIBUTOR","FIRST_TIMER"]'),
+               github.event.pull_request.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require a closing-keyword issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 << 'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+
+          repo = os.environ["REPO"]
+          pr_number = os.environ["PR_NUMBER"]
+          owner, name = repo.split("/", 1)
+
+          keyword = r"(?:close[sd]?|fix(?:es|ed)?|resolve[sd]?)"
+          patterns = (
+              re.compile(rf"(?i)\b{keyword}\s+#(\d+)\b"),
+              re.compile(rf"(?i)\b{keyword}\s+{re.escape(owner)}/{re.escape(name)}#(\d+)\b"),
+              re.compile(
+                  rf"(?i)\b{keyword}\s+https://github\.com/{re.escape(owner)}/{re.escape(name)}/issues/(\d+)\b"
+              ),
+          )
+
+          def gh_json(*args: str) -> dict:
+              return json.loads(
+                  subprocess.check_output(["gh", *args], text=True)
+              )
+
+          def is_repo_issue(number: int) -> bool:
+              result = subprocess.run(
+                  ["gh", "api", f"repos/{repo}/issues/{number}"],
+                  capture_output=True,
+                  text=True,
+              )
+              if result.returncode != 0:
+                  stderr = result.stderr or ""
+                  if "404" in stderr or "Not Found" in stderr:
+                      return False
+                  raise RuntimeError(
+                      f"GitHub API error looking up #{number}: {stderr}"
+                  )
+              return "pull_request" not in json.loads(result.stdout)
+
+          pr = gh_json(
+              "pr", "view", pr_number, "--repo", repo, "--json", "title,body,state"
+          )
+          text = f"{pr.get('title') or ''}\n{pr.get('body') or ''}"
+          candidates = {
+              int(match)
+              for pattern in patterns
+              for match in pattern.findall(text)
+          }
+          if any(is_repo_issue(number) for number in sorted(candidates)):
+              sys.exit(0)
+
+          if (pr.get("state") or "").upper() == "CLOSED":
+              sys.exit(0)
+
+          comment = f"""Thanks for the pull request.
+          
+          First-time contributors need an associated issue before we can review a PR.
+          
+          1. Open an issue with a [template](https://github.com/{repo}/issues/new/choose), or pick an existing one.
+          2. Open a new PR (or reopen this one) whose title or body includes a closing keyword, for example `Fixes #123`.
+          
+          See the [contributing guide](https://github.com/{repo}/blob/main/.github/CONTRIBUTING.md).
+          """
+          subprocess.run(
+              [
+                  "gh",
+                  "pr",
+                  "comment",
+                  pr_number,
+                  "--repo",
+                  repo,
+                  "--body",
+                  comment,
+              ],
+              check=True,
+          )
+          subprocess.run(
+              ["gh", "pr", "close", pr_number, "--repo", repo],
+              check=True,
+          )
+          PY

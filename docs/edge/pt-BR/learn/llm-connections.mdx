@@ -140,7 +140,7 @@ Você pode se conectar a LLMs compatíveis com a OpenAI usando variáveis de amb
         # Exemplo usando a API compatível com OpenAI do Gemini.
         os.environ["OPENAI_API_KEY"] = "your-gemini-key"  # Deve começar com AIza...
         os.environ["OPENAI_API_BASE"] = "https://generativelanguage.googleapis.com/v1beta/openai/"
-        os.environ["OPENAI_MODEL_NAME"] = "openai/gemini-2.0-flash"  # Adicione aqui seu modelo do Gemini, sob openai/
+        os.environ["OPENAI_MODEL_NAME"] = "openai/gemini-3.7-flash"  # Adicione aqui seu modelo do Gemini, sob openai/
         ```
         </CodeGroup>
     </Tab>
@@ -158,7 +158,7 @@ Você pode se conectar a LLMs compatíveis com a OpenAI usando variáveis de amb
             ```python Google
             # Exemplo usando a API compatível com OpenAI do Gemini
             llm = LLM(
-                model="openai/gemini-2.0-flash",
+                model="openai/gemini-3.7-flash",
                 base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
                 api_key="your-gemini-key",  # Deve começar com AIza...
             )
