@@ -10,7 +10,7 @@ from crewai.llms.providers.openai_compatible.completion import (
     OPENAI_COMPATIBLE_PROVIDERS,
     OpenAICompatibleCompletion,
     ProviderConfig,
-    _normalize_ollama_base_url,
+    _normalize_local_base_url,
 )
 
 
@@ -73,6 +73,24 @@ class TestProviderRegistry:
         assert ollama.base_url == ollama_chat.base_url
         assert ollama.api_key_required == ollama_chat.api_key_required
 
+    def test_llmman_config(self):
+        """Test llmman provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["llmman"]
+        assert config.base_url == "http://localhost:17434/v1"
+        assert config.api_key_env == "LLMMAN_API_KEY"
+        assert config.base_url_env == "LLMMAN_HOST"
+        assert config.api_key_required is False
+        assert config.default_api_key == "llmman"
+
+    def test_llmman_base_url_does_not_collide(self):
+        """llmman must not reuse another provider's default endpoint."""
+        others = [
+            cfg.base_url
+            for name, cfg in OPENAI_COMPATIBLE_PROVIDERS.items()
+            if name != "llmman"
+        ]
+        assert OPENAI_COMPATIBLE_PROVIDERS["llmman"].base_url not in others
+
     def test_hosted_vllm_config(self):
         """Test hosted_vllm provider configuration."""
         config = OPENAI_COMPATIBLE_PROVIDERS["hosted_vllm"]
@@ -96,24 +114,24 @@ class TestProviderRegistry:
         assert config.api_key_required is True
 
 
-class TestNormalizeOllamaBaseUrl:
-    """Tests for _normalize_ollama_base_url helper."""
+class TestNormalizeLocalBaseUrl:
+    """Tests for _normalize_local_base_url helper."""
 
     def test_adds_v1_suffix(self):
         """Test that /v1 is added when missing."""
-        assert _normalize_ollama_base_url("http://localhost:11434") == "http://localhost:11434/v1"
+        assert _normalize_local_base_url("http://localhost:11434") == "http://localhost:11434/v1"
 
     def test_preserves_existing_v1(self):
         """Test that existing /v1 is preserved."""
-        assert _normalize_ollama_base_url("http://localhost:11434/v1") == "http://localhost:11434/v1"
+        assert _normalize_local_base_url("http://localhost:11434/v1") == "http://localhost:11434/v1"
 
     def test_strips_trailing_slash(self):
         """Test that trailing slash is handled."""
-        assert _normalize_ollama_base_url("http://localhost:11434/") == "http://localhost:11434/v1"
+        assert _normalize_local_base_url("http://localhost:11434/") == "http://localhost:11434/v1"
 
     def test_handles_v1_with_trailing_slash(self):
         """Test /v1/ is normalized."""
-        assert _normalize_ollama_base_url("http://localhost:11434/v1/") == "http://localhost:11434/v1"
+        assert _normalize_local_base_url("http://localhost:11434/v1/") == "http://localhost:11434/v1"
 
 
 class TestOpenAICompatibleCompletion:
@@ -197,6 +215,12 @@ class TestOpenAICompatibleCompletion:
             completion = OpenAICompatibleCompletion(model="llama3", provider="ollama")
             assert completion.base_url == "http://custom-ollama:11434/v1"
 
+    def test_llmman_base_url_normalized(self):
+        """Test llmman base URL is normalized to include /v1."""
+        with patch.dict(os.environ, {"LLMMAN_HOST": "http://custom-llmman:17434"}):
+            completion = OpenAICompatibleCompletion(model="qwen3.8", provider="llmman")
+            assert completion.base_url == "http://custom-llmman:17434/v1"
+
     def test_openrouter_headers(self):
         """Test OpenRouter has HTTP-Referer header."""
         with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}):
@@ -241,6 +265,21 @@ class TestLLMIntegration:
         assert isinstance(llm, OpenAICompatibleCompletion)
         assert llm.provider == "ollama"
         assert llm.model == "llama3"
+
+    def test_llm_creates_openai_compatible_for_llmman(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for llmman."""
+        llm = LLM(model="llmman/qwen3.8")
+        assert isinstance(llm, OpenAICompatibleCompletion)
+        assert llm.provider == "llmman"
+        assert llm.model == "qwen3.8"
+        assert llm.base_url == "http://localhost:17434/v1"
+
+    def test_llm_creates_openai_compatible_for_explicit_llmman(self):
+        """Test LLM factory routes an explicit llmman provider without a prefix."""
+        llm = LLM(model="qwen3.8", provider="llmman")
+        assert isinstance(llm, OpenAICompatibleCompletion)
+        assert llm.provider == "llmman"
+        assert llm.model == "qwen3.8"
 
     def test_llm_creates_openai_compatible_for_openrouter(self):
         """Test LLM factory creates OpenAICompatibleCompletion for OpenRouter."""

@@ -70,6 +70,13 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         api_key_required=False,
         default_api_key="ollama",
     ),
+    "llmman": ProviderConfig(
+        base_url="http://localhost:17434/v1",
+        api_key_env="LLMMAN_API_KEY",
+        base_url_env="LLMMAN_HOST",
+        api_key_required=False,
+        default_api_key="llmman",
+    ),
     "hosted_vllm": ProviderConfig(
         base_url="http://localhost:8000/v1",
         api_key_env="VLLM_API_KEY",
@@ -92,11 +99,11 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
 }
 
 
-def _normalize_ollama_base_url(base_url: str) -> str:
-    """Normalize Ollama base URL to ensure it ends with /v1.
+def _normalize_local_base_url(base_url: str) -> str:
+    """Ensure a local server base URL ends with /v1.
 
-    Ollama uses OLLAMA_HOST which may not include the /v1 suffix,
-    but the OpenAI-compatible endpoint requires it.
+    Hosts configured via OLLAMA_HOST or LLMMAN_HOST are bare host:port values,
+    but the OpenAI-compatible endpoint requires the /v1 suffix.
 
     Args:
         base_url: The base URL, potentially without /v1 suffix.
@@ -122,6 +129,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - deepseek: DeepSeek (https://deepseek.com)
         - ollama: Ollama local server (https://ollama.ai)
         - ollama_chat: Alias for ollama
+        - llmman: llmman local server (https://github.com/llmmanorg/llmman)
         - hosted_vllm: vLLM server (https://github.com/vllm-project/vllm)
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
@@ -222,8 +230,8 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         else:
             resolved = config.base_url
 
-        if provider in ("ollama", "ollama_chat"):
-            resolved = _normalize_ollama_base_url(resolved)
+        if provider in ("ollama", "ollama_chat", "llmman"):
+            resolved = _normalize_local_base_url(resolved)
 
         return resolved
 

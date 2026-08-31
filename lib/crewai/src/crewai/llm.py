@@ -341,6 +341,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "deepseek",
     "ollama",
     "ollama_chat",
+    "llmman",
     "hosted_vllm",
     "cerebras",
     "dashscope",
@@ -446,6 +447,7 @@ class LLM(BaseLLM):
                 "deepseek": "deepseek",
                 "ollama": "ollama",
                 "ollama_chat": "ollama_chat",
+                "llmman": "llmman",
                 "hosted_vllm": "hosted_vllm",
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
@@ -561,8 +563,8 @@ class LLM(BaseLLM):
         if provider == "deepseek":
             return model_lower.startswith("deepseek")
 
-        if provider == "ollama" or provider == "ollama_chat":
-            # Ollama accepts any local model name
+        if provider in ("ollama", "ollama_chat", "llmman"):
+            # Local servers accept any model name they can resolve
             return True
 
         if provider == "hosted_vllm":
@@ -704,6 +706,7 @@ class LLM(BaseLLM):
             "deepseek",
             "ollama",
             "ollama_chat",
+            "llmman",
             "hosted_vllm",
             "cerebras",
             "dashscope",

@@ -58,6 +58,12 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
             "API_BASE": "http://localhost:11434",
         }
     ],
+    "llmman": [
+        {
+            "default": True,
+            "API_BASE": "http://localhost:17434",
+        }
+    ],
     "bedrock": [
         {
             "prompt": "Enter your AWS Access Key ID (press Enter to skip)",
@@ -123,6 +129,7 @@ PROVIDERS: list[str] = [
     "groq",
     "huggingface",
     "ollama",
+    "llmman",
     "watson",
     "bedrock",
     "azure",
@@ -269,6 +276,7 @@ MODELS: dict[str, list[str]] = {
         "groq/gemma-7b-it",
     ],
     "ollama": ["ollama/llama3.1", "ollama/mixtral"],
+    "llmman": ["llmman/qwen3.8", "llmman/gemma4"],
     "watson": [
         "watsonx/meta-llama/llama-3-1-70b-instruct",
         "watsonx/meta-llama/llama-3-1-8b-instruct",
