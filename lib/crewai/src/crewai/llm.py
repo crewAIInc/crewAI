@@ -2378,9 +2378,9 @@ class LLM(BaseLLM):
         if "mistral" in self.model.lower():
             if cleaned_messages and cleaned_messages[-1]["role"] == "assistant":
                 return [
-                    *cleaned_messages,
+                    *cleaned_messages,  # type: ignore[list-item]
                     {"role": "user", "content": "Please continue."},
-                ]  # type: ignore[list-item]
+                ]
             return cleaned_messages  # type: ignore[return-value]
 
         # TODO: Remove this code after merging PR https://github.com/BerriAI/litellm/pull/10917
