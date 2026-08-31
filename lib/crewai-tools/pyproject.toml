@@ -68,6 +68,9 @@ scrapegraph-py = [
 linkup-sdk = [
     "linkup-sdk>=0.2.2",
 ]
+madeonsol-x402 = [
+    "madeonsol-x402>=1.28.1",
+]
 tavily-python = [
     "tavily-python~=0.7.14",
 ]
