@@ -25,7 +25,13 @@ def _embedded_python() -> str:
     )
 
 
-def _run_gate(*, title: str, body: str, issue_payloads: dict[int, dict]) -> list[list[str]]:
+def _run_gate(
+    *,
+    title: str,
+    body: str,
+    issue_payloads: dict[int, dict],
+    expect_exit: int | None = 0,
+) -> list[list[str]]:
     calls: list[list[str]] = []
 
     def fake_check_output(args: list[str], **_kwargs: object) -> str:
@@ -54,9 +60,13 @@ def _run_gate(*, title: str, body: str, issue_payloads: dict[int, dict]) -> list
         mock.patch("subprocess.check_output", side_effect=fake_check_output),
         mock.patch("subprocess.run", side_effect=fake_run),
     ):
-        with pytest.raises(SystemExit) as exited:
-            exec(compile(_embedded_python(), "<workflow>", "exec"), {})  # noqa: S102
-        assert exited.value.code == 0
+        compiled = compile(_embedded_python(), "<workflow>", "exec")
+        if expect_exit is None:
+            exec(compiled, {})  # noqa: S102
+        else:
+            with pytest.raises(SystemExit) as exited:
+                exec(compiled, {})  # noqa: S102
+            assert exited.value.code == expect_exit
     return calls
 
 
@@ -77,3 +87,15 @@ def test_open_issue_mention_blocks_close(body: str) -> None:
 
     assert not any(call[:3] == ["gh", "pr", "close"] for call in calls)
     assert any(call[:2] == ["gh", "api"] and call[2].endswith("/issues/123") for call in calls)
+
+
+def test_foreign_repo_reference_closes_pr() -> None:
+    calls = _run_gate(
+        title="feat: example",
+        body="other/repo#123",
+        issue_payloads={123: {"state": "open"}},
+        expect_exit=None,
+    )
+
+    assert any(call[:3] == ["gh", "pr", "close"] for call in calls)
+    assert not any(call[:2] == ["gh", "api"] for call in calls)

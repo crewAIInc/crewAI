@@ -47,7 +47,7 @@ jobs:
           )
 
           patterns = (
-              re.compile(r"#(\d+)\b"),
+              re.compile(r"(?<![\w./-])#(\d+)\b"),
               re.compile(rf"{re.escape(owner)}/{re.escape(name)}#(\d+)\b"),
               re.compile(
                   rf"https://github\.com/{re.escape(owner)}/{re.escape(name)}/issues/(\d+)\b"
