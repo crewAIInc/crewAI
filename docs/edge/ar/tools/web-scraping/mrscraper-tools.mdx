@@ -1,0 +1,128 @@
+---
+title: أدوات MrScraper
+description: استخدم MrScraper مع CrewAI لاستخراج بيانات المواقع والزحف إليها بموثوقية، وجمع بيانات الويب العامة وتحويلها إلى مخرجات منظمة ونظيفة لمسارات عمل AI.
+icon: spider
+mode: "wide"
+---
+
+# أدوات MrScraper
+
+يوفر [MrScraper](https://mrscraper.com) استكشاف الويب والاستخراج باستخدام AI وجلب الصفحات المعروضة ومسارات عمل scraper القابلة لإعادة الاستخدام. يتضمن تكامل CrewAI خمس عشرة أداة مستقلة وfactory لاختيار الإمكانات التي يحتاجها Agent فقط.
+
+## التثبيت
+
+ثبّت `crewai-tools`. يستخدم التكامل تبعيات HTTP الموجودة، لذلك لا يلزم تثبيت SDK منفصل لـ MrScraper.
+
+```shell
+uv add crewai-tools
+```
+
+عيّن رمز API الخاص بـ MrScraper كمتغير بيئة:
+
+```shell
+export MRSCRAPER_API_TOKEN="your-mrscraper-token"
+```
+
+احتفظ بالرمز في متغير بيئة أو مدير أسرار. لا تضعه في prompts أو أوصاف Task أو ملفات المصدر أو وسيطات الأدوات التي يمكن للنموذج رؤيتها.
+
+## البدء السريع
+
+تعيد factory الخاصة بـ toolkit جميع الأدوات الخمس عشرة افتراضيًا. يُفضّل اختيار أصغر مجموعة مناسبة حتى يمتلك Agent مجموعة أدوات مركزة.
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import create_mrscraper_toolkit
+
+researcher = Agent(
+    role="Web researcher",
+    goal="Find public product pages and extract structured product data",
+    backstory="You make focused, cost-aware web extraction calls.",
+    tools=create_mrscraper_toolkit(groups=["Discovery", "Extraction"]),
+)
+
+task = Task(
+    description="Find the relevant product page and extract its name and price.",
+    expected_output="A concise summary containing the source URL, product name, and price.",
+    agent=researcher,
+)
+
+result = Crew(agents=[researcher], tasks=[task]).kickoff()
+```
+
+## الأدوات المتاحة
+
+| المجموعة | الأداة | الاستخدام | المدخلات الرئيسية |
+| --- | --- | --- | --- |
+| Account | `MrScraperGetAccountInfoTool` | فحص تفاصيل الحساب وحدود الاستخدام | لا يوجد |
+| Discovery | `MrScraperCrawlWebsiteUrlsTool` | اكتشاف عناوين URL بدءًا من موقع | `url`, `max_depth`, `max_pages`, `limit` |
+| Discovery | `MrScraperSearchGoogleSerpTool` | تنفيذ بحث Google SERP متزامن | `query`, `region`, `language`, `page` |
+| Extraction | `MrScraperExtractPageByPromptTool` | استخراج البيانات من صفحة واحدة باستخدام تعليمات AI | `url`, `prompt`, `output_schema`, `mode` |
+| Extraction | `MrScraperExtractListingsTool` | استخراج قوائم متكررة أو مقسمة إلى صفحات | `url`, `prompt`, `output_schema`, `max_pages` |
+| Extraction | `MrScraperExtractStructuredDataTool` | استخراج preset مدعوم للبيانات المنظمة | `url`, `category`, `mode` |
+| Extraction | `MrScraperFetchRenderedHtmlTool` | جلب HTML معروض باستخدام JavaScript أو Markdown أو cookies أو screenshots | `url`, `html`, `markdown`, `screenshot` |
+| Results | `MrScraperGetResultsTool` | عرض نتائج scraper مقسمة إلى صفحات | `scraper_id`, `page`, `page_size` |
+| Results | `MrScraperGetLatestResultsTool` | استرجاع أحدث نتائج scraper | `scraper_id`, `count` |
+| Results | `MrScraperGetResultDetailTool` | استرجاع نتيجة واحدة باستخدام المعرّف | `result_id` |
+| Scraper Creation | `MrScraperCreatePromptScraperTool` | إنشاء scraper قابل لإعادة الاستخدام يعتمد على prompt | `url`, `prompt`, `output_schema`, `mode` |
+| Scraper Creation | `MrScraperCreateListingScraperTool` | إنشاء listing scraper قابل لإعادة الاستخدام | `url`, `prompt`, `output_schema`, `max_pages` |
+| Scraper Creation | `MrScraperCreateWebsiteCrawlScraperTool` | إنشاء website crawl scraper قابل لإعادة الاستخدام | `url`, `max_depth`, `max_pages`, `limit` |
+| Scraper Runs | `MrScraperRunExistingScraperTool` | تشغيل AI scraper أو manual scraper حالي لعنوان URL واحد | `scraper_type`, `scraper_id`, `url` |
+| Scraper Runs | `MrScraperRunExistingScraperBatchTool` | تشغيل scraper حالي لعدة عناوين URL | `scraper_type`, `scraper_id`, `urls` |
+
+فئات البيانات المنظمة المدعومة هي `article` و`forumThread` و`hotel` و`jobPosting` و`post` و`product` و`property` و`restaurant` و`socialMediaProfile` و`tourAttraction`.
+
+## استخدام أداة واحدة مباشرة
+
+استخدم أداة واحدة عندما يحتاج Agent أو التطبيق إلى إمكانية واحدة فقط:
+
+```python
+from crewai_tools import MrScraperExtractPageByPromptTool
+
+tool = MrScraperExtractPageByPromptTool()
+result = tool.run(
+    url="https://example.com/products/123",
+    prompt="Extract the product name and current price",
+    output_schema={"name": "string", "price": "number"},
+)
+```
+
+يمكنك أيضًا تمرير `api_token="..."` إلى constructor الأداة أو factory الخاصة بـ toolkit. يُوصى باستخدام بيانات الاعتماد المعتمدة على البيئة لأنه يسهل إبقاؤها خارج كود التطبيق.
+
+## اختيار إمكانات Toolkit
+
+اختر الأدوات حسب اسم المجموعة دون حساسية لحالة الأحرف أو حسب الاسم العام الدقيق للأداة. لا تمرر `groups` و`tool_names` معًا.
+
+```python
+from crewai_tools import create_mrscraper_toolkit
+
+# All tools share one configured HTTP client.
+all_tools = create_mrscraper_toolkit()
+
+read_tools = create_mrscraper_toolkit(groups=["Account", "Results"])
+
+selected_tools = create_mrscraper_toolkit(
+    tool_names=[
+        "mrscraper_search_google_serp",
+        "mrscraper_fetch_rendered_html",
+    ]
+)
+```
+
+المجموعات المتاحة هي `Account` و`Discovery` و`Extraction` و`Results` و`Scraper Creation` و`Scraper Runs`.
+
+## القيم المعادة
+
+تُعاد كائنات JSON والمصفوفات والقيم scalar كنص JSON مضغوط حتى تظل مستقرة عند تمريرها عبر Agents وTasks وFlows. تُعاد استجابات HTML والنصوص العادية الأخرى كما يوفرها MrScraper.
+
+## إرشادات التشغيل
+
+- اجعل حدود صفحات الزحف ودفعات URL صغيرة بقدر ما تسمح به Task. يمكن أن تستهلك عمليات الزحف واستدعاءات المتصفح المعروض واستخراج القوائم والتشغيل بالدفعات قدرًا كبيرًا من حصة API.
+- لا تُعاد محاولة طلبات POST تلقائيًا لأن ذلك قد يؤدي إلى إنشاء jobs مكررة. تُرسل الحقول المتعلقة بإعادة المحاولة فقط للعمليات التي تدعمها.
+- استخرج فقط المحتوى المصرح لك بالوصول إليه. راجع شروط الموقع المستهدف ومتطلبات الخصوصية وسياسة robots والقانون المعمول به، خصوصًا للبيانات الشخصية أو المحمية بتسجيل الدخول.
+
+## استكشاف الأخطاء وإصلاحها
+
+- **الرمز مفقود:** عيّن قيمة غير فارغة لـ `MRSCRAPER_API_TOKEN` قبل إنشاء الأداة.
+- **وسيطات غير صالحة:** ترفض أدوات MrScraper المدخلات غير الموثقة. تحقق من schema الأداة واستخدم أسماء الحقول المقبولة بدقة.
+- **استدعاءات بطيئة:** قلّل `max_pages` أو عمق الزحف أو حجم الدفعة أو مخرجات المتصفح المطلوبة عند الحاجة.
+- **تنسيق إخراج غير متوقع:** يعيد بحث SERP صيغة JSON افتراضيًا؛ عيّن `format="html"` فقط عند الحاجة إلى HTML خام.

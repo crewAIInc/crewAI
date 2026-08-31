@@ -1,0 +1,128 @@
+---
+title: MrScraper Tools
+description: Use MrScraper with CrewAI to reliably scrape and crawl websites, extract public web data, and turn it into clean, structured output for AI workflows.
+icon: spider
+mode: "wide"
+---
+
+# MrScraper Tools
+
+[MrScraper](https://mrscraper.com) provides web discovery, AI extraction, rendered-page fetching, and reusable scraper workflows. The CrewAI integration includes 15 independent tools and a factory for selecting only the capabilities an agent needs.
+
+## Installation
+
+Install `crewai-tools`. The integration uses its existing HTTP dependencies, so no separate MrScraper SDK is required.
+
+```shell
+uv add crewai-tools
+```
+
+Set your MrScraper API token as an environment variable:
+
+```shell
+export MRSCRAPER_API_TOKEN="your-mrscraper-token"
+```
+
+Keep the token in an environment variable or secret manager. Do not place it in prompts, task descriptions, source files, or tool arguments that the model can see.
+
+## Quick start
+
+The toolkit factory returns all 15 tools by default. Prefer selecting the smallest relevant group so the agent has a focused toolset.
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import create_mrscraper_toolkit
+
+researcher = Agent(
+    role="Web researcher",
+    goal="Find public product pages and extract structured product data",
+    backstory="You make focused, cost-aware web extraction calls.",
+    tools=create_mrscraper_toolkit(groups=["Discovery", "Extraction"]),
+)
+
+task = Task(
+    description="Find the relevant product page and extract its name and price.",
+    expected_output="A concise summary containing the source URL, product name, and price.",
+    agent=researcher,
+)
+
+result = Crew(agents=[researcher], tasks=[task]).kickoff()
+```
+
+## Available tools
+
+| Group | Tool | Use it for | Main inputs |
+| --- | --- | --- | --- |
+| Account | `MrScraperGetAccountInfoTool` | Inspect account details and usage limits | None |
+| Discovery | `MrScraperCrawlWebsiteUrlsTool` | Discover URLs starting from a website | `url`, `max_depth`, `max_pages`, `limit` |
+| Discovery | `MrScraperSearchGoogleSerpTool` | Run a synchronous Google SERP search | `query`, `region`, `language`, `page` |
+| Extraction | `MrScraperExtractPageByPromptTool` | Extract data from one page with AI instructions | `url`, `prompt`, `output_schema`, `mode` |
+| Extraction | `MrScraperExtractListingsTool` | Extract repeated or paginated listings | `url`, `prompt`, `output_schema`, `max_pages` |
+| Extraction | `MrScraperExtractStructuredDataTool` | Extract a supported structured-data preset | `url`, `category`, `mode` |
+| Extraction | `MrScraperFetchRenderedHtmlTool` | Fetch JavaScript-rendered HTML, Markdown, cookies, or screenshots | `url`, `html`, `markdown`, `screenshot` |
+| Results | `MrScraperGetResultsTool` | List paginated results for a scraper | `scraper_id`, `page`, `page_size` |
+| Results | `MrScraperGetLatestResultsTool` | Retrieve the newest results for a scraper | `scraper_id`, `count` |
+| Results | `MrScraperGetResultDetailTool` | Retrieve one result by ID | `result_id` |
+| Scraper Creation | `MrScraperCreatePromptScraperTool` | Create a reusable prompt-based scraper | `url`, `prompt`, `output_schema`, `mode` |
+| Scraper Creation | `MrScraperCreateListingScraperTool` | Create a reusable listing scraper | `url`, `prompt`, `output_schema`, `max_pages` |
+| Scraper Creation | `MrScraperCreateWebsiteCrawlScraperTool` | Create a reusable website crawl scraper | `url`, `max_depth`, `max_pages`, `limit` |
+| Scraper Runs | `MrScraperRunExistingScraperTool` | Run an existing AI or manual scraper for one URL | `scraper_type`, `scraper_id`, `url` |
+| Scraper Runs | `MrScraperRunExistingScraperBatchTool` | Run an existing scraper for multiple URLs | `scraper_type`, `scraper_id`, `urls` |
+
+The supported structured-data categories are `article`, `forumThread`, `hotel`, `jobPosting`, `post`, `product`, `property`, `restaurant`, `socialMediaProfile`, and `tourAttraction`.
+
+## Use one tool directly
+
+Use a single tool when the agent or application only needs one capability:
+
+```python
+from crewai_tools import MrScraperExtractPageByPromptTool
+
+tool = MrScraperExtractPageByPromptTool()
+result = tool.run(
+    url="https://example.com/products/123",
+    prompt="Extract the product name and current price",
+    output_schema={"name": "string", "price": "number"},
+)
+```
+
+You can also pass `api_token="..."` to a tool constructor or the toolkit factory. Environment-based credentials are recommended because they are easier to keep out of application code.
+
+## Select toolkit capabilities
+
+Select tools by case-insensitive group name or by exact public tool name. Do not pass `groups` and `tool_names` together.
+
+```python
+from crewai_tools import create_mrscraper_toolkit
+
+# All tools share one configured HTTP client.
+all_tools = create_mrscraper_toolkit()
+
+read_tools = create_mrscraper_toolkit(groups=["Account", "Results"])
+
+selected_tools = create_mrscraper_toolkit(
+    tool_names=[
+        "mrscraper_search_google_serp",
+        "mrscraper_fetch_rendered_html",
+    ]
+)
+```
+
+Available groups are `Account`, `Discovery`, `Extraction`, `Results`, `Scraper Creation`, and `Scraper Runs`.
+
+## Return values
+
+JSON objects, arrays, and scalar values are returned as compact JSON text so they remain stable when passed through Agents, Tasks, and Flows. HTML and other plain-text responses are returned as provided by MrScraper.
+
+## Operational guidance
+
+- Keep crawl page limits and URL batches as small as the task permits. Crawls, rendered browser calls, listing extraction, and batch runs can consume significant API allowance.
+- POST requests are not automatically retried because retrying can create duplicate jobs. Retry-related fields are sent only for operations that support them.
+- Only scrape content you are authorized to access. Review the target site's terms, privacy requirements, robots policy, and applicable law, especially for login-protected or personal data.
+
+## Troubleshooting
+
+- **Missing token:** Set a nonblank `MRSCRAPER_API_TOKEN` before constructing a tool.
+- **Invalid arguments:** MrScraper tools reject undocumented inputs. Check the tool schema and use the exact accepted field names.
+- **Slow calls:** Reduce `max_pages`, crawl depth, batch size, or requested browser outputs where appropriate.
+- **Unexpected output format:** SERP searches return JSON by default; set `format="html"` only when raw HTML is required.

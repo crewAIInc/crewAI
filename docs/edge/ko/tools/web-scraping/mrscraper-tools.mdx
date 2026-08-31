@@ -1,0 +1,128 @@
+---
+title: MrScraper 도구
+description: CrewAI에서 MrScraper를 사용하여 웹사이트를 안정적으로 scraping 및 crawling하고, 공개 웹 데이터를 추출하여 AI 워크플로를 위한 깔끔한 구조화 결과로 변환합니다.
+icon: spider
+mode: "wide"
+---
+
+# MrScraper 도구
+
+[MrScraper](https://mrscraper.com)는 웹 탐색, AI 추출, 렌더링된 페이지 가져오기 및 재사용 가능한 스크래퍼 워크플로를 제공합니다. CrewAI 통합에는 15개의 독립적인 도구와 Agent에 필요한 기능만 선택할 수 있는 factory가 포함되어 있습니다.
+
+## 설치
+
+`crewai-tools`를 설치합니다. 이 통합은 기존 HTTP 종속성을 사용하므로 별도의 MrScraper SDK가 필요하지 않습니다.
+
+```shell
+uv add crewai-tools
+```
+
+MrScraper API 토큰을 환경 변수로 설정합니다.
+
+```shell
+export MRSCRAPER_API_TOKEN="your-mrscraper-token"
+```
+
+토큰은 환경 변수나 비밀 관리자에 보관하세요. 모델이 볼 수 있는 prompt, Task 설명, 소스 파일 또는 도구 인수에 토큰을 넣지 마세요.
+
+## 빠른 시작
+
+toolkit factory는 기본적으로 15개 도구를 모두 반환합니다. Agent가 집중된 도구 세트를 갖도록 가장 작은 관련 그룹을 선택하는 것이 좋습니다.
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import create_mrscraper_toolkit
+
+researcher = Agent(
+    role="Web researcher",
+    goal="Find public product pages and extract structured product data",
+    backstory="You make focused, cost-aware web extraction calls.",
+    tools=create_mrscraper_toolkit(groups=["Discovery", "Extraction"]),
+)
+
+task = Task(
+    description="Find the relevant product page and extract its name and price.",
+    expected_output="A concise summary containing the source URL, product name, and price.",
+    agent=researcher,
+)
+
+result = Crew(agents=[researcher], tasks=[task]).kickoff()
+```
+
+## 사용 가능한 도구
+
+| 그룹 | 도구 | 용도 | 주요 입력 |
+| --- | --- | --- | --- |
+| Account | `MrScraperGetAccountInfoTool` | 계정 세부 정보 및 사용 한도 확인 | 없음 |
+| Discovery | `MrScraperCrawlWebsiteUrlsTool` | 웹사이트에서 시작하여 URL 탐색 | `url`, `max_depth`, `max_pages`, `limit` |
+| Discovery | `MrScraperSearchGoogleSerpTool` | 동기식 Google SERP 검색 실행 | `query`, `region`, `language`, `page` |
+| Extraction | `MrScraperExtractPageByPromptTool` | AI 지침을 사용하여 단일 페이지에서 데이터 추출 | `url`, `prompt`, `output_schema`, `mode` |
+| Extraction | `MrScraperExtractListingsTool` | 반복되거나 페이지가 나뉜 목록 추출 | `url`, `prompt`, `output_schema`, `max_pages` |
+| Extraction | `MrScraperExtractStructuredDataTool` | 지원되는 구조화 데이터 preset 추출 | `url`, `category`, `mode` |
+| Extraction | `MrScraperFetchRenderedHtmlTool` | JavaScript로 렌더링된 HTML, Markdown, cookie 또는 screenshot 가져오기 | `url`, `html`, `markdown`, `screenshot` |
+| Results | `MrScraperGetResultsTool` | scraper의 페이지별 결과 목록 조회 | `scraper_id`, `page`, `page_size` |
+| Results | `MrScraperGetLatestResultsTool` | scraper의 최신 결과 조회 | `scraper_id`, `count` |
+| Results | `MrScraperGetResultDetailTool` | ID로 단일 결과 조회 | `result_id` |
+| Scraper Creation | `MrScraperCreatePromptScraperTool` | 재사용 가능한 prompt 기반 scraper 생성 | `url`, `prompt`, `output_schema`, `mode` |
+| Scraper Creation | `MrScraperCreateListingScraperTool` | 재사용 가능한 listing scraper 생성 | `url`, `prompt`, `output_schema`, `max_pages` |
+| Scraper Creation | `MrScraperCreateWebsiteCrawlScraperTool` | 재사용 가능한 웹사이트 crawl scraper 생성 | `url`, `max_depth`, `max_pages`, `limit` |
+| Scraper Runs | `MrScraperRunExistingScraperTool` | 하나의 URL에 기존 AI 또는 manual scraper 실행 | `scraper_type`, `scraper_id`, `url` |
+| Scraper Runs | `MrScraperRunExistingScraperBatchTool` | 여러 URL에 기존 scraper 실행 | `scraper_type`, `scraper_id`, `urls` |
+
+지원되는 구조화 데이터 category는 `article`, `forumThread`, `hotel`, `jobPosting`, `post`, `product`, `property`, `restaurant`, `socialMediaProfile`, `tourAttraction`입니다.
+
+## 단일 도구 직접 사용
+
+Agent나 애플리케이션에 하나의 기능만 필요할 때는 단일 도구를 사용하세요.
+
+```python
+from crewai_tools import MrScraperExtractPageByPromptTool
+
+tool = MrScraperExtractPageByPromptTool()
+result = tool.run(
+    url="https://example.com/products/123",
+    prompt="Extract the product name and current price",
+    output_schema={"name": "string", "price": "number"},
+)
+```
+
+도구 생성자나 toolkit factory에 `api_token="..."`을 전달할 수도 있습니다. 환경 기반 자격 증명은 애플리케이션 코드 외부에 보관하기 더 쉬우므로 권장됩니다.
+
+## Toolkit 기능 선택
+
+대소문자를 구분하지 않는 그룹 이름이나 정확한 공개 도구 이름으로 도구를 선택합니다. `groups`와 `tool_names`를 함께 전달하지 마세요.
+
+```python
+from crewai_tools import create_mrscraper_toolkit
+
+# All tools share one configured HTTP client.
+all_tools = create_mrscraper_toolkit()
+
+read_tools = create_mrscraper_toolkit(groups=["Account", "Results"])
+
+selected_tools = create_mrscraper_toolkit(
+    tool_names=[
+        "mrscraper_search_google_serp",
+        "mrscraper_fetch_rendered_html",
+    ]
+)
+```
+
+사용 가능한 그룹은 `Account`, `Discovery`, `Extraction`, `Results`, `Scraper Creation`, `Scraper Runs`입니다.
+
+## 반환값
+
+JSON 객체, 배열 및 scalar 값은 Agent, Task 및 Flow를 통과할 때 안정적으로 유지되도록 압축된 JSON 텍스트로 반환됩니다. HTML 및 기타 일반 텍스트 응답은 MrScraper가 제공한 그대로 반환됩니다.
+
+## 운영 지침
+
+- crawl 페이지 제한과 URL batch는 Task에 필요한 만큼만 작게 유지하세요. crawl, 렌더링된 browser 호출, listing 추출 및 batch 실행은 상당한 API 할당량을 소비할 수 있습니다.
+- POST 요청은 중복 job을 생성할 수 있으므로 자동으로 재시도되지 않습니다. 재시도 관련 필드는 이를 지원하는 작업에만 전송됩니다.
+- 접근 권한이 있는 콘텐츠만 scraping하세요. 특히 login으로 보호되거나 개인 데이터가 포함된 경우 대상 사이트의 약관, 개인정보 보호 요구 사항, robots 정책 및 관련 법률을 검토하세요.
+
+## 문제 해결
+
+- **토큰 누락:** 도구를 생성하기 전에 비어 있지 않은 `MRSCRAPER_API_TOKEN`을 설정하세요.
+- **잘못된 인수:** MrScraper 도구는 문서화되지 않은 입력을 거부합니다. 도구 schema를 확인하고 허용된 정확한 필드 이름을 사용하세요.
+- **느린 호출:** 필요에 따라 `max_pages`, crawl 깊이, batch 크기 또는 요청된 browser 출력을 줄이세요.
+- **예상치 못한 출력 형식:** SERP 검색은 기본적으로 JSON을 반환합니다. 원시 HTML이 필요한 경우에만 `format="html"`을 설정하세요.
