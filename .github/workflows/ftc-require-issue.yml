@@ -14,10 +14,13 @@ concurrency:
 
 jobs:
   require-issue:
+    # Allow-list returning contributors. FIRST_TIMER / FIRST_TIME_CONTRIBUTOR
+    # are often NONE on pull_request_target at opened time, which skipped the
+    # previous deny-list and left first-timer PRs open.
     if: >
       github.event.pull_request.user.type != 'Bot' &&
-      contains(fromJSON('["FIRST_TIME_CONTRIBUTOR","FIRST_TIMER"]'),
-               github.event.pull_request.author_association)
+      !contains(fromJSON('["MEMBER","OWNER","COLLABORATOR","CONTRIBUTOR"]'),
+                github.event.pull_request.author_association)
     runs-on: ubuntu-latest
     steps:
       - name: Require a closing-keyword issue
@@ -25,6 +28,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
+          AUTHOR_ASSOCIATION: ${{ github.event.pull_request.author_association }}
         run: |
           python3 << 'PY'
           import json
@@ -36,6 +40,11 @@ jobs:
           repo = os.environ["REPO"]
           pr_number = os.environ["PR_NUMBER"]
           owner, name = repo.split("/", 1)
+          print(
+              "author_association=",
+              os.environ.get("AUTHOR_ASSOCIATION", ""),
+              sep="",
+          )
 
           keyword = r"(?:close[sd]?|fix(?:es|ed)?|resolve[sd]?)"
           patterns = (
@@ -51,7 +60,7 @@ jobs:
                   subprocess.check_output(["gh", *args], text=True)
               )
 
-          def is_repo_issue(number: int) -> bool:
+          def is_open_repo_issue(number: int) -> bool:
               result = subprocess.run(
                   ["gh", "api", f"repos/{repo}/issues/{number}"],
                   capture_output=True,
@@ -64,7 +73,10 @@ jobs:
                   raise RuntimeError(
                       f"GitHub API error looking up #{number}: {stderr}"
                   )
-              return "pull_request" not in json.loads(result.stdout)
+              payload = json.loads(result.stdout)
+              if "pull_request" in payload:
+                  return False
+              return (payload.get("state") or "").lower() == "open"
 
           pr = gh_json(
               "pr", "view", pr_number, "--repo", repo, "--json", "title,body,state"
@@ -75,7 +87,7 @@ jobs:
               for pattern in patterns
               for match in pattern.findall(text)
           }
-          if any(is_repo_issue(number) for number in sorted(candidates)):
+          if any(is_open_repo_issue(number) for number in sorted(candidates)):
               sys.exit(0)
 
           if (pr.get("state") or "").upper() == "CLOSED":
@@ -83,9 +95,9 @@ jobs:
 
           comment = f"""Thanks for the pull request.
           
-          First-time contributors need an associated issue before we can review a PR.
+          First-time contributors need an associated open issue before we can review a PR.
           
-          1. Open an issue with a [template](https://github.com/{repo}/issues/new/choose), or pick an existing one.
+          1. Open an issue with a [template](https://github.com/{repo}/issues/new/choose), or pick an existing open one.
           2. Open a new PR (or reopen this one) whose title or body includes a closing keyword, for example `Fixes #123`.
           
           See the [contributing guide](https://github.com/{repo}/blob/main/.github/CONTRIBUTING.md).
