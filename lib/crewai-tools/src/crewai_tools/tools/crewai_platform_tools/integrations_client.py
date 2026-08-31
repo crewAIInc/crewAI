@@ -17,20 +17,16 @@ class IntegrationsResponse(Protocol):
     @property
     def ok(self) -> bool:
         """Return whether the request succeeded."""
-        ...
 
     @property
     def status_code(self) -> int:
         """Return the HTTP response status code."""
-        ...
 
     def json(self) -> Any:
         """Decode the response body as JSON."""
-        ...
 
     def raise_for_status(self) -> None:
         """Raise an error when the request failed."""
-        ...
 
 
 class IntegrationsClient(Protocol):
@@ -38,13 +34,11 @@ class IntegrationsClient(Protocol):
 
     def get_actions(self, apps: list[str]) -> IntegrationsResponse:
         """Get the actions available for the selected applications."""
-        ...
 
     def execute_action(
         self, action_name: str, arguments: dict[str, Any]
     ) -> IntegrationsResponse:
         """Execute an action with the given arguments."""
-        ...
 
 
 class LegacyClient:
