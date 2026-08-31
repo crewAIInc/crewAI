@@ -13789,6 +13789,14 @@
                         ]
                       },
                       {
+                        "group": "Frontend",
+                        "icon": "browser",
+                        "pages": [
+                          "edge/pt-BR/guides/frontend/overview",
+                          "edge/pt-BR/guides/frontend/channels"
+                        ]
+                      },
+                      {
                         "group": "Ferramentas",
                         "icon": "wrench",
                         "pages": [
@@ -26493,6 +26501,14 @@
                           "edge/ko/guides/flows/mastering-flow-state",
                           "edge/ko/guides/flows/conversational-flows",
                           "edge/ko/guides/flows/inputs-id-deprecation"
+                        ]
+                      },
+                      {
+                        "group": "Frontend",
+                        "icon": "browser",
+                        "pages": [
+                          "edge/ko/guides/frontend/overview",
+                          "edge/ko/guides/frontend/channels"
                         ]
                       },
                       {
@@ -39632,6 +39648,14 @@
                           "edge/ar/guides/flows/mastering-flow-state",
                           "edge/ar/guides/flows/conversational-flows",
                           "edge/ar/guides/flows/inputs-id-deprecation"
+                        ]
+                      },
+                      {
+                        "group": "Frontend",
+                        "icon": "browser",
+                        "pages": [
+                          "edge/ar/guides/frontend/overview",
+                          "edge/ar/guides/frontend/channels"
                         ]
                       },
                       {
