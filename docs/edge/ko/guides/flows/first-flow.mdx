@@ -135,7 +135,7 @@ crewai flow add-crew content-crew
 }
 ```
 
-`provider/model-id`를 사용하는 모델로 바꾸세요. 예: `openai/gpt-4o`, `gemini/gemini-2.0-flash-001`, `anthropic/claude-sonnet-4-6`.
+`provider/model-id`를 사용하는 모델로 바꾸세요. 예: `openai/gpt-4o`, `gemini/gemini-3.7-flash`, `anthropic/claude-sonnet-4-6`.
 
 3. `src/guide_creator_flow/crews/content_crew/crew.jsonc`를 만듭니다:
 
@@ -481,7 +481,7 @@ Flow를 사용하면 간단하고 구조화된 응답이 필요할 때 언어 �
 
 ```python
 llm = LLM(
-    model="model-id-here",  # gpt-4o, gemini-2.0-flash, anthropic/claude...
+    model="model-id-here",  # gpt-4o, gemini/gemini-3.7-flash, anthropic/claude...
     response_format=GuideOutline
 )
 response = llm.call(messages=messages)
