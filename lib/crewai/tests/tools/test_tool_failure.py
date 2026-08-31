@@ -1697,18 +1697,16 @@ class TestPlatformActionTool:
         import crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool as mod
 
         return mod.CrewAIPlatformActionTool(
-            description="Send a Slack message",
-            app="slack",
-            action_name="slackbot_send_message",
-            action_schema={
-                "function": {
-                    "name": "slackbot_send_message",
-                    "parameters": {
-                        "properties": {"channel": {"type": "string"}},
-                        "required": [],
-                    },
-                }
-            },
+            platform_tool=mod.PlatformTool(
+                application="slack",
+                tool="slackbot_send_message",
+                description="Send a Slack message",
+                input_schema={
+                    "properties": {"channel": {"type": "string"}},
+                    "required": [],
+                },
+            ),
+            client=mod.LegacyIntegrationsClient(),
         )
 
     def test_non_ok_response_becomes_a_tool_failure(self, monkeypatch) -> None:  # noqa: ANN001
@@ -1725,7 +1723,7 @@ class TestPlatformActionTool:
         monkeypatch.setattr(mod.requests, "post", Mock(return_value=response))
         monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "t")
 
-        result = self._tool()._run(channel="#joao-message")
+        result = self._tool().run(channel="#joao-message")
 
         assert isinstance(result, ToolFailure)
         assert "channel_not_found" in result.message
@@ -1742,7 +1740,7 @@ class TestPlatformActionTool:
         monkeypatch.setattr(mod.requests, "post", Mock(return_value=response))
         monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "t")
 
-        result = self._tool()._run(channel="#general")
+        result = self._tool().run(channel="#general")
 
         assert not isinstance(result, ToolFailure)
         assert "1234.5678" in result

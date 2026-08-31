@@ -1,14 +1,12 @@
-import logging
-
 from crewai.tools import BaseTool
 
 from crewai_tools.adapters.tool_collection import ToolCollection
-from crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder import (
-    CrewaiPlatformToolBuilder,
+from crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool import (
+    ClipperClient,
+    CrewAIPlatformActionTool,
+    LegacyIntegrationsClient,
 )
-
-
-logger = logging.getLogger(__name__)
+from crewai_tools.tools.crewai_platform_tools.platform_tool import PlatformTool
 
 
 def CrewaiPlatformTools(  # noqa: N802
@@ -17,11 +15,22 @@ def CrewaiPlatformTools(  # noqa: N802
     """Factory function that returns crewai platform tools.
 
     Args:
-        apps: List of platform apps to get tools that are available on the platform.
+        apps: Platform application selectors.
 
     Returns:
-        A list of BaseTool instances for platform actions
+        A list of platform tools.
     """
-    builder = CrewaiPlatformToolBuilder(apps=apps)
+    tools: list[BaseTool] = []
+    for app in apps:
+        selector = PlatformTool.from_selector(app)
+        client = (
+            ClipperClient()
+            if selector.connection_id is not None
+            else LegacyIntegrationsClient()
+        )
+        tools.extend(
+            CrewAIPlatformActionTool(platform_tool=tool, client=client)
+            for tool in client.list_tools(selector)
+        )
 
-    return builder.tools()  # type: ignore
+    return ToolCollection(tools)
