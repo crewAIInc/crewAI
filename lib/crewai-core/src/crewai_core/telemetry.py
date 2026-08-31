@@ -32,7 +32,11 @@ from opentelemetry.trace import Span, Status, StatusCode
 from typing_extensions import Self
 
 from crewai_core.project import get_project_id
-from crewai_core.runtime_env import detect_coding_agent, detect_runtime_context
+from crewai_core.runtime_env import (
+    detect_coding_agent,
+    detect_cpu_band,
+    detect_runtime_context,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -135,12 +139,16 @@ def common_span_attributes() -> dict[str, str]:
     imports ``crewai``, still reports the same process-wide context.
 
     Returns:
-        Attributes to stamp on every span. ``project_id`` is omitted for
-        projects that do not declare one.
+        Attributes to stamp on every span. ``project_id`` is always present and
+        is the empty string whenever no id is available -- both for projects that
+        declare none and when the lookup itself failed, which are deliberately
+        indistinguishable here because neither yields an id. See the comment at
+        the assignment for why empty and *absent* must stay distinct.
     """
     attributes = {
         "coding_agent": detect_coding_agent(),
         "runtime_context": detect_runtime_context(),
+        "cpu_band": detect_cpu_band(),
     }
 
     try:
@@ -151,8 +159,15 @@ def common_span_attributes() -> dict[str, str]:
         logger.debug("Failed to read project id: %s", e)
         project_id = None
 
-    if project_id:
-        attributes["project_id"] = project_id
+    # Always set the key, even when empty. Absent and empty mean different things
+    # and only this distinction can tell them apart: absent means the client is too
+    # old to report a project id at all, empty means the client asked and the project
+    # declares none -- or the lookup failed, which lands here too and is treated the
+    # same, since an unreadable pyproject.toml also means no id is available.
+    # Collapsing empty into "absent" makes the share of clients that COULD have
+    # reported one unknowable, and that share is the denominator every attribution
+    # rate needs.
+    attributes["project_id"] = project_id or ""
 
     return attributes
 
@@ -260,18 +275,6 @@ class Telemetry:
         """
         self.trace_set = self.ready
 
-    def _safe_telemetry_operation(
-        self, operation: Callable[[], Span | None]
-    ) -> Span | None:
-        """Run a span-returning telemetry operation, swallowing failures."""
-        if not self._should_execute_telemetry():
-            return None
-        try:
-            return operation()
-        except Exception as e:
-            logger.debug("Telemetry operation failed: %s", e)
-            return None
-
     def _safe_telemetry_procedure(self, operation: Callable[[], None]) -> None:
         """Run a void telemetry procedure, swallowing failures."""
         if not self._should_execute_telemetry():
@@ -352,6 +355,39 @@ class Telemetry:
         self._safe_telemetry_procedure(_operation)
         self.feature_usage_span("deploy:created")
 
+    def crew_deployment_created_span(
+        self, uuid: str | None = None, source: DeploySource = "cli"
+    ) -> None:
+        """Records that a crew deployment was confirmed created, with its uuid.
+
+        Distinct from :meth:`create_crew_deployment_span`, which fires *before*
+        the API call and so counts creation **attempts**. The uuid cannot be on
+        that span: the call that creates the deployment is the call that returns
+        the uuid, so it does not exist yet. Attribution therefore needs a second
+        span, emitted once the response has validated.
+
+        Emits no feature count on purpose. ``create_crew_deployment_span``
+        already emits ``deploy:created``; a second emit would double the
+        deployment count that origin-independent aggregation depends on.
+
+        Args:
+            uuid: The deployment that was created.
+            source: Where the deployment was initiated from.
+        """
+
+        from crewai_core.version import get_crewai_version
+
+        def _operation() -> None:
+            tracer = self.provider.get_tracer(TRACER_NAME)
+            span = tracer.start_span("Crew Deployment Created")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
+            if uuid:
+                self._add_attribute(span, "uuid", uuid)
+            self._add_attribute(span, "source", source)
+            close_span(span)
+
+        self._safe_telemetry_procedure(_operation)
+
     def get_crew_logs_span(
         self, uuid: str | None, log_type: str = "deployment"
     ) -> None:
@@ -394,6 +430,35 @@ class Telemetry:
             span = tracer.start_span("Feature Usage")
             self._add_attribute(span, "crewai_version", get_crewai_version())
             self._add_attribute(span, "feature", feature)
+            close_span(span)
+
+        self._safe_telemetry_procedure(_operation)
+
+    def project_created_span(self, kind: str, project_id: str | None) -> None:
+        """Records that the CLI scaffolded a new project.
+
+        Acquisition was previously only observable from a project's first *run*, which
+        misses every project created and never run and dates the rest to the wrong day.
+
+        ``created_project_id`` rather than ``project_id``: the ``project_id`` stamped on
+        every span by ``CommonAttributesSpanProcessor`` is read from the *current
+        working directory* and cached for the life of the process, so at scaffold time it
+        describes the directory the command was run from - not the project just minted a
+        line earlier. Two different things must not share one attribute name.
+
+        Args:
+            kind: What was scaffolded - "crew", "json_crew" or "flow".
+            project_id: The id just minted for the new project. Empty string when
+                minting failed, matching the convention for the common attribute.
+        """
+        from crewai_core.version import get_crewai_version
+
+        def _operation() -> None:
+            tracer = self.provider.get_tracer(TRACER_NAME)
+            span = tracer.start_span("Project Created")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
+            self._add_attribute(span, "kind", kind)
+            self._add_attribute(span, "created_project_id", project_id or "")
             close_span(span)
 
         self._safe_telemetry_procedure(_operation)
