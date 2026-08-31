@@ -148,7 +148,7 @@ Agentes de planejamento se beneficiam de modelos de raciocínio para pensamento 
 from crewai import Agent, Task, Crew, LLM
 
 # Modelo de raciocínio para planejamento estratégico
-manager_llm = LLM(model="gemini-2.5-flash-preview-05-20", temperature=0.1)
+manager_llm = LLM(model="gemini/gemini-3.7-flash", temperature=0.1)
 
 # Modelo criativo para gerar conteúdo
 content_llm = LLM(model="claude-3-5-sonnet-20241022", temperature=0.7)
@@ -413,7 +413,7 @@ Em vez de repetir o framework estratégico, segue um checklist tático para impl
     # Agentes gerenciadores ou de coordenação
     manager_agent = Agent(
         role="Project Manager",
-        llm=LLM(model="gemini-2.5-flash-preview-05-20"),
+        llm=LLM(model="gemini/gemini-3.7-flash"),
         # ... demais configs
     )
 
