@@ -1,114 +1,100 @@
-from unittest.mock import patch, Mock
-import os
+from unittest.mock import Mock, patch
 
-from crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool import (
-    CrewAIPlatformActionTool,
+import pytest
+
+from crewai_tools.tools.crewai_platform_tools._client import (
+    _PlatformToolInfo,
+    _PlatformToolsClient,
 )
 
 
-class TestCrewAIPlatformActionToolVerify:
-    """Test suite for SSL verification behavior based on CREWAI_FACTORY environment variable"""
+TOOL_INFO = _PlatformToolInfo(
+    app="test_app",
+    action="test_action",
+    connection_id=None,
+    description="Test action tool",
+    parameters={},
+)
 
-    def setup_method(self):
-        self.action_schema = {
-            "function": {
-                "name": "test_action",
-                "parameters": {
-                    "properties": {
-                        "test_param": {
-                            "type": "string",
-                            "description": "Test parameter"
-                        }
-                    },
-                    "required": []
-                }
-            }
-        }
 
-    def create_test_tool(self):
-        return CrewAIPlatformActionTool(
-            description="Test action tool",
-            app="test_app",
-            action_name="test_action",
-            action_schema=self.action_schema
-        )
+@patch.dict(
+    "os.environ",
+    {
+        "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+        "CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment_uuid",
+    },
+    clear=True,
+)
+@patch("crewai_tools.tools.crewai_platform_tools._client.requests.post")
+def test_client_executes_action(mock_post):
+    response = Mock(ok=True, status_code=200)
+    response.json.return_value = {"result": "success"}
+    mock_post.return_value = response
 
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"}, clear=True)
-    @patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool.requests.post")
-    def test_run_with_ssl_verification_default(self, mock_post):
-        """Test that _run uses SSL verification by default when CREWAI_FACTORY is not set"""
-        mock_response = Mock()
-        mock_response.ok = True
-        mock_response.json.return_value = {"result": "success"}
-        mock_post.return_value = mock_response
+    result = _PlatformToolsClient().execute_action(
+        TOOL_INFO,
+        {"test_param": "test_value"},
+    )
 
-        tool = self.create_test_tool()
-        tool._run(test_param="test_value")
+    mock_post.assert_called_once_with(
+        url=(
+            "https://app.crewai.com/clipper/v1/applications/"
+            "test_app/tools/test_action/execute"
+        ),
+        headers={
+            "Authorization": "Bearer test_token",
+            "X-Crewai-Deployment-Instance-Id": "deployment_uuid",
+            "Content-Type": "application/json",
+        },
+        json={"arguments": {"test_param": "test_value"}},
+        timeout=60,
+        verify=True,
+    )
+    assert result is response
 
-        mock_post.assert_called_once()
-        call_args = mock_post.call_args
-        assert call_args.kwargs["verify"] is True
 
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token", "CREWAI_FACTORY": "false"}, clear=True)
-    @patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool.requests.post")
-    def test_run_with_ssl_verification_factory_false(self, mock_post):
-        """Test that _run uses SSL verification when CREWAI_FACTORY is 'false'"""
-        mock_response = Mock()
-        mock_response.ok = True
-        mock_response.json.return_value = {"result": "success"}
-        mock_post.return_value = mock_response
+@patch.dict(
+    "os.environ",
+    {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"},
+    clear=True,
+)
+@patch("crewai_tools.tools.crewai_platform_tools._client.requests.post")
+def test_client_returns_action_error_response(mock_post):
+    response = Mock(ok=False, status_code=500)
+    response.json.return_value = {"error": "Action failed"}
+    mock_post.return_value = response
 
-        tool = self.create_test_tool()
-        tool._run(test_param="test_value")
+    result = _PlatformToolsClient().execute_action(TOOL_INFO, {})
 
-        mock_post.assert_called_once()
-        call_args = mock_post.call_args
-        assert call_args.kwargs["verify"] is True
+    assert result is response
 
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token", "CREWAI_FACTORY": "FALSE"}, clear=True)
-    @patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool.requests.post")
-    def test_run_with_ssl_verification_factory_false_uppercase(self, mock_post):
-        """Test that _run uses SSL verification when CREWAI_FACTORY is 'FALSE' (case-insensitive)"""
-        mock_response = Mock()
-        mock_response.ok = True
-        mock_response.json.return_value = {"result": "success"}
-        mock_post.return_value = mock_response
 
-        tool = self.create_test_tool()
-        tool._run(test_param="test_value")
+@pytest.mark.parametrize(
+    ("factory_value", "expected"),
+    [
+        (None, True),
+        ("false", True),
+        ("FALSE", True),
+        ("true", False),
+        ("TRUE", False),
+    ],
+)
+@patch("crewai_tools.tools.crewai_platform_tools._client.requests.post")
+def test_client_ssl_verification(
+    mock_post,
+    monkeypatch,
+    factory_value,
+    expected,
+):
+    monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "test_token")
+    if factory_value is None:
+        monkeypatch.delenv("CREWAI_FACTORY", raising=False)
+    else:
+        monkeypatch.setenv("CREWAI_FACTORY", factory_value)
+    response = Mock(ok=True, status_code=200)
+    response.json.return_value = {"result": "success"}
+    mock_post.return_value = response
 
-        mock_post.assert_called_once()
-        call_args = mock_post.call_args
-        assert call_args.kwargs["verify"] is True
+    _PlatformToolsClient().execute_action(TOOL_INFO, {})
 
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token", "CREWAI_FACTORY": "true"}, clear=True)
-    @patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool.requests.post")
-    def test_run_without_ssl_verification_factory_true(self, mock_post):
-        """Test that _run disables SSL verification when CREWAI_FACTORY is 'true'"""
-        mock_response = Mock()
-        mock_response.ok = True
-        mock_response.json.return_value = {"result": "success"}
-        mock_post.return_value = mock_response
-
-        tool = self.create_test_tool()
-        tool._run(test_param="test_value")
-
-        mock_post.assert_called_once()
-        call_args = mock_post.call_args
-        assert call_args.kwargs["verify"] is False
-
-    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token", "CREWAI_FACTORY": "TRUE"}, clear=True)
-    @patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool.requests.post")
-    def test_run_without_ssl_verification_factory_true_uppercase(self, mock_post):
-        """Test that _run disables SSL verification when CREWAI_FACTORY is 'TRUE' (case-insensitive)"""
-        mock_response = Mock()
-        mock_response.ok = True
-        mock_response.json.return_value = {"result": "success"}
-        mock_post.return_value = mock_response
-
-        tool = self.create_test_tool()
-        tool._run(test_param="test_value")
-
-        mock_post.assert_called_once()
-        call_args = mock_post.call_args
-        assert call_args.kwargs["verify"] is False
+    assert mock_post.call_args.kwargs["verify"] is expected

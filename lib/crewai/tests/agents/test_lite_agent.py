@@ -612,30 +612,27 @@ def test_lite_agent_with_invalid_llm():
 
 
 @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
-@patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool.requests.post")
-@patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get")
-@pytest.mark.vcr()
+@patch("crewai_tools.tools.crewai_platform_tools._client.requests.post")
+@patch("crewai_tools.tools.crewai_platform_tools._client.requests.get")
 def test_agent_kickoff_with_platform_tools(mock_get, mock_post):
     """Test that Agent.kickoff() properly integrates platform tools with LiteAgent"""
     mock_response = Mock()
     mock_response.raise_for_status.return_value = None
     mock_response.json.return_value = {
-        "actions": {
-            "github": [
-                {
-                    "name": "create_issue",
-                    "description": "Create a GitHub issue",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "title": {"type": "string", "description": "Issue title"},
-                            "body": {"type": "string", "description": "Issue body"},
-                        },
-                        "required": ["title"],
+        "data": [
+            {
+                "slug": "create_issue",
+                "description": "Create a GitHub issue",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string", "description": "Issue title"},
+                        "body": {"type": "string", "description": "Issue body"},
                     },
-                }
-            ]
-        }
+                    "required": ["title"],
+                },
+            }
+        ]
     }
     mock_get.return_value = mock_response
 
@@ -647,11 +644,22 @@ def test_agent_kickoff_with_platform_tools(mock_get, mock_post):
     }
     mock_post.return_value = mock_post_response
 
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.side_effect = [
+        "Thought: Create the issue\n"
+        "Action: github_create_issue\n"
+        'Action Input: {"title": "Test GitHub Issue", "body": "Test body"}',
+        "Thought: The issue was created\nFinal Answer: Issue created",
+    ]
+    mock_llm.supports_function_calling.return_value = False
+    mock_llm.stop = []
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics()
+
     agent = Agent(
         role="Test Agent",
         goal="Test goal",
         backstory="Test backstory",
-        llm=LLM(model="gpt-3.5-turbo"),
+        llm=mock_llm,
         apps=["github"],
         verbose=True
     )
@@ -660,6 +668,7 @@ def test_agent_kickoff_with_platform_tools(mock_get, mock_post):
 
     assert isinstance(result, LiteAgentOutput)
     assert result.raw is not None
+    mock_post.assert_called_once()
 
 
 @patch.dict("os.environ", {"EXA_API_KEY": "test_exa_key"})
