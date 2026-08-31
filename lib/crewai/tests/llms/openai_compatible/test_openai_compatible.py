@@ -73,6 +73,24 @@ class TestProviderRegistry:
         assert ollama.base_url == ollama_chat.base_url
         assert ollama.api_key_required == ollama_chat.api_key_required
 
+    def test_llmman_config(self):
+        """Test llmman provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["llmman"]
+        assert config.base_url == "http://localhost:17434/v1"
+        assert config.api_key_env == "LLMMAN_API_KEY"
+        assert config.base_url_env == "LLMMAN_HOST"
+        assert config.api_key_required is False
+        assert config.default_api_key == "llmman"
+
+    def test_llmman_port_does_not_collide(self):
+        """llmman must not reuse another local provider's default port."""
+        others = {
+            name: cfg.base_url
+            for name, cfg in OPENAI_COMPATIBLE_PROVIDERS.items()
+            if name != "llmman"
+        }
+        assert OPENAI_COMPATIBLE_PROVIDERS["llmman"].base_url not in others.values()
+
     def test_hosted_vllm_config(self):
         """Test hosted_vllm provider configuration."""
         config = OPENAI_COMPATIBLE_PROVIDERS["hosted_vllm"]

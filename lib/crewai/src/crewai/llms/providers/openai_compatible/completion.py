@@ -70,6 +70,13 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         api_key_required=False,
         default_api_key="ollama",
     ),
+    "llmman": ProviderConfig(
+        base_url="http://localhost:17434/v1",
+        api_key_env="LLMMAN_API_KEY",
+        base_url_env="LLMMAN_HOST",
+        api_key_required=False,
+        default_api_key="llmman",
+    ),
     "hosted_vllm": ProviderConfig(
         base_url="http://localhost:8000/v1",
         api_key_env="VLLM_API_KEY",
@@ -122,6 +129,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - deepseek: DeepSeek (https://deepseek.com)
         - ollama: Ollama local server (https://ollama.ai)
         - ollama_chat: Alias for ollama
+        - llmman: llmman local server (https://github.com/llmmanorg/llmman)
         - hosted_vllm: vLLM server (https://github.com/vllm-project/vllm)
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
@@ -222,7 +230,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         else:
             resolved = config.base_url
 
-        if provider in ("ollama", "ollama_chat"):
+        if provider in ("ollama", "ollama_chat", "llmman"):
             resolved = _normalize_ollama_base_url(resolved)
 
         return resolved
