@@ -1,37 +1,34 @@
-from unittest.mock import patch, Mock
 import os
+from unittest.mock import Mock, patch
 
 from crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool import (
     CrewAIPlatformActionTool,
 )
+from crewai_tools.tools.crewai_platform_tools.integrations_client import ToolInfo
 
 
 class TestCrewAIPlatformActionToolVerify:
     """Test suite for SSL verification behavior based on CREWAI_FACTORY environment variable"""
 
     def setup_method(self):
-        self.action_schema = {
-            "function": {
-                "name": "test_action",
-                "parameters": {
-                    "properties": {
-                        "test_param": {
-                            "type": "string",
-                            "description": "Test parameter"
-                        }
-                    },
-                    "required": []
-                }
-            }
-        }
+        self.tool_info = ToolInfo(
+            app="test_app",
+            action="test_action",
+            connection_id=None,
+            description="Test action tool",
+            parameters={
+                "properties": {
+                    "test_param": {
+                        "type": "string",
+                        "description": "Test parameter",
+                    }
+                },
+                "required": [],
+            },
+        )
 
     def create_test_tool(self):
-        return CrewAIPlatformActionTool(
-            description="Test action tool",
-            app="test_app",
-            action_name="test_action",
-            action_schema=self.action_schema
-        )
+        return CrewAIPlatformActionTool(self.tool_info)
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"}, clear=True)
     @patch("crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post")

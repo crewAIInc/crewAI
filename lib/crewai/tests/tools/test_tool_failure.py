@@ -1693,29 +1693,27 @@ class TestPlatformActionTool:
     """CrewAI AMP agentic-app actions -- the Slack case from the bug report."""
 
     @staticmethod
-    def _tool(response: Any) -> Any:
+    def _tool() -> Any:
         import crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool as mod
+        from crewai_tools.tools.crewai_platform_tools.integrations_client import ToolInfo
 
         return mod.CrewAIPlatformActionTool(
-            description="Send a Slack message",
-            app="slack",
-            action_name="slackbot_send_message",
-            action_schema={
-                "function": {
-                    "name": "slackbot_send_message",
-                    "parameters": {
-                        "properties": {"channel": {"type": "string"}},
-                        "required": [],
-                    },
-                }
-            },
-            integrations_client=SimpleNamespace(
-                execute_action=lambda _action_name, _arguments: response
-            ),
+            ToolInfo(
+                app="slack",
+                action="slackbot_send_message",
+                connection_id=None,
+                description="Send a Slack message",
+                parameters={
+                    "properties": {"channel": {"type": "string"}},
+                    "required": [],
+                },
+            )
         )
 
-    def test_non_ok_response_becomes_a_tool_failure(self) -> None:
+    def test_non_ok_response_becomes_a_tool_failure(self, monkeypatch) -> None:  # noqa: ANN001
         from unittest.mock import Mock
+
+        import crewai_tools.tools.crewai_platform_tools.integrations_client as client_mod
 
         response = Mock()
         response.ok = False
@@ -1723,21 +1721,27 @@ class TestPlatformActionTool:
         response.json.return_value = {
             "error": "Failed to execute action: Slack API error: channel_not_found"
         }
+        monkeypatch.setattr(client_mod.requests, "post", Mock(return_value=response))
+        monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "t")
 
-        result = self._tool(response)._run(channel="#joao-message")
+        result = self._tool()._run(channel="#joao-message")
 
         assert isinstance(result, ToolFailure)
         assert "channel_not_found" in result.message
         assert result.retryable is True
 
-    def test_ok_response_still_returns_json(self) -> None:
+    def test_ok_response_still_returns_json(self, monkeypatch) -> None:  # noqa: ANN001
         from unittest.mock import Mock
+
+        import crewai_tools.tools.crewai_platform_tools.integrations_client as client_mod
 
         response = Mock()
         response.ok = True
         response.json.return_value = {"ts": "1234.5678"}
+        monkeypatch.setattr(client_mod.requests, "post", Mock(return_value=response))
+        monkeypatch.setenv("CREWAI_PLATFORM_INTEGRATION_TOKEN", "t")
 
-        result = self._tool(response)._run(channel="#general")
+        result = self._tool()._run(channel="#general")
 
         assert not isinstance(result, ToolFailure)
         assert "1234.5678" in result
