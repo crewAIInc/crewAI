@@ -20,11 +20,11 @@ class TruthBearVerifyTool(BaseTool):
     TruthBearVerifyTool - Verify official facts with Bitcoin-anchored proof.
 
     Queries 180+ official data signals (FRED, USGS, SEC EDGAR, NOAA, EPA, etc.)
-    and returns verifiable results. Each record includes the source URL, a SHA-256
-    record_hash anchored to Bitcoin via OpenTimestamps, and a freshness stamp.
+    and returns verifiable results via the free preview endpoint. Each record
+    includes the source URL, a SHA-256 record_hash anchored to Bitcoin via
+    OpenTimestamps, and a freshness stamp.
 
-    No API key or signup required. Free preview endpoint used by default.
-    Paid tiers settle per call via x402 (USDC on Base).
+    No API key or signup required.
     """
 
     name: str = "Truth Bear Verify"
@@ -46,6 +46,9 @@ class TruthBearVerifyTool(BaseTool):
             )
             response.raise_for_status()
             data = response.json()
+
+            if not isinstance(data, dict):
+                return json.dumps(data, indent=2)
 
             parts = []
             if "value" in data:

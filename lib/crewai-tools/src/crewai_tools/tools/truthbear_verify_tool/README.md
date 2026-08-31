@@ -10,7 +10,7 @@ TruthBearVerifyTool lets CrewAI agents verify facts against 180+ official data s
 - A **SHA-256 record_hash** anchored to Bitcoin via daily Merkle tree + OpenTimestamps
 - A **freshness stamp** indicating when the data was last verified
 
-Screening-level factual grounding, not decision-grade advice.
+This tool uses the free preview endpoint. Screening-level factual grounding, not decision-grade advice.
 
 ## Installation
 
@@ -35,8 +35,6 @@ print(result)
 ## Environment Variables
 
 None required. The free preview endpoint is used by default.
-
-For paid tiers with 3-source cross-validation, payment settles automatically per call via x402 (USDC on Base) — no API key, no signup.
 
 ## Links
 
