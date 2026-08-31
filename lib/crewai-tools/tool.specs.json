@@ -15213,6 +15213,2077 @@
       }
     },
     {
+      "description": "Use this potentially expensive immediate Map crawl to discover website URLs. Use the website-crawl creation tool when the intent is to create a reusable scraper.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "MrScraper API token",
+          "name": "MRSCRAPER_API_TOKEN",
+          "required": true
+        }
+      ],
+      "humanized_name": "mrscraper_crawl_website_urls",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Discover URLs from a starting page.",
+        "properties": {},
+        "required": [],
+        "title": "MrScraperCrawlWebsiteUrlsTool",
+        "type": "object"
+      },
+      "name": "MrScraperCrawlWebsiteUrlsTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "additionalProperties": false,
+        "description": "Inputs shared by immediate and reusable website crawl tools.",
+        "properties": {
+          "exclude_patterns": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional pipe-separated regular expressions for URLs to exclude.",
+            "title": "Exclude Patterns"
+          },
+          "include_patterns": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional pipe-separated regular expressions for URLs to include.",
+            "title": "Include Patterns"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Maximum URLs to return; defaults to 50; minimum 1.",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "max_depth": {
+            "default": 2,
+            "description": "Maximum link depth to crawl; defaults to 2.",
+            "title": "Max Depth",
+            "type": "integer"
+          },
+          "max_pages": {
+            "default": 50,
+            "description": "Maximum pages to evaluate; defaults to 50.",
+            "title": "Max Pages",
+            "type": "integer"
+          },
+          "url": {
+            "description": "Required starting URL to crawl.",
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "MapScraperInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Use this to create a reusable Listing AI scraper for repeated or paginated items. Use extract_listings when the intent is immediate extraction.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "MrScraper API token",
+          "name": "MRSCRAPER_API_TOKEN",
+          "required": true
+        }
+      ],
+      "humanized_name": "mrscraper_create_listing_scraper",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Create a reusable Listing AI scraper.",
+        "properties": {},
+        "required": [],
+        "title": "MrScraperCreateListingScraperTool",
+        "type": "object"
+      },
+      "name": "MrScraperCreateListingScraperTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "additionalProperties": false,
+        "description": "Inputs shared by immediate and reusable listing scrapers.",
+        "properties": {
+          "max_pages": {
+            "default": 1,
+            "description": "Maximum pagination pages to scrape; defaults to 1; minimum 1.",
+            "minimum": 1,
+            "title": "Max Pages",
+            "type": "integer"
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional JSON object describing each expected listing item.",
+            "title": "Output Schema"
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional instructions describing each listing item to extract.",
+            "title": "Prompt"
+          },
+          "proxy_country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional ISO country code for the proxy.",
+            "title": "Proxy Country"
+          },
+          "url": {
+            "description": "Required listing page URL to scrape.",
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "ListingScraperInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Use this to create a reusable General AI scraper from a page, prompt, and optional output schema. Use extract_page_by_prompt for immediate one-page extraction intent.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "MrScraper API token",
+          "name": "MRSCRAPER_API_TOKEN",
+          "required": true
+        }
+      ],
+      "humanized_name": "mrscraper_create_prompt_scraper",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Create a reusable General AI scraper.",
+        "properties": {},
+        "required": [],
+        "title": "MrScraperCreatePromptScraperTool",
+        "type": "object"
+      },
+      "name": "MrScraperCreatePromptScraperTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "additionalProperties": false,
+        "description": "Inputs shared by immediate and reusable prompt scrapers.",
+        "properties": {
+          "mode": {
+            "default": "Super",
+            "description": "Scraping mode, 'Super' or 'Cheap'; defaults to 'Super'.",
+            "enum": [
+              "Super",
+              "Cheap"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional JSON object describing the expected output shape.",
+            "title": "Output Schema"
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional extraction instructions for the AI scraper.",
+            "title": "Prompt"
+          },
+          "proxy_country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional ISO country code for the proxy.",
+            "title": "Proxy Country"
+          },
+          "url": {
+            "description": "Required page URL to scrape.",
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "GeneralScraperInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Use this potentially expensive operation to create a reusable Map scraper for URL discovery. Use crawl_website_urls for immediate crawl intent.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "MrScraper API token",
+          "name": "MRSCRAPER_API_TOKEN",
+          "required": true
+        }
+      ],
+      "humanized_name": "mrscraper_create_website_crawl_scraper",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Create a reusable Map AI scraper.",
+        "properties": {},
+        "required": [],
+        "title": "MrScraperCreateWebsiteCrawlScraperTool",
+        "type": "object"
+      },
+      "name": "MrScraperCreateWebsiteCrawlScraperTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "additionalProperties": false,
+        "description": "Inputs shared by immediate and reusable website crawl tools.",
+        "properties": {
+          "exclude_patterns": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional pipe-separated regular expressions for URLs to exclude.",
+            "title": "Exclude Patterns"
+          },
+          "include_patterns": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional pipe-separated regular expressions for URLs to include.",
+            "title": "Include Patterns"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Maximum URLs to return; defaults to 50; minimum 1.",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "max_depth": {
+            "default": 2,
+            "description": "Maximum link depth to crawl; defaults to 2.",
+            "title": "Max Depth",
+            "type": "integer"
+          },
+          "max_pages": {
+            "default": 50,
+            "description": "Maximum pages to evaluate; defaults to 50.",
+            "title": "Max Pages",
+            "type": "integer"
+          },
+          "url": {
+            "description": "Required starting URL to crawl.",
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "MapScraperInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Use this potentially multi-page immediate extraction for repeated listings or paginated content. Use create_listing_scraper for reusable scraper creation.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "MrScraper API token",
+          "name": "MRSCRAPER_API_TOKEN",
+          "required": true
+        }
+      ],
+      "humanized_name": "mrscraper_extract_listings",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Perform immediate Listing extraction.",
+        "properties": {},
+        "required": [],
+        "title": "MrScraperExtractListingsTool",
+        "type": "object"
+      },
+      "name": "MrScraperExtractListingsTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "additionalProperties": false,
+        "description": "Inputs shared by immediate and reusable listing scrapers.",
+        "properties": {
+          "max_pages": {
+            "default": 1,
+            "description": "Maximum pagination pages to scrape; defaults to 1; minimum 1.",
+            "minimum": 1,
+            "title": "Max Pages",
+            "type": "integer"
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional JSON object describing each expected listing item.",
+            "title": "Output Schema"
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional instructions describing each listing item to extract.",
+            "title": "Prompt"
+          },
+          "proxy_country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional ISO country code for the proxy.",
+            "title": "Proxy Country"
+          },
+          "url": {
+            "description": "Required listing page URL to scrape.",
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "ListingScraperInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Use this for immediate AI extraction from one page using a prompt. Use create_prompt_scraper when the primary intent is reusable scraper creation.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "MrScraper API token",
+          "name": "MRSCRAPER_API_TOKEN",
+          "required": true
+        }
+      ],
+      "humanized_name": "mrscraper_extract_page_by_prompt",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Perform immediate General extraction.",
+        "properties": {},
+        "required": [],
+        "title": "MrScraperExtractPageByPromptTool",
+        "type": "object"
+      },
+      "name": "MrScraperExtractPageByPromptTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "additionalProperties": false,
+        "description": "Inputs shared by immediate and reusable prompt scrapers.",
+        "properties": {
+          "mode": {
+            "default": "Super",
+            "description": "Scraping mode, 'Super' or 'Cheap'; defaults to 'Super'.",
+            "enum": [
+              "Super",
+              "Cheap"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional JSON object describing the expected output shape.",
+            "title": "Output Schema"
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional extraction instructions for the AI scraper.",
+            "title": "Prompt"
+          },
+          "proxy_country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional ISO country code for the proxy.",
+            "title": "Proxy Country"
+          },
+          "url": {
+            "description": "Required page URL to scrape.",
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "GeneralScraperInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Use this immediate extraction tool when a page matches one supported structured category, such as article, product, hotel, job, property, restaurant, or tour.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "MrScraper API token",
+          "name": "MRSCRAPER_API_TOKEN",
+          "required": true
+        }
+      ],
+      "humanized_name": "mrscraper_extract_structured_data",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Extract one of the bundled structured-data presets.",
+        "properties": {},
+        "required": [],
+        "title": "MrScraperExtractStructuredDataTool",
+        "type": "object"
+      },
+      "name": "MrScraperExtractStructuredDataTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "additionalProperties": false,
+        "description": "Inputs for preset structured-data extraction.",
+        "properties": {
+          "category": {
+            "default": "article",
+            "description": "Structured extraction preset category; defaults to 'article'.",
+            "enum": [
+              "article",
+              "forumThread",
+              "hotel",
+              "jobPosting",
+              "post",
+              "product",
+              "property",
+              "restaurant",
+              "socialMediaProfile",
+              "tourAttraction"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "mode": {
+            "default": "Super",
+            "description": "Scraping mode, 'Super' or 'Cheap'; defaults to 'Super'.",
+            "enum": [
+              "Super",
+              "Cheap"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "proxy_country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional ISO country code for the proxy.",
+            "title": "Proxy Country"
+          },
+          "url": {
+            "description": "Required page URL to scrape.",
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "ExtractStructuredDataInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Use this immediate stealth-browser call when JavaScript-rendered HTML, Markdown, cookies, or a screenshot is needed. Keep the requested outputs narrow to control cost.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "MrScraper API token",
+          "name": "MRSCRAPER_API_TOKEN",
+          "required": true
+        }
+      ],
+      "humanized_name": "mrscraper_fetch_rendered_html",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Fetch a browser-rendered page.",
+        "properties": {},
+        "required": [],
+        "title": "MrScraperFetchRenderedHtmlTool",
+        "type": "object"
+      },
+      "name": "MrScraperFetchRenderedHtmlTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "additionalProperties": false,
+        "description": "Inputs for the rendered-page API.",
+        "properties": {
+          "block_resources": {
+            "default": true,
+            "description": "Whether to block images, fonts, and stylesheets; defaults to true.",
+            "title": "Block Resources",
+            "type": "boolean"
+          },
+          "geo_code": {
+            "default": "us",
+            "description": "Geolocation country code; defaults to 'us'.",
+            "pattern": "^[A-Za-z]{2}$",
+            "title": "Geo Code",
+            "type": "string"
+          },
+          "home_page": {
+            "default": false,
+            "description": "Whether to visit the site home page first; defaults to false.",
+            "title": "Home Page",
+            "type": "boolean"
+          },
+          "html": {
+            "default": true,
+            "description": "Whether to include rendered HTML; defaults to true.",
+            "title": "Html",
+            "type": "boolean"
+          },
+          "markdown": {
+            "default": false,
+            "description": "Whether to include Markdown; defaults to false.",
+            "title": "Markdown",
+            "type": "boolean"
+          },
+          "max_retries": {
+            "default": 3,
+            "description": "Maximum retry attempts; defaults to 3; minimum 0.",
+            "minimum": 0,
+            "title": "Max Retries",
+            "type": "integer"
+          },
+          "proxy_country": {
+            "default": "us",
+            "description": "Proxy country code; defaults to 'us'.",
+            "pattern": "^[A-Za-z]{2}$",
+            "title": "Proxy Country",
+            "type": "string"
+          },
+          "return_cookie": {
+            "default": true,
+            "description": "Whether to include browser cookies; defaults to true.",
+            "title": "Return Cookie",
+            "type": "boolean"
+          },
+          "screenshot": {
+            "default": false,
+            "description": "Whether to capture a screenshot; defaults to false.",
+            "title": "Screenshot",
+            "type": "boolean"
+          },
+          "screenshot_mode": {
+            "default": "full",
+            "description": "Screenshot mode, 'full' or 'top'; used only when screenshot is true.",
+            "enum": [
+              "full",
+              "top"
+            ],
+            "title": "Screenshot Mode",
+            "type": "string"
+          },
+          "super_mode": {
+            "default": true,
+            "description": "Whether to use stronger device mode; defaults to true.",
+            "title": "Super Mode",
+            "type": "boolean"
+          },
+          "timeout": {
+            "default": 300,
+            "description": "Maximum page-load time in seconds; defaults to 300; minimum 1.",
+            "minimum": 1,
+            "title": "Timeout",
+            "type": "integer"
+          },
+          "token_cap": {
+            "default": 30,
+            "description": "Maximum processing token allowance; defaults to 30; minimum 1.",
+            "minimum": 1,
+            "title": "Token Cap",
+            "type": "integer"
+          },
+          "url": {
+            "description": "Required target URL to render.",
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          },
+          "wait_for_selector": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional CSS selector to await before returning.",
+            "title": "Wait For Selector"
+          },
+          "wait_until": {
+            "default": "domcontentloaded",
+            "description": "Browser lifecycle event to await; defaults to 'domcontentloaded'.",
+            "enum": [
+              "domcontentloaded",
+              "load",
+              "networkidle"
+            ],
+            "title": "Wait Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "FetchRenderedHtmlInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Use this narrow read-only tool to inspect MrScraper account details, token usage, and token limits. It does not scrape a page or create a job.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "MrScraper API token",
+          "name": "MRSCRAPER_API_TOKEN",
+          "required": true
+        }
+      ],
+      "humanized_name": "mrscraper_get_account_info",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Retrieve subscription and token usage information.",
+        "properties": {},
+        "required": [],
+        "title": "MrScraperGetAccountInfoTool",
+        "type": "object"
+      },
+      "name": "MrScraperGetAccountInfoTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "additionalProperties": false,
+        "description": "The account operation has no model-supplied inputs.",
+        "properties": {},
+        "title": "GetAccountInfoInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Use this shortcut for the newest N results from one scraper. Use get_results instead when page navigation or ascending order is required.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "MrScraper API token",
+          "name": "MRSCRAPER_API_TOKEN",
+          "required": true
+        }
+      ],
+      "humanized_name": "mrscraper_get_latest_results",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Retrieve the newest N results.",
+        "properties": {},
+        "required": [],
+        "title": "MrScraperGetLatestResultsTool",
+        "type": "object"
+      },
+      "name": "MrScraperGetLatestResultsTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "additionalProperties": false,
+        "description": "Inputs for the newest scraper results.",
+        "properties": {
+          "count": {
+            "default": 10,
+            "description": "Number of newest results; defaults to 10.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "scraper_id": {
+            "description": "Required scraper ID whose newest results to list.",
+            "minLength": 1,
+            "title": "Scraper Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scraper_id"
+        ],
+        "title": "GetLatestResultsInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Use this narrow lookup when a specific MrScraper result ID is already known. It returns that record rather than a paginated collection.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "MrScraper API token",
+          "name": "MRSCRAPER_API_TOKEN",
+          "required": true
+        }
+      ],
+      "humanized_name": "mrscraper_get_result_detail",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Retrieve one result by ID.",
+        "properties": {},
+        "required": [],
+        "title": "MrScraperGetResultDetailTool",
+        "type": "object"
+      },
+      "name": "MrScraperGetResultDetailTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "additionalProperties": false,
+        "description": "Inputs for one result record.",
+        "properties": {
+          "result_id": {
+            "description": "Required result ID to retrieve.",
+            "minLength": 1,
+            "title": "Result Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result_id"
+        ],
+        "title": "GetResultDetailInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Use this to page through results for one scraper with explicit paging and sort controls. Use get_latest_results when only the newest N records are needed.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "MrScraper API token",
+          "name": "MRSCRAPER_API_TOKEN",
+          "required": true
+        }
+      ],
+      "humanized_name": "mrscraper_get_results",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Retrieve a configurable page of results.",
+        "properties": {},
+        "required": [],
+        "title": "MrScraperGetResultsTool",
+        "type": "object"
+      },
+      "name": "MrScraperGetResultsTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "additionalProperties": false,
+        "description": "Inputs for paginated scraper results.",
+        "properties": {
+          "page": {
+            "default": 1,
+            "description": "Results page number; defaults to 1.",
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "default": 10,
+            "description": "Number of results per page; defaults to 10.",
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "scraper_id": {
+            "description": "Required scraper ID whose results to list.",
+            "minLength": 1,
+            "title": "Scraper Id",
+            "type": "string"
+          },
+          "sort_by": {
+            "const": "createdAt",
+            "default": "createdAt",
+            "description": "Sort field; only 'createdAt' is supported.",
+            "title": "Sort By",
+            "type": "string"
+          },
+          "sort_order": {
+            "default": "DESC",
+            "description": "Sort direction, 'ASC' or 'DESC'; defaults to 'DESC'.",
+            "enum": [
+              "ASC",
+              "DESC"
+            ],
+            "title": "Sort Order",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scraper_id"
+        ],
+        "title": "GetResultsInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Use this potentially expensive batch operation to run multiple URLs through one existing AI or manual scraper. Use run_existing_scraper for a single URL.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "MrScraper API token",
+          "name": "MRSCRAPER_API_TOKEN",
+          "required": true
+        }
+      ],
+      "humanized_name": "mrscraper_run_existing_scraper_batch",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Run an existing AI or manual scraper on a URL batch.",
+        "properties": {},
+        "required": [],
+        "title": "MrScraperRunExistingScraperBatchTool",
+        "type": "object"
+      },
+      "name": "MrScraperRunExistingScraperBatchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "additionalProperties": false,
+        "description": "Inputs for batch runs of an existing scraper.",
+        "properties": {
+          "scraper_id": {
+            "description": "Required existing scraper ID.",
+            "minLength": 1,
+            "title": "Scraper Id",
+            "type": "string"
+          },
+          "scraper_type": {
+            "description": "Required scraper kind selecting the AI or manual bulk endpoint.",
+            "enum": [
+              "ai",
+              "manual"
+            ],
+            "title": "Scraper Type",
+            "type": "string"
+          },
+          "urls": {
+            "description": "Required nonempty array of nonblank URLs to process in this batch.",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Urls",
+            "type": "array"
+          }
+        },
+        "required": [
+          "scraper_type",
+          "scraper_id",
+          "urls"
+        ],
+        "title": "RunExistingScraperBatchInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Use this to run one URL through an existing AI or manual scraper. Choose the AI agent type carefully; conditional options are validated before any request.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "MrScraper API token",
+          "name": "MRSCRAPER_API_TOKEN",
+          "required": true
+        }
+      ],
+      "humanized_name": "mrscraper_run_existing_scraper",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Run an existing AI or manual scraper on one URL.",
+        "properties": {},
+        "required": [],
+        "title": "MrScraperRunExistingScraperTool",
+        "type": "object"
+      },
+      "name": "MrScraperRunExistingScraperTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "additionalProperties": false,
+        "description": "Stable conditional schema for AI and manual single scraper runs.",
+        "properties": {
+          "agent_type": {
+            "default": "general",
+            "description": "AI agent type; defaults to 'general' for AI and is forbidden for manual runs.",
+            "enum": [
+              "general",
+              "listing",
+              "map"
+            ],
+            "title": "Agent Type",
+            "type": "string"
+          },
+          "bypass_proxy": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "General/Listing default false; Manual default true; forbidden for Map.",
+            "title": "Bypass Proxy"
+          },
+          "cookie_jar": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional Manual cookie-jar identifier or value.",
+            "title": "Cookie Jar"
+          },
+          "cookies": {
+            "description": "Manual browser-cookie objects; defaults to an empty array.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Cookies",
+            "type": "array"
+          },
+          "exclude_patterns": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional Map exclude-pattern expressions.",
+            "title": "Exclude Patterns"
+          },
+          "home_page": {
+            "default": false,
+            "description": "Manual home-page visit flag; defaults to false.",
+            "title": "Home Page",
+            "type": "boolean"
+          },
+          "home_page_timeout": {
+            "default": 10,
+            "description": "Manual home-page timeout; defaults to 10; minimum 1.",
+            "minimum": 1,
+            "title": "Home Page Timeout",
+            "type": "integer"
+          },
+          "html": {
+            "default": false,
+            "description": "General, Listing, or Manual HTML output flag; defaults to false.",
+            "title": "Html",
+            "type": "boolean"
+          },
+          "include_patterns": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional Map include-pattern expressions.",
+            "title": "Include Patterns"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Map result limit; defaults to 50; minimum 1.",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "markdown": {
+            "default": false,
+            "description": "General, Listing, or Manual Markdown output flag; defaults to false.",
+            "title": "Markdown",
+            "type": "boolean"
+          },
+          "max_depth": {
+            "default": 2,
+            "description": "Map crawl depth; defaults to 2; minimum 0.",
+            "minimum": 0,
+            "title": "Max Depth",
+            "type": "integer"
+          },
+          "max_pages": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Listing defaults to 5; Map defaults to 50; minimum 1.",
+            "title": "Max Pages"
+          },
+          "max_retry": {
+            "default": 3,
+            "description": "Maximum retry attempts; defaults to 3; minimum 0.",
+            "minimum": 0,
+            "title": "Max Retry",
+            "type": "integer"
+          },
+          "paginator": {
+            "additionalProperties": true,
+            "description": "Manual paginator configuration; defaults to an empty object.",
+            "title": "Paginator",
+            "type": "object"
+          },
+          "proxy": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional Manual proxy URL.",
+            "title": "Proxy"
+          },
+          "proxy_country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional proxy country code.",
+            "title": "Proxy Country"
+          },
+          "record": {
+            "default": false,
+            "description": "Manual browser-session recording flag; defaults to false.",
+            "title": "Record",
+            "type": "boolean"
+          },
+          "render_javascript": {
+            "default": false,
+            "description": "General/Listing JavaScript rendering flag; defaults to false.",
+            "title": "Render Javascript",
+            "type": "boolean"
+          },
+          "return_cookie": {
+            "default": false,
+            "description": "Manual cookie-return flag; defaults to false.",
+            "title": "Return Cookie",
+            "type": "boolean"
+          },
+          "return_cookies": {
+            "default": false,
+            "description": "General/Listing cookie-return flag; defaults to false.",
+            "title": "Return Cookies",
+            "type": "boolean"
+          },
+          "scraper_id": {
+            "description": "Required existing scraper ID.",
+            "minLength": 1,
+            "title": "Scraper Id",
+            "type": "string"
+          },
+          "scraper_type": {
+            "description": "Required scraper kind selecting the AI or manual endpoint.",
+            "enum": [
+              "ai",
+              "manual"
+            ],
+            "title": "Scraper Type",
+            "type": "string"
+          },
+          "screenshot": {
+            "default": false,
+            "description": "General, Listing, or Manual screenshot flag; defaults to false.",
+            "title": "Screenshot",
+            "type": "boolean"
+          },
+          "stream": {
+            "default": false,
+            "description": "Listing or Manual streaming flag; defaults to false.",
+            "title": "Stream",
+            "type": "boolean"
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Listing timeout defaults to 300; Manual timeout defaults to 600; minimum 1.",
+            "title": "Timeout"
+          },
+          "token_cap": {
+            "default": 0,
+            "description": "Manual token cap; defaults to 0; minimum 0.",
+            "minimum": 0,
+            "title": "Token Cap",
+            "type": "integer"
+          },
+          "url": {
+            "description": "Required URL to process in this run.",
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          },
+          "use_home_page": {
+            "default": false,
+            "description": "General/Listing home-page visit flag; defaults to false.",
+            "title": "Use Home Page",
+            "type": "boolean"
+          },
+          "wait_for_selector": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional General/Listing CSS selector to await.",
+            "title": "Wait For Selector"
+          }
+        },
+        "required": [
+          "scraper_type",
+          "scraper_id",
+          "url"
+        ],
+        "title": "RunExistingScraperInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Use this for one narrow synchronous Google search. It returns compact JSON text for JSON format or the exact upstream HTML string for HTML format.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "MrScraper API token",
+          "name": "MRSCRAPER_API_TOKEN",
+          "required": true
+        }
+      ],
+      "humanized_name": "mrscraper_search_google_serp",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Search Google synchronously through MrScraper.",
+        "properties": {},
+        "required": [],
+        "title": "MrScraperSearchGoogleSerpTool",
+        "type": "object"
+      },
+      "name": "MrScraperSearchGoogleSerpTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "additionalProperties": false,
+        "description": "Inputs for synchronous Google SERP search.",
+        "properties": {
+          "format": {
+            "default": "json",
+            "description": "Response format: 'json' or 'html'; defaults to 'json'.",
+            "enum": [
+              "json",
+              "html"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "language": {
+            "default": "en",
+            "description": "Two-letter result language code; defaults to 'en'.",
+            "pattern": "^[A-Za-z]{2}$",
+            "title": "Language",
+            "type": "string"
+          },
+          "page": {
+            "default": 1,
+            "description": "Google result page number; defaults to 1; minimum 1.",
+            "minimum": 1,
+            "title": "Page",
+            "type": "integer"
+          },
+          "query": {
+            "description": "Required Google search query.",
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "region": {
+            "default": "us",
+            "description": "Two-letter result region code; defaults to 'us'.",
+            "pattern": "^[A-Za-z]{2}$",
+            "title": "Region",
+            "type": "string"
+          },
+          "render_js": {
+            "default": false,
+            "description": "Whether to render JavaScript before collecting results; defaults to false.",
+            "title": "Render Js",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SearchGoogleSerpInput",
+        "type": "object"
+      }
+    },
+    {
       "description": "Multion gives the ability for LLMs to control web browsers using natural language instructions.\n            If the status is 'CONTINUE', reissue the same instruction to continue execution",
       "env_vars": [
         {

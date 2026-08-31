@@ -109,6 +109,24 @@ from crewai_tools.tools.mongodb_vector_search_tool import (
     MongoDBVectorSearchConfig,
     MongoDBVectorSearchTool,
 )
+from crewai_tools.tools.mrscraper import (
+    MrScraperCrawlWebsiteUrlsTool,
+    MrScraperCreateListingScraperTool,
+    MrScraperCreatePromptScraperTool,
+    MrScraperCreateWebsiteCrawlScraperTool,
+    MrScraperExtractListingsTool,
+    MrScraperExtractPageByPromptTool,
+    MrScraperExtractStructuredDataTool,
+    MrScraperFetchRenderedHtmlTool,
+    MrScraperGetAccountInfoTool,
+    MrScraperGetLatestResultsTool,
+    MrScraperGetResultDetailTool,
+    MrScraperGetResultsTool,
+    MrScraperRunExistingScraperBatchTool,
+    MrScraperRunExistingScraperTool,
+    MrScraperSearchGoogleSerpTool,
+    create_mrscraper_toolkit,
+)
 from crewai_tools.tools.multion_tool.multion_tool import MultiOnTool
 from crewai_tools.tools.mysql_search_tool.mysql_search_tool import MySQLSearchTool
 from crewai_tools.tools.nl2sql.nl2sql_tool import NL2SQLTool
@@ -270,6 +288,21 @@ __all__ = [
     "MongoDBToolSchema",
     "MongoDBVectorSearchConfig",
     "MongoDBVectorSearchTool",
+    "MrScraperCrawlWebsiteUrlsTool",
+    "MrScraperCreateListingScraperTool",
+    "MrScraperCreatePromptScraperTool",
+    "MrScraperCreateWebsiteCrawlScraperTool",
+    "MrScraperExtractListingsTool",
+    "MrScraperExtractPageByPromptTool",
+    "MrScraperExtractStructuredDataTool",
+    "MrScraperFetchRenderedHtmlTool",
+    "MrScraperGetAccountInfoTool",
+    "MrScraperGetLatestResultsTool",
+    "MrScraperGetResultDetailTool",
+    "MrScraperGetResultsTool",
+    "MrScraperRunExistingScraperBatchTool",
+    "MrScraperRunExistingScraperTool",
+    "MrScraperSearchGoogleSerpTool",
     "MultiOnTool",
     "MySQLSearchTool",
     "NL2SQLTool",
@@ -320,4 +353,5 @@ __all__ = [
     "YoutubeChannelSearchTool",
     "YoutubeVideoSearchTool",
     "ZapierActionTools",
+    "create_mrscraper_toolkit",
 ]
