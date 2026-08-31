@@ -1,22 +1,21 @@
 """Crewai Enterprise Tools."""
 
 import json
-import os
 from typing import Any
 
 from crewai.tools import BaseTool
 from crewai.tools.tool_failure import ToolFailure
 from crewai.utilities.pydantic_schema_utils import create_model_from_schema
-from pydantic import Field, create_model
-import requests
+from pydantic import Field, PrivateAttr, create_model
 
-from crewai_tools.tools.crewai_platform_tools.misc import (
-    get_platform_api_base_url,
-    get_platform_integration_token,
+from crewai_tools.tools.crewai_platform_tools.integrations_client import (
+    IntegrationsClient,
+    LegacyClient,
 )
 
 
 class CrewAIPlatformActionTool(BaseTool):
+    _integrations_client: IntegrationsClient = PrivateAttr()
     app: str = Field(description="The integration slug for this action")
     action_name: str = Field(default="", description="The name of the action")
     action_schema: dict[str, Any] = Field(
@@ -29,7 +28,8 @@ class CrewAIPlatformActionTool(BaseTool):
         app: str,
         action_name: str,
         action_schema: dict[str, Any],
-    ):
+        integrations_client: IntegrationsClient | None = None,
+    ) -> None:
         parameters = action_schema.get("function", {}).get("parameters", {})
 
         if parameters and parameters.get("properties"):
@@ -52,6 +52,9 @@ class CrewAIPlatformActionTool(BaseTool):
         )
         self.action_name = action_name
         self.action_schema = action_schema
+        self._integrations_client = (
+            integrations_client if integrations_client is not None else LegacyClient()
+        )
 
     def _run(self, **kwargs: Any) -> Any:
         try:
@@ -59,24 +62,8 @@ class CrewAIPlatformActionTool(BaseTool):
                 key: value for key, value in kwargs.items() if value is not None
             }
 
-            api_url = (
-                f"{get_platform_api_base_url()}/actions/{self.action_name}/execute"
-            )
-            token = get_platform_integration_token()
-            headers = {
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            }
-            payload = {
-                "integration": cleaned_kwargs if cleaned_kwargs else {"_noop": True}
-            }
-
-            response = requests.post(
-                url=api_url,
-                headers=headers,
-                json=payload,
-                timeout=60,
-                verify=os.environ.get("CREWAI_FACTORY", "false").lower() != "true",
+            response = self._integrations_client.execute_action(
+                self.action_name, cleaned_kwargs
             )
 
             data = response.json()
