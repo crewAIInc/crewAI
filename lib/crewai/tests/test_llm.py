@@ -886,7 +886,7 @@ def test_prefixed_models_with_valid_constants_use_native_sdk():
 
     # Test anthropic/ prefix with Claude model in constants → Native SDK
     with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-        llm2 = LLM(model="anthropic/claude-opus-4-0", is_litellm=False)
+        llm2 = LLM(model="anthropic/claude-sonnet-4-6", is_litellm=False)
         assert llm2.is_litellm is False
         assert llm2.provider == "anthropic"
 
@@ -981,9 +981,9 @@ def test_unprefixed_models_use_native_sdk():
         assert llm.is_litellm is False
         assert llm.provider == "openai"
 
-    # claude-opus-4-0 is in ANTHROPIC_MODELS → Native Anthropic SDK
+    # claude-sonnet-4-6 is in ANTHROPIC_MODELS → Native Anthropic SDK
     with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-        llm2 = LLM(model="claude-opus-4-0", is_litellm=False)
+        llm2 = LLM(model="claude-sonnet-4-6", is_litellm=False)
         assert llm2.is_litellm is False
         assert llm2.provider == "anthropic"
 
@@ -1018,11 +1018,9 @@ def test_validate_model_in_constants():
     assert LLM._validate_model_in_constants("unknown-model", "openai") is False
 
     # Anthropic models
-    assert LLM._validate_model_in_constants("claude-opus-4-0", "claude") is True
+    assert LLM._validate_model_in_constants("claude-sonnet-4-6", "claude") is True
     assert LLM._validate_model_in_constants("claude-future-5", "claude") is True
-    assert (
-        LLM._validate_model_in_constants("claude-3-5-sonnet-latest", "claude") is True
-    )
+    assert LLM._validate_model_in_constants("claude-haiku-4-5", "claude") is True
     assert LLM._validate_model_in_constants("unknown-model", "claude") is False
 
     # Gemini models
