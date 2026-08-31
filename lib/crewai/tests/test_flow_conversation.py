@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from threading import Event
 from typing import Any, ClassVar, Literal
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
@@ -1123,6 +1124,54 @@ class TestConversationalFlow:
             )
 
         assert outputs == ["\nAssistant: raw assistant output"]
+
+    def test_queued_chat_accepts_input_while_turn_runs(self) -> None:
+        first_started = Event()
+        second_read = Event()
+        release_first = Event()
+
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> str:
+                message = self.state.current_user_message or ""
+                if message == "first":
+                    first_started.set()
+                    assert release_first.wait(timeout=5)
+                return f"worked: {message}"
+
+        flow = MyChat()
+        inputs = iter(["first", "second", "quit"])
+        calls = 0
+        outputs: list[str] = []
+
+        def input_fn(_: str) -> str:
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                assert first_started.wait(timeout=5)
+                second_read.set()
+            elif calls == 3:
+                assert second_read.is_set()
+                release_first.set()
+            return next(inputs)
+
+        with patch.object(flow, "finalize_session_traces"):
+            flow.chat(input_fn=input_fn, output_fn=outputs.append)
+
+        assert outputs == [
+            "\nAssistant: worked: first",
+            "\nAssistant: worked: second",
+        ]
+        assert [message.content for message in flow.state.messages] == [
+            "first",
+            "worked: first",
+            "second",
+            "worked: second",
+        ]
 
     def test_chat_rejects_non_conversational_flows(self) -> None:
         class PlainFlow(Flow):
