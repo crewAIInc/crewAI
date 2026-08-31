@@ -948,6 +948,11 @@ def _estimate_message_summary_tokens(msg: LLMMessage) -> int:
     return _estimate_token_count(_format_messages_for_summary([msg]))
 
 
+def _estimate_chunk_summary_tokens(chunk: list[LLMMessage]) -> int:
+    """Estimate tokens for a complete rendered summary chunk."""
+    return _estimate_token_count(_format_messages_for_summary(chunk))
+
+
 def _split_text_by_token_limit(text: str, max_tokens: int) -> list[str]:
     """Split text into parts each estimated to fit within max_tokens."""
     if not text:
@@ -962,24 +967,31 @@ def _split_text_by_token_limit(text: str, max_tokens: int) -> list[str]:
 
 def _expand_oversized_message(msg: LLMMessage, max_tokens: int) -> list[LLMMessage]:
     """Split a message whose content alone exceeds max_tokens into sub-messages."""
-    msg_text = message_content_text(msg)
-    if _estimate_token_count(msg_text) <= max_tokens:
+    if _estimate_message_summary_tokens(msg) <= max_tokens:
         return [msg]
 
-    # Reserve budget for the [Part i/n] prefix and summary role label.
-    summary_label_tokens = _estimate_message_summary_tokens({**msg, "content": ""})
-    body_max_tokens = max(1, max_tokens - 5 - summary_label_tokens)
-    parts = _split_text_by_token_limit(msg_text, body_max_tokens)
-    total_parts = len(parts)
-    expanded: list[LLMMessage] = []
+    msg_text = message_content_text(msg)
+    if not msg_text:
+        return [msg]
 
-    for index, part in enumerate(parts, start=1):
-        part_content = (
-            f"[Part {index}/{total_parts}]\n{part}" if total_parts > 1 else part
-        )
-        expanded.append({**msg, "content": part_content})
+    body_max_tokens = max_tokens
+    while body_max_tokens > 0:
+        parts = _split_text_by_token_limit(msg_text, body_max_tokens)
+        total_parts = len(parts)
+        expanded: list[LLMMessage] = []
 
-    return expanded
+        for index, part in enumerate(parts, start=1):
+            part_content = (
+                f"[Part {index}/{total_parts}]\n{part}" if total_parts > 1 else part
+            )
+            expanded.append({**msg, "content": part_content})
+
+        if all(_estimate_message_summary_tokens(part) <= max_tokens for part in expanded):
+            return expanded
+
+        body_max_tokens -= 1
+
+    return [msg]
 
 
 def _normalize_messages_for_chunking(
@@ -1015,18 +1027,16 @@ def _split_messages_into_chunks(
 
     chunks: list[list[LLMMessage]] = []
     current_chunk: list[LLMMessage] = []
-    current_tokens = 0
 
     for msg in normalized:
-        msg_tokens = _estimate_message_summary_tokens(msg)
+        candidate_chunk = [*current_chunk, msg]
+        candidate_tokens = _estimate_chunk_summary_tokens(candidate_chunk)
 
-        if current_chunk and (current_tokens + msg_tokens) > max_tokens:
+        if current_chunk and candidate_tokens > max_tokens:
             chunks.append(current_chunk)
             current_chunk = []
-            current_tokens = 0
 
         current_chunk.append(msg)
-        current_tokens += msg_tokens
 
     if current_chunk:
         chunks.append(current_chunk)
@@ -1058,6 +1068,9 @@ def _summarization_prompt_overhead_tokens() -> int:
         + _estimate_token_count(
             I18N_DEFAULT.slice("summarize_instruction").format(conversation="")
         )
+        # Estimating the empty wrapper and conversation separately can lose
+        # one token to integer-division rounding when they are joined.
+        + 1
     )
 
 
@@ -1129,10 +1142,14 @@ def summarize_messages(
     if not non_system_messages:
         return
 
-    max_tokens = max(
-        1, llm.get_context_window_size() - _summarization_prompt_overhead_tokens()
+    available_content_tokens = (
+        llm.get_context_window_size() - _summarization_prompt_overhead_tokens()
     )
-    chunks = _split_messages_into_chunks(non_system_messages, max_tokens)
+    chunks = (
+        _split_messages_into_chunks(non_system_messages, available_content_tokens)
+        if available_content_tokens > 0
+        else [non_system_messages]
+    )
 
     total_chunks = len(chunks)
 

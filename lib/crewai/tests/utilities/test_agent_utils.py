@@ -20,6 +20,7 @@ from crewai.tools.base_tool import BaseTool
 from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.utilities.agent_utils import (
     _asummarize_chunks,
+    _estimate_chunk_summary_tokens,
     _estimate_token_count,
     _expand_oversized_message,
     _extract_summary_tags,
@@ -708,10 +709,7 @@ class TestSplitMessagesIntoChunks:
         chunks = _split_messages_into_chunks(messages, max_tokens=max_tokens)
         assert len(chunks) > 1
         for chunk in chunks:
-            chunk_tokens = sum(
-                _estimate_token_count(message_content_text(msg)) for msg in chunk
-            )
-            assert chunk_tokens <= max_tokens
+            assert _estimate_chunk_summary_tokens(chunk) <= max_tokens
 
     def test_oversized_tool_in_conversation(self) -> None:
         messages: list[dict[str, Any]] = [
@@ -723,10 +721,36 @@ class TestSplitMessagesIntoChunks:
         chunks = _split_messages_into_chunks(messages, max_tokens=max_tokens)
         assert len(chunks) > 1
         for chunk in chunks:
-            chunk_tokens = sum(
-                _estimate_token_count(message_content_text(msg)) for msg in chunk
-            )
-            assert chunk_tokens <= max_tokens
+            assert _estimate_chunk_summary_tokens(chunk) <= max_tokens
+
+    def test_chunk_budget_includes_rendered_separators(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "user", "content": "a" * 4},
+            {"role": "user", "content": "b" * 4},
+        ]
+
+        chunks = _split_messages_into_chunks(messages, max_tokens=4)
+
+        assert len(chunks) == 2
+        assert all(_estimate_chunk_summary_tokens(chunk) <= 4 for chunk in chunks)
+
+    def test_tool_call_rendering_counts_toward_chunk_budget(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {"function": {"name": "x" * 80, "arguments": "{}"}},
+                ],
+            },
+            {"role": "user", "content": "next"},
+        ]
+
+        chunks = _split_messages_into_chunks(messages, max_tokens=10)
+
+        assert len(chunks) == 2
+        assert _estimate_chunk_summary_tokens(chunks[0]) > 10
+        assert _estimate_chunk_summary_tokens(chunks[1]) <= 10
 
     def test_rendered_summarization_request_within_raw_context_window(self) -> None:
         """Chunked payloads plus summarization prompt fit in the raw model limit.
@@ -779,6 +803,23 @@ class TestSplitMessagesIntoChunks:
         assert request_token_counts
         assert max(request_token_counts) <= context_window
         assert min(request_token_counts) > _summarization_prompt_overhead_tokens()
+
+    def test_summarize_messages_uses_single_attempt_when_no_content_budget(
+        self,
+    ) -> None:
+        context_window = _summarization_prompt_overhead_tokens()
+        messages: list[dict[str, Any]] = [
+            {"role": "tool", "content": "Z" * 400, "name": "search"},
+        ]
+
+        mock_llm = MagicMock()
+        mock_llm.get_context_window_size.return_value = context_window
+        mock_llm.call.return_value = "<summary>chunk summary</summary>"
+
+        summarize_messages(messages=messages, llm=mock_llm, callbacks=[], verbose=False)
+
+        mock_llm.call.assert_called_once()
+        mock_llm.acall.assert_not_called()
 
 
 class TestMessageContentText:
