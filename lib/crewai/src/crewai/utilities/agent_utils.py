@@ -893,51 +893,6 @@ def message_content_text(msg: LLMMessage) -> str:
     return str(content)
 
 
-def _split_text_by_token_limit(text: str, max_tokens: int) -> list[str]:
-    """Split text into parts each estimated to fit within max_tokens."""
-    if not text:
-        return []
-    if _estimate_token_count(text) <= max_tokens:
-        return [text]
-
-    # Inverse of _estimate_token_count (len // 4): each slice is at most max_tokens.
-    max_chars = max(1, max_tokens * 4)
-    return [text[i : i + max_chars] for i in range(0, len(text), max_chars)]
-
-
-def _expand_oversized_message(msg: LLMMessage, max_tokens: int) -> list[LLMMessage]:
-    """Split a message whose content alone exceeds max_tokens into sub-messages."""
-    msg_text = message_content_text(msg)
-    if _estimate_token_count(msg_text) <= max_tokens:
-        return [msg]
-
-    # Reserve budget for the [Part i/n] prefix added to each sub-message.
-    body_max_tokens = max(1, max_tokens - 5)
-    parts = _split_text_by_token_limit(msg_text, body_max_tokens)
-    total_parts = len(parts)
-    expanded: list[LLMMessage] = []
-
-    for index, part in enumerate(parts, start=1):
-        part_content = (
-            f"[Part {index}/{total_parts}]\n{part}" if total_parts > 1 else part
-        )
-        expanded.append({**msg, "content": part_content})
-
-    return expanded
-
-
-def _normalize_messages_for_chunking(
-    messages: list[LLMMessage], max_tokens: int
-) -> list[LLMMessage]:
-    """Return non-system messages with oversized entries split to fit max_tokens."""
-    normalized: list[LLMMessage] = []
-    for msg in messages:
-        if msg.get("role") == "system":
-            continue
-        normalized.extend(_expand_oversized_message(msg, max_tokens))
-    return normalized
-
-
 def _format_messages_for_summary(messages: list[LLMMessage]) -> str:
     """Format messages with role labels for summarization.
 
@@ -988,6 +943,57 @@ def _format_messages_for_summary(messages: list[LLMMessage]) -> str:
     return "\n\n".join(lines)
 
 
+def _estimate_message_summary_tokens(msg: LLMMessage) -> int:
+    """Estimate tokens for a message after summary formatting."""
+    return _estimate_token_count(_format_messages_for_summary([msg]))
+
+
+def _split_text_by_token_limit(text: str, max_tokens: int) -> list[str]:
+    """Split text into parts each estimated to fit within max_tokens."""
+    if not text:
+        return []
+    if _estimate_token_count(text) <= max_tokens:
+        return [text]
+
+    # Inverse of _estimate_token_count (len // 4): each slice is at most max_tokens.
+    max_chars = max(1, max_tokens * 4)
+    return [text[i : i + max_chars] for i in range(0, len(text), max_chars)]
+
+
+def _expand_oversized_message(msg: LLMMessage, max_tokens: int) -> list[LLMMessage]:
+    """Split a message whose content alone exceeds max_tokens into sub-messages."""
+    msg_text = message_content_text(msg)
+    if _estimate_token_count(msg_text) <= max_tokens:
+        return [msg]
+
+    # Reserve budget for the [Part i/n] prefix and summary role label.
+    summary_label_tokens = _estimate_message_summary_tokens({**msg, "content": ""})
+    body_max_tokens = max(1, max_tokens - 5 - summary_label_tokens)
+    parts = _split_text_by_token_limit(msg_text, body_max_tokens)
+    total_parts = len(parts)
+    expanded: list[LLMMessage] = []
+
+    for index, part in enumerate(parts, start=1):
+        part_content = (
+            f"[Part {index}/{total_parts}]\n{part}" if total_parts > 1 else part
+        )
+        expanded.append({**msg, "content": part_content})
+
+    return expanded
+
+
+def _normalize_messages_for_chunking(
+    messages: list[LLMMessage], max_tokens: int
+) -> list[LLMMessage]:
+    """Return non-system messages with oversized entries split to fit max_tokens."""
+    normalized: list[LLMMessage] = []
+    for msg in messages:
+        if msg.get("role") == "system":
+            continue
+        normalized.extend(_expand_oversized_message(msg, max_tokens))
+    return normalized
+
+
 def _split_messages_into_chunks(
     messages: list[LLMMessage], max_tokens: int
 ) -> list[list[LLMMessage]]:
@@ -1012,7 +1018,7 @@ def _split_messages_into_chunks(
     current_tokens = 0
 
     for msg in normalized:
-        msg_tokens = _estimate_token_count(message_content_text(msg))
+        msg_tokens = _estimate_message_summary_tokens(msg)
 
         if current_chunk and (current_tokens + msg_tokens) > max_tokens:
             chunks.append(current_chunk)
@@ -1043,6 +1049,16 @@ def _extract_summary_tags(text: str) -> str:
     if match:
         return match.group(1).strip()
     return text.strip()
+
+
+def _summarization_prompt_overhead_tokens() -> int:
+    """Estimate fixed tokens added around each chunk during summarization."""
+    return (
+        _estimate_token_count(I18N_DEFAULT.slice("summarizer_system_message"))
+        + _estimate_token_count(
+            I18N_DEFAULT.slice("summarize_instruction").format(conversation="")
+        )
+    )
 
 
 async def _asummarize_chunks(
@@ -1113,7 +1129,9 @@ def summarize_messages(
     if not non_system_messages:
         return
 
-    max_tokens = llm.get_context_window_size()
+    max_tokens = max(
+        1, llm.get_context_window_size() - _summarization_prompt_overhead_tokens()
+    )
     chunks = _split_messages_into_chunks(non_system_messages, max_tokens)
 
     total_chunks = len(chunks)

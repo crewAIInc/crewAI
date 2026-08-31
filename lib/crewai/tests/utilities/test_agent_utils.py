@@ -28,6 +28,7 @@ from crewai.utilities.agent_utils import (
     _normalize_messages_for_chunking,
     _split_messages_into_chunks,
     _split_text_by_token_limit,
+    _summarization_prompt_overhead_tokens,
     format_message_for_llm,
     convert_tools_to_openai_schema,
     execute_single_native_tool_call,
@@ -748,6 +749,37 @@ class TestSplitMessagesIntoChunks:
             request_tokens = _estimate_summarization_request_tokens(chunk)
             assert request_tokens <= raw_context_limit
 
+    def test_summarize_messages_subtracts_prompt_overhead_from_chunk_budget(
+        self,
+    ) -> None:
+        context_window = 850
+        messages: list[dict[str, Any]] = [
+            {"role": "tool", "content": "Z" * (context_window * 4), "name": "search"},
+        ]
+        request_token_counts: list[int] = []
+
+        async def _assert_request_fits_context_window(
+            summarization_messages: list[dict[str, Any]], **kwargs: Any
+        ) -> str:
+            request_tokens = sum(
+                _estimate_token_count(str(message.get("content", "")))
+                for message in summarization_messages
+            )
+            request_token_counts.append(request_tokens)
+            assert request_tokens <= context_window
+            return "<summary>chunk summary</summary>"
+
+        mock_llm = MagicMock()
+        mock_llm.get_context_window_size.return_value = context_window
+        mock_llm.acall = AsyncMock(side_effect=_assert_request_fits_context_window)
+
+        summarize_messages(messages=messages, llm=mock_llm, callbacks=[], verbose=False)
+
+        assert mock_llm.acall.await_count > 1
+        assert request_token_counts
+        assert max(request_token_counts) <= context_window
+        assert min(request_token_counts) > _summarization_prompt_overhead_tokens()
+
 
 class TestMessageContentText:
     """Tests for message_content_text helper."""
@@ -925,8 +957,9 @@ class TestParallelSummarization:
     def _make_messages_for_n_chunks(self, n: int) -> list[dict[str, Any]]:
         """Build a message list that will produce exactly *n* chunks.
 
-        Each message has 400 chars (~100 tokens). With max_tokens=100 returned
-        by the mock LLM, each message lands in its own chunk.
+        Each message has 400 chars (~100 tokens). With the mock LLM's
+        context window leaving just over 100 content tokens after
+        summarization overhead, each message lands in its own chunk.
         """
         msgs: list[dict[str, Any]] = []
         for i in range(n):
@@ -941,7 +974,9 @@ class TestParallelSummarization:
         messages = self._make_messages_for_n_chunks(3)
 
         mock_llm = MagicMock()
-        mock_llm.get_context_window_size.return_value = 100
+        mock_llm.get_context_window_size.return_value = (
+            _summarization_prompt_overhead_tokens() + 125
+        )
         mock_llm.acall = AsyncMock(
             side_effect=[
                 "<summary>Summary chunk 1</summary>",
@@ -989,7 +1024,9 @@ class TestParallelSummarization:
         messages = self._make_messages_for_n_chunks(3)
 
         mock_llm = MagicMock()
-        mock_llm.get_context_window_size.return_value = 100
+        mock_llm.get_context_window_size.return_value = (
+            _summarization_prompt_overhead_tokens() + 125
+        )
 
         # Simulate varying latencies — chunk 2 finishes before chunk 0
         async def _delayed_acall(msgs: Any, **kwargs: Any) -> str:
@@ -1051,7 +1088,9 @@ class TestParallelSummarization:
         messages = self._make_messages_for_n_chunks(2)
 
         mock_llm = MagicMock()
-        mock_llm.get_context_window_size.return_value = 100
+        mock_llm.get_context_window_size.return_value = (
+            _summarization_prompt_overhead_tokens() + 125
+        )
         mock_llm.acall = AsyncMock(
             side_effect=[
                 "<summary>Flow summary 1</summary>",
