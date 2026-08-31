@@ -18,6 +18,7 @@ Example::
         def handle_research(self) -> str:
             return "researching"
 
+
     flow = SupportFlow()
     flow.handle_turn("/btw keep answers under 20 words")
     flow.handle_turn("/btw route RESEARCH")

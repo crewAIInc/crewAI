@@ -61,40 +61,43 @@ class TestParseBtwLine:
         assert show.action.kind is BtwKind.SHOW
 
 
-@ConversationConfig(defer_trace_finalization=False)
-class _RoutedChat(ConversationalFlow):
-    turns: int = 0
+def _routed_chat_class(*, with_btw: bool) -> type[ConversationalFlow]:
+    """Build a chat Flow with listeners on the concrete class.
 
-    def route_turn(self, context: dict[str, Any]) -> str | None:
-        message = (self.state.current_user_message or "").lower()
-        if "research" in message:
-            return "RESEARCH"
-        return "work"
+    Flow definitions only collect ``@listen`` methods from the class
+    ``__dict__``, so a ``pass`` subclass would drop the routes.
+    """
 
-    @listen("work")
-    def handle_work(self) -> str:
-        self.turns += 1
-        reply = f"worked: {self.state.current_user_message}"
-        self.append_assistant_message(reply)
-        return reply
+    @ConversationConfig(defer_trace_finalization=False)
+    class RoutedChat(ConversationalFlow):
+        turns: int = 0
 
-    @listen("RESEARCH")
-    def handle_research(self) -> str:
-        self.turns += 1
-        reply = f"researched: {self.state.current_user_message}"
-        self.append_assistant_message(reply)
-        return reply
+        def route_turn(self, context: dict[str, Any]) -> str | None:
+            message = (self.state.current_user_message or "").lower()
+            if "research" in message:
+                return "RESEARCH"
+            return "work"
 
+        @listen("work")
+        def handle_work(self) -> str:
+            self.turns += 1
+            reply = f"worked: {self.state.current_user_message}"
+            self.append_assistant_message(reply)
+            return reply
 
-@btw_commands
-@ConversationConfig(defer_trace_finalization=False)
-class _BtwChat(_RoutedChat):
-    pass
+        @listen("RESEARCH")
+        def handle_research(self) -> str:
+            self.turns += 1
+            reply = f"researched: {self.state.current_user_message}"
+            self.append_assistant_message(reply)
+            return reply
+
+    return btw_commands(RoutedChat) if with_btw else RoutedChat
 
 
 class TestBtwCommandsOnFlow:
     def test_note_does_not_run_a_turn_or_append_user_history(self) -> None:
-        flow = _BtwChat()
+        flow = _routed_chat_class(with_btw=True)()
         reply = flow.handle_turn("/btw keep answers under 20 words")
 
         assert "Noted" in reply
@@ -107,7 +110,7 @@ class TestBtwCommandsOnFlow:
     def test_note_is_injected_into_later_system_prompt_and_router_context(
         self,
     ) -> None:
-        flow = _BtwChat()
+        flow = _routed_chat_class(with_btw=True)()
         flow.handle_turn("/btw be terse")
 
         prompt = flow._resolve_system_prompt()
@@ -118,7 +121,7 @@ class TestBtwCommandsOnFlow:
         assert context["steering_notes"] == ["be terse"]
 
     def test_later_user_turn_still_runs(self) -> None:
-        flow = _BtwChat()
+        flow = _routed_chat_class(with_btw=True)()
         flow.handle_turn("/btw be terse")
         result = flow.handle_turn("hello there")
 
@@ -128,7 +131,7 @@ class TestBtwCommandsOnFlow:
         assert flow.state.messages[0].content == "hello there"
 
     def test_forced_route_wins_for_the_next_turn_only(self) -> None:
-        flow = _BtwChat()
+        flow = _routed_chat_class(with_btw=True)()
         ack = flow.handle_turn("/btw route RESEARCH")
         assert "RESEARCH" in ack
 
@@ -140,7 +143,7 @@ class TestBtwCommandsOnFlow:
         assert second == "worked: hello again"
 
     def test_persist_route_keeps_forcing_until_cleared(self) -> None:
-        flow = _BtwChat()
+        flow = _routed_chat_class(with_btw=True)()
         flow.handle_turn("/btw stay RESEARCH")
         assert flow.handle_turn("hello") == "researched: hello"
         assert flow.handle_turn("again") == "researched: again"
@@ -149,14 +152,14 @@ class TestBtwCommandsOnFlow:
         assert flow.handle_turn("hello") == "worked: hello"
 
     def test_unknown_route_is_rejected(self) -> None:
-        flow = _BtwChat()
+        flow = _routed_chat_class(with_btw=True)()
         reply = flow.handle_turn("/btw route NOPE")
         assert "Unknown route" in reply
         assert get_btw_steering(flow).forced_route is None
         assert flow.turns == 0
 
     def test_inline_command_steers_the_same_turn(self) -> None:
-        flow = _BtwChat()
+        flow = _routed_chat_class(with_btw=True)()
         result = flow.handle_turn("hello there /btw route RESEARCH")
 
         assert result == "researched: hello there"
@@ -166,13 +169,13 @@ class TestBtwCommandsOnFlow:
         )
 
     def test_help_returns_the_catalog(self) -> None:
-        flow = _BtwChat()
+        flow = _routed_chat_class(with_btw=True)()
         reply = flow.handle_turn("/help")
         assert reply == HELP_TEXT
         assert flow.turns == 0
 
     def test_chat_repl_surfaces_standalone_acks(self) -> None:
-        flow = _BtwChat()
+        flow = _routed_chat_class(with_btw=True)()
         inputs = iter(["/btw be terse", "hello", "quit"])
         outputs: list[str] = []
 
@@ -187,7 +190,7 @@ class TestBtwCommandsOnFlow:
         assert flow.turns == 1
 
     def test_stream_turn_returns_an_ack_session_for_standalone_commands(self) -> None:
-        flow = _BtwChat()
+        flow = _routed_chat_class(with_btw=True)()
         stream = flow.stream_turn("/btw show")
         with stream:
             frames = list(stream.events)
@@ -195,8 +198,8 @@ class TestBtwCommandsOnFlow:
         assert "Current /btw steering" in stream.result
 
     def test_enable_on_instance_does_not_change_undecorated_classes(self) -> None:
-        plain = _RoutedChat()
-        enabled = enable_btw_commands(_RoutedChat())
+        plain = _routed_chat_class(with_btw=False)()
+        enabled = enable_btw_commands(_routed_chat_class(with_btw=False)())
 
         plain_result = plain.handle_turn("/btw be terse")
         assert plain.turns == 1

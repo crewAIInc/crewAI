@@ -76,7 +76,9 @@ class BtwSteering:
     def apply_to_system_prompt(self, base: str | None) -> str | None:
         if not self.notes:
             return base
-        steering = _STEERING_HEADER + "\n" + "\n".join(f"- {note}" for note in self.notes)
+        steering = (
+            _STEERING_HEADER + "\n" + "\n".join(f"- {note}" for note in self.notes)
+        )
         if base:
             return f"{base}\n\n{steering}"
         return steering
