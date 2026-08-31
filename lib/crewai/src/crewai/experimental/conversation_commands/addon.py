@@ -93,7 +93,7 @@ def _wrap_route_turn(original: Callable[..., Any]) -> Callable[..., Any]:
         forced = get_btw_steering(self).consume_forced_route()
         if forced:
             return forced
-        return original(self, context)
+        return cast(str | None, original(self, context))
 
     return route_turn
 
@@ -114,16 +114,12 @@ def _wrap_resolve_system_prompt(original: Callable[..., Any]) -> Callable[..., A
     return _resolve_system_prompt
 
 
-def _wrap_class(cls: type[T]) -> type[T]:
-    cls.handle_turn = _wrap_handle_turn(cls.handle_turn)  # type: ignore[attr-defined]
-    cls.stream_turn = _wrap_stream_turn(cls.stream_turn)  # type: ignore[attr-defined]
-    cls.route_turn = _wrap_route_turn(cls.route_turn)  # type: ignore[attr-defined]
-    cls.build_router_context = _wrap_build_router_context(  # type: ignore[attr-defined]
-        cls.build_router_context
-    )
-    cls._resolve_system_prompt = _wrap_resolve_system_prompt(  # type: ignore[attr-defined]
-        cls._resolve_system_prompt
-    )
+def _wrap_class(cls: Any) -> Any:
+    cls.handle_turn = _wrap_handle_turn(cls.handle_turn)
+    cls.stream_turn = _wrap_stream_turn(cls.stream_turn)
+    cls.route_turn = _wrap_route_turn(cls.route_turn)
+    cls.build_router_context = _wrap_build_router_context(cls.build_router_context)
+    cls._resolve_system_prompt = _wrap_resolve_system_prompt(cls._resolve_system_prompt)
     setattr(cls, ENABLED_ATTR, True)
     return cls
 
@@ -154,6 +150,14 @@ def _wrap_instance(flow: T) -> T:
     return flow
 
 
+@overload
+def enable_btw_commands(target: type[T]) -> type[T]: ...
+
+
+@overload
+def enable_btw_commands(target: T) -> T: ...
+
+
 def enable_btw_commands(target: T) -> T:
     """Install ``/btw`` interjections on a Flow class or instance.
 
@@ -163,7 +167,7 @@ def enable_btw_commands(target: T) -> T:
     if _already_enabled(target):
         return target
     if isinstance(target, type):
-        return _wrap_class(cast(type[T], target))
+        return cast(T, _wrap_class(target))
     return _wrap_instance(target)
 
 
