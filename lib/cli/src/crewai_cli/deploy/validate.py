@@ -38,11 +38,6 @@ import subprocess
 import sys
 from typing import Any
 
-from crewai.project.json_loader import (
-    JSONProjectValidationError,
-    find_json_project_file,
-    validate_crew_project,
-)
 from crewai_core.project import (
     ProjectDefinitionError,
     configured_project_definition,
@@ -51,6 +46,8 @@ from crewai_core.project import (
     read_toml,
 )
 from rich.console import Console
+
+from crewai_cli.utils import normalize_package_name
 
 
 console = Console()
@@ -108,15 +105,121 @@ _KNOWN_API_KEY_HINTS: dict[str, str] = {
 }
 
 
-def normalize_package_name(project_name: str) -> str:
-    """Normalize a pyproject project.name into a Python package directory name.
+_JSON_VALIDATION_MARKER = "CREWAI_JSON_VALIDATION_RESULT="
+_JSON_VALIDATOR_SCRIPT = f"""
+import json
+import sys
 
-    Mirrors the rules in ``crewai.cli.create_crew.create_crew`` so the
-    validator agrees with the scaffolder about where ``src/<pkg>/`` should
-    live.
-    """
-    folder = project_name.replace(" ", "_").replace("-", "_").lower()
-    return re.sub(r"[^a-zA-Z0-9_]", "", folder)
+try:
+    from crewai.project.json_loader import validate_crew_project
+    project = validate_crew_project(sys.argv[1], agents_dir=sys.argv[2])
+    payload = {{"ok": True, "agent_names": project.agent_names}}
+except BaseException as exc:
+    errors = getattr(exc, "errors", None)
+    payload = {{
+        "ok": False,
+        "error_type": type(exc).__name__,
+        "error": str(exc),
+        "errors": errors if isinstance(errors, list) else None,
+    }}
+
+print({_JSON_VALIDATION_MARKER!r} + json.dumps(payload))
+""".strip()
+
+
+class _JSONProjectValidationError(ValueError):
+    def __init__(self, errors: list[str]) -> None:
+        self.errors = errors
+        super().__init__("\n".join(errors))
+
+
+def _find_json_project_file(directory: Path, stem: str) -> Path | None:
+    for extension in (".jsonc", ".json"):
+        candidate = directory / f"{stem}{extension}"
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _validate_json_project_in_project_env(
+    crew_path: Path, agents_dir: Path, project_root: Path
+) -> list[str]:
+    """Validate a JSON crew with the full CrewAI package from its project env."""
+    uv_path = shutil.which("uv")
+    if uv_path is None:
+        raise RuntimeError("Cannot validate JSON crew: `uv` is not installed")
+
+    try:
+        proc = subprocess.run(  # noqa: S603 - fixed command plus trusted paths
+            [
+                uv_path,
+                "run",
+                "python",
+                "-c",
+                _JSON_VALIDATOR_SCRIPT,
+                str(crew_path),
+                str(agents_dir),
+            ],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("JSON crew validation timed out after 120s") from exc
+
+    payload: dict[str, Any] | None = None
+    for line in reversed(proc.stdout.splitlines()):
+        if not line.startswith(_JSON_VALIDATION_MARKER):
+            continue
+        try:
+            payload = json.loads(line.removeprefix(_JSON_VALIDATION_MARKER))
+        except json.JSONDecodeError:
+            pass
+        break
+
+    if payload is None:
+        detail = (proc.stderr or proc.stdout or "").strip()
+        raise RuntimeError(detail or "JSON crew validation produced no result")
+
+    if not payload.get("ok"):
+        errors = payload.get("errors")
+        if isinstance(errors, list) and all(isinstance(error, str) for error in errors):
+            raise _JSONProjectValidationError(errors)
+        error_type = payload.get("error_type", "Error")
+        error = payload.get("error", "JSON crew validation failed")
+        raise RuntimeError(f"{error_type}: {error}")
+
+    agent_names = payload.get("agent_names")
+    if not isinstance(agent_names, list) or not all(
+        isinstance(name, str) for name in agent_names
+    ):
+        raise RuntimeError("JSON crew validation returned invalid agent names")
+    return agent_names
+
+
+def _validate_json_project(
+    crew_path: Path, agents_dir: Path, project_root: Path
+) -> list[str]:
+    """Validate locally when possible, otherwise use the project's environment."""
+    try:
+        from crewai.project.json_loader import (
+            JSONProjectValidationError,
+            validate_crew_project,
+        )
+    except ModuleNotFoundError as exc:
+        if exc.name and (exc.name == "crewai" or exc.name.startswith("crewai.")):
+            return _validate_json_project_in_project_env(
+                crew_path, agents_dir, project_root
+            )
+        raise
+
+    try:
+        project = validate_crew_project(crew_path, agents_dir)
+    except JSONProjectValidationError as exc:
+        raise _JSONProjectValidationError(exc.errors) from exc
+    return project.agent_names
 
 
 class DeployValidator:
@@ -232,11 +335,13 @@ class DeployValidator:
         agents_dir = crew_path.parent / "agents"
         agents_dir_ok = self._check_json_agents_dir(agents_dir)
 
-        project = None
+        agent_names: list[str] | None = None
         try:
             if agents_dir_ok:
-                project = validate_crew_project(crew_path, agents_dir)
-        except JSONProjectValidationError as e:
+                agent_names = _validate_json_project(
+                    crew_path, agents_dir, self.project_root
+                )
+        except _JSONProjectValidationError as e:
             self._add(
                 Severity.ERROR,
                 "invalid_crew_json",
@@ -254,8 +359,8 @@ class DeployValidator:
             )
             return self.results
 
-        if project is not None:
-            self._check_env_vars_json(crew_path, agents_dir, project.agent_names)
+        if agent_names is not None:
+            self._check_env_vars_json(crew_path, agents_dir, agent_names)
         self._check_version_vs_lockfile()
 
         return self.results
@@ -288,7 +393,7 @@ class DeployValidator:
             logger.debug("Skipping unreadable crew file %s: %s", crew_path, exc)
 
         for name in agent_names:
-            agent_path = find_json_project_file(agents_dir, name)
+            agent_path = _find_json_project_file(agents_dir, name)
             if agent_path is None:
                 continue
             try:
