@@ -728,6 +728,39 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="AI/ML API">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    AIML_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="aiml/openai/gpt-5-5",
+        temperature=0.7,
+        extra_headers={"X-AIMLAPI-Source": "agent/crewai"}
+    )
+    ```
+
+    `extra_headers` é opcional — ele marca as requisições como vindas do CrewAI para a análise interna da AI/ML API e não altera o comportamento.
+
+    <Info>
+      Modelos da AI/ML API:
+      - aiml/openai/gpt-5-5
+      - aiml/anthropic/claude-opus-5
+      - aiml/google/gemini-3-7-flash
+      - aiml/deepseek/deepseek-v4-pro-0813
+
+      Uma única chave de API para mais de 300 modelos de chat, imagem, vídeo, áudio e embeddings de diversos provedores. Consulte o [catálogo de modelos](https://docs.aimlapi.com) para a lista completa e atualizada de ids.
+    </Info>
+
+    **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
 </AccordionGroup>
 
 ## Respostas em streaming

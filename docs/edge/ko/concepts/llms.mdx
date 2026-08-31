@@ -755,6 +755,39 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="AI/ML API">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    AIML_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="aiml/openai/gpt-5-5",
+        temperature=0.7,
+        extra_headers={"X-AIMLAPI-Source": "agent/crewai"}
+    )
+    ```
+
+    `extra_headers`는 선택 사항입니다 — 요청이 CrewAI에서 온 것임을 AI/ML API 자체 분석용으로 표시할 뿐 동작을 변경하지 않습니다.
+
+    <Info>
+      AI/ML API 모델:
+      - aiml/openai/gpt-5-5
+      - aiml/anthropic/claude-opus-5
+      - aiml/google/gemini-3-7-flash
+      - aiml/deepseek/deepseek-v4-pro-0813
+
+      하나의 API 키로 여러 제공자의 채팅, 이미지, 비디오, 오디오, 임베딩 모델 300개 이상을 사용할 수 있습니다. 전체 최신 모델 ID 목록은 [모델 카탈로그](https://docs.aimlapi.com)를 참조하세요.
+    </Info>
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
 </AccordionGroup>
 
 ## 스트리밍 응답
