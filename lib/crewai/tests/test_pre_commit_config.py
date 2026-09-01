@@ -23,3 +23,14 @@ def test_local_hooks_use_uv_without_shell_activation() -> None:
     assert local_hooks
     assert all(hook["entry"].startswith("uv run ") for hook in local_hooks)
     assert all(".venv/bin/activate" not in hook["entry"] for hook in local_hooks)
+
+    expected_prefixes = {
+        "ruff": "uv run ruff check --config pyproject.toml",
+        "ruff-format": "uv run ruff format --config pyproject.toml",
+        "mypy": "uv run mypy --config-file pyproject.toml",
+        "pip-audit": "uv run pip-audit --skip-editable",
+    }
+    hooks_by_id = {hook["id"]: hook for hook in local_hooks}
+    assert set(expected_prefixes) <= set(hooks_by_id)
+    for hook_id, prefix in expected_prefixes.items():
+        assert hooks_by_id[hook_id]["entry"].startswith(prefix)
