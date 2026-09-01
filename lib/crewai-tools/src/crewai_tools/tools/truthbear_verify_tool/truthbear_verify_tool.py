@@ -39,6 +39,7 @@ class TruthBearVerifyTool(BaseTool):
     base_url: str = "https://api.truthbear.co"
 
     def _run(self, query: str, **_: Any) -> str:
+        """Query the free /trust/preview endpoint and return the matched fact."""
         try:
             response = requests.get(
                 f"{self.base_url}/trust/preview",
@@ -69,11 +70,14 @@ class TruthBearVerifyTool(BaseTool):
         if missing:
             return json.dumps(data, indent=2)
 
+        value = data.get("value")
+        if value is None or (isinstance(value, str) and not value.strip()):
+            return json.dumps(data, indent=2)
+
         parts = []
         if "signal" in data:
             parts.append(f"Signal: {data['signal']}")
-        if "value" in data:
-            parts.append(f"Value: {data['value']}")
+        parts.append(f"Value: {value}")
         parts.append(f"Source: {data['source_url']}")
         parts.append(f"Record Hash: {data['record_hash']}")
         parts.append(f"Freshness: {data['freshness']}")
