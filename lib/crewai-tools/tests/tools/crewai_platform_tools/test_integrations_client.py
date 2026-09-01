@@ -1,18 +1,305 @@
 from dataclasses import FrozenInstanceError
 from typing import Any
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 from uuid import UUID
 
 import pytest
 
 from crewai_tools.tools.crewai_platform_tools.integrations_client import (
     ApplicationSelector,
+    ClipperClient,
     IntegrationsClient,
     LegacyClient,
     ToolExecutionFailure,
     ToolExecutionSuccess,
     ToolInfo,
 )
+
+
+@patch.dict(
+    "os.environ",
+    {
+        "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+        "CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id",
+        "CREWAI_FACTORY": "false",
+        "CREWAI_PLUS_URL": "https://platform.example.test/",
+    },
+)
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
+)
+def test_clipper_client_discovers_selected_actions(mock_get: Mock) -> None:
+    index_response = Mock()
+    index_response.raise_for_status.return_value = None
+    index_response.json.return_value = {
+        "data": [
+            {
+                "slug": "create_issue",
+                "description": "Create a GitHub issue",
+                "input_schema": {"type": "object"},
+            }
+        ]
+    }
+    show_response = Mock()
+    show_response.raise_for_status.return_value = None
+    show_response.json.return_value = {
+        "data": {
+            "slug": "create_issue",
+            "description": "Create a GitHub issue",
+            "input_schema": {"type": "object"},
+        }
+    }
+    mock_get.side_effect = [index_response, show_response]
+    connection_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+
+    tools = ClipperClient().get_actions(
+        [
+            ApplicationSelector.from_string(f"github@{connection_id}"),
+            ApplicationSelector.from_string("github/create_issue"),
+        ]
+    )
+
+    expected_tool = ToolInfo(
+        app="github",
+        action="create_issue",
+        connection_id=connection_id,
+        description="Create a GitHub issue",
+        parameters={"type": "object"},
+    )
+    assert tools == [
+        expected_tool,
+        ToolInfo(
+            app="github",
+            action="create_issue",
+            connection_id=None,
+            description="Create a GitHub issue",
+            parameters={"type": "object"},
+        ),
+    ]
+    headers = {
+        "Authorization": "Bearer test_token",
+        "X-Crewai-Deployment-Instance-Id": "deployment-instance-id",
+    }
+    assert mock_get.call_args_list == [
+        call(
+            "https://platform.example.test/clipper/v1/applications/github/tools",
+            headers=headers,
+            params={"connection_id": str(connection_id)},
+            timeout=30,
+            verify=True,
+        ),
+        call(
+            "https://platform.example.test/clipper/v1/applications/github/tools/create_issue",
+            headers=headers,
+            params={},
+            timeout=30,
+            verify=True,
+        ),
+    ]
+    index_response.raise_for_status.assert_called_once_with()
+    show_response.raise_for_status.assert_called_once_with()
+
+
+@pytest.mark.parametrize(
+    ("factory_value", "verify"),
+    [
+        (None, True),
+        ("false", True),
+        ("FALSE", True),
+        ("true", False),
+        ("TRUE", False),
+    ],
+)
+@patch.dict(
+    "os.environ",
+    {
+        "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+        "CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id",
+    },
+)
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
+)
+def test_clipper_client_preserves_discovery_ssl_behavior(
+    mock_get: Mock,
+    factory_value: str | None,
+    verify: bool,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    if factory_value is None:
+        monkeypatch.delenv("CREWAI_FACTORY", raising=False)
+    else:
+        monkeypatch.setenv("CREWAI_FACTORY", factory_value)
+    response = Mock()
+    response.raise_for_status.return_value = None
+    response.json.return_value = {"data": []}
+    mock_get.return_value = response
+
+    ClipperClient().get_actions([ApplicationSelector.from_string("github")])
+
+    assert mock_get.call_args.kwargs["verify"] is verify
+
+
+@patch.dict(
+    "os.environ",
+    {
+        "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+        "CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id",
+        "CREWAI_FACTORY": "false",
+        "CREWAI_PLUS_URL": "https://platform.example.test/",
+    },
+)
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
+)
+@pytest.mark.parametrize(
+    ("arguments", "connection_id"),
+    [
+        ({}, UUID("550e8400-e29b-41d4-a716-446655440000")),
+        (
+            {
+                "filters": {"labels": ["urgent"], "enabled": True},
+                "values": [1, {"key": "value"}],
+            },
+            None,
+        ),
+    ],
+)
+def test_clipper_client_executes_action(
+    mock_post: Mock,
+    arguments: dict[str, Any],
+    connection_id: UUID | None,
+) -> None:
+    response = Mock(status_code=200)
+    response.json.return_value = {"data": {"output": {"issue": 42}}}
+    mock_post.return_value = response
+    tool = ToolInfo(
+        app="github",
+        action="create_issue",
+        connection_id=connection_id,
+        description="Create an issue",
+        parameters={},
+    )
+
+    result = ClipperClient().execute_action(tool, arguments)
+
+    assert result == ToolExecutionSuccess(output={"issue": 42})
+    expected_payload: dict[str, Any] = {"arguments": arguments}
+    if connection_id is not None:
+        expected_payload["connection_id"] = str(connection_id)
+    mock_post.assert_called_once_with(
+        "https://platform.example.test/clipper/v1/applications/github/tools/create_issue/execute",
+        headers={
+            "Authorization": "Bearer test_token",
+            "X-Crewai-Deployment-Instance-Id": "deployment-instance-id",
+        },
+        json=expected_payload,
+        timeout=60,
+        verify=True,
+    )
+
+
+@patch.dict(
+    "os.environ",
+    {
+        "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+        "CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id",
+        "CREWAI_FACTORY": "false",
+        "CREWAI_PLUS_URL": "https://platform.example.test/",
+    },
+)
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
+)
+@pytest.mark.parametrize(
+    ("status_code", "code", "detail", "retryable"),
+    [
+        (
+            422,
+            "tool_execution_failed",
+            "The provider rejected the request.",
+            False,
+        ),
+        (
+            503,
+            "service_unavailable",
+            "The tool provider is unavailable.",
+            True,
+        ),
+    ],
+)
+def test_clipper_client_normalizes_execution_failure(
+    mock_post: Mock,
+    status_code: int,
+    code: str,
+    detail: str,
+    retryable: bool,
+) -> None:
+    response = Mock(status_code=status_code)
+    response.json.return_value = {
+        "errors": [
+            {
+                "code": code,
+                "detail": detail,
+            }
+        ]
+    }
+    mock_post.return_value = response
+    tool = ToolInfo(
+        app="github",
+        action="create_issue",
+        connection_id=None,
+        description="Create an issue",
+        parameters={},
+    )
+
+    result = ClipperClient().execute_action(tool, {"title": "Contract test"})
+
+    assert result == ToolExecutionFailure(
+        message=detail,
+        code=code,
+        retryable=retryable,
+    )
+
+
+@patch.dict(
+    "os.environ",
+    {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"},
+    clear=True,
+)
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
+)
+def test_clipper_client_requires_deployment_instance_uuid(mock_get: Mock) -> None:
+    with pytest.raises(ValueError, match="CREWAI_DEPLOYMENT_INSTANCE_UUID"):
+        ClipperClient().get_actions([ApplicationSelector.from_string("github")])
+
+    mock_get.assert_not_called()
+
+
+@patch.dict(
+    "os.environ",
+    {"CREWAI_DEPLOYMENT_INSTANCE_UUID": "deployment-instance-id"},
+    clear=True,
+)
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
+)
+def test_clipper_client_requires_platform_integration_token(
+    mock_post: Mock,
+) -> None:
+    tool = ToolInfo(
+        app="github",
+        action="create_issue",
+        connection_id=None,
+        description="Create an issue",
+        parameters={},
+    )
+
+    with pytest.raises(ValueError, match="CREWAI_PLATFORM_INTEGRATION_TOKEN"):
+        ClipperClient().execute_action(tool, {})
+
+    mock_post.assert_not_called()
 
 
 @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
