@@ -114,6 +114,7 @@ from crewai.flow.human_feedback import (
     HumanFeedbackResult,
     _distill_and_store_lessons,
     _pre_review_with_lessons,
+    _require_collapse_outcome,
     _resolve_llm_instance,
     _serialize_llm_for_context,
 )
@@ -3880,26 +3881,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             outcomes=", ".join(outcomes),
         )
 
-        def match_outcome(response_text: str) -> str | None:
-            response_clean = response_text.strip()
-            for outcome in outcomes:
-                if outcome.lower() == response_clean.lower():
-                    return outcome
-            response_lower = response_clean.lower()
-            best_outcome: str | None = None
-            best_len = -1
-            for outcome in outcomes:
-                if outcome.lower() in response_lower and len(outcome) > best_len:
-                    best_outcome = outcome
-                    best_len = len(outcome)
-            return best_outcome
-
-        def unmatched(response_text: str) -> HumanFeedbackCollapseError:
-            return HumanFeedbackCollapseError(
-                f"Could not match LLM response {response_text!r} to outcomes "
-                f"{list(outcomes)}."
-            )
-
         try:
             # NOTE: LLM.call with response_model returns JSON string, not a Pydantic model
             response = llm_instance.call(
@@ -3914,22 +3895,17 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     parsed = json.loads(response)
                     outcome = parsed.get("outcome")
                     if isinstance(outcome, str):
-                        matched = match_outcome(outcome)
-                        if matched is not None:
-                            return matched
-                    raise unmatched(response)
+                        return _require_collapse_outcome(outcome, outcomes)
+                    raise HumanFeedbackCollapseError(
+                        f"Could not match LLM response {response!r} to outcomes "
+                        f"{list(outcomes)}."
+                    )
                 except json.JSONDecodeError:
-                    matched = match_outcome(response)
-                    if matched is not None:
-                        return matched
-                    raise unmatched(response) from None
+                    return _require_collapse_outcome(response, outcomes)
             elif isinstance(response, FeedbackOutcome):
                 return str(response.outcome)
             elif hasattr(response, "outcome"):
-                matched = match_outcome(str(response.outcome))
-                if matched is not None:
-                    return matched
-                raise unmatched(str(response.outcome))
+                return _require_collapse_outcome(str(response.outcome), outcomes)
             else:
                 raise HumanFeedbackCollapseError(
                     f"Unexpected collapse response type: {type(response)}"
@@ -3947,10 +3923,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 response = llm_instance.call(
                     messages=[{"role": "user", "content": prompt}],
                 )
-                matched = match_outcome(str(response))
-                if matched is not None:
-                    return matched
-                raise unmatched(str(response))
+                return _require_collapse_outcome(str(response), outcomes)
 
             except HookAborted:
                 raise

@@ -84,6 +84,32 @@ class HumanFeedbackCollapseError(ValueError):
     """Raised when human feedback cannot be mapped to an emit outcome."""
 
 
+def _match_collapse_outcome(response_text: str, outcomes: Sequence[str]) -> str | None:
+    """Return the emit label that best matches ``response_text``, or None."""
+    response_clean = response_text.strip()
+    for outcome in outcomes:
+        if outcome.lower() == response_clean.lower():
+            return outcome
+    response_lower = response_clean.lower()
+    best_outcome: str | None = None
+    best_len = -1
+    for outcome in outcomes:
+        if outcome.lower() in response_lower and len(outcome) > best_len:
+            best_outcome = outcome
+            best_len = len(outcome)
+    return best_outcome
+
+
+def _require_collapse_outcome(response_text: str, outcomes: Sequence[str]) -> str:
+    matched = _match_collapse_outcome(response_text, outcomes)
+    if matched is None:
+        raise HumanFeedbackCollapseError(
+            f"Could not match LLM response {response_text!r} to outcomes "
+            f"{list(outcomes)}."
+        )
+    return matched
+
+
 def _serialize_llm_for_context(llm: Any) -> dict[str, Any] | str | None:
     to_config: Callable[[], dict[str, Any]] | None = getattr(
         llm, "to_config_dict", None
