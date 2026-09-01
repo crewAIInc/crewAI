@@ -201,17 +201,14 @@ class ClipperClient:
 
     @staticmethod
     def _headers() -> dict[str, str]:
-        deployment_instance_uuid = os.getenv("CREWAI_DEPLOYMENT_INSTANCE_UUID")
-        if not deployment_instance_uuid:
-            raise ValueError(
-                "No deployment instance UUID found. Set the "
-                "CREWAI_DEPLOYMENT_INSTANCE_UUID environment variable."
-            )
-
-        return {
+        headers = {
             "Authorization": f"Bearer {get_platform_integration_token()}",
-            "X-Crewai-Deployment-Instance-Id": deployment_instance_uuid,
         }
+        deployment_instance_uuid = os.getenv("CREWAI_DEPLOYMENT_INSTANCE_UUID")
+        if deployment_instance_uuid:
+            headers["X-Crewai-Deployment-Instance-Id"] = deployment_instance_uuid
+
+        return headers
 
 
 class LegacyClient:

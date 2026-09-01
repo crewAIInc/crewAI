@@ -270,11 +270,50 @@ def test_clipper_client_normalizes_execution_failure(
 @patch(
     "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
 )
-def test_clipper_client_requires_deployment_instance_uuid(mock_get: Mock) -> None:
-    with pytest.raises(ValueError, match="CREWAI_DEPLOYMENT_INSTANCE_UUID"):
-        ClipperClient().get_actions([ApplicationSelector.from_string("github")])
+def test_clipper_client_discovers_without_deployment_instance_uuid(
+    mock_get: Mock,
+) -> None:
+    response = Mock()
+    response.raise_for_status.return_value = None
+    response.json.return_value = {"data": []}
+    mock_get.return_value = response
 
-    mock_get.assert_not_called()
+    assert ClipperClient().get_actions(
+        [ApplicationSelector.from_string("github")]
+    ) == []
+    assert mock_get.call_args.kwargs["headers"] == {
+        "Authorization": "Bearer test_token"
+    }
+
+
+@patch.dict(
+    "os.environ",
+    {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"},
+    clear=True,
+)
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
+)
+def test_clipper_client_executes_without_deployment_instance_uuid(
+    mock_post: Mock,
+) -> None:
+    response = Mock(status_code=200)
+    response.json.return_value = {"data": {"output": {"issue": 42}}}
+    mock_post.return_value = response
+    tool = ToolInfo(
+        app="github",
+        action="create_issue",
+        connection_id=None,
+        description="Create an issue",
+        parameters={},
+    )
+
+    result = ClipperClient().execute_action(tool, {})
+
+    assert result == ToolExecutionSuccess(output={"issue": 42})
+    assert mock_post.call_args.kwargs["headers"] == {
+        "Authorization": "Bearer test_token"
+    }
 
 
 @patch.dict(
