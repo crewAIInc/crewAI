@@ -3090,7 +3090,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         )
                         for listener_name in listeners_triggered
                     ]
-                    await asyncio.gather(*tasks)
+                    outcomes = await asyncio.gather(*tasks, return_exceptions=True)
+                    for outcome in outcomes:
+                        if isinstance(outcome, BaseException):
+                            raise outcome
 
                 if current_trigger in router_results:
                     for method_name in self._start_method_names():
