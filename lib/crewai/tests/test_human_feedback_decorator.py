@@ -16,6 +16,7 @@ import pytest
 from crewai.constants import DEFAULT_LLM_MODEL
 from crewai.flow import Flow, human_feedback, listen, persist, start
 from crewai.flow.human_feedback import (
+    HumanFeedbackCollapseError,
     HumanFeedbackConfig,
     HumanFeedbackResult,
     _resolve_llm_instance,
@@ -487,8 +488,8 @@ class TestCollapseToOutcome:
 
         assert result == "approved"
 
-    def test_fallback_to_first(self):
-        """Test that unmatched response falls back to first outcome."""
+    def test_unmatched_response_raises(self):
+        """Unmatched LLM text fails closed instead of taking emit[0]."""
         flow = Flow()
 
         with patch("crewai.llm.LLM") as MockLLM:
@@ -496,31 +497,28 @@ class TestCollapseToOutcome:
             mock_llm.call.return_value = "something completely different"
             MockLLM.return_value = mock_llm
 
-            result = flow._collapse_to_outcome(
-                feedback="Unclear feedback",
-                outcomes=["approved", "rejected"],
-                llm="gpt-4o-mini",
-            )
+            with pytest.raises(HumanFeedbackCollapseError, match="Could not match"):
+                flow._collapse_to_outcome(
+                    feedback="Unclear feedback",
+                    outcomes=["approved", "rejected"],
+                    llm="gpt-4o-mini",
+                )
 
-        assert result == "approved"
-
-    def test_both_llm_calls_fail_returns_first_outcome(self):
-        """When both structured and simple prompting fail, return outcomes[0]."""
+    def test_both_llm_calls_fail_raises(self):
+        """When both structured and simple prompting fail, raise instead of emit[0]."""
         flow = Flow()
 
         with patch("crewai.llm.LLM") as MockLLM:
             mock_llm = MagicMock()
-            # Both calls raise — simulates wrong provider / auth failure
             mock_llm.call.side_effect = RuntimeError("Model not found")
             MockLLM.return_value = mock_llm
 
-            result = flow._collapse_to_outcome(
-                feedback="looks great, approve it",
-                outcomes=["needs_changes", "approved"],
-                llm="gemini-3-flash-preview",
-            )
-
-        assert result == "needs_changes"  # First in list (safe fallback)
+            with pytest.raises(HumanFeedbackCollapseError, match="Could not classify"):
+                flow._collapse_to_outcome(
+                    feedback="looks great, approve it",
+                    outcomes=["needs_changes", "approved"],
+                    llm="gemini-3-flash-preview",
+                )
 
     def test_structured_fails_but_simple_succeeds(self):
         """When structured output fails but simple prompting works, use that."""
@@ -542,7 +540,70 @@ class TestCollapseToOutcome:
 
         assert result == "approved"
 
+    def test_collapse_failure_does_not_route_to_first_emit(self):
+        """A failed collapse must not fire the first emit listener."""
+        routed: list[str] = []
 
+        class TestFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                emit=["approved", "rejected"],
+                llm="gpt-4o-mini",
+            )
+            def review(self):
+                return "payment of $10"
+
+            @listen("approved")
+            def send_money(self):
+                routed.append("approved")
+                return "sent"
+
+            @listen("rejected")
+            def stop(self):
+                routed.append("rejected")
+                return "stopped"
+
+        flow = TestFlow()
+        with (
+            patch.object(
+                flow, "_request_human_feedback", return_value="no, reject this"
+            ),
+            patch.object(
+                flow,
+                "_collapse_to_outcome",
+                side_effect=HumanFeedbackCollapseError("failed"),
+            ),
+        ):
+            with pytest.raises(HumanFeedbackCollapseError, match="failed"):
+                flow.kickoff()
+
+        assert routed == []
+
+    def test_unresolved_collapse_llm_raises(self):
+        """If no LLM can be resolved, do not take emit[0]."""
+
+        class TestFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                emit=["approved", "rejected"],
+            )
+            def review(self):
+                return "payment of $10"
+
+        flow = TestFlow()
+        with (
+            patch.object(
+                flow, "_request_human_feedback", return_value="no, reject this"
+            ),
+            patch(
+                "crewai.flow.runtime._resolve_llm_instance",
+                return_value=None,
+            ),
+        ):
+            with pytest.raises(HumanFeedbackCollapseError, match="Could not resolve"):
+                flow.kickoff()
 
 
 class TestHumanFeedbackLearn:

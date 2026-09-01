@@ -77,7 +77,11 @@ logger = logging.getLogger(__name__)
 
 F = TypeVar("F", bound=Callable[..., Any])
 
-__all__ = ["HumanFeedbackResult", "human_feedback"]
+__all__ = ["HumanFeedbackCollapseError", "HumanFeedbackResult", "human_feedback"]
+
+
+class HumanFeedbackCollapseError(ValueError):
+    """Raised when human feedback cannot be mapped to an emit outcome."""
 
 
 def _serialize_llm_for_context(llm: Any) -> dict[str, Any] | str | None:

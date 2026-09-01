@@ -1099,6 +1099,24 @@ class TestCollapseToOutcomeJsonParsing:
 
         assert result == "approved"
 
+    def test_json_without_outcome_raises(self) -> None:
+        """Parsed JSON missing a usable outcome fails closed."""
+        from crewai.flow.human_feedback import HumanFeedbackCollapseError
+
+        flow = Flow()
+
+        with patch("crewai.llm.LLM") as MockLLM:
+            mock_llm = MagicMock()
+            mock_llm.call.return_value = '{"foo": "bar"}'
+            MockLLM.return_value = mock_llm
+
+            with pytest.raises(HumanFeedbackCollapseError, match="Could not match"):
+                flow._collapse_to_outcome(
+                    feedback="looks good",
+                    outcomes=["approved", "rejected"],
+                    llm="gpt-4o-mini",
+                )
+
     def test_llm_exception_falls_back_to_simple_prompting(self) -> None:
         """Test that LLM exception triggers fallback to simple prompting."""
         flow = Flow()
