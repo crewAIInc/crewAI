@@ -17,22 +17,23 @@ class TruthBearVerifyToolInput(BaseModel):
 
 class TruthBearVerifyTool(BaseTool):
     """
-    TruthBearVerifyTool - Verify official facts with Bitcoin-anchored proof.
+    TruthBearVerifyTool - Free preview of official-data fact checking.
 
-    Queries 180+ official data signals (FRED, USGS, SEC EDGAR, NOAA, EPA, etc.)
-    and returns verifiable results via the free preview endpoint. Each record
-    includes the source URL, a SHA-256 record_hash anchored to Bitcoin via
-    OpenTimestamps, and a freshness stamp.
+    Queries the free `/trust/preview` endpoint to retrieve a single-source
+    summary from 180+ official data signals (FRED, USGS, SEC EDGAR, NOAA,
+    EPA, etc.).  The response includes the matched signal, its value,
+    the primary source URL, a SHA-256 record_hash, and a freshness stamp.
 
+    This is a screening-level preview — not decision-grade verification.
     No API key or signup required.
     """
 
     name: str = "Truth Bear Verify"
     description: str = (
-        "Verify official facts from government and institutional sources "
-        "(FRED, USGS, SEC EDGAR, NOAA, EPA, 180+ signals). Returns the "
-        "official value, source URL, and a SHA-256 record_hash anchored "
-        "to Bitcoin for independent re-verification."
+        "Free preview: look up an official data point from government and "
+        "institutional sources (FRED, USGS, SEC EDGAR, NOAA, EPA, 180+ "
+        "signals). Returns the value, source URL, SHA-256 record_hash, "
+        "and freshness stamp. Screening-level only."
     )
     args_schema: Type[BaseModel] = TruthBearVerifyToolInput
     base_url: str = "https://api.truthbear.co"
@@ -45,26 +46,36 @@ class TruthBearVerifyTool(BaseTool):
                 timeout=30,
             )
             response.raise_for_status()
+        except requests.ConnectionError:
+            return "Error verifying fact: unable to connect to api.truthbear.co"
+        except requests.Timeout:
+            return "Error verifying fact: request timed out after 30 s"
+        except requests.HTTPError as e:
+            status = e.response.status_code if e.response is not None else "unknown"
+            return f"Error verifying fact: HTTP {status}"
+        except requests.RequestException as e:
+            return f"Error verifying fact: {e}"
+
+        try:
             data = response.json()
+        except (ValueError, json.JSONDecodeError):
+            return "Error verifying fact: response is not valid JSON"
 
-            if not isinstance(data, dict):
-                return json.dumps(data, indent=2)
-
-            parts = []
-            if "value" in data:
-                parts.append(f"Value: {data['value']}")
-            if "source_url" in data:
-                parts.append(f"Source: {data['source_url']}")
-            if "record_hash" in data:
-                parts.append(f"Record Hash: {data['record_hash']}")
-            if "freshness" in data:
-                parts.append(f"Freshness: {data['freshness']}")
-            if "signal" in data:
-                parts.append(f"Signal: {data['signal']}")
-
-            if parts:
-                return "\n".join(parts)
+        if not isinstance(data, dict):
             return json.dumps(data, indent=2)
 
-        except requests.RequestException as e:
-            return f"Error verifying fact: {str(e)}"
+        parts = []
+        if "signal" in data:
+            parts.append(f"Signal: {data['signal']}")
+        if "value" in data:
+            parts.append(f"Value: {data['value']}")
+        if "source_url" in data:
+            parts.append(f"Source: {data['source_url']}")
+        if "record_hash" in data:
+            parts.append(f"Record Hash: {data['record_hash']}")
+        if "freshness" in data:
+            parts.append(f"Freshness: {data['freshness']}")
+
+        if parts:
+            return "\n".join(parts)
+        return json.dumps(data, indent=2)

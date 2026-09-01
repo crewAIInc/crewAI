@@ -1,16 +1,18 @@
 # TruthBearVerifyTool
 
-Verify official facts from government and institutional sources with Bitcoin-anchored proof.
+Free preview of official-data fact checking for CrewAI agents.
 
 ## Description
 
-TruthBearVerifyTool lets CrewAI agents verify facts against 180+ official data signals (FRED, USGS, SEC EDGAR, NOAA, EPA, and more). Each record includes:
+TruthBearVerifyTool queries the free `/trust/preview` endpoint to retrieve a single-source summary from 180+ official data signals (FRED, USGS, SEC EDGAR, NOAA, EPA, and more). Each response includes:
 
-- The **official source URL** linking to the primary data source
-- A **SHA-256 record_hash** anchored to Bitcoin via daily Merkle tree + OpenTimestamps
+- The **matched signal** name
+- The **official value**
+- The **source URL** linking to the primary data source
+- A **SHA-256 record_hash** for the record
 - A **freshness stamp** indicating when the data was last verified
 
-This tool uses the free preview endpoint. Screening-level factual grounding, not decision-grade advice.
+This is a screening-level preview — not decision-grade verification. No API key or signup required.
 
 ## Installation
 
@@ -23,9 +25,10 @@ from crewai_tools import TruthBearVerifyTool
 
 tool = TruthBearVerifyTool()
 
-# Verify a fact
+# Look up a fact
 result = tool.run("US unemployment rate")
 print(result)
+# Signal: UNRATE
 # Value: 4.2%
 # Source: https://fred.stlouisfed.org/series/UNRATE
 # Record Hash: sha256:7a3f...d91e

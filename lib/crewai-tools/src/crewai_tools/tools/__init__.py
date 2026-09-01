@@ -314,6 +314,7 @@ __all__ = [
     "TavilyGetResearchTool",
     "TavilyResearchTool",
     "TavilySearchTool",
+    "TruthBearVerifyTool",
     "URLReadTool",
     "VisionTool",
     "WaitTool",
