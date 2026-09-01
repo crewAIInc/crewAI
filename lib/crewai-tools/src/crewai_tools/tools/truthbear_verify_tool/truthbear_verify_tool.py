@@ -46,10 +46,10 @@ class TruthBearVerifyTool(BaseTool):
                 timeout=30,
             )
             response.raise_for_status()
-        except requests.ConnectionError:
-            return "Error verifying fact: unable to connect to api.truthbear.co"
         except requests.Timeout:
             return "Error verifying fact: request timed out after 30 s"
+        except requests.ConnectionError:
+            return "Error verifying fact: unable to connect to api.truthbear.co"
         except requests.HTTPError as e:
             status = e.response.status_code if e.response is not None else "unknown"
             return f"Error verifying fact: HTTP {status}"
@@ -64,18 +64,18 @@ class TruthBearVerifyTool(BaseTool):
         if not isinstance(data, dict):
             return json.dumps(data, indent=2)
 
+        required = {"source_url": str, "record_hash": str, "freshness": str}
+        missing = [k for k, t in required.items() if k not in data or not isinstance(data[k], t)]
+        if missing:
+            return json.dumps(data, indent=2)
+
         parts = []
         if "signal" in data:
             parts.append(f"Signal: {data['signal']}")
         if "value" in data:
             parts.append(f"Value: {data['value']}")
-        if "source_url" in data:
-            parts.append(f"Source: {data['source_url']}")
-        if "record_hash" in data:
-            parts.append(f"Record Hash: {data['record_hash']}")
-        if "freshness" in data:
-            parts.append(f"Freshness: {data['freshness']}")
+        parts.append(f"Source: {data['source_url']}")
+        parts.append(f"Record Hash: {data['record_hash']}")
+        parts.append(f"Freshness: {data['freshness']}")
 
-        if parts:
-            return "\n".join(parts)
-        return json.dumps(data, indent=2)
+        return "\n".join(parts)

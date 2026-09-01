@@ -1,6 +1,6 @@
 # TruthBearVerifyTool
 
-Free preview of official-data fact checking for CrewAI agents.
+Free preview of official-data fact-checking for CrewAI agents.
 
 ## Description
 
