@@ -17,12 +17,11 @@ def create_flow(name: str, *, declarative: bool = False) -> None:
     folder_name = name.replace(" ", "_").replace("-", "_").lower()
     class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
 
-    click.secho(f"Creating flow {folder_name}...", fg="green", bold=True)
-
     project_root = Path(folder_name)
     if project_root.exists():
-        click.secho(f"Error: Folder {folder_name} already exists.", fg="red")
-        return
+        raise click.ClickException(f"Folder {folder_name} already exists.")
+
+    click.secho(f"Creating flow {folder_name}...", fg="green", bold=True)
 
     telemetry = Telemetry()
     telemetry.flow_creation_span(class_name)

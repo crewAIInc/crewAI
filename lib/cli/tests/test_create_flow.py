@@ -10,6 +10,23 @@ from crewai_cli.cli import crewai
 from crewai_cli.create_flow import create_flow
 
 
+def test_create_flow_existing_folder_exits_nonzero(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+):
+    monkeypatch.chdir(tmp_path)
+    project_root = tmp_path / "research_flow"
+    project_root.mkdir()
+    sentinel = project_root / "existing.txt"
+    sentinel.write_text("keep", encoding="utf-8")
+
+    result = CliRunner().invoke(crewai, ["create", "flow", "Research Flow"])
+
+    assert result.exit_code != 0
+    assert "Error: Folder research_flow already exists." in result.output
+    assert "Creating flow research_flow" not in result.output
+    assert sentinel.read_text(encoding="utf-8") == "keep"
+
+
 def test_create_flow_declarative_project_can_run(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ):
