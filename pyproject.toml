@@ -220,7 +220,10 @@ exclude-newer-package = { pypdf = "2026-08-07T00:00:00Z", msgpack = "2026-06-20T
 # nltk.pathsec.urlopen), GHSA-fg7f-2386-8897 (ReDoS in ReviewsCorpusReader), and
 # GHSA-xh95-f55m-82fw (path traversal in FramenetCorpusReader.frame); all fixed
 # in 3.10.0. 3.10.0 also clears PYSEC-2026-597, whose last affected version is
-# 3.9.4, so that ignore is no longer needed. Transitive via
+# 3.9.4, so that ignore is no longer needed. 3.10.0-3.10.1 have PYSEC-2026-3726
+# (symlink-based arbitrary file read in IPIPANCorpusReader); fixed in 3.10.2.
+# 3.10.3 also clears later 3.10.2 findings (proxy SSRF, pickle allowlist RCE,
+# JVM option injection, XML entity expansion). Transitive via
 # crewai-tools[xml] -> unstructured.
 # pydantic-settings <2.14.2 has GHSA-4xgf-cpjx-pc3j.
 # h2 <=4.4.0 has GHSA-6hr6-w5qg-qmwg (CVE-2026-71554): duplicate Host headers
@@ -228,6 +231,10 @@ exclude-newer-package = { pypdf = "2026-08-07T00:00:00Z", msgpack = "2026-06-20T
 # qdrant-client -> httpx[http2].
 # torch <=2.12.1 has GHSA-rrmf-rvhw-rf47 (CVE-2025-3000): memory corruption in
 # torch.jit.script; fixed in 2.13.0. Transitive via docling/unstructured extras.
+# snowflake-connector-python >=4.0.0,<4.7.1 has GHSA-5cc2-282f-jjq2 (CVE-2026-15925):
+# TLS hostnames are not verified, so a network attacker can impersonate the endpoint;
+# fixed in 4.7.1. Declared as crewai-tools[snowflake] "snowflake-connector-python>=3.12.4",
+# which the lock resolved to 4.6.0.
 # Keep OpenAI on the SDK range required by CrewAI when transitive dependencies
 # loosen or pin their own lower versions.
 override-dependencies = [
@@ -257,9 +264,10 @@ override-dependencies = [
     "msgpack>=1.2.1",
     "pydantic-settings>=2.14.2",
     "setuptools>=83.0.0", # PYSEC-2026-3447
-    "nltk>=3.10.0",
+    "nltk>=3.10.3",
     "h2>=4.4.1",
     "torch>=2.13.0",
+    "snowflake-connector-python>=4.7.1",
 ]
 
 [tool.uv.workspace]

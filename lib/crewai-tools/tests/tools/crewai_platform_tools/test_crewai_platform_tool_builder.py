@@ -60,7 +60,7 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
     @patch(
-        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
     def test_fetch_actions_success(self, mock_get):
         mock_api_response = {
@@ -84,7 +84,9 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
             }
         }
 
-        builder = CrewaiPlatformToolBuilder(apps=["github", "slack/send_message"])
+        builder = CrewaiPlatformToolBuilder(
+            apps=["github", "slack/send_message", "custom/path/to/action"]
+        )
 
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
@@ -98,7 +100,9 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
 
         assert "/actions" in args[0]
         assert kwargs["headers"]["Authorization"] == "Bearer test_token"
-        assert kwargs["params"]["apps"] == "github,slack/send_message"
+        assert kwargs["params"]["apps"] == (
+            "github,slack/send_message,custom/path/to/action"
+        )
 
         assert "create_issue" in builder._actions_schema
         assert (
@@ -116,7 +120,7 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
     @patch(
-        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
     def test_create_tools(self, mock_get):
         mock_api_response = {
@@ -213,7 +217,7 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
         builder = CrewaiPlatformToolBuilder(apps=[])
 
         with patch(
-            "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+            "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
         ) as mock_get:
             mock_response = Mock()
             mock_response.raise_for_status.return_value = None
@@ -233,7 +237,7 @@ class TestCrewaiPlatformToolBuilderVerify(unittest.TestCase):
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"}, clear=True)
     @patch(
-        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
     def test_fetch_actions_with_ssl_verification_default(self, mock_get):
         """Test that _fetch_actions uses SSL verification by default when CREWAI_FACTORY is not set"""
@@ -251,7 +255,7 @@ class TestCrewaiPlatformToolBuilderVerify(unittest.TestCase):
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token", "CREWAI_FACTORY": "false"}, clear=True)
     @patch(
-        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
     def test_fetch_actions_with_ssl_verification_factory_false(self, mock_get):
         """Test that _fetch_actions uses SSL verification when CREWAI_FACTORY is 'false'"""
@@ -269,7 +273,7 @@ class TestCrewaiPlatformToolBuilderVerify(unittest.TestCase):
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token", "CREWAI_FACTORY": "FALSE"}, clear=True)
     @patch(
-        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
     def test_fetch_actions_with_ssl_verification_factory_false_uppercase(self, mock_get):
         """Test that _fetch_actions uses SSL verification when CREWAI_FACTORY is 'FALSE' (case-insensitive)"""
@@ -287,7 +291,7 @@ class TestCrewaiPlatformToolBuilderVerify(unittest.TestCase):
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token", "CREWAI_FACTORY": "true"}, clear=True)
     @patch(
-        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
     def test_fetch_actions_without_ssl_verification_factory_true(self, mock_get):
         """Test that _fetch_actions disables SSL verification when CREWAI_FACTORY is 'true'"""
@@ -305,7 +309,7 @@ class TestCrewaiPlatformToolBuilderVerify(unittest.TestCase):
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token", "CREWAI_FACTORY": "TRUE"}, clear=True)
     @patch(
-        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
     )
     def test_fetch_actions_without_ssl_verification_factory_true_uppercase(self, mock_get):
         """Test that _fetch_actions disables SSL verification when CREWAI_FACTORY is 'TRUE' (case-insensitive)"""
@@ -320,3 +324,52 @@ class TestCrewaiPlatformToolBuilderVerify(unittest.TestCase):
         mock_get.assert_called_once()
         call_args = mock_get.call_args
         assert call_args.kwargs["verify"] is False
+
+
+@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
+)
+def test_connection_ids_are_parsed_but_not_sent(mock_get):
+    mock_response = Mock()
+    mock_response.raise_for_status.return_value = None
+    mock_response.json.return_value = {"actions": {}}
+    mock_get.return_value = mock_response
+
+    builder = CrewaiPlatformToolBuilder(
+        apps=[
+            "github@550E8400-E29B-41D4-A716-446655440000",
+            "slack/send_message@67e55044-10b1-426f-9247-bb680e5fe0c8",
+        ]
+    )
+
+    builder.tools()
+
+    assert mock_get.call_args.kwargs["params"]["apps"] == (
+        "github,slack/send_message"
+    )
+
+
+@pytest.mark.parametrize(
+    ("selector", "message"),
+    [
+        ("", "cannot be empty"),
+        (
+            "@550e8400-e29b-41d4-a716-446655440000",
+            "application cannot be empty",
+        ),
+        ("github/", "action cannot be empty"),
+        ("github@", "connection ID cannot be empty"),
+        ("github@not-a-uuid", "connection ID must be a valid UUID"),
+        (
+            "github@550e8400-e29b-41d4-a716-446655440000/issues",
+            "connection ID must be the last segment",
+        ),
+    ],
+)
+def test_rejects_invalid_app_selector(selector, message):
+    with pytest.raises(ValueError) as error:
+        CrewaiPlatformToolBuilder(apps=[selector])
+
+    assert repr(selector) in str(error.value)
+    assert message in str(error.value)
