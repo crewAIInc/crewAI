@@ -3887,33 +3887,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 messages=[{"role": "user", "content": prompt}],
                 response_model=FeedbackOutcome,
             )
-
-            if isinstance(response, str):
-                import json
-
-                try:
-                    parsed = json.loads(response)
-                    outcome = parsed.get("outcome")
-                    if isinstance(outcome, str):
-                        return _require_collapse_outcome(outcome, outcomes)
-                    raise HumanFeedbackCollapseError(
-                        f"Could not match LLM response {response!r} to outcomes "
-                        f"{list(outcomes)}."
-                    )
-                except json.JSONDecodeError:
-                    return _require_collapse_outcome(response, outcomes)
-            elif isinstance(response, FeedbackOutcome):
-                return str(response.outcome)
-            elif hasattr(response, "outcome"):
-                return _require_collapse_outcome(str(response.outcome), outcomes)
-            else:
-                raise HumanFeedbackCollapseError(
-                    f"Unexpected collapse response type: {type(response)}"
-                )
-
         except HookAborted:
-            raise
-        except HumanFeedbackCollapseError:
             raise
         except Exception as e:
             logger.warning(
@@ -3923,17 +3897,33 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 response = llm_instance.call(
                     messages=[{"role": "user", "content": prompt}],
                 )
-                return _require_collapse_outcome(str(response), outcomes)
-
             except HookAborted:
-                raise
-            except HumanFeedbackCollapseError:
                 raise
             except Exception as fallback_err:
                 raise HumanFeedbackCollapseError(
                     f"Could not classify human feedback into {list(outcomes)}: "
                     f"{fallback_err}"
                 ) from fallback_err
+            return _require_collapse_outcome(str(response), outcomes)
+
+        if isinstance(response, str):
+            import json
+
+            try:
+                parsed = json.loads(response)
+            except json.JSONDecodeError:
+                return _require_collapse_outcome(response, outcomes)
+            outcome = parsed.get("outcome")
+            if isinstance(outcome, str):
+                return _require_collapse_outcome(outcome, outcomes)
+            return _require_collapse_outcome(response, outcomes)
+        if isinstance(response, FeedbackOutcome):
+            return str(response.outcome)
+        if hasattr(response, "outcome"):
+            return _require_collapse_outcome(str(response.outcome), outcomes)
+        raise HumanFeedbackCollapseError(
+            f"Unexpected collapse response type: {type(response)}"
+        )
 
     def _log_flow_event(
         self,
