@@ -200,20 +200,22 @@ def test_core_telemetry_stays_enabled_for_conventional_no_values(
     assert Telemetry._is_telemetry_disabled() is False
 
 
-def test_core_telemetry_unrecognized_disable_value_warns(
+def test_core_telemetry_unrecognized_disable_value_warns_once(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     from crewai_core.telemetry import Telemetry
 
     monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", "maybe")
-    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
-    monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
+    Telemetry._warned_env_flags.clear()
 
     with caplog.at_level(logging.WARNING, logger="crewai_core.telemetry"):
-        assert Telemetry._is_telemetry_disabled() is False
+        assert Telemetry._env_flag_enabled("CREWAI_DISABLE_TELEMETRY") is False
+        assert Telemetry._env_flag_enabled("CREWAI_DISABLE_TELEMETRY") is False
 
-    assert "CREWAI_DISABLE_TELEMETRY" in caplog.text
-    assert "maybe" in caplog.text
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    assert "CREWAI_DISABLE_TELEMETRY" in warnings[0].getMessage()
+    assert "maybe" in warnings[0].getMessage()
 
 
 def test_core_telemetry_never_installs_a_global_provider(

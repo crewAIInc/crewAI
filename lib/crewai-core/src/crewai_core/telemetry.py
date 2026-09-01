@@ -183,6 +183,7 @@ class Telemetry:
     _lock: ClassVar[threading.Lock] = threading.Lock()
     _TRUTHY_ENV: ClassVar[frozenset[str]] = frozenset({"1", "on", "true", "yes"})
     _FALSY_ENV: ClassVar[frozenset[str]] = frozenset({"", "0", "false", "no", "off"})
+    _warned_env_flags: ClassVar[set[tuple[str, str]]] = set()
 
     def __new__(cls) -> Self:
         if cls._instance is None:
@@ -240,7 +241,8 @@ class Telemetry:
         """Return whether ``name`` is a conventional yes-value.
 
         Yes: ``true``, ``1``, ``yes``, ``on``. No: unset, ``false``, ``0``,
-        ``no``, ``off``, empty. Anything else is treated as unset and logged.
+        ``no``, ``off``, empty. Anything else is treated as unset and logged
+        once per ``(name, raw)`` pair for the process.
         """
         raw = os.getenv(name)
         if raw is None:
@@ -250,12 +252,15 @@ class Telemetry:
             return True
         if value in cls._FALSY_ENV:
             return False
-        logger.warning(
-            "Unrecognized value %r for %s; expected true/1/yes/on or "
-            "false/0/no/off. Treating as unset.",
-            raw,
-            name,
-        )
+        warning_key = (name, raw)
+        if warning_key not in cls._warned_env_flags:
+            cls._warned_env_flags.add(warning_key)
+            logger.warning(
+                "Unrecognized value %r for %s; expected true/1/yes/on or "
+                "false/0/no/off. Treating as unset.",
+                raw,
+                name,
+            )
         return default
 
     @classmethod
