@@ -111,9 +111,9 @@ from crewai.flow.flow_wrappers import (
 )
 from crewai.flow.human_feedback import (
     HumanFeedbackResult,
-    _deserialize_llm_from_context,
     _distill_and_store_lessons,
     _pre_review_with_lessons,
+    _resolve_llm_instance,
     _serialize_llm_for_context,
 )
 from crewai.flow.input_provider import InputProvider
@@ -3606,13 +3606,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         method_output: Any,
     ) -> Any:
         llm = feedback_definition.llm
-        llm_instance = (
-            _deserialize_llm_from_context(llm) if isinstance(llm, (str, dict)) else llm
-        )
         emit = feedback_definition.emit
         default_outcome = feedback_definition.default_outcome
         metadata = feedback_definition.metadata
         learn = feedback_definition.learn and self.memory is not None
+        llm_instance = _resolve_llm_instance(llm) if (emit or learn) else llm
 
         if learn:
             method_output = await asyncio.to_thread(
@@ -3705,11 +3703,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             elif emit:
                 collapsed_outcome = emit[0]
         elif emit:
-            collapse_llm = (
-                _deserialize_llm_from_context(llm)
-                if isinstance(llm, (str, dict))
-                else llm
-            )
+            collapse_llm = _resolve_llm_instance(llm)
             if collapse_llm is not None:
                 collapsed_outcome = await asyncio.to_thread(
                     self._collapse_to_outcome,

@@ -13,29 +13,44 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from crewai.constants import DEFAULT_LLM_MODEL
 from crewai.flow import Flow, human_feedback, listen, persist, start
 from crewai.flow.human_feedback import (
     HumanFeedbackConfig,
     HumanFeedbackResult,
+    _resolve_llm_instance,
 )
 
 
 class TestHumanFeedbackValidation:
     """Tests for decorator parameter validation."""
 
-    def test_emit_requires_llm(self):
-        """Test that specifying emit with llm=None raises ValueError."""
-        with pytest.raises(ValueError) as exc_info:
+    def test_emit_allows_omitted_llm(self):
+        """emit without an explicit llm is allowed; the engine resolves one later."""
 
-            @human_feedback(
-                message="Review this:",
-                emit=["approve", "reject"],
-                llm=None,
-            )
-            def test_method(self):
-                return "output"
+        @human_feedback(
+            message="Review this:",
+            emit=["approve", "reject"],
+        )
+        def test_method(self):
+            return "output"
 
-        assert "llm is required" in str(exc_info.value)
+        config = test_method.__human_feedback_config__
+        assert config.emit == ["approve", "reject"]
+        assert config.llm is None
+
+    def test_emit_allows_explicit_llm_none(self):
+        """llm=None with emit is the same as omitting llm."""
+
+        @human_feedback(
+            message="Review this:",
+            emit=["approve", "reject"],
+            llm=None,
+        )
+        def test_method(self):
+            return "output"
+
+        assert test_method.__human_feedback_config__.llm is None
 
     def test_default_outcome_requires_emit(self):
         """Test that specifying default_outcome without emit raises ValueError."""
@@ -127,6 +142,38 @@ class TestHumanFeedbackConfig:
         assert config.llm == "gpt-4"
         assert config.default_outcome == "a"
         assert config.metadata == {"key": "value"}
+
+
+class TestResolveLlmInstance:
+    """Omitted decorator llm follows create_llm (project MODEL, then default)."""
+
+    def test_none_uses_model_env(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("MODEL", "anthropic/claude-sonnet-4-5")
+        monkeypatch.delenv("MODEL_NAME", raising=False)
+        monkeypatch.delenv("OPENAI_MODEL_NAME", raising=False)
+
+        llm = _resolve_llm_instance(None)
+
+        assert llm is not None
+        assert "claude-sonnet-4-5" in getattr(llm, "model", "")
+
+    def test_explicit_string_wins_over_model_env(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("MODEL", "anthropic/claude-sonnet-4-5")
+
+        llm = _resolve_llm_instance("gpt-4o-mini")
+
+        assert llm is not None
+        assert getattr(llm, "model", "") == "gpt-4o-mini"
+
+    def test_none_falls_back_to_default_model(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.delenv("MODEL", raising=False)
+        monkeypatch.delenv("MODEL_NAME", raising=False)
+        monkeypatch.delenv("OPENAI_MODEL_NAME", raising=False)
+
+        llm = _resolve_llm_instance(None)
+
+        assert llm is not None
+        assert getattr(llm, "model", "") == DEFAULT_LLM_MODEL
 
 
 class TestHumanFeedbackResult:
@@ -317,6 +364,41 @@ class TestHumanFeedbackExecution:
         assert flow.last_human_feedback is not None
         # But the outcome is still correctly set for routing purposes
         assert flow.last_human_feedback.outcome == "approved"
+
+    @patch("builtins.input", return_value="Approved!")
+    @patch("builtins.print")
+    def test_omitted_llm_collapse_uses_project_model(
+        self, mock_print, mock_input, monkeypatch: pytest.MonkeyPatch
+    ):
+        """When emit is set without llm=, collapse uses MODEL via create_llm."""
+        monkeypatch.setenv("MODEL", "anthropic/claude-sonnet-4-5")
+        monkeypatch.delenv("MODEL_NAME", raising=False)
+        monkeypatch.delenv("OPENAI_MODEL_NAME", raising=False)
+
+        class TestFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                emit=["approved", "rejected"],
+            )
+            def review(self):
+                return "Content"
+
+        flow = TestFlow()
+
+        with (
+            patch.object(
+                flow, "_request_human_feedback", return_value="Looks great, approved!"
+            ),
+            patch.object(flow, "_collapse_to_outcome", return_value="approved") as mock_collapse,
+        ):
+            result = flow.kickoff()
+
+        assert result == "Content"
+        mock_collapse.assert_called_once()
+        collapse_llm = mock_collapse.call_args.kwargs["llm"]
+        assert collapse_llm is not None
+        assert "claude-sonnet-4-5" in getattr(collapse_llm, "model", "")
 
 
 class TestHumanFeedbackHistory:
@@ -596,8 +678,8 @@ class TestHumanFeedbackLearn:
 
         flow.memory.remember_many.assert_not_called()
 
-    def test_learn_true_uses_default_llm(self):
-        """When learn=True and llm is not explicitly set, the default gpt-5.4-mini is used."""
+    def test_learn_true_omits_llm_by_default(self):
+        """When learn=True and llm is not set, config.llm stays None for runtime resolve."""
 
         @human_feedback(message="Review:", learn=True)
         def test_method(self):
@@ -606,8 +688,7 @@ class TestHumanFeedbackLearn:
         config = test_method.__human_feedback_config__
         assert config is not None
         assert config.learn is True
-        # llm defaults to "gpt-5.4-mini" at the function level
-        assert config.llm == "gpt-5.4-mini"
+        assert config.llm is None
 
     def test_pre_review_failure_logs_and_returns_raw_output(self, caplog):
         """Pre-review LLM failure falls back to raw output AND logs a warning."""
