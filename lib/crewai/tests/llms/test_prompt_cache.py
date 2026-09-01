@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from crewai.llms.cache import (
@@ -204,6 +206,19 @@ class TestNonAnthropicStripsMarker:
             assert CACHE_BREAKPOINT_KEY not in m
 
 
+# Test-only LLM subclass for direct instantiation.
+# LLM.__new__ requires a model argument and routes to providers.
+# This minimal subclass allows model_construct() to bypass __new__
+# entirely, creating a bare instance for testing internal methods.
+from crewai.llm import LLM
+
+
+class _LLMForTest(LLM):
+    def __new__(cls, **kwargs: Any) -> "_LLMForTest":
+        # Bypass LLM.__new__ routing
+        return object.__new__(cls)
+
+
 class TestLiteLLMStripsMarker:
     """LiteLLM path must strip cache_breakpoint to avoid rejection by
     providers like Mistral that don't recognize the key.
@@ -215,12 +230,10 @@ class TestLiteLLMStripsMarker:
 
     def test_mistral_format_strips_marker(self) -> None:
         """Mistral models via LiteLLM must have cache_breakpoint stripped."""
-        from crewai.llm import LLM
-
-        # Bypass __new__ to create a test instance
-        llm = object.__new__(LLM)
-        llm.model = "mistral/mistral-large-latest"
-        llm.is_anthropic = False
+        llm = _LLMForTest.model_construct(
+            model="mistral/mistral-large-latest",
+            is_anthropic=False,
+        )
 
         messages = [
             mark_cache_breakpoint({"role": "system", "content": "stable"}),
@@ -234,11 +247,10 @@ class TestLiteLLMStripsMarker:
 
     def test_generic_litellm_format_strips_marker(self) -> None:
         """Any LiteLLM model must have cache_breakpoint stripped."""
-        from crewai.llm import LLM
-
-        llm = object.__new__(LLM)
-        llm.model = "gpt-4o-mini"
-        llm.is_anthropic = False
+        llm = _LLMForTest.model_construct(
+            model="gpt-4o-mini",
+            is_anthropic=False,
+        )
 
         messages = [
             mark_cache_breakpoint({"role": "system", "content": "stable"}),
@@ -250,11 +262,10 @@ class TestLiteLLMStripsMarker:
 
     def test_marker_stripping_does_not_mutate_original(self) -> None:
         """Stripping markers must not modify the original messages list."""
-        from crewai.llm import LLM
-
-        llm = object.__new__(LLM)
-        llm.model = "mistral/mistral-large-latest"
-        llm.is_anthropic = False
+        llm = _LLMForTest.model_construct(
+            model="mistral/mistral-large-latest",
+            is_anthropic=False,
+        )
 
         messages = [
             mark_cache_breakpoint({"role": "system", "content": "stable"}),
@@ -267,11 +278,10 @@ class TestLiteLLMStripsMarker:
 
     def test_format_preserves_all_other_keys(self) -> None:
         """Only cache_breakpoint should be stripped, all other keys preserved."""
-        from crewai.llm import LLM
-
-        llm = object.__new__(LLM)
-        llm.model = "mistral/mistral-large-latest"
-        llm.is_anthropic = False
+        llm = _LLMForTest.model_construct(
+            model="mistral/mistral-large-latest",
+            is_anthropic=False,
+        )
 
         messages = [
             mark_cache_breakpoint(
