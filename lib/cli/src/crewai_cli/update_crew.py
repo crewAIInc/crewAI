@@ -21,7 +21,7 @@ def migrate_pyproject(input_file: str, output_file: str) -> None:
     When the time comes that uv supports the new format, this function will be deprecated.
     """
     poetry_data = {}
-    pyproject_data = read_toml()
+    pyproject_data = read_toml(input_file)
 
     new_pyproject: dict[str, Any] = {
         "project": {},
@@ -41,6 +41,13 @@ def migrate_pyproject(input_file: str, output_file: str) -> None:
             for author in poetry_data.get("authors", [])
         ]
         new_pyproject["project"]["requires-python"] = poetry_data.get("python")
+        preserved_tool_config = {
+            name: config
+            for name, config in pyproject_data["tool"].items()
+            if name != "poetry"
+        }
+        if preserved_tool_config:
+            new_pyproject["tool"] = preserved_tool_config
     else:
         new_pyproject["project"] = pyproject_data.get("project", {})
         new_pyproject["tool"] = pyproject_data.get("tool", {})
