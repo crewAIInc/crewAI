@@ -772,8 +772,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     # duration span emitted at the end does not need to hold a span open for
     # the life of the run.
     _telemetry_started_at: float | None = PrivateAttr(default=None)
-    # CEL now() is frozen per kickoff so expressions in one run agree on the
-    # date even across midnight.
     _cel_now: datetime | None = PrivateAttr(default=None)
     _event_futures: list[Future[None]] = PrivateAttr(default_factory=list)
     _pending_feedback_context: PendingFeedbackContext | None = PrivateAttr(default=None)
