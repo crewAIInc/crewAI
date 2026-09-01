@@ -89,25 +89,22 @@ print(tool.run(signal_id="hydrology.river-level", entity="06893000"))
 
 ```json
 {
-  "payment_required": true,
-  "note": "Settle this x402 challenge with your own wallet, then retry the same URL.",
-  "challenge": {
-    "x402Version": 1,
-    "accepts": [
-      {
-        "scheme": "exact",
-        "network": "base",
-        "maxAmountRequired": "10000",
-        "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-        "payTo": "0x…",
-        "resource": "https://aeml-x402.zeabur.app/gauge"
-      }
-    ]
-  }
+  "x402Version": 1,
+  "error": "X-PAYMENT header is required",
+  "accepts": [
+    {
+      "scheme": "exact",
+      "network": "base",
+      "maxAmountRequired": "10000",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "payTo": "0x…",
+      "resource": "https://aeml-x402.zeabur.app/gauge"
+    }
+  ]
 }
 ```
 
-Settle that challenge with your own x402 client and retry the same URL to receive the record.
+The tool returns the x402 challenge unchanged. Settle it with your own x402 client and retry the same URL to receive the record.
 
 ---
 

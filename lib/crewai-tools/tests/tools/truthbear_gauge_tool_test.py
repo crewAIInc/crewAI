@@ -88,6 +88,25 @@ def test_catalog_filtered(mock_urlopen):
     assert result["signals"][0]["entities"][0]["entity"] == "06893000"
 
 
+@patch("urllib.request.urlopen")
+def test_catalog_filtered_by_industry(mock_urlopen):
+    """The catalog tool accepts industry as an alternative filter to signal_id."""
+    payload = {
+        "signals": [
+            {
+                "signal_id": "hydrology.river-level",
+                "entities": [
+                    {"entity": "06893000", "name": "Missouri River at Kansas City, MO"}
+                ],
+            }
+        ]
+    }
+    mock_urlopen.return_value = _ok(payload)
+    result = json.loads(TruthBearCatalogTool().run(industry="hydrology"))
+    assert result["signals"][0]["signal_id"] == "hydrology.river-level"
+    assert result["signals"][0]["entities"][0]["entity"] == "06893000"
+
+
 def test_catalog_requires_a_filter():
     """The unfiltered catalog is ~1.5 MB and would flood an agent's context."""
     with pytest.raises(ValueError):
@@ -96,7 +115,7 @@ def test_catalog_requires_a_filter():
 
 @patch("urllib.request.urlopen")
 def test_record_returns_402_challenge_intact(mock_urlopen):
-    """402 is a price quote, not a failure - it must reach the caller unflattened."""
+    """402 is a price quote, not a failure - the x402 challenge must pass through unchanged."""
     challenge = {
         "x402Version": 1,
         "error": "X-PAYMENT header is required",
@@ -114,13 +133,8 @@ def test_record_returns_402_challenge_intact(mock_urlopen):
     result = json.loads(
         TruthBearRecordTool().run(signal_id="hydrology.river-level", entity="06893000")
     )
-    assert result["payment_required"] is True
-    accepts = result["challenge"]["accepts"][0]
-    assert accepts["network"] == "base"
-    assert accepts["maxAmountRequired"] == "10000"
-    assert accepts["payTo"].startswith("0x")
-    # the tool must not have swallowed the challenge into a generic error string
-    assert "error" not in result
+    # the complete x402 challenge must be preserved exactly as the server sent it
+    assert result == challenge
 
 
 @patch("urllib.request.urlopen")
@@ -135,13 +149,13 @@ def test_coverage_server_error_is_not_found_false(mock_urlopen):
 
 @patch("urllib.request.urlopen")
 def test_record_passes_through_a_paid_success(mock_urlopen):
+    """A successful paid record must be returned exactly as the API sent it."""
     payload = {"signal_id": "hydrology.river-level", "record_hash": "a" * 64}
     mock_urlopen.return_value = _ok(payload)
     result = json.loads(
         TruthBearRecordTool().run(signal_id="hydrology.river-level", entity="06893000")
     )
-    assert result["record_hash"] == "a" * 64
-    assert "payment_required" not in result
+    assert result == payload
 
 
 @patch("urllib.request.urlopen")

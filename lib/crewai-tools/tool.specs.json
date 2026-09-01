@@ -26974,6 +26974,16 @@
             "title": "Signal Id"
           }
         },
+        "anyOf": [
+          {
+            "properties": {"signal_id": {"type": "string"}},
+            "required": ["signal_id"]
+          },
+          {
+            "properties": {"industry": {"type": "string"}},
+            "required": ["industry"]
+          }
+        ],
         "title": "TruthBearCatalogInput",
         "type": "object"
       }

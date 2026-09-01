@@ -186,14 +186,7 @@ class TruthBearRecordTool(BaseTool):
         args = TruthBearRecordInput(signal_id=signal_id, entity=entity)
         status, data = _get_json("/gauge", {"signal_id": args.signal_id, "entity": args.entity})
         if status == 402:
-            return json.dumps(
-                {
-                    "payment_required": True,
-                    "note": "Settle this x402 challenge with your own wallet, then retry the same URL.",
-                    "challenge": data,
-                },
-                ensure_ascii=False,
-            )
+            return json.dumps(data, ensure_ascii=False)
         if status != 200:
             return json.dumps(
                 {"error": True, "http_status": status, "detail": data},
