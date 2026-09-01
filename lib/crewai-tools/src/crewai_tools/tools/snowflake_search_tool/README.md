@@ -8,10 +8,10 @@ A tool for executing queries on Snowflake data warehouse with built-in connectio
 uv sync --extra snowflake
 
 OR 
-uv pip install snowflake-connector-python>=3.5.0 snowflake-sqlalchemy>=1.5.0 cryptography>=41.0.0
+uv pip install snowflake-connector-python>=4.7.1 snowflake-sqlalchemy>=1.5.0 cryptography>=41.0.0
 
 OR 
-pip install snowflake-connector-python>=3.5.0 snowflake-sqlalchemy>=1.5.0 cryptography>=41.0.0
+pip install snowflake-connector-python>=4.7.1 snowflake-sqlalchemy>=1.5.0 cryptography>=41.0.0
 ```
 
 ## Quick Start

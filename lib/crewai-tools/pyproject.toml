@@ -76,7 +76,10 @@ hyperbrowser = [
 ]
 snowflake = [
     "cryptography>=43.0.3",
-    "snowflake-connector-python>=3.12.4",
+    # <4.7.1 has GHSA-5cc2-282f-jjq2 (CVE-2026-15925): improper TLS hostname
+    # verification. Declared here, not only as a uv override, so consumers
+    # installing crewai-tools[snowflake] get the fixed version.
+    "snowflake-connector-python>=4.7.1",
     "snowflake-sqlalchemy>=1.7.3",
 ]
 singlestore = [
