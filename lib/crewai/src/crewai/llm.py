@@ -662,6 +662,12 @@ class LLM(BaseLLM):
         if model in AZURE_MODELS:
             return "azure"
 
+        # Bedrock namespaces Anthropic models as "anthropic.claude-*", optionally
+        # region-prefixed ("us.anthropic.claude-*"). That form also satisfies the
+        # anthropic pattern below, so it has to be settled first.
+        if "anthropic." in model.lower():
+            return "bedrock"
+
         # Only anthropic and gemini have prefixes unambiguous enough to infer from.
         # Bedrock matches any model containing a dot (so "gpt-3.5-turbo") and Azure
         # matches every OpenAI prefix, so both would steal models from openai here.

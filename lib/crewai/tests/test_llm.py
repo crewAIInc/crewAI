@@ -1019,6 +1019,28 @@ def test_gemini_model_newer_than_constants_routes_to_gemini():
 
 
 @pytest.mark.parametrize(
+    "model",
+    [
+        "anthropic.claude-opus-9-20990101-v1:0",
+        "us.anthropic.claude-opus-9-20990101-v1:0",
+        "eu.anthropic.claude-sonnet-9-20990101-v1:0",
+    ],
+)
+def test_unlisted_bedrock_anthropic_ids_route_to_bedrock(model):
+    """Bedrock names Anthropic models "anthropic.claude-*"; that is not the direct API."""
+    with patch.dict(
+        os.environ,
+        {
+            "AWS_ACCESS_KEY_ID": "test-key",
+            "AWS_SECRET_ACCESS_KEY": "test-secret",
+            "AWS_DEFAULT_REGION": "us-east-1",
+        },
+    ):
+        llm = LLM(model=model, is_litellm=False)
+        assert llm.provider == "bedrock"
+
+
+@pytest.mark.parametrize(
     ("model", "expected_provider"),
     [
         # Bedrock's pattern is `"." in model` and Azure's covers every OpenAI
@@ -1026,6 +1048,7 @@ def test_gemini_model_newer_than_constants_routes_to_gemini():
         ("gpt-3.5-turbo", "openai"),
         ("gpt-4.1", "openai"),
         ("gpt-4o", "openai"),
+        ("gpt-4o-mini", "openai"),
         ("o1", "openai"),
         ("some-unknown-model", "openai"),
     ],
