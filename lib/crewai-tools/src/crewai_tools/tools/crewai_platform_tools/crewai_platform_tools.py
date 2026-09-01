@@ -7,6 +7,7 @@ from crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool import
 )
 from crewai_tools.tools.crewai_platform_tools.integrations_client import (
     ApplicationSelector,
+    IntegrationsClient,
     LegacyClient,
 )
 
@@ -26,7 +27,7 @@ def CrewaiPlatformTools(  # noqa: N802
         A list of BaseTool instances for platform actions
     """
     selectors = [ApplicationSelector.from_string(app) for app in apps]
-    client = LegacyClient()
+    client: IntegrationsClient = LegacyClient()
 
     try:
         tool_infos = client.get_actions(selectors)
@@ -36,4 +37,6 @@ def CrewaiPlatformTools(  # noqa: N802
         logger.error(f"Failed to fetch platform tools for apps {apps}: {error}")
         return []
 
-    return [CrewAIPlatformActionTool(tool_info) for tool_info in tool_infos]
+    return [
+        CrewAIPlatformActionTool(tool_info, client=client) for tool_info in tool_infos
+    ]

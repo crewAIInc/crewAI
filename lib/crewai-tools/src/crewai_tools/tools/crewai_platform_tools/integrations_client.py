@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 import os
-from typing import Any
+from typing import Any, Protocol
 from uuid import UUID
 
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -91,6 +92,39 @@ class ToolInfo:
         return sanitize_tool_name("_".join(parts))
 
 
+@dataclass(frozen=True)
+class ToolExecutionSuccess:
+    """Represent a successful platform action execution."""
+
+    output: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class ToolExecutionFailure:
+    """Represent an expected platform action failure."""
+
+    message: str
+    code: str
+    retryable: bool
+
+
+ToolExecutionResult = ToolExecutionSuccess | ToolExecutionFailure
+
+
+class IntegrationsClient(Protocol):
+    """Define the contract for platform integrations clients."""
+
+    def get_actions(self, selectors: list[ApplicationSelector]) -> list[ToolInfo]:
+        """Get the actions available for the selected applications."""
+        ...
+
+    def execute_action(
+        self, tool: ToolInfo, arguments: dict[str, Any]
+    ) -> ToolExecutionResult:
+        """Execute an action with the given arguments."""
+        ...
+
+
 class LegacyClient:
     """Use the existing CrewAI platform integrations API."""
 
@@ -143,10 +177,10 @@ class LegacyClient:
 
     def execute_action(
         self, tool: ToolInfo, arguments: dict[str, Any]
-    ) -> requests.Response:
+    ) -> ToolExecutionResult:
         """Execute an action with the given arguments."""
         plus_api = PlusAPI()
-        return requests.post(
+        response = requests.post(
             url=(
                 f"{plus_api.base_url.rstrip('/')}{plus_api.INTEGRATIONS_RESOURCE}"
                 f"/actions/{tool.action}/execute"
@@ -159,3 +193,21 @@ class LegacyClient:
             timeout=60,
             verify=os.environ.get("CREWAI_FACTORY", "false").lower() != "true",
         )
+        data = response.json()
+        if not 200 <= response.status_code < 300:
+            if isinstance(data, dict):
+                error_info = data.get("error", {})
+                if isinstance(error_info, dict):
+                    error_message = error_info.get("message", json.dumps(data))
+                else:
+                    error_message = str(error_info)
+            else:
+                error_message = str(data)
+
+            return ToolExecutionFailure(
+                message=str(error_message),
+                code=str(response.status_code),
+                retryable=response.status_code >= 500,
+            )
+
+        return ToolExecutionSuccess(output=data)

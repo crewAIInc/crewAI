@@ -9,18 +9,22 @@ from crewai.utilities.pydantic_schema_utils import create_model_from_schema
 from pydantic import Field, PrivateAttr, create_model
 
 from crewai_tools.tools.crewai_platform_tools.integrations_client import (
+    IntegrationsClient,
     LegacyClient,
+    ToolExecutionFailure,
     ToolInfo,
 )
 
 
 class CrewAIPlatformActionTool(BaseTool):
+    _client: IntegrationsClient = PrivateAttr()
     _tool_info: ToolInfo = PrivateAttr()
     app: str = Field(description="The integration slug for this action")
 
     def __init__(
         self,
         tool_info: ToolInfo,
+        client: IntegrationsClient | None = None,
     ) -> None:
         schema_name = f"{tool_info.qualified_name}Schema"
         parameters = tool_info.parameters
@@ -43,36 +47,26 @@ class CrewAIPlatformActionTool(BaseTool):
             args_schema=args_schema,
             app=tool_info.app,
         )
+        self._client = client if client is not None else LegacyClient()
         self._tool_info = tool_info
 
-    def _run(self, **kwargs: Any) -> Any:
+    def _run(self, **kwargs: Any) -> str | ToolFailure:
         try:
             cleaned_kwargs = {
                 key: value for key, value in kwargs.items() if value is not None
             }
 
-            response = LegacyClient().execute_action(self._tool_info, cleaned_kwargs)
+            result = self._client.execute_action(self._tool_info, cleaned_kwargs)
 
-            data = response.json()
-            if not response.ok:
-                if isinstance(data, dict):
-                    error_info = data.get("error", {})
-                    if isinstance(error_info, dict):
-                        error_message = error_info.get("message", json.dumps(data))
-                    else:
-                        error_message = str(error_info)
-                else:
-                    error_message = str(data)
-                # A non-2xx here means the upstream app rejected the action
-                # (e.g. Slack's channel_not_found) -- report it, not prose.
+            if isinstance(result, ToolExecutionFailure):
                 return ToolFailure(
-                    message=f"API request failed: {error_message}",
-                    code=str(response.status_code),
-                    retryable=response.status_code >= 500,
+                    message=f"API request failed: {result.message}",
+                    code=result.code,
+                    retryable=result.retryable,
                     details={"action": self._tool_info.action},
                 )
 
-            return json.dumps(data, indent=2)
+            return json.dumps(result.output, indent=2)
 
         except Exception as e:
             return ToolFailure(

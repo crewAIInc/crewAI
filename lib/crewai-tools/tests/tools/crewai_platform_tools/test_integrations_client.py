@@ -7,7 +7,10 @@ import pytest
 
 from crewai_tools.tools.crewai_platform_tools.integrations_client import (
     ApplicationSelector,
+    IntegrationsClient,
     LegacyClient,
+    ToolExecutionFailure,
+    ToolExecutionSuccess,
     ToolInfo,
 )
 
@@ -141,6 +144,28 @@ def test_tool_info_is_immutable() -> None:
         tool_info.action = "delete_issue"
 
 
+@pytest.mark.parametrize(
+    ("result", "field", "value"),
+    [
+        (ToolExecutionSuccess(output={"issue": 42}), "output", {"issue": 43}),
+        (
+            ToolExecutionFailure(
+                message="Request failed", code="400", retryable=False
+            ),
+            "message",
+            "Another failure",
+        ),
+    ],
+)
+def test_tool_execution_results_are_immutable(
+    result: ToolExecutionSuccess | ToolExecutionFailure,
+    field: str,
+    value: Any,
+) -> None:
+    with pytest.raises(FrozenInstanceError):
+        setattr(result, field, value)
+
+
 def test_application_selector_is_immutable() -> None:
     selector = ApplicationSelector.from_string(
         "github/create_issue@550e8400-e29b-41d4-a716-446655440000"
@@ -227,7 +252,8 @@ def test_legacy_client_preserves_execution_request(
     arguments: dict[str, Any],
     integration: dict[str, Any],
 ) -> None:
-    response = Mock()
+    response = Mock(status_code=200)
+    response.json.return_value = {"issue": 42}
     mock_post.return_value = response
     tool_info = ToolInfo(
         app="github",
@@ -237,9 +263,10 @@ def test_legacy_client_preserves_execution_request(
         parameters={},
     )
 
-    result = LegacyClient().execute_action(tool_info, arguments)
+    client: IntegrationsClient = LegacyClient()
+    result = client.execute_action(tool_info, arguments)
 
-    assert result is response
+    assert result == ToolExecutionSuccess(output={"issue": 42})
     mock_post.assert_called_once()
     assert mock_post.call_args.kwargs["url"].endswith(
         "/actions/create_issue/execute"
@@ -250,3 +277,70 @@ def test_legacy_client_preserves_execution_request(
     }
     assert mock_post.call_args.kwargs["json"] == {"integration": integration}
     assert mock_post.call_args.kwargs["timeout"] == 60
+
+
+@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
+)
+@pytest.mark.parametrize(
+    ("response_data", "status_code", "message", "retryable"),
+    [
+        ({"error": {"message": "Invalid issue"}}, 400, "Invalid issue", False),
+        ({"error": "Rate limited"}, 429, "Rate limited", False),
+        (["Service unavailable"], 503, "['Service unavailable']", True),
+        ({"reason": "Unknown"}, 500, '{"reason": "Unknown"}', True),
+    ],
+)
+def test_legacy_client_normalizes_execution_failures(
+    mock_post: Mock,
+    response_data: Any,
+    status_code: int,
+    message: str,
+    retryable: bool,
+) -> None:
+    response = Mock(status_code=status_code)
+    response.json.return_value = response_data
+    mock_post.return_value = response
+    tool_info = ToolInfo(
+        app="github",
+        action="create_issue",
+        connection_id=None,
+        description="Create an issue",
+        parameters={},
+    )
+
+    result = LegacyClient().execute_action(tool_info, {"title": "Contract test"})
+
+    assert result == ToolExecutionFailure(
+        message=message,
+        code=str(status_code),
+        retryable=retryable,
+    )
+
+
+@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
+)
+def test_legacy_client_treats_redirect_as_execution_failure(
+    mock_post: Mock,
+) -> None:
+    response = Mock(status_code=302)
+    response.json.return_value = {"error": {"message": "Redirected"}}
+    mock_post.return_value = response
+    tool_info = ToolInfo(
+        app="github",
+        action="create_issue",
+        connection_id=None,
+        description="Create an issue",
+        parameters={},
+    )
+
+    result = LegacyClient().execute_action(tool_info, {})
+
+    assert result == ToolExecutionFailure(
+        message="Redirected",
+        code="302",
+        retryable=False,
+    )
