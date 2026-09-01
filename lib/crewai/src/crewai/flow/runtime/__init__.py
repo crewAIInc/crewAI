@@ -3913,9 +3913,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 parsed = json.loads(response)
             except json.JSONDecodeError:
                 return _require_collapse_outcome(response, outcomes)
-            outcome = parsed.get("outcome")
-            if isinstance(outcome, str):
-                return _require_collapse_outcome(outcome, outcomes)
+            if isinstance(parsed, dict):
+                outcome = parsed.get("outcome")
+                if isinstance(outcome, str):
+                    return _require_collapse_outcome(outcome, outcomes)
             return _require_collapse_outcome(response, outcomes)
         if isinstance(response, FeedbackOutcome):
             return str(response.outcome)
