@@ -277,6 +277,7 @@ def test_legacy_client_preserves_execution_request(
     }
     assert mock_post.call_args.kwargs["json"] == {"integration": integration}
     assert mock_post.call_args.kwargs["timeout"] == 60
+    assert mock_post.call_args.kwargs["allow_redirects"] is False
 
 
 @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})

@@ -1735,7 +1735,7 @@ class TestPlatformActionTool:
 
         import crewai_tools.tools.crewai_platform_tools.integrations_client as client_mod
 
-        response = Mock()
+        response = Mock(status_code=200)
         response.ok = True
         response.json.return_value = {"ts": "1234.5678"}
         monkeypatch.setattr(client_mod.requests, "post", Mock(return_value=response))

@@ -116,13 +116,11 @@ class IntegrationsClient(Protocol):
 
     def get_actions(self, selectors: list[ApplicationSelector]) -> list[ToolInfo]:
         """Get the actions available for the selected applications."""
-        ...
 
     def execute_action(
         self, tool: ToolInfo, arguments: dict[str, Any]
     ) -> ToolExecutionResult:
         """Execute an action with the given arguments."""
-        ...
 
 
 class LegacyClient:
@@ -191,6 +189,7 @@ class LegacyClient:
             },
             json={"integration": arguments if arguments else {"_noop": True}},
             timeout=60,
+            allow_redirects=False,
             verify=os.environ.get("CREWAI_FACTORY", "false").lower() != "true",
         )
         data = response.json()
