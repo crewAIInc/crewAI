@@ -3045,16 +3045,38 @@ def test_replay_feature(researcher, writer):
     )
 
     with patch.object(Task, "execute_sync") as mock_execute_task:
-        mock_execute_task.return_value = TaskOutput(
-            description="Mock description",
-            raw="Mocked output for list of ideas",
-            agent="Researcher",
-            json_dict=None,
-            output_format=OutputFormat.RAW,
-            pydantic=None,
-            summary="Mocked output for list of ideas",
-            messages=[],
-        )
+        mock_execute_task.side_effect = [
+            TaskOutput(
+                description=list_ideas.description,
+                raw="Mocked output for list of ideas",
+                agent="Researcher",
+                json_dict=None,
+                output_format=OutputFormat.RAW,
+                pydantic=None,
+                summary="Mocked output for list of ideas",
+                messages=[],
+            ),
+            TaskOutput(
+                description=write.description,
+                raw="Mocked output for list of ideas",
+                agent="Researcher",
+                json_dict=None,
+                output_format=OutputFormat.RAW,
+                pydantic=None,
+                summary="Mocked output for list of ideas",
+                messages=[],
+            ),
+            TaskOutput(
+                description=write.description,
+                raw="Mocked output for list of ideas",
+                agent="Researcher",
+                json_dict=None,
+                output_format=OutputFormat.RAW,
+                pydantic=None,
+                summary="Mocked output for list of ideas",
+                messages=[],
+            ),
+        ]
 
         crew.kickoff()
         crew.replay(str(write.id))
@@ -3080,6 +3102,42 @@ def test_replay_rejects_changed_task_order(researcher):
         agent=researcher,
     )
     crew = Crew(agents=[researcher], tasks=[plan, research, write])
+
+    stored_outputs = [
+        {
+            "task_id": str(research.id),
+            "expected_output": research.expected_output,
+            "output": {"description": research.description},
+            "inputs": {},
+        },
+        {
+            "task_id": str(write.id),
+            "expected_output": write.expected_output,
+            "output": {"description": write.description},
+            "inputs": {},
+        },
+    ]
+    with patch(
+        "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
+        return_value=stored_outputs,
+    ):
+        with pytest.raises(ValueError, match="current crew does not match"):
+            crew.replay(str(write.id))
+
+
+def test_replay_rejects_reordered_tasks_with_matching_expected_output(researcher):
+    """Task descriptions keep replay from confusing tasks with the same expected output."""
+    research = Task(
+        description="Research the topic",
+        expected_output="A report",
+        agent=researcher,
+    )
+    write = Task(
+        description="Write the article",
+        expected_output="A report",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[write, research])
 
     stored_outputs = [
         {
@@ -3333,7 +3391,7 @@ def test_replay_with_context():
     )
 
     context_output = TaskOutput(
-        description="Context Task Output",
+        description=task1.description,
         agent="test_agent",
         raw="context raw output",
         pydantic=None,
@@ -3350,6 +3408,7 @@ def test_replay_with_context():
         return_value=[
             {
                 "task_id": str(task1.id),
+                "expected_output": task1.expected_output,
                 "output": {
                     "description": context_output.description,
                     "summary": context_output.summary,
@@ -3363,8 +3422,9 @@ def test_replay_with_context():
             },
             {
                 "task_id": str(task2.id),
+                "expected_output": task2.expected_output,
                 "output": {
-                    "description": "Test Task Output",
+                    "description": task2.description,
                     "summary": None,
                     "raw": "test raw output",
                     "pydantic": None,

@@ -2038,7 +2038,12 @@ class Crew(FlowTrackable, BaseModel):
 
         for index, stored_output in enumerate(stored_outputs[: start_index + 1]):
             task = self.tasks[index]
-            if task.expected_output != stored_output["expected_output"]:
+            output = stored_output["output"]
+            stored_expected_output = stored_output.get("expected_output")
+            if task.description != output.get("description") or (
+                stored_expected_output is not None
+                and task.expected_output != stored_expected_output
+            ):
                 raise ValueError(
                     "Cannot replay because the current crew does not match the stored task outputs."
                 )
