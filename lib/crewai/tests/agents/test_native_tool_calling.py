@@ -20,6 +20,11 @@ from pydantic import BaseModel, Field
 from crewai import Agent, Crew, Task
 from crewai.agents.parser import AgentFinish
 from crewai.events import crewai_event_bus
+from crewai.events.types.tool_usage_events import (
+    ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
+)
 from crewai.hooks import register_after_tool_call_hook, register_before_tool_call_hook
 from crewai.hooks.tool_hooks import ToolCallHookContext, clear_after_tool_call_hooks
 from crewai.llm import LLM
@@ -1113,35 +1118,39 @@ class TestMaxUsageCountWithNativeToolCalling:
 # JSON Parse Error Handling Tests
 
 
+def _make_crew_agent_executor(tools: list[BaseTool]) -> "CrewAgentExecutor":
+    """Create a minimal CrewAgentExecutor with mocked dependencies."""
+    from crewai.agents.crew_agent_executor import CrewAgentExecutor
+    from crewai.tools.base_tool import to_langchain
+
+    structured_tools = to_langchain(tools)
+    mock_agent = Mock()
+    mock_agent.key = "test_agent"
+    mock_agent.role = "tester"
+    mock_agent.verbose = False
+    mock_agent.fingerprint = None
+    mock_agent.tools_results = []
+
+    mock_task = Mock()
+    mock_task.name = "test"
+    mock_task.description = "test"
+    mock_task.id = "test-id"
+
+    executor = CrewAgentExecutor(
+        tools=structured_tools,
+        original_tools=tools,
+    )
+    executor.agent = mock_agent
+    executor.task = mock_task
+    return executor
+
+
 class TestNativeToolCallingJsonParseError:
     """Tests that malformed JSON tool arguments produce clear errors
     instead of silently dropping all arguments."""
 
     def _make_executor(self, tools: list[BaseTool]) -> "CrewAgentExecutor":
-        """Create a minimal CrewAgentExecutor with mocked dependencies."""
-        from crewai.agents.crew_agent_executor import CrewAgentExecutor
-        from crewai.tools.base_tool import to_langchain
-
-        structured_tools = to_langchain(tools)
-        mock_agent = Mock()
-        mock_agent.key = "test_agent"
-        mock_agent.role = "tester"
-        mock_agent.verbose = False
-        mock_agent.fingerprint = None
-        mock_agent.tools_results = []
-
-        mock_task = Mock()
-        mock_task.name = "test"
-        mock_task.description = "test"
-        mock_task.id = "test-id"
-
-        executor = CrewAgentExecutor(
-            tools=structured_tools,
-            original_tools=tools,
-        )
-        executor.agent = mock_agent
-        executor.task = mock_task
-        return executor
+        return _make_crew_agent_executor(tools)
 
     def test_malformed_json_returns_parse_error(self) -> None:
         """Malformed JSON args must return a descriptive error, not silently become {}."""
@@ -1363,3 +1372,64 @@ class TestNativeToolCallingJsonParseError:
 
         assert "Error" in result["result"]
         assert "validation failed" in result["result"].lower() or "missing" in result["result"].lower()
+
+
+class TestNativeToolCallingEventCorrelation:
+    """Tests for correlating native tool usage events with model tool calls."""
+
+    def test_native_tool_usage_events_include_call_id(self) -> None:
+        class EchoTool(BaseTool):
+            name: str = "echo"
+            description: str = "Echo the input"
+
+            def _run(self, value: str) -> str:
+                return value
+
+        tool = EchoTool()
+        executor = _make_crew_agent_executor([tool])
+
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
+
+        with patch.object(crewai_event_bus, "emit") as emit:
+            result = executor._execute_single_native_tool_call(
+                call_id="call_events",
+                func_name="echo",
+                func_args='{"value": "hello"}',
+                available_functions=available_functions,
+            )
+
+        events = [call.kwargs["event"] for call in emit.call_args_list]
+
+        assert result["result"] == "hello"
+        assert [type(event) for event in events] == [
+            ToolUsageStartedEvent,
+            ToolUsageFinishedEvent,
+        ]
+        assert [event.call_id for event in events] == ["call_events", "call_events"]
+
+    def test_native_tool_usage_error_event_includes_call_id(self) -> None:
+        tool = FailingTool()
+        executor = _make_crew_agent_executor([tool])
+
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
+
+        with patch.object(crewai_event_bus, "emit") as emit:
+            result = executor._execute_single_native_tool_call(
+                call_id="call_error",
+                func_name="failing_tool",
+                func_args="{}",
+                available_functions=available_functions,
+            )
+
+        events = [call.kwargs["event"] for call in emit.call_args_list]
+
+        assert "Error executing tool" in result["result"]
+        assert [type(event) for event in events] == [
+            ToolUsageStartedEvent,
+            ToolUsageErrorEvent,
+        ]
+        assert [event.call_id for event in events] == ["call_error", "call_error"]

@@ -10,6 +10,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel, Field
 
+from crewai.events import crewai_event_bus
+from crewai.events.types.tool_usage_events import (
+    ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
+)
 from crewai.hooks.tool_hooks import (
     ToolCallHookContext,
     clear_after_tool_call_hooks,
@@ -1396,6 +1401,42 @@ class TestExecuteSingleNativeToolCall:
             "query": "crew",
             "score": 0.9,
         }
+
+    def test_tool_usage_events_include_native_call_id(self) -> None:
+        class EchoTool(BaseTool):
+            name: str = "echo"
+            description: str = "Echo the input"
+
+            def _run(self, value: str) -> str:
+                return value
+
+        tool = EchoTool()
+        tool_call = MagicMock()
+        tool_call.id = "call_utility"
+        tool_call.function.name = "echo"
+        tool_call.function.arguments = '{"value": "hello"}'
+
+        with patch.object(crewai_event_bus, "emit") as emit:
+            result = execute_single_native_tool_call(
+                tool_call,
+                available_functions={"echo": tool._run},
+                original_tools=[tool],
+                structured_tools=[tool.to_structured_tool()],
+                tools_handler=None,
+                agent=None,
+                task=None,
+                crew=None,
+                event_source=MagicMock(),
+            )
+
+        events = [call.kwargs["event"] for call in emit.call_args_list]
+
+        assert result.result == "hello"
+        assert [type(event) for event in events] == [
+            ToolUsageStartedEvent,
+            ToolUsageFinishedEvent,
+        ]
+        assert [event.call_id for event in events] == ["call_utility", "call_utility"]
 
     def test_custom_agent_output_formatter_is_used_from_structured_tool(
         self,

@@ -1752,6 +1752,7 @@ def execute_single_native_tool_call(
         event_source,
         event=ToolUsageStartedEvent(
             tool_name=func_name,
+            call_id=call_id,
             tool_args=args_dict,
             from_agent=agent,
             from_task=task,
@@ -1810,6 +1811,7 @@ def execute_single_native_tool_call(
                     event_source,
                     event=ToolUsageErrorEvent(
                         tool_name=func_name,
+                        call_id=call_id,
                         tool_args=args_dict,
                         from_agent=agent,
                         from_task=task,
@@ -1849,6 +1851,7 @@ def execute_single_native_tool_call(
             event=ToolUsageFinishedEvent(
                 output=result,
                 tool_name=func_name,
+                call_id=call_id,
                 tool_args=args_dict,
                 from_agent=agent,
                 from_task=task,

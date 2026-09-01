@@ -2045,6 +2045,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self,
             event=ToolUsageStartedEvent(
                 tool_name=func_name,
+                call_id=call_id,
                 tool_args=args_dict,
                 from_agent=self.agent,
                 from_task=self.task,
@@ -2105,6 +2106,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                         self,
                         event=ToolUsageErrorEvent(
                             tool_name=func_name,
+                            call_id=call_id,
                             tool_args=args_dict,
                             from_agent=self.agent,
                             from_task=self.task,
@@ -2149,6 +2151,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 event=ToolUsageFinishedEvent(
                     output=result,
                     tool_name=func_name,
+                    call_id=call_id,
                     tool_args=args_dict,
                     from_agent=self.agent,
                     from_task=self.task,

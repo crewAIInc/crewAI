@@ -75,6 +75,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities.step_execution_context import StepExecutionContext
 from crewai.utilities.planning_types import TodoItem, TodoList
@@ -2417,6 +2418,49 @@ class TestNativeToolCallMaxUsage:
         source = inspect.getsource(AgentExecutor._execute_single_native_tool_call)
         assert "elif max_usage_reached:" in source
         assert 'result = f"Tool \'{func_name}\' has reached its maximum usage limit' in source
+
+
+class TestNativeToolCallEvents:
+    def test_native_tool_usage_events_include_call_id(self):
+        class EchoTool(BaseTool):
+            name: str = "echo"
+            description: str = "Echo the input"
+
+            def _run(self, value: str) -> str:
+                return value
+
+        tool = EchoTool()
+        agent = SimpleNamespace(id="agent-id", key="agent-key", role="tester")
+        task = SimpleNamespace(id="task-id", name="test-task", description="test")
+        executor = _build_executor(
+            agent=agent,
+            task=task,
+            crew=SimpleNamespace(),
+            tools=[tool.to_structured_tool()],
+            original_tools=[tool],
+            tools_handler=None,
+        )
+        executor._available_functions = {"echo": tool._run}
+        executor._tool_name_mapping = {}
+        tool_call = {
+            "id": "call_experimental",
+            "function": {"name": "echo", "arguments": '{"value": "hello"}'},
+        }
+
+        with patch.object(crewai_event_bus, "emit") as emit:
+            result = executor._execute_single_native_tool_call(tool_call)
+
+        events = [call.kwargs["event"] for call in emit.call_args_list]
+
+        assert result["result"] == "hello"
+        assert [type(event) for event in events] == [
+            ToolUsageStartedEvent,
+            ToolUsageFinishedEvent,
+        ]
+        assert [event.call_id for event in events] == [
+            "call_experimental",
+            "call_experimental",
+        ]
 
 
 # Executor State Reset on Re-invoke
