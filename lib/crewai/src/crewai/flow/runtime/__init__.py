@@ -1383,6 +1383,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "No pending feedback context. Use from_pending() to restore a paused flow."
             )
 
+        # A fresh instant, not the persisted kickoff one: a flow can pause on
+        # feedback for days, and expressions after resume must see today.
+        self._cel_now = datetime.now(timezone.utc)
+
         execution_token = begin_execution(self._pending_feedback_context.execution_uuid)
 
         # Force `current_flow_id` to this flow's match id for the

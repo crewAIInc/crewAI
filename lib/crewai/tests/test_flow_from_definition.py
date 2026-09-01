@@ -3826,6 +3826,41 @@ def test_resume_synthetic_completion_persists():
     assert _saved_methods("resume-synthetic") == ["generate"]
 
 
+def test_resume_freezes_fresh_cel_now():
+    from crewai.flow.expressions import Expression
+
+    backend = DefinitionStoreBackend(store="resume-cel-now")
+    frozen_at_listener: list[Any] = []
+
+    class NowResumableFlow(Flow):
+        @start()
+        @human_feedback(message="Review:")
+        def generate(self):
+            return "content"
+
+        @listen(generate)
+        def process(self, result):
+            frozen_at_listener.append(self._cel_now)
+            return Expression.from_flow("string(now())", self).evaluate()
+
+    context = PendingFeedbackContext(
+        flow_id="resume-cel-now-1",
+        flow_class="NowResumableFlow",
+        method_name="generate",
+        method_output="content",
+        message="Review:",
+    )
+    backend.save_pending_feedback("resume-cel-now-1", context, {"id": "resume-cel-now-1"})
+
+    flow = NowResumableFlow.from_pending("resume-cel-now-1", backend)
+    assert flow._cel_now is None
+
+    result = flow.resume("looks good")
+
+    assert frozen_at_listener[0] is not None
+    assert result == frozen_at_listener[0].strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 class ReviewFlow(Flow):
     @start()
     @human_feedback(
