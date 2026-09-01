@@ -4,6 +4,7 @@ from unittest.mock import Mock, call, patch
 from uuid import UUID
 
 import pytest
+from requests.exceptions import JSONDecodeError
 
 from crewai_tools.tools.crewai_platform_tools.integrations_client import (
     ApplicationSelector,
@@ -259,6 +260,37 @@ def test_clipper_client_normalizes_execution_failure(
         message=detail,
         code=code,
         retryable=retryable,
+    )
+
+
+@patch.dict(
+    "os.environ",
+    {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"},
+    clear=True,
+)
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
+)
+def test_clipper_client_normalizes_non_json_service_failure(
+    mock_post: Mock,
+) -> None:
+    response = Mock(status_code=503)
+    response.json.side_effect = JSONDecodeError("Expecting value", "", 0)
+    mock_post.return_value = response
+    tool = ToolInfo(
+        app="github",
+        action="create_issue",
+        connection_id=None,
+        description="Create an issue",
+        parameters={},
+    )
+
+    result = ClipperClient().execute_action(tool, {"title": "Contract test"})
+
+    assert result == ToolExecutionFailure(
+        message="Upstream API request failed with status 503.",
+        code="503",
+        retryable=True,
     )
 
 

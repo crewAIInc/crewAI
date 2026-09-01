@@ -188,14 +188,26 @@ class ClipperClient:
             timeout=60,
             verify=os.environ.get("CREWAI_FACTORY", "false").lower() != "true",
         )
-        data = response.json()
         if 200 <= response.status_code < 300:
+            data = response.json()
             return ToolExecutionSuccess(output=data["data"]["output"])
 
-        error = data["errors"][0]
+        try:
+            error = response.json()["errors"][0]
+            message = error["detail"]
+            code = error["code"]
+        except (
+            requests.exceptions.JSONDecodeError,
+            KeyError,
+            IndexError,
+            TypeError,
+        ):
+            message = f"Upstream API request failed with status {response.status_code}."
+            code = str(response.status_code)
+
         return ToolExecutionFailure(
-            message=error["detail"],
-            code=error["code"],
+            message=message,
+            code=code,
             retryable=500 <= response.status_code < 600,
         )
 
