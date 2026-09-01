@@ -51,6 +51,7 @@ from crewai.hooks.tool_hooks import (
 )
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
+    _extract_provider_tool_call_id,
     _llm_stop_words_applied,
     aget_llm_response,
     build_text_tool_calling_fallback_message,
@@ -725,7 +726,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         original_tools_by_name.get(func_name), "result_as_answer", False
                     )
                 )
-                for _, func_name, _ in parsed_calls
+                for _, _, func_name, _ in parsed_calls
             )
             has_max_usage_count_in_batch = any(
                 bool(
@@ -737,7 +738,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     )
                     is not None
                 )
-                for _, func_name, _ in parsed_calls
+                for _, _, func_name, _ in parsed_calls
             )
 
             if has_result_as_answer_in_batch or has_max_usage_count_in_batch:
@@ -746,18 +747,18 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 )
             else:
                 execution_plan: list[
-                    tuple[str, str, str | dict[str, Any], Any | None]
+                    tuple[str, str | None, str, str | dict[str, Any], Any | None]
                 ] = []
-                for call_id, func_name, func_args in parsed_calls:
+                for call_id, provider_call_id, func_name, func_args in parsed_calls:
                     original_tool = original_tools_by_name.get(func_name)
                     execution_plan.append(
-                        (call_id, func_name, func_args, original_tool)
+                        (call_id, provider_call_id, func_name, func_args, original_tool)
                     )
 
                 self._append_assistant_tool_calls_message(
                     [
                         (call_id, func_name, func_args)
-                        for call_id, func_name, func_args, _ in execution_plan
+                        for call_id, _, func_name, func_args, _ in execution_plan
                     ]
                 )
 
@@ -771,6 +772,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                             contextvars.copy_context().run,
                             self._execute_single_native_tool_call,
                             call_id=call_id,
+                            provider_call_id=provider_call_id,
                             func_name=func_name,
                             func_args=func_args,
                             available_functions=available_functions,
@@ -779,6 +781,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         ): idx
                         for idx, (
                             call_id,
+                            provider_call_id,
                             func_name,
                             func_args,
                             original_tool,
@@ -805,11 +808,12 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 self.messages.append(reasoning_message)
                 return None
 
-        call_id, func_name, func_args = parsed_calls[0]
+        call_id, provider_call_id, func_name, func_args = parsed_calls[0]
         self._append_assistant_tool_calls_message([(call_id, func_name, func_args)])
 
         execution_result = self._execute_single_native_tool_call(
             call_id=call_id,
+            provider_call_id=provider_call_id,
             func_name=func_name,
             func_args=func_args,
             available_functions=available_functions,
@@ -830,36 +834,37 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
     def _parse_native_tool_call(
         self, tool_call: Any
-    ) -> tuple[str, str, str | dict[str, Any]] | None:
+    ) -> tuple[str, str | None, str, str | dict[str, Any]] | None:
+        """Parse a tool call into local and provider correlation IDs."""
         if hasattr(tool_call, "function"):
-            call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
+            provider_call_id = _extract_provider_tool_call_id(tool_call)
+            call_id = provider_call_id or f"call_{id(tool_call)}"
             func_name = sanitize_tool_name(tool_call.function.name)
-            return call_id, func_name, tool_call.function.arguments
+            return call_id, provider_call_id, func_name, tool_call.function.arguments
         if hasattr(tool_call, "function_call") and tool_call.function_call:
-            call_id = f"call_{id(tool_call)}"
+            provider_call_id = _extract_provider_tool_call_id(tool_call)
+            call_id = provider_call_id or f"call_{id(tool_call)}"
             func_name = sanitize_tool_name(tool_call.function_call.name)
             func_args = (
                 dict(tool_call.function_call.args)
                 if tool_call.function_call.args
                 else {}
             )
-            return call_id, func_name, func_args
+            return call_id, provider_call_id, func_name, func_args
         if hasattr(tool_call, "name") and hasattr(tool_call, "input"):
-            call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
+            provider_call_id = _extract_provider_tool_call_id(tool_call)
+            call_id = provider_call_id or f"call_{id(tool_call)}"
             func_name = sanitize_tool_name(tool_call.name)
-            return call_id, func_name, tool_call.input
+            return call_id, provider_call_id, func_name, tool_call.input
         if isinstance(tool_call, dict):
-            call_id = (
-                tool_call.get("id")
-                or tool_call.get("toolUseId")
-                or f"call_{id(tool_call)}"
-            )
+            provider_call_id = _extract_provider_tool_call_id(tool_call)
+            call_id = provider_call_id or f"call_{id(tool_call)}"
             func_info = tool_call.get("function", {})
             func_name = sanitize_tool_name(
                 func_info.get("name", "") or tool_call.get("name", "")
             )
             func_args = func_info.get("arguments") or tool_call.get("input", {})
-            return call_id, func_name, func_args
+            return call_id, provider_call_id, func_name, func_args
         return None
 
     def _append_assistant_tool_calls_message(
@@ -891,12 +896,14 @@ class CrewAgentExecutor(BaseAgentExecutor):
         self,
         *,
         call_id: str,
+        provider_call_id: str | None = None,
         func_name: str,
         func_args: str | dict[str, Any],
         available_functions: dict[str, Callable[..., Any]],
         original_tool: Any | None = None,
         should_execute: bool = True,
     ) -> dict[str, Any]:
+        """Execute one native tool call and emit its lifecycle events."""
         from datetime import datetime
         import json
 
@@ -963,7 +970,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             self,
             event=ToolUsageStartedEvent(
                 tool_name=func_name,
-                call_id=call_id,
+                call_id=provider_call_id,
                 tool_args=args_dict,
                 from_agent=self.agent,
                 from_task=self.task,
@@ -1024,7 +1031,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     self,
                     event=ToolUsageErrorEvent(
                         tool_name=func_name,
-                        call_id=call_id,
+                        call_id=provider_call_id,
                         tool_args=args_dict,
                         from_agent=self.agent,
                         from_task=self.task,
@@ -1054,7 +1061,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 event=ToolUsageFinishedEvent(
                     output=result,
                     tool_name=func_name,
-                    call_id=call_id,
+                    call_id=provider_call_id,
                     tool_args=args_dict,
                     from_agent=self.agent,
                     from_task=self.task,

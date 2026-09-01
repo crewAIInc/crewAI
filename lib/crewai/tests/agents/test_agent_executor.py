@@ -2422,11 +2422,13 @@ class TestNativeToolCallMaxUsage:
 
 class TestNativeToolCallEvents:
     def test_native_tool_usage_events_include_call_id(self):
+        """Propagate a provider-supplied ID through experimental tool events."""
         class EchoTool(BaseTool):
             name: str = "echo"
             description: str = "Echo the input"
 
             def _run(self, value: str) -> str:
+                """Return the input unchanged."""
                 return value
 
         tool = EchoTool()
@@ -2461,6 +2463,42 @@ class TestNativeToolCallEvents:
             "call_experimental",
             "call_experimental",
         ]
+
+    def test_native_tool_usage_events_omit_missing_provider_call_id(self):
+        """Leave event IDs unset when the provider did not supply one."""
+        class EchoTool(BaseTool):
+            name: str = "echo"
+            description: str = "Echo the input"
+
+            def _run(self, value: str) -> str:
+                """Return the input unchanged."""
+                return value
+
+        tool = EchoTool()
+        agent = SimpleNamespace(id="agent-id", key="agent-key", role="tester")
+        task = SimpleNamespace(id="task-id", name="test-task", description="test")
+        executor = _build_executor(
+            agent=agent,
+            task=task,
+            crew=SimpleNamespace(),
+            tools=[tool.to_structured_tool()],
+            original_tools=[tool],
+            tools_handler=None,
+        )
+        executor._available_functions = {"echo": tool._run}
+        executor._tool_name_mapping = {}
+        tool_call = {
+            "function": {"name": "echo", "arguments": '{"value": "hello"}'},
+        }
+
+        with patch.object(crewai_event_bus, "emit") as emit:
+            result = executor._execute_single_native_tool_call(tool_call)
+
+        events = [call.kwargs["event"] for call in emit.call_args_list]
+
+        assert result["result"] == "hello"
+        assert result["call_id"].startswith("call_")
+        assert [event.call_id for event in events] == [None, None]
 
 
 # Executor State Reset on Re-invoke

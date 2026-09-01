@@ -1403,11 +1403,13 @@ class TestExecuteSingleNativeToolCall:
         }
 
     def test_tool_usage_events_include_native_call_id(self) -> None:
+        """Use a provider ID when it is available to tool usage events."""
         class EchoTool(BaseTool):
             name: str = "echo"
             description: str = "Echo the input"
 
             def _run(self, value: str) -> str:
+                """Return the input unchanged."""
                 return value
 
         tool = EchoTool()
@@ -1437,6 +1439,41 @@ class TestExecuteSingleNativeToolCall:
             ToolUsageFinishedEvent,
         ]
         assert [event.call_id for event in events] == ["call_utility", "call_utility"]
+
+    def test_tool_usage_events_omit_missing_provider_call_id(self) -> None:
+        """Keep the message fallback ID out of tool usage events."""
+        class EchoTool(BaseTool):
+            name: str = "echo"
+            description: str = "Echo the input"
+
+            def _run(self, value: str) -> str:
+                """Return the input unchanged."""
+                return value
+
+        tool = EchoTool()
+        tool_call = {
+            "function": {"name": "echo", "arguments": '{"value": "hello"}'},
+        }
+
+        with patch.object(crewai_event_bus, "emit") as emit:
+            result = execute_single_native_tool_call(
+                tool_call,
+                available_functions={"echo": tool._run},
+                original_tools=[tool],
+                structured_tools=[tool.to_structured_tool()],
+                tools_handler=None,
+                agent=None,
+                task=None,
+                crew=None,
+                event_source=MagicMock(),
+            )
+
+        events = [call.kwargs["event"] for call in emit.call_args_list]
+
+        assert result.result == "hello"
+        assert [event.call_id for event in events] == [None, None]
+        assert result.tool_message["tool_call_id"] == result.call_id
+        assert result.call_id.startswith("call_")
 
     def test_custom_agent_output_formatter_is_used_from_structured_tool(
         self,

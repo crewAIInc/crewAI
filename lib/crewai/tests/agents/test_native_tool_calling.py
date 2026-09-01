@@ -1378,11 +1378,13 @@ class TestNativeToolCallingEventCorrelation:
     """Tests for correlating native tool usage events with model tool calls."""
 
     def test_native_tool_usage_events_include_call_id(self) -> None:
+        """Propagate an explicitly supplied provider ID to lifecycle events."""
         class EchoTool(BaseTool):
             name: str = "echo"
             description: str = "Echo the input"
 
             def _run(self, value: str) -> str:
+                """Return the input unchanged."""
                 return value
 
         tool = EchoTool()
@@ -1395,6 +1397,7 @@ class TestNativeToolCallingEventCorrelation:
         with patch.object(crewai_event_bus, "emit") as emit:
             result = executor._execute_single_native_tool_call(
                 call_id="call_events",
+                provider_call_id="call_events",
                 func_name="echo",
                 func_args='{"value": "hello"}',
                 available_functions=available_functions,
@@ -1410,6 +1413,7 @@ class TestNativeToolCallingEventCorrelation:
         assert [event.call_id for event in events] == ["call_events", "call_events"]
 
     def test_native_tool_usage_error_event_includes_call_id(self) -> None:
+        """Propagate a provider ID to an error event as well as the start event."""
         tool = FailingTool()
         executor = _make_crew_agent_executor([tool])
 
@@ -1420,6 +1424,7 @@ class TestNativeToolCallingEventCorrelation:
         with patch.object(crewai_event_bus, "emit") as emit:
             result = executor._execute_single_native_tool_call(
                 call_id="call_error",
+                provider_call_id="call_error",
                 func_name="failing_tool",
                 func_args="{}",
                 available_functions=available_functions,
@@ -1433,3 +1438,50 @@ class TestNativeToolCallingEventCorrelation:
             ToolUsageErrorEvent,
         ]
         assert [event.call_id for event in events] == ["call_error", "call_error"]
+
+    def test_native_tool_usage_events_omit_missing_provider_call_id(self) -> None:
+        """Do not expose a locally generated fallback ID through lifecycle events."""
+        class EchoTool(BaseTool):
+            name: str = "echo"
+            description: str = "Echo the input"
+
+            def _run(self, value: str) -> str:
+                """Return the input unchanged."""
+                return value
+
+        tool = EchoTool()
+        executor = _make_crew_agent_executor([tool])
+
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
+
+        with patch.object(crewai_event_bus, "emit") as emit:
+            result = executor._execute_single_native_tool_call(
+                call_id="call_local_fallback",
+                provider_call_id=None,
+                func_name="echo",
+                func_args='{"value": "hello"}',
+                available_functions=available_functions,
+            )
+
+        events = [call.kwargs["event"] for call in emit.call_args_list]
+
+        assert result["result"] == "hello"
+        assert [event.call_id for event in events] == [None, None]
+
+    def test_native_tool_call_parser_separates_provider_id(self) -> None:
+        """Keep provider and locally generated IDs separate during parsing."""
+        executor = _make_crew_agent_executor([])
+        tool_call = {
+            "function": {"name": "echo", "arguments": '{"value": "hello"}'},
+        }
+
+        parsed = executor._parse_native_tool_call(tool_call)
+
+        assert parsed is not None
+        call_id, provider_call_id, func_name, func_args = parsed
+        assert call_id.startswith("call_")
+        assert provider_call_id is None
+        assert func_name == "echo"
+        assert func_args == '{"value": "hello"}'
