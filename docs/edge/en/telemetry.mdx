@@ -23,7 +23,7 @@ usage of tools, API calls, responses, any data processed by the agents, or secre
 When the `share_crew` feature is enabled, detailed data including task descriptions, agents' backstories or goals, and other specific attributes are collected 
 to provide deeper insights. This expanded data collection may include personal information if users have incorporated it into their crews or tasks. 
 Users should carefully consider the content of their crews and tasks before enabling `share_crew`. 
-Users can disable telemetry by setting the environment variable `CREWAI_DISABLE_TELEMETRY` to `true` or by setting `OTEL_SDK_DISABLED` to `true` (note that the latter disables all OpenTelemetry instrumentation globally).
+Users can disable CrewAI telemetry by setting `CREWAI_DISABLE_TELEMETRY` (or the alias `CREWAI_DISABLE_TRACKING`) to `true`, `1`, `yes`, or `on` (any case). `OTEL_SDK_DISABLED` with the same values also disables CrewAI's exporter. The OpenTelemetry SDK itself still only honors `true` for disabling other instrumentation in the process.
 
 ### Examples:
 ```python
@@ -33,6 +33,8 @@ os.environ['CREWAI_DISABLE_TELEMETRY'] = 'true'
 # Disable all OpenTelemetry (including CrewAI)
 os.environ['OTEL_SDK_DISABLED'] = 'true'
 ```
+
+`CREWAI_DISABLE_TELEMETRY=1` (or `yes` / `on`) works the same as `true`. Unrecognized values are ignored and leave telemetry on.
 
 ### Isolation from your own OpenTelemetry setup
 

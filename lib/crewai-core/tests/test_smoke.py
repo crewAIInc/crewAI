@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from unittest.mock import Mock
@@ -173,6 +174,46 @@ def test_configured_project_definition_rejects_empty_definition(
             },
             project_root=tmp_path,
         )
+
+
+@pytest.mark.parametrize("value", ["true", "TRUE", "1", "yes", "on", "  yes  "])
+def test_core_telemetry_disabled_by_conventional_yes_values(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    from crewai_core.telemetry import Telemetry
+
+    monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", value)
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
+    assert Telemetry._is_telemetry_disabled() is True
+
+
+@pytest.mark.parametrize("value", ["false", "0", "no", "off", ""])
+def test_core_telemetry_stays_enabled_for_conventional_no_values(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    from crewai_core.telemetry import Telemetry
+
+    monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", value)
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
+    assert Telemetry._is_telemetry_disabled() is False
+
+
+def test_core_telemetry_unrecognized_disable_value_warns(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    from crewai_core.telemetry import Telemetry
+
+    monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", "maybe")
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
+
+    with caplog.at_level(logging.WARNING, logger="crewai_core.telemetry"):
+        assert Telemetry._is_telemetry_disabled() is False
+
+    assert "CREWAI_DISABLE_TELEMETRY" in caplog.text
+    assert "maybe" in caplog.text
 
 
 def test_core_telemetry_never_installs_a_global_provider(
