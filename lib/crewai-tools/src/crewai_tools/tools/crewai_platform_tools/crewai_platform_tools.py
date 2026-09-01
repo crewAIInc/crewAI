@@ -1,5 +1,7 @@
 import logging
 
+from crewai.tools import BaseTool
+
 from crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool import (
     CrewAIPlatformActionTool,
 )
@@ -14,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 def CrewaiPlatformTools(  # noqa: N802
     apps: list[str],
-) -> list[CrewAIPlatformActionTool]:
+) -> list[BaseTool]:
     """Factory function that returns crewai platform tools.
 
     Args:
