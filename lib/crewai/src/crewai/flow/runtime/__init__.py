@@ -13,7 +13,7 @@ from collections.abc import Callable, Iterator, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
 import copy
-from datetime import datetime
+from datetime import datetime, timezone
 import enum
 import inspect
 import logging
@@ -772,6 +772,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     # duration span emitted at the end does not need to hold a span open for
     # the life of the run.
     _telemetry_started_at: float | None = PrivateAttr(default=None)
+    # CEL now() is frozen per kickoff so expressions in one run agree on the
+    # date even across midnight.
+    _cel_now: datetime | None = PrivateAttr(default=None)
     _event_futures: list[Future[None]] = PrivateAttr(default_factory=list)
     _pending_feedback_context: PendingFeedbackContext | None = PrivateAttr(default=None)
     _human_feedback_method_outputs: dict[str, Any] = PrivateAttr(default_factory=dict)
@@ -2170,6 +2173,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 from_checkpoint=from_checkpoint,
                 restore_from_state_id=restore_from_state_id,
             )
+
+        self._cel_now = datetime.now(timezone.utc)
 
         ctx = baggage.set_baggage("flow_inputs", inputs or {})
         ctx = baggage.set_baggage("flow_input_files", input_files or {}, context=ctx)
