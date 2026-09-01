@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any
 
 from crewai_core.telemetry import (
     CommonAttributesSpanProcessor,
+    Telemetry as CoreTelemetry,
     common_span_attributes,
 )
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
@@ -161,11 +162,7 @@ class Telemetry:
     @classmethod
     def _is_telemetry_disabled(cls) -> bool:
         """Check if telemetry should be disabled based on environment variables."""
-        return (
-            os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true"
-            or os.getenv("CREWAI_DISABLE_TELEMETRY", "false").lower() == "true"
-            or os.getenv("CREWAI_DISABLE_TRACKING", "false").lower() == "true"
-        )
+        return CoreTelemetry._is_telemetry_disabled()
 
     def _should_execute_telemetry(self) -> bool:
         """Check if telemetry operations should be executed."""
