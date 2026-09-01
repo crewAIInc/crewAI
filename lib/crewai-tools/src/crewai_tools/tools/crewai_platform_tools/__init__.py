@@ -13,10 +13,18 @@ from crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder impor
 from crewai_tools.tools.crewai_platform_tools.crewai_platform_tools import (
     CrewaiPlatformTools,
 )
+from crewai_tools.tools.crewai_platform_tools.integrations_client import (
+    IntegrationsClient,
+    IntegrationsResponse,
+    LegacyClient,
+)
 
 
 __all__ = [
     "CrewAIPlatformActionTool",
     "CrewaiPlatformToolBuilder",
     "CrewaiPlatformTools",
+    "IntegrationsClient",
+    "IntegrationsResponse",
+    "LegacyClient",
 ]
