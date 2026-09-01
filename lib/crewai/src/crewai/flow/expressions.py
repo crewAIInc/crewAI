@@ -25,8 +25,6 @@ _CEL_MACROS_WITH_LOCAL_BINDINGS = frozenset(
 
 @dataclass(frozen=True)
 class _CelRunContext:
-    """Run-scoped values available to registered CEL functions."""
-
     now: datetime
 
 
