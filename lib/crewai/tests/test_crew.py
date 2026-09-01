@@ -3161,6 +3161,42 @@ def test_replay_rejects_reordered_tasks_with_matching_expected_output(researcher
             crew.replay(str(write.id))
 
 
+def test_replay_rejects_ambiguous_task_identities(researcher):
+    """Replay must fail loud when persisted task details cannot identify a task."""
+    first_task = Task(
+        description="Write a report",
+        expected_output="A report",
+        agent=researcher,
+    )
+    second_task = Task(
+        description="Write a report",
+        expected_output="A report",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[second_task, first_task])
+
+    stored_outputs = [
+        {
+            "task_id": str(first_task.id),
+            "expected_output": first_task.expected_output,
+            "output": {"description": first_task.description},
+            "inputs": {},
+        },
+        {
+            "task_id": str(second_task.id),
+            "expected_output": second_task.expected_output,
+            "output": {"description": second_task.description},
+            "inputs": {},
+        },
+    ]
+    with patch(
+        "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
+        return_value=stored_outputs,
+    ):
+        with pytest.raises(ValueError, match="task identities are ambiguous"):
+            crew.replay(str(second_task.id))
+
+
 @pytest.mark.vcr()
 def test_crew_replay_error(researcher, writer):
     task = Task(

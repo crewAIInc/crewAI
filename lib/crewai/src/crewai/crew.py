@@ -2031,12 +2031,35 @@ class Crew(FlowTrackable, BaseModel):
             None,
         )
 
-    def _validate_replay_tasks(self, stored_outputs: list[Any], start_index: int) -> None:
+    def _validate_replay_tasks(
+        self, stored_outputs: list[Any], start_index: int
+    ) -> None:
         """Ensure stored outputs still correspond to the tasks that will receive them."""
         if len(self.tasks) <= start_index:
-            raise ValueError("Cannot replay because the current crew does not match the stored task outputs.")
+            raise ValueError(
+                "Cannot replay because the current crew does not match the stored task outputs."
+            )
 
-        for index, stored_output in enumerate(stored_outputs[: start_index + 1]):
+        stored_prefix = stored_outputs[: start_index + 1]
+        stored_identities = [
+            (
+                stored_output["output"].get("description"),
+                stored_output.get("expected_output"),
+            )
+            for stored_output in stored_prefix
+        ]
+        current_identities = [
+            (task.description, task.expected_output)
+            for task in self.tasks[: start_index + 1]
+        ]
+        if len(set(stored_identities)) != len(stored_identities) or len(
+            set(current_identities)
+        ) != len(current_identities):
+            raise ValueError(
+                "Cannot replay because the stored task identities are ambiguous."
+            )
+
+        for index, stored_output in enumerate(stored_prefix):
             task = self.tasks[index]
             output = stored_output["output"]
             stored_expected_output = stored_output.get("expected_output")
