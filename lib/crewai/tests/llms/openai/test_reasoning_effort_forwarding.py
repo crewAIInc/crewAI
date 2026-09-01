@@ -9,8 +9,11 @@ succeeded.
 The gate could not simply be widened: ``is_o1_model`` also drives
 ``supports_function_calling``, ``supports_stop_words`` and the system->user
 message rewrite, so marking gpt-5 as an o1 model would report that it cannot
-call tools. The parameter is forwarded unconditionally instead, and a model that
-genuinely does not support it says so in a 400 that is retried without the key.
+call tools. ``_supports_reasoning_effort`` is a separate predicate matched on
+model *shape* -- the o-series, and GPT generation 5 onwards -- so a new member of
+an existing family needs no release, and a non-reasoning model never pays a
+wasted round trip. If the shape match is ever wrong for a future family, the
+400 is retried without the key rather than surfacing.
 """
 
 from __future__ import annotations
@@ -22,7 +25,10 @@ import pytest
 from openai import BadRequestError
 
 from crewai.llm import LLM
-from crewai.llms.providers.openai.completion import OpenAICompletion
+from crewai.llms.providers.openai.completion import (
+    OpenAICompletion,
+    _supports_reasoning_effort,
+)
 
 
 MESSAGES = [{"role": "user", "content": "hi"}]
@@ -95,6 +101,59 @@ class TestParameterReachesTheModel:
             MESSAGES
         )
 
+    @pytest.mark.parametrize("model", ["gpt-4o", "gpt-4.1", "gpt-3.5-turbo"])
+    def test_not_sent_to_non_reasoning_models(self, model):
+        """No wasted round trip: these never reach the API with the parameter."""
+        params = build(model, reasoning_effort="high")._prepare_completion_params(
+            MESSAGES
+        )
+
+        assert "reasoning_effort" not in params
+
+
+class TestSupportedModelShape:
+    """Matched on shape so a new family member needs no release."""
+
+    @pytest.mark.parametrize(
+        "model",
+        [
+            "o1",
+            "o1-mini",
+            "o1-preview",
+            "o3",
+            "o3-mini",
+            "o4-mini",
+            "gpt-5",
+            "gpt-5-mini",
+            "gpt-5.1",
+            "gpt-5.6-sol",
+            "openai/gpt-5",
+        ],
+    )
+    def test_supported(self, model):
+        assert _supports_reasoning_effort(model) is True
+
+    @pytest.mark.parametrize(
+        "model",
+        [
+            "gpt-4o",
+            "gpt-4o-mini",
+            "gpt-4.1",
+            "gpt-4-turbo",
+            "gpt-3.5-turbo",
+            "chatgpt-4o-latest",
+            "omni-moderation-latest",
+            "text-embedding-3-small",
+        ],
+    )
+    def test_unsupported(self, model):
+        assert _supports_reasoning_effort(model) is False
+
+    @pytest.mark.parametrize("model", ["gpt-6", "gpt-7-turbo", "o5", "o9-mini"])
+    def test_future_family_members_need_no_release(self, model):
+        """The staleness this replaced: an unreleased family must still match."""
+        assert _supports_reasoning_effort(model) is True
+
 
 class TestO1FlagUntouched:
     """The gate was shared; widening it would have broken these."""
@@ -163,7 +222,7 @@ class TestRetryParams:
 
 class TestRetryBehaviour:
     def test_retries_without_the_key_and_succeeds(self, monkeypatch):
-        llm = build("gpt-4o", reasoning_effort="high")
+        llm = build("gpt-6-future", reasoning_effort="high")
         seen: list[dict] = []
 
         def fake_handle(params, **kwargs):
@@ -181,7 +240,7 @@ class TestRetryBehaviour:
 
     @pytest.mark.asyncio
     async def test_retries_on_the_async_path(self, monkeypatch):
-        llm = build("gpt-4o", reasoning_effort="high")
+        llm = build("gpt-6-future", reasoning_effort="high")
         seen: list[dict] = []
 
         async def fake_handle(params, **kwargs):
@@ -197,7 +256,7 @@ class TestRetryBehaviour:
         assert "reasoning_effort" not in seen[1]
 
     def test_retries_on_the_streaming_path(self, monkeypatch):
-        llm = build("gpt-4o", reasoning_effort="high", stream=True)
+        llm = build("gpt-6-future", reasoning_effort="high", stream=True)
         seen: list[dict] = []
 
         def fake_handle(params, **kwargs):
@@ -214,7 +273,7 @@ class TestRetryBehaviour:
 
     @pytest.mark.asyncio
     async def test_retries_on_the_async_streaming_path(self, monkeypatch):
-        llm = build("gpt-4o", reasoning_effort="high", stream=True)
+        llm = build("gpt-6-future", reasoning_effort="high", stream=True)
         seen: list[dict] = []
 
         async def fake_handle(params, **kwargs):
@@ -230,7 +289,7 @@ class TestRetryBehaviour:
         assert "reasoning_effort" not in seen[1]
 
     def test_does_not_retry_forever(self, monkeypatch):
-        llm = build("gpt-4o", reasoning_effort="high")
+        llm = build("gpt-6-future", reasoning_effort="high")
         calls: list[dict] = []
 
         def always_fail(params, **kwargs):

@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 import json
 import logging
 import os
+import re
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, TypedDict
 
 import httpx
@@ -166,6 +167,27 @@ def _raise_for_upstream_error(
         InternalServerError if code >= 500 else APIStatusError
     )
     raise error_cls(message, response=http_response, body=error)
+
+# `reasoning_effort` is accepted by the o-series and by GPT generation 5 onwards.
+# Matched by shape rather than by a list of names so a new member of an existing
+# family works without a release here; `gpt-4o` and `gpt-4.1` parse to generation
+# 4 and are excluded. An over-match is recovered rather than fatal -- the call is
+# retried without the parameter when the API rejects it.
+_O_SERIES_MODEL = re.compile(r"^o\d")
+_GPT_GENERATION = re.compile(r"^gpt-(\d+)")
+_MIN_REASONING_GPT_GENERATION: Final[int] = 5
+
+
+def _supports_reasoning_effort(model: str) -> bool:
+    """Whether the model accepts `reasoning_effort` on /v1/chat/completions."""
+    name = model.rsplit("/", 1)[-1].lower()
+    if _O_SERIES_MODEL.match(name):
+        return True
+    generation = _GPT_GENERATION.match(name)
+    return (
+        generation is not None
+        and int(generation.group(1)) >= _MIN_REASONING_GPT_GENERATION
+    )
 
 
 class WebSearchResult(TypedDict, total=False):
@@ -1989,10 +2011,11 @@ class OpenAICompletion(BaseLLM):
         if self.top_logprobs is not None:
             params["top_logprobs"] = self.top_logprobs
 
-        # Forwarded for every model, not just o1: gpt-5, o3 and o4-mini are all
-        # reasoning models whose names contain no "o1". A model that does not
-        # support the parameter rejects it, and the caller retries without it.
-        if self.reasoning_effort:
+        # Not gated on `is_o1_model`: that is a literal "o1" substring test, so
+        # gpt-5, o3 and o4-mini failed it and silently thought at the server
+        # default. It also drives tool support and message rewriting, so it
+        # cannot be widened to mean "is a reasoning model".
+        if self.reasoning_effort and _supports_reasoning_effort(self.model):
             params["reasoning_effort"] = self.reasoning_effort
 
         if self.response_format is not None:
