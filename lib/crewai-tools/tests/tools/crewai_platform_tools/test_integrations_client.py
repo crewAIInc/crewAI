@@ -56,6 +56,78 @@ def test_legacy_client_normalizes_discovered_actions(mock_get: Mock) -> None:
     assert mock_get.call_args.kwargs["params"] == {"apps": "github/create_issue"}
 
 
+@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
+)
+def test_legacy_client_emits_action_for_each_matching_selector(
+    mock_get: Mock,
+) -> None:
+    response = Mock()
+    response.raise_for_status.return_value = None
+    response.json.return_value = {
+        "actions": {
+            "github": [
+                {
+                    "name": "create_issue",
+                    "description": "Create a GitHub issue",
+                    "parameters": {},
+                }
+            ]
+        }
+    }
+    mock_get.return_value = response
+    app_connection_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+    action_connection_id = UUID("8c5f9d69-902b-4b48-a23c-8d037c242e1e")
+
+    tools = LegacyClient().get_actions(
+        [
+            ApplicationSelector.from_string(f"github@{app_connection_id}"),
+            ApplicationSelector.from_string(
+                f"github/create_issue@{action_connection_id}"
+            ),
+        ]
+    )
+
+    assert [tool.connection_id for tool in tools] == [
+        app_connection_id,
+        action_connection_id,
+    ]
+    assert [tool.qualified_name for tool in tools] == [
+        "github_create_issue_550e8400_e29b_41d4_a716_446655440000",
+        "github_create_issue_8c5f9d69_902b_4b48_a23c_8d037c242e1e",
+    ]
+
+
+@patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch(
+    "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
+)
+def test_legacy_client_excludes_actions_without_a_matching_selector(
+    mock_get: Mock,
+) -> None:
+    response = Mock()
+    response.raise_for_status.return_value = None
+    response.json.return_value = {
+        "actions": {
+            "github": [
+                {
+                    "name": "delete_issue",
+                    "description": "Delete a GitHub issue",
+                    "parameters": {},
+                }
+            ]
+        }
+    }
+    mock_get.return_value = response
+
+    tools = LegacyClient().get_actions(
+        [ApplicationSelector.from_string("github/create_issue")]
+    )
+
+    assert tools == []
+
+
 def test_tool_info_is_immutable() -> None:
     tool_info = ToolInfo(
         app="github",

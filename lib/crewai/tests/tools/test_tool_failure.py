@@ -1695,10 +1695,10 @@ class TestPlatformActionTool:
     @staticmethod
     def _tool() -> Any:
         import crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool as mod
-        from crewai_tools.tools.crewai_platform_tools.integrations_client import ToolInfo
+        import crewai_tools.tools.crewai_platform_tools.integrations_client as client_mod
 
         return mod.CrewAIPlatformActionTool(
-            ToolInfo(
+            client_mod.ToolInfo(
                 app="slack",
                 action="slackbot_send_message",
                 connection_id=None,

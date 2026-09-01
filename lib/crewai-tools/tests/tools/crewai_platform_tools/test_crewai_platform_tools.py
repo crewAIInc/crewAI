@@ -89,6 +89,45 @@ class TestCrewaiPlatformTools(unittest.TestCase):
         )
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+    @patch(
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
+    )
+    def test_invalid_parameter_schemas_do_not_abort_discovery(self, mock_get):
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {
+            "actions": {
+                "github": [
+                    {
+                        "name": "create_issue",
+                        "description": "Create a GitHub issue",
+                        "parameters": "invalid",
+                    },
+                    {
+                        "name": "close_issue",
+                        "description": "Close a GitHub issue",
+                        "parameters": [{"type": "string"}],
+                    },
+                    {
+                        "name": "list_issues",
+                        "description": "List GitHub issues",
+                        "parameters": {},
+                    },
+                ]
+            }
+        }
+        mock_get.return_value = mock_response
+
+        tools = CrewaiPlatformTools(apps=["github"])
+
+        assert [tool.name for tool in tools] == [
+            "github_create_issue",
+            "github_close_issue",
+            "github_list_issues",
+        ]
+        assert all(tool.args_schema.model_fields == {} for tool in tools)
+
+    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
     def test_crewai_platform_tools_empty_apps(self):
         with patch(
             "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"

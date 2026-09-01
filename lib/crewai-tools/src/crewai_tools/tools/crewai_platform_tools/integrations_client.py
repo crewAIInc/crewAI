@@ -121,27 +121,22 @@ class LegacyClient:
                 if not isinstance(action_data, dict):
                     continue
                 if action := action_data.get("name"):
-                    selector = next(
-                        (
-                            selector
-                            for selector in selectors
-                            if selector.app == app
-                            and (selector.action is None or selector.action == action)
-                        ),
-                        None,
-                    )
-                    tool_infos.append(
+                    parameters = action_data.get("parameters", {})
+                    if not isinstance(parameters, dict):
+                        parameters = {}
+
+                    tool_infos.extend(
                         ToolInfo(
                             app=app,
                             action=action,
-                            connection_id=(
-                                selector.connection_id if selector is not None else None
-                            ),
+                            connection_id=selector.connection_id,
                             description=action_data.get(
                                 "description", f"Execute {action}"
                             ),
-                            parameters=action_data.get("parameters", {}),
+                            parameters=parameters,
                         )
+                        for selector in selectors
+                        if selector.app == app and selector.action in (None, action)
                     )
 
         return tool_infos
