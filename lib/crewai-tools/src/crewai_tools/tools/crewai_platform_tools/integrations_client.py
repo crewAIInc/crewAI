@@ -123,6 +123,106 @@ class IntegrationsClient(Protocol):
         """Execute an action with the given arguments."""
 
 
+class ClipperClient:
+    """Use the Clipper platform integrations API."""
+
+    _RESOURCE = "/clipper/v1"
+
+    def get_actions(self, selectors: list[ApplicationSelector]) -> list[ToolInfo]:
+        """Get the actions available for the selected applications."""
+        plus_api = PlusAPI()
+        base_url = f"{plus_api.base_url.rstrip('/')}{self._RESOURCE}"
+        headers = self._headers()
+        tool_infos: list[ToolInfo] = []
+
+        for selector in selectors:
+            url = f"{base_url}/applications/{selector.app}/tools"
+            if selector.action is not None:
+                url = f"{url}/{selector.action}"
+
+            params = (
+                {"connection_id": str(selector.connection_id)}
+                if selector.connection_id is not None
+                else {}
+            )
+            response = requests.get(
+                url,
+                headers=headers,
+                params=params,
+                timeout=30,
+                verify=os.environ.get("CREWAI_FACTORY", "false").lower() != "true",
+            )
+            response.raise_for_status()
+            data = response.json()["data"]
+            actions = data if selector.action is None else [data]
+
+            tool_infos.extend(
+                ToolInfo(
+                    app=selector.app,
+                    action=action["slug"],
+                    connection_id=selector.connection_id,
+                    description=action["description"],
+                    parameters=action["input_schema"],
+                )
+                for action in actions
+            )
+
+        return tool_infos
+
+    def execute_action(
+        self, tool: ToolInfo, arguments: dict[str, Any]
+    ) -> ToolExecutionResult:
+        """Execute an action with the given arguments."""
+        plus_api = PlusAPI()
+        payload: dict[str, Any] = {"arguments": arguments}
+        if tool.connection_id is not None:
+            payload["connection_id"] = str(tool.connection_id)
+
+        response = requests.post(
+            (
+                f"{plus_api.base_url.rstrip('/')}{self._RESOURCE}"
+                f"/applications/{tool.app}/tools/{tool.action}/execute"
+            ),
+            headers=self._headers(),
+            json=payload,
+            timeout=60,
+            verify=os.environ.get("CREWAI_FACTORY", "false").lower() != "true",
+        )
+        if 200 <= response.status_code < 300:
+            data = response.json()
+            return ToolExecutionSuccess(output=data["data"]["output"])
+
+        try:
+            error = response.json()["errors"][0]
+            message = error["detail"]
+            code = error["code"]
+        except (
+            requests.exceptions.JSONDecodeError,
+            KeyError,
+            IndexError,
+            TypeError,
+        ):
+            message = f"Upstream API request failed with status {response.status_code}."
+            code = str(response.status_code)
+
+        return ToolExecutionFailure(
+            message=message,
+            code=code,
+            retryable=500 <= response.status_code < 600,
+        )
+
+    @staticmethod
+    def _headers() -> dict[str, str]:
+        headers = {
+            "Authorization": f"Bearer {get_platform_integration_token()}",
+        }
+        deployment_instance_uuid = os.getenv("CREWAI_DEPLOYMENT_INSTANCE_UUID")
+        if deployment_instance_uuid:
+            headers["X-Crewai-Deployment-Instance-Id"] = deployment_instance_uuid
+
+        return headers
+
+
 class LegacyClient:
     """Use the existing CrewAI platform integrations API."""
 
@@ -210,3 +310,10 @@ class LegacyClient:
             )
 
         return ToolExecutionSuccess(output=data)
+
+
+def client_for_selector(selector: ApplicationSelector) -> IntegrationsClient:
+    """Select the integrations client for an application selector."""
+    if selector.connection_id is not None:
+        return ClipperClient()
+    return LegacyClient()
