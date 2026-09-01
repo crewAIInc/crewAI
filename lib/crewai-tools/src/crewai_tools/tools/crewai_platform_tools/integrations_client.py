@@ -298,3 +298,10 @@ class LegacyClient:
             )
 
         return ToolExecutionSuccess(output=data)
+
+
+def client_for_selector(selector: ApplicationSelector) -> IntegrationsClient:
+    """Select the integrations client for an application selector."""
+    if selector.connection_id is not None:
+        return ClipperClient()
+    return LegacyClient()

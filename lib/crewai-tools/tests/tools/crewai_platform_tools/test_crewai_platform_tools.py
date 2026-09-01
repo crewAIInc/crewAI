@@ -81,12 +81,10 @@ class TestCrewaiPlatformTools(unittest.TestCase):
         assert tools[0].description == "Create a GitHub issue"
         assert tools[1].description == "Send a Slack message"
 
-        mock_get.assert_called_once()
-        args, kwargs = mock_get.call_args
-        assert (
-            "apps=github,slack" in args[0]
-            or kwargs.get("params", {}).get("apps") == "github,slack"
-        )
+        assert [request.kwargs["params"] for request in mock_get.call_args_list] == [
+            {"apps": "github"},
+            {"apps": "slack"},
+        ]
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
     @patch(
@@ -190,9 +188,7 @@ class TestCrewaiPlatformTools(unittest.TestCase):
         execution_response.json.return_value = {"issue": 42}
         mock_post.return_value = execution_response
 
-        tools = CrewaiPlatformTools(
-            apps=["github@550e8400-e29b-41d4-a716-446655440000"]
-        )
+        tools = CrewaiPlatformTools(apps=["github"])
         result = tools[0].run(title="Contract test")
 
         assert mock_get.call_args.kwargs["params"] == {"apps": "github"}
@@ -203,6 +199,93 @@ class TestCrewaiPlatformTools(unittest.TestCase):
             "integration": {"title": "Contract test"}
         }
         assert result == '{\n  "issue": 42\n}'
+
+    @patch.dict(
+        "os.environ",
+        {
+            "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+            "CREWAI_PLUS_URL": "https://platform.example.test/",
+        },
+        clear=True,
+    )
+    @patch(
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post"
+    )
+    @patch(
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
+    )
+    def test_connection_selects_clipper_api(self, mock_get, mock_post):
+        discovery_response = Mock()
+        discovery_response.raise_for_status.return_value = None
+        discovery_response.json.return_value = {
+            "data": {
+                "slug": "create_issue",
+                "description": "Create a GitHub issue",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {"title": {"type": "string"}},
+                    "required": ["title"],
+                },
+            }
+        }
+        mock_get.return_value = discovery_response
+        execution_response = Mock(status_code=200)
+        execution_response.json.return_value = {"data": {"output": {"issue": 42}}}
+        mock_post.return_value = execution_response
+        connection_id = "550e8400-e29b-41d4-a716-446655440000"
+
+        tools = CrewaiPlatformTools(
+            apps=[f"github/create_issue@{connection_id}"]
+        )
+        result = tools[0].run(title="Contract test")
+
+        assert mock_get.call_args.args[0].endswith(
+            "/clipper/v1/applications/github/tools/create_issue"
+        )
+        assert mock_get.call_args.kwargs["params"] == {
+            "connection_id": connection_id
+        }
+        assert mock_post.call_args.args[0].endswith(
+            "/clipper/v1/applications/github/tools/create_issue/execute"
+        )
+        assert mock_post.call_args.kwargs["json"] == {
+            "arguments": {"title": "Contract test"},
+            "connection_id": connection_id,
+        }
+        assert result == '{\n  "issue": 42\n}'
+
+    @patch.dict(
+        "os.environ",
+        {
+            "CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token",
+            "CREWAI_PLUS_URL": "https://platform.example.test/",
+        },
+        clear=True,
+    )
+    @patch(
+        "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
+    )
+    def test_mixed_selectors_use_both_apis(self, mock_get):
+        legacy_response = Mock()
+        legacy_response.raise_for_status.return_value = None
+        legacy_response.json.return_value = {"actions": {"slack": []}}
+        clipper_response = Mock()
+        clipper_response.raise_for_status.return_value = None
+        clipper_response.json.return_value = {"data": []}
+        mock_get.side_effect = [legacy_response, clipper_response]
+        connection_id = "550e8400-e29b-41d4-a716-446655440000"
+
+        tools = CrewaiPlatformTools(apps=["slack", f"github@{connection_id}"])
+
+        assert tools == []
+        assert mock_get.call_count == 2
+        assert mock_get.call_args_list[0].kwargs["params"] == {"apps": "slack"}
+        assert mock_get.call_args_list[1].args[0].endswith(
+            "/clipper/v1/applications/github/tools"
+        )
+        assert mock_get.call_args_list[1].kwargs["params"] == {
+            "connection_id": connection_id
+        }
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
     @patch(
@@ -246,14 +329,10 @@ class TestCrewaiPlatformTools(unittest.TestCase):
         response = Mock()
         response.raise_for_status.return_value = None
         response.json.return_value = {
-            "actions": {
-                "Google Drive": [
-                    {
-                        "name": "CreateFile!",
-                        "description": "Create a file",
-                        "parameters": {},
-                    }
-                ]
+            "data": {
+                "slug": "CreateFile!",
+                "description": "Create a file",
+                "input_schema": {},
             }
         }
         mock_get.return_value = response
