@@ -1,6 +1,6 @@
 ---
 title: RAG 도구
-description: RagTool은 Retrieval-Augmented Generation을 사용하여 질문에 답변하는 동적 지식 기반 도구입니다.
+description: `RagTool`은 Retrieval-Augmented Generation을 사용하여 질문에 답변하는 동적 지식 기반 도구입니다.
 icon: vector-square
 mode: "wide"
 ---
@@ -9,7 +9,7 @@ mode: "wide"
 
 ## 설명
 
-`RagTool`은 EmbedChain을 통한 RAG(Retrieval-Augmented Generation)의 강력함을 활용하여 질문에 답하도록 설계되었습니다.
+`RagTool`은 CrewAI의 네이티브 RAG 시스템을 통해 RAG(Retrieval-Augmented Generation)의 강력함을 활용하여 질문에 답하도록 설계되었습니다.
 이는 다양한 데이터 소스에서 관련 정보를 검색할 수 있는 동적 지식 기반을 제공합니다.
 이 도구는 방대한 정보에 접근해야 하고 맥락에 맞는 답변을 제공해야 하는 애플리케이션에 특히 유용합니다.
 
@@ -76,24 +76,24 @@ def knowledge_expert(self) -> Agent:
 `RagTool`은 다음과 같은 매개변수를 허용합니다:
 
 - **summarize**: 선택 사항. 검색된 콘텐츠를 요약할지 여부입니다. 기본값은 `False`입니다.
-- **adapter**: 선택 사항. 지식 베이스에 대한 사용자 지정 어댑터입니다. 제공되지 않은 경우 EmbedchainAdapter가 사용됩니다.
-- **config**: 선택 사항. 내부 EmbedChain App의 구성입니다.
+- **adapter**: 선택 사항. 지식 기반을 위한 사용자 지정 어댑터입니다. 제공하지 않으면 CrewAIRagAdapter가 사용됩니다.
+- **config**: 선택 사항. 내부 CrewAI RAG 시스템에 대한 구성입니다. 선택적 `embedding_model`(ProviderSpec) 및 `vectordb`(VectorDbConfig) 키를 포함하는 `RagToolConfig` TypedDict를 허용합니다. 프로그래밍 방식으로 제공된 모든 구성 값은 환경 변수보다 우선합니다.
 
 ## 콘텐츠 추가
 
 `add` 메서드를 사용하여 지식 베이스에 콘텐츠를 추가할 수 있습니다:
 
 ```python Code
-# PDF 파일 추가
+# Add a PDF file
 rag_tool.add(data_type="file", path="path/to/your/document.pdf")
 
-# 웹 페이지 추가
+# Add a web page
 rag_tool.add(data_type="web_page", url="https://example.com")
 
-# YouTube 비디오 추가
+# Add a YouTube video
 rag_tool.add(data_type="youtube_video", url="https://www.youtube.com/watch?v=VIDEO_ID")
 
-# 파일이 있는 디렉터리 추가
+# Add a directory of files
 rag_tool.add(data_type="directory", path="path/to/your/directory")
 ```
 
@@ -123,51 +123,532 @@ def knowledge_expert(self) -> Agent:
 
 ## 고급 구성
 
-`RagTool`의 동작을 구성 사전을 제공하여 사용자 지정할 수 있습니다.
+구성 딕셔너리를 제공하여 `RagTool`의 동작을 사용자 지정할 수 있습니다.
 
 ```python Code
 from crewai_tools import RagTool
+from crewai_tools.tools.rag import RagToolConfig, VectorDbConfig, ProviderSpec
 
-# 사용자 지정 구성으로 RAG 도구 생성
-config = {
-    "app": {
-        "name": "custom_app",
-    },
-    "llm": {
-        "provider": "openai",
-        "config": {
-            "model": "gpt-4",
-        }
-    },
-    "embedding_model": {
-        "provider": "openai",
-        "config": {
-            "model": "text-embedding-ada-002"
-        }
-    },
-    "vectordb": {
-        "provider": "elasticsearch",
-        "config": {
-            "collection_name": "my-collection",
-            "cloud_id": "deployment-name:xxxx",
-            "api_key": "your-key",
-            "verify_certs": False
-        }
-    },
-    "chunker": {
-        "chunk_size": 400,
-        "chunk_overlap": 100,
-        "length_function": "len",
-        "min_chunk_size": 0
+# Create a RAG tool with custom configuration
+
+vectordb: VectorDbConfig = {
+    "provider": "qdrant",
+    "config": {
+        "collection_name": "my-collection"
     }
+}
+
+embedding_model: ProviderSpec = {
+    "provider": "openai",
+    "config": {
+        "model_name": "text-embedding-3-small"
+    }
+}
+
+config: RagToolConfig = {
+    "vectordb": vectordb,
+    "embedding_model": embedding_model
 }
 
 rag_tool = RagTool(config=config, summarize=True)
 ```
 
-내부 RAG 도구는 Embedchain 어댑터를 사용하므로 Embedchain에서 지원하는 모든 구성 옵션을 전달할 수 있습니다.
-자세한 내용은 [Embedchain 문서](https://docs.embedchain.ai/components/introduction)를 참조하세요.
-.yaml 파일에서 제공되는 구성 옵션을 반드시 검토하시기 바랍니다.
+## 임베딩 모델 구성
+
+`embedding_model` 매개변수는 다음 구조의 `crewai.rag.embeddings.types.ProviderSpec` 딕셔너리를 허용합니다.
+
+```python
+{
+    "provider": "provider-name",  # Required
+    "config": {                    # Optional
+        # Provider-specific configuration
+    }
+}
+```
+
+### 지원되는 프로바이더
+
+<AccordionGroup>
+  <Accordion title="OpenAI">
+    ```python main.py
+    from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
+
+    embedding_model: OpenAIProviderSpec = {
+        "provider": "openai",
+        "config": {
+            "api_key": "your-api-key",
+            "model_name": "text-embedding-ada-002",
+            "dimensions": 1536,
+            "organization_id": "your-org-id",
+            "api_base": "https://api.openai.com/v1",
+            "api_version": "v1",
+            "default_headers": {"Custom-Header": "value"}
+        }
+    }
+    ```
+
+    **구성 옵션:**
+    - `api_key` (str): OpenAI API 키
+    - `model_name` (str): 사용할 모델. 기본값: `text-embedding-ada-002`. 옵션: `text-embedding-3-small`, `text-embedding-3-large`, `text-embedding-ada-002`
+    - `dimensions` (int): 임베딩 차원 수
+    - `organization_id` (str): OpenAI 조직 ID
+    - `api_base` (str): 사용자 지정 API 기본 URL
+    - `api_version` (str): API 버전
+    - `default_headers` (dict): API 요청을 위한 사용자 지정 헤더
+
+    **환경 변수:**
+    - `OPENAI_API_KEY` 또는 `EMBEDDINGS_OPENAI_API_KEY`: `api_key`
+    - `OPENAI_ORGANIZATION_ID` 또는 `EMBEDDINGS_OPENAI_ORGANIZATION_ID`: `organization_id`
+    - `OPENAI_MODEL_NAME` 또는 `EMBEDDINGS_OPENAI_MODEL_NAME`: `model_name`
+    - `OPENAI_API_BASE` 또는 `EMBEDDINGS_OPENAI_API_BASE`: `api_base`
+    - `OPENAI_API_VERSION` 또는 `EMBEDDINGS_OPENAI_API_VERSION`: `api_version`
+    - `OPENAI_DIMENSIONS` 또는 `EMBEDDINGS_OPENAI_DIMENSIONS`: `dimensions`
+  </Accordion>
+
+  <Accordion title="Cohere">
+    ```python main.py
+    from crewai.rag.embeddings.providers.cohere.types import CohereProviderSpec
+
+    embedding_model: CohereProviderSpec = {
+        "provider": "cohere",
+        "config": {
+            "api_key": "your-api-key",
+            "model_name": "embed-english-v3.0"
+        }
+    }
+    ```
+
+    **구성 옵션:**
+    - `api_key` (str): Cohere API 키
+    - `model_name` (str): 사용할 모델. 기본값: `large`. 옵션: `embed-english-v3.0`, `embed-multilingual-v3.0`, `large`, `small`
+
+    **환경 변수:**
+    - `COHERE_API_KEY` 또는 `EMBEDDINGS_COHERE_API_KEY`: `api_key`
+    - `EMBEDDINGS_COHERE_MODEL_NAME`: `model_name`
+  </Accordion>
+
+  <Accordion title="VoyageAI">
+    ```python main.py
+    from crewai.rag.embeddings.providers.voyageai.types import VoyageAIProviderSpec
+
+    embedding_model: VoyageAIProviderSpec = {
+        "provider": "voyageai",
+        "config": {
+            "api_key": "your-api-key",
+            "model": "voyage-3",
+            "input_type": "document",
+            "truncation": True,
+            "output_dtype": "float32",
+            "output_dimension": 1024,
+            "max_retries": 3,
+            "timeout": 60.0
+        }
+    }
+    ```
+
+    **구성 옵션:**
+    - `api_key` (str): VoyageAI API 키
+    - `model` (str): 사용할 모델. 기본값: `voyage-2`. 옵션: `voyage-3`, `voyage-3-lite`, `voyage-code-3`, `voyage-large-2`
+    - `input_type` (str): 입력 유형. 옵션: `document`(저장용), `query`(검색용)
+    - `truncation` (bool): 최대 길이를 초과하는 입력을 잘라낼지 여부. 기본값: `True`
+    - `output_dtype` (str): 출력 데이터 유형
+    - `output_dimension` (int): 출력 임베딩 차원
+    - `max_retries` (int): 최대 재시도 횟수. 기본값: `0`
+    - `timeout` (float): 요청 시간 제한(초)
+
+    **환경 변수:**
+    - `VOYAGEAI_API_KEY` 또는 `EMBEDDINGS_VOYAGEAI_API_KEY`: `api_key`
+    - `VOYAGEAI_MODEL` 또는 `EMBEDDINGS_VOYAGEAI_MODEL`: `model`
+    - `VOYAGEAI_INPUT_TYPE` 또는 `EMBEDDINGS_VOYAGEAI_INPUT_TYPE`: `input_type`
+    - `VOYAGEAI_TRUNCATION` 또는 `EMBEDDINGS_VOYAGEAI_TRUNCATION`: `truncation`
+    - `VOYAGEAI_OUTPUT_DTYPE` 또는 `EMBEDDINGS_VOYAGEAI_OUTPUT_DTYPE`: `output_dtype`
+    - `VOYAGEAI_OUTPUT_DIMENSION` 또는 `EMBEDDINGS_VOYAGEAI_OUTPUT_DIMENSION`: `output_dimension`
+    - `VOYAGEAI_MAX_RETRIES` 또는 `EMBEDDINGS_VOYAGEAI_MAX_RETRIES`: `max_retries`
+    - `VOYAGEAI_TIMEOUT` 또는 `EMBEDDINGS_VOYAGEAI_TIMEOUT`: `timeout`
+  </Accordion>
+
+  <Accordion title="Ollama">
+    ```python main.py
+    from crewai.rag.embeddings.providers.ollama.types import OllamaProviderSpec
+
+    embedding_model: OllamaProviderSpec = {
+        "provider": "ollama",
+        "config": {
+            "model_name": "llama2",
+            "url": "http://localhost:11434/api/embeddings"
+        }
+    }
+    ```
+
+    **구성 옵션:**
+    - `model_name` (str): Ollama 모델 이름(예: `llama2`, `mistral`, `nomic-embed-text`)
+    - `url` (str): Ollama API 엔드포인트 URL. 기본값: `http://localhost:11434/api/embeddings`
+
+    **환경 변수:**
+    - `OLLAMA_MODEL` 또는 `EMBEDDINGS_OLLAMA_MODEL`: `model_name`
+    - `OLLAMA_URL` 또는 `EMBEDDINGS_OLLAMA_URL`: `url`
+  </Accordion>
+
+  <Accordion title="Amazon Bedrock">
+    ```python main.py
+    from crewai.rag.embeddings.providers.aws.types import BedrockProviderSpec
+
+    embedding_model: BedrockProviderSpec = {
+        "provider": "amazon-bedrock",
+        "config": {
+            "model_name": "amazon.titan-embed-text-v2:0",
+            "session": boto3_session
+        }
+    }
+    ```
+
+    **구성 옵션:**
+    - `model_name` (str): Bedrock 모델 ID. 기본값: `amazon.titan-embed-text-v1`. 옵션: `amazon.titan-embed-text-v1`, `amazon.titan-embed-text-v2:0`, `cohere.embed-english-v3`, `cohere.embed-multilingual-v3`
+    - `session` (Any): AWS 인증을 위한 Boto3 세션 객체
+
+    **환경 변수:**
+    - `AWS_ACCESS_KEY_ID`: AWS 액세스 키
+    - `AWS_SECRET_ACCESS_KEY`: AWS 비밀 키
+    - `AWS_REGION`: AWS 리전(예: `us-east-1`)
+  </Accordion>
+
+  <Accordion title="Azure OpenAI">
+    ```python main.py
+    from crewai.rag.embeddings.providers.microsoft.types import AzureProviderSpec
+
+    embedding_model: AzureProviderSpec = {
+        "provider": "azure",
+        "config": {
+            "deployment_id": "your-deployment-id",
+            "api_key": "your-api-key",
+            "api_base": "https://your-resource.openai.azure.com",
+            "api_version": "2024-02-01",
+            "model_name": "text-embedding-ada-002",
+            "api_type": "azure"
+        }
+    }
+    ```
+
+    **구성 옵션:**
+    - `deployment_id` (str): **필수** - Azure OpenAI 배포 ID
+    - `api_key` (str): Azure OpenAI API 키
+    - `api_base` (str): Azure OpenAI 리소스 엔드포인트
+    - `api_version` (str): API 버전. 예: `2024-02-01`
+    - `model_name` (str): 모델 이름. 기본값: `text-embedding-ada-002`
+    - `api_type` (str): API 유형. 기본값: `azure`
+    - `dimensions` (int): 출력 차원
+    - `default_headers` (dict): 사용자 지정 헤더
+
+    **환경 변수:**
+    - `AZURE_OPENAI_API_KEY` 또는 `EMBEDDINGS_AZURE_API_KEY`: `api_key`
+    - `AZURE_OPENAI_ENDPOINT` 또는 `EMBEDDINGS_AZURE_API_BASE`: `api_base`
+    - `EMBEDDINGS_AZURE_DEPLOYMENT_ID`: `deployment_id`
+    - `EMBEDDINGS_AZURE_API_VERSION`: `api_version`
+    - `EMBEDDINGS_AZURE_MODEL_NAME`: `model_name`
+    - `EMBEDDINGS_AZURE_API_TYPE`: `api_type`
+    - `EMBEDDINGS_AZURE_DIMENSIONS`: `dimensions`
+  </Accordion>
+
+  <Accordion title="Google Generative AI">
+    ```python main.py
+    from crewai.rag.embeddings.providers.google.types import GenerativeAiProviderSpec
+
+    embedding_model: GenerativeAiProviderSpec = {
+        "provider": "google-generativeai",
+        "config": {
+            "api_key": "your-api-key",
+            "model_name": "gemini-embedding-001",
+            "task_type": "RETRIEVAL_DOCUMENT"
+        }
+    }
+    ```
+
+    **구성 옵션:**
+    - `api_key` (str): Google AI API 키
+    - `model_name` (str): 모델 이름. 기본값: `gemini-embedding-001`. 옵션: `gemini-embedding-001`, `text-embedding-005`, `text-multilingual-embedding-002`
+    - `task_type` (str): 임베딩 작업 유형. 기본값: `RETRIEVAL_DOCUMENT`. 옵션: `RETRIEVAL_DOCUMENT`, `RETRIEVAL_QUERY`
+
+    **환경 변수:**
+    - `GOOGLE_API_KEY`, `GEMINI_API_KEY` 또는 `EMBEDDINGS_GOOGLE_API_KEY`: `api_key`
+    - `EMBEDDINGS_GOOGLE_GENERATIVE_AI_MODEL_NAME`: `model_name`
+    - `EMBEDDINGS_GOOGLE_GENERATIVE_AI_TASK_TYPE`: `task_type`
+  </Accordion>
+
+  <Accordion title="Google Vertex AI">
+    ```python main.py
+    from crewai.rag.embeddings.providers.google.types import VertexAIProviderSpec
+
+    embedding_model: VertexAIProviderSpec = {
+        "provider": "google-vertex",
+        "config": {
+            "model_name": "text-embedding-004",
+            "project_id": "your-project-id",
+            "region": "us-central1",
+            "api_key": "your-api-key"
+        }
+    }
+    ```
+
+    **구성 옵션:**
+    - `model_name` (str): 모델 이름. 기본값: `textembedding-gecko`. 옵션: `text-embedding-004`, `textembedding-gecko`, `textembedding-gecko-multilingual`
+    - `project_id` (str): Google Cloud 프로젝트 ID. 기본값: `cloud-large-language-models`
+    - `region` (str): Google Cloud 리전. 기본값: `us-central1`
+    - `api_key` (str): 인증을 위한 API 키
+
+    **환경 변수:**
+    - `GOOGLE_APPLICATION_CREDENTIALS`: 서비스 계정 JSON 파일 경로
+    - `GOOGLE_CLOUD_PROJECT` 또는 `EMBEDDINGS_GOOGLE_VERTEX_PROJECT_ID`: `project_id`
+    - `EMBEDDINGS_GOOGLE_VERTEX_MODEL_NAME`: `model_name`
+    - `EMBEDDINGS_GOOGLE_VERTEX_REGION`: `region`
+    - `EMBEDDINGS_GOOGLE_VERTEX_API_KEY`: `api_key`
+  </Accordion>
+
+  <Accordion title="Jina AI">
+    ```python main.py
+    from crewai.rag.embeddings.providers.jina.types import JinaProviderSpec
+
+    embedding_model: JinaProviderSpec = {
+        "provider": "jina",
+        "config": {
+            "api_key": "your-api-key",
+            "model_name": "jina-embeddings-v3"
+        }
+    }
+    ```
+
+    **구성 옵션:**
+    - `api_key` (str): Jina AI API 키
+    - `model_name` (str): 모델 이름. 기본값: `jina-embeddings-v2-base-en`. 옵션: `jina-embeddings-v3`, `jina-embeddings-v2-base-en`, `jina-embeddings-v2-small-en`
+
+    **환경 변수:**
+    - `JINA_API_KEY` 또는 `EMBEDDINGS_JINA_API_KEY`: `api_key`
+    - `EMBEDDINGS_JINA_MODEL_NAME`: `model_name`
+  </Accordion>
+
+  <Accordion title="HuggingFace">
+    ```python main.py
+    from crewai.rag.embeddings.providers.huggingface.types import HuggingFaceProviderSpec
+
+    embedding_model: HuggingFaceProviderSpec = {
+        "provider": "huggingface",
+        "config": {
+            "url": "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
+        }
+    }
+    ```
+
+    **구성 옵션:**
+    - `url` (str): HuggingFace 추론 API 엔드포인트의 전체 URL
+
+    **환경 변수:**
+    - `HUGGINGFACE_URL` 또는 `EMBEDDINGS_HUGGINGFACE_URL`: `url`
+  </Accordion>
+
+  <Accordion title="Instructor">
+    ```python main.py
+    from crewai.rag.embeddings.providers.instructor.types import InstructorProviderSpec
+
+    embedding_model: InstructorProviderSpec = {
+        "provider": "instructor",
+        "config": {
+            "model_name": "hkunlp/instructor-xl",
+            "device": "cuda",
+            "instruction": "Represent the document"
+        }
+    }
+    ```
+
+    **구성 옵션:**
+    - `model_name` (str): HuggingFace 모델 ID. 기본값: `hkunlp/instructor-base`. 옵션: `hkunlp/instructor-xl`, `hkunlp/instructor-large`, `hkunlp/instructor-base`
+    - `device` (str): 실행할 장치. 기본값: `cpu`. 옵션: `cpu`, `cuda`, `mps`, `xpu`
+    - `instruction` (str): 임베딩을 위한 명령어 접두사
+
+    **환경 변수:**
+    - `EMBEDDINGS_INSTRUCTOR_MODEL_NAME`: `model_name`
+    - `EMBEDDINGS_INSTRUCTOR_DEVICE`: `device`
+    - `EMBEDDINGS_INSTRUCTOR_INSTRUCTION`: `instruction`
+  </Accordion>
+
+  <Accordion title="Sentence Transformer">
+    ```python main.py
+    from crewai.rag.embeddings.providers.sentence_transformer.types import SentenceTransformerProviderSpec
+
+    embedding_model: SentenceTransformerProviderSpec = {
+        "provider": "sentence-transformer",
+        "config": {
+            "model_name": "all-mpnet-base-v2",
+            "device": "cuda",
+            "normalize_embeddings": True
+        }
+    }
+    ```
+
+    **구성 옵션:**
+    - `model_name` (str): Sentence Transformers 모델 이름. 기본값: `all-MiniLM-L6-v2`. 옵션: `all-mpnet-base-v2`, `all-MiniLM-L6-v2`, `paraphrase-multilingual-MiniLM-L12-v2`
+    - `device` (str): 실행할 장치. 기본값: `cpu`. 옵션: `cpu`, `cuda`, `mps`, `xpu`
+    - `normalize_embeddings` (bool): 임베딩을 정규화할지 여부. 기본값: `False`
+
+    **환경 변수:**
+    - `EMBEDDINGS_SENTENCE_TRANSFORMER_MODEL_NAME`: `model_name`
+    - `EMBEDDINGS_SENTENCE_TRANSFORMER_DEVICE`: `device`
+    - `EMBEDDINGS_SENTENCE_TRANSFORMER_NORMALIZE_EMBEDDINGS`: `normalize_embeddings`
+  </Accordion>
+
+  <Accordion title="ONNX">
+    ```python main.py
+    from crewai.rag.embeddings.providers.onnx.types import ONNXProviderSpec
+
+    embedding_model: ONNXProviderSpec = {
+        "provider": "onnx",
+        "config": {
+            "preferred_providers": ["CUDAExecutionProvider", "CPUExecutionProvider"]
+        }
+    }
+    ```
+
+    **구성 옵션:**
+    - `preferred_providers` (list[str]): 선호도 순으로 나열한 ONNX 실행 프로바이더 목록
+
+    **환경 변수:**
+    - `EMBEDDINGS_ONNX_PREFERRED_PROVIDERS`: `preferred_providers`(쉼표로 구분된 목록)
+  </Accordion>
+
+  <Accordion title="OpenCLIP">
+    ```python main.py
+    from crewai.rag.embeddings.providers.openclip.types import OpenCLIPProviderSpec
+
+    embedding_model: OpenCLIPProviderSpec = {
+        "provider": "openclip",
+        "config": {
+            "model_name": "ViT-B-32",
+            "checkpoint": "laion2b_s34b_b79k",
+            "device": "cuda"
+        }
+    }
+    ```
+
+    **구성 옵션:**
+    - `model_name` (str): OpenCLIP 모델 아키텍처. 기본값: `ViT-B-32`. 옵션: `ViT-B-32`, `ViT-B-16`, `ViT-L-14`
+    - `checkpoint` (str): 사전 학습된 체크포인트 이름. 기본값: `laion2b_s34b_b79k`. 옵션: `laion2b_s34b_b79k`, `laion400m_e32`, `openai`
+    - `device` (str): 실행할 장치. 기본값: `cpu`. 옵션: `cpu`, `cuda`
+
+    **환경 변수:**
+    - `EMBEDDINGS_OPENCLIP_MODEL_NAME`: `model_name`
+    - `EMBEDDINGS_OPENCLIP_CHECKPOINT`: `checkpoint`
+    - `EMBEDDINGS_OPENCLIP_DEVICE`: `device`
+  </Accordion>
+
+  <Accordion title="Text2Vec">
+    ```python main.py
+    from crewai.rag.embeddings.providers.text2vec.types import Text2VecProviderSpec
+
+    embedding_model: Text2VecProviderSpec = {
+        "provider": "text2vec",
+        "config": {
+            "model_name": "shibing624/text2vec-base-multilingual"
+        }
+    }
+    ```
+
+    **구성 옵션:**
+    - `model_name` (str): HuggingFace의 Text2Vec 모델 이름. 기본값: `shibing624/text2vec-base-chinese`. 옵션: `shibing624/text2vec-base-multilingual`, `shibing624/text2vec-base-chinese`
+
+    **환경 변수:**
+    - `EMBEDDINGS_TEXT2VEC_MODEL_NAME`: `model_name`
+  </Accordion>
+
+  <Accordion title="Roboflow">
+    ```python main.py
+    from crewai.rag.embeddings.providers.roboflow.types import RoboflowProviderSpec
+
+    embedding_model: RoboflowProviderSpec = {
+        "provider": "roboflow",
+        "config": {
+            "api_key": "your-api-key",
+            "api_url": "https://infer.roboflow.com"
+        }
+    }
+    ```
+
+    **구성 옵션:**
+    - `api_key` (str): Roboflow API 키. 기본값: `""`(빈 문자열)
+    - `api_url` (str): Roboflow 추론 API URL. 기본값: `https://infer.roboflow.com`
+
+    **환경 변수:**
+    - `ROBOFLOW_API_KEY` 또는 `EMBEDDINGS_ROBOFLOW_API_KEY`: `api_key`
+    - `ROBOFLOW_API_URL` 또는 `EMBEDDINGS_ROBOFLOW_API_URL`: `api_url`
+  </Accordion>
+
+  <Accordion title="WatsonX (IBM)">
+    ```python main.py
+    from crewai.rag.embeddings.providers.ibm.types import WatsonXProviderSpec
+
+    embedding_model: WatsonXProviderSpec = {
+        "provider": "watsonx",
+        "config": {
+            "model_id": "ibm/slate-125m-english-rtrvr",
+            "url": "https://us-south.ml.cloud.ibm.com",
+            "api_key": "your-api-key",
+            "project_id": "your-project-id",
+            "batch_size": 100,
+            "concurrency_limit": 10,
+            "persistent_connection": True
+        }
+    }
+    ```
+
+    **구성 옵션:**
+    - `model_id` (str): WatsonX 모델 식별자
+    - `url` (str): WatsonX API 엔드포인트
+    - `api_key` (str): IBM Cloud API 키
+    - `project_id` (str): WatsonX 프로젝트 ID
+    - `space_id` (str): WatsonX 공간 ID(project_id의 대안)
+    - `batch_size` (int): 임베딩 배치 크기. 기본값: `100`
+    - `concurrency_limit` (int): 최대 동시 요청 수. 기본값: `10`
+    - `persistent_connection` (bool): 지속 연결 사용 여부. 기본값: `True`
+    - 그 외 20개 이상의 추가 인증 및 구성 옵션
+
+    **환경 변수:**
+    - `WATSONX_API_KEY` 또는 `EMBEDDINGS_WATSONX_API_KEY`: `api_key`
+    - `WATSONX_URL` 또는 `EMBEDDINGS_WATSONX_URL`: `url`
+    - `WATSONX_PROJECT_ID` 또는 `EMBEDDINGS_WATSONX_PROJECT_ID`: `project_id`
+    - `EMBEDDINGS_WATSONX_MODEL_ID`: `model_id`
+    - `EMBEDDINGS_WATSONX_SPACE_ID`: `space_id`
+    - `EMBEDDINGS_WATSONX_BATCH_SIZE`: `batch_size`
+    - `EMBEDDINGS_WATSONX_CONCURRENCY_LIMIT`: `concurrency_limit`
+    - `EMBEDDINGS_WATSONX_PERSISTENT_CONNECTION`: `persistent_connection`
+  </Accordion>
+
+  <Accordion title="사용자 지정">
+    ```python main.py
+    from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
+    from crewai.rag.embeddings.providers.custom.types import CustomProviderSpec
+
+    class MyEmbeddingFunction(EmbeddingFunction):
+        def __call__(self, input):
+            # Your custom embedding logic
+            return embeddings
+
+    embedding_model: CustomProviderSpec = {
+        "provider": "custom",
+        "config": {
+            "embedding_callable": MyEmbeddingFunction
+        }
+    }
+    ```
+
+    **구성 옵션:**
+    - `embedding_callable` (type[EmbeddingFunction]): 사용자 지정 임베딩 함수 클래스
+
+    **참고:** 사용자 지정 임베딩 함수는 `crewai.rag.core.base_embeddings_callable`에 정의된 `EmbeddingFunction` 프로토콜을 구현해야 합니다. `__call__` 메서드는 입력 데이터를 받아 numpy 배열 목록(또는 정규화할 수 있는 호환 형식)으로 임베딩을 반환해야 합니다. 반환된 임베딩은 자동으로 정규화되고 검증됩니다.
+  </Accordion>
+</AccordionGroup>
+
+### 참고
+- **필수**로 표시되지 않은 모든 구성 필드는 선택 사항입니다.
+- 일반적으로 API 키는 구성 대신 환경 변수를 통해 제공할 수 있습니다.
+- 해당하는 경우 기본값이 표시됩니다.
+
 
 ## 결론
 `RagTool`은 다양한 데이터 소스에서 지식 베이스를 생성하고 질의할 수 있는 강력한 방법을 제공합니다. Retrieval-Augmented Generation을 활용하여, 에이전트가 관련 정보를 효율적으로 접근하고 검색할 수 있게 하여, 보다 정확하고 상황에 맞는 응답을 제공하는 능력을 향상시킵니다.

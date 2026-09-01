@@ -9,7 +9,7 @@ mode: "wide"
 
 ## Descrição
 
-O `RagTool` foi desenvolvido para responder perguntas aproveitando o poder da Geração Aumentada por Recuperação (RAG) através do EmbedChain.
+O `RagTool` foi desenvolvido para responder perguntas aproveitando o poder da Geração Aumentada por Recuperação (RAG) por meio do sistema RAG nativo da CrewAI.
 Ele fornece uma base de conhecimento dinâmica que pode ser consultada para recuperar informações relevantes de várias fontes de dados.
 Esta ferramenta é particularmente útil para aplicações que exigem acesso a uma ampla variedade de informações e precisam fornecer respostas contextualmente relevantes.
 
@@ -76,8 +76,8 @@ O `RagTool` pode ser utilizado com uma grande variedade de fontes de dados, incl
 O `RagTool` aceita os seguintes parâmetros:
 
 - **summarize**: Opcional. Indica se o conteúdo recuperado deve ser resumido. O padrão é `False`.
-- **adapter**: Opcional. Um adaptador personalizado para a base de conhecimento. Se não for fornecido, será utilizado o EmbedchainAdapter.
-- **config**: Opcional. Configuração para o aplicativo EmbedChain subjacente.
+- **adapter**: Opcional. Um adaptador personalizado para a base de conhecimento. Se não for fornecido, será utilizado o CrewAIRagAdapter.
+- **config**: Opcional. Configuração do sistema RAG subjacente da CrewAI. Aceita um TypedDict `RagToolConfig` com as chaves opcionais `embedding_model` (ProviderSpec) e `vectordb` (VectorDbConfig). Todos os valores de configuração fornecidos programaticamente têm precedência sobre as variáveis de ambiente.
 
 ## Adicionando Conteúdo
 
@@ -127,47 +127,528 @@ def knowledge_expert(self) -> Agent:
 
 ```python Code
 from crewai_tools import RagTool
+from crewai_tools.tools.rag import RagToolConfig, VectorDbConfig, ProviderSpec
 
 # Create a RAG tool with custom configuration
-config = {
-    "app": {
-        "name": "custom_app",
-    },
-    "llm": {
-        "provider": "openai",
-        "config": {
-            "model": "gpt-4",
-        }
-    },
-    "embedding_model": {
-        "provider": "openai",
-        "config": {
-            "model": "text-embedding-ada-002"
-        }
-    },
-    "vectordb": {
-        "provider": "elasticsearch",
-        "config": {
-            "collection_name": "my-collection",
-            "cloud_id": "deployment-name:xxxx",
-            "api_key": "your-key",
-            "verify_certs": False
-        }
-    },
-    "chunker": {
-        "chunk_size": 400,
-        "chunk_overlap": 100,
-        "length_function": "len",
-        "min_chunk_size": 0
+
+vectordb: VectorDbConfig = {
+    "provider": "qdrant",
+    "config": {
+        "collection_name": "my-collection"
     }
+}
+
+embedding_model: ProviderSpec = {
+    "provider": "openai",
+    "config": {
+        "model_name": "text-embedding-3-small"
+    }
+}
+
+config: RagToolConfig = {
+    "vectordb": vectordb,
+    "embedding_model": embedding_model
 }
 
 rag_tool = RagTool(config=config, summarize=True)
 ```
 
-A ferramenta RAG interna utiliza o adaptador Embedchain, possibilitando que você forneça quaisquer opções de configuração suportadas pelo Embedchain.
-Você pode consultar a [documentação do Embedchain](https://docs.embedchain.ai/components/introduction) para mais detalhes.
-Certifique-se de revisar as opções de configuração disponíveis no arquivo .yaml.
+## Configuração do Modelo de Embedding
+
+O parâmetro `embedding_model` aceita um dicionário `crewai.rag.embeddings.types.ProviderSpec` com a seguinte estrutura:
+
+```python
+{
+    "provider": "provider-name",  # Required
+    "config": {                    # Optional
+        # Provider-specific configuration
+    }
+}
+```
+
+### Provedores Suportados
+
+<AccordionGroup>
+  <Accordion title="OpenAI">
+    ```python main.py
+    from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
+
+    embedding_model: OpenAIProviderSpec = {
+        "provider": "openai",
+        "config": {
+            "api_key": "your-api-key",
+            "model_name": "text-embedding-ada-002",
+            "dimensions": 1536,
+            "organization_id": "your-org-id",
+            "api_base": "https://api.openai.com/v1",
+            "api_version": "v1",
+            "default_headers": {"Custom-Header": "value"}
+        }
+    }
+    ```
+
+    **Opções de Configuração:**
+    - `api_key` (str): Chave da API OpenAI
+    - `model_name` (str): Modelo a ser utilizado. Padrão: `text-embedding-ada-002`. Opções: `text-embedding-3-small`, `text-embedding-3-large`, `text-embedding-ada-002`
+    - `dimensions` (int): Número de dimensões do embedding
+    - `organization_id` (str): ID da organização OpenAI
+    - `api_base` (str): URL base personalizada da API
+    - `api_version` (str): Versão da API
+    - `default_headers` (dict): Cabeçalhos personalizados para solicitações à API
+
+    **Variáveis de Ambiente:**
+    - `OPENAI_API_KEY` ou `EMBEDDINGS_OPENAI_API_KEY`: `api_key`
+    - `OPENAI_ORGANIZATION_ID` ou `EMBEDDINGS_OPENAI_ORGANIZATION_ID`: `organization_id`
+    - `OPENAI_MODEL_NAME` ou `EMBEDDINGS_OPENAI_MODEL_NAME`: `model_name`
+    - `OPENAI_API_BASE` ou `EMBEDDINGS_OPENAI_API_BASE`: `api_base`
+    - `OPENAI_API_VERSION` ou `EMBEDDINGS_OPENAI_API_VERSION`: `api_version`
+    - `OPENAI_DIMENSIONS` ou `EMBEDDINGS_OPENAI_DIMENSIONS`: `dimensions`
+  </Accordion>
+
+  <Accordion title="Cohere">
+    ```python main.py
+    from crewai.rag.embeddings.providers.cohere.types import CohereProviderSpec
+
+    embedding_model: CohereProviderSpec = {
+        "provider": "cohere",
+        "config": {
+            "api_key": "your-api-key",
+            "model_name": "embed-english-v3.0"
+        }
+    }
+    ```
+
+    **Opções de Configuração:**
+    - `api_key` (str): Chave da API Cohere
+    - `model_name` (str): Modelo a ser utilizado. Padrão: `large`. Opções: `embed-english-v3.0`, `embed-multilingual-v3.0`, `large`, `small`
+
+    **Variáveis de Ambiente:**
+    - `COHERE_API_KEY` ou `EMBEDDINGS_COHERE_API_KEY`: `api_key`
+    - `EMBEDDINGS_COHERE_MODEL_NAME`: `model_name`
+  </Accordion>
+
+  <Accordion title="VoyageAI">
+    ```python main.py
+    from crewai.rag.embeddings.providers.voyageai.types import VoyageAIProviderSpec
+
+    embedding_model: VoyageAIProviderSpec = {
+        "provider": "voyageai",
+        "config": {
+            "api_key": "your-api-key",
+            "model": "voyage-3",
+            "input_type": "document",
+            "truncation": True,
+            "output_dtype": "float32",
+            "output_dimension": 1024,
+            "max_retries": 3,
+            "timeout": 60.0
+        }
+    }
+    ```
+
+    **Opções de Configuração:**
+    - `api_key` (str): Chave da API VoyageAI
+    - `model` (str): Modelo a ser utilizado. Padrão: `voyage-2`. Opções: `voyage-3`, `voyage-3-lite`, `voyage-code-3`, `voyage-large-2`
+    - `input_type` (str): Tipo de entrada. Opções: `document` (para armazenamento), `query` (para pesquisa)
+    - `truncation` (bool): Indica se entradas que excedem o comprimento máximo devem ser truncadas. Padrão: `True`
+    - `output_dtype` (str): Tipo de dados da saída
+    - `output_dimension` (int): Dimensão dos embeddings de saída
+    - `max_retries` (int): Número máximo de tentativas. Padrão: `0`
+    - `timeout` (float): Tempo limite da solicitação em segundos
+
+    **Variáveis de Ambiente:**
+    - `VOYAGEAI_API_KEY` ou `EMBEDDINGS_VOYAGEAI_API_KEY`: `api_key`
+    - `VOYAGEAI_MODEL` ou `EMBEDDINGS_VOYAGEAI_MODEL`: `model`
+    - `VOYAGEAI_INPUT_TYPE` ou `EMBEDDINGS_VOYAGEAI_INPUT_TYPE`: `input_type`
+    - `VOYAGEAI_TRUNCATION` ou `EMBEDDINGS_VOYAGEAI_TRUNCATION`: `truncation`
+    - `VOYAGEAI_OUTPUT_DTYPE` ou `EMBEDDINGS_VOYAGEAI_OUTPUT_DTYPE`: `output_dtype`
+    - `VOYAGEAI_OUTPUT_DIMENSION` ou `EMBEDDINGS_VOYAGEAI_OUTPUT_DIMENSION`: `output_dimension`
+    - `VOYAGEAI_MAX_RETRIES` ou `EMBEDDINGS_VOYAGEAI_MAX_RETRIES`: `max_retries`
+    - `VOYAGEAI_TIMEOUT` ou `EMBEDDINGS_VOYAGEAI_TIMEOUT`: `timeout`
+  </Accordion>
+
+  <Accordion title="Ollama">
+    ```python main.py
+    from crewai.rag.embeddings.providers.ollama.types import OllamaProviderSpec
+
+    embedding_model: OllamaProviderSpec = {
+        "provider": "ollama",
+        "config": {
+            "model_name": "llama2",
+            "url": "http://localhost:11434/api/embeddings"
+        }
+    }
+    ```
+
+    **Opções de Configuração:**
+    - `model_name` (str): Nome do modelo Ollama (por exemplo, `llama2`, `mistral`, `nomic-embed-text`)
+    - `url` (str): URL do endpoint da API Ollama. Padrão: `http://localhost:11434/api/embeddings`
+
+    **Variáveis de Ambiente:**
+    - `OLLAMA_MODEL` ou `EMBEDDINGS_OLLAMA_MODEL`: `model_name`
+    - `OLLAMA_URL` ou `EMBEDDINGS_OLLAMA_URL`: `url`
+  </Accordion>
+
+  <Accordion title="Amazon Bedrock">
+    ```python main.py
+    from crewai.rag.embeddings.providers.aws.types import BedrockProviderSpec
+
+    embedding_model: BedrockProviderSpec = {
+        "provider": "amazon-bedrock",
+        "config": {
+            "model_name": "amazon.titan-embed-text-v2:0",
+            "session": boto3_session
+        }
+    }
+    ```
+
+    **Opções de Configuração:**
+    - `model_name` (str): ID do modelo Bedrock. Padrão: `amazon.titan-embed-text-v1`. Opções: `amazon.titan-embed-text-v1`, `amazon.titan-embed-text-v2:0`, `cohere.embed-english-v3`, `cohere.embed-multilingual-v3`
+    - `session` (Any): Objeto de sessão Boto3 para autenticação da AWS
+
+    **Variáveis de Ambiente:**
+    - `AWS_ACCESS_KEY_ID`: Chave de acesso da AWS
+    - `AWS_SECRET_ACCESS_KEY`: Chave secreta da AWS
+    - `AWS_REGION`: Região da AWS (por exemplo, `us-east-1`)
+  </Accordion>
+
+  <Accordion title="Azure OpenAI">
+    ```python main.py
+    from crewai.rag.embeddings.providers.microsoft.types import AzureProviderSpec
+
+    embedding_model: AzureProviderSpec = {
+        "provider": "azure",
+        "config": {
+            "deployment_id": "your-deployment-id",
+            "api_key": "your-api-key",
+            "api_base": "https://your-resource.openai.azure.com",
+            "api_version": "2024-02-01",
+            "model_name": "text-embedding-ada-002",
+            "api_type": "azure"
+        }
+    }
+    ```
+
+    **Opções de Configuração:**
+    - `deployment_id` (str): **Obrigatório** - ID de implantação do Azure OpenAI
+    - `api_key` (str): Chave da API Azure OpenAI
+    - `api_base` (str): Endpoint do recurso Azure OpenAI
+    - `api_version` (str): Versão da API. Exemplo: `2024-02-01`
+    - `model_name` (str): Nome do modelo. Padrão: `text-embedding-ada-002`
+    - `api_type` (str): Tipo de API. Padrão: `azure`
+    - `dimensions` (int): Dimensões da saída
+    - `default_headers` (dict): Cabeçalhos personalizados
+
+    **Variáveis de Ambiente:**
+    - `AZURE_OPENAI_API_KEY` ou `EMBEDDINGS_AZURE_API_KEY`: `api_key`
+    - `AZURE_OPENAI_ENDPOINT` ou `EMBEDDINGS_AZURE_API_BASE`: `api_base`
+    - `EMBEDDINGS_AZURE_DEPLOYMENT_ID`: `deployment_id`
+    - `EMBEDDINGS_AZURE_API_VERSION`: `api_version`
+    - `EMBEDDINGS_AZURE_MODEL_NAME`: `model_name`
+    - `EMBEDDINGS_AZURE_API_TYPE`: `api_type`
+    - `EMBEDDINGS_AZURE_DIMENSIONS`: `dimensions`
+  </Accordion>
+
+  <Accordion title="Google Generative AI">
+    ```python main.py
+    from crewai.rag.embeddings.providers.google.types import GenerativeAiProviderSpec
+
+    embedding_model: GenerativeAiProviderSpec = {
+        "provider": "google-generativeai",
+        "config": {
+            "api_key": "your-api-key",
+            "model_name": "gemini-embedding-001",
+            "task_type": "RETRIEVAL_DOCUMENT"
+        }
+    }
+    ```
+
+    **Opções de Configuração:**
+    - `api_key` (str): Chave da API Google AI
+    - `model_name` (str): Nome do modelo. Padrão: `gemini-embedding-001`. Opções: `gemini-embedding-001`, `text-embedding-005`, `text-multilingual-embedding-002`
+    - `task_type` (str): Tipo de tarefa para embeddings. Padrão: `RETRIEVAL_DOCUMENT`. Opções: `RETRIEVAL_DOCUMENT`, `RETRIEVAL_QUERY`
+
+    **Variáveis de Ambiente:**
+    - `GOOGLE_API_KEY`, `GEMINI_API_KEY` ou `EMBEDDINGS_GOOGLE_API_KEY`: `api_key`
+    - `EMBEDDINGS_GOOGLE_GENERATIVE_AI_MODEL_NAME`: `model_name`
+    - `EMBEDDINGS_GOOGLE_GENERATIVE_AI_TASK_TYPE`: `task_type`
+  </Accordion>
+
+  <Accordion title="Google Vertex AI">
+    ```python main.py
+    from crewai.rag.embeddings.providers.google.types import VertexAIProviderSpec
+
+    embedding_model: VertexAIProviderSpec = {
+        "provider": "google-vertex",
+        "config": {
+            "model_name": "text-embedding-004",
+            "project_id": "your-project-id",
+            "region": "us-central1",
+            "api_key": "your-api-key"
+        }
+    }
+    ```
+
+    **Opções de Configuração:**
+    - `model_name` (str): Nome do modelo. Padrão: `textembedding-gecko`. Opções: `text-embedding-004`, `textembedding-gecko`, `textembedding-gecko-multilingual`
+    - `project_id` (str): ID do projeto Google Cloud. Padrão: `cloud-large-language-models`
+    - `region` (str): Região do Google Cloud. Padrão: `us-central1`
+    - `api_key` (str): Chave de API para autenticação
+
+    **Variáveis de Ambiente:**
+    - `GOOGLE_APPLICATION_CREDENTIALS`: Caminho para o arquivo JSON da conta de serviço
+    - `GOOGLE_CLOUD_PROJECT` ou `EMBEDDINGS_GOOGLE_VERTEX_PROJECT_ID`: `project_id`
+    - `EMBEDDINGS_GOOGLE_VERTEX_MODEL_NAME`: `model_name`
+    - `EMBEDDINGS_GOOGLE_VERTEX_REGION`: `region`
+    - `EMBEDDINGS_GOOGLE_VERTEX_API_KEY`: `api_key`
+  </Accordion>
+
+  <Accordion title="Jina AI">
+    ```python main.py
+    from crewai.rag.embeddings.providers.jina.types import JinaProviderSpec
+
+    embedding_model: JinaProviderSpec = {
+        "provider": "jina",
+        "config": {
+            "api_key": "your-api-key",
+            "model_name": "jina-embeddings-v3"
+        }
+    }
+    ```
+
+    **Opções de Configuração:**
+    - `api_key` (str): Chave da API Jina AI
+    - `model_name` (str): Nome do modelo. Padrão: `jina-embeddings-v2-base-en`. Opções: `jina-embeddings-v3`, `jina-embeddings-v2-base-en`, `jina-embeddings-v2-small-en`
+
+    **Variáveis de Ambiente:**
+    - `JINA_API_KEY` ou `EMBEDDINGS_JINA_API_KEY`: `api_key`
+    - `EMBEDDINGS_JINA_MODEL_NAME`: `model_name`
+  </Accordion>
+
+  <Accordion title="HuggingFace">
+    ```python main.py
+    from crewai.rag.embeddings.providers.huggingface.types import HuggingFaceProviderSpec
+
+    embedding_model: HuggingFaceProviderSpec = {
+        "provider": "huggingface",
+        "config": {
+            "url": "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
+        }
+    }
+    ```
+
+    **Opções de Configuração:**
+    - `url` (str): URL completa do endpoint da API de inferência do HuggingFace
+
+    **Variáveis de Ambiente:**
+    - `HUGGINGFACE_URL` ou `EMBEDDINGS_HUGGINGFACE_URL`: `url`
+  </Accordion>
+
+  <Accordion title="Instructor">
+    ```python main.py
+    from crewai.rag.embeddings.providers.instructor.types import InstructorProviderSpec
+
+    embedding_model: InstructorProviderSpec = {
+        "provider": "instructor",
+        "config": {
+            "model_name": "hkunlp/instructor-xl",
+            "device": "cuda",
+            "instruction": "Represent the document"
+        }
+    }
+    ```
+
+    **Opções de Configuração:**
+    - `model_name` (str): ID do modelo HuggingFace. Padrão: `hkunlp/instructor-base`. Opções: `hkunlp/instructor-xl`, `hkunlp/instructor-large`, `hkunlp/instructor-base`
+    - `device` (str): Dispositivo no qual executar. Padrão: `cpu`. Opções: `cpu`, `cuda`, `mps`, `xpu`
+    - `instruction` (str): Prefixo de instrução para embeddings
+
+    **Variáveis de Ambiente:**
+    - `EMBEDDINGS_INSTRUCTOR_MODEL_NAME`: `model_name`
+    - `EMBEDDINGS_INSTRUCTOR_DEVICE`: `device`
+    - `EMBEDDINGS_INSTRUCTOR_INSTRUCTION`: `instruction`
+  </Accordion>
+
+  <Accordion title="Sentence Transformer">
+    ```python main.py
+    from crewai.rag.embeddings.providers.sentence_transformer.types import SentenceTransformerProviderSpec
+
+    embedding_model: SentenceTransformerProviderSpec = {
+        "provider": "sentence-transformer",
+        "config": {
+            "model_name": "all-mpnet-base-v2",
+            "device": "cuda",
+            "normalize_embeddings": True
+        }
+    }
+    ```
+
+    **Opções de Configuração:**
+    - `model_name` (str): Nome do modelo Sentence Transformers. Padrão: `all-MiniLM-L6-v2`. Opções: `all-mpnet-base-v2`, `all-MiniLM-L6-v2`, `paraphrase-multilingual-MiniLM-L12-v2`
+    - `device` (str): Dispositivo no qual executar. Padrão: `cpu`. Opções: `cpu`, `cuda`, `mps`, `xpu`
+    - `normalize_embeddings` (bool): Indica se os embeddings devem ser normalizados. Padrão: `False`
+
+    **Variáveis de Ambiente:**
+    - `EMBEDDINGS_SENTENCE_TRANSFORMER_MODEL_NAME`: `model_name`
+    - `EMBEDDINGS_SENTENCE_TRANSFORMER_DEVICE`: `device`
+    - `EMBEDDINGS_SENTENCE_TRANSFORMER_NORMALIZE_EMBEDDINGS`: `normalize_embeddings`
+  </Accordion>
+
+  <Accordion title="ONNX">
+    ```python main.py
+    from crewai.rag.embeddings.providers.onnx.types import ONNXProviderSpec
+
+    embedding_model: ONNXProviderSpec = {
+        "provider": "onnx",
+        "config": {
+            "preferred_providers": ["CUDAExecutionProvider", "CPUExecutionProvider"]
+        }
+    }
+    ```
+
+    **Opções de Configuração:**
+    - `preferred_providers` (list[str]): Lista de provedores de execução ONNX em ordem de preferência
+
+    **Variáveis de Ambiente:**
+    - `EMBEDDINGS_ONNX_PREFERRED_PROVIDERS`: `preferred_providers` (lista separada por vírgulas)
+  </Accordion>
+
+  <Accordion title="OpenCLIP">
+    ```python main.py
+    from crewai.rag.embeddings.providers.openclip.types import OpenCLIPProviderSpec
+
+    embedding_model: OpenCLIPProviderSpec = {
+        "provider": "openclip",
+        "config": {
+            "model_name": "ViT-B-32",
+            "checkpoint": "laion2b_s34b_b79k",
+            "device": "cuda"
+        }
+    }
+    ```
+
+    **Opções de Configuração:**
+    - `model_name` (str): Arquitetura do modelo OpenCLIP. Padrão: `ViT-B-32`. Opções: `ViT-B-32`, `ViT-B-16`, `ViT-L-14`
+    - `checkpoint` (str): Nome do checkpoint pré-treinado. Padrão: `laion2b_s34b_b79k`. Opções: `laion2b_s34b_b79k`, `laion400m_e32`, `openai`
+    - `device` (str): Dispositivo no qual executar. Padrão: `cpu`. Opções: `cpu`, `cuda`
+
+    **Variáveis de Ambiente:**
+    - `EMBEDDINGS_OPENCLIP_MODEL_NAME`: `model_name`
+    - `EMBEDDINGS_OPENCLIP_CHECKPOINT`: `checkpoint`
+    - `EMBEDDINGS_OPENCLIP_DEVICE`: `device`
+  </Accordion>
+
+  <Accordion title="Text2Vec">
+    ```python main.py
+    from crewai.rag.embeddings.providers.text2vec.types import Text2VecProviderSpec
+
+    embedding_model: Text2VecProviderSpec = {
+        "provider": "text2vec",
+        "config": {
+            "model_name": "shibing624/text2vec-base-multilingual"
+        }
+    }
+    ```
+
+    **Opções de Configuração:**
+    - `model_name` (str): Nome do modelo Text2Vec do HuggingFace. Padrão: `shibing624/text2vec-base-chinese`. Opções: `shibing624/text2vec-base-multilingual`, `shibing624/text2vec-base-chinese`
+
+    **Variáveis de Ambiente:**
+    - `EMBEDDINGS_TEXT2VEC_MODEL_NAME`: `model_name`
+  </Accordion>
+
+  <Accordion title="Roboflow">
+    ```python main.py
+    from crewai.rag.embeddings.providers.roboflow.types import RoboflowProviderSpec
+
+    embedding_model: RoboflowProviderSpec = {
+        "provider": "roboflow",
+        "config": {
+            "api_key": "your-api-key",
+            "api_url": "https://infer.roboflow.com"
+        }
+    }
+    ```
+
+    **Opções de Configuração:**
+    - `api_key` (str): Chave da API Roboflow. Padrão: `""` (string vazia)
+    - `api_url` (str): URL da API de inferência do Roboflow. Padrão: `https://infer.roboflow.com`
+
+    **Variáveis de Ambiente:**
+    - `ROBOFLOW_API_KEY` ou `EMBEDDINGS_ROBOFLOW_API_KEY`: `api_key`
+    - `ROBOFLOW_API_URL` ou `EMBEDDINGS_ROBOFLOW_API_URL`: `api_url`
+  </Accordion>
+
+  <Accordion title="WatsonX (IBM)">
+    ```python main.py
+    from crewai.rag.embeddings.providers.ibm.types import WatsonXProviderSpec
+
+    embedding_model: WatsonXProviderSpec = {
+        "provider": "watsonx",
+        "config": {
+            "model_id": "ibm/slate-125m-english-rtrvr",
+            "url": "https://us-south.ml.cloud.ibm.com",
+            "api_key": "your-api-key",
+            "project_id": "your-project-id",
+            "batch_size": 100,
+            "concurrency_limit": 10,
+            "persistent_connection": True
+        }
+    }
+    ```
+
+    **Opções de Configuração:**
+    - `model_id` (str): Identificador do modelo WatsonX
+    - `url` (str): Endpoint da API WatsonX
+    - `api_key` (str): Chave da API IBM Cloud
+    - `project_id` (str): ID do projeto WatsonX
+    - `space_id` (str): ID do espaço WatsonX (alternativa ao project_id)
+    - `batch_size` (int): Tamanho do lote para embeddings. Padrão: `100`
+    - `concurrency_limit` (int): Número máximo de solicitações simultâneas. Padrão: `10`
+    - `persistent_connection` (bool): Utilizar conexões persistentes. Padrão: `True`
+    - Mais de 20 opções adicionais de autenticação e configuração
+
+    **Variáveis de Ambiente:**
+    - `WATSONX_API_KEY` ou `EMBEDDINGS_WATSONX_API_KEY`: `api_key`
+    - `WATSONX_URL` ou `EMBEDDINGS_WATSONX_URL`: `url`
+    - `WATSONX_PROJECT_ID` ou `EMBEDDINGS_WATSONX_PROJECT_ID`: `project_id`
+    - `EMBEDDINGS_WATSONX_MODEL_ID`: `model_id`
+    - `EMBEDDINGS_WATSONX_SPACE_ID`: `space_id`
+    - `EMBEDDINGS_WATSONX_BATCH_SIZE`: `batch_size`
+    - `EMBEDDINGS_WATSONX_CONCURRENCY_LIMIT`: `concurrency_limit`
+    - `EMBEDDINGS_WATSONX_PERSISTENT_CONNECTION`: `persistent_connection`
+  </Accordion>
+
+  <Accordion title="Personalizado">
+    ```python main.py
+    from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
+    from crewai.rag.embeddings.providers.custom.types import CustomProviderSpec
+
+    class MyEmbeddingFunction(EmbeddingFunction):
+        def __call__(self, input):
+            # Your custom embedding logic
+            return embeddings
+
+    embedding_model: CustomProviderSpec = {
+        "provider": "custom",
+        "config": {
+            "embedding_callable": MyEmbeddingFunction
+        }
+    }
+    ```
+
+    **Opções de Configuração:**
+    - `embedding_callable` (type[EmbeddingFunction]): Classe da função de embedding personalizada
+
+    **Observação:** As funções de embedding personalizadas devem implementar o protocolo `EmbeddingFunction` definido em `crewai.rag.core.base_embeddings_callable`. O método `__call__` deve aceitar dados de entrada e retornar embeddings como uma lista de arrays numpy (ou um formato compatível que será normalizado). Os embeddings retornados são normalizados e validados automaticamente.
+  </Accordion>
+</AccordionGroup>
+
+### Observações
+- Todos os campos de configuração são opcionais, a menos que estejam marcados como **Obrigatório**
+- Normalmente, as chaves de API podem ser fornecidas por meio de variáveis de ambiente em vez da configuração
+- Os valores padrão são exibidos quando aplicável
+
 
 ## Conclusão
 O `RagTool` oferece uma maneira poderosa de criar e consultar bases de conhecimento a partir de diversas fontes de dados. Ao explorar a Geração Aumentada por Recuperação, ele permite que agentes acessem e recuperem informações relevantes de forma eficiente, ampliando a capacidade de fornecer respostas precisas e contextualmente apropriadas.
