@@ -386,7 +386,7 @@ class LLM(BaseLLM):
     api_base: str | None = None
     api_version: str | None = None
     callbacks: list[Any] | None = None
-    reasoning_effort: Literal["none", "low", "medium", "high"] | None = None
+    reasoning_effort: Literal["none", "minimal", "low", "medium", "high"] | None = None
     stream: bool = False
     interceptor: Any = None
     thinking: Any = None
