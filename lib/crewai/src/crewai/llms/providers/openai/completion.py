@@ -552,6 +552,16 @@ class OpenAICompletion(BaseLLM):
                     )
                     return dispatch(retry_params)
 
+            if self._rejects_reasoning_effort_as_unsupported(cause):
+                retry_params = self._without_reasoning_effort(completion_params)
+                if retry_params is not None:
+                    logging.debug(
+                        "Retrying %r without reasoning_effort: the model does "
+                        "not support the parameter.",
+                        self.model,
+                    )
+                    return dispatch(retry_params)
+
             if self.custom_openai or not self._is_responses_only_error(cause):
                 raise
             self._remember_responses_only_model()
@@ -681,6 +691,16 @@ class OpenAICompletion(BaseLLM):
             if self._rejects_reasoning_effort_with_tools(cause):
                 retry_params = self._reasoning_effort_none_params(completion_params)
                 if retry_params is not None:
+                    return await dispatch(retry_params)
+
+            if self._rejects_reasoning_effort_as_unsupported(cause):
+                retry_params = self._without_reasoning_effort(completion_params)
+                if retry_params is not None:
+                    logging.debug(
+                        "Retrying %r without reasoning_effort: the model does "
+                        "not support the parameter.",
+                        self.model,
+                    )
                     return await dispatch(retry_params)
 
             if self.custom_openai or not self._is_responses_only_error(cause):
@@ -1765,6 +1785,49 @@ class OpenAICompletion(BaseLLM):
         message = str(source.get("message") or "").lower()
         return "function tools" in message and "reasoning_effort" in message
 
+    @staticmethod
+    def _rejects_reasoning_effort_as_unsupported(error: BaseException) -> bool:
+        """Whether a 400 is OpenAI refusing `reasoning_effort` for this model.
+
+        Non-reasoning models reject the parameter itself, in one of two shapes:
+
+            {"code": "unsupported_parameter", "param": "reasoning_effort",
+             "message": "Unsupported parameter: 'reasoning_effort' is not
+             supported with this model."}
+
+            {"param": null, "message": "Unrecognized request argument
+             supplied: reasoning_effort"}
+
+        Distinct from `_rejects_reasoning_effort_with_tools`: that is a
+        reasoning model refusing the parameter only alongside function tools,
+        and it recovers by sending "none" rather than by dropping the key. Also
+        deliberately does not match the "Unsupported value" 400 that o1/o3
+        return for a bad *value* -- the model does support the parameter, so
+        silently dropping it would restore the very bug this recovers from.
+        """
+        if not isinstance(error, BadRequestError):
+            return False
+        body = getattr(error, "body", None)
+        source = None
+        if isinstance(body, dict):
+            inner = body.get("error")
+            source = inner if isinstance(inner, dict) else body
+        if not isinstance(source, dict):
+            return False
+        message = str(source.get("message") or "").lower()
+        if "reasoning_effort" not in message:
+            return False
+        if source.get("code") == "unsupported_parameter":
+            return True
+        return "unrecognized request argument" in message
+
+    @staticmethod
+    def _without_reasoning_effort(params: dict[str, Any]) -> dict[str, Any] | None:
+        """Params with `reasoning_effort` removed, or None if it was not set."""
+        if "reasoning_effort" not in params:
+            return None
+        return {k: v for k, v in params.items() if k != "reasoning_effort"}
+
     def _reasoning_effort_none_params(
         self, params: dict[str, Any]
     ) -> dict[str, Any] | None:
@@ -1829,8 +1892,10 @@ class OpenAICompletion(BaseLLM):
         if self.top_logprobs is not None:
             params["top_logprobs"] = self.top_logprobs
 
-        # Handle o1 model specific parameters
-        if self.is_o1_model and self.reasoning_effort:
+        # Forwarded for every model, not just o1: gpt-5, o3 and o4-mini are all
+        # reasoning models whose names contain no "o1". A model that does not
+        # support the parameter rejects it, and the caller retries without it.
+        if self.reasoning_effort:
             params["reasoning_effort"] = self.reasoning_effort
 
         if self.response_format is not None:
@@ -2043,9 +2108,11 @@ class OpenAICompletion(BaseLLM):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
 
-            # `_call_completions` retries this one, so reporting a failed call
+            # `_call_completions` retries these, so reporting a failed call
             # here would surface an error the caller never experiences.
-            if self._rejects_reasoning_effort_with_tools(e):
+            if self._rejects_reasoning_effort_with_tools(
+                e
+            ) or self._rejects_reasoning_effort_as_unsupported(e):
                 raise
 
             error_msg = f"OpenAI API call failed: {e!s}"
@@ -2471,9 +2538,11 @@ class OpenAICompletion(BaseLLM):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
 
-            # `_call_completions` retries this one, so reporting a failed call
+            # `_call_completions` retries these, so reporting a failed call
             # here would surface an error the caller never experiences.
-            if self._rejects_reasoning_effort_with_tools(e):
+            if self._rejects_reasoning_effort_with_tools(
+                e
+            ) or self._rejects_reasoning_effort_as_unsupported(e):
                 raise
 
             error_msg = f"OpenAI API call failed: {e!s}"
