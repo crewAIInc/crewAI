@@ -20,7 +20,6 @@ exclude-newer-span = "P3D"
 msgpack = "2026-06-20T00:00:00Z"
 langsmith = "2026-06-20T00:00:00Z"
 gitpython = "2026-08-05T00:00:00Z"
-pypdf = "2026-08-24T00:00:00Z"
 pydantic-settings = "2026-06-20T00:00:00Z"
 
 [manifest]
