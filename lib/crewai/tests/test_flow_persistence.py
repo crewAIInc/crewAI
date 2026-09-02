@@ -20,18 +20,21 @@ class TestState(FlowState):
 
 
 @pytest.mark.parametrize(
-    ("state", "expected_message"),
+    ("flow_instance", "expected_message"),
     [
-        (None, "Flow instance has no state"),
-        ({}, "Flow state must have an 'id' field for persistence"),
+        (SimpleNamespace(), "Flow instance has no state"),
+        (SimpleNamespace(state=None), "Flow instance has no state"),
+        (
+            SimpleNamespace(state={}),
+            "Flow state must have an 'id' field for persistence",
+        ),
     ],
 )
 def test_persist_state_reports_specific_validation_error(
-    tmp_path, state, expected_message
+    tmp_path, flow_instance, expected_message
 ):
     """Report whether the state itself or only its ID is missing."""
     persistence = SQLiteFlowPersistence(str(tmp_path / "test_flows.db"))
-    flow_instance = SimpleNamespace(state=state)
 
     with pytest.raises(ValueError) as exc_info:
         PersistenceDecorator.persist_state(
