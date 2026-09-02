@@ -19,8 +19,6 @@ dependencies = [
 
 [tool.uv]
 exclude-newer = "3 days"
-# pypdf 6.16.1+ patches GHSA-jp53-mhqp-8xcg, GHSA-23w6-3w8w-8484, GHSA-763m-79hh-57f2.
-exclude-newer-package = { pypdf = "2026-08-24T00:00:00Z" }
 
 [build-system]
 requires = ["hatchling"]
