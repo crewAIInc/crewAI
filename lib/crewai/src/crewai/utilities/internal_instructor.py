@@ -143,8 +143,12 @@ class InternalInstructor(Generic[T]):
             Instance of the specified Pydantic model with structured data
 
         Raises:
-            ValueError: If LLM is not provided or invalid
+            ValueError: If LLM is not provided or invalid, or if a hook blocked
+                the call by returning ``False``.
+            HookAborted: If a hook denied the call.
         """
+        from crewai.llms.base_llm import BaseLLM
+
         messages: list[LLMMessage] = [{"role": "user", "content": self.content}]
 
         if not _is_valid_llm(self.llm):
@@ -156,6 +160,11 @@ class InternalInstructor(Generic[T]):
             model_name = self.llm
         else:
             model_name = self.llm.model
+
+        if isinstance(self.llm, BaseLLM):
+            # This reaches the provider client directly, so the hooks the LLM
+            # layer would have dispatched are dispatched here instead.
+            self.llm._invoke_before_llm_call_hooks(messages, self.agent)
 
         return self._client.chat.completions.create(  # type: ignore[no-any-return]
             model=model_name, response_model=self.model, messages=messages
