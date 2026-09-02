@@ -50,16 +50,15 @@ mode: "wide"
 - **سلامة الذكاء الاصطناعي**: تنفيذ فحوصات الإشراف على المحتوى والسلامة
 
 ```python
-from crewai_tools import DallETool, VisionTool, CodeInterpreterTool
+from crewai_tools import DallETool, VisionTool
 
 # Create AI tools
 image_generator = DallETool()
 vision_processor = VisionTool()
-code_executor = CodeInterpreterTool()
 
 # Add to your agent
 agent = Agent(
     role="AI Specialist",
-    tools=[image_generator, vision_processor, code_executor],
+    tools=[image_generator, vision_processor],
     goal="Create and analyze content using AI capabilities"
 )
