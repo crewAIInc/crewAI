@@ -72,7 +72,7 @@ docling = [
     # docling 2.97 split into docling-slim; the chunker package (HierarchicalChunker)
     # now eagerly imports code-chunking submodules that need tree-sitter/semchunk,
     # which only the docling-core[chunking] extra provides.
-    "docling-core[chunking]>=2.74.1",
+    "docling-core[chunking]>=2.92.0",
 ]
 qdrant = [
     "qdrant-client[fastembed]~=1.14.3",
