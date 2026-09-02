@@ -259,6 +259,7 @@
                         "pages": [
                           "edge/en/tools/search-research/overview",
                           "edge/en/tools/search-research/serperdevtool",
+                          "edge/en/tools/search-research/searchapitool",
                           "edge/en/tools/search-research/bravesearchtool",
                           "edge/en/tools/search-research/exasearchtool",
                           "edge/en/tools/search-research/linkupsearchtool",
@@ -13912,6 +13913,7 @@
                         "pages": [
                           "edge/pt-BR/tools/search-research/overview",
                           "edge/pt-BR/tools/search-research/serperdevtool",
+                          "edge/pt-BR/tools/search-research/searchapitool",
                           "edge/pt-BR/tools/search-research/bravesearchtool",
                           "edge/pt-BR/tools/search-research/exasearchtool",
                           "edge/pt-BR/tools/search-research/linkupsearchtool",
@@ -26630,6 +26632,7 @@
                         "pages": [
                           "edge/ko/tools/search-research/overview",
                           "edge/ko/tools/search-research/serperdevtool",
+                          "edge/ko/tools/search-research/searchapitool",
                           "edge/ko/tools/search-research/bravesearchtool",
                           "edge/ko/tools/search-research/exasearchtool",
                           "edge/ko/tools/search-research/linkupsearchtool",
@@ -39777,6 +39780,7 @@
                         "pages": [
                           "edge/ar/tools/search-research/overview",
                           "edge/ar/tools/search-research/serperdevtool",
+                          "edge/ar/tools/search-research/searchapitool",
                           "edge/ar/tools/search-research/bravesearchtool",
                           "edge/ar/tools/search-research/exasearchtool",
                           "edge/ar/tools/search-research/linkupsearchtool",
