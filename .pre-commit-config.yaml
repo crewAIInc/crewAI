@@ -59,7 +59,8 @@ repos:
           --ignore-vuln GHSA-f4j7-r4q5-qw2c
           --ignore-vuln GHSA-2wm9-hf6c-p5cr
           --ignore-vuln GHSA-36p7-vc44-83pf
-          --ignore-vuln GHSA-xph7-9rjv-w5fr' --
+          --ignore-vuln GHSA-xph7-9rjv-w5fr
+          --ignore-vuln GHSA-8mgp-746c-j5xp' --
         language: system
         pass_filenames: false
         stages: [pre-push, manual]

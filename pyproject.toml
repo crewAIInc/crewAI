@@ -226,7 +226,10 @@ exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = 
 # 3.9.4, so that ignore is no longer needed. 3.10.0-3.10.1 have PYSEC-2026-3726
 # (symlink-based arbitrary file read in IPIPANCorpusReader); fixed in 3.10.2.
 # 3.10.3 also clears later 3.10.2 findings (proxy SSRF, pickle allowlist RCE,
-# JVM option injection, XML entity expansion). Transitive via
+# JVM option injection, XML entity expansion). 3.10.3 still has
+# GHSA-8mgp-746c-j5xp (CVE-2026-81726; model-artifact pathsec bypass); no
+# patched PyPI release yet, so that GHSA is ignored in pip-audit until one
+# ships. Transitive via
 # crewai-tools[xml] -> unstructured.
 # pydantic-settings <2.14.2 has GHSA-4xgf-cpjx-pc3j.
 # h2 <=4.4.0 has GHSA-6hr6-w5qg-qmwg (CVE-2026-71554): duplicate Host headers
