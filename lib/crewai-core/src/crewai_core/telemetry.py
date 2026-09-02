@@ -32,7 +32,11 @@ from opentelemetry.trace import Span, Status, StatusCode
 from typing_extensions import Self
 
 from crewai_core.project import get_project_id
-from crewai_core.runtime_env import detect_coding_agent, detect_runtime_context
+from crewai_core.runtime_env import (
+    detect_coding_agent,
+    detect_cpu_band,
+    detect_runtime_context,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -144,6 +148,7 @@ def common_span_attributes() -> dict[str, str]:
     attributes = {
         "coding_agent": detect_coding_agent(),
         "runtime_context": detect_runtime_context(),
+        "cpu_band": detect_cpu_band(),
     }
 
     try:
@@ -176,6 +181,9 @@ class Telemetry:
 
     _instance: ClassVar[Self | None] = None
     _lock: ClassVar[threading.Lock] = threading.Lock()
+    _TRUTHY_ENV: ClassVar[frozenset[str]] = frozenset({"1", "on", "true", "yes"})
+    _FALSY_ENV: ClassVar[frozenset[str]] = frozenset({"", "0", "false", "no", "off"})
+    _warned_env_flags: ClassVar[set[tuple[str, str]]] = set()
 
     def __new__(cls) -> Self:
         if cls._instance is None:
@@ -229,11 +237,38 @@ class Telemetry:
             self.ready = False
 
     @classmethod
+    def _env_flag_enabled(cls, name: str, *, default: bool = False) -> bool:
+        """Return whether ``name`` is a conventional yes-value.
+
+        Yes: ``true``, ``1``, ``yes``, ``on``. No: unset, ``false``, ``0``,
+        ``no``, ``off``, empty. Anything else is treated as unset and logged
+        once per ``(name, raw)`` pair for the process.
+        """
+        raw = os.getenv(name)
+        if raw is None:
+            return default
+        value = raw.strip().lower()
+        if value in cls._TRUTHY_ENV:
+            return True
+        if value in cls._FALSY_ENV:
+            return False
+        warning_key = (name, raw)
+        if warning_key not in cls._warned_env_flags:
+            cls._warned_env_flags.add(warning_key)
+            logger.warning(
+                "Unrecognized value %r for %s; expected true/1/yes/on or "
+                "false/0/no/off. Treating as unset.",
+                raw,
+                name,
+            )
+        return default
+
+    @classmethod
     def _is_telemetry_disabled(cls) -> bool:
         return (
-            os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true"
-            or os.getenv("CREWAI_DISABLE_TELEMETRY", "false").lower() == "true"
-            or os.getenv("CREWAI_DISABLE_TRACKING", "false").lower() == "true"
+            cls._env_flag_enabled("OTEL_SDK_DISABLED")
+            or cls._env_flag_enabled("CREWAI_DISABLE_TELEMETRY")
+            or cls._env_flag_enabled("CREWAI_DISABLE_TRACKING")
         )
 
     def _should_execute_telemetry(self) -> bool:

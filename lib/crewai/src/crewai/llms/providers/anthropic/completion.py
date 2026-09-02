@@ -8,7 +8,13 @@ from typing import Any, Final, Literal, Protocol, TypeGuard, TypedDict, cast
 from pydantic import BaseModel, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM, JsonResponseFormat, llm_call_context
+from crewai.hooks.dispatch import HookAborted
+from crewai.llms.base_llm import (
+    BaseLLM,
+    JsonResponseFormat,
+    LLMCallBlockedError,
+    llm_call_context,
+)
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.llms.providers.utils.common import safe_tool_conversion
@@ -75,6 +81,11 @@ def _default_max_tokens_for_model(model: str) -> int:
 
 NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
     tuple[
+        Literal["claude-fable-5"],
+        Literal["claude-opus-5"],
+        Literal["claude-sonnet-5"],
+        Literal["claude-opus-4-8"],
+        Literal["claude-opus-4.8"],
         Literal["claude-sonnet-4-5"],
         Literal["claude-sonnet-4.5"],
         Literal["claude-opus-4-5"],
@@ -83,6 +94,11 @@ NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
         Literal["claude-haiku-4.5"],
     ]
 ] = (
+    "claude-fable-5",
+    "claude-opus-5",
+    "claude-sonnet-5",
+    "claude-opus-4-8",
+    "claude-opus-4.8",
     "claude-sonnet-4-5",
     "claude-sonnet-4.5",
     "claude-opus-4-5",
@@ -95,9 +111,9 @@ NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
 def _supports_native_structured_outputs(model: str) -> bool:
     """Check if the model supports native structured outputs.
 
-    Native structured outputs are only available for Claude 4.5 models
-    (Sonnet 4.5, Opus 4.5, Haiku 4.5).
-    Other models require the tool-based fallback approach.
+    Covers Claude Fable 5, Opus 5, Sonnet 5, Opus 4.8 and the 4.5-era models
+    (Sonnet 4.5, Opus 4.5, Haiku 4.5). Other models require the tool-based
+    fallback approach.
 
     Args:
         model: The model name/identifier.
@@ -401,10 +417,7 @@ class AnthropicCompletion(BaseLLM):
                     self._format_messages_for_anthropic(messages)
                 )
 
-                if not self._invoke_before_llm_call_hooks(
-                    formatted_messages, from_agent
-                ):
-                    raise ValueError("LLM call blocked by before_llm_call hook")
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
 
                 completion_params = self._prepare_completion_params(
                     formatted_messages, system_message, tools, available_functions
@@ -429,6 +442,9 @@ class AnthropicCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 error_msg = f"Anthropic API call failed: {e!s}"
                 logging.error(error_msg)
@@ -476,6 +492,8 @@ class AnthropicCompletion(BaseLLM):
                     self._format_messages_for_anthropic(messages)
                 )
 
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
+
                 completion_params = self._prepare_completion_params(
                     formatted_messages, system_message, tools, available_functions
                 )
@@ -499,6 +517,9 @@ class AnthropicCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 error_msg = f"Anthropic API call failed: {e!s}"
                 logging.error(error_msg)
