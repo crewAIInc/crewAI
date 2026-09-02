@@ -29,6 +29,7 @@ repos:
       - id: pip-audit
         name: pip-audit
         # Keep this ignore list in sync with .github/workflows/vulnerability-scan.yml.
+        # TODO: drop --ignore-vuln GHSA-8mgp-746c-j5xp when bumping nltk past 3.10.3.
         entry: >-
           bash -c 'source .venv/bin/activate && uv run pip-audit --skip-editable
           --ignore-vuln PYSEC-2024-277
