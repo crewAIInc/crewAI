@@ -28,10 +28,21 @@ def cleanup_telemetry():
     [
         ("OTEL_SDK_DISABLED", "true", False),
         ("OTEL_SDK_DISABLED", "TRUE", False),
+        ("OTEL_SDK_DISABLED", "1", False),
+        ("OTEL_SDK_DISABLED", "yes", False),
+        ("OTEL_SDK_DISABLED", "on", False),
         ("CREWAI_DISABLE_TELEMETRY", "true", False),
         ("CREWAI_DISABLE_TELEMETRY", "TRUE", False),
+        ("CREWAI_DISABLE_TELEMETRY", "1", False),
+        ("CREWAI_DISABLE_TELEMETRY", "yes", False),
+        ("CREWAI_DISABLE_TELEMETRY", "on", False),
+        ("CREWAI_DISABLE_TRACKING", "1", False),
         ("OTEL_SDK_DISABLED", "false", True),
+        ("OTEL_SDK_DISABLED", "0", True),
         ("CREWAI_DISABLE_TELEMETRY", "false", True),
+        ("CREWAI_DISABLE_TELEMETRY", "0", True),
+        ("CREWAI_DISABLE_TELEMETRY", "no", True),
+        ("CREWAI_DISABLE_TELEMETRY", "off", True),
     ],
 )
 def test_telemetry_environment_variables(env_var, value, expected_ready):
