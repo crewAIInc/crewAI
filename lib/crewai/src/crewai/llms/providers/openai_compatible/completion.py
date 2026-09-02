@@ -111,16 +111,16 @@ def _normalize_ollama_base_url(base_url: str) -> str:
     Returns:
         A fully-qualified base URL ending in /v1.
     """
-    base_url = base_url.rstrip("/")
-
     if "://" not in base_url:
         base_url = f"http://{base_url}"
+
     parts = urlsplit(base_url)
+
     netloc = parts.netloc
     if parts.scheme == "http" and parts.port is None:
         netloc = f"{netloc}:{_OLLAMA_DEFAULT_PORT}"
 
-    path = parts.path
+    path = parts.path.rstrip("/")
     if not path.endswith("/v1"):
         path = f"{path}/v1"
 

@@ -135,6 +135,14 @@ class TestNormalizeOllamaBaseUrl:
         """An explicit https:// URL keeps its scheme and gets no default port."""
         assert _normalize_ollama_base_url("https://ollama.example.com") == "https://ollama.example.com/v1"
 
+    def test_root_path_with_query_does_not_double_slash(self):
+        """A root path alongside a query yields /v1, not //v1."""
+        assert _normalize_ollama_base_url("http://ollama/?tenant=acme") == "http://ollama:11434/v1?tenant=acme"
+
+    def test_trailing_slash_in_query_is_preserved(self):
+        """Only the path is stripped, so a query ending in / keeps that character."""
+        assert _normalize_ollama_base_url("http://ollama:11434/?x=a/") == "http://ollama:11434/v1?x=a/"
+
 class TestOpenAICompatibleCompletion:
     """Tests for OpenAICompatibleCompletion class."""
 
