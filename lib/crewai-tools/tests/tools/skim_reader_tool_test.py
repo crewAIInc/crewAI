@@ -114,6 +114,34 @@ def test_get_session_prefers_card_api_key(monkeypatch):
     assert session.headers["Authorization"] == "Bearer sk402_test_key"
 
 
+def test_environment_api_key_uses_bearer_card_read(monkeypatch):
+    """SKIM_API_KEY alone builds a Bearer session and uses the card endpoint."""
+    response = _FakeResponse(json_data={"markdown": "env result", "metadata": {}})
+    fake = _FakeSession(response)
+    monkeypatch.setenv("SKIM_API_KEY", "sk402_env_key")
+    monkeypatch.delenv("SKIM_WALLET_PRIVATE_KEY", raising=False)
+    monkeypatch.setattr(skim_module.requests, "Session", lambda: fake)
+    monkeypatch.setattr(
+        skim_module.importlib,
+        "import_module",
+        lambda name: (_ for _ in ()).throw(AssertionError(name)),
+    )
+
+    tool = SkimReaderTool()
+    result = tool._run(url="https://example.com/from-env")
+
+    assert result == "env result"
+    assert fake.headers["Authorization"] == "Bearer sk402_env_key"
+    assert fake.calls == [
+        {
+            "method": "GET",
+            "endpoint": "https://skim402.com/api/t/read",
+            "params": {"url": "https://example.com/from-env"},
+            "timeout": 60.0,
+        }
+    ]
+
+
 def test_run_card_lane_uses_token_endpoint_get():
     """Card-key reads use the credit endpoint, query params, and timeout."""
     response = _FakeResponse(json_data={"markdown": "card result", "metadata": {}})

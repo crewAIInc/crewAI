@@ -92,7 +92,7 @@ The agent decides when to call the Skim Web Reader, Skim returns clean Markdown 
 
 `SkimReaderTool` returns Markdown with a YAML frontmatter block of the page metadata:
 
-```
+```markdown
 ---
 title: Example article
 byline: Jane Doe
@@ -125,10 +125,10 @@ Set `include_metadata=False` to get just the Markdown body.
 
 ```python
 # Card key (recommended)
-reader = SkimReader(api_key="sk402_...")
+reader = SkimReaderTool(api_key="sk402_...")
 
 # Or wallet
-reader = SkimReader(
+reader = SkimReaderTool(
     private_key="0x...",
     max_price_usd=0.005,
     include_metadata=False,
