@@ -4,7 +4,8 @@ Fixes #
 
 <!--
 First-time contributors must mention an existing open issue in this repo
-(for example #123). PRs without a linked open issue are closed automatically.
+(for example #123). PRs without a linked open issue are closed automatically
+and labeled needs-issue.
 -->
 
 ## Summary
