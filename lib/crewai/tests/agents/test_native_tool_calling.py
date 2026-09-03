@@ -1473,6 +1473,61 @@ class TestNativeToolCallingEventCorrelation:
         assert executor.messages[1]["tool_call_id"] == local_call_id
         assert [event.call_id for event in events] == [None, None]
 
+    def test_providerless_native_tool_calls_use_distinct_fallback_ids(self) -> None:
+        """Keep fallback message IDs distinct across provider-less tool calls."""
+
+        class EchoTool(BaseTool):
+            name: str = "echo"
+            description: str = "Echo the input"
+
+            def _run(self, value: str) -> str:
+                """Return the input unchanged."""
+                return value
+
+        tool = EchoTool()
+        executor = _make_crew_agent_executor([tool])
+        executor._available_functions = {"echo": tool._run}
+        executor._tool_name_mapping = {"echo": tool}
+        tool_calls = [
+            {
+                "function": {
+                    "name": "echo",
+                    "arguments": '{"value": "first"}',
+                },
+            },
+            {
+                "function": {
+                    "name": "echo",
+                    "arguments": '{"value": "second"}',
+                },
+            },
+        ]
+
+        first = executor._parse_native_tool_call(tool_calls[0])
+        second = executor._parse_native_tool_call(tool_calls[1])
+
+        assert first is not None
+        assert second is not None
+        fallback_ids = [first[0], second[0]]
+        assert all(call_id.startswith("call_") for call_id in fallback_ids)
+        assert len(set(fallback_ids)) == 2
+
+        with patch.object(crewai_event_bus, "emit") as emit:
+            result = executor._handle_native_tool_calls(
+                tool_calls, executor._available_functions
+            )
+
+        events = [call.kwargs["event"] for call in emit.call_args_list]
+
+        assert result is None
+        assert [call["id"] for call in executor.messages[0]["tool_calls"]] == (
+            fallback_ids
+        )
+        assert [message["tool_call_id"] for message in executor.messages[1:3]] == (
+            fallback_ids
+        )
+        assert [event.call_id for event in events] == [None] * 4
+
     def test_native_tool_call_parser_separates_provider_id(self) -> None:
         """Keep provider and locally generated IDs separate during parsing."""
         executor = _make_crew_agent_executor([])
