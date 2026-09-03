@@ -3047,6 +3047,94 @@ def test_expression_keeps_short_circuited_cel_errors():
     )
 
 
+def test_expression_now_evaluates_with_frozen_timestamp():
+    from datetime import datetime, timezone
+
+    from crewai.flow.expressions import Expression
+
+    frozen = datetime(2026, 1, 15, 12, 30, tzinfo=timezone.utc)
+
+    assert Expression("now().getFullYear()", context={}, now=frozen).evaluate() == 2026
+    assert (
+        Expression("string(now())", context={}, now=frozen).evaluate()
+        == "2026-01-15T12:30:00Z"
+    )
+    assert (
+        Expression("string(now() - duration('24h'))", context={}, now=frozen).evaluate()
+        == "2026-01-14T12:30:00Z"
+    )
+
+
+def test_expression_now_defaults_to_current_time():
+    from datetime import datetime, timezone
+
+    from crewai.flow.expressions import Expression
+
+    year = Expression("now().getFullYear()", context={}).evaluate()
+
+    assert year == datetime.now(timezone.utc).year
+
+
+def test_expression_now_renders_in_templates():
+    from datetime import datetime, timezone
+
+    from crewai.flow.expressions import Expression
+
+    frozen = datetime(2026, 1, 15, tzinfo=timezone.utc)
+    rendered = Expression(
+        {"query": "News from ${string(now().getFullYear())}"},
+        context={},
+        now=frozen,
+    ).render_template()
+
+    assert rendered == {"query": "News from 2026"}
+
+
+def test_expression_now_passes_root_validation():
+    from crewai.flow.expressions import Expression
+
+    Expression("string(now().getFullYear())").validate_expression(
+        allowed_roots=["state", "outputs"]
+    )
+
+
+def test_expression_from_flow_uses_run_frozen_now():
+    from datetime import datetime, timezone
+
+    from crewai.flow.expressions import Expression
+
+    flow = Flow()
+    flow._cel_now = datetime(2026, 1, 15, tzinfo=timezone.utc)
+
+    assert (
+        Expression.from_flow("now().getFullYear()", flow).evaluate() == 2026
+    )
+
+
+def test_expression_action_can_use_now():
+    definition = FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "NowFlow",
+            "methods": {
+                "today": {
+                    "start": True,
+                    "do": {
+                        "call": "expression",
+                        "expr": "string(now().getFullYear())",
+                    },
+                }
+            },
+        }
+    )
+
+    from datetime import datetime, timezone
+
+    result = Flow.from_declaration(contents=definition).kickoff()
+
+    assert result == str(datetime.now(timezone.utc).year)
+
+
 def test_expression_action_can_route_like_if_else():
     yaml_str = f"""
 schema: crewai.flow/v1
@@ -3736,6 +3824,41 @@ def test_resume_synthetic_completion_persists():
 
     assert result == "done"
     assert _saved_methods("resume-synthetic") == ["generate"]
+
+
+def test_resume_freezes_fresh_cel_now():
+    from crewai.flow.expressions import Expression
+
+    backend = DefinitionStoreBackend(store="resume-cel-now")
+    frozen_at_listener: list[Any] = []
+
+    class NowResumableFlow(Flow):
+        @start()
+        @human_feedback(message="Review:")
+        def generate(self):
+            return "content"
+
+        @listen(generate)
+        def process(self, result):
+            frozen_at_listener.append(self._cel_now)
+            return Expression.from_flow("string(now())", self).evaluate()
+
+    context = PendingFeedbackContext(
+        flow_id="resume-cel-now-1",
+        flow_class="NowResumableFlow",
+        method_name="generate",
+        method_output="content",
+        message="Review:",
+    )
+    backend.save_pending_feedback("resume-cel-now-1", context, {"id": "resume-cel-now-1"})
+
+    flow = NowResumableFlow.from_pending("resume-cel-now-1", backend)
+    assert flow._cel_now is None
+
+    result = flow.resume("looks good")
+
+    assert frozen_at_listener[0] is not None
+    assert result == frozen_at_listener[0].strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 class ReviewFlow(Flow):

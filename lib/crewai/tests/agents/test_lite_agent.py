@@ -612,8 +612,8 @@ def test_lite_agent_with_invalid_llm():
 
 
 @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
-@patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool.requests.post")
-@patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get")
+@patch("crewai_tools.tools.crewai_platform_tools.integrations_client.requests.post")
+@patch("crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get")
 @pytest.mark.vcr()
 def test_agent_kickoff_with_platform_tools(mock_get, mock_post):
     """Test that Agent.kickoff() properly integrates platform tools with LiteAgent"""

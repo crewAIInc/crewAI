@@ -82,6 +82,11 @@ def _default_max_tokens_for_model(model: str) -> int:
 
 NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
     tuple[
+        Literal["claude-fable-5"],
+        Literal["claude-opus-5"],
+        Literal["claude-sonnet-5"],
+        Literal["claude-opus-4-8"],
+        Literal["claude-opus-4.8"],
         Literal["claude-sonnet-4-5"],
         Literal["claude-sonnet-4.5"],
         Literal["claude-opus-4-5"],
@@ -90,6 +95,11 @@ NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
         Literal["claude-haiku-4.5"],
     ]
 ] = (
+    "claude-fable-5",
+    "claude-opus-5",
+    "claude-sonnet-5",
+    "claude-opus-4-8",
+    "claude-opus-4.8",
     "claude-sonnet-4-5",
     "claude-sonnet-4.5",
     "claude-opus-4-5",
@@ -102,9 +112,9 @@ NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
 def _supports_native_structured_outputs(model: str) -> bool:
     """Check if the model supports native structured outputs.
 
-    Native structured outputs are only available for Claude 4.5 models
-    (Sonnet 4.5, Opus 4.5, Haiku 4.5).
-    Other models require the tool-based fallback approach.
+    Covers Claude Fable 5, Opus 5, Sonnet 5, Opus 4.8 and the 4.5-era models
+    (Sonnet 4.5, Opus 4.5, Haiku 4.5). Other models require the tool-based
+    fallback approach.
 
     Args:
         model: The model name/identifier.

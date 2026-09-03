@@ -123,8 +123,10 @@ xml = [
     "unstructured[local-inference, all-docs]>=0.17.2",
     # unstructured allows nltk>=3.9.2, but <3.10.3 still has PYSEC-2026-3726
     # (symlink file read in IPIPANCorpusReader; 3.10.0-3.10.1) plus later
-    # 3.10.2 findings. Declared here, not only as a uv override, so consumers
-    # installing crewai-tools[xml] get the fixed version.
+    # 3.10.2 findings. 3.10.3 still has unpatched GHSA-8mgp-746c-j5xp
+    # (ignored in pip-audit until a release ships). TODO: drop that ignore
+    # when bumping nltk past 3.10.3. Declared here, not only as a uv
+    # override, so consumers installing crewai-tools[xml] get this floor.
     "nltk>=3.10.3",
 ]
 oxylabs = [

@@ -849,6 +849,33 @@ def test_ollama_does_not_modify_when_last_is_user(ollama_llm):
     assert formatted == original_messages
 
 
+@pytest.fixture
+def gemini_litellm_llm():
+    return LLM(model="gemini/gemini-flash-latest", is_litellm=True)
+
+
+def test_gemini_litellm_appends_user_message_when_last_is_assistant(gemini_litellm_llm):
+    original_messages = [
+        {"role": "user", "content": "Hi there"},
+        {"role": "assistant", "content": "Hello!"},
+    ]
+
+    formatted = gemini_litellm_llm._format_messages_for_provider(original_messages)
+
+    assert len(formatted) == len(original_messages) + 1
+    assert formatted[-1] == {"role": "user", "content": "Please continue."}
+
+
+def test_gemini_litellm_does_not_modify_when_last_is_user(gemini_litellm_llm):
+    original_messages = [
+        {"role": "user", "content": "Tell me a joke."},
+    ]
+
+    formatted = gemini_litellm_llm._format_messages_for_provider(original_messages)
+
+    assert formatted == original_messages
+
+
 def test_native_provider_raises_error_when_supported_but_fails():
     """Test that when a native provider is in SUPPORTED_NATIVE_PROVIDERS but fails to instantiate, we raise the error."""
     with patch("crewai.llm.SUPPORTED_NATIVE_PROVIDERS", ["openai"]):
@@ -992,6 +1019,71 @@ def test_unprefixed_models_use_native_sdk():
         llm3 = LLM(model="gemini-2.5-pro", is_litellm=False)
         assert llm3.is_litellm is False
         assert llm3.provider == "gemini"
+
+
+@pytest.mark.parametrize(
+    "model",
+    ["claude-opus-5", "claude-sonnet-5", "claude-fable-5", "claude-opus-4-8"],
+)
+def test_current_claude_models_route_to_anthropic(model):
+    """Current Claude models are in the constants list and use the Anthropic SDK."""
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        llm = LLM(model=model, is_litellm=False)
+        assert llm.provider == "anthropic"
+
+
+def test_claude_model_newer_than_constants_routes_to_anthropic():
+    """A Claude release we have not listed yet must not fall through to OpenAI."""
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        llm = LLM(model="claude-opus-6-20990101", is_litellm=False)
+        assert llm.provider == "anthropic"
+
+
+def test_gemini_model_newer_than_constants_routes_to_gemini():
+    with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
+        llm = LLM(model="gemini-9-pro-preview", is_litellm=False)
+        assert llm.provider == "gemini"
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        "anthropic.claude-opus-9-20990101-v1:0",
+        "us.anthropic.claude-opus-9-20990101-v1:0",
+        "eu.anthropic.claude-sonnet-9-20990101-v1:0",
+    ],
+)
+def test_unlisted_bedrock_anthropic_ids_route_to_bedrock(model):
+    """Bedrock names Anthropic models "anthropic.claude-*"; that is not the direct API."""
+    with patch.dict(
+        os.environ,
+        {
+            "AWS_ACCESS_KEY_ID": "test-key",
+            "AWS_SECRET_ACCESS_KEY": "test-secret",
+            "AWS_DEFAULT_REGION": "us-east-1",
+        },
+    ):
+        llm = LLM(model=model, is_litellm=False)
+        assert llm.provider == "bedrock"
+
+
+@pytest.mark.parametrize(
+    ("model", "expected_provider"),
+    [
+        # Bedrock's pattern is `"." in model` and Azure's covers every OpenAI
+        # prefix, so these pin that pattern inference did not steal them.
+        ("gpt-3.5-turbo", "openai"),
+        ("gpt-4.1", "openai"),
+        ("gpt-4o", "openai"),
+        ("gpt-4o-mini", "openai"),
+        ("o1", "openai"),
+        ("some-unknown-model", "openai"),
+    ],
+)
+def test_non_claude_models_keep_their_inferred_provider(model, expected_provider):
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        llm = LLM(model=model, is_litellm=False)
+        assert llm.provider == expected_provider
 
 
 def test_explicit_provider_kwarg_takes_priority():
