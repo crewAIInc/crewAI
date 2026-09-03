@@ -493,6 +493,13 @@ def test_anthropic_model_detection():
         assert llm.is_anthropic == expected, f"Failed for model: {model}"
 
 
+def test_anthropic_double_dash_model_matches_native_provider():
+    """Recognize custom Anthropic deployment names using a double dash."""
+    assert LLM._matches_provider_pattern(
+        "anthropic--claude-sonnet-4", "anthropic"
+    )
+
+
 def test_anthropic_message_formatting(anthropic_llm, system_message, user_message):
     """Test Anthropic message formatting with fixtures."""
 
@@ -819,6 +826,18 @@ def test_litellm_retry_catches_openai_api_stop_error(caplog):
 
     assert "Retrying LLM call without the unsupported 'stop'" in caplog.text
     assert "stop" in llm.additional_params.get("additional_drop_params", [])
+
+
+def test_litellm_formatting_strips_cache_breakpoint_without_mutating_input():
+    llm = LLM(model="groq/llama-3.3-70b", is_litellm=True)
+    original_messages = [
+        {"role": "user", "content": "Hello", "cache_breakpoint": True}
+    ]
+
+    formatted = llm._format_messages_for_provider(original_messages)
+
+    assert formatted == [{"role": "user", "content": "Hello"}]
+    assert original_messages[0]["cache_breakpoint"] is True
 
 
 @pytest.fixture
