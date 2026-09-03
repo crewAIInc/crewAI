@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from contextvars import ContextVar, Token
 import sys
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 
 if TYPE_CHECKING:
@@ -142,6 +142,33 @@ class HumanInputProvider(Protocol):
         if isinstance(answer.output, str):
             return answer.output
         return answer.output.model_dump_json()
+
+    @staticmethod
+    def _render_answer_panel(formatter: Any, answer: AgentFinish) -> None:
+        """Print the agent's current answer above the feedback prompt.
+
+        Rendered in training mode as well as normal mode: both prompts ask the
+        operator to judge the result, so the result has to be visible in both.
+
+        Args:
+            formatter: Event-listener formatter owning the rich console.
+            answer: The agent's finished answer to display.
+        """
+        from rich.panel import Panel
+        from rich.text import Text
+
+        result_content = Text()
+        result_content.append(
+            HumanInputProvider._get_output_string(answer), style="green"
+        )
+        formatter.console.print(
+            Panel(
+                result_content,
+                title="✅ Agent Final Answer",
+                border_style="green",
+                padding=(1, 2),
+            )
+        )
 
 
 class SyncHumanInputProvider(HumanInputProvider):
@@ -342,7 +369,7 @@ class SyncHumanInputProvider(HumanInputProvider):
     @staticmethod
     def _prompt_input(
         crew: Crew | None,
-        answer: "AgentFinish | None" = None,
+        answer: AgentFinish | None = None,
     ) -> str:
         """Show rich panel and prompt for input.
 
@@ -364,6 +391,9 @@ class SyncHumanInputProvider(HumanInputProvider):
         formatter.pause_live_updates()
 
         try:
+            if answer is not None:
+                HumanInputProvider._render_answer_panel(formatter, answer)
+
             if crew and getattr(crew, "_train", False):
                 prompt_text = (
                     "TRAINING MODE: Provide feedback to improve the agent's performance.\n\n"
@@ -372,18 +402,6 @@ class SyncHumanInputProvider(HumanInputProvider):
                 )
                 title = "🎓 Training Feedback Required"
             else:
-                if answer is not None:
-                    output_str = HumanInputProvider._get_output_string(answer)
-                    result_content = Text()
-                    result_content.append(output_str, style="green")
-                    formatter.console.print(
-                        Panel(
-                            result_content,
-                            title="✅ Agent Final Answer",
-                            border_style="green",
-                            padding=(1, 2),
-                        )
-                    )
                 prompt_text = (
                     "Provide feedback on the Final Result above.\n\n"
                     "• If you are happy with the result, simply hit Enter without typing anything.\n"
@@ -413,7 +431,7 @@ class SyncHumanInputProvider(HumanInputProvider):
     @staticmethod
     async def _prompt_input_async(
         crew: Crew | None,
-        answer: "AgentFinish | None" = None,
+        answer: AgentFinish | None = None,
     ) -> str:
         """Show rich panel and prompt for input without blocking the event loop.
 
@@ -435,6 +453,9 @@ class SyncHumanInputProvider(HumanInputProvider):
         formatter.pause_live_updates()
 
         try:
+            if answer is not None:
+                HumanInputProvider._render_answer_panel(formatter, answer)
+
             if crew and getattr(crew, "_train", False):
                 prompt_text = (
                     "TRAINING MODE: Provide feedback to improve the agent's performance.\n\n"
@@ -443,18 +464,6 @@ class SyncHumanInputProvider(HumanInputProvider):
                 )
                 title = "🎓 Training Feedback Required"
             else:
-                if answer is not None:
-                    output_str = HumanInputProvider._get_output_string(answer)
-                    result_content = Text()
-                    result_content.append(output_str, style="green")
-                    formatter.console.print(
-                        Panel(
-                            result_content,
-                            title="✅ Agent Final Answer",
-                            border_style="green",
-                            padding=(1, 2),
-                        )
-                    )
                 prompt_text = (
                     "Provide feedback on the Final Result above.\n\n"
                     "• If you are happy with the result, simply hit Enter without typing anything.\n"
