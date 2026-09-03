@@ -1,0 +1,95 @@
+---
+title: Fathom Committed-State Read
+description: Check whether a crew's later actions contradict the records it already committed, from the events the crew already emits.
+icon: check-double
+mode: "wide"
+---
+
+# Fathom Committed-State Read
+
+## Overview
+
+[Fathom](https://github.com/ERA-Fathom/fathom) reads the tool calls and task completions a crew emits, folds the successful ones into the crew's committed state, and names the step where a later action contradicts an earlier commitment. That includes a record written against a key the crew already renamed, a task reported complete while its record was never written, an entity added to a collection that already holds it, and a value the crew replaced and then wrote again. The read is deterministic and needs no model access. It runs after the crew finishes, on a file you already have, and touches nothing in the crew's runtime path.
+
+## What it catches
+
+| Finding | The crew... |
+|---|---|
+| `stale_reference` | acts on a record it already removed or renamed away |
+| `superseded_value` | writes a value it already replaced |
+| `residual` | ends the run with a record still carrying a value it replaced elsewhere |
+| `duplicate_commit` | adds an entity a collection already holds |
+| `post_commit_mutation` | changes a record after committing it |
+
+A crew whose committed state stays consistent returns `coherent`, and the read prints nothing else.
+
+## Installation
+
+```shell
+uv add fathom-read
+```
+
+The package ships with a rate-limited demo key. For your own key, write to contact@embeddedriskanalytics.com and set `FATHOM_API_KEY`.
+
+## Capture the crew's events
+
+`FathomListener` records `tool_usage_finished`, `tool_usage_error`, and `task_completed` from the CrewAI event bus and writes them to a file when you close it. Keep a reference to the listener while the crew runs.
+
+```python Code
+from crewai import Agent, Task, Crew
+from fathom_read.capture.crewai import FathomListener
+
+listener = FathomListener("events.json")
+
+crew = Crew(agents=[...], tasks=[...])
+result = crew.kickoff()
+
+listener.close()
+```
+
+## Run the read
+
+```shell
+fathom read events.json --format crewai
+```
+
+If the crew's job involves a rename or a migration, tell the read which token replaced which, so it can also report records that still carry the old value when the run ends.
+
+```shell
+fathom read events.json --format crewai --supersede guest_id=customer_id
+```
+
+`fathom read` exits 0 when the committed state is coherent and 2 when it finds a contradiction, so it drops into a test suite or a CI step as it is. Add `--json` for a machine-readable verdict, or `--ops` to see the action stream before anything is sent.
+
+## Map your own tools
+
+The read knows common record-keeping tool names (`write_record`, `update_record`, `set_value`, `rename_key`, and others). For tools with your own names, map them once.
+
+```json tools.json
+{"save_decision": {"op": "set", "kind": "decision", "key": "topic", "value": "text"},
+ "book_seat":     {"op": "add", "kind": "flight", "key": "seats", "value": "seat"},
+ "confirm_booking": {"op": "commit", "kind": "flight", "key": "booking"}}
+```
+
+```shell
+fathom read events.json --format crewai --map tools.json
+```
+
+## Example verdict
+
+The [coherence census](https://github.com/ERA-Fathom/coherence-census) ships a minimal CrewAI event log in which a crew renames a key across three records, writes the third one on the old key, and reports the task complete. The read returns the following.
+
+```text
+$ fathom read traces/crewai_events.json --format crewai --supersede guest_id=customer_id
+ops read: 4   rejected (no-ops): 0   live facts: 4
+committed state: 1 finding
+  [residual] end of run: record 'r2' still carries 'guest_id' when the run ends; the agent replaced it with 'customer_id' elsewhere.
+```
+
+The full study, with sequential and hierarchical crews across 5, 12, and 20 coupled sub-records on two models, is at [Reading a crew's committed state from its own event stream](https://embeddedriskanalytics.com/research-reading-a-crews-committed-state-from-its-own-event-stream.html).
+
+## Resources
+
+- [fathom-read on GitHub](https://github.com/ERA-Fathom/fathom)
+- [Coherence census](https://github.com/ERA-Fathom/coherence-census), every framework the read has run on, with a trace per row
+- [Embedded Risk Analytics research](https://embeddedriskanalytics.com/research.html)
