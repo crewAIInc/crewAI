@@ -5,6 +5,7 @@ from collections.abc import Callable, Coroutine
 from typing import Any
 
 from crewai.tools import BaseTool
+from crewai.utilities.asyncio_utils import run_sync
 
 
 MCP_CONNECTION_TIMEOUT = 15
@@ -76,7 +77,7 @@ class MCPToolWrapper(BaseTool):
             Result from the MCP tool execution
         """
         try:
-            return asyncio.run(self._run_async(**kwargs))
+            return run_sync(self._run_async(**kwargs))
         except asyncio.TimeoutError:
             return f"MCP tool '{self.original_tool_name}' timed out after {MCP_TOOL_EXECUTION_TIMEOUT} seconds"
         except Exception as e:

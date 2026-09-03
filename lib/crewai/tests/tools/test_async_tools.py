@@ -194,3 +194,69 @@ class TestAsyncToolWithIO:
         assert len(results) == 3
         assert all("done" in r for r in results)
         assert elapsed < 0.25, f"Expected concurrent execution, took {elapsed}s"
+
+class TestAsyncToolInsideRunningLoop:
+    """Tools bridged from async to sync must work when a loop is already running.
+
+    A Flow running an ``async def`` method already owns the thread's event loop,
+    so the sync bridge inside ``run()`` / ``invoke()`` cannot use a bare
+    ``asyncio.run()``.
+    """
+
+    @pytest.mark.asyncio
+    async def test_decorated_async_tool_run_inside_running_loop(self) -> None:
+        """An async decorated tool works through run() with a loop already running."""
+
+        @tool("async_in_loop")
+        async def async_func(value: str) -> str:
+            """An async decorated tool."""
+            await asyncio.sleep(0.01)
+            return f"async: {value}"
+
+        assert async_func.run(value="test") == "async: test"
+
+    @pytest.mark.asyncio
+    async def test_base_tool_coroutine_run_inside_running_loop(self) -> None:
+        """A BaseTool whose _run returns a coroutine works with a loop running."""
+
+        class CoroutineRunTool(BaseTool):
+            name: str = "coroutine_run_tool"
+            description: str = "A tool whose _run returns a coroutine"
+
+            async def _run(self, input_text: str) -> str:
+                await asyncio.sleep(0.01)
+                return f"Coroutine processed: {input_text}"
+
+        assert CoroutineRunTool().run(input_text="test") == "Coroutine processed: test"
+
+    @pytest.mark.asyncio
+    async def test_structured_tool_invoke_inside_running_loop(self) -> None:
+        """CrewStructuredTool.invoke() works with a loop already running."""
+
+        @tool("structured_in_loop")
+        async def async_func(value: str) -> str:
+            """An async decorated tool."""
+            await asyncio.sleep(0.01)
+            return f"async: {value}"
+
+        structured = async_func.to_structured_tool()
+        assert structured.invoke({"value": "test"}) == "async: test"
+
+    @pytest.mark.asyncio
+    async def test_mcp_tool_wrapper_run_inside_running_loop(self) -> None:
+        """MCPToolWrapper._run() reaches the server with a loop already running."""
+        from crewai.tools.mcp_tool_wrapper import MCPToolWrapper
+
+        wrapper = MCPToolWrapper(
+            mcp_server_params={"url": "http://127.0.0.1:9/mcp"},
+            tool_name="echo",
+            tool_schema={},
+            server_name="probe",
+        )
+
+        async def fake_run_async(**kwargs: object) -> str:
+            return "mcp ok"
+
+        wrapper._run_async = fake_run_async  # type: ignore[method-assign]
+
+        assert wrapper._run(value="test") == "mcp ok"
