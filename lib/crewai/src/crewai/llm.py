@@ -31,10 +31,12 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.hooks.dispatch import HookAborted
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.base_llm import (
     BaseLLM,
     JsonResponseFormat,
+    LLMCallBlockedError,
     get_current_call_id,
     llm_call_context,
 )
@@ -660,6 +662,19 @@ class LLM(BaseLLM):
         if model in AZURE_MODELS:
             return "azure"
 
+        # Bedrock namespaces Anthropic models as "anthropic.claude-*", optionally
+        # region-prefixed ("us.anthropic.claude-*"). That form also satisfies the
+        # anthropic pattern below, so it has to be settled first.
+        if "anthropic." in model.lower():
+            return "bedrock"
+
+        # Only anthropic and gemini have prefixes unambiguous enough to infer from.
+        # Bedrock matches any model containing a dot (so "gpt-3.5-turbo") and Azure
+        # matches every OpenAI prefix, so both would steal models from openai here.
+        for provider in ("anthropic", "gemini"):
+            if cls._matches_provider_pattern(model, provider):
+                return provider
+
         return "openai"
 
     @classmethod
@@ -1039,12 +1054,15 @@ class LLM(BaseLLM):
 
             if not tool_calls or not available_functions:
                 if response_model and self.is_litellm:
+                    from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+
                     instructor_instance = InternalInstructor(
                         content=full_response,
                         model=response_model,
                         llm=self,
                     )
-                    result = instructor_instance.to_pydantic()
+                    with model_call_hooks_dispatched():
+                        result = instructor_instance.to_pydantic()
                     structured_response = result.model_dump_json()
                     usage_dict = self._usage_to_dict(usage_info)
                     self._handle_emit_call_events(
@@ -1241,6 +1259,7 @@ class LLM(BaseLLM):
             str: The response text
         """
         if response_model and self.is_litellm:
+            from crewai.hooks.llm_hooks import model_call_hooks_dispatched
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1256,7 +1275,8 @@ class LLM(BaseLLM):
                 model=response_model,
                 llm=self,
             )
-            result = instructor_instance.to_pydantic()
+            with model_call_hooks_dispatched():
+                result = instructor_instance.to_pydantic()
             structured_response = result.model_dump_json()
             self._handle_emit_call_events(
                 response=structured_response,
@@ -1396,6 +1416,7 @@ class LLM(BaseLLM):
             str: The response text
         """
         if response_model and self.is_litellm:
+            from crewai.hooks.llm_hooks import model_call_hooks_dispatched
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1411,7 +1432,8 @@ class LLM(BaseLLM):
                 model=response_model,
                 llm=self,
             )
-            result = instructor_instance.to_pydantic()
+            with model_call_hooks_dispatched():
+                result = instructor_instance.to_pydantic()
             structured_response = result.model_dump_json()
             self._handle_emit_call_events(
                 response=structured_response,
@@ -1874,8 +1896,11 @@ class LLM(BaseLLM):
                         msg_role: Literal["assistant"] = "assistant"
                         message["role"] = msg_role
 
-            if not self._invoke_before_llm_call_hooks(messages, from_agent):
-                raise ValueError("LLM call blocked by before_llm_call hook")
+            try:
+                self._invoke_before_llm_call_hooks(messages, from_agent)
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
 
             with suppress_warnings():
                 if callbacks and len(callbacks) > 0:
@@ -2015,6 +2040,12 @@ class LLM(BaseLLM):
                     if message.get("role") == "system":
                         msg_role: Literal["assistant"] = "assistant"
                         message["role"] = msg_role
+
+            try:
+                self._invoke_before_llm_call_hooks(messages, from_agent)
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
 
             with suppress_warnings():
                 if callbacks and len(callbacks) > 0:
@@ -2359,6 +2390,14 @@ class LLM(BaseLLM):
             and messages[-1]["role"] == "assistant"
         ):
             return [*messages, {"role": "user", "content": ""}]  # type: ignore[list-item]
+
+        # Handle Gemini models - they require the last message to not be 'assistant'
+        if (
+            ("gemini" in self.model.lower() or "google" in self.model.lower())
+            and messages
+            and messages[-1]["role"] == "assistant"
+        ):
+            return [*messages, {"role": "user", "content": "Please continue."}]  # type: ignore[list-item]
 
         if not self.is_anthropic:
             return messages  # type: ignore[return-value]

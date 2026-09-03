@@ -375,7 +375,16 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             response = self._create_crew_from_zip(env_vars, repository, confirm)
 
         self._validate_response(response)
-        self._display_creation_success(response.json())
+        json_response = response.json()
+        # After _validate_response, not before: it raises SystemExit on a failed
+        # create, so the span cannot fire for a deployment that was not made. This
+        # is the first point at which the uuid exists -- the pre-flight span at the
+        # top of this method counts the attempt and cannot carry it.
+        created_uuid = json_response.get("uuid")
+        self._telemetry.crew_deployment_created_span(
+            uuid=str(created_uuid) if created_uuid else None, source=source
+        )
+        self._display_creation_success(json_response)
 
     def _prepare_git_repository(self) -> git.Repository | None:
         """Prepare Git for deploy while preserving remote deploy when possible."""
