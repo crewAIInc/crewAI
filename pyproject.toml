@@ -245,6 +245,7 @@ exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = 
 # Keep OpenAI on the SDK range required by CrewAI when transitive dependencies
 # loosen or pin their own lower versions.
 override-dependencies = [
+    "supabase>=2.0.0",
     "openai>=2.30.0,<3",
     "rich>=13.7.1",
     "onnxruntime<1.24; python_version < '3.11'",
