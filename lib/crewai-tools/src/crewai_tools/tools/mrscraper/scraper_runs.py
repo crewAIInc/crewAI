@@ -23,6 +23,7 @@ class MrScraperRunExistingScraperTool(MrScraperBaseTool):
     args_schema: type[BaseModel] = RunExistingScraperInput
 
     def _run(self, **values: Any) -> str:
+        """Run one validated URL through an existing AI or manual scraper."""
         scraper_type = values["scraper_type"]
         endpoint = (
             "/api/v1/scrapers-manual-rerun"
@@ -53,6 +54,7 @@ class MrScraperRunExistingScraperBatchTool(MrScraperBaseTool):
         scraper_id: str,
         urls: list[str],
     ) -> str:
+        """Run a URL batch through an existing AI or manual scraper."""
         base = (
             "/api/v1/scrapers-manual-rerun"
             if scraper_type == "manual"

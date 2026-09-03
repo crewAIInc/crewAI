@@ -41,6 +41,7 @@ class MrScraperBaseTool(BaseTool):
         client: MrScraperClient | None = None,
         **kwargs: Any,
     ) -> None:
+        """Initialize the tool with an injected client or resolved API token."""
         super().__init__(**kwargs)
         self._client = client or MrScraperClient(resolve_api_token(api_token))
 

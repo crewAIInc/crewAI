@@ -31,6 +31,7 @@ class MrScraperGetResultsTool(MrScraperBaseTool):
         sort_by: Literal["createdAt"] = "createdAt",
         sort_order: Literal["ASC", "DESC"] = "DESC",
     ) -> str:
+        """Return a configured page of results for one scraper."""
         return self._client.request(
             "GET",
             "primary",
@@ -56,6 +57,7 @@ class MrScraperGetLatestResultsTool(MrScraperBaseTool):
     args_schema: type[BaseModel] = GetLatestResultsInput
 
     def _run(self, scraper_id: str, count: int = 10) -> str:
+        """Return the newest results for one scraper."""
         return self._client.request(
             "GET",
             "primary",
@@ -81,6 +83,7 @@ class MrScraperGetResultDetailTool(MrScraperBaseTool):
     args_schema: type[BaseModel] = GetResultDetailInput
 
     def _run(self, result_id: str) -> str:
+        """Return one result after safely encoding its identifier."""
         encoded_id = quote(result_id, safe="")
         return self._client.request("GET", "primary", f"/api/v1/results/{encoded_id}")
 

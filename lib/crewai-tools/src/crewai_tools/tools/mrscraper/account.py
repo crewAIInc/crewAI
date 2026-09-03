@@ -17,6 +17,7 @@ class MrScraperGetAccountInfoTool(MrScraperBaseTool):
     args_schema: type[BaseModel] = GetAccountInfoInput
 
     def _run(self) -> str:
+        """Return subscription and token-usage details for the account."""
         return self._client.request("GET", "primary", "/api/v1/subscription-accounts")
 
 

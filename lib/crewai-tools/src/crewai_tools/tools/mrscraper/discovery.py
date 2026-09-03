@@ -28,6 +28,7 @@ class MrScraperCrawlWebsiteUrlsTool(MrScraperBaseTool):
         include_patterns: str | None = None,
         exclude_patterns: str | None = None,
     ) -> str:
+        """Discover URLs from a starting page with bounded crawl controls."""
         return self._client.request(
             "POST",
             "primary",
@@ -62,6 +63,7 @@ class MrScraperSearchGoogleSerpTool(MrScraperBaseTool):
         format: Literal["json", "html"] = "json",
         render_js: bool = False,
     ) -> str:
+        """Run a synchronous Google search and return JSON or HTML text."""
         return self._client.request(
             "POST",
             "serp",

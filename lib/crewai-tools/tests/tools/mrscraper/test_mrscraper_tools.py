@@ -43,7 +43,7 @@ from crewai_tools.tools.mrscraper.schemas import (
     RunExistingScraperInput,
     SearchGoogleSerpInput,
 )
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 import pytest
 import requests
 
@@ -96,12 +96,14 @@ class FakeResponse:
         status_code: int = 200,
         content_type: str = "application/json",
     ) -> None:
+        """Initialize a deterministic response double."""
         self.value = value
         self.text = text if text is not None else json.dumps(value)
         self.status_code = status_code
         self.headers = {"Content-Type": content_type}
 
     def json(self) -> Any:
+        """Return the configured JSON value."""
         return self.value
 
 
@@ -111,11 +113,13 @@ class FakeSession:
         response: FakeResponse | None = None,
         error: requests.RequestException | None = None,
     ) -> None:
+        """Initialize a session double with a response or transport error."""
         self.response = response or FakeResponse({"ok": True})
         self.error = error
         self.calls: list[dict[str, Any]] = []
 
     def request(self, method: str, url: str, **kwargs: Any) -> FakeResponse:
+        """Record a request before returning or raising the configured result."""
         self.calls.append({"method": method, "url": url, **kwargs})
         if self.error is not None:
             raise self.error
@@ -126,11 +130,13 @@ def make_client(
     response: FakeResponse | None = None,
     error: requests.RequestException | None = None,
 ) -> tuple[MrScraperClient, FakeSession]:
+    """Build a client and expose its deterministic session double."""
     session = FakeSession(response=response, error=error)
     return MrScraperClient(FAKE_TOKEN, session=session), session  # type: ignore[arg-type]
 
 
 def test_all_tools_are_public_independent_base_tools() -> None:
+    """Expose every integration operation as a distinct BaseTool."""
     client, _ = make_client()
     tools = [tool_class(client=client) for tool_class in TOOL_CLASSES]
 
@@ -143,6 +149,7 @@ def test_all_tools_are_public_independent_base_tools() -> None:
 
 
 def test_toolkit_returns_all_groups_names_and_fresh_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Select fresh tool instances by group or public tool name."""
     monkeypatch.setenv("MRSCRAPER_API_TOKEN", FAKE_TOKEN)
     first = create_mrscraper_toolkit()
     second = create_mrscraper_toolkit()
@@ -170,6 +177,7 @@ def test_toolkit_returns_all_groups_names_and_fresh_state(monkeypatch: pytest.Mo
 
 
 def test_agent_receives_15_independent_tools(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Attach all independent MrScraper tools to an Agent."""
     monkeypatch.setenv("MRSCRAPER_API_TOKEN", FAKE_TOKEN)
     tools = create_mrscraper_toolkit()
     agent = Agent(
@@ -187,6 +195,7 @@ def test_agent_receives_15_independent_tools(monkeypatch: pytest.MonkeyPatch) ->
 
 
 def test_schema_required_defaults_enums_constraints_and_descriptions() -> None:
+    """Publish strict, documented schemas with the expected defaults."""
     search_schema = SearchGoogleSerpInput.model_json_schema()
     assert search_schema["required"] == ["query"]
     assert search_schema["properties"]["page"]["default"] == 1
@@ -228,6 +237,7 @@ def test_schema_required_defaults_enums_constraints_and_descriptions() -> None:
     ],
 )
 def test_strict_schema_validation(schema: Any, values: dict[str, Any]) -> None:
+    """Reject coercion, invalid bounds, and empty URL batches."""
     with pytest.raises(ValidationError):
         schema.model_validate(values)
 
@@ -396,8 +406,9 @@ def test_general_listing_map_payloads_and_schema_append_once() -> None:
 
 
 def test_structured_presets_are_exact_and_selected_without_category() -> None:
-    preset_path = Path(
-        "lib/crewai-tools/src/crewai_tools/tools/mrscraper/structured_data_prompts.json"
+    preset_path = (
+        Path(__file__).resolve().parents[3]
+        / "src/crewai_tools/tools/mrscraper/structured_data_prompts.json"
     )
     assert hashlib.sha256(preset_path.read_bytes()).hexdigest() == (
         "3d9c15e8ebe7ad8cb04281251311200c1d3413452f14f252dc9ed3a8aae8533a"
@@ -623,3 +634,22 @@ def test_generated_discovery_specs_include_all_tools_without_secrets() -> None:
         rendered = json.dumps(spec)
         assert FAKE_TOKEN not in rendered
         assert "api_token" not in spec["run_params_schema"].get("properties", {})
+
+
+@pytest.mark.parametrize(
+    ("tool_class", "input_schema"),
+    [
+        (MrScraperFetchRenderedHtmlTool, FetchRenderedHtmlInput),
+        (MrScraperRunExistingScraperTool, RunExistingScraperInput),
+    ],
+)
+def test_generated_run_schemas_match_runtime_schemas(
+    tool_class: type[BaseTool], input_schema: type[BaseModel]
+) -> None:
+    """Keep generated discovery defaults aligned with direct tool invocation."""
+    specs = ToolSpecExtractor().extract_all_tools()
+    by_class = {spec["name"]: spec for spec in specs}
+
+    assert by_class[tool_class.__name__]["run_params_schema"] == (
+        input_schema.model_json_schema()
+    )

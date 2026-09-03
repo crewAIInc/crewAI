@@ -16217,8 +16217,8 @@
         "description": "Inputs for the rendered-page API.",
         "properties": {
           "block_resources": {
-            "default": true,
-            "description": "Whether to block images, fonts, and stylesheets; defaults to true.",
+            "default": false,
+            "description": "Whether to block images, fonts, and stylesheets; defaults to false.",
             "title": "Block Resources",
             "type": "boolean"
           },
@@ -16262,8 +16262,8 @@
             "type": "string"
           },
           "return_cookie": {
-            "default": true,
-            "description": "Whether to include browser cookies; defaults to true.",
+            "default": false,
+            "description": "Whether to include browser cookies; defaults to false.",
             "title": "Return Cookie",
             "type": "boolean"
           },
@@ -16274,18 +16274,25 @@
             "type": "boolean"
           },
           "screenshot_mode": {
-            "default": "full",
-            "description": "Screenshot mode, 'full' or 'top'; used only when screenshot is true.",
-            "enum": [
-              "full",
-              "top"
+            "anyOf": [
+              {
+                "enum": [
+                  "full",
+                  "top"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Screenshot Mode",
-            "type": "string"
+            "default": null,
+            "description": "Optional screenshot mode; used only when screenshot is true.",
+            "title": "Screenshot Mode"
           },
           "super_mode": {
-            "default": true,
-            "description": "Whether to use stronger device mode; defaults to true.",
+            "default": false,
+            "description": "Whether to use stronger device mode; defaults to false.",
             "title": "Super Mode",
             "type": "boolean"
           },
@@ -16297,11 +16304,18 @@
             "type": "integer"
           },
           "token_cap": {
-            "default": 30,
-            "description": "Maximum processing token allowance; defaults to 30; minimum 1.",
-            "minimum": 1,
-            "title": "Token Cap",
-            "type": "integer"
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional maximum processing token allowance; minimum 1.",
+            "title": "Token Cap"
           },
           "url": {
             "description": "Required target URL to render.",
@@ -16324,15 +16338,22 @@
             "title": "Wait For Selector"
           },
           "wait_until": {
-            "default": "domcontentloaded",
-            "description": "Browser lifecycle event to await; defaults to 'domcontentloaded'.",
-            "enum": [
-              "domcontentloaded",
-              "load",
-              "networkidle"
+            "anyOf": [
+              {
+                "enum": [
+                  "domcontentloaded",
+                  "load",
+                  "networkidle"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Wait Until",
-            "type": "string"
+            "default": null,
+            "description": "Optional browser lifecycle event to await.",
+            "title": "Wait Until"
           }
         },
         "required": [
@@ -16923,13 +16944,21 @@
             "title": "Cookie Jar"
           },
           "cookies": {
-            "description": "Manual browser-cookie objects; defaults to an empty array.",
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Cookies",
-            "type": "array"
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional Manual browser-cookie objects.",
+            "title": "Cookies"
           },
           "exclude_patterns": {
             "anyOf": [
@@ -16946,23 +16975,44 @@
             "title": "Exclude Patterns"
           },
           "home_page": {
-            "default": false,
-            "description": "Manual home-page visit flag; defaults to false.",
-            "title": "Home Page",
-            "type": "boolean"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional Manual home-page visit flag.",
+            "title": "Home Page"
           },
           "home_page_timeout": {
-            "default": 10,
-            "description": "Manual home-page timeout; defaults to 10; minimum 1.",
-            "minimum": 1,
-            "title": "Home Page Timeout",
-            "type": "integer"
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional Manual home-page timeout; minimum 1.",
+            "title": "Home Page Timeout"
           },
           "html": {
-            "default": false,
-            "description": "General, Listing, or Manual HTML output flag; defaults to false.",
-            "title": "Html",
-            "type": "boolean"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional General, Listing, or Manual HTML output flag.",
+            "title": "Html"
           },
           "include_patterns": {
             "anyOf": [
@@ -16979,24 +17029,45 @@
             "title": "Include Patterns"
           },
           "limit": {
-            "default": 50,
-            "description": "Map result limit; defaults to 50; minimum 1.",
-            "minimum": 1,
-            "title": "Limit",
-            "type": "integer"
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional Map result limit; minimum 1.",
+            "title": "Limit"
           },
           "markdown": {
-            "default": false,
-            "description": "General, Listing, or Manual Markdown output flag; defaults to false.",
-            "title": "Markdown",
-            "type": "boolean"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional General, Listing, or Manual Markdown output flag.",
+            "title": "Markdown"
           },
           "max_depth": {
-            "default": 2,
-            "description": "Map crawl depth; defaults to 2; minimum 0.",
-            "minimum": 0,
-            "title": "Max Depth",
-            "type": "integer"
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional Map crawl depth; minimum 0.",
+            "title": "Max Depth"
           },
           "max_pages": {
             "anyOf": [
@@ -17020,10 +17091,18 @@
             "type": "integer"
           },
           "paginator": {
-            "additionalProperties": true,
-            "description": "Manual paginator configuration; defaults to an empty object.",
-            "title": "Paginator",
-            "type": "object"
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional Manual paginator configuration.",
+            "title": "Paginator"
           },
           "proxy": {
             "anyOf": [
@@ -17054,28 +17133,56 @@
             "title": "Proxy Country"
           },
           "record": {
-            "default": false,
-            "description": "Manual browser-session recording flag; defaults to false.",
-            "title": "Record",
-            "type": "boolean"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional Manual browser-session recording flag.",
+            "title": "Record"
           },
           "render_javascript": {
-            "default": false,
-            "description": "General/Listing JavaScript rendering flag; defaults to false.",
-            "title": "Render Javascript",
-            "type": "boolean"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional General/Listing JavaScript rendering flag.",
+            "title": "Render Javascript"
           },
           "return_cookie": {
-            "default": false,
-            "description": "Manual cookie-return flag; defaults to false.",
-            "title": "Return Cookie",
-            "type": "boolean"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional Manual cookie-return flag.",
+            "title": "Return Cookie"
           },
           "return_cookies": {
-            "default": false,
-            "description": "General/Listing cookie-return flag; defaults to false.",
-            "title": "Return Cookies",
-            "type": "boolean"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional General/Listing cookie-return flag.",
+            "title": "Return Cookies"
           },
           "scraper_id": {
             "description": "Required existing scraper ID.",
@@ -17093,16 +17200,30 @@
             "type": "string"
           },
           "screenshot": {
-            "default": false,
-            "description": "General, Listing, or Manual screenshot flag; defaults to false.",
-            "title": "Screenshot",
-            "type": "boolean"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional General, Listing, or Manual screenshot flag.",
+            "title": "Screenshot"
           },
           "stream": {
-            "default": false,
-            "description": "Listing or Manual streaming flag; defaults to false.",
-            "title": "Stream",
-            "type": "boolean"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional Listing or Manual streaming flag.",
+            "title": "Stream"
           },
           "timeout": {
             "anyOf": [
@@ -17119,11 +17240,18 @@
             "title": "Timeout"
           },
           "token_cap": {
-            "default": 0,
-            "description": "Manual token cap; defaults to 0; minimum 0.",
-            "minimum": 0,
-            "title": "Token Cap",
-            "type": "integer"
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional Manual token cap; minimum 0.",
+            "title": "Token Cap"
           },
           "url": {
             "description": "Required URL to process in this run.",
@@ -17132,10 +17260,17 @@
             "type": "string"
           },
           "use_home_page": {
-            "default": false,
-            "description": "General/Listing home-page visit flag; defaults to false.",
-            "title": "Use Home Page",
-            "type": "boolean"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional General/Listing home-page visit flag.",
+            "title": "Use Home Page"
           },
           "wait_for_selector": {
             "anyOf": [

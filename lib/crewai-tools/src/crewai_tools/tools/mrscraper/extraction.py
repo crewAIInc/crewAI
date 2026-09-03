@@ -49,6 +49,7 @@ class MrScraperExtractPageByPromptTool(MrScraperBaseTool):
         mode: ScrapingMode = "Super",
         proxy_country: str | None = None,
     ) -> str:
+        """Extract prompted data from one page immediately."""
         return self._client.request(
             "POST",
             "primary",
@@ -81,6 +82,7 @@ class MrScraperExtractListingsTool(MrScraperBaseTool):
         max_pages: int = 1,
         proxy_country: str | None = None,
     ) -> str:
+        """Extract repeated listings across one or more pages immediately."""
         return self._client.request(
             "POST",
             "primary",
@@ -112,6 +114,7 @@ class MrScraperExtractStructuredDataTool(MrScraperBaseTool):
         mode: ScrapingMode = "Super",
         proxy_country: str | None = None,
     ) -> str:
+        """Extract data using the selected bundled structured-data preset."""
         payload: dict[str, Any] = {
             "graph": "general",
             "url": url,
@@ -154,6 +157,7 @@ class MrScraperFetchRenderedHtmlTool(MrScraperBaseTool):
         return_cookie: bool = False,
         super_mode: bool = False,
     ) -> str:
+        """Fetch a rendered page with optional browser outputs and controls."""
         params, body = rendered_request(
             url=url,
             max_retries=max_retries,

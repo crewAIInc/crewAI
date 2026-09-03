@@ -48,10 +48,10 @@ TARGET_URL = "https://www.cireba.com/property-detail/south-sound/residential-pro
 LISTING_URL = "https://www.cireba.com/cayman-islands-real-estate-listings/"
 SEARCH_QUERY = "CrewAI framework"
 
-# Fill these IDs before running result/rerun tests.
-AI_SCRAPER_ID = "0bc62b79-e314-4d70-a6c8-7f0bd58ae221"
-MANUAL_SCRAPER_ID = ""
-RESULT_ID = ""
+# Configure these IDs in the environment before running result/rerun tests.
+AI_SCRAPER_ID = os.getenv("MRSCRAPER_AI_SCRAPER_ID", "")
+MANUAL_SCRAPER_ID = os.getenv("MRSCRAPER_MANUAL_SCRAPER_ID", "")
+RESULT_ID = os.getenv("MRSCRAPER_RESULT_ID", "")
 
 MAX_OUTPUT_CHARS = 6_000
 Test = Callable[[], Any]
@@ -66,30 +66,31 @@ def tool(tool_class: type[Any]) -> Any:
 def require(value: str, name: str) -> str:
     """Require a configured value without printing secret contents."""
     if not value.strip():
-        raise RuntimeError(
-            f"{name} belum diisi. Set environment variable atau isi konstanta "
-            "di bagian atas file ini."
-        )
+        raise RuntimeError(f"{name} is required; set the {name} environment variable.")
     return value
 
 
 def account() -> str:
+    """Smoke-test account information retrieval."""
     return tool(MrScraperGetAccountInfoTool).run()
 
 
 def crawl_urls() -> str:
+    """Smoke-test bounded website URL discovery."""
     return tool(MrScraperCrawlWebsiteUrlsTool).run(
         url=TARGET_URL, max_depth=1, max_pages=2, limit=5
     )
 
 
 def google_serp() -> str:
+    """Smoke-test a synchronous Google SERP request."""
     return tool(MrScraperSearchGoogleSerpTool).run(
         query=SEARCH_QUERY, region="us", language="en", page=1, format="json"
     )
 
 
 def extract_prompt() -> str:
+    """Smoke-test immediate prompt-based page extraction."""
     return tool(MrScraperExtractPageByPromptTool).run(
         url=TARGET_URL,
         prompt="Extract the page title and main description.",
@@ -99,21 +100,24 @@ def extract_prompt() -> str:
 
 
 def extract_listings() -> str:
+    """Smoke-test immediate real-estate listing extraction."""
     return tool(MrScraperExtractListingsTool).run(
         url=LISTING_URL,
-        prompt="Extract book title and price from the first page.",
+        prompt="Extract the property title and price from the first page.",
         output_schema={"title": "string", "price": "string"},
         max_pages=1,
     )
 
 
 def extract_structured() -> str:
+    """Smoke-test extraction with a bundled structured-data preset."""
     return tool(MrScraperExtractStructuredDataTool).run(
         url=TARGET_URL, category="article", mode="Cheap"
     )
 
 
 def rendered_html() -> str:
+    """Smoke-test browser-rendered HTML retrieval."""
     # Advanced options that remain False/None are intentionally not sent.
     return tool(MrScraperFetchRenderedHtmlTool).run(
         url=TARGET_URL,
@@ -127,8 +131,9 @@ def rendered_html() -> str:
 
 
 def get_results() -> str:
+    """Smoke-test paginated result retrieval for a configured scraper."""
     return tool(MrScraperGetResultsTool).run(
-        scraper_id=require(AI_SCRAPER_ID, "AI_SCRAPER_ID"),
+        scraper_id=require(AI_SCRAPER_ID, "MRSCRAPER_AI_SCRAPER_ID"),
         page=1,
         page_size=5,
         sort_order="DESC",
@@ -136,62 +141,79 @@ def get_results() -> str:
 
 
 def get_latest_results() -> str:
+    """Smoke-test latest-result retrieval for a configured scraper."""
     return tool(MrScraperGetLatestResultsTool).run(
-        scraper_id=require(AI_SCRAPER_ID, "AI_SCRAPER_ID"), count=5
+        scraper_id=require(AI_SCRAPER_ID, "MRSCRAPER_AI_SCRAPER_ID"), count=5
     )
 
 
 def get_result_detail() -> str:
+    """Smoke-test retrieval of one configured result."""
     return tool(MrScraperGetResultDetailTool).run(
-        result_id=require(RESULT_ID, "RESULT_ID")
+        result_id=require(RESULT_ID, "MRSCRAPER_RESULT_ID")
     )
 
 
 def create_prompt_scraper() -> str:
+    """Smoke-test General AI scraper creation."""
     return tool(MrScraperCreatePromptScraperTool).run(
         url=TARGET_URL,
-        prompt="Extract the property name and price, number of bedroom and bathroom, and mls ID.",
-        output_schema={"title": "string", "description": "string"},
+        prompt=(
+            "Extract the property name, price, bedroom count, bathroom count, "
+            "and MLS ID."
+        ),
+        output_schema={
+            "property_name": "string",
+            "price": "string",
+            "bedrooms": "number",
+            "bathrooms": "number",
+            "mls_id": "string",
+        },
         mode="Cheap",
     )
 
 
 def create_listing_scraper() -> str:
+    """Smoke-test real-estate Listing AI scraper creation."""
     return tool(MrScraperCreateListingScraperTool).run(
         url=LISTING_URL,
-        prompt="Extract book title and price.",
+        prompt="Extract the property title and price.",
         output_schema={"title": "string", "price": "string"},
         max_pages=1,
     )
 
 
 def create_crawl_scraper() -> str:
+    """Smoke-test Map AI scraper creation."""
     return tool(MrScraperCreateWebsiteCrawlScraperTool).run(
         url=TARGET_URL, max_depth=1, max_pages=2, limit=5
     )
 
 
 def run_ai_scraper() -> str:
+    """Smoke-test one run of a configured AI scraper."""
     return tool(MrScraperRunExistingScraperTool).run(
         scraper_type="ai",
-        scraper_id=require(AI_SCRAPER_ID, "AI_SCRAPER_ID"),
+        scraper_id=require(AI_SCRAPER_ID, "MRSCRAPER_AI_SCRAPER_ID"),
         url=TARGET_URL,
         agent_type="general",
     )
 
 
 def run_manual_scraper() -> str:
+    """Smoke-test one run of a configured manual scraper."""
     return tool(MrScraperRunExistingScraperTool).run(
         scraper_type="manual",
-        scraper_id=require(MANUAL_SCRAPER_ID, "MANUAL_SCRAPER_ID"),
+        scraper_id=require(MANUAL_SCRAPER_ID, "MRSCRAPER_MANUAL_SCRAPER_ID"),
         url=TARGET_URL,
     )
 
 
 def run_ai_batch() -> str:
+    """Smoke-test a small batch run of a configured AI scraper."""
     return tool(MrScraperRunExistingScraperBatchTool).run(
         scraper_type="ai",
-        scraper_id=require(AI_SCRAPER_ID, "AI_SCRAPER_ID"),
+        scraper_id=require(AI_SCRAPER_ID, "MRSCRAPER_AI_SCRAPER_ID"),
         urls=[TARGET_URL, f"{TARGET_URL}/?second=1"],
     )
 
@@ -247,6 +269,7 @@ CREATES_RECORDS = {
 
 
 def main() -> int:
+    """Parse the CLI selection and execute one opt-in smoke test."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--list", action="store_true", help="List available tests")
     parser.add_argument("--test", choices=sorted(TESTS), help="Run one real test")

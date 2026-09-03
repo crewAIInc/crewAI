@@ -23,6 +23,7 @@ class MrScraperClient:
     """Make requests only to MrScraper's fixed API origins."""
 
     def __init__(self, token: str, *, session: requests.Session | None = None) -> None:
+        """Initialize a client with a nonblank token and optional HTTP session."""
         if not token.strip():
             raise ValueError("MRSCRAPER_API_TOKEN must be a nonblank value")
         self._token = token
@@ -82,6 +83,7 @@ class MrScraperClient:
         return self._sanitize(serialized)
 
     def _headers(self, origin: Origin) -> dict[str, str]:
+        """Build the authentication headers required by an API origin."""
         headers = {
             "Accept": "application/json",
             "Content-Type": "application/json",
@@ -93,6 +95,7 @@ class MrScraperClient:
         return headers
 
     def _sanitize(self, value: str) -> str:
+        """Redact the configured token from response and error text."""
         redacted = value.replace(self._token, "[REDACTED]")
         return _TOKEN_QUERY_RE.sub(r"\1[REDACTED]", redacted)
 

@@ -36,6 +36,7 @@ class MrScraperCreatePromptScraperTool(MrScraperBaseTool):
         mode: ScrapingMode = "Super",
         proxy_country: str | None = None,
     ) -> str:
+        """Create a reusable General AI scraper."""
         return self._client.request(
             "POST",
             "primary",
@@ -68,6 +69,7 @@ class MrScraperCreateListingScraperTool(MrScraperBaseTool):
         max_pages: int = 1,
         proxy_country: str | None = None,
     ) -> str:
+        """Create a reusable Listing AI scraper."""
         return self._client.request(
             "POST",
             "primary",
@@ -101,6 +103,7 @@ class MrScraperCreateWebsiteCrawlScraperTool(MrScraperBaseTool):
         include_patterns: str | None = None,
         exclude_patterns: str | None = None,
     ) -> str:
+        """Create a reusable Map AI scraper."""
         return self._client.request(
             "POST",
             "primary",

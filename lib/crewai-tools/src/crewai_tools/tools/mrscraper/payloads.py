@@ -7,6 +7,7 @@ from typing import Any
 def _include_if_present(
     payload: dict[str, Any], key: str, value: Any
 ) -> dict[str, Any]:
+    """Add a payload value unless it is absent."""
     if value is not None:
         payload[key] = value
     return payload
@@ -35,6 +36,7 @@ def general_payload(
     mode: str,
     proxy_country: str | None,
 ) -> dict[str, Any]:
+    """Build a General AI extraction payload."""
     payload: dict[str, Any] = {"graph": "general", "url": url, "mode": mode}
     message = append_output_schema(
         prompt, output_schema, "Return the output as JSON matching this schema:"
@@ -52,6 +54,7 @@ def listing_payload(
     max_pages: int,
     proxy_country: str | None,
 ) -> dict[str, Any]:
+    """Build a Listing AI extraction payload."""
     payload: dict[str, Any] = {
         "graph": "listing",
         "url": url,
@@ -74,6 +77,7 @@ def map_payload(
     include_patterns: str | None,
     exclude_patterns: str | None,
 ) -> dict[str, Any]:
+    """Build a Map AI crawl payload."""
     payload: dict[str, Any] = {
         "graph": "map",
         "url": url,
@@ -105,7 +109,10 @@ def rendered_request(
     return_cookie: bool,
     super_mode: bool,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Split rendered-page options into query parameters and a JSON body."""
+
     def bool_text(value: bool) -> str:
+        """Serialize a boolean for rendered-page query parameters."""
         return "true" if value else "false"
 
     params: dict[str, Any] = {
