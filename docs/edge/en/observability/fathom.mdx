@@ -21,7 +21,7 @@ mode: "wide"
 | `duplicate_commit` | adds an entity a collection already holds |
 | `post_commit_mutation` | changes a record after committing it |
 
-A crew whose committed state stays consistent returns `coherent`, and the read prints nothing else.
+A crew whose committed state stays consistent returns `coherent`. The read still prints the operation summary and then reports the committed state as coherent.
 
 ## Installation
 
@@ -30,6 +30,10 @@ uv add fathom-read
 ```
 
 The package ships with a rate-limited demo key. For your own key, write to contact@embeddedriskanalytics.com and set `FATHOM_API_KEY`.
+
+## Data handling
+
+`fathom read` sends the operation stream to the Fathom hosted read. That stream is derived from the crew's tool calls, so it can include tool arguments and task output. The read needs network access and does not run offline. Write to contact@embeddedriskanalytics.com for privacy and retention terms.
 
 ## Capture the crew's events
 
