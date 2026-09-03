@@ -172,7 +172,7 @@ info = "Commits must follow Conventional Commits 1.0.0."
 [tool.uv]
 exclude-newer = "3 days"
 # These security fixes are newer than the global supply-chain cutoff.
-exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = "2026-06-20T00:00:00Z", langsmith = "2026-06-20T00:00:00Z", gitpython = "2026-08-11T00:00:00Z" }
+exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = "2026-06-20T00:00:00Z", langsmith = "2026-06-20T00:00:00Z" }
 
 # composio-core pins rich<14 but textual requires rich>=14.
 # onnxruntime 1.24+ dropped Python 3.10 wheels; cap it so qdrant[fastembed] resolves on 3.10.
@@ -208,7 +208,8 @@ exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = 
 # PYSEC-2026-3786/GHSA-284h-m62q-gf8w (multi-line git-config re-serialization RCE),
 # PYSEC-2026-3787/GHSA-8mcc-hrx5-hvxc (clone --separate-git-dir omitted from unsafe options),
 # and PYSEC-2026-3788/GHSA-5xxx-qhh7-9287 (Repo.blame --contents/-S arbitrary file read);
-# force 3.1.59+. Cutoff bumped to 2026-08-11 to admit that release.
+# force 3.1.59+. 3.1.59 is older than the global 3-day cutoff, so no
+# exclude-newer-package override is needed.
 # pyasn1 <0.6.4 has GHSA-8ppf-4f7h-5ppj and GHSA-hm4w-wwcw-mr6r; force 0.6.4+.
 # urllib3 <2.7.0 has GHSA-qccp-gfcp-xxvc (ProxyManager cross-origin redirect leaks Authorization/Cookie) and GHSA-mf9v-mfxr-j63j (streaming decompression-bomb bypass); force 2.7.0+.
 # langsmith <0.8.18 has GHSA-3644-q5cj-c5c7 (public prompt manifest deserialization, SSRF/secret disclosure)
