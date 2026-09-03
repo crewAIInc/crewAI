@@ -1021,6 +1021,71 @@ def test_unprefixed_models_use_native_sdk():
         assert llm3.provider == "gemini"
 
 
+@pytest.mark.parametrize(
+    "model",
+    ["claude-opus-5", "claude-sonnet-5", "claude-fable-5", "claude-opus-4-8"],
+)
+def test_current_claude_models_route_to_anthropic(model):
+    """Current Claude models are in the constants list and use the Anthropic SDK."""
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        llm = LLM(model=model, is_litellm=False)
+        assert llm.provider == "anthropic"
+
+
+def test_claude_model_newer_than_constants_routes_to_anthropic():
+    """A Claude release we have not listed yet must not fall through to OpenAI."""
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        llm = LLM(model="claude-opus-6-20990101", is_litellm=False)
+        assert llm.provider == "anthropic"
+
+
+def test_gemini_model_newer_than_constants_routes_to_gemini():
+    with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
+        llm = LLM(model="gemini-9-pro-preview", is_litellm=False)
+        assert llm.provider == "gemini"
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        "anthropic.claude-opus-9-20990101-v1:0",
+        "us.anthropic.claude-opus-9-20990101-v1:0",
+        "eu.anthropic.claude-sonnet-9-20990101-v1:0",
+    ],
+)
+def test_unlisted_bedrock_anthropic_ids_route_to_bedrock(model):
+    """Bedrock names Anthropic models "anthropic.claude-*"; that is not the direct API."""
+    with patch.dict(
+        os.environ,
+        {
+            "AWS_ACCESS_KEY_ID": "test-key",
+            "AWS_SECRET_ACCESS_KEY": "test-secret",
+            "AWS_DEFAULT_REGION": "us-east-1",
+        },
+    ):
+        llm = LLM(model=model, is_litellm=False)
+        assert llm.provider == "bedrock"
+
+
+@pytest.mark.parametrize(
+    ("model", "expected_provider"),
+    [
+        # Bedrock's pattern is `"." in model` and Azure's covers every OpenAI
+        # prefix, so these pin that pattern inference did not steal them.
+        ("gpt-3.5-turbo", "openai"),
+        ("gpt-4.1", "openai"),
+        ("gpt-4o", "openai"),
+        ("gpt-4o-mini", "openai"),
+        ("o1", "openai"),
+        ("some-unknown-model", "openai"),
+    ],
+)
+def test_non_claude_models_keep_their_inferred_provider(model, expected_provider):
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        llm = LLM(model=model, is_litellm=False)
+        assert llm.provider == expected_provider
+
+
 def test_explicit_provider_kwarg_takes_priority():
     """Test that explicit provider kwarg takes priority over model name inference."""
     # Explicit provider=openai should use OpenAI even if model name suggests otherwise

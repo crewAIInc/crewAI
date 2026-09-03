@@ -211,7 +211,7 @@ def _normalize_agent_input(rendered: Any) -> str | list[LLMMessage]:
     if isinstance(rendered, list) and all(
         isinstance(item, Mapping) for item in rendered
     ):
-        from crewai.experimental.conversational import message_to_llm_dict
+        from crewai.flow.conversational import message_to_llm_dict
 
         # ``message_to_llm_dict`` only drops ``None`` keys for a model input;
         # a CEL render is plain dicts, so a serialized message keeps its

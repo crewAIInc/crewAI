@@ -9,6 +9,14 @@ from crewai.flow.conversation import (
     ConversationalConfig,
     ConversationalInputs,
 )
+from crewai.flow.conversational import (
+    AgentMessage,
+    ConversationConfig,
+    ConversationEvent,
+    ConversationMessage,
+    ConversationState,
+    RouterConfig,
+)
 from crewai.flow.dsl import HumanFeedbackResult, human_feedback
 from crewai.flow.expressions import Expression
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
@@ -23,8 +31,13 @@ from crewai.flow.visualization import (
 
 
 __all__ = [
+    "AgentMessage",
     "ChatState",
     "ConsoleProvider",
+    "ConversationConfig",
+    "ConversationEvent",
+    "ConversationMessage",
+    "ConversationState",
     "ConversationalConfig",
     "ConversationalInputs",
     "Expression",
@@ -36,6 +49,7 @@ __all__ = [
     "InputProvider",
     "InputResponse",
     "PendingFeedbackContext",
+    "RouterConfig",
     "and_",
     "build_flow_structure",
     "flow_config",

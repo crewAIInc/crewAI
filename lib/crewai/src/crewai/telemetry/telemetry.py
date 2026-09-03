@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any
 
 from crewai_core.telemetry import (
     CommonAttributesSpanProcessor,
+    Telemetry as CoreTelemetry,
     common_span_attributes,
 )
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
@@ -161,11 +162,7 @@ class Telemetry:
     @classmethod
     def _is_telemetry_disabled(cls) -> bool:
         """Check if telemetry should be disabled based on environment variables."""
-        return (
-            os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true"
-            or os.getenv("CREWAI_DISABLE_TELEMETRY", "false").lower() == "true"
-            or os.getenv("CREWAI_DISABLE_TRACKING", "false").lower() == "true"
-        )
+        return CoreTelemetry._is_telemetry_disabled()
 
     def _should_execute_telemetry(self) -> bool:
         """Check if telemetry operations should be executed."""
@@ -1119,6 +1116,45 @@ class Telemetry:
         ):
             return error_type.__name__
         return None
+
+    def crew_completed_span(self, crew: Crew, duration_ms: float, outcome: str) -> None:
+        """Records how long a crew ran and how it ended, for every user.
+
+        The crew analogue of :meth:`flow_completed_span`, and it exists because
+        crew was the one level with no ungated terminal record: ``Crew
+        Execution`` and :meth:`end_crew` are both behind ``share_crew``, which
+        defaults False, so for essentially every run there is no end-of-crew
+        span at all -- not one with fields missing. Task and flow outcomes
+        already ship ungated, which made crew the odd one out rather than a
+        deliberate exclusion.
+
+        A separate span rather than ``Crew Execution`` held open to completion,
+        for the same reason flows use one: that span is emitted and closed at
+        start, so holding it would drop every run that is killed or crashes.
+
+        Carries no token count. ``crew.token_usage`` sums each agent's LLM
+        counters, and two agents sharing one ``LLM`` object share one counter,
+        so that total double-counts today -- putting it on a span would
+        propagate a known-wrong number into a metric. Models are already on the
+        ungated ``Crew Created`` span, which this joins by ``crew_id``.
+
+        Args:
+            crew: The crew that finished, for its key and id.
+            duration_ms: Wall-clock milliseconds from kickoff, measured on a
+                monotonic clock.
+            outcome: Either ``"completed"`` or ``"failed"``.
+        """
+
+        def _operation() -> None:
+            tracer = self.provider.get_tracer(TRACER_NAME)
+            span = tracer.start_span("Crew Completed")
+            self._add_attribute(span, "crewai_version", version("crewai"))
+            add_crew_attributes(span, crew, self._add_attribute)
+            self._add_attribute(span, "duration_ms", duration_ms)
+            self._add_attribute(span, "outcome", outcome)
+            close_span(span)
+
+        self._safe_telemetry_operation(_operation)
 
     def flow_completed_span(
         self,
