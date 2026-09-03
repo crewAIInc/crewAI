@@ -1,0 +1,993 @@
+---
+title: 'LLMs'
+description: 'CrewAI 프로젝트에서 대형 언어 모델(LLM)을 구성하고 사용하는 방법에 대한 종합 안내서'
+icon: 'microchip-ai'
+mode: "wide"
+---
+
+## 개요
+
+CrewAI는 LiteLLM을 통해 다양한 LLM 제공업체와 통합되어, 특정 사용 사례에 맞는 올바른 모델을 선택할 수 있는 유연성을 제공합니다. 이 가이드는 CrewAI 프로젝트에서 다양한 LLM 제공업체를 구성하고 사용하는 방법을 이해하는 데 도움이 될 것입니다.
+
+## LLM이란 무엇인가요?
+
+Large Language Models(LLM)는 CrewAI 에이전트의 핵심 지능입니다. 에이전트가 문맥을 이해하고, 결정을 내리며, 인간과 유사한 응답을 생성할 수 있도록 합니다. 알아두어야 할 내용은 다음과 같습니다:
+
+<CardGroup cols={2}>
+  <Card title="LLM 기본" icon="brain">
+    Large Language Models는 방대한 양의 텍스트 데이터로 학습된 AI 시스템입니다. CrewAI 에이전트의 지능을 구동하여, 인간과 유사한 텍스트를 이해하고 생성할 수 있도록 합니다.
+  </Card>
+  <Card title="컨텍스트 윈도우" icon="window">
+    컨텍스트 윈도우는 LLM이 한 번에 처리할 수 있는 텍스트 양을 결정합니다. 더 큰 윈도우(예: 128K 토큰)는 더 많은 문맥을 다룰 수 있지만, 비용과 속도 면에서 더 부담이 될 수 있습니다.
+  </Card>
+  <Card title="Temperature" icon="temperature-three-quarters">
+    Temperature는 일부 모델이 지원하는 샘플링 제어 옵션입니다. 값이 낮을수록 일반적으로 샘플링이 더 집중되고, 값이 높을수록 변동성이 커집니다. 일부 최신 추론 모델은 이 파라미터를 무시하거나 더 이상 권장하지 않거나 거부하므로, 설정하기 전에 선택한 모델의 문서를 확인하세요.
+  </Card>
+  <Card title="제공자 선택" icon="server">
+    각 LLM 제공자(예: OpenAI, Anthropic, Google)는 다양한 기능, 가격, 특성을 가진 모델을 제공합니다. 정확성, 속도, 비용 등 요구 사항에 따라 선택하세요.
+  </Card>
+</CardGroup>
+
+## LLM 설정하기
+
+CrewAI 코드 내에는 사용할 모델을 지정할 수 있는 여러 위치가 있습니다. 모델을 지정한 후에는 사용하는 각 모델 제공자에 대한 설정(예: API 키)을 제공해야 합니다. 각 제공자에 맞는 [제공자 설정 예제](#provider-configuration-examples) 섹션을 참고하세요.
+
+<Tabs>
+  <Tab title="1. 환경 변수">
+    가장 간단하게 시작할 수 있는 방법입니다. `.env` 파일이나 앱 코드에서 환경 변수로 직접 모델을 설정할 수 있습니다. `crewai create`를 사용해 프로젝트를 부트스트랩했다면 이미 설정되어 있을 수 있습니다.
+
+    ```bash .env
+    MODEL=provider/model-id  # e.g. openai/gpt-5.6-terra
+
+    # 반드시 여기에서 API 키도 설정하세요. 아래 제공자
+    # 섹션을 참고하세요.
+    ```
+
+    <Warning>
+      API 키를 절대 버전 관리 시스템에 커밋하지 마세요. 환경 파일(.env)이나 시스템의 비밀 관리 기능을 사용하세요.
+    </Warning>
+  </Tab>
+  <Tab title="2. YAML 구성">
+    에이전트 구성을 정의하는 YAML 파일을 만드세요. 이 방법은 버전 관리와 팀 협업에 적합합니다:
+
+    ```yaml agents.yaml {6}
+    researcher:
+        role: Research Specialist
+        goal: Conduct comprehensive research and analysis
+        backstory: A dedicated research professional with years of experience
+        verbose: true
+        llm: provider/model-id  # e.g. anthropic/claude-sonnet-4-6
+        # (아래 제공자 구성 예제 참고)
+    ```
+
+    <Info>
+      YAML 구성의 장점:
+      - 에이전트 설정을 버전 관리할 수 있습니다.
+      - 다양한 모델 간 전환이 쉽습니다.
+      - 팀원들과 구성을 공유할 수 있습니다.
+      - 모델 선택과 목적을 문서화할 수 있습니다.
+    </Info>
+  </Tab>
+  <Tab title="3. 직접 코드 작성">
+    최대한 유연하게 LLM을 Python 코드에서 직접 구성할 수 있습니다:
+
+    ```python {4,8}
+    from crewai import LLM
+
+    # 기본 설정
+    llm = LLM(model="provider/model-id")  # e.g. gemini/gemini-3.6-flash
+
+    # 자세한 파라미터로 고급 설정
+    llm = LLM(
+        model="provider/model-id",
+        timeout=120,
+        max_tokens=4000,
+        response_format={"type": "json"},  # 구조화된 출력용
+    )
+    ```
+
+    <Info>
+      파라미터 설명:
+      - `timeout`: 응답 대기 최대 시간
+      - `max_tokens`: 응답 길이 제한
+      - `response_format`: 출력 구조 지정
+
+      `temperature`, `top_p` 같은 샘플링 제어, 페널티 파라미터, 토큰 제한 파라미터 이름, 추론 제어는 모델별로 다릅니다. 선택한 제공자와 모델이 지원하는 경우에만 추가하세요. 아래 제공자 예시와 해당 제공자의 모델 문서를 참고하세요.
+    </Info>
+  </Tab>
+</Tabs>
+
+<Info>
+  CrewAI는 OpenAI, Anthropic, Google (Gemini API), Azure, AWS Bedrock, Snowflake Cortex에 대해 네이티브 SDK 통합을 제공합니다 — 제공자별 extras(예: `uv add "crewai[openai]"`) 외에 추가 설치가 필요하지 않습니다.
+
+  그 외 모든 제공자는 **LiteLLM**을 통해 지원됩니다. 이를 사용하려면 프로젝트에 의존성으로 추가하세요:
+  ```bash
+  uv add 'crewai[litellm]'
+  ```
+</Info>
+
+## 공급자 구성 예시
+
+CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양한 LLM 공급자를 지원합니다.
+이 섹션에서는 프로젝트의 요구에 가장 적합한 LLM을 선택, 구성, 최적화하는 데 도움이 되는 자세한 예시를 제공합니다.
+
+<Warning>
+  모델 가용성은 자주 변경되며 계정, 리전, 클라우드 플랫폼에 따라 달라질 수 있습니다. 아래 예시는 작성 시점에 제공되는 모델을 사용하지만 전체 지원 목록은 아닙니다. 배포하기 전에 연결된 제공자 모델 카탈로그에서 모델 ID와 수명 주기 상태를 확인하세요.
+</Warning>
+
+<AccordionGroup>
+  <Accordion title="OpenAI">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+
+    ```toml Code
+    # Required
+    OPENAI_API_KEY=sk-...
+
+    # Optional
+    OPENAI_API_BASE=<custom-base-url>
+    OPENAI_ORGANIZATION=<your-org-id>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/gpt-5.6-terra",
+        reasoning_effort="medium",
+        max_completion_tokens=4000
+    )
+    ```
+
+    OpenAI는 정기적으로 모델을 추가하고 이전 스냅샷을 폐기합니다. 현재 모델 ID, 컨텍스트 윈도우, 엔드포인트 호환성, 수명 주기 정보는 [OpenAI 모델 카탈로그](https://developers.openai.com/api/docs/models)를 확인하세요.
+
+    **Responses API:**
+
+    OpenAI는 Chat Completions(기본값)와 새로운 Responses API, 두 가지 API를 제공합니다. Responses API는 네이티브 멀티모달 지원을 기반으로 처음부터 설계되었으며, 텍스트, 이미지, 오디오, 함수 호출이 모두 일급 객체입니다. 추론 모델에서 더 나은 성능을 제공하고 자동 체이닝 및 내장 도구와 같은 추가 기능을 지원합니다.
+
+    ```python Code
+    from crewai import LLM
+
+    # Chat Completions 대신 Responses API 사용
+    llm = LLM(
+        model="openai/gpt-4o",
+        api="responses",  # Responses API 활성화
+        store=True,  # 멀티턴을 위한 응답 저장 (선택사항)
+        auto_chain=True,  # 추론 모델용 자동 체이닝 (선택사항)
+    )
+    ```
+
+    **Responses API 파라미터:**
+    - `api`: Responses API를 사용하려면 `"responses"`로 설정 (기본값: `"completions"`)
+    - `instructions`: 시스템 레벨 지침 (Responses API 전용)
+    - `store`: 멀티턴 대화를 위한 응답 저장 여부
+    - `previous_response_id`: 멀티턴을 위한 이전 응답 ID
+    - `include`: 응답에 포함할 추가 데이터 (예: `["reasoning.encrypted_content"]`)
+    - `builtin_tools`: OpenAI 내장 도구 목록: `"web_search"`, `"file_search"`, `"code_interpreter"`, `"computer_use"`
+    - `parse_tool_outputs`: 파싱된 내장 도구 출력과 함께 구조화된 `ResponsesAPIResult` 반환
+    - `auto_chain`: 멀티턴 대화를 위한 응답 ID 자동 추적 및 사용
+    - `auto_chain_reasoning`: ZDR(제로 데이터 보존) 준수를 위한 암호화된 추론 항목 추적
+
+    <Tip>
+      새 프로젝트, 특히 추론 모델(o1, o3, o4)을 사용하거나 [파일](/ko/concepts/files)에 대한 네이티브 멀티모달 지원이 필요한 경우 Responses API를 사용하세요.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="Meta-Llama">
+    Meta의 Llama API는 Meta의 대형 언어 모델 패밀리 접근을 제공합니다.
+    API는 [Meta Llama API](https://llama.developer.meta.com?utm_source=partner-crewai&utm_medium=website)에서 사용할 수 있습니다.
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+
+    ```toml Code
+    # Meta Llama API Key Configuration
+    LLAMA_API_KEY=LLM|your_api_key_here
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    from crewai import LLM
+
+    # Meta Llama LLM 초기화
+    llm = LLM(
+        model="meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8",
+        temperature=0.8,
+        stop=["END"],
+        seed=42
+    )
+    ```
+
+    현재 모델 제품군, 모달리티, 컨텍스트 지침은 [Meta Llama 모델 개요](https://ai.meta.com/llama/get-started/)를 확인하세요.
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Snowflake Cortex">
+    CrewAI는 OpenAI 호환 Chat Completions 엔드포인트를 통해 Snowflake Cortex REST API와 네이티브로 통합됩니다. `snowflake/...` 모델은 LiteLLM fallback 없이 사용됩니다. CrewAI에서 Snowflake Cortex는 현재 Chat Completions만 지원하므로 기본 `api` 모드를 사용하고 `api="responses"`를 설정하지 마세요.
+
+    ```toml Code
+    # Required
+    SNOWFLAKE_PAT=<your-programmatic-access-token>
+    SNOWFLAKE_ACCOUNT_URL=https://<account-identifier>.snowflakecomputing.com
+
+    # Alternative account configuration
+    SNOWFLAKE_ACCOUNT=<account-identifier>
+    ```
+
+    **기본 사용법:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="snowflake/openai-gpt-4.1",
+        temperature=0.7,
+        max_completion_tokens=1024,
+    )
+    ```
+
+    **Cortex의 Claude 모델:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="snowflake/claude-sonnet-4-5",
+        max_completion_tokens=1024,
+        stream=True,
+    )
+    ```
+
+    **지원 환경 변수:**
+    - `SNOWFLAKE_PAT`, `SNOWFLAKE_TOKEN`, 또는 `SNOWFLAKE_JWT`: Bearer 자격 증명으로 사용할 토큰
+    - `SNOWFLAKE_ACCOUNT_URL`: 전체 Snowflake 계정 URL
+    - `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_ACCOUNT_ID`, 또는 `SNOWFLAKE_ACCOUNT_IDENTIFIER`: 계정 URL을 만들 계정 식별자
+
+    Snowflake REST 요청은 사용자의 기본 Snowflake role을 사용합니다. 해당 role에 `SNOWFLAKE.CORTEX_USER` 또는 `SNOWFLAKE.CORTEX_REST_API_USER`가 있는지 확인하세요. Cortex REST Chat Completions 엔드포인트에는 database, schema, warehouse, 명시적 role 파라미터가 필요하지 않습니다.
+
+    **기능:**
+    - `model="snowflake/<model-name>"`을 통한 네이티브 provider 선택
+    - Streaming 및 non-streaming Chat Completions만 지원; `api="responses"`는 지원되지 않음
+    - 토큰 사용량 추적
+    - Snowflake 호스팅 OpenAI 및 Claude 모델의 함수 호출
+    - Snowflake Claude 모델에서 유효하지 않은 마지막 assistant prefill 자동 제거
+  </Accordion>
+
+  <Accordion title="Anthropic">
+    ```toml Code
+    # Required
+    ANTHROPIC_API_KEY=sk-ant-...
+
+    # Optional
+    ANTHROPIC_API_BASE=<custom-base-url>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-6",
+        max_tokens=4096
+    )
+    ```
+
+    현재 모델 ID와 기능은 Anthropic의 [모델 개요](https://platform.claude.com/docs/en/about-claude/models/overview)를 확인하고, 프로덕션에서 모델을 고정하기 전에 [모델 지원 중단 표](https://platform.claude.com/docs/en/about-claude/model-deprecations)를 검토하세요.
+  </Accordion>
+
+  <Accordion title="Google (Gemini API)">
+    `.env` 파일에 API 키를 설정하십시오. 키가 필요하거나 기존 키를 찾으려면 [AI Studio](https://aistudio.google.com/apikey)를 확인하세요.
+
+    ```toml .env
+    # Gemini API 사용 시 (다음 중 하나)
+    GOOGLE_API_KEY=<your-api-key>
+    GEMINI_API_KEY=<your-api-key>
+
+    # Vertex AI Express 모드 사용 시 (API 키 인증)
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_API_KEY=<your-api-key>
+
+    # Vertex AI 서비스 계정 사용 시
+    GOOGLE_CLOUD_PROJECT=<your-project-id>
+    GOOGLE_CLOUD_LOCATION=<location>  # 기본값: us-central1
+    ```
+
+    **기본 사용법:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-3.6-flash",
+    )
+    ```
+
+    **Vertex AI Express 모드 (API 키 인증):**
+
+    Vertex AI Express 모드를 사용하면 서비스 계정 자격 증명 대신 간단한 API 키 인증으로 Vertex AI를 사용할 수 있습니다. Vertex AI를 시작하는 가장 빠른 방법입니다.
+
+    Express 모드를 활성화하려면 `.env` 파일에 두 환경 변수를 모두 설정하세요:
+    ```toml .env
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_API_KEY=<your-api-key>
+    ```
+
+    그런 다음 평소처럼 LLM을 사용하세요:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-3.6-flash"
+    )
+    ```
+
+    <Info>
+      Express 모드 API 키를 받으려면:
+      - 신규 Google Cloud 사용자: [Express 모드 API 키](https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey) 받기
+      - 기존 Google Cloud 사용자: [서비스 계정에 바인딩된 Google Cloud API 키](https://cloud.google.com/docs/authentication/api-keys) 받기
+
+      자세한 내용은 [Vertex AI Express 모드 문서](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey)를 참조하세요.
+    </Info>
+
+    Google은 현재 Gemini ID, 기능, 수명 주기 단계를 [Gemini 모델 카탈로그](https://ai.google.dev/gemini-api/docs/models)에 게시합니다. 안정 또는 preview 모델을 선택하기 전에 [지원 중단 일정](https://ai.google.dev/gemini-api/docs/deprecations)을 확인하세요. Gemini API는 [Gemma 모델](https://ai.google.dev/gemma/docs)도 호스팅합니다.
+
+  </Accordion>
+  <Accordion title="Google (Vertex AI)">
+    [애플리케이션 기본 사용자 인증 정보](https://cloud.google.com/docs/authentication/provide-credentials-adc)로 인증한 다음, Vertex AI를 사용하도록 네이티브 Gemini 제공업체를 구성하세요:
+    ```toml .env
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_CLOUD_PROJECT=<your-project-id>
+    GOOGLE_CLOUD_LOCATION=<location>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-3.6-flash"
+    )
+    ```
+
+    사용 가능한 Vertex AI 모델과 리전은 [Vertex AI 모델 정보](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models)를 확인하세요.
+
+    **참고:** 이 경로는 CrewAI의 네이티브 Gemini 통합을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add "crewai[google-genai]"
+    ```
+  </Accordion>
+
+  <Accordion title="Azure">
+    ```toml Code
+    # Required
+    AZURE_API_KEY=<your-api-key>
+    AZURE_API_BASE=<your-resource-url>
+    AZURE_API_VERSION=<api-version>
+
+    # Optional
+    AZURE_AD_TOKEN=<your-azure-ad-token>
+    AZURE_API_TYPE=<your-azure-api-type>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="azure/gpt-4",
+        api_version="2023-05-15"
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="AWS Bedrock">
+    ```toml Code
+    AWS_ACCESS_KEY_ID=<your-access-key>
+    AWS_SECRET_ACCESS_KEY=<your-secret-key>
+    AWS_DEFAULT_REGION=<your-region>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="bedrock/us.anthropic.claude-sonnet-4-6"
+    )
+    ```
+
+    Amazon Bedrock을 사용하기 전에, 환경에 boto3가 설치되어 있는지 확인하십시오.
+
+    [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html)은 대표적인 AI 회사들의 여러 파운데이션 모델에 통합 API를 통해 접근할 수 있는 매니지드 서비스로, 안전하고 책임감 있는 AI 응용프로그램 개발을 가능하게 해줍니다.
+
+
+  </Accordion>
+
+  <Accordion title="Amazon SageMaker">
+    ```toml Code
+    AWS_ACCESS_KEY_ID=<your-access-key>
+    AWS_SECRET_ACCESS_KEY=<your-secret-key>
+    AWS_DEFAULT_REGION=<your-region>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="sagemaker/<my-endpoint>"
+    )
+    ```
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Mistral">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    MISTRAL_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="mistral/mistral-large-latest",
+        temperature=0.7
+    )
+    ```
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Nvidia NIM">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    NVIDIA_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="nvidia_nim/nvidia/nvidia-nemotron-3-ultra-550b-a55b",
+        temperature=0.7
+    )
+    ```
+
+    NVIDIA NIM의 호스팅 카탈로그는 자주 변경됩니다. 현재 endpoint를 선택하고 모델 ID, 모달리티, 컨텍스트 제한을 확인하려면 [NVIDIA NIM 모델 카탈로그](https://build.nvidia.com/models)를 사용하세요.
+
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Local NVIDIA NIM Deployed using WSL2">
+
+    NVIDIA NIM을 이용하면 Windows 기기에서 WSL2(Windows Subsystem for Linux)를 통해 강력한 LLM을 로컬로 실행할 수 있습니다.
+    이 방식은 Nvidia GPU를 활용하여 프라이빗하고, 안전하며, 비용 효율적인 AI 추론을 클라우드 서비스에 의존하지 않고 구현할 수 있습니다.
+    데이터 프라이버시, 오프라인 기능이 필요한 개발, 테스트, 또는 프로덕션 환경에 최적입니다.
+
+    로컬 NVIDIA NIM 모델 설치 단계별 가이드는 다음과 같습니다:
+
+    1. [NVIDIA 홈페이지](https://docs.nvidia.com/nim/wsl2/latest/getting-started.html)의 설치 안내를 따르세요.
+
+    2. 로컬 모델을 설치합니다. Llama 3.1-8b는 [여기](https://build.nvidia.com/meta/llama-3_1-8b-instruct/deploy) 안내를 참조하세요.
+
+    3. crewai 로컬 모델을 구성하세요:
+
+    ```python Code
+    from crewai.llm import LLM
+
+    local_nvidia_nim_llm = LLM(
+        model="openai/meta/llama-3.1-8b-instruct", # it's an openai-api compatible model
+        base_url="http://localhost:8000/v1",
+        api_key="<your_api_key|any text if you have not configured it>", # api_key is required, but you can use any text
+    )
+
+    # 그런 다음 crew에서 사용할 수 있습니다:
+
+    @CrewBase
+    class MyCrew():
+        # ...
+
+        @agent
+        def researcher(self) -> Agent:
+            return Agent(
+                config=self.agents_config['researcher'], # type: ignore[index]
+                llm=local_nvidia_nim_llm
+            )
+
+        # ...
+    ```
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Groq">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+
+    ```toml Code
+    GROQ_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="groq/qwen/qwen3.6-27b",
+        temperature=0.7
+    )
+    ```
+
+    Groq는 production 모델과 preview 모델을 구분하며 모델 ID를 정기적으로 폐기합니다. 프로덕션 모델을 선택하기 전에 [Groq 모델 카탈로그](https://console.groq.com/docs/models)와 [지원 중단 페이지](https://console.groq.com/docs/deprecations)를 확인하세요.
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="IBM watsonx.ai">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    # Required
+    WATSONX_URL=<your-url>
+    WATSONX_APIKEY=<your-apikey>
+    WATSONX_PROJECT_ID=<your-project-id>
+
+    # Optional
+    WATSONX_TOKEN=<your-token>
+    WATSONX_DEPLOYMENT_SPACE_ID=<your-space-id>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="watsonx/meta-llama/llama-3-1-70b-instruct",
+        base_url="https://api.watsonx.ai/v1"
+    )
+    ```
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Ollama (Local LLMs)">
+    1. Ollama 설치: [ollama.ai](https://ollama.ai/)
+    2. 모델 실행: `ollama run llama3`
+    3. 구성:
+
+    ```python Code
+    llm = LLM(
+        model="ollama/llama3:70b",
+        base_url="http://localhost:11434"
+    )
+    ```
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Fireworks AI">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    FIREWORKS_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="fireworks_ai/accounts/fireworks/models/llama-v3-70b-instruct",
+        temperature=0.7
+    )
+    ```
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Perplexity AI">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    PERPLEXITY_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="perplexity/sonar-pro"
+    )
+    ```
+
+    현재 모델 ID와 지원 중단 공지는 [Perplexity 모델 카탈로그](https://docs.perplexity.ai/getting-started/models)와 [changelog](https://docs.perplexity.ai/docs/resources/changelog)를 확인하세요.
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Hugging Face">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    HF_TOKEN=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct"
+    )
+    ```
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="SambaNova">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+
+    ```toml Code
+    SAMBANOVA_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="sambanova/Meta-Llama-3.3-70B-Instruct",
+        temperature=0.7
+    )
+    ```
+
+    SambaNova Cloud의 호스팅 모델은 CrewAI와 별도로 변경될 수 있습니다. 배포 전에 [models endpoint](https://docs.sambanova.ai/docs/api-reference/models/get-environments-available-model-list-metadata)를 조회하고 [지원 중단 가이드](https://docs.sambanova.ai/docs/en/models/deprecations)를 확인하세요.
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Cerebras">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    # Required
+    CEREBRAS_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="cerebras/gpt-oss-120b",
+        temperature=0.7,
+        max_tokens=8192
+    )
+    ```
+
+    <Info>
+      Cerebras 특징:
+      - 빠른 추론 속도
+      - 경쟁력 있는 가격
+      - 속도와 품질의 우수한 밸런스
+      - 긴 컨텍스트 윈도우 지원
+    </Info>
+
+    현재 공개 endpoint ID는 [Cerebras 모델 카탈로그](https://inference-docs.cerebras.ai/models/overview)와 [지원 중단 공지](https://inference-docs.cerebras.ai/support/deprecation)를 확인하세요.
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Open Router">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    OPENROUTER_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="openrouter/deepseek/deepseek-r1",
+        base_url="https://openrouter.ai/api/v1",
+        api_key=OPENROUTER_API_KEY
+    )
+    ```
+
+    <Info>
+      Open Router 모델:
+      - openrouter/deepseek/deepseek-r1
+      - openrouter/deepseek/deepseek-chat
+    </Info>
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="Nebius AI Studio">
+    `.env` 파일에 다음 환경 변수를 설정하십시오:
+    ```toml Code
+    NEBIUS_API_KEY=<your-api-key>
+    ```
+
+    CrewAI 프로젝트에서의 예시 사용법:
+    ```python Code
+    llm = LLM(
+        model="nebius/Qwen/Qwen3-30B-A3B"
+    )
+    ```
+
+    <Info>
+      Nebius AI Studio 특징:
+      - 대규모 오픈소스 모델 보유
+      - 높은 속도 제한
+      - 경쟁력 있는 가격
+      - 속도와 품질의 우수한 밸런스
+    </Info>
+
+    **참고:** 이 제공자는 LiteLLM을 사용합니다. 프로젝트에 의존성으로 추가하세요:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## 스트리밍 응답
+
+CrewAI는 LLM의 스트리밍 응답을 지원하여, 애플리케이션이 출력물을 생성되는 즉시 실시간으로 수신하고 처리할 수 있습니다.
+
+<Tabs>
+  <Tab title="기본 설정">
+    LLM을 초기화할 때 `stream` 파라미터를 `True`로 설정하여 스트리밍을 활성화합니다:
+
+    ```python
+    from crewai import LLM
+
+    # 스트리밍이 활성화된 LLM 생성
+    llm = LLM(
+        model="openai/gpt-5.6-terra",
+        stream=True  # 스트리밍 활성화
+    )
+    ```
+
+    스트리밍이 활성화되면, 응답이 생성되는 대로 청크 단위로 전달되어 보다 반응성 있는 사용자 경험을 만듭니다.
+  </Tab>
+
+  <Tab title="이벤트 처리">
+    CrewAI는 스트리밍 중 수신되는 각 청크에 대해 이벤트를 발생시킵니다:
+
+    ```python
+    from crewai.events import (
+      LLMStreamChunkEvent
+    )
+    from crewai.events import BaseEventListener
+
+    class MyCustomListener(BaseEventListener):
+        def setup_listeners(self, crewai_event_bus):
+            @crewai_event_bus.on(LLMStreamChunkEvent)
+            def on_llm_stream_chunk(self, event: LLMStreamChunkEvent):
+              # 각 청크가 도착할 때마다 처리
+              print(f"Received chunk: {event.chunk}")
+
+    my_listener = MyCustomListener()
+    ```
+
+    <Tip>
+      [자세한 내용은 여기를 클릭하세요](/ko/concepts/event-listener#event-listeners)
+    </Tip>
+  </Tab>
+
+  <Tab title="에이전트 & 태스크 추적">
+    CrewAI의 모든 LLM 이벤트에는 에이전트 및 태스크 정보가 포함되어 있어, 특정 에이전트나 태스크별로 LLM 상호작용을 추적하고 필터링할 수 있습니다:
+
+    ```python
+    from crewai import LLM, Agent, Task, Crew
+    from crewai.events import LLMStreamChunkEvent
+    from crewai.events import BaseEventListener
+
+    class MyCustomListener(BaseEventListener):
+        def setup_listeners(self, crewai_event_bus):
+            @crewai_event_bus.on(LLMStreamChunkEvent)
+            def on_llm_stream_chunk(source, event):
+                if researcher.id == event.agent_id:
+                    print("\n==============\n Got event:", event, "\n==============\n")
+
+
+    my_listener = MyCustomListener()
+
+    llm = LLM(model="openai/gpt-5.6-terra", stream=True)
+
+    researcher = Agent(
+        role="About User",
+        goal="You know everything about the user.",
+        backstory="""You are a master at understanding people and their preferences.""",
+        llm=llm,
+    )
+
+    search = Task(
+        description="Answer the following questions about the user: {question}",
+        expected_output="An answer to the question.",
+        agent=researcher,
+    )
+
+    crew = Crew(agents=[researcher], tasks=[search])
+
+    result = crew.kickoff(
+        inputs={"question": "..."}
+    )
+    ```
+
+    <Info>
+      이 기능은 다음과 같은 경우에 특히 유용합니다:
+      - 특정 에이전트 동작을 디버깅할 때
+      - 태스크 유형별 LLM 사용 기록을 남길 때
+      - 어떤 에이전트가 어떤 유형의 LLM 호출을 하는지 감사할 때
+      - 특정 태스크의 성능을 모니터링할 때
+    </Info>
+  </Tab>
+</Tabs>
+
+## 구조화된 LLM 호출
+
+CrewAI는 Pydantic 모델을 사용하여 `response_format`을 정의함으로써 LLM 호출에서 구조화된 응답을 지원합니다. 이를 통해 프레임워크가 출력을 자동으로 파싱하고 검증할 수 있어, 수동 후처리 없이도 응답을 애플리케이션에 쉽게 통합할 수 있습니다.
+
+구조화된 출력 지원은 제공업체와 모델에 따라 다릅니다. 프로덕션에서 구조화된 응답에 의존하기 전에 선택한 모델을 테스트하세요.
+
+예를 들어, 예상되는 응답 구조를 나타내는 Pydantic 모델을 정의하고 LLM을 인스턴스화할 때 `response_format`으로 전달할 수 있습니다. 이 모델은 LLM 출력을 구조화된 Python 객체로 변환하는 데 사용됩니다.
+
+```python Code
+from crewai import LLM
+
+class Dog(BaseModel):
+    name: str
+    age: int
+    breed: str
+
+
+llm = LLM(model="openai/gpt-5.6-terra", response_format=Dog)
+
+response = llm.call(
+    "Analyze the following messages and return the name, age, and breed. "
+    "Meet Kona! She is 3 years old and is a black german shepherd."
+)
+print(response)
+
+# Output:
+# Dog(name='Kona', age=3, breed='black german shepherd')
+```
+
+## 고급 기능 및 최적화
+
+LLM 설정을 최대한 활용하는 방법을 알아보세요:
+
+<AccordionGroup>
+  <Accordion title="컨텍스트 윈도우 관리">
+    CrewAI는 스마트한 컨텍스트 관리 기능을 제공합니다:
+
+    ```python
+    from crewai import LLM
+
+    # CrewAI는 자동으로 다음을 처리합니다:
+    # 1. 토큰 계산 및 추적
+    # 2. 필요시 콘텐츠 요약
+    # 3. 큰 컨텍스트에 대한 작업 분할
+
+    llm = LLM(
+        model="openai/gpt-5.6-terra",
+        max_completion_tokens=4000,  # 응답 길이 제한
+    )
+    ```
+
+    <Info>
+      컨텍스트 관리 모범 사례:
+      1. 적절한 컨텍스트 윈도우를 가진 모델 선택
+      2. 가능하면 긴 입력값을 사전 처리
+      3. 큰 문서에는 청킹(chunking) 사용
+      4. 비용 최적화를 위해 토큰 사용량 모니터링
+    </Info>
+  </Accordion>
+
+  <Accordion title="성능 최적화">
+    <Steps>
+      <Step title="토큰 사용 최적화">
+        작업에 맞는 컨텍스트 윈도우를 선택하세요:
+        - 작은 작업 (최대 4K 토큰): 표준 모델
+        - 중간 작업 (4K~32K 사이): 확장 모델
+        - 큰 작업 (32K 이상): 대형 컨텍스트 모델
+
+        ```python
+        # 모델을 적절한 설정으로 구성
+        llm = LLM(
+            model="openai/gpt-5.6-terra",
+            reasoning_effort="medium",
+            max_completion_tokens=4096,
+            timeout=300
+        )
+        ```
+        <Tip>
+          선택한 모델이 지원하는 제어 옵션을 사용하세요. 제공자에 따라 `temperature`, reasoning 또는 thinking 수준, 혹은 원하는 스타일과 변동성을 정의하는 프롬프트 지침을 사용할 수 있습니다.
+        </Tip>
+      </Step>
+
+      <Step title="모범 사례">
+        1. 토큰 사용량 모니터링
+        2. 속도 제한(rate limiting) 구현
+        3. 가능하면 캐싱 사용
+        4. 적절한 max_tokens 제한 설정
+      </Step>
+    </Steps>
+
+    <Info>
+      비용 및 성능을 최적화하기 위해 토큰 사용량을 정기적으로 모니터링하고 필요에 따라 설정을 조정하세요.
+    </Info>
+  </Accordion>
+
+  <Accordion title="추가 파라미터 드롭">
+    CrewAI는 내부적으로 LLM 호출에 Litellm을 사용하며, 이를 통해 특정 사용 사례에 필요하지 않은 추가 파라미터를 제거할 수 있습니다. 이를 통해 코드가 간소화되며 LLM 구성의 복잡성을 줄일 수 있습니다.
+    예를 들어, <code>stop</code> 파라미터를 보낼 필요가 없다면 LLM 호출에서 제외할 수 있습니다:
+
+    ```python
+    from crewai import LLM
+    import os
+
+    os.environ["OPENAI_API_KEY"] = "<api-key>"
+
+    o3_llm = LLM(
+        model="o3",
+        drop_params=True,
+        additional_drop_params=["stop"]
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## 일반적인 문제 및 해결 방법
+
+<Tabs>
+  <Tab title="인증">
+    <Warning>
+      대부분의 인증 문제는 API 키 형식과 환경 변수 이름을 확인하여 해결할 수 있습니다.
+    </Warning>
+
+    ```bash
+    # OpenAI
+    OPENAI_API_KEY=sk-...
+
+    # Anthropic
+    ANTHROPIC_API_KEY=sk-ant-...
+    ```
+  </Tab>
+  <Tab title="모델 이름">
+    <Check>
+      항상 모델 이름에 provider 접두사를 포함하세요.
+    </Check>
+
+    ```python
+    # 올바른 예시
+    llm = LLM(model="openai/gpt-4")
+
+    # 잘못된 예시
+    llm = LLM(model="gpt-4")
+    ```
+  </Tab>
+  <Tab title="컨텍스트 길이">
+    <Tip>
+      대규모 작업에는 더 큰 컨텍스트 모델을 사용하세요.
+    </Tip>
+
+    ```python
+    # 대용량 컨텍스트 모델
+    llm = LLM(model="openai/gpt-4o")  # 128K tokens
+    ```
+  </Tab>
+</Tabs>

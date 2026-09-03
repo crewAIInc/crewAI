@@ -1,0 +1,276 @@
+---
+title: أداة تشغيل أتمتة CrewAI
+description: تتيح لوكلاء CrewAI استدعاء أتمتة منصة CrewAI والاستفادة من خدمات الأطقم الخارجية ضمن سير العمل الخاص بك.
+icon: robot
+---
+
+# `InvokeCrewAIAutomationTool`
+
+توفر `InvokeCrewAIAutomationTool` تكاملاً مع واجهة برمجة تطبيقات منصة CrewAI مع خدمات الأطقم الخارجية. تتيح لك هذه الأداة استدعاء أتمتة منصة CrewAI والتفاعل معها من داخل وكلاء CrewAI، مما يمكّن التكامل السلس بين سير عمل الأطقم المختلفة.
+
+## التثبيت
+
+```bash
+uv pip install 'crewai[tools]'
+```
+
+## المتطلبات
+
+- الوصول إلى واجهة برمجة تطبيقات منصة CrewAI
+- رمز حامل صالح للمصادقة
+- الوصول الشبكي إلى نقاط نهاية أتمتة منصة CrewAI
+
+## الاستخدام
+
+إليك كيفية استخدام الأداة مع وكيل CrewAI:
+
+```python {2, 4-9}
+from crewai import Agent, Task, Crew
+from crewai_tools import InvokeCrewAIAutomationTool
+
+# Initialize the tool
+automation_tool = InvokeCrewAIAutomationTool(
+    crew_api_url="https://data-analysis-crew-[...].crewai.com",
+    crew_bearer_token="your_bearer_token_here",
+    crew_name="Data Analysis Crew",
+    crew_description="Analyzes data and generates insights"
+)
+
+# Create a CrewAI agent that uses the tool
+automation_coordinator = Agent(
+    role='Automation Coordinator',
+    goal='Coordinate and execute automated crew tasks',
+    backstory='I am an expert at leveraging automation tools to execute complex workflows.',
+    tools=[automation_tool],
+    verbose=True
+)
+
+# Create a task for the agent
+analysis_task = Task(
+    description="Execute data analysis automation and provide insights",
+    agent=automation_coordinator,
+    expected_output="Comprehensive data analysis report"
+)
+
+# Create a crew with the agent
+crew = Crew(
+    agents=[automation_coordinator],
+    tasks=[analysis_task],
+    verbose=2
+)
+
+# Run the crew
+result = crew.kickoff()
+print(result)
+```
+
+## معاملات الأداة
+
+| المعامل | النوع | مطلوب | الافتراضي | الوصف |
+|:---------|:-----|:---------|:--------|:------------|
+| **crew_api_url** | `str` | نعم | None | عنوان URL الأساسي لواجهة برمجة تطبيقات أتمتة منصة CrewAI |
+| **crew_bearer_token** | `str` | نعم | None | رمز حامل لمصادقة API |
+| **crew_name** | `str` | نعم | None | اسم أتمتة الطاقم |
+| **crew_description** | `str` | نعم | None | وصف ما تفعله أتمتة الطاقم |
+| **max_polling_time** | `int` | لا | 600 | الحد الأقصى للوقت بالثواني للانتظار حتى اكتمال المهمة |
+| **crew_inputs** | `dict` | لا | None | قاموس يحدد حقول مخطط المدخلات المخصصة |
+
+## متغيرات البيئة
+
+```bash
+CREWAI_API_URL=https://your-crew-automation.crewai.com  # Alternative to passing crew_api_url
+CREWAI_BEARER_TOKEN=your_bearer_token_here              # Alternative to passing crew_bearer_token
+```
+
+## الاستخدام المتقدم
+
+### مخطط مدخلات مخصص مع معاملات ديناميكية
+
+```python {2, 4-15}
+from crewai import Agent, Task, Crew
+from crewai_tools import InvokeCrewAIAutomationTool
+from pydantic import Field
+
+# Define custom input schema
+custom_inputs = {
+    "year": Field(..., description="Year to retrieve the report for (integer)"),
+    "region": Field(default="global", description="Geographic region for analysis"),
+    "format": Field(default="summary", description="Report format (summary, detailed, raw)")
+}
+
+# Create tool with custom inputs
+market_research_tool = InvokeCrewAIAutomationTool(
+    crew_api_url="https://state-of-ai-report-crew-[...].crewai.com",
+    crew_bearer_token="your_bearer_token_here",
+    crew_name="State of AI Report",
+    crew_description="Retrieves a comprehensive report on state of AI for a given year and region",
+    crew_inputs=custom_inputs,
+    max_polling_time=15 * 60  # 15 minutes timeout
+)
+
+# Create an agent with the tool
+research_agent = Agent(
+    role="Research Coordinator",
+    goal="Coordinate and execute market research tasks",
+    backstory="You are an expert at coordinating research tasks and leveraging automation tools.",
+    tools=[market_research_tool],
+    verbose=True
+)
+
+# Create and execute a task with custom parameters
+research_task = Task(
+    description="Conduct market research on AI tools market for 2024 in North America with detailed format",
+    agent=research_agent,
+    expected_output="Comprehensive market research report"
+)
+
+crew = Crew(
+    agents=[research_agent],
+    tasks=[research_task]
+)
+
+result = crew.kickoff()
+```
+
+### سير عمل أتمتة متعدد المراحل
+
+```python {2, 4-35}
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import InvokeCrewAIAutomationTool
+
+# Initialize different automation tools
+data_collection_tool = InvokeCrewAIAutomationTool(
+    crew_api_url="https://data-collection-crew-[...].crewai.com",
+    crew_bearer_token="your_bearer_token_here",
+    crew_name="Data Collection Automation",
+    crew_description="Collects and preprocesses raw data"
+)
+
+analysis_tool = InvokeCrewAIAutomationTool(
+    crew_api_url="https://analysis-crew-[...].crewai.com",
+    crew_bearer_token="your_bearer_token_here",
+    crew_name="Analysis Automation",
+    crew_description="Performs advanced data analysis and modeling"
+)
+
+reporting_tool = InvokeCrewAIAutomationTool(
+    crew_api_url="https://reporting-crew-[...].crewai.com",
+    crew_bearer_token="your_bearer_token_here",
+    crew_name="Reporting Automation",
+    crew_description="Generates comprehensive reports and visualizations"
+)
+
+# Create specialized agents
+data_collector = Agent(
+    role='Data Collection Specialist',
+    goal='Gather and preprocess data from various sources',
+    backstory='I specialize in collecting and cleaning data from multiple sources.',
+    tools=[data_collection_tool]
+)
+
+data_analyst = Agent(
+    role='Data Analysis Expert',
+    goal='Perform advanced analysis on collected data',
+    backstory='I am an expert in statistical analysis and machine learning.',
+    tools=[analysis_tool]
+)
+
+report_generator = Agent(
+    role='Report Generation Specialist',
+    goal='Create comprehensive reports and visualizations',
+    backstory='I excel at creating clear, actionable reports from complex data.',
+    tools=[reporting_tool]
+)
+
+# Create sequential tasks
+collection_task = Task(
+    description="Collect market data for Q4 2024 analysis",
+    agent=data_collector
+)
+
+analysis_task = Task(
+    description="Analyze collected data to identify trends and patterns",
+    agent=data_analyst
+)
+
+reporting_task = Task(
+    description="Generate executive summary report with key insights and recommendations",
+    agent=report_generator
+)
+
+# Create a crew with sequential processing
+crew = Crew(
+    agents=[data_collector, data_analyst, report_generator],
+    tasks=[collection_task, analysis_task, reporting_task],
+    process=Process.sequential,
+    verbose=2
+)
+
+result = crew.kickoff()
+```
+
+## حالات الاستخدام
+
+### تنسيق الأطقم الموزعة
+- تنسيق أتمتة أطقم متخصصة متعددة للتعامل مع سير عمل معقدة ومتعددة المراحل
+- تمكين عمليات التسليم السلسة بين خدمات الأتمتة المختلفة لتنفيذ شامل للمهام
+- توسيع المعالجة من خلال توزيع أعباء العمل عبر أتمتة منصة CrewAI المتعددة
+
+### التكامل عبر المنصات
+- ربط وكلاء CrewAI مع أتمتة منصة CrewAI لسير عمل محلي-سحابي هجين
+- الاستفادة من الأتمتة المتخصصة مع الحفاظ على التحكم والتنسيق المحلي
+- تمكين التعاون الآمن بين الوكلاء المحليين وخدمات الأتمتة السحابية
+
+### خطوط أنابيب أتمتة المؤسسات
+- إنشاء خطوط أنابيب أتمتة بمستوى المؤسسة تجمع بين الذكاء المحلي وقوة المعالجة السحابية
+- تنفيذ سير عمل أعمال معقدة تمتد عبر خدمات أتمتة متعددة
+- تمكين عمليات قابلة للتوسع ومتكررة لتحليل البيانات وإعداد التقارير واتخاذ القرارات
+
+### تركيب سير العمل الديناميكي
+- تركيب سير العمل ديناميكياً من خلال تسلسل خدمات أتمتة مختلفة بناءً على متطلبات المهمة
+- تمكين المعالجة التكيفية حيث يعتمد اختيار الأتمتة على خصائص البيانات أو قواعد العمل
+- إنشاء مكونات أتمتة مرنة وقابلة لإعادة الاستخدام يمكن دمجها بطرق مختلفة
+
+### المعالجة المتخصصة بالمجال
+- الوصول إلى أتمتة خاصة بالمجال (التحليل المالي، البحث القانوني، التوثيق التقني) من وكلاء ذات أغراض عامة
+- الاستفادة من أتمتة أطقم متخصصة مبنية مسبقاً دون إعادة بناء منطق المجال المعقد
+- تمكين الوكلاء من الوصول إلى قدرات مستوى الخبراء من خلال خدمات أتمتة مستهدفة
+
+## مخطط المدخلات المخصص
+
+عند تعريف `crew_inputs`، استخدم كائنات Pydantic Field لتحديد معاملات المدخلات:
+
+```python
+from pydantic import Field
+
+crew_inputs = {
+    "required_param": Field(..., description="This parameter is required"),
+    "optional_param": Field(default="default_value", description="This parameter is optional"),
+    "typed_param": Field(..., description="Integer parameter", ge=1, le=100)  # With validation
+}
+```
+
+## معالجة الأخطاء
+
+توفر الأداة معالجة شاملة للأخطاء للسيناريوهات الشائعة:
+
+- **أخطاء اتصال API**: مشكلات الاتصال الشبكي مع منصة CrewAI
+- **أخطاء المصادقة**: رموز حامل غير صالحة أو منتهية الصلاحية
+- **أخطاء المهلة**: المهام التي تتجاوز الحد الأقصى لوقت الاستقصاء
+- **فشل المهام**: أتمتة الأطقم التي تفشل أثناء التنفيذ
+- **أخطاء التحقق من المدخلات**: معاملات غير صالحة مُمررة إلى نقاط نهاية الأتمتة
+
+## نقاط نهاية API
+
+تتفاعل الأداة مع نقطتي نهاية API رئيسيتين:
+
+- `POST {crew_api_url}/kickoff`: بدء مهمة أتمتة طاقم جديدة
+- `GET {crew_api_url}/status/{crew_id}`: التحقق من حالة مهمة قيد التشغيل
+
+## ملاحظات
+
+- تقوم الأداة تلقائياً باستقصاء نقطة نهاية الحالة كل ثانية حتى الاكتمال أو انتهاء المهلة
+- تُرجع المهام الناجحة النتيجة مباشرة، بينما تُرجع المهام الفاشلة معلومات الخطأ
+- يجب الحفاظ على أمان رموز الحامل وعدم ترميزها بشكل ثابت في بيئات الإنتاج
+- فكر في استخدام متغيرات البيئة للتكوينات الحساسة مثل رموز الحامل
+- يجب أن تكون مخططات المدخلات المخصصة متوافقة مع المعاملات المتوقعة لأتمتة الطاقم المستهدف

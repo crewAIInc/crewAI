@@ -31,10 +31,12 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.hooks.dispatch import HookAborted
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.base_llm import (
     BaseLLM,
     JsonResponseFormat,
+    LLMCallBlockedError,
     get_current_call_id,
     llm_call_context,
 )
@@ -170,6 +172,7 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "gpt-4o": 128000,
     "gpt-4o-mini": 200000,
     "gpt-5.4-mini": 200000,
+    "gpt-5.6": 1050000,  # sol, terra, luna, and the gpt-5.6 alias
     "gpt-4-turbo": 128000,
     "gpt-4.1": 1047576,  # Based on official docs
     "gpt-4.1-mini-2025-04-14": 1047576,
@@ -660,6 +663,19 @@ class LLM(BaseLLM):
         if model in AZURE_MODELS:
             return "azure"
 
+        # Bedrock namespaces Anthropic models as "anthropic.claude-*", optionally
+        # region-prefixed ("us.anthropic.claude-*"). That form also satisfies the
+        # anthropic pattern below, so it has to be settled first.
+        if "anthropic." in model.lower():
+            return "bedrock"
+
+        # Only anthropic and gemini have prefixes unambiguous enough to infer from.
+        # Bedrock matches any model containing a dot (so "gpt-3.5-turbo") and Azure
+        # matches every OpenAI prefix, so both would steal models from openai here.
+        for provider in ("anthropic", "gemini"):
+            if cls._matches_provider_pattern(model, provider):
+                return provider
+
         return "openai"
 
     @classmethod
@@ -1039,12 +1055,15 @@ class LLM(BaseLLM):
 
             if not tool_calls or not available_functions:
                 if response_model and self.is_litellm:
+                    from crewai.hooks.llm_hooks import model_call_hooks_dispatched
+
                     instructor_instance = InternalInstructor(
                         content=full_response,
                         model=response_model,
                         llm=self,
                     )
-                    result = instructor_instance.to_pydantic()
+                    with model_call_hooks_dispatched():
+                        result = instructor_instance.to_pydantic()
                     structured_response = result.model_dump_json()
                     usage_dict = self._usage_to_dict(usage_info)
                     self._handle_emit_call_events(
@@ -1241,6 +1260,7 @@ class LLM(BaseLLM):
             str: The response text
         """
         if response_model and self.is_litellm:
+            from crewai.hooks.llm_hooks import model_call_hooks_dispatched
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1256,7 +1276,8 @@ class LLM(BaseLLM):
                 model=response_model,
                 llm=self,
             )
-            result = instructor_instance.to_pydantic()
+            with model_call_hooks_dispatched():
+                result = instructor_instance.to_pydantic()
             structured_response = result.model_dump_json()
             self._handle_emit_call_events(
                 response=structured_response,
@@ -1396,6 +1417,7 @@ class LLM(BaseLLM):
             str: The response text
         """
         if response_model and self.is_litellm:
+            from crewai.hooks.llm_hooks import model_call_hooks_dispatched
             from crewai.utilities.internal_instructor import InternalInstructor
 
             messages = params.get("messages", [])
@@ -1411,7 +1433,8 @@ class LLM(BaseLLM):
                 model=response_model,
                 llm=self,
             )
-            result = instructor_instance.to_pydantic()
+            with model_call_hooks_dispatched():
+                result = instructor_instance.to_pydantic()
             structured_response = result.model_dump_json()
             self._handle_emit_call_events(
                 response=structured_response,
@@ -1874,8 +1897,11 @@ class LLM(BaseLLM):
                         msg_role: Literal["assistant"] = "assistant"
                         message["role"] = msg_role
 
-            if not self._invoke_before_llm_call_hooks(messages, from_agent):
-                raise ValueError("LLM call blocked by before_llm_call hook")
+            try:
+                self._invoke_before_llm_call_hooks(messages, from_agent)
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
 
             with suppress_warnings():
                 if callbacks and len(callbacks) > 0:
@@ -2015,6 +2041,12 @@ class LLM(BaseLLM):
                     if message.get("role") == "system":
                         msg_role: Literal["assistant"] = "assistant"
                         message["role"] = msg_role
+
+            try:
+                self._invoke_before_llm_call_hooks(messages, from_agent)
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
 
             with suppress_warnings():
                 if callbacks and len(callbacks) > 0:
@@ -2226,14 +2258,14 @@ class LLM(BaseLLM):
                 )
             return messages
 
-        provider = self.provider or self.model
+        formatter = self._multimodal_formatter_name()
 
         for msg in messages:
             files = msg.get("files")
             if not files:
                 continue
 
-            content_blocks = format_multimodal_content(files, provider)
+            content_blocks = format_multimodal_content(files, formatter)
             if not content_blocks:
                 msg.pop("files", None)
                 continue
@@ -2250,6 +2282,13 @@ class LLM(BaseLLM):
             msg.pop("files", None)
 
         return messages
+
+    def _multimodal_formatter_name(self) -> str:
+        # Identity (`self.provider`) stays e.g. anthropic. LiteLLM's completion()
+        # API is OpenAI-shaped and translates blocks to the vendor on the wire.
+        if self.is_litellm:
+            return "openai"
+        return self.provider or self.model
 
     async def _aprocess_message_files(
         self, messages: list[LLMMessage]
@@ -2277,14 +2316,14 @@ class LLM(BaseLLM):
                 )
             return messages
 
-        provider = self.provider or self.model
+        formatter = self._multimodal_formatter_name()
 
         for msg in messages:
             files = msg.get("files")
             if not files:
                 continue
 
-            content_blocks = await aformat_multimodal_content(files, provider)
+            content_blocks = await aformat_multimodal_content(files, formatter)
             if not content_blocks:
                 msg.pop("files", None)
                 continue
@@ -2362,6 +2401,14 @@ class LLM(BaseLLM):
             and messages[-1]["role"] == "assistant"
         ):
             return [*messages, {"role": "user", "content": ""}]  # type: ignore[list-item]
+
+        # Handle Gemini models - they require the last message to not be 'assistant'
+        if (
+            ("gemini" in self.model.lower() or "google" in self.model.lower())
+            and messages
+            and messages[-1]["role"] == "assistant"
+        ):
+            return [*messages, {"role": "user", "content": "Please continue."}]  # type: ignore[list-item]
 
         if not self.is_anthropic:
             return messages  # type: ignore[return-value]
@@ -2451,6 +2498,18 @@ class LLM(BaseLLM):
             logging.error(f"Failed to get supported params: {e!s}")
             return True  # Default to True
 
+    def _context_window_model_name(self) -> str:
+        """Return the model id used for context-window lookup.
+
+        LiteLLM keeps provider-qualified names such as ``openai/gpt-5.6-luna``.
+        Strip a recognized provider prefix so those resolve through the same
+        mapping as the bare model id. Unrecognized prefixes are left intact.
+        """
+        prefix, separator, remainder = self.model.partition("/")
+        if separator and remainder and prefix.lower() in SUPPORTED_NATIVE_PROVIDERS:
+            return remainder
+        return self.model
+
     def get_context_window_size(self) -> int:
         """
         Returns the context window size, using 75% of the maximum to avoid
@@ -2474,8 +2533,9 @@ class LLM(BaseLLM):
         self.context_window_size = int(
             DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
         )
+        model_name = self._context_window_model_name()
         for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if self.model.startswith(key):
+            if model_name.startswith(key) or self.model.startswith(key):
                 self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
         return self.context_window_size
 

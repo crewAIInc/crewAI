@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 from typing import Any, ParamSpec, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from typing_extensions import TypeIs
 
 from crewai.flow.flow_definition import (
@@ -276,6 +277,50 @@ def _build_persistence_definition(value: Any) -> FlowPersistenceDefinition | Non
     )
 
 
+def _resolves_to_itself(cls: type[BaseModel]) -> bool:
+    """Whether ``module.qualname`` would actually import ``cls`` back.
+
+    The loader splits a ref on its last dot, so a nested class projects
+    ``module.Outer.Route`` and ``module.Outer`` is then looked up as a module
+    that does not exist. A ``create_model()`` class held only in a local or a
+    dict is not reachable under its qualname either. Checked against the
+    already-imported module so projecting never triggers an import.
+    """
+    module = sys.modules.get(cls.__module__)
+    return module is not None and getattr(module, cls.__qualname__, None) is cls
+
+
+def _python_reference(value: Any) -> dict[str, str] | None:
+    """Project a class as the dotted ``{"python": ...}`` ref the contract uses.
+
+    The same shape a crew agent's ``response_format`` is declared with, so a
+    projected definition reloads into a live class instead of an opaque ref.
+    """
+    if value is None:
+        return None
+
+    reason: str | None = None
+    if not isinstance(value, type) or not issubclass(value, BaseModel):
+        reason = "is not a Pydantic model class"
+    elif "<locals>" in value.__qualname__:
+        # A dotted path through ``<locals>`` cannot be imported back, so the
+        # ref would only fail when something tried to reload it.
+        reason = "is defined inside a function and cannot be imported by path"
+    elif not _resolves_to_itself(value):
+        reason = "cannot be imported by its module path"
+
+    if reason is not None:
+        logger.warning(
+            "Conversational router response_format %r %s; dropping it from the "
+            "definition. The router will use its synthesized response format.",
+            value,
+            reason,
+        )
+        return None
+
+    return {"python": f"{value.__module__}.{value.__qualname__}"}
+
+
 def _build_conversational_router_definition(
     router_config: Any,
     path: str,
@@ -286,9 +331,8 @@ def _build_conversational_router_definition(
     routes = getattr(router_config, "routes", None)
     return FlowConversationalRouterDefinition(
         prompt=getattr(router_config, "prompt", None),
-        response_format=_serialize_static_value(
-            getattr(router_config, "response_format", None),
-            f"{path}.response_format",
+        response_format=_python_reference(
+            getattr(router_config, "response_format", None)
         ),
         llm=_serialize_static_value(getattr(router_config, "llm", None), f"{path}.llm"),
         routes=[str(route) for route in routes] if routes is not None else None,
@@ -370,6 +414,14 @@ def _build_method_definition(
             deep=True, update={"do": _method_action(method)}
         )
 
+    if method_definition.description is None:
+        # The router catalog describes a route from its handler's docstring.
+        # Projecting it makes that description survive serialization, so a
+        # declaration can carry one too.
+        docstring = getattr(method, "__doc__", None)
+        if docstring and docstring.strip():
+            method_definition.description = docstring.strip().split("\n", 1)[0].strip()
+
     human_feedback = _build_human_feedback_definition(method, f"{path}.human_feedback")
     if human_feedback is not None:
         method_definition.human_feedback = human_feedback
@@ -432,6 +484,20 @@ def _iter_flow_methods(flow_class: type) -> dict[str, Any]:
     return methods
 
 
+def _flow_definition_validation_error(
+    flow_class: type, exc: ValidationError
+) -> ValueError:
+    errors = exc.errors()
+    if errors:
+        detail = errors[0].get("msg", str(exc))
+        if isinstance(detail, str) and detail.startswith("Value error, "):
+            detail = detail.removeprefix("Value error, ")
+    else:
+        detail = str(exc)
+    class_name = getattr(flow_class, "__name__", "Flow")
+    return ValueError(f"Invalid flow definition for {class_name}: {detail}")
+
+
 def _build_flow_definition_from_class(
     flow_class: type,
     namespace: dict[str, Any] | None = None,
@@ -455,15 +521,18 @@ def _build_flow_definition_from_class(
     if docstring:
         description = docstring.strip()
 
-    definition = FlowDefinition(
-        name=getattr(flow_class, "__name__", "Flow"),
-        description=description,
-        state=_build_state_definition(flow_class),
-        config=_build_config_definition(flow_class),
-        persist=_build_persistence_definition(flow_class),
-        conversational=_build_conversational_definition(flow_class),
-        methods=methods,
-    )
+    try:
+        definition = FlowDefinition(
+            name=getattr(flow_class, "__name__", "Flow"),
+            description=description,
+            state=_build_state_definition(flow_class),
+            config=_build_config_definition(flow_class),
+            persist=_build_persistence_definition(flow_class),
+            conversational=_build_conversational_definition(flow_class),
+            methods=methods,
+        )
+    except ValidationError as exc:
+        raise _flow_definition_validation_error(flow_class, exc) from exc
     log_flow_definition_issues(definition)
     return definition
 
