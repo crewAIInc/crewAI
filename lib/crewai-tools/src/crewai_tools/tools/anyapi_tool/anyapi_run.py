@@ -5,6 +5,12 @@ from pydantic import BaseModel, Field
 from crewai_tools.tools.anyapi_tool.anyapi_base import AnyApiToolBase
 
 
+# AnyAPI answers 402 with three codes and only one of them is about the wallet:
+# a spend cap on the key or on an authorized connection stops a call whatever the
+# balance is, so adding funds would not help.
+CAP_CODES = frozenset({"key_cap_exceeded", "grant_cap_exceeded"})
+
+
 class AnyApiRunToolSchema(BaseModel):
     """Input for AnyApiRunTool."""
 
@@ -42,17 +48,23 @@ class AnyApiRunTool(AnyApiToolBase):
         try:
             result = self._client.run(slug=slug, input=input)
         except self._anyapi.InsufficientBalanceError as exc:
-            return f"AnyAPI run failed for '{slug}': {exc}{self._balance_hint()}"
-        except self._anyapi.AnyAPIError as exc:
+            return f"AnyAPI run failed for '{slug}': {exc}{self._spend_hint(exc)}"
+        except (self._anyapi.AnyAPIError, ValueError) as exc:
             return f"AnyAPI run failed for '{slug}': {exc}"
 
         return self._as_json(result)
 
-    def _balance_hint(self) -> str:
-        """Report the wallet balance so an agent knows how much is left."""
+    def _spend_hint(self, exc: Any) -> str:
+        """Point at the limit that stopped the call: a spend cap, or the wallet."""
+        if getattr(exc, "code", None) in CAP_CODES:
+            return (
+                " A spend limit on this key, not the wallet balance, stopped the "
+                "call. Raise it at https://getanyapi.com/dashboard."
+            )
+
         try:
             balance = self._client.balance()
-        except self._anyapi.AnyAPIError:
+        except (self._anyapi.AnyAPIError, ValueError):
             return ""
 
         return (

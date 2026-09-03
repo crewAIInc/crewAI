@@ -35,7 +35,6 @@ class AnyApiToolBase(BaseTool):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    api_key: str | None = None
     base_url: str = ANYAPI_BASE_URL
     package_dependencies: list[str] = Field(default=["getanyapi"])
     env_vars: list[EnvVar] = Field(
@@ -48,6 +47,9 @@ class AnyApiToolBase(BaseTool):
         ]
     )
 
+    # The key is never a model field: CrewAI serializes a tool's fields into
+    # checkpoints and telemetry, and a secret must not travel with them. Only the
+    # SDK client below holds it.
     _anyapi: Any = PrivateAttr(default=None)
     _client: Any = PrivateAttr(default=None)
 
@@ -55,11 +57,11 @@ class AnyApiToolBase(BaseTool):
         super().__init__(**kwargs)
         self._anyapi = import_getanyapi()
 
-        self.api_key = api_key or os.getenv("ANYAPI_API_KEY")
-        if not self.api_key:
+        key = api_key or os.getenv("ANYAPI_API_KEY")
+        if not key:
             raise ValueError(MISSING_KEY_HINT)
 
-        self._client = self._anyapi.AnyAPI(api_key=self.api_key, base_url=self.base_url)
+        self._client = self._anyapi.AnyAPI(api_key=key, base_url=self.base_url)
 
     def _as_json(self, payload: Any) -> str:
         """Serialize an SDK response the way the AnyAPI wire publishes it."""

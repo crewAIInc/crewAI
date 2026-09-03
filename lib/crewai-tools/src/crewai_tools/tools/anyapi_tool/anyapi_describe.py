@@ -33,7 +33,7 @@ class AnyApiDescribeTool(AnyApiToolBase):
     def _run(self, slug: str, **_: Any) -> str:
         try:
             entry = self._client.describe(slug)
-        except self._anyapi.AnyAPIError as exc:
+        except (self._anyapi.AnyAPIError, ValueError) as exc:
             return f"AnyAPI could not describe '{slug}': {exc}"
 
         return self._as_json(entry)

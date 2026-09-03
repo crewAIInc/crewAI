@@ -132,6 +132,23 @@ def test_search_returns_ranked_catalog_matches(client):
     assert payload["results"][0]["pricing"]["from"]["maxUsd"] == 0.002
 
 
+def _validation_error() -> ValidationError:
+    """A real pydantic failure, as the SDK raises when a 200 body is malformed."""
+    try:
+        Balance.model_validate({"usd": "plenty"})
+    except ValidationError as exc:
+        return exc
+    raise AssertionError("a malformed balance body should not validate")
+
+
+def test_the_key_never_reaches_serialized_tool_state(client):
+    tool = AnyApiSearchTool(api_key="aa_live_secret")
+
+    assert "api_key" not in tool.model_dump()
+    assert "aa_live_secret" not in tool.model_dump_json()
+    assert "aa_live_secret" not in repr(tool)
+
+
 def test_search_reports_an_api_error(client):
     client.search.side_effect = AnyAPIError("gateway unreachable", status=0)
 
@@ -140,6 +157,16 @@ def test_search_reports_an_api_error(client):
 
     assert "AnyAPI catalog search failed" in result
     assert "gateway unreachable" in result
+
+
+def test_search_reports_a_malformed_discovery_response(client):
+    client.search.side_effect = ValueError("malformed discovery response: search")
+
+    tool = AnyApiSearchTool(api_key="aa_live_test")
+    result = tool.run(query="instagram profile")
+
+    assert "AnyAPI catalog search failed" in result
+    assert "malformed discovery response" in result
 
 
 def test_describe_returns_the_input_schema(client):
@@ -161,6 +188,18 @@ def test_describe_reports_an_api_error(client):
 
     assert "AnyAPI could not describe 'instagram.nope'" in result
     assert "no such endpoint" in result
+
+
+def test_describe_reports_a_malformed_discovery_response(client):
+    client.describe.side_effect = ValueError(
+        "malformed discovery response: detail latency is required"
+    )
+
+    tool = AnyApiDescribeTool(api_key="aa_live_test")
+    result = tool.run(slug="instagram.profile")
+
+    assert "AnyAPI could not describe 'instagram.profile'" in result
+    assert "detail latency is required" in result
 
 
 def test_run_returns_output_and_usd_cost(client):
@@ -195,6 +234,15 @@ def test_run_reports_an_api_error(client):
     assert "upstream refused the input" in result
 
 
+def test_run_reports_a_malformed_durable_response(client):
+    client.run.side_effect = _validation_error()
+
+    tool = AnyApiRunTool(api_key="aa_live_test")
+    result = tool.run(slug="instagram.profile", input={"handle": "nasa"})
+
+    assert result.startswith("AnyAPI run failed for 'instagram.profile'")
+
+
 def test_run_reports_the_wallet_balance_when_funds_run_out(client):
     client.run.side_effect = InsufficientBalanceError(
         "insufficient balance", status=402
@@ -214,6 +262,33 @@ def test_run_survives_a_failed_balance_lookup(client):
         "insufficient balance", status=402
     )
     client.balance.side_effect = AnyAPIError("gateway unreachable", status=0)
+
+    tool = AnyApiRunTool(api_key="aa_live_test")
+    result = tool.run(slug="instagram.profile", input={"handle": "nasa"})
+
+    assert result.endswith("insufficient balance")
+
+
+def test_run_names_the_spend_cap_rather_than_the_wallet(client):
+    client.run.side_effect = InsufficientBalanceError(
+        "this API key has reached its spend limit",
+        status=402,
+        code="key_cap_exceeded",
+    )
+
+    tool = AnyApiRunTool(api_key="aa_live_test")
+    result = tool.run(slug="instagram.profile", input={"handle": "nasa"})
+
+    assert "spend limit" in result
+    assert "Add funds" not in result
+    client.balance.assert_not_called()
+
+
+def test_run_survives_a_malformed_balance_response(client):
+    client.run.side_effect = InsufficientBalanceError(
+        "insufficient balance", status=402
+    )
+    client.balance.side_effect = _validation_error()
 
     tool = AnyApiRunTool(api_key="aa_live_test")
     result = tool.run(slug="instagram.profile", input={"handle": "nasa"})

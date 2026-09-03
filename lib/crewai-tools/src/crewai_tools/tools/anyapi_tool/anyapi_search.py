@@ -61,7 +61,7 @@ class AnyApiSearchTool(AnyApiToolBase):
                 platform=platform,
                 limit=limit,
             )
-        except self._anyapi.AnyAPIError as exc:
+        except (self._anyapi.AnyAPIError, ValueError) as exc:
             return f"AnyAPI catalog search failed for '{query}': {exc}"
 
         return self._as_json(results)

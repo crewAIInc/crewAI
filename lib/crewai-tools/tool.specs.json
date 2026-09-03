@@ -178,18 +178,6 @@
         },
         "description": "Fetch one AnyAPI endpoint's input schema and price before running it.",
         "properties": {
-          "api_key": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Api Key"
-          },
           "base_url": {
             "default": "https://api.getanyapi.com",
             "title": "Base Url",
@@ -281,18 +269,6 @@
         },
         "description": "Execute one AnyAPI endpoint and return its normalized output.",
         "properties": {
-          "api_key": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Api Key"
-          },
           "base_url": {
             "default": "https://api.getanyapi.com",
             "title": "Base Url",
@@ -391,18 +367,6 @@
         },
         "description": "Search the AnyAPI catalog for the API that answers a question.",
         "properties": {
-          "api_key": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Api Key"
-          },
           "base_url": {
             "default": "https://api.getanyapi.com",
             "title": "Base Url",
