@@ -447,7 +447,7 @@ class TaskMarketRequesterTool(BaseTool):
             raise RuntimeError(
                 "Taskmarket CLI did not report the legal enforcement state."
             )
-        if enforcement_enabled and not legal_data.get("accepted"):
+        if enforcement_enabled and legal_data.get("accepted") is not True:
             raise RuntimeError(
                 "The current Taskmarket legal bundle requires acceptance."
             )
@@ -457,12 +457,16 @@ class TaskMarketRequesterTool(BaseTool):
             raise RuntimeError(
                 "Taskmarket CLI returned an invalid USDC balance."
             ) from exc
+        if not balance.is_finite():
+            raise RuntimeError(
+                "Taskmarket CLI returned a non-finite USDC balance."
+            )
         if balance < reward:
             raise RuntimeError(
                 f"Insufficient Base USDC: need {_format_usdc(reward)}, have {balance}."
             )
         wallet_address = address_data.get("address")
-        if not isinstance(wallet_address, str):
+        if not isinstance(wallet_address, str) or not wallet_address.strip():
             raise RuntimeError(
                 "Taskmarket CLI did not return the acting wallet address."
             )

@@ -332,14 +332,29 @@ def test_concurrent_create_calls_cannot_duplicate_spend(
             "did not report the legal enforcement state",
         ),
         (
+            ("legal", "status"),
+            {"ok": True, "data": {"enforcementEnabled": True, "accepted": "false"}},
+            "requires acceptance",
+        ),
+        (
             ("address",),
             {"ok": True, "data": {}},
+            "did not return the acting wallet address",
+        ),
+        (
+            ("address",),
+            {"ok": True, "data": {"address": "   "}},
             "did not return the acting wallet address",
         ),
         (
             ("wallet", "balance"),
             {"ok": True, "data": {"balanceUsdc": "0.10"}},
             "Insufficient Base USDC",
+        ),
+        (
+            ("wallet", "balance"),
+            {"ok": True, "data": {"balanceUsdc": "Infinity"}},
+            "non-finite USDC balance",
         ),
     ],
 )
