@@ -58,7 +58,7 @@ def is_truncated(finish_reason: str | None) -> bool:
 
 def warn_if_truncated(
     finish_reason: str | None,
-    max_tokens: int | None = None,
+    max_tokens: int | float | None = None,
     model: str | None = None,
 ) -> bool:
     """Log a warning when a response was cut off by the token cap.
