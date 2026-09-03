@@ -1662,6 +1662,9 @@ exa-py = [
 firecrawl-py = [
     { name = "firecrawl-py" },
 ]
+getanyapi = [
+    { name = "getanyapi" },
+]
 github = [
     { name = "gitpython" },
     { name = "pygithub" },
@@ -1762,6 +1765,7 @@ requires-dist = [
     { name = "e2b-code-interpreter", marker = "extra == 'e2b'", specifier = "~=2.6.0" },
     { name = "exa-py", marker = "extra == 'exa-py'", specifier = ">=1.8.7" },
     { name = "firecrawl-py", marker = "extra == 'firecrawl-py'", specifier = ">=1.8.0" },
+    { name = "getanyapi", marker = "extra == 'getanyapi'", specifier = ">=0.35.3" },
     { name = "gitpython", marker = "extra == 'github'", specifier = ">=3.1.58,<4" },
     { name = "hyperbrowser", marker = "extra == 'hyperbrowser'", specifier = ">=0.18.0" },
     { name = "langchain-apify", marker = "extra == 'apify'", specifier = ">=0.1.2,<1.0.0" },
@@ -1803,7 +1807,7 @@ requires-dist = [
     { name = "weaviate-client", marker = "extra == 'weaviate-client'", specifier = ">=4.10.2" },
     { name = "youtube-transcript-api", specifier = "~=1.2.2" },
 ]
-provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
+provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "getanyapi", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
 
 [[package]]
 name = "cryptography"
@@ -2766,6 +2770,20 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a7/b2/4140c69c6a66432916b26158687e821ba631a4c9273c474343badf84d3ba/future-1.0.0.tar.gz", hash = "sha256:bd2968309307861edae1458a4f8a4f3598c03be43b97521076aebf5d94c07b05", size = 1228490, upload-time = "2024-02-21T11:52:38.461Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/da/71/ae30dadffc90b9006d77af76b393cb9dfbfc9629f339fc1574a1c52e6806/future-1.0.0-py3-none-any.whl", hash = "sha256:929292d34f5872e70396626ef385ec22355a1fae8ad29e1a734c3e43f9fbc216", size = 491326, upload-time = "2024-02-21T11:52:35.956Z" },
+]
+
+[[package]]
+name = "getanyapi"
+version = "0.35.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8a/ed/d6fa8e55c8d22952cafa3babd51880bde75e3d296819c3b498d13e20a63d/getanyapi-0.35.3.tar.gz", hash = "sha256:26deac93c5ec3c1bd4bd70dd07ef105c11334a4f189653ac4d89c9ccae76cb6e", size = 349760, upload-time = "2026-09-01T06:58:28.175Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/73/5a/61394b66c43e2e903f68535e22f23751776b9dacb833da8a7fc01f4e54ea/getanyapi-0.35.3-py3-none-any.whl", hash = "sha256:cf4dccdc97ddffbe9ad09c317a303eed781f1f3c62da73fe8d2602cdfeea928f", size = 383613, upload-time = "2026-09-01T06:58:26.694Z" },
 ]
 
 [[package]]

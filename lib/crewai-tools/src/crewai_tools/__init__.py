@@ -8,6 +8,9 @@ from crewai_tools.aws.bedrock.knowledge_base.retriever_tool import (
 from crewai_tools.aws.s3.reader_tool import S3ReaderTool
 from crewai_tools.aws.s3.writer_tool import S3WriterTool
 from crewai_tools.tools.ai_mind_tool.ai_mind_tool import AIMindTool
+from crewai_tools.tools.anyapi_tool.anyapi_describe import AnyApiDescribeTool
+from crewai_tools.tools.anyapi_tool.anyapi_run import AnyApiRunTool
+from crewai_tools.tools.anyapi_tool.anyapi_search import AnyApiSearchTool
 from crewai_tools.tools.apify_actors_tool.apify_actors_tool import ApifyActorsTool
 from crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool import ArxivPaperTool
 from crewai_tools.tools.brave_search_tool.brave_image_tool import BraveImageSearchTool
@@ -226,6 +229,9 @@ from crewai_tools.tools.zapier_action_tool.zapier_action_tool import ZapierActio
 
 __all__ = [
     "AIMindTool",
+    "AnyApiDescribeTool",
+    "AnyApiRunTool",
+    "AnyApiSearchTool",
     "ApifyActorsTool",
     "ArxivPaperTool",
     "BedrockInvokeAgentTool",
