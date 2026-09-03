@@ -207,9 +207,10 @@ exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = 
 # gitpython <3.1.59 has PYSEC-2026-3785/GHSA-7833-fr7j-v32q (.gitmodules [include] file disclosure),
 # PYSEC-2026-3786/GHSA-284h-m62q-gf8w (multi-line git-config re-serialization RCE),
 # PYSEC-2026-3787/GHSA-8mcc-hrx5-hvxc (clone --separate-git-dir omitted from unsafe options),
-# and PYSEC-2026-3788/GHSA-5xxx-qhh7-9287 (Repo.blame --contents/-S arbitrary file read);
-# force 3.1.59+. 3.1.59 is older than the global 3-day cutoff, so no
-# exclude-newer-package override is needed.
+# and PYSEC-2026-3788/GHSA-5xxx-qhh7-9287 (Repo.blame --contents/-S arbitrary file read).
+# gitpython 3.1.60 hardens config escape semantics, diff/actor parsing, and
+# filesystem diffs; force 3.1.60+. 3.1.60 is older than the global 3-day cutoff,
+# so no exclude-newer-package override is needed.
 # pyasn1 <0.6.4 has GHSA-8ppf-4f7h-5ppj and GHSA-hm4w-wwcw-mr6r; force 0.6.4+.
 # urllib3 <2.7.0 has GHSA-qccp-gfcp-xxvc (ProxyManager cross-origin redirect leaks Authorization/Cookie) and GHSA-mf9v-mfxr-j63j (streaming decompression-bomb bypass); force 2.7.0+.
 # langsmith <0.8.18 has GHSA-3644-q5cj-c5c7 (public prompt manifest deserialization, SSRF/secret disclosure)
@@ -262,7 +263,7 @@ override-dependencies = [
     "pypdf>=6.16.1,<7",
     "uv>=0.11.15,<1",
     "python-multipart>=0.0.27,<1",
-    "gitpython>=3.1.59,<4",
+    "gitpython>=3.1.60,<4",
     "pyasn1>=0.6.4",
     "langsmith>=0.8.18,<1",
     "authlib>=1.6.12",

@@ -109,8 +109,9 @@ stagehand = [
 github = [
     # <3.1.59 has PYSEC-2026-3785/GHSA-7833-fr7j-v32q,
     # PYSEC-2026-3786/GHSA-284h-m62q-gf8w, PYSEC-2026-3787/GHSA-8mcc-hrx5-hvxc,
-    # and PYSEC-2026-3788/GHSA-5xxx-qhh7-9287; force 3.1.59+.
-    "gitpython>=3.1.59,<4",
+    # and PYSEC-2026-3788/GHSA-5xxx-qhh7-9287. 3.1.60 hardens config escapes,
+    # diff/actor parsing, and filesystem diffs; force 3.1.60+.
+    "gitpython>=3.1.60,<4",
     "PyGithub==1.59.1",
 ]
 rag = [
