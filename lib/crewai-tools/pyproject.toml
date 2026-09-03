@@ -93,6 +93,10 @@ apify = [
     "langchain-apify>=0.1.2,<1.0.0",
 ]
 
+getanyapi = [
+    "getanyapi>=0.35.3",
+]
+
 databricks-sdk = [
     "databricks-sdk>=0.46.0",
 ]

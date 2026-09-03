@@ -118,6 +118,361 @@
       }
     },
     {
+      "description": "Fetch the full definition of one AnyAPI endpoint by slug: its input JSON Schema, its output JSON Schema and its USD price per request. Call this after 'AnyAPI catalog search' and before the first 'AnyAPI endpoint run' on a slug. Build the run input only from the schema this returns, because every AnyAPI input schema is strict and an invented field name fails the call.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for AnyAPI, created at https://getanyapi.com/dashboard",
+          "name": "ANYAPI_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "AnyAPI endpoint schema",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Fetch one AnyAPI endpoint's input schema and price before running it.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.getanyapi.com",
+            "title": "Base Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "AnyApiDescribeTool",
+        "type": "object"
+      },
+      "name": "AnyApiDescribeTool",
+      "package_dependencies": [
+        "getanyapi"
+      ],
+      "run_params_schema": {
+        "description": "Input for AnyApiDescribeTool.",
+        "properties": {
+          "slug": {
+            "description": "The slug of the AnyAPI endpoint to describe, as returned by 'AnyAPI catalog search', for example 'instagram.profile'.",
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug"
+        ],
+        "title": "AnyApiDescribeToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Run one AnyAPI endpoint by slug with a JSON input and return its normalized output. Use 'AnyAPI catalog search' first to pick a slug, then 'AnyAPI endpoint schema' to read that slug's input schema, and only then run it: the input schema is strict, so an invented field name fails the call. The response reports what the call cost in USD as costUsd. Failed calls are never charged, because AnyAPI fails over across sources automatically under one price.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for AnyAPI, created at https://getanyapi.com/dashboard",
+          "name": "ANYAPI_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "AnyAPI endpoint run",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Execute one AnyAPI endpoint and return its normalized output.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.getanyapi.com",
+            "title": "Base Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "AnyApiRunTool",
+        "type": "object"
+      },
+      "name": "AnyApiRunTool",
+      "package_dependencies": [
+        "getanyapi"
+      ],
+      "run_params_schema": {
+        "description": "Input for AnyApiRunTool.",
+        "properties": {
+          "input": {
+            "additionalProperties": true,
+            "description": "The endpoint input, built from the input schema returned by 'AnyAPI endpoint schema'. The schema is strict, so an unknown field fails the call. Example for the instagram.profile endpoint: {\"handle\": \"nasa\"}.",
+            "title": "Input",
+            "type": "object"
+          },
+          "slug": {
+            "description": "The slug of the AnyAPI endpoint to run, for example 'instagram.profile'.",
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "input"
+        ],
+        "title": "AnyApiRunToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search the AnyAPI catalog for an API that returns the data you need. AnyAPI is one gateway to hundreds of scraping and data APIs (social media, search results, general web data), reached with one key and paid per request in USD. Use this tool first. It returns matching slugs with a short description and the USD price per request, but no input schemas. Pick a slug from the results, then call 'AnyAPI endpoint schema' on it, and only then 'AnyAPI endpoint run'.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for AnyAPI, created at https://getanyapi.com/dashboard",
+          "name": "ANYAPI_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "AnyAPI catalog search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Search the AnyAPI catalog for the API that answers a question.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://api.getanyapi.com",
+            "title": "Base Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "AnyApiSearchTool",
+        "type": "object"
+      },
+      "name": "AnyApiSearchTool",
+      "package_dependencies": [
+        "getanyapi"
+      ],
+      "run_params_schema": {
+        "description": "Input for AnyApiSearchTool.",
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional category filter, for example 'social' or 'search'.",
+            "title": "Category"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional cap on how many matching APIs to return.",
+            "title": "Limit"
+          },
+          "platform": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional platform filter, matched against the slug prefix, for example 'instagram', 'tiktok' or 'linkedin'.",
+            "title": "Platform"
+          },
+          "query": {
+            "description": "What the data is, in plain words, for example 'instagram profile' or 'google maps reviews'.",
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "AnyApiSearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "Fetches metadata from Arxiv based on a search query and optionally downloads PDFs.",
       "env_vars": [],
       "humanized_name": "Arxiv Paper Fetcher and Downloader",
