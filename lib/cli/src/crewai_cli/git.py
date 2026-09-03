@@ -201,3 +201,12 @@ class Repository:
             return result.stdout.strip()
         except subprocess.CalledProcessError:
             return None
+
+
+def initialize_if_git_available(path: Path) -> bool:
+    """Initialize a Git repository when Git is available."""
+    if not Repository.is_git_installed():
+        return False
+
+    subprocess.run(["git", "init"], cwd=path, check=True)  # noqa: S607
+    return True

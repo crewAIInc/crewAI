@@ -1,12 +1,16 @@
 from pathlib import Path
 import subprocess
 from typing import Any
+from urllib.parse import quote
+import webbrowser
 
 from crewai_core.plus_api import CreateCrewPayload
+from crewai_core.telemetry import DeploySource
 from rich.console import Console
 
 from crewai_cli import git
 from crewai_cli.command import BaseCommand, PlusAPIMixin
+from crewai_cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai_cli.deploy.archive import create_project_zip
 from crewai_cli.deploy.validate import DeployValidator, Severity, render_report
 from crewai_cli.utils import fetch_and_json_env_file, get_project_name
@@ -14,6 +18,8 @@ from crewai_cli.utils import fetch_and_json_env_file, get_project_name
 
 console = Console()
 _MISSING_LOCKFILE_ERROR_CODES = {"missing_lockfile"}
+_DEPLOYMENT_ID_KEYS = ("deployment_id", "deploymentId")
+_DEPLOYMENT_FALLBACK_IDENTIFIER_KEYS = ("id",)
 
 
 def _run_predeploy_validation(
@@ -77,6 +83,39 @@ def _env_summary(env_vars: dict[str, str]) -> str:
         return "0 env vars"
     keys = ", ".join(sorted(env_vars))
     return f"{len(env_vars)} env vars: {keys}"
+
+
+def _deployment_identifier(json_response: dict[str, Any]) -> str | None:
+    """Return the best available identifier for a deployment show URL."""
+    deployment = json_response.get("deployment")
+
+    for key in _DEPLOYMENT_ID_KEYS:
+        value = json_response.get(key)
+        if value:
+            return str(value)
+
+    if isinstance(deployment, dict):
+        for key in _DEPLOYMENT_ID_KEYS + _DEPLOYMENT_FALLBACK_IDENTIFIER_KEYS:
+            value = deployment.get(key)
+            if value:
+                return str(value)
+
+    for key in _DEPLOYMENT_FALLBACK_IDENTIFIER_KEYS:
+        value = json_response.get(key)
+        if value:
+            return str(value)
+
+    return None
+
+
+def _deployment_page_url(base_url: str, json_response: dict[str, Any]) -> str | None:
+    """Build the CrewAI deployment show URL for a response payload."""
+    identifier = _deployment_identifier(json_response)
+    if not identifier:
+        return None
+    return (
+        f"{base_url.rstrip('/')}/crewai_plus/deployments/{quote(identifier, safe='')}"
+    )
 
 
 def _needs_lockfile_for_deploy(project_root: Path | None = None) -> bool:
@@ -165,6 +204,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         console.print("crewai deploy status")
         console.print(" or")
         console.print(f'crewai deploy status --uuid "{json_response["uuid"]}"')
+        self._open_deployment_page(json_response)
 
     def _display_logs(self, log_messages: list[dict[str, Any]]) -> None:
         """
@@ -178,17 +218,91 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
                 f"{log_message['timestamp']} - {log_message['level']}: {log_message['message']}"
             )
 
-    def deploy(self, uuid: str | None = None, skip_validate: bool = False) -> None:
+    def _open_deployment_page(self, json_response: dict[str, Any]) -> None:
+        """Open the deployment show page in the user's browser when possible."""
+        base_url = str(
+            getattr(self.plus_api_client, "base_url", None)
+            or DEFAULT_CREWAI_ENTERPRISE_URL
+        )
+        deployment_url = self._deployment_page_url(json_response, base_url)
+        if not deployment_url:
+            return
+
+        console.print(f"\nOpening deployment page: [blue]{deployment_url}[/blue]")
+        try:
+            opened = webbrowser.open(deployment_url)
+        except Exception:
+            opened = False
+
+        if not opened:
+            console.print(
+                "Could not open the deployment page automatically.",
+                style="yellow",
+            )
+
+    def _deployment_page_url(
+        self,
+        json_response: dict[str, Any],
+        base_url: str,
+    ) -> str | None:
+        """Build the deployment show URL, resolving UUID-only responses if needed."""
+        deployment_url = _deployment_page_url(base_url, json_response)
+        if deployment_url:
+            return deployment_url
+
+        identifier = self._deployment_identifier_from_status(json_response)
+        if not identifier:
+            return None
+
+        return (
+            f"{base_url.rstrip('/')}/crewai_plus/deployments/"
+            f"{quote(identifier, safe='')}"
+        )
+
+    def _deployment_identifier_from_status(
+        self,
+        json_response: dict[str, Any],
+    ) -> str | None:
+        """Resolve the deployment page id from status without failing the command."""
+        crew_uuid = json_response.get("uuid")
+        if not crew_uuid:
+            return None
+
+        try:
+            response = self.plus_api_client.crew_status_by_uuid(str(crew_uuid))
+        except Exception:
+            return None
+
+        if not getattr(response, "is_success", False):
+            return None
+
+        try:
+            status_response = response.json()
+        except ValueError:
+            return None
+
+        if not isinstance(status_response, dict):
+            return None
+
+        return _deployment_identifier(status_response)
+
+    def deploy(
+        self,
+        uuid: str | None = None,
+        skip_validate: bool = False,
+        source: DeploySource = "cli",
+    ) -> None:
         """
         Deploy a crew using either UUID or project name.
 
         Args:
             uuid (Optional[str]): The UUID of the crew to deploy.
             skip_validate (bool): Skip pre-deploy validation checks.
+            source (DeploySource): Where the deployment was initiated from.
         """
         if not _prepare_project_for_deploy(skip_validate):
             return
-        self._telemetry.start_deployment_span(uuid)
+        self._telemetry.start_deployment_span(uuid, source=source)
         console.print("Starting deployment...", style="bold blue")
         repository = self._prepare_git_repository()
         remote_repo_url = repository.origin_url() if repository else None
@@ -230,17 +344,23 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             raise ValueError("Deployment status response did not include a uuid")
         return str(uuid)
 
-    def create_crew(self, confirm: bool = False, skip_validate: bool = False) -> None:
+    def create_crew(
+        self,
+        confirm: bool = False,
+        skip_validate: bool = False,
+        source: DeploySource = "cli",
+    ) -> None:
         """
         Create a new crew deployment.
 
         Args:
             confirm (bool): Whether to skip the interactive confirmation prompt.
             skip_validate (bool): Skip pre-deploy validation checks.
+            source (DeploySource): Where the deployment was initiated from.
         """
         if not _prepare_project_for_deploy(skip_validate):
             return
-        self._telemetry.create_crew_deployment_span()
+        self._telemetry.create_crew_deployment_span(source=source)
         console.print("Creating deployment...", style="bold blue")
         env_vars = fetch_and_json_env_file()
         repository = self._prepare_git_repository()
@@ -255,7 +375,16 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             response = self._create_crew_from_zip(env_vars, repository, confirm)
 
         self._validate_response(response)
-        self._display_creation_success(response.json())
+        json_response = response.json()
+        # After _validate_response, not before: it raises SystemExit on a failed
+        # create, so the span cannot fire for a deployment that was not made. This
+        # is the first point at which the uuid exists -- the pre-flight span at the
+        # top of this method counts the attempt and cannot carry it.
+        created_uuid = json_response.get("uuid")
+        self._telemetry.crew_deployment_created_span(
+            uuid=str(created_uuid) if created_uuid else None, source=source
+        )
+        self._display_creation_success(json_response)
 
     def _prepare_git_repository(self) -> git.Repository | None:
         """Prepare Git for deploy while preserving remote deploy when possible."""
@@ -438,6 +567,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         console.print("crewai deploy push")
         console.print(" or")
         console.print(f"crewai deploy push --uuid {json_response['uuid']}")
+        self._open_deployment_page(json_response)
 
     def list_crews(self) -> None:
         """

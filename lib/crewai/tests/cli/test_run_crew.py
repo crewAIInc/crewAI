@@ -14,7 +14,7 @@ from crewai_cli.run_crew import (
     _execute_uv_script,
     _load_json_crew_for_tui,
     _missing_input_names,
-    _prompt_for_missing_inputs,
+    _resolve_crew_inputs,
 )
 
 
@@ -105,7 +105,7 @@ def test_missing_input_names_scans_agent_and_task_placeholders() -> None:
     ]
 
 
-def test_prompt_for_missing_inputs_merges_runtime_values(monkeypatch) -> None:
+def test_resolve_crew_inputs_merges_runtime_values(monkeypatch) -> None:
     crew = SimpleNamespace(
         agents=[SimpleNamespace(role="Researcher", goal="Cover {topic}", backstory="")],
         tasks=[
@@ -123,9 +123,10 @@ def test_prompt_for_missing_inputs_merges_runtime_values(monkeypatch) -> None:
             return values["audience"]
         raise AssertionError(f"Unexpected prompt: {label}")
 
-    monkeypatch.setattr("crewai_cli.run_crew.click.prompt", prompt)
+    # Prompting now lives in the shared crewai_cli.input_prompt helper.
+    monkeypatch.setattr("crewai_cli.input_prompt.click.prompt", prompt)
 
-    assert _prompt_for_missing_inputs(crew, {"topic": "AI"}) == {
+    assert _resolve_crew_inputs(crew, {"topic": "AI"}, None, interactive=True) == {
         "topic": "AI",
         "audience": "developers",
     }

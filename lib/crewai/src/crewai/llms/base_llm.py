@@ -42,8 +42,13 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.types.streaming import StreamSession
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.pydantic_schema_utils import serialize_model_class
+from crewai.utilities.streaming import (
+    create_frame_generator,
+    create_frame_streaming_state,
+)
 
 
 try:
@@ -67,6 +72,15 @@ class JsonResponseFormat(TypedDict):
     type: Literal["json_object"]
 
 
+class LLMCallBlockedError(ValueError):
+    """A ``before_llm_call`` hook blocked the call by returning ``False``.
+
+    A ``ValueError`` so the fail-open handlers around internal model calls keep
+    absorbing it, and its own type so a provider can report it as the decision
+    it is instead of letting it read as a provider outage.
+    """
+
+
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
 _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
@@ -76,6 +90,9 @@ _current_call_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 )
 _call_stop_override_var: contextvars.ContextVar[dict[int, list[str]] | None] = (
     contextvars.ContextVar("_call_stop_override_var", default=None)
+)
+_call_stream_override_var: contextvars.ContextVar[dict[int, bool] | None] = (
+    contextvars.ContextVar("_call_stream_override_var", default=None)
 )
 
 
@@ -113,6 +130,19 @@ def call_stop_override(
         yield
     finally:
         _call_stop_override_var.reset(token)
+
+
+@contextmanager
+def call_stream_override(llm: BaseLLM, stream: bool) -> Generator[None, None, None]:
+    """Override streaming for ``llm`` within the current call scope."""
+    current = _call_stream_override_var.get()
+    new_overrides: dict[int, bool] = dict(current) if current else {}
+    new_overrides[id(llm)] = stream
+    token = _call_stream_override_var.set(new_overrides)
+    try:
+        yield
+    finally:
+        _call_stream_override_var.reset(token)
 
 
 def get_current_call_id() -> str:
@@ -213,6 +243,13 @@ class BaseLLM(BaseModel, ABC):
                 return override
         return self.stop
 
+    def _effective_stream(self) -> bool | None:
+        """Return the call-scoped streaming mode for this instance."""
+        overrides = _call_stream_override_var.get()
+        if overrides is not None and id(self) in overrides:
+            return overrides[id(self)]
+        return self.stream
+
     _token_usage: dict[str, int] = PrivateAttr(
         default_factory=lambda: {
             "total_tokens": 0,
@@ -246,7 +283,10 @@ class BaseLLM(BaseModel, ABC):
             data["stop"] = list(stop)
 
         if not data.get("provider"):
-            data["provider"] = "openai"
+            model = data.get("model") or ""
+            data["provider"] = (
+                cls._extract_provider(model) if isinstance(model, str) else "openai"
+            )
 
         known_fields = set(cls.model_fields.keys())
         extras = {k: v for k, v in data.items() if k not in known_fields}
@@ -317,6 +357,39 @@ class BaseLLM(BaseModel, ABC):
             TimeoutError: If the LLM request times out.
             RuntimeError: If the LLM request fails for other reasons.
         """
+
+    def stream_events(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Task | None = None,
+        from_agent: BaseAgent | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> StreamSession[Any]:
+        """Run the LLM call and stream scoped public ``StreamFrame`` events."""
+        result_holder: list[Any] = []
+        state = create_frame_streaming_state(result_holder, use_async=False)
+        output_holder: list[StreamSession[Any]] = []
+
+        def run_llm_call() -> Any:
+            with call_stream_override(self, True):
+                return self.call(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
+
+        stream_session: StreamSession[Any] = StreamSession(
+            sync_iterator=create_frame_generator(state, run_llm_call, output_holder)
+        )
+        output_holder.append(stream_session)
+        return stream_session
 
     async def acall(
         self,
@@ -446,6 +519,10 @@ class BaseLLM(BaseModel, ABC):
         """
         return False
 
+    def _multimodal_formatter_name(self) -> str:
+        # Content-block schema key for crewai_files. Identity stays on self.provider.
+        return self.provider or self.model
+
     def format_text_content(self, text: str) -> dict[str, Any]:
         """Format text as a content block for the LLM.
 
@@ -509,7 +586,7 @@ class BaseLLM(BaseModel, ABC):
         if max_tokens is None:
             max_tokens = self._effective_max_tokens()
         if stream is None:
-            stream = self.stream
+            stream = self._effective_stream()
         if seed is None:
             seed = self.seed
         if stop_sequences is None:
@@ -590,6 +667,28 @@ class BaseLLM(BaseModel, ABC):
                 model=self.model,
                 call_id=get_current_call_id(),
             ),
+        )
+
+    def _emit_call_denied_event(
+        self,
+        denial: Exception,
+        from_task: Task | None = None,
+        from_agent: BaseAgent | None = None,
+    ) -> None:
+        """Report a hook deny as a deny rather than as a provider failure.
+
+        The call still owes its started event a terminal one, so the failed event
+        is emitted — with a message that names the decision instead of blaming
+        the provider for an outage that never happened.
+        """
+        from crewai.hooks.dispatch import source_name
+
+        source = source_name(getattr(denial, "source", None))
+        reason = getattr(denial, "reason", str(denial))
+        message = f"LLM call denied by {source or 'hook'}: {reason}"
+        logging.warning(message)
+        self._emit_call_failed_event(
+            error=message, from_task=from_task, from_agent=from_agent
         )
 
     def _emit_stream_chunk_event(
@@ -805,7 +904,7 @@ class BaseLLM(BaseModel, ABC):
                 )
             return messages
 
-        provider = getattr(self, "provider", None) or getattr(self, "model", "openai")
+        formatter = self._multimodal_formatter_name()
         api = getattr(self, "api", None)
 
         for msg in messages:
@@ -817,7 +916,7 @@ class BaseLLM(BaseModel, ABC):
             text = existing_content if isinstance(existing_content, str) else None
 
             content_blocks = format_multimodal_content(
-                files, provider, api=api, prefer_upload=self.prefer_upload, text=text
+                files, formatter, api=api, prefer_upload=self.prefer_upload, text=text
             )
             if not content_blocks:
                 msg.pop("files", None)
@@ -905,8 +1004,15 @@ class BaseLLM(BaseModel, ABC):
     def get_token_usage_summary(self) -> UsageMetrics:
         """Get summary of token usage for this LLM instance.
 
+        The counters are cumulative for the lifetime of this instance: they
+        grow across every call made through it, including calls issued by
+        different agents sharing the instance. For usage scoped to a single
+        call, snapshot before and after and use
+        ``UsageMetrics.delta_since`` (agent kickoff results already report
+        per-call usage this way).
+
         Returns:
-            Dictionary with token usage totals
+            UsageMetrics with this instance's lifetime token usage totals.
         """
         return UsageMetrics(**self._token_usage)
 
@@ -915,65 +1021,69 @@ class BaseLLM(BaseModel, ABC):
         messages: list[LLMMessage],
         from_agent: BaseAgent | None = None,
     ) -> bool:
-        """Invoke before_llm_call hooks for direct LLM calls (no agent context).
+        """Invoke before_llm_call hooks for an LLM call reaching the provider.
 
         This method should be called by native provider implementations before
-        making the actual LLM call when from_agent is None (direct calls).
+        making the actual LLM call. It no-ops when an enclosing caller — the
+        executor — already dispatched the hooks for this same call.
 
         Args:
             messages: The messages being sent to the LLM
-            from_agent: The agent making the call (None for direct calls)
+            from_agent: The agent making the call, when there is one
 
         Returns:
-            True if LLM call should proceed, False if blocked by hook
+            True, so a provider may still guard the call with ``if not ...``.
+            A block is raised, never returned.
+
+        Raises:
+            HookAborted: If a hook raised it. The deny reaches the caller intact
+                instead of being flattened into a provider-style error.
+            LLMCallBlockedError: If a legacy hook blocked the call by returning
+                ``False``. A ``ValueError``, so the fail-open handlers around
+                internal model calls keep absorbing it.
 
         Example:
             >>> # In a native provider's call() method:
-            >>> if from_agent is None and not self._invoke_before_llm_call_hooks(
-            ...     messages, from_agent
-            ... ):
-            ...     raise ValueError("LLM call blocked by hook")
+            >>> self._invoke_before_llm_call_hooks(messages, from_agent)
         """
-        if from_agent is not None:
-            return True
-
         from crewai_core.printer import PRINTER
 
+        from crewai.hooks.dispatch import InterceptionPoint, dispatch
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
-            get_before_llm_call_hooks,
+            LegacyHookBlocked,
+            before_llm_call_reducer,
+            model_call_hooks_already_dispatched,
         )
 
-        before_hooks = get_before_llm_call_hooks()
-        if not before_hooks:
+        if model_call_hooks_already_dispatched():
             return True
 
+        # No early global-list guard: dispatch resolves global + execution-scoped
+        # hooks and has its own no-op fast path, so scoped hooks still run here.
         hook_context = LLMCallHookContext(
             executor=None,
             messages=messages,
             llm=self,
-            agent=None,
+            agent=from_agent,
             task=None,
             crew=None,
         )
-        verbose = getattr(from_agent, "verbose", True) if from_agent else True
 
         try:
-            for hook in before_hooks:
-                result = hook(hook_context)
-                if result is False:
-                    if verbose:
-                        PRINTER.print(
-                            content="LLM call blocked by before_llm_call hook",
-                            color="yellow",
-                        )
-                    return False
-        except Exception as e:
-            if verbose:
-                PRINTER.print(
-                    content=f"Error in before_llm_call hook: {e}",
-                    color="yellow",
-                )
+            dispatch(
+                InterceptionPoint.PRE_MODEL_CALL,
+                hook_context,
+                reducer=before_llm_call_reducer,
+            )
+        except LegacyHookBlocked as blocked:
+            PRINTER.print(
+                content="LLM call blocked by before_llm_call hook",
+                color="yellow",
+            )
+            raise LLMCallBlockedError(
+                "LLM call blocked by before_llm_call hook"
+            ) from blocked
 
         return True
 
@@ -983,63 +1093,53 @@ class BaseLLM(BaseModel, ABC):
         response: str,
         from_agent: BaseAgent | None = None,
     ) -> str:
-        """Invoke after_llm_call hooks for direct LLM calls (no agent context).
+        """Invoke after_llm_call hooks for an LLM call that reached the provider.
 
         This method should be called by native provider implementations after
-        receiving the LLM response when from_agent is None (direct calls).
+        receiving the LLM response. It no-ops when an enclosing caller — the
+        executor — already dispatched the hooks for this same call.
 
         Args:
             messages: The messages that were sent to the LLM
             response: The response from the LLM
-            from_agent: The agent that made the call (None for direct calls)
+            from_agent: The agent that made the call, when there is one
 
         Returns:
             The potentially modified response string
 
         Example:
             >>> # In a native provider's call() method:
-            >>> if from_agent is None and isinstance(result, str):
+            >>> if isinstance(result, str):
             ...     result = self._invoke_after_llm_call_hooks(
             ...         messages, result, from_agent
             ...     )
         """
-        if from_agent is not None or not isinstance(response, str):
-            return response
-
-        from crewai_core.printer import PRINTER
-
+        from crewai.hooks.dispatch import InterceptionPoint, dispatch
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
-            get_after_llm_call_hooks,
+            after_llm_call_reducer,
+            model_call_hooks_already_dispatched,
         )
 
-        after_hooks = get_after_llm_call_hooks()
-        if not after_hooks:
+        if model_call_hooks_already_dispatched() or not isinstance(response, str):
             return response
 
+        # No early global-list guard: dispatch resolves global + execution-scoped
+        # hooks and has its own no-op fast path, so scoped hooks still run here.
         hook_context = LLMCallHookContext(
             executor=None,
             messages=messages,
             llm=self,
-            agent=None,
+            agent=from_agent,
             task=None,
             crew=None,
             response=response,
         )
-        verbose = getattr(from_agent, "verbose", True) if from_agent else True
-        modified_response = response
 
-        try:
-            for hook in after_hooks:
-                result = hook(hook_context)
-                if result is not None and isinstance(result, str):
-                    modified_response = result
-                    hook_context.response = modified_response
-        except Exception as e:
-            if verbose:
-                PRINTER.print(
-                    content=f"Error in after_llm_call hook: {e}",
-                    color="yellow",
-                )
+        dispatch(
+            InterceptionPoint.POST_MODEL_CALL,
+            hook_context,
+            reducer=after_llm_call_reducer,
+        )
 
-        return modified_response
+        return hook_context.response if hook_context.response is not None else response

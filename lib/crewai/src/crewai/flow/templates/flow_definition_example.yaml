@@ -1,0 +1,69 @@
+schema: crewai.flow/v1
+name: ResearchReviewFlow
+state:
+  type: json_schema
+  json_schema:
+    type: object
+    properties:
+      topic:
+        type: string
+      audience:
+        type: string
+    required:
+      - topic
+      - audience
+  default:
+    topic: AI agent orchestration
+    audience: platform engineering leaders
+methods:
+  research_brief:
+    start: true
+    do:
+      call: crew
+      with:
+        agents:
+          researcher:
+            role: Research analyst
+            goal: Research {topic} for {audience}
+            backstory: Expert at concise technical research.
+          reviewer:
+            role: Strategy reviewer
+            goal: Decide whether the research needs an executive follow-up
+            backstory: Experienced at reviewing technical briefs for leaders.
+        tasks:
+          - name: research_task
+            description: Research {topic} for {audience}.
+            expected_output: Key findings and tradeoffs.
+            agent: researcher
+          - name: review_task
+            description: Review the research and decide if an executive follow-up is needed.
+            expected_output: 'A brief review ending with `needs_followup: true` or `needs_followup: false`.'
+            agent: reviewer
+        inputs:
+          topic: Default topic
+          audience: Default audience
+      inputs:
+        topic: "${state.topic}"
+        audience: "${state.audience}"
+  route_followup:
+    listen: research_brief
+    router: true
+    emit:
+      - followup
+      - done
+    do:
+      call: agent
+      with:
+        role: Follow-up router
+        goal: 'Return exactly one bare value: followup or done. Do not include explanation.'
+        backstory: Skilled at routing reviewed research briefs.
+        input: "Reviewed research: ${outputs.research_brief.raw}"
+  write_followup:
+    listen: followup
+    do:
+      call: agent
+      with:
+        role: Executive communications specialist
+        goal: Draft a concise executive follow-up from the reviewed research
+        backstory: Writes crisp follow-ups for technical leaders.
+        input: "${outputs.research_brief.raw}"

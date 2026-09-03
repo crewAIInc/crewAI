@@ -16,6 +16,7 @@ import pytest
 from crewai_cli.deploy.validate import (
     DeployValidator,
     Severity,
+    _JSONProjectEnvironmentError,
     normalize_package_name,
 )
 
@@ -111,7 +112,12 @@ def _run_without_import_check(root: Path) -> DeployValidator:
 
 
 def _scaffold_json_crew(root: Path, *, task_agent: str = "researcher") -> None:
-    (root / "pyproject.toml").write_text(_make_pyproject(name="json_crew"))
+    (root / "pyproject.toml").write_text(
+        _make_pyproject(
+            name="json_crew",
+            extra='[tool.crewai]\ntype = "crew"\ndefinition = "crew.jsonc"',
+        )
+    )
     (root / "uv.lock").write_text("# dummy uv lockfile\n")
     agents_dir = root / "agents"
     agents_dir.mkdir()
@@ -200,6 +206,33 @@ def test_json_runtime_fields_are_deploy_errors(tmp_path: Path) -> None:
     assert "runtime-only" in finding.detail
 
 
+def test_json_project_environment_failure_has_actionable_hint(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _scaffold_json_crew(tmp_path)
+
+    def fail_in_project_environment(*args: object) -> list[str]:
+        raise _JSONProjectEnvironmentError("uv run failed")
+
+    monkeypatch.setattr(
+        "crewai_cli.deploy.validate._validate_json_project",
+        fail_in_project_environment,
+    )
+
+    validator = DeployValidator(project_root=tmp_path)
+    validator.run()
+
+    finding = next(
+        result
+        for result in validator.results
+        if result.code == "json_validation_environment_failed"
+    )
+    assert finding.title == "Could not validate the JSON crew in the project environment"
+    assert finding.detail == "uv run failed"
+    assert "Install `uv`" in finding.hint
+    assert "uv sync" in finding.hint
+
+
 def test_json_crew_requires_agents_dir_without_classic_errors(tmp_path: Path) -> None:
     _scaffold_json_crew(tmp_path)
     for path in (tmp_path / "agents").iterdir():
@@ -221,7 +254,6 @@ def test_json_crew_reports_project_metadata_before_invalid_json(
     tmp_path: Path,
 ) -> None:
     _scaffold_json_crew(tmp_path)
-    (tmp_path / "pyproject.toml").unlink()
     (tmp_path / "uv.lock").unlink()
     (tmp_path / "crew.jsonc").write_text('{"agents": ["researcher"], "tasks": []}\n')
 
@@ -229,7 +261,6 @@ def test_json_crew_reports_project_metadata_before_invalid_json(
     v.run()
 
     codes = _codes(v)
-    assert "missing_pyproject" in codes
     assert "missing_lockfile" in codes
     assert "invalid_crew_json" in codes
     assert "missing_src_dir" not in codes
@@ -546,17 +577,43 @@ def test_is_json_crew_defers_to_declared_flow_type(tmp_path):
     assert DeployValidator(project_root=tmp_path)._is_json_crew is False
 
 
-def test_is_json_crew_true_for_declared_crew_type(tmp_path):
+def test_is_json_crew_true_for_declared_crew_definition(tmp_path):
+    (tmp_path / "crew.jsonc").write_text("{}")
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "demo"\nversion = "0.1.0"\n\n'
+        '[tool.crewai]\ntype = "crew"\ndefinition = "crew.jsonc"\n'
+    )
+
+    assert DeployValidator(project_root=tmp_path)._is_json_crew is True
+
+
+def test_is_json_crew_false_for_declared_crew_without_definition(tmp_path):
     (tmp_path / "crew.jsonc").write_text("{}")
     (tmp_path / "pyproject.toml").write_text(
         '[project]\nname = "demo"\nversion = "0.1.0"\n\n'
         '[tool.crewai]\ntype = "crew"\n'
     )
 
-    assert DeployValidator(project_root=tmp_path)._is_json_crew is True
+    assert DeployValidator(project_root=tmp_path)._is_json_crew is False
 
 
-def test_is_json_crew_true_without_pyproject(tmp_path):
+def test_json_crew_non_string_definition_reports_invalid_definition(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "demo"\nversion = "0.1.0"\n\n'
+        '[tool.crewai]\ntype = "crew"\ndefinition = ["crew.jsonc"]\n'
+    )
+
+    v = DeployValidator(project_root=tmp_path)
+    v.run()
+
+    finding = next(r for r in v.results if r.code == "invalid_crew_definition")
+    assert finding.severity is Severity.ERROR
+    assert "must be a string" in finding.detail
+
+
+def test_is_json_crew_false_without_pyproject(tmp_path):
     (tmp_path / "crew.jsonc").write_text("{}")
 
-    assert DeployValidator(project_root=tmp_path)._is_json_crew is True
+    assert DeployValidator(project_root=tmp_path)._is_json_crew is False

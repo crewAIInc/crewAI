@@ -233,7 +233,7 @@ def test_persistence_with_base_model(tmp_path):
     assert message.role == "user"
     assert message.type == "text"
     assert message.content == "Hello, World!"
-    assert isinstance(flow.state._unwrap(), State)
+    assert isinstance(flow.state, State)
 
 
 def test_fork_with_restore_from_state_id(tmp_path):

@@ -3,9 +3,11 @@ import shutil
 import sys
 
 import click
+from crewai_core.telemetry import Telemetry
 import tomli
 
 from crewai_cli.constants import ENV_VARS, MODELS
+from crewai_cli.git import initialize_if_git_available
 from crewai_cli.provider import (
     get_provider_data,
     select_model,
@@ -13,6 +15,7 @@ from crewai_cli.provider import (
 )
 from crewai_cli.utils import (
     copy_template,
+    get_or_create_project_id,
     is_dmn_mode_enabled,
     load_env_vars,
     write_env_file,
@@ -317,5 +320,13 @@ def create_crew(
             src_file = templates_dir / file_name
             dst_file = src_folder / file_name
             copy_template(src_file, dst_file, name, class_name, folder_name)
+
+    if not parent_folder:
+        # Minted at creation so the project has a stable identity from run one.
+        project_id = get_or_create_project_id(folder_path / "pyproject.toml")
+        # Emitted only here, not in the parent_folder branch: that branch adds a crew to
+        # an existing project, which is not an acquisition and mints no id.
+        Telemetry().project_created_span("crew", project_id)
+        initialize_if_git_available(folder_path)
 
     click.secho(f"Crew {name} created successfully!", fg="green", bold=True)

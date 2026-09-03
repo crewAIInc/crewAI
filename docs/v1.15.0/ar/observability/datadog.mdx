@@ -1,0 +1,109 @@
+---
+title: تكامل Datadog
+description: تعلم كيفية دمج Datadog مع CrewAI لإرسال تتبعات مراقبة LLM إلى Datadog.
+icon: dog
+mode: "wide"
+---
+
+# دمج Datadog مع CrewAI
+
+سيوضح هذا الدليل كيفية دمج **[Datadog LLM Observability](https://docs.datadoghq.com/llm_observability/)** مع **CrewAI** باستخدام [أداة Datadog للتجهيز التلقائي](https://docs.datadoghq.com/llm_observability/instrumentation/auto_instrumentation?tab=python). بنهاية هذا الدليل، ستتمكن من إرسال تتبعات مراقبة LLM إلى Datadog وعرض تشغيلات وكلاء CrewAI في [عرض التنفيذ الوكيلي](https://docs.datadoghq.com/llm_observability/monitoring/agent_monitoring) من Datadog LLM Observability.
+
+## ما هو Datadog LLM Observability؟
+
+[Datadog LLM Observability](https://www.datadoghq.com/product/llm-observability/) يساعد مهندسي الذكاء الاصطناعي وعلماء البيانات ومطوري التطبيقات على تطوير وتقييم ومراقبة تطبيقات LLM بسرعة. حسّن جودة المخرجات والأداء والتكاليف والمخاطر الإجمالية بثقة مع تجارب منظمة وتتبع شامل عبر وكلاء الذكاء الاصطناعي والتقييمات.
+
+## البدء
+
+### تثبيت الاعتماديات
+
+```shell
+pip install ddtrace crewai crewai-tools
+```
+
+### تعيين متغيرات البيئة
+
+إذا لم يكن لديك مفتاح API من Datadog، يمكنك [إنشاء حساب](https://www.datadoghq.com/) و[الحصول على مفتاح API](https://docs.datadoghq.com/account_management/api-app-keys/#api-keys).
+
+ستحتاج أيضاً إلى تحديد اسم تطبيق ML في متغيرات البيئة التالية. تطبيق ML هو تجميع لتتبعات LLM Observability المرتبطة بتطبيق محدد قائم على LLM.
+
+```shell
+export DD_API_KEY=<YOUR_DD_API_KEY>
+export DD_SITE=<YOUR_DD_SITE>
+export DD_LLMOBS_ENABLED=true
+export DD_LLMOBS_ML_APP=<YOUR_ML_APP_NAME>
+export DD_LLMOBS_AGENTLESS_ENABLED=true
+export DD_APM_TRACING_ENABLED=false
+```
+
+بالإضافة إلى ذلك، قم بإعداد مفاتيح API لمزودي LLM
+
+```shell
+export OPENAI_API_KEY=<YOUR_OPENAI_API_KEY>
+export ANTHROPIC_API_KEY=<YOUR_ANTHROPIC_API_KEY>
+export GEMINI_API_KEY=<YOUR_GEMINI_API_KEY>
+...
+```
+
+### إنشاء تطبيق وكيل CrewAI
+
+```python
+# crewai_agent.py
+from crewai import Agent, Task, Crew
+
+from crewai_tools import (
+    WebsiteSearchTool
+)
+
+web_rag_tool = WebsiteSearchTool()
+
+writer = Agent(
+    role="Writer",
+    goal="You make math engaging and understandable for young children through poetry",
+    backstory="You're an expert in writing haikus but you know nothing of math.",
+    tools=[web_rag_tool],
+)
+
+task = Task(
+    description=("What is {multiplication}?"),
+    expected_output=("Compose a haiku that includes the answer."),
+    agent=writer
+)
+
+crew = Crew(
+    agents=[writer],
+    tasks=[task],
+    share_crew=False
+)
+
+output = crew.kickoff(dict(multiplication="2 * 2"))
+```
+
+### تشغيل التطبيق مع التجهيز التلقائي من Datadog
+
+مع تعيين [متغيرات البيئة](#تعيين-متغيرات-البيئة)، يمكنك الآن تشغيل التطبيق مع التجهيز التلقائي من Datadog.
+
+```shell
+ddtrace-run python crewai_agent.py
+```
+
+### عرض التتبعات في Datadog
+
+بعد تشغيل التطبيق، يمكنك عرض التتبعات في [عرض تتبعات Datadog LLM Observability](https://app.datadoghq.com/llm/traces)، باختيار اسم تطبيق ML الذي اخترته من القائمة المنسدلة أعلى اليسار.
+
+النقر على تتبع سيعرض لك تفاصيل التتبع، بما في ذلك إجمالي الرموز المستخدمة وعدد استدعاءات LLM والنماذج المستخدمة والتكلفة المقدرة.
+
+<Frame>
+<img src="/images/datadog-llm-observability-1.png" alt="عرض تتبع Datadog LLM Observability" />
+</Frame>
+
+بالإضافة إلى ذلك، يمكنك عرض رسم بياني لتنفيذ التتبع، الذي يوضح تدفق التحكم والبيانات للتتبع.
+
+<Frame>
+<img src="/images/datadog-llm-observability-2.png" alt="عرض تدفق تنفيذ وكيل Datadog LLM Observability" />
+</Frame>
+
+## المراجع
+
+- [Datadog LLM Observability](https://www.datadoghq.com/product/llm-observability/)
+- [التجهيز التلقائي لـ CrewAI من Datadog LLM Observability](https://docs.datadoghq.com/llm_observability/instrumentation/auto_instrumentation?tab=python#crew-ai)

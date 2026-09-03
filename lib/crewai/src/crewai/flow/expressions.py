@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from functools import lru_cache
 import json
-from typing import TYPE_CHECKING, Any, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias, cast
 
 from crewai.utilities.serialization import to_serializable
 
@@ -18,6 +21,165 @@ else:
 _CEL_MACROS_WITH_LOCAL_BINDINGS = frozenset(
     {"all", "exists", "exists_one", "filter", "map"}
 )
+
+
+@dataclass(frozen=True)
+class _CelRunContext:
+    now: datetime
+
+
+@dataclass(frozen=True)
+class _CelFunctionSpec:
+    annotation: Any
+    factory: Callable[[_CelRunContext], Callable[..., Any]]
+
+
+@lru_cache(maxsize=1)
+def _cel_function_registry() -> dict[str, _CelFunctionSpec]:
+    from celpy import celtypes
+
+    return {
+        "now": _CelFunctionSpec(
+            annotation=celtypes.FunctionType,
+            factory=lambda run: lambda: celtypes.TimestampType(run.now),
+        ),
+    }
+
+
+def _cel_environment() -> Any:
+    from celpy import Environment
+
+    return Environment(
+        annotations={
+            name: spec.annotation for name, spec in _cel_function_registry().items()
+        }
+    )
+
+
+def _cel_functions(run_context: _CelRunContext) -> dict[str, Any]:
+    return {
+        name: spec.factory(run_context)
+        for name, spec in _cel_function_registry().items()
+    }
+
+
+def _find_cel_eval_error(value: Any) -> Exception | None:
+    from celpy.evaluation import CELEvalError
+
+    if isinstance(value, CELEvalError):
+        return value
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if (error := _find_cel_eval_error(key)) is not None:
+                return error
+            if (error := _find_cel_eval_error(item)) is not None:
+                return error
+        return None
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            if (error := _find_cel_eval_error(item)) is not None:
+                return error
+    return None
+
+
+def _stringify_cel_value(value: Any) -> str:
+    from celpy.adapter import CELJSONEncoder
+
+    if isinstance(value, str):
+        return value
+    return json.dumps(value, cls=CELJSONEncoder, ensure_ascii=False)
+
+
+class _ExpressionSegment(NamedTuple):
+    source: str
+
+
+def _marker_end(value: str, start: int) -> int:
+    from celpy.celparser import CELParser
+
+    CELParser()
+    parser: Any = CELParser.CEL_PARSER
+    depth = 1
+    try:
+        for token in parser.lex(value[start:]):
+            if token.type == "LBRACE":
+                depth += 1
+            elif token.type == "RBRACE":
+                depth -= 1
+                if depth == 0:
+                    return start + int(token.start_pos)
+    except Exception as e:
+        raise ExpressionError(
+            f"unterminated or invalid ${{...}} expression in {value!r}: {e}"
+        ) from e
+    raise ExpressionError(f"unterminated ${{...}} expression in {value!r}")
+
+
+@lru_cache(maxsize=256)
+def _parse_template_segments(value: str) -> tuple[str | _ExpressionSegment, ...]:
+    segments: list[str | _ExpressionSegment] = []
+    index = 0
+    while (start := value.find("${", index)) != -1:
+        if start > index:
+            segments.append(value[index:start])
+        end = _marker_end(value, start + 2)
+        source = value[start + 2 : end].strip()
+        if not source:
+            raise ExpressionError(f"empty CEL expression in {value!r}")
+        segments.append(_ExpressionSegment(source))
+        index = end + 1
+    if index < len(value) or not segments:
+        segments.append(value[index:])
+    return tuple(segments)
+
+
+FLOW_TEMPLATE_EXPRESSION_RULES: tuple[str, ...] = (
+    "Use `${...}` inside action mapping strings to read Flow data with CEL. "
+    "Example value: `Ticket: ${state.ticket_id}`.",
+    "Use `state` for input data. Use `outputs.step_name` for a completed "
+    "method result.",
+    "In action mapping strings, keep literal text outside `${...}` and "
+    "interpolate each Flow value directly. Write `Ticket: ${state.ticket_id}`; "
+    "do not assemble the string with CEL `+`.",
+    "If a value is only one `${...}` expression, the result keeps its type. "
+    "Use this for numbers, booleans, objects, and lists.",
+    "If the string has other text, the final value is text. Non-text values "
+    "become JSON. `null` becomes empty text.",
+    "Use `now()` for the current UTC time as a CEL timestamp, frozen for the "
+    "whole run. Use standard CEL on it: `string(now())` for ISO text, "
+    "`now().getFullYear()`, or `now() - duration('24h')`.",
+)
+FLOW_TEMPLATE_EXPRESSION_CONTRACT = " ".join(FLOW_TEMPLATE_EXPRESSION_RULES)
+FLOW_TEMPLATE_EXPRESSION_EXAMPLES: dict[str, tuple[dict[str, str], ...]] = {
+    "yaml": (
+        {
+            "title": "Mix text and Flow data",
+            "code": 'query: "News about ${state.topic}"',
+        },
+        {
+            "title": "Keep a list or number type",
+            "code": 'domains: "${state.domains}"\nlimit: "${state.limit}"',
+        },
+    ),
+    "json": (
+        {
+            "title": "Mix text and Flow data",
+            "code": '{\n  "query": "News about ${state.topic}"\n}',
+        },
+        {
+            "title": "Keep a list or number type",
+            "code": (
+                '{\n  "domains": "${state.domains}",\n  "limit": "${state.limit}"\n}'
+            ),
+        },
+    ),
+}
+
+
+def flow_template_expression_description(prefix: str) -> str:
+    return f"{prefix} {FLOW_TEMPLATE_EXPRESSION_CONTRACT}"
+
+
 if TYPE_CHECKING:
     ExpressionData: TypeAlias = (
         str
@@ -41,9 +203,13 @@ else:
     )
 
 __all__ = [
+    "FLOW_TEMPLATE_EXPRESSION_CONTRACT",
+    "FLOW_TEMPLATE_EXPRESSION_EXAMPLES",
+    "FLOW_TEMPLATE_EXPRESSION_RULES",
     "Expression",
     "ExpressionData",
     "ExpressionError",
+    "flow_template_expression_description",
 ]
 
 
@@ -55,10 +221,15 @@ class Expression:
     """CEL expression helper used for definition-time checks and runtime rendering."""
 
     def __init__(
-        self, value: ExpressionData, *, context: dict[str, Any] | None = None
+        self,
+        value: ExpressionData,
+        *,
+        context: dict[str, Any] | None = None,
+        now: datetime | None = None,
     ) -> None:
         self.value = value
         self.context = context
+        self.now = now
 
     @classmethod
     def from_flow(
@@ -69,7 +240,11 @@ class Expression:
         local_context: dict[str, Any] | None = None,
     ) -> Expression:
         """Build an expression with the standard Flow runtime context."""
-        return cls(value, context=cls._flow_context(flow, local_context=local_context))
+        return cls(
+            value,
+            context=cls._flow_context(flow, local_context=local_context),
+            now=getattr(flow, "_cel_now", None),
+        )
 
     def validate_expression(
         self,
@@ -99,7 +274,7 @@ class Expression:
         allowed_roots: Iterable[str],
         source: str = "with block",
     ) -> None:
-        """Validate nested strings fully wrapped in ``${...}`` as CEL."""
+        """Validate ``${...}`` expressions inside nested strings as CEL."""
         self._validate_template_value(
             self.value, allowed_roots=allowed_roots, source=source
         )
@@ -110,12 +285,22 @@ class Expression:
         return self._evaluate_cel(
             self._require_cel_source(cast(str, self.value)),
             resolved_context or {},
+            self._run_context(),
         )
 
     def render_template(self, context: dict[str, Any] | None = None) -> Any:
-        """Evaluate nested strings fully wrapped in ``${...}`` as CEL."""
+        """Interpolate ``${...}`` expressions inside nested strings as CEL.
+
+        A string that is exactly one ``${...}`` keeps the evaluated value's
+        type; strings mixing literals and expressions render as text.
+        """
         resolved_context = self.context if context is None else context
-        return self._render_template_value(self.value, resolved_context or {})
+        return self._render_template_value(
+            self.value, resolved_context or {}, self._run_context()
+        )
+
+    def _run_context(self) -> _CelRunContext:
+        return _CelRunContext(now=self.now or datetime.now(timezone.utc))
 
     @staticmethod
     def _validate_template_value(
@@ -125,10 +310,23 @@ class Expression:
         source: str,
     ) -> None:
         if isinstance(value, str):
-            expression = Expression._expression_marker_source(value, source=source)
-            if expression is not None:
-                Expression(expression).validate_expression(
-                    allowed_roots=allowed_roots, source=source
+            try:
+                segments = _parse_template_segments(value)
+            except ExpressionError as e:
+                raise ExpressionError(f"{e} at {source}") from None
+            expressions = [
+                segment
+                for segment in segments
+                if isinstance(segment, _ExpressionSegment)
+            ]
+            for index, segment in enumerate(expressions):
+                segment_source = (
+                    source
+                    if len(expressions) == 1
+                    else f"{source} (expression {index + 1})"
+                )
+                Expression(segment.source).validate_expression(
+                    allowed_roots=allowed_roots, source=segment_source
                 )
             return
         if isinstance(value, dict):
@@ -173,55 +371,61 @@ class Expression:
         return context
 
     @staticmethod
-    def _render_template_value(value: ExpressionData, context: dict[str, Any]) -> Any:
+    def _render_template_value(
+        value: ExpressionData, context: dict[str, Any], run_context: _CelRunContext
+    ) -> Any:
         if isinstance(value, str):
-            return Expression._render_template_string(value, context)
+            return Expression._render_template_string(value, context, run_context)
         if isinstance(value, dict):
             return {
-                key: Expression._render_template_value(item, context)
+                key: Expression._render_template_value(item, context, run_context)
                 for key, item in value.items()
             }
         if isinstance(value, list):
-            return [Expression._render_template_value(item, context) for item in value]
+            return [
+                Expression._render_template_value(item, context, run_context)
+                for item in value
+            ]
         return value
 
     @staticmethod
-    def _render_template_string(value: str, context: dict[str, Any]) -> Any:
-        expression = Expression._expression_marker_source(value)
-        if expression is None:
+    def _render_template_string(
+        value: str, context: dict[str, Any], run_context: _CelRunContext
+    ) -> Any:
+        segments = _parse_template_segments(value)
+        expressions = [
+            segment for segment in segments if isinstance(segment, _ExpressionSegment)
+        ]
+        if not expressions:
             return value
-        return Expression._evaluate_cel(expression, context)
+        literals = [segment for segment in segments if isinstance(segment, str)]
+        if len(expressions) == 1 and all(not literal.strip() for literal in literals):
+            return Expression._evaluate_cel(expressions[0].source, context, run_context)
+        rendered: list[str] = []
+        for segment in segments:
+            if isinstance(segment, str):
+                rendered.append(segment)
+                continue
+            result = Expression._evaluate_cel(segment.source, context, run_context)
+            rendered.append("" if result is None else _stringify_cel_value(result))
+        return "".join(rendered)
 
     @staticmethod
-    def _expression_marker_source(
-        value: str, *, source: str | None = None
-    ) -> str | None:
-        """Return CEL source when the trimmed string starts with ``${`` and ends with ``}``."""
-        stripped = value.strip()
-        if not stripped.startswith("${"):
-            return None
-        if not stripped.endswith("}"):
-            return None
-
-        expression = stripped[2:-1].strip()
-        if not expression:
-            if source is None:
-                raise ExpressionError("empty CEL expression in with block")
-            raise ExpressionError(f"empty CEL expression at {source}")
-        return expression
-
-    @staticmethod
-    def _evaluate_cel(expression: str, context: dict[str, Any]) -> Any:
+    def _evaluate_cel(
+        expression: str, context: dict[str, Any], run_context: _CelRunContext
+    ) -> Any:
         try:
-            from celpy import Environment
             from celpy.adapter import CELJSONEncoder, json_to_cel
             from celpy.evaluation import Context
 
-            environment = Environment()
+            environment = _cel_environment()
             program = environment.program(
-                Expression._compile_cel(expression, environment=environment)
+                Expression._compile_cel(expression, environment=environment),
+                functions=_cel_functions(run_context),
             )
             result = program.evaluate(cast(Context, json_to_cel(context)))
+            if (eval_error := _find_cel_eval_error(result)) is not None:
+                raise eval_error
             return json.loads(json.dumps(result, cls=CELJSONEncoder))
         except Exception as e:
             raise ExpressionError(
@@ -236,9 +440,7 @@ class Expression:
         environment: Any | None = None,
     ) -> Any:
         if environment is None:
-            from celpy import Environment
-
-            environment = Environment()
+            environment = _cel_environment()
         try:
             return environment.compile(expression)
         except Exception as e:

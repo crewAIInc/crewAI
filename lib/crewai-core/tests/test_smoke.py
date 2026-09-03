@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
+from unittest.mock import Mock
 
 from crewai_core import (
     constants,
     lock_store,
     paths,
     printer,
+    project,
     user_data,
     version,
 )
-from opentelemetry.sdk.trace import TracerProvider
 import pytest
 
 
@@ -97,7 +99,151 @@ def test_unused_var_warning_silenced() -> None:
     assert os.environ is not None
 
 
-def test_core_telemetry_skips_duplicate_tracer_provider(
+def test_configured_project_definition_resolves_project_local_file(
+    tmp_path: Path,
+) -> None:
+    definition = tmp_path / "crew.jsonc"
+    definition.write_text("{}\n")
+
+    resolved = project.configured_project_definition(
+        "crew",
+        pyproject_data={
+            "tool": {
+                "crewai": {
+                    "type": "crew",
+                    "definition": " crew.jsonc ",
+                }
+            }
+        },
+        project_root=tmp_path,
+    )
+
+    assert resolved == definition.resolve()
+
+
+def test_configured_project_definition_rejects_project_escape(tmp_path: Path) -> None:
+    outside = tmp_path.parent / f"{tmp_path.name}-outside-crew.jsonc"
+    outside.write_text("{}\n")
+
+    with pytest.raises(project.ProjectDefinitionError):
+        project.configured_project_definition(
+            "crew",
+            pyproject_data={
+                "tool": {
+                    "crewai": {
+                        "type": "crew",
+                        "definition": "../outside-crew.jsonc",
+                    }
+                }
+            },
+            project_root=tmp_path,
+        )
+
+
+def test_configured_project_definition_rejects_non_string_definition(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(project.ProjectDefinitionError, match="must be a string"):
+        project.configured_project_definition(
+            "crew",
+            pyproject_data={
+                "tool": {
+                    "crewai": {
+                        "type": "crew",
+                        "definition": ["crew.jsonc"],
+                    }
+                }
+            },
+            project_root=tmp_path,
+        )
+
+
+def test_configured_project_definition_rejects_empty_definition(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(project.ProjectDefinitionError, match="non-empty"):
+        project.configured_project_definition(
+            "crew",
+            pyproject_data={
+                "tool": {
+                    "crewai": {
+                        "type": "crew",
+                        "definition": "  ",
+                    }
+                }
+            },
+            project_root=tmp_path,
+        )
+
+
+@pytest.mark.parametrize("value", ["true", "TRUE", "1", "yes", "on", "  yes  "])
+def test_core_telemetry_disabled_by_conventional_yes_values(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    from crewai_core.telemetry import Telemetry
+
+    monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", value)
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
+    assert Telemetry._is_telemetry_disabled() is True
+
+
+@pytest.mark.parametrize("value", ["false", "0", "no", "off", ""])
+def test_core_telemetry_stays_enabled_for_conventional_no_values(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    from crewai_core.telemetry import Telemetry
+
+    monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", value)
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
+    assert Telemetry._is_telemetry_disabled() is False
+
+
+def test_core_telemetry_unrecognized_disable_value_warns_once(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    from crewai_core.telemetry import Telemetry
+
+    monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", "maybe")
+    Telemetry._warned_env_flags.clear()
+
+    with caplog.at_level(logging.WARNING, logger="crewai_core.telemetry"):
+        assert Telemetry._env_flag_enabled("CREWAI_DISABLE_TELEMETRY") is False
+        assert Telemetry._env_flag_enabled("CREWAI_DISABLE_TELEMETRY") is False
+
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    assert "CREWAI_DISABLE_TELEMETRY" in warnings[0].getMessage()
+    assert "maybe" in warnings[0].getMessage()
+
+
+def test_core_telemetry_never_installs_a_global_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Telemetry must leave the process-wide TracerProvider untouched.
+
+    Installing it globally routed every OTel-instrumented library in the host
+    process - HTTP servers, Redis clients, ORMs - to CrewAI's collector.
+    """
+    from crewai_core.telemetry import Telemetry
+    import opentelemetry.trace as ot
+
+    Telemetry._instance = None
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TELEMETRY", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
+
+    before = ot.get_tracer_provider()
+    telemetry = Telemetry()
+    telemetry.set_tracer()
+    after = ot.get_tracer_provider()
+
+    assert after is before
+    assert telemetry.trace_set is True
+
+
+def test_core_telemetry_records_feature_usage(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from crewai_core.telemetry import Telemetry
@@ -107,24 +253,45 @@ def test_core_telemetry_skips_duplicate_tracer_provider(
     monkeypatch.delenv("CREWAI_DISABLE_TELEMETRY", raising=False)
     monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
 
+    tracer = Mock()
+    span = Mock()
+    tracer.start_span.return_value = span
     monkeypatch.setattr(
-        "crewai_core.telemetry.trace.get_tracer_provider",
-        lambda: TracerProvider(),
-    )
-
-    called = False
-
-    def fail_if_called(provider: object) -> None:
-        nonlocal called
-        called = True
-
-    monkeypatch.setattr(
-        "crewai_core.telemetry.trace.set_tracer_provider",
-        fail_if_called,
+        "crewai_core.telemetry.TracerProvider",
+        lambda **_kwargs: Mock(get_tracer=Mock(return_value=tracer)),
     )
 
     telemetry = Telemetry()
-    telemetry.set_tracer()
+    telemetry.feature_usage_span("cli_usage:view_traces")
 
-    assert called is False
-    assert telemetry.trace_set is True
+    tracer.start_span.assert_called_once_with("Feature Usage")
+    span.set_attribute.assert_any_call("feature", "cli_usage:view_traces")
+    span.end.assert_called_once()
+
+
+def test_core_telemetry_records_flow_creation_version(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from crewai_core.telemetry import Telemetry
+
+    Telemetry._instance = None
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TELEMETRY", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
+    monkeypatch.setattr("crewai_core.version.get_crewai_version", lambda: "1.0.0")
+
+    tracer = Mock()
+    span = Mock()
+    tracer.start_span.return_value = span
+    monkeypatch.setattr(
+        "crewai_core.telemetry.TracerProvider",
+        lambda **_kwargs: Mock(get_tracer=Mock(return_value=tracer)),
+    )
+
+    telemetry = Telemetry()
+    telemetry.flow_creation_span("ResearchFlow")
+
+    tracer.start_span.assert_called_once_with("Flow Creation")
+    span.set_attribute.assert_any_call("crewai_version", "1.0.0")
+    span.set_attribute.assert_any_call("flow_name", "ResearchFlow")
+    span.end.assert_called_once()

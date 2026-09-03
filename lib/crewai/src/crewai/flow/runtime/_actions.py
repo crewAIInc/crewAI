@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 import contextvars
 import inspect
 import os
@@ -24,7 +24,12 @@ from crewai.flow.flow_definition import (
     FlowToolActionDefinition,
 )
 from crewai.flow.runtime._outputs import outputs_by_name
-from crewai.flow.runtime._refs import InvalidRefError, resolve_ref
+from crewai.utilities.declarative_refs import (
+    InvalidRefError,
+    resolve_class_ref,
+    resolve_ref,
+)
+from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
@@ -103,16 +108,17 @@ class ToolAction:
         )
 
     def _build_tool(self) -> Any:
-        target = resolve_ref(self.definition.ref, field="do")
         from crewai.tools import BaseTool
 
-        if not (inspect.isclass(target) and issubclass(target, BaseTool)):
-            raise InvalidRefError(
-                f"invalid tool ref {self.definition.ref!r}; expected a BaseTool class"
-            )
-
+        tool_cls = cast(
+            Callable[[], BaseTool],
+            resolve_class_ref(
+                self.definition.ref,
+                field="do",
+                base_class=BaseTool,
+            ),
+        )
         try:
-            tool_cls = cast(Callable[[], BaseTool], target)
             return tool_cls()
         except Exception as e:
             raise InvalidRefError(
@@ -133,11 +139,12 @@ class CrewAction:
 
         local_context = _pop_local_context(kwargs)
         if self.definition.from_declaration is not None:
-            crew, default_inputs = load_crew(
+            crew, default_inputs = await asyncio.to_thread(
+                load_crew,
                 _resolve_crew_declaration(
                     self.definition.from_declaration,
                     base_dir=self.flow._definition.source_dir,
-                )
+                ),
             )
             input_template = {**default_inputs, **(self.definition.inputs or {})}
         else:
@@ -150,7 +157,9 @@ class CrewAction:
                 **crew_definition.inputs,
                 **(self.definition.inputs or {}),
             }
-            crew, _ = load_crew_from_definition(crew_definition, source="crew action")
+            crew, _ = await asyncio.to_thread(
+                load_crew_from_definition, crew_definition, source="crew action"
+            )
 
         inputs = Expression.from_flow(
             cast(ExpressionData, input_template),
@@ -176,17 +185,52 @@ class AgentAction:
             self.flow,
             local_context=local_context,
         ).render_template()
-        if not isinstance(rendered_input, str):
-            raise ValueError("agent input must render to a string")
+        agent_input = _normalize_agent_input(rendered_input)
 
-        agent, response_format = load_agent_from_definition(
+        agent, response_format = await asyncio.to_thread(
+            load_agent_from_definition,
             self.definition.with_,
             source="agent action",
         )
         return await agent.kickoff_async(
-            rendered_input,
+            agent_input,
             response_format=response_format,
         )
+
+
+def _normalize_agent_input(rendered: Any) -> str | list[LLMMessage]:
+    """Accept a prompt string or a rendered conversation.
+
+    A whole-string ``${...}`` template keeps its evaluated type, so a CEL
+    expression over ``state.messages`` renders a list. ``message_to_llm_dict``
+    drops the metadata and ``None`` keys a serialized message carries, which
+    the agent event schema rejects.
+    """
+    if isinstance(rendered, str):
+        return rendered
+    if isinstance(rendered, list) and all(
+        isinstance(item, Mapping) for item in rendered
+    ):
+        from crewai.flow.conversational import message_to_llm_dict
+
+        # ``message_to_llm_dict`` only drops ``None`` keys for a model input;
+        # a CEL render is plain dicts, so a serialized message keeps its
+        # ``name: None`` -- which the agent event schema rejects.
+        return [
+            cast(
+                LLMMessage,
+                {
+                    key: value
+                    for key, value in message_to_llm_dict(item).items()
+                    if value is not None or key == "content"
+                },
+            )
+            for item in rendered
+        ]
+    raise ValueError(
+        "agent input must render to a string or a list of messages; "
+        f"got {type(rendered).__name__}"
+    )
 
 
 class ExpressionAction:
