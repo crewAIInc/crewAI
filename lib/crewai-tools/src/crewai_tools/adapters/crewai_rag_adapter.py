@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import hashlib
 from typing import TYPE_CHECKING, Any, cast
 import uuid
@@ -54,6 +55,7 @@ class CrewAIRagAdapter(Adapter):
     similarity_threshold: float = 0.6
     limit: int = 5
     config: RagConfigType | None = None
+    content_filter: Callable[[list[str]], list[str]] | None = None
     _client: BaseClient | None = PrivateAttr(default=None)
 
     def model_post_init(self, __context: Any) -> None:
@@ -348,6 +350,15 @@ class CrewAIRagAdapter(Adapter):
                     )
 
         if documents:
+            if self.content_filter is not None:
+                filtered_contents = set(
+                    self.content_filter([doc["content"] for doc in documents])
+                )
+                documents = [
+                    doc for doc in documents if doc["content"] in filtered_contents
+                ]
+                if not documents:
+                    return
             if self._client is None:
                 raise ValueError("Client is not initialized")
             self._client.add_documents(

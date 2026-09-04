@@ -193,3 +193,118 @@ def test_dimension_mismatch_error_handling(mock_get_client: MagicMock) -> None:
 
     with pytest.raises(ValueError, match="Embedding dimension mismatch"):
         storage.save(["test document"])
+
+
+# --- content_filter tests ---
+
+
+@patch("crewai.knowledge.storage.knowledge_storage.get_rag_client")
+def test_content_filter_removes_documents(mock_get_client: MagicMock) -> None:
+    """content_filter can drop specific documents before indexing."""
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+
+    def reject_secrets(docs: list[str]) -> list[str]:
+        return [d for d in docs if "SECRET" not in d]
+
+    storage = KnowledgeStorage(
+        collection_name="filter_test", content_filter=reject_secrets
+    )
+    storage.save(["safe content", "contains SECRET key", "also safe"])
+
+    mock_client.add_documents.assert_called_once()
+    added = mock_client.add_documents.call_args.kwargs["documents"]
+    contents = [doc["content"] for doc in added]
+    assert contents == ["safe content", "also safe"]
+
+
+@patch("crewai.knowledge.storage.knowledge_storage.get_rag_client")
+def test_content_filter_returns_empty_skips_save(mock_get_client: MagicMock) -> None:
+    """When content_filter filters out all documents, save is skipped entirely."""
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+
+    storage = KnowledgeStorage(
+        collection_name="empty_filter", content_filter=lambda docs: []
+    )
+    storage.save(["doc1", "doc2"])
+
+    mock_client.add_documents.assert_not_called()
+    mock_client.get_or_create_collection.assert_not_called()
+
+
+@patch("crewai.knowledge.storage.knowledge_storage.get_rag_client")
+def test_content_filter_exception_propagates(mock_get_client: MagicMock) -> None:
+    """Exceptions raised inside content_filter abort the save."""
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+
+    def strict_filter(docs: list[str]) -> list[str]:
+        raise ValueError("Blocked by policy")
+
+    storage = KnowledgeStorage(
+        collection_name="strict_test", content_filter=strict_filter
+    )
+    with pytest.raises(ValueError, match="Blocked by policy"):
+        storage.save(["some content"])
+
+    mock_client.add_documents.assert_not_called()
+
+
+@patch("crewai.knowledge.storage.knowledge_storage.get_rag_client")
+def test_content_filter_none_is_noop(mock_get_client: MagicMock) -> None:
+    """When content_filter is None (default), all documents are saved."""
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+
+    storage = KnowledgeStorage(collection_name="noop_test")
+    assert storage.content_filter is None
+    storage.save(["doc1", "doc2"])
+
+    mock_client.add_documents.assert_called_once()
+    added = mock_client.add_documents.call_args.kwargs["documents"]
+    assert len(added) == 2
+
+
+@pytest.mark.asyncio
+@patch("crewai.knowledge.storage.knowledge_storage.get_rag_client")
+async def test_content_filter_async_save(mock_get_client: MagicMock) -> None:
+    """content_filter is applied in asave() as well."""
+    from unittest.mock import AsyncMock
+
+    mock_client = MagicMock()
+    mock_client.aget_or_create_collection = AsyncMock()
+    mock_client.aadd_documents = AsyncMock()
+    mock_get_client.return_value = mock_client
+
+    def only_short(docs: list[str]) -> list[str]:
+        return [d for d in docs if len(d) < 20]
+
+    storage = KnowledgeStorage(
+        collection_name="async_filter", content_filter=only_short
+    )
+    await storage.asave(["short", "this is a much longer document string"])
+
+    mock_client.aadd_documents.assert_called_once()
+    added = mock_client.aadd_documents.call_args.kwargs["documents"]
+    assert len(added) == 1
+    assert added[0]["content"] == "short"
+
+
+@pytest.mark.asyncio
+@patch("crewai.knowledge.storage.knowledge_storage.get_rag_client")
+async def test_content_filter_async_all_filtered(mock_get_client: MagicMock) -> None:
+    """asave() skips persistence when content_filter removes everything."""
+    from unittest.mock import AsyncMock
+
+    mock_client = MagicMock()
+    mock_client.aget_or_create_collection = AsyncMock()
+    mock_client.aadd_documents = AsyncMock()
+    mock_get_client.return_value = mock_client
+
+    storage = KnowledgeStorage(
+        collection_name="async_empty", content_filter=lambda docs: []
+    )
+    await storage.asave(["doc1"])
+
+    mock_client.aadd_documents.assert_not_called()
