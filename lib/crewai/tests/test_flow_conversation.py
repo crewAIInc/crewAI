@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import logging
+import sys
 from typing import Any, ClassVar, Literal
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from pydantic import BaseModel
+from pathlib import Path
+import yaml
+
+from pydantic import BaseModel, ValidationError, create_model
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
@@ -23,19 +27,23 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.events.types.llm_events import LLMCallStartedEvent, LLMStreamChunkEvent
-from crewai.experimental import (
+from crewai.flow import (
+    ChatState,
     ConversationConfig,
     ConversationMessage,
     ConversationState,
+    Flow,
     RouterConfig,
+    listen,
+    start,
 )
-from crewai.flow import Flow, ChatState, listen, start
 from crewai.flow.async_feedback import HumanFeedbackPending, PendingFeedbackContext
 from crewai.flow.flow_context import (
     current_flow_defer_trace_finalization,
     current_flow_id,
     current_flow_name,
 )
+from crewai.flow.persistence import SQLiteFlowPersistence, persist
 from crewai.llms.base_llm import BaseLLM
 from crewai.flow.conversation import (
     append_message,
@@ -316,9 +324,15 @@ class TestConversationalFlow:
         assert flow.state.agent_threads["planner"][0].content == "private scratch"
 
     def test_answer_from_history_uses_configured_llm_and_appends_reply(self) -> None:
-        @ConversationConfig(answer_from_history_llm="gpt-4o-mini")
-        class HistoryFlow(ConversationalFlow):
-            pass
+        with pytest.warns(
+            DeprecationWarning,
+            match="answer_from_history_prompt.*answer_from_history_llm",
+        ) as warning_records:
+            @ConversationConfig(answer_from_history_llm="gpt-4o-mini")
+            class HistoryFlow(ConversationalFlow):
+                pass
+
+        assert warning_records[0].filename == __file__
 
         flow = HistoryFlow()
         flow._state = ConversationState(
@@ -1017,10 +1031,10 @@ class TestConversationalFlow:
         """``Flow`` mixes in ``_ConversationalMixin`` — opt-in subclasses get its methods.
 
         The conversational graph + ``handle_turn`` live on the mixin in
-        ``crewai.experimental.conversational_mixin``; this test confirms
+        ``crewai.flow.conversational_mixin``; this test confirms
         MRO resolution wires them onto a ``Flow`` subclass that opts in.
         """
-        from crewai.experimental.conversational_mixin import _ConversationalMixin
+        from crewai.flow.conversational_mixin import _ConversationalMixin
 
         @ConversationConfig()
         class MyChat(Flow):
@@ -1587,6 +1601,121 @@ class TestHandleTurnReplyFallback:
             if message.role == "assistant"
         ]
         assert assistant_messages == ["computed reply"]
+
+
+class TestPersistCustomListenReplies:
+    """Custom ``@listen`` returns must land in ``@persist`` snapshots.
+
+    The fallback appends after ``kickoff()``, so the per-method snapshot is
+    user-only unless we persist again. Fresh Flow instances restore the
+    latest row; without that second snapshot the assistant turn disappears.
+    """
+
+    SESSION = "persist-custom-listen-session"
+
+    @staticmethod
+    def _roles(messages: Any) -> list[tuple[Any, Any]]:
+        rows: list[tuple[Any, Any]] = []
+        for message in messages:
+            if hasattr(message, "role"):
+                rows.append((message.role, message.content))
+            else:
+                rows.append((message["role"], message["content"]))
+        return rows
+
+    def test_custom_listen_return_persists_across_fresh_instances(
+        self, tmp_path: Any
+    ) -> None:
+        store = SQLiteFlowPersistence(str(tmp_path / "custom-listen.db"))
+
+        @persist(store)
+        class ResearchBot(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "research"
+
+            @listen("research")
+            def run_research(self) -> str:
+                return f"researched: {self.state.current_user_message}"
+
+        bot_a = ResearchBot()
+        bot_a.handle_turn("what is CrewAI?", session_id=self.SESSION)
+
+        saved = store.load_state(self.SESSION)
+        assert saved is not None
+        assert self._roles(saved["messages"]) == [
+            ("user", "what is CrewAI?"),
+            ("assistant", "researched: what is CrewAI?"),
+        ]
+
+        bot_b = ResearchBot()
+        bot_b.handle_turn("tell me more", session_id=self.SESSION)
+
+        assert self._roles(bot_b.state.messages) == [
+            ("user", "what is CrewAI?"),
+            ("assistant", "researched: what is CrewAI?"),
+            ("user", "tell me more"),
+            ("assistant", "researched: tell me more"),
+        ]
+
+    def test_builtin_converse_does_not_double_append_with_persist(
+        self, tmp_path: Any
+    ) -> None:
+        store = SQLiteFlowPersistence(str(tmp_path / "converse.db"))
+        chat_llm = MagicMock()
+        chat_llm.call.return_value = "hello back"
+
+        @ConversationConfig(llm=chat_llm)
+        @persist(store)
+        class ChatBot(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return None
+
+        bot_a = ChatBot()
+        bot_a.handle_turn("hi", session_id=self.SESSION)
+
+        assert self._roles(bot_a.state.messages) == [
+            ("user", "hi"),
+            ("assistant", "hello back"),
+        ]
+
+        bot_b = ChatBot()
+        bot_b.handle_turn("again", session_id=self.SESSION)
+
+        assert self._roles(bot_b.state.messages) == [
+            ("user", "hi"),
+            ("assistant", "hello back"),
+            ("user", "again"),
+            ("assistant", "hello back"),
+        ]
+
+    def test_custom_listen_return_emits_one_user_and_one_assistant_message_event(
+        self, tmp_path: Any
+    ) -> None:
+        store = SQLiteFlowPersistence(str(tmp_path / "trace.db"))
+
+        @persist(store)
+        class ResearchBot(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "research"
+
+            @listen("research")
+            def run_research(self) -> str:
+                return "researched"
+
+        events: list[ConversationMessageAddedEvent] = []
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(ConversationMessageAddedEvent)
+            def capture(_: Any, event: ConversationMessageAddedEvent) -> None:
+                events.append(event)
+
+            ResearchBot().handle_turn("hello", session_id=self.SESSION)
+            crewai_event_bus.flush()
+
+        assert [(event.role, event.content) for event in events] == [
+            ("user", "hello"),
+            ("assistant", "researched"),
+        ]
 
 
 class TestFalsyRouteTurnFallback:
@@ -2272,7 +2401,7 @@ class TestHandleTurnGuard:
         assert DecoratedFlow().handle_turn("hi") == "ok"
 
 
-_MIXIN = "crewai.experimental.conversational_mixin:_ConversationalMixin"
+_MIXIN = "crewai.flow.conversational_mixin:_ConversationalMixin"
 
 
 class DeclaredChatState(ConversationState):
@@ -2303,6 +2432,13 @@ class _ScriptedLLM(BaseLLM):
         return 8192
 
 
+class _Outer:
+    """Holds a nested model, so its qualname is dotted without `<locals>`."""
+
+    class Route(BaseModel):
+        intent: str
+
+
 def _conversational_declaration(**overrides: Any) -> dict[str, Any]:
     """A declaration naming the built-in methods explicitly.
 
@@ -2314,7 +2450,7 @@ def _conversational_declaration(**overrides: Any) -> dict[str, Any]:
         "name": "DeclaredChat",
         "state": {
             "type": "pydantic",
-            "ref": "crewai.experimental.conversational:ConversationState",
+            "ref": "crewai.flow.conversational:ConversationState",
         },
         "conversational": {},
         "methods": {
@@ -2404,21 +2540,474 @@ class TestDeclarativeConversationalFlow:
         assert ordered == ["bootstrap", "route_conversation"]
         assert sequential is True
 
-    def test_router_response_format_ref_is_dropped_with_a_warning(self, caplog) -> None:
-        caplog.set_level(
-            logging.WARNING, logger="crewai.experimental.conversational_mixin"
-        )
+    def test_router_response_format_takes_a_python_ref_not_a_module_ref(self) -> None:
+        """The contract declares the same `{"python": ...}` shape crews use.
+
+        A bare `module:qualname` ref used to be accepted and silently dropped;
+        it is now a load-time error, so a typo cannot look like it worked.
+        """
+        with pytest.raises(ValidationError, match="response_format"):
+            Flow.from_declaration(
+                contents=_conversational_declaration(
+                    conversational={
+                        "router": {"response_format": {"ref": "some.module:Schema"}}
+                    }
+                )
+            )
+
+
+class TestDeclaredRouterResponseFormat:
+    """A declaration can name the model the routing decision is parsed into."""
+
+    ROUTE_MODULE = (
+        "from typing import Literal\n"
+        "from pydantic import BaseModel\n"
+        "\n"
+        "class ConversationRoute(BaseModel):\n"
+        "    intent: Literal['order', 'converse']\n"
+    )
+
+    @staticmethod
+    def _declaration(router: dict[str, Any]) -> dict[str, Any]:
+        return _conversational_declaration(conversational={"router": router})
+
+    def test_a_declared_python_ref_is_resolved_to_the_class(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        (tmp_path / "routes.py").write_text(self.ROUTE_MODULE, encoding="utf-8")
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
         flow = Flow.from_declaration(
-            contents=_conversational_declaration(
-                conversational={
-                    "router": {"response_format": {"ref": "some.module:Schema"}}
-                }
+            contents=self._declaration(
+                {"response_format": {"python": "routes.ConversationRoute"}}
+            )
+        )
+        resolved = flow._conversation_config.router.response_format
+
+        assert resolved is not None
+        assert resolved.__name__ == "ConversationRoute"
+        assert "intent" in resolved.model_fields
+        assert flow._router_response_format(flow._conversation_config.router) is resolved
+
+    def test_a_ref_resolves_next_to_the_declaration_not_the_cwd(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A flow loaded by path finds the model sitting beside its YAML.
+
+        Resolution used to fall back to ``Path.cwd()``, so the same project
+        loaded from another directory could not import its own route model.
+        """
+        project = tmp_path / "project"
+        project.mkdir()
+        (project / "chat_routes.py").write_text(self.ROUTE_MODULE, encoding="utf-8")
+        declaration = project / "chat.yaml"
+        declaration.write_text(
+            yaml.safe_dump(
+                self._declaration(
+                    {"response_format": {"python": "chat_routes.ConversationRoute"}}
+                )
+            ),
+            encoding="utf-8",
+        )
+
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir()
+        monkeypatch.chdir(elsewhere)
+        monkeypatch.delitem(sys.modules, "chat_routes", raising=False)
+
+        try:
+            flow = Flow.from_declaration(path=declaration)
+            resolved = flow._conversation_config.router.response_format
+        finally:
+            sys.modules.pop("chat_routes", None)
+
+        assert resolved is not None
+        assert resolved.__name__ == "ConversationRoute"
+        assert "intent" in resolved.model_fields
+
+    def test_omitting_it_still_synthesizes_one(self) -> None:
+        flow = Flow.from_declaration(contents=self._declaration({}))
+
+        synthesized = flow._router_response_format(flow._conversation_config.router)
+
+        assert flow._conversation_config.router.response_format is None
+        assert list(synthesized.model_fields) == ["intent"]
+
+    def test_a_ref_outside_the_project_root_is_refused(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Declarations may not reach outside the project to import code."""
+        monkeypatch.chdir(tmp_path)
+        flow = Flow.from_declaration(
+            contents=self._declaration(
+                {"response_format": {"python": "os.path.basename"}}
             )
         )
 
-        assert flow._conversation_config.router.response_format is None
-        assert "cannot carry a model class" in caplog.text
+        # Resolution is lazy: the declaration loads, the import is refused.
+        with pytest.raises(Exception, match="inside the project root"):
+            _ = flow._conversation_config
 
+    def test_a_ref_without_a_dot_is_rejected_at_load(self) -> None:
+        with pytest.raises(ValidationError):
+            Flow.from_declaration(
+                contents=self._declaration({"response_format": {"python": "nodots"}})
+            )
+
+    def test_a_live_class_on_a_python_flow_is_untouched(self) -> None:
+        class MyRoute(BaseModel):
+            intent: str
+
+        @ConversationConfig(router=RouterConfig(response_format=MyRoute))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        assert ClassChat()._conversation_config.router.response_format is MyRoute
+
+    def test_a_function_local_model_is_omitted_from_the_projection(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A path through `<locals>` cannot be imported back, so never emit it."""
+
+        class LocalRoute(BaseModel):
+            intent: str
+
+        @ConversationConfig(router=RouterConfig(response_format=LocalRoute))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        with caplog.at_level(logging.WARNING, logger="crewai.flow.dsl._utils"):
+            definition = ClassChat.flow_definition()
+
+        assert definition.conversational.router.response_format is None
+        # Silently dropping it would leave the author guessing, so warn.
+        assert "cannot be imported by path" in caplog.text
+        # The live class still drives the running flow; only the projection drops it.
+        assert ClassChat()._conversation_config.router.response_format is LocalRoute
+
+    def test_a_non_model_response_format_is_omitted_from_the_projection(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        class NotAModel:
+            pass
+
+        @ConversationConfig(router=RouterConfig(response_format=NotAModel))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        with caplog.at_level(logging.WARNING, logger="crewai.flow.dsl._utils"):
+            definition = ClassChat.flow_definition()
+
+        assert definition.conversational.router.response_format is None
+        assert "is not a Pydantic model class" in caplog.text
+
+    def test_a_nested_model_is_omitted_from_the_projection(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """`module.Outer.Route` reloads `module.Outer` as a module that is absent."""
+
+        @ConversationConfig(router=RouterConfig(response_format=_Outer.Route))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        with caplog.at_level(logging.WARNING, logger="crewai.flow.dsl._utils"):
+            definition = ClassChat.flow_definition()
+
+        assert definition.conversational.router.response_format is None
+        assert "cannot be imported by its module path" in caplog.text
+        assert ClassChat()._conversation_config.router.response_format is _Outer.Route
+
+    def test_an_unbound_generated_model_is_omitted_from_the_projection(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A `create_model()` class no module attribute names cannot be reloaded."""
+        generated = create_model("GeneratedRoute", intent=(str, ...))
+
+        @ConversationConfig(router=RouterConfig(response_format=generated))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        with caplog.at_level(logging.WARNING, logger="crewai.flow.dsl._utils"):
+            definition = ClassChat.flow_definition()
+
+        assert definition.conversational.router.response_format is None
+        assert "cannot be imported by its module path" in caplog.text
+
+        reloaded = Flow.from_declaration(contents=definition.to_dict())
+        synthesized = reloaded._router_response_format(
+            reloaded._conversation_config.router
+        )
+
+        assert synthesized is not generated
+        assert list(synthesized.model_fields) == ["intent"]
+
+    def test_a_dropped_projection_reloads_with_the_synthesized_model(self) -> None:
+        class LocalRoute(BaseModel):
+            intent: str
+
+        @ConversationConfig(router=RouterConfig(response_format=LocalRoute))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        reloaded = Flow.from_declaration(
+            contents=ClassChat.flow_definition().to_dict()
+        )
+        synthesized = reloaded._router_response_format(
+            reloaded._conversation_config.router
+        )
+
+        assert list(synthesized.model_fields) == ["intent"]
+
+    def test_a_live_class_projects_as_a_python_ref(self) -> None:
+        @ConversationConfig(router=RouterConfig(response_format=ConversationState))
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        projected = ClassChat.flow_definition().conversational.router.response_format
+
+        assert projected is not None
+        assert projected.python == "crewai.flow.conversational.ConversationState"
+
+
+class DeclaredSchemaChatState(ConversationState):
+    """A ConversationState subclass, i.e. the already-supported state shape."""
+
+    ticket_id: str | None = None
+
+
+class TestDeclaredConversationalState:
+    """Any declared state shape works for a chat flow, keeping its own fields."""
+
+    @staticmethod
+    def _flow(state: dict[str, Any] | None) -> Flow[Any]:
+        declaration = _conversational_declaration(conversational={})
+        if state is None:
+            declaration.pop("state", None)
+        else:
+            declaration["state"] = state
+        return Flow.from_declaration(contents=declaration)
+
+    CONVERSATIONAL_FIELDS = (
+        "messages",
+        "current_user_message",
+        "last_intent",
+        "ended",
+        "events",
+        "agent_threads",
+    )
+
+    def test_inline_json_schema_state_gains_the_conversational_fields(self) -> None:
+        flow = self._flow(
+            {
+                "type": "json_schema",
+                "json_schema": {
+                    "type": "object",
+                    "properties": {
+                        "ticket_id": {"type": "string"},
+                        "turns": {"type": "integer"},
+                    },
+                },
+                "default": {"ticket_id": "T-1"},
+            }
+        )
+        fields = type(flow.state).model_fields
+
+        for name in self.CONVERSATIONAL_FIELDS:
+            assert name in fields, name
+        assert "ticket_id" in fields and "turns" in fields
+        assert flow.state.ticket_id == "T-1"
+        assert flow.state.id
+
+    def test_a_pydantic_ref_that_is_not_a_conversation_state_is_composed(self) -> None:
+        flow = self._flow({"type": "pydantic", "ref": "crewai.flow:ChatState"})
+        fields = type(flow.state).model_fields
+
+        for name in self.CONVERSATIONAL_FIELDS:
+            assert name in fields, name
+        assert "session_ready" in fields
+
+    def test_a_conversation_state_subclass_is_not_composed_twice(self) -> None:
+        flow = self._flow(
+            {"type": "pydantic", "ref": f"{__name__}:DeclaredSchemaChatState"}
+        )
+        mro = [cls.__name__ for cls in type(flow.state).__mro__]
+
+        assert mro.count("ConversationState") == 1
+        assert "ticket_id" in type(flow.state).model_fields
+
+    def test_dict_state_is_given_the_real_shape(self) -> None:
+        """A dict cannot carry the fields, so supply them rather than die."""
+        flow = self._flow({"type": "dict", "default": {"last_intent": "order"}})
+
+        assert isinstance(flow.state, ConversationState)
+        assert flow.state.last_intent == "order"
+
+    def test_dict_state_keeps_declared_defaults_it_does_not_own(self) -> None:
+        """Dropping them would break an action reading `state.topic`."""
+        flow = self._flow({"type": "dict", "default": {"topic": "ai", "limit": 3}})
+
+        assert flow.state.topic == "ai"
+        assert flow.state.limit == 3
+        assert isinstance(flow.state, ConversationState)
+
+    def test_unknown_state_is_treated_like_dict(self) -> None:
+        flow = self._flow({"type": "unknown", "ref": "x:Y", "default": {"topic": "ai"}})
+
+        assert flow.state.topic == "ai"
+        assert isinstance(flow.state, ConversationState)
+
+    def test_an_unbuildable_declared_model_still_gets_the_chat_shape(self) -> None:
+        """A bad ref fell back to a plain dict, so the turn died on `state.id`."""
+        flow = self._flow({"type": "pydantic", "ref": "no.such.module:Nope"})
+
+        assert isinstance(flow.state, ConversationState)
+        assert flow.state.id
+
+    def test_declared_state_still_runs_a_turn(self) -> None:
+        flow = self._flow(
+            {
+                "type": "json_schema",
+                "json_schema": {
+                    "type": "object",
+                    "properties": {"ticket_id": {"type": "string"}},
+                },
+            }
+        )
+        flow._conversation_config.llm = _ScriptedLLM(["Hello."])
+
+        assert flow.handle_turn("hi") == "Hello."
+        assert [m.role for m in flow.state.messages] == ["user", "assistant"]
+
+    def test_non_conversational_declaration_keeps_its_plain_state(self) -> None:
+        flow = Flow.from_declaration(
+            contents={
+                "schema": "crewai.flow/v1",
+                "name": "Plain",
+                "state": {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "type": "object",
+                        "properties": {"topic": {"type": "string"}},
+                    },
+                    "default": {"topic": "ai"},
+                },
+                "methods": {
+                    "begin": {
+                        "do": {"call": "expression", "expr": "state.topic"},
+                        "start": True,
+                    }
+                },
+            }
+        )
+
+        assert "messages" not in type(flow.state).model_fields
+        assert flow.state.topic == "ai"
+
+class TestDeclaredConversationalLLM:
+    """A conversational block accepts the shapes a crew agent's `llm` accepts."""
+
+    @staticmethod
+    def _resolved(llm: Any) -> Any:
+        flow = Flow.from_declaration(
+            contents=_conversational_declaration(conversational={"llm": llm})
+        )
+        return flow._coerce_llm(flow._conversation_config.llm)
+
+    def test_model_id_string(self) -> None:
+        assert self._resolved("gpt-4o-mini").model == "gpt-4o-mini"
+
+    def test_config_mapping_carries_provider_settings(self) -> None:
+        resolved = self._resolved({"model": "openai/gpt-4o-mini", "max_tokens": 512})
+
+        assert resolved.model == "gpt-4o-mini"
+        assert resolved.max_tokens == 512
+
+    def test_config_mapping_passes_through_extra_settings(self) -> None:
+        resolved = self._resolved({"model": "openai/gpt-4o-mini", "temperature": 0.2})
+
+        assert resolved.temperature == 0.2
+
+    def test_a_live_llm_object_is_passed_through_untouched(self) -> None:
+        llm = _ScriptedLLM(["hi"])
+
+        @ConversationConfig(llm=llm)
+        class ClassChat(Flow[ConversationState]):
+            pass
+
+        assert ClassChat()._coerce_llm(llm) is llm
+
+    def test_a_mapping_without_a_model_key_says_so(self) -> None:
+        with pytest.raises(ValueError, match="must include 'model'"):
+            self._resolved({"max_tokens": 512})
+
+    def test_a_wrong_type_fails_now_not_at_call_time(self) -> None:
+        """`create_llm` would take an int as a model name and fail later."""
+        with pytest.raises(ValueError, match="expected a model-id string"):
+            self._resolved(1234)
+
+    def test_an_llm_definition_resolves_with_its_settings(self) -> None:
+        from crewai.project.crew_definition import LLMDefinition
+
+        flow = Flow.from_declaration(contents=_conversational_declaration())
+        resolved = flow._coerce_llm(
+            LLMDefinition(model="openai/gpt-4o-mini", max_tokens=256)
+        )
+
+        assert resolved.model == "gpt-4o-mini"
+        assert resolved.max_tokens == 256
+
+    def test_a_declared_mapping_reaches_create_llm_during_a_turn(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Swapping the config out before the turn would not prove the path."""
+        declared = {"model": "openai/gpt-4o-mini", "max_tokens": 128}
+        scripted = _ScriptedLLM(["Hello."])
+        seen: list[Any] = []
+
+        def fake_create_llm(value: Any) -> Any:
+            seen.append(value)
+            return scripted
+
+        monkeypatch.setattr(
+            "crewai.utilities.llm_utils.create_llm", fake_create_llm
+        )
+        flow = Flow.from_declaration(
+            contents=_conversational_declaration(conversational={"llm": declared})
+        )
+
+        assert flow.handle_turn("hi") == "Hello."
+        assert declared in seen
+
+    def test_a_declared_intent_llm_mapping_is_resolved(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """`_collapse_to_outcome` takes only str | BaseLLM, so it must be coerced.
+
+        Swapping the mapping for an LLM before the turn would skip the coercion
+        entirely, so the mapping stays declared and ``create_llm`` is patched.
+        """
+        declared = {"model": "openai/gpt-4o-mini", "max_tokens": 64}
+        intent_llm = _ScriptedLLM(['{"outcome": "order"}'])
+        converse_llm = _ScriptedLLM(["ok"])
+        seen: list[Any] = []
+
+        def fake_create_llm(value: Any) -> Any:
+            seen.append(value)
+            return intent_llm if value == declared else converse_llm
+
+        monkeypatch.setattr("crewai.utilities.llm_utils.create_llm", fake_create_llm)
+        flow = Flow.from_declaration(
+            contents=_conversational_declaration(
+                conversational={"default_intents": ["order"], "intent_llm": declared}
+            )
+        )
+
+        # Before coercion this raised "Invalid llm type: <class 'dict'>".
+        flow.handle_turn("where is my order?")
+
+        assert declared in seen
+        assert [m.role for m in flow.state.messages][0] == "user"
 
 class TestRoutingArtefactLabels:
     """A route label echoed by a handler is a routing artefact, not a reply."""

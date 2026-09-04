@@ -114,7 +114,34 @@ class TestNormalizeOllamaBaseUrl:
     def test_handles_v1_with_trailing_slash(self):
         """Test /v1/ is normalized."""
         assert _normalize_ollama_base_url("http://localhost:11434/v1/") == "http://localhost:11434/v1"
+        
+    def test_bare_host_gets_scheme_and_port(self):
+        """Bare host from OLLAMA_HOST gets http:// and the default port."""
+        assert _normalize_ollama_base_url("0.0.0.0") == "http://0.0.0.0:11434/v1"
 
+    def test_bare_localhost_gets_scheme_and_port(self):
+        """Bare localhost gets http:// and the default port."""
+        assert _normalize_ollama_base_url("localhost") == "http://localhost:11434/v1"
+
+    def test_host_port_without_scheme_gets_scheme(self):
+        """host:port without a scheme gets http:// prepended."""
+        assert _normalize_ollama_base_url("127.0.0.1:11434") == "http://127.0.0.1:11434/v1"
+
+    def test_lan_host_port_without_scheme(self):
+        """A LAN host:port without a scheme gets http:// prepended."""
+        assert _normalize_ollama_base_url("192.168.1.5:11434") == "http://192.168.1.5:11434/v1"
+
+    def test_https_url_keeps_scheme_and_gets_no_default_port(self):
+        """An explicit https:// URL keeps its scheme and gets no default port."""
+        assert _normalize_ollama_base_url("https://ollama.example.com") == "https://ollama.example.com/v1"
+
+    def test_root_path_with_query_does_not_double_slash(self):
+        """A root path alongside a query yields /v1, not //v1."""
+        assert _normalize_ollama_base_url("http://ollama/?tenant=acme") == "http://ollama:11434/v1?tenant=acme"
+
+    def test_trailing_slash_in_query_is_preserved(self):
+        """Only the path is stripped, so a query ending in / keeps that character."""
+        assert _normalize_ollama_base_url("http://ollama:11434/?x=a/") == "http://ollama:11434/v1?x=a/"
 
 class TestOpenAICompatibleCompletion:
     """Tests for OpenAICompatibleCompletion class."""

@@ -1,17 +1,14 @@
-"""Experimental CrewAI surface — APIs here may change without major-version bumps."""
+"""Experimental CrewAI surface and compatibility exports."""
 
 from __future__ import annotations
 
 from typing import Any
 
-# ``crewai.experimental.conversational`` is pure data shapes — no Flow or Task
-# imports — so it's safe to eager-import. Everything else is resolved lazily
-# below; otherwise the chain
-#     crewai → Flow → experimental.conversational → experimental.__init__
-#                  → experimental.agent_executor / experimental.evaluation
-#                  → Flow / Task (mid-load)
-# would deadlock with "partially initialized module" ImportErrors.
-from crewai.experimental.conversational import (
+# Conversational Flow graduated to ``crewai.flow``. Keep these exports so
+# existing ``from crewai.experimental import ...`` imports continue to work.
+# Everything still experimental is resolved lazily below to avoid Flow/Task
+# import cycles.
+from crewai.flow.conversational import (
     AgentMessage,
     ConversationConfig,
     ConversationEvent,
@@ -47,11 +44,9 @@ _LAZY_FROM_EVALUATION = {
 def __getattr__(name: str) -> Any:
     """Lazily resolve symbols whose modules import ``Flow`` or ``Task``.
 
-    Eager re-exports would deadlock when ``Flow`` itself is the consumer that
-    triggered ``crewai.experimental.__init__`` (``Flow`` imports types from
-    :mod:`crewai.experimental.conversational`). Callers like
-    ``from crewai.experimental import AgentExecutor`` still work — the
-    real import just runs lazily, after the original loader finishes.
+    Eager re-exports would deadlock when ``Flow`` or ``Task`` is still loading.
+    Callers like ``from crewai.experimental import AgentExecutor`` still work —
+    the real import just runs lazily, after the original loader finishes.
     """
     if name in _LAZY_FROM_AGENT_EXECUTOR:
         from crewai.experimental.agent_executor import (

@@ -1,6 +1,8 @@
 """HTTP and Streamable HTTP transport for MCP servers."""
 
 import asyncio
+import contextlib
+import logging
 import sys
 from typing import Any
 
@@ -12,7 +14,16 @@ if sys.version_info >= (3, 11):
 else:
     from exceptiongroup import BaseExceptionGroup
 
+from crewai.mcp.exceptions import (
+    error_for_status,
+    find_http_status,
+    find_transport_failure,
+    raise_connection_failure,
+)
 from crewai.mcp.transports.base import BaseTransport, TransportType
+
+
+logger = logging.getLogger(__name__)
 
 
 class HTTPTransport(BaseTransport):
@@ -58,6 +69,42 @@ class HTTPTransport(BaseTransport):
         """Return the transport type."""
         return TransportType.STREAMABLE_HTTP if self.streamable else TransportType.HTTP
 
+    async def _close_transport_context(
+        self,
+        exc: BaseException | None = None,
+    ) -> BaseException | None:
+        """Exit the streamable-HTTP context if one is pending."""
+        context, self._transport_context = self._transport_context, None
+        self._clear_streams()
+
+        if context is None:
+            return None
+
+        exc_type = type(exc) if exc is not None else None
+        exc_tb = exc.__traceback__ if exc is not None else None
+
+        try:
+            with contextlib.suppress(asyncio.CancelledError):
+                await asyncio.sleep(0.1)
+            await context.__aexit__(exc_type, exc, exc_tb)
+        except asyncio.CancelledError as cancel_exc:
+            return cancel_exc
+        except (Exception, BaseExceptionGroup) as teardown_exc:
+            return teardown_exc
+        return None
+
+    def _raise_teardown_failure(self, error: BaseException) -> None:
+        """Raise a typed error when teardown reveals why the connection failed."""
+        if (status_code := find_http_status(error)) is not None:
+            raise error_for_status(status_code) from error
+        failure = find_transport_failure(error)
+        if failure is not None and not isinstance(failure, asyncio.CancelledError):
+            raise failure from error
+        if isinstance(error, asyncio.CancelledError):
+            logger.debug("MCP HTTP transport teardown was cancelled")
+            raise error
+        logger.debug("Ignoring MCP HTTP transport teardown error: %s", error)
+
     async def connect(self) -> Self:
         """Establish HTTP connection to MCP server.
 
@@ -65,7 +112,8 @@ class HTTPTransport(BaseTransport):
             Self for method chaining.
 
         Raises:
-            ConnectionError: If connection fails.
+            MCPConnectionError: If the server refused the connection with an HTTP status.
+            ConnectionError: If connection fails for other reasons.
             ImportError: If MCP SDK not available.
         """
         if self._connected:
@@ -73,90 +121,64 @@ class HTTPTransport(BaseTransport):
 
         try:
             from mcp.client.streamable_http import streamablehttp_client
-
-            self._transport_context = streamablehttp_client(
-                self.url,
-                headers=self.headers if self.headers else None,
-                terminate_on_close=True,
-            )
-
-            try:
-                read, write, _ = await asyncio.wait_for(
-                    self._transport_context.__aenter__(), timeout=30.0
-                )
-            except asyncio.TimeoutError as e:
-                self._transport_context = None
-                raise ConnectionError(
-                    "Transport context entry timed out after 30 seconds. "
-                    "Server may be slow or unreachable."
-                ) from e
-            except Exception as e:
-                self._transport_context = None
-                raise ConnectionError(f"Failed to enter transport context: {e}") from e
-            self._set_streams(read=read, write=write)
-            return self
-
         except ImportError as e:
             raise ImportError(
                 "MCP library not available. Please install with: pip install mcp"
             ) from e
-        except Exception as e:
-            self._clear_streams()
-            if self._transport_context is not None:
-                self._transport_context = None
-            raise ConnectionError(f"Failed to connect to MCP server: {e}") from e
 
-    async def disconnect(self) -> None:
-        """Close HTTP connection."""
-        if not self._connected:
-            return
+        self._transport_context = streamablehttp_client(
+            self.url,
+            headers=self.headers if self.headers else None,
+            terminate_on_close=True,
+        )
 
         try:
-            # Clear streams first
-            self._clear_streams()
-            # await self._exit_stack.aclose()
+            read, write, _ = await asyncio.wait_for(
+                self._transport_context.__aenter__(), timeout=30.0
+            )
+        except asyncio.TimeoutError as e:
+            teardown_error = await self._close_transport_context(e)
+            if find_http_status(e, teardown_error) is not None:
+                raise_connection_failure(
+                    f"Failed to connect to MCP server: {e}", e, teardown_error
+                )
+            raise ConnectionError(
+                "Transport context entry timed out after 30 seconds. "
+                "Server may be slow or unreachable."
+            ) from e
+        except asyncio.CancelledError as e:
+            teardown_error = await self._close_transport_context(e)
+            if find_http_status(e, teardown_error) is not None:
+                raise_connection_failure(
+                    f"Failed to connect to MCP server: {e}", e, teardown_error
+                )
+            if (failure := find_transport_failure(teardown_error)) is not None:
+                raise failure from e
+            raise
+        except (Exception, BaseExceptionGroup) as e:
+            teardown_error = await self._close_transport_context(e)
+            raise_connection_failure(
+                f"Failed to connect to MCP server: {e}", e, teardown_error
+            )
 
-            # Exit transport context - this will clean up background tasks
-            # Give a small delay to allow background tasks to complete
-            if self._transport_context is not None:
-                try:
-                    # Wait a tiny bit for any pending operations
-                    await asyncio.sleep(0.1)
-                    await self._transport_context.__aexit__(None, None, None)
-                except (RuntimeError, asyncio.CancelledError) as e:
-                    # Ignore "exit cancel scope in different task" errors and cancellation
-                    # These happen when asyncio.run() closes the event loop
-                    # while background tasks are still running
-                    error_msg = str(e).lower()
-                    if "cancel scope" not in error_msg and "task" not in error_msg:
-                        # Only suppress cancel scope/task errors, re-raise others
-                        if isinstance(e, RuntimeError):
-                            raise
-                        # For CancelledError, just suppress it
-                except BaseExceptionGroup as eg:
-                    # Handle exception groups from anyio task groups
-                    # Suppress if they contain cancel scope errors
-                    should_suppress = False
-                    for exc in eg.exceptions:
-                        error_msg = str(exc).lower()
-                        if "cancel scope" in error_msg or "task" in error_msg:
-                            should_suppress = True
-                            break
-                    if not should_suppress:
-                        raise
-                except Exception as e:
-                    raise RuntimeError(
-                        f"Error during HTTP transport disconnect: {e}"
-                    ) from e
+        self._set_streams(read=read, write=write)
+        return self
 
-            self._connected = False
+    async def disconnect(self) -> None:
+        """Close HTTP connection.
 
-        except Exception as e:
-            # Log but don't raise - cleanup should be best effort
-            import logging
+        Raises:
+            MCPConnectionError: If the server refused the connection. The
+                refusal is reported here rather than to the coroutine that
+                was waiting, because the underlying task group only raises it
+                while unwinding.
+        """
+        if self._transport_context is None and not self._connected:
+            return
 
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Error during HTTP transport disconnect: {e}")
+        teardown_error = await self._close_transport_context()
+        if teardown_error is not None:
+            self._raise_teardown_failure(teardown_error)
 
     async def __aenter__(self) -> Self:
         """Async context manager entry."""
