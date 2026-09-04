@@ -6,6 +6,8 @@ from urllib.parse import urlparse
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field, field_validator
 
+from crewai_tools.security.safe_path import validate_url
+
 
 class FixedSeleniumScrapingToolSchema(BaseModel):
     """Input for SeleniumScrapingTool."""
@@ -45,7 +47,9 @@ class SeleniumScrapingToolSchema(FixedSeleniumScrapingToolSchema):
         if re.search(r"\s", v):
             raise ValueError("URL cannot contain whitespace")
 
-        return v
+        # Align with Firecrawl/Scrapfly: block private/reserved SSRF targets
+        # before the local Chrome WebDriver navigates to the URL.
+        return validate_url(v)
 
 
 class SeleniumScrapingTool(BaseTool):
@@ -121,9 +125,9 @@ class SeleniumScrapingTool(BaseTool):
             self.css_element = css_element
 
         if website_url is not None:
-            self.website_url = website_url
+            self.website_url = validate_url(website_url)
             self.description = (
-                f"A tool that can be used to read {website_url}'s content."
+                f"A tool that can be used to read {self.website_url}'s content."
             )
             self.args_schema = FixedSeleniumScrapingToolSchema
 
@@ -194,6 +198,9 @@ class SeleniumScrapingTool(BaseTool):
 
         if not re.match(r"^https?://", url):
             raise ValueError("URL must start with http:// or https://")
+
+        # Defense in depth for the fixed-URL schema path (no pydantic re-check).
+        url = validate_url(url)
 
         if self.driver is None:
             raise RuntimeError("Driver not initialized. Call _run first.")
