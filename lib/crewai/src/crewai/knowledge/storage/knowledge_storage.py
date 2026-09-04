@@ -102,7 +102,11 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 f"Error during knowledge reset: {e!s}\n{traceback.format_exc()}"
             )
 
-    def save(self, documents: list[str]) -> None:
+    def save(
+        self,
+        documents: list[str],
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
         if not documents:
             return
 
@@ -115,7 +119,10 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
             client.get_or_create_collection(collection_name=collection_name)
 
-            rag_documents: list[BaseRecord] = [{"content": doc} for doc in documents]
+            rag_documents: list[BaseRecord] = [
+                {"content": doc, "metadata": metadata} if metadata else {"content": doc}
+                for doc in documents
+            ]
 
             client.add_documents(
                 collection_name=collection_name, documents=rag_documents
@@ -178,11 +185,16 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
             return []
 
-    async def asave(self, documents: list[str]) -> None:
+    async def asave(
+        self,
+        documents: list[str],
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
         """Save documents to the knowledge base asynchronously.
 
         Args:
             documents: List of document strings to save.
+            metadata: Optional metadata to attach to each document.
         """
         if not documents:
             return
@@ -196,7 +208,10 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
             await client.aget_or_create_collection(collection_name=collection_name)
 
-            rag_documents: list[BaseRecord] = [{"content": doc} for doc in documents]
+            rag_documents: list[BaseRecord] = [
+                {"content": doc, "metadata": metadata} if metadata else {"content": doc}
+                for doc in documents
+            ]
 
             await client.aadd_documents(
                 collection_name=collection_name, documents=rag_documents
