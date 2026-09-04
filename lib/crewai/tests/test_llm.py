@@ -11,7 +11,7 @@ from crewai.events.event_types import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, DEFAULT_CONTEXT_WINDOW_SIZE, LLM
 from crewai.llms.providers.anthropic.completion import AnthropicCompletion
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from pydantic import BaseModel
@@ -341,6 +341,49 @@ def test_context_window_validation():
             llm = LLM(model="test-model")
             llm.get_context_window_size()
     assert "must be between 1024 and 2097152" in str(excinfo.value)
+
+
+@pytest.mark.parametrize(
+    "model",
+    ["gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
+)
+def test_gpt56_family_uses_official_context_window(model: str) -> None:
+    """GPT-5.6 Sol, Terra, Luna, and the alias share a 1.05M window."""
+    llm = LLM(model=model, is_litellm=True)
+    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_gpt56_does_not_override_gpt54_mini_window() -> None:
+    """A more specific older prefix must keep its own window."""
+    llm = LLM(model="gpt-5.4-mini", is_litellm=True)
+    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        "openai/gpt-5.6",
+        "openai/gpt-5.6-sol",
+        "openai/gpt-5.6-terra",
+        "openai/gpt-5.6-luna",
+    ],
+)
+def test_gpt56_family_context_window_with_provider_prefix(model: str) -> None:
+    """LiteLLM keeps the provider prefix on self.model; lookup must still hit gpt-5.6."""
+    llm = LLM(model=model, is_litellm=True)
+    assert llm.model == model
+    assert llm._context_window_model_name() == model.partition("/")[2]
+    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_unrecognized_provider_prefix_is_not_stripped() -> None:
+    """Unknown prefixes stay on the lookup name and do not inherit the gpt-5.6 window."""
+    llm = LLM(model="acme/gpt-5.6-luna", is_litellm=True)
+    assert llm.model == "acme/gpt-5.6-luna"
+    assert llm._context_window_model_name() == "acme/gpt-5.6-luna"
+    assert llm.get_context_window_size() == int(
+        DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
+    )
 
 
 @pytest.fixture
@@ -806,6 +849,33 @@ def test_ollama_does_not_modify_when_last_is_user(ollama_llm):
     assert formatted == original_messages
 
 
+@pytest.fixture
+def gemini_litellm_llm():
+    return LLM(model="gemini/gemini-flash-latest", is_litellm=True)
+
+
+def test_gemini_litellm_appends_user_message_when_last_is_assistant(gemini_litellm_llm):
+    original_messages = [
+        {"role": "user", "content": "Hi there"},
+        {"role": "assistant", "content": "Hello!"},
+    ]
+
+    formatted = gemini_litellm_llm._format_messages_for_provider(original_messages)
+
+    assert len(formatted) == len(original_messages) + 1
+    assert formatted[-1] == {"role": "user", "content": "Please continue."}
+
+
+def test_gemini_litellm_does_not_modify_when_last_is_user(gemini_litellm_llm):
+    original_messages = [
+        {"role": "user", "content": "Tell me a joke."},
+    ]
+
+    formatted = gemini_litellm_llm._format_messages_for_provider(original_messages)
+
+    assert formatted == original_messages
+
+
 def test_native_provider_raises_error_when_supported_but_fails():
     """Test that when a native provider is in SUPPORTED_NATIVE_PROVIDERS but fails to instantiate, we raise the error."""
     with patch("crewai.llm.SUPPORTED_NATIVE_PROVIDERS", ["openai"]):
@@ -843,7 +913,7 @@ def test_prefixed_models_with_valid_constants_use_native_sdk():
 
     # Test anthropic/ prefix with Claude model in constants → Native SDK
     with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-        llm2 = LLM(model="anthropic/claude-opus-4-0", is_litellm=False)
+        llm2 = LLM(model="anthropic/claude-sonnet-4-6", is_litellm=False)
         assert llm2.is_litellm is False
         assert llm2.provider == "anthropic"
 
@@ -938,9 +1008,9 @@ def test_unprefixed_models_use_native_sdk():
         assert llm.is_litellm is False
         assert llm.provider == "openai"
 
-    # claude-opus-4-0 is in ANTHROPIC_MODELS → Native Anthropic SDK
+    # claude-sonnet-4-6 is in ANTHROPIC_MODELS → Native Anthropic SDK
     with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
-        llm2 = LLM(model="claude-opus-4-0", is_litellm=False)
+        llm2 = LLM(model="claude-sonnet-4-6", is_litellm=False)
         assert llm2.is_litellm is False
         assert llm2.provider == "anthropic"
 
@@ -949,6 +1019,71 @@ def test_unprefixed_models_use_native_sdk():
         llm3 = LLM(model="gemini-2.5-pro", is_litellm=False)
         assert llm3.is_litellm is False
         assert llm3.provider == "gemini"
+
+
+@pytest.mark.parametrize(
+    "model",
+    ["claude-opus-5", "claude-sonnet-5", "claude-fable-5", "claude-opus-4-8"],
+)
+def test_current_claude_models_route_to_anthropic(model):
+    """Current Claude models are in the constants list and use the Anthropic SDK."""
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        llm = LLM(model=model, is_litellm=False)
+        assert llm.provider == "anthropic"
+
+
+def test_claude_model_newer_than_constants_routes_to_anthropic():
+    """A Claude release we have not listed yet must not fall through to OpenAI."""
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        llm = LLM(model="claude-opus-6-20990101", is_litellm=False)
+        assert llm.provider == "anthropic"
+
+
+def test_gemini_model_newer_than_constants_routes_to_gemini():
+    with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
+        llm = LLM(model="gemini-9-pro-preview", is_litellm=False)
+        assert llm.provider == "gemini"
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        "anthropic.claude-opus-9-20990101-v1:0",
+        "us.anthropic.claude-opus-9-20990101-v1:0",
+        "eu.anthropic.claude-sonnet-9-20990101-v1:0",
+    ],
+)
+def test_unlisted_bedrock_anthropic_ids_route_to_bedrock(model):
+    """Bedrock names Anthropic models "anthropic.claude-*"; that is not the direct API."""
+    with patch.dict(
+        os.environ,
+        {
+            "AWS_ACCESS_KEY_ID": "test-key",
+            "AWS_SECRET_ACCESS_KEY": "test-secret",
+            "AWS_DEFAULT_REGION": "us-east-1",
+        },
+    ):
+        llm = LLM(model=model, is_litellm=False)
+        assert llm.provider == "bedrock"
+
+
+@pytest.mark.parametrize(
+    ("model", "expected_provider"),
+    [
+        # Bedrock's pattern is `"." in model` and Azure's covers every OpenAI
+        # prefix, so these pin that pattern inference did not steal them.
+        ("gpt-3.5-turbo", "openai"),
+        ("gpt-4.1", "openai"),
+        ("gpt-4o", "openai"),
+        ("gpt-4o-mini", "openai"),
+        ("o1", "openai"),
+        ("some-unknown-model", "openai"),
+    ],
+)
+def test_non_claude_models_keep_their_inferred_provider(model, expected_provider):
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        llm = LLM(model=model, is_litellm=False)
+        assert llm.provider == expected_provider
 
 
 def test_explicit_provider_kwarg_takes_priority():
@@ -975,11 +1110,9 @@ def test_validate_model_in_constants():
     assert LLM._validate_model_in_constants("unknown-model", "openai") is False
 
     # Anthropic models
-    assert LLM._validate_model_in_constants("claude-opus-4-0", "claude") is True
+    assert LLM._validate_model_in_constants("claude-sonnet-4-6", "claude") is True
     assert LLM._validate_model_in_constants("claude-future-5", "claude") is True
-    assert (
-        LLM._validate_model_in_constants("claude-3-5-sonnet-latest", "claude") is True
-    )
+    assert LLM._validate_model_in_constants("claude-haiku-4-5", "claude") is True
     assert LLM._validate_model_in_constants("unknown-model", "claude") is False
 
     # Gemini models

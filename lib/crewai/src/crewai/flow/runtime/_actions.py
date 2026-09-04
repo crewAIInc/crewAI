@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 import contextvars
 import inspect
 import os
@@ -29,6 +29,7 @@ from crewai.utilities.declarative_refs import (
     resolve_class_ref,
     resolve_ref,
 )
+from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
@@ -184,8 +185,7 @@ class AgentAction:
             self.flow,
             local_context=local_context,
         ).render_template()
-        if not isinstance(rendered_input, str):
-            raise ValueError("agent input must render to a string")
+        agent_input = _normalize_agent_input(rendered_input)
 
         agent, response_format = await asyncio.to_thread(
             load_agent_from_definition,
@@ -193,9 +193,44 @@ class AgentAction:
             source="agent action",
         )
         return await agent.kickoff_async(
-            rendered_input,
+            agent_input,
             response_format=response_format,
         )
+
+
+def _normalize_agent_input(rendered: Any) -> str | list[LLMMessage]:
+    """Accept a prompt string or a rendered conversation.
+
+    A whole-string ``${...}`` template keeps its evaluated type, so a CEL
+    expression over ``state.messages`` renders a list. ``message_to_llm_dict``
+    drops the metadata and ``None`` keys a serialized message carries, which
+    the agent event schema rejects.
+    """
+    if isinstance(rendered, str):
+        return rendered
+    if isinstance(rendered, list) and all(
+        isinstance(item, Mapping) for item in rendered
+    ):
+        from crewai.flow.conversational import message_to_llm_dict
+
+        # ``message_to_llm_dict`` only drops ``None`` keys for a model input;
+        # a CEL render is plain dicts, so a serialized message keeps its
+        # ``name: None`` -- which the agent event schema rejects.
+        return [
+            cast(
+                LLMMessage,
+                {
+                    key: value
+                    for key, value in message_to_llm_dict(item).items()
+                    if value is not None or key == "content"
+                },
+            )
+            for item in rendered
+        ]
+    raise ValueError(
+        "agent input must render to a string or a list of messages; "
+        f"got {type(rendered).__name__}"
+    )
 
 
 class ExpressionAction:
