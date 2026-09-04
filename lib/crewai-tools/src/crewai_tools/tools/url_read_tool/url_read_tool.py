@@ -128,6 +128,14 @@ class URLReadTool(BaseTool):
     those identify is refused rather than returned as base64, keeping this
     tool's output text-only.
 
+    That last step is what makes this a good fit for cloud storage. Presigned
+    S3 and Cloudflare R2 URLs, and Google Drive, OneDrive and SharePoint
+    download links, routinely serve a real document as
+    ``application/octet-stream`` from a path that is a content hash with no
+    extension, so neither the header nor the URL says what the file is. The
+    tool reads a URL and does not authenticate, so the link has to already
+    grant access -- which is exactly what a presigned or shared link is.
+
     Security:
         Requests go through :func:`~crewai_tools.security.safe_requests.safe_get_bounded`,
         which resolves each hostname and rejects it when any resolved address is
@@ -157,6 +165,10 @@ class URLReadTool(BaseTool):
         >>> tool = URLReadTool()
         >>> content = tool.run(url="https://example.com/report.pdf")
         >>> head = tool.run(url="https://example.com/data.csv", line_count=20)
+        >>> # A presigned link: no extension, served as octet-stream, read anyway.
+        >>> sheet = tool.run(
+        ...     url="https://bucket.r2.cloudflarestorage.com/a1b2c3?X-Amz-Signature=..."
+        ... )
     """
 
     name: str = "Read content from a URL"
@@ -165,8 +177,12 @@ class URLReadTool(BaseTool):
         "this tool, provide a 'url' parameter with an http:// or https:// "
         "address. PDF, DOCX, XLSX, HTML, JSON, XML, CSV and plain-text "
         "responses are converted to text; other binary types are rejected. "
-        "URLs that resolve to private or internal network addresses are "
-        "refused, as are responses "
+        "Well suited to presigned and share links from S3, Cloudflare R2, "
+        "Google Drive, OneDrive and SharePoint, which serve real documents "
+        "with a generic content type and no file extension; the type is "
+        "detected from the response bytes. The link must already grant "
+        "access, as a presigned or shared link does. URLs that resolve to "
+        "private or internal network addresses are refused, as are responses "
         "over the tool's size limit. Optionally provide 'start_line' and "
         "'line_count' to read only part of the content."
     )

@@ -242,14 +242,12 @@ exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = 
 # torch.jit.script; fixed in 2.13.0. Transitive via docling/unstructured extras.
 # snowflake-sqlalchemy <1.11.0 has GHSA-8g6f-qw9x-4q6q (SQL injection and local file disclosure); fixed in
 # 1.11.0. Declared as crewai-tools[snowflake] "snowflake-sqlalchemy>=1.7.3", which the lock resolved to 1.10.0.
-# unstructured <0.24.0 has GHSA-4mvj-m6j5-pmf7: full-read SSRF via the url= argument of partition(),
-# partition_html() and partition_md(), which fetch with no host validation. Fixed in 0.24.0, but that release
-# requires Python >=3.11 while crewai-tools supports >=3.10, so the floor carries a marker and 3.10 stays on
-# the 0.18 line. It also requires beautifulsoup4>=4.14.3, which is why the crewai-tools bs4 pin widens from
-# ~=4.13.4 to >=4.13.4,<5 -- a widening, so no existing install breaks; uv then resolves bs4 4.13.5 on 3.10
-# and 4.15.0 on 3.11+. The extras are repeated here because override-dependencies replace the whole
-# requirement; without [local-inference, all-docs] the crewai-tools[xml] deps get stripped, same trap as
-# docling-core below. Only crewai-tools[xml] is affected: it gains spacy and openai-whisper transitively.
+# unstructured <0.24.0 has GHSA-4mvj-m6j5-pmf7 (full-read SSRF via partition(url=)); the marker-split floor
+# lives in lib/crewai-tools/pyproject.toml rather than here, because an override replaces the whole
+# requirement including its marker and would drop the dependency on 3.10. 0.24+ needs beautifulsoup4>=4.14.3,
+# which is why the crewai-tools bs4 pin widens from ~=4.13.4 to >=4.13.4,<5 -- a widening, so no existing
+# install breaks; uv resolves bs4 4.13.5 on 3.10 and 4.15.0 on 3.11+. Only crewai-tools[xml] grows, gaining
+# spacy and openai-whisper transitively on 3.11+.
 # snowflake-connector-python >=4.0.0,<4.7.1 has GHSA-5cc2-282f-jjq2 (CVE-2026-15925):
 # TLS hostnames are not verified, so a network attacker can impersonate the endpoint;
 # fixed in 4.7.1. Declared as crewai-tools[snowflake] "snowflake-connector-python>=3.12.4",
@@ -288,7 +286,6 @@ override-dependencies = [
     "torch>=2.13.0",
     "snowflake-connector-python>=4.7.1",
     "snowflake-sqlalchemy>=1.11.0",
-    "unstructured[local-inference, all-docs]>=0.24.0; python_version >= '3.11'",
 ]
 
 [tool.uv.workspace]
