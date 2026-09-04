@@ -142,6 +142,61 @@ class TestCancellableDecorator:
 
         assert result == 11
 
+    @pytest.mark.asyncio
+    async def test_closes_pubsub_after_execution(
+        self, mock_context: MagicMock
+    ) -> None:
+        """Redis pubsub is closed when execution finishes first."""
+        subscribed = asyncio.Event()
+        cache = MagicMock()
+        cache.delete = AsyncMock()
+        pubsub = MagicMock()
+        pubsub.subscribe = AsyncMock(side_effect=lambda _: subscribed.set())
+        pubsub.aclose = AsyncMock()
+
+        async def listen() -> Any:
+            await asyncio.Event().wait()
+            yield
+
+        pubsub.listen = listen
+        cache.client.pubsub.return_value = pubsub
+
+        @cancellable
+        async def my_func(context: RequestContext) -> str:
+            await subscribed.wait()
+            return "completed"
+
+        with patch("crewai.a2a.utils.task.caches.get", return_value=cache):
+            result = await my_func(mock_context)
+
+        assert result == "completed"
+        pubsub.aclose.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_wrapper_cancellation_stops_execution(
+        self, mock_context: MagicMock
+    ) -> None:
+        """Cancelling the wrapper also stops the wrapped function."""
+        started = asyncio.Event()
+        stopped = asyncio.Event()
+
+        @cancellable
+        async def slow_func(context: RequestContext) -> None:
+            try:
+                started.set()
+                await asyncio.Event().wait()
+            finally:
+                stopped.set()
+
+        wrapper_task = asyncio.create_task(slow_func(mock_context))
+        await started.wait()
+        wrapper_task.cancel()
+
+        with pytest.raises(asyncio.CancelledError):
+            await wrapper_task
+
+        assert stopped.is_set()
+
 
 class TestExecute:
     """Tests for the execute function."""
