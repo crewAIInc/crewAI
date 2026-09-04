@@ -13,13 +13,17 @@ from crewai.utilities.i18n import I18N_DEFAULT
 class RecallMemorySchema(BaseModel):
     """Schema for the recall memory tool."""
 
-    queries: list[str] = Field(
-        ...,
+    queries: list[str] | None = Field(
+        default=None,
         description=(
-            "One or more search queries. Pass a single item for a focused search, "
-            "or multiple items to search for several things at once."
+            "REQUIRED: A list of search query strings. "
+            "Examples: ['AI trends'], ['Python', 'machine learning'], ['vector databases']. "
+            "Pass a single item for a focused search, or multiple items to search for several things at once."
         ),
+        min_length=1,
     )
+
+    model_config = {"extra": "forbid"}
 
 
 class RecallMemoryTool(BaseTool):
@@ -32,7 +36,7 @@ class RecallMemoryTool(BaseTool):
 
     def _run(
         self,
-        queries: list[str] | str,
+        queries: list[str] | str | None = None,
         **kwargs: Any,
     ) -> str:
         """Search memory for relevant information.
@@ -43,8 +47,19 @@ class RecallMemoryTool(BaseTool):
         Returns:
             Formatted string of matching memories, or a message if none found.
         """
+        # Handle None or empty input
+        if not queries:
+            return "Error: Please provide search queries. Example: search_memory(queries=['AI trends'])"
+
+        # Handle string input
         if isinstance(queries, str):
             queries = [queries]
+
+        # Filter out non-string and empty items
+        queries = [q.strip() for q in queries if isinstance(q, str) and q.strip()]
+
+        if not queries:
+            return "Error: Please provide non-empty search queries."
 
         all_lines: list[str] = []
         seen_ids: set[str] = set()
@@ -63,13 +78,17 @@ class RecallMemoryTool(BaseTool):
 class RememberSchema(BaseModel):
     """Schema for the remember tool."""
 
-    contents: list[str] = Field(
-        ...,
+    contents: list[str] | None = Field(
+        default=None,
         description=(
-            "One or more facts, decisions, or observations to remember. "
+            "REQUIRED: A list of strings to save to memory. "
+            "Examples: ['User prefers dark mode'], ['Project deadline is March 15', 'Budget is $50k']. "
             "Pass a single item or multiple items at once."
         ),
+        min_length=1,
     )
+
+    model_config = {"extra": "forbid"}
 
 
 class RememberTool(BaseTool):
@@ -80,7 +99,7 @@ class RememberTool(BaseTool):
     args_schema: type[BaseModel] = RememberSchema
     memory: Any = Field(exclude=True)
 
-    def _run(self, contents: list[str] | str, **kwargs: Any) -> str:
+    def _run(self, contents: list[str] | str | None = None, **kwargs: Any) -> str:
         """Store one or more items in memory. The system infers scope, categories, and importance.
 
         Args:
@@ -89,8 +108,19 @@ class RememberTool(BaseTool):
         Returns:
             Confirmation with the number of items saved.
         """
+        # Handle None or empty input
+        if not contents:
+            return "Error: Please provide content to save. Example: save_to_memory(contents=['fact to remember'])"
+
         if isinstance(contents, str):
             contents = [contents]
+
+        # Filter out non-string and empty items
+        contents = [c.strip() for c in contents if isinstance(c, str) and c.strip()]
+
+        if not contents:
+            return "Error: Please provide non-empty content to save."
+
         if len(contents) == 1:
             record = self.memory.remember(contents[0])
             return (
