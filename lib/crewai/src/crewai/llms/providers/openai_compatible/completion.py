@@ -90,6 +90,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DASHSCOPE_BASE_URL",
         api_key_required=True,
     ),
+    "nvidia": ProviderConfig(
+        base_url="https://integrate.api.nvidia.com/v1",
+        api_key_env="NVIDIA_API_KEY",
+        base_url_env="NVIDIA_BASE_URL",
+        api_key_required=True,
+    ),
 }
 
 _OLLAMA_DEFAULT_PORT = 11434
