@@ -45,6 +45,7 @@ dependencies = [
     "pyyaml~=6.0",
     "aiofiles~=24.1.0",
     "lancedb>=0.29.2,<0.30.1",
+    "supabase>=2.0.0",
 ]
 
 [project.urls]
