@@ -39,6 +39,44 @@ def test_persist_decorator_saves_state(tmp_path, caplog):
     assert saved_state["message"] == "Hello, World!"
 
 
+def test_dict_state_restore_keeps_fields_added_after_the_checkpoint(tmp_path):
+    """Restoring an older checkpoint must not drop fields added since then.
+
+    _restore_state used to clear() the dict state before applying the stored
+    values, so any key present in the flow's current initial_state but absent
+    from an older checkpoint (e.g. a field added after that checkpoint was
+    saved) was wiped out entirely instead of keeping its fresh default.
+    """
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class FlowBeforeFieldAdded(Flow[Dict[str, object]]):
+        initial_state = {"counter": 0}
+
+        @start()
+        @persist(persistence)
+        def go(self):
+            self.state["counter"] = 5
+
+    old_flow = FlowBeforeFieldAdded(persistence=persistence)
+    old_flow.kickoff()
+    checkpoint_id = old_flow.state["id"]
+
+    class FlowAfterFieldAdded(Flow[Dict[str, object]]):
+        initial_state = {"counter": 0, "config_value": "fresh_default"}
+
+        @start()
+        @persist(persistence)
+        def go(self):
+            pass
+
+    new_flow = FlowAfterFieldAdded(persistence=persistence)
+    new_flow.kickoff(inputs={"id": checkpoint_id})
+
+    assert new_flow.state["counter"] == 5
+    assert new_flow.state["config_value"] == "fresh_default"
+
+
 def test_structured_state_persistence(tmp_path):
     """Test persistence with Pydantic model state."""
     db_path = os.path.join(tmp_path, "test_flows.db")
