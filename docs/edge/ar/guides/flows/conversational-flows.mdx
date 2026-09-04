@@ -612,6 +612,44 @@ from crewai.flow import (
 )
 ```
 
+## تجريبي: أوامر `/btw`
+
+<Warning>
+`/btw` إضافة تجريبية. تتجاهل التدفقات المحادثية أسطر الأوامر حتى تفعّلها صراحة، وقد يتغيّر الـ API.
+</Warning>
+
+يعامل كل `handle_turn()` سطر المستخدم كتشغيل جديد للرسم. `/btw` قناة جانبية تتيح لك إدخال ملاحظة توجيه — أو فرض مسار — **دون** إلحاق رسالة مستخدم أو تشغيل الرسم.
+
+```python
+from crewai.experimental.conversation_commands import btw_commands
+from crewai.flow import ConversationConfig, ConversationState, Flow, listen
+
+
+@btw_commands
+@ConversationConfig()
+class SupportFlow(Flow[ConversationState]):
+    @listen("RESEARCH")
+    def handle_research(self) -> str:
+        """Fresh web research."""
+        reply = "I would research that."
+        self.append_assistant_message(reply)
+        return reply
+```
+
+| السطر | الأثر |
+|------|--------|
+| `/btw keep answers under 20 words` | يحفظ ملاحظة توجيه. لا تُسجَّل جولة مستخدم. تظهر الملاحظة لاحقاً في مطالبات `converse` والموجّه. |
+| `/btw route RESEARCH` | يفرض المسار على **الجولة التالية** ثم يعود للتوجيه العادي. |
+| `/btw stay RESEARCH` أو `/btw route RESEARCH persist` | يواصل فرض ذلك المسار حتى `/btw clear`. |
+| `/btw clear` | يحذف الملاحظات والمسارات المفروضة. |
+| `/btw` أو `/btw show` | يعرض التوجيه الحالي. |
+| `/help` | يسرد الأوامر. |
+| `What's the weather /btw keep it to one sentence` | يطبّق الأمر ثم يشغّل النص المتبقي كجولة مستخدم. |
+
+لتدفق أنشأته مسبقاً (بما في ذلك `Flow.from_declaration(...)`)، استدعِ `enable_btw_commands(flow)` بدل المزيّن.
+
+أسطر `/btw` المستقلة تعيد إقراراً ولا تستدعي `kickoff()`. ولأن `chat()` وواجهة CLI TUI تغلفان `handle_turn()`، تلتقطان الإضافة تلقائياً بعد تثبيتها. التدفقات بدون الإضافة ما زالت تعامل `/btw …` كرسالة مستخدم عادية.
+
 ## مراجع
 
 - [إتقان إدارة حالة Flow](/ar/guides/flows/mastering-flow-state)

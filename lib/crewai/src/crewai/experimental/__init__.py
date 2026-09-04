@@ -20,6 +20,18 @@ from crewai.flow.conversational import (
 
 _LAZY_FROM_AGENT_EXECUTOR = {"AgentExecutor", "CrewAgentExecutorFlow"}
 
+_LAZY_FROM_CONVERSATION_COMMANDS = {
+    "BtwAction",
+    "BtwKind",
+    "BtwSteering",
+    "HELP_TEXT",
+    "ParsedBtwLine",
+    "btw_commands",
+    "enable_btw_commands",
+    "get_btw_steering",
+    "parse_btw_line",
+}
+
 _LAZY_FROM_EVALUATION = {
     "AgentEvaluationResult",
     "AgentEvaluator",
@@ -65,15 +77,26 @@ def __getattr__(name: str) -> Any:
             globals()[attr] = getattr(_evaluation_mod, attr)
         return globals()[name]
 
+    if name in _LAZY_FROM_CONVERSATION_COMMANDS:
+        from crewai.experimental import conversation_commands as _btw_mod
+
+        for attr in _LAZY_FROM_CONVERSATION_COMMANDS:
+            globals()[attr] = getattr(_btw_mod, attr)
+        return globals()[name]
+
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 __all__ = [
+    "HELP_TEXT",
     "AgentEvaluationResult",
     "AgentEvaluator",
     "AgentExecutor",
     "AgentMessage",
     "BaseEvaluator",
+    "BtwAction",
+    "BtwKind",
+    "BtwSteering",
     "ConversationConfig",
     "ConversationEvent",
     "ConversationMessage",
@@ -87,11 +110,16 @@ __all__ = [
     "GoalAlignmentEvaluator",
     "MetricCategory",
     "ParameterExtractionEvaluator",
+    "ParsedBtwLine",
     "ReasoningEfficiencyEvaluator",
     "RouterConfig",
     "SemanticQualityEvaluator",
     "ToolInvocationEvaluator",
     "ToolSelectionEvaluator",
+    "btw_commands",
     "create_default_evaluator",
     "create_evaluation_callbacks",
+    "enable_btw_commands",
+    "get_btw_steering",
+    "parse_btw_line",
 ]
