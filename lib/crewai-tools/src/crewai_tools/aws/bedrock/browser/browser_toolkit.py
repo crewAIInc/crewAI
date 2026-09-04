@@ -3,7 +3,7 @@
 import asyncio
 import json
 import logging
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlparse
 
 from crewai.tools import BaseTool
@@ -341,10 +341,9 @@ class ExtractHyperlinksTool(BrowserBaseTool):
             soup = BeautifulSoup(content, "html.parser")
             links = []
             for link in soup.find_all("a", href=True):
-                if not isinstance(link, Tag):
-                    continue
-                text = link.get_text().strip()
-                href = str(link.get("href", ""))
+                tag = cast(Tag, link)
+                text = tag.get_text().strip()
+                href = str(tag.get("href", ""))
                 if href.startswith(("http", "https")):
                     links.append({"text": text, "url": href})
 
@@ -372,10 +371,9 @@ class ExtractHyperlinksTool(BrowserBaseTool):
             soup = BeautifulSoup(content, "html.parser")
             links = []
             for link in soup.find_all("a", href=True):
-                if not isinstance(link, Tag):
-                    continue
-                text = link.get_text().strip()
-                href = str(link.get("href", ""))
+                tag = cast(Tag, link)
+                text = tag.get_text().strip()
+                href = str(tag.get("href", ""))
                 if href.startswith(("http", "https")):
                     links.append({"text": text, "url": href})
 
