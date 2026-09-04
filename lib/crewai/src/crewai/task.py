@@ -211,7 +211,7 @@ class Task(BaseModel):
         default=True,
     )
     output: TaskOutput | None = Field(
-        description="Task output, it's final result after being executed", default=None
+        description="Task output, its final result after being executed", default=None
     )
     tools: list[BaseTool] | None = Field(
         default_factory=list,
@@ -661,7 +661,7 @@ class Task(BaseModel):
             self.agent = agent
             if not agent:
                 raise Exception(
-                    f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
+                    f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that supports that, like hierarchical."
                 )
 
             self.prompt_context = context
@@ -820,7 +820,7 @@ class Task(BaseModel):
             self.agent = agent
             if not agent:
                 raise Exception(
-                    f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
+                    f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that supports that, like hierarchical."
                 )
 
             self.prompt_context = context
