@@ -37,7 +37,10 @@ from pydantic import BaseModel, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.hooks.dispatch import HookAborted
-from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
+from crewai.llms._finish_reason_utils import (
+    extract_choices_finish_reason_and_id,
+    warn_if_truncated,
+)
 from crewai.llms.base_llm import (
     BaseLLM,
     JsonResponseFormat,
@@ -994,6 +997,13 @@ class OpenAICompletion(BaseLLM):
             finish_reason, response_id = self._extract_responses_finish_reason_and_id(
                 response
             )
+            # The Responses API reports ``status`` ("incomplete"), not a finish
+            # reason, so the cause lives in ``incomplete_details.reason``.
+            warn_if_truncated(
+                self._responses_truncation_reason(response) or finish_reason,
+                self._effective_max_tokens(),
+                self.model,
+            )
 
             if self.parse_tool_outputs:
                 parsed_result = self._extract_builtin_tool_outputs(response)
@@ -1140,6 +1150,13 @@ class OpenAICompletion(BaseLLM):
 
             finish_reason, response_id = self._extract_responses_finish_reason_and_id(
                 response
+            )
+            # The Responses API reports ``status`` ("incomplete"), not a finish
+            # reason, so the cause lives in ``incomplete_details.reason``.
+            warn_if_truncated(
+                self._responses_truncation_reason(response) or finish_reason,
+                self._effective_max_tokens(),
+                self.model,
             )
 
             if self.parse_tool_outputs:
@@ -1921,6 +1938,9 @@ class OpenAICompletion(BaseLLM):
                 )
                 parsed_object = parsed_response.choices[0].message.parsed
                 if parsed_object:
+                    warn_if_truncated(
+                        parsed_finish_reason, self._effective_max_tokens(), self.model
+                    )
                     self._emit_call_completed_event(
                         response=parsed_object.model_dump_json(),
                         call_type=LLMCallType.LLM_CALL,
@@ -1946,6 +1966,7 @@ class OpenAICompletion(BaseLLM):
             finish_reason, response_id = self._extract_chat_finish_reason_and_id(
                 response
             )
+            warn_if_truncated(finish_reason, self._effective_max_tokens(), self.model)
 
             # Without available_functions, return tool_calls so the caller (executor) handles execution
             if message.tool_calls and not available_functions:
@@ -2349,6 +2370,9 @@ class OpenAICompletion(BaseLLM):
                 )
                 parsed_object = parsed_response.choices[0].message.parsed
                 if parsed_object:
+                    warn_if_truncated(
+                        parsed_finish_reason, self._effective_max_tokens(), self.model
+                    )
                     self._emit_call_completed_event(
                         response=parsed_object.model_dump_json(),
                         call_type=LLMCallType.LLM_CALL,
@@ -2374,6 +2398,7 @@ class OpenAICompletion(BaseLLM):
             finish_reason, response_id = self._extract_chat_finish_reason_and_id(
                 response
             )
+            warn_if_truncated(finish_reason, self._effective_max_tokens(), self.model)
 
             # Without available_functions, return tool_calls so the caller (executor) handles execution
             if message.tool_calls and not available_functions:
@@ -2714,6 +2739,22 @@ class OpenAICompletion(BaseLLM):
         delegate to the shared extractor.
         """
         return extract_choices_finish_reason_and_id(response)
+
+    @staticmethod
+    def _responses_truncation_reason(response: Any) -> str | None:
+        """Why a Responses-API call stopped early, when it did.
+
+        ``status`` only says ``"incomplete"``; the cause is carried separately on
+        ``incomplete_details.reason`` (for example ``"max_output_tokens"``).
+        Returns ``None`` for complete responses and for shapes lacking the field.
+        """
+        if getattr(response, "status", None) != "incomplete":
+            return None
+        details = getattr(response, "incomplete_details", None)
+        reason = getattr(details, "reason", None)
+        if reason is None and isinstance(details, dict):
+            reason = details.get("reason")
+        return reason if isinstance(reason, str) else None
 
     @staticmethod
     def _extract_responses_finish_reason_and_id(
