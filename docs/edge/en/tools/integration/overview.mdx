@@ -21,6 +21,10 @@ Integration tools let your agents hand off work to other automation platforms an
   <Card title="Bedrock Invoke Agent Tool" icon="aws" href="/en/tools/integration/bedrockinvokeagenttool">
     Call Amazon Bedrock Agents from your crews, reuse AWS guardrails, and stream responses back into the workflow.
   </Card>
+
+  <Card title="Lians Agent Memory Tools" icon="brain" href="/en/tools/integration/lians">
+    Give CrewAI agents durable, timestamped memory with local or remote storage.
+  </Card>
 </CardGroup>
 
 ## **Common Use Cases**
@@ -70,7 +74,7 @@ Crew(agents=[automation_strategist], tasks=[execute_playbook]).kickoff()
 ## **Best Practices**
 
 - **Secure credentials**: Store API keys and bearer tokens in environment variables or a secrets manager
-- **Plan for latency**: External automations may take longer—set appropriate polling intervals and timeouts
+- **Plan for latency**: External automations may take longer, so set appropriate polling intervals and timeouts
 - **Reuse sessions**: Bedrock Agents support session IDs so you can maintain context across multiple tool calls
 - **Validate responses**: Normalise remote output (JSON, text, status codes) before forwarding it to downstream tasks
 - **Monitor usage**: Track audit logs in CrewAI Platform or AWS CloudWatch to stay ahead of quota limits and failures
