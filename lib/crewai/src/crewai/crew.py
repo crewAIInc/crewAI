@@ -2205,8 +2205,16 @@ class Crew(FlowTrackable, BaseModel):
         """Calculates and returns the usage metrics."""
         total_usage_metrics = UsageMetrics()
 
+        # An LLM instance's counters are cumulative for its lifetime and
+        # include calls made by every agent sharing it, so each distinct
+        # instance must contribute to the total exactly once.
+        counted_llms: set[int] = set()
+
         for agent in self.agents:
             if isinstance(agent.llm, BaseLLM):
+                if id(agent.llm) in counted_llms:
+                    continue
+                counted_llms.add(id(agent.llm))
                 llm_usage = agent.llm.get_token_usage_summary()
 
                 total_usage_metrics.add_usage_metrics(llm_usage)
@@ -2220,7 +2228,11 @@ class Crew(FlowTrackable, BaseModel):
             total_usage_metrics.add_usage_metrics(token_sum)
 
         if self.manager_agent:
-            if isinstance(self.manager_agent.llm, BaseLLM):
+            if (
+                isinstance(self.manager_agent.llm, BaseLLM)
+                and id(self.manager_agent.llm) not in counted_llms
+            ):
+                counted_llms.add(id(self.manager_agent.llm))
                 llm_usage = self.manager_agent.llm.get_token_usage_summary()
                 total_usage_metrics.add_usage_metrics(llm_usage)
 

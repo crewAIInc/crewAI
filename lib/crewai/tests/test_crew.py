@@ -4989,3 +4989,57 @@ def test_memory_remember_receives_task_content():
     assert "Researcher" in raw
     assert "Expected result:" in raw
     assert "Result:" in raw
+
+
+def test_usage_metrics_counts_a_shared_llm_instance_once():
+    """A single LLM instance shared by several agents must be counted once.
+
+    ``get_token_usage_summary()`` returns totals cumulative for the lifetime of
+    the instance, including calls made by every agent sharing it, so adding it
+    per agent multiplied the reported usage by the number of agents.
+    """
+    llm = LLM(model="gpt-4o")
+    llm.get_token_usage_summary = lambda: UsageMetrics(
+        total_tokens=100, prompt_tokens=80, completion_tokens=20, successful_requests=1
+    )
+    agents = [
+        Agent(role=f"Role {i}", goal="goal", backstory="backstory", llm=llm)
+        for i in range(3)
+    ]
+    tasks = [
+        Task(description=f"task {i}", expected_output="out", agent=agents[i])
+        for i in range(3)
+    ]
+
+    usage = Crew(agents=agents, tasks=tasks).calculate_usage_metrics()
+
+    assert usage.total_tokens == 100
+    assert usage.successful_requests == 1
+
+
+def test_usage_metrics_still_sums_distinct_llm_instances():
+    """Separate LLM instances must still be summed, even for the same model."""
+
+    def make_llm() -> LLM:
+        llm = LLM(model="gpt-4o")
+        llm.get_token_usage_summary = lambda: UsageMetrics(
+            total_tokens=100,
+            prompt_tokens=80,
+            completion_tokens=20,
+            successful_requests=1,
+        )
+        return llm
+
+    agents = [
+        Agent(role=f"Role {i}", goal="goal", backstory="backstory", llm=make_llm())
+        for i in range(3)
+    ]
+    tasks = [
+        Task(description=f"task {i}", expected_output="out", agent=agents[i])
+        for i in range(3)
+    ]
+
+    usage = Crew(agents=agents, tasks=tasks).calculate_usage_metrics()
+
+    assert usage.total_tokens == 300
+    assert usage.successful_requests == 3
