@@ -154,9 +154,14 @@ flow.kickoff(restore_from_state_id="<previous-run-state-id>")
 
 새 실행은 새로운 `state.id`(자동 생성, 또는 `inputs["id"]`가 고정된 경우 그 값)를 받아 `@persist` 기록이 원본의 기록을 확장하지 않도록 합니다. `from_checkpoint`와 결합하면 `ValueError`가 발생합니다; 하나의 하이드레이션 소스를 선택하세요.
 
+## 보안
+
+도구가 있는 에이전트는 실제 작업을 수행할 수 있습니다. 그 위험을 제한하려면 [안전한 에이전트 설계](/edge/ko/guides/agents/secure-agent-design)를 참고하세요.
+
 ## 요약
 
 - **Flow로 시작하세요.**
 - **명확한 State를 정의하세요.**
 - **복잡한 작업에는 Crews를 사용하세요.**
 - **API와 지속성을 갖추어 배포하세요.**
+- [안전한 에이전트 설계](/edge/ko/guides/agents/secure-agent-design)를 따르세요.

@@ -154,9 +154,14 @@ flow.kickoff(restore_from_state_id="<previous-run-state-id>")
 
 A nova execução recebe um novo `state.id` (auto-gerado, ou `inputs["id"]` se fixado), então suas escritas do `@persist` não estendem o histórico da origem. Combinar com `from_checkpoint` lança um `ValueError`; escolha uma única fonte de hidratação.
 
+## Segurança
+
+Agentes com ferramentas podem executar ações reais. Veja [Design Seguro de Agentes](/edge/pt-BR/guides/agents/secure-agent-design) para limitar esse risco.
+
 ## Resumo
 
 - **Comece com um Flow.**
 - **Defina um Estado claro.**
 - **Use Crews para tarefas complexas.**
 - **Implante com uma API e persistência.**
+- Siga [Design Seguro de Agentes](/edge/pt-BR/guides/agents/secure-agent-design).
