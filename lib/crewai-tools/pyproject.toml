@@ -12,7 +12,7 @@ dependencies = [
     "requests>=2.33.0,<3",
     "crewai==1.15.18",
     "tiktoken>=0.8.0,<0.13",
-    "beautifulsoup4~=4.13.4",
+    "beautifulsoup4>=4.14.3",  # unstructured 0.24+ requires >=4.14.3 (GHSA-4mvj-m6j5-pmf7)
     "python-docx~=1.2.0",
     "youtube-transcript-api~=1.2.2",
     "pymupdf~=1.26.6",
@@ -77,7 +77,10 @@ hyperbrowser = [
 snowflake = [
     "cryptography>=43.0.3",
     "snowflake-connector-python>=3.12.4",
-    "snowflake-sqlalchemy>=1.7.3",
+    # <1.11.0 has GHSA-8g6f-qw9x-4q6q (CVE-2026-15736): SQL injection in MERGE
+    # identifiers / table-creation literals, plus arbitrary local-file read via
+    # forwarded connection params. Fixed in 1.11.0.
+    "snowflake-sqlalchemy>=1.11.0",
 ]
 singlestore = [
     "singlestoredb>=1.12.4",
@@ -119,7 +122,10 @@ rag = [
     "lxml>=6.1.0,<7",  # 6.1.0+ required for GHSA-vfmq-68hx-4jfw (XXE in iterparse)
 ]
 xml = [
-    "unstructured[local-inference, all-docs]>=0.17.2",
+    # <0.24.0 has GHSA-4mvj-m6j5-pmf7 (CVE-2026-71428): SSRF in partition /
+    # partition_html / partition_md url= fetches. Fixed in 0.24.0, which
+    # requires Python 3.11+. 0.18.32 is the last 3.10-compatible release.
+    "unstructured[local-inference, all-docs]>=0.24.0; python_version >= '3.11'",
     # unstructured allows nltk>=3.9.2, but <3.10.3 still has PYSEC-2026-3726
     # (symlink file read in IPIPANCorpusReader; 3.10.0-3.10.1) plus later
     # 3.10.2 findings. 3.10.3 still has unpatched GHSA-8mgp-746c-j5xp

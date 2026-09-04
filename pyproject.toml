@@ -248,6 +248,17 @@ exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = 
 # TLS hostnames are not verified, so a network attacker can impersonate the endpoint;
 # fixed in 4.7.1. Declared as crewai-tools[snowflake] "snowflake-connector-python>=3.12.4",
 # which the lock resolved to 4.6.0.
+# snowflake-sqlalchemy <1.11.0 has GHSA-8g6f-qw9x-4q6q (CVE-2026-15736): SQL injection
+# in MERGE identifiers / table-creation literals, plus arbitrary local-file read via
+# forwarded connection params; force 1.11.0+. 1.11.0 is older than the global 3-day
+# cutoff, so no exclude-newer-package override is needed.
+# unstructured <0.24.0 has GHSA-4mvj-m6j5-pmf7 (CVE-2026-71428): SSRF in partition /
+# partition_html / partition_md url= fetches; force 0.24.0+ on Python 3.11+.
+# 0.24.0 dropped Python 3.10 (0.18.32 was the last 3.10 release), so the xml
+# extra only pulls unstructured on 3.11+. unstructured 0.24+ also requires
+# beautifulsoup4>=4.14.3, so the crewai-tools pin is raised past ~=4.13.4.
+# 0.24.0 is older than the global 3-day cutoff, so no exclude-newer-package
+# override is needed.
 # Keep OpenAI on the SDK range required by CrewAI when transitive dependencies
 # loosen or pin their own lower versions.
 override-dependencies = [
@@ -281,6 +292,8 @@ override-dependencies = [
     "h2>=4.4.1",
     "torch>=2.13.0",
     "snowflake-connector-python>=4.7.1",
+    "snowflake-sqlalchemy>=1.11.0",
+    "unstructured>=0.24.0; python_version >= '3.11'",
 ]
 
 [tool.uv.workspace]
