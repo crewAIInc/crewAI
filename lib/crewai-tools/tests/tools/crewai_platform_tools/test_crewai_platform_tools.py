@@ -67,7 +67,17 @@ class TestCrewaiPlatformTools(unittest.TestCase):
                 ],
             }
         }
-        mock_get.return_value = mock_response
+        github_response = Mock()
+        github_response.raise_for_status.return_value = None
+        github_response.json.return_value = {
+            "actions": {"github": mock_response.json.return_value["actions"]["github"]}
+        }
+        slack_response = Mock()
+        slack_response.raise_for_status.return_value = None
+        slack_response.json.return_value = {
+            "actions": {"slack": mock_response.json.return_value["actions"]["slack"]}
+        }
+        mock_get.side_effect = [github_response, slack_response]
 
         tools = CrewaiPlatformTools(apps=["github", "slack"])
         assert tools is not None
@@ -312,7 +322,17 @@ class TestCrewaiPlatformTools(unittest.TestCase):
                 ],
             }
         }
-        mock_get.return_value = response
+        github_response = Mock()
+        github_response.raise_for_status.return_value = None
+        github_response.json.return_value = {
+            "actions": {"github": response.json.return_value["actions"]["github"]}
+        }
+        slack_response = Mock()
+        slack_response.raise_for_status.return_value = None
+        slack_response.json.return_value = {
+            "actions": {"slack": response.json.return_value["actions"]["slack"]}
+        }
+        mock_get.side_effect = [github_response, slack_response]
 
         tools = CrewaiPlatformTools(apps=["github", "slack"])
 
