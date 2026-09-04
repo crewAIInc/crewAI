@@ -148,7 +148,7 @@ testpaths = [
 ]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
-addopts = "--tb=short -n auto --timeout=60 --dist=loadfile --max-worker-restart=2 --block-network --import-mode=importlib"
+addopts = "--tb=short -n auto --timeout=60 --dist=loadfile --max-worker-restart=2 --block-network --allowed-hosts=127.0.0.1,localhost,::1 --import-mode=importlib"
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
