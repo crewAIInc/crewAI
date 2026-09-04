@@ -68,6 +68,9 @@ _PDF_MAGIC: Final[bytes] = b"%PDF-"
 _ZIP_MAGIC: Final[bytes] = b"PK\x03\x04"
 _DOCX_ZIP_ENTRY: Final[str] = "word/document.xml"
 _XLSX_ZIP_ENTRY: Final[str] = "xl/workbook.xml"
+# A workbook is bounded by max_bytes on the wire but not by what it expands
+# into, so the number of cells handed to an agent is capped separately.
+_XLSX_MAX_CELLS: Final[int] = 200_000
 _HTML_PREFIXES: Final[tuple[str, ...]] = ("<!doctype html", "<html")
 _HTML_PREFIX_LEN: Final[int] = max(len(prefix) for prefix in _HTML_PREFIXES)
 
@@ -159,8 +162,8 @@ class URLReadTool(BaseTool):
         "A tool that reads the content at a URL and returns it as text. To use "
         "this tool, provide a 'url' parameter with an http:// or https:// "
         "address. PDF, DOCX, XLSX, HTML, JSON, XML, CSV and plain-text "
-        "responses are "
-        "converted to text; other binary types are rejected. URLs that resolve "
+        "responses are converted to text; other binary types are rejected. "
+        "URLs that resolve "
         "to private or internal network addresses are refused, as are responses "
         "over the tool's size limit. Optionally provide 'start_line' and "
         "'line_count' to read only part of the content."
@@ -252,9 +255,12 @@ class URLReadTool(BaseTool):
                     names = set(archive.namelist())
             except zipfile.BadZipFile:
                 return None
-            if _DOCX_ZIP_ENTRY in names:
-                return "docx"
-            return "xlsx" if _XLSX_ZIP_ENTRY in names else None
+            # Exactly one marker, or nothing: a package claiming to be both a
+            # Word document and a workbook has not been positively identified.
+            is_docx = _DOCX_ZIP_ENTRY in names
+            if is_docx == (_XLSX_ZIP_ENTRY in names):
+                return None
+            return "docx" if is_docx else "xlsx"
 
         # Strict, whole-body decode: a prefix would split a multi-byte
         # character and reject valid text. The body is already resident and
@@ -374,29 +380,41 @@ class URLReadTool(BaseTool):
         workbook = load_workbook(BytesIO(body), read_only=True, data_only=True)
         try:
             sheets = []
+            remaining = _XLSX_MAX_CELLS
+            truncated = False
             for worksheet in workbook.worksheets:
-                rows = [
-                    ["" if value is None else str(value) for value in row]
-                    for row in worksheet.iter_rows(values_only=True)
-                ]
-                # Excel reports a sheet's dimension generously, so trailing
-                # phantom rows are routine and would be pages of empty commas.
-                while rows and not any(cell.strip() for cell in rows[-1]):
-                    rows.pop()
-                if not rows:
-                    continue
-
                 # csv rather than a join: a cell may itself hold a comma, a
                 # quote or a newline, any of which would corrupt the grid.
                 buffer = StringIO()
-                csv.writer(buffer, lineterminator="\n").writerows(rows)
-                sheets.append(f"Sheet {worksheet.title}:\n{buffer.getvalue().rstrip()}")
+                writer = csv.writer(buffer, lineterminator="\n")
+                for row in worksheet.iter_rows(values_only=True):
+                    values = ["" if value is None else str(value) for value in row]
+                    # Excel reports a sheet's dimension generously and openpyxl
+                    # pads every row up to it, so one stray far-down cell turns
+                    # a 5 KB upload into 100k blank rows. They carry nothing.
+                    if not any(value.strip() for value in values):
+                        continue
+                    if len(values) > remaining:
+                        truncated = True
+                        break
+                    remaining -= len(values)
+                    writer.writerow(values)
+
+                if buffer.tell():
+                    sheets.append(
+                        f"Sheet {worksheet.title}:\n{buffer.getvalue().rstrip()}"
+                    )
+                if truncated:
+                    break
         finally:
             workbook.close()
 
         if not sheets:
             return "[XLSX with no extractable cells]"
-        return "\n\n".join(sheets)
+        text = "\n\n".join(sheets)
+        if truncated:
+            text += f"\n\n[Truncated: workbook exceeds {_XLSX_MAX_CELLS} cells]"
+        return text
 
     def _extract_html(self, body: bytes, content_type: str) -> str:
         """Strip HTML bytes down to visible text."""

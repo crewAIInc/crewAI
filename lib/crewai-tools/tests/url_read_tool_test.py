@@ -625,15 +625,69 @@ def test_xlsx_cells_are_csv_quoted_so_the_grid_survives():
     assert '"line1\nline2"' in result
 
 
-def test_xlsx_trailing_empty_rows_are_trimmed():
+def test_xlsx_blank_rows_are_dropped():
     """Excel reports generous dimensions; phantom rows must not pad the output."""
     tool = URLReadTool()
-    body = build_xlsx([["a"], ["b"], [None], [None], [None]])
+    body = build_xlsx([["a"], [None], ["b"], [None], [None]])
     with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
         fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
         result = tool.run(url=PRESIGNED_URL)
 
     assert result == "Sheet Sheet1:\na\nb"
+
+
+def test_one_far_down_cell_does_not_pad_the_output():
+    """A stray cell at row 100000 must not expand 5 KB into 100k blank rows.
+
+    openpyxl pads every row up to the sheet's declared dimension, so trimming
+    only trailing blanks left the interior padding in the agent's context.
+    """
+    tool = URLReadTool()
+    from openpyxl import Workbook
+
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet["A1"] = "header"
+    worksheet["B100000"] = "stray"
+    buffer = BytesIO()
+    workbook.save(buffer)
+    body = buffer.getvalue()
+
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert len(result.splitlines()) == 3
+    assert "header" in result
+    assert "stray" in result
+
+
+def test_oversized_workbook_is_truncated_with_a_visible_notice():
+    """A cap that is not announced reads as complete content. Announce it."""
+    tool = URLReadTool()
+    body = build_xlsx([[f"r{index}c{column}" for column in range(10)] for index in range(30)])
+    with (
+        patch(f"{TOOL_MODULE}._XLSX_MAX_CELLS", 50),
+        patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch,
+    ):
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "[Truncated: workbook exceeds 50 cells]" in result
+    assert "r0c0" in result
+    assert "r29c9" not in result
+
+
+def test_zip_claiming_to_be_both_docx_and_xlsx_is_refused():
+    """A package asserting two identities has not been positively identified."""
+    tool = URLReadTool()
+    body = build_zip("[Content_Types].xml", "word/document.xml", "xl/workbook.xml")
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "Unsupported content type 'application/octet-stream'" in result
+    assert "Failed to read" not in result
 
 
 def test_xlsx_with_no_cells_says_so_instead_of_returning_nothing():
