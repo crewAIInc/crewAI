@@ -25,7 +25,7 @@ class YoutubeChannelSearchToolSchema(FixedYoutubeChannelSearchToolSchema):
 
 class YoutubeChannelSearchTool(RagTool):
     name: str = "Search a Youtube Channels content"
-    description: str = "A tool that can be used to semantic search a query from a Youtube Channels content."
+    description: str = "A tool that can be used to semantically search a query from a Youtube Channels content."
     args_schema: type[BaseModel] = YoutubeChannelSearchToolSchema
 
     def __init__(
