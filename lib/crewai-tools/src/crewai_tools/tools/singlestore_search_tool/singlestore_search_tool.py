@@ -1,3 +1,4 @@
+import re
 from collections.abc import Callable
 from typing import Any
 
@@ -306,7 +307,7 @@ class SingleStoreSearchTool(BaseTool):
                             f"Please ensure the table is created."
                         )
 
-                    cursor.execute(f"SHOW COLUMNS FROM {table}")
+                    cursor.execute(f"SHOW COLUMNS FROM `{table.replace('`', '')}`")
                     columns = cursor.fetchall()
                     column_info = ", ".join(f"{row[0]} {row[1]}" for row in columns)
                     table_definitions.append(f"{table}({column_info})")
@@ -356,7 +357,9 @@ class SingleStoreSearchTool(BaseTool):
     def _validate_query(self, search_query: str) -> tuple[bool, str]:
         """Validate the search query to ensure it's safe to execute.
 
-        Only SELECT and SHOW statements are allowed for security reasons.
+        Only a single SELECT or SHOW statement is allowed. Stacked statements
+        such as ``SELECT 1; DROP TABLE users`` are rejected so a read-only
+        start token cannot hide a following write.
 
         Args:
             search_query: The SQL query to validate
@@ -367,13 +370,69 @@ class SingleStoreSearchTool(BaseTool):
         if not isinstance(search_query, str):
             return False, "Search query must be a string."
 
-        query_lower = search_query.strip().lower()
+        stripped = search_query.strip()
+        if stripped.endswith(";"):
+            stripped = stripped[:-1].rstrip()
+        if not stripped:
+            return False, "Search query must be a string."
+        if ";" in stripped:
+            return False, "Multiple SQL statements are not supported."
 
-        # Allow only SELECT and SHOW statements
-        if not (query_lower.startswith(("select", "show"))):
+        # Reject SQL comments — they can separate keywords and bypass
+        # the regex-based pattern checks below (e.g. INTO/**/S3,
+        # FOR/**/UPDATE).  Strip single-quoted string literals first
+        # so that comment-like characters inside data values (e.g.
+        # WHERE name = 'uses -- dashes') do not trigger false rejections.
+        _comment_safe = re.sub(r"'(?:[^']*(?:''[^']*)*)'", "''", stripped)
+        if "/*" in _comment_safe or "--" in _comment_safe or "#" in _comment_safe:
+            return (
+                False,
+                "SQL comments are not supported in search queries.",
+            )
+
+        first_token = stripped.split(None, 1)[0].lower().rstrip("(")
+        if first_token not in {"select", "show"}:
             return (
                 False,
                 "Only SELECT and SHOW queries are supported for security reasons.",
+            )
+
+        # Reject SELECT … INTO clauses that can write to external resources
+        # (OUTFILE, DUMPFILE, FS, LINK, S3, HDFS, AZURE, GCS, KAFKA, STAGE).
+        # Although these start with a SELECT token, they grant FILE WRITE
+        # or OUTBOUND privileges and are not read-only.  Also reject SELECT
+        # … INTO @<variable> (session-variable assignment).
+        into_clause = re.search(
+            r"\bINTO\s+(OUTFILE|DUMPFILE|FS|LINK|S3|HDFS|AZURE|GCS|KAFKA|STAGE)\b",
+            stripped,
+            re.IGNORECASE,
+        )
+        if into_clause:
+            return (
+                False,
+                f"INTO {into_clause.group(1).upper()} is not supported for security reasons.",
+            )
+        # Reject session-variable assignment (SELECT … INTO @var).
+        if re.search(r"\bINTO\s+@", stripped, re.IGNORECASE):
+            return (
+                False,
+                "INTO <variable> is not supported for security reasons.",
+            )
+
+        # Reject locking clauses (FOR UPDATE, LOCK IN SHARE MODE) — a
+        # read-only search tool has no legitimate reason to acquire row
+        # locks, and they can deadlock or block other transactions.
+        if re.search(r"\bFOR\s+UPDATE\b", stripped, re.IGNORECASE):
+            return (
+                False,
+                "FOR UPDATE is not supported for security reasons.",
+            )
+        if re.search(
+            r"\bLOCK\s+IN\s+(?:SHARE\s+)?MODE\b", stripped, re.IGNORECASE
+        ):
+            return (
+                False,
+                "LOCK IN SHARE MODE is not supported for security reasons.",
             )
 
         return True, "Valid query"
