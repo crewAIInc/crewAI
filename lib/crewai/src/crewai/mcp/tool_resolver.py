@@ -390,6 +390,7 @@ class MCPToolResolver:
                 ) from e
 
         try:
+            tools_list: list[dict[str, Any]] = []
             try:
                 asyncio.get_running_loop()
             except RuntimeError:
