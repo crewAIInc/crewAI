@@ -1,4 +1,6 @@
+from io import BytesIO
 from unittest.mock import patch
+import zipfile
 
 import pytest
 import requests
@@ -54,6 +56,34 @@ def build_pdf(text: str = "Quarterly revenue was 42") -> bytes:
         return document.tobytes()
     finally:
         document.close()
+
+
+PRESIGNED_URL = (
+    "https://temp.4d4f16c61d89ec64e760039c4ec50717.r2.cloudflarestorage.com/"
+    "668641/share_point/SHARE_POINT_DOWNLOAD_FILE_BY_SERVER_RELATIVE_URL/"
+    "response/34e077085d293bdb832a6b7c93b9e222"
+    "?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Signature=1954b3d4"
+)
+
+
+def build_docx(text: str = "Signed and delivered") -> bytes:
+    """Return the bytes of a DOCX holding a single paragraph."""
+    from docx import Document
+
+    document = Document()
+    document.add_paragraph(text)
+    buffer = BytesIO()
+    document.save(buffer)
+    return buffer.getvalue()
+
+
+def build_zip(*names: str) -> bytes:
+    """Return a zip holding *names*, shaped like an OOXML package."""
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        for name in names:
+            archive.writestr(name, "<x/>")
+    return buffer.getvalue()
 
 
 def fetch_result(
@@ -309,6 +339,229 @@ def test_corrupt_pdf_reports_error_without_raising():
         result = tool.run(url="https://example.com/report.pdf")
 
     assert result.startswith("Error: Failed to read PDF content")
+
+
+def test_presigned_octet_stream_pdf_is_read_from_its_bytes():
+    """The reported failure: octet-stream, no extension, real PDF bytes.
+
+    Presigned object-store links from the SharePoint connector use a content
+    hash for a path and pin every object to octet-stream, which leaves the
+    body as the only evidence of what was fetched.
+    """
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            build_pdf("Signed quarterly report"),
+            "application/octet-stream",
+            PRESIGNED_URL,
+        )
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "Page 1:" in result
+    assert "Signed quarterly report" in result
+
+
+def test_presigned_octet_stream_docx_is_read_from_its_bytes():
+    """A DOCX behind the same extensionless presigned link is extracted."""
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            build_docx("Countersigned on Tuesday"),
+            "application/octet-stream",
+            PRESIGNED_URL,
+        )
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert result == "Countersigned on Tuesday"
+
+
+def test_octet_stream_html_is_sniffed_and_stripped():
+    """HTML bytes behind an unhelpful header still lose their markup."""
+    tool = URLReadTool()
+    body = b"<!DOCTYPE html><html><body><p>Hi</p><script>x=1</script></body></html>"
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "Hi" in result
+    assert "x=1" not in result
+
+
+@pytest.mark.parametrize(
+    "prefix",
+    [
+        pytest.param(b"", id="bare"),
+        pytest.param(b"\xef\xbb\xbf", id="utf8-bom"),
+        pytest.param(b"\n  \t", id="leading-whitespace"),
+        pytest.param(b"\xef\xbb\xbf\n  ", id="bom-then-whitespace"),
+    ],
+)
+def test_bom_and_whitespace_do_not_hide_the_html_prefix(prefix):
+    """A BOM or leading whitespace must not demote HTML to raw text."""
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            prefix + b"<html><body><p>Hi</p></body></html>",
+            "application/octet-stream",
+            PRESIGNED_URL,
+        )
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "<p>" not in result
+    assert "Hi" in result
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param(b"a,b\n1,2\n", id="csv"),
+        pytest.param(b'{"a": 1}', id="json"),
+        pytest.param(b"# Title\n\nBody text.\n", id="markdown"),
+        pytest.param("plain café text\n".encode(), id="utf8-plain"),
+    ],
+)
+def test_octet_stream_text_bodies_are_returned_verbatim(body):
+    """Decodable, NUL-free bytes are handed back untouched."""
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        assert tool.run(url=PRESIGNED_URL) == body.decode()
+
+
+@pytest.mark.parametrize(
+    "entries",
+    [
+        pytest.param(("[Content_Types].xml", "xl/workbook.xml"), id="xlsx"),
+        pytest.param(("[Content_Types].xml", "ppt/presentation.xml"), id="pptx"),
+        pytest.param(("notes.txt",), id="plain-zip"),
+    ],
+)
+def test_non_word_zips_are_refused_without_a_misleading_docx_error(entries):
+    """An .xlsx must get an honest refusal, not a DOCX extraction failure.
+
+    Sniffing the zip magic alone would route a spreadsheet into python-docx,
+    which raises and surfaces as "Failed to read DOCX content" -- a worse
+    answer than the refusal it replaced.
+    """
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            build_zip(*entries), "application/octet-stream", PRESIGNED_URL
+        )
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "Unsupported content type 'application/octet-stream'" in result
+    assert "Failed to read DOCX" not in result
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param(build_docx()[:120], id="truncated-docx"),
+        pytest.param(b"PK\x03\x04", id="magic-only"),
+        pytest.param(b"PK\x03\x04" + b"\xff" * 200, id="garbage-after-magic"),
+    ],
+)
+def test_malformed_zip_bodies_are_refused_without_raising(body):
+    """Zip magic on unreadable bytes fails closed rather than escaping _run."""
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "Unsupported content type" in result
+
+
+def test_multibyte_character_past_a_prefix_boundary_still_reads_as_text():
+    """The sniff decodes the whole body, so no character is split in half.
+
+    Decoding only a leading slice rejects valid UTF-8 whenever a multi-byte
+    character straddles the cut.
+    """
+    tool = URLReadTool()
+    body = b"a" * 2047 + "é".encode() + b"b" * 5000
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert not result.startswith("Error:")
+    assert result == body.decode()
+
+
+def test_empty_body_is_refused_rather_than_read_as_empty_text():
+    """An empty body identifies nothing; it must not read as a successful "".
+
+    Without an explicit guard it strict-decodes to "" with no NUL byte and
+    would be classified as text.
+    """
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(b"", "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "Unsupported content type" in result
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param("café,x\n".encode("latin-1"), id="latin-1"),
+        pytest.param("a,b\n".encode("utf-16"), id="utf-16-with-bom"),
+        pytest.param("a,b\n".encode("utf-16-be"), id="utf-16-be-nul-bytes"),
+        pytest.param(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR", id="png"),
+    ],
+)
+def test_undecodable_or_nul_bearing_bodies_fail_closed(body):
+    """Fail-closed is deliberate: only strict UTF-8 without NUL reads as text.
+
+    A charset-guessing rescue here would push binary payloads into an agent's
+    context as mojibake, which is what the tool's text-only contract forbids.
+    """
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "Unsupported content type 'application/octet-stream'" in result
+
+
+def test_declared_content_type_wins_over_the_body_bytes():
+    """A usable header is still authoritative; the sniff never overrides it."""
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            build_pdf("Should not be extracted"), "text/html", PRESIGNED_URL
+        )
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "Page 1:" not in result
+    assert "Should not be extracted" not in result
+
+
+def test_url_extension_wins_over_the_body_bytes():
+    """The extension fallback still runs ahead of the sniff."""
+    tool = URLReadTool()
+    url = "https://example.com/export.csv"
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            build_pdf("Should not be extracted"), "application/octet-stream", url
+        )
+        result = tool.run(url=url)
+
+    assert result.startswith("%PDF")
+    assert "Page 1:" not in result
+
+
+def test_sniffed_content_still_honors_the_line_window():
+    """Windowing applies to sniffed bodies like any other."""
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            b"one\ntwo\nthree\nfour\n", "application/octet-stream", PRESIGNED_URL
+        )
+        result = tool.run(url=PRESIGNED_URL, start_line=2, line_count=2)
+
+    assert result == "two\nthree\n"
 
 
 class TestSafeGetBounded:

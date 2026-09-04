@@ -7,6 +7,7 @@ from itertools import islice
 import re
 from typing import Any, Final
 from urllib.parse import urlparse
+import zipfile
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -39,7 +40,8 @@ _TEXT_TYPES: Final[frozenset[str]] = frozenset(
 _TEXT_TYPE_SUFFIXES: Final[tuple[str, ...]] = ("+json", "+xml", "+yaml")
 
 # Servers commonly serve static files as octet-stream, or send no type at all,
-# so the extension is consulted when the header carries no usable answer.
+# so the extension and then the body itself are consulted when the header
+# carries no usable answer.
 _UNINFORMATIVE_TYPES: Final[frozenset[str]] = frozenset(
     {"", "application/octet-stream", "binary/octet-stream"}
 )
@@ -56,6 +58,12 @@ _EXTENSION_TYPES: Final[dict[str, str]] = {
     ".yaml": "application/yaml",
     ".yml": "application/yaml",
 }
+
+_PDF_MAGIC: Final[bytes] = b"%PDF-"
+_ZIP_MAGIC: Final[bytes] = b"PK\x03\x04"
+_DOCX_ZIP_ENTRY: Final[str] = "word/document.xml"
+_HTML_PREFIXES: Final[tuple[str, ...]] = ("<!doctype html", "<html")
+_HTML_PREFIX_LEN: Final[int] = max(len(prefix) for prefix in _HTML_PREFIXES)
 
 _SPACES_PATTERN: Final[re.Pattern[str]] = re.compile(r"[ \t]+")
 _NEWLINE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\s+\n\s+")
@@ -103,8 +111,11 @@ class URLReadTool(BaseTool):
     Responses are decoded to text according to their content type. PDF and DOCX
     bodies have their text extracted, HTML is stripped to visible text, and
     text-shaped types (plain text, Markdown, JSON, XML, YAML, CSV) are decoded
-    as-is. Any other type is refused rather than returned as base64, keeping
-    this tool's output text-only.
+    as-is. When a server names no usable type -- ``application/octet-stream``
+    from a presigned link, say -- the URL extension and then the body's own
+    leading bytes are consulted before giving up. Any content that none of
+    those identify is refused rather than returned as base64, keeping this
+    tool's output text-only.
 
     Security:
         Requests go through :func:`~crewai_tools.security.safe_requests.safe_get_bounded`,
@@ -201,10 +212,62 @@ class URLReadTool(BaseTool):
             return "text"
         return None
 
-    def _resolve_kind(self, content_type: str, *urls: str) -> str | None:
-        """Decide how to extract text, by content type then by URL extension.
+    @staticmethod
+    def _sniff(body: bytes) -> str | None:
+        """Identify a supported type from the body's own bytes.
+
+        Presigned object-store links routinely serve every file as
+        octet-stream from an extensionless path, which leaves the bytes as
+        the only remaining evidence of what was fetched.
+
+        Fails closed: anything this cannot positively identify is refused
+        rather than decoded speculatively, which is what keeps binary
+        payloads from reaching an agent's context as mojibake.
+        """
+        # An empty body identifies nothing. Without this it would strict-decode
+        # to "" and read as a successful empty text response.
+        if not body:
+            return None
+
+        if body.startswith(_PDF_MAGIC):
+            return "pdf"
+
+        if body.startswith(_ZIP_MAGIC):
+            try:
+                with zipfile.ZipFile(BytesIO(body)) as archive:
+                    # Central directory only -- nothing is decompressed, so a
+                    # zip bomb costs nothing here. Without the entry check an
+                    # .xlsx would reach python-docx and surface as a misleading
+                    # "failed to read DOCX" instead of an honest refusal.
+                    names = archive.namelist()
+            except zipfile.BadZipFile:
+                return None
+            return "docx" if _DOCX_ZIP_ENTRY in names else None
+
+        # Strict, whole-body decode: a prefix would split a multi-byte
+        # character and reject valid text. The body is already resident and
+        # already capped at max_bytes, so there is nothing to save by slicing.
+        try:
+            text = body.decode("utf-8")
+        except UnicodeDecodeError:
+            return None
+        if "\x00" in text:
+            return None
+
+        leading = text.lstrip("\ufeff").lstrip()[:_HTML_PREFIX_LEN].lower()
+        return "html" if leading.startswith(_HTML_PREFIXES) else "text"
+
+    def _resolve_kind(self, body: bytes, content_type: str, *urls: str) -> str | None:
+        """Decide how to extract text: content type, URL extension, then bytes.
+
+        Each source is consulted only when every earlier one came back with
+        nothing, and none may override an answer an earlier one gave. That
+        ordering is what makes the byte sniff a pure widening of what the tool
+        accepts: it can turn a refusal into a read, never a read into a
+        different read.
 
         Args:
+            body: The fetched body, sniffed last when nothing else identifies it.
             content_type: The raw Content-Type header value.
             *urls: URLs to consult for an extension, most authoritative first.
                 A ``.pdf`` link that redirects to an extensionless CDN or
@@ -212,7 +275,7 @@ class URLReadTool(BaseTool):
                 both ends of the chain are worth checking.
 
         Returns:
-            The extractor name, or None when the content type is unsupported.
+            The extractor name, or None when nothing identifies the content.
         """
         declared = content_type.split(";", 1)[0].strip().lower()
         if declared not in _UNINFORMATIVE_TYPES:
@@ -223,7 +286,8 @@ class URLReadTool(BaseTool):
             for extension, media_type in _EXTENSION_TYPES.items():
                 if path.endswith(extension):
                     return self._classify(media_type)
-        return None
+
+        return self._sniff(body)
 
     def _decode(self, body: bytes, content_type: str) -> str:
         """Decode *body* using the configured, declared, or default encoding.
@@ -355,7 +419,7 @@ class URLReadTool(BaseTool):
         except requests.RequestException as e:
             return f"Error: Failed to fetch '{url}'. {format_error_for_display(e)}"
 
-        kind = self._resolve_kind(content_type, final_url, url)
+        kind = self._resolve_kind(body, content_type, final_url, url)
         if kind is None:
             return (
                 f"Error: Unsupported content type "
