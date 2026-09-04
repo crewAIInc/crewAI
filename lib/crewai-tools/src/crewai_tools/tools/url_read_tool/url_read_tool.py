@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from io import BytesIO
+import csv
+from io import BytesIO, StringIO
 from itertools import islice
 import re
 from typing import Any, Final
@@ -23,6 +24,9 @@ _DEFAULT_TIMEOUT: Final[int] = 30
 _PDF_TYPE: Final[str] = "application/pdf"
 _DOCX_TYPE: Final[str] = (
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+)
+_XLSX_TYPE: Final[str] = (
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 _HTML_TYPES: Final[frozenset[str]] = frozenset({"text/html", "application/xhtml+xml"})
 _TEXT_TYPES: Final[frozenset[str]] = frozenset(
@@ -54,6 +58,7 @@ _EXTENSION_TYPES: Final[dict[str, str]] = {
     ".md": "text/markdown",
     ".pdf": _PDF_TYPE,
     ".txt": "text/plain",
+    ".xlsx": _XLSX_TYPE,
     ".xml": "application/xml",
     ".yaml": "application/yaml",
     ".yml": "application/yaml",
@@ -62,6 +67,7 @@ _EXTENSION_TYPES: Final[dict[str, str]] = {
 _PDF_MAGIC: Final[bytes] = b"%PDF-"
 _ZIP_MAGIC: Final[bytes] = b"PK\x03\x04"
 _DOCX_ZIP_ENTRY: Final[str] = "word/document.xml"
+_XLSX_ZIP_ENTRY: Final[str] = "xl/workbook.xml"
 _HTML_PREFIXES: Final[tuple[str, ...]] = ("<!doctype html", "<html")
 _HTML_PREFIX_LEN: Final[int] = max(len(prefix) for prefix in _HTML_PREFIXES)
 
@@ -108,10 +114,10 @@ class URLReadTool(BaseTool):
     egress, and that should be a deliberate choice rather than a flag on a
     filesystem tool.
 
-    Responses are decoded to text according to their content type. PDF and DOCX
-    bodies have their text extracted, HTML is stripped to visible text, and
-    text-shaped types (plain text, Markdown, JSON, XML, YAML, CSV) are decoded
-    as-is. When a server names no usable type -- ``application/octet-stream``
+    Responses are decoded to text according to their content type. PDF, DOCX
+    and XLSX bodies have their text extracted, HTML is stripped to visible
+    text, and text-shaped types (plain text, Markdown, JSON, XML, YAML, CSV)
+    are decoded as-is. When a server names no usable type -- ``octet-stream``
     from a presigned link, say -- the URL extension and then the body's own
     leading bytes are consulted before giving up. Any content that none of
     those identify is refused rather than returned as base64, keeping this
@@ -152,7 +158,8 @@ class URLReadTool(BaseTool):
     description: str = (
         "A tool that reads the content at a URL and returns it as text. To use "
         "this tool, provide a 'url' parameter with an http:// or https:// "
-        "address. PDF, DOCX, HTML, JSON, XML, CSV and plain-text responses are "
+        "address. PDF, DOCX, XLSX, HTML, JSON, XML, CSV and plain-text "
+        "responses are "
         "converted to text; other binary types are rejected. URLs that resolve "
         "to private or internal network addresses are refused, as are responses "
         "over the tool's size limit. Optionally provide 'start_line' and "
@@ -202,6 +209,8 @@ class URLReadTool(BaseTool):
             return "pdf"
         if media_type == _DOCX_TYPE:
             return "docx"
+        if media_type == _XLSX_TYPE:
+            return "xlsx"
         if media_type in _HTML_TYPES:
             return "html"
         if (
@@ -236,13 +245,16 @@ class URLReadTool(BaseTool):
             try:
                 with zipfile.ZipFile(BytesIO(body)) as archive:
                     # Central directory only -- nothing is decompressed, so a
-                    # zip bomb costs nothing here. Without the entry check an
-                    # .xlsx would reach python-docx and surface as a misleading
-                    # "failed to read DOCX" instead of an honest refusal.
-                    names = archive.namelist()
+                    # zip bomb costs nothing here. Naming the part that must be
+                    # present is what keeps a .pptx from reaching python-docx
+                    # and surfacing as a misleading "failed to read DOCX"
+                    # instead of an honest refusal.
+                    names = set(archive.namelist())
             except zipfile.BadZipFile:
                 return None
-            return "docx" if _DOCX_ZIP_ENTRY in names else None
+            if _DOCX_ZIP_ENTRY in names:
+                return "docx"
+            return "xlsx" if _XLSX_ZIP_ENTRY in names else None
 
         # Strict, whole-body decode: a prefix would split a multi-byte
         # character and reject valid text. The body is already resident and
@@ -345,6 +357,47 @@ class URLReadTool(BaseTool):
             if paragraph.text.strip()
         )
 
+    @staticmethod
+    def _extract_xlsx(body: bytes) -> str:
+        """Extract cell values from XLSX bytes, sheet by sheet, as CSV."""
+        try:
+            # openpyxl ships no stubs; same treatment as pymupdf above.
+            from openpyxl import load_workbook  # type: ignore[import-untyped]
+        except ImportError as e:
+            raise ImportError(
+                "Reading XLSX URLs requires openpyxl. Install with: uv add openpyxl"
+            ) from e
+
+        # read_only streams the sheets rather than building the whole object
+        # graph, and data_only takes cached values so formulas do not come
+        # back as "=SUM(A1:A9)". Both matter for a workbook off an untrusted URL.
+        workbook = load_workbook(BytesIO(body), read_only=True, data_only=True)
+        try:
+            sheets = []
+            for worksheet in workbook.worksheets:
+                rows = [
+                    ["" if value is None else str(value) for value in row]
+                    for row in worksheet.iter_rows(values_only=True)
+                ]
+                # Excel reports a sheet's dimension generously, so trailing
+                # phantom rows are routine and would be pages of empty commas.
+                while rows and not any(cell.strip() for cell in rows[-1]):
+                    rows.pop()
+                if not rows:
+                    continue
+
+                # csv rather than a join: a cell may itself hold a comma, a
+                # quote or a newline, any of which would corrupt the grid.
+                buffer = StringIO()
+                csv.writer(buffer, lineterminator="\n").writerows(rows)
+                sheets.append(f"Sheet {worksheet.title}:\n{buffer.getvalue().rstrip()}")
+        finally:
+            workbook.close()
+
+        if not sheets:
+            return "[XLSX with no extractable cells]"
+        return "\n\n".join(sheets)
+
     def _extract_html(self, body: bytes, content_type: str) -> str:
         """Strip HTML bytes down to visible text."""
         try:
@@ -368,6 +421,8 @@ class URLReadTool(BaseTool):
             return self._extract_pdf(body)
         if kind == "docx":
             return self._extract_docx(body)
+        if kind == "xlsx":
+            return self._extract_xlsx(body)
         if kind == "html":
             return self._extract_html(body, content_type)
         return self._decode(body, content_type)

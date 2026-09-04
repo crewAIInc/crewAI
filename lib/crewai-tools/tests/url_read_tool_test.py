@@ -77,6 +77,20 @@ def build_docx(text: str = "Signed and delivered") -> bytes:
     return buffer.getvalue()
 
 
+def build_xlsx(rows: list[list[object]], title: str = "Sheet1") -> bytes:
+    """Return the bytes of a single-sheet XLSX holding *rows*."""
+    from openpyxl import Workbook
+
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = title
+    for row in rows:
+        worksheet.append(row)
+    buffer = BytesIO()
+    workbook.save(buffer)
+    return buffer.getvalue()
+
+
 def build_zip(*names: str) -> bytes:
     """Return a zip holding *names*, shaped like an OOXML package."""
     buffer = BytesIO()
@@ -431,17 +445,17 @@ def test_octet_stream_text_bodies_are_returned_verbatim(body):
 @pytest.mark.parametrize(
     "entries",
     [
-        pytest.param(("[Content_Types].xml", "xl/workbook.xml"), id="xlsx"),
         pytest.param(("[Content_Types].xml", "ppt/presentation.xml"), id="pptx"),
+        pytest.param(("[Content_Types].xml", "visio/document.xml"), id="vsdx"),
         pytest.param(("notes.txt",), id="plain-zip"),
     ],
 )
-def test_non_word_zips_are_refused_without_a_misleading_docx_error(entries):
-    """An .xlsx must get an honest refusal, not a DOCX extraction failure.
+def test_unsupported_zips_are_refused_without_a_misleading_docx_error(entries):
+    """A .pptx must get an honest refusal, not a DOCX extraction failure.
 
-    Sniffing the zip magic alone would route a spreadsheet into python-docx,
-    which raises and surfaces as "Failed to read DOCX content" -- a worse
-    answer than the refusal it replaced.
+    Sniffing the zip magic alone would route any OOXML package into
+    python-docx, which raises and surfaces as "Failed to read DOCX content"
+    -- a worse answer than the refusal it replaced.
     """
     tool = URLReadTool()
     with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
@@ -562,6 +576,101 @@ def test_sniffed_content_still_honors_the_line_window():
         result = tool.run(url=PRESIGNED_URL, start_line=2, line_count=2)
 
     assert result == "two\nthree\n"
+
+
+def test_presigned_octet_stream_xlsx_is_read_from_its_bytes():
+    """The reported file: an XLSX behind an extensionless presigned link."""
+    tool = URLReadTool()
+    body = build_xlsx([["RFQ ID", "Title"], ["RFQ-1", "Turbine parts"]], "RFQ Header")
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert result == "Sheet RFQ Header:\nRFQ ID,Title\nRFQ-1,Turbine parts"
+
+
+@pytest.mark.parametrize(
+    ("content_type", "url"),
+    [
+        pytest.param(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            PRESIGNED_URL,
+            id="declared-type",
+        ),
+        pytest.param(
+            "application/octet-stream",
+            "https://example.com/q3.xlsx",
+            id="url-extension",
+        ),
+    ],
+)
+def test_xlsx_resolves_from_its_declared_type_and_its_extension(content_type, url):
+    """XLSX is reachable by all three routes, not only by sniffing."""
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(build_xlsx([["a", "b"]]), content_type, url)
+        assert tool.run(url=url) == "Sheet Sheet1:\na,b"
+
+
+def test_xlsx_cells_are_csv_quoted_so_the_grid_survives():
+    """A comma, quote or newline inside a cell must not corrupt the row."""
+    tool = URLReadTool()
+    body = build_xlsx([["Smith, Jane", 'He said "hi"'], ["line1\nline2", "plain"]])
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert '"Smith, Jane"' in result
+    assert '"He said ""hi"""' in result
+    assert '"line1\nline2"' in result
+
+
+def test_xlsx_trailing_empty_rows_are_trimmed():
+    """Excel reports generous dimensions; phantom rows must not pad the output."""
+    tool = URLReadTool()
+    body = build_xlsx([["a"], ["b"], [None], [None], [None]])
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert result == "Sheet Sheet1:\na\nb"
+
+
+def test_xlsx_with_no_cells_says_so_instead_of_returning_nothing():
+    """An empty workbook reports its emptiness rather than an empty string."""
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            build_xlsx([]), "application/octet-stream", PRESIGNED_URL
+        )
+        assert tool.run(url=PRESIGNED_URL) == "[XLSX with no extractable cells]"
+
+
+def test_xlsx_formula_without_a_cached_value_reads_as_empty():
+    """data_only returns cached results, so an uncalculated formula is blank.
+
+    Pinning this documents the trade: agents get "42" from a workbook Excel
+    has saved, never the literal "=SUM(A1:A2)".
+    """
+    tool = URLReadTool()
+    body = build_xlsx([[1], [2], ["=SUM(A1:A2)"]])
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "=SUM" not in result
+    assert result == "Sheet Sheet1:\n1\n2"
+
+
+def test_corrupt_xlsx_reports_error_without_raising():
+    """A zip that claims to be a workbook but is not becomes an error string."""
+    tool = URLReadTool()
+    body = build_zip("[Content_Types].xml", "xl/workbook.xml")
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert result.startswith("Error: Failed to read XLSX content")
 
 
 class TestSafeGetBounded:
