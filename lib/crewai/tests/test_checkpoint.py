@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import concurrent.futures
 import inspect
 import json
 import os
@@ -801,3 +803,208 @@ class TestCustomLLMCheckpointRestore:
         assert isinstance(llm, BaseLLM)
         assert not inspect.isabstract(type(llm))
         assert llm.model == "stub"
+
+
+class TestJsonProviderAtomicWrites:
+    """Verify that JsonProvider writes are atomic and no partial files appear."""
+
+    def test_checkpoint_file_is_complete(self) -> None:
+        """After checkpoint(), the file must contain exactly the data written."""
+        provider = JsonProvider()
+        payload = json.dumps({"key": "value", "nested": {"a": 1}})
+        with tempfile.TemporaryDirectory() as d:
+            path = provider.checkpoint(payload, d, branch="main")
+            with open(path) as f:
+                assert f.read() == payload
+
+    def test_no_temp_files_left_on_success(self) -> None:
+        """Successful writes must not leave .tmp files behind."""
+        provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            provider.checkpoint("{}", d, branch="main")
+            branch_dir = os.path.join(d, "main")
+            tmp_files = [f for f in os.listdir(branch_dir) if f.endswith(".tmp")]
+            assert tmp_files == []
+
+    def test_no_temp_files_left_on_failure(self) -> None:
+        """A failed write must clean up its temp file."""
+        provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            branch_dir = os.path.join(d, "main")
+            os.makedirs(branch_dir)
+            # Make the target file path a directory to force os.replace to fail
+            fake_target = os.path.join(branch_dir, "blocker")
+            os.makedirs(fake_target)
+            # Patch _build_path to return our blocker path
+            from crewai.state.provider import json_provider as jp
+            original_build = jp._build_path
+            from pathlib import Path
+            def bad_build(*a, **kw):
+                return Path(fake_target)
+            jp._build_path = bad_build
+            try:
+                with pytest.raises(OSError):
+                    provider.checkpoint("{}", d, branch="main")
+            finally:
+                jp._build_path = original_build
+            # No leftover .tmp files
+            tmp_files = [f for f in os.listdir(branch_dir) if f.endswith(".tmp")]
+            assert tmp_files == []
+
+    @pytest.mark.asyncio
+    async def test_acheckpoint_file_is_complete(self) -> None:
+        """Async checkpoint must produce a complete file."""
+        provider = JsonProvider()
+        payload = json.dumps({"async": True, "data": list(range(100))})
+        with tempfile.TemporaryDirectory() as d:
+            path = await provider.acheckpoint(payload, d, branch="main")
+            with open(path) as f:
+                assert f.read() == payload
+
+    @pytest.mark.asyncio
+    async def test_acheckpoint_no_temp_files(self) -> None:
+        """Async writes must not leave .tmp files."""
+        provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            await provider.acheckpoint("{}", d, branch="main")
+            branch_dir = os.path.join(d, "main")
+            tmp_files = [f for f in os.listdir(branch_dir) if f.endswith(".tmp")]
+            assert tmp_files == []
+
+
+class TestJsonProviderConcurrency:
+    """Verify that concurrent checkpoint writes do not lose data or diverge lineage."""
+
+    def _make_state(self) -> RuntimeState:
+        from crewai import Agent, Crew
+        agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")
+        crew = Crew(agents=[agent], tasks=[], verbose=False)
+        return RuntimeState(root=[crew])
+
+    def test_concurrent_sync_checkpoints_preserve_lineage(self) -> None:
+        """Multiple threads writing checkpoints must form a linear chain."""
+        state = self._make_state()
+        state._provider = JsonProvider()
+        num_writers = 5
+        writes_per_thread = 10
+
+        with tempfile.TemporaryDirectory() as d:
+            def writer():
+                for _ in range(writes_per_thread):
+                    state.checkpoint(d)
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=num_writers) as pool:
+                futures = [pool.submit(writer) for _ in range(num_writers)]
+                for f in futures:
+                    f.result()
+
+            # All checkpoint files should exist
+            branch_dir = os.path.join(d, "main")
+            # Sort by filename which encodes timestamp + uuid
+            files = sorted(
+                [f for f in os.listdir(branch_dir) if f.endswith(".json")],
+            )
+            total_expected = num_writers * writes_per_thread
+            assert len(files) == total_expected
+
+            # Verify lineage: each checkpoint's parent_id must refer to an
+            # existing earlier checkpoint (or "none" for the root). With the
+            # lock, exactly one checkpoint should have parent "none" and all
+            # others must form a single linear chain.
+            provider = JsonProvider()
+            ids = [provider.extract_id(os.path.join(branch_dir, f)) for f in files]
+            parent_ids = []
+            for f in files:
+                stem = os.path.splitext(f)[0]
+                idx = stem.find("_p-")
+                parent_ids.append(stem[idx + 3:] if idx != -1 else "none")
+
+            # Exactly one root checkpoint (parent "none")
+            assert parent_ids.count("none") == 1, (
+                f"Expected exactly 1 root checkpoint, got {parent_ids.count('none')}"
+            )
+            # Every non-root checkpoint must reference a valid earlier checkpoint id
+            id_set = set(ids)
+            for i, parent in enumerate(parent_ids):
+                if parent == "none":
+                    continue
+                assert parent in id_set, (
+                    f"Checkpoint {i} has parent {parent!r} which is not "
+                    f"a known checkpoint id — lineage diverged"
+                )
+
+    @pytest.mark.asyncio
+    async def test_concurrent_async_checkpoints_preserve_lineage(self) -> None:
+        """Multiple async tasks writing checkpoints must form a linear chain."""
+        state = self._make_state()
+        state._provider = JsonProvider()
+        num_tasks = 5
+        writes_per_task = 10
+
+        with tempfile.TemporaryDirectory() as d:
+            async def writer():
+                for _ in range(writes_per_task):
+                    await state.acheckpoint(d)
+
+            await asyncio.gather(*(writer() for _ in range(num_tasks)))
+
+            branch_dir = os.path.join(d, "main")
+            files = sorted(
+                [f for f in os.listdir(branch_dir) if f.endswith(".json")],
+            )
+            total_expected = num_tasks * writes_per_task
+            assert len(files) == total_expected
+
+            provider = JsonProvider()
+            ids = [provider.extract_id(os.path.join(branch_dir, f)) for f in files]
+            parent_ids = []
+            for f in files:
+                stem = os.path.splitext(f)[0]
+                idx = stem.find("_p-")
+                parent_ids.append(stem[idx + 3:] if idx != -1 else "none")
+
+            # Exactly one root checkpoint (parent "none")
+            assert parent_ids.count("none") == 1, (
+                f"Expected exactly 1 root checkpoint, got {parent_ids.count('none')}"
+            )
+            # Every non-root checkpoint must reference a valid checkpoint id
+            id_set = set(ids)
+            for i, parent in enumerate(parent_ids):
+                if parent == "none":
+                    continue
+                assert parent in id_set, (
+                    f"Checkpoint {i} has parent {parent!r} which is not "
+                    f"a known checkpoint id — lineage diverged"
+                )
+
+    def test_concurrent_checkpoints_all_files_valid_json(self) -> None:
+        """Every checkpoint file produced by concurrent writers must be valid JSON."""
+        state = self._make_state()
+        state._provider = JsonProvider()
+        num_writers = 5
+        writes_per_thread = 10
+
+        with tempfile.TemporaryDirectory() as d:
+            def writer():
+                for _ in range(writes_per_thread):
+                    state.checkpoint(d)
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=num_writers) as pool:
+                futures = [pool.submit(writer) for _ in range(num_writers)]
+                for f in futures:
+                    f.result()
+
+            branch_dir = os.path.join(d, "main")
+            for filename in os.listdir(branch_dir):
+                if not filename.endswith(".json"):
+                    continue
+                filepath = os.path.join(branch_dir, filename)
+                with open(filepath) as fh:
+                    content = fh.read()
+                    try:
+                        json.loads(content)
+                    except json.JSONDecodeError:
+                        pytest.fail(
+                            f"Checkpoint {filename} contains invalid JSON "
+                            f"(partial write?): {content[:200]!r}"
+                        )
