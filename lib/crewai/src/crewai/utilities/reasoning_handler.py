@@ -104,6 +104,21 @@ FUNCTION_SCHEMA: Final[dict[str, Any]] = {
 }
 
 
+
+
+def _is_ready_response(text: str) -> bool:
+    """Check if the LLM response indicates readiness to execute.
+
+    Matches 'READY' as a standalone keyword while excluding 'NOT READY'.
+    This handles various LLM output formats:
+    - "READY"
+    - "---\nREADY"
+    - "READY: I am ready to execute the task."
+    But NOT:
+    - "NOT READY"
+    """
+    return bool(re.search(r"(?<!NOT\s)READY", text))
+
 class AgentReasoning:
     """
     Handles the agent planning/reasoning process, enabling an agent to reflect
@@ -411,7 +426,7 @@ class AgentReasoning:
             return (
                 response_str,
                 [],
-                "READY: I am ready to execute the task." in response_str,
+                _is_ready_response(response_str),
             )
 
         except HookAborted:
@@ -437,7 +452,7 @@ class AgentReasoning:
                 return (
                     fallback_str,
                     [],
-                    "READY: I am ready to execute the task." in fallback_str,
+                    _is_ready_response(fallback_str),
                 )
             except HookAborted:
                 raise
@@ -599,7 +614,7 @@ class AgentReasoning:
             return "No plan was generated.", False
 
         plan = response
-        ready = "READY: I am ready to execute the task." in response
+        ready = _is_ready_response(response)
 
         return plan, ready
 
