@@ -149,13 +149,19 @@ def _extract_thought(text: str) -> str:
 def _clean_action(text: str) -> str:
     """Clean action string by removing non-essential formatting characters.
 
+    Only the first line is kept: models sometimes emit explanatory text between
+    ``Action:`` and ``Action Input:``, which the action regex captures into the
+    tool name. Keeping just the first line ensures the tool name still matches a
+    registered tool instead of becoming a multi-line string that never matches.
+
     Args:
         text: The action text to clean.
 
     Returns:
-        The cleaned action string.
+        The cleaned tool name.
     """
-    return text.strip().strip("*").strip()
+    first_line = text.strip().split("\n", 1)[0]
+    return first_line.strip().strip("*").strip()
 
 
 def _safe_repair_json(tool_input: str) -> str:
