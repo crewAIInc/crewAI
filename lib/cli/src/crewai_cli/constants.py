@@ -177,6 +177,7 @@ MODELS: dict[str, list[str]] = {
         "claude-haiku-4-5-20251001",
     ],
     "gemini": [
+        "gemini/gemini-3.8-flash",
         "gemini/gemini-3-pro-preview",
         "gemini/gemini-1.5-flash",
         "gemini/gemini-1.5-pro",
