@@ -4,6 +4,7 @@ Two-column layout: left sidebar (tasks/agents/tokens) + main content
 (task header, plan checklist, activity timeline, streaming output).
 """
 
+from concurrent.futures import Future
 import json as _json
 import re
 import threading
@@ -395,6 +396,16 @@ Screen {
     border-top: hkey #1F7982;
 }
 
+#conversation-queue {
+    display: none;
+    height: auto;
+    max-height: 5;
+    padding: 0 2;
+    background: #1c1c1c;
+    border-top: hkey #333333;
+    color: #AAAAAA;
+}
+
 Header {
     background: #1c1c1c;
     color: #FF5A50;
@@ -563,6 +574,11 @@ FooterKey .footer-key--key {
         self._conversation_messages: list[tuple[str, str]] = []
         self._conversation_turns = 0
         self._conversation_turn_in_progress = False
+        self._conversation_queued_turns = 0
+        self._conversation_turn_queue: Any = None
+        self._conversation_turn_futures: list[tuple[str, Future[Any]]] = []
+        self._conversation_displayed_turns: set[Future[Any]] = set()
+        self._conversation_result_timer: Any = None
         self._conversation_previous_defer_trace_finalization: bool | None = None
         self._conversation_exit_commands = {"exit", "quit"}
         self._default_inputs: dict[str, Any] | None = None
@@ -612,6 +628,7 @@ FooterKey .footer-key--key {
                     placeholder="Message the flow...",
                     id="conversation-input",
                 )
+                yield Static(id="conversation-queue")
                 with VerticalScroll(id="log-panel"):
                     yield Static(id="log-content")
         yield Footer()
@@ -847,6 +864,13 @@ FooterKey .footer-key--key {
             )
             self._flow.defer_trace_finalization = True
 
+        from crewai.flow._conversation_queue import ConversationTurnQueue
+
+        self._conversation_turn_queue = ConversationTurnQueue(self._flow)
+        self._conversation_result_timer = self.set_interval(
+            1 / 20, self._drain_queued_conversation_results
+        )
+
         try:
             input_widget = self.query_one("#conversation-input", Input)
             input_widget.display = True
@@ -857,6 +881,16 @@ FooterKey .footer-key--key {
     def _finalize_conversational_session(self) -> None:
         if not (self._is_conversational and self._flow):
             return
+        if self._conversation_turn_queue is not None:
+            try:
+                self._conversation_turn_queue.close()
+            except Exception:  # noqa: S110
+                pass
+            self._drain_queued_conversation_results()
+            self._conversation_turn_queue = None
+        if self._conversation_result_timer is not None:
+            self._conversation_result_timer.stop()
+            self._conversation_result_timer = None
         try:
             self._flow.finalize_session_traces()
         except Exception:  # noqa: S110
@@ -883,13 +917,28 @@ FooterKey .footer-key--key {
             self._unsubscribe()
             self.exit(self._crew_result)
             return
-        if self._conversation_turn_in_progress:
+        if (
+            self._conversation_turn_in_progress
+            and self._conversation_turn_queue is None
+        ):
             return
 
+        queued_future: Future[Any] | None = None
+        if self._conversation_turn_queue is not None:
+            try:
+                queued_future = self._conversation_turn_queue.submit(message)
+            except Exception as exc:
+                self._on_conversation_turn_failed(str(exc))
+                return
+
         with self._lock:
-            self._conversation_messages.append(("user", message))
             self._conversation_turn_in_progress = True
-            self._conversation_turns += 1
+            if queued_future is not None:
+                self._conversation_queued_turns += 1
+                self._conversation_turn_futures.append((message, queued_future))
+            else:
+                self._conversation_messages.append(("user", message))
+                self._conversation_turns += 1
             self._status = "working"
             self._current_step = ("yellow", "Thinking…", "")
             self._is_streaming = False
@@ -897,8 +946,52 @@ FooterKey .footer-key--key {
             self._task_full_output = ""
             self._current_llm_text = ""
 
+        if queued_future is not None:
+            self._tick()
+            return
+
         event.input.disabled = True
         self._run_conversation_turn_worker(message)
+
+    def _drain_queued_conversation_results(self) -> None:
+        while (
+            self._conversation_turn_futures
+            and self._conversation_turn_futures[0][1].done()
+        ):
+            message, future = self._conversation_turn_futures.pop(0)
+            try:
+                result = future.result()
+            except BaseException as exc:
+                from crewai.flow._conversation_queue import (
+                    ConversationTurnQueueStoppedError,
+                )
+
+                if not isinstance(exc, ConversationTurnQueueStoppedError):
+                    self._display_queued_user_message(message, future)
+                self._on_conversation_turn_failed(str(exc))
+            else:
+                self._display_queued_user_message(message, future)
+                self._on_conversation_turn_done(result)
+            self._conversation_displayed_turns.discard(future)
+
+        for message, future in self._conversation_turn_futures:
+            if future.running():
+                self._display_queued_user_message(message, future)
+
+    def _display_queued_user_message(self, message: str, future: Future[Any]) -> None:
+        if future in self._conversation_displayed_turns:
+            return
+        self._conversation_displayed_turns.add(future)
+        self._conversation_messages.append(("user", message))
+        self._conversation_turns += 1
+
+    def _queued_conversation_entries(self) -> list[tuple[str, str]]:
+        """Return outstanding messages with active or queued display status."""
+        return [
+            (message, "active" if future.running() else "queued")
+            for message, future in self._conversation_turn_futures
+            if not future.done()
+        ]
 
     @work(thread=True, exclusive=True, group="conversation")
     def _run_conversation_turn_worker(self, message: str) -> None:
@@ -924,23 +1017,39 @@ FooterKey .footer-key--key {
             output = self._stringify_output(result)
             self._conversation_messages.append(("assistant", output))
             self._crew_result = result
-            self._conversation_turn_in_progress = False
-            self._status = "chatting"
+            if self._conversation_turn_queue is not None:
+                self._conversation_queued_turns = max(
+                    0, self._conversation_queued_turns - 1
+                )
+            self._conversation_turn_in_progress = self._conversation_queued_turns > 0
+            self._status = (
+                "working" if self._conversation_turn_in_progress else "chatting"
+            )
             self._is_streaming = False
             self._streaming_text = ""
-            self._current_step = None
-        self._enable_conversation_input()
+            self._current_step = (
+                ("yellow", "Thinking…", "")
+                if self._conversation_turn_in_progress
+                else None
+            )
+        if self._conversation_turn_queue is None:
+            self._enable_conversation_input()
         self._tick()
         self._scroll_to_result()
 
     def _on_conversation_turn_failed(self, error: str) -> None:
         with self._lock:
+            if self._conversation_turn_queue is not None:
+                self._conversation_queued_turns = max(
+                    0, self._conversation_queued_turns - 1
+                )
             self._status = "failed"
             self._error = error
-            self._conversation_turn_in_progress = False
+            self._conversation_turn_in_progress = self._conversation_queued_turns > 0
             self._is_streaming = False
             self._current_step = None
-        self._enable_conversation_input()
+        if self._conversation_turn_queue is None:
+            self._enable_conversation_input()
         self._tick()
 
     def _enable_conversation_input(self) -> None:
@@ -1196,6 +1305,7 @@ FooterKey .footer-key--key {
                 self._render_sidebar()
                 self._render_task_header()
                 self._render_main_content()
+                self._render_conversation_queue()
                 if self.query_one("#log-panel").display:
                     self._render_log_panel()
         except NoMatches:
@@ -1222,6 +1332,11 @@ FooterKey .footer-key--key {
             else:
                 t.append("  ● Ready\n", style=_C_GREEN)
             t.append(f"  Turns {self._conversation_turns}\n", style=_C_DIM)
+            queued = sum(
+                status == "queued" for _, status in self._queued_conversation_entries()
+            )
+            if queued:
+                t.append(f"  Queue {queued} waiting\n", style=_C_TEAL)
             t.append("\n")
             t.append("  TOKENS\n", style=f"bold {_C_PRIMARY}")
             t.append("\n")
@@ -1336,6 +1451,12 @@ FooterKey .footer-key--key {
             elif self._conversation_turn_in_progress:
                 t.append(f"{self._spinner()} ", style=_C_PRIMARY)
                 t.append("Flow is responding", style=f"bold {_C_PRIMARY}")
+                queued = sum(
+                    status == "queued"
+                    for _, status in self._queued_conversation_entries()
+                )
+                if queued:
+                    t.append(f"  {queued} queued", style=_C_TEAL)
             else:
                 t.append("● ", style=f"bold {_C_GREEN}")
                 t.append("Conversational flow ready", style=f"bold {_C_GREEN}")
@@ -1437,6 +1558,29 @@ FooterKey .footer-key--key {
         widget.update(t)
 
     # ── Main content rendering ──────────────────────────────
+
+    def _render_conversation_queue(self) -> None:
+        widget = self.query_one("#conversation-queue", Static)
+        waiting = [
+            message
+            for message, status in self._queued_conversation_entries()
+            if status == "queued"
+        ]
+        widget.display = bool(waiting)
+        if not waiting:
+            widget.update("")
+            return
+
+        t = Text()
+        t.append(f"QUEUED ({len(waiting)})\n", style=f"bold {_C_TEAL}")
+        for message in waiting[:3]:
+            summary = " ".join(message.split())
+            if len(summary) > 72:
+                summary = summary[:71] + "…"
+            t.append(f"○ {summary}\n", style=_C_DIM)
+        if len(waiting) > 3:
+            t.append(f"+ {len(waiting) - 3} more\n", style=_C_DIM)
+        widget.update(t)
 
     def _render_main_content(self) -> None:
         widget = self.query_one("#main-content", Static)
