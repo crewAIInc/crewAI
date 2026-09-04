@@ -1,0 +1,238 @@
+---
+title: Frontend Overview
+description: Construa interfaces de usuário interativas para seus agentes CrewAI com o CopilotKit e o protocolo AG-UI.
+icon: browser
+mode: "wide"
+---
+
+## Dê uma interface de usuário aos seus agentes
+
+O CrewAI executa seus agentes. O [CopilotKit](https://copilotkit.ai) dá a eles um frontend. Juntos, eles permitem que você construa aplicações em que os usuários conversam com um Crew ou Flow, o observam trabalhar em tempo real, aprovam suas decisões e veem sua saída renderizada como UI ao vivo, em vez de paredes de texto.
+
+Os dois se conectam através do [protocolo AG-UI](https://docs.ag-ui.com). O pacote `ag-ui-crewai` expõe qualquer Crew ou Flow como um endpoint AG-UI. Os hooks e componentes React do CopilotKit consomem esse endpoint. Isso desbloqueia experiências que vão muito além de uma caixa de chat:
+
+<CardGroup cols={2}>
+  <Card title="Generative UI" icon="wand-magic-sparkles" href="/edge/en/guides/frontend/generative-ui">
+    Renderize as chamadas de tool e o estado do agente como seus próprios componentes React.
+  </Card>
+  <Card title="Human-in-the-Loop" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
+    Pause o agente para coletar aprovação ou input do usuário no meio da execução.
+  </Card>
+  <Card title="Shared State" icon="arrows-rotate" href="/edge/en/guides/frontend/shared-state">
+    Mantenha o estado do agente e a UI do seu app em sincronia bidirecional.
+  </Card>
+  <Card title="Channels" icon="messages" href="/edge/pt-BR/guides/frontend/channels">
+    Execute o mesmo agente como um bot do Slack, Discord ou Teams.
+  </Card>
+</CardGroup>
+
+Este guia coloca um Crew ou Flow conversando com um frontend Next.js de ponta a ponta. O restante da seção se apoia no app que você configura aqui.
+
+## Arquitetura
+
+Há três peças:
+
+1. **CrewAI agent server** — um processo Python que serve o seu Crew ou Flow por AG-UI (FastAPI + `ag-ui-crewai`).
+2. **CopilotKit runtime** — uma rota Next.js que registra o seu agente e faz o proxy das requisições para ele.
+3. **React frontend** — o provider `<CopilotKit>` mais os componentes de chat e de generative UI.
+
+```
+React app  ──►  CopilotKit runtime (/api/copilotkit)  ──►  CrewAI server (AG-UI)  ──►  Crew / Flow
+```
+
+<Note>
+Este guia cobre o caminho **self-hosted**: você mesmo executa o servidor do agente CrewAI com `ag-ui-crewai`, e ele funciona localmente sem nenhum serviço gerenciado. O CopilotKit também oferece um caminho **gerenciado** (CopilotKit Cloud / Enterprise Intelligence) com threads hospedadas e um inspetor — consulte o [quickstart de CrewAI do CopilotKit](https://docs.copilotkit.ai/crewai-crews/quickstart) se preferir isso. O código do frontend nesta seção é o mesmo de qualquer forma; apenas como o agente é hospedado e registrado é que muda.
+</Note>
+
+<Note>
+O CrewAI roda por trás do AG-UI em três formatos: **Flows** comuns (usados ao longo destes guias), **[Conversational Flows](/edge/en/guides/frontend/conversational-flows)** (nativos, cientes de sessão, baseados em turnos, com paridade total de recursos) e **Crews** (chat básico). O frontend nesta seção é idêntico entre eles — apenas a autoria e o registro no backend é que diferem.
+</Note>
+
+## Guia de integração
+
+<Steps>
+
+<Step title="Sirva seu agente por AG-UI">
+
+Instale o pacote de integração no seu projeto CrewAI:
+
+```bash
+pip install ag-ui-crewai
+```
+
+Exponha o seu agente a partir de um app FastAPI. Flows usam `add_crewai_flow_fastapi_endpoint`; Crews usam `add_crewai_crew_fastapi_endpoint`. Você pode registrar quantos quiser, cada um em seu próprio path.
+
+<CodeGroup>
+
+```python Flow
+# server.py
+from fastapi import FastAPI
+from ag_ui_crewai.endpoint import add_crewai_flow_fastapi_endpoint
+from my_agents.recipe_flow import RecipeFlow
+
+app = FastAPI(title="CrewAI Agent Server")
+
+add_crewai_flow_fastapi_endpoint(
+    app=app,
+    flow=RecipeFlow(),
+    path="/recipe",
+)
+```
+
+```python Crew
+# server.py
+from fastapi import FastAPI
+from ag_ui_crewai.endpoint import add_crewai_crew_fastapi_endpoint
+from my_agents.research_crew import ResearchCrew
+
+app = FastAPI(title="CrewAI Agent Server")
+
+add_crewai_crew_fastapi_endpoint(
+    app=app,
+    crew=ResearchCrew().crew(),
+    path="/research",
+)
+```
+
+</CodeGroup>
+
+Execute:
+
+```bash
+uvicorn server:app --port 8000
+```
+
+<Note>
+Defina as variáveis de ambiente do seu provedor de LLM (por exemplo `OPENAI_API_KEY`) antes de iniciar o servidor.
+</Note>
+
+</Step>
+
+<Step title="Crie um app Next.js">
+
+Se você ainda não tem um frontend, gere um:
+
+```bash
+npx create-next-app@latest my-app
+cd my-app
+```
+
+Instale o CopilotKit e o cliente AG-UI do CrewAI:
+
+```bash
+npm install @copilotkit/react-core @copilotkit/react-ui @copilotkit/runtime @ag-ui/crewai
+```
+
+</Step>
+
+<Step title="Adicione o runtime do CopilotKit">
+
+Crie uma rota que registre o(s) seu(s) agente(s) CrewAI no runtime do CopilotKit. Cada agente aponta para um path no seu servidor Python via `CrewAIAgent`.
+
+```ts
+// app/api/copilotkit/route.ts
+import {
+  CopilotRuntime,
+  InMemoryAgentRunner,
+  createCopilotEndpoint,
+} from "@copilotkit/runtime/v2";
+import { CrewAIAgent } from "@ag-ui/crewai";
+import { handle } from "hono/vercel";
+
+const runtime = new CopilotRuntime({
+  agents: {
+    recipe: new CrewAIAgent({ url: "http://localhost:8000/recipe" }),
+  },
+  runner: new InMemoryAgentRunner(),
+});
+
+const app = createCopilotEndpoint({
+  runtime,
+  basePath: "/api/copilotkit",
+});
+
+const handler = handle(app);
+export const GET = handler;
+export const POST = handler;
+```
+
+</Step>
+
+<Step title="Envolva seu app com o provider">
+
+Aponte `<CopilotKit>` para a rota do runtime e nomeie o agente que você registrou.
+
+```tsx
+// app/page.tsx
+"use client";
+import { CopilotKit } from "@copilotkit/react-core";
+import { CopilotSidebar } from "@copilotkit/react-core/v2";
+import "@copilotkit/react-core/v2/styles.css";
+
+export default function Page() {
+  return (
+    <CopilotKit runtimeUrl="/api/copilotkit" agent="recipe">
+      <YourApp />
+      <CopilotSidebar agentId="recipe" labels={{ modalHeaderTitle: "Assistant" }} />
+    </CopilotKit>
+  );
+}
+```
+
+</Step>
+
+<Step title="Execute">
+
+Inicie os dois processos e abra o app. Conversar na sidebar agora executa o seu Crew ou Flow.
+
+```bash
+uvicorn server:app --port 8000   # terminal 1
+npm run dev                       # terminal 2
+```
+
+</Step>
+
+</Steps>
+
+## Opções de UI de chat
+
+O CopilotKit entrega três superfícies de chat intercambiáveis. Troque o componente; a fiação é idêntica.
+
+<CodeGroup>
+
+```tsx Sidebar
+import { CopilotSidebar } from "@copilotkit/react-core/v2";
+
+<CopilotSidebar agentId="recipe" />
+```
+
+```tsx Popup
+import { CopilotPopup } from "@copilotkit/react-core/v2";
+
+<CopilotPopup agentId="recipe" />
+```
+
+```tsx Inline
+import { CopilotChat } from "@copilotkit/react-core/v2";
+
+<CopilotChat agentId="recipe" />
+```
+
+</CodeGroup>
+
+## Para onde ir em seguida
+
+<CardGroup cols={2}>
+  <Card title="Generative UI" icon="wand-magic-sparkles" href="/edge/en/guides/frontend/generative-ui">
+    Renderize chamadas de tool e o estado do agente como componentes personalizados.
+  </Card>
+  <Card title="Frontend Actions" icon="bolt" href="/edge/en/guides/frontend/frontend-actions">
+    Permita que o agente chame funções que rodam no navegador.
+  </Card>
+  <Card title="Human-in-the-Loop" icon="user-check" href="/edge/en/guides/frontend/human-in-the-loop">
+    Restrinja ações do agente por trás da aprovação do usuário.
+  </Card>
+  <Card title="Predictive State" icon="gauge-high" href="/edge/en/guides/frontend/predictive-state-updates">
+    Transmita o estado em andamento para a UI enquanto o agente trabalha.
+  </Card>
+</CardGroup>
