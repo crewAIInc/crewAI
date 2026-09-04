@@ -378,6 +378,25 @@ class TestJsonProviderFork:
             assert path.endswith(".json")
             assert os.path.isfile(path)
 
+    def test_checkpoint_uses_utf8_for_non_ascii_json(self) -> None:
+        provider = JsonProvider()
+        data = '{"message": "olá niño"}'
+        with tempfile.TemporaryDirectory() as d:
+            path = provider.checkpoint(data, d, branch="main")
+
+            assert Path(path).read_bytes() == data.encode("utf-8")
+            assert provider.from_checkpoint(path) == data
+
+    @pytest.mark.asyncio
+    async def test_acheckpoint_uses_utf8_for_non_ascii_json(self) -> None:
+        provider = JsonProvider()
+        data = '{"message": "olá niño"}'
+        with tempfile.TemporaryDirectory() as d:
+            path = await provider.acheckpoint(data, d, branch="main")
+
+            assert Path(path).read_bytes() == data.encode("utf-8")
+            assert await provider.afrom_checkpoint(path) == data
+
     def test_checkpoint_fork_branch_subdir(self) -> None:
         provider = JsonProvider()
         with tempfile.TemporaryDirectory() as d:
