@@ -61,7 +61,7 @@ The `datasources` parameter is a list of dictionaries, each containing the follo
 - `connection_data`: A dictionary containing the connection parameters for the datasource. Find a list of connection parameters for each engine in the link below.
 - `tables`: A list of tables that the data source will use. This is optional and can be omitted if all tables in the data source are to be used.
 
-A list of supported data sources and their connection parameters can be found [here](https://docs.mdb.ai/docs/data_sources).
+A list of supported data sources and their connection parameters can be found [here](https://docs.mdb.ai).
 
 ```python
 from crewai import Agent
