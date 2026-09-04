@@ -303,3 +303,21 @@ agent = Agent(
     # ...
 )
 ```
+
+### Sharing Community Tools
+
+Keep the package README as the primary source of truth for installation, setup, security notes, and usage examples.
+This lets users evaluate the package from PyPI or its source repository without needing a CrewAI docs release.
+
+If you want to propose a CrewAI docs mention for a community-maintained tool, open a docs issue or PR with:
+
+- Package name and PyPI link.
+- Source repository link and license.
+- Supported CrewAI versions.
+- Installation command.
+- Minimal usage snippet that imports the package and attaches the tool to an agent.
+- Required environment variables or external services.
+- Maintenance status, known limitations, and any data handling or security considerations.
+
+Prefer a concise pointer to the external package over duplicating full package documentation in the CrewAI docs.
+If the tool should ship as part of the official `crewai_tools` package instead, follow the repository's normal contribution process.
