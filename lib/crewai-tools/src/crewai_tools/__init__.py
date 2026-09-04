@@ -340,4 +340,4 @@ __all__ = [
     "ZapierActionTools",
 ]
 
-__version__ = "1.15.18"
+__version__ = "1.15.20"
