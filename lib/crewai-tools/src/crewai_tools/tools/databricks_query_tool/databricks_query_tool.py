@@ -73,7 +73,11 @@ class DatabricksQueryToolSchema(BaseModel):
 
         # Add a LIMIT clause if row_limit is set and the query has no LIMIT/FETCH clause.
         if self.row_limit and not _SQL_LIMIT_CLAUSE_RE.search(self.query):
-            self.query = f"{self.query.rstrip(';')} LIMIT {self.row_limit};"
+            # Strip any trailing mix of semicolons and whitespace so a query that
+            # ends in `;  ` doesn't keep its statement-terminating `;` ahead of
+            # the appended LIMIT (which would produce invalid SQL).
+            stripped = re.sub(r"[\s;]+$", "", self.query)
+            self.query = f"{stripped} LIMIT {self.row_limit};"
 
         return self
 

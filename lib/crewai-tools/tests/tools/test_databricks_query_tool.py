@@ -46,6 +46,17 @@ def test_skips_append_when_row_limit_is_zero() -> None:
     assert "LIMIT" not in schema.query.upper()
 
 
+def test_appends_limit_after_trailing_semicolon_whitespace() -> None:
+    """Regression: a trailing `;` followed by whitespace used to defeat rstrip(';')."""
+    schema = DatabricksQueryToolSchema(query="SELECT * FROM limited_orders;   ")
+    assert schema.query == "SELECT * FROM limited_orders LIMIT 1000;"
+
+
+def test_appends_limit_after_trailing_newline_semicolon() -> None:
+    schema = DatabricksQueryToolSchema(query="SELECT * FROM limited_orders;\n")
+    assert schema.query == "SELECT * FROM limited_orders LIMIT 1000;"
+
+
 def test_rejects_empty_query() -> None:
     with pytest.raises(ValueError, match="Query cannot be empty"):
         DatabricksQueryToolSchema(query="   ")
