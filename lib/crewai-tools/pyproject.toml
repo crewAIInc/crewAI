@@ -12,7 +12,7 @@ dependencies = [
     "requests>=2.33.0,<3",
     "crewai==1.15.18",
     "tiktoken>=0.8.0,<0.13",
-    "beautifulsoup4~=4.13.4",
+    "beautifulsoup4>=4.13.4,<5",
     "python-docx~=1.2.0",
     "youtube-transcript-api~=1.2.2",
     "pymupdf~=1.26.6",
