@@ -391,8 +391,10 @@ class URLReadTool(BaseTool):
                     values = ["" if value is None else str(value) for value in row]
                     # Excel reports a sheet's dimension generously and openpyxl
                     # pads every row up to it, so one stray far-down cell turns
-                    # a 5 KB upload into 100k blank rows. They carry nothing.
-                    if not any(value.strip() for value in values):
+                    # a 5 KB upload into 100k blank rows. Padding arrives as
+                    # None, so testing for exactly-empty drops it while leaving
+                    # a cell the author really did fill with spaces alone.
+                    if not any(values):
                         continue
                     if len(values) > remaining:
                         truncated = True
@@ -401,9 +403,10 @@ class URLReadTool(BaseTool):
                     writer.writerow(values)
 
                 if buffer.tell():
-                    sheets.append(
-                        f"Sheet {worksheet.title}:\n{buffer.getvalue().rstrip()}"
-                    )
+                    # Only the line terminator: a bare rstrip() would also eat
+                    # a trailing space the final cell legitimately holds.
+                    grid = buffer.getvalue().rstrip("\n")
+                    sheets.append(f"Sheet {worksheet.title}:\n{grid}")
                 if truncated:
                     break
         finally:

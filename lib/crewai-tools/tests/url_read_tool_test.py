@@ -678,6 +678,32 @@ def test_oversized_workbook_is_truncated_with_a_visible_notice():
     assert "r29c9" not in result
 
 
+def test_xlsx_whitespace_only_values_survive():
+    """Padding is empty, not blank -- a cell the author filled with spaces stays.
+
+    A bare rstrip() on the rendered grid would also eat a trailing space from
+    the final cell, and dropping rows on .strip() would delete a row whose
+    cells hold only spaces.
+    """
+    tool = URLReadTool()
+    body = build_xlsx([["a", "trailing "], [" ", " "], ["b", "c"]])
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert result == "Sheet Sheet1:\na,trailing \n , \nb,c"
+
+
+def test_xlsx_trailing_space_in_the_final_cell_survives():
+    """The rendered grid loses its line terminator, not the last cell's space."""
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            build_xlsx([["only "]]), "application/octet-stream", PRESIGNED_URL
+        )
+        assert tool.run(url=PRESIGNED_URL) == "Sheet Sheet1:\nonly "
+
+
 def test_zip_claiming_to_be_both_docx_and_xlsx_is_refused():
     """A package asserting two identities has not been positively identified."""
     tool = URLReadTool()
