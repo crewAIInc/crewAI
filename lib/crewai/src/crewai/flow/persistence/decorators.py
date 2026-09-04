@@ -62,6 +62,7 @@ def _stamp_persistence_metadata(
     persistence: FlowPersistence,
     verbose: bool,
 ) -> None:
+    """Attach persistence configuration metadata to a flow target."""
     target.__flow_persistence_config__ = SimpleNamespace(
         persistence=persistence,
         verbose=verbose,
