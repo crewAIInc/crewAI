@@ -2142,7 +2142,7 @@ class Crew(FlowTrackable, BaseModel):
         manager_agent = self.manager_agent.copy() if self.manager_agent else None
         manager_llm = shallow_copy(self.manager_llm) if self.manager_llm else None
 
-        task_mapping: dict[str, Any] = {}
+        task_mapping: dict[int, Any] = {}
 
         cloned_tasks = []
         existing_knowledge_sources = shallow_copy(self.knowledge_sources)
@@ -2151,12 +2151,12 @@ class Crew(FlowTrackable, BaseModel):
         for task in self.tasks:
             cloned_task = task.copy(cloned_agents, task_mapping)
             cloned_tasks.append(cloned_task)
-            task_mapping[task.key] = cloned_task
+            task_mapping[id(task)] = cloned_task
 
         for cloned_task, original_task in zip(cloned_tasks, self.tasks, strict=False):
             if isinstance(original_task.context, list):
                 cloned_context = [
-                    task_mapping[context_task.key]
+                    task_mapping.get(id(context_task), context_task)
                     for context_task in original_task.context
                 ]
                 cloned_task.context = cloned_context
