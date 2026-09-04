@@ -10,7 +10,8 @@ from typing import Any, Literal, cast
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM, llm_call_context
+from crewai.hooks.dispatch import HookAborted
+from crewai.llms.base_llm import BaseLLM, LLMCallBlockedError, llm_call_context
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -313,10 +314,7 @@ class GeminiCompletion(BaseLLM):
 
                 messages_for_hooks = self._convert_contents_to_dict(formatted_content)
 
-                if not self._invoke_before_llm_call_hooks(
-                    messages_for_hooks, from_agent
-                ):
-                    raise ValueError("LLM call blocked by before_llm_call hook")
+                self._invoke_before_llm_call_hooks(messages_for_hooks, from_agent)
 
                 config = self._prepare_generation_config(
                     system_instruction, tools, effective_response_model
@@ -341,6 +339,9 @@ class GeminiCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except APIError as e:
                 error_msg = f"Google Gemini API error: {e.code} - {e.message}"
                 logging.error(error_msg)
@@ -397,6 +398,10 @@ class GeminiCompletion(BaseLLM):
                     self._format_messages_for_gemini(messages)
                 )
 
+                messages_for_hooks = self._convert_contents_to_dict(formatted_content)
+
+                self._invoke_before_llm_call_hooks(messages_for_hooks, from_agent)
+
                 config = self._prepare_generation_config(
                     system_instruction, tools, effective_response_model
                 )
@@ -420,6 +425,9 @@ class GeminiCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except APIError as e:
                 error_msg = f"Google Gemini API error: {e.code} - {e.message}"
                 logging.error(error_msg)
@@ -554,12 +562,19 @@ class GeminiCompletion(BaseLLM):
         - System messages are separate system_instruction
         - Content is organized as Content objects with Parts
         - Roles are 'user' and 'model' (not 'assistant')
+        - History may not end on a model turn; a "Please continue." user turn
+          is appended when it does
 
         Args:
             messages: Input messages
 
         Returns:
             Tuple of (formatted_contents, system_instruction)
+
+        Raises:
+            ValueError: If the history ends on a model turn with an unresolved
+                function call, which requires a function response rather than a
+                continuation prompt.
         """
         base_formatted = super()._format_messages(messages)
 
@@ -671,6 +686,23 @@ class GeminiCompletion(BaseLLM):
 
                 gemini_content = types.Content(role=gemini_role, parts=parts)
                 contents.append(gemini_content)
+
+        if contents and contents[-1].role == "model":
+            # Gemini's generateContent API rejects a request whose history ends
+            # on a model turn (agent loops can produce this, e.g. after
+            # max-iteration handling or a guardrail retry).
+            last_parts = contents[-1].parts or []
+            if any(part.function_call for part in last_parts):
+                raise ValueError(
+                    "Gemini message history ends on an unresolved function call "
+                    "-- a function response must be provided before calling the "
+                    "model again."
+                )
+            contents.append(
+                types.Content(
+                    role="user", parts=[types.Part.from_text(text="Please continue.")]
+                )
+            )
 
         return contents, system_instruction
 

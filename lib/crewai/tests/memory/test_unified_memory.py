@@ -240,6 +240,50 @@ def test_memory_scope_slice(tmp_path: Path, mock_embedder: MagicMock) -> None:
     assert "/a" in sl.scopes and "/b" in sl.scopes
 
 
+def test_memory_scope_config_can_be_reused() -> None:
+    """Constructing a scope must not remove the memory from caller-owned config."""
+    from crewai.memory.memory_scope import MemoryScope
+
+    memory = MagicMock()
+    config = {"memory": memory, "root_path": "/agent/1"}
+
+    first = MemoryScope.model_validate(config)
+    second = MemoryScope.model_validate(config)
+
+    assert config == {"memory": memory, "root_path": "/agent/1"}
+    assert first._require_memory() is memory
+    assert second._require_memory() is memory
+
+
+def test_memory_slice_config_can_be_reused_without_normalizing_it_in_place() -> None:
+    """Constructing a slice must preserve caller-owned dependencies and paths."""
+    from crewai.memory.memory_scope import MemorySlice
+
+    memory = MagicMock()
+    config = {"memory": memory, "scopes": ["/team/", "/"]}
+
+    first = MemorySlice.model_validate(config)
+    second = MemorySlice.model_validate(config)
+
+    assert config == {"memory": memory, "scopes": ["/team/", "/"]}
+    assert first.scopes == ["/team", "/"]
+    assert second.scopes == ["/team", "/"]
+    assert first._require_memory() is memory
+    assert second._require_memory() is memory
+
+
+def test_memory_kind_inference_preserves_input() -> None:
+    """Inferring a legacy config's discriminator must not mutate that config."""
+    from crewai.memory.memory_scope import _ensure_memory_kind
+
+    config = {"root_path": "/agent/1"}
+
+    normalized = _ensure_memory_kind(config)
+
+    assert config == {"root_path": "/agent/1"}
+    assert normalized == {"root_path": "/agent/1", "memory_kind": "scope"}
+
+
 def test_memory_list_scopes_info_tree(tmp_path: Path, mock_embedder: MagicMock) -> None:
     from crewai.memory.unified_memory import Memory
 

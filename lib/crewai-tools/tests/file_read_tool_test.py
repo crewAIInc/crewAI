@@ -3,6 +3,34 @@ from unittest.mock import mock_open, patch
 from crewai_tools import FileReadTool
 
 
+class CountingFile:
+    """Text-file stand-in that records how many lines were actually consumed."""
+
+    def __init__(self, lines):
+        self._lines = lines
+        self.consumed = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        return False
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.consumed >= len(self._lines):
+            raise StopIteration
+        line = self._lines[self.consumed]
+        self.consumed += 1
+        return line
+
+    def read(self):
+        self.consumed = len(self._lines)
+        return "".join(self._lines)
+
+
 def test_file_read_tool_constructor():
     """Test FileReadTool initialization with file_path."""
     test_file = "test_file.txt"
@@ -186,3 +214,234 @@ def test_file_read_tool_invalid_path_error_does_not_disclose_workspace(
     assert "outside.txt" in result
     assert str(tmp_path) not in result
     assert str(tmp_path.parent) not in result
+    # Point users at base_dir, not the process-wide escape hatch.
+    assert "base_dir" in result
+    assert "CREWAI_TOOLS_ALLOW_UNSAFE_PATHS" not in result
+
+
+def test_constructor_path_outside_working_directory_is_readable(tmp_path, monkeypatch):
+    """A developer-declared file_path is trusted even outside the sandbox."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.chdir(workspace)
+    target = tmp_path / "declared.txt"
+    target.write_text("declared content")
+
+    tool = FileReadTool(file_path=str(target))
+
+    assert tool._run() == "declared content"
+    assert tool._run(file_path=str(target)) == "declared content"
+
+
+def test_declared_file_is_reachable_the_way_an_agent_calls_it(tmp_path, monkeypatch):
+    """The label in the description must resolve to the declared file.
+
+    The description only shows a redacted label, so that label is all the model
+    has to work with. It has to address the declared file.
+    """
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.chdir(workspace)
+    target = tmp_path / "declared.txt"
+    target.write_text("declared content")
+
+    tool = FileReadTool(file_path=str(target))
+    label = tool._declared_label
+
+    assert label == "declared.txt"
+    assert label in tool.description
+    # Omitting file_path entirely, and passing the advertised label, both work.
+    assert tool.run() == "declared content"
+    assert tool.run(file_path=label) == "declared content"
+
+
+def test_run_without_file_path_reports_error_when_no_default(tmp_path, monkeypatch):
+    """file_path is optional in the schema, so this must not raise."""
+    monkeypatch.chdir(tmp_path)
+
+    assert "Error: No file path provided" in FileReadTool().run()
+
+
+def test_declared_relative_path_survives_chdir(tmp_path, monkeypatch):
+    """The declared file is pinned at construction, not re-resolved per call."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "rel.txt").write_text("original")
+    nested = tmp_path / "sub"
+    nested.mkdir()
+    (nested / "rel.txt").write_text("a different file")
+
+    tool = FileReadTool(file_path="rel.txt")
+    assert tool._run() == "original"
+
+    monkeypatch.chdir(nested)
+    assert tool._run() == "original"
+    assert tool._run(file_path="rel.txt") == "original"
+
+
+def test_relative_declared_path_anchors_to_base_dir(tmp_path, monkeypatch):
+    """A relative declared path must resolve against base_dir, not the cwd.
+
+    The advertised label is built against base_dir, so pinning against the cwd
+    would make the same name mean two different files — and would serve a file
+    from outside base_dir under a label that looks like it is inside.
+    """
+    allowed = tmp_path / "allowed"
+    allowed.mkdir()
+    work = tmp_path / "work"
+    work.mkdir()
+    (allowed / "data.txt").write_text("sandbox file")
+    (work / "data.txt").write_text("cwd file")
+    monkeypatch.chdir(work)
+
+    tool = FileReadTool(file_path="data.txt", base_dir=str(allowed))
+
+    assert tool._declared_label == "data.txt"
+    assert tool._declared_realpath == str(allowed / "data.txt")
+    assert tool.run() == "sandbox file"
+    assert tool.run(file_path="data.txt") == "sandbox file"
+
+
+def test_relative_base_dir_is_anchored_at_construction(tmp_path, monkeypatch):
+    """A relative base_dir must not follow a later chdir.
+
+    Otherwise the sandbox root moves while the declared file stays pinned, and
+    the tool applies two different roots.
+    """
+    monkeypatch.chdir(tmp_path)
+    allowed = tmp_path / "allowed"
+    allowed.mkdir()
+    (allowed / "data.txt").write_text("sandbox file")
+    nested = tmp_path / "sub"
+    nested.mkdir()
+
+    tool = FileReadTool(base_dir="allowed")
+    assert tool.base_dir == str(allowed)
+
+    monkeypatch.chdir(nested)
+    assert tool._run(file_path="data.txt") == "sandbox file"
+
+
+def test_declared_path_survives_a_serialization_round_trip(tmp_path, monkeypatch):
+    """model_dump drops private attrs, so the pin must be rebuilt on restore."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.chdir(workspace)
+    allowed = tmp_path / "allowed"
+    allowed.mkdir()
+    (allowed / "data.txt").write_text("sandbox file")
+
+    tool = FileReadTool(file_path="data.txt", base_dir=str(allowed))
+    restored = FileReadTool.model_validate(tool.model_dump())
+
+    assert restored._declared_realpath == tool._declared_realpath
+    assert restored.run() == "sandbox file"
+
+    # A chdir between dump and restore must not repoint the declared file.
+    nested = workspace / "sub"
+    nested.mkdir()
+    monkeypatch.chdir(nested)
+    assert FileReadTool.model_validate(tool.model_dump()).run() == "sandbox file"
+
+
+def test_constructor_path_does_not_widen_the_sandbox(tmp_path, monkeypatch):
+    """Declaring one file must not expose its siblings to the LLM."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.chdir(workspace)
+    declared = tmp_path / "declared.txt"
+    declared.write_text("declared content")
+    sibling = tmp_path / "sibling.txt"
+    sibling.write_text("secret")
+
+    result = FileReadTool(file_path=str(declared))._run(file_path=str(sibling))
+
+    assert "Invalid file path" in result
+    assert "secret" not in result
+
+
+def test_base_dir_widens_the_sandbox(tmp_path, monkeypatch):
+    """base_dir lets a developer authorize reads outside the working directory."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.chdir(workspace)
+    data = tmp_path / "data"
+    data.mkdir()
+    (data / "report.csv").write_text("a,b,c")
+
+    tool = FileReadTool(base_dir=str(data))
+
+    assert tool._run(file_path=str(data / "report.csv")) == "a,b,c"
+    assert tool._run(file_path="report.csv") == "a,b,c"
+
+
+def test_base_dir_still_blocks_escapes(tmp_path, monkeypatch):
+    """base_dir moves the sandbox; it does not remove it."""
+    monkeypatch.chdir(tmp_path)
+    data = tmp_path / "data"
+    data.mkdir()
+    outside = tmp_path / "outside.txt"
+    outside.write_text("secret")
+
+    result = FileReadTool(base_dir=str(data))._run(file_path=str(outside))
+
+    assert "Invalid file path" in result
+    assert "secret" not in result
+
+
+def test_line_window_stops_reading_early():
+    """A small window must not scan the rest of the file."""
+    handle = CountingFile([f"Line {i}\n" for i in range(1, 1001)])
+
+    with patch("builtins.open", return_value=handle):
+        result = FileReadTool()._run(
+            file_path="big.log", start_line=1, line_count=3
+        )
+
+    assert result == "Line 1\nLine 2\nLine 3\n"
+    assert handle.consumed == 3
+
+
+def test_line_window_stops_early_with_offset():
+    handle = CountingFile([f"Line {i}\n" for i in range(1, 1001)])
+
+    with patch("builtins.open", return_value=handle):
+        result = FileReadTool()._run(
+            file_path="big.log", start_line=10, line_count=2
+        )
+
+    assert result == "Line 10\nLine 11\n"
+    assert handle.consumed == 11
+
+
+def test_reads_utf8_by_default(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    content = "café — 日本語 — 🚀"
+    (tmp_path / "unicode.txt").write_bytes(content.encode("utf-8"))
+
+    assert FileReadTool()._run(file_path="unicode.txt") == content
+
+
+def test_encoding_is_configurable(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "latin.txt").write_bytes("café".encode("latin-1"))
+
+    assert FileReadTool(encoding="latin-1")._run(file_path="latin.txt") == "café"
+
+
+def test_null_byte_path_returns_error_instead_of_raising(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    result = FileReadTool()._run(file_path="a\x00b.txt")
+
+    assert "Error" in result
+
+
+def test_decode_error_names_the_encoding(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "binary.bin").write_bytes(bytes(range(256)))
+
+    result = FileReadTool()._run(file_path="binary.bin")
+
+    assert "Failed to decode" in result
+    assert "utf-8" in result
+    assert str(tmp_path) not in result

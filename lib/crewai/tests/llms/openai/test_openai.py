@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock
 import openai
 import pytest
 
-from crewai.llm import LLM
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
 from crewai.llms.providers.openai.completion import OpenAICompletion, ResponsesAPIResult
 from crewai.crew import Crew
 from crewai.agent import Agent
@@ -970,6 +970,170 @@ def test_openai_responses_api_with_system_message_extraction():
     assert result.isupper() or "HELLO" in result.upper()
 
 
+def test_openai_responses_api_converts_assistant_tool_calls_message():
+    """Regression: assistant messages carrying tool_calls (Chat-Completions
+    shape) must become standalone function_call input items, since the
+    Responses API has no message shape for an assistant tool-call turn.
+    """
+    llm = OpenAICompletion(model="gpt-4o-mini", api="responses")
+
+    messages = [
+        {"role": "user", "content": "Fetch https://example.com"},
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "call_abc123",
+                    "type": "function",
+                    "function": {
+                        "name": "fetch_page",
+                        "arguments": '{"url": "https://example.com"}',
+                    },
+                }
+            ],
+        },
+    ]
+
+    params = llm._prepare_responses_params(messages)
+
+    assert params["input"][0] == {"role": "user", "content": "Fetch https://example.com"}
+    assert params["input"][1] == {
+        "type": "function_call",
+        "call_id": "call_abc123",
+        "name": "fetch_page",
+        "arguments": '{"url": "https://example.com"}',
+    }
+
+
+def test_openai_responses_api_preserves_assistant_content_with_tool_calls():
+    """Assistant text must be retained when it accompanies tool calls."""
+    llm = OpenAICompletion(model="gpt-4o-mini", api="responses")
+
+    messages = [
+        {
+            "role": "assistant",
+            "content": "I'll fetch that page now.",
+            "tool_calls": [
+                {
+                    "type": "function",
+                    "id": "call_fetch_page",
+                    "function": {
+                        "name": "fetch_page",
+                        "arguments": {"url": "https://example.com"},
+                    },
+                }
+            ],
+        }
+    ]
+
+    params = llm._prepare_responses_params(messages)
+
+    assert params["input"][0] == {
+        "role": "assistant",
+        "content": "I'll fetch that page now.",
+    }
+    assert params["input"][1]["type"] == "function_call"
+    assert params["input"][1]["call_id"] == "call_fetch_page"
+    assert params["input"][1]["arguments"] == '{"url": "https://example.com"}'
+
+
+def test_openai_responses_api_defaults_missing_tool_call_arguments():
+    """Missing or empty tool-call arguments must become a valid JSON object."""
+    llm = OpenAICompletion(model="gpt-4o-mini", api="responses")
+
+    messages = [
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "call_no_args",
+                    "type": "function",
+                    "function": {"name": "ping"},
+                },
+                {
+                    "id": "call_empty_args",
+                    "type": "function",
+                    "function": {"name": "ping", "arguments": ""},
+                },
+            ],
+        }
+    ]
+
+    params = llm._prepare_responses_params(messages)
+
+    assert params["input"][0]["arguments"] == "{}"
+    assert params["input"][1]["arguments"] == "{}"
+
+
+def test_openai_responses_api_converts_tool_result_message():
+    """Regression: tool-role messages (Chat-Completions shape) must become
+    function_call_output input items for the Responses API.
+    """
+    llm = OpenAICompletion(model="gpt-4o-mini", api="responses")
+
+    messages = [
+        {
+            "role": "tool",
+            "tool_call_id": "call_abc123",
+            "name": "fetch_page",
+            "content": "<html>page text</html>",
+        },
+    ]
+
+    params = llm._prepare_responses_params(messages)
+
+    assert params["input"] == [
+        {
+            "type": "function_call_output",
+            "call_id": "call_abc123",
+            "output": "<html>page text</html>",
+        }
+    ]
+
+
+def test_openai_responses_api_multi_turn_tool_conversation_shape():
+    """Regression: a full multi-turn tool-calling conversation (user ->
+    assistant tool_calls -> tool result) must convert entirely into valid
+    Responses API input items, with no leftover Chat-Completions-only keys
+    ("tool_calls", "tool_call_id") that the Responses API would reject.
+    """
+    llm = OpenAICompletion(model="gpt-4o-mini", api="responses")
+
+    messages = [
+        {"role": "user", "content": "Fetch https://example.com"},
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "call_abc123",
+                    "type": "function",
+                    "function": {
+                        "name": "fetch_page",
+                        "arguments": '{"url": "https://example.com"}',
+                    },
+                }
+            ],
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "call_abc123",
+            "name": "fetch_page",
+            "content": "<html>page text</html>",
+        },
+    ]
+
+    params = llm._prepare_responses_params(messages)
+
+    for item in params["input"]:
+        assert "tool_calls" not in item
+        assert "tool_call_id" not in item
+    assert params["input"][1]["type"] == "function_call"
+    assert params["input"][2]["type"] == "function_call_output"
+
+
 @pytest.mark.vcr()
 def test_openai_responses_api_streaming():
     """Test Responses API with streaming enabled."""
@@ -1675,6 +1839,30 @@ def test_openai_gpt5_still_applies_stop_words_client_side():
     assert "Observation:" not in result
     assert "Found results" not in result
     assert "I need to search" in result
+
+
+@pytest.mark.parametrize(
+    "model",
+    ["gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
+)
+def test_openai_gpt56_family_uses_official_context_window(model: str) -> None:
+    """Native OpenAI must not inherit the shorter gpt-5 window for GPT-5.6."""
+    llm = OpenAICompletion(model=model)
+    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_openai_prefixed_gpt56_luna_uses_official_context_window() -> None:
+    llm = LLM(model="openai/gpt-5.6-luna")
+    assert isinstance(llm, OpenAICompletion)
+    assert llm.model == "gpt-5.6-luna"
+    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_openai_gpt5_and_gpt54_mini_keep_their_windows() -> None:
+    gpt5 = OpenAICompletion(model="gpt-5")
+    gpt54_mini = OpenAICompletion(model="gpt-5.4-mini")
+    assert gpt5.get_context_window_size() == int(1_047_576 * CONTEXT_WINDOW_USAGE_RATIO)
+    assert gpt54_mini.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_openai_stop_words_still_applied_to_regular_responses():

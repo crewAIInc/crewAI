@@ -168,6 +168,8 @@ def extract_memories_from_content(content: str, llm: Any) -> list[str]:
     Returns:
         List of short, self-contained memory statements (or [content] on failure).
     """
+    from crewai.hooks.dispatch import HookAborted
+
     if not (content or "").strip():
         return []
     user = _get_prompt("extract_memories_user").format(content=content)
@@ -188,6 +190,8 @@ def extract_memories_from_content(content: str, llm: Any) -> list[str]:
             data = json.loads(response)
             return ExtractedMemories.model_validate(data).memories
         return ExtractedMemories.model_validate(response).memories
+    except HookAborted:
+        raise
     except Exception as e:
         _logger.warning(
             "Memory extraction failed, storing full content as single memory: %s",
@@ -216,6 +220,8 @@ def analyze_query(
     Returns:
         QueryAnalysis with keywords, suggested_scopes, complexity, recall_queries, time_filter.
     """
+    from crewai.hooks.dispatch import HookAborted
+
     scope_desc = ""
     if scope_info:
         scope_desc = f"Current scope has {scope_info.record_count} records, categories: {scope_info.categories}"
@@ -241,6 +247,8 @@ def analyze_query(
             data = json.loads(response)
             return QueryAnalysis.model_validate(data)
         return QueryAnalysis.model_validate(response)
+    except HookAborted:
+        raise
     except Exception as e:
         _logger.warning(
             "Query analysis failed, using defaults (complexity=simple): %s",
@@ -284,6 +292,8 @@ def analyze_for_save(
     Returns:
         MemoryAnalysis with suggested_scope, categories, importance, extracted_metadata.
     """
+    from crewai.hooks.dispatch import HookAborted
+
     user = _get_prompt("save_user").format(
         content=content,
         existing_scopes=existing_scopes or ["/"],
@@ -306,6 +316,8 @@ def analyze_for_save(
             data = json.loads(response)
             return MemoryAnalysis.model_validate(data)
         return MemoryAnalysis.model_validate(response)
+    except HookAborted:
+        raise
     except Exception as e:
         _logger.warning(
             "Memory save analysis failed, using defaults: %s",
@@ -336,6 +348,8 @@ def analyze_for_consolidation(
     Returns:
         ConsolidationPlan with actions per record and whether to insert the new content.
     """
+    from crewai.hooks.dispatch import HookAborted
+
     if not existing_records:
         return ConsolidationPlan(actions=[], insert_new=True)
     records_lines: list[str] = []
@@ -366,6 +380,8 @@ def analyze_for_consolidation(
             data = json.loads(response)
             return ConsolidationPlan.model_validate(data)
         return ConsolidationPlan.model_validate(response)
+    except HookAborted:
+        raise
     except Exception as e:
         _logger.warning(
             "Consolidation analysis failed, defaulting to insert: %s",

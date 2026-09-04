@@ -1,0 +1,379 @@
+---
+title: Visão Geral dos Hooks de Execução
+description: Entendendo e usando hooks de execução no CrewAI para controle fino sobre operações de agentes
+mode: "wide"
+---
+
+Os Hooks de Execução fornecem controle fino sobre o comportamento em tempo de execução dos seus agentes CrewAI. Diferentemente dos hooks de kickoff que são executados antes e depois da execução da crew, os hooks de execução interceptam operações específicas durante a execução do agente, permitindo que você modifique comportamentos, implemente verificações de segurança e adicione monitoramento abrangente.
+
+## Tipos de Hooks de Execução
+
+O CrewAI fornece duas categorias principais de hooks de execução:
+
+### 1. [Hooks de Chamada LLM](/learn/llm-hooks)
+
+Controle e monitore interações com o modelo de linguagem:
+- **Antes da Chamada LLM**: Modifique prompts, valide entradas, implemente gates de aprovação
+- **Depois da Chamada LLM**: Transforme respostas, sanitize saídas, atualize histórico de conversação
+
+**Casos de Uso:**
+- Limitação de iterações
+- Rastreamento de custos e monitoramento de uso de tokens
+- Sanitização de respostas e filtragem de conteúdo
+- Aprovação humana para chamadas LLM
+- Adição de diretrizes de segurança ou contexto
+- Logging de debug e inspeção de requisição/resposta
+
+[Ver Documentação de Hooks LLM →](/learn/llm-hooks)
+
+### 2. [Hooks de Chamada de Ferramenta](/learn/tool-hooks)
+
+Controle e monitore execução de ferramentas:
+- **Antes da Chamada de Ferramenta**: Modifique entradas, valide parâmetros, bloqueie operações perigosas
+- **Depois da Chamada de Ferramenta**: Transforme resultados, sanitize saídas, registre detalhes de execução
+
+**Casos de Uso:**
+- Guardrails de segurança para operações destrutivas
+- Aprovação humana para ações sensíveis
+- Validação e sanitização de entrada
+- Cache de resultados e limitação de taxa
+- Análise de uso de ferramentas
+- Logging de debug e monitoramento
+
+[Ver Documentação de Hooks de Ferramenta →](/learn/tool-hooks)
+
+## Métodos de Registro
+
+### 1. Hooks Baseados em Decoradores (Recomendado)
+
+A maneira mais limpa e pythônica de registrar hooks:
+
+```python
+from crewai.hooks import before_llm_call, after_llm_call, before_tool_call, after_tool_call
+
+@before_llm_call
+def limit_iterations(context):
+    """Previne loops infinitos limitando iterações."""
+    if context.iterations > 10:
+        return False  # Bloquear execução
+    return None
+
+@after_llm_call
+def sanitize_response(context):
+    """Remove dados sensíveis das respostas do LLM."""
+    if "API_KEY" in context.response:
+        return context.response.replace("API_KEY", "[CENSURADO]")
+    return None
+
+@before_tool_call
+def block_dangerous_tools(context):
+    """Bloqueia operações destrutivas."""
+    if context.tool_name == "delete_database":
+        return False  # Bloquear execução
+    return None
+
+@after_tool_call
+def log_tool_result(context):
+    """Registra execução de ferramenta."""
+    print(f"Ferramenta {context.tool_name} concluída")
+    return None
+```
+
+### 2. Hooks com Escopo de Crew
+
+Aplica hooks apenas a instâncias específicas de crew:
+
+```python
+from crewai import CrewBase
+from crewai.project import crew
+from crewai.hooks import before_llm_call_crew, after_tool_call_crew
+
+@CrewBase
+class MyProjCrew:
+    @before_llm_call_crew
+    def validate_inputs(self, context):
+        # Aplica-se apenas a esta crew
+        print(f"Chamada LLM em {self.__class__.__name__}")
+        return None
+
+    @after_tool_call_crew
+    def log_results(self, context):
+        # Logging específico da crew
+        print(f"Resultado da ferramenta: {context.tool_result[:50]}...")
+        return None
+
+    @crew
+    def crew(self) -> Crew:
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential
+        )
+```
+
+## Fluxo de Execução de Hooks
+
+### Fluxo de Chamada LLM
+
+```
+Agente precisa chamar LLM
+    ↓
+[Hooks Antes da Chamada LLM Executam]
+    ├→ Hook 1: Validar contagem de iterações
+    ├→ Hook 2: Adicionar contexto de segurança
+    └→ Hook 3: Registrar requisição
+    ↓
+Se algum hook retornar False:
+    ├→ Bloquear chamada LLM
+    └→ Lançar ValueError
+    ↓
+Se todos os hooks retornarem True/None:
+    ├→ Chamada LLM prossegue
+    └→ Resposta gerada
+    ↓
+[Hooks Depois da Chamada LLM Executam]
+    ├→ Hook 1: Sanitizar resposta
+    ├→ Hook 2: Registrar resposta
+    └→ Hook 3: Atualizar métricas
+    ↓
+Resposta final retornada
+```
+
+### Fluxo de Chamada de Ferramenta
+
+```
+Agente precisa executar ferramenta
+    ↓
+[Hooks Antes da Chamada de Ferramenta Executam]
+    ├→ Hook 1: Verificar se ferramenta é permitida
+    ├→ Hook 2: Validar entradas
+    └→ Hook 3: Solicitar aprovação se necessário
+    ↓
+Se algum hook retornar False:
+    ├→ Bloquear execução da ferramenta
+    └→ Retornar mensagem de erro
+    ↓
+Se todos os hooks retornarem True/None:
+    ├→ Execução da ferramenta prossegue
+    └→ Resultado gerado
+    ↓
+[Hooks Depois da Chamada de Ferramenta Executam]
+    ├→ Hook 1: Sanitizar resultado
+    ├→ Hook 2: Fazer cache do resultado
+    └→ Hook 3: Registrar métricas
+    ↓
+Resultado final retornado
+```
+
+## Objetos de Contexto de Hook
+
+### LLMCallHookContext
+
+Fornece acesso ao estado de execução do LLM:
+
+```python
+class LLMCallHookContext:
+    executor: CrewAgentExecutor  # Acesso completo ao executor
+    messages: list               # Lista de mensagens mutável
+    agent: Agent                 # Agente atual
+    task: Task                   # Tarefa atual
+    crew: Crew                   # Instância da crew
+    llm: BaseLLM                 # Instância do LLM
+    iterations: int              # Iteração atual
+    response: str | None         # Resposta do LLM (hooks posteriores)
+```
+
+### ToolCallHookContext
+
+Fornece acesso ao estado de execução da ferramenta:
+
+```python
+class ToolCallHookContext:
+    tool_name: str               # Ferramenta sendo chamada
+    tool_input: dict             # Parâmetros de entrada mutáveis
+    tool: CrewStructuredTool     # Instância da ferramenta
+    agent: Agent | None          # Agente executando
+    task: Task | None            # Tarefa atual
+    crew: Crew | None            # Instância da crew
+    tool_result: str | None      # Resultado da ferramenta (hooks posteriores)
+```
+
+## Padrões Comuns
+
+### Segurança e Validação
+
+```python
+@before_tool_call
+def safety_check(context):
+    """Bloqueia operações destrutivas."""
+    dangerous = ['delete_file', 'drop_table', 'system_shutdown']
+    if context.tool_name in dangerous:
+        print(f"🛑 Bloqueado: {context.tool_name}")
+        return False
+    return None
+
+@before_llm_call
+def iteration_limit(context):
+    """Previne loops infinitos."""
+    if context.iterations > 15:
+        print("⛔ Máximo de iterações excedido")
+        return False
+    return None
+```
+
+### Humano no Loop
+
+```python
+@before_tool_call
+def require_approval(context):
+    """Requer aprovação para operações sensíveis."""
+    sensitive = ['send_email', 'make_payment', 'post_message']
+
+    if context.tool_name in sensitive:
+        response = context.request_human_input(
+            prompt=f"Aprovar {context.tool_name}?",
+            default_message="Digite 'sim' para aprovar:"
+        )
+
+        if response.lower() != 'sim':
+            return False
+
+    return None
+```
+
+### Monitoramento e Análise
+
+```python
+from collections import defaultdict
+import time
+
+metrics = defaultdict(lambda: {'count': 0, 'total_time': 0})
+
+@before_tool_call
+def start_timer(context):
+    context.tool_input['_start'] = time.time()
+    return None
+
+@after_tool_call
+def track_metrics(context):
+    start = context.tool_input.get('_start', time.time())
+    duration = time.time() - start
+
+    metrics[context.tool_name]['count'] += 1
+    metrics[context.tool_name]['total_time'] += duration
+
+    return None
+```
+
+## Gerenciamento de Hooks
+
+### Limpar Todos os Hooks
+
+```python
+from crewai.hooks import clear_all_global_hooks
+
+# Limpa todos os hooks de uma vez
+result = clear_all_global_hooks()
+print(f"Limpou {result['total']} hooks")
+```
+
+### Limpar Tipos Específicos de Hooks
+
+```python
+from crewai.hooks import (
+    clear_before_llm_call_hooks,
+    clear_after_llm_call_hooks,
+    clear_before_tool_call_hooks,
+    clear_after_tool_call_hooks
+)
+
+# Limpar tipos específicos
+llm_before_count = clear_before_llm_call_hooks()
+tool_after_count = clear_after_tool_call_hooks()
+```
+
+## Melhores Práticas
+
+### 1. Mantenha os Hooks Focados
+Cada hook deve ter uma responsabilidade única e clara.
+
+### 2. Trate Erros Graciosamente
+```python
+@before_llm_call
+def safe_hook(context):
+    try:
+        if some_condition:
+            return False
+    except Exception as e:
+        print(f"Erro no hook: {e}")
+        return None  # Permitir execução apesar do erro
+```
+
+### 3. Modifique o Contexto In-Place
+```python
+# ✅ Correto - modificar in-place
+@before_llm_call
+def add_context(context):
+    context.messages.append({"role": "system", "content": "Seja conciso"})
+
+# ❌ Errado - substitui referência
+@before_llm_call
+def wrong_approach(context):
+    context.messages = [{"role": "system", "content": "Seja conciso"}]
+```
+
+### 4. Use Type Hints
+```python
+from crewai.hooks import LLMCallHookContext, ToolCallHookContext
+
+def my_llm_hook(context: LLMCallHookContext) -> bool | None:
+    return None
+
+def my_tool_hook(context: ToolCallHookContext) -> str | None:
+    return None
+```
+
+### 5. Limpe em Testes
+```python
+import pytest
+from crewai.hooks import clear_all_global_hooks
+
+@pytest.fixture(autouse=True)
+def clean_hooks():
+    """Reseta hooks antes de cada teste."""
+    yield
+    clear_all_global_hooks()
+```
+
+## Quando Usar Qual Hook
+
+### Use Hooks LLM Quando:
+- Implementar limites de iteração
+- Adicionar contexto ou diretrizes de segurança aos prompts
+- Rastrear uso de tokens e custos
+- Sanitizar ou transformar respostas
+- Implementar gates de aprovação para chamadas LLM
+- Fazer debug de interações de prompt/resposta
+
+### Use Hooks de Ferramenta Quando:
+- Bloquear operações perigosas ou destrutivas
+- Validar entradas de ferramenta antes da execução
+- Implementar gates de aprovação para ações sensíveis
+- Fazer cache de resultados de ferramenta
+- Rastrear uso e performance de ferramentas
+- Sanitizar saídas de ferramenta
+- Limitar taxa de chamadas de ferramenta
+
+### Use Ambos Quando:
+Construir sistemas abrangentes de observabilidade, segurança ou aprovação que precisam monitorar todas as operações do agente.
+
+## Documentação Relacionada
+
+- [Hooks de Chamada LLM →](/learn/llm-hooks) - Documentação detalhada de hooks LLM
+- [Hooks de Chamada de Ferramenta →](/learn/tool-hooks) - Documentação detalhada de hooks de ferramenta
+- [Hooks Antes e Depois do Kickoff →](/learn/before-and-after-kickoff-hooks) - Hooks do ciclo de vida da crew
+- [Humano no Loop →](/learn/human-in-the-loop) - Padrões de entrada humana
+
+## Conclusão
+
+Os Hooks de Execução fornecem controle poderoso sobre o comportamento em tempo de execução do agente. Use-os para implementar guardrails de segurança, fluxos de trabalho de aprovação, monitoramento abrangente e lógica de negócio personalizada. Combinados com tratamento adequado de erros, segurança de tipos e considerações de performance, os hooks permitem sistemas de agentes seguros, prontos para produção e observáveis.

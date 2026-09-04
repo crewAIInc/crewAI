@@ -58,6 +58,7 @@ from crewai.events.types.flow_events import (
     ConversationTurnCompletedEvent,
     ConversationTurnFailedEvent,
     ConversationTurnStartedEvent,
+    FlowFailedEvent,
     FlowFinishedEvent,
     FlowStartedEvent,
     MethodExecutionFailedEvent,
@@ -117,6 +118,7 @@ from crewai.events.types.task_events import (
     TaskStartedEvent,
 )
 from crewai.events.types.tool_usage_events import (
+    ToolFailureDetectedEvent,
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
@@ -170,12 +172,14 @@ EventTypes = (
     | ConversationTurnStartedEvent
     | FlowStartedEvent
     | FlowFinishedEvent
+    | FlowFailedEvent
     | MethodExecutionStartedEvent
     | MethodExecutionFinishedEvent
     | MethodExecutionFailedEvent
     | AgentExecutionErrorEvent
     | ToolUsageFinishedEvent
     | ToolUsageErrorEvent
+    | ToolFailureDetectedEvent
     | ToolUsageStartedEvent
     | LLMCallStartedEvent
     | LLMCallCompletedEvent
