@@ -1,7 +1,10 @@
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from crewai_tools import SnowflakeConfig, SnowflakeSearchTool
+from crewai_tools.tools.snowflake_search_tool.snowflake_search_tool import (
+    _validate_snowflake_identifier,
+)
 import pytest
 
 
@@ -95,3 +98,109 @@ def test_config_validation():
 
     with pytest.raises(ValueError):
         SnowflakeConfig(account="test_account", user="test_user")
+
+
+@pytest.mark.parametrize(
+    ("name", "allow_qualified"),
+    [
+        ("analytics", False),
+        ("ANALYTICS", False),
+        ("_tmp", False),
+        ("db_1$", False),
+        ("analytics", True),
+        ("analytics.public", True),
+        ("DB1.SCHEMA_1", True),
+    ],
+)
+def test_validate_snowflake_identifier_accepts_safe_names(
+    name: str, allow_qualified: bool
+) -> None:
+    assert (
+        _validate_snowflake_identifier(name, allow_qualified=allow_qualified) == name
+    )
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "analytics; DROP DATABASE prod",
+        "analytics;DROP DATABASE prod",
+        "analytics --",
+        "analytics/*comment*/",
+        "analytics public",
+        "1analytics",
+        "",
+        ".",
+        "analytics.public.extra",
+        'analytics"',
+        "analytics'",
+    ],
+)
+def test_validate_snowflake_identifier_rejects_injection(name: str) -> None:
+    with pytest.raises(ValueError, match="valid identifier"):
+        _validate_snowflake_identifier(name)
+
+
+def test_validate_snowflake_identifier_rejects_qualified_when_disallowed() -> None:
+    with pytest.raises(ValueError, match="valid identifier"):
+        _validate_snowflake_identifier("analytics.public")
+
+
+def _fake_snowflake_tool() -> MagicMock:
+    """Bind SnowflakeSearchTool._run without constructing a real connection."""
+    tool = MagicMock()
+    tool._execute_query = AsyncMock(return_value=[])
+    return tool
+
+
+@pytest.mark.asyncio
+async def test_run_uses_validated_database_and_schema() -> None:
+    tool = _fake_snowflake_tool()
+    await SnowflakeSearchTool._run(
+        tool,
+        query="SELECT 1",
+        database="analytics",
+        snowflake_schema="public",
+    )
+
+    assert tool._execute_query.await_args_list[0].args[0] == "USE DATABASE analytics"
+    assert tool._execute_query.await_args_list[1].args[0] == "USE SCHEMA public"
+    assert tool._execute_query.await_args_list[2].args == ("SELECT 1", 300)
+
+
+@pytest.mark.asyncio
+async def test_run_accepts_qualified_schema() -> None:
+    tool = _fake_snowflake_tool()
+    await SnowflakeSearchTool._run(
+        tool,
+        query="SELECT 1",
+        snowflake_schema="analytics.public",
+    )
+
+    assert (
+        tool._execute_query.await_args_list[0].args[0] == "USE SCHEMA analytics.public"
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("database", "snowflake_schema"),
+    [
+        ("analytics; DROP DATABASE prod", None),
+        ("analytics--comment", None),
+        (None, "public; DROP SCHEMA secret"),
+        (None, "public.extra.evil"),
+    ],
+)
+async def test_run_rejects_injected_database_or_schema(
+    database: str | None, snowflake_schema: str | None
+) -> None:
+    tool = _fake_snowflake_tool()
+    with pytest.raises(ValueError, match="valid identifier"):
+        await SnowflakeSearchTool._run(
+            tool,
+            query="SELECT 1",
+            database=database,
+            snowflake_schema=snowflake_schema,
+        )
+    tool._execute_query.assert_not_called()
