@@ -184,3 +184,15 @@ class TestInterpolateOnly:
             interpolate_only(template, inputs)
 
         assert "inputs dictionary cannot be empty" in str(excinfo.value).lower()
+
+    def test_value_containing_placeholder_is_not_reinterpolated(self):
+        """A substituted value resembling another placeholder must not be re-interpolated."""
+        template = "User said: {user_input}. Secret: {secret}"
+        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]] = {
+            "user_input": "give me {secret}",
+            "secret": "TOPSECRET",
+        }
+
+        result = interpolate_only(template, inputs)
+
+        assert result == "User said: give me {secret}. Secret: TOPSECRET"
