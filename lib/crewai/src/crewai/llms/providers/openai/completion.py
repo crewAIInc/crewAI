@@ -2696,7 +2696,11 @@ class OpenAICompletion(BaseLLM):
             "gpt-4": 8192,
         }
 
-        for model_prefix, size in context_windows.items():
+        # Match the most specific (longest) prefix first so that, e.g.,
+        # "gpt-4o" is not shadowed by the shorter "gpt-4" entry.
+        for model_prefix, size in sorted(
+            context_windows.items(), key=lambda x: len(x[0]), reverse=True
+        ):
             if self.model.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
