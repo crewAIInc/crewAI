@@ -1,11 +1,13 @@
 """Test flow state persistence functionality."""
 
 import os
+from types import SimpleNamespace
 from typing import Dict, List
 
 import pytest
 from crewai.flow.flow import Flow, FlowState, listen, start
 from crewai.flow.persistence import persist
+from crewai.flow.persistence.decorators import PersistenceDecorator
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 from pydantic import BaseModel
 
@@ -15,6 +17,33 @@ class TestState(FlowState):
 
     counter: int = 0
     message: str = ""
+
+
+@pytest.mark.parametrize(
+    ("flow_instance", "expected_message"),
+    [
+        (SimpleNamespace(), "Flow instance has no state"),
+        (SimpleNamespace(state=None), "Flow instance has no state"),
+        (
+            SimpleNamespace(state={}),
+            "Flow state must have an 'id' field for persistence",
+        ),
+    ],
+)
+def test_persist_state_reports_specific_validation_error(
+    tmp_path, flow_instance, expected_message
+):
+    """Report whether the state itself or only its ID is missing."""
+    persistence = SQLiteFlowPersistence(str(tmp_path / "test_flows.db"))
+
+    with pytest.raises(ValueError) as exc_info:
+        PersistenceDecorator.persist_state(
+            flow_instance,
+            "test_method",
+            persistence,
+        )
+
+    assert str(exc_info.value) == expected_message
 
 
 def test_persist_decorator_saves_state(tmp_path, caplog):
