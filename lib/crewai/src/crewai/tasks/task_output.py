@@ -44,6 +44,11 @@ class TaskOutput(BaseModel):
     output_format: OutputFormat = Field(
         description="Output format of the task", default=OutputFormat.RAW
     )
+    skipped: bool = Field(
+        description="Whether the task was skipped (e.g. a conditional task whose "
+        "condition was not met) rather than executed",
+        default=False,
+    )
     messages: list[LLMMessage] = Field(
         description="Messages of the task", default_factory=list
     )
