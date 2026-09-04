@@ -1001,6 +1001,28 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```
   </Accordion>
 
+  <Accordion title="Crusoe">
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    CRUSOE_API_KEY=<your-api-key>
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    llm = LLM(
+        model="crusoe/zai/GLM-5.2",
+        temperature=0.7
+    )
+    ```
+
+    Available models include `zai/GLM-5.2`, `zai/GLM-5.1`, `moonshotai/Kimi-K2.6`, `deepseek-ai/DeepSeek-V4-Pro`, `deepseek-ai/Deepseek-V4-Flash`, `Qwen/Qwen3-235B-A22B-Instruct-2507`, `openai/gpt-oss-120b`, `nvidia/NVIDIA-Nemotron-3-Super-120B-A12B`, and `meta-llama/Llama-3.3-70B-Instruct` — see the [Crusoe Managed Inference docs](https://docs.crusoecloud.com/managed-inference/overview/index.html) for the full catalog.
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
   <Accordion title="Perplexity AI">
     Set the following environment variables in your `.env` file:
     ```toml Code
