@@ -92,6 +92,10 @@ from crewai.events.types.crew_events import (
     CrewTrainFailedEvent,
     CrewTrainStartedEvent,
 )
+from crewai.execution import (
+    begin_execution,
+    end_execution,
+)
 from crewai.flow.flow_trackable import FlowTrackable
 from crewai.knowledge.knowledge import Knowledge, _resolve_knowledge_sources
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -203,6 +207,9 @@ class Crew(FlowTrackable, BaseModel):
 
     __hash__ = object.__hash__
     _execution_span: Span | None = PrivateAttr()
+    # Monotonic stamp for the ungated "Crew Completed" span. A PrivateAttr
+    # because Crew is a BaseModel, unlike Flow which takes a plain attribute.
+    _telemetry_started_at: float | None = PrivateAttr(default=None)
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
@@ -1038,6 +1045,8 @@ class Crew(FlowTrackable, BaseModel):
         )
         token = attach(baggage_ctx)
 
+        execution_token = begin_execution()
+
         runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
             inputs = prepare_kickoff(self, inputs, input_files)
@@ -1076,6 +1085,7 @@ class Crew(FlowTrackable, BaseModel):
             self._drain_memory_writes()
             clear_files(self.id)
             detach(token)
+            end_execution(execution_token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
 
     def _post_kickoff(self, result: CrewOutput) -> CrewOutput:
@@ -1252,6 +1262,8 @@ class Crew(FlowTrackable, BaseModel):
         )
         token = attach(baggage_ctx)
 
+        execution_token = begin_execution()
+
         runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
             inputs = prepare_kickoff(self, inputs, input_files)
@@ -1290,6 +1302,7 @@ class Crew(FlowTrackable, BaseModel):
             self._drain_memory_writes()
             clear_files(self.id)
             detach(token)
+            end_execution(execution_token)
             crewai_event_bus._exit_runtime_scope(runtime_scope)
 
     async def akickoff_for_each(

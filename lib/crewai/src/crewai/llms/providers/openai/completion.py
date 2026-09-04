@@ -36,8 +36,14 @@ from openai.types.responses import (
 from pydantic import BaseModel, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
+from crewai.hooks.dispatch import HookAborted
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
-from crewai.llms.base_llm import BaseLLM, JsonResponseFormat, llm_call_context
+from crewai.llms.base_llm import (
+    BaseLLM,
+    JsonResponseFormat,
+    LLMCallBlockedError,
+    llm_call_context,
+)
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.llms.providers.utils.common import safe_tool_conversion
@@ -462,10 +468,7 @@ class OpenAICompletion(BaseLLM):
 
                 formatted_messages = self._format_messages(messages)
 
-                if not self._invoke_before_llm_call_hooks(
-                    formatted_messages, from_agent
-                ):
-                    raise ValueError("LLM call blocked by before_llm_call hook")
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
 
                 if self._effective_api() == "responses":
                     return self._call_responses(
@@ -486,6 +489,9 @@ class OpenAICompletion(BaseLLM):
                     response_model=response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 error_msg = f"OpenAI API call failed: {e!s}"
                 logging.error(error_msg)
@@ -600,6 +606,8 @@ class OpenAICompletion(BaseLLM):
 
                 formatted_messages = self._format_messages(messages)
 
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
+
                 if self._effective_api() == "responses":
                     return await self._acall_responses(
                         messages=formatted_messages,
@@ -619,6 +627,9 @@ class OpenAICompletion(BaseLLM):
                     response_model=response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 error_msg = f"OpenAI API call failed: {e!s}"
                 logging.error(error_msg)
@@ -747,7 +758,7 @@ class OpenAICompletion(BaseLLM):
         )
 
     @staticmethod
-    def _to_responses_input(message: LLMMessage) -> list[Any]:
+    def _to_responses_input(message: LLMMessage) -> list[dict[str, Any] | LLMMessage]:
         """Translate a chat-format message into Responses ``input`` items.
 
         Tool calling is expressed differently by the two APIs. Chat Completions
@@ -765,18 +776,23 @@ class OpenAICompletion(BaseLLM):
         role = message.get("role")
 
         if role == "assistant" and message.get("tool_calls"):
-            items: list[Any] = []
+            items: list[dict[str, Any] | LLMMessage] = []
             content = message.get("content")
             if content:
                 items.append({"role": "assistant", "content": content})
             for call in message["tool_calls"]:
                 function = call.get("function", {})
+                args = function.get("arguments")
+                if args is None or args == "":
+                    args = "{}"
+                elif not isinstance(args, str):
+                    args = json.dumps(args)
                 items.append(
                     {
                         "type": "function_call",
                         "call_id": call.get("id", ""),
                         "name": function.get("name", ""),
-                        "arguments": function.get("arguments", "{}"),
+                        "arguments": args,
                     }
                 )
             return items
@@ -807,7 +823,7 @@ class OpenAICompletion(BaseLLM):
         - Internally-tagged tool format (flat structure)
         """
         instructions: str | None = self.instructions
-        input_messages: list[LLMMessage] = []
+        input_messages: list[dict[str, Any] | LLMMessage] = []
 
         for message in messages:
             if message.get("role") == "system":
@@ -821,7 +837,7 @@ class OpenAICompletion(BaseLLM):
                 input_messages.extend(self._to_responses_input(message))
 
         # Prepend reasoning items for ZDR (zero-data-retention) chaining when configured
-        final_input: list[Any] = []
+        final_input: list[dict[str, Any] | LLMMessage] = []
         if self.auto_chain_reasoning and self._last_reasoning_items:
             final_input.extend(self._last_reasoning_items)
         final_input.extend(input_messages if input_messages else messages)
@@ -2659,23 +2675,25 @@ class OpenAICompletion(BaseLLM):
                     f"Context window for {key} must be between {min_context} and {max_context}"
                 )
 
-        # Context window sizes for OpenAI models
+        # Longest prefix first. Always insert new keys in that order so
+        # startswith prefers gpt-5.6 over gpt-5, gpt-4o-mini over gpt-4o, etc.
         context_windows = {
-            "gpt-4": 8192,
-            "gpt-4o": 128000,
-            "gpt-4o-mini": 200000,
-            "gpt-5.4-mini": 200000,
-            "gpt-4-turbo": 128000,
-            "gpt-4.1": 1047576,
             "gpt-4.1-mini-2025-04-14": 1047576,
             "gpt-4.1-nano-2025-04-14": 1047576,
-            "gpt-5": 1047576,
+            "gpt-5.4-mini": 200000,
+            "gpt-4-turbo": 128000,
+            "gpt-4o-mini": 200000,
             "gpt-5-mini": 1047576,
             "gpt-5-nano": 1047576,
             "o1-preview": 128000,
+            "gpt-5.6": 1050000,
             "o1-mini": 128000,
             "o3-mini": 200000,
             "o4-mini": 200000,
+            "gpt-4.1": 1047576,
+            "gpt-4o": 128000,
+            "gpt-5": 1047576,
+            "gpt-4": 8192,
         }
 
         for model_prefix, size in context_windows.items():

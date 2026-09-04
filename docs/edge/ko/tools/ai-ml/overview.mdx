@@ -48,17 +48,16 @@ mode: "wide"
 - **AI 안전성**: 콘텐츠 모더레이션 및 안전성 점검 구현
 
 ```python
-from crewai_tools import DallETool, VisionTool, CodeInterpreterTool
+from crewai_tools import DallETool, VisionTool
 
 # Create AI tools
 image_generator = DallETool()
 vision_processor = VisionTool()
-code_executor = CodeInterpreterTool()
 
 # Add to your agent
 agent = Agent(
     role="AI Specialist",
-    tools=[image_generator, vision_processor, code_executor],
+    tools=[image_generator, vision_processor],
     goal="Create and analyze content using AI capabilities"
 )
 ```

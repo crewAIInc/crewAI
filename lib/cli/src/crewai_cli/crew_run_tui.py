@@ -1027,6 +1027,9 @@ FooterKey .footer-key--key {
     def action_view_traces(self) -> None:
         if self._status != "completed":
             return
+        # Recorded here rather than in on_button_pressed so the `t` key binding
+        # is counted too, and only once the action can actually do something.
+        self._record_tui_button_click("view_traces")
         if self._trace_url:
             import webbrowser
 
@@ -1115,6 +1118,9 @@ FooterKey .footer-key--key {
     def action_deploy_crew(self) -> None:
         if self._status != "completed":
             return
+        # Recorded here rather than in on_button_pressed so the `d` key binding
+        # is counted too, and only once the action can actually do something.
+        self._record_tui_button_click("deploy")
         self._want_deploy = True
         self._unsubscribe()
         self.exit(self._crew_result)
@@ -1130,10 +1136,8 @@ FooterKey .footer-key--key {
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id in ("btn-traces", "btn-traces-done"):
-            self._record_tui_button_click("view_traces")
             self.action_view_traces()
         elif event.button.id == "btn-deploy":
-            self._record_tui_button_click("deploy")
             self.action_deploy_crew()
 
     def _scroll_to_result(self) -> None:
