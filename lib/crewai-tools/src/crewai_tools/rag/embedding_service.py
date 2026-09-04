@@ -88,6 +88,11 @@ class EmbeddingService:
     @staticmethod
     def _get_default_api_key(provider: str) -> str | None:
         """Get default API key from environment variables."""
+        if provider == "openrouter":
+            return os.getenv("EMBEDDINGS_OPENROUTER_API_KEY") or os.getenv(
+                "OPENROUTER_API_KEY"
+            )
+
         env_key_map = {
             "azure": "AZURE_OPENAI_API_KEY",
             "amazon-bedrock": "AWS_ACCESS_KEY_ID",  # or AWS_PROFILE
@@ -144,6 +149,14 @@ class EmbeddingService:
                 "model_name": self.config.model,
                 **self.config.extra_config,
             }
+        elif self.config.provider == "openrouter":
+            openrouter_config: dict[str, Any] = {
+                "model_name": self.config.model,
+                **self.config.extra_config,
+            }
+            if self.config.api_key is not None:
+                openrouter_config["api_key"] = self.config.api_key
+            base_config["config"] = openrouter_config
         elif self.config.provider == "azure":
             base_config["config"] = {
                 "api_key": self.config.api_key,
@@ -371,6 +384,7 @@ class EmbeddingService:
             "onnx",
             "openai",
             "openclip",
+            "openrouter",
             "roboflow",
             "sentence-transformer",
             "text2vec",
@@ -387,6 +401,16 @@ class EmbeddingService:
     ) -> EmbeddingService:
         """Create an OpenAI embedding service."""
         return cls(provider="openai", model=model, api_key=api_key, **kwargs)
+
+    @classmethod
+    def create_openrouter_service(
+        cls,
+        model: str = "openai/text-embedding-3-small",
+        api_key: str | None = None,
+        **kwargs: Any,
+    ) -> EmbeddingService:
+        """Create an OpenRouter embedding service."""
+        return cls(provider="openrouter", model=model, api_key=api_key, **kwargs)
 
     @classmethod
     def create_voyage_service(
