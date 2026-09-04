@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from pydantic import BaseModel, Field
@@ -411,7 +412,7 @@ class AgentReasoning:
             return (
                 response_str,
                 [],
-                "READY: I am ready to execute the task." in response_str,
+                self._is_ready(response_str),
             )
 
         except HookAborted:
@@ -437,7 +438,7 @@ class AgentReasoning:
                 return (
                     fallback_str,
                     [],
-                    "READY: I am ready to execute the task." in fallback_str,
+                    self._is_ready(fallback_str),
                 )
             except HookAborted:
                 raise
@@ -586,6 +587,23 @@ class AgentReasoning:
             )
 
     @staticmethod
+    def _is_ready(response: str) -> bool:
+        """Check whether a text response indicates the agent is ready.
+
+        The prompt templates instruct models to conclude with "READY" or
+        "NOT READY".  Older prompts used the full phrase
+        "READY: I am ready to execute the task."  Both forms are accepted
+        so that models following either convention work correctly.
+        """
+        upper = response.upper()
+        if "NOT READY" in upper:
+            return False
+        return bool(
+            "READY: I AM READY TO EXECUTE THE TASK." in upper
+            or re.search(r"\bREADY\b", upper)
+        )
+
+    @staticmethod
     def _parse_planning_response(response: str) -> tuple[str, bool]:
         """Parses the planning response to extract the plan and readiness.
 
@@ -598,10 +616,7 @@ class AgentReasoning:
         if not response:
             return "No plan was generated.", False
 
-        plan = response
-        ready = "READY: I am ready to execute the task." in response
-
-        return plan, ready
+        return response, AgentReasoning._is_ready(response)
 
 
 AgentPlanning = AgentReasoning
