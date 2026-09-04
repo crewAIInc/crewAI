@@ -1,8 +1,10 @@
+import time
 from io import BytesIO
 from unittest.mock import patch
 import zipfile
 
 import pytest
+import re
 import requests
 
 from crewai_tools import URLReadTool
@@ -89,6 +91,39 @@ def build_xlsx(rows: list[list[object]], title: str = "Sheet1") -> bytes:
     buffer = BytesIO()
     workbook.save(buffer)
     return buffer.getvalue()
+
+
+def build_forged_dimension_xlsx() -> bytes:
+    """Return a tiny XLSX whose sheet declares Excel's maximum dimension.
+
+    openpyxl trusts the declared width and pads every row out to it, so this
+    4.8 KB file otherwise drives ~1.6e9 cell normalizations.
+    """
+    from openpyxl import Workbook
+
+    source = BytesIO()
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet["A1"] = "header"
+    worksheet["B100000"] = "stray"
+    workbook.save(source)
+    workbook.close()
+
+    rewritten = BytesIO()
+    with (
+        zipfile.ZipFile(BytesIO(source.getvalue())) as archive,
+        zipfile.ZipFile(rewritten, "w", zipfile.ZIP_DEFLATED) as output,
+    ):
+        for info in archive.infolist():
+            payload = archive.read(info.filename)
+            if info.filename == "xl/worksheets/sheet1.xml":
+                payload = re.sub(
+                    rb'<dimension ref="[^"]*"',
+                    b'<dimension ref="A1:XFD1048576"',
+                    payload,
+                )
+            output.writestr(info, payload)
+    return rewritten.getvalue()
 
 
 def build_zip(*names: str) -> bytes:
@@ -673,7 +708,7 @@ def test_oversized_workbook_is_truncated_with_a_visible_notice():
         fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
         result = tool.run(url=PRESIGNED_URL)
 
-    assert "[Truncated: workbook exceeds 50 cells]" in result
+    assert "[Truncated: workbook is too large to read in full]" in result
     assert "r0c0" in result
     assert "r29c9" not in result
 
@@ -702,6 +737,29 @@ def test_xlsx_trailing_space_in_the_final_cell_survives():
             build_xlsx([["only "]]), "application/octet-stream", PRESIGNED_URL
         )
         assert tool.run(url=PRESIGNED_URL) == "Sheet Sheet1:\nonly "
+
+
+def test_forged_sheet_dimension_is_bounded_by_the_scan_budget():
+    """A forged dimension must not buy unbounded work off a 5 KB upload.
+
+    Blank rows are skipped, so budgeting only emitted cells left the padding
+    free: 4.8 KB drove 1.6e9 normalizations in 15s. The scan budget is
+    charged per row before the row is normalized, which is what bounds it.
+    """
+    tool = URLReadTool()
+    body = build_forged_dimension_xlsx()
+    assert len(body) < 10_000
+
+    started = time.monotonic()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+    elapsed = time.monotonic() - started
+
+    assert "[Truncated: workbook is too large to read in full]" in result
+    # Generous vs. the ~15s the unbounded scan took, tight enough to fail if
+    # the per-row charge is removed.
+    assert elapsed < 5, f"scan took {elapsed:.1f}s -- the budget is not bounding work"
 
 
 def test_zip_claiming_to_be_both_docx_and_xlsx_is_refused():

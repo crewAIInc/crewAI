@@ -69,8 +69,10 @@ _ZIP_MAGIC: Final[bytes] = b"PK\x03\x04"
 _DOCX_ZIP_ENTRY: Final[str] = "word/document.xml"
 _XLSX_ZIP_ENTRY: Final[str] = "xl/workbook.xml"
 # A workbook is bounded by max_bytes on the wire but not by what it expands
-# into, so the number of cells handed to an agent is capped separately.
+# into. Two separate ceilings: how much is handed to an agent, and how much
+# work a hostile sheet can demand before that decision is even reached.
 _XLSX_MAX_CELLS: Final[int] = 200_000
+_XLSX_MAX_SCANNED_CELLS: Final[int] = 5_000_000
 _HTML_PREFIXES: Final[tuple[str, ...]] = ("<!doctype html", "<html")
 _HTML_PREFIX_LEN: Final[int] = max(len(prefix) for prefix in _HTML_PREFIXES)
 
@@ -163,8 +165,8 @@ class URLReadTool(BaseTool):
         "this tool, provide a 'url' parameter with an http:// or https:// "
         "address. PDF, DOCX, XLSX, HTML, JSON, XML, CSV and plain-text "
         "responses are converted to text; other binary types are rejected. "
-        "URLs that resolve "
-        "to private or internal network addresses are refused, as are responses "
+        "URLs that resolve to private or internal network addresses are "
+        "refused, as are responses "
         "over the tool's size limit. Optionally provide 'start_line' and "
         "'line_count' to read only part of the content."
     )
@@ -380,7 +382,8 @@ class URLReadTool(BaseTool):
         workbook = load_workbook(BytesIO(body), read_only=True, data_only=True)
         try:
             sheets = []
-            remaining = _XLSX_MAX_CELLS
+            scannable = _XLSX_MAX_SCANNED_CELLS
+            emittable = _XLSX_MAX_CELLS
             truncated = False
             for worksheet in workbook.worksheets:
                 # csv rather than a join: a cell may itself hold a comma, a
@@ -388,6 +391,16 @@ class URLReadTool(BaseTool):
                 buffer = StringIO()
                 writer = csv.writer(buffer, lineterminator="\n")
                 for row in worksheet.iter_rows(values_only=True):
+                    # Charged before the row is touched. openpyxl pads every
+                    # row out to the sheet's declared width, and a forged
+                    # dimension makes each *skipped* blank row cost 16k
+                    # normalizations -- 4.8 KB of upload drove 1.6e9 of them.
+                    # Budgeting only what is emitted bounds none of that work.
+                    if len(row) > scannable:
+                        truncated = True
+                        break
+                    scannable -= len(row)
+
                     values = ["" if value is None else str(value) for value in row]
                     # Excel reports a sheet's dimension generously and openpyxl
                     # pads every row up to it, so one stray far-down cell turns
@@ -396,10 +409,10 @@ class URLReadTool(BaseTool):
                     # a cell the author really did fill with spaces alone.
                     if not any(values):
                         continue
-                    if len(values) > remaining:
+                    if len(values) > emittable:
                         truncated = True
                         break
-                    remaining -= len(values)
+                    emittable -= len(values)
                     writer.writerow(values)
 
                 if buffer.tell():
@@ -416,7 +429,7 @@ class URLReadTool(BaseTool):
             return "[XLSX with no extractable cells]"
         text = "\n\n".join(sheets)
         if truncated:
-            text += f"\n\n[Truncated: workbook exceeds {_XLSX_MAX_CELLS} cells]"
+            text += "\n\n[Truncated: workbook is too large to read in full]"
         return text
 
     def _extract_html(self, body: bytes, content_type: str) -> str:
