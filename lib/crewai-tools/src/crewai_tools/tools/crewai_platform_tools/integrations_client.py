@@ -257,18 +257,16 @@ class LegacyClient:
                     if not isinstance(parameters, dict):
                         parameters = {}
 
-                    tool_infos.extend(
+                    tool_infos.append(
                         ToolInfo(
                             app=app,
                             action=action,
-                            connection_id=selector.connection_id,
+                            connection_id=None,
                             description=action_data.get(
                                 "description", f"Execute {action}"
                             ),
                             parameters=parameters,
                         )
-                        for selector in selectors
-                        if selector.app == app and selector.action in (None, action)
                     )
 
         return tool_infos
