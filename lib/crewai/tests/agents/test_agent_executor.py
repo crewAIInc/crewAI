@@ -427,6 +427,45 @@ class TestAgentExecutor:
             assert result == "initialized"
             mock_show_start.assert_called_once()
 
+    def test_show_logs_displays_final_answer_for_human_input(self, mock_dependencies):
+        """Human feedback prompts must show the final answer under review."""
+        executor = _build_executor(**mock_dependencies)
+        executor.state.ask_for_human_input = True
+        executor.agent.verbose = False
+
+        with patch("crewai.experimental.agent_executor.crewai_event_bus.emit") as emit:
+            executor._show_logs(
+                AgentFinish(
+                    thought="Done",
+                    output="The sky is blue.",
+                    text="Final Answer: The sky is blue.",
+                )
+            )
+
+        event = emit.call_args.args[1]
+        assert event.verbose is True
+
+    def test_show_logs_keeps_non_final_human_input_logs_non_verbose(
+        self, mock_dependencies
+    ):
+        """Human feedback should not enable all intermediate logs."""
+        executor = _build_executor(**mock_dependencies)
+        executor.state.ask_for_human_input = True
+        executor.agent.verbose = False
+
+        with patch("crewai.experimental.agent_executor.crewai_event_bus.emit") as emit:
+            executor._show_logs(
+                AgentAction(
+                    thought="Need a tool",
+                    tool="search",
+                    tool_input="query",
+                    text="Action: search",
+                )
+            )
+
+        event = emit.call_args.args[1]
+        assert event.verbose is False
+
     def test_check_max_iterations_not_reached(self, mock_dependencies):
         """Test routing when iterations < max."""
         executor = _build_executor(**mock_dependencies)
