@@ -71,6 +71,9 @@ linkup-sdk = [
 tavily-python = [
     "tavily-python~=0.7.14",
 ]
+iflow-search = [
+    "iflow-search>=0.1.0,<0.2",
+]
 hyperbrowser = [
     "hyperbrowser>=0.18.0",
 ]
