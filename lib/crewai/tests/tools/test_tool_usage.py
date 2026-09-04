@@ -113,6 +113,93 @@ def test_random_number_tool_schema():
     )
 
 
+def _make_tool_usage(tools):
+    return ToolUsage(
+        tools_handler=MagicMock(),
+        tools=tools,
+        task=MagicMock(),
+        function_calling_llm=MagicMock(),
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+
+def _legacy_select_tool(tool_usage, tool_name):
+    """Reference implementation of the pre-fast-path _select_tool matching
+    logic (fuzzy sort + threshold), used to prove behavior is preserved."""
+    from difflib import SequenceMatcher
+
+    from crewai.utilities.string_utils import sanitize_tool_name
+
+    sanitized_input = sanitize_tool_name(tool_name)
+    order_tools = sorted(
+        tool_usage.tools,
+        key=lambda tool: SequenceMatcher(
+            None, sanitize_tool_name(tool.name), sanitized_input
+        ).ratio(),
+        reverse=True,
+    )
+    for tool in order_tools:
+        sanitized_tool = sanitize_tool_name(tool.name)
+        if (
+            sanitized_tool == sanitized_input
+            or SequenceMatcher(None, sanitized_tool, sanitized_input).ratio() > 0.85
+        ):
+            return tool
+    return None
+
+
+class _NamedTool(BaseTool):
+    description: str = "A tool"
+
+    def _run(self) -> str:
+        return "ok"
+
+
+def test_select_tool_exact_match_by_raw_and_sanitized_name():
+    calc = _NamedTool(name="Calculator Tool")
+    weather = _NamedTool(name="Weather Lookup")
+    tool_usage = _make_tool_usage([calc, weather])
+
+    # Raw name and its sanitized form both resolve to the same tool.
+    assert tool_usage._select_tool("Calculator Tool") is calc
+    assert tool_usage._select_tool("calculator_tool") is calc
+    assert tool_usage._select_tool("Weather Lookup") is weather
+
+
+def test_select_tool_fuzzy_fallback_for_typo():
+    calc = _NamedTool(name="Calculator Tool")
+    weather = _NamedTool(name="Weather Lookup")
+    tool_usage = _make_tool_usage([calc, weather])
+
+    # A small typo (no exact match) still resolves via the fuzzy fallback.
+    assert tool_usage._select_tool("calculater_tool") is calc
+
+
+def test_select_tool_matches_legacy_behavior():
+    tools = [
+        _NamedTool(name="Calculator Tool"),
+        _NamedTool(name="Weather Lookup"),
+        _NamedTool(name="Search The Web"),
+    ]
+    tool_usage = _make_tool_usage(tools)
+
+    # Across exact names, sanitized names, and near-miss typos, the fast-path
+    # selection must return exactly what the legacy fuzzy-sort logic returned.
+    for query in [
+        "Calculator Tool",
+        "calculator_tool",
+        "Weather Lookup",
+        "weather_lookup",
+        "Search The Web",
+        "search_the_webb",  # typo, fuzzy
+        "calculater_tool",  # typo, fuzzy
+    ]:
+        assert tool_usage._select_tool(query) is _legacy_select_tool(
+            tool_usage, query
+        ), f"mismatch for {query!r}"
+
+
 def test_tool_usage_render():
     tool = RandomNumberTool()
 
