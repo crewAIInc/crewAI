@@ -90,6 +90,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DASHSCOPE_BASE_URL",
         api_key_required=True,
     ),
+    "monet": ProviderConfig(
+        base_url="https://monet.gg/api/v1",
+        api_key_env="MONET_ACCESS_TOKEN",
+        base_url_env="MONET_BASE_URL",
+        api_key_required=True,
+    ),
 }
 
 _OLLAMA_DEFAULT_PORT = 11434
@@ -142,6 +148,8 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - hosted_vllm: vLLM server (https://github.com/vllm-project/vllm)
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
+        - monet: Monet (https://monet.gg) — routes inference through an end-user's
+          own ChatGPT or Claude subscription instead of an API key
 
     Example:
         # Using provider prefix
