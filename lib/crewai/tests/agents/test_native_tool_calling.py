@@ -20,6 +20,11 @@ from pydantic import BaseModel, Field
 from crewai import Agent, Crew, Task
 from crewai.agents.parser import AgentFinish
 from crewai.events import crewai_event_bus
+from crewai.events.types.tool_usage_events import (
+    ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
+)
 from crewai.hooks import register_after_tool_call_hook, register_before_tool_call_hook
 from crewai.hooks.tool_hooks import ToolCallHookContext, clear_after_tool_call_hooks
 from crewai.llm import LLM
@@ -1113,35 +1118,39 @@ class TestMaxUsageCountWithNativeToolCalling:
 # JSON Parse Error Handling Tests
 
 
+def _make_crew_agent_executor(tools: list[BaseTool]) -> "CrewAgentExecutor":
+    """Create a minimal CrewAgentExecutor with mocked dependencies."""
+    from crewai.agents.crew_agent_executor import CrewAgentExecutor
+    from crewai.tools.base_tool import to_langchain
+
+    structured_tools = to_langchain(tools)
+    mock_agent = Mock()
+    mock_agent.key = "test_agent"
+    mock_agent.role = "tester"
+    mock_agent.verbose = False
+    mock_agent.fingerprint = None
+    mock_agent.tools_results = []
+
+    mock_task = Mock()
+    mock_task.name = "test"
+    mock_task.description = "test"
+    mock_task.id = "test-id"
+
+    executor = CrewAgentExecutor(
+        tools=structured_tools,
+        original_tools=tools,
+    )
+    executor.agent = mock_agent
+    executor.task = mock_task
+    return executor
+
+
 class TestNativeToolCallingJsonParseError:
     """Tests that malformed JSON tool arguments produce clear errors
     instead of silently dropping all arguments."""
 
     def _make_executor(self, tools: list[BaseTool]) -> "CrewAgentExecutor":
-        """Create a minimal CrewAgentExecutor with mocked dependencies."""
-        from crewai.agents.crew_agent_executor import CrewAgentExecutor
-        from crewai.tools.base_tool import to_langchain
-
-        structured_tools = to_langchain(tools)
-        mock_agent = Mock()
-        mock_agent.key = "test_agent"
-        mock_agent.role = "tester"
-        mock_agent.verbose = False
-        mock_agent.fingerprint = None
-        mock_agent.tools_results = []
-
-        mock_task = Mock()
-        mock_task.name = "test"
-        mock_task.description = "test"
-        mock_task.id = "test-id"
-
-        executor = CrewAgentExecutor(
-            tools=structured_tools,
-            original_tools=tools,
-        )
-        executor.agent = mock_agent
-        executor.task = mock_task
-        return executor
+        return _make_crew_agent_executor(tools)
 
     def test_malformed_json_returns_parse_error(self) -> None:
         """Malformed JSON args must return a descriptive error, not silently become {}."""
@@ -1363,3 +1372,174 @@ class TestNativeToolCallingJsonParseError:
 
         assert "Error" in result["result"]
         assert "validation failed" in result["result"].lower() or "missing" in result["result"].lower()
+
+
+class TestNativeToolCallingEventCorrelation:
+    """Tests for correlating native tool usage events with model tool calls."""
+
+    def test_native_tool_usage_events_include_call_id(self) -> None:
+        """Propagate an explicitly supplied provider ID to lifecycle events."""
+
+        class EchoTool(BaseTool):
+            name: str = "echo"
+            description: str = "Echo the input"
+
+            def _run(self, value: str) -> str:
+                """Return the input unchanged."""
+                return value
+
+        tool = EchoTool()
+        executor = _make_crew_agent_executor([tool])
+        executor._available_functions = {"echo": tool._run}
+        executor._tool_name_mapping = {"echo": tool}
+        tool_call = {
+            "id": "fc_response_item",
+            "call_id": "call_events",
+            "function": {"name": "echo", "arguments": '{"value": "hello"}'},
+        }
+
+        with patch.object(crewai_event_bus, "emit") as emit:
+            result = executor._handle_native_tool_calls(
+                [tool_call], executor._available_functions
+            )
+
+        events = [call.kwargs["event"] for call in emit.call_args_list]
+
+        assert result is None
+        assert [type(event) for event in events] == [
+            ToolUsageStartedEvent,
+            ToolUsageFinishedEvent,
+        ]
+        assert [event.call_id for event in events] == ["call_events", "call_events"]
+        assert executor.messages[0]["tool_calls"][0]["id"] == "call_events"
+        assert executor.messages[1]["tool_call_id"] == "call_events"
+
+    def test_native_tool_usage_error_event_includes_call_id(self) -> None:
+        """Propagate a provider ID to an error event as well as the start event."""
+        tool = FailingTool()
+        executor = _make_crew_agent_executor([tool])
+
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
+
+        with patch.object(crewai_event_bus, "emit") as emit:
+            result = executor._execute_single_native_tool_call(
+                call_id="call_error",
+                provider_call_id="call_error",
+                func_name="failing_tool",
+                func_args="{}",
+                available_functions=available_functions,
+            )
+
+        events = [call.kwargs["event"] for call in emit.call_args_list]
+
+        assert "Error executing tool" in result["result"]
+        assert [type(event) for event in events] == [
+            ToolUsageStartedEvent,
+            ToolUsageErrorEvent,
+        ]
+        assert [event.call_id for event in events] == ["call_error", "call_error"]
+
+    def test_native_tool_usage_events_omit_missing_provider_call_id(self) -> None:
+        """Do not expose a locally generated fallback ID through lifecycle events."""
+
+        class EchoTool(BaseTool):
+            name: str = "echo"
+            description: str = "Echo the input"
+
+            def _run(self, value: str) -> str:
+                """Return the input unchanged."""
+                return value
+
+        tool = EchoTool()
+        executor = _make_crew_agent_executor([tool])
+        executor._available_functions = {"echo": tool._run}
+        executor._tool_name_mapping = {"echo": tool}
+        tool_call = {
+            "function": {"name": "echo", "arguments": '{"value": "hello"}'},
+        }
+
+        with patch.object(crewai_event_bus, "emit") as emit:
+            result = executor._handle_native_tool_calls(
+                [tool_call], executor._available_functions
+            )
+
+        events = [call.kwargs["event"] for call in emit.call_args_list]
+
+        assert result is None
+        local_call_id = executor.messages[0]["tool_calls"][0]["id"]
+        assert local_call_id.startswith("call_")
+        assert executor.messages[1]["tool_call_id"] == local_call_id
+        assert [event.call_id for event in events] == [None, None]
+
+    def test_providerless_native_tool_calls_use_distinct_fallback_ids(self) -> None:
+        """Keep fallback message IDs distinct across provider-less tool calls."""
+
+        class EchoTool(BaseTool):
+            name: str = "echo"
+            description: str = "Echo the input"
+
+            def _run(self, value: str) -> str:
+                """Return the input unchanged."""
+                return value
+
+        tool = EchoTool()
+        executor = _make_crew_agent_executor([tool])
+        executor._available_functions = {"echo": tool._run}
+        executor._tool_name_mapping = {"echo": tool}
+        tool_calls = [
+            {
+                "function": {
+                    "name": "echo",
+                    "arguments": '{"value": "first"}',
+                },
+            },
+            {
+                "function": {
+                    "name": "echo",
+                    "arguments": '{"value": "second"}',
+                },
+            },
+        ]
+
+        first = executor._parse_native_tool_call(tool_calls[0])
+        second = executor._parse_native_tool_call(tool_calls[1])
+
+        assert first is not None
+        assert second is not None
+        fallback_ids = [first[0], second[0]]
+        assert all(call_id.startswith("call_") for call_id in fallback_ids)
+        assert len(set(fallback_ids)) == 2
+
+        with patch.object(crewai_event_bus, "emit") as emit:
+            result = executor._handle_native_tool_calls(
+                tool_calls, executor._available_functions
+            )
+
+        events = [call.kwargs["event"] for call in emit.call_args_list]
+
+        assert result is None
+        assert [call["id"] for call in executor.messages[0]["tool_calls"]] == (
+            fallback_ids
+        )
+        assert [message["tool_call_id"] for message in executor.messages[1:3]] == (
+            fallback_ids
+        )
+        assert [event.call_id for event in events] == [None] * 4
+
+    def test_native_tool_call_parser_separates_provider_id(self) -> None:
+        """Keep provider and locally generated IDs separate during parsing."""
+        executor = _make_crew_agent_executor([])
+        tool_call = {
+            "function": {"name": "echo", "arguments": '{"value": "hello"}'},
+        }
+
+        parsed = executor._parse_native_tool_call(tool_call)
+
+        assert parsed is not None
+        call_id, provider_call_id, func_name, func_args = parsed
+        assert call_id.startswith("call_")
+        assert provider_call_id is None
+        assert func_name == "echo"
+        assert func_args == '{"value": "hello"}'

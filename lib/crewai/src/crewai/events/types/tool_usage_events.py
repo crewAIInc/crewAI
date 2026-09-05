@@ -15,6 +15,7 @@ class ToolUsageEvent(BaseEvent):
     agent_role: str | None = None
     agent_id: str | None = None
     tool_name: str
+    call_id: str | None = None
     tool_args: dict[str, Any] | str
     tool_class: str | None = None
     run_attempts: int = 0
