@@ -15,9 +15,16 @@ program.
         ...
     )
 
+The program runs in a separate, killable process bounded by ``timeout``
+(seconds, default 30) and ``max_memory_mb`` (default 512), so a program
+that never ends or eats memory is stopped and the crew's worker survives
+it. The memory cap is enforced on Linux and macOS; on Windows it is
+recorded but not enforced. Both limits need velaris-lang 2.59.0 or
+newer; with an older compiler the program runs unbounded.
+
 Not a security boundary: allow=["ffi"] grants everything Python can
-do, and nothing here limits memory or time. It is a guard for the
-ordinary case of running a script a model wrote.
+do. It is a guard for the ordinary case of running a script a model
+wrote.
 
 Install the compiler once: pip install velaris-lang z3-solver
 The z3-solver is optional; without it promises are checked while
@@ -25,6 +32,7 @@ running rather than proven beforehand, and the audit says so.
 """
 
 import importlib
+import inspect
 import json
 from types import ModuleType
 from typing import Any
@@ -50,6 +58,21 @@ def _import_velaris() -> ModuleType:
             "Install it with: uv add crewai-tools --extra velaris  (or) "
             "pip install velaris-lang"
         ) from exc
+
+
+def _supports_limits(velaris: ModuleType) -> bool:
+    """Report whether the installed compiler accepts run-time limits.
+
+    ``timeout`` and ``max_memory_mb`` arrived in velaris-lang 2.59.0.
+
+    Args:
+        velaris: The imported ``velaris`` module.
+
+    Returns:
+        True if ``velaris.run`` accepts ``timeout`` and ``max_memory_mb``.
+    """
+    params = inspect.signature(velaris.run).parameters
+    return "timeout" in params and "max_memory_mb" in params
 
 
 class VelarisAuditToolSchema(BaseModel):
@@ -129,14 +152,22 @@ class VelarisAuditTool(BaseTool):
 class VelarisRunTool(BaseTool):
     """Run a program under an effect budget the crew's author chose.
 
+    The program runs in a separate, killable process bounded by ``timeout``
+    and ``max_memory_mb``, so a program that never ends or eats memory is
+    stopped and reported as such. The memory cap is enforced on Linux and
+    macOS only; the timeout is enforced everywhere. Both need velaris-lang
+    2.59.0 or newer.
+
     Args:
         allow: The effects the program may perform, chosen from io, fs, net,
             clock, rand and ffi. Defaults to ``["io"]``: the program can print
             and nothing else.
+        timeout: Seconds the program may run before it is stopped.
+        max_memory_mb: Memory the program may use, in MB, before it is stopped.
         **kwargs: Additional keyword arguments passed to BaseTool.
 
     Example:
-        >>> tool = VelarisRunTool(allow=["io"])
+        >>> tool = VelarisRunTool(allow=["io"], timeout=10)
         >>> tool.run(source="fn main() uses io { print(6 * 7) }")
     """
 
@@ -145,6 +176,7 @@ class VelarisRunTool(BaseTool):
         "Run a Velaris program in a sandbox. Effects outside the budget "
         "this tool was created with are refused while the program runs, "
         "whatever the source claims, and a refusal cannot be caught. "
+        "A program that runs too long or uses too much memory is stopped. "
         "Returns the program's output, or the problem that stopped it."
     )
     args_schema: type[BaseModel] = VelarisRunToolSchema
@@ -153,10 +185,30 @@ class VelarisRunTool(BaseTool):
         default_factory=lambda: ["io"],
         description="The effects the program may perform: io, fs, net, clock, rand, ffi.",
     )
+    timeout: float = Field(
+        default=30.0,
+        gt=0,
+        description="Seconds the program may run before it is stopped.",
+    )
+    max_memory_mb: int = Field(
+        default=512,
+        gt=0,
+        description="Memory cap in MB, enforced on Linux and macOS.",
+    )
 
-    def __init__(self, allow: list[str] | None = None, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        allow: list[str] | None = None,
+        timeout: float | None = None,
+        max_memory_mb: int | None = None,
+        **kwargs: Any,
+    ) -> None:
         if allow is not None:
             kwargs["allow"] = list(allow)
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+        if max_memory_mb is not None:
+            kwargs["max_memory_mb"] = max_memory_mb
         super().__init__(**kwargs)
         _import_velaris()
 
@@ -166,7 +218,7 @@ class VelarisRunTool(BaseTool):
         stdin: str = "",
         args: list[str] | None = None,
     ) -> str:
-        """Run ``source`` under this tool's effect budget.
+        """Run ``source`` under this tool's effect budget and limits.
 
         Args:
             source: The Velaris program to run.
@@ -177,13 +229,26 @@ class VelarisRunTool(BaseTool):
             The program's output, or a description of what stopped it.
         """
         velaris = _import_velaris()
+        limits: dict[str, Any] = {}
+        if _supports_limits(velaris):
+            # A separate, killable process: a program that never ends or
+            # eats memory is stopped, and the crew's worker survives it.
+            limits = {"timeout": self.timeout, "max_memory_mb": self.max_memory_mb}
         result = velaris.run(
-            source, allow=set(self.allow), stdin=stdin, args=args or []
+            source, allow=set(self.allow), stdin=stdin, args=args or [], **limits
         )
         if result.ok:
             output: str = result.output or "(the program printed nothing)"
             return output
         lines: list[str] = []
+        if getattr(result, "timed_out", False):
+            lines.append(
+                f"STOPPED: the program ran longer than {self.timeout} seconds."
+            )
+        elif getattr(result, "out_of_memory", False):
+            lines.append(
+                f"STOPPED: the program used more than {self.max_memory_mb} MB."
+            )
         if result.refused_effect:
             lines.append(
                 f"REFUSED: the program tried to use "

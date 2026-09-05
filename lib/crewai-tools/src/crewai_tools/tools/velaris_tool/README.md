@@ -11,9 +11,16 @@ you, the crew's author, not by the agent.
 - **VelarisAuditTool**: tells the agent (and you) what a program can touch and how much of its promises were proven before running, in the versioned `velaris.audit/1` JSON format.
 - **VelarisCardTool**: returns the Velaris language card (about 2,300 words), which an agent can read before writing Velaris.
 
+The program runs in a separate, killable process bounded by `timeout`
+(seconds, default 30) and `max_memory_mb` (default 512). A program that
+never ends or eats memory is stopped, and the tool reports which limit
+it hit. The memory cap is enforced on Linux and macOS; on Windows it is
+recorded but not enforced. Both limits need velaris-lang 2.59.0 or
+newer; with an older compiler the program runs unbounded.
+
 Not a security boundary: `allow=["ffi"]` grants everything Python can
-do, and nothing here limits memory or time. It is a real guard for the
-ordinary case of running a script a model wrote.
+do. It is a real guard for the ordinary case of running a script a
+model wrote.
 
 ## Installation
 
@@ -58,6 +65,8 @@ VelarisRunTool(allow=["io", "fs"])
 Constructor:
 
 - `allow`: (Optional) The effects the program may perform, chosen from `io`, `fs`, `net`, `clock`, `rand` and `ffi`. Defaults to `["io"]`.
+- `timeout`: (Optional) Seconds the program may run before it is stopped. Defaults to `30.0`.
+- `max_memory_mb`: (Optional) Memory the program may use, in MB, before it is stopped. Defaults to `512`. Enforced on Linux and macOS.
 
 Run:
 
