@@ -5,9 +5,6 @@ import sys
 from types import ModuleType
 from typing import Any
 
-from crewai.rag.config.types import RagConfigType
-from crewai.rag.config.utils import set_rag_config
-
 
 _module_path = __path__
 _module_file = __file__
@@ -27,7 +24,7 @@ class _RagModule(ModuleType):
         """
         super().__init__(module_name)
 
-    def __setattr__(self, name: str, value: RagConfigType) -> None:
+    def __setattr__(self, name: str, value: Any) -> None:
         """Set module attributes.
 
         Args:
@@ -35,6 +32,17 @@ class _RagModule(ModuleType):
             value: Attribute value.
         """
         if name == "config":
+            if isinstance(value, ModuleType) and value is sys.modules.get(
+                f"{self.__name__}.config"
+            ):
+                # importlib registers the crewai.rag.config submodule on the
+                # package when it is first imported; store it as a plain
+                # module attribute instead of treating it as a RAG config.
+                return super().__setattr__(name, value)
+            # Imported lazily so that `import crewai.rag` does not pull in the
+            # provider config chain (chromadb, qdrant) at import time.
+            from crewai.rag.config.utils import set_rag_config
+
             return set_rag_config(value)
         raise AttributeError(f"Setting attribute '{name}' is not allowed.")
 
