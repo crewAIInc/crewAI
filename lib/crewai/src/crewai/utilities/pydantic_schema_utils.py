@@ -30,6 +30,8 @@ from typing import (
     TypedDict,
     Union,
     cast,
+    get_args,
+    get_origin,
 )
 import uuid
 
@@ -1042,7 +1044,20 @@ def _json_schema_to_pydantic_field(
                 elif len(allowed_schemes) == 1 and allowed_schemes[0] == "file":
                     pydantic_type = FileUrl
 
-        type_ = pydantic_type
+        # `type_` can be a Union built from a list-form `type` (or anyOf/oneOf)
+        # rather than a plain `str`, e.g. `{"type": ["string", "null"],
+        # "format": "date-time"}`. Replacing the whole thing with
+        # `pydantic_type` would silently drop the other members (null,
+        # non-string alternatives) instead of just narrowing the string one.
+        if type_ is str:
+            type_ = pydantic_type
+        elif get_origin(type_) is Union:
+            type_ = Union[  # noqa: UP007
+                tuple(
+                    pydantic_type if member is str else member
+                    for member in get_args(type_)
+                )
+            ]
 
     if isinstance(type_, type) and issubclass(type_, str):
         if "minLength" in json_schema:
