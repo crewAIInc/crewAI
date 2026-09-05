@@ -894,6 +894,43 @@ async def test_agent_default_executor_async_human_input():
     assert mock_kickoff.await_count == 2
 
 
+@pytest.mark.parametrize("training_mode", [False, True])
+def test_prompt_input_renders_answer_in_both_modes(training_mode):
+    """The agent's answer must be shown above the feedback prompt in training mode too.
+
+    Both prompts ask the operator to judge the result ("Provide feedback on the
+    Final Result above" / "feedback about the result quality"), so hiding the
+    answer in training mode leaves them judging output they cannot see.
+    """
+    from unittest.mock import MagicMock
+
+    from crewai.core.providers.human_input import SyncHumanInputProvider
+
+    crew = MagicMock()
+    crew._train = training_mode
+    formatter = MagicMock()
+    answer = AgentFinish(output="Hello", thought="", text="")
+
+    with (
+        patch(
+            "crewai.events.event_listener.event_listener.formatter",
+            formatter,
+        ),
+        patch("builtins.input", return_value=""),
+    ):
+        SyncHumanInputProvider._prompt_input(crew, answer=answer)
+
+    printed = [str(call.args[0]) for call in formatter.console.print.call_args_list]
+    rendered = [
+        call.args[0]
+        for call in formatter.console.print.call_args_list
+        if str(getattr(call.args[0], "title", "")) == "✅ Agent Final Answer"
+    ]
+    assert rendered, (
+        f"answer panel not rendered with _train={training_mode}; printed={printed}"
+    )
+
+
 def test_interpolate_inputs():
     agent = Agent(
         role="{topic} specialist",
