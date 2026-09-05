@@ -17,11 +17,13 @@ class _CountedLLM(BaseLLM):
     """Returns responses with sequential call counts."""
 
     def __init__(self, responses: list[str] | None = None) -> None:
+        """Initialize CountedLLM with optional canned responses."""
         super().__init__(model="counted_llm")
         object.__setattr__(self, "call_count", 0)
         object.__setattr__(self, "responses", responses or [])
 
     def call(self, messages: Any, **kwargs: Any) -> str:
+        """Return next response or default response string."""
         count = self.call_count
         object.__setattr__(self, "call_count", count + 1)
         if self.responses and count < len(self.responses):
@@ -29,19 +31,25 @@ class _CountedLLM(BaseLLM):
         return f"Response {count + 1}"
 
     async def acall(self, messages: Any, **kwargs: Any) -> str:
+        """Async call delegating to synchronous call."""
         return self.call(messages, **kwargs)
 
     def supports_function_calling(self) -> bool:
+        """Return whether function calling is supported."""
         return False
 
     def supports_stop_words(self) -> bool:
+        """Return whether stop words are supported."""
         return False
 
     def get_context_window_size(self) -> int:
+        """Return simulated context window size."""
         return 8192
 
 
 class _CustomPydanticResult(BaseModel):
+    """Sample Pydantic result model for guardrail output transformations."""
+
     summary: str
 
 
@@ -52,6 +60,7 @@ async def test_agent_kickoff_async_guardrail_retry_success() -> None:
     attempts: list[str] = []
 
     def fail_first_guardrail(output: Any) -> tuple[bool, str]:
+        """Fail on first attempt and pass on subsequent attempts."""
         attempts.append(output.raw)
         if len(attempts) == 1:
             return (False, "Draft lacked required detail, please refine.")
@@ -79,6 +88,7 @@ async def test_agent_kickoff_async_guardrail_max_retries_exceeded() -> None:
     llm = _CountedLLM()
 
     def always_fail_guardrail(output: Any) -> tuple[bool, str]:
+        """Always reject output to trigger retry exhaustion."""
         return (False, "Unconditional guardrail rejection")
 
     agent = Agent(
@@ -103,6 +113,7 @@ async def test_agent_kickoff_async_guardrail_transforms_output() -> None:
     llm = _CountedLLM()
 
     def transform_guardrail(output: Any) -> tuple[bool, _CustomPydanticResult]:
+        """Transform output into a structured Pydantic model."""
         return (True, _CustomPydanticResult(summary="Transformed Summary"))
 
     agent = Agent(
@@ -127,6 +138,7 @@ def test_agent_kickoff_sync_guardrail_retry_parity() -> None:
     attempts: list[str] = []
 
     def fail_first_guardrail(output: Any) -> tuple[bool, str]:
+        """Fail on first attempt and pass on second for sync kickoff."""
         attempts.append(output.raw)
         if len(attempts) == 1:
             return (False, "Needs revision.")
