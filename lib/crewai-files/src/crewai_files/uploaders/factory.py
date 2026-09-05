@@ -113,20 +113,20 @@ def get_uploader(
 def get_uploader(
     provider: BedrockProviderType,
     **kwargs: Unpack[BedrockOpts],
-) -> BedrockFileUploader:
+) -> BedrockFileUploader | None:
     """Get Bedrock file uploader."""
 
 
 @overload
 def get_uploader(
     provider: ProviderType, **kwargs: Unpack[AllOptions]
-) -> FileUploaderType:
+) -> FileUploaderType | None:
     """Get any file uploader."""
 
 
 def get_uploader(
     provider: ProviderType, **kwargs: Unpack[AllOptions]
-) -> FileUploaderType:
+) -> FileUploaderType | None:
     """Get a file uploader for a specific provider.
 
     Args:
@@ -188,15 +188,14 @@ def get_uploader(
     if "bedrock" in provider_lower or "aws" in provider_lower:
         import os
 
-        if (
-            not os.environ.get("CREWAI_BEDROCK_S3_BUCKET")
-            and "bucket_name" not in kwargs
+        if not os.environ.get("CREWAI_BEDROCK_S3_BUCKET") and not kwargs.get(
+            "bucket_name"
         ):
             logger.debug(
                 "Bedrock S3 uploader not configured. "
                 "Set CREWAI_BEDROCK_S3_BUCKET environment variable to enable."
             )
-            raise
+            return None
         try:
             from crewai_files.uploaders.bedrock import BedrockFileUploader
 
@@ -213,4 +212,4 @@ def get_uploader(
             raise
 
     logger.debug(f"No file uploader available for provider: {provider}")
-    raise
+    return None
