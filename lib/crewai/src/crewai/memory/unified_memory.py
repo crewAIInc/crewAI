@@ -836,6 +836,9 @@ class Memory(BaseModel):
         Returns:
             Number of records deleted.
         """
+        # Write barrier: drain pending background saves before deleting,
+        # so a save submitted before forget() cannot resurrect deleted content.
+        self.drain_writes()
         effective_scope = scope
         if effective_scope is None and self.root_scope:
             effective_scope = self.root_scope
