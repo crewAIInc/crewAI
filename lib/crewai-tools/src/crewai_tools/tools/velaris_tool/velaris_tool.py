@@ -18,9 +18,10 @@ program.
 The program runs in a separate, killable process bounded by ``timeout``
 (seconds, default 30) and ``max_memory_mb`` (default 512), so a program
 that never ends or eats memory is stopped and the crew's worker survives
-it. The memory cap is enforced on Linux and macOS; on Windows it is
-recorded but not enforced. Both limits need velaris-lang 2.59.0 or
-newer; with an older compiler the program runs unbounded.
+it. The limits are enforced on every supported compiler version: on
+velaris-lang 2.59.0 and newer by ``velaris.run`` itself, on older
+versions by the tool's own subprocess. The memory cap is enforced on
+Linux and macOS; on Windows it is recorded but not enforced.
 
 Not a security boundary: allow=["ffi"] grants everything Python can
 do. It is a guard for the ordinary case of running a script a model
@@ -31,14 +32,24 @@ The z3-solver is optional; without it promises are checked while
 running rather than proven beforehand, and the audit says so.
 """
 
+from collections.abc import Callable
 import importlib
 import inspect
 import json
+import os
+import re
+import subprocess
+import sys
+import tempfile
 from types import ModuleType
 from typing import Any
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
+
+
+_REFUSED_EFFECT = re.compile(r"needs the '(\w+)' effect")
+_PROBLEM_LINE = re.compile(r"line (\d+)")
 
 
 def _import_velaris() -> ModuleType:
@@ -73,6 +84,28 @@ def _supports_limits(velaris: ModuleType) -> bool:
     """
     params = inspect.signature(velaris.run).parameters
     return "timeout" in params and "max_memory_mb" in params
+
+
+def _memory_limiter(max_memory_mb: int) -> Callable[[], None] | None:
+    """Build a ``preexec_fn`` that caps the child's address space.
+
+    Args:
+        max_memory_mb: The cap in megabytes.
+
+    Returns:
+        A function to run in the child before exec, or None on Windows,
+        where address-space limits are not available.
+    """
+    if sys.platform == "win32":
+        return None
+    import resource
+
+    limit = max_memory_mb * 1024 * 1024
+
+    def _apply() -> None:
+        resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
+
+    return _apply
 
 
 class VelarisAuditToolSchema(BaseModel):
@@ -154,9 +187,10 @@ class VelarisRunTool(BaseTool):
 
     The program runs in a separate, killable process bounded by ``timeout``
     and ``max_memory_mb``, so a program that never ends or eats memory is
-    stopped and reported as such. The memory cap is enforced on Linux and
-    macOS only; the timeout is enforced everywhere. Both need velaris-lang
-    2.59.0 or newer.
+    stopped and reported as such. On velaris-lang 2.59.0 and newer the
+    limits are enforced by ``velaris.run``; on older versions the tool runs
+    the compiler as its own bounded subprocess. The memory cap is enforced
+    on Linux and macOS only; the timeout is enforced everywhere.
 
     Args:
         allow: The effects the program may perform, chosen from io, fs, net,
@@ -229,36 +263,153 @@ class VelarisRunTool(BaseTool):
             The program's output, or a description of what stopped it.
         """
         velaris = _import_velaris()
-        limits: dict[str, Any] = {}
-        if _supports_limits(velaris):
-            # A separate, killable process: a program that never ends or
-            # eats memory is stopped, and the crew's worker survives it.
-            limits = {"timeout": self.timeout, "max_memory_mb": self.max_memory_mb}
+        if not _supports_limits(velaris):
+            return self._run_in_subprocess(source, stdin, args or [])
+        # A separate, killable process: a program that never ends or
+        # eats memory is stopped, and the crew's worker survives it.
         result = velaris.run(
-            source, allow=set(self.allow), stdin=stdin, args=args or [], **limits
+            source,
+            allow=set(self.allow),
+            stdin=stdin,
+            args=args or [],
+            timeout=self.timeout,
+            max_memory_mb=self.max_memory_mb,
         )
         if result.ok:
             output: str = result.output or "(the program printed nothing)"
             return output
         lines: list[str] = []
-        if getattr(result, "timed_out", False):
-            lines.append(
-                f"STOPPED: the program ran longer than {self.timeout} seconds."
-            )
-        elif getattr(result, "out_of_memory", False):
-            lines.append(
-                f"STOPPED: the program used more than {self.max_memory_mb} MB."
-            )
+        if result.timed_out:
+            lines.append(self._timed_out())
+        elif result.out_of_memory:
+            lines.append(self._out_of_memory())
         if result.refused_effect:
-            lines.append(
-                f"REFUSED: the program tried to use "
-                f"'{result.refused_effect}', which this tool does not "
-                f"allow (it allows: {', '.join(sorted(self.allow))})."
-            )
+            lines.append(self._refused(result.refused_effect))
         for p in result.problems:
             lines.append(f"line {p.line}: [{p.code}] {p.message}")
             lines.extend(f"    fix: {fix}" for fix in (p.fixes or [])[:2])
-        if result.output:
+        return self._finish(lines, result.output)
+
+    def _run_in_subprocess(self, source: str, stdin: str, args: list[str]) -> str:
+        """Run the compiler as a bounded subprocess.
+
+        Used when the installed compiler predates ``velaris.run``'s own
+        limits (velaris-lang < 2.59.0). The outcome is mapped to the same
+        report the ``velaris.run`` path produces. One difference remains on
+        this path: the compiler's command line puts everything after the
+        file name into the program's ``args()``, so the program also sees
+        the ``--allow`` flag and its value ahead of ``args``.
+
+        Args:
+            source: The Velaris program to run.
+            stdin: Text to feed the program on standard input.
+            args: Command-line arguments for the program.
+
+        Returns:
+            The program's output, or a description of what stopped it.
+        """
+        fd, path = tempfile.mkstemp(suffix=".vel", text=True)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                handle.write(source)
+            command = [
+                sys.executable,
+                "-m",
+                "velaris",
+                path,
+                "--allow",
+                ",".join(sorted(self.allow)),
+                *args,
+            ]
+            try:
+                completed = subprocess.run(  # noqa: S603
+                    command,
+                    input=stdin,
+                    capture_output=True,
+                    text=True,
+                    timeout=self.timeout,
+                    preexec_fn=_memory_limiter(self.max_memory_mb),
+                )
+            except subprocess.TimeoutExpired as exc:
+                # Typed as bytes in the stubs, but str at runtime with text=True.
+                raw: bytes | str | None = exc.stdout
+                partial = (
+                    raw.decode("utf-8", errors="replace")
+                    if isinstance(raw, bytes)
+                    else raw or ""
+                )
+                return self._finish([self._timed_out()], partial)
+        finally:
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
+
+        if completed.returncode == 0:
+            return completed.stdout or "(the program printed nothing)"
+
+        stderr = completed.stderr or ""
+        lines: list[str] = []
+        if "error[E310]" in stderr:
+            effect_match = _REFUSED_EFFECT.search(stderr)
+            effect = effect_match.group(1) if effect_match else "an effect"
+            lines.append(self._refused(effect))
+            stderr_lines = [line for line in stderr.splitlines() if line.strip()]
+            line_match = _PROBLEM_LINE.search(stderr)
+            line_no = line_match.group(1) if line_match else "0"
+            message = stderr_lines[0].replace("error[E310] ", "", 1)
+            lines.append(f"line {line_no}: [E310] {message}")
+        elif "MemoryError" in stderr or completed.returncode in (-9, 137):
+            lines.append(self._out_of_memory())
+        else:
+            first = next((line for line in stderr.splitlines() if line.strip()), "")
+            lines.append(
+                first or f"the program exited with code {completed.returncode}"
+            )
+        return self._finish(lines, completed.stdout)
+
+    def _timed_out(self) -> str:
+        """Describe a run stopped by the time limit.
+
+        Returns:
+            The STOPPED line for a timeout.
+        """
+        return f"STOPPED: the program ran longer than {self.timeout} seconds."
+
+    def _out_of_memory(self) -> str:
+        """Describe a run stopped by the memory cap.
+
+        Returns:
+            The STOPPED line for the memory cap.
+        """
+        return f"STOPPED: the program used more than {self.max_memory_mb} MB."
+
+    def _refused(self, effect: str) -> str:
+        """Describe a refused effect.
+
+        Args:
+            effect: The effect the program tried to use.
+
+        Returns:
+            The REFUSED line naming the effect and the budget.
+        """
+        return (
+            f"REFUSED: the program tried to use '{effect}', which this tool "
+            f"does not allow (it allows: {', '.join(sorted(self.allow))})."
+        )
+
+    @staticmethod
+    def _finish(lines: list[str], output: str | None) -> str:
+        """Append any partial output and join the report.
+
+        Args:
+            lines: The report lines gathered so far.
+            output: What the program printed before it stopped, if anything.
+
+        Returns:
+            The joined report, or a fallback when there is nothing to say.
+        """
+        if output:
             lines.append("output before it stopped:")
-            lines.append(result.output)
+            lines.append(output)
         return "\n".join(lines) or "the program failed without a message"

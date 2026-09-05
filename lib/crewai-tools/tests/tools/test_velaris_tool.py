@@ -5,10 +5,9 @@ import json
 import pytest
 
 
-velaris = pytest.importorskip("velaris")
+pytest.importorskip("velaris")
 
 from crewai_tools.tools.velaris_tool import VelarisAuditTool, VelarisRunTool
-from crewai_tools.tools.velaris_tool.velaris_tool import _supports_limits
 
 
 READS_A_FILE = """
@@ -72,10 +71,6 @@ def test_run_refuses_an_effect_outside_the_budget():
     assert "failed" not in out
 
 
-@pytest.mark.skipif(
-    not _supports_limits(velaris),
-    reason="timeout and max_memory_mb need velaris-lang 2.59.0 or newer",
-)
 def test_run_stops_a_program_that_never_ends():
     out = VelarisRunTool(allow=["io"], timeout=2).run(source=FOREVER)
     assert "STOPPED" in out

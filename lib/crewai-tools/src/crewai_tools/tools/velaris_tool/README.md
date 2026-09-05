@@ -14,9 +14,10 @@ you, the crew's author, not by the agent.
 The program runs in a separate, killable process bounded by `timeout`
 (seconds, default 30) and `max_memory_mb` (default 512). A program that
 never ends or eats memory is stopped, and the tool reports which limit
-it hit. The memory cap is enforced on Linux and macOS; on Windows it is
-recorded but not enforced. Both limits need velaris-lang 2.59.0 or
-newer; with an older compiler the program runs unbounded.
+it hit. The limits are enforced on every supported compiler version: on
+velaris-lang 2.59.0 and newer by `velaris.run` itself, on older versions
+by the tool's own subprocess. The memory cap is enforced on Linux and
+macOS; on Windows it is recorded but not enforced.
 
 Not a security boundary: `allow=["ffi"]` grants everything Python can
 do. It is a real guard for the ordinary case of running a script a
