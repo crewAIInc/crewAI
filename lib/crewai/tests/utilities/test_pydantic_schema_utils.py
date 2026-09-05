@@ -303,6 +303,122 @@ class TestUnionTypes:
         assert Model(value="hello").value == "hello"
         assert Model(value=3.14).value == pytest.approx(3.14)
 
+    def test_type_array_nullable_string_with_format(self) -> None:
+        """type: ["string", "null"] -- the .NET/System.Text.Json-style way
+        of expressing an optional field, as opposed to Pydantic's own
+        anyOf-based form. Seen in real MCP tool schemas from non-Python
+        servers (e.g. Equibles' ListCompanyDocuments startDate/endDate
+        filters). The format="date-time" here (also straight from that
+        real schema) is applied by the existing FORMAT_TYPE_MAP logic once
+        the list-form type no longer raises, so the field lands as a real
+        datetime rather than str -- that's the pre-existing, correct
+        behavior for any date-time-formatted field, not something this fix
+        changes."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "startDate": {
+                    "description": "Optional start date filter in YYYY-MM-DD format",
+                    "type": ["string", "null"],
+                    "format": "date-time",
+                    "default": None,
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(startDate="2026-01-01").startDate == datetime.datetime(
+            2026, 1, 1
+        )
+        assert Model(startDate=None).startDate is None
+        assert Model().startDate is None
+
+    def test_type_array_nullable_string_no_format(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "note": {"type": ["string", "null"]},
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(note="hello").note == "hello"
+        assert Model(note=None).note is None
+        assert Model().note is None
+
+    def test_type_array_multiple_non_null(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "value": {"type": ["string", "integer", "null"]},
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(value="hello").value == "hello"
+        assert Model(value=42).value == 42
+        assert Model(value=None).value is None
+
+    def test_type_array_single_element(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {"value": {"type": ["string"]}},
+            "required": ["value"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(value="hello").value == "hello"
+
+    def test_type_array_required_nullable_string_with_format(self) -> None:
+        """A required-but-nullable formatted field, e.g. `{"type":
+        ["string", "null"], "format": "date-time"}` inside a "required"
+        list -- a valid JSON Schema shape meaning the key must be present
+        but its value may be null. Before this fix, the FORMAT_TYPE_MAP
+        override in `_json_schema_to_pydantic_field` replaced the whole
+        `Union[datetime, None]` with plain `datetime`, so passing `None`
+        would fail validation even though the schema explicitly allows it.
+        The `not is_required` Optional-rewrap at the end of that function
+        doesn't fire for required fields, so this case wasn't masked the
+        way the non-required version (test above) was.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "startDate": {
+                    "type": ["string", "null"],
+                    "format": "date-time",
+                },
+            },
+            "required": ["startDate"],
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(startDate="2026-01-01").startDate == datetime.datetime(
+            2026, 1, 1
+        )
+        assert Model(startDate=None).startDate is None
+        with pytest.raises(Exception):
+            Model()
+
+    def test_type_array_multiple_non_null_with_format(self) -> None:
+        """A list-form type with more than one non-null member plus a
+        recognized format, e.g. `{"type": ["string", "integer", "null"],
+        "format": "date-time"}`. Before this fix, the FORMAT_TYPE_MAP
+        override collapsed the entire Union down to plain `datetime`,
+        silently dropping the `integer` alternative regardless of whether
+        the field was required. The fix narrows only the `str` member of
+        the union to the formatted type, leaving `integer` and `None`
+        alone.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "value": {
+                    "type": ["string", "integer", "null"],
+                    "format": "date-time",
+                },
+            },
+        }
+        Model = create_model_from_schema(schema)
+        assert Model(value="2026-01-01").value == datetime.datetime(2026, 1, 1)
+        assert Model(value=42).value == 42
+        assert Model(value=None).value is None
+
 
 class TestAllOfMerging:
     def test_allof_merges_properties(self) -> None:
