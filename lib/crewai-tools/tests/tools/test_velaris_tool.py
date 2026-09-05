@@ -1,6 +1,7 @@
 """The tools must keep Velaris's guarantee: a budget is enforced."""
 
 import json
+import sys
 
 import pytest
 
@@ -47,6 +48,18 @@ fn main() uses io {
 }
 """
 
+EATS_MEMORY = """
+fn main() uses io {
+    let s = "xxxxxxxxxxxxxxxx"
+    let i = 0
+    while i < 40 {
+        s = s + s
+        i = i + 1
+    }
+    print(length(s))
+}
+"""
+
 
 @pytest.fixture
 def reads_a_file(tmp_path):
@@ -77,6 +90,18 @@ def test_run_stops_a_program_that_never_ends():
     # the marker only the program could print must be absent; the
     # compiler's own hint text mentions a loop that "never ends"
     assert "REACHED THE END" not in out
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="the memory cap is enforced on Linux and macOS"
+)
+def test_run_stops_a_program_that_eats_memory():
+    out = VelarisRunTool(allow=["io"], max_memory_mb=150, timeout=60).run(
+        source=EATS_MEMORY
+    )
+    assert "used more than 150" in out
+    # the program must not have printed a length (16 * 2**40 starts with 16)
+    assert not any(line.startswith("16") for line in out.splitlines())
 
 
 def test_the_default_limits_are_set():
