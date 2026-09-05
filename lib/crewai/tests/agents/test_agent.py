@@ -924,7 +924,7 @@ def test_prompt_input_renders_answer_in_both_modes(training_mode):
     rendered = [
         call.args[0]
         for call in formatter.console.print.call_args_list
-        if getattr(call.args[0], "title", None) == "✅ Agent Final Answer"
+        if str(getattr(call.args[0], "title", "")) == "✅ Agent Final Answer"
     ]
     assert rendered, (
         f"answer panel not rendered with _train={training_mode}; printed={printed}"

@@ -159,7 +159,7 @@ class HumanInputProvider(Protocol):
 
         result_content = Text()
         result_content.append(
-            HumanInputProvider._get_output_string(answer), style="green"
+            HumanInputProvider._get_output_string(answer), style="bright_green"
         )
         formatter.console.print(
             Panel(
