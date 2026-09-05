@@ -27028,6 +27028,267 @@
       }
     },
     {
+      "description": "Audit a Velaris program before running it: which effects it can perform (io, fs, net, clock, rand, ffi), what each function promises and whether that was proven before running, what can fail, and the command to run it safely. Returns JSON in the velaris.audit/1 format.",
+      "env_vars": [],
+      "humanized_name": "Audit a Velaris program",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "What a program can touch, promise and fail at - before running.",
+        "properties": {},
+        "required": [],
+        "title": "VelarisAuditTool",
+        "type": "object"
+      },
+      "name": "VelarisAuditTool",
+      "package_dependencies": [
+        "velaris-lang"
+      ],
+      "run_params_schema": {
+        "description": "Input for VelarisAuditTool.",
+        "properties": {
+          "source": {
+            "description": "The Velaris program to inspect.",
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "title": "VelarisAuditToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Read the Velaris language card (about 2,300 words) before writing Velaris. It covers syntax, the rules models get wrong, every builtin with its effects, and the error table.",
+      "env_vars": [],
+      "humanized_name": "Velaris language card",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "The Velaris language, small enough to read before writing it.",
+        "properties": {},
+        "required": [],
+        "title": "VelarisCardTool",
+        "type": "object"
+      },
+      "name": "VelarisCardTool",
+      "package_dependencies": [
+        "velaris-lang"
+      ],
+      "run_params_schema": {
+        "properties": {},
+        "title": "_ArgsSchemaPlaceholder",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Run a Velaris program in a sandbox. Effects outside the budget this tool was created with are refused while the program runs, whatever the source claims, and a refusal cannot be caught. A program that runs too long or uses too much memory is stopped. Returns the program's output, or the problem that stopped it.",
+      "env_vars": [],
+      "humanized_name": "Run a Velaris program",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Run a program under an effect budget the crew's author chose.\n\nThe program runs in a separate, killable process bounded by ``timeout``\nand ``max_memory_mb``, so a program that never ends or eats memory is\nstopped and reported as such. On velaris-lang 2.59.0 and newer the\nlimits are enforced by ``velaris.run``; on older versions the tool runs\nthe compiler as its own bounded subprocess. The memory cap is enforced\non Linux and macOS only; the timeout is enforced everywhere.\n\nArgs:\n    allow: The effects the program may perform, chosen from io, fs, net,\n        clock, rand and ffi. Defaults to ``[\"io\"]``: the program can print\n        and nothing else.\n    timeout: Seconds the program may run before it is stopped.\n    max_memory_mb: Memory the program may use, in MB, before it is stopped.\n    **kwargs: Additional keyword arguments passed to BaseTool.\n\nExample:\n    >>> tool = VelarisRunTool(allow=[\"io\"], timeout=10)\n    >>> tool.run(source=\"fn main() uses io { print(6 * 7) }\")",
+        "properties": {
+          "allow": {
+            "description": "The effects the program may perform: io, fs, net, clock, rand, ffi.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Allow",
+            "type": "array"
+          },
+          "max_memory_mb": {
+            "default": 512,
+            "description": "Memory cap in MB, enforced on Linux and macOS.",
+            "exclusiveMinimum": 0,
+            "title": "Max Memory Mb",
+            "type": "integer"
+          },
+          "timeout": {
+            "default": 30.0,
+            "description": "Seconds the program may run before it is stopped.",
+            "exclusiveMinimum": 0,
+            "title": "Timeout",
+            "type": "number"
+          }
+        },
+        "required": [],
+        "title": "VelarisRunTool",
+        "type": "object"
+      },
+      "name": "VelarisRunTool",
+      "package_dependencies": [
+        "velaris-lang"
+      ],
+      "run_params_schema": {
+        "description": "Input for VelarisRunTool.",
+        "properties": {
+          "args": {
+            "description": "Command-line arguments for the program.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Args",
+            "type": "array"
+          },
+          "source": {
+            "description": "The Velaris program to run.",
+            "title": "Source",
+            "type": "string"
+          },
+          "stdin": {
+            "default": "",
+            "description": "Text to feed the program on standard input.",
+            "title": "Stdin",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "title": "VelarisRunToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "This tool uses OpenAI's Vision API to describe the contents of an image.",
       "env_vars": [
         {

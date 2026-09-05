@@ -17,7 +17,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
+exclude-newer = "2026-09-02T06:30:33.5794045Z"
 exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
@@ -1839,6 +1839,9 @@ stagehand = [
 tavily-python = [
     { name = "tavily-python" },
 ]
+velaris = [
+    { name = "velaris-lang" },
+]
 weaviate-client = [
     { name = "weaviate-client", version = "4.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (python_full_version >= '3.13' and platform_machine != 's390x')" },
     { name = "weaviate-client", version = "4.21.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.13') or (python_full_version >= '3.11' and platform_machine == 's390x')" },
@@ -1906,10 +1909,11 @@ requires-dist = [
     { name = "tiktoken", specifier = ">=0.8.0,<0.13" },
     { name = "unstructured", extras = ["all-docs", "local-inference"], marker = "python_full_version >= '3.11' and extra == 'xml'", specifier = ">=0.24.0" },
     { name = "unstructured", extras = ["all-docs", "local-inference"], marker = "python_full_version < '3.11' and extra == 'xml'", specifier = ">=0.17.2" },
+    { name = "velaris-lang", marker = "extra == 'velaris'", specifier = ">=2.57.0" },
     { name = "weaviate-client", marker = "extra == 'weaviate-client'", specifier = ">=4.10.2" },
     { name = "youtube-transcript-api", specifier = "~=1.2.2" },
 ]
-provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
+provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "velaris", "weaviate-client", "xml"]
 
 [[package]]
 name = "cryptography"
@@ -10345,6 +10349,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/08/db/08183b845b0040bb877dad2bd7e4e0976fc232bb3476d7ee369c6c4f8b5a/vcrpy-8.2.1.tar.gz", hash = "sha256:d73a6e4eb6dae8148e659764b7a00e68cc51ba29ba9e6a85e1f0790ad96b97df", size = 90511, upload-time = "2026-06-16T13:20:52.906Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f8/7c/0e812ab83f5289404c674f3461ba783250b967d34b5ab034d361236ec042/vcrpy-8.2.1-py3-none-any.whl", hash = "sha256:7ce58c9e2792b246f79d6f4b3e9660676cc6f853be17e1547305b4437ab1ff85", size = 44925, upload-time = "2026-06-16T13:20:51.734Z" },
+]
+
+[[package]]
+name = "velaris-lang"
+version = "2.57.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/55/a2/2b70b597550fbf8377686e803deb591122aee761e1e4e9e908190fbbc1de/velaris_lang-2.57.0.tar.gz", hash = "sha256:8c67c2745b7d741d94d648c82dacad0d75a9369eb9f9296344cd4b6dd2beb6fb", size = 63690769, upload-time = "2026-08-26T21:33:44.139Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9a/c4/bf2c58ea1b65bb6e7910445701d5cdb0e27e44ff8d25996ad9829fdc9b4f/velaris_lang-2.57.0-py3-none-any.whl", hash = "sha256:5d8a7f61f4d0e3a98248507b560f2a12d6b501661c9f704a5c1c5b1ed6612594", size = 102931, upload-time = "2026-08-26T21:33:39.813Z" },
 ]
 
 [[package]]

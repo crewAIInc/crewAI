@@ -170,6 +170,9 @@ e2b = [
     "e2b~=2.20.0",
     "e2b-code-interpreter~=2.6.0",
 ]
+velaris = [
+    "velaris-lang>=2.57.0",
+]
 
 
 [tool.uv]
