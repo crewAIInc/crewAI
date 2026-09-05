@@ -100,8 +100,8 @@ def test_run_stops_a_program_that_eats_memory():
         source=EATS_MEMORY
     )
     assert "used more than 150" in out
-    # the program must not have printed a length (16 * 2**40 starts with 16)
-    assert not any(line.startswith("16") for line in out.splitlines())
+    # the exact length the program would print if it were not stopped
+    assert "17592186044416" not in out
 
 
 def test_the_default_limits_are_set():
