@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from pydantic import BaseModel, Field
@@ -411,7 +412,7 @@ class AgentReasoning:
             return (
                 response_str,
                 [],
-                "READY: I am ready to execute the task." in response_str,
+                AgentReasoning._is_plan_ready(response_str),
             )
 
         except HookAborted:
@@ -437,7 +438,7 @@ class AgentReasoning:
                 return (
                     fallback_str,
                     [],
-                    "READY: I am ready to execute the task." in fallback_str,
+                    AgentReasoning._is_plan_ready(fallback_str),
                 )
             except HookAborted:
                 raise
@@ -586,6 +587,21 @@ class AgentReasoning:
             )
 
     @staticmethod
+    def _is_plan_ready(response: str) -> bool:
+        """Check if the agent indicated readiness in the planning response.
+
+        Detects standalone ``READY`` that is not part of ``NOT READY``.
+        Case-insensitive to handle ``Ready``, ``READY``, ``ready``, etc.
+
+        Args:
+            response: The LLM response text.
+
+        Returns:
+            True if the agent declared READY, False otherwise.
+        """
+        return bool(re.search(r"(?<!\bnot\s)\bready\b", response, re.IGNORECASE))
+
+    @staticmethod
     def _parse_planning_response(response: str) -> tuple[str, bool]:
         """Parses the planning response to extract the plan and readiness.
 
@@ -599,7 +615,7 @@ class AgentReasoning:
             return "No plan was generated.", False
 
         plan = response
-        ready = "READY: I am ready to execute the task." in response
+        ready = AgentReasoning._is_plan_ready(response)
 
         return plan, ready
 
