@@ -338,6 +338,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "bedrock",
     "aws",
     "openrouter",
+    "requesty",
     "deepseek",
     "ollama",
     "ollama_chat",
@@ -443,6 +444,7 @@ class LLM(BaseLLM):
                 "bedrock": "bedrock",
                 "aws": "bedrock",
                 "openrouter": "openrouter",
+                "requesty": "requesty",
                 "deepseek": "deepseek",
                 "ollama": "ollama",
                 "ollama_chat": "ollama_chat",
@@ -577,6 +579,10 @@ class LLM(BaseLLM):
 
         if provider == "openrouter":
             # OpenRouter uses org/model format but accepts anything
+            return True
+
+        if provider == "requesty":
+            # Requesty uses provider/model format but accepts anything
             return True
 
         if provider == "snowflake":
@@ -714,6 +720,7 @@ class LLM(BaseLLM):
 
         openai_compatible_providers = {
             "openrouter",
+            "requesty",
             "deepseek",
             "ollama",
             "ollama_chat",
