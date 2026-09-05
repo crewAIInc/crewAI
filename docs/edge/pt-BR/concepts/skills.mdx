@@ -202,13 +202,17 @@ A publicação lê `name`, `description` e `metadata.version` do frontmatter do 
 
 ### Instalar
 
-Instale uma skill publicada pela sua referência `@org/name`:
+Instale uma skill publicada pela sua referência `@org-uuid/name`:
 
 ```shell Terminal
-crewai skill install @acme/code-review
+crewai skill install @your-org-uuid/code-review
 ```
 
-Dentro de um projeto de crew, a skill é colocada em `./skills/{name}/`; fora de um projeto, vai para o cache compartilhado em `~/.crewai/skills/{org}/{name}/`.
+<Note>
+  Use o **UUID** da sua organização, não o nome — nomes de organização não são únicos, então um nome pode resolver para a organização errada e a instalação falha com um erro de "não encontrado". Execute `crewai org list` para ver o UUID (a coluna `ID`) de cada organização à qual você pertence.
+</Note>
+
+Dentro de um projeto de crew, a skill é colocada em `./skills/{name}/`; fora de um projeto, vai para o cache compartilhado em `~/.crewai/skills/{org-uuid}/{name}/`.
 
 Agentes também podem referenciar skills do registro diretamente — elas são resolvidas a partir do cache local (ou do diretório `skills/` do projeto) em tempo de execução:
 
@@ -217,7 +221,7 @@ agent = Agent(
     role="Senior Code Reviewer",
     goal="Review pull requests for quality and security issues",
     backstory="Staff engineer with expertise in secure coding practices.",
-    skills=["@acme/code-review"],  # registry ref, resolved locally
+    skills=["@your-org-uuid/code-review"],  # registry ref, resolved locally
 )
 ```
 

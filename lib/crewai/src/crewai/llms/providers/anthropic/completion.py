@@ -8,10 +8,17 @@ from typing import Any, Final, Literal, Protocol, TypeGuard, TypedDict, cast
 from pydantic import BaseModel, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM, JsonResponseFormat, llm_call_context
+from crewai.hooks.dispatch import HookAborted
+from crewai.llms.base_llm import (
+    BaseLLM,
+    JsonResponseFormat,
+    LLMCallBlockedError,
+    llm_call_context,
+)
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.llms.providers.utils.common import safe_tool_conversion
+from crewai.types.usage_metrics import _coerce_int
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -45,25 +52,57 @@ TOOL_SEARCH_TOOL_TYPES: Final[tuple[str, ...]] = (
 
 ANTHROPIC_FILES_API_BETA: Final = "files-api-2025-04-14"
 ANTHROPIC_STRUCTURED_OUTPUTS_BETA: Final = "structured-outputs-2025-11-13"
+# Anthropic requires max_tokens. Offered models all accept at least 32000.
+# Longest prefix wins. Unknown IDs use 32000 so they stay in-range.
+_MAX_OUTPUT_TOKENS_BY_PREFIX: Final[tuple[tuple[str, int], ...]] = (
+    ("claude-fable-5", 128000),
+    ("claude-opus-5", 128000),
+    ("claude-sonnet-5", 128000),
+    ("claude-opus-4-8", 128000),
+    ("claude-opus-4-7", 128000),
+    ("claude-opus-4-6", 128000),
+    ("claude-sonnet-4-6", 128000),
+    ("claude-haiku-4-5", 64000),
+    ("claude-sonnet-4-5", 64000),
+    ("claude-opus-4-5", 64000),
+)
+_DEFAULT_MODEL_MAX_TOKENS: Final[int] = 32000
+DEFAULT_MODEL: Final[str] = "claude-sonnet-4-6"
+
+
+def _default_max_tokens_for_model(model: str) -> int:
+    """Return the model's documented Messages API max output tokens."""
+    name = model.rsplit("/", 1)[-1].lower()
+    for prefix, limit in _MAX_OUTPUT_TOKENS_BY_PREFIX:
+        if name.startswith(prefix):
+            return limit
+    return _DEFAULT_MODEL_MAX_TOKENS
+
 
 NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
     tuple[
+        Literal["claude-fable-5"],
+        Literal["claude-opus-5"],
+        Literal["claude-sonnet-5"],
+        Literal["claude-opus-4-8"],
+        Literal["claude-opus-4.8"],
         Literal["claude-sonnet-4-5"],
         Literal["claude-sonnet-4.5"],
         Literal["claude-opus-4-5"],
         Literal["claude-opus-4.5"],
-        Literal["claude-opus-4-1"],
-        Literal["claude-opus-4.1"],
         Literal["claude-haiku-4-5"],
         Literal["claude-haiku-4.5"],
     ]
 ] = (
+    "claude-fable-5",
+    "claude-opus-5",
+    "claude-sonnet-5",
+    "claude-opus-4-8",
+    "claude-opus-4.8",
     "claude-sonnet-4-5",
     "claude-sonnet-4.5",
     "claude-opus-4-5",
     "claude-opus-4.5",
-    "claude-opus-4-1",
-    "claude-opus-4.1",
     "claude-haiku-4-5",
     "claude-haiku-4.5",
 )
@@ -72,9 +111,9 @@ NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
 def _supports_native_structured_outputs(model: str) -> bool:
     """Check if the model supports native structured outputs.
 
-    Native structured outputs are only available for Claude 4.5 models
-    (Sonnet 4.5, Opus 4.5, Opus 4.1, Haiku 4.5).
-    Other models require the tool-based fallback approach.
+    Covers Claude Fable 5, Opus 5, Sonnet 5, Opus 4.8 and the 4.5-era models
+    (Sonnet 4.5, Opus 4.5, Haiku 4.5). Other models require the tool-based
+    fallback approach.
 
     Args:
         model: The model name/identifier.
@@ -215,10 +254,10 @@ class AnthropicCompletion(BaseLLM):
     """
 
     llm_type: Literal["anthropic"] = "anthropic"
-    model: str = "claude-3-5-sonnet-20241022"
+    model: str = DEFAULT_MODEL
     timeout: float | None = None
     max_retries: int = 2
-    max_tokens: int = 4096
+    max_tokens: int = _DEFAULT_MODEL_MAX_TOKENS
     top_p: float | None = None
     stream: bool = False
     client_params: dict[str, Any] | None = None
@@ -244,7 +283,11 @@ class AnthropicCompletion(BaseLLM):
         if isinstance(seqs, str):
             seqs = [seqs]
         data["stop"] = seqs
+        if not data.get("model"):
+            data["model"] = DEFAULT_MODEL
         data["is_claude_3"] = "claude-3" in data.get("model", "").lower()
+        if data.get("max_tokens") is None:
+            data["max_tokens"] = _default_max_tokens_for_model(data["model"])
         # Normalize tool_search
         ts = data.get("tool_search")
         if ts is True:
@@ -294,7 +337,7 @@ class AnthropicCompletion(BaseLLM):
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Anthropic-specific fields."""
         config = super().to_config_dict()
-        if self.max_tokens != 4096:  # non-default
+        if self.max_tokens != _default_max_tokens_for_model(self.model):
             config["max_tokens"] = self.max_tokens
         if self.max_retries != 2:  # non-default
             config["max_retries"] = self.max_retries
@@ -374,10 +417,7 @@ class AnthropicCompletion(BaseLLM):
                     self._format_messages_for_anthropic(messages)
                 )
 
-                if not self._invoke_before_llm_call_hooks(
-                    formatted_messages, from_agent
-                ):
-                    raise ValueError("LLM call blocked by before_llm_call hook")
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
 
                 completion_params = self._prepare_completion_params(
                     formatted_messages, system_message, tools, available_functions
@@ -402,6 +442,9 @@ class AnthropicCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 error_msg = f"Anthropic API call failed: {e!s}"
                 logging.error(error_msg)
@@ -449,6 +492,8 @@ class AnthropicCompletion(BaseLLM):
                     self._format_messages_for_anthropic(messages)
                 )
 
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
+
                 completion_params = self._prepare_completion_params(
                     formatted_messages, system_message, tools, available_functions
                 )
@@ -472,6 +517,9 @@ class AnthropicCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 error_msg = f"Anthropic API call failed: {e!s}"
                 logging.error(error_msg)
@@ -1926,16 +1974,19 @@ class AnthropicCompletion(BaseLLM):
         """Get the context window size for the model."""
         from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
 
+        # Current offered models. Unknown and retired IDs fall back to 200k.
         context_windows = {
-            "claude-3-5-sonnet": 200000,
-            "claude-3-5-haiku": 200000,
-            "claude-3-opus": 200000,
-            "claude-3-sonnet": 200000,
-            "claude-3-haiku": 200000,
-            "claude-3-7-sonnet": 200000,
-            "claude-2.1": 200000,
-            "claude-2": 100000,
-            "claude-instant": 100000,
+            "claude-fable-5": 1000000,
+            "claude-mythos-5": 1000000,
+            "claude-opus-5": 1000000,
+            "claude-sonnet-5": 1000000,
+            "claude-opus-4-8": 1000000,
+            "claude-opus-4-7": 1000000,
+            "claude-opus-4-6": 1000000,
+            "claude-sonnet-4-6": 1000000,
+            "claude-opus-4-5": 200000,
+            "claude-sonnet-4-5": 200000,
+            "claude-haiku-4-5": 200000,
         }
 
         for model_prefix, size in context_windows.items():
@@ -1965,12 +2016,15 @@ class AnthropicCompletion(BaseLLM):
         """Extract token usage and response metadata from Anthropic response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
-            input_tokens = getattr(usage, "input_tokens", 0)
-            output_tokens = getattr(usage, "output_tokens", 0)
-            cache_read_tokens = getattr(usage, "cache_read_input_tokens", 0) or 0
-            cache_creation_tokens = (
-                getattr(usage, "cache_creation_input_tokens", 0) or 0
+            input_tokens = _coerce_int(getattr(usage, "input_tokens", 0))
+            output_tokens = _coerce_int(getattr(usage, "output_tokens", 0))
+            cache_read_tokens = _coerce_int(
+                getattr(usage, "cache_read_input_tokens", 0)
             )
+            cache_creation_tokens = _coerce_int(
+                getattr(usage, "cache_creation_input_tokens", 0)
+            )
+            input_tokens = input_tokens + cache_read_tokens + cache_creation_tokens
             result: dict[str, Any] = {
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,

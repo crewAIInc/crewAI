@@ -61,6 +61,17 @@ class InterceptionPoint(str, Enum):
     POST_STEP = "post_step"
 
 
+EXECUTION_BOUNDARY_POINTS: frozenset[InterceptionPoint] = frozenset(
+    {
+        InterceptionPoint.EXECUTION_START,
+        InterceptionPoint.INPUT,
+        InterceptionPoint.OUTPUT,
+        InterceptionPoint.EXECUTION_END,
+    }
+)
+"""The points that open and close a run, as opposed to steps within it."""
+
+
 class HookAborted(Exception):  # noqa: N818 - public contract name from OSS-86
     """Raised by a hook (or a legacy adapter) to abort the intercepted operation.
 
@@ -198,7 +209,7 @@ def _resolve_hooks(point: InterceptionPoint) -> list[HookFn]:
     return global_hooks
 
 
-def _source_name(source: Any) -> str | None:
+def source_name(source: Any) -> str | None:
     """Best-effort readable name for a hook source."""
     if source is None:
         return None
@@ -330,7 +341,7 @@ def run_hooks(
     except HookAborted as aborted:
         outcome = "aborted"
         abort_reason = aborted.reason
-        abort_source = _source_name(aborted.source)
+        abort_source = source_name(aborted.source)
         raise
     finally:
         _emit_telemetry(

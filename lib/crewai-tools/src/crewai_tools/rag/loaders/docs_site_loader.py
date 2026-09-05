@@ -29,7 +29,7 @@ class DocsSiteLoader(BaseLoader):
         try:
             response = safe_get(docs_url, timeout=30)
             response.raise_for_status()
-        except requests.RequestException as e:
+        except (requests.RequestException, ValueError) as e:
             raise ValueError(
                 f"Unable to fetch documentation from {docs_url}: {e}"
             ) from e

@@ -311,6 +311,8 @@ class EvaluationDisplayFormatter:
         scores: list[float | None],
         strategy: AggregationStrategy,
     ) -> str:
+        from crewai.hooks.dispatch import HookAborted
+
         if len(feedbacks) <= 2 and all(len(fb) < 200 for fb in feedbacks):
             return "\n\n".join(
                 [f"Feedback {i + 1}: {fb}" for i, fb in enumerate(feedbacks)]
@@ -372,6 +374,8 @@ class EvaluationDisplayFormatter:
                 raise ValueError("LLM must be initialized")
             return llm.call(prompt)
 
+        except HookAborted:
+            raise
         except Exception:
             return "Synthesized from multiple tasks: " + "\n\n".join(
                 [f"- {fb[:500]}..." for fb in feedbacks]

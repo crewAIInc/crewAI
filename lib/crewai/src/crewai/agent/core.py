@@ -6,7 +6,6 @@ import asyncio
 from collections.abc import Callable, Coroutine, Sequence
 import concurrent.futures
 import contextvars
-from datetime import datetime
 import inspect
 import json
 import os
@@ -75,6 +74,7 @@ from crewai.events.types.memory_events import (
 )
 from crewai.events.types.skill_events import SkillUsedEvent
 from crewai.experimental.agent_executor import AgentExecutor
+from crewai.hooks.dispatch import HookAborted
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent_output import LiteAgentOutput
@@ -98,6 +98,7 @@ from crewai.utilities.agent_utils import (
     get_tool_names,
     is_inside_event_loop,
     load_agent_from_repository,
+    message_content_text,
     parse_tools,
     render_text_description_and_args,
 )
@@ -139,7 +140,10 @@ if TYPE_CHECKING:
 
 # Deliberate stops, not transient errors: never swallowed into the
 # max_retry_limit loop.
-_passthrough_exceptions: tuple[type[Exception], ...] = (ToolExecutionFailedError,)
+_passthrough_exceptions: tuple[type[Exception], ...] = (
+    ToolExecutionFailedError,
+    HookAborted,
+)
 
 _EXECUTOR_CLASS_MAP: dict[str, type] = {
     "CrewAgentExecutor": CrewAgentExecutor,
@@ -175,6 +179,38 @@ def _validate_executor_class(value: Any) -> Any:
 
 def _serialize_executor_class(value: Any) -> str:
     return value.__name__ if isinstance(value, type) else str(value)
+
+
+def _request_index(carried: list[LLMMessage]) -> int:
+    """Index of the message that is this turn's request.
+
+    The last ``user`` message, not simply the last one: a caller can hand over
+    a conversation that ends in assistant or tool messages -- notably
+    ``build_agent_context()``, which appends an agent's private thread after
+    the current user turn -- and promoting that tail would make the agent's own
+    scratch the task while demoting the real question to history. With no user
+    message at all the last one stands in, which is what a single-message
+    caller has always got.
+    """
+    for index in range(len(carried) - 1, -1, -1):
+        if carried[index].get("role") == "user":
+            return index
+    return len(carried) - 1
+
+
+def _carries_payload(message: LLMMessage) -> bool:
+    """Whether a message says anything the provider needs.
+
+    Text is the usual case, but an assistant turn that only requests tool
+    calls, the tool result that answers it, and a turn whose payload is an
+    attachment all matter.
+    """
+    return bool(
+        message.get("content")
+        or message.get("tool_calls")
+        or message.get("tool_call_id")
+        or message.get("files")
+    )
 
 
 class Agent(BaseAgent):
@@ -264,7 +300,7 @@ class Agent(BaseAgent):
     )
     inject_date: bool = Field(
         default=False,
-        description="Whether to automatically inject the current date into tasks.",
+        description="Whether to automatically inject the current date into the agent's prompt.",
     )
     date_format: str = Field(
         default="%Y-%m-%d",
@@ -545,7 +581,7 @@ class Agent(BaseAgent):
     ) -> str:
         """Prepare common setup for task execution shared by sync and async paths.
 
-        Handles reasoning, date injection, prompt building, and memory retrieval.
+        Handles reasoning, prompt building, and memory retrieval.
 
         Args:
             task: Task to execute.
@@ -555,8 +591,6 @@ class Agent(BaseAgent):
             The task prompt after memory retrieval, ready for knowledge lookup.
         """
         get_env_context()
-
-        self._inject_date_to_task(task)
 
         self.reset_tool_failures()
 
@@ -681,6 +715,9 @@ class Agent(BaseAgent):
                     error=str(e),
                 ),
             )
+            # a deny aborts the task; any other failure degrades to no memory
+            if isinstance(e, HookAborted):
+                raise
 
         return task_prompt
 
@@ -731,28 +768,22 @@ class Agent(BaseAgent):
         Raises:
             Exception: If the error is from litellm, a passthrough, or retries are exhausted.
         """
-        if e.__class__.__module__.startswith("litellm"):
-            crewai_event_bus.emit(
-                self,
-                event=AgentExecutionErrorEvent(
-                    agent=self,
-                    task=task,
-                    error=str(e),
-                ),
-            )
-            raise e
         if isinstance(e, _passthrough_exceptions):
             raise
+        # A retry re-enters execute_task, which opens a new agent_execution_started
+        # scope, so every failed attempt has to close its own.
+        crewai_event_bus.emit(
+            self,
+            event=AgentExecutionErrorEvent(
+                agent=self,
+                task=task,
+                error=str(e),
+            ),
+        )
+        if e.__class__.__module__.startswith("litellm"):
+            raise e
         self._times_executed += 1
         if self._times_executed > self.max_retry_limit:
-            crewai_event_bus.emit(
-                self,
-                event=AgentExecutionErrorEvent(
-                    agent=self,
-                    task=task,
-                    error=str(e),
-                ),
-            )
             raise e
 
     def _handle_execution_error(
@@ -889,7 +920,8 @@ class Agent(BaseAgent):
             )
             raise e
         except Exception as e:
-            result = self._handle_execution_error(e, task, context, tools)
+            # The retry runs a whole execute_task of its own, result already finalized.
+            return self._handle_execution_error(e, task, context, tools)
 
         return self._finalize_task_execution(task, result)
 
@@ -1023,7 +1055,8 @@ class Agent(BaseAgent):
             )
             raise e
         except Exception as e:
-            result = await self._handle_execution_error_async(e, task, context, tools)
+            # The retry runs a whole aexecute_task of its own, result already finalized.
+            return await self._handle_execution_error_async(e, task, context, tools)
 
         return self._finalize_task_execution(task, result)
 
@@ -1332,32 +1365,6 @@ class Agent(BaseAgent):
             ]
         )
 
-    def _inject_date_to_task(self, task: Task) -> None:
-        """Inject the current date into the task description if inject_date is enabled."""
-        if self.inject_date:
-            try:
-                valid_format_codes = [
-                    "%Y",
-                    "%m",
-                    "%d",
-                    "%H",
-                    "%M",
-                    "%S",
-                    "%B",
-                    "%b",
-                    "%A",
-                    "%a",
-                ]
-                is_valid = any(code in self.date_format for code in valid_format_codes)
-
-                if not is_valid:
-                    raise ValueError(f"Invalid date format: {self.date_format}")
-
-                current_date = datetime.now().strftime(self.date_format)
-                task.description += f"\n\nCurrent Date: {current_date}"
-            except Exception as e:
-                self._logger.log("warning", f"Failed to inject date: {e!s}")
-
     def _validate_docker_installation(self) -> None:
         """Deprecated: No-op. CodeInterpreterTool is no longer available."""
         warnings.warn(
@@ -1438,6 +1445,18 @@ class Agent(BaseAgent):
                 ),
             )
             return rewritten_query
+        except HookAborted as e:
+            # A deny still owes the started event above its terminal event; only
+            # the fallback to no query is skipped.
+            crewai_event_bus.emit(
+                self,
+                event=KnowledgeQueryFailedEvent(
+                    error=str(e),
+                    from_task=task,
+                    from_agent=self,
+                ),
+            )
+            raise
         except Exception as e:
             crewai_event_bus.emit(
                 self,
@@ -1557,15 +1576,38 @@ class Agent(BaseAgent):
             )
 
         all_files: dict[str, Any] = {}
+        history: list[LLMMessage] = []
+        trailing: list[LLMMessage] = []
         if isinstance(messages, str):
             formatted_messages = messages
+            recall_text = messages
         else:
-            formatted_messages = "\n".join(
-                str(msg.get("content", "")) for msg in messages if msg.get("content")
+            # A message with no text still carries meaning when it holds tool
+            # calls or is a tool result; dropping those leaves a `tool` message
+            # with no preceding `assistant` tool_calls, which providers reject.
+            carried = [msg for msg in messages if _carries_payload(msg)]
+            # The executor's prompt needs one request string, so exactly one
+            # message is promoted to it and the rest keep their roles as
+            # history. Joining them all into one string told the model the
+            # assistant's own replies were the user's.
+            request_index = _request_index(carried)
+            request = carried[request_index] if carried else None
+            formatted_messages = message_content_text(request) if request else ""
+            # Split, rather than one history list: the promoted request keeps
+            # its position in the conversation. Sending everything before it
+            # would hoist a trailing tool pair above the question it answers,
+            # which is the wrong chronology even where a provider tolerates it.
+            if request is not None:
+                history = carried[:request_index]
+                trailing = carried[request_index + 1 :]
+            recall_text = "\n".join(
+                message_content_text(msg) for msg in carried if msg.get("content")
             )
-            for msg in messages:
-                if msg.get("files"):
-                    all_files.update(msg["files"])
+            # Only the request's attachments go on the current turn; a history
+            # message keeps its own, so unioning them all would send prior
+            # attachments twice.
+            if request is not None and request.get("files"):
+                all_files.update(request["files"])
 
         if input_files:
             all_files.update(input_files)
@@ -1581,7 +1623,7 @@ class Agent(BaseAgent):
                     ),
                 )
                 start_time = time.time()
-                matches = agent_memory.recall(formatted_messages, limit=20)
+                matches = agent_memory.recall(recall_text, limit=20)
                 memory_block = ""
                 if matches:
                     memory_block = "Relevant memories:\n" + "\n".join(
@@ -1611,6 +1653,9 @@ class Agent(BaseAgent):
                         error=str(e),
                     ),
                 )
+                # a deny aborts the kickoff; any other failure degrades to no memory
+                if isinstance(e, HookAborted):
+                    raise
 
         inputs: dict[str, Any] = {
             "input": formatted_messages,
@@ -1619,6 +1664,10 @@ class Agent(BaseAgent):
         }
         if all_files:
             inputs["files"] = all_files
+        if history:
+            inputs["history"] = history
+        if trailing:
+            inputs["trailing"] = trailing
 
         return executor, inputs, agent_info, parsed_tools
 
@@ -1643,6 +1692,12 @@ class Agent(BaseAgent):
                      If a string is provided, it will be converted to a user message.
                      If a list is provided, each dict should have 'role' and 'content' keys.
                      Messages can include a 'files' field with file inputs.
+                     The last ``user`` message is the request the agent answers;
+                     every other message keeps its role and its place around it,
+                     so a list that trails off in assistant or tool messages
+                     still asks the user's question and still delivers those
+                     turns after it. With no ``user`` message the last one is
+                     the request.
             response_format: Optional Pydantic model for structured output.
             input_files: Optional dict of named files to attach to the message.
                    Files can be paths, bytes, or File objects from crewai_files.
@@ -1772,7 +1827,7 @@ class Agent(BaseAgent):
             else:
                 input_str = (
                     "\n".join(
-                        str(msg.get("content", ""))
+                        message_content_text(msg)
                         for msg in messages
                         if msg.get("content")
                     )
@@ -1782,6 +1837,8 @@ class Agent(BaseAgent):
             extracted = agent_memory.extract_memories(raw)
             if extracted:
                 agent_memory.remember_many(extracted)
+        except HookAborted:
+            raise
         except Exception as e:
             self._logger.log("error", f"Failed to save kickoff result to memory: {e}")
 
@@ -2017,6 +2074,12 @@ class Agent(BaseAgent):
                      If a string is provided, it will be converted to a user message.
                      If a list is provided, each dict should have 'role' and 'content' keys.
                      Messages can include a 'files' field with file inputs.
+                     The last ``user`` message is the request the agent answers;
+                     every other message keeps its role and its place around it,
+                     so a list that trails off in assistant or tool messages
+                     still asks the user's question and still delivers those
+                     turns after it. With no ``user`` message the last one is
+                     the request.
             response_format: Optional Pydantic model for structured output.
             input_files: Optional dict of named files to attach to the message.
                    Files can be paths, bytes, or File objects from crewai_files.
