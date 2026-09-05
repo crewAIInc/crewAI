@@ -386,6 +386,18 @@ def test_unrecognized_provider_prefix_is_not_stripped() -> None:
     )
 
 
+def test_gemini_thinking_context_window() -> None:
+    """Gemini thinking models must not be shadowed by gemini-2.0-flash prefix."""
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    gemini_thinking = GeminiCompletion(model="gemini-2.0-flash-thinking-exp-01-21")
+    assert gemini_thinking.get_context_window_size() == int(32768 * CONTEXT_WINDOW_USAGE_RATIO)
+
+    gemini_flash = GeminiCompletion(model="gemini-2.0-flash-001")
+    assert gemini_flash.get_context_window_size() == int(1048576 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+
 @pytest.fixture
 def get_weather_tool_schema():
     return {

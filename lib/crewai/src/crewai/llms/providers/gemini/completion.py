@@ -1385,24 +1385,28 @@ class GeminiCompletion(BaseLLM):
                     f"Context window for {key} must be between {min_context} and {max_context}"
                 )
 
+        # Longest prefix first. Always insert new keys in that order so
+        # startswith prefers gemini-2.0-flash-thinking over gemini-2.0-flash, etc.
         context_windows = {
             "gemini-3-pro-preview": 1048576,  # 1M tokens
-            "gemini-2.0-flash": 1048576,  # 1M tokens
             "gemini-2.0-flash-thinking": 32768,
             "gemini-2.0-flash-lite": 1048576,
+            "gemini-2.0-flash": 1048576,  # 1M tokens
             "gemini-2.5-flash": 1048576,
             "gemini-2.5-pro": 1048576,
             "gemini-1.5-pro": 2097152,  # 2M tokens
-            "gemini-1.5-flash": 1048576,
             "gemini-1.5-flash-8b": 1048576,
+            "gemini-1.5-flash": 1048576,
             "gemini-1.0-pro": 32768,
-            "gemma-3-1b": 32000,
-            "gemma-3-4b": 128000,
-            "gemma-3-12b": 128000,
             "gemma-3-27b": 128000,
+            "gemma-3-12b": 128000,
+            "gemma-3-4b": 128000,
+            "gemma-3-1b": 32000,
         }
 
-        for model_prefix, size in context_windows.items():
+        for model_prefix, size in sorted(
+            context_windows.items(), key=lambda item: len(item[0]), reverse=True
+        ):
             if self.model.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
