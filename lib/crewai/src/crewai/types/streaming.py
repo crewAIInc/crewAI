@@ -504,13 +504,15 @@ class CrewStreamingOutput(StreamingOutputBase["CrewOutput"]):
 
     Example:
         ```python
-        # Single crew
+        # Single crew — the crew must be constructed with stream=True
+        crew = Crew(agents=[...], tasks=[...], stream=True)
         streaming = crew.kickoff(inputs={"topic": "AI"})
         for chunk in streaming:
             print(chunk.content, end="", flush=True)
         result = streaming.result
 
-        # Multiple crews (kickoff_for_each_async)
+        # Multiple crews (kickoff_for_each_async) — also requires stream=True
+        crew = Crew(agents=[...], tasks=[...], stream=True)
         streaming = await crew.kickoff_for_each_async(
             [{"topic": "AI"}, {"topic": "ML"}]
         )
@@ -580,22 +582,13 @@ class FlowStreamingOutput(StreamingOutputBase[Any]):
     """Streaming output wrapper for flow execution.
 
     Provides both sync and async iteration over stream chunks,
-    with access to the final flow output via the .result property.
+    with access to the final flow output via the ``.result`` property.
 
-    Example:
-        ```python
-        # Sync usage
-        streaming = flow.kickoff_streaming()
-        for chunk in streaming:
-            print(chunk.content, end="", flush=True)
-        result = streaming.result
-
-        # Async usage
-        streaming = await flow.kickoff_streaming_async()
-        async for chunk in streaming:
-            print(chunk.content, end="", flush=True)
-        result = streaming.result
-        ```
+    Note:
+        Flow-level streaming is exposed to users through
+        :class:`StreamSession` (see ``Flow.kickoff`` with ``stream=True``).
+        ``FlowStreamingOutput`` is retained for consumers that build a
+        streaming wrapper directly from an existing iterator.
     """
 
     def _set_result(self, result: Any) -> None:
