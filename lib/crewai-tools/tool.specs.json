@@ -21131,6 +21131,163 @@
       }
     },
     {
+      "description": "A tool that can be used to search the internet with a search_query using SearchApi. One endpoint fronts many engines, set with 'engine': 'google' (default), 'google_news', 'google_scholar', 'google_jobs', 'bing', 'youtube', 'baidu' and others. Returns the engine's structured JSON results.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SearchApi",
+          "name": "SEARCHAPI_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Search the internet with SearchApi",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          },
+          "ToolFailurePolicy": {
+            "description": "How an agent reacts when one of its tools reports a failure.",
+            "enum": [
+              "ignore",
+              "warn",
+              "raise"
+            ],
+            "title": "ToolFailurePolicy",
+            "type": "string"
+          }
+        },
+        "description": "Search the internet through SearchApi's unified search endpoint.\n\nOne endpoint fronts many engines, selected with ``engine``, so the same\ntool covers web search, news, scholar, jobs and the rest. The response is\nthe engine's own JSON, so its shape follows the engine's documentation at\nhttps://www.searchapi.io/docs.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Api Key"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "engine": {
+            "default": "google",
+            "title": "Engine",
+            "type": "string"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Locale"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Location"
+          },
+          "max_string_length": {
+            "default": 1000,
+            "title": "Max String Length",
+            "type": "integer"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "search_url": {
+            "default": "https://www.searchapi.io/api/v1/search",
+            "title": "Search Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 30,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "SearchApiTool",
+        "type": "object"
+      },
+      "name": "SearchApiTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for SearchApiTool.",
+        "properties": {
+          "search_query": {
+            "description": "Mandatory search query you want to use to search the internet",
+            "title": "Search Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "search_query"
+        ],
+        "title": "SearchApiToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to read a website content.",
       "env_vars": [],
       "humanized_name": "Read a website content",
