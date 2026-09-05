@@ -86,7 +86,7 @@ def test_run_refuses_an_effect_outside_the_budget():
 
 def test_run_stops_a_program_that_never_ends():
     out = VelarisRunTool(allow=["io"], timeout=2).run(source=FOREVER)
-    assert "STOPPED" in out
+    assert "ran longer than 2" in out
     # the marker only the program could print must be absent; the
     # compiler's own hint text mentions a loop that "never ends"
     assert "REACHED THE END" not in out
