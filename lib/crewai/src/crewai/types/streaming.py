@@ -586,9 +586,10 @@ class FlowStreamingOutput(StreamingOutputBase[Any]):
 
     Note:
         Flow-level streaming is exposed to users through
-        :class:`StreamSession` (see ``Flow.kickoff`` with ``stream=True``).
-        ``FlowStreamingOutput`` is retained for consumers that build a
-        streaming wrapper directly from an existing iterator.
+        :class:`StreamSession`; configure the Flow with ``stream=True``
+        before calling ``Flow.kickoff()``. ``FlowStreamingOutput`` is
+        retained for consumers that build a streaming wrapper directly
+        from an existing iterator.
     """
 
     def _set_result(self, result: Any) -> None:
