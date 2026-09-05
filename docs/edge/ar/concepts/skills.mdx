@@ -202,13 +202,17 @@ crewai skill publish
 
 ### التثبيت
 
-ثبّت مهارة منشورة عبر مرجعها `@org/name`:
+ثبّت مهارة منشورة عبر مرجعها `@org-uuid/name`:
 
 ```shell Terminal
-crewai skill install @acme/code-review
+crewai skill install @your-org-uuid/code-review
 ```
 
-داخل مشروع الطاقم تُثبَّت المهارة في `./skills/{name}/`؛ وخارج المشروع تذهب إلى ذاكرة التخزين المؤقتة المشتركة في `~/.crewai/skills/{org}/{name}/`.
+<Note>
+  استخدم **UUID** الخاص بمؤسستك وليس اسمها — فأسماء المؤسسات ليست فريدة، وقد يشير الاسم إلى مؤسسة خاطئة فيفشل التثبيت برسالة "غير موجود". شغّل `crewai org list` لعرض الـ UUID (عمود `ID`) لكل مؤسسة تنتمي إليها.
+</Note>
+
+داخل مشروع الطاقم تُثبَّت المهارة في `./skills/{name}/`؛ وخارج المشروع تذهب إلى ذاكرة التخزين المؤقتة المشتركة في `~/.crewai/skills/{org-uuid}/{name}/`.
 
 يمكن للوكلاء أيضًا الإشارة إلى مهارات السجل مباشرة — يتم حلّها من ذاكرة التخزين المؤقتة المحلية (أو من مجلد `skills/` في المشروع) وقت التشغيل:
 
@@ -217,7 +221,7 @@ agent = Agent(
     role="Senior Code Reviewer",
     goal="Review pull requests for quality and security issues",
     backstory="Staff engineer with expertise in secure coding practices.",
-    skills=["@acme/code-review"],  # registry ref, resolved locally
+    skills=["@your-org-uuid/code-review"],  # registry ref, resolved locally
 )
 ```
 
