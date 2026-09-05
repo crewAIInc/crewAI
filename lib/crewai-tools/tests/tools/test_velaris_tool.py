@@ -93,7 +93,7 @@ def test_run_stops_a_program_that_never_ends():
 
 
 @pytest.mark.skipif(
-    sys.platform == "win32", reason="the memory cap is enforced on Linux and macOS"
+    sys.platform != "linux", reason="RLIMIT_AS is only reliably honoured on Linux"
 )
 def test_run_stops_a_program_that_eats_memory():
     out = VelarisRunTool(allow=["io"], max_memory_mb=150, timeout=60).run(

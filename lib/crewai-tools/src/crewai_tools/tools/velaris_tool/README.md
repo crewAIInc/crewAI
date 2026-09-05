@@ -16,8 +16,8 @@ The program runs in a separate, killable process bounded by `timeout`
 never ends or eats memory is stopped, and the tool reports which limit
 it hit. The limits are enforced on every supported compiler version: on
 velaris-lang 2.59.0 and newer by `velaris.run` itself, on older versions
-by the tool's own subprocess. The memory cap is enforced on Linux and
-macOS; on Windows it is recorded but not enforced.
+by the tool's own subprocess. The memory cap is enforced on Linux;
+best-effort on macOS; not applied on Windows.
 
 Not a security boundary: `allow=["ffi"]` grants everything Python can
 do. It is a real guard for the ordinary case of running a script a
@@ -67,7 +67,7 @@ Constructor:
 
 - `allow`: (Optional) The effects the program may perform, chosen from `io`, `fs`, `net`, `clock`, `rand` and `ffi`. Defaults to `["io"]`.
 - `timeout`: (Optional) Seconds the program may run before it is stopped. Defaults to `30.0`.
-- `max_memory_mb`: (Optional) Memory the program may use, in MB, before it is stopped. Defaults to `512`. Enforced on Linux and macOS.
+- `max_memory_mb`: (Optional) Memory the program may use, in MB, before it is stopped. Defaults to `512`. Enforced on Linux; best-effort on macOS; not applied on Windows.
 
 Run:
 

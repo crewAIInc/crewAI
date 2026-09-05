@@ -21,7 +21,7 @@ that never ends or eats memory is stopped and the crew's worker survives
 it. The limits are enforced on every supported compiler version: on
 velaris-lang 2.59.0 and newer by ``velaris.run`` itself, on older
 versions by the tool's own subprocess. The memory cap is enforced on
-Linux and macOS; on Windows it is recorded but not enforced.
+Linux; best-effort on macOS; not applied on Windows.
 
 Not a security boundary: allow=["ffi"] grants everything Python can
 do. It is a guard for the ordinary case of running a script a model
@@ -94,7 +94,8 @@ def _memory_limiter(max_memory_mb: int) -> Callable[[], None] | None:
 
     Returns:
         A function to run in the child before exec, or None on Windows,
-        where address-space limits are not available.
+        where address-space limits are not available. The limit is
+        reliably honoured on Linux and best-effort on macOS.
     """
     if sys.platform == "win32":
         return None
@@ -190,7 +191,8 @@ class VelarisRunTool(BaseTool):
     stopped and reported as such. On velaris-lang 2.59.0 and newer the
     limits are enforced by ``velaris.run``; on older versions the tool runs
     the compiler as its own bounded subprocess. The memory cap is enforced
-    on Linux and macOS only; the timeout is enforced everywhere.
+    on Linux; best-effort on macOS; not applied on Windows. The timeout is
+    enforced everywhere.
 
     Args:
         allow: The effects the program may perform, chosen from io, fs, net,
@@ -227,7 +229,10 @@ class VelarisRunTool(BaseTool):
     max_memory_mb: int = Field(
         default=512,
         gt=0,
-        description="Memory cap in MB, enforced on Linux and macOS.",
+        description=(
+            "Memory cap in MB: enforced on Linux; best-effort on macOS; "
+            "not applied on Windows."
+        ),
     )
 
     def __init__(
