@@ -72,8 +72,9 @@ def test_forget_holds_reset_lock_across_drain_and_delete():
     lock between the drain snapshot and the delete, a concurrent save could
     register in between, land after the deletion, and resurrect the
     forgotten content. Probed deterministically: a helper thread attempts a
-    non-blocking acquire of _reset_lock while the delete runs; it must fail.
-    (A same-thread probe would succeed trivially: the lock is re-entrant.)
+    non-blocking acquire of _reset_lock while the drain runs and again while
+    the delete runs; both must fail. (A same-thread probe would succeed
+    trivially: the lock is re-entrant.)
     """
     from crewai.memory.unified_memory import Memory
 
@@ -83,23 +84,38 @@ def test_forget_holds_reset_lock_across_drain_and_delete():
 
     probe = {}
 
-    def fake_delete(**kwargs):
-        def try_acquire():
+    def try_acquire(key):
+        def _probe():
             got = mem._reset_lock.acquire(blocking=False)
-            probe["acquired"] = got
+            probe[key] = got
             if got:
                 mem._reset_lock.release()
 
-        t = threading.Thread(target=try_acquire)
+        t = threading.Thread(target=_probe)
         t.start()
         t.join()
+
+    real_drain = Memory.drain_writes
+
+    def probed_drain(self):
+        try_acquire("drain")
+        return real_drain(self)
+
+    def fake_delete(**kwargs):
+        try_acquire("delete")
         return 1
 
     mem._storage = MagicMock()
     mem._storage.delete.side_effect = fake_delete
 
-    assert Memory.forget(mem) == 1
-    assert probe.get("acquired") is False, (
+    with patch.object(Memory, "drain_writes", probed_drain):
+        assert Memory.forget(mem) == 1
+    assert probe.get("drain") is False, (
+        "forget() must hold _reset_lock while draining, otherwise a "
+        "concurrent _submit_save() can register after the snapshot and "
+        "resurrect forgotten content"
+    )
+    assert probe.get("delete") is False, (
         "forget() must hold _reset_lock while deleting, otherwise a "
         "concurrent _submit_save() can slip between drain and delete and "
         "resurrect forgotten content"
