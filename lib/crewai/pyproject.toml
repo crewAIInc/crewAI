@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Joao Moura", email = "joao@crewai.com" }
 ]
-requires-python = ">=3.10, <3.14"
+requires-python = ">=3.10, <3.15"
 dependencies = [
     "crewai-core==1.15.20",
     "crewai-cli==1.15.20",
@@ -22,7 +22,11 @@ dependencies = [
     "opentelemetry-sdk~=1.42.0",
     "opentelemetry-exporter-otlp-proto-http~=1.42.0",
     # Data Handling
-    "chromadb~=1.1.0",
+    # chromadb~=1.1.0 still shipped the pydantic.v1.BaseSettings compat
+    # layer, which is broken on Python 3.14 (ConfigError: unable to infer
+    # type for chroma_server_nofile). Fixed upstream in
+    # chroma-core/chroma#6356 (dropped the v1 layer), released in 1.5.x.
+    "chromadb>=1.5.9,<2",
     "tokenizers>=0.21,<1",
     "openpyxl~=3.1.5",
     # Authentication and Security
