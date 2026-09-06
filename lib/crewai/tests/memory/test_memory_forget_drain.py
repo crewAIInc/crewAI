@@ -65,6 +65,45 @@ def test_forget_drains_pending_saves_before_delete():
         )
 
 
+def test_forget_holds_reset_lock_across_drain_and_delete():
+    """forget() must hold _reset_lock across the drain AND the delete.
+
+    _submit_save() registers under _reset_lock. If forget() released the
+    lock between the drain snapshot and the delete, a concurrent save could
+    register in between, land after the deletion, and resurrect the
+    forgotten content. Probed deterministically: a helper thread attempts a
+    non-blocking acquire of _reset_lock while the delete runs; it must fail.
+    (A same-thread probe would succeed trivially: the lock is re-entrant.)
+    """
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory.model_construct()
+    mem._pending_saves = []
+    mem.root_scope = None
+
+    probe = {}
+
+    def fake_delete(**kwargs):
+        def try_acquire():
+            got = mem._reset_lock.acquire(blocking=False)
+            probe["acquired"] = got
+            if got:
+                mem._reset_lock.release()
+
+        t = threading.Thread(target=try_acquire)
+        t.start()
+        t.join()
+        return 1
+
+    mem._storage = MagicMock()
+    mem._storage.delete.side_effect = fake_delete
+
+    assert Memory.forget(mem) == 1
+    assert probe.get("acquired") is False, (
+        "forget() must hold _reset_lock while deleting, otherwise a "
+        "concurrent _submit_save() can slip between drain and delete and "
+        "resurrect forgotten content"
+    )
 def test_recall_already_has_drain_writes():
     """Confirm recall() has the read barrier (regression guard)."""
     from crewai.memory.unified_memory import Memory

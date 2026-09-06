@@ -838,19 +838,25 @@ class Memory(BaseModel):
         """
         # Write barrier: drain pending background saves before deleting,
         # so a save submitted before forget() cannot resurrect deleted content.
-        self.drain_writes()
-        effective_scope = scope
-        if effective_scope is None and self.root_scope:
-            effective_scope = self.root_scope
-        elif effective_scope is not None and self.root_scope:
-            effective_scope = join_scope_paths(self.root_scope, effective_scope)
-        return self._storage.delete(
-            scope_prefix=effective_scope,
-            categories=categories,
-            record_ids=record_ids,
-            older_than=older_than,
-            metadata_filter=metadata_filter,
-        )
+        # The _reset_lock must be held across the drain AND the delete:
+        # _submit_save() registers under the same lock, so without it a save
+        # could register after the drain snapshot but before the delete, land
+        # after the deletion, and resurrect the forgotten content. reset()
+        # already serializes the same way.
+        with self._reset_lock:
+            self.drain_writes()
+            effective_scope = scope
+            if effective_scope is None and self.root_scope:
+                effective_scope = self.root_scope
+            elif effective_scope is not None and self.root_scope:
+                effective_scope = join_scope_paths(self.root_scope, effective_scope)
+            return self._storage.delete(
+                scope_prefix=effective_scope,
+                categories=categories,
+                record_ids=record_ids,
+                older_than=older_than,
+                metadata_filter=metadata_filter,
+            )
 
     def update(
         self,
