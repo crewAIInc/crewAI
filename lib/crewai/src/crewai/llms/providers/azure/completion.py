@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Self
 
+from crewai.hooks.dispatch import HookAborted
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
@@ -42,7 +43,12 @@ try:
     )
 
     from crewai.events.types.llm_events import LLMCallType
-    from crewai.llms.base_llm import BaseLLM, call_stream_override, llm_call_context
+    from crewai.llms.base_llm import (
+        BaseLLM,
+        LLMCallBlockedError,
+        call_stream_override,
+        llm_call_context,
+    )
 
 except ImportError:
     raise ImportError(
@@ -521,10 +527,7 @@ class AzureCompletion(BaseLLM):
 
                 formatted_messages = self._format_messages_for_azure(messages)
 
-                if not self._invoke_before_llm_call_hooks(
-                    formatted_messages, from_agent
-                ):
-                    raise ValueError("LLM call blocked by before_llm_call hook")
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
 
                 completion_params = self._prepare_completion_params(
                     formatted_messages, tools, effective_response_model
@@ -547,6 +550,9 @@ class AzureCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 return self._handle_api_error(e, from_task, from_agent)  # type: ignore[func-returns-value]
 
@@ -603,6 +609,8 @@ class AzureCompletion(BaseLLM):
 
                 formatted_messages = self._format_messages_for_azure(messages)
 
+                self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
+
                 completion_params = self._prepare_completion_params(
                     formatted_messages, tools, effective_response_model
                 )
@@ -624,6 +632,9 @@ class AzureCompletion(BaseLLM):
                     effective_response_model,
                 )
 
+            except (HookAborted, LLMCallBlockedError) as e:
+                self._emit_call_denied_event(e, from_task, from_agent)
+                raise
             except Exception as e:
                 self._handle_api_error(e, from_task, from_agent)
 
@@ -1302,20 +1313,21 @@ class AzureCompletion(BaseLLM):
                     f"Context window for {key} must be between {min_context} and {max_context}"
                 )
 
+        # Longest prefix first. Always insert new keys in that order so
+        # startswith prefers gpt-5.6 over gpt-5, gpt-4o-mini over gpt-4o, etc.
         context_windows = {
-            "gpt-4": 8192,
-            "gpt-4o": 128000,
-            "gpt-4o-mini": 200000,
-            "gpt-5.4-mini": 200000,
-            "gpt-4-turbo": 128000,
-            "gpt-35-turbo": 16385,
-            "gpt-3.5-turbo": 16385,
             "text-embedding": 8191,
+            "gpt-3.5-turbo": 16385,
+            "gpt-5.4-mini": 200000,
+            "gpt-35-turbo": 16385,
+            "gpt-4o-mini": 200000,
+            "gpt-4-turbo": 128000,
+            "gpt-5.6": 1050000,
+            "gpt-4o": 128000,
+            "gpt-4": 8192,
         }
 
-        for model_prefix, size in sorted(
-            context_windows.items(), key=lambda x: len(x[0]), reverse=True
-        ):
+        for model_prefix, size in context_windows.items():
             if self.model.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 

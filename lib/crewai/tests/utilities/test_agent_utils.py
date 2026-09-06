@@ -17,12 +17,18 @@ from crewai.hooks.tool_hooks import (
     register_after_tool_call_hook,
 )
 from crewai.tools.base_tool import BaseTool
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
 from crewai.utilities.agent_utils import (
     _asummarize_chunks,
     _estimate_token_count,
+    _expand_oversized_message,
     _extract_summary_tags,
     _format_messages_for_summary,
+    message_content_text,
+    _normalize_messages_for_chunking,
     _split_messages_into_chunks,
+    _split_text_by_token_limit,
+    format_message_for_llm,
     convert_tools_to_openai_schema,
     execute_single_native_tool_call,
     extract_tool_call_info,
@@ -31,6 +37,26 @@ from crewai.utilities.agent_utils import (
     parse_tool_call_args,
     summarize_messages,
 )
+from crewai.utilities.i18n import I18N_DEFAULT
+
+
+def _estimate_summarization_request_tokens(chunk: list[dict[str, Any]]) -> int:
+    """Estimate tokens for the full summarization LLM request for one chunk."""
+    conversation_text = _format_messages_for_summary(chunk)
+    summarization_messages = [
+        format_message_for_llm(
+            I18N_DEFAULT.slice("summarizer_system_message"), role="system"
+        ),
+        format_message_for_llm(
+            I18N_DEFAULT.slice("summarize_instruction").format(
+                conversation=conversation_text
+            ),
+        ),
+    ]
+    return sum(
+        _estimate_token_count(str(message.get("content", "")))
+        for message in summarization_messages
+    )
 
 
 class CalculatorInput(BaseModel):
@@ -673,6 +699,205 @@ class TestSplitMessagesIntoChunks:
         assert len(chunks) == 1
         assert len(chunks[0]) == 2
 
+    def test_splits_oversized_single_message(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "tool", "content": "X" * 1200, "name": "web_scraper"},
+        ]
+        max_tokens = 100
+        chunks = _split_messages_into_chunks(messages, max_tokens=max_tokens)
+        assert len(chunks) > 1
+        for chunk in chunks:
+            chunk_tokens = sum(
+                _estimate_token_count(message_content_text(msg)) for msg in chunk
+            )
+            assert chunk_tokens <= max_tokens
+
+    def test_oversized_tool_in_conversation(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "user", "content": "Search"},
+            {"role": "tool", "content": "Y" * 1200, "name": "search"},
+            {"role": "assistant", "content": "Done"},
+        ]
+        max_tokens = 100
+        chunks = _split_messages_into_chunks(messages, max_tokens=max_tokens)
+        assert len(chunks) > 1
+        for chunk in chunks:
+            chunk_tokens = sum(
+                _estimate_token_count(message_content_text(msg)) for msg in chunk
+            )
+            assert chunk_tokens <= max_tokens
+
+    def test_rendered_summarization_request_within_raw_context_window(self) -> None:
+        """Chunked payloads plus summarization prompt fit in the raw model limit.
+
+        get_context_window_size() already applies CONTEXT_WINDOW_USAGE_RATIO (85%).
+        The remaining 15% headroom should absorb summarizer system/instruction overhead.
+        """
+        chunk_budget = 50_000
+        raw_context_limit = int(chunk_budget / CONTEXT_WINDOW_USAGE_RATIO)
+        messages: list[dict[str, Any]] = [
+            {"role": "user", "content": "Fetch CRM data for the attendee."},
+            {"role": "tool", "content": "Z" * 200_000, "name": "hubspot_search"},
+            {"role": "assistant", "content": "Collected HubSpot results."},
+        ]
+
+        chunks = _split_messages_into_chunks(messages, max_tokens=chunk_budget)
+        assert len(chunks) > 1
+
+        for chunk in chunks:
+            request_tokens = _estimate_summarization_request_tokens(chunk)
+            assert request_tokens <= raw_context_limit
+
+
+class TestMessageContentText:
+    """Tests for message_content_text helper."""
+
+    def test_string_content(self) -> None:
+        msg: dict[str, Any] = {"role": "user", "content": "hello"}
+        assert message_content_text(msg) == "hello"
+
+    def test_none_content(self) -> None:
+        msg: dict[str, Any] = {"role": "assistant", "content": None}
+        assert message_content_text(msg) == ""
+
+    def test_list_content_yields_its_text(self) -> None:
+        """A parts list used to collapse to its Python repr."""
+        msg: dict[str, Any] = {
+            "role": "user",
+            "content": [{"type": "text", "text": "first"}, {"type": "text", "text": "second"}],
+        }
+        assert message_content_text(msg) == "first second"
+
+    @pytest.mark.parametrize(
+        "bad_text", [123, None, {"nested": "x"}, ["a"]], ids=str
+    )
+    def test_a_non_string_text_block_does_not_raise(self, bad_text: Any) -> None:
+        """Blocks are `dict[str, Any]` from a model, so `text` may be anything."""
+        msg: dict[str, Any] = {
+            "role": "user",
+            "content": [{"type": "text", "text": bad_text}],
+        }
+
+        assert message_content_text(msg) == "[multimodal content]"
+
+    def test_a_usable_text_block_survives_a_malformed_sibling(self) -> None:
+        msg: dict[str, Any] = {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": {"nested": "x"}},
+                {"type": "text", "text": "real text"},
+            ],
+        }
+
+        assert message_content_text(msg) == "real text"
+
+    def test_list_content_without_text_is_named_not_repr(self) -> None:
+        msg: dict[str, Any] = {
+            "role": "user",
+            "content": [{"type": "image_url", "image_url": {"url": "https://x/y.png"}}],
+        }
+
+        text = message_content_text(msg)
+
+        assert text == "[multimodal content]"
+        assert "image_url" not in text
+
+
+class TestSplitTextByTokenLimit:
+    """Tests for _split_text_by_token_limit helper."""
+
+    def test_empty_string(self) -> None:
+        assert _split_text_by_token_limit("", max_tokens=100) == []
+
+    def test_under_limit_returns_single_part(self) -> None:
+        assert _split_text_by_token_limit("hello", max_tokens=100) == ["hello"]
+
+    def test_split_preserves_content(self) -> None:
+        text = "a" * 600
+        parts = _split_text_by_token_limit(text, max_tokens=100)
+        assert len(parts) > 1
+        assert "".join(parts) == text
+
+    def test_each_part_estimated_under_limit(self) -> None:
+        text = "b" * 1200
+        max_tokens = 100
+        parts = _split_text_by_token_limit(text, max_tokens=max_tokens)
+        assert all(_estimate_token_count(part) <= max_tokens for part in parts)
+
+
+class TestExpandOversizedMessage:
+    """Tests for _expand_oversized_message helper."""
+
+    def test_returns_original_when_under_limit(self) -> None:
+        msg: dict[str, Any] = {"role": "user", "content": "hello"}
+        expanded = _expand_oversized_message(msg, max_tokens=100)
+        assert expanded == [msg]
+
+    def test_splits_tool_output_with_metadata(self) -> None:
+        msg: dict[str, Any] = {
+            "role": "tool",
+            "content": "Z" * 1200,
+            "name": "fetch_page",
+            "tool_call_id": "call_123",
+        }
+        expanded = _expand_oversized_message(msg, max_tokens=100)
+        assert len(expanded) > 1
+        assert all(part["role"] == "tool" for part in expanded)
+        assert all(part["name"] == "fetch_page" for part in expanded)
+        assert all(part["tool_call_id"] == "call_123" for part in expanded)
+        assert expanded[0]["content"].startswith("[Part 1/")
+
+    def test_preserves_non_content_fields(self) -> None:
+        mock_file = MagicMock()
+        msg: dict[str, Any] = {
+            "role": "user",
+            "content": "X" * 1200,
+            "files": {"report.pdf": mock_file},
+        }
+        expanded = _expand_oversized_message(msg, max_tokens=100)
+        assert len(expanded) > 1
+        assert all(part["role"] == "user" for part in expanded)
+        assert all(part["files"] == {"report.pdf": mock_file} for part in expanded)
+
+    def test_each_part_estimated_under_limit(self) -> None:
+        msg: dict[str, Any] = {"role": "user", "content": "Y" * 1200}
+        max_tokens = 100
+        expanded = _expand_oversized_message(msg, max_tokens=max_tokens)
+        assert len(expanded) > 1
+        assert all(
+            _estimate_token_count(message_content_text(part)) <= max_tokens
+            for part in expanded
+        )
+
+
+class TestNormalizeMessagesForChunking:
+    """Tests for _normalize_messages_for_chunking helper."""
+
+    def test_excludes_system_messages(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": "System prompt"},
+            {"role": "user", "content": "Hello"},
+        ]
+        normalized = _normalize_messages_for_chunking(messages, max_tokens=1000)
+        assert len(normalized) == 1
+        assert normalized[0]["role"] == "user"
+
+    def test_expands_oversized_and_preserves_small_messages(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "user", "content": "Short"},
+            {"role": "tool", "content": "X" * 1200, "name": "search"},
+            {"role": "assistant", "content": "Done"},
+        ]
+        max_tokens = 100
+        normalized = _normalize_messages_for_chunking(messages, max_tokens=max_tokens)
+        assert normalized[0]["content"] == "Short"
+        assert normalized[-1]["content"] == "Done"
+        assert len(normalized) > 3
+        assert all(
+            _estimate_token_count(message_content_text(msg)) <= max_tokens
+            for msg in normalized
+        )
+
 
 class TestEstimateTokenCount:
     """Tests for _estimate_token_count helper."""
@@ -705,7 +930,9 @@ class TestParallelSummarization:
         """
         msgs: list[dict[str, Any]] = []
         for i in range(n):
-            msgs.append({"role": "user", "content": f"msg-{i} " + "x" * 400})
+            prefix = f"msg-{i} "
+            padding = "x" * max(0, 400 - len(prefix))
+            msgs.append({"role": "user", "content": prefix + padding})
         return msgs
 
     def test_multiple_chunks_use_acall(self) -> None:

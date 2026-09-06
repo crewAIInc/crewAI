@@ -182,17 +182,36 @@ class EventListener(BaseEventListener):
         def on_default_env(_: Any, event: DefaultEnvEvent) -> None:
             self._telemetry.env_context_span(event.type)
 
+        def _report_crew_duration(source: Any, outcome: str) -> None:
+            """Emit the elapsed time for a crew that reached a terminal state.
+
+            A missing stamp means "no duration to report", not an error: a
+            listener attached mid-run, or a completion re-emitted for a run this
+            listener never saw start, both land here legitimately. The stamp is
+            cleared so a second terminal event on the same instance cannot
+            report a duration twice.
+            """
+            started_at = getattr(source, "_telemetry_started_at", None)
+            if started_at is None:
+                return
+            source._telemetry_started_at = None
+            self._telemetry.crew_completed_span(
+                source, (time.monotonic() - started_at) * 1000, outcome
+            )
+
         @crewai_event_bus.on(CrewKickoffStartedEvent)
         def on_crew_started(source: Any, event: CrewKickoffStartedEvent) -> None:
             self.formatter.handle_crew_started(event.crew_name or "Crew", source.id)
             source._execution_span = self._telemetry.crew_execution_span(
                 source, event.inputs
             )
+            source._telemetry_started_at = time.monotonic()
 
         @crewai_event_bus.on(CrewKickoffCompletedEvent)
         def on_crew_completed(source: Any, event: CrewKickoffCompletedEvent) -> None:
             final_string_output = event.output.raw
             self._telemetry.end_crew(source, final_string_output)
+            _report_crew_duration(source, "completed")
 
             self.formatter.handle_crew_status(
                 event.crew_name or "Crew",
@@ -203,6 +222,10 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(CrewKickoffFailedEvent)
         def on_crew_failed(source: Any, event: CrewKickoffFailedEvent) -> None:
+            # end_crew is deliberately not called here: it writes onto the
+            # share_crew-gated execution span, which a failed run may never have
+            # opened. This span is the only terminal record for a failed crew.
+            _report_crew_duration(source, "failed")
             self.formatter.handle_crew_status(
                 event.crew_name or "Crew",
                 source.id,
@@ -266,8 +289,12 @@ class EventListener(BaseEventListener):
         def on_task_failed(source: Any, event: TaskFailedEvent) -> None:
             span = self.execution_spans.pop(source, None)
             if span:
-                if source.agent and source.agent.crew:
-                    self._telemetry.task_ended(span, source, source.agent.crew)
+                # Routed to task_failed, not task_ended: the latter closes the span
+                # as OK, which is why a failed task was indistinguishable from a
+                # successful one. No longer conditional on source.agent.crew either -
+                # task_failed does not need a crew, and requiring one meant the span
+                # was popped and then never closed, so it was never exported at all.
+                self._telemetry.task_failed(span, source, event.error_type)
 
             task_name = get_task_name(source)
             self.formatter.handle_task_status(
@@ -915,6 +942,7 @@ class EventListener(BaseEventListener):
                 event.transport_type,
                 event.error,
                 event.error_type,
+                event.status_code,
             )
             self._telemetry.feature_usage_span("mcp:connection_failed")
 

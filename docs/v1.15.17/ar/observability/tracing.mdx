@@ -1,0 +1,214 @@
+---
+title: تتبع CrewAI
+description: التتبع المدمج لطواقم وتدفقات CrewAI مع منصة CrewAI AMP
+icon: magnifying-glass-chart
+mode: "wide"
+---
+
+# التتبع المدمج في CrewAI
+
+يوفر CrewAI إمكانيات تتبع مدمجة تتيح لك مراقبة وتصحيح أخطاء الطواقم والتدفقات في الوقت الفعلي. يوضح هذا الدليل كيفية تفعيل التتبع لكل من **الطواقم** و**التدفقات** باستخدام منصة المراقبة المتكاملة في CrewAI.
+
+> **ما هو تتبع CrewAI؟** يوفر التتبع المدمج في CrewAI مراقبة شاملة لوكلاء الذكاء الاصطناعي، بما في ذلك قرارات الوكلاء وجداول تنفيذ المهام واستخدام الأدوات واستدعاءات LLM - كل ذلك متاح عبر [منصة CrewAI AMP](https://app.crewai.com).
+
+![واجهة تتبع CrewAI](/images/crewai-tracing.png)
+
+## المتطلبات الأساسية
+
+قبل أن تتمكن من استخدام تتبع CrewAI، تحتاج إلى:
+
+1. **حساب CrewAI AMP**: سجّل للحصول على حساب مجاني على [app.crewai.com](https://app.crewai.com)
+2. **مصادقة CLI**: استخدم CLI الخاص بـ CrewAI لمصادقة بيئتك المحلية
+
+```bash
+crewai login
+```
+
+## تعليمات الإعداد
+
+### الخطوة 1: إنشاء حساب CrewAI AMP
+
+قم بزيارة [app.crewai.com](https://app.crewai.com) وأنشئ حسابك المجاني. سيمنحك هذا الوصول إلى منصة CrewAI AMP حيث يمكنك عرض التتبعات والمقاييس وإدارة طواقمك.
+
+### الخطوة 2: تثبيت CLI الخاص بـ CrewAI والمصادقة
+
+إذا لم تكن قد فعلت ذلك بالفعل، ثبّت CrewAI مع أدوات CLI:
+
+```bash
+uv add 'crewai[tools]'
+```
+
+ثم صادق على CLI مع حساب CrewAI AMP الخاص بك:
+
+```bash
+crewai login
+```
+
+سيقوم هذا الأمر بـ:
+
+1. فتح متصفحك إلى صفحة المصادقة
+2. طلب إدخال رمز الجهاز
+3. مصادقة بيئتك المحلية مع حساب CrewAI AMP
+4. تفعيل إمكانيات التتبع لتطويرك المحلي
+
+### الخطوة 3: تفعيل التتبع في طاقمك
+
+يمكنك تفعيل التتبع لطاقمك عبر تعيين معامل `tracing` إلى `True`:
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai_tools import SerperDevTool
+
+# Define your agents
+researcher = Agent(
+    role="Senior Research Analyst",
+    goal="Uncover cutting-edge developments in AI and data science",
+    backstory="""You work at a leading tech think tank.
+    Your expertise lies in identifying emerging trends.
+    You have a knack for dissecting complex data and presenting actionable insights.""",
+    verbose=True,
+    tools=[SerperDevTool()],
+)
+
+writer = Agent(
+    role="Tech Content Strategist",
+    goal="Craft compelling content on tech advancements",
+    backstory="""You are a renowned Content Strategist, known for your insightful and engaging articles.
+    You transform complex concepts into compelling narratives.""",
+    verbose=True,
+)
+
+# Create tasks for your agents
+research_task = Task(
+    description="""Conduct a comprehensive analysis of the latest advancements in AI in 2024.
+    Identify key trends, breakthrough technologies, and potential industry impacts.""",
+    expected_output="Full analysis report in bullet points",
+    agent=researcher,
+)
+
+writing_task = Task(
+    description="""Using the insights provided, develop an engaging blog
+    post that highlights the most significant AI advancements.
+    Your post should be informative yet accessible, catering to a tech-savvy audience.""",
+    expected_output="Full blog post of at least 4 paragraphs",
+    agent=writer,
+)
+
+# Enable tracing in your crew
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    process=Process.sequential,
+    tracing=True,  # Enable built-in tracing
+    verbose=True
+)
+
+# Execute your crew
+result = crew.kickoff()
+```
+
+### الخطوة 4: تفعيل التتبع في التدفق
+
+بالمثل، يمكنك تفعيل التتبع لتدفقات CrewAI:
+
+```python
+from crewai.flow.flow import Flow, listen, start
+from pydantic import BaseModel
+
+class ExampleState(BaseModel):
+    counter: int = 0
+    message: str = ""
+
+class ExampleFlow(Flow[ExampleState]):
+    def __init__(self):
+        super().__init__(tracing=True)  # Enable tracing for the flow
+
+    @start()
+    def first_method(self):
+        print("Starting the flow")
+        self.state.counter = 1
+        self.state.message = "Flow started"
+        return "continue"
+
+    @listen("continue")
+    def second_method(self):
+        print("Continuing the flow")
+        self.state.counter += 1
+        self.state.message = "Flow continued"
+        return "finish"
+
+    @listen("finish")
+    def final_method(self):
+        print("Finishing the flow")
+        self.state.counter += 1
+        self.state.message = "Flow completed"
+
+# Create and run the flow with tracing enabled
+flow = ExampleFlow(tracing=True)
+result = flow.kickoff()
+```
+
+### الخطوة 5: عرض التتبعات في لوحة تحكم CrewAI AMP
+
+بعد تشغيل الطاقم أو التدفق، يمكنك عرض التتبعات التي أنشأها تطبيق CrewAI في لوحة تحكم CrewAI AMP. يجب أن ترى خطوات تفصيلية لتفاعلات الوكلاء واستخدامات الأدوات واستدعاءات LLM.
+ما عليك سوى النقر على الرابط أدناه لعرض التتبعات أو التوجه إلى علامة تبويب التتبعات في لوحة التحكم [هنا](https://app.crewai.com/crewai_plus/trace_batches)
+![واجهة تتبع CrewAI](/images/view-traces.png)
+
+### البديل: إعداد متغير البيئة
+
+يمكنك أيضاً تفعيل التتبع عالمياً عبر تعيين متغير بيئة:
+
+```bash
+export CREWAI_TRACING_ENABLED=true
+```
+
+أو إضافته إلى ملف `.env`:
+
+```env
+CREWAI_TRACING_ENABLED=true
+```
+
+عند تعيين متغير البيئة هذا، ستُفعّل جميع الطواقم والتدفقات التتبع تلقائياً، حتى بدون تعيين `tracing=True` صراحةً.
+
+## عرض التتبعات
+
+### الوصول إلى لوحة تحكم CrewAI AMP
+
+1. قم بزيارة [app.crewai.com](https://app.crewai.com) وسجّل الدخول إلى حسابك
+2. انتقل إلى لوحة تحكم مشروعك
+3. انقر على علامة تبويب **التتبعات** لعرض تفاصيل التنفيذ
+
+### ما ستراه في التتبعات
+
+يوفر تتبع CrewAI رؤية شاملة لـ:
+
+- **قرارات الوكلاء**: شاهد كيف يفكر الوكلاء في المهام ويتخذون القرارات
+- **جدول تنفيذ المهام**: تمثيل مرئي لتسلسلات المهام والتبعيات
+- **استخدام الأدوات**: مراقبة الأدوات المستدعاة ونتائجها
+- **استدعاءات LLM**: تتبع جميع تفاعلات نماذج اللغة، بما في ذلك الموجهات والاستجابات
+- **مقاييس الأداء**: أوقات التنفيذ واستخدام الرموز المميزة والتكاليف
+- **تتبع الأخطاء**: معلومات تفصيلية عن الأخطاء وتتبعات المكدس
+
+### ميزات التتبع
+
+- **جدول التنفيذ**: انقر عبر مراحل التنفيذ المختلفة
+- **سجلات تفصيلية**: الوصول إلى سجلات شاملة لتصحيح الأخطاء
+- **تحليلات الأداء**: حلّل أنماط التنفيذ وحسّن الأداء
+- **إمكانيات التصدير**: حمّل التتبعات لمزيد من التحليل
+
+### مشكلات المصادقة
+
+إذا واجهت مشاكل في المصادقة:
+
+1. تأكد من تسجيل الدخول: `crewai login`
+2. تحقق من اتصال الإنترنت
+3. تحقق من حسابك على [app.crewai.com](https://app.crewai.com)
+
+### التتبعات لا تظهر
+
+إذا لم تظهر التتبعات في لوحة التحكم:
+
+1. تأكد من تعيين `tracing=True` في الطاقم/التدفق
+2. تحقق من `CREWAI_TRACING_ENABLED=true` إذا كنت تستخدم متغيرات البيئة
+3. تأكد من المصادقة عبر `crewai login`
+4. تحقق من أن الطاقم/التدفق قيد التنفيذ فعلاً

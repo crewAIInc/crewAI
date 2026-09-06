@@ -1332,6 +1332,55 @@ methods:
     }
 
 
+def test_agent_action_delivers_a_rendered_conversation_to_the_agent(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """The whole path: `${state.messages}` -> normalization -> `kickoff_async`."""
+    from crewai import Agent
+
+    received: list[Any] = []
+
+    async def fake_kickoff_async(self: Agent, messages: Any, **_kwargs: Any) -> str:
+        received.append(messages)
+        return "answered"
+
+    monkeypatch.setattr(Agent, "kickoff_async", fake_kickoff_async)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: HistoryAgentFlow
+methods:
+  answer:
+    do:
+      call: agent
+      with:
+        role: Analyst
+        goal: Answer questions
+        backstory: Knows things.
+        input: "${state.messages}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+    result = flow.kickoff(
+        inputs={
+            "messages": [
+                {"role": "user", "content": "my order id is 42", "name": None},
+                {"role": "assistant", "content": "thanks, checking"},
+            ]
+        }
+    )
+
+    assert result == "answered"
+    # A list, not a stringified blob, and the serialization noise is gone.
+    assert received == [
+        [
+            {"role": "user", "content": "my order id is 42"},
+            {"role": "assistant", "content": "thanks, checking"},
+        ]
+    ]
+
+
 def test_agent_action_runs_inside_each(monkeypatch: pytest.MonkeyPatch):
     from crewai import Agent
 
@@ -2998,6 +3047,94 @@ def test_expression_keeps_short_circuited_cel_errors():
     )
 
 
+def test_expression_now_evaluates_with_frozen_timestamp():
+    from datetime import datetime, timezone
+
+    from crewai.flow.expressions import Expression
+
+    frozen = datetime(2026, 1, 15, 12, 30, tzinfo=timezone.utc)
+
+    assert Expression("now().getFullYear()", context={}, now=frozen).evaluate() == 2026
+    assert (
+        Expression("string(now())", context={}, now=frozen).evaluate()
+        == "2026-01-15T12:30:00Z"
+    )
+    assert (
+        Expression("string(now() - duration('24h'))", context={}, now=frozen).evaluate()
+        == "2026-01-14T12:30:00Z"
+    )
+
+
+def test_expression_now_defaults_to_current_time():
+    from datetime import datetime, timezone
+
+    from crewai.flow.expressions import Expression
+
+    year = Expression("now().getFullYear()", context={}).evaluate()
+
+    assert year == datetime.now(timezone.utc).year
+
+
+def test_expression_now_renders_in_templates():
+    from datetime import datetime, timezone
+
+    from crewai.flow.expressions import Expression
+
+    frozen = datetime(2026, 1, 15, tzinfo=timezone.utc)
+    rendered = Expression(
+        {"query": "News from ${string(now().getFullYear())}"},
+        context={},
+        now=frozen,
+    ).render_template()
+
+    assert rendered == {"query": "News from 2026"}
+
+
+def test_expression_now_passes_root_validation():
+    from crewai.flow.expressions import Expression
+
+    Expression("string(now().getFullYear())").validate_expression(
+        allowed_roots=["state", "outputs"]
+    )
+
+
+def test_expression_from_flow_uses_run_frozen_now():
+    from datetime import datetime, timezone
+
+    from crewai.flow.expressions import Expression
+
+    flow = Flow()
+    flow._cel_now = datetime(2026, 1, 15, tzinfo=timezone.utc)
+
+    assert (
+        Expression.from_flow("now().getFullYear()", flow).evaluate() == 2026
+    )
+
+
+def test_expression_action_can_use_now():
+    definition = FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "NowFlow",
+            "methods": {
+                "today": {
+                    "start": True,
+                    "do": {
+                        "call": "expression",
+                        "expr": "string(now().getFullYear())",
+                    },
+                }
+            },
+        }
+    )
+
+    from datetime import datetime, timezone
+
+    result = Flow.from_declaration(contents=definition).kickoff()
+
+    assert result == str(datetime.now(timezone.utc).year)
+
+
 def test_expression_action_can_route_like_if_else():
     yaml_str = f"""
 schema: crewai.flow/v1
@@ -3689,6 +3826,41 @@ def test_resume_synthetic_completion_persists():
     assert _saved_methods("resume-synthetic") == ["generate"]
 
 
+def test_resume_freezes_fresh_cel_now():
+    from crewai.flow.expressions import Expression
+
+    backend = DefinitionStoreBackend(store="resume-cel-now")
+    frozen_at_listener: list[Any] = []
+
+    class NowResumableFlow(Flow):
+        @start()
+        @human_feedback(message="Review:")
+        def generate(self):
+            return "content"
+
+        @listen(generate)
+        def process(self, result):
+            frozen_at_listener.append(self._cel_now)
+            return Expression.from_flow("string(now())", self).evaluate()
+
+    context = PendingFeedbackContext(
+        flow_id="resume-cel-now-1",
+        flow_class="NowResumableFlow",
+        method_name="generate",
+        method_output="content",
+        message="Review:",
+    )
+    backend.save_pending_feedback("resume-cel-now-1", context, {"id": "resume-cel-now-1"})
+
+    flow = NowResumableFlow.from_pending("resume-cel-now-1", backend)
+    assert flow._cel_now is None
+
+    result = flow.resume("looks good")
+
+    assert frozen_at_listener[0] is not None
+    assert result == frozen_at_listener[0].strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 class ReviewFlow(Flow):
     @start()
     @human_feedback(
@@ -4037,6 +4209,95 @@ methods: {}
 """
     with pytest.raises(ValidationError, match="default"):
         FlowDefinition.from_declaration(contents=yaml_str)
+
+
+
+def test_agent_action_accepts_a_rendered_message_list():
+    """A chat handler can hand the agent the conversation, not just a string."""
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    rendered = [
+        {"role": "user", "content": "my order id is 42"},
+        {"role": "assistant", "content": "thanks, checking"},
+    ]
+
+    assert _normalize_agent_input(rendered) == rendered
+
+
+def test_agent_action_strips_serialized_message_metadata():
+    """A raw `${state.messages}` render carries None keys the event rejects."""
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    normalized = _normalize_agent_input(
+        [{"role": "user", "content": "hi", "name": None, "metadata": {}}]
+    )
+
+    assert normalized == [{"role": "user", "content": "hi"}]
+
+
+def test_agent_action_keeps_a_none_content_tool_call_message():
+    """A tool-call turn has no content; dropping the key breaks the sequence."""
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    normalized = _normalize_agent_input(
+        [
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [{"id": "c1", "function": {"name": "lookup"}}],
+                "name": None,
+            }
+        ]
+    )
+
+    assert normalized == [
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [{"id": "c1", "function": {"name": "lookup"}}],
+        }
+    ]
+
+
+def test_agent_action_still_accepts_a_string():
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    assert _normalize_agent_input("just a prompt") == "just a prompt"
+
+
+def test_agent_action_rejects_a_shape_that_is_neither():
+    from crewai.flow.runtime._actions import _normalize_agent_input
+
+    with pytest.raises(
+        ValueError, match="must render to a string or a list of messages"
+    ):
+        _normalize_agent_input(1234)
+
+
+def test_agent_definition_accepts_a_message_list_input():
+    from crewai.project.crew_definition import AgentDefinition
+
+    definition = AgentDefinition.model_validate(
+        {
+            "role": "R",
+            "goal": "G",
+            "backstory": "B",
+            "input": [{"role": "user", "content": "hi"}],
+        }
+    )
+
+    assert definition.input == [{"role": "user", "content": "hi"}]
+
+
+def test_agent_definition_rejects_a_non_message_input():
+    from crewai.project.crew_definition import AgentDefinition
+
+    with pytest.raises(
+        ValidationError, match="must be a string or a list of messages"
+    ):
+        AgentDefinition.model_validate(
+            {"role": "R", "goal": "G", "backstory": "B", "input": [1, 2]}
+        )
 
 
 def test_definition_method_missing_from_class_fails_loudly():

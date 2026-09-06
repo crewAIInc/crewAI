@@ -331,7 +331,10 @@ class ToolUsage:
                     message=usage_limit_error,
                     reason=ToolFailureReason.USAGE_LIMIT,
                 )
-                self._telemetry.tool_usage_error(llm=self.function_calling_llm)
+                self._telemetry.tool_usage_error(
+                    llm=self.function_calling_llm,
+                    tool_name=sanitize_tool_name(tool.name),
+                )
                 result = self._format_result(result=result)
             elif result is None:
                 try:
@@ -450,7 +453,10 @@ class ToolUsage:
                     error_event_emitted = True
                     self._run_attempts += 1
                     if self._run_attempts > self._max_parsing_attempts:
-                        self._telemetry.tool_usage_error(llm=self.function_calling_llm)
+                        self._telemetry.tool_usage_error(
+                            llm=self.function_calling_llm,
+                            tool_name=sanitize_tool_name(tool.name),
+                        )
                         error_message = I18N_DEFAULT.errors(
                             "tool_usage_exception"
                         ).format(
@@ -582,7 +588,10 @@ class ToolUsage:
                     message=usage_limit_error,
                     reason=ToolFailureReason.USAGE_LIMIT,
                 )
-                self._telemetry.tool_usage_error(llm=self.function_calling_llm)
+                self._telemetry.tool_usage_error(
+                    llm=self.function_calling_llm,
+                    tool_name=sanitize_tool_name(tool.name),
+                )
                 result = self._format_result(result=result)
             elif result is None:
                 try:
@@ -701,7 +710,10 @@ class ToolUsage:
                     error_event_emitted = True
                     self._run_attempts += 1
                     if self._run_attempts > self._max_parsing_attempts:
-                        self._telemetry.tool_usage_error(llm=self.function_calling_llm)
+                        self._telemetry.tool_usage_error(
+                            llm=self.function_calling_llm,
+                            tool_name=sanitize_tool_name(tool.name),
+                        )
                         error_message = I18N_DEFAULT.errors(
                             "tool_usage_exception"
                         ).format(
@@ -910,6 +922,10 @@ class ToolUsage:
         except Exception as e:
             self._run_attempts += 1
             if self._run_attempts > self._max_parsing_attempts:
+                # No tool_name here, deliberately: this is a tool-CALL PARSING failure, so the
+                # tool the model wanted was never identified. Passing tool_string would put raw,
+                # unbounded model output into a metrics dimension. Parse failures are counted as
+                # tool errors with an empty name, which is the honest representation.
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
                 if self.task:
                     self.task.increment_tools_errors()

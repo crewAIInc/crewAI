@@ -587,6 +587,101 @@ class TestDeployCommand(unittest.TestCase):
             self.assertIn("Deployment created successfully!", fake_out.getvalue())
             self.assertIn("new-uuid", fake_out.getvalue())
 
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    @pytest.mark.timeout(180)
+    def test_create_crew_reports_the_created_uuid_from_the_git_path(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        """The attempt span cannot carry the uuid; the post-success span must."""
+        mock_fetch_env.return_value = {"ENV_VAR": "value"}
+        mock_repository.return_value.origin_url.return_value = (
+            "https://github.com/test/repo.git"
+        )
+        mock_repository.return_value.create_initial_commit_if_needed.return_value = (
+            False
+        )
+        mock_input.return_value = ""
+
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_response.is_success = True
+        mock_response.json.return_value = {"uuid": "new-uuid", "status": "created"}
+        self.mock_client.create_crew.return_value = mock_response
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                self.deploy_command.create_crew(skip_validate=True)
+
+        telemetry.crew_deployment_created_span.assert_called_once_with(
+            uuid="new-uuid", source="cli"
+        )
+        telemetry.create_crew_deployment_span.assert_called_once_with(source="cli")
+
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    def test_create_crew_reports_the_created_uuid_from_the_zip_path(
+        self, mock_repository, mock_fetch_env, mock_create_project_zip
+    ):
+        """The two creation paths converge, so the uuid must arrive from both."""
+        mock_fetch_env.return_value = {"ENV_VAR": "value"}
+        mock_repository.side_effect = ValueError("not a Git repository")
+        initialized_repository = MagicMock()
+        initialized_repository.origin_url.return_value = None
+        mock_repository.initialize.return_value = initialized_repository
+        mock_create_project_zip.return_value = Path("/tmp/test_project.zip")
+
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_response.is_success = True
+        mock_response.json.return_value = {"uuid": "zip-uuid", "status": "created"}
+        self.mock_client.create_crew_from_zip.return_value = mock_response
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                self.deploy_command.create_crew(skip_validate=True, confirm=True)
+
+        telemetry.crew_deployment_created_span.assert_called_once_with(
+            uuid="zip-uuid", source="cli"
+        )
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("builtins.input")
+    def test_a_failed_create_counts_the_attempt_but_reports_no_creation(
+        self, mock_input, mock_repository, mock_fetch_env
+    ):
+        """The whole point of two spans: a failed create is an attempt, not a success.
+
+        Collapsing them into one post-success span would silently convert the
+        creation-attempt metric into a creation-success metric, which the churn
+        figures are built on.
+        """
+        mock_fetch_env.return_value = {"ENV_VAR": "value"}
+        mock_repository.return_value.origin_url.return_value = (
+            "https://github.com/test/repo.git"
+        )
+        mock_repository.return_value.create_initial_commit_if_needed.return_value = (
+            False
+        )
+        mock_input.return_value = ""
+
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+        mock_response.is_success = False
+        mock_response.json.return_value = {"error": "boom"}
+        self.mock_client.create_crew.return_value = mock_response
+
+        with patch.object(self.deploy_command, "_telemetry") as telemetry:
+            with patch("sys.stdout", new=StringIO()):
+                with self.assertRaises(SystemExit):
+                    self.deploy_command.create_crew(skip_validate=True)
+
+        telemetry.create_crew_deployment_span.assert_called_once_with(source="cli")
+        telemetry.crew_deployment_created_span.assert_not_called()
+
     @patch("crewai_cli.deploy.main.create_project_zip")
     @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
     @patch("crewai_cli.deploy.main.git.Repository")

@@ -5,7 +5,7 @@ from unittest.mock import patch, MagicMock, Mock
 from urllib.parse import urlparse
 import pytest
 
-from crewai.llm import LLM
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
@@ -651,6 +651,26 @@ def test_azure_context_window_size():
     llm_gpt4o = LLM(model="azure/gpt-4o")
     context_size_gpt4o = llm_gpt4o.get_context_window_size()
     assert context_size_gpt4o > context_size_gpt4  # GPT-4o has larger context
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        "azure/gpt-5.6",
+        "azure/gpt-5.6-sol",
+        "azure/gpt-5.6-terra",
+        "azure/gpt-5.6-luna",
+    ],
+)
+def test_azure_gpt56_family_uses_official_context_window(model: str) -> None:
+    """Azure must not fall back to the 8k default for GPT-5.6 deployments."""
+    llm = LLM(model=model)
+    assert llm.get_context_window_size() == int(1_050_000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_azure_gpt54_mini_keeps_its_window() -> None:
+    llm = LLM(model="azure/gpt-5.4-mini")
+    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
 
 def test_azure_message_formatting():

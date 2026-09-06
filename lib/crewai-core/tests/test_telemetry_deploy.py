@@ -8,7 +8,7 @@ deployments", from the feature-usage aggregation, regardless of origin.
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 from crewai_core.telemetry import Telemetry
@@ -77,6 +77,61 @@ class TestCreateDeployment:
             "deploy:created",
             "deploy:created",
         ]
+
+
+class TestCrewDeploymentCreated:
+    """The post-success span: the only one that can carry the created uuid."""
+
+    def test_carries_the_uuid_and_defaults_to_cli(
+        self, telemetry: tuple[Telemetry, MagicMock]
+    ) -> None:
+        instance, span = telemetry
+        instance.crew_deployment_created_span("dep-abc")
+        attributes = _attributes(span)
+        assert attributes["uuid"] == "dep-abc"
+        assert attributes["source"] == "cli"
+
+    def test_is_a_separate_span_from_the_attempt(
+        self, telemetry: tuple[Telemetry, MagicMock]
+    ) -> None:
+        """Two names, because they count different things.
+
+        ``Create Crew Deployment`` counts attempts and fires before the API call;
+        this one fires only after one succeeded. Collapsing them would turn the
+        attempt metric into a success metric, which the churn figures rely on.
+        """
+        instance, _ = telemetry
+        # The fixture patches `provider` with a MagicMock; the declared type is a
+        # real TracerProvider, so narrow it rather than reaching through it.
+        tracer = cast(MagicMock, instance.provider).get_tracer.return_value
+        # feature_usage_span opens a span of its own; patch it out so this asserts
+        # on the two deployment spans rather than on emission order in general.
+        with patch.object(instance, "feature_usage_span"):
+            instance.create_crew_deployment_span()
+            instance.crew_deployment_created_span("dep-abc")
+        assert [call.args[0] for call in tracer.start_span.call_args_list] == [
+            "Create Crew Deployment",
+            "Crew Deployment Created",
+        ]
+
+    def test_does_not_emit_a_second_deploy_created_count(
+        self, telemetry: tuple[Telemetry, MagicMock]
+    ) -> None:
+        """A second emit would double every deployment in the feature count."""
+        instance, _ = telemetry
+        with patch.object(instance, "feature_usage_span") as feature:
+            instance.crew_deployment_created_span("dep-abc")
+        feature.assert_not_called()
+
+    def test_omits_the_uuid_key_rather_than_writing_an_empty_one(
+        self, telemetry: tuple[Telemetry, MagicMock]
+    ) -> None:
+        """Absent must stay distinguishable from empty, as on the sibling spans."""
+        instance, span = telemetry
+        instance.crew_deployment_created_span(None, source="tui")
+        attributes = _attributes(span)
+        assert "uuid" not in attributes
+        assert attributes["source"] == "tui"
 
 
 class TestStartDeployment:

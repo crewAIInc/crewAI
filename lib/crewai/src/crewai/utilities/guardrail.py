@@ -144,6 +144,7 @@ def process_guardrail(
     Raises:
         TypeError: If output is not a TaskOutput or LiteAgentOutput
         ValueError: If guardrail is None
+        HookAborted: A `pre_model_call` hook denied an LLM-backed guardrail.
     """
     from crewai.lite_agent_output import LiteAgentOutput
     from crewai.tasks.task_output import TaskOutput
@@ -158,6 +159,7 @@ def process_guardrail(
         LLMGuardrailCompletedEvent,
         LLMGuardrailStartedEvent,
     )
+    from crewai.hooks.dispatch import HookAborted
 
     started_event = LLMGuardrailStartedEvent(
         guardrail=guardrail,
@@ -167,7 +169,26 @@ def process_guardrail(
     )
     crewai_event_bus.emit(event_source, started_event)
 
-    result = guardrail(output)
+    try:
+        result = guardrail(output)
+    except HookAborted as e:
+        # a deny ends the validation, so the started event above still needs a
+        # terminal one before it leaves
+        crewai_event_bus.emit(
+            event_source,
+            LLMGuardrailCompletedEvent(
+                success=False,
+                result=None,
+                error=str(e),
+                retry_count=retry_count,
+                guardrail_type=started_event.guardrail_type,
+                guardrail_name=started_event.guardrail_name,
+                from_agent=from_agent,
+                from_task=from_task,
+            ),
+        )
+        raise
+
     guardrail_result = GuardrailResult.from_tuple(result)
 
     crewai_event_bus.emit(
