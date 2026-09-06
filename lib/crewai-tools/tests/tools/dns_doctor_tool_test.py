@@ -1,6 +1,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
+import pytest
 import requests
 
 from crewai_tools.tools.dns_doctor_tool.dns_doctor_tool import (
@@ -17,16 +18,27 @@ REPORT = {
 _PATH = "crewai_tools.tools.dns_doctor_tool.dns_doctor_tool.requests.post"
 
 
-def _response(status: int, payload=None):
+def _response(status: int, payload=None, text: str | None = None):
     response = MagicMock()
     response.status_code = status
     response.json.return_value = payload
+    # Deliberately NOT json.dumps(payload): the tool must relay the exact bytes
+    # the API sent, so the tests give the text a shape re-serialisation would change.
+    response.text = text if text is not None else json.dumps(payload, separators=(",", ":"))
+    response.headers = {}
     return response
+
+
+@pytest.fixture(autouse=True)
+def _default_api_base(monkeypatch):
+    """The expected URLs assume the default origin; a developer's env must not leak in."""
+    monkeypatch.delenv("DNSDOCTOR_API_BASE", raising=False)
 
 
 def test_scan_posts_the_domain_and_relays_the_body_verbatim():
     with patch(_PATH, return_value=_response(200, REPORT)) as post:
         out = DnsDoctorScanTool().run(domain="example.com")
+    assert out == post.return_value.text  # relayed verbatim, never re-serialised
     assert json.loads(out) == REPORT
     (_url,) = post.call_args.args
     assert _url == "https://dnsdoctor.dev/api/v1/scan"
@@ -40,7 +52,7 @@ def test_dmarc_upgrade_uses_its_own_endpoint():
     body = {"record": None, "rationale": "reporting first", "current_policy": "none"}
     with patch(_PATH, return_value=_response(200, body)) as post:
         out = DnsDoctorDmarcUpgradeTool().run(domain="example.com")
-    assert json.loads(out) == body
+    assert out == post.return_value.text
     assert post.call_args.args[0] == "https://dnsdoctor.dev/api/v1/dmarc-upgrade"
 
 
@@ -61,6 +73,10 @@ def test_propagation_sends_the_endpoints_field_names_and_omits_an_absent_expecta
         "record_type": "A",
         "expected_value": "203.0.113.10",
     }
+    # An explicit empty string is still an explicit value; only None means "omit".
+    with patch(_PATH, return_value=_response(200, {"verdict": "consistent"})) as post:
+        DnsDoctorPropagationTool().run(name="www.example.com", expected_value="")
+    assert post.call_args.kwargs["json"]["expected_value"] == ""
 
 
 def test_transport_failures_are_messages_that_are_not_verdicts():

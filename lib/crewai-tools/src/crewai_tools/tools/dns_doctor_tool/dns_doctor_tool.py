@@ -8,7 +8,6 @@ text; nothing is composed here.
 """
 
 from importlib.metadata import PackageNotFoundError, version
-import json
 import os
 from typing import Any, Literal
 
@@ -39,7 +38,7 @@ def _user_agent() -> str:
 
 
 def _call(path: str, body: dict[str, Any]) -> str:
-    """POST one request and return the API body as JSON text, untouched.
+    """POST one request and return the API body as the API sent it, untouched.
 
     A transport failure (network, 429, 402, 5xx) returns a message that says it
     is not a verdict about the domain, so an agent never reads it as one.
@@ -79,7 +78,8 @@ def _call(path: str, body: dict[str, Any]) -> str:
     if status >= 400:
         detail = payload.get("detail") if isinstance(payload, dict) else None
         return f"DNS Doctor refused the request (HTTP {status}): {detail or payload}"
-    return json.dumps(payload, indent=2)
+    # Validated above; relayed as the API sent it (no re-serialisation).
+    return response.text
 
 
 class DnsDoctorScanToolSchema(BaseModel):
@@ -171,6 +171,6 @@ class DnsDoctorPropagationTool(BaseTool):
         **_: Any,
     ) -> str:
         body: dict[str, Any] = {"name": name, "record_type": record_type}
-        if expected_value:
+        if expected_value is not None:
             body["expected_value"] = expected_value
         return _call("/api/tools/propagation-check", body)
