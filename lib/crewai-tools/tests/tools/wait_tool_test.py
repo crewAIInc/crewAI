@@ -10,6 +10,11 @@ def tool():
     return WaitTool()
 
 
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"
+
+
 @patch("crewai_tools.tools.wait_tool.wait_tool.time.sleep")
 def test_waits_requested_duration(mock_sleep, tool):
     result = tool.run(seconds=2)
@@ -65,7 +70,8 @@ def test_negative_seconds_is_rejected_when_passed_positionally(mock_sleep, tool)
     mock_sleep.assert_not_called()
 
 
-@pytest.mark.asyncio
+@pytest.mark.block_network(allowed_hosts=[r"127\.0\.0\.1"])
+@pytest.mark.anyio
 async def test_async_negative_seconds_is_rejected_when_passed_positionally(tool):
     with patch(
         "crewai_tools.tools.wait_tool.wait_tool.asyncio.sleep", new_callable=AsyncMock
@@ -106,7 +112,8 @@ def test_invalid_max_seconds_is_rejected():
         WaitTool(max_seconds=0)
 
 
-@pytest.mark.asyncio
+@pytest.mark.block_network(allowed_hosts=[r"127\.0\.0\.1"])
+@pytest.mark.anyio
 async def test_async_wait_caps_long_waits(tool):
     with patch(
         "crewai_tools.tools.wait_tool.wait_tool.asyncio.sleep", new_callable=AsyncMock
