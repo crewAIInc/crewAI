@@ -1,70 +1,75 @@
-"""Filesystem JSON state provider."""
-
-from __future__ import annotations
-
-from datetime import datetime, timezone
+import os
+import uuid
 import glob
 import logging
-import os
+import re
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal
-import uuid
-
+from typing import Optional
+import json
 import aiofiles
-import aiofiles.os
-
-from crewai.state.provider.core import BaseProvider
-
+import asyncio
 
 logger = logging.getLogger(__name__)
 
+_SAFE_ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
-def _safe_branch(base: str, branch: str) -> None:
-    """Validate that a branch name doesn't escape the base directory.
+def _sanitize_parent_id(parent_id: str | None) -> str:
+    pid = parent_id or "root"
+    if not _SAFE_ID_RE.fullmatch(pid):
+        raise ValueError(f"Invalid parent_id '{pid}'")
+    return pid
 
-    Raises:
-        ValueError: If the branch resolves outside the base directory.
-    """
-    base_resolved = str(Path(base).resolve())
-    target_resolved = str((Path(base) / branch).resolve())
-    if (
-        not target_resolved.startswith(base_resolved + os.sep)
-        and target_resolved != base_resolved
-    ):
-        raise ValueError(f"Branch name escapes checkpoint directory: {branch!r}")
+def _validate_branch(location: str, branch: str) -> Path:
+    \"\"\"Validate branch doesn't escape location and return resolved branch_dir.\"\"\"
+    root = Path(location).resolve()
+    branch_dir = (root / branch).resolve()
+    try:
+        branch_dir.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(f"Branch '{branch}' escapes checkpoint directory") from exc
+    return branch_dir
 
+def _build_path(location: str, branch: str, parent_id: str | None = None) -> Path:
+    base_dir = _validate_branch(location, branch)
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    uid = uuid.uuid4().hex[:8]
+    pid = _sanitize_parent_id(parent_id)
+    return base_dir / "{}_{}_p-{}.json".format(ts, uid, pid)
 
-class JsonProvider(BaseProvider):
-    """Persists runtime state checkpoints as JSON files on the local filesystem."""
+class JsonProvider:
+    def __init__(self, location: str = "checkpoints"):
+        self.location = location
 
-    provider_type: Literal["json"] = "json"
-
-    def checkpoint(
-        self,
-        data: str,
-        location: str,
-        *,
-        parent_id: str | None = None,
-        branch: str = "main",
-    ) -> str:
-        """Write a JSON checkpoint file.
-
-        Args:
-            data: The serialized JSON string to persist.
-            location: Base directory where checkpoints are saved.
-            parent_id: ID of the parent checkpoint for lineage tracking.
-                Encoded in the filename for queryable lineage without
-                parsing the blob.
-            branch: Branch label. Files are stored under ``location/branch/``.
-
-        Returns:
-            The path to the written checkpoint file.
-        """
+    def checkpoint(self, data: str, location: str, *, parent_id: str | None = None, branch: str = "main") -> str:
+        \"\"\"Write a JSON checkpoint file atomically.\"\"\"
         file_path = _build_path(location, branch, parent_id)
         file_path.parent.mkdir(parents=True, exist_ok=True)
-
-        with open(file_path, "w") as f:
-            f.write(data)
+        
+        tmp_name = ".{}.tmp_{}".format(file_path.name, uuid.uuid4().hex[:8])
+        tmp_path = file_path.parent / tmp_name
+        
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                f.write(data)
+                f.flush()
+                os.fsync(f.fileno())
+            
+            os.replace(tmp_path, file_path)
+            
+            dir_fd = os.open(str(file_path.parent), os.O_RDONLY)
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
+        except Exception:
+            try:
+                if tmp_path.exists():
+                    tmp_path.unlink()
+            except Exception as e:
+                logger.debug("Failed to remove temp file {}: {}".format(tmp_path, e))
+            raise
+            
         return str(file_path)
 
     async def acheckpoint(
@@ -75,93 +80,69 @@ class JsonProvider(BaseProvider):
         parent_id: str | None = None,
         branch: str = "main",
     ) -> str:
-        """Write a JSON checkpoint file asynchronously.
-
-        Args:
-            data: The serialized JSON string to persist.
-            location: Base directory where checkpoints are saved.
-            parent_id: ID of the parent checkpoint for lineage tracking.
-                Encoded in the filename for queryable lineage without
-                parsing the blob.
-            branch: Branch label. Files are stored under ``location/branch/``.
-
-        Returns:
-            The path to the written checkpoint file.
-        """
+        \"\"\"Write a JSON checkpoint file atomically and asynchronously.\"\"\"
         file_path = _build_path(location, branch, parent_id)
         await aiofiles.os.makedirs(str(file_path.parent), exist_ok=True)
-
-        async with aiofiles.open(file_path, "w") as f:
-            await f.write(data)
+        
+        tmp_name = ".{}.tmp_{}".format(file_path.name, uuid.uuid4().hex[:8])
+        tmp_path = file_path.parent / tmp_name
+        
+        try:
+            async with aiofiles.open(tmp_path, "w") as f:
+                await f.write(data)
+                await f.flush()
+                loop = asyncio.get_running_loop()
+                await loop.run_in_executor(None, os.fsync, f.fileno())
+            
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, os.replace, tmp_path, file_path)
+            
+            def sync_dir():
+                dir_fd = os.open(str(file_path.parent), os.O_RDONLY)
+                try:
+                    os.fsync(dir_fd)
+                finally:
+                    os.close(dir_fd)
+            
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, sync_dir)
+            
+        except Exception:
+            try:
+                if await aiofiles.os.path.exists(tmp_path):
+                    await aiofiles.os.remove(tmp_path)
+            except Exception as e:
+                logger.debug("Failed to remove temp file {}: {}".format(tmp_path, e))
+            raise
+            
         return str(file_path)
 
-    def prune(self, location: str, max_keep: int, *, branch: str = "main") -> int:
-        """Remove oldest checkpoint files beyond *max_keep* on a branch."""
-        _safe_branch(location, branch)
-        branch_dir = os.path.join(location, branch)
-        pattern = os.path.join(branch_dir, "*.json")
-        files = sorted(glob.glob(pattern), key=os.path.getmtime)
-        removed = 0
-        for path in files if max_keep == 0 else files[:-max_keep]:
+    def prune(self, location: str, branch: str, keep: int = 10, max_keep: Optional[int] = None) -> int:
+        branch_dir = _validate_branch(location, branch)
+        if not branch_dir.exists():
+            return 0
+        
+        if keep < 0:
+            raise ValueError("keep parameter cannot be negative")
+        if max_keep is not None and max_keep < 0:
+            raise ValueError("max_keep parameter cannot be negative")
+            
+        effective_keep = min(max_keep, keep) if max_keep is not None else keep
+        
+        pattern = os.path.join(str(branch_dir), "*.json")
+        files = [f for f in glob.glob(pattern) if not os.path.basename(f).startswith('.')]
+        files = sorted(files, key=os.path.getmtime)
+        
+        if effective_keep >= len(files):
+            return 0
+            
+        files_to_delete = files[:-effective_keep] if effective_keep > 0 else files
+        
+        deleted_count = 0
+        for file in files_to_delete:
             try:
-                os.remove(path)
-                removed += 1
-            except OSError:  # noqa: PERF203
-                logger.debug("Failed to remove %s", path, exc_info=True)
-        return removed
-
-    def extract_id(self, location: str) -> str:
-        """Extract the checkpoint ID from a file path.
-
-        The filename format is ``{ts}_{uuid8}_p-{parent}.json``.
-        The checkpoint ID is the ``{ts}_{uuid8}`` prefix.
-        """
-        stem = Path(location).stem
-        idx = stem.find("_p-")
-        return stem[:idx] if idx != -1 else stem
-
-    def from_checkpoint(self, location: str) -> str:
-        """Read a JSON checkpoint file.
-
-        Args:
-            location: Filesystem path to the checkpoint file.
-
-        Returns:
-            The raw JSON string.
-        """
-        return Path(location).read_text()
-
-    async def afrom_checkpoint(self, location: str) -> str:
-        """Read a JSON checkpoint file asynchronously.
-
-        Args:
-            location: Filesystem path to the checkpoint file.
-
-        Returns:
-            The raw JSON string.
-        """
-        async with aiofiles.open(location) as f:
-            return await f.read()
-
-
-def _build_path(
-    directory: str, branch: str = "main", parent_id: str | None = None
-) -> Path:
-    """Build a timestamped checkpoint file path under a branch subdirectory.
-
-    Filename format: ``{ts}_{uuid8}_p-{parent_id}.json``
-
-    Args:
-        directory: Base directory for checkpoints.
-        branch: Branch label used as a subdirectory name.
-        parent_id: Parent checkpoint ID to encode in the filename.
-
-    Returns:
-        The target file path.
-    """
-    _safe_branch(directory, branch)
-    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
-    short_uuid = uuid.uuid4().hex[:8]
-    parent_suffix = parent_id or "none"
-    filename = f"{ts}_{short_uuid}_p-{parent_suffix}.json"
-    return Path(directory) / branch / filename
+                os.remove(file)
+                deleted_count += 1
+            except OSError:
+                pass
+        return deleted_count
