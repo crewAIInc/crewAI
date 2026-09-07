@@ -677,9 +677,9 @@ CrewAI is released under the [MIT License](https://github.com/crewAIInc/crewAI/b
 
 ### Enterprise Features
 
-- [What additional features does CrewAI AMP offer?](#q-what-additional-features-does-crewai-enterprise-offer)
-- [Is CrewAI AMP available for cloud and on-premise deployments?](#q-is-crewai-enterprise-available-for-cloud-and-on-premise-deployments)
-- [Can I try CrewAI AMP for free?](#q-can-i-try-crewai-enterprise-for-free)
+- [What additional features does CrewAI AMP offer?](#q-what-additional-features-does-crewai-amp-offer)
+- [Is CrewAI AMP available for cloud and on-premise deployments?](#q-is-crewai-amp-available-for-cloud-and-on-premise-deployments)
+- [Can I try CrewAI AMP for free?](#q-can-i-try-crewai-amp-for-free)
 
 ### Q: What exactly is CrewAI?
 
