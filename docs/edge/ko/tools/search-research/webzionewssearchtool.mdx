@@ -1,0 +1,135 @@
+---
+title: "Webzio 뉴스 검색 도구"
+description: "Webz.io로 전 세계 뉴스 기사와 블로그 게시물을 검색하고, 언어, 국가, 날짜, 감정 등으로 필터링합니다."
+icon: "newspaper"
+mode: "wide"
+---
+
+`WebzioNewsSearchTool`은 CrewAI 에이전트가 [Webz.io](https://webz.io/)로 뉴스 기사와 블로그 게시물을 검색할 수 있게 합니다. Webz.io는 여러 언어와 국가에 걸쳐 수십만 개의 소스를 크롤링합니다. 결과에는 기사 제목, URL, 발행일, 소스, 언어, 본문이 함께 반환되므로 에이전트가 찾은 내용을 인용할 수 있습니다.
+
+이 도구는 Webz.io가 호스팅하는 [MCP](/ko/mcp/overview) 서버와 통신하며, 도구가 생성될 때 해당 서버에서 인자 스키마를 가져옵니다. Webz.io가 서버 측에서 추가하는 필터는 `crewai-tools`를 업그레이드하지 않아도 에이전트에서 사용할 수 있습니다.
+
+## 설치
+
+이 도구에는 MCP extra가 필요합니다:
+
+```shell
+pip install 'crewai[tools]' 'crewai-tools[mcp]'
+```
+
+## 환경 변수
+
+Webz.io API 토큰을 환경 변수로 설정하세요:
+
+```bash
+export WEBZ_API_TOKEN='your_webz_api_token'
+```
+
+토큰은 [Webz.io 대시보드](https://dashboard.webz.io/)에서 발급받을 수 있습니다.
+
+## 사용 예시
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import WebzioNewsSearchTool
+
+news_tool = WebzioNewsSearchTool()
+
+analyst = Agent(
+    role="News Analyst",
+    goal="Report what the press is saying about a topic",
+    backstory=(
+        "A media analyst who searches the news and summarizes coverage. "
+        "Search with only the filters you were asked for, so that broad "
+        "queries stay broad."
+    ),
+    tools=[news_tool],
+    verbose=True,
+)
+
+coverage_task = Task(
+    description="Find recent news coverage about AI regulation in the European Union.",
+    expected_output="A summary of the main themes, each with source URLs.",
+    agent=analyst,
+)
+
+crew = Crew(agents=[analyst], tasks=[coverage_task], verbose=True)
+result = crew.kickoff()
+print(result)
+
+news_tool.stop()
+```
+
+## 구성 옵션
+
+`WebzioNewsSearchTool`은 다음 매개변수를 받습니다:
+
+- `api_token` (str, 선택): Webz.io API 토큰입니다. 제공하지 않으면 `WEBZ_API_TOKEN` 환경 변수를 사용합니다.
+- `mcp_url` (str, 선택): 뉴스 검색 MCP 엔드포인트입니다. `WEBZ_MCP_URL` 환경 변수를 먼저 사용하고, 그다음 `https://news-search-mcp.webz.io/mcp`를 사용합니다.
+- `connect_timeout` (int, 선택): MCP 서버 연결을 기다리는 시간(초)입니다. 기본값은 `30`입니다.
+
+## 검색 인자
+
+필수 검색 인자는 `query` 하나입니다. 나머지 필터는 MCP 서버에서 읽어오므로, 실제 목록은 토큰이 접근할 수 있는 필터에 따라 정해집니다 — `news_tool.args_schema.model_fields`로 확인하세요. 일반적으로 발행 언어와 국가, 발행일 범위, 감정, 소스 사이트 또는 도메인 필터를 사용할 수 있습니다.
+
+```python
+news_tool = WebzioNewsSearchTool()
+
+print(news_tool.args_schema.model_fields.keys())
+
+results = news_tool.run(
+    query="ai regulation",
+    language="english",
+)
+print(results)
+```
+
+<Note>
+에이전트는 필터 목록이 짧을 때 가장 잘 작동합니다. 폭넓은 쿼리에 필터를 하나나 둘만 더한 경우가, 모든 필터를 설정해 결과가 하나도 남지 않을 수 있는 쿼리보다 보통 더 유용한 결과를 돌려줍니다.
+</Note>
+
+## 연결 관리
+
+이 도구는 하나의 MCP 세션을 열어 두고 여러 검색에 재사용합니다. Crew 작업이 끝나면 `stop()`으로 세션을 닫거나, 도구를 컨텍스트 매니저로 사용하세요:
+
+```python
+with WebzioNewsSearchTool() as news_tool:
+    print(news_tool.run(query="renewable energy investment"))
+```
+
+서버에 연결할 수 없거나 토큰이 없어도 도구 생성은 실패하지 않습니다. 연결할 수 없을 때는 `query`만 있는 스키마로 대체하고 첫 검색에서 다시 시도하며, 오류는 그 시점에 보고됩니다. 덕분에 import 시점이나 오프라인 테스트 스위트에서도 도구를 안전하게 생성할 수 있습니다.
+
+## MCP로 Webz.io 직접 사용하기
+
+이 도구를 사용하는 대신 Webz.io MCP 서버 전체를 에이전트에 연결할 수도 있습니다:
+
+```python
+from crewai import Agent
+from crewai.mcp import MCPServerHTTP
+
+agent = Agent(
+    role="News Analyst",
+    goal="Report what the press is saying about a topic",
+    backstory="A media analyst with access to Webz.io's news index",
+    mcps=[
+        MCPServerHTTP(
+            url="https://news-search-mcp.webz.io/mcp",
+            headers={"Authorization": "Bearer YOUR_WEBZ_API_TOKEN"},
+        ),
+    ],
+)
+```
+
+CrewAI의 MCP에 대한 자세한 내용은 [MCP 개요](/ko/mcp/overview)를 참고하세요.
+
+## 기능
+
+- **전 세계 뉴스 커버리지**: 수십만 개 소스의 기사와 블로그 게시물
+- **실시간 필터 스키마**: 필터를 MCP 서버에서 읽어오므로 패키지를 업그레이드하지 않아도 새 필터가 나타납니다
+- **풍부한 메타데이터**: 모든 결과에 제목, URL, 발행일, 소스, 언어, 본문 포함
+- **견고한 초기화**: 연결 실패로 생성이 중단되지 않으며, 검색 시 다시 시도합니다
+
+## 리소스
+
+- [Webz.io News API 문서](https://docs.webz.io/)
+- [Webz.io 대시보드 — API 토큰 및 사용량 관리](https://dashboard.webz.io/)

@@ -1,0 +1,135 @@
+---
+title: "Ferramenta de Busca de Notícias Webzio"
+description: "Busque artigos de notícias e posts de blog do mundo inteiro com a Webz.io, filtrando por idioma, país, data, sentimento e mais."
+icon: "newspaper"
+mode: "wide"
+---
+
+A `WebzioNewsSearchTool` permite que agentes do CrewAI busquem artigos de notícias e posts de blog com a [Webz.io](https://webz.io/), que rastreia centenas de milhares de fontes em vários idiomas e países. Os resultados retornam com o título do artigo, a URL, a data de publicação, a fonte, o idioma e o texto, para que um agente possa citar o que encontrou.
+
+A ferramenta se comunica com o servidor [MCP](/pt-BR/mcp/overview) hospedado pela Webz.io e busca o schema de argumentos nesse servidor quando a ferramenta é criada. Filtros que a Webz.io adiciona no servidor ficam disponíveis para os seus agentes sem atualizar o `crewai-tools`.
+
+## Instalação
+
+A ferramenta precisa do extra de MCP:
+
+```shell
+pip install 'crewai[tools]' 'crewai-tools[mcp]'
+```
+
+## Variáveis de Ambiente
+
+Defina o seu token da API da Webz.io como variável de ambiente:
+
+```bash
+export WEBZ_API_TOKEN='your_webz_api_token'
+```
+
+Obtenha um token no [painel da Webz.io](https://dashboard.webz.io/).
+
+## Exemplo de Uso
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import WebzioNewsSearchTool
+
+news_tool = WebzioNewsSearchTool()
+
+analyst = Agent(
+    role="News Analyst",
+    goal="Report what the press is saying about a topic",
+    backstory=(
+        "A media analyst who searches the news and summarizes coverage. "
+        "Search with only the filters you were asked for, so that broad "
+        "queries stay broad."
+    ),
+    tools=[news_tool],
+    verbose=True,
+)
+
+coverage_task = Task(
+    description="Find recent news coverage about AI regulation in the European Union.",
+    expected_output="A summary of the main themes, each with source URLs.",
+    agent=analyst,
+)
+
+crew = Crew(agents=[analyst], tasks=[coverage_task], verbose=True)
+result = crew.kickoff()
+print(result)
+
+news_tool.stop()
+```
+
+## Opções de Configuração
+
+A `WebzioNewsSearchTool` aceita os seguintes parâmetros:
+
+- `api_token` (str, opcional): O seu token da API da Webz.io. Usa a variável de ambiente `WEBZ_API_TOKEN` como alternativa.
+- `mcp_url` (str, opcional): O endpoint MCP de busca de notícias. Usa a variável de ambiente `WEBZ_MCP_URL` como alternativa e, depois, `https://news-search-mcp.webz.io/mcp`.
+- `connect_timeout` (int, opcional): Segundos de espera pela conexão com o servidor MCP. O padrão é `30`.
+
+## Argumentos de Busca
+
+`query` é o único argumento de busca obrigatório. Os demais filtros são lidos do servidor MCP, então a lista autoritativa é aquela à qual o seu token tem acesso — inspecione-a com `news_tool.args_schema.model_fields`. Filtros comumente disponíveis incluem o idioma e o país de publicação, um intervalo de datas de publicação, o sentimento e o site ou domínio da fonte.
+
+```python
+news_tool = WebzioNewsSearchTool()
+
+print(news_tool.args_schema.model_fields.keys())
+
+results = news_tool.run(
+    query="ai regulation",
+    language="english",
+)
+print(results)
+```
+
+<Note>
+Os agentes funcionam melhor com uma lista curta de filtros. Uma consulta ampla com um ou dois filtros normalmente retorna uma cobertura mais útil do que uma consulta com todos os filtros definidos, que pode reduzir o conjunto de resultados a nada.
+</Note>
+
+## Gerenciando a Conexão
+
+A ferramenta mantém uma sessão MCP aberta e a reutiliza entre buscas. Encerre-a com `stop()` quando a sua crew terminar, ou use a ferramenta como gerenciador de contexto:
+
+```python
+with WebzioNewsSearchTool() as news_tool:
+    print(news_tool.run(query="renewable energy investment"))
+```
+
+Criar a ferramenta nunca falha por causa de um servidor inacessível ou de um token ausente. Quando a conexão não pode ser feita, a ferramenta recorre a um schema com apenas `query` e tenta novamente na primeira busca, que é onde o erro é reportado. Isso mantém a criação da ferramenta segura em tempo de import e em suítes de teste offline.
+
+## Usando a Webz.io Diretamente via MCP
+
+Você também pode anexar todo o servidor MCP da Webz.io a um agente em vez de usar esta ferramenta:
+
+```python
+from crewai import Agent
+from crewai.mcp import MCPServerHTTP
+
+agent = Agent(
+    role="News Analyst",
+    goal="Report what the press is saying about a topic",
+    backstory="A media analyst with access to Webz.io's news index",
+    mcps=[
+        MCPServerHTTP(
+            url="https://news-search-mcp.webz.io/mcp",
+            headers={"Authorization": "Bearer YOUR_WEBZ_API_TOKEN"},
+        ),
+    ],
+)
+```
+
+Para saber mais sobre MCP no CrewAI, consulte a [visão geral do MCP](/pt-BR/mcp/overview).
+
+## Funcionalidades
+
+- **Cobertura Global de Notícias**: Artigos e posts de blog de centenas de milhares de fontes
+- **Schema de Filtros ao Vivo**: Os filtros são lidos do servidor MCP, então novos filtros aparecem sem atualizar o pacote
+- **Metadados Ricos**: Título, URL, data de publicação, fonte, idioma e texto para cada resultado
+- **Configuração Resiliente**: A criação nunca gera erro em uma conexão falha; a busca tenta novamente
+
+## Recursos
+
+- [Documentação da News API da Webz.io](https://docs.webz.io/)
+- [Painel da Webz.io — gerencie tokens de API e uso](https://dashboard.webz.io/)

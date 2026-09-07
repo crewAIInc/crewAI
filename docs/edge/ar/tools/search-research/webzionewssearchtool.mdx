@@ -1,0 +1,135 @@
+---
+title: "أداة بحث أخبار Webzio"
+description: "ابحث في المقالات الإخبارية ومنشورات المدونات من مختلف أنحاء العالم باستخدام Webz.io، مع التصفية حسب اللغة والبلد والتاريخ والمشاعر والمزيد."
+icon: "newspaper"
+mode: "wide"
+---
+
+تتيح أداة `WebzioNewsSearchTool` لوكلاء CrewAI البحث في المقالات الإخبارية ومنشورات المدونات باستخدام [Webz.io](https://webz.io/)، التي تزحف إلى مئات الآلاف من المصادر بلغات وبلدان متعددة. تعود النتائج مع عنوان المقال ورابط URL وتاريخ النشر والمصدر واللغة والنص، بحيث يمكن للوكيل الاستشهاد بما وجده.
+
+تتواصل الأداة مع خادم [MCP](/ar/mcp/overview) المُستضاف من Webz.io، وتجلب مخطط الوسائط من ذلك الخادم عند إنشاء الأداة. وبذلك تصبح المُرشِّحات التي تضيفها Webz.io على الخادم متاحة لوكلائك دون ترقية `crewai-tools`.
+
+## التثبيت
+
+تحتاج الأداة إلى إضافة MCP:
+
+```shell
+pip install 'crewai[tools]' 'crewai-tools[mcp]'
+```
+
+## متغيرات البيئة
+
+اضبط رمز واجهة برمجة تطبيقات Webz.io كمتغير بيئة:
+
+```bash
+export WEBZ_API_TOKEN='your_webz_api_token'
+```
+
+احصل على رمز من [لوحة تحكم Webz.io](https://dashboard.webz.io/).
+
+## مثال على الاستخدام
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import WebzioNewsSearchTool
+
+news_tool = WebzioNewsSearchTool()
+
+analyst = Agent(
+    role="News Analyst",
+    goal="Report what the press is saying about a topic",
+    backstory=(
+        "A media analyst who searches the news and summarizes coverage. "
+        "Search with only the filters you were asked for, so that broad "
+        "queries stay broad."
+    ),
+    tools=[news_tool],
+    verbose=True,
+)
+
+coverage_task = Task(
+    description="Find recent news coverage about AI regulation in the European Union.",
+    expected_output="A summary of the main themes, each with source URLs.",
+    agent=analyst,
+)
+
+crew = Crew(agents=[analyst], tasks=[coverage_task], verbose=True)
+result = crew.kickoff()
+print(result)
+
+news_tool.stop()
+```
+
+## خيارات التهيئة
+
+تقبل `WebzioNewsSearchTool` المعاملات التالية:
+
+- `api_token` (str، اختياري): رمز واجهة برمجة تطبيقات Webz.io الخاص بك. يعود إلى متغير البيئة `WEBZ_API_TOKEN` عند عدم تمريره.
+- `mcp_url` (str، اختياري): نقطة نهاية MCP لبحث الأخبار. تعود إلى متغير البيئة `WEBZ_MCP_URL`، ثم إلى `https://news-search-mcp.webz.io/mcp`.
+- `connect_timeout` (int، اختياري): عدد الثواني لانتظار الاتصال بخادم MCP. القيمة الافتراضية هي `30`.
+
+## وسائط البحث
+
+`query` هي وسيطة البحث المطلوبة الوحيدة. تُقرأ بقية المُرشِّحات من خادم MCP، لذا فإن القائمة المُعتمدة هي ما يستطيع رمزك الوصول إليه — يمكنك استعراضها عبر `news_tool.args_schema.model_fields`. تشمل المُرشِّحات المتاحة عادةً لغة النشر والبلد، ونطاق تاريخ النشر، والمشاعر، وموقع المصدر أو نطاقه.
+
+```python
+news_tool = WebzioNewsSearchTool()
+
+print(news_tool.args_schema.model_fields.keys())
+
+results = news_tool.run(
+    query="ai regulation",
+    language="english",
+)
+print(results)
+```
+
+<Note>
+يعمل الوكلاء بأفضل صورة مع قائمة مُرشِّحات قصيرة. فاستعلام واسع مع مُرشِّح أو اثنين يعيد عادةً تغطية أكثر نفعًا من استعلام تُضبط فيه كل المُرشِّحات، وهو ما قد يُقلّص مجموعة النتائج إلى لا شيء.
+</Note>
+
+## إدارة الاتصال
+
+تُبقي الأداة جلسة MCP واحدة مفتوحة وتعيد استخدامها بين عمليات البحث. أغلقها باستخدام `stop()` عند انتهاء الـ crew، أو استخدم الأداة كمدير سياق:
+
+```python
+with WebzioNewsSearchTool() as news_tool:
+    print(news_tool.run(query="renewable energy investment"))
+```
+
+لا يفشل إنشاء الأداة أبدًا بسبب خادم غير قابل للوصول أو رمز مفقود. عندما لا يتحقق الاتصال، تعود الأداة إلى مخطط يحتوي على `query` فقط وتعيد المحاولة عند أول عملية بحث، وهناك يُبلَّغ عن الخطأ. هذا يجعل إنشاء الأداة آمنًا وقت الاستيراد وفي مجموعات الاختبار غير المتصلة بالشبكة.
+
+## استخدام Webz.io مباشرةً عبر MCP
+
+يمكنك أيضًا إرفاق خادم MCP الخاص بـ Webz.io بالكامل إلى وكيل بدلًا من استخدام هذه الأداة:
+
+```python
+from crewai import Agent
+from crewai.mcp import MCPServerHTTP
+
+agent = Agent(
+    role="News Analyst",
+    goal="Report what the press is saying about a topic",
+    backstory="A media analyst with access to Webz.io's news index",
+    mcps=[
+        MCPServerHTTP(
+            url="https://news-search-mcp.webz.io/mcp",
+            headers={"Authorization": "Bearer YOUR_WEBZ_API_TOKEN"},
+        ),
+    ],
+)
+```
+
+لمزيد من المعلومات عن MCP في CrewAI، راجع [نظرة عامة على MCP](/ar/mcp/overview).
+
+## الميزات
+
+- **تغطية إخبارية عالمية**: مقالات ومنشورات مدونات من مئات الآلاف من المصادر
+- **مخطط مُرشِّحات حيّ**: تُقرأ المُرشِّحات من خادم MCP، لذا تظهر المُرشِّحات الجديدة دون ترقية الحزمة
+- **بيانات وصفية غنية**: العنوان ورابط URL وتاريخ النشر والمصدر واللغة والنص لكل نتيجة
+- **إعداد مرن**: لا يُصدر الإنشاء خطأً عند فشل الاتصال؛ إذ تعيد عملية البحث المحاولة
+
+## المصادر
+
+- [توثيق News API من Webz.io](https://docs.webz.io/)
+- [لوحة تحكم Webz.io — إدارة رموز واجهة برمجة التطبيقات والاستخدام](https://dashboard.webz.io/)
