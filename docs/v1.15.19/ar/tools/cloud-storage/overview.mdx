@@ -1,0 +1,51 @@
+---
+title: "نظرة عامة"
+description: "التفاعل مع الخدمات السحابية وأنظمة التخزين ومنصات الذكاء الاصطناعي السحابية"
+icon: "face-smile"
+mode: "wide"
+---
+
+تمكّن هذه الأدوات وكلاءك من التفاعل مع الخدمات السحابية والوصول إلى التخزين السحابي والاستفادة من منصات الذكاء الاصطناعي السحابية لعمليات قابلة للتوسع.
+
+## **الأدوات المتاحة**
+
+<CardGroup cols={2}>
+  <Card title="أداة قراءة S3" icon="cloud" href="/ar/tools/cloud-storage/s3readertool">
+    قراءة الملفات والبيانات من حاويات Amazon S3.
+  </Card>
+
+  <Card title="أداة كتابة S3" icon="cloud-arrow-up" href="/ar/tools/cloud-storage/s3writertool">
+    كتابة وتحميل الملفات إلى تخزين Amazon S3.
+  </Card>
+
+  <Card title="استدعاء وكيل Bedrock" icon="aws" href="/ar/tools/integration/bedrockinvokeagenttool">
+    استدعاء وكلاء Amazon Bedrock للمهام المدعومة بالذكاء الاصطناعي.
+  </Card>
+
+  <Card title="مسترجع قاعدة معرفة Bedrock" icon="database" href="/ar/tools/cloud-storage/bedrockkbretriever">
+    استرجاع المعلومات من قواعد معرفة Amazon Bedrock.
+  </Card>
+</CardGroup>
+
+## **حالات الاستخدام الشائعة**
+
+- **تخزين الملفات**: تخزين واسترجاع الملفات من أنظمة التخزين السحابية
+- **نسخ البيانات احتياطياً**: نسخ البيانات المهمة احتياطياً إلى التخزين السحابي
+- **خدمات الذكاء الاصطناعي**: الوصول إلى نماذج وخدمات الذكاء الاصطناعي السحابية
+- **استرجاع المعرفة**: الاستعلام عن قواعد المعرفة المستضافة سحابياً
+- **عمليات قابلة للتوسع**: الاستفادة من البنية التحتية السحابية للمعالجة
+
+```python
+from crewai_tools import S3ReaderTool, S3WriterTool, BedrockInvokeAgentTool
+
+# Create cloud tools
+s3_reader = S3ReaderTool()
+s3_writer = S3WriterTool()
+bedrock_agent = BedrockInvokeAgentTool()
+
+# Add to your agent
+agent = Agent(
+    role="Cloud Operations Specialist",
+    tools=[s3_reader, s3_writer, bedrock_agent],
+    goal="Manage cloud resources and AI services"
+)

@@ -1,0 +1,314 @@
+---
+title: أدوات بحث Brave
+description: مجموعة أدوات للاستعلام من واجهة برمجة تطبيقات Brave Search - تغطي البحث في الويب والأخبار والصور والفيديو.
+icon: searchengin
+mode: "wide"
+---
+
+# أدوات بحث Brave
+
+## الوصف
+
+تقدم CrewAI عائلة من أدوات بحث Brave، كل منها يستهدف نقطة نهاية محددة في [واجهة برمجة تطبيقات Brave Search](https://brave.com/search/api/). بدلاً من أداة واحدة شاملة، يمكنك اختيار الأداة التي تتطابق بدقة مع نوع النتائج التي يحتاجها وكيلك:
+
+| الأداة | نقطة النهاية | حالة الاستخدام |
+| --- | --- | --- |
+| `BraveWebSearchTool` | بحث الويب | نتائج ويب عامة ومقتطفات وعناوين URL |
+| `BraveNewsSearchTool` | بحث الأخبار | مقالات إخبارية حديثة وعناوين |
+| `BraveImageSearchTool` | بحث الصور | نتائج صور مع الأبعاد وعناوين URL المصدر |
+| `BraveVideoSearchTool` | بحث الفيديو | نتائج فيديو من جميع أنحاء الويب |
+| `BraveLocalPOIsTool` | نقاط الاهتمام المحلية | العثور على نقاط الاهتمام (مثل المطاعم) |
+| `BraveLocalPOIsDescriptionTool` | نقاط الاهتمام المحلية | استرجاع أوصاف المواقع المولّدة بالذكاء الاصطناعي |
+| `BraveLLMContextTool` | سياق LLM | محتوى ويب مستخرج مسبقاً ومُحسَّن لوكلاء الذكاء الاصطناعي وتأريض LLM وخطوط أنابيب RAG. |
+
+تشترك جميع الأدوات في صنف أساسي مشترك (`BraveSearchToolBase`) يوفر سلوكاً متسقاً - تحديد المعدل، إعادة المحاولة التلقائية عند استجابات `429`، التحقق من صحة الرؤوس والمعاملات، والحفظ الاختياري في الملفات.
+
+<Note>
+  لا يزال صنف `BraveSearchTool` القديم متاحاً للتوافق مع الإصدارات السابقة، لكنه يُعتبر **قديماً** ولن يحظى بنفس مستوى الاهتمام في المستقبل. نوصي بالانتقال إلى الأدوات المحددة المدرجة أعلاه، والتي توفر تكويناً أغنى وواجهة أكثر تركيزاً.
+</Note>
+
+<Note>
+    بينما يمكن استخدام العديد من الأدوات (مثل _BraveWebSearchTool_ و _BraveNewsSearchTool_ و _BraveImageSearchTool_ و _BraveVideoSearchTool_) مع اشتراك/خطة مجانية لواجهة Brave Search API، تتطلب بعض المعاملات (مثل `enable_snippets`) وبعض الأدوات (مثل _BraveLocalPOIsTool_ و _BraveLocalPOIsDescriptionTool_) خطة مدفوعة. راجع إمكانيات خطة اشتراكك للتوضيح.
+</Note>
+
+## التثبيت
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## البدء
+
+1. **تثبيت الحزمة** - تأكد من تثبيت `crewai[tools]` في بيئة Python الخاصة بك.
+2. **الحصول على مفتاح API** - سجّل في [api-dashboard.search.brave.com/login](https://api-dashboard.search.brave.com/login) لتوليد مفتاح.
+3. **تعيين متغير البيئة** - خزّن مفتاحك كـ `BRAVE_API_KEY`، أو مرره مباشرة عبر معامل `api_key`.
+
+## أمثلة سريعة
+
+### بحث الويب
+
+```python Code
+from crewai_tools import BraveWebSearchTool
+
+tool = BraveWebSearchTool()
+results = tool.run(q="CrewAI agent framework")
+print(results)
+```
+
+### بحث الأخبار
+
+```python Code
+from crewai_tools import BraveNewsSearchTool
+
+tool = BraveNewsSearchTool()
+results = tool.run(q="latest AI breakthroughs")
+print(results)
+```
+
+### بحث الصور
+
+```python Code
+from crewai_tools import BraveImageSearchTool
+
+tool = BraveImageSearchTool()
+results = tool.run(q="northern lights photography")
+print(results)
+```
+
+### بحث الفيديو
+
+```python Code
+from crewai_tools import BraveVideoSearchTool
+
+tool = BraveVideoSearchTool()
+results = tool.run(q="how to build AI agents")
+print(results)
+```
+
+### أوصاف نقاط الاهتمام المحلية
+
+```python Code
+from crewai_tools import (
+    BraveWebSearchTool,
+    BraveLocalPOIsDescriptionTool,
+)
+
+web_search = BraveWebSearchTool(raw=True)
+poi_details = BraveLocalPOIsDescriptionTool()
+
+results = web_search.run(q="italian restaurants in pensacola, florida")
+
+if "locations" in results:
+    location_ids = [ loc["id"] for loc in results["locations"]["results"] ]
+    if location_ids:
+        descriptions = poi_details.run(ids=location_ids)
+        print(descriptions)
+```
+
+## معاملات المُنشئ المشتركة
+
+تقبل كل أداة بحث Brave المعاملات التالية عند التهيئة:
+
+| المعامل | النوع | الافتراضي | الوصف |
+| --- | --- | --- | --- |
+| `api_key` | `str \| None` | `None` | مفتاح Brave API. يعود إلى متغير البيئة `BRAVE_API_KEY`. |
+| `headers` | `dict \| None` | `None` | رؤوس HTTP إضافية لإرسالها مع كل طلب (مثل `api-version`، رؤوس تحديد الموقع الجغرافي). |
+| `requests_per_second` | `float` | `1.0` | الحد الأقصى لمعدل الطلبات. ستنتظر الأداة بين الاستدعاءات للبقاء ضمن هذا الحد. |
+| `save_file` | `bool` | `False` | عند `True`، يتم كتابة كل استجابة في ملف `.txt` مختوم بالوقت. |
+| `raw` | `bool` | `False` | عند `True`، يتم إرجاع استجابة JSON الكاملة من API دون أي تنقيح. |
+| `timeout` | `int` | `30` | مهلة طلب HTTP بالثواني. |
+| `country` | `str \| None` | `None` | اختصار قديم لاستهداف جغرافي (مثل `"US"`). يُفضل استخدام معامل الاستعلام `country` مباشرة. |
+| `n_results` | `int` | `10` | اختصار قديم لعدد النتائج. يُفضل استخدام معامل الاستعلام `count` مباشرة. |
+
+<Warning>
+  معاملات المُنشئ `country` و `n_results` موجودة للتوافق مع الإصدارات السابقة. يتم تطبيقها كقيم افتراضية عندما لا يتم تقديم معاملات الاستعلام المقابلة (`country`، `count`) وقت الاستدعاء. للكود الجديد، نوصي بتمرير `country` و `count` مباشرة كمعاملات استعلام بدلاً من ذلك.
+</Warning>
+
+## معاملات الاستعلام
+
+تتحقق كل أداة من صحة معاملات الاستعلام مقابل مخطط Pydantic قبل إرسال الطلب. تتنوع المعاملات قليلاً حسب نقطة النهاية - إليك ملخص لأكثرها استخداماً:
+
+### BraveWebSearchTool
+
+| المعامل | الوصف |
+| --- | --- |
+| `q` | **(مطلوب)** سلسلة استعلام البحث (الحد الأقصى 400 حرف). |
+| `country` | رمز بلد من حرفين للاستهداف الجغرافي (مثل `"US"`). |
+| `search_lang` | رمز لغة من حرفين للنتائج (مثل `"en"`). |
+| `count` | الحد الأقصى لعدد النتائج المُرجعة (1-20). |
+| `offset` | تخطي أول N صفحة من النتائج (0-9). |
+| `safesearch` | مرشح المحتوى: `"off"` أو `"moderate"` أو `"strict"`. |
+| `freshness` | مرشح الحداثة: `"pd"` (اليوم الماضي)، `"pw"` (الأسبوع الماضي)، `"pm"` (الشهر الماضي)، `"py"` (السنة الماضية)، أو نطاق تاريخ مثل `"2025-01-01to2025-06-01"`. |
+| `extra_snippets` | تضمين حتى 5 مقتطفات نصية إضافية لكل نتيجة. |
+| `goggles` | عنوان(عناوين) URL لـ Brave Goggles و/أو المصدر لإعادة الترتيب المخصص. |
+
+للمرجع الكامل للمعاملات والرؤوس، انظر [وثائق واجهة Brave Web Search API](https://api-dashboard.search.brave.com/api-reference/web/search/get).
+
+### BraveNewsSearchTool
+
+| المعامل | الوصف |
+| --- | --- |
+| `q` | **(مطلوب)** سلسلة استعلام البحث (الحد الأقصى 400 حرف). |
+| `country` | رمز بلد من حرفين للاستهداف الجغرافي. |
+| `search_lang` | رمز لغة من حرفين للنتائج. |
+| `count` | الحد الأقصى لعدد النتائج المُرجعة (1-50). |
+| `offset` | تخطي أول N صفحة من النتائج (0-9). |
+| `safesearch` | مرشح المحتوى: `"off"` أو `"moderate"` أو `"strict"`. |
+| `freshness` | مرشح الحداثة (نفس خيارات بحث الويب). |
+| `goggles` | عنوان(عناوين) URL لـ Brave Goggles و/أو المصدر لإعادة الترتيب المخصص. |
+
+للمرجع الكامل للمعاملات والرؤوس، انظر [وثائق واجهة Brave News Search API](https://api-dashboard.search.brave.com/api-reference/news/news_search/get).
+
+### BraveImageSearchTool
+
+| المعامل | الوصف |
+| --- | --- |
+| `q` | **(مطلوب)** سلسلة استعلام البحث (الحد الأقصى 400 حرف). |
+| `country` | رمز بلد من حرفين للاستهداف الجغرافي. |
+| `search_lang` | رمز لغة من حرفين للنتائج. |
+| `count` | الحد الأقصى لعدد النتائج المُرجعة (1-200). |
+| `safesearch` | مرشح المحتوى: `"off"` أو `"strict"`. |
+| `spellcheck` | محاولة تصحيح الأخطاء الإملائية في الاستعلام. |
+
+للمرجع الكامل للمعاملات والرؤوس، انظر [وثائق واجهة Brave Image Search API](https://api-dashboard.search.brave.com/api-reference/images/image_search).
+
+### BraveVideoSearchTool
+
+| المعامل | الوصف |
+| --- | --- |
+| `q` | **(مطلوب)** سلسلة استعلام البحث (الحد الأقصى 400 حرف). |
+| `country` | رمز بلد من حرفين للاستهداف الجغرافي. |
+| `search_lang` | رمز لغة من حرفين للنتائج. |
+| `count` | الحد الأقصى لعدد النتائج المُرجعة (1-50). |
+| `offset` | تخطي أول N صفحة من النتائج (0-9). |
+| `safesearch` | مرشح المحتوى: `"off"` أو `"moderate"` أو `"strict"`. |
+| `freshness` | مرشح الحداثة (نفس خيارات بحث الويب). |
+
+للمرجع الكامل للمعاملات والرؤوس، انظر [وثائق واجهة Brave Video Search API](https://api-dashboard.search.brave.com/api-reference/videos/video_search/get).
+
+### BraveLocalPOIsTool
+
+| المعامل | الوصف |
+| --- | --- |
+| `ids` | **(مطلوب)** قائمة معرّفات فريدة للمواقع المطلوبة. |
+| `search_lang` | رمز لغة من حرفين للنتائج. |
+
+للمرجع الكامل للمعاملات والرؤوس، انظر [وثائق واجهة Brave Local POIs API](https://api-dashboard.search.brave.com/api-reference/web/local_pois).
+
+### BraveLocalPOIsDescriptionTool
+
+| المعامل | الوصف |
+| --- | --- |
+| `ids` | **(مطلوب)** قائمة معرّفات فريدة للمواقع المطلوبة. |
+
+للمرجع الكامل للمعاملات والرؤوس، انظر [وثائق واجهة Brave POI Descriptions API](https://api-dashboard.search.brave.com/api-reference/web/poi_descriptions).
+
+## الرؤوس المخصصة
+
+تدعم جميع الأدوات رؤوس طلبات HTTP مخصصة. أداة بحث الويب، على سبيل المثال، تقبل رؤوس تحديد الموقع الجغرافي للحصول على نتائج واعية بالموقع:
+
+```python Code
+from crewai_tools import BraveWebSearchTool
+
+tool = BraveWebSearchTool(
+    headers={
+        "x-loc-lat": "37.7749",
+        "x-loc-long": "-122.4194",
+        "x-loc-city": "San Francisco",
+        "x-loc-state": "CA",
+        "x-loc-country": "US",
+    }
+)
+
+results = tool.run(q="best coffee shops nearby")
+```
+
+يمكنك أيضاً تحديث الرؤوس بعد التهيئة باستخدام طريقة `set_headers()`:
+
+```python Code
+tool.set_headers({"api-version": "2025-01-01"})
+```
+
+## الوضع الخام
+
+بشكل افتراضي، تقوم كل أداة بتنقيح استجابة API إلى قائمة نتائج مختصرة. إذا كنت تحتاج إلى استجابة API الكاملة غير المعالجة، فعّل الوضع الخام:
+
+```python Code
+from crewai_tools import BraveWebSearchTool
+
+tool = BraveWebSearchTool(raw=True)
+full_response = tool.run(q="Brave Search API")
+```
+
+## مثال على التكامل مع الوكيل
+
+إليك كيفية تزويد وكيل CrewAI بأدوات بحث Brave متعددة:
+
+```python Code
+from crewai import Agent
+from crewai.project import agent
+from crewai_tools import BraveWebSearchTool, BraveNewsSearchTool
+
+web_search = BraveWebSearchTool()
+news_search = BraveNewsSearchTool()
+
+@agent
+def researcher(self) -> Agent:
+    return Agent(
+        config=self.agents_config["researcher"],
+        tools=[web_search, news_search],
+    )
+```
+
+## مثال متقدم
+
+الجمع بين معاملات متعددة لبحث مستهدف:
+
+```python Code
+from crewai_tools import BraveWebSearchTool
+
+tool = BraveWebSearchTool(
+    requests_per_second=0.5,  # conservative rate limit
+    save_file=True,
+)
+
+results = tool.run(
+    q="artificial intelligence news",
+    country="US",
+    search_lang="en",
+    count=5,
+    freshness="pm",           # past month only
+    extra_snippets=True,
+)
+print(results)
+```
+
+## الانتقال من `BraveSearchTool` (القديمة)
+
+إذا كنت تستخدم حالياً `BraveSearchTool`، فالتبديل إلى الأدوات الجديدة بسيط:
+
+```python Code
+# Before (legacy)
+from crewai_tools import BraveSearchTool
+
+tool = BraveSearchTool(country="US", n_results=5, save_file=True)
+results = tool.run(search_query="AI agents")
+
+# After (recommended)
+from crewai_tools import BraveWebSearchTool
+
+tool = BraveWebSearchTool(save_file=True)
+results = tool.run(q="AI agents", country="US", count=5)
+```
+
+الاختلافات الرئيسية:
+- **الاستيراد**: استخدم `BraveWebSearchTool` (أو متغير الأخبار/الصور/الفيديو) بدلاً من `BraveSearchTool`.
+- **معامل الاستعلام**: استخدم `q` بدلاً من `search_query`. (لا يزال كلا `search_query` و `query` مقبولين للراحة، لكن `q` هو المعامل المفضل.)
+- **عدد النتائج**: مرر `count` كمعامل استعلام بدلاً من `n_results` عند التهيئة.
+- **البلد**: مرر `country` كمعامل استعلام بدلاً من عند التهيئة.
+- **مفتاح API**: يمكن الآن تمريره مباشرة عبر `api_key=` بالإضافة إلى متغير البيئة `BRAVE_API_KEY`.
+- **تحديد المعدل**: قابل للتكوين عبر `requests_per_second` مع إعادة محاولة تلقائية عند استجابات `429`.
+
+## الخلاصة
+
+توفر مجموعة أدوات بحث Brave لوكلاء CrewAI وصولاً مرناً ومحدداً بنقطة النهاية إلى واجهة برمجة تطبيقات Brave Search. سواء كنت تحتاج إلى صفحات ويب أو أخبار عاجلة أو صور أو مقاطع فيديو، هناك أداة مخصصة مع معاملات مُتحقق منها ومرونة مدمجة. اختر الأداة المناسبة لحالة استخدامك، وارجع إلى [وثائق واجهة Brave Search API](https://brave.com/search/api/) للحصول على التفاصيل الكاملة حول المعاملات المتاحة وصيغ الاستجابة.
