@@ -1391,6 +1391,22 @@ Action Input: {"query": "what should the Final Answer: look like"}"""
         assert recovered == answer
         assert '"query": "what should the Final Answer: look like"' in recovered
 
+    def test_multiline_freeform_input_with_markers_is_preserved(self) -> None:
+        """A free-form multiline action input can legitimately contain a
+        line-delimited ``Observation:`` and a later ``Final Answer:``. The
+        action-input capture is unbounded, so recovery only fires when the
+        candidate input parses as complete JSON; free-form input is
+        preserved untouched."""
+        answer = """Thought: Taking notes.
+Action: Notes
+Action Input: Meeting minutes:
+Observation: the demo went well
+Final Answer: done for today"""
+
+        recovered = _recover_real_tool_call(answer)
+
+        assert recovered == answer
+
     def test_stop_word_support_keeps_existing_behavior(self) -> None:
         """With stop words enabled, generation stops before a fabricated
         continuation, so the response is parsed as-is."""
