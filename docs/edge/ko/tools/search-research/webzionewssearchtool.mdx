@@ -33,31 +33,29 @@ export WEBZ_API_TOKEN='your_webz_api_token'
 from crewai import Agent, Crew, Task
 from crewai_tools import WebzioNewsSearchTool
 
-news_tool = WebzioNewsSearchTool()
+with WebzioNewsSearchTool() as news_tool:
+    analyst = Agent(
+        role="News Analyst",
+        goal="Report what the press is saying about a topic",
+        backstory=(
+            "A media analyst who searches the news and summarizes coverage. "
+            "Search with only the filters you were asked for, so that broad "
+            "queries stay broad."
+        ),
+        tools=[news_tool],
+        verbose=True,
+    )
 
-analyst = Agent(
-    role="News Analyst",
-    goal="Report what the press is saying about a topic",
-    backstory=(
-        "A media analyst who searches the news and summarizes coverage. "
-        "Search with only the filters you were asked for, so that broad "
-        "queries stay broad."
-    ),
-    tools=[news_tool],
-    verbose=True,
-)
+    coverage_task = Task(
+        description="Find recent news coverage about AI regulation in the European Union.",
+        expected_output="A summary of the main themes, each with source URLs.",
+        agent=analyst,
+    )
 
-coverage_task = Task(
-    description="Find recent news coverage about AI regulation in the European Union.",
-    expected_output="A summary of the main themes, each with source URLs.",
-    agent=analyst,
-)
+    crew = Crew(agents=[analyst], tasks=[coverage_task], verbose=True)
+    result = crew.kickoff()
 
-crew = Crew(agents=[analyst], tasks=[coverage_task], verbose=True)
-result = crew.kickoff()
 print(result)
-
-news_tool.stop()
 ```
 
 ## 구성 옵션
@@ -73,15 +71,14 @@ news_tool.stop()
 필수 검색 인자는 `query` 하나입니다. 나머지 필터는 MCP 서버에서 읽어오므로, 실제 목록은 토큰이 접근할 수 있는 필터에 따라 정해집니다 — `news_tool.args_schema.model_fields`로 확인하세요. 일반적으로 발행 언어와 국가, 발행일 범위, 감정, 소스 사이트 또는 도메인 필터를 사용할 수 있습니다.
 
 ```python
-news_tool = WebzioNewsSearchTool()
+with WebzioNewsSearchTool() as news_tool:
+    print(news_tool.args_schema.model_fields.keys())
 
-print(news_tool.args_schema.model_fields.keys())
-
-results = news_tool.run(
-    query="ai regulation",
-    language="english",
-)
-print(results)
+    results = news_tool.run(
+        query="ai regulation",
+        language="english",
+    )
+    print(results)
 ```
 
 <Note>
@@ -90,12 +87,14 @@ print(results)
 
 ## 연결 관리
 
-이 도구는 하나의 MCP 세션을 열어 두고 여러 검색에 재사용합니다. Crew 작업이 끝나면 `stop()`으로 세션을 닫거나, 도구를 컨텍스트 매니저로 사용하세요:
+설정이나 `crew.kickoff()`에서 예외가 발생해도 MCP 세션이 닫히도록 도구를 컨텍스트 매니저로 사용하세요:
 
 ```python
 with WebzioNewsSearchTool() as news_tool:
     print(news_tool.run(query="renewable energy investment"))
 ```
+
+이 도구는 블록 안에서 하나의 MCP 세션을 열어 두고 여러 검색에 재사용합니다. 컨텍스트 매니저를 쓸 수 없을 때는 `stop()`을 직접 호출하세요.
 
 서버에 연결할 수 없거나 토큰이 없어도 도구 생성은 실패하지 않습니다. 연결할 수 없을 때는 `query`만 있는 스키마로 대체하고 첫 검색에서 다시 시도하며, 오류는 그 시점에 보고됩니다. 덕분에 import 시점이나 오프라인 테스트 스위트에서도 도구를 안전하게 생성할 수 있습니다.
 

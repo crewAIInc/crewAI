@@ -33,31 +33,29 @@ export WEBZ_API_TOKEN='your_webz_api_token'
 from crewai import Agent, Crew, Task
 from crewai_tools import WebzioNewsSearchTool
 
-news_tool = WebzioNewsSearchTool()
+with WebzioNewsSearchTool() as news_tool:
+    analyst = Agent(
+        role="News Analyst",
+        goal="Report what the press is saying about a topic",
+        backstory=(
+            "A media analyst who searches the news and summarizes coverage. "
+            "Search with only the filters you were asked for, so that broad "
+            "queries stay broad."
+        ),
+        tools=[news_tool],
+        verbose=True,
+    )
 
-analyst = Agent(
-    role="News Analyst",
-    goal="Report what the press is saying about a topic",
-    backstory=(
-        "A media analyst who searches the news and summarizes coverage. "
-        "Search with only the filters you were asked for, so that broad "
-        "queries stay broad."
-    ),
-    tools=[news_tool],
-    verbose=True,
-)
+    coverage_task = Task(
+        description="Find recent news coverage about AI regulation in the European Union.",
+        expected_output="A summary of the main themes, each with source URLs.",
+        agent=analyst,
+    )
 
-coverage_task = Task(
-    description="Find recent news coverage about AI regulation in the European Union.",
-    expected_output="A summary of the main themes, each with source URLs.",
-    agent=analyst,
-)
+    crew = Crew(agents=[analyst], tasks=[coverage_task], verbose=True)
+    result = crew.kickoff()
 
-crew = Crew(agents=[analyst], tasks=[coverage_task], verbose=True)
-result = crew.kickoff()
 print(result)
-
-news_tool.stop()
 ```
 
 ## خيارات التهيئة
@@ -73,15 +71,14 @@ news_tool.stop()
 `query` هي وسيطة البحث المطلوبة الوحيدة. تُقرأ بقية المُرشِّحات من خادم MCP، لذا فإن القائمة المُعتمدة هي ما يستطيع رمزك الوصول إليه — يمكنك استعراضها عبر `news_tool.args_schema.model_fields`. تشمل المُرشِّحات المتاحة عادةً لغة النشر والبلد، ونطاق تاريخ النشر، والمشاعر، وموقع المصدر أو نطاقه.
 
 ```python
-news_tool = WebzioNewsSearchTool()
+with WebzioNewsSearchTool() as news_tool:
+    print(news_tool.args_schema.model_fields.keys())
 
-print(news_tool.args_schema.model_fields.keys())
-
-results = news_tool.run(
-    query="ai regulation",
-    language="english",
-)
-print(results)
+    results = news_tool.run(
+        query="ai regulation",
+        language="english",
+    )
+    print(results)
 ```
 
 <Note>
@@ -90,12 +87,14 @@ print(results)
 
 ## إدارة الاتصال
 
-تُبقي الأداة جلسة MCP واحدة مفتوحة وتعيد استخدامها بين عمليات البحث. أغلقها باستخدام `stop()` عند انتهاء الـ crew، أو استخدم الأداة كمدير سياق:
+استخدم الأداة كمدير سياق حتى تُغلق جلسة MCP حتى عندما يرفع الإعداد أو `crew.kickoff()` استثناءً:
 
 ```python
 with WebzioNewsSearchTool() as news_tool:
     print(news_tool.run(query="renewable energy investment"))
 ```
+
+تُبقي الأداة جلسة MCP واحدة مفتوحة وتعيد استخدامها بين عمليات البحث داخل الكتلة. استدعِ `stop()` يدويًا عندما لا تستطيع استخدام مدير سياق.
 
 لا يفشل إنشاء الأداة أبدًا بسبب خادم غير قابل للوصول أو رمز مفقود. عندما لا يتحقق الاتصال، تعود الأداة إلى مخطط يحتوي على `query` فقط وتعيد المحاولة عند أول عملية بحث، وهناك يُبلَّغ عن الخطأ. هذا يجعل إنشاء الأداة آمنًا وقت الاستيراد وفي مجموعات الاختبار غير المتصلة بالشبكة.
 

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 from types import TracebackType
 from typing import Any
+from urllib.parse import urlsplit
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
@@ -43,6 +45,9 @@ class WebzioNewsSearchTool(BaseTool):
     is unreachable: the tool keeps :class:`WebzioNewsSearchToolSchema` and
     retries the connection on the first call, which is where a missing token or
     an unreachable server is reported.
+
+    The MCP endpoint must be an absolute ``https://`` URL so the Bearer token
+    is not sent in cleartext.
 
     The MCP session stays open for reuse. Close it with :meth:`stop`, or use the
     tool as a context manager.
@@ -99,6 +104,7 @@ class WebzioNewsSearchTool(BaseTool):
 
     _adapter: MCPServerAdapter | None = PrivateAttr(default=None)
     _mcp_tool: BaseTool | None = PrivateAttr(default=None)
+    _lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
 
     def __init__(self, **kwargs: Any) -> None:
         """Build the tool and try to adopt the live MCP argument schema.
@@ -119,40 +125,52 @@ class WebzioNewsSearchTool(BaseTool):
             The MCP-backed tool that runs the search.
 
         Raises:
-            ValueError: If the API token is missing, or if the server does not
-                expose the news search tool.
+            ValueError: If the API token is missing, the endpoint is not HTTPS,
+                or if the server does not expose the news search tool.
         """
-        if self._mcp_tool is not None:
+        with self._lock:
+            if self._mcp_tool is not None:
+                return self._mcp_tool
+
+            token = (self.api_token or "").strip()
+            if not token:
+                raise ValueError(
+                    f"Webz.io API token is missing. Set {AUTH_ENV_VAR} or pass "
+                    f"api_token=... to {type(self).__name__}."
+                )
+
+            url = self.mcp_url.strip().rstrip("/")
+            parsed_url = urlsplit(url)
+            if parsed_url.scheme != "https" or not parsed_url.netloc:
+                raise ValueError(
+                    f"The Webz.io MCP endpoint must be an absolute https:// URL, "
+                    f"got {url!r}."
+                )
+
+            adapter = MCPServerAdapter(
+                {
+                    "url": url,
+                    "transport": MCP_TRANSPORT,
+                    "headers": {"Authorization": f"Bearer {token}"},
+                },
+                MCP_TOOL_NAME,
+                connect_timeout=self.connect_timeout,
+            )
+            try:
+                mcp_tools = list(adapter.tools)
+                if not mcp_tools:
+                    raise ValueError(
+                        f"The MCP server at {url} did not expose a "
+                        f"{MCP_TOOL_NAME} tool."
+                    )
+            except Exception:
+                adapter.stop()
+                raise
+
+            self._adapter = adapter
+            self._mcp_tool = mcp_tools[0]
+            self.args_schema = self._mcp_tool.args_schema
             return self._mcp_tool
-
-        token = (self.api_token or "").strip()
-        if not token:
-            raise ValueError(
-                f"Webz.io API token is missing. Set {AUTH_ENV_VAR} or pass "
-                f"api_token=... to {type(self).__name__}."
-            )
-
-        url = self.mcp_url.strip().rstrip("/")
-        self._adapter = MCPServerAdapter(
-            {
-                "url": url,
-                "transport": MCP_TRANSPORT,
-                "headers": {"Authorization": f"Bearer {token}"},
-            },
-            MCP_TOOL_NAME,
-            connect_timeout=self.connect_timeout,
-        )
-
-        mcp_tools = list(self._adapter.tools)
-        if not mcp_tools:
-            self.stop()
-            raise ValueError(
-                f"The MCP server at {url} did not expose a {MCP_TOOL_NAME} tool."
-            )
-
-        self._mcp_tool = mcp_tools[0]
-        self.args_schema = self._mcp_tool.args_schema
-        return self._mcp_tool
 
     def _run(self, **kwargs: Any) -> str:
         """Run a news search against Webz.io.
@@ -168,7 +186,8 @@ class WebzioNewsSearchTool(BaseTool):
 
     def stop(self) -> None:
         """Close the MCP session. A later call reconnects."""
-        adapter, self._adapter, self._mcp_tool = self._adapter, None, None
+        with self._lock:
+            adapter, self._adapter, self._mcp_tool = self._adapter, None, None
         if adapter is not None:
             adapter.stop()
 

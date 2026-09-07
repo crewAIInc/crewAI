@@ -33,31 +33,29 @@ Obtenha um token no [painel da Webz.io](https://dashboard.webz.io/).
 from crewai import Agent, Crew, Task
 from crewai_tools import WebzioNewsSearchTool
 
-news_tool = WebzioNewsSearchTool()
+with WebzioNewsSearchTool() as news_tool:
+    analyst = Agent(
+        role="News Analyst",
+        goal="Report what the press is saying about a topic",
+        backstory=(
+            "A media analyst who searches the news and summarizes coverage. "
+            "Search with only the filters you were asked for, so that broad "
+            "queries stay broad."
+        ),
+        tools=[news_tool],
+        verbose=True,
+    )
 
-analyst = Agent(
-    role="News Analyst",
-    goal="Report what the press is saying about a topic",
-    backstory=(
-        "A media analyst who searches the news and summarizes coverage. "
-        "Search with only the filters you were asked for, so that broad "
-        "queries stay broad."
-    ),
-    tools=[news_tool],
-    verbose=True,
-)
+    coverage_task = Task(
+        description="Find recent news coverage about AI regulation in the European Union.",
+        expected_output="A summary of the main themes, each with source URLs.",
+        agent=analyst,
+    )
 
-coverage_task = Task(
-    description="Find recent news coverage about AI regulation in the European Union.",
-    expected_output="A summary of the main themes, each with source URLs.",
-    agent=analyst,
-)
+    crew = Crew(agents=[analyst], tasks=[coverage_task], verbose=True)
+    result = crew.kickoff()
 
-crew = Crew(agents=[analyst], tasks=[coverage_task], verbose=True)
-result = crew.kickoff()
 print(result)
-
-news_tool.stop()
 ```
 
 ## Opções de Configuração
@@ -73,15 +71,14 @@ A `WebzioNewsSearchTool` aceita os seguintes parâmetros:
 `query` é o único argumento de busca obrigatório. Os demais filtros são lidos do servidor MCP, então a lista autoritativa é aquela à qual o seu token tem acesso — inspecione-a com `news_tool.args_schema.model_fields`. Filtros comumente disponíveis incluem o idioma e o país de publicação, um intervalo de datas de publicação, o sentimento e o site ou domínio da fonte.
 
 ```python
-news_tool = WebzioNewsSearchTool()
+with WebzioNewsSearchTool() as news_tool:
+    print(news_tool.args_schema.model_fields.keys())
 
-print(news_tool.args_schema.model_fields.keys())
-
-results = news_tool.run(
-    query="ai regulation",
-    language="english",
-)
-print(results)
+    results = news_tool.run(
+        query="ai regulation",
+        language="english",
+    )
+    print(results)
 ```
 
 <Note>
@@ -90,12 +87,14 @@ Os agentes funcionam melhor com uma lista curta de filtros. Uma consulta ampla c
 
 ## Gerenciando a Conexão
 
-A ferramenta mantém uma sessão MCP aberta e a reutiliza entre buscas. Encerre-a com `stop()` quando a sua crew terminar, ou use a ferramenta como gerenciador de contexto:
+Use a ferramenta como gerenciador de contexto para que a sessão MCP seja fechada mesmo quando a configuração ou `crew.kickoff()` lançar uma exceção:
 
 ```python
 with WebzioNewsSearchTool() as news_tool:
     print(news_tool.run(query="renewable energy investment"))
 ```
+
+A ferramenta mantém uma sessão MCP aberta e a reutiliza entre buscas dentro do bloco. Chame `stop()` manualmente quando não puder usar um gerenciador de contexto.
 
 Criar a ferramenta nunca falha por causa de um servidor inacessível ou de um token ausente. Quando a conexão não pode ser feita, a ferramenta recorre a um schema com apenas `query` e tenta novamente na primeira busca, que é onde o erro é reportado. Isso mantém a criação da ferramenta segura em tempo de import e em suítes de teste offline.
 
