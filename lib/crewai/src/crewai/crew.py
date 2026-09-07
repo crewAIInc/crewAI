@@ -8,6 +8,7 @@ from hashlib import md5
 import json
 from pathlib import Path
 import re
+import threading
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -125,6 +126,7 @@ from crewai.types.callback import SerializableCallable
 from crewai.types.streaming import CrewStreamingOutput
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
+from crewai.utilities.crew.crew_context import get_crew_context
 from crewai.utilities.crew.models import CrewContext
 from crewai.utilities.env import get_env_context
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
@@ -226,6 +228,9 @@ class Crew(FlowTrackable, BaseModel):
     )
     _kickoff_event_id: str | None = PrivateAttr(default=None)
     _execution_start_dispatched: bool = PrivateAttr(default=False)
+    _agent_usage: dict[str, UsageMetrics] = PrivateAttr(default_factory=dict)
+    _usage_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+    _usage_handler: Callable[[Any, Any], None] | None = PrivateAttr(default=None)
     _execution_end_dispatched: bool = PrivateAttr(default=False)
 
     name: str | None = Field(default="crew")
@@ -1047,6 +1052,7 @@ class Crew(FlowTrackable, BaseModel):
 
         execution_token = begin_execution()
 
+        self._attach_usage_listener()
         runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
             inputs = prepare_kickoff(self, inputs, input_files)
@@ -1083,6 +1089,7 @@ class Crew(FlowTrackable, BaseModel):
             # Safety net for the exception path; the success path already
             # drained in _create_crew_output before emitting completion.
             self._drain_memory_writes()
+            self._detach_usage_listener()
             clear_files(self.id)
             detach(token)
             end_execution(execution_token)
@@ -1264,6 +1271,7 @@ class Crew(FlowTrackable, BaseModel):
 
         execution_token = begin_execution()
 
+        self._attach_usage_listener()
         runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
             inputs = prepare_kickoff(self, inputs, input_files)
@@ -1300,6 +1308,7 @@ class Crew(FlowTrackable, BaseModel):
             # Safety net for the exception path; the success path already
             # drained in _create_crew_output before emitting completion.
             self._drain_memory_writes()
+            self._detach_usage_listener()
             clear_files(self.id)
             detach(token)
             end_execution(execution_token)
@@ -2201,40 +2210,65 @@ class Crew(FlowTrackable, BaseModel):
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
 
+    def _attach_usage_listener(self) -> None:
+        """Accumulate per-agent token usage as each LLM call completes.
+
+        Usage is recorded at call time rather than reconstructed from an LLM
+        instance's lifetime counters. Those counters are cumulative and shared
+        by every agent holding the instance, so reading them per agent both
+        multiplied usage across agents and carried earlier runs into later
+        ones. Recording each completed call instead needs no before/after
+        window, so agents running concurrently on a shared instance are still
+        attributed correctly.
+        """
+        from crewai.events.types.llm_events import LLMCallCompletedEvent
+
+        if self._usage_handler is not None:
+            return
+
+        with self._usage_lock:
+            self._agent_usage = {}
+
+        # Bind the accumulator in the closure so a handler still queued on the
+        # bus from an earlier kickoff writes into its own dict, not this one.
+        usage = self._agent_usage
+        lock = self._usage_lock
+        crew_id = str(self.id)
+
+        def _accumulate(source: Any, event: LLMCallCompletedEvent) -> None:
+            context = get_crew_context()
+            if context is None or context.id != crew_id:
+                return
+            metrics = UsageMetrics.from_provider_dict(event.usage)
+            if metrics is None:
+                return
+            # Calls made outside an agent (crew planning, guardrails) still
+            # belong to the crew's total, so they get their own bucket.
+            key = getattr(event, "agent_id", None) or "__crew__"
+            with lock:
+                usage.setdefault(key, UsageMetrics()).add_usage_metrics(metrics)
+
+        crewai_event_bus.on(LLMCallCompletedEvent)(_accumulate)
+        self._usage_handler = _accumulate
+
+    def _detach_usage_listener(self) -> None:
+        """Stop accumulating usage once the kickoff has finished."""
+        from crewai.events.types.llm_events import LLMCallCompletedEvent
+
+        handler = self._usage_handler
+        if handler is None:
+            return
+        crewai_event_bus.off(LLMCallCompletedEvent, handler)
+        self._usage_handler = None
+
     def calculate_usage_metrics(self) -> UsageMetrics:
-        """Calculates and returns the usage metrics."""
+        """Return the token usage recorded for the most recent kickoff."""
         total_usage_metrics = UsageMetrics()
 
-        # An LLM instance's counters are cumulative for its lifetime and
-        # include calls made by every agent sharing it, so each distinct
-        # instance must contribute to the total exactly once.
-        counted_llms: set[int] = set()
-
-        for agent in self.agents:
-            if isinstance(agent.llm, BaseLLM):
-                if id(agent.llm) in counted_llms:
-                    continue
-                counted_llms.add(id(agent.llm))
-                llm_usage = agent.llm.get_token_usage_summary()
-
-                total_usage_metrics.add_usage_metrics(llm_usage)
-            else:
-                if hasattr(agent, "_token_process"):
-                    token_sum = agent._token_process.get_summary()
-                    total_usage_metrics.add_usage_metrics(token_sum)
-
-        if self.manager_agent and hasattr(self.manager_agent, "_token_process"):
-            token_sum = self.manager_agent._token_process.get_summary()
-            total_usage_metrics.add_usage_metrics(token_sum)
-
-        if self.manager_agent:
-            if (
-                isinstance(self.manager_agent.llm, BaseLLM)
-                and id(self.manager_agent.llm) not in counted_llms
-            ):
-                counted_llms.add(id(self.manager_agent.llm))
-                llm_usage = self.manager_agent.llm.get_token_usage_summary()
-                total_usage_metrics.add_usage_metrics(llm_usage)
+        with self._usage_lock:
+            per_agent = list(self._agent_usage.values())
+        for agent_usage in per_agent:
+            total_usage_metrics.add_usage_metrics(agent_usage)
 
         self.usage_metrics = total_usage_metrics
         return total_usage_metrics

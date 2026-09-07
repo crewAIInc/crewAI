@@ -1813,6 +1813,10 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
 
 def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
     """Ensure Crew.kickoff() sums UsageMetrics from both regular and manager agents."""
+    from uuid import uuid4
+
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.llm_events import LLMCallCompletedEvent, LLMCallType
 
     manager = Agent(
         role="Manager",
@@ -1834,12 +1838,24 @@ def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
         total_tokens=30, prompt_tokens=20, completion_tokens=10, successful_requests=1
     )
 
-    researcher.llm.get_token_usage_summary = MagicMock(return_value=researcher_metrics)
-
-    # Mock the manager's _token_process since it uses the fallback path
-    manager._token_process = MagicMock(
-        get_summary=MagicMock(return_value=manager_metrics)
-    )
+    def _emit(agent: Agent, metrics: UsageMetrics, calls: int) -> None:
+        """Emit the LLM calls the agent would have made for ``metrics``."""
+        for _ in range(calls):
+            event = LLMCallCompletedEvent(
+                call_id=str(uuid4()),
+                model="gpt-4o",
+                response="ok",
+                call_type=LLMCallType.LLM_CALL,
+                usage={
+                    "prompt_tokens": metrics.prompt_tokens // calls,
+                    "completion_tokens": metrics.completion_tokens // calls,
+                    "total_tokens": metrics.total_tokens // calls,
+                },
+                from_agent=agent,
+            )
+            future = crewai_event_bus.emit(agent, event)
+            if future is not None:
+                future.result(timeout=5.0)
 
     crew = Crew(
         agents=[researcher],
@@ -1848,14 +1864,17 @@ def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
         process=Process.hierarchical,
     )
 
-    # We don't care about LLM output here; patch execute_sync to avoid network
-    with patch.object(
-        Task,
-        "execute_sync",
-        return_value=TaskOutput(
+    def _execute(*_args, **_kwargs) -> TaskOutput:
+        # Stand in for the LLM calls the agent and manager would make; usage is
+        # recorded from these events rather than from LLM lifetime counters.
+        _emit(researcher, researcher_metrics, researcher_metrics.successful_requests)
+        _emit(manager, manager_metrics, manager_metrics.successful_requests)
+        return TaskOutput(
             description="dummy", raw="Hello", agent=researcher.role, messages=[]
-        ),
-    ):
+        )
+
+    # We don't care about LLM output here; patch execute_sync to avoid network
+    with patch.object(Task, "execute_sync", side_effect=_execute):
         crew.kickoff()
 
     assert (
@@ -4989,57 +5008,3 @@ def test_memory_remember_receives_task_content():
     assert "Researcher" in raw
     assert "Expected result:" in raw
     assert "Result:" in raw
-
-
-def test_usage_metrics_counts_a_shared_llm_instance_once():
-    """A single LLM instance shared by several agents must be counted once.
-
-    ``get_token_usage_summary()`` returns totals cumulative for the lifetime of
-    the instance, including calls made by every agent sharing it, so adding it
-    per agent multiplied the reported usage by the number of agents.
-    """
-    llm = LLM(model="gpt-4o")
-    llm.get_token_usage_summary = lambda: UsageMetrics(
-        total_tokens=100, prompt_tokens=80, completion_tokens=20, successful_requests=1
-    )
-    agents = [
-        Agent(role=f"Role {i}", goal="goal", backstory="backstory", llm=llm)
-        for i in range(3)
-    ]
-    tasks = [
-        Task(description=f"task {i}", expected_output="out", agent=agents[i])
-        for i in range(3)
-    ]
-
-    usage = Crew(agents=agents, tasks=tasks).calculate_usage_metrics()
-
-    assert usage.total_tokens == 100
-    assert usage.successful_requests == 1
-
-
-def test_usage_metrics_still_sums_distinct_llm_instances():
-    """Separate LLM instances must still be summed, even for the same model."""
-
-    def make_llm() -> LLM:
-        llm = LLM(model="gpt-4o")
-        llm.get_token_usage_summary = lambda: UsageMetrics(
-            total_tokens=100,
-            prompt_tokens=80,
-            completion_tokens=20,
-            successful_requests=1,
-        )
-        return llm
-
-    agents = [
-        Agent(role=f"Role {i}", goal="goal", backstory="backstory", llm=make_llm())
-        for i in range(3)
-    ]
-    tasks = [
-        Task(description=f"task {i}", expected_output="out", agent=agents[i])
-        for i in range(3)
-    ]
-
-    usage = Crew(agents=agents, tasks=tasks).calculate_usage_metrics()
-
-    assert usage.total_tokens == 300
-    assert usage.successful_requests == 3
