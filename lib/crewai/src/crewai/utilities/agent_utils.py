@@ -144,6 +144,9 @@ class SummaryContent(TypedDict):
 console = Console()
 
 _MULTIPLE_NEWLINES: Final[re.Pattern[str]] = re.compile(r"\n+")
+_FABRICATED_OBSERVATION_REGEX: Final[re.Pattern[str]] = re.compile(
+    r"^Observation:", re.MULTILINE
+)
 _NATIVE_TOOL_UNSUPPORTED_PATTERNS: Final[tuple[str, ...]] = (
     "does not support tools",
     "doesn't support tools",
@@ -677,9 +680,14 @@ def _recover_real_tool_call(answer: str) -> str:
     Answer:``.  When that happens the parser treats the fabricated ``Final
     Answer`` as the agent's output and the real tool call never executes.
 
-    This detects that exact shape and drops everything from the fabricated
-    ``Final Answer:`` onward (including the made-up observation and any
-    follow-up thoughts), so the real ``Action`` is parsed and executed.
+    The fabrication shape is detected only when a line-delimited
+    ``Observation:`` appears after the action and is followed by a ``Final
+    Answer:`` — a literal ``Final Answer:`` inside the action input is data
+    and must not truncate valid tool arguments.  Everything from the
+    fabricated ``Observation:`` onward (observation, follow-up thoughts, and
+    final answer) is dropped, so the fabricated continuation never leaks into
+    the parsed tool input: the action-input capture runs to the end of the
+    text, so any retained suffix would become part of the tool payload.
 
     Args:
         answer: The raw LLM response.
@@ -694,11 +702,17 @@ def _recover_real_tool_call(answer: str) -> str:
     if action_match is None:
         return answer
 
-    final_answer_idx = answer.find(FINAL_ANSWER_ACTION, action_match.start())
+    observation_match = _FABRICATED_OBSERVATION_REGEX.search(
+        answer, action_match.start()
+    )
+    if observation_match is None:
+        return answer
+
+    final_answer_idx = answer.find(FINAL_ANSWER_ACTION, observation_match.start())
     if final_answer_idx == -1:
         return answer
 
-    return answer[:final_answer_idx].strip()
+    return answer[: observation_match.start()].strip()
 
 
 def handle_agent_action_core(

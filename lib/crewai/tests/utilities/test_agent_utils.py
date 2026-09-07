@@ -29,6 +29,7 @@ from crewai.utilities.agent_utils import (
     NativeToolCallResult,
     parse_tool_call_args,
     process_llm_response,
+    _recover_real_tool_call,
     summarize_messages,
 )
 
@@ -1363,6 +1364,32 @@ Final Answer: The main AI trends are multimodal models."""
         assert isinstance(result, AgentAction)
         assert result.tool == "Web Search Tool"
         assert '"search_query": "trends in AI 2025"' in result.tool_input
+
+    def test_recovered_response_excludes_fabricated_continuation(self) -> None:
+        """The action-input capture runs to the end of the text, so the
+        fabricated Observation/Thought must be truncated away entirely —
+        neither the tool input nor the recovered text may retain it."""
+        result = process_llm_response(self.FABRICATED, use_stop_words=False)
+
+        assert isinstance(result, AgentAction)
+        assert "Observation:" not in result.tool_input
+        assert "Thought: I now have enough information." not in result.tool_input
+        assert "Observation:" not in result.text
+        assert "Final Answer:" not in result.text
+
+    def test_final_answer_inside_action_input_is_not_truncated(self) -> None:
+        """A literal ``Final Answer:`` inside the action input is data. The
+        recovery must not cut the payload mid-JSON — whether the response
+        then parses as an action or a finish is the parser's own precedence,
+        not the recovery's concern."""
+        answer = """Thought: I should search.
+Action: Search
+Action Input: {"query": "what should the Final Answer: look like"}"""
+
+        recovered = _recover_real_tool_call(answer)
+
+        assert recovered == answer
+        assert '"query": "what should the Final Answer: look like"' in recovered
 
     def test_stop_word_support_keeps_existing_behavior(self) -> None:
         """With stop words enabled, generation stops before a fabricated
