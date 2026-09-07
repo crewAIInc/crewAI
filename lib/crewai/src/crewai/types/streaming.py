@@ -584,6 +584,23 @@ class FlowStreamingOutput(StreamingOutputBase[Any]):
     Provides both sync and async iteration over stream chunks,
     with access to the final flow output via the ``.result`` property.
 
+    Example:
+        ```python
+        # FlowStreamingOutput wraps a chunk-producing iterator directly.
+        # Consumers use it to expose a custom flow-execution generator
+        # through the same iteration + .result API as CrewStreamingOutput.
+        streaming = FlowStreamingOutput(sync_iterator=chunk_generator())
+        for chunk in streaming:
+            print(chunk.content, end="", flush=True)
+        result = streaming.result
+
+        # Async variant:
+        streaming = FlowStreamingOutput(async_iterator=async_chunk_generator())
+        async for chunk in streaming:
+            print(chunk.content, end="", flush=True)
+        result = streaming.result
+        ```
+
     Note:
         Flow-level streaming is exposed to users through
         :class:`StreamSession`; configure the Flow with ``stream=True``
