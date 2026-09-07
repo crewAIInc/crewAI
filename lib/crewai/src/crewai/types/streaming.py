@@ -586,18 +586,22 @@ class FlowStreamingOutput(StreamingOutputBase[Any]):
 
     Example:
         ```python
-        # FlowStreamingOutput wraps a chunk-producing iterator directly.
-        # Consumers use it to expose a custom flow-execution generator
-        # through the same iteration + .result API as CrewStreamingOutput.
-        streaming = FlowStreamingOutput(sync_iterator=chunk_generator())
-        for chunk in streaming:
-            print(chunk.content, end="", flush=True)
+        # Flow-level streaming returns a StreamSession from Flow.kickoff() —
+        # NOT a FlowStreamingOutput. See
+        # docs/edge/en/learn/streaming-flow-execution.mdx for the full guide.
+        flow = MyFlow()
+        flow.stream = True
+        streaming = flow.kickoff()  # -> StreamSession
+        for frame in streaming:
+            print(frame.content, end="", flush=True)
         result = streaming.result
 
         # Async variant:
-        streaming = FlowStreamingOutput(async_iterator=async_chunk_generator())
-        async for chunk in streaming:
-            print(chunk.content, end="", flush=True)
+        flow = MyFlow()
+        flow.stream = True
+        streaming = await flow.kickoff_async()  # -> AsyncStreamSession
+        async for frame in streaming:
+            print(frame.content, end="", flush=True)
         result = streaming.result
         ```
 
