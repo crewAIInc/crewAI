@@ -9,7 +9,9 @@ via ``RuntimeState.model_rebuild()``.
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import threading
 import time
 from typing import TYPE_CHECKING, Any
 import uuid
@@ -181,6 +183,8 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
     _checkpoint_id: str | None = PrivateAttr(default=None)
     _parent_id: str | None = PrivateAttr(default=None)
     _branch: str = PrivateAttr(default="main")
+    _lineage_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+    _async_lineage_lock: asyncio.Lock = PrivateAttr(default_factory=asyncio.Lock)
 
     @property
     def event_record(self) -> EventRecord:
@@ -286,6 +290,10 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
     def checkpoint(self, location: str) -> str:
         """Write a checkpoint.
 
+        The lineage lock ensures that concurrent callers serialize their
+        read of ``_parent_id``, write, and update — preventing lineage
+        divergence.
+
         Args:
             location: Storage destination. For JsonProvider this is a directory
                 path; for SqliteProvider it is a database file path.
@@ -293,32 +301,37 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         Returns:
             A location identifier for the saved checkpoint.
         """
-        provider_name, parent_id_snapshot, branch_snapshot, start = (
-            self._begin_checkpoint(location)
-        )
-        try:
-            _prepare_entities(self.root)
-            result = self._provider.checkpoint(
-                self.model_dump_json(),
-                location,
-                parent_id=parent_id_snapshot,
-                branch=branch_snapshot,
+        with self._lineage_lock:
+            provider_name, parent_id_snapshot, branch_snapshot, start = (
+                self._begin_checkpoint(location)
             )
-            self._chain_lineage(self._provider, result)
-        except Exception as exc:
-            self._emit_checkpoint_failed(
-                location, provider_name, branch_snapshot, parent_id_snapshot, exc
-            )
-            raise
+            try:
+                _prepare_entities(self.root)
+                result = self._provider.checkpoint(
+                    self.model_dump_json(),
+                    location,
+                    parent_id=parent_id_snapshot,
+                    branch=branch_snapshot,
+                )
+                self._chain_lineage(self._provider, result)
+            except Exception as exc:
+                self._emit_checkpoint_failed(
+                    location, provider_name, branch_snapshot, parent_id_snapshot, exc
+                )
+                raise
 
-        self._emit_checkpoint_completed(
-            result, provider_name, branch_snapshot, parent_id_snapshot, start
-        )
-        return result
+            self._emit_checkpoint_completed(
+                result, provider_name, branch_snapshot, parent_id_snapshot, start
+            )
+            return result
 
     async def acheckpoint(self, location: str) -> str:
         """Async version of :meth:`checkpoint`.
 
+        The async lineage lock ensures that concurrent coroutines serialize
+        their read of ``_parent_id``, write, and update — preventing lineage
+        divergence.
+
         Args:
             location: Storage destination. For JsonProvider this is a directory
                 path; for SqliteProvider it is a database file path.
@@ -326,28 +339,29 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         Returns:
             A location identifier for the saved checkpoint.
         """
-        provider_name, parent_id_snapshot, branch_snapshot, start = (
-            self._begin_checkpoint(location)
-        )
-        try:
-            _prepare_entities(self.root)
-            result = await self._provider.acheckpoint(
-                self.model_dump_json(),
-                location,
-                parent_id=parent_id_snapshot,
-                branch=branch_snapshot,
+        async with self._async_lineage_lock:
+            provider_name, parent_id_snapshot, branch_snapshot, start = (
+                self._begin_checkpoint(location)
             )
-            self._chain_lineage(self._provider, result)
-        except Exception as exc:
-            self._emit_checkpoint_failed(
-                location, provider_name, branch_snapshot, parent_id_snapshot, exc
-            )
-            raise
+            try:
+                _prepare_entities(self.root)
+                result = await self._provider.acheckpoint(
+                    self.model_dump_json(),
+                    location,
+                    parent_id=parent_id_snapshot,
+                    branch=branch_snapshot,
+                )
+                self._chain_lineage(self._provider, result)
+            except Exception as exc:
+                self._emit_checkpoint_failed(
+                    location, provider_name, branch_snapshot, parent_id_snapshot, exc
+                )
+                raise
 
-        self._emit_checkpoint_completed(
-            result, provider_name, branch_snapshot, parent_id_snapshot, start
-        )
-        return result
+            self._emit_checkpoint_completed(
+                result, provider_name, branch_snapshot, parent_id_snapshot, start
+            )
+            return result
 
     def fork(self, branch: str | None = None) -> None:
         """Create a new execution branch and write an initial checkpoint.
