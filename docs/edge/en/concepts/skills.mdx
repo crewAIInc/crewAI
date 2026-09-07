@@ -210,13 +210,17 @@ Publishing reads `name`, `description`, and `metadata.version` from the `SKILL.m
 
 ### Install
 
-Install a published skill by its `@org/name` reference:
+Install a published skill by its `@org-uuid/name` reference:
 
 ```shell Terminal
-crewai skill install @acme/code-review
+crewai skill install @your-org-uuid/code-review
 ```
 
-Inside a crew project the skill lands in `./skills/{name}/`; outside a project it goes to the shared cache at `~/.crewai/skills/{org}/{name}/`.
+<Note>
+  Use your organization's **UUID**, not its name — organization names are not unique, so a name can resolve to the wrong organization and the install fails with a "not found" error. Run `crewai org list` to see the UUID (the `ID` column) of every organization you belong to.
+</Note>
+
+Inside a crew project the skill lands in `./skills/{name}/`; outside a project it goes to the shared cache at `~/.crewai/skills/{org-uuid}/{name}/`.
 
 Agents can also reference registry skills directly — they resolve from the local cache (or project `skills/` directory) at runtime:
 
@@ -225,7 +229,7 @@ agent = Agent(
     role="Senior Code Reviewer",
     goal="Review pull requests for quality and security issues",
     backstory="Staff engineer with expertise in secure coding practices.",
-    skills=["@acme/code-review"],  # registry ref, resolved locally
+    skills=["@your-org-uuid/code-review"],  # registry ref, resolved locally
 )
 ```
 
@@ -240,7 +244,7 @@ agent = Agent(
     role="Senior Code Reviewer",
     goal="Review pull requests for quality and security issues",
     backstory="Staff engineer with expertise in secure coding practices.",
-    skills=["@acme/code-review@1.2.0"],  # pinned; a leading "v" also works
+    skills=["@your-org-uuid/code-review@1.2.0"],  # pinned; a leading "v" also works
 )
 ```
 

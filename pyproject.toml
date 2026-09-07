@@ -172,7 +172,7 @@ info = "Commits must follow Conventional Commits 1.0.0."
 [tool.uv]
 exclude-newer = "3 days"
 # These security fixes are newer than the global supply-chain cutoff.
-exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = "2026-06-20T00:00:00Z", langsmith = "2026-06-20T00:00:00Z", gitpython = "2026-08-05T00:00:00Z" }
+exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = "2026-06-20T00:00:00Z", langsmith = "2026-06-20T00:00:00Z" }
 
 # composio-core pins rich<14 but textual requires rich>=14.
 # onnxruntime 1.24+ dropped Python 3.10 wheels; cap it so qdrant[fastembed] resolves on 3.10.
@@ -203,8 +203,10 @@ exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = 
 # TagReference); force 3.1.57+.
 # gitpython <3.1.58 has GHSA-9rj7-rf2p-w77r, GHSA-4gmw-gg2m-w46p, GHSA-hh9p-6wh2-4mfc, GHSA-wvpp-8hx9-p66j and
 # GHSA-jm78-9fvv-mhgr (further unguarded git option forwarding in Repo.init, read-tree and git-config, plus
-# arbitrary file read via --pathspec-from-file); force 3.1.58+. Its exclude-newer-package cutoff is bumped to
-# 2026-08-05 to admit that release.
+# arbitrary file read via --pathspec-from-file); force 3.1.58+.
+# gitpython 3.1.58 has PYSEC-2026-3785, PYSEC-2026-3786, PYSEC-2026-3787 and PYSEC-2026-3788; all fixed in
+# 3.1.59, so force 3.1.59+. Its exclude-newer-package cutoff (2026-08-05) is dropped rather than bumped: the
+# global 3-day cutoff is now far later than that date, so the per-package pin only blocked the fix.
 # pyasn1 <0.6.4 has GHSA-8ppf-4f7h-5ppj and GHSA-hm4w-wwcw-mr6r; force 0.6.4+.
 # urllib3 <2.7.0 has GHSA-qccp-gfcp-xxvc (ProxyManager cross-origin redirect leaks Authorization/Cookie) and GHSA-mf9v-mfxr-j63j (streaming decompression-bomb bypass); force 2.7.0+.
 # langsmith <0.8.18 has GHSA-3644-q5cj-c5c7 (public prompt manifest deserialization, SSRF/secret disclosure)
@@ -238,6 +240,14 @@ exclude-newer-package = { msgpack = "2026-06-20T00:00:00Z", pydantic-settings = 
 # qdrant-client -> httpx[http2].
 # torch <=2.12.1 has GHSA-rrmf-rvhw-rf47 (CVE-2025-3000): memory corruption in
 # torch.jit.script; fixed in 2.13.0. Transitive via docling/unstructured extras.
+# snowflake-sqlalchemy <1.11.0 has GHSA-8g6f-qw9x-4q6q (SQL injection and local file disclosure); fixed in
+# 1.11.0. Declared as crewai-tools[snowflake] "snowflake-sqlalchemy>=1.7.3", which the lock resolved to 1.10.0.
+# unstructured <0.24.0 has GHSA-4mvj-m6j5-pmf7 (full-read SSRF via partition(url=)); the marker-split floor
+# lives in lib/crewai-tools/pyproject.toml rather than here, because an override replaces the whole
+# requirement including its marker and would drop the dependency on 3.10. 0.24+ needs beautifulsoup4>=4.14.3,
+# which is why the crewai-tools bs4 pin widens from ~=4.13.4 to >=4.13.4,<5 -- a widening, so no existing
+# install breaks; uv resolves bs4 4.13.5 on 3.10 and 4.15.0 on 3.11+. Only crewai-tools[xml] grows, gaining
+# spacy and openai-whisper transitively on 3.11+.
 # snowflake-connector-python >=4.0.0,<4.7.1 has GHSA-5cc2-282f-jjq2 (CVE-2026-15925):
 # TLS hostnames are not verified, so a network attacker can impersonate the endpoint;
 # fixed in 4.7.1. Declared as crewai-tools[snowflake] "snowflake-connector-python>=3.12.4",
@@ -257,7 +267,7 @@ override-dependencies = [
     "pypdf>=6.16.1,<7",
     "uv>=0.11.15,<1",
     "python-multipart>=0.0.27,<1",
-    "gitpython>=3.1.58,<4",
+    "gitpython>=3.1.59,<4",
     "pyasn1>=0.6.4",
     "langsmith>=0.8.18,<1",
     "authlib>=1.6.12",
@@ -275,6 +285,7 @@ override-dependencies = [
     "h2>=4.4.1",
     "torch>=2.13.0",
     "snowflake-connector-python>=4.7.1",
+    "snowflake-sqlalchemy>=1.11.0",
 ]
 
 [tool.uv.workspace]

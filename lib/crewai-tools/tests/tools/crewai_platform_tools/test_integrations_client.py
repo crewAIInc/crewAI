@@ -395,17 +395,15 @@ def test_legacy_client_normalizes_discovered_actions(mock_get: Mock) -> None:
         }
     }
     mock_get.return_value = response
-    connection_id = UUID("550e8400-e29b-41d4-a716-446655440000")
-
     tools = LegacyClient().get_actions(
-        [ApplicationSelector.from_string(f"github/create_issue@{connection_id}")]
+        [ApplicationSelector.from_string("github/create_issue")]
     )
 
     assert tools == [
         ToolInfo(
             app="github",
             action="create_issue",
-            connection_id=connection_id,
+            connection_id=None,
             description="Create a GitHub issue",
             parameters={
                 "type": "object",
@@ -421,7 +419,7 @@ def test_legacy_client_normalizes_discovered_actions(mock_get: Mock) -> None:
 @patch(
     "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
 )
-def test_legacy_client_emits_action_for_each_matching_selector(
+def test_legacy_client_sends_multiple_selectors_in_one_request(
     mock_get: Mock,
 ) -> None:
     response = Mock()
@@ -438,43 +436,49 @@ def test_legacy_client_emits_action_for_each_matching_selector(
         }
     }
     mock_get.return_value = response
-    app_connection_id = UUID("550e8400-e29b-41d4-a716-446655440000")
-    action_connection_id = UUID("8c5f9d69-902b-4b48-a23c-8d037c242e1e")
-
     tools = LegacyClient().get_actions(
         [
-            ApplicationSelector.from_string(f"github@{app_connection_id}"),
-            ApplicationSelector.from_string(
-                f"github/create_issue@{action_connection_id}"
-            ),
+            ApplicationSelector.from_string("github"),
+            ApplicationSelector.from_string("github/create_issue"),
         ]
     )
 
-    assert [tool.connection_id for tool in tools] == [
-        app_connection_id,
-        action_connection_id,
+    assert tools == [
+        ToolInfo(
+            app="github",
+            action="create_issue",
+            connection_id=None,
+            description="Create a GitHub issue",
+            parameters={},
+        )
     ]
-    assert [tool.qualified_name for tool in tools] == [
-        "github_create_issue_550e8400_e29b_41d4_a716_446655440000",
-        "github_create_issue_8c5f9d69_902b_4b48_a23c_8d037c242e1e",
-    ]
+    assert mock_get.call_args.kwargs["params"] == {
+        "apps": "github,github/create_issue"
+    }
 
 
 @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
 @patch(
     "crewai_tools.tools.crewai_platform_tools.integrations_client.requests.get"
 )
-def test_legacy_client_excludes_actions_without_a_matching_selector(
-    mock_get: Mock,
+@pytest.mark.parametrize(
+    "selector",
+    [
+        "share_point",
+        "share_point/download_file_by_server_relative_url",
+    ],
+)
+def test_legacy_client_accepts_canonicalized_actions(
+    mock_get: Mock, selector: str
 ) -> None:
     response = Mock()
     response.raise_for_status.return_value = None
     response.json.return_value = {
         "actions": {
-            "github": [
+            "microsoft_sharepoint": [
                 {
-                    "name": "delete_issue",
-                    "description": "Delete a GitHub issue",
+                    "name": "SHARE_POINT_DOWNLOAD_FILE_BY_SERVER_RELATIVE_URL",
+                    "description": "Download a SharePoint file",
                     "parameters": {},
                 }
             ]
@@ -482,11 +486,17 @@ def test_legacy_client_excludes_actions_without_a_matching_selector(
     }
     mock_get.return_value = response
 
-    tools = LegacyClient().get_actions(
-        [ApplicationSelector.from_string("github/create_issue")]
-    )
+    tools = LegacyClient().get_actions([ApplicationSelector.from_string(selector)])
 
-    assert tools == []
+    assert tools == [
+        ToolInfo(
+            app="microsoft_sharepoint",
+            action="SHARE_POINT_DOWNLOAD_FILE_BY_SERVER_RELATIVE_URL",
+            connection_id=None,
+            description="Download a SharePoint file",
+            parameters={},
+        )
+    ]
 
 
 def test_tool_info_is_immutable() -> None:
