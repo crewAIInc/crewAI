@@ -1,0 +1,54 @@
+---
+title: تشغيل الطاقم لكل عنصر
+description: تشغيل الطاقم لكل عنصر في قائمة
+icon: at
+mode: "wide"
+---
+
+## مقدمة
+
+يوفر CrewAI القدرة على تشغيل طاقم لكل عنصر في قائمة، مما يتيح لك تنفيذ الطاقم لكل عنصر في القائمة.
+هذه الميزة مفيدة بشكل خاص عندما تحتاج إلى تنفيذ نفس مجموعة المهام لعناصر متعددة.
+
+## تشغيل طاقم لكل عنصر
+
+لتشغيل طاقم لكل عنصر في قائمة، استخدم طريقة `kickoff_for_each()`.
+تنفذ هذه الطريقة الطاقم لكل عنصر في القائمة، مما يتيح لك معالجة عناصر متعددة بكفاءة.
+
+إليك مثالاً على كيفية تشغيل طاقم لكل عنصر في قائمة:
+
+```python Code
+from crewai import Crew, Agent, Task
+
+# Create an agent with code execution enabled
+coding_agent = Agent(
+    role="Python Data Analyst",
+    goal="Analyze data and provide insights using Python",
+    backstory="You are an experienced data analyst with strong Python skills.",
+    allow_code_execution=True
+)
+
+# Create a task that requires code execution
+data_analysis_task = Task(
+    description="Analyze the given dataset and calculate the average age of participants. Ages: {ages}",
+    agent=coding_agent,
+    expected_output="The average age calculated from the dataset"
+)
+
+# Create a crew and add the task
+analysis_crew = Crew(
+    agents=[coding_agent],
+    tasks=[data_analysis_task],
+    verbose=True,
+    memory=False
+)
+
+datasets = [
+  { "ages": [25, 30, 35, 40, 45] },
+  { "ages": [20, 25, 30, 35, 40] },
+  { "ages": [30, 35, 40, 45, 50] }
+]
+
+# Execute the crew
+result = analysis_crew.kickoff_for_each(inputs=datasets)
+```

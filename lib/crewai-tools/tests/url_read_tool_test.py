@@ -1,6 +1,10 @@
+import time
+from io import BytesIO
 from unittest.mock import patch
+import zipfile
 
 import pytest
+import re
 import requests
 
 from crewai_tools import URLReadTool
@@ -54,6 +58,81 @@ def build_pdf(text: str = "Quarterly revenue was 42") -> bytes:
         return document.tobytes()
     finally:
         document.close()
+
+
+PRESIGNED_URL = (
+    "https://temp.4d4f16c61d89ec64e760039c4ec50717.r2.cloudflarestorage.com/"
+    "668641/share_point/SHARE_POINT_DOWNLOAD_FILE_BY_SERVER_RELATIVE_URL/"
+    "response/34e077085d293bdb832a6b7c93b9e222"
+    "?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Signature=1954b3d4"
+)
+
+
+def build_docx(text: str = "Signed and delivered") -> bytes:
+    """Return the bytes of a DOCX holding a single paragraph."""
+    from docx import Document
+
+    document = Document()
+    document.add_paragraph(text)
+    buffer = BytesIO()
+    document.save(buffer)
+    return buffer.getvalue()
+
+
+def build_xlsx(rows: list[list[object]], title: str = "Sheet1") -> bytes:
+    """Return the bytes of a single-sheet XLSX holding *rows*."""
+    from openpyxl import Workbook
+
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = title
+    for row in rows:
+        worksheet.append(row)
+    buffer = BytesIO()
+    workbook.save(buffer)
+    return buffer.getvalue()
+
+
+def build_forged_dimension_xlsx() -> bytes:
+    """Return a tiny XLSX whose sheet declares Excel's maximum dimension.
+
+    openpyxl trusts the declared width and pads every row out to it, so this
+    4.8 KB file otherwise drives ~1.6e9 cell normalizations.
+    """
+    from openpyxl import Workbook
+
+    source = BytesIO()
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet["A1"] = "header"
+    worksheet["B100000"] = "stray"
+    workbook.save(source)
+    workbook.close()
+
+    rewritten = BytesIO()
+    with (
+        zipfile.ZipFile(BytesIO(source.getvalue())) as archive,
+        zipfile.ZipFile(rewritten, "w", zipfile.ZIP_DEFLATED) as output,
+    ):
+        for info in archive.infolist():
+            payload = archive.read(info.filename)
+            if info.filename == "xl/worksheets/sheet1.xml":
+                payload = re.sub(
+                    rb'<dimension ref="[^"]*"',
+                    b'<dimension ref="A1:XFD1048576"',
+                    payload,
+                )
+            output.writestr(info, payload)
+    return rewritten.getvalue()
+
+
+def build_zip(*names: str) -> bytes:
+    """Return a zip holding *names*, shaped like an OOXML package."""
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        for name in names:
+            archive.writestr(name, "<x/>")
+    return buffer.getvalue()
 
 
 def fetch_result(
@@ -309,6 +388,427 @@ def test_corrupt_pdf_reports_error_without_raising():
         result = tool.run(url="https://example.com/report.pdf")
 
     assert result.startswith("Error: Failed to read PDF content")
+
+
+def test_presigned_octet_stream_pdf_is_read_from_its_bytes():
+    """The reported failure: octet-stream, no extension, real PDF bytes.
+
+    Presigned object-store links from the SharePoint connector use a content
+    hash for a path and pin every object to octet-stream, which leaves the
+    body as the only evidence of what was fetched.
+    """
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            build_pdf("Signed quarterly report"),
+            "application/octet-stream",
+            PRESIGNED_URL,
+        )
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "Page 1:" in result
+    assert "Signed quarterly report" in result
+
+
+def test_presigned_octet_stream_docx_is_read_from_its_bytes():
+    """A DOCX behind the same extensionless presigned link is extracted."""
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            build_docx("Countersigned on Tuesday"),
+            "application/octet-stream",
+            PRESIGNED_URL,
+        )
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert result == "Countersigned on Tuesday"
+
+
+def test_octet_stream_html_is_sniffed_and_stripped():
+    """HTML bytes behind an unhelpful header still lose their markup."""
+    tool = URLReadTool()
+    body = b"<!DOCTYPE html><html><body><p>Hi</p><script>x=1</script></body></html>"
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "Hi" in result
+    assert "x=1" not in result
+
+
+@pytest.mark.parametrize(
+    "prefix",
+    [
+        pytest.param(b"", id="bare"),
+        pytest.param(b"\xef\xbb\xbf", id="utf8-bom"),
+        pytest.param(b"\n  \t", id="leading-whitespace"),
+        pytest.param(b"\xef\xbb\xbf\n  ", id="bom-then-whitespace"),
+    ],
+)
+def test_bom_and_whitespace_do_not_hide_the_html_prefix(prefix):
+    """A BOM or leading whitespace must not demote HTML to raw text."""
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            prefix + b"<html><body><p>Hi</p></body></html>",
+            "application/octet-stream",
+            PRESIGNED_URL,
+        )
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "<p>" not in result
+    assert "Hi" in result
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param(b"a,b\n1,2\n", id="csv"),
+        pytest.param(b'{"a": 1}', id="json"),
+        pytest.param(b"# Title\n\nBody text.\n", id="markdown"),
+        pytest.param("plain café text\n".encode(), id="utf8-plain"),
+    ],
+)
+def test_octet_stream_text_bodies_are_returned_verbatim(body):
+    """Decodable, NUL-free bytes are handed back untouched."""
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        assert tool.run(url=PRESIGNED_URL) == body.decode()
+
+
+@pytest.mark.parametrize(
+    "entries",
+    [
+        pytest.param(("[Content_Types].xml", "ppt/presentation.xml"), id="pptx"),
+        pytest.param(("[Content_Types].xml", "visio/document.xml"), id="vsdx"),
+        pytest.param(("notes.txt",), id="plain-zip"),
+    ],
+)
+def test_unsupported_zips_are_refused_without_a_misleading_docx_error(entries):
+    """A .pptx must get an honest refusal, not a DOCX extraction failure.
+
+    Sniffing the zip magic alone would route any OOXML package into
+    python-docx, which raises and surfaces as "Failed to read DOCX content"
+    -- a worse answer than the refusal it replaced.
+    """
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            build_zip(*entries), "application/octet-stream", PRESIGNED_URL
+        )
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "Unsupported content type 'application/octet-stream'" in result
+    assert "Failed to read DOCX" not in result
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param(build_docx()[:120], id="truncated-docx"),
+        pytest.param(b"PK\x03\x04", id="magic-only"),
+        pytest.param(b"PK\x03\x04" + b"\xff" * 200, id="garbage-after-magic"),
+    ],
+)
+def test_malformed_zip_bodies_are_refused_without_raising(body):
+    """Zip magic on unreadable bytes fails closed rather than escaping _run."""
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "Unsupported content type" in result
+
+
+def test_multibyte_character_past_a_prefix_boundary_still_reads_as_text():
+    """The sniff decodes the whole body, so no character is split in half.
+
+    Decoding only a leading slice rejects valid UTF-8 whenever a multi-byte
+    character straddles the cut.
+    """
+    tool = URLReadTool()
+    body = b"a" * 2047 + "é".encode() + b"b" * 5000
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert not result.startswith("Error:")
+    assert result == body.decode()
+
+
+def test_empty_body_is_refused_rather_than_read_as_empty_text():
+    """An empty body identifies nothing; it must not read as a successful "".
+
+    Without an explicit guard it strict-decodes to "" with no NUL byte and
+    would be classified as text.
+    """
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(b"", "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "Unsupported content type" in result
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param("café,x\n".encode("latin-1"), id="latin-1"),
+        pytest.param("a,b\n".encode("utf-16"), id="utf-16-with-bom"),
+        pytest.param("a,b\n".encode("utf-16-be"), id="utf-16-be-nul-bytes"),
+        pytest.param(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR", id="png"),
+    ],
+)
+def test_undecodable_or_nul_bearing_bodies_fail_closed(body):
+    """Fail-closed is deliberate: only strict UTF-8 without NUL reads as text.
+
+    A charset-guessing rescue here would push binary payloads into an agent's
+    context as mojibake, which is what the tool's text-only contract forbids.
+    """
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "Unsupported content type 'application/octet-stream'" in result
+
+
+def test_declared_content_type_wins_over_the_body_bytes():
+    """A usable header is still authoritative; the sniff never overrides it."""
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            build_pdf("Should not be extracted"), "text/html", PRESIGNED_URL
+        )
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "Page 1:" not in result
+    assert "Should not be extracted" not in result
+
+
+def test_url_extension_wins_over_the_body_bytes():
+    """The extension fallback still runs ahead of the sniff."""
+    tool = URLReadTool()
+    url = "https://example.com/export.csv"
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            build_pdf("Should not be extracted"), "application/octet-stream", url
+        )
+        result = tool.run(url=url)
+
+    assert result.startswith("%PDF")
+    assert "Page 1:" not in result
+
+
+def test_sniffed_content_still_honors_the_line_window():
+    """Windowing applies to sniffed bodies like any other."""
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            b"one\ntwo\nthree\nfour\n", "application/octet-stream", PRESIGNED_URL
+        )
+        result = tool.run(url=PRESIGNED_URL, start_line=2, line_count=2)
+
+    assert result == "two\nthree\n"
+
+
+def test_presigned_octet_stream_xlsx_is_read_from_its_bytes():
+    """The reported file: an XLSX behind an extensionless presigned link."""
+    tool = URLReadTool()
+    body = build_xlsx([["RFQ ID", "Title"], ["RFQ-1", "Turbine parts"]], "RFQ Header")
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert result == "Sheet RFQ Header:\nRFQ ID,Title\nRFQ-1,Turbine parts"
+
+
+@pytest.mark.parametrize(
+    ("content_type", "url"),
+    [
+        pytest.param(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            PRESIGNED_URL,
+            id="declared-type",
+        ),
+        pytest.param(
+            "application/octet-stream",
+            "https://example.com/q3.xlsx",
+            id="url-extension",
+        ),
+    ],
+)
+def test_xlsx_resolves_from_its_declared_type_and_its_extension(content_type, url):
+    """XLSX is reachable by all three routes, not only by sniffing."""
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(build_xlsx([["a", "b"]]), content_type, url)
+        assert tool.run(url=url) == "Sheet Sheet1:\na,b"
+
+
+def test_xlsx_cells_are_csv_quoted_so_the_grid_survives():
+    """A comma, quote or newline inside a cell must not corrupt the row."""
+    tool = URLReadTool()
+    body = build_xlsx([["Smith, Jane", 'He said "hi"'], ["line1\nline2", "plain"]])
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert '"Smith, Jane"' in result
+    assert '"He said ""hi"""' in result
+    assert '"line1\nline2"' in result
+
+
+def test_xlsx_blank_rows_are_dropped():
+    """Excel reports generous dimensions; phantom rows must not pad the output."""
+    tool = URLReadTool()
+    body = build_xlsx([["a"], [None], ["b"], [None], [None]])
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert result == "Sheet Sheet1:\na\nb"
+
+
+def test_one_far_down_cell_does_not_pad_the_output():
+    """A stray cell at row 100000 must not expand 5 KB into 100k blank rows.
+
+    openpyxl pads every row up to the sheet's declared dimension, so trimming
+    only trailing blanks left the interior padding in the agent's context.
+    """
+    tool = URLReadTool()
+    from openpyxl import Workbook
+
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet["A1"] = "header"
+    worksheet["B100000"] = "stray"
+    buffer = BytesIO()
+    workbook.save(buffer)
+    body = buffer.getvalue()
+
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert len(result.splitlines()) == 3
+    assert "header" in result
+    assert "stray" in result
+
+
+def test_oversized_workbook_is_truncated_with_a_visible_notice():
+    """A cap that is not announced reads as complete content. Announce it."""
+    tool = URLReadTool()
+    body = build_xlsx([[f"r{index}c{column}" for column in range(10)] for index in range(30)])
+    with (
+        patch(f"{TOOL_MODULE}._XLSX_MAX_CELLS", 50),
+        patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch,
+    ):
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "[Truncated: workbook is too large to read in full]" in result
+    assert "r0c0" in result
+    assert "r29c9" not in result
+
+
+def test_xlsx_whitespace_only_values_survive():
+    """Padding is empty, not blank -- a cell the author filled with spaces stays.
+
+    A bare rstrip() on the rendered grid would also eat a trailing space from
+    the final cell, and dropping rows on .strip() would delete a row whose
+    cells hold only spaces.
+    """
+    tool = URLReadTool()
+    body = build_xlsx([["a", "trailing "], [" ", " "], ["b", "c"]])
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert result == "Sheet Sheet1:\na,trailing \n , \nb,c"
+
+
+def test_xlsx_trailing_space_in_the_final_cell_survives():
+    """The rendered grid loses its line terminator, not the last cell's space."""
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            build_xlsx([["only "]]), "application/octet-stream", PRESIGNED_URL
+        )
+        assert tool.run(url=PRESIGNED_URL) == "Sheet Sheet1:\nonly "
+
+
+def test_forged_sheet_dimension_is_bounded_by_the_scan_budget():
+    """A forged dimension must not buy unbounded work off a 5 KB upload.
+
+    Blank rows are skipped, so budgeting only emitted cells left the padding
+    free: 4.8 KB drove 1.6e9 normalizations in 15s. The scan budget is
+    charged per row before the row is normalized, which is what bounds it.
+    """
+    tool = URLReadTool()
+    body = build_forged_dimension_xlsx()
+    assert len(body) < 10_000
+
+    started = time.monotonic()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+    elapsed = time.monotonic() - started
+
+    assert "[Truncated: workbook is too large to read in full]" in result
+    # Generous vs. the ~15s the unbounded scan took, tight enough to fail if
+    # the per-row charge is removed.
+    assert elapsed < 5, f"scan took {elapsed:.1f}s -- the budget is not bounding work"
+
+
+def test_zip_claiming_to_be_both_docx_and_xlsx_is_refused():
+    """A package asserting two identities has not been positively identified."""
+    tool = URLReadTool()
+    body = build_zip("[Content_Types].xml", "word/document.xml", "xl/workbook.xml")
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "Unsupported content type 'application/octet-stream'" in result
+    assert "Failed to read" not in result
+
+
+def test_xlsx_with_no_cells_says_so_instead_of_returning_nothing():
+    """An empty workbook reports its emptiness rather than an empty string."""
+    tool = URLReadTool()
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(
+            build_xlsx([]), "application/octet-stream", PRESIGNED_URL
+        )
+        assert tool.run(url=PRESIGNED_URL) == "[XLSX with no extractable cells]"
+
+
+def test_xlsx_formula_without_a_cached_value_reads_as_empty():
+    """data_only returns cached results, so an uncalculated formula is blank.
+
+    Pinning this documents the trade: agents get "42" from a workbook Excel
+    has saved, never the literal "=SUM(A1:A2)".
+    """
+    tool = URLReadTool()
+    body = build_xlsx([[1], [2], ["=SUM(A1:A2)"]])
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert "=SUM" not in result
+    assert result == "Sheet Sheet1:\n1\n2"
+
+
+def test_corrupt_xlsx_reports_error_without_raising():
+    """A zip that claims to be a workbook but is not becomes an error string."""
+    tool = URLReadTool()
+    body = build_zip("[Content_Types].xml", "xl/workbook.xml")
+    with patch(f"{TOOL_MODULE}.safe_get_bounded") as fetch:
+        fetch.return_value = fetch_result(body, "application/octet-stream", PRESIGNED_URL)
+        result = tool.run(url=PRESIGNED_URL)
+
+    assert result.startswith("Error: Failed to read XLSX content")
 
 
 class TestSafeGetBounded:
