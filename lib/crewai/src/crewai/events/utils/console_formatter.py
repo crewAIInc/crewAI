@@ -589,9 +589,7 @@ To enable tracing, do any one of these:
         """Handle LLM stream chunk event - display streaming text in a panel.
 
         Args:
-            chunk: The new chunk of text received.
             accumulated_text: All text accumulated so far.
-            crew_tree: Unused (kept for API compatibility).
             call_type: The type of LLM call (LLM_CALL or TOOL_CALL).
         """
         if not self.verbose:
