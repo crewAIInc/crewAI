@@ -1813,10 +1813,6 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
 
 def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
     """Ensure Crew.kickoff() sums UsageMetrics from both regular and manager agents."""
-    from uuid import uuid4
-
-    from crewai.events.event_bus import crewai_event_bus
-    from crewai.events.types.llm_events import LLMCallCompletedEvent, LLMCallType
 
     manager = Agent(
         role="Manager",
@@ -1838,24 +1834,21 @@ def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
         total_tokens=30, prompt_tokens=20, completion_tokens=10, successful_requests=1
     )
 
-    def _emit(agent: Agent, metrics: UsageMetrics, calls: int) -> None:
-        """Emit the LLM calls the agent would have made for ``metrics``."""
-        for _ in range(calls):
-            event = LLMCallCompletedEvent(
-                call_id=str(uuid4()),
-                model="gpt-4o",
-                response="ok",
-                call_type=LLMCallType.LLM_CALL,
-                usage={
-                    "prompt_tokens": metrics.prompt_tokens // calls,
-                    "completion_tokens": metrics.completion_tokens // calls,
-                    "total_tokens": metrics.total_tokens // calls,
-                },
-                from_agent=agent,
-            )
-            future = crewai_event_bus.emit(agent, event)
-            if future is not None:
-                future.result(timeout=5.0)
+    # Usage for a run is the growth of each LLM's counters across it, so the
+    # summaries read empty until the task runs and report totals afterwards.
+    consumed = {"done": False}
+    researcher.llm.get_token_usage_summary = (
+        lambda: researcher_metrics if consumed["done"] else UsageMetrics()
+    )
+    manager.llm.get_token_usage_summary = (
+        lambda: manager_metrics if consumed["done"] else UsageMetrics()
+    )
+
+    def _execute(*_args, **_kwargs) -> TaskOutput:
+        consumed["done"] = True
+        return TaskOutput(
+            description="dummy", raw="Hello", agent=researcher.role, messages=[]
+        )
 
     crew = Crew(
         agents=[researcher],
@@ -1863,15 +1856,6 @@ def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
         tasks=[task],
         process=Process.hierarchical,
     )
-
-    def _execute(*_args, **_kwargs) -> TaskOutput:
-        # Stand in for the LLM calls the agent and manager would make; usage is
-        # recorded from these events rather than from LLM lifetime counters.
-        _emit(researcher, researcher_metrics, researcher_metrics.successful_requests)
-        _emit(manager, manager_metrics, manager_metrics.successful_requests)
-        return TaskOutput(
-            description="dummy", raw="Hello", agent=researcher.role, messages=[]
-        )
 
     # We don't care about LLM output here; patch execute_sync to avoid network
     with patch.object(Task, "execute_sync", side_effect=_execute):
