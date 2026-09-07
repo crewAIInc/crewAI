@@ -1,0 +1,65 @@
+---
+title: أداة تنفيذ Fly.io Sprites
+description: امنح وكلاء CrewAI وصولاً إلى shell داخل Fly.io Sprite موجود ودائم.
+icon: terminal
+mode: "wide"
+---
+
+## نظرة عامة
+
+تنفّذ `SpritesExecTool` أوامر shell داخل [Fly.io Sprite](https://sprites.dev) موجود، باستخدام SDK الرسمي لـ Python. تبقى الملفات بين الاستدعاءات. يبدأ كل استدعاء جلسة Bash جديدة، لذلك لا تنتقل متغيرات shell وتغييرات مجلد العمل إلى الاستدعاء التالي.
+
+يدير المستدعي دورة حياة Sprite: لا تنشئ هذه الأداة Sprites ولا تحذفها.
+
+## التثبيت والمصادقة
+
+ثبّت الاعتماد الاختياري:
+
+```shell
+uv add "crewai-tools[sprites]"
+```
+
+أنشئ Sprite باستخدام [Sprites CLI](https://docs.sprites.dev/cli/) قبل استخدام الأداة. اضبط `SPRITE_TOKEN` في بيئة عملية CrewAI على رمز مخوّل للوصول إلى ذلك Sprite، أو مرّره عبر `api_key` عند إنشاء الأداة. الرمز ليس وسيطاً للوكيل، ويُستبعد من تسلسل الأداة، ولا يُحقن في الأوامر البعيدة.
+
+## الاستخدام
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import SpritesExecTool
+
+tool = SpritesExecTool(sprite_name="crew-workspace", timeout=60)
+agent = Agent(
+    role="Python developer",
+    goal="Run and verify Python programs in the provided Fly.io Sprite",
+    backstory="You check program output and report failures accurately.",
+    tools=[tool],
+)
+task = Task(
+    description="Use the Sprite to print the sum of the integers from 1 to 100.",
+    expected_output="The command used, its exit code, and the computed sum.",
+    agent=agent,
+)
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+يتطلب المثال أيضاً بيانات اعتماد موفّر LLM الذي تختاره. للاستدعاء المباشر دون LLM:
+
+```python
+result = tool.run(command="python -c 'print(sum(range(1, 101)))'")
+# {"exit_code": 0, "stdout": "5050\n", "stderr": "",
+#  "stdout_truncated": False, "stderr_truncated": False}
+```
+
+## الإعدادات والوسائط
+
+اضبط `sprite_name` (مطلوب)، و`api_key` (يستخدم `SPRITE_TOKEN` افتراضياً)، و`timeout` (60 ثانية افتراضياً، أكبر من 0 وبحد أقصى 300)، و`max_output_chars` (20,000 لكل تدفق افتراضياً) في الأداة. يقدّم الوكيل `command` و`cwd` الاختياري فقط، ويُفسّران داخل Sprite.
+
+تتضمن النتائج `exit_code` و`stdout` و`stderr` بترميز UTF-8 (تُستبدل البايتات غير الصالحة)، ومؤشر اقتطاع لكل تدفق. تُعاد رموز الخروج غير الصفرية إلى الوكيل ولا تُعامل كأخطاء نقل. تستخدم الاستدعاءات غير المتزامنة `await tool.arun(command="...")`. لا تُخزّن النتائج مؤقتاً افتراضياً لأن الأوامر قد تغيّر الحالة الدائمة.
+
+## السلامة والحدود
+
+- تتمتع الأوامر بوصول إلى shell ويمكنها تعديل البيانات أو حذفها والوصول إلى شبكة Sprite وبيانات اعتماده. استخدم Sprite مخصصاً يحتوي فقط على البيانات والصلاحيات التي يحتاجها الوكيل. تثبيت اسم Sprite ليس حداً للتفويض على الخادم.
+- يحدّد `timeout` مدة انتظار العميل؛ لكنه **لا** يضمن إنهاء العملية البعيدة. كذلك لا يضمن الإلغاء غير المتزامن إنهاءها. بعد انتهاء المهلة أو فشل الاتصال، افحص Sprite قبل إعادة أمر له آثار جانبية.
+- يُقتطع الخرج **بعد** أن يلتقطه SDK. يحدّ ذلك من سياق الوكيل، لا من استهلاك الذاكرة. وجّه الخرج المطوّل إلى ملفات داخل Sprite.
+- لا تُمرّر متغيرات بيئة المضيف تلقائياً. تبقى الملفات إلى أن تديرها أو تزيلها بنفسك.

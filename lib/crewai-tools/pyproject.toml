@@ -26,6 +26,9 @@ Documentation = "https://docs.crewai.com"
 
 
 [project.optional-dependencies]
+sprites = [
+    "sprites-py>=0.6.0,<0.7",
+]
 scrapfly-sdk = [
     "scrapfly-sdk>=0.8.19",
 ]

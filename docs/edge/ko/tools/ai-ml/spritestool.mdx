@@ -1,0 +1,65 @@
+---
+title: Fly.io Sprites 실행 도구
+description: CrewAI 에이전트에 기존의 영구 Fly.io Sprite 셸 접근 권한을 제공합니다.
+icon: terminal
+mode: "wide"
+---
+
+## 개요
+
+`SpritesExecTool`은 공식 Python SDK를 사용하여 기존 [Fly.io Sprite](https://sprites.dev)에서 셸 명령을 실행합니다. 파일은 호출 간에 유지됩니다. 각 호출은 새로운 Bash 셸을 시작하므로 셸 변수와 작업 디렉터리 변경 사항은 다음 호출로 이어지지 않습니다.
+
+Sprite의 수명 주기는 호출자가 관리합니다. 이 도구는 Sprite를 생성하거나 삭제하지 않습니다.
+
+## 설치 및 인증
+
+선택적 의존성을 설치하세요.
+
+```shell
+uv add "crewai-tools[sprites]"
+```
+
+도구를 사용하기 전에 [Sprites CLI](https://docs.sprites.dev/cli/)로 Sprite를 생성하세요. CrewAI 프로세스 환경의 `SPRITE_TOKEN`에 해당 Sprite에 접근할 수 있는 토큰을 설정하거나, 도구를 생성할 때 `api_key`로 전달하세요. 토큰은 에이전트 인수가 아니며, 도구 직렬화에서 제외되고 원격 명령에 주입되지 않습니다.
+
+## 사용법
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import SpritesExecTool
+
+tool = SpritesExecTool(sprite_name="crew-workspace", timeout=60)
+agent = Agent(
+    role="Python developer",
+    goal="Run and verify Python programs in the provided Fly.io Sprite",
+    backstory="You check program output and report failures accurately.",
+    tools=[tool],
+)
+task = Task(
+    description="Use the Sprite to print the sum of the integers from 1 to 100.",
+    expected_output="The command used, its exit code, and the computed sum.",
+    agent=agent,
+)
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+이 예제에는 선택한 LLM 제공업체의 인증 정보도 필요합니다. LLM 없이 직접 호출하려면 다음과 같이 사용하세요.
+
+```python
+result = tool.run(command="python -c 'print(sum(range(1, 101)))'")
+# {"exit_code": 0, "stdout": "5050\n", "stderr": "",
+#  "stdout_truncated": False, "stderr_truncated": False}
+```
+
+## 설정 및 인수
+
+도구에서 `sprite_name`(필수), `api_key`(기본값은 `SPRITE_TOKEN`), `timeout`(기본값 60초, 0보다 크고 최대 300), `max_output_chars`(스트림당 기본값 20,000)를 설정하세요. 에이전트는 `command`와 선택적 `cwd`만 제공하며, 둘 다 Sprite 내부에서 해석됩니다.
+
+결과에는 `exit_code`, UTF-8 `stdout` 및 `stderr`(잘못된 바이트는 대체됨), 각 스트림의 잘림 여부가 포함됩니다. 0이 아닌 종료 코드는 전송 실패로 처리하지 않고 에이전트에 반환합니다. 비동기 호출은 `await tool.arun(command="...")`을 사용합니다. 명령이 영구 상태를 변경할 수 있으므로 기본적으로 결과를 캐시하지 않습니다.
+
+## 안전 및 제한 사항
+
+- 명령은 셸 접근 권한을 가지며 데이터를 수정하거나 삭제하고 Sprite의 네트워크 및 인증 정보에 접근할 수 있습니다. 에이전트에 필요한 데이터와 권한만 있는 전용 Sprite를 사용하세요. Sprite 이름을 고정하는 것은 서버 측 권한 경계가 아닙니다.
+- `timeout`은 클라이언트의 대기 시간만 제한하며 원격 프로세스 종료를 **보장하지 않습니다**. 비동기 취소도 종료를 보장하지 않습니다. 시간 초과나 연결 실패 후에는 부수 효과가 있는 명령을 다시 실행하기 전에 Sprite를 확인하세요.
+- 출력은 SDK가 캡처한 **후에** 잘립니다. 이는 에이전트 컨텍스트를 제한하지만 메모리 사용량은 제한하지 않습니다. 많은 출력은 Sprite 내부 파일로 리디렉션하세요.
+- 호스트 환경 변수는 자동 전달되지 않습니다. 파일은 직접 관리하거나 제거할 때까지 유지됩니다.
