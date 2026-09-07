@@ -386,6 +386,36 @@ def test_unrecognized_provider_prefix_is_not_stripped() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "model",
+    ["o1", "o1-pro", "o3"],
+)
+def test_o_series_reasoning_models_context_window(model: str) -> None:
+    """Official reasoning models (o1, o1-pro, o3) use 200,000 token context window."""
+    llm = LLM(model=model, is_litellm=True)
+    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+def test_o_series_does_not_override_preview_and_mini() -> None:
+    """More specific o1-preview and o1-mini must keep their 128,000 window."""
+    llm_preview = LLM(model="o1-preview", is_litellm=True)
+    assert llm_preview.get_context_window_size() == int(128000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+    llm_mini = LLM(model="o1-mini", is_litellm=True)
+    assert llm_mini.get_context_window_size() == int(128000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+@pytest.mark.parametrize(
+    "model",
+    ["openai/o1", "openai/o1-pro", "openai/o3"],
+)
+def test_openai_o_series_reasoning_models_context_window(model: str) -> None:
+    """Native OpenAI provider recognizes 200,000 token window for o1, o1-pro, and o3."""
+    llm = LLM(model=model)
+    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+
+
 @pytest.fixture
 def get_weather_tool_schema():
     return {
