@@ -150,6 +150,25 @@ def test_valid_action_parsing_with_unbalanced_quotes():
     assert result.tool_input == "what is the temperature in SF?"
 
 
+def test_valid_action_parsing_with_text_between_action_and_action_input():
+    text = (
+        "Thought: Let's find the temperature\n"
+        "Action: search\n"
+        "I will look up the temperature in SF\n"
+        "Action Input: what is the temperature in SF?"
+    )
+    result = parser.parse(text)
+    assert isinstance(result, AgentAction)
+    assert result.tool == "search"
+    assert result.tool_input == "what is the temperature in SF?"
+
+
+def test_clean_action_with_text_after_tool_name():
+    action = "search\nI will look up the temperature in SF"
+    cleaned_action = parser._clean_action(action)
+    assert cleaned_action == "search"
+
+
 def test_clean_action_no_formatting():
     action = "Ask question to senior researcher"
     cleaned_action = parser._clean_action(action)
